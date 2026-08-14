@@ -2,26 +2,20 @@ import { exportNotebookEntryPdf, exportProjectNotebookEntriesPdf } from '../../p
 import { findLatestLinkedRecord } from '../../../services/notebook-linked-previews.js';
 import {
   matchesNotebookType,
-  resolveEntryExperimentName,
   resolveEntryProtocol
 } from '../entry/entry-helpers.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createLinkedWorkActions({
   notebookType,
-  experimentNameInput,
   ensureEntry,
   getNotebookEntries,
   getProtocols,
   getGelAnalyses,
   getAssays,
-  getSettings,
-  setSettings,
-  persist,
   previewImageLoader,
   resultFileAttachmentLoader,
-  onCreateLinkedAssay,
-  onOpenSampleRecorder
+  onCreateLinkedAssay
 } = {}) {
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
@@ -37,39 +31,6 @@ export function createLinkedWorkActions({
       projectId: entry.projectId,
       notebookType: entry.notebookType || notebookType
     });
-  }
-
-  async function onAddSamplesClick() {
-    const entry = await ensureEntry();
-    if (!entry) {
-      return;
-    }
-    const requestedAt = new Date().toISOString();
-    const settings = getSettings() || {};
-    const nextSettings = settings && typeof settings === 'object' ? settings : {};
-    nextSettings.pendingNotebookSampleCapture = {
-      notebookEntryId: entry.id,
-      notebookType: entry.notebookType || notebookType,
-      projectId: entry.projectId,
-      projectName: entry.projectName,
-      protocolName: entry.protocolName,
-      experimentName: resolveEntryExperimentName(entry),
-      requestedAt
-    };
-    setSettings?.(nextSettings);
-    persist?.();
-
-    if (typeof onOpenSampleRecorder === 'function') {
-      onOpenSampleRecorder({
-        notebookEntryId: entry.id,
-        notebookType: entry.notebookType || notebookType,
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        protocolName: entry.protocolName,
-        experimentName: resolveEntryExperimentName(entry),
-        requestedAt
-      });
-    }
   }
 
   async function exportEntryPdf(entryId) {
@@ -169,7 +130,6 @@ export function createLinkedWorkActions({
 
   return {
     onAddAssayClick,
-    onAddSamplesClick,
     exportEntryPdf,
     exportProjectPagesPdf
   };

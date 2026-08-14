@@ -5,6 +5,7 @@ import { buildQ5KldPlan } from './cloning-assembly/q5-kld-mutagenesis.js';
 import { buildGoldenGatePlan } from './cloning-assembly/golden-gate.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
+import { annotatePrimersOnSelectedRecord } from './primer-annotation.js';
 
 const STRATEGY_WHOLE_PLASMID = 'whole-plasmid';
 const STRATEGY_Q5_KLD = 'q5-kld';
@@ -608,6 +609,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   const getSelectedRecord = config?.getSelectedRecord || (() => null);
   const getCloningDesignSource = config?.getCloningDesignSource || (() => null);
   const setStatus = config?.setStatus || (() => {});
+  const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onNavigateCloningDesign = config?.onNavigateCloningDesign || (() => {});
   const onReturnToDetail = config?.onReturnToDetail || (() => {});
 
@@ -828,9 +830,16 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       range
     });
     designState.displayPlan = displayPlan;
-    const primerCount = asArray(displayPlan?.primers).length;
+    const primers = asArray(displayPlan?.primers);
+    const primerCount = primers.length;
     setStatus(`${formatStrategyLabel(designState.strategy)} designed ${primerCount.toLocaleString()} primer${primerCount === 1 ? '' : 's'}.`, !displayPlan?.feasible);
     render();
+    void annotatePrimersOnSelectedRecord({
+      state,
+      primers,
+      persistFeatureMutation,
+      label: `Annotated ${formatStrategyLabel(designState.strategy)} primers on the sequence.`
+    });
   }
 
   function open() {

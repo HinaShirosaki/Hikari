@@ -374,12 +374,13 @@ function buildNotebookConclusionRequest(source) {
     moduleId: 'notebook',
     task: 'result-memory-conclusion',
     prompt: [
-      'Generate one concise experimental conclusion from the saved result record below.',
+      'Generate one concise, single-line experimental conclusion from the saved result record below.',
       '',
       'Requirements:',
       '- Base the conclusion only on the supplied saved result.',
       '- Preserve uncertainty, negative findings, numbers, units, and sample identities.',
       '- Do not claim causality, statistical significance, binding affinity, or generality unless the saved result states it.',
+      '- Write the conclusion as one sentence with no newline characters or Markdown.',
       '- Return 1 to 3 short supporting quotes copied exactly from the saved result.',
       '- Return exactly two JSON fields: "conclusion" as a string and "quotes" as an array of those exact substrings.',
       '- Do not add quotation-mark characters around the text inside each quotes array item.',
@@ -390,7 +391,7 @@ function buildNotebookConclusionRequest(source) {
       'Saved result:',
       source.corpus
     ].filter(Boolean).join('\n'),
-    systemPrompt: 'You summarize recorded experimental results without inventing evidence. Return the requested structured JSON only.',
+    systemPrompt: 'You summarize recorded experimental results as concise single-line conclusions without inventing evidence. Return the requested structured JSON only.',
     schema: {
       type: 'object',
       additionalProperties: false,
@@ -573,15 +574,11 @@ function collectProjectMemoryRecords(snapshot = {}) {
 
 function buildProjectMemoryGeneratedBlock(projectRecord = {}, {
   paperEntries = [],
-  notebookEntries = [],
-  pendingNotebookCount = 0,
-  generatedAt = new Date().toISOString()
+  notebookEntries = []
 } = {}) {
   const record = ensureObject(projectRecord);
-  const counts = ensureObject(record.counts);
   const papers = asArray(paperEntries);
   const notebooks = asArray(notebookEntries);
-  const fallbackCount = notebooks.filter((entry) => entry.model === NOTEBOOK_MEMORY_MODEL_FALLBACK).length;
   const paperLines = papers.length
     ? papers.flatMap((paper) => [
         ...[
@@ -595,49 +592,23 @@ function buildProjectMemoryGeneratedBlock(projectRecord = {}, {
       ])
     : ['- None recorded.', ''];
   const notebookLines = notebooks.length
-    ? notebooks.flatMap((entry) => [
-        ...[
-          `### ${truncateInline(entry.title || entry.id, 320)}`,
-          entry.model === NOTEBOOK_MEMORY_MODEL_FALLBACK
-            ? `- Recorded result extract: ${truncateInline(entry.conclusion, 800)}`
-            : `- Generated conclusion: ${truncateInline(entry.conclusion, 800)}`,
-          entry.protocolName ? `- Protocol: ${truncateInline(entry.protocolName, 320)}` : '',
-          entry.model ? `- Model: ${truncateInline(entry.model, 120)}` : '',
-          entry.generatedAt ? `- Generated: ${formatTimestamp(entry.generatedAt)}` : '',
-          entry.updatedAt ? `- Result updated: ${formatTimestamp(entry.updatedAt)}` : '',
-          `- Source: \`${entry.sourceRelativePath}\``
-        ].filter(Boolean),
-        ''
-      ])
+    ? notebooks.map((entry) => (
+        `${truncateInline(entry.title || entry.id, 320)}; ${truncateInline(entry.conclusion, 800)}`
+      ))
     : ['- None recorded.', ''];
 
   return [
     '# Project Memory',
     '',
     `Name: ${formatField(record.displayName, 'Untitled Project')}`,
-    `Folder: ${formatField(record.folderName, 'Untitled_Project')}`,
-    `ID: ${formatField(record.projectId)}`,
     `Description: ${formatField(record.description)}`,
     `Created: ${formatTimestamp(record.createdAt)}`,
     `Updated: ${formatTimestamp(record.updatedAt)}`,
-    '',
-    '## Linked Records',
-    `- Notebook pages: ${Number(counts.notebookEntries) || 0}`,
-    `- Workflows: ${Number(counts.workflows) || 0}`,
-    `- Papers: ${Number(counts.papers) || 0}`,
-    `- Assays: ${Number(counts.assays) || 0}`,
-    `- Gel analyses: ${Number(counts.gelAnalyses) || 0}`,
     '',
     '## Paper Conclusions',
     ...paperLines,
     '## Experimental Conclusions',
     ...notebookLines,
-    '## Memory Sync',
-    `- Generated: ${formatTimestamp(generatedAt)}`,
-    `- Paper conclusions: ${papers.length}`,
-    `- Experimental conclusions: ${notebooks.length}`,
-    `- Notebook conclusions awaiting generation: ${Number(pendingNotebookCount) || 0}`,
-    `- Fallback extracts: ${fallbackCount}`,
     ''
   ].join('\n').trim();
 }
@@ -815,8 +786,7 @@ async function renderProjectMemoryInput(input, { writePrunedCache = false } = {}
   });
   const generatedBlock = buildProjectMemoryGeneratedBlock(input.projectRecord, {
     paperEntries,
-    notebookEntries,
-    pendingNotebookCount: misses.length
+    notebookEntries
   });
   const existing = await readExistingText(input.filePath);
   await atomicWriteFile(

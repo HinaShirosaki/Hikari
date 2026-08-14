@@ -8,6 +8,7 @@ import {
 import { isOrfFeature } from './orf-analysis.js';
 import * as detailAlignment from './detail-alignment.js';
 import { bindSequenceViewerDetailEvents } from './detail-events.js';
+import { createSequenceViewerAminoAcidEditingController } from './detail-amino-acid-editing.js';
 import { createSequenceViewerFeatureEditingController } from './detail-feature-editing.js';
 import { createSequenceHoverTooltipController } from './detail-hover.js';
 import { resolveSequenceBoundaryFromEvent as resolveSequenceBoundaryFromEventShared } from './detail-layout.js';
@@ -58,6 +59,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
+  const onApplyAminoAcidEdit = config?.onApplyAminoAcidEdit || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
@@ -65,6 +67,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const showSequenceHoverTooltip = (event, feature, sequenceLength) => {
     hoverController.show(event, feature, sequenceLength);
   };
+  let aminoAcidEditingController = null;
   let featureEditingController = null;
   let sequenceEditingController = null;
   let activeFeatureActionContext = null;
@@ -182,6 +185,7 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function hideFeatureContextMenu() {
     activeFeatureActionContext = null;
+    aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.hideFeatureContextMenu();
   }
 
@@ -191,6 +195,10 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function hidePrimerDesignOverlay() {
     featureEditingController?.hidePrimerDesignOverlay();
+  }
+
+  function openPrimerDesignOverlay(context) {
+    return featureEditingController?.openPrimerDesignOverlay(context);
   }
 
   function hideSequenceEditDialog() {
@@ -204,11 +212,26 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function renderFeatureContextMenu(context, event) {
     activeFeatureActionContext = context;
+    aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.renderFeatureContextMenu(context, event);
   }
 
   function resolveFeatureActionContext(record, event) {
     return featureEditingController?.resolveFeatureActionContext(record, event) || null;
+  }
+
+  function resolveAminoAcidActionContext(record, event) {
+    return aminoAcidEditingController?.resolveContext(record, event) || null;
+  }
+
+  function renderAminoAcidContextMenu(context, event) {
+    activeFeatureActionContext = null;
+    featureEditingController?.hideFeatureContextMenu();
+    aminoAcidEditingController?.renderContextMenu(context, event);
+  }
+
+  async function applyAminoAcidReplacement(targetAminoAcid) {
+    await aminoAcidEditingController?.applyReplacement(targetAminoAcid);
   }
 
   function openFeatureEditor(mode, context = {}) {
@@ -596,6 +619,23 @@ export function createSequenceViewerDetailController(config = {}) {
     onApplySequenceEdit
   });
 
+  aminoAcidEditingController = createSequenceViewerAminoAcidEditingController({
+    elements,
+    getSelectedRecord,
+    setStatus,
+    onApplyAminoAcidEdit: async (payload) => {
+      const record = getSelectedRecord();
+      const selectedFeature = getFeatureByIndexForRecord(record, state.selectedFeatureIndex);
+      const result = await onApplyAminoAcidEdit(payload);
+      if (isOrfFeature(selectedFeature)) {
+        const nextFeatures = getVisibleFeaturesForRecord(getSelectedRecord());
+        state.selectedFeatureIndex = findUpdatedOrfIndex(nextFeatures, selectedFeature);
+        renderActiveRecord({ preserveScroll: true });
+      }
+      return result;
+    }
+  });
+
   function bindEvents() {
     bindSequenceViewerDetailEvents({
       elements,
@@ -623,6 +663,9 @@ export function createSequenceViewerDetailController(config = {}) {
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,
       renderFeatureContextMenu,
+      resolveAminoAcidActionContext,
+      renderAminoAcidContextMenu,
+      applyAminoAcidReplacement,
       openFeatureEditor,
       openPrimerDesignOverlay,
       deleteFeatureFromContext,
@@ -651,6 +694,7 @@ export function createSequenceViewerDetailController(config = {}) {
     hideFeatureEditor,
     hidePrimerDesignOverlay,
     hideSequenceEditDialog,
+    openPrimerDesignOverlay,
     renderActiveRecord,
     renderSelectedFeatureDetail,
     renderSequence,

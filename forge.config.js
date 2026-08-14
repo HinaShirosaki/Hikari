@@ -102,7 +102,11 @@ module.exports = {
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+      // Off: the streaming validator aborts the main process on a partial read
+      // of a packed asar file (string_view::substr out-of-range -> LOG(FATAL)).
+      // The app is ad-hoc signed, so anyone who can rewrite app.asar can rewrite
+      // Info.plist's hash too — this bought no tamper protection, only crashes.
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false,
       [FuseV1Options.OnlyLoadAppFromAsar]: true
     })
   ]

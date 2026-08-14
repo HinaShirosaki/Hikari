@@ -22,6 +22,8 @@ export function createNavigationActions(ctx) {
 
   function returnToSequenceDetailFromVectorBuilder() {
     controllers.vectorBuilder?.hideOverlays?.();
+    // Reachable from the vector map now, so it must not follow the user back.
+    controllers.detail?.hidePrimerDesignOverlay?.();
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
     controllers.detail?.renderActiveRecord?.();

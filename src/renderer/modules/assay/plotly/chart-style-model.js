@@ -23,6 +23,7 @@ const TICK_FORMATS = Object.freeze(['auto', 'fixed1', 'fixed2', 'sci', 'si', 'po
 const MARKER_FILLS = Object.freeze(['filled', 'open']);
 const BAR_MODES = Object.freeze(['group', 'stack']);
 const REF_AXES = Object.freeze(['y', 'x']);
+const CHART_TYPES = Object.freeze(['auto', 'line', 'bar']);
 
 export const CHART_FONT_FAMILY = 'Arial, sans-serif';
 
@@ -58,9 +59,12 @@ function sanitizeChartTextStyle(input) {
 
 export function createDefaultChartStyle() {
   return {
+    chartType: 'auto',
     xColumn: 'auto',
     yColumn: 'auto',
     seriesColumn: 'auto',
+    xTitle: '',
+    yTitle: '',
     xScale: 'linear',
     yScale: 'linear',
     xRange: { auto: true, min: null, max: null },
@@ -173,9 +177,12 @@ export function normalizeChartStyle(input) {
     });
   }
   return {
+    chartType: sanitizeEnum(input.chartType, CHART_TYPES, base.chartType),
     xColumn: typeof input.xColumn === 'string' ? input.xColumn : base.xColumn,
     yColumn: typeof input.yColumn === 'string' ? input.yColumn : base.yColumn,
     seriesColumn: typeof input.seriesColumn === 'string' ? input.seriesColumn : base.seriesColumn,
+    xTitle: typeof input.xTitle === 'string' ? input.xTitle.slice(0, 200) : base.xTitle,
+    yTitle: typeof input.yTitle === 'string' ? input.yTitle.slice(0, 200) : base.yTitle,
     xScale: sanitizeEnum(migrateScale(input.xScale), SCALE_TYPES, base.xScale),
     yScale: sanitizeEnum(migrateScale(input.yScale), SCALE_TYPES, base.yScale),
     xRange: sanitizeRange(input.xRange),
@@ -222,6 +229,7 @@ export function normalizeChartStyle(input) {
 }
 
 export const CHART_STYLE_OPTIONS = Object.freeze({
+  chartTypes: CHART_TYPES,
   pointShapes: POINT_SHAPES,
   lineStyles: LINE_STYLES,
   frameStyles: FRAME_STYLES,

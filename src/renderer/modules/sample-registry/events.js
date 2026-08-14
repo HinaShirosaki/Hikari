@@ -14,6 +14,7 @@ import {
 } from './sample-form.js';
 import { onListClick, renderList } from './sample-list.js';
 import { mergeSamplesFromCsv, parseSamplesCsv, toSamplesCsv } from './csv-io.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function setSampleCsvStatus(ctx, message) {
   if (ctx.dom.sampleCsvStatus) {
@@ -52,6 +53,7 @@ export function bindSampleRegistryEvents(ctx) {
       const rows = parseSamplesCsv(await file.text());
       if (!rows.length) {
         setSampleCsvStatus(ctx, 'Import failed: no rows with a "name" column were found.');
+        showTransientNotice('Import failed: no rows with a "name" column were found.', { type: 'error' });
         return;
       }
       const { created, updated } = mergeSamplesFromCsv(ctx.state, rows);
@@ -61,6 +63,7 @@ export function bindSampleRegistryEvents(ctx) {
       setSampleCsvStatus(ctx, `Imported ${created + updated} samples (${created} new, ${updated} updated).`);
     } catch (error) {
       setSampleCsvStatus(ctx, `Import failed: ${error?.message || 'could not read the CSV file.'}`);
+      showTransientNotice(`Import failed: ${error?.message || 'could not read the CSV file.'}`, { type: 'error' });
     } finally {
       event.target.value = '';
     }

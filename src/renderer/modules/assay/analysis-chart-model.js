@@ -8,28 +8,14 @@ function parseAnalysisCellNumber(value) {
   return parseFirstNumericToken(value);
 }
 
+// Fallback only: every analysis now returns its own chartModel. This runs when a
+// caller hands over a bare headers/rows table (e.g. a restored saved analysis).
 function pickChartMetricIndex(method, headers, numericIndexes) {
   const methodPriority = {
-    grouped_summary: ['mean'],
-    nested_summary: ['mean'],
-    row_summary: ['mean'],
-    column_summary: ['mean'],
-    linear_regression: ['r²', 'r2', 'intercept', 'points'],
-    ec50: ['ec50'],
-    ic50: ['ic50'],
-    survival: ['survival', 'mean'],
-    standard_curve_line: ['r²', 'r2', 'rmse'],
-    standard_curve_4pl_log_concentration: ['r²', 'r2', 'rmse'],
-    standard_curve_4pl_concentration: ['r²', 'r2', 'rmse'],
-    standard_curve_5pl_log_concentration: ['r²', 'r2', 'rmse'],
-    standard_curve_5pl_concentration: ['r²', 'r2', 'rmse'],
-    standard_curve_semilog_line: ['r²', 'r2', 'rmse'],
-    standard_curve_hyperbola: ['r²', 'r2', 'rmse'],
-    standard_curve_quadratic: ['r²', 'r2', 'rmse'],
-    standard_curve_cubic: ['r²', 'r2', 'rmse'],
-    standard_curve_pade_11: ['r²', 'r2', 'rmse']
+    summary: ['mean'],
+    normalize: ['normalized', 'survival', 'mean']
   };
-  const priorities = methodPriority[method] || ['mean', 'value'];
+  const priorities = methodPriority[method] || ['r²', 'r2', 'rmse', 'x50', 'mean', 'value'];
   for (let keywordIndex = 0; keywordIndex < priorities.length; keywordIndex += 1) {
     const keyword = priorities[keywordIndex];
     const match = numericIndexes.find((index) => String(headers[index] || '').toLowerCase().includes(keyword));
@@ -104,21 +90,8 @@ export function buildAnalysisChartModel(result, method, style) {
   }
 
   const numericXAxis = numericXCount / totalCount >= 0.75;
-  const prefersLineMethod = method === 'linear_regression'
-    || method === 'ec50'
-    || method === 'ic50'
-    || method === 'survival'
-    || method === 'standard_curve_line'
-    || method === 'standard_curve_4pl_log_concentration'
-    || method === 'standard_curve_4pl_concentration'
-    || method === 'standard_curve_5pl_log_concentration'
-    || method === 'standard_curve_5pl_concentration'
-    || method === 'standard_curve_semilog_line'
-    || method === 'standard_curve_hyperbola'
-    || method === 'standard_curve_quadratic'
-    || method === 'standard_curve_cubic'
-    || method === 'standard_curve_pade_11';
-  const chartType = numericXAxis && prefersLineMethod ? 'line' : 'bar';
+  // Everything except a summary table is a fit over a continuous X.
+  const chartType = numericXAxis && method !== 'summary' ? 'line' : 'bar';
 
   if (chartType === 'line') {
     const series = Array.from(seriesMap.entries())

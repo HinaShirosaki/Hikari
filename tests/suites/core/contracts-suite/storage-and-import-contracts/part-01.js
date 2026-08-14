@@ -19,7 +19,6 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     );
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
-      readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
@@ -348,7 +347,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const projectContainerSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-container', 'SKILL.md');
         const projectAssayPlotlySkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-assay-plotly', 'SKILL.md');
         assert.match(memoryText, /Name: Atlas/);
-        assert.match(memoryText, /ID: project-1/);
+        assert.doesNotMatch(memoryText, /^ID:/m);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Call the direct Hikari MCP tool `protocol_generation`/);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /expects complete protocol JSON/);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Protocol JSON checklist:/);

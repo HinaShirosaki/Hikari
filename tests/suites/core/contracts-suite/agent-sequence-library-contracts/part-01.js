@@ -56,6 +56,57 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('sequence library helper recovers valid GBK entry folders missing from sqlite', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-recovery-'));
+      try {
+        const entriesRoot = path.join(storageRoot, 'SequenceViewer', 'entries');
+        const recoveredId = 'seq_1777332124519_recovered';
+        const invalidId = 'seq_1777332124520_invalid';
+        await fsPromises.mkdir(path.join(entriesRoot, recoveredId), { recursive: true });
+        await fsPromises.mkdir(path.join(entriesRoot, invalidId), { recursive: true });
+        await fsPromises.writeFile(
+          path.join(entriesRoot, recoveredId, 'Recovered_Vector.gbk'),
+          [
+            'LOCUS       Recovered_Vector    12 bp    DNA     circular SYN 01-JAN-2026',
+            'DEFINITION  Recovered Vector',
+            'FEATURES             Location/Qualifiers',
+            '     promoter        1..6',
+            '                     /label="Recovery promoter"',
+            'ORIGIN',
+            '        1 acgtacgtacgt',
+            '//',
+            ''
+          ].join('\n'),
+          'utf8'
+        );
+        await fsPromises.writeFile(
+          path.join(entriesRoot, invalidId, 'broken.gbk'),
+          'LOCUS       broken\n',
+          'utf8'
+        );
+
+        const recovered = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'saved' });
+        assert.equal(recovered.entries.length, 1);
+        assert.equal(recovered.entries[0].id, recoveredId);
+        assert.equal(recovered.entries[0].name, 'Recovered Vector');
+        assert.equal(recovered.entries[0].sequenceLength, 12);
+        assert.equal(recovered.entries[0].featureCount, 1);
+        assert.equal(recovered.entries[0].topology, 'circular');
+
+        const fetched = await sequenceLibrary.getSequenceEntry({
+          storagePath: storageRoot,
+          id: recoveredId,
+          includeGbk: true
+        });
+        assert.equal(fetched.entry.id, recoveredId);
+        assert.match(fetched.gbkText, /acgtacgtacgt/);
+
+        const stable = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'saved' });
+        assert.equal(stable.entries.length, 1);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('sequence library helper persists user folders and moves entries without coupling sequence data to folders', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-folders-'));
       try {

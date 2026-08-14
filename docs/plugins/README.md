@@ -12,6 +12,7 @@ with Hikari.
 | [plugin-api.md](plugin-api.md) | Host API reference: every verb, its permission, its request/response shape, and how to add a new one. |
 | [imagej-walkthrough.md](imagej-walkthrough.md) | Served plugins: why storage forces `serve: true`, and what "runs locally" does and does not cover. |
 | [service-plugins.md](service-plugins.md) | Service plugins: headless capability providers, e.g. teaching the sequence viewer to open `.dna`. |
+| [`src/plugins/README.md`](../../src/plugins/README.md) | Hikari contributors: source-owned internal plugins that still use the sandbox and public plugin API. |
 
 Runnable examples:
 
@@ -21,7 +22,13 @@ Runnable examples:
 | [`notebook-results`](../../examples/plugins/notebook-results/) | local | Reading and writing notebook data through the host API. |
 | [`imagej`](../../examples/plugins/imagej/) | served | Real ImageJ running locally, on its own loopback origin. |
 | [`snapgene-dna`](../../examples/plugins/snapgene-dna/) | service | Headless `.dna` → GenBank converter, so the sequence viewer can open `.dna`. |
-| [`gel`](../../examples/plugins/gel/) | bundled + served | **The Gel app itself**, moved out of the renderer. It owns its workspace code, keeps a compact record index in `storage`, stores images/reports in `files`, exports through `downloads`, follows host appearance context, and imports pre-port Gel records once. |
+
+Internal reference: [`src/plugins/gel`](../../src/plugins/gel/) is Hikari's
+source-owned, bundled Gel workspace. It is not installed through **Add Plugin
+Folder**, but it deliberately uses the same served iframe and public API as an
+installable plugin. Read it after the smaller examples when you need a
+production-sized reference for persistence, recovery, responsive UI, and
+unsaved-change protection.
 
 **Start here:** follow [quickstart.md](quickstart.md). Copy `hello-world` for a
 minimal page, or `notebook-results` when you need the host API. Both use classic

@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../lib/notify.js';
+
 const DEFAULT_MAX_DEPTH = 80;
 const DEFAULT_MAX_BYTES = 24 * 1024 * 1024;
 const DEFAULT_COALESCE_MS = 700;
@@ -26,6 +28,7 @@ function serializeHistoryState(state) {
     return JSON.stringify(state);
   } catch (error) {
     console.warn('Unable to serialize undo history snapshot:', error);
+    showTransientNotice('Undo history could not be saved.', { type: 'error' });
     return null;
   }
 }
@@ -36,6 +39,7 @@ function parseHistorySnapshot(serialized) {
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
   } catch (error) {
     console.warn('Unable to restore undo history snapshot:', error);
+    showTransientNotice('Undo history could not be restored.', { type: 'error' });
     return null;
   }
 }

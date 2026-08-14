@@ -238,9 +238,10 @@
   gap: 0;
 }
 
-.left-rail-template.assay-results-layout > .assay-results-controls-panel.left-rail-template__rail--pinned {
+/* Analyze rail: a single scroller of foldable sections, nothing pinned. */
+.left-rail-template.assay-results-layout > .assay-results-controls-panel {
   display: grid;
-  grid-template-rows: minmax(148px, 1fr) minmax(0, 3fr);
+  grid-template-rows: minmax(0, 1fr);
   align-content: stretch;
   height: 100%;
   min-height: 0;
@@ -251,18 +252,13 @@
   background: var(--app-left-rail-surface, var(--theme-surface)) !important;
 }
 
-.assay-results-controls-panel > .assay-results-controls-pinned.left-rail-template__pinned {
+.assay-results-controls-panel > .assay-results-rail-scroll.left-rail-template__scroll {
   display: grid;
-  gap: 16px;
+  align-content: start;
+  gap: 0;
   min-height: 0;
-  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  padding: 8px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 16px var(--app-left-rail-padding-inline, 16px);
   overflow-y: auto !important;
-  scrollbar-gutter: stable;
-}
-
-.assay-results-controls-panel > .assay-results-browser-scroll.left-rail-template__scroll {
-  padding: 8px var(--app-left-rail-padding-inline, 16px) 16px;
-  border-bottom: 1px solid var(--app-left-rail-divider);
   scrollbar-gutter: stable;
 }
 
@@ -287,6 +283,16 @@
 .assay-results-output-stage {
   min-width: 0;
   min-height: 0;
+}
+
+/* Folding the plate away hands its vertical space to the chart below it. */
+.assay-result-table-panel > .assay-browser-summary {
+  padding-bottom: 8px;
+}
+
+.assay-result-table-panel:not([open]) > .assay-browser-summary {
+  padding-bottom: 0;
+  color: var(--theme-text-muted);
 }
 
 .assay-results-output-stage {
@@ -1179,6 +1185,72 @@
   box-shadow: inset 0 -4px var(--assay-analysis-column-group-color);
 }
 
+.assay-analysis-format-actions {
+  justify-content: flex-start;
+}
+
+.assay-transform-mode-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.assay-transform-mode-panel[hidden] {
+  display: none;
+}
+
+#assay-transform-formula {
+  font-family: var(--app-font-mono, ui-monospace, monospace);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.assay-formula-help-body {
+  display: grid;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--theme-text-muted);
+}
+
+.assay-formula-help-body p {
+  margin: 0;
+}
+
+.assay-formula-help-body code {
+  font-size: 0.92em;
+}
+
+.assay-transform-arithmetic {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.assay-derived-plate-host {
+  overflow-x: auto;
+}
+
+.assay-derived-plate-table {
+  font-variant-numeric: tabular-nums;
+}
+
+.assay-derived-plate-table th[scope="row"] {
+  position: sticky;
+  left: 0;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-analysis-modifiers {
+  display: grid;
+  gap: 8px;
+  border-left: 2px solid var(--theme-accent);
+  padding-left: 10px;
+}
+
+.assay-analysis-modifiers:not(:has(> label:not([hidden]))) {
+  display: none;
+}
+
 .assay-analysis-checkbox {
   display: flex;
   align-items: center;
@@ -1260,8 +1332,8 @@
     overflow: visible !important;
   }
 
-  .left-rail-template.assay-results-layout > .assay-results-controls-panel.left-rail-template__rail--pinned {
-    grid-template-rows: auto auto;
+  .left-rail-template.assay-results-layout > .assay-results-controls-panel {
+    grid-template-rows: auto;
     align-self: start;
     height: auto;
     min-height: auto;
@@ -1269,13 +1341,12 @@
     overflow: visible !important;
   }
 
-  .assay-results-controls-panel > .assay-results-controls-pinned.left-rail-template__pinned {
+  .assay-results-controls-panel > .assay-results-rail-scroll.left-rail-template__scroll {
     overflow: visible;
     scrollbar-gutter: auto;
   }
 
-  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll,
-  .assay-results-controls-panel > .assay-results-browser-scroll.left-rail-template__scroll {
+  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
     max-height: min(360px, 42vh);
   }
 
@@ -1414,63 +1485,226 @@ body.theme-night .assay-analysis-chart {
   box-shadow: none;
 }
 
-.assay-chart-style {
-  display: block;
+/* Chart toolbar: the settings changed constantly, kept beside the figure. */
+.assay-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
 }
 
-.assay-chart-style-summary {
-  cursor: pointer;
-  color: var(--theme-text-strong);
-  font-weight: 650;
-  padding: 4px 0;
-  list-style: none;
-}
-
-.assay-chart-style-summary::-webkit-details-marker {
+.assay-chart-toolbar[hidden] {
   display: none;
 }
 
-.assay-chart-style-summary::after {
-  content: '▸';
-  margin-left: 6px;
-  font-size: 0.8em;
+.assay-chart-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.assay-chart-toolbar-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--theme-text-muted);
-  transition: transform 140ms ease;
-  display: inline-block;
 }
 
-.assay-chart-style[open] .assay-chart-style-summary::after {
-  transform: rotate(90deg);
+.assay-chart-toolbar-seg {
+  display: flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--theme-surface-elevated);
 }
 
-.assay-chart-style-body {
+.assay-chart-toolbar-seg button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 3px 9px;
+  min-height: 26px;
+  border: 0;
+  border-right: 1px solid var(--theme-border-soft);
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.assay-chart-toolbar-seg button:last-child {
+  border-right: 0;
+}
+
+.assay-chart-toolbar-seg button[aria-pressed="true"] {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  font-weight: 600;
+}
+
+.assay-chart-toolbar-seg button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.assay-chart-toolbar select {
+  min-height: 26px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+}
+
+.assay-chart-toolbar-btn {
+  min-height: 26px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+
+.assay-chart-toolbar-btn[aria-pressed="true"] {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+/* Format panel. */
+.assay-chart-style {
   display: grid;
   gap: 10px;
-  padding-top: 8px;
 }
 
-.assay-chart-style-group {
+.assay-chart-style-presets {
   display: grid;
-  gap: 8px;
-  padding: 8px 10px 10px;
-  margin: 0;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
+  gap: 6px;
 }
 
-.assay-chart-style-group legend {
-  padding: 0 4px;
-  font-size: 0.78rem;
-  color: var(--theme-text-muted);
+.assay-chart-style-preset-actions {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+/* Five tabs in a narrow rail. The rail has vertical room and no horizontal room, so
+   they wrap onto a second line rather than clipping or scrolling out of reach. */
+.assay-chart-style-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.assay-chart-style-tabs button {
+  font: inherit;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 5px 7px 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  color: var(--theme-text-muted);
+  cursor: pointer;
 }
 
-.assay-chart-style-group label {
+.assay-chart-style-tabs button:hover {
+  color: var(--theme-text-strong);
+}
+
+.assay-chart-style-tabs button[aria-selected="true"] {
+  color: var(--theme-text-strong);
+  border-bottom-color: var(--theme-accent);
+  font-weight: 650;
+}
+
+.assay-chart-style-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-chart-style-panel[hidden] {
+  display: none;
+}
+
+.assay-chart-style-panel label {
   display: grid;
   gap: 4px;
   font-size: 0.85rem;
   color: var(--theme-text-strong);
+}
+
+.assay-chart-style-panel label[hidden] {
+  display: none;
+}
+
+.assay-chart-style-subsection {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.assay-chart-style-subsection[hidden] {
+  display: none;
+}
+
+.assay-chart-style-subhead {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-style-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--theme-text-muted);
+}
+
+/* X and Y side by side, so per-axis settings read as a pair. */
+.assay-chart-style-axis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3.6rem) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+/* The rail is narrow; let the paired controls shrink instead of clipping. */
+.assay-chart-style-axis-grid select,
+.assay-chart-style-axis-grid input[type="number"] {
+  min-width: 0;
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 3px 5px;
+}
+
+.assay-chart-style-axis-grid > [hidden] {
+  visibility: hidden;
+  display: revert;
+}
+
+.assay-chart-style-axis-head {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--theme-accent);
+  text-align: center;
+}
+
+.assay-chart-style-axis-label {
+  font-size: 0.75rem;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-style-axis-grid input[type="checkbox"] {
+  justify-self: center;
+  width: auto;
 }
 
 .assay-chart-style-checkbox {
@@ -1478,6 +1712,10 @@ body.theme-night .assay-analysis-chart {
   display: flex !important;
   align-items: center;
   gap: 8px;
+}
+
+.assay-chart-style-checkbox[hidden] {
+  display: none !important;
 }
 
 .assay-chart-style-checkbox input[type="checkbox"] {
@@ -1490,11 +1728,7 @@ body.theme-night .assay-analysis-chart {
   gap: 8px;
 }
 
-.assay-chart-style-group input[type="range"] {
-  width: 100%;
-}
-
-.assay-chart-style-group input[type="color"] {
+.assay-chart-style-panel input[type="color"] {
   width: 100%;
   min-height: 32px;
   padding: 2px;
@@ -1507,7 +1741,7 @@ body.theme-night .assay-analysis-chart {
 
 .assay-chart-style-series-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
@@ -1530,6 +1764,9 @@ body.theme-night .assay-analysis-chart {
 
 .assay-chart-style-actions {
   justify-content: flex-start;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .assay-chart-picker-mount {

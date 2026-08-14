@@ -6,6 +6,7 @@ import {
   NODE_PORT_Y,
   NODE_WIDTH
 } from './constants.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createWorkflowGraphController(config = {}) {
   const runtime = config?.runtime || {};
@@ -563,6 +564,7 @@ export function createWorkflowGraphController(config = {}) {
       }
       if (runtime.activeLinkFromBlockId === targetBlockId) {
         setGraphStatus('Cannot connect a block to itself.');
+        showTransientNotice('Cannot connect a block to itself.', { type: 'error' });
         event.stopPropagation();
         return;
       }

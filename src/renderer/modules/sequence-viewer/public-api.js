@@ -38,6 +38,13 @@ export {
 } from './orf-analysis.js';
 
 export {
+  STANDARD_AMINO_ACIDS,
+  buildAminoAcidSubstitution,
+  chooseClosestAminoAcidCodon,
+  resolveAminoAcidCodonContext
+} from './amino-acid-substitution.js';
+
+export {
   formatSelectedFeatureDetailHtml,
   renderDualStrandSequenceLinesHtml
 } from './rendering.js';

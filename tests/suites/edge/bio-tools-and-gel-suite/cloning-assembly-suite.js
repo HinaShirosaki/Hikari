@@ -235,5 +235,121 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.ok(Array.isArray(result.primers));
       assert.equal(records[0].sequence, seq);            // compute-only, no mutation
     });
+
+    test('[EDGE] designed primers land on the sequence as primer_bind features', () => {
+      const primerAnnotation = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
+      );
+      // Non-repeating, so a 22-mer has exactly one match on the template.
+      const sequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+        + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+        + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+      const record = { name: 'pTest', topology: 'circular', sequence, features: [] };
+      const forwardBinding = record.sequence.slice(20, 42);
+      const reverseBinding = record.sequence.slice(80, 102);
+
+      const result = primerAnnotation.withPrimerBindFeatures(record, [
+        // A 5' tail must not be annotated: only the binding half is on the template.
+        { name: 'ins_F', role: 'gibson-forward', tm: 62, sequence: `CACCAGGGGGG${forwardBinding}`, bindingSequence: forwardBinding },
+        { name: 'ins_R', role: 'gibson-reverse', tm: 61, sequence: reverseBinding, bindingSequence: reverseBinding },
+        { name: 'nowhere', role: 'pcr-forward', sequence: 'GGGGGGGGGGGGGGGGGGGGGG' }
+      ]);
+
+      // Cross-realm objects fail strict deepEqual, so compare plain snapshots.
+      const plain = (value) => JSON.parse(JSON.stringify(value));
+      assert.deepEqual(plain(result.unplaced), ['nowhere']);
+      assert.equal(result.added.length, 2);
+      assert.deepEqual(plain(result.added[0].segments), [{ start: 20, end: 42 }]);
+      assert.equal(result.added[0].type, 'primer_bind');
+      assert.equal(result.added[0].strand, 1);
+      // The reverse primer is given plus-strand here, so it must resolve as -1
+      // only when the template match is the reverse complement.
+      assert.equal(result.added[1].strand, 1);
+      assert.deepEqual(plain(result.added[1].segments), [{ start: 80, end: 102 }]);
+
+      const revcomp = [...reverseBinding].reverse()
+        .map((base) => ({ A: 'T', T: 'A', G: 'C', C: 'G' }[base] || 'N')).join('');
+      const reversed = primerAnnotation.withPrimerBindFeatures(record, [
+        { name: 'ins_R', role: 'pcr-reverse', sequence: revcomp, bindingSequence: revcomp }
+      ]);
+      assert.equal(reversed.added[0].strand, -1);
+      assert.deepEqual(plain(reversed.added[0].segments), [{ start: 80, end: 102 }]);
+
+      // A primer straddling the origin of a plasmid wraps into two segments.
+      const wrapping = record.sequence.slice(-10) + record.sequence.slice(0, 12);
+      const wrapped = primerAnnotation.withPrimerBindFeatures(record, [
+        { name: 'origin_F', role: 'pcr-forward', sequence: wrapping, bindingSequence: wrapping }
+      ]);
+      assert.deepEqual(plain(wrapped.added[0].segments), [
+        { start: record.sequence.length - 10, end: record.sequence.length },
+        { start: 0, end: 12 }
+      ]);
+
+      // A mutagenesis primer carries the edit, so its binding half matches no
+      // template; the full oligo is what lands on the edited construct.
+      const mutagenic = primerAnnotation.withPrimerBindFeatures(record, [{
+        name: 'mutagenesis_F',
+        role: 'mutagenesis-forward',
+        sequence: sequence.slice(50, 74),
+        bindingSequence: `${sequence.slice(50, 62)}GGGGGGGGGGGG`
+      }]);
+      assert.deepEqual(plain(mutagenic.added[0].segments), [{ start: 50, end: 74 }]);
+
+      // Re-running a design replaces its own features instead of stacking them.
+      const rerun = primerAnnotation.withPrimerBindFeatures(
+        { ...record, features: result.features },
+        [{ name: 'ins_F', role: 'gibson-forward', sequence: forwardBinding, bindingSequence: forwardBinding }]
+      );
+      assert.equal(rerun.features.filter((feature) => feature.name === 'ins_F').length, 1);
+      // Callers hand over the whole primer set, so the previous run's ins_R goes with it.
+      assert.equal(rerun.features.filter((feature) => feature.type === 'primer_bind').length, 1);
+
+      // Replacement keys off the feature source, not the generated id, so renaming a
+      // primer between designs cannot leave the old annotation behind.
+      const renamed = primerAnnotation.withPrimerBindFeatures(
+        { ...record, features: result.features },
+        [{ name: 'ins_F_v2', role: 'gibson-forward', sequence: forwardBinding, bindingSequence: forwardBinding }]
+      );
+      assert.equal(
+        renamed.features.filter((feature) => feature.type === 'primer_bind').map((feature) => feature.name).join('|'),
+        'ins_F_v2'
+      );
+    });
+
+    test('[EDGE] annotatePrimersOnSelectedRecord writes and persists onto the selected record', async () => {
+      const primerAnnotation = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
+      );
+      const sequence = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
+      const binding = sequence.slice(12, 34);
+      const state = {
+        records: [{ name: 'other', sequence, features: [] }, { name: 'target', sequence, features: [] }],
+        selectedRecordIndex: 1,
+        selectedFeatureIndex: 3
+      };
+      const saved = [];
+
+      const placed = await primerAnnotation.annotatePrimersOnSelectedRecord({
+        state,
+        primers: [{ name: 'sel_F', role: 'pcr-forward', sequence: binding, bindingSequence: binding }],
+        persistFeatureMutation: async (record, label) => saved.push([record.name, label])
+      });
+
+      assert.equal(placed, 1);
+      assert.equal(state.records[1].features.length, 1);
+      assert.equal(state.records[0].features.length, 0); // untouched
+      assert.equal(state.selectedFeatureIndex, -1);
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0][0], 'target');
+
+      // Nothing to place means no write and no save.
+      const none = await primerAnnotation.annotatePrimersOnSelectedRecord({
+        state,
+        primers: [{ name: 'ghost', sequence: 'GGGGGGGGGGGGGGGGGGGG' }],
+        persistFeatureMutation: async () => saved.push(['ghost'])
+      });
+      assert.equal(none, 0);
+      assert.equal(saved.length, 1);
+    });
   }
 };

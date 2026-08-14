@@ -17,6 +17,10 @@
 
 import { normalizeNotebookResultTable } from '../lib/notebook-result-tables.js';
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../lib/plugin-storage.js';
+import {
+  getSharedLeftRailLayout,
+  setSharedLeftRailWidth
+} from './shared-left-rail.js';
 
 const PROTOCOL_MARKER = 1;
 const MAX_LIST_SIZE = 500;
@@ -43,6 +47,14 @@ function readPluginStorage(state, pluginId) {
 // Every plugin file lives under <storage root>/Plugins/<plugin id>/.
 const PLUGIN_FILES_FOLDER = 'Plugins';
 const MAX_FILE_BASE64_CHARS = 24000000;
+
+// python.run bounds. The host runner enforces its own run time, stdout, and
+// readback limits; these bound what a frame can push across the bridge before
+// the runner ever sees it, and what comes back.
+const MAX_PYTHON_CODE_CHARS = 200000;
+const MAX_PYTHON_INPUT_FILES = 32;
+const MAX_PYTHON_INPUT_CHARS = 4000000;
+const MAX_PYTHON_OUTPUT_CHARS = 120000;
 
 function isCanonicalBase64(value) {
   const encoded = String(value || '');
@@ -96,7 +108,7 @@ function text(value, maxLength = 4000) {
   return String(value ?? '').trim().slice(0, maxLength);
 }
 
-function buildPluginAppContext(state, changed = '') {
+function buildPluginAppContext(state, changed = '', windowObject = globalThis.window) {
   const settings = asObject(state?.settings);
   const appearance = asObject(settings.appearance);
   const requestedMode = text(appearance.mode, 20).toLowerCase();
@@ -110,6 +122,12 @@ function buildPluginAppContext(state, changed = '') {
     },
     storage: {
       configured: Boolean(text(settings.storagePath, 2400))
+    },
+    layout: {
+      leftRail: getSharedLeftRailLayout({
+        document: windowObject?.document,
+        windowObject
+      })
     }
   };
   const normalizedChange = text(changed, 40);
@@ -305,12 +323,30 @@ async function migrateLegacyGelRecords({ state, plugin, api, skipIds = [] }) {
 const VERBS = {
   'app.info': {
     permission: '',
-    handler: (_params, { plugin, state }) => ({
+    handler: (_params, { plugin, state, windowObject }) => ({
       host: 'hikari',
       pluginId: plugin.id,
       permissions: asArray(plugin.permissions),
-      ...buildPluginAppContext(state)
+      ...buildPluginAppContext(state, '', windowObject)
     })
+  },
+
+  'app.setLeftRailWidth': {
+    // Not permission-free: this writes the host's documentElement CSS variable and
+    // the host's localStorage, and the resulting layout event is broadcast to every
+    // other plugin frame.
+    permission: 'layout',
+    handler: (params, { windowObject }) => {
+      if (typeof params?.width !== 'number' || !Number.isFinite(params.width)) {
+        throw new Error('app.setLeftRailWidth requires a finite numeric "width".');
+      }
+      return {
+        leftRail: setSharedLeftRailWidth(params.width, {
+          document: windowObject?.document,
+          windowObject
+        })
+      };
+    }
   },
 
   'protocols.list': {
@@ -576,6 +612,61 @@ const VERBS = {
     }
   },
 
+  // Runs Python in the host's sandbox (one throwaway directory per run, deleted
+  // when it ends). This is the only verb that executes plugin-authored code
+  // outside the frame, so it carries its own permission rather than riding on
+  // `files` or `storage` — a plugin that can read a file has not thereby been
+  // granted a subprocess.
+  //
+  // The frame supplies no filesystem path: `files` and `readbackPaths` are
+  // resolved inside the run directory by the host runner, the same way the
+  // agent's Python tool uses it.
+  'python.run': {
+    permission: 'python',
+    handler: async (params, { api }) => {
+      const code = String(params?.code ?? '');
+      if (!code.trim()) {
+        throw new Error('python.run needs "code".');
+      }
+      if (code.length > MAX_PYTHON_CODE_CHARS) {
+        throw new Error(`python.run rejected: ${code.length} characters of code exceeds the ${MAX_PYTHON_CODE_CHARS}-character limit.`);
+      }
+      if (typeof api?.runPython !== 'function') {
+        throw new Error('Python is unavailable in this environment.');
+      }
+      const files = asArray(params?.files).slice(0, MAX_PYTHON_INPUT_FILES).map((file) => ({
+        path: text(asObject(file).path, 400),
+        content: String(asObject(file).content ?? '')
+      }));
+      const inputChars = files.reduce((total, file) => total + file.content.length, 0);
+      if (inputChars > MAX_PYTHON_INPUT_CHARS) {
+        throw new Error(`python.run rejected: ${inputChars} characters of input files exceeds the ${MAX_PYTHON_INPUT_CHARS}-character limit.`);
+      }
+      const result = asObject(await api.runPython({
+        code,
+        files,
+        readback_paths: asArray(params?.readbackPaths).map((item) => text(item, 400)),
+        timeout_ms: Number(params?.timeoutMs) || undefined
+      }));
+      // Rebuilt, not forwarded: the host result also carries the interpreter
+      // path, run id, and pid, none of which the frame asked for.
+      return {
+        ok: result.ok === true,
+        status: text(result.status, 40),
+        stdout: String(result.stdout ?? '').slice(0, MAX_PYTHON_OUTPUT_CHARS),
+        stderr: String(result.stderr ?? '').slice(0, MAX_PYTHON_OUTPUT_CHARS),
+        exitCode: Number.isFinite(Number(result.exit_code)) ? Number(result.exit_code) : null,
+        timedOut: result.timed_out === true,
+        error: text(result.error, 4000),
+        files: asArray(result.readback_files).map((file) => ({
+          path: text(asObject(file).path, 400),
+          content: String(asObject(file).content ?? '').slice(0, MAX_PYTHON_OUTPUT_CHARS),
+          truncated: asObject(file).truncated === true
+        }))
+      };
+    }
+  },
+
   // A plugin's own dirty flag, pushed up so the host's quit guard can list it.
   // The frame has no host DOM and the protocol has no host->plugin request, so
   // the plugin volunteers this rather than being asked at close time.
@@ -674,7 +765,7 @@ export function createPluginBridge({
   }
 
   function broadcastAppContext(changed = '') {
-    broadcast('app.context', buildPluginAppContext(state, changed));
+    broadcast('app.context', buildPluginAppContext(state, changed, windowObject));
   }
 
   function handleMessage(event) {
@@ -719,7 +810,13 @@ export function createPluginBridge({
       }
       const params = request.params || {};
       const result = verb.handler(params, {
-        state, persist, plugin, onNotebookEntriesChanged, api, pluginUnsaved
+        state,
+        persist,
+        plugin,
+        onNotebookEntriesChanged,
+        api,
+        pluginUnsaved,
+        windowObject
       });
       // Filesystem verbs are async; the rest stay synchronous so a reply still
       // lands in the same turn as the request.

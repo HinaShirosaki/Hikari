@@ -384,6 +384,32 @@ test('[EDGE] sequence-viewer selected ORF translation context uses genomic left-
   assert.equal(context.strand, -1);
   assert.equal(context.anchors.map((anchor) => anchor.aa).join(''), 'KM');
   assert.equal(context.anchors[0].baseIndex < context.anchors[1].baseIndex, true);
+  assert.deepEqual(Array.from(context.anchors[0].codonPositions), [5, 4, 3]);
+});
+test('[EDGE] sequence-viewer amino-acid substitution chooses the nearest codon on both strands', () => {
+  assert.equal(sequenceViewerInternals.chooseClosestAminoAcidCodon('AAA', 'E'), 'GAA');
+
+  const plus = sequenceViewerInternals.buildAminoAcidSubstitution('ATGAAATAG', {
+    codonPositions: [3, 4, 5],
+    currentAminoAcid: 'K',
+    currentCodon: 'AAA',
+    strand: 1,
+    targetAminoAcid: 'E'
+  });
+  assert.equal(plus.targetCodon, 'GAA');
+  assert.equal(plus.changedBaseCount, 1);
+  assert.equal(plus.nextSequence, 'ATGGAATAG');
+
+  const minus = sequenceViewerInternals.buildAminoAcidSubstitution('CTATTTCAT', {
+    codonPositions: [5, 4, 3],
+    currentAminoAcid: 'K',
+    currentCodon: 'AAA',
+    strand: -1,
+    targetAminoAcid: 'E'
+  });
+  assert.equal(minus.targetCodon, 'GAA');
+  assert.equal(minus.changedBaseCount, 1);
+  assert.equal(minus.nextSequence, 'CTATTCCAT');
 });
 test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid row by strand', () => {
   const plusSequence = 'ATGAAATAGCCC';
@@ -558,6 +584,9 @@ test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells w
 
   assert.match(html, /sequence-viewer-aa-chip/);
   assert.doesNotMatch(html, /data-aa-display="TAG"/);
+  assert.match(html, /data-aa-codon="ATG"/);
+  assert.match(html, /data-aa-codon-positions="0,1,2"/);
+  assert.match(html, /Right-click to change this amino acid/);
   assert.match(html, /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
 });
 test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at exact base boundary', () => {

@@ -34,6 +34,12 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-sequence-edit-cancel',
   'sequence-viewer-protein-builder-insert-vector-btn',
   'sequence-viewer-protein-builder-assemble-btn',
+  'sequence-viewer-primer-design-overlay',
+  'sequence-viewer-primer-design-title',
+  'sequence-viewer-primer-design-note',
+  'sequence-viewer-primer-design-result',
+  'sequence-viewer-primer-design-close',
+  'sequence-viewer-primer-design-dismiss',
   'sequence-viewer-status',
   'sequence-viewer-sequence-host',
   'sequence-viewer-feature-rail-host',
@@ -225,10 +231,9 @@ test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset c
   assert.match(document.getElementById('sequence-viewer-alignment-query-status').textContent, /\S/);
 });
 
-test('[EDGE] sequence-viewer status feedback reaches a surface in both workspaces', () => {
-  // setStatus() is how Annotate, backbone recognition and every Vector Builder
-  // action report back. With no status element in the markup it returned early
-  // and the whole app went silent, so the elements have to exist and receive it.
+test('[EDGE] sequence-viewer status feedback uses a transient notice and Vector Builder note', () => {
+  // setStatus() is shared by Annotate, backbone recognition, and Vector Builder
+  // actions. The main workspace reports through the transient notice system.
   const document = createMockDocument([...VECTOR_BUILDER_IDS, 'sequence-viewer-vector-builder-status-note']);
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
@@ -243,13 +248,12 @@ test('[EDGE] sequence-viewer status feedback reaches a surface in both workspace
     features: [{ name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] }]
   });
 
-  const detailStatus = document.getElementById('sequence-viewer-status');
   const vectorStatus = document.getElementById('sequence-viewer-vector-builder-status-note');
 
-  // Opening Vector Builder reports through setStatus; both surfaces carry it,
-  // since only one workspace is on screen at a time.
+  // Opening Vector Builder uses the shared notification system while the
+  // Vector Builder retains its local note.
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
-  assert.match(detailStatus.textContent, /Vector Builder open for pVector/);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Vector Builder open for pVector/);
   assert.match(vectorStatus.textContent, /Vector Builder open for pVector/);
 });
 
@@ -550,15 +554,47 @@ test('[EDGE] sequence-viewer vector builder refuses to replace a primer binding 
   const map = document.getElementById('sequence-viewer-vector-builder-map');
   const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
   const overlay = document.getElementById('sequence-viewer-vector-builder-feature-replace-overlay');
-  const status = document.getElementById('sequence-viewer-status');
-
   trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
   trigger(contextMenu, 'click', { target: contextActionTarget('replace-feature') });
 
   // The primer is the only feature in range, so there is nothing to replace.
   assert.equal(overlay.hidden, true);
-  assert.match(status.textContent, /Primer binding sites cannot be replaced/);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Primer binding sites cannot be replaced/);
+});
+
+test('[EDGE] sequence-viewer vector builder designs primers on the map and annotates them', async () => {
+  const { document } = bootVectorBuilder([
+    { name: 'Whole insert', type: 'misc_feature', strand: 1, source: 'external', segments: [{ start: 0, end: 61 }] }
+  ]);
+
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
+  const overlay = document.getElementById('sequence-viewer-primer-design-overlay');
+  const result = document.getElementById('sequence-viewer-primer-design-result');
+
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+  assert.match(contextMenu.innerHTML, /Design Primer/);
+
+  trigger(contextMenu, 'click', { target: contextActionTarget('design-primer') });
+  await flushAsync();
+
+  // The dialog is shared with the detail workspace, so it has to be reachable
+  // while only the vector builder is visible.
+  assert.equal(Boolean(overlay.hidden), false);
+  assert.match(result.innerHTML, /Pcr Forward/);
+  assert.match(result.innerHTML, /Pcr Reverse/);
+
+  // Designing writes the pair onto the record, so the map redraws with the
+  // primer track — the toggle's own track, only drawn for primer_bind features.
+  assert.match(map.innerHTML, /vector-map__primer/);
+  assert.match(map.innerHTML, /selection_1_61_F/);
+  assert.match(map.innerHTML, /selection_1_61_R/);
+
+  // Going back must not drag the dialog into the detail workspace.
+  trigger(document.getElementById('sequence-viewer-vector-builder-back-btn'), 'click', { preventDefault() {} });
+  assert.equal(Boolean(overlay.hidden), true);
 });
 
 test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-map insert designer', async () => {

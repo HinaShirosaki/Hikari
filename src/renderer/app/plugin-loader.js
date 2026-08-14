@@ -202,10 +202,17 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
         label: plugin.name || plugin.id,
         viewId,
         subtitle: plugin.description || '',
-        icon: '',
-        iconMarkup: PLUGIN_ICON_MARKUP,
-        placement: 'more',
-        aliases: [],
+        icon: plugin.bundled === true ? String(plugin.icon || '') : '',
+        // Only source-owned bundled definitions may inject host SVG markup.
+        // Installed plugin manifests are untrusted and always keep the generic
+        // plug icon so an SVG cannot execute in the host document.
+        iconMarkup: plugin.bundled === true && String(plugin.iconMarkup || '').trim()
+          ? String(plugin.iconMarkup).trim()
+          : PLUGIN_ICON_MARKUP,
+        placement: plugin.bundled === true && plugin.placement === 'dock' ? 'dock' : 'more',
+        aliases: plugin.bundled === true && Array.isArray(plugin.aliases)
+          ? [...plugin.aliases]
+          : [],
         searchInputId: '',
         agentChatRail: false,
         hiddenFromNavigation: false

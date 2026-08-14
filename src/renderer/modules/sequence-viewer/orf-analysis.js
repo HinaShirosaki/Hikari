@@ -110,6 +110,7 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
       baseIndex: anchorIndex,
       aa,
       codon,
+      codonPositions,
       displayText: display.text,
       colorKey: display.colorKey,
       isStop: Boolean(display.isStop),

@@ -15,7 +15,6 @@ function createMainAppPaths(deps = {}) {
   const projectRoot = String(deps.projectRoot || processObject.cwd() || '').trim();
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const defaultDataFileName = String(deps.defaultDataFileName || 'hikari-data.json').trim() || 'hikari-data.json';
-  const telegramConfigFileName = String(deps.telegramConfigFileName || 'telegram-bot.json').trim() || 'telegram-bot.json';
   const scheduledTasksFileName = String(deps.scheduledTasksFileName || 'scheduled-tasks.json').trim()
     || 'scheduled-tasks.json';
   const genomeLibraryFileName = String(deps.genomeLibraryFileName || 'genome-library.json').trim() || 'genome-library.json';
@@ -75,10 +74,6 @@ function createMainAppPaths(deps = {}) {
 
   function getDefaultDataFilePath() {
     return path.join(getDefaultAppDataRoot(), defaultDataFileName);
-  }
-
-  function getTelegramConfigPath() {
-    return path.join(getDefaultAppDataRoot(), 'Config', telegramConfigFileName);
   }
 
   function getScheduledTasksPath() {
@@ -142,7 +137,6 @@ function createMainAppPaths(deps = {}) {
     getDefaultDataFilePath,
     getStorageRootPointerPath,
     getUserDataPath,
-    getTelegramConfigPath,
     getScheduledTasksPath,
     getGenomeLibraryPath,
     getAgentChatLogPath,

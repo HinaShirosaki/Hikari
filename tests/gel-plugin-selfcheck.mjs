@@ -1,10 +1,9 @@
-// Self-check for examples/plugins/gel — the gel analysis pipeline running as a
-// plugin (docs/plugins/plugin-system.md).
+// Self-check for src/plugins/gel — Hikari's internal Gel workspace running
+// through the same sandbox and API boundary as an installed plugin.
 //
-// Two things can silently break it: the folder drifting out of the install
-// contract, and the vendored copy of the analysis modules losing an import when
-// the built-in module moves. Both are checked here against the plugin's own
-// copy, never the source tree, so a stale or half-copied vendor/ fails.
+// Two things can silently break it: the internal folder drifting out of the
+// plugin contract, and the plugin-owned analysis graph losing an import. Both
+// are checked against this source-owned plugin, the only implementation.
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -14,8 +13,12 @@ import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const pluginDir = path.join(projectRoot, 'examples/plugins/gel');
+const pluginDir = path.join(projectRoot, 'src/plugins/gel');
 const { inspectPluginFolder } = require(path.join(projectRoot, 'src/main/lib/inspect-plugin-folder.js'));
+const { loadEsmStyleModule } = require(path.join(projectRoot, 'tests/support/runtime.js'));
+const { BUNDLED_PLUGINS } = loadEsmStyleModule(
+  path.join(projectRoot, 'src/renderer/lib/bundled-plugins.js')
+);
 
 // preprocessWithJs builds a preview ImageData for the canvas. Node has no such
 // global; the preview is never read here, so a holder is enough.
@@ -28,6 +31,7 @@ globalThis.ImageData ??= class ImageData {
 const vendor = path.join(pluginDir, 'vendor/modules/gel');
 const { detectLanes } = await import(new URL(`file://${vendor}/analysis/auto-lanes.js`));
 const { analyzeGelImage } = await import(new URL(`file://${vendor}/analysis/analysis-core.js`));
+const { initPluginLeftRailResizer } = await import(new URL(`file://${pluginDir}/left-rail.js`));
 
 // Six evenly spaced dark lanes on a light background, each with one band.
 function syntheticGel({ width = 320, height = 200, laneCount = 6 } = {}) {
@@ -49,7 +53,114 @@ async function checkFolderContract() {
   assert.equal(result.ok, true, `plugin folder rejected: ${result.error}`);
   assert.equal(result.id, 'gel');
   assert.equal(result.serve, true, 'must stay served — main.js uses ES modules, which an opaque origin cannot load');
-  assert.deepEqual(result.permissions, ['storage', 'files', 'downloads']);
+  // `layout` covers app.setLeftRailWidth, which the in-frame rail commits on pointer-up.
+  assert.deepEqual(result.permissions, ['storage', 'files', 'downloads', 'layout']);
+
+  const bundled = BUNDLED_PLUGINS.find((entry) => entry.id === result.id);
+  assert.ok(bundled, 'Gel must remain registered as an internal bundled plugin');
+  assert.equal(bundled.path, '@bundled/gel', 'renderer state must keep a private token, not a source path');
+  assert.equal(bundled.bundled, true);
+  assert.equal(bundled.icon, 'gel-analysis');
+  assert.match(bundled.iconMarkup, /data-hikari-icon="gel-analysis"/);
+  assert.doesNotMatch(bundled.iconMarkup, /<script|on\w+=/i, 'the trusted host icon stays inert');
+  assert.equal(bundled.name, result.name);
+  assert.equal(bundled.version, result.version);
+  assert.equal(bundled.description, result.description);
+  assert.equal(bundled.serve, result.serve);
+  assert.deepEqual([...bundled.permissions], result.permissions);
+
+  const mainServicesSource = await fs.readFile(
+    path.join(projectRoot, 'src/main/core/main-services.js'),
+    'utf8'
+  );
+  assert.match(
+    mainServicesSource,
+    /pluginId === 'gel' \? path\.join\(projectRoot, 'src', 'plugins', 'gel'\) : ''/,
+    'the private Gel token must resolve to the source-owned packaged folder'
+  );
+}
+
+async function checkLeftRailContract() {
+  const rootStyles = new Map();
+  const documentListeners = new Map();
+  const windowListeners = new Map();
+  const handleListeners = new Map();
+  const bodyClasses = new Set();
+  const railClasses = new Set();
+  const commits = [];
+  let handle = null;
+
+  const rail = {
+    classList: {
+      add: (name) => railClasses.add(name),
+      remove: (name) => railClasses.delete(name)
+    },
+    getBoundingClientRect: () => ({
+      width: Number.parseFloat(rootStyles.get('--shared-left-rail-width')) || 280
+    })
+  };
+  const layout = {
+    querySelector: (selector) => (selector === '[data-sync-left-rail]' ? rail : null),
+    querySelectorAll: () => [],
+    append: (node) => { handle = node; }
+  };
+  const documentObject = {
+    documentElement: {
+      style: { setProperty: (name, value) => rootStyles.set(name, value) }
+    },
+    body: {
+      classList: {
+        add: (name) => bodyClasses.add(name),
+        remove: (name) => bodyClasses.delete(name)
+      }
+    },
+    querySelector: (selector) => (selector === '.gel-workspace.left-rail-template' ? layout : null),
+    querySelectorAll: () => [],
+    createElement: () => ({
+      setAttribute() {},
+      addEventListener: (type, listener) => handleListeners.set(type, listener),
+      removeEventListener: (type) => handleListeners.delete(type),
+      remove() { this.removed = true; }
+    }),
+    addEventListener: (type, listener) => documentListeners.set(type, listener),
+    removeEventListener: (type) => documentListeners.delete(type)
+  };
+  const windowObject = {
+    innerWidth: 1200,
+    addEventListener: (type, listener) => windowListeners.set(type, listener),
+    removeEventListener: (type) => windowListeners.delete(type)
+  };
+
+  const controller = initPluginLeftRailResizer({
+    documentObject,
+    windowObject,
+    initialLayout: {
+      leftRail: { width: 300, min: 240, max: 400, mobileBreakpoint: 980 }
+    },
+    commitWidth: async (width) => {
+      commits.push(width);
+      return { leftRail: { width, min: 240, max: 400, mobileBreakpoint: 980 } };
+    }
+  });
+
+  assert.ok(handle, 'Gel creates one resize handle inside its own iframe');
+  assert.equal(rootStyles.get('--shared-left-rail-width'), '300px');
+  handleListeners.get('pointerdown')({ clientX: 300, preventDefault() {} });
+  documentListeners.get('pointermove')({ clientX: 360 });
+  assert.equal(rootStyles.get('--shared-left-rail-width'), '360px', 'pointer movement resizes immediately');
+  assert.equal(bodyClasses.has('shared-left-rail-resizing'), true);
+  documentListeners.get('pointerup')({});
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.deepEqual(commits, [360], 'only the settled width crosses the host API boundary');
+  assert.equal(railClasses.has('is-resizing'), false);
+  assert.equal(bodyClasses.has('shared-left-rail-resizing'), false);
+
+  controller.applyContext({ leftRail: { width: 390, min: 240, max: 400, mobileBreakpoint: 980 } });
+  assert.equal(rootStyles.get('--shared-left-rail-width'), '390px', 'host layout updates stay synchronized');
+  controller.destroy();
+  assert.equal(handle.removed, true);
+  assert.equal(windowListeners.has('resize'), false, 'destroy releases the resize listener');
 }
 
 async function checkAdapterContract() {
@@ -64,6 +175,8 @@ async function checkAdapterContract() {
   ]);
   assert.doesNotMatch(mainSource, /PERSIST_DEBOUNCE_MS/, 'save acknowledgement must not sit behind a timer');
   assert.match(mainSource, /await hikari\.call\('storage\.set'/, 'persist waits for the host write');
+  assert.match(mainSource, /app\.setLeftRailWidth/, 'the in-frame rail commits its settled width through the host API');
+  assert.match(mainSource, /initPluginLeftRailResizer/, 'Gel initializes its plugin-owned resize controller');
   assert.match(mainSource, /!Number\.isInteger\(version\)/, 'stored schema versions are validated before hydration');
   assert.match(mainSource, /gelAnalyses: state\.gelAnalyses\.map\(toStoredRecord\)/, 'plugin storage keeps a compact record index');
   assert.match(recordSource, /await runtime\.persist\(\)/, 'the Gel save waits for persistence');
@@ -134,5 +247,6 @@ function checkPipeline() {
 
 await checkFolderContract();
 await checkAdapterContract();
+await checkLeftRailContract();
 checkPipeline();
 console.log('gel-plugin-selfcheck: ok');

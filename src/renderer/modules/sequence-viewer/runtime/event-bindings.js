@@ -38,7 +38,7 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
     onError: (error) => actions.setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true)
   });
 
-  elements.loadBtn?.addEventListener('click', (event) => {
+  elements.form?.addEventListener('submit', (event) => {
     event.preventDefault();
     void actions.loadCurrentInput();
   });

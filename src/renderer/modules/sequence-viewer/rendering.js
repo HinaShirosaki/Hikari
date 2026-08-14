@@ -652,15 +652,24 @@ function buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext, cha
       Math.min(remainingBases * safeAdvance, safeAdvance * 3)
     );
     const title = String(anchor?.title || displayText);
+    const codonPositions = (Array.isArray(anchor?.codonPositions) ? anchor.codonPositions : [])
+      .map((position) => Math.round(Number(position)))
+      .filter(Number.isFinite)
+      .join(',');
     cells.push(`
-      <span
+      <button
+        type="button"
         class="sequence-viewer-aa-chip${anchor?.isStop ? ' sequence-viewer-aa-chip-stop' : ''}"
         data-aa="${escapeHtml(anchor?.aa || '')}"
         data-aa-display="${escapeHtml(displayText)}"
         data-aa-color-key="${escapeHtml(anchor?.colorKey || '')}"
+        data-aa-codon="${escapeHtml(anchor?.codon || '')}"
+        data-aa-strand="${orfTranslationContext?.strand === -1 ? -1 : 1}"
+        data-aa-codon-positions="${codonPositions}"
         style="left:${leftPx.toFixed(3)}px;width:${widthPx.toFixed(3)}px;--sequence-viewer-aa-chip-color:${style.color};--sequence-viewer-aa-chip-background:${style.background};--sequence-viewer-aa-chip-border:${style.border};"
         title="${escapeHtml(title)}"
-      >${escapeHtml(displayText)}</span>
+        aria-label="${escapeHtml(`${title}. Right-click to change this amino acid.`)}"
+      >${escapeHtml(displayText)}</button>
     `);
   });
 

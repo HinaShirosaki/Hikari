@@ -10,44 +10,30 @@ const {
   readRows,
   readSingleRow
 } = require('./database');
+const { findNextSavedName } = require('./entry-row-store');
+const { recoverMissingSequenceEntries } = require('./entry-reconcile');
 const { deleteOrphanFeatures, rebuildCdsSequenceTable } = require('./feature-store');
 const {
   ensureLibraryDirectories,
   ensurePathWithinRoot,
   resolveLibraryPaths
 } = require('./paths');
-const {
-  cleanText,
-  normalizeName
-} = require('./utils');
+const { cleanText } = require('./utils');
 const {
   attachAlignmentSourcePaths,
   readAlignmentManifest
 } = require('./alignment-store');
 const { listSequenceFoldersFromDb } = require('./folder-store');
 
-function findNextSavedName(db, requestedName, selfId = '') {
-  const base = normalizeName(requestedName, 'sequence');
-  for (let attempt = 1; attempt < 5000; attempt += 1) {
-    const candidate = attempt === 1 ? base : `${base}_${attempt}`;
-    const normalized = candidate.toLowerCase();
-    const row = readSingleRow(
-      db,
-      'SELECT id FROM sequence_entries WHERE status = ? AND normalized_name = ? LIMIT 1',
-      [STATUS_SAVED, normalized]
-    );
-    if (!row || cleanText(row.id, 200) === cleanText(selfId, 200)) {
-      return candidate;
-    }
-  }
-  throw new Error('Failed to resolve a unique saved sequence name.');
-}
-
 async function listSequenceEntries({ storagePath, status = '' }) {
   const paths = resolveLibraryPaths(storagePath);
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
   try {
+    const recoveredEntryCount = await recoverMissingSequenceEntries({ db, paths });
+    if (recoveredEntryCount > 0) {
+      await persistDatabase(paths.sqlitePath, db);
+    }
     const normalizedStatus = cleanText(status, 40).toLowerCase();
     const filtered = normalizedStatus === STATUS_SAVED || normalizedStatus === STATUS_TEMPORARY;
     const rows = filtered
@@ -84,6 +70,10 @@ async function getSequenceEntry({ storagePath, id, includeGbk = false, includeAl
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
   try {
+    const recoveredEntryCount = await recoverMissingSequenceEntries({ db, paths });
+    if (recoveredEntryCount > 0) {
+      await persistDatabase(paths.sqlitePath, db);
+    }
     const row = readSingleRow(db, 'SELECT * FROM sequence_entries WHERE id = ? LIMIT 1', [safeId]);
     const entry = normalizeEntryRow(row);
     if (!entry) {

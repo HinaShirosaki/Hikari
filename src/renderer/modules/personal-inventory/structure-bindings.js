@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function bindStructureButtons(ctx) {
   const { inventorySections } = ctx.elements;
   const syncStructureButtons = (...args) => ctx.syncStructureButtons(...args);
@@ -19,6 +21,7 @@ export function bindStructureButtons(ctx) {
     button.addEventListener('click', () => {
       pasteInventoryStructure(button).catch(() => {
         setStructureStatus('Cannot read a chemical structure from the clipboard yet.');
+        showTransientNotice('Cannot read a chemical structure from the clipboard yet.', { type: 'error' });
       });
     });
   });

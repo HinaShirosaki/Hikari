@@ -7,6 +7,7 @@ const path = require('node:path');
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 const { createIntakePipeline } = require('./intake/intake-pipeline.js');
+const { createReviewJournalSkipResult } = require('../shared/review-paper-filter.js');
 const {
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction
@@ -508,6 +509,13 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         status: 'error',
         error: cleanText(error?.message || error, 1200)
       };
+    }
+
+    const reviewJournalSkip = createReviewJournalSkipResult(
+      source.journal || source.paper_journal || source.paperJournal
+    );
+    if (reviewJournalSkip) {
+      return reviewJournalSkip;
     }
 
     let pdfBuffer = null;

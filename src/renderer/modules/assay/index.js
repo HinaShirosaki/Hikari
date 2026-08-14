@@ -19,6 +19,7 @@ import { createAssayAgentContext } from './agent/context.js';
 import { bindAssayEvents } from './ui/event-bindings.js';
 import { createAssayBrowserView } from './ui/browser-view.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
   const TabulatorLib = window.Tabulator || null;
@@ -333,6 +334,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
         activeAssay.updatedAt = new Date().toISOString();
         persist();
       }
+    },
+    onTransformChanged: (spec) => {
+      const activeAssay = getAssayById(runtime.activeResultsAssayId);
+      if (activeAssay) {
+        activeAssay.transformSpec = spec;
+        activeAssay.updatedAt = new Date().toISOString();
+        persist();
+      }
     }
   });
 
@@ -368,6 +377,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     resultsManager.renderResultTable();
     clearActiveAssayInfo();
     analysisView.loadChartStyle(assay.chartStyle);
+    analysisView.loadTransformSpec(assay.transformSpec);
     analysisView.clearOutput();
     markLoadedAssayDraftsSaved();
     renderList();
@@ -429,6 +439,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     const assay = getAssayById(assayId);
     if (!assay) {
       setResultStatus('Selected assay plate was not found.');
+      showTransientNotice('Selected assay plate was not found.', { type: 'error' });
       return null;
     }
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
@@ -500,6 +511,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
       resultAttachments: Array.isArray(existing?.resultAttachments) ? existing.resultAttachments : [],
+      // Analysis-side settings live on the assay but are edited in the Analyze view, so
+      // a save from Setup has to carry them forward instead of rebuilding them away.
+      chartStyle: existing?.chartStyle || null,
+      transformSpec: existing?.transformSpec || null,
       updatedAt: new Date().toISOString()
     };
     record.latestAnalysis = assayDefinitionChanged(existing, record)
@@ -541,9 +556,29 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
     layoutManager.setConcentrationUnit('');
     layoutManager.resetSerialDilutionState();
-    if (elements.assayAnalysisMethodInput) {
-      elements.assayAnalysisMethodInput.value = 'grouped_summary';
+    if (elements.assayAnalysisKindInput) {
+      elements.assayAnalysisKindInput.value = 'summary';
     }
+    if (elements.assayAnalysisGroupByInput) {
+      elements.assayAnalysisGroupByInput.value = 'auto';
+    }
+    if (elements.assayAnalysisXAxisInput) {
+      elements.assayAnalysisXAxisInput.value = 'auto';
+    }
+    if (elements.assayAnalysisXTransformInput) {
+      elements.assayAnalysisXTransformInput.value = 'none';
+    }
+    if (elements.assayAnalysisAsymmetricInput) {
+      elements.assayAnalysisAsymmetricInput.checked = false;
+    }
+    if (elements.assayAnalysisPolyOrderInput) {
+      elements.assayAnalysisPolyOrderInput.value = '2';
+    }
+    if (elements.assayAnalysisSubtotalsInput) {
+      elements.assayAnalysisSubtotalsInput.checked = false;
+    }
+    analysisView?.syncAnalysisControls();
+    analysisView?.clearTransform();
     if (elements.assayAnalysisRowGroupsInput) {
       elements.assayAnalysisRowGroupsInput.value = '';
     }
@@ -551,7 +586,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       elements.assayAnalysisColumnGroupsInput.value = '';
     }
     if (elements.assayAnalysisErrorBarsInput) {
-      elements.assayAnalysisErrorBarsInput.checked = false;
+      elements.assayAnalysisErrorBarsInput.checked = true;
     }
     if (elements.assayAnalysisGroupNameInput) {
       elements.assayAnalysisGroupNameInput.value = '';

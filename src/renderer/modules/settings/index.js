@@ -16,6 +16,7 @@ import {
   normalizeAppearanceMode
 } from '../app-state/appearance.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 
 export function initSettings({
@@ -61,9 +62,6 @@ export function initSettings({
     pluginsReloadBtn,
     pluginsStatus,
     pluginsList,
-    telegramForm,
-    settingTelegramToken,
-    clearTelegramTokenBtn,
     locationInput,
     locationAddBtn,
     locationList,
@@ -161,8 +159,6 @@ export function initSettings({
   pluginsReloadBtn?.addEventListener('click', () => {
     window.location.reload();
   });
-  telegramForm?.addEventListener('submit', onSaveTelegramToken);
-  clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   locationAddBtn.addEventListener('click', sampleInventoryController.onAddLocation);
   sampleInventoryLocationAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleInventoryLocation);
   sampleTypeAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleType);
@@ -468,6 +464,7 @@ export function initSettings({
   async function refreshCodexLoginStatus() {
     if (!window.hikariApi?.getCodexLlmStatus) {
       renderCodexStatus('Codex login is unavailable.');
+      showTransientNotice('Codex login is unavailable.', { type: 'error' });
       return codexLoginConfig;
     }
     try {
@@ -477,6 +474,7 @@ export function initSettings({
       return codexLoginConfig;
     } catch {
       renderCodexStatus('Failed to load Codex login status.');
+      showTransientNotice('Failed to load Codex login status.', { type: 'error' });
       return codexLoginConfig;
     }
   }
@@ -484,12 +482,14 @@ export function initSettings({
   async function startCodexLoginFlow() {
     if (!window.hikariApi?.loginCodexLlm) {
       renderCodexStatus('Codex login is unavailable.');
+      showTransientNotice('Codex login is unavailable.', { type: 'error' });
       return { ok: false };
     }
     try {
       const result = await window.hikariApi.loginCodexLlm();
       if (!result?.ok) {
         renderCodexStatus(result?.error || 'Failed to start the OpenAI login flow.');
+        showTransientNotice(result?.error || 'Failed to start the OpenAI login flow.', { type: 'error' });
         return result;
       }
       renderCodexStatus(result?.message || 'OpenAI login opened. Finish the Codex sign-in flow in your browser, then return here.');
@@ -497,6 +497,7 @@ export function initSettings({
       return result;
     } catch {
       renderCodexStatus('Failed to start the OpenAI login flow.');
+      showTransientNotice('Failed to start the OpenAI login flow.', { type: 'error' });
       return { ok: false };
     }
   }
@@ -509,12 +510,14 @@ export function initSettings({
     clearCodexLoginRefreshTimers();
     if (!window.hikariApi?.clearCodexLlmLogin) {
       renderCodexStatus('Codex login reset is unavailable.');
+      showTransientNotice('Codex login reset is unavailable.', { type: 'error' });
       return;
     }
 
     const result = await window.hikariApi.clearCodexLlmLogin();
     if (!result?.ok) {
       renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
+      showTransientNotice(result?.error || 'Failed to clear the saved Codex login.', { type: 'error' });
       return;
     }
 
@@ -615,6 +618,7 @@ export function initSettings({
       }
     } catch {
       renderCodexStatus('Failed to start Codex login from settings.');
+      showTransientNotice('Failed to start Codex login from settings.', { type: 'error' });
     }
   }
 
@@ -635,41 +639,6 @@ export function initSettings({
       renderForms();
     } catch {
       // Keep settings available even when the desktop bridge cannot inspect Codex CLI.
-    }
-  }
-
-  async function onSaveTelegramToken(event) {
-    event.preventDefault();
-    const token = settingTelegramToken?.value?.trim() || '';
-    if (!token) {
-      return;
-    }
-    if (!window.hikariApi?.setTelegramBotToken) {
-      return;
-    }
-
-    const result = await window.hikariApi.setTelegramBotToken(token);
-    if (!result?.ok) {
-      return;
-    }
-
-    if (settingTelegramToken) {
-      settingTelegramToken.value = '';
-    }
-  }
-
-  async function onClearTelegramToken() {
-    if (!window.hikariApi?.clearTelegramBotToken) {
-      return;
-    }
-
-    const result = await window.hikariApi.clearTelegramBotToken();
-    if (!result?.ok) {
-      return;
-    }
-
-    if (settingTelegramToken) {
-      settingTelegramToken.value = '';
     }
   }
 

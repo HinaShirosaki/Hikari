@@ -71,6 +71,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
   const onNavigateVectorBuilder = config?.onNavigateVectorBuilder || (() => {});
   const onReturnToDetail = config?.onReturnToDetail || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
+  const onRequestPrimerDesign = config?.onRequestPrimerDesign || (() => {});
   const onRequestProteinInsert = config?.onRequestProteinInsert || (() => {});
   const getBridge = config?.getBridge || (() => null);
   const getStoragePath = config?.getStoragePath || (() => '');
@@ -515,6 +516,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     menu.innerHTML = `
       ${rangeLabel ? `<p class="small-note">${escapeHtml(rangeLabel)}</p>` : ''}
       ${insertBaseItems}
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="design-primer"${disabledRange}>Design Primer</button>
       <button type="button" class="sequence-viewer-context-item" data-vector-action="replace-feature"${disabledRange}>Replace Feature...</button>
       <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-vector-action="delete-bases"${disabledRange}>Delete Bases${hasRange ? ` (${(range.end - range.start).toLocaleString()} bp)` : ''}</button>
       <hr class="sequence-viewer-context-divider" />
@@ -572,6 +574,13 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     }
     if (!range || range.end <= range.start) {
       setStatus('Select bases or a feature first.', true);
+      return;
+    }
+    if (action === 'design-primer') {
+      hideContextMenu();
+      // The detail workspace owns the dialog; the map only supplies the target
+      // range, so both surfaces design primers the same way.
+      onRequestPrimerDesign({ selectionRange: range });
       return;
     }
     if (action === 'replace-feature') {

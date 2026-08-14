@@ -235,6 +235,59 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('paper intake skips review journals before PDF extraction', async () => {
+      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-review-journal-filter-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'large-review.pdf');
+      let extractionCalls = 0;
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake review pdf bytes\n'));
+        const paper = {
+          id: 'paper-review-1',
+          title: 'A very large chemistry review',
+          journal: 'Chemical Reviews',
+          storedRelativePath: 'Papers/Atlas/large-review.pdf'
+        };
+        const result = await transformPaperPdfToMarkdown({
+          storagePath: storageRoot,
+          paper,
+          paperKnowledgeDatabaseRuntime: {
+            ingestPaperPdf: async () => {
+              throw new Error('Review journal filter must run before the knowledge runtime.');
+            }
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'skipped');
+        assert.equal(result.skipped, true);
+        assert.equal(result.reason, 'review_journal');
+        assert.equal(result.matched_keyword, 'reviews');
+        assert.equal(result.paper_intake_status, 'skipped_review_journal');
+        assert.equal(paper.knowledgeStatus, 'skipped');
+
+        const directRuntime = agentPaperKnowledgeDatabase.createPaperKnowledgeDatabaseRuntime({
+          pdfTextExtractionRuntime: {
+            extractText: async () => {
+              extractionCalls += 1;
+              throw new Error('Review journal filter must run before PDF extraction.');
+            }
+          }
+        });
+        const directResult = await directRuntime.ingestPaperPdf({
+          storage_path: storageRoot,
+          file_path: pdfPath,
+          paper_title: paper.title,
+          journal: 'ANNUAL REVIEW OF BIOCHEMISTRY'
+        });
+        assert.equal(directResult.ok, true);
+        assert.equal(directResult.paper_intake_status, 'skipped_review_journal');
+        assert.equal(extractionCalls, 0);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('paper markdown import migrates legacy paper.md to a title-named compatibility path without re-extraction', async () => {
       const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-markdown-title-migration-'));

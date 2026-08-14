@@ -28,6 +28,9 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
   const resolveFeatureActionContext = config?.resolveFeatureActionContext || (() => null);
   const renderFeatureContextMenu = config?.renderFeatureContextMenu || (() => {});
+  const resolveAminoAcidActionContext = config?.resolveAminoAcidActionContext || (() => null);
+  const renderAminoAcidContextMenu = config?.renderAminoAcidContextMenu || (() => {});
+  const applyAminoAcidReplacement = config?.applyAminoAcidReplacement || (async () => {});
   const openFeatureEditor = config?.openFeatureEditor || (() => {});
   const openPrimerDesignOverlay = config?.openPrimerDesignOverlay || (() => {});
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
@@ -198,7 +201,8 @@ export function bindSequenceViewerDetailEvents(config = {}) {
       return;
     }
     const featureTrigger = event.target?.closest?.('[data-feature-index]') || null;
-    if (featureTrigger) {
+    const aminoAcidTrigger = event.target?.closest?.('[data-aa-codon-positions]') || null;
+    if (featureTrigger || aminoAcidTrigger) {
       return;
     }
     const record = getSelectedRecord();
@@ -329,6 +333,12 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (state.isSelectingSequence) {
       state.isSelectingSequence = false;
     }
+    const aminoAcidContext = resolveAminoAcidActionContext(record, event);
+    if (aminoAcidContext) {
+      event.preventDefault?.();
+      renderAminoAcidContextMenu(aminoAcidContext, event);
+      return;
+    }
     const context = resolveFeatureActionContext(record, event);
     if (!context?.selectionRange && !context?.featureContext) {
       hideFeatureContextMenu();
@@ -340,6 +350,14 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   });
 
   elements.featureContextMenu?.addEventListener('click', (event) => {
+    const targetAminoAcid = cleanText(
+      event?.target?.closest?.('[data-sequence-aa-replacement]')?.dataset?.sequenceAaReplacement,
+      4
+    ).toUpperCase();
+    if (targetAminoAcid) {
+      void applyAminoAcidReplacement(targetAminoAcid);
+      return;
+    }
     const action = cleanText(
       event?.target?.closest?.('[data-sequence-feature-action]')?.dataset?.sequenceFeatureAction,
       40

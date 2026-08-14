@@ -29,6 +29,11 @@ export function createRecordWorkflowActions(ctx) {
     controllers.proteinBuilder?.render();
     controllers.home?.syncHomeControlsState();
     actions.setStatus(state.records.length ? `${statusPrefix}: ${state.records.length} record(s).` : (state.errors[0] || 'No records loaded.'), !state.records.length);
+    // A partial parse reports success in the status line, so the parser errors
+    // would otherwise only exist in the message box.
+    if (state.records.length && state.errors.length) {
+      showTransientNotice(state.errors[0], { type: 'error' });
+    }
   }
 
   async function loadCurrentInput() {
@@ -98,7 +103,7 @@ export function createRecordWorkflowActions(ctx) {
     actions.setInputComposerVisible(true);
     resetDetailSurfaces();
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
-    actions.setStatus('Idle');
+    actions.setStatus('');
   }
 
   function loadFromExternal(payload, loadOptions = {}) {

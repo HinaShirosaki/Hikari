@@ -1,24 +1,45 @@
 import {
-  buildNotebookSampleLinkMetadata,
-  buildNotebookSampleNote,
   formatSampleLinkValue,
-  formatSampleRecordLabel,
   getSampleTypeLabel
 } from '../samples/sample-helpers.js';
 
 export function createInlinePlaceholderController({
   stepsHost,
   getSampleLink,
-  setSampleLink,
   deleteSampleLink,
-  getInventory,
   getSettings,
   onOpenSampleLinkMenu,
   onCloseSampleLinkMenu,
-  onAppendResultLine,
   onPersistSampleLinks,
   onValueCommitted
 } = {}) {
+  function renderedWidth(element) {
+    const rect = typeof element?.getBoundingClientRect === 'function'
+      ? element.getBoundingClientRect()
+      : null;
+    const width = Number(rect?.width) || Number(element?.offsetWidth) || 0;
+    return Math.max(0, width);
+  }
+
+  function setEditorInitialWidth(editor, token) {
+    const width = renderedWidth(token);
+    if (!editor?.style || !width) {
+      return;
+    }
+    editor.dataset.inlineEditorBaseWidth = String(width);
+    editor.style.width = `${width}px`;
+  }
+
+  function resizeEditorForValue(editor) {
+    const baseWidth = Number(editor?.dataset?.inlineEditorBaseWidth) || 0;
+    if (!editor?.style || !baseWidth) {
+      return;
+    }
+    editor.style.width = '1px';
+    const contentWidth = Math.ceil(Number(editor.scrollWidth) || 0);
+    editor.style.width = `${Math.max(baseWidth, contentWidth)}px`;
+  }
+
   function refreshTokenFromValue(wrap) {
     const hiddenValue = wrap?.querySelector('[data-nb-key]');
     const token = wrap?.querySelector('[data-inline-token]');
@@ -47,36 +68,6 @@ export function createInlinePlaceholderController({
       editor.hidden = true;
     }
     token.hidden = false;
-  }
-
-  function linkSample({ menuState, sample } = {}) {
-    if (!menuState?.wrap) {
-      return;
-    }
-    const { wrap, key, placeholderName, placeholderType } = menuState;
-    const hiddenValue = wrap.querySelector('[data-nb-key]');
-    const editor = wrap.querySelector('[data-inline-input]');
-    if (!hiddenValue) {
-      return;
-    }
-    const link = buildNotebookSampleLinkMetadata({
-      key,
-      name: placeholderName,
-      placeholderType,
-      sample,
-      existingLink: getSampleLink(key),
-      inventory: typeof getInventory === 'function' ? getInventory() : {}
-    });
-    setSampleLink(key, link);
-    hiddenValue.value = formatSampleRecordLabel(sample);
-    if (editor) {
-      editor.value = hiddenValue.value;
-    }
-    refreshTokenFromValue(wrap);
-    onAppendResultLine?.(buildNotebookSampleNote(link, 'Linked', typeof getSettings === 'function' ? getSettings() : {}));
-    onPersistSampleLinks?.();
-    onValueCommitted?.({ key, value: hiddenValue.value });
-    onCloseSampleLinkMenu?.();
   }
 
   function closeEditor(editor) {
@@ -150,10 +141,18 @@ export function createInlinePlaceholderController({
     }
 
     editor.value = hiddenValue.value || '';
+    setEditorInitialWidth(editor, token);
     token.hidden = true;
     editor.hidden = false;
     editor.focus();
     editor.select();
+  }
+
+  function onInput(event) {
+    const editor = event.target.closest('[data-inline-input]');
+    if (editor) {
+      resizeEditorForValue(editor);
+    }
   }
 
   function onBlur(event) {
@@ -193,12 +192,12 @@ export function createInlinePlaceholderController({
     }
     stepsHost.addEventListener('click', onClick);
     stepsHost.addEventListener('contextmenu', onContextMenu);
+    stepsHost.addEventListener('input', onInput);
     stepsHost.addEventListener('blur', onBlur, true);
     stepsHost.addEventListener('keydown', onKeydown);
   }
 
   return {
-    bindEvents,
-    linkSample
+    bindEvents
   };
 }

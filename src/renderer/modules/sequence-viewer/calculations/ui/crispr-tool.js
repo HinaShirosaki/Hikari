@@ -7,6 +7,7 @@ import {
   designCrisprGuides,
   buildCrisprGuideTsv
 } from '../crispr.js';
+import { showTransientNotice } from '../../../../lib/notify.js';
 
 function formatPercent(value, digits = 1) {
   if (!Number.isFinite(value)) {
@@ -276,6 +277,7 @@ export function initCrisprTool(options = {}) {
       setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
     } catch {
       crisprCopyTsvBtn.textContent = 'Copy failed';
+      showTransientNotice('Could not copy the sgRNA table to the clipboard.', { type: 'error' });
       setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
     }
   });

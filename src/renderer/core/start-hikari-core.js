@@ -13,7 +13,10 @@ import {
   createUndoService,
   createUnsavedChangesService
 } from '../services/index.js';
-import { initSharedLeftRailResizers } from '../app/shared-left-rail.js';
+import {
+  initSharedLeftRailResizers,
+  SHARED_LEFT_RAIL_CHANGED_EVENT
+} from '../app/shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
 import {
   applyAppearanceSnapshot,
@@ -129,6 +132,9 @@ export function startHikariCore({
   });
   windowObject.addEventListener?.('hikari:storage-changed', () => {
     pluginBridge.broadcastAppContext('storage');
+  });
+  windowObject.addEventListener?.(SHARED_LEFT_RAIL_CHANGED_EVENT, () => {
+    pluginBridge.broadcastAppContext('layout');
   });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
@@ -326,7 +332,6 @@ export function startHikariCore({
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
-    topbarSearchController.initTelegramCommandBridge();
     renderAll();
     navigationShell.enableLastViewPersistence();
     navigationShell.showView(navigationShell.resolveStartupViewId(state));

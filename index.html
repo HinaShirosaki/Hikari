@@ -499,10 +499,32 @@
                 <span class="protocol-detail-mode">Viewer</span>
                 <h3 id="protocol-view-title">Protocol</h3>
               </div>
-              <div class="form-actions">
-                <button type="button" id="protocol-view-edit-btn" class="ghost-btn">Edit</button>
-                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
-                <button type="button" id="protocol-print-btn" class="ghost-btn">Print</button>
+              <div class="form-actions protocol-viewer-actions" aria-label="Protocol actions">
+                <button type="button" id="protocol-view-edit-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Edit protocol" title="Edit protocol">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
+                    <path d="m13.75 7 3.25 3.25"></path>
+                  </svg>
+                  <span class="sr-only">Edit protocol</span>
+                </button>
+                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Export PDF" title="Export PDF">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
+                    <path d="M14 3.75v4h4"></path>
+                    <path d="M12 10v6"></path>
+                    <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
+                  </svg>
+                  <span class="sr-only">Export PDF</span>
+                </button>
+                <button type="button" id="protocol-print-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Print" title="Print">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 8V4.75h10V8"></path>
+                    <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                    <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                    <path d="M8.25 16.5h7.5"></path>
+                  </svg>
+                  <span class="sr-only">Print</span>
+                </button>
                 <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
               </div>
             </div>
@@ -527,7 +549,7 @@
                   Or Paste JSON
                   <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
                 </label>
-                <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+                <p id="protocol-json-import-status" class="small-note" hidden></p>
                 <div class="form-actions">
                   <button type="button" id="import-protocol-json-btn" class="primary-btn">Import Protocol JSON</button>
                 </div>
@@ -627,7 +649,7 @@
 
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
-      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
+      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template is-tool-sidebar-collapsed">
         <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
             <button id="biology-notebook-new-experiment-btn" class="ghost-btn biology-notebook-new-experiment-btn" type="button">
@@ -642,7 +664,6 @@
         </aside>
 
         <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
-          <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
           <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
             <span id="biology-notebook-page-starter-project"></span>
           </div>
@@ -661,13 +682,43 @@
                 <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
-              <div class="biology-notebook-viewer-actions">
-                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn" type="button" hidden>Edit Page Copy</button>
+              <div class="biology-notebook-viewer-actions" aria-label="Notebook page actions">
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" title="Edit page copy" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
+                    <path d="m13.75 7 3.25 3.25"></path>
+                  </svg>
+                  <span class="sr-only">Edit page copy</span>
+                </button>
                 <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn" type="button" hidden>Apply Page Edit</button>
                 <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
-                <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
-                <button id="biology-notebook-print-btn" class="ghost-btn" type="button" hidden>Print</button>
+                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" title="Export PDF" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
+                    <path d="M14 3.75v4h4"></path>
+                    <path d="M12 10v6"></path>
+                    <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
+                  </svg>
+                  <span class="sr-only">Export PDF</span>
+                </button>
+                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" title="Print" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 8V4.75h10V8"></path>
+                    <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                    <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                    <path d="M8.25 16.5h7.5"></path>
+                  </svg>
+                  <span class="sr-only">Print</span>
+                </button>
+                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" title="Save notebook page">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5 3.75h12.25L20 6.5v13.75H5V3.75Z"></path>
+                    <path d="M8 3.75v6h8v-6"></path>
+                    <rect x="8" y="13" width="8" height="7.25" rx="1"></rect>
+                  </svg>
+                  <span class="sr-only">Save notebook page</span>
+                </button>
               </div>
             </div>
 
@@ -700,9 +751,6 @@
                 </div>
                 <div class="biology-notebook-viewer-section-body">
                   <div class="biology-notebook-linked-toolbar">
-                    <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
-                    <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
-                    <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
                     <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
                     <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
                     <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
@@ -731,7 +779,6 @@
                   </label>
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
-                    <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
                     <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                   </div>
                 </div>
@@ -741,21 +788,61 @@
         </div>
 
         <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
-          <div class="biology-notebook-tool-content">
-            <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
-              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true" aria-label="Open molarity calculator" title="Molarity calculator">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
-              </button>
-              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" title="Buffer preparer">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
-              </button>
-              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" title="Fixed volume reaction">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-label="Open bench toolbox" data-hover-caption="Bench toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <path d="M8.5 7V5.75A1.75 1.75 0 0 1 10.25 4h3.5a1.75 1.75 0 0 1 1.75 1.75V7"></path>
+              <rect x="3.5" y="7" width="17" height="12.5" rx="2"></rect>
+              <path d="M3.5 12h17M10 12v2h4v-2"></path>
+            </svg>
+            <span class="sr-only">Open bench toolbox</span>
+          </button>
+          <div id="biology-notebook-tool-content" class="biology-notebook-tool-content">
+            <div class="biology-notebook-tool-toolbar">
+              <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
+                <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="false" aria-label="Open molarity calculator" data-hover-caption="Molarity calculator">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
+                </button>
+                <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" data-hover-caption="Buffer preparer">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
+                </button>
+                <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" data-hover-caption="Fixed volume reaction">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+                </button>
+              </div>
+              <div class="biology-notebook-tool-icon-actions" aria-label="Notebook insert tools">
+                <button id="biology-notebook-add-assay-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add assay" data-hover-caption="Add assay">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5" width="16" height="14" rx="2"></rect>
+                    <circle cx="8" cy="9" r="1"></circle><circle cx="12" cy="9" r="1"></circle><circle cx="16" cy="9" r="1"></circle>
+                    <circle cx="8" cy="13" r="1"></circle><circle cx="12" cy="13" r="1"></circle><circle cx="16" cy="13" r="1"></circle>
+                  </svg>
+                  <span class="sr-only">Add assay</span>
+                </button>
+                <button id="biology-notebook-add-samples-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add samples" data-hover-caption="Add samples">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 4h4M8 4v5l-2.5 6.5A3 3 0 0 0 8.3 20h1.4a3 3 0 0 0 2.8-4.5L10 9V4"></path>
+                    <path d="M14 6h3M15 6v4l-1.8 5.2A2.4 2.4 0 0 0 15.5 19h.9a2.4 2.4 0 0 0 2.3-3.8L17 10V6"></path>
+                  </svg>
+                  <span class="sr-only">Add samples</span>
+                </button>
+                <button id="biology-notebook-add-table-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add table" data-hover-caption="Add table">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5" width="16" height="14" rx="1.5"></rect>
+                    <path d="M4 10h16M10 5v14M15 5v14"></path>
+                  </svg>
+                  <span class="sr-only">Add table</span>
+                </button>
+              </div>
+              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn biology-notebook-tool-collapse-btn" type="button" aria-label="Fold bench toolbox" data-hover-caption="Fold toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="m10 7 5 5-5 5"></path>
+                </svg>
+                <span class="sr-only">Fold bench toolbox</span>
               </button>
             </div>
 
             <div class="biology-notebook-tool-body">
-              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity">
+              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity" hidden>
               <label>
                 Calculation
                 <select id="biology-notebook-tool-molarity-mode">
@@ -1034,6 +1121,77 @@
             <div class="form-actions">
               <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>
               <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit">Start Experiment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="biology-notebook-quick-sample-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-quick-sample-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-quick-sample-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-quick-sample-title">Quick Add Sample</h3>
+              <p class="small-note">Place and record a sample without leaving the notebook.</p>
+            </div>
+            <button id="biology-notebook-quick-sample-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close quick add sample" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-quick-sample-form" class="biology-notebook-quick-sample-form">
+            <div class="biology-notebook-quick-sample-layout">
+              <section class="biology-notebook-quick-sample-storage" aria-label="Sample position and container">
+                <div class="biology-notebook-quick-sample-position-panel">
+                  <span class="biology-notebook-quick-sample-position-label">Position</span>
+                  <output id="biology-notebook-quick-sample-position" class="biology-notebook-quick-sample-position">—</output>
+                  <span id="biology-notebook-quick-sample-position-meta" class="small-note">No container selected</span>
+                  <label class="biology-notebook-quick-sample-container-field">
+                    Container
+                    <select id="biology-notebook-quick-sample-container">
+                      <option value="">No container</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-grid-panel">
+                  <div class="biology-notebook-quick-sample-grid-head">
+                    <strong>Grid box</strong>
+                    <span id="biology-notebook-quick-sample-grid-label" class="small-note">Grid box</span>
+                  </div>
+                  <div id="biology-notebook-quick-sample-grid" class="biology-notebook-quick-sample-grid is-empty" aria-label="Container positions">
+                    <p class="small-note">Choose a container.</p>
+                  </div>
+                </div>
+              </section>
+              <section class="biology-notebook-quick-sample-fields" aria-label="Sample details">
+                <label>
+                  Sample Name
+                  <input id="biology-notebook-quick-sample-name" required autocomplete="off" placeholder="Required" />
+                </label>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    Sample Code
+                    <input id="biology-notebook-quick-sample-code" autocomplete="off" placeholder="Auto" />
+                  </label>
+                  <label>
+                    Type
+                    <select id="biology-notebook-quick-sample-type"></select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    Lot / Batch
+                    <input id="biology-notebook-quick-sample-lot" autocomplete="off" />
+                  </label>
+                  <label>
+                    Concentration
+                    <input id="biology-notebook-quick-sample-concentration" autocomplete="off" placeholder="e.g. 2 mg/mL" />
+                  </label>
+                </div>
+              </section>
+            </div>
+            <div class="biology-notebook-quick-sample-footer">
+              <p id="biology-notebook-quick-sample-status" class="small-note" aria-live="polite"></p>
+              <div class="form-actions">
+                <button id="biology-notebook-quick-sample-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn" type="submit">Add Sample</button>
+              </div>
             </div>
           </form>
         </div>
@@ -1442,14 +1600,14 @@
       </div>
 
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
-        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
-          <div class="assay-results-browser-scroll left-rail-template__scroll">
-            <details id="assay-results-browser-panel" class="assay-browser-panel" open>
-              <summary class="assay-browser-summary">
+        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="assay-results-rail-scroll left-rail-template__scroll">
+            <details id="assay-results-browser-panel" class="foldable-section" open>
+              <summary class="foldable-section__summary">
                 <span>Existing Assays</span>
                 <span id="assay-results-browser-count" class="small-note">0</span>
               </summary>
-              <div class="assay-browser-body">
+              <div class="foldable-section__body">
                 <label>
                   Search Assays
                   <input id="assay-results-search" placeholder="Search assay plates, projects, or notes" />
@@ -1457,8 +1615,12 @@
                 <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
               </div>
             </details>
-          </div>
-          <div class="assay-results-controls-pinned left-rail-template__pinned">
+
+            <details id="assay-analysis-panel" class="foldable-section" open>
+              <summary class="foldable-section__summary">
+                <span>Data Analysis</span>
+              </summary>
+              <div class="foldable-section__body">
             <div class="assay-results-control-section">
               <select id="assay-results-assay-select" hidden>
                 <option value="">Select assay plate</option>
@@ -1490,7 +1652,99 @@
               </div>
               <div id="assay-active-assay-info" class="small-note"></div>
               <div id="assay-result-status" class="small-note"></div>
+              <div id="assay-transform-summary" class="small-note"></div>
             </div>
+
+            <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
+              <summary class="foldable-section__summary">
+                <span>Transform Plate</span>
+              </summary>
+              <div class="foldable-section__body assay-results-control-section">
+              <label>
+                Mode
+                <select id="assay-transform-mode">
+                  <option value="steps" selected>Guided steps</option>
+                  <option value="formula">Formula</option>
+                </select>
+              </label>
+              <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
+                <label>
+                  Formula
+                  <textarea id="assay-transform-formula" rows="3" spellcheck="false"
+                    placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
+                </label>
+                <details class="assay-browser-panel assay-formula-help">
+                  <summary class="assay-browser-summary"><span>Functions and references</span></summary>
+                  <div class="assay-formula-help-body">
+                    <p><code>x</code> is this well's value.</p>
+                    <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
+                      block, <code>H</code> a whole row, or the name of a custom group. A reference
+                      covering more than one well must be wrapped in an aggregate.</p>
+                    <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
+                      <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
+                      <code>COUNT</code>.</p>
+                    <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
+                      <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
+                      <code>POWER</code>, <code>ROUND</code>.</p>
+                    <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
+                    <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
+                      <code>A-C</code> is subtraction in a formula.</p>
+                  </div>
+                </details>
+              </div>
+              <div data-transform-mode="steps" class="assay-transform-mode-panel">
+              <p class="small-note">
+                Each step is optional and applies in the order shown, to every well with a
+                numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
+                or a custom group name.
+              </p>
+              <label>
+                1. Subtract blank
+                <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
+              </label>
+              <label>
+                2. 100% reference
+                <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
+              </label>
+              <label>
+                0% reference (optional)
+                <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
+              </label>
+              <div class="assay-transform-arithmetic">
+                <label>
+                  3. Arithmetic
+                  <select id="assay-transform-arithmetic-op">
+                    <option value="none" selected>None</option>
+                    <option value="add">Add</option>
+                    <option value="subtract">Subtract</option>
+                    <option value="multiply">Multiply by</option>
+                    <option value="divide">Divide by</option>
+                  </select>
+                </label>
+                <label>
+                  Value
+                  <input id="assay-transform-arithmetic-value" type="number" step="any" />
+                </label>
+              </div>
+              <label>
+                4. Transform each value
+                <select id="assay-transform-value">
+                  <option value="none" selected>None</option>
+                  <option value="log10">log10(x)</option>
+                  <option value="ln">ln(x)</option>
+                  <option value="sqrt">sqrt(x)</option>
+                  <option value="reciprocal">1/x</option>
+                  <option value="square">x&sup2;</option>
+                </select>
+              </label>
+              </div>
+              <div id="assay-transform-status" class="small-note"></div>
+              <div class="form-actions">
+                <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
+              </div>
+              </div>
+            </details>
+
 
             <div class="assay-results-control-section">
               <span class="assay-display-label">Groups (optional)</span>
@@ -1513,46 +1767,98 @@
 
             <div class="assay-results-control-section">
               <label>
-                Analysis Method
-                <select id="assay-analysis-method">
-                  <option value="grouped_summary" selected>Grouped Summary</option>
-                  <option value="nested_summary">Nested Summary</option>
-                  <option value="row_summary">Row Summary</option>
-                  <option value="column_summary">Column Summary</option>
-                  <option value="linear_regression">Linear Regression</option>
-                  <option value="ec50">EC50 (4PL Fit)</option>
-                  <option value="ic50">IC50 (4PL Fit)</option>
-                  <option value="survival">Survival %</option>
-                  <optgroup label="Standard curves to interpolate">
-                    <option value="standard_curve_line">Line</option>
-                    <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
-                    <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
-                    <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
-                    <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
-                    <option value="standard_curve_semilog_line">Semilog line</option>
-                    <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
-                    <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
-                    <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
-                    <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
-                  </optgroup>
+                Group By
+                <select id="assay-analysis-group-by">
+                  <option value="auto" selected>Auto (from plate mapping)</option>
+                  <option value="sample">Sample ID</option>
+                  <option value="concentration">Concentration</option>
+                  <option value="sample_concentration">Sample ID &times; Concentration</option>
+                  <option value="row">Plate row</option>
+                  <option value="column">Plate column</option>
+                  <option value="custom">Custom groups</option>
                 </select>
               </label>
-              <label class="assay-analysis-checkbox">
-                <input id="assay-analysis-error-bars" type="checkbox" />
-                Show SD error bars (for Row/Column Summary)
+              <label>
+                Analysis
+                <select id="assay-analysis-kind">
+                  <option value="summary" selected>Summary statistics</option>
+                  <option value="linear">Linear fit</option>
+                  <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                  <option value="hyperbola">Hyperbola</option>
+                  <option value="polynomial">Polynomial</option>
+                  <option value="pade11">Pade (1,1)</option>
+                  <option value="normalize">Normalize to baseline</option>
+                </select>
+              </label>
+              <label id="assay-analysis-x-axis-field" hidden>
+                X Axis
+                <select id="assay-analysis-x-axis">
+                  <option value="auto" selected>Auto</option>
+                  <option value="concentration">Concentration</option>
+                  <option value="sample">Sample ID</option>
+                  <option value="column">Column number</option>
+                </select>
+              </label>
+              <div class="assay-analysis-modifiers">
+                <label id="assay-analysis-x-transform-field" hidden>
+                  X Transform
+                  <select id="assay-analysis-x-transform">
+                    <option value="none" selected>None</option>
+                    <option value="log10">log10</option>
+                  </select>
+                </label>
+                <label class="assay-analysis-checkbox" hidden>
+                  <input id="assay-analysis-asymmetric" type="checkbox" />
+                  Asymmetric (5PL)
+                </label>
+                <label id="assay-analysis-poly-order-field" hidden>
+                  Polynomial Order
+                  <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
+                </label>
+                <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
+                  <input id="assay-analysis-subtotals" type="checkbox" />
+                  Add subtotal rows per first group
+                </label>
+              </div>
+              <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
+                <input id="assay-analysis-error-bars" type="checkbox" checked />
+                Show SD error bars
               </label>
               <div id="assay-analysis-summary" class="small-note"></div>
             </div>
+              </div>
+            </details>
 
-            <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+            <details id="assay-chart-format-panel" class="foldable-section">
+              <summary class="foldable-section__summary">
+                <span>Chart Format</span>
+              </summary>
+              <div class="foldable-section__body">
+                <div id="assay-chart-style-panel" data-assay-chart-style-mount></div>
+              </div>
+            </details>
+
           </div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
           <div class="assay-results-table-stage">
-            <div id="assay-result-table" class="assay-plate-preview"></div>
+            <details id="assay-result-table-panel" class="assay-browser-panel assay-result-table-panel" open>
+              <summary class="assay-browser-summary">
+                <span>Plate Results</span>
+              </summary>
+              <div id="assay-result-table" class="assay-plate-preview"></div>
+            </details>
+            <details id="assay-derived-plate-panel" class="assay-browser-panel assay-result-table-panel" open hidden>
+              <summary class="assay-browser-summary">
+                <span>Derived Plate</span>
+              </summary>
+              <div id="assay-derived-plate-steps" class="small-note"></div>
+              <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+            </details>
           </div>
           <div class="assay-results-output-stage">
+            <div id="assay-chart-toolbar" class="assay-chart-toolbar" hidden></div>
             <div id="assay-analysis-table" class="list-table"></div>
           </div>
         </div>
@@ -1778,11 +2084,6 @@
               <span>Plugins</span>
               <small>User plugin folders</small>
             </button>
-            <!-- ponytail: telegram unwired in main-services; drop `hidden` to bring it back. -->
-            <button type="button" class="settings-nav-item" data-settings-target="telegram" hidden>
-              <span>Telegram Bot</span>
-              <small>Bot token and status</small>
-            </button>
             </section>
           </div>
         </aside>
@@ -1999,21 +2300,6 @@
             </div>
           </section>
 
-          <section class="settings-section" data-settings-panel="telegram" hidden>
-            <div class="settings-section-head">
-              <h3>Telegram Bot</h3>
-            </div>
-            <form id="telegram-form" class="stack-form">
-              <label>
-                Bot Token
-                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Telegram Token</button>
-                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
-              </div>
-            </form>
-          </section>
         </div>
       </div>
     </section>
@@ -3243,9 +3529,29 @@
               <div class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                   <div class="form-actions sequence-viewer-rail-nav-actions">
-                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open</button>
-                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
+                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      <span class="sr-only">New sequence</span>
+                    </button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
+                        <path d="M3.5 7.5V5h7l2 2.5"></path>
+                      </svg>
+                      <span class="sr-only">Open sequence</span>
+                    </button>
+                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="7.5"></circle>
+                        <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
+                        <path d="m17.5 5.75 1 2.5-2.65.45"></path>
+                        <circle cx="7.25" cy="15.5" r="1"></circle>
+                      </svg>
+                      <span class="sr-only">Vector Builder</span>
+                    </button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
@@ -3460,10 +3766,30 @@
             <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
-                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
-                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open</button>
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M12 5v14"></path>
+                      <path d="M5 12h14"></path>
+                    </svg>
+                    <span class="sr-only">New sequence</span>
+                  </button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
+                      <path d="M3.5 7.5V5h7l2 2.5"></path>
+                    </svg>
+                    <span class="sr-only">Open sequence</span>
+                  </button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
+                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="12" r="7.5"></circle>
+                      <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
+                      <path d="m17.5 5.75 1 2.5-2.65.45"></path>
+                      <circle cx="7.25" cy="15.5" r="1"></circle>
+                    </svg>
+                    <span class="sr-only">Vector Builder</span>
+                  </button>
                 </div>
               </section>
             </div>
@@ -3513,14 +3839,34 @@
             </div>
           </div>
 
-          <div class="form-actions">
+          <div class="form-actions sequence-viewer-detail-toolbar">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
-            <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
-            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
-            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
-            <span id="sequence-viewer-status" class="small-note sequence-viewer-status-note"></span>
+            <button id="sequence-viewer-load-btn" type="submit" class="primary-btn">Load</button>
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Annotate sequence" title="Annotate sequence">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
+                <circle cx="8.5" cy="9" r="1"></circle>
+              </svg>
+              <span class="sr-only">Annotate sequence</span>
+            </button>
+            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Recognize backbone and insert" title="Recognize backbone and insert">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <circle cx="10.5" cy="10.5" r="5.5"></circle>
+                <path d="m14.5 14.5 5 5"></path>
+                <path d="M8.5 8.5h4v4h-4Z"></path>
+              </svg>
+              <span class="sr-only">Recognize backbone and insert</span>
+            </button>
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Alignment ▾</button>
+              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 7h14"></path>
+                  <path d="M7 12h12"></path>
+                  <path d="M5 17h14"></path>
+                  <path d="M9 5v4M15 10v4M11 15v4"></path>
+                </svg>
+                <span class="sr-only">Alignment options</span>
+              </button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
                 <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
@@ -3538,7 +3884,13 @@
             </div>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">ORF View ▾</button>
+              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="ORF View options" title="ORF View" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 6h14v12H5Z"></path>
+                  <path d="m10 9 5 3-5 3Z"></path>
+                </svg>
+                <span class="sr-only">ORF View options</span>
+              </button>
               <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
                   <input id="sequence-viewer-orf-toggle" type="checkbox" />
@@ -3589,13 +3941,29 @@
               </div>
             </div>
 
-            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
+            <label class="sequence-viewer-inline-toggle sequence-viewer-toolbar-icon-toggle" title="Show primer binding sites" aria-label="Show primer binding sites">
               <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
-              <span>Primers</span>
+              <span class="sequence-viewer-toolbar-toggle-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                  <path d="M5 8h11"></path>
+                  <path d="m13 5 3 3-3 3"></path>
+                  <path d="M19 16H8"></path>
+                  <path d="m11 13-3 3 3 3"></path>
+                </svg>
+              </span>
+              <span class="sr-only">Show primer binding sites</span>
             </label>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Cutter ▾</button>
+              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Restriction cutter options" title="Restriction cutters" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <circle cx="6.5" cy="7" r="2.5"></circle>
+                  <circle cx="6.5" cy="17" r="2.5"></circle>
+                  <path d="m8.5 8.5 11 8.5"></path>
+                  <path d="m8.5 15.5 11-8.5"></path>
+                </svg>
+                <span class="sr-only">Restriction cutter options</span>
+              </button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
                   <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
@@ -3703,20 +4071,6 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-          <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
-            <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
-              <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-              <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
-            <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
-            <div class="form-actions">
-              <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
-            </div>
-          </section>
-        </div>
-
         <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
@@ -3784,6 +4138,22 @@
         </div>
           </div>
         </div>
+      </div>
+
+      <!-- Sibling of the workspaces, not inside one: the Sequence Viewer and the
+           Vector Builder map both open it, and a hidden workspace hides its children. -->
+      <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
+          <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
+            <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
+            <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
+          <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
+          <div class="form-actions">
+            <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+          </div>
+        </section>
       </div>
 
       <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>

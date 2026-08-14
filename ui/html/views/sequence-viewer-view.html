@@ -6,9 +6,29 @@
               <div class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                   <div class="form-actions sequence-viewer-rail-nav-actions">
-                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open</button>
-                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
+                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      <span class="sr-only">New sequence</span>
+                    </button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
+                        <path d="M3.5 7.5V5h7l2 2.5"></path>
+                      </svg>
+                      <span class="sr-only">Open sequence</span>
+                    </button>
+                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="7.5"></circle>
+                        <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
+                        <path d="m17.5 5.75 1 2.5-2.65.45"></path>
+                        <circle cx="7.25" cy="15.5" r="1"></circle>
+                      </svg>
+                      <span class="sr-only">Vector Builder</span>
+                    </button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />

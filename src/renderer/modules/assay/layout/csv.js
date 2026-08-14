@@ -1,5 +1,6 @@
 import { escapeCsv, parseCsvLine, sanitizeFilePart } from '../shared.js';
 import { buildAllWells, layoutToMap, normalizeLayout } from '../plate-model.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 // CSV plate-template export and import. Self-contained leaf wired by index.js.
 export function createLayoutCsv({
@@ -56,6 +57,7 @@ export function createLayoutCsv({
         .filter(Boolean);
       if (!lines.length) {
         setCsvStatus('Import failed: CSV file is empty.');
+        showTransientNotice('Import failed: CSV file is empty.', { type: 'error' });
         return;
       }
 
@@ -67,6 +69,7 @@ export function createLayoutCsv({
       const indexConcentration = header.indexOf('concentration');
       if (indexWell < 0 && (indexRow < 0 || indexColumn < 0)) {
         setCsvStatus('Import failed: CSV needs "well" or both "row" and "column" columns.');
+        showTransientNotice('Import failed: CSV needs "well" or both "row" and "column" columns.', { type: 'error' });
         return;
       }
 
@@ -99,6 +102,7 @@ export function createLayoutCsv({
       setCsvStatus(`Imported ${runtime.currentLayout.length} mapped wells from ${file.name}.`);
     } catch {
       setCsvStatus('Import failed: could not parse CSV file.');
+      showTransientNotice('Import failed: could not parse CSV file.', { type: 'error' });
     } finally {
       if (assayImportFile) {
         assayImportFile.value = '';

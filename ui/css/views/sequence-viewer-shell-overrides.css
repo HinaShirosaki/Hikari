@@ -83,6 +83,36 @@
   padding: 6px 8px;
 }
 
+#sequence-viewer-detail-view .sequence-viewer-detail-toolbar > .sequence-viewer-toolbar-icon-toggle {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-toolbar > .sequence-viewer-toolbar-icon-toggle:hover {
+  background: var(--theme-surface-subtle);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-toolbar > .sequence-viewer-toolbar-icon-toggle:has(input:checked) {
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-surface));
+  color: var(--theme-accent);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-toolbar > .sequence-viewer-toolbar-icon-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle-group {
   padding: 6px 8px;
   gap: 6px;

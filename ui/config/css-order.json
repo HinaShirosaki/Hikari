@@ -12,6 +12,7 @@
     "ui/css/views/workflow-palette.css"
   ],
   "suffixInputs": [
+    "ui/css/components/foldable-section.css",
     "ui/css/overrides/cross-view-fixes.css",
     "ui/css/views/tool-box-shell-overrides.css",
     "ui/css/views/sample-registry-shell-overrides.css",

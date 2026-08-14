@@ -260,6 +260,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (elements.alignmentQueryStatus) {
       if (state.query.errors.length) {
         elements.alignmentQueryStatus.textContent = state.query.errors[0];
+        showTransientNotice(state.query.errors[0], { type: 'error' });
         elements.alignmentQueryStatus.style.color = 'var(--theme-danger)';
       } else if (state.query.warnings.length) {
         elements.alignmentQueryStatus.textContent = state.query.warnings.join(' | ');

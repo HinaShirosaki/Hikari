@@ -1,5 +1,5 @@
-// Gel ships as a plugin now (examples/plugins/gel); these suites follow the
-// code there, which is the only copy of it left.
+// Gel is an internal plugin (src/plugins/gel); these suites follow that source,
+// which is the only copy of its implementation.
 module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -58,7 +58,7 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
   const readPaths = [];
   const decodedSources = [];
   const recordsModule = loadEsmStyleModule(
-    path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
     {
       window: {
         hikariApi: {
@@ -195,7 +195,7 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
 });
 
 test('[EDGE] gel-analysis report opens in an overlapping window only when report data exists', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const runtime = {
     currentReport: null,
     reportDialogOpen: false
@@ -257,7 +257,7 @@ test('[EDGE] gel-analysis report opens in an overlapping window only when report
 });
 
 test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
-  const cropModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'images', 'crop-controller.js'));
+  const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'images', 'crop-controller.js'));
   const rotationCalls = [];
   const statuses = [];
   const runtime = {
@@ -418,7 +418,7 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
 });
 
 test('[EDGE] gel-analysis outermost lane dividers define gel edges without separate border tools', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -482,7 +482,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
 });
 
 test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -577,7 +577,7 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
 });
 
 test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual step', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -647,7 +647,7 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
 });
 
 test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane-by-lane band mode', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const operations = [];
   let strokeStyle = '';
   const context = {
@@ -752,7 +752,7 @@ test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane
 });
 
 test('[EDGE] gel-analysis peak editor records curve baselines and vertical dividers lane by lane', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const gray = new Float32Array(8 * 5);
   [0.05, 0.2, 0.6, 0.3, 0.1].forEach((value, row) => {
     for (let x = 0; x < 8; x += 1) {
@@ -831,7 +831,7 @@ test('[EDGE] gel-analysis peak editor records curve baselines and vertical divid
 });
 
 test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG width', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const width = 8;
   const height = 101;
   const gray = new Float32Array(width * height);
@@ -922,7 +922,7 @@ test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG
 
 test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks', () => {
   const renderingModule = loadEsmStyleModule(
-    path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'),
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'),
     {},
     ['computeLaneIntensityProfile']
   );
@@ -950,7 +950,7 @@ test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks
 test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', () => {
   const promptCalls = [];
   const manualModule = loadEsmStyleModule(
-    path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'),
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'),
     {
       window: {
         prompt(message, defaultValue) {
@@ -1159,7 +1159,7 @@ test('[EDGE] gel-analysis tilted lane vertices define target-band area in report
 });
 
 test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -1238,7 +1238,7 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
 });
 
 test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -1458,7 +1458,7 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
 });
 
 test('[EDGE] gel-analysis peak integration area uses baseline and vertical dividers', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const rows = renderingModule.calculatePeakIntegrationRows({
     values: [1, 2, 5, 4, 3],
     minValue: 1,
@@ -1842,7 +1842,7 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
     }
   };
   const { createRecordsManager } = loadEsmStyleModule(
-    path.join(__dirname, 'examples', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
     { window: windowObject }
   );
   const form = new MockElement('gel-form');

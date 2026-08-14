@@ -2,7 +2,7 @@ import { exportProtocolPdf } from '../pdf-export/index.js';
 import { printElement } from '../print/index.js';
 import { requestLlmText } from '../../services/direct-llm.js';
 import { parseJsonFromText } from '../../lib/json.js';
-import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
+import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 import { getProtocolDom } from './dom.js';
 import { createProtocolDraftHelpers } from './draft-utils.js';
 import { createProtocolImportController } from './import-controller.js';
@@ -439,8 +439,7 @@ export function initProtocolManagement({
     FileReaderClass,
     parseProtocolsFromJson: draftHelpers.parseProtocolsFromJson,
     onProtocolsChanged,
-    renderList: () => listController?.renderList?.(),
-    defaultProtocolJsonImportStatus: DEFAULT_PROTOCOL_JSON_IMPORT_STATUS
+    renderList: () => listController?.renderList?.()
   });
 
   listController = createProtocolListController({
@@ -628,7 +627,6 @@ export function initProtocolManagement({
     }
   });
 
-  if (ui.protocolJsonImportStatus && !String(ui.protocolJsonImportStatus.textContent || '').trim()) ui.protocolJsonImportStatus.textContent = DEFAULT_PROTOCOL_JSON_IMPORT_STATUS;
   listController.updateSortButtonLabels();
   generationController.syncProtocolGenerateButtonVisibility();
   applyDetailMode('empty');

@@ -57,6 +57,18 @@ const PLUGINS = Object.freeze({
   EXPORT_FILE: 'plugins:export-file'
 });
 
+const PYTHON = Object.freeze({
+  RUN: 'python:run'
+});
+
+const BIOINFORMATICS = Object.freeze({
+  BLAST_SUBMIT: 'bioinformatics:blast-submit',
+  BLAST_STATUS: 'bioinformatics:blast-status',
+  BLAST_RESULTS: 'bioinformatics:blast-results',
+  UNIPROT_SEARCH: 'bioinformatics:uniprot-search',
+  UNIPROT_GET: 'bioinformatics:uniprot-get'
+});
+
 const INVENTORY = Object.freeze({
   PARSE_CHEMICAL_IMPORT: 'inventory:parse-chemical-import'
 });
@@ -85,14 +97,6 @@ const SEQUENCE_AGENT = Object.freeze({
   REQUEST: 'sequence-agent:request',
   RESPONSE: 'sequence-agent:response'
 });
-
-const TELEGRAM = Object.freeze({
-  GET_CONFIG: 'telegram:get-config',
-  SET_TOKEN: 'telegram:set-token',
-  CLEAR_TOKEN: 'telegram:clear-token'
-});
-
-const TELEGRAM_COMMAND_EVENT = 'telegram-command';
 
 const GENOME = Object.freeze({
   LIST: 'genome:list',
@@ -130,12 +134,12 @@ module.exports = {
   STORAGE,
   SYSTEM,
   PLUGINS,
+  PYTHON,
+  BIOINFORMATICS,
   INVENTORY,
   ASSAY,
   SEQUENCE_LIBRARY,
   SEQUENCE_AGENT,
-  TELEGRAM,
-  TELEGRAM_COMMAND_EVENT,
   SCHEDULED_TASK,
   GENOME,
   LLM

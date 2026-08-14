@@ -114,6 +114,11 @@ export function createAssayPlotlyRenderer() {
 
     const st = style || {};
     const isBar = chartModel.chartType === 'bar';
+    // The x axis follows the data, not the chart type. A summary model carries category
+    // strings ("Sample A", "10 uM"); forcing it onto a linear axis coerces every x to
+    // NaN and silently drops every point, which is what a bar -> line override used to do.
+    const hasCategoryX = chartModel.series.some((series) => (series.data || [])
+      .some((point) => point && !Number.isFinite(Number(point.x))));
     const textStyle = st.text || {};
     const fontFamily = textStyle.fontFamily
       ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}`
@@ -243,19 +248,20 @@ export function createAssayPlotlyRenderer() {
       return minor;
     };
 
-    const xScaleCfg = isBar ? { type: 'category', dtick: null } : scaleAxis(st.xScale);
+    const xScaleCfg = isBar || hasCategoryX ? { type: 'category', dtick: null } : scaleAxis(st.xScale);
     const yScaleCfg = scaleAxis(st.yScale);
 
+    // An explicit axis title wins; otherwise the analysis names its own axes.
     const xaxis = {
       ...axisBase,
-      title: { text: chartModel.xLabel || '', font },
+      title: { text: st.xTitle || chartModel.xLabel || '', font },
       type: xScaleCfg.type,
       showgrid: st.showVerticalGrid !== false,
       tickangle: isBar ? -35 : 0
     };
     const yaxis = {
       ...axisBase,
-      title: { text: chartModel.yLabel || '', font },
+      title: { text: st.yTitle || chartModel.yLabel || '', font },
       type: yScaleCfg.type,
       showgrid: st.showHorizontalGrid !== false
     };
@@ -313,8 +319,28 @@ export function createAssayPlotlyRenderer() {
 
     Plotly.newPlot(target, traces, layout, { displayModeBar: false, responsive: false });
     chartHost = target;
-    return { seriesLabels: chartModel.series.map((s) => String(s.label || '')) };
+    return {
+      seriesLabels: chartModel.series.map((s) => String(s.label || '')),
+      chartType: isBar ? 'bar' : 'line',
+      hasErrorBars: traces.some((trace) => Boolean(trace.error_y))
+    };
   }
 
-  return { render, unmount, captureDataUrl };
+  // Full-fidelity export straight from the live figure. Plotly.toImage resolves to a
+  // data URL for both raster and vector formats.
+  function toImage(format = 'png') {
+    const Plotly = getPlotly();
+    if (!chartHost || typeof Plotly?.toImage !== 'function') {
+      return Promise.resolve('');
+    }
+    const rect = chartHost.getBoundingClientRect?.() || { width: 900, height: 500 };
+    return Plotly.toImage(chartHost, {
+      format: format === 'svg' ? 'svg' : 'png',
+      width: Math.max(320, Math.round(rect.width) || 900),
+      height: Math.max(180, Math.round(rect.height) || 500),
+      scale: format === 'svg' ? 1 : 2
+    });
+  }
+
+  return { render, unmount, captureDataUrl, toImage };
 }

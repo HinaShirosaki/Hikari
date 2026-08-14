@@ -159,3 +159,9 @@ function startMainApp() {
 module.exports = {
   startMainApp
 };
+
+// Electron entry point: boot only when launched directly, so requiring this
+// module (tests, tooling) stays side-effect free.
+if (require.main === module) {
+  startMainApp();
+}

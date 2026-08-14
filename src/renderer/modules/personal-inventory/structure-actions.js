@@ -2,6 +2,7 @@ import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
 } from '../../services/chemical-structure-clipboard.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function installStructureActions(ctx) {
   const { helpers, pendingStructureDrafts, persist } = ctx;
@@ -25,6 +26,7 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
   }
 
   ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.');
+  showTransientNotice('Cannot save that structure yet. Try SMILES or MOL/SDF data.', { type: 'error' });
   return false;
 }
 

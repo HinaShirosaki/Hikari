@@ -603,6 +603,96 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.equal(summary.ok, true);
       assert.equal(summary.experiments.length, 61);
     });
+    test('paper intake classification skips review papers without running the summary pipeline', async () => {
+      const intakePipeline = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'intake', 'intake-pipeline.js'));
+      const stages = [];
+      let writes = 0;
+      const runtime = intakePipeline.createIntakePipeline({
+        store: {
+          readPaperMeta: async () => ({ ok: true, meta: {} }),
+          writeIntake: async () => {
+            writes += 1;
+            return { ok: true };
+          }
+        },
+        requestStructuredJsonPayload: async (options = {}) => {
+          stages.push(options.stage);
+          if (options.stage !== 'paper_intake_classification') {
+            throw new Error(`Review intake must stop before ${options.stage}.`);
+          }
+          return {
+            ok: true,
+            payload: {
+              doc_type: 'review',
+              confidence: 0.98,
+              reason: 'The article synthesizes prior literature.'
+            }
+          };
+        }
+      });
+
+      const result = await runtime.runIntakeForPaper({
+        paperId: 'review-paper-1',
+        title: 'A broad review of protein chemistry',
+        markdown: '# A broad review\n\nThis article surveys prior studies.',
+        paperMarkdownRelativePath: 'KnowledgeBase/papers.md/review-paper-1/review.md'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.status, 'skipped_review');
+      assert.equal(result.reason, 'classified_as_review');
+      assert.equal(result.doc_type, 'review');
+      assert.equal(result.ran_summary_pipeline, false);
+      assert.deepEqual(stages, ['paper_intake_classification']);
+      assert.equal(writes, 0);
+
+      let markdownReads = 0;
+      const journalRuntime = intakePipeline.createIntakePipeline({
+        store: {
+          readPaperMeta: async () => ({
+            ok: true,
+            meta: { journal: 'Chemical Society Reviews' }
+          }),
+          readPaperMarkdown: async () => {
+            markdownReads += 1;
+            throw new Error('Journal filtering must run before paper Markdown is read.');
+          },
+          writeIntake: async () => {
+            throw new Error('Journal-filtered reviews must not be written.');
+          }
+        },
+        requestStructuredJsonPayload: async () => {
+          throw new Error('Journal-filtered reviews must not call the classifier.');
+        }
+      });
+      const journalResult = await journalRuntime.runIntakeForPaper({
+        paperId: 'review-journal-paper-1'
+      });
+      assert.equal(journalResult.ok, true);
+      assert.equal(journalResult.status, 'skipped_review_journal');
+      assert.equal(journalResult.reason, 'review_journal');
+      assert.equal(journalResult.matched_keyword, 'reviews');
+      assert.equal(markdownReads, 0);
+
+      // "review" as a bare substring would swallow primary-research venues.
+      const primaryRuntime = intakePipeline.createIntakePipeline({
+        store: {
+          readPaperMeta: async () => ({
+            ok: true,
+            meta: { journal: 'Physical Review Letters' }
+          }),
+          readPaperMarkdown: async () => ({ ok: false, error: 'stop here' }),
+          writeIntake: async () => ({ ok: true })
+        },
+        requestStructuredJsonPayload: async () => {
+          throw new Error('unused');
+        }
+      });
+      const primaryResult = await primaryRuntime.runIntakeForPaper({
+        paperId: 'physical-review-letters-1'
+      });
+      assert.notEqual(primaryResult.status, 'skipped_review_journal');
+    });
     test('pdf text extraction keeps long detected sections within the overall extraction budget by default', async () => {
       const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
       const longBody = (label) => `${label} ${'x'.repeat(19000)}`;

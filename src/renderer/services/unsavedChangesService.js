@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../lib/notify.js';
+
 const EDITOR_SOURCES = Object.freeze([
   { key: 'sampleRegistry', label: 'Sample' },
   { key: 'protocol', label: 'Protocol' },
@@ -10,6 +12,7 @@ function safeHasUnsavedChanges(moduleApi) {
     return moduleApi?.hasUnsavedChanges?.() === true;
   } catch (error) {
     console.warn('Failed to inspect unsaved editor state:', error);
+    showTransientNotice('Could not check an editor for unsaved changes.', { type: 'error' });
     return false;
   }
 }
@@ -39,6 +42,7 @@ export function createUnsavedChangesService({
       external = externalSources() || [];
     } catch (error) {
       console.warn('Failed to collect external unsaved sources:', error);
+      showTransientNotice('Could not check plugin panels for unsaved changes.', { type: 'error' });
     }
     return [
       ...EDITOR_SOURCES.map((source) => ({

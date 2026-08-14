@@ -55,13 +55,15 @@ test('assay-analysis standard curve methods produce fitted rows and line chart m
     assert.equal(Array.isArray(result.chartModel?.series), true, `expected chart series for ${method}`);
     assert.ok(result.chartModel.series.length >= 1, `expected non-empty chart series for ${method}`);
 
+    // Index by header: analyses may add their own columns (e.g. sigmoidal potency).
     const row = result.rows[0];
+    const cell = (header) => row[result.headers.indexOf(header)];
     assert.ok(String(row[0] || '').trim().length > 0, `expected non-empty series label for ${method}`);
-    assert.ok(Number.isFinite(Number(row[1])), `expected numeric point count for ${method}`);
-    assert.ok(Number.isFinite(Number(row[3])), `expected numeric r2 for ${method}`);
-    assert.ok(Number.isFinite(Number(row[4])), `expected numeric rmse for ${method}`);
-    assert.equal(typeof row[5], 'string');
-    assert.equal(typeof row[6], 'string');
+    assert.ok(Number.isFinite(Number(cell('Points'))), `expected numeric point count for ${method}`);
+    assert.ok(Number.isFinite(Number(cell('R²'))), `expected numeric r2 for ${method}`);
+    assert.ok(Number.isFinite(Number(cell('RMSE'))), `expected numeric rmse for ${method}`);
+    assert.equal(typeof cell('Equation'), 'string');
+    assert.equal(typeof cell('Parameters'), 'string');
   });
 });
 

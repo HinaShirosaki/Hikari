@@ -13,8 +13,9 @@
  *   3. Branches:
  *        - research_paper -> extract a one-sentence summary + the full experiment
  *          list (the "summary pipeline").
- *        - everything else -> the "other way": one-sentence summary + section
- *          outline + notable claims, with NO experiment list.
+ *        - review -> stop without running the summary pipeline or writing intake.
+ *        - book / book_chapter / other -> the "other way": one-sentence summary
+ *          + section outline + notable claims, with NO experiment list.
  *   4. Persists the normalized intake record into the KB via `store.writeIntake`.
  *
  * This is the programmatic counterpart of the `hikari-paper-intake` skill: the
@@ -27,6 +28,7 @@
  */
 
 const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
+const { findReviewJournalKeyword } = require('../../shared/review-paper-filter.js');
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
 
 const DEFAULT_MARKDOWN_CHAR_LIMIT = 24000;
@@ -62,6 +64,33 @@ function firstSentence(value, maxLength = 800) {
   // punctuation that is followed by whitespace or end-of-string.
   const match = text.match(/^.*?[.!?](?=\s|$)/u);
   return cleanText(match ? match[0] : text, maxLength);
+}
+
+function buildReviewSkipResult({
+  paperId,
+  status,
+  reason,
+  confidence,
+  journal,
+  matchedKeyword,
+  classified = false
+} = {}) {
+  return {
+    ok: true,
+    status,
+    skipped: true,
+    reason,
+    paper_id: paperId,
+    ...(classified ? { doc_type: 'review', confidence } : {}),
+    ...(journal ? { journal } : {}),
+    ...(matchedKeyword ? { matched_keyword: matchedKeyword } : {}),
+    is_research_paper: false,
+    ran_summary_pipeline: false,
+    experiment_count: 0,
+    pages_read: 0,
+    rejected_experiment_count: 0,
+    one_sentence_summary: ''
+  };
 }
 
 const CLASSIFICATION_SCHEMA = {
@@ -395,8 +424,9 @@ function normalizeClaims(value) {
  *     to the store.
  *   - markdownCharLimit — cap for classification and non-research summaries.
  *     Research experiment extraction always traverses every available page.
- *   - saveNonResearch (default true) — when false, non-research papers are
- *     classified and returned but not written to the KB.
+ *   - saveNonResearch (default true) — when false, books, book chapters, and
+ *     other non-research documents are classified and returned but not written
+ *     to the KB. Reviews are always skipped.
  *   - minResearchConfidence (default 0) — re-route low-confidence research
  *     classifications down the non-research path.
  */
@@ -548,6 +578,25 @@ function createIntakePipeline(deps = {}) {
       return { ok: false, status: 'invalid_arguments', error: 'paperId is required.' };
     }
 
+    const meta = ensureObject((await store.readPaperMeta(paperId))?.meta);
+    const reviewJournalMatch = findReviewJournalKeyword(
+      options.journal
+        || options.paper_journal
+        || options.paperJournal
+        || meta.journal
+        || meta.paper_journal
+        || meta.paperJournal
+    );
+    if (reviewJournalMatch) {
+      return buildReviewSkipResult({
+        paperId,
+        status: 'skipped_review_journal',
+        reason: 'review_journal',
+        journal: reviewJournalMatch.journal,
+        matchedKeyword: reviewJournalMatch.keyword
+      });
+    }
+
     let markdown = cleanText(options.markdown, 0);
     let paperMarkdownRelativePath = cleanText(
       options.paperMarkdownRelativePath || options.paper_markdown_relative_path,
@@ -581,7 +630,6 @@ function createIntakePipeline(deps = {}) {
       };
     }
 
-    const meta = ensureObject((await store.readPaperMeta(paperId))?.meta);
     const title = cleanText(options.title || meta.title || meta.paper_title, 400);
     const doi = cleanText(options.doi || meta.doi, 200);
     const projectIds = asArray(options.projectIds || options.project_ids);
@@ -596,6 +644,16 @@ function createIntakePipeline(deps = {}) {
         paper_id: paperId,
         error: classification.error
       };
+    }
+
+    if (classification.doc_type === 'review') {
+      return buildReviewSkipResult({
+        paperId,
+        status: 'skipped_review',
+        reason: 'classified_as_review',
+        confidence: classification.confidence,
+        classified: true
+      });
     }
 
     const treatAsResearch = classification.doc_type === 'research_paper'

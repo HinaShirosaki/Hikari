@@ -256,6 +256,7 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
     'sequence-viewer-home-open-input',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
+    'sequence-viewer-form',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -292,7 +293,7 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
   const textarea = document.getElementById('sequence-viewer-textarea');
   textarea.value = '>seq1\nACGTACGT\n';
-  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-form'), 'submit');
 
   const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
   const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
@@ -316,6 +317,7 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
     'sequence-viewer-home-open-input',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
+    'sequence-viewer-form',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -402,7 +404,7 @@ ORIGIN
         1 atgcgatttaaa
 //
 `;
-  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-form'), 'submit');
   await flushAsync();
   await flushAsync();
 
@@ -429,6 +431,7 @@ test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible 
     'sequence-viewer-home-open-input',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
+    'sequence-viewer-form',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -513,7 +516,7 @@ ORIGIN
         1 atgcgatttaaa
 //
 `;
-  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-form'), 'submit');
   await flushAsync();
   await flushAsync();
 

@@ -57,19 +57,18 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
     }
   }
 
-  // Detail and Vector Builder are separate workspaces, so status has to land on
-  // both surfaces -- only one of them is on screen at a time.
+  // Transient feedback belongs in the app notification system. The Vector
+  // Builder retains its local note because it is a separate workspace.
   function setStatus(message, isError = false) {
-    if (isError && message) {
-      showTransientNotice(message, { type: 'error' });
+    const text = String(message || '').trim();
+    if (text) {
+      showTransientNotice(text, { type: isError ? 'error' : 'success' });
     }
-    [elements.statusNote, elements.vectorBuilderStatusNote].forEach((node) => {
-      if (!node) {
-        return;
-      }
-      node.textContent = message;
-      node.style.color = isError ? 'var(--theme-danger)' : '';
-    });
+    if (!elements.vectorBuilderStatusNote) {
+      return;
+    }
+    elements.vectorBuilderStatusNote.textContent = text;
+    elements.vectorBuilderStatusNote.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
   function updateMessages() {

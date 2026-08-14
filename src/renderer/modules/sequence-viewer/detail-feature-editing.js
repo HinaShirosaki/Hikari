@@ -7,6 +7,7 @@ import {
 import { cleanText, clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
 import { isOrfFeature } from './orf-analysis.js';
 import { renderPrimerCopyButton } from './primer-copy.js';
+import { annotatePrimersOnSelectedRecord } from './primer-annotation.js';
 
 function sanitizeFeatureType(type) {
   return normalizeFeatureType(type, 'misc_feature');
@@ -366,6 +367,20 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       elements.primerDesignOverlay.hidden = false;
     }
     elements.primerDesignCloseBtn?.focus?.();
+
+    // Returned so a caller in another workspace can re-render once the primers
+    // are on the record.
+    return (async () => {
+      const placed = await annotatePrimersOnSelectedRecord({
+        state,
+        primers,
+        persistFeatureMutation,
+        label: `Annotated ${primers.length} designed primer${primers.length === 1 ? '' : 's'} on the sequence.`
+      });
+      if (placed) {
+        renderActiveRecord();
+      }
+    })();
   }
 
   function renderFeatureContextMenu(context, event) {

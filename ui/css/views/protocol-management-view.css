@@ -144,8 +144,15 @@
 }
 
 .left-rail-template.protocol-workspace > .protocol-list-panel > .protocol-list-scroll.left-rail-template__scroll {
+  --protocol-list-row-inline-padding: var(--app-left-rail-padding-inline, 16px);
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
+}
+
+.protocol-list-scroll > .list-table {
+  min-width: 0;
+  width: calc(100% + var(--protocol-list-row-inline-padding) + var(--protocol-list-row-inline-padding));
+  margin-inline: calc(-1 * var(--protocol-list-row-inline-padding));
 }
 
 .protocol-list-pinned > [hidden] {
@@ -153,9 +160,11 @@
 }
 
 .protocol-list-row {
+  box-sizing: border-box;
+  width: 100%;
   grid-template-columns: minmax(220px, 1fr) auto;
   gap: 12px;
-  padding: 14px 0;
+  padding: 14px var(--protocol-list-row-inline-padding);
   cursor: pointer;
   position: relative;
   border-bottom: 0;
@@ -170,10 +179,8 @@
 }
 
 .protocol-list-row-selected {
-  box-sizing: border-box;
-  width: calc(100% + var(--app-left-rail-padding-inline, 16px) + var(--app-left-rail-padding-inline, 16px));
-  margin-inline: calc(-1 * var(--app-left-rail-padding-inline, 16px));
-  padding-inline: var(--app-left-rail-padding-inline, 16px) !important;
+  margin-inline: 0;
+  padding-inline: var(--protocol-list-row-inline-padding) !important;
   background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 82%);
 }
 
@@ -293,6 +300,46 @@
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
+}
+
+.protocol-viewer-actions {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.protocol-viewer-icon-btn.ghost-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  line-height: 1;
+}
+
+.protocol-viewer-icon-btn svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.protocol-viewer-icon-btn.ghost-btn:hover,
+.protocol-viewer-icon-btn.ghost-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .protocol-preview-block {

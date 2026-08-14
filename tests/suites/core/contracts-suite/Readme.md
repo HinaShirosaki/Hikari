@@ -7,7 +7,7 @@ This folder holds the large core contract tests split by concern.
 - `agent-contracts-a.js`: agent registrar, controller, logging, research, and tool wiring contracts.
 - `agent-contracts-b.js`: reusable helper/runtime exports and runtime registry contracts.
 - `agent-sequence-library-contracts.js`: sequence library storage, search, promotion, and backbone recognition contracts.
-- `telegram-and-manifest-contracts.js`: Telegram bot internals, package manifest, and DOM id coverage checks.
+- `manifest-contracts.js`: package manifest and DOM id coverage checks.
 - `index.js`: thin entry point used by the core suite loader.
 
 Maintenance notes:

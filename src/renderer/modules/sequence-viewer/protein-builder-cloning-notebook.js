@@ -1,11 +1,13 @@
 import { assembleCloningPlan } from './cloning-assembly.js';
+import { calculateFixedReaction } from '../../lib/bench-calculations.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
 
 const CLONING_NOTEBOOK_SOURCE = 'protein_builder_cloning_assembly';
 const CLONING_PROJECT_NAME = 'Protein Builder';
 const CLONING_PROJECT_DESCRIPTION = 'Automatically collected cloning designs from Protein Builder.';
 const CLONING_PROTOCOL_ID = 'protein-builder-cloning-assembly-protocol';
-const CLONING_PROTOCOL_NAME = 'Protein Builder Cloning Assembly';
+const CLONING_PROTOCOL_NAME = 'PCR Thermocycle Program';
+const CLONING_REACTION_CALCULATION_ID = 'protein-builder-pcr-fixed-reaction';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -372,38 +374,61 @@ export function formatProteinBuilderCloningNotebookResult({
   return lines.filter((line, index, list) => line || list[index - 1]).join('\n').trim();
 }
 
-function buildProtocolSteps(plan = {}) {
-  const procedureSteps = asArray(plan?.stepByStepProcedure);
-  if (procedureSteps.length) {
-    return procedureSteps.map((step, index) => ({
-      id: `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
-      text: `${cleanText(step?.title, 160) || `Step ${index + 1}`}: ${cleanText(step?.details, 800) || 'Follow the planned cloning step.'}`,
-      placeholders: []
-    }));
-  }
-
+function formatThermocycleCondition(step = {}) {
   return [
-    {
-      id: `${CLONING_PROTOCOL_ID}_step_1`,
-      text: 'Review Protein Builder cloning inputs and primer plan.',
-      placeholders: []
-    }
-  ];
+    cleanText(step?.label, 120) || 'Thermocycle step',
+    cleanText(step?.temperature, 60),
+    cleanText(step?.time, 60)
+  ].filter(Boolean).join(' - ');
 }
 
-function buildCloningProtocol(plan = {}, nowIso = '') {
+function buildProtocolSteps(pcrProgram = {}) {
+  const programSteps = asArray(pcrProgram?.steps);
+  if (!programSteps.length) {
+    return [{
+      id: `${CLONING_PROTOCOL_ID}_step_1`,
+      text: 'Configure the thermocycler with the generated PCR program.',
+      placeholders: []
+    }];
+  }
+
+  const cyclingSteps = programSteps.filter((step) => Math.max(1, Number(step?.cycles) || 1) > 1);
+  const singleSteps = programSteps.filter((step) => Math.max(1, Number(step?.cycles) || 1) === 1);
+  const steps = singleSteps
+    .filter((step) => cleanText(step?.label, 80).toLowerCase() === 'initial denaturation')
+    .map((step) => formatThermocycleCondition(step));
+
+  if (cyclingSteps.length) {
+    const cycleCount = Math.max(...cyclingSteps.map((step) => Math.max(1, Number(step?.cycles) || 1)));
+    steps.push(`Repeat for ${cycleCount} cycles: ${cyclingSteps.map((step) => formatThermocycleCondition(step)).join('; ')}.`);
+  }
+
+  singleSteps
+    .filter((step) => cleanText(step?.label, 80).toLowerCase() !== 'initial denaturation')
+    .forEach((step) => steps.push(formatThermocycleCondition(step)));
+
+  return steps.map((text, index) => ({
+    id: `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
+    text,
+    placeholders: []
+  }));
+}
+
+function buildCloningProtocol(pcrProgram = {}, nowIso = '') {
   return {
     id: CLONING_PROTOCOL_ID,
     name: CLONING_PROTOCOL_NAME,
-    purpose: 'Design cloning primers and PCR setup for a Protein Builder assembled construct.',
+    purpose: 'Run the generated high-fidelity PCR thermocycle program for the cloning design.',
     materials: [
-      'Protein Builder insert DNA template',
-      'Selected vector backbone template',
-      'Designed primers',
-      'High-fidelity DNA polymerase'
+      'DNA template',
+      'Forward and reverse primers',
+      'dNTP mix',
+      'High-fidelity DNA polymerase',
+      'Polymerase buffer',
+      'Nuclease-free water'
     ],
-    steps: buildProtocolSteps(plan),
-    troubleshooting: 'If primer design is infeasible, adjust the selected backbone, fragment order, or assembly strategy.',
+    steps: buildProtocolSteps(pcrProgram),
+    troubleshooting: 'If amplification is weak or nonspecific, adjust annealing temperature and extension time for the selected primer pair and polymerase.',
     createdAt: nowIso,
     updatedAt: nowIso,
     source: CLONING_NOTEBOOK_SOURCE
@@ -432,9 +457,9 @@ function ensureProteinBuilderProject(state, createId, nowIso) {
   return project;
 }
 
-function ensureProteinBuilderProtocol(state, plan, nowIso) {
+function ensureProteinBuilderProtocol(state, pcrProgram, nowIso) {
   state.protocols = asArray(state.protocols);
-  const nextProtocol = buildCloningProtocol(plan, nowIso);
+  const nextProtocol = buildCloningProtocol(pcrProgram, nowIso);
   const existingIndex = state.protocols.findIndex((protocol) => (
     cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID
   ));
@@ -448,6 +473,68 @@ function ensureProteinBuilderProtocol(state, plan, nowIso) {
   }
   state.protocols.push(nextProtocol);
   return nextProtocol;
+}
+
+function resultTextAfterName(text) {
+  const source = String(text || '').trim();
+  const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
+  return match ? match[1].trim() : source;
+}
+
+export function buildProteinBuilderPcrReactionCalculation(pcrProgram = {}, nowIso = '') {
+  const polymerase = cleanText(pcrProgram?.polymerase, 160) || 'High-fidelity DNA polymerase';
+  const result = calculateFixedReaction({
+    totalVolumeValue: '50 uL',
+    totalVolumeUnit: 'uL',
+    fillName: 'Nuclease-free water',
+    reagents: [
+      { rowIndex: 1, name: 'Forward primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+      { rowIndex: 2, name: 'Reverse primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+      { rowIndex: 3, name: 'dNTP mix', stockConcentration: '10 mM', finalConcentration: '0.2 mM' },
+      { rowIndex: 4, name: polymerase, manualVolumeValue: '0.5 uL' },
+      { rowIndex: 5, name: '5x polymerase buffer', stockConcentration: '5x', finalConcentration: '1x' },
+      { rowIndex: 6, name: 'Template DNA', manualVolumeValue: '1 uL' }
+    ]
+  });
+  const rowsByIndex = new Map(asArray(result?.inputs?.reagents).map((row, index) => (
+    [Math.max(1, Number(row?.rowIndex) || index + 1), row]
+  )));
+  const rows = asArray(result?.details).map((detail, index) => {
+    const rowDetail = asArray(detail?.details)[0] || {};
+    const rowInput = rowsByIndex.get(Math.max(1, Number(detail?.rowIndex) || index + 1)) || {};
+    return [
+      cleanText(rowDetail?.name || detail?.inputs?.name || rowInput?.name, 160),
+      cleanText(rowInput?.stockConcentration, 80),
+      cleanText(rowInput?.finalConcentration, 80),
+      cleanText(rowDetail?.quantityText || resultTextAfterName(detail?.resultText), 80)
+    ];
+  });
+
+  return {
+    id: CLONING_REACTION_CALCULATION_ID,
+    type: result.type,
+    mode: result.mode,
+    title: result.title,
+    inputs: result.inputs,
+    table: {
+      caption: 'Fixed Volume Reaction',
+      metaRows: [['Total volume', '50 uL', '', '']],
+      headers: ['Item', 'Stock Conc.', 'Final Conc.', 'Volume'],
+      rows,
+      footerRows: [[result?.fill?.name || 'Nuclease-free water', '', '', result?.fill?.text || '']]
+    },
+    result: result.resultText,
+    formula: result.formulaText,
+    summary: result.resultText || result.formulaText,
+    createdAt: nowIso,
+    status: result.status || ''
+  };
+}
+
+function appendGeneratedPcrReaction(calculations, reactionCalculation) {
+  return asArray(calculations)
+    .filter((calculation) => cleanText(calculation?.id, 160) !== CLONING_REACTION_CALCULATION_ID)
+    .concat(reactionCalculation);
 }
 
 function cloneProtocolSnapshot(protocol = {}) {
@@ -495,8 +582,8 @@ export function createProteinBuilderCloningNotebookPage({
 
   const nowIso = new Date().toISOString();
   const project = ensureProteinBuilderProject(state, createId, nowIso);
-  const protocol = ensureProteinBuilderProtocol(state, cloningPlan, nowIso);
   const pcrProgram = buildProteinBuilderPcrProgram(cloningPlan);
+  const protocol = ensureProteinBuilderProtocol(state, pcrProgram, nowIso);
   const backboneName = buildBackboneName(backbone);
   const safeConstructName = cleanText(constructName, 160)
     || cleanText(assembledRecord?.name, 160)
@@ -528,6 +615,10 @@ export function createProteinBuilderCloningNotebookPage({
     result,
     resultTable,
     resultTables: resultTable ? [resultTable] : [],
+    toolCalculations: appendGeneratedPcrReaction(
+      existingEntry?.toolCalculations,
+      buildProteinBuilderPcrReactionCalculation(pcrProgram, nowIso)
+    ),
     resultFiles: [],
     resultFileRecords: [],
     storageFolder: '',

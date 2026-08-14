@@ -1,4 +1,5 @@
 import { createProteinBuilderCloningNotebookPage } from '../protein-builder-cloning-notebook.js';
+import { withPrimerBindFeatures } from '../primer-annotation.js';
 import { cleanText } from '../shared.js';
 import {
   buildAssembledPlasmidPayload,
@@ -88,6 +89,13 @@ export function installProteinBuilderAssemblyActions(ctx) {
       } catch (error) {
         notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
       }
+
+      // Annotate before the review payload is built, so the construct opens with
+      // its primers already on the map and carries them into the saved record.
+      payload.features = withPrimerBindFeatures(
+        payload,
+        cloningNotebookResult?.plan?.primerOligoPlan?.primers
+      ).features;
 
       const reviewConfirmation = buildProteinBuilderConfirmationPayload({
         assembledRecord: payload,

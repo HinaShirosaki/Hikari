@@ -14,6 +14,7 @@ const {
   persistDatabase,
   readSingleRow
 } = require('./database');
+const { findNextSavedName, upsertEntryRow } = require('./entry-row-store');
 const { replaceFeatureOccurrencesForEntry } = require('./feature-store');
 const {
   clearDirectoryContents,
@@ -28,7 +29,7 @@ const {
   normalizeStatus,
   sanitizeFileName
 } = require('./utils');
-const { findNextSavedName, getSequenceEntry } = require('./entry-read');
+const { getSequenceEntry } = require('./entry-read');
 const {
   attachAlignmentSourcePaths,
   readAlignmentManifest,
@@ -119,33 +120,6 @@ function buildEntryRow({ existing, payload, entryId, resolvedName, status, gbkAb
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
-}
-
-function upsertEntryRow(db, row) {
-  db.run(
-    `INSERT INTO sequence_entries (
-       id, name, normalized_name, status, source_format, topology, sequence_length, feature_count,
-       feature_index_version, gbk_rel_path, html_rel_path, folder_id, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       name = excluded.name,
-       normalized_name = excluded.normalized_name,
-       status = excluded.status,
-       source_format = excluded.source_format,
-       topology = excluded.topology,
-       sequence_length = excluded.sequence_length,
-       feature_count = excluded.feature_count,
-       feature_index_version = excluded.feature_index_version,
-       gbk_rel_path = excluded.gbk_rel_path,
-       html_rel_path = excluded.html_rel_path,
-       folder_id = excluded.folder_id,
-       updated_at = excluded.updated_at`,
-    [
-      row.id, row.name, row.normalizedName, row.status, row.sourceFormat, row.topology,
-      row.sequenceLength, row.featureCount, row.featureIndexVersion, row.gbkRelPath, row.htmlRelPath, row.folderId,
-      row.createdAt, row.updatedAt
-    ]
-  );
 }
 
 async function resolveNextAlignmentSessions({ alignmentSessions, entryId, paths }) {

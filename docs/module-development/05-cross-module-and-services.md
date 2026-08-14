@@ -174,9 +174,9 @@ Three custom events broadcast from the renderer app shell:
 
 If your module needs to listen, attach to `window` and remember to remove the listener if you ever support hot-reload.
 
-## Telegram / external command bridge
+## Topbar search routing
 
-The topbar search command bar is wired to a Telegram bot bridge (see [src/renderer/app/topbar-search.js](../../src/renderer/app/topbar-search.js)) so the same query strings can come from chat. If your view has a useful search/filter input, expose its DOM id via `searchInputId` in `app-registry.json` and the topbar will route queries to it through `setSearchInputValue(inputId, value)`. No code in your module is required.
+The topbar search command bar (see [src/renderer/app/topbar-search.js](../../src/renderer/app/topbar-search.js)) routes queries to feature views. If your view has a useful search/filter input, expose its DOM id via `searchInputId` in `app-registry.json` and the topbar will route queries to it through `setSearchInputValue(inputId, value)`. No code in your module is required.
 
 ## Anti-patterns
 

@@ -10,6 +10,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
     'sequence-viewer-home-paste-btn',
+    'sequence-viewer-form',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -53,7 +54,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   const longOrf = `ATG${'AAA'.repeat(74)}TAA`;
   const textarea = document.getElementById('sequence-viewer-textarea');
   textarea.value = `>orf_test\n${longOrf}\n`;
-  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-form'), 'submit');
 
   const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
   const orfStopTagToggle = document.getElementById('sequence-viewer-orf-stop-tag-toggle');
@@ -107,6 +108,7 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
     'sequence-viewer-home-paste-btn',
+    'sequence-viewer-form',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -146,7 +148,7 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
   const textarea = document.getElementById('sequence-viewer-textarea');
   textarea.value = '>vendor_filter\nTTATAAGAACAAAAAATCCCCATC\n';
-  trigger(document.getElementById('sequence-viewer-load-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-form'), 'submit');
 
   const nebToggle = document.getElementById('sequence-viewer-restriction-neb-toggle');
   const thermoToggle = document.getElementById('sequence-viewer-restriction-thermo-toggle');

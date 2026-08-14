@@ -156,6 +156,10 @@ Important contracts:
   to “saved” before the promise resolves.
 - Listen for `app.context` to react when appearance or storage availability
   changes.
+- If the plugin draws a left rail, initialize it from
+  `app.info.layout.leftRail`, resize locally during pointer movement, and call
+  `app.setLeftRailWidth` once when the drag settles. This keeps it aligned with
+  the persisted width used by built-in modules.
 
 ## 5. Make the UI failure-safe
 
@@ -176,12 +180,13 @@ Before calling a plugin UI finished, check these behaviors:
 - Long-running listeners and timers have a cleanup path when the workspace is
   reinitialized.
 
-The reference host-API example,
+The installable reference host-API example,
 [`notebook-results`](../../examples/plugins/notebook-results/), demonstrates
 safe DOM rendering, retryable loading, and an exclusive write action. The
-bundled [`gel`](../../examples/plugins/gel/) plugin demonstrates a larger
+internal bundled [`gel`](../../src/plugins/gel/) plugin demonstrates a larger
 served workspace with file persistence, boot recovery, responsive layout, and
-unsaved-change protection.
+unsaved-change protection. Hikari contributors load it from source; users do
+not add its folder in Settings.
 
 ## 6. Verify before sharing
 

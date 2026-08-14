@@ -895,7 +895,7 @@ test('biology-notebook creates a result table from a placeholder variable', () =
   assert.equal(MockTabulator.instances.length, 1);
 });
 
-test('biology-notebook placeholder context menu exposes the table action for regular variables', () => {
+test('biology-notebook placeholder context menu exposes only a plain Add Table action', () => {
   const action = {
     closest(selector) {
       return selector === '[data-placeholder-add-table]' ? action : null;
@@ -935,6 +935,8 @@ test('biology-notebook placeholder context menu exposes the table action for reg
   const token = { dataset: { nbKeyRef: 'step-1:temperature' } };
 
   controller.open({ wrap, token, x: 100, y: 100 });
+  assert.match(menu.innerHTML, /role="menuitem"[^>]*data-placeholder-add-table[^>]*>[\s\S]*?Add Table[\s\S]*?<\/button>/);
+  assert.doesNotMatch(menu.innerHTML, /Placeholder variable|Search samples|data-sample-link-results|ghost-btn|Add table from this variable/i);
   menu.listeners.click({
     target: action,
     preventDefault() {}
@@ -944,6 +946,72 @@ test('biology-notebook placeholder context menu exposes the table action for reg
   assert.equal(receivedState.placeholderName, 'Incubation temperature');
   assert.equal(receivedState.value, '37 °C');
   assert.equal(menu.hidden, true);
+});
+test('biology-notebook placeholder editor keeps its chip width on click and grows for long input', () => {
+  const listeners = {};
+  const stepsHost = {
+    addEventListener(type, handler) {
+      listeners[type] = handler;
+    }
+  };
+  const hiddenValue = {
+    value: '',
+    dataset: { nbKey: 'step-1:volume' }
+  };
+  const token = {
+    hidden: false,
+    dataset: { nbKeyRef: 'step-1:volume' },
+    getBoundingClientRect: () => ({ width: 61 }),
+    closest: (selector) => selector === '[data-inline-placeholder]' ? wrap : null
+  };
+  const editor = {
+    value: '',
+    hidden: true,
+    dataset: {},
+    style: {},
+    scrollWidth: 178,
+    focus() {},
+    select() {},
+    closest: (selector) => selector === '[data-inline-placeholder]' ? wrap : null
+  };
+  const wrap = {
+    dataset: { placeholderName: 'volume' },
+    querySelector(selector) {
+      if (selector === '[data-nb-key]') return hiddenValue;
+      if (selector === '[data-inline-token]') return token;
+      if (selector === '[data-inline-input]') return editor;
+      return null;
+    }
+  };
+  const controllerModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'protocol',
+    'inline-placeholder-controller.js'
+  ));
+  controllerModule.createInlinePlaceholderController({
+    stepsHost,
+    getSampleLink: () => null
+  }).bindEvents();
+
+  listeners.click({
+    target: {
+      closest: (selector) => selector === '[data-inline-token]' ? token : null
+    }
+  });
+  assert.equal(editor.style.width, '61px');
+  assert.equal(editor.hidden, false);
+
+  editor.value = 'A much longer entered placeholder value';
+  listeners.input({
+    target: {
+      closest: (selector) => selector === '[data-inline-input]' ? editor : null
+    }
+  });
+  assert.equal(editor.style.width, '178px');
 });
 test('biology-notebook sidebar records bench calculations and inserts readable notes', async () => {
   const document = createMockDocument([
@@ -963,7 +1031,8 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
     'biology-notebook-result-file',
     'biology-notebook-layout',
     'biology-notebook-tool-sidebar',
-    'biology-notebook-tool-mobile-toggle',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-collapse-btn',
     'biology-notebook-tool-workspace',
     'biology-notebook-tool-calculations',
     'save-biology-notebook-btn',
@@ -1022,7 +1091,10 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   trigger(document.getElementById('biology-notebook-tool-mass-volume'), 'input');
   trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
 
+  trigger(document.getElementById('biology-notebook-tool-fold-toggle'), 'click');
+  assert.equal(document.getElementById('biology-notebook-tool-fold-toggle').getAttribute('aria-expanded'), 'true');
   trigger(document.getElementById('biology-notebook-tool-tab-buffer'), 'click');
+  assert.equal(document.getElementById('biology-notebook-tool-tab-buffer').getAttribute('aria-selected'), 'true');
   assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, false);
   document.getElementById('biology-notebook-tool-buffer-volume').value = '1000';
   document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
@@ -1069,6 +1141,146 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 3 calculations/i);
+});
+test('biology-notebook folded toolbox icon drags within the workspace without opening', () => {
+  const document = createMockDocument([
+    'biology-notebook-layout',
+    'biology-notebook-tool-sidebar',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-collapse-btn'
+  ]);
+  const layout = document.getElementById('biology-notebook-layout');
+  const sidebar = document.getElementById('biology-notebook-tool-sidebar');
+  const foldToggle = document.getElementById('biology-notebook-tool-fold-toggle');
+  const windowListeners = new Map();
+  const windowRef = {
+    addEventListener(type, handler) {
+      const handlers = windowListeners.get(type) || [];
+      handlers.push(handler);
+      windowListeners.set(type, handlers);
+    },
+    dispatch(type, event) {
+      (windowListeners.get(type) || []).forEach((handler) => handler(event));
+    }
+  };
+
+  layout.classList.add('is-tool-sidebar-collapsed');
+  layout.getBoundingClientRect = () => ({ left: 0, top: 0, right: 1000, bottom: 700, width: 1000, height: 700 });
+  sidebar.getBoundingClientRect = () => {
+    const left = Number.parseFloat(sidebar.style.left) || 850;
+    const top = Number.parseFloat(sidebar.style.top) || 72;
+    const size = layout.classList.contains('is-tool-sidebar-open') ? 132 : 42;
+    return { left, top, right: left + size, bottom: top + size, width: size, height: size };
+  };
+  foldToggle.setPointerCapture = () => {};
+  foldToggle.releasePointerCapture = () => {};
+  document.querySelector = (selector) => (
+    selector === '[data-notebook-tool-sidebar]' ? sidebar : null
+  );
+
+  const toolModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'tools',
+    'tool-sidebar.js'
+  ));
+  toolModule.createNotebookToolSidebarController({
+    doc: document,
+    win: windowRef,
+    safeText: (value) => String(value ?? ''),
+    createId: () => 'tool-record'
+  });
+
+  trigger(foldToggle, 'pointerdown', { button: 0, pointerId: 7, clientX: 871, clientY: 93 });
+  windowRef.dispatch('pointermove', { pointerId: 7, clientX: 621, clientY: 213, preventDefault() {} });
+  windowRef.dispatch('pointerup', { pointerId: 7 });
+
+  assert.equal(sidebar.style.left, '600px');
+  assert.equal(sidebar.style.top, '192px');
+  assert.equal(sidebar.dataset.notebookToolboxMoved, 'true');
+  trigger(foldToggle, 'click');
+  assert.equal(layout.classList.contains('is-tool-sidebar-collapsed'), true);
+
+  trigger(foldToggle, 'pointerdown', { button: 0, pointerId: 8, clientX: 621, clientY: 213 });
+  windowRef.dispatch('pointerup', { pointerId: 8 });
+  trigger(foldToggle, 'click');
+  assert.equal(layout.classList.contains('is-tool-sidebar-open'), true);
+  assert.equal(sidebar.dataset.toolboxExpandX, 'right');
+  assert.equal(sidebar.dataset.toolboxExpandY, 'down');
+
+  trigger(document.getElementById('biology-notebook-tool-collapse-btn'), 'click');
+  trigger(foldToggle, 'pointerdown', { button: 0, pointerId: 9, clientX: 621, clientY: 213 });
+  windowRef.dispatch('pointermove', { pointerId: 9, clientX: 1200, clientY: 900, preventDefault() {} });
+  windowRef.dispatch('pointerup', { pointerId: 9 });
+  assert.equal(sidebar.style.left, '958px');
+  assert.equal(sidebar.style.top, '658px');
+  trigger(foldToggle, 'click');
+  trigger(foldToggle, 'pointerdown', { button: 0, pointerId: 10, clientX: 979, clientY: 679 });
+  windowRef.dispatch('pointerup', { pointerId: 10 });
+  trigger(foldToggle, 'click');
+  assert.equal(sidebar.dataset.toolboxExpandX, 'left');
+  assert.equal(sidebar.dataset.toolboxExpandY, 'up');
+  assert.equal(sidebar.style.left, '868px');
+  assert.equal(sidebar.style.top, '568px');
+});
+test('biology-notebook toolbox starts without a sticky tool highlight and clears stale selection', () => {
+  const document = createMockDocument([
+    'biology-notebook-layout',
+    'biology-notebook-tool-sidebar',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-collapse-btn',
+    'biology-notebook-tool-workspace',
+    'biology-notebook-tool-tab-molarity',
+    'biology-notebook-tool-tab-buffer',
+    'biology-notebook-tool-tab-reaction',
+    'biology-notebook-tool-panel-molarity',
+    'biology-notebook-tool-panel-buffer',
+    'biology-notebook-tool-panel-reaction'
+  ]);
+  const sidebar = document.getElementById('biology-notebook-tool-sidebar');
+  const workspace = document.getElementById('biology-notebook-tool-workspace');
+  document.querySelector = (selector) => (
+    selector === '[data-notebook-tool-sidebar]' ? sidebar : null
+  );
+  sidebar.querySelector = () => null;
+
+  const toolModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'tools',
+    'tool-sidebar.js'
+  ));
+  const controller = toolModule.createNotebookToolSidebarController({
+    doc: document,
+    win: { addEventListener() {} },
+    safeText: (value) => String(value ?? ''),
+    createId: () => 'tool-record'
+  });
+  const molarityTab = document.getElementById('biology-notebook-tool-tab-molarity');
+  const bufferTab = document.getElementById('biology-notebook-tool-tab-buffer');
+  const reactionTab = document.getElementById('biology-notebook-tool-tab-reaction');
+
+  assert.equal(molarityTab.classList.contains('is-active'), false);
+  assert.equal(bufferTab.classList.contains('is-active'), false);
+  assert.equal(reactionTab.classList.contains('is-active'), false);
+
+  trigger(bufferTab, 'click');
+  assert.equal(molarityTab.classList.contains('is-active'), false);
+  assert.equal(bufferTab.classList.contains('is-active'), true);
+  assert.equal(bufferTab.getAttribute('aria-selected'), 'true');
+
+  controller.clearSelection();
+  assert.equal(molarityTab.classList.contains('is-active'), false);
+  assert.equal(bufferTab.classList.contains('is-active'), false);
+  assert.equal(reactionTab.classList.contains('is-active'), false);
+  assert.equal(bufferTab.getAttribute('aria-selected'), 'false');
+  assert.equal(workspace.hidden, true);
 });
   }
 };

@@ -1,8 +1,5 @@
 'use strict';
 
-const fs = require('fs/promises');
-const path = require('path');
-const { pathToFileURL } = require('url');
 const { FEATURE_INDEX_VERSION } = require('./constants');
 const {
   normalizeEntryRow,
@@ -10,17 +7,7 @@ const {
   readRows
 } = require('./database');
 const { replaceFeatureOccurrencesForEntry } = require('./feature-store');
-const { ensurePathWithinRoot } = require('./paths');
-
-let sequenceViewerParserPromise = null;
-
-async function loadSequenceViewerParser() {
-  if (!sequenceViewerParserPromise) {
-    const parserPath = path.resolve(__dirname, '../../parsing.js');
-    sequenceViewerParserPromise = import(pathToFileURL(parserPath).href);
-  }
-  return sequenceViewerParserPromise;
-}
+const { readStoredRecord: loadStoredRecord } = require('./stored-record-read');
 
 function listEntriesMissingFeatureIndex(db) {
   return readRows(
@@ -34,21 +21,15 @@ function listEntriesMissingFeatureIndex(db) {
 }
 
 async function readStoredRecord(paths, entry) {
-  if (!entry?.gbkRelPath) {
-    return null;
-  }
-  let gbkText;
   try {
-    gbkText = await fs.readFile(ensurePathWithinRoot(paths.libraryRoot, entry.gbkRelPath), 'utf8');
+    const result = await loadStoredRecord(paths, entry);
+    return result.record;
   } catch (error) {
     if (error?.code === 'ENOENT') {
       return null;
     }
     throw error;
   }
-  const parser = await loadSequenceViewerParser();
-  const parsed = parser.parseInputRecords(String(gbkText || ''));
-  return Array.isArray(parsed?.records) ? parsed.records[0] || null : null;
 }
 
 async function syncMissingFeatureOccurrences({ db, paths }) {

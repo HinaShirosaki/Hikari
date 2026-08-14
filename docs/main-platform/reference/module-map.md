@@ -79,7 +79,7 @@ IPC registration no longer lives in this folder. See [ipc-registrars.md](../ipc/
 | --- | --- | --- |
 | `ipc/register-data-ipc.js` | Main path | renderer data/storage/import composition |
 | `ipc/register-data-ipc/register-sequence-library-ipc.js` | Main path | grouped Sequence Viewer IPC endpoints |
-| `ipc/register-system-ipc.js` | Main path | Codex CLI and Telegram configuration endpoints |
+| `ipc/register-system-ipc.js` | Main path | Codex CLI configuration endpoints |
 | `ipc/register-agent-ipc/` | Main path | agent IPC subsystem (chat handler, session/lifecycle services, Codex controller); runtime documented in [agent/](../../agent/README.md) |
 
 ## Good entry points

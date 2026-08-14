@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const referencePath = path.join(projectRoot, 'examples/plugins/notebook-results/hikari.js');
-const gelPath = path.join(projectRoot, 'examples/plugins/gel/hikari.js');
+const gelPath = path.join(projectRoot, 'src/plugins/gel/hikari.js');
 const referenceDir = path.dirname(referencePath);
 const [source, gelSource, referenceHtml, referenceMain, referenceParser] = await Promise.all([
   fs.readFile(referencePath, 'utf8'),
@@ -16,7 +16,7 @@ const [source, gelSource, referenceHtml, referenceMain, referenceParser] = await
   fs.readFile(path.join(referenceDir, 'parse-results.js'), 'utf8')
 ]);
 
-assert.equal(gelSource, source, 'served and local examples must use the same copyable client');
+assert.equal(gelSource, source, 'internal and installable plugins must use the same copyable client');
 assert.doesNotMatch(source, /\bexport\b|\bimport\b/, 'the reference client must remain a classic script');
 assert.ok(
   referenceHtml.indexOf('./hikari.js') < referenceHtml.indexOf('./parse-results.js')

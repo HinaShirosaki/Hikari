@@ -288,6 +288,7 @@ export function createAgentChatSessionManager(deps = {}) {
       }
     }).catch((error) => {
       setSessionStatus(`Chat load failed: ${String(error?.message || error)}`);
+      showTransientNotice(`Chat load failed: ${String(error?.message || error)}`, { type: 'error' });
       if (options.silent !== true) {
         setStatus('Error.');
       }
@@ -323,6 +324,7 @@ export function createAgentChatSessionManager(deps = {}) {
     if (!api?.agentChatLogListSessions || !api?.agentChatLogGetSession) {
       renderSessionList();
       setSessionStatus('Persistent chat sessions are unavailable in this build.');
+      showTransientNotice('Persistent chat sessions are unavailable in this build.', { type: 'error' });
       return [];
     }
     if (!force && sessionsLoaded) {
@@ -364,6 +366,7 @@ export function createAgentChatSessionManager(deps = {}) {
       state.agentChat.sessions = [];
       renderSessionList();
       setSessionStatus(`Chat list failed: ${String(error?.message || error)}`);
+      showTransientNotice(`Chat list failed: ${String(error?.message || error)}`, { type: 'error' });
       return [];
     }).finally(() => {
       sessionListPromise = null;
@@ -456,6 +459,7 @@ export function createAgentChatSessionManager(deps = {}) {
       setStatus('New chat ready.');
     } catch (error) {
       setSessionStatus(`New chat failed: ${String(error?.message || error)}`);
+      showTransientNotice(`New chat failed: ${String(error?.message || error)}`, { type: 'error' });
       setStatus('Error.');
     }
   }

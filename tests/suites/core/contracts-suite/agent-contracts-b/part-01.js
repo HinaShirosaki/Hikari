@@ -8,7 +8,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
-      readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),

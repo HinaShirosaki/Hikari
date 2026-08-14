@@ -1,4 +1,5 @@
 import { ensureDashboardState, quickLogId } from './utils.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 // Quick-log + dashboard quick actions widget. Persists a free-text bench
 // note draft as the user types, lets them either save it locally or hand
@@ -170,6 +171,7 @@ export function initQuickLogWidget({
     render();
     if (sent === false) {
       setQuickLogStatus('Logged locally. Assistant handoff unavailable.');
+      showTransientNotice('Logged locally. Assistant handoff unavailable.', { type: 'error' });
       return;
     }
     setQuickLogStatus('Logged and sent to Assistant.');

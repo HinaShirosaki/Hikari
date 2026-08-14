@@ -65,8 +65,8 @@ const {
 } = require('../../renderer/modules/sequence-viewer/main-process/sequence-library');
 const { buildCompactIndexedSnapshot } = require('../data/data-snapshot-utils');
 const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transformer.js');
+const { createBioinformaticsService } = require('../bioinformatics');
 const { createAgentLogService } = require('./services/create-agent-log-service');
-const { createTelegramService } = require('./services/create-telegram-service');
 const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
@@ -74,14 +74,16 @@ const { createGenomeService } = require('./services/create-genome-service');
 const { createScheduledTaskService } = require('./services/create-scheduled-task-service');
 const { registerDataIpc } = require('../ipc/register-data-ipc');
 const { registerAgentIpc } = require('../ipc/register-agent-ipc');
+const { registerBioinformaticsIpc } = require('../ipc/register-bioinformatics-ipc');
 const { registerGenomeIpc } = require('../ipc/register-genome-ipc');
+const { registerPythonIpc } = require('../ipc/register-python-ipc');
 const { registerScheduledTaskIpc } = require('../ipc/register-scheduled-task-ipc');
 const { registerSystemIpc } = require('../ipc/register-system-ipc');
+const { runPythonSandbox } = require('../agent/tools/agent-python-sandbox.js');
 
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const DEFAULT_DATA_FILE_NAME = 'hikari-data.json';
 const PROJECT_MEMORY_NOTEBOOK_MODEL = 'gpt-5.4-mini';
-const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 
 // Constructs every main-process service in dependency order and registers all
 // IPC handlers. Construction and IPC registration are synchronous so they can
@@ -109,7 +111,6 @@ function createMainServices(context = {}) {
     projectRoot,
     cleanText,
     defaultDataFileName: DEFAULT_DATA_FILE_NAME,
-    telegramConfigFileName: TELEGRAM_CONFIG_FILE_NAME,
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
   const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
@@ -151,16 +152,6 @@ function createMainServices(context = {}) {
   };
 
   const npmUpdater = createNpmUpdaterService({ app, dialog, shell, getMainWindow });
-
-  const telegram = createTelegramService({
-    fs,
-    path,
-    processObject,
-    // ponytail: telegram unwired — swap back to `startTelegramBot` to re-enable.
-    startTelegramBot: () => null,
-    getTelegramConfigPath: appPaths.getTelegramConfigPath,
-    getMainWindow
-  });
 
   // Provider-neutral agent foundation. Codex is constructed afterwards (it
   // needs the MCP service), so sub-agent delegation resolves it lazily.
@@ -260,6 +251,11 @@ function createMainServices(context = {}) {
     }
   });
 
+  const bioinformatics = createBioinformaticsService({
+    fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
+    defaultNcbiEmail: cleanText(processObject?.env?.HIKARI_NCBI_EMAIL, 254)
+  });
+
   // IPC registration (before app ready).
   registerDataIpc({
     ipcMain,
@@ -274,7 +270,7 @@ function createMainServices(context = {}) {
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
     getUserDataPath: appPaths.getUserDataPath,
     getBundledPluginPath: (pluginId) => (
-      pluginId === 'gel' ? path.join(projectRoot, 'examples', 'plugins', 'gel') : ''
+      pluginId === 'gel' ? path.join(projectRoot, 'src', 'plugins', 'gel') : ''
     ),
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime,
     discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
@@ -325,10 +321,22 @@ function createMainServices(context = {}) {
     cleanText
   });
 
+  registerBioinformaticsIpc({
+    ipcMain,
+    bioinformaticsService: bioinformatics,
+    cleanText
+  });
+
   registerScheduledTaskIpc({
     ipcMain,
     scheduledTaskService: scheduledTasks,
     cleanText
+  });
+
+  registerPythonIpc({
+    ipcMain,
+    runPythonSandbox,
+    getSandboxRoot: appPaths.getAgentPythonSandboxRoot
   });
 
   registerSystemIpc({
@@ -346,11 +354,7 @@ function createMainServices(context = {}) {
     requestCodexCliText,
     getCodexDesktopMcpSetupPrompt: codex.getCodexDesktopMcpSetupPrompt,
     directLlmRegistry: agents.directLlmRegistry,
-    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
-    writeSavedTelegramToken: telegram.writeSavedTelegramToken,
-    restartTelegramBot: telegram.restartTelegramBot,
-    getTelegramState: telegram.getTelegramState,
-    setSavedTelegramToken: telegram.setSavedTelegramToken
+    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory
   });
 
   // Every startup step below is best-effort: a failed integration is logged
@@ -372,10 +376,6 @@ function createMainServices(context = {}) {
       });
     });
     await bestEffort('npm-updater', () => npmUpdater.start());
-    await bestEffort('telegram', async () => {
-      await telegram.hydrateSavedTelegramToken();
-      telegram.restartTelegramBot();
-    });
     await bestEffort('mcp', async () => {
       const result = await mcp.initialize({ reason: 'app_ready' });
       if (result?.ok === false) {
@@ -398,9 +398,9 @@ function createMainServices(context = {}) {
   // Reverse start order; each failure is logged without blocking the rest.
   async function shutdown() {
     const stops = [
+      ['bioinformatics', () => bioinformatics.stop()],
       ['scheduled-tasks', () => scheduledTasks.stop()],
       ['mcp', () => mcp.stop()],
-      ['telegram', () => telegram.stopTelegramBot('app quit')],
       ['npm-updater', () => npmUpdater.stop()],
       ['agent-logging', () => chatLogTransformMonitor.stop()]
     ];

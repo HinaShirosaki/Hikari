@@ -382,7 +382,7 @@ test('[EDGE] sequence-viewer assembleCloningPlan reports infeasible inputs with 
   assert.equal(Array.isArray(plan.warnings), true);
   assert.equal(plan.warnings.length > 0, true);
 });
-test('[EDGE] protein-builder cloning notebook page includes PCR program and primer table', () => {
+test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefilled PCR reaction', () => {
   const notebookAdapter = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
   );
@@ -427,9 +427,29 @@ test('[EDGE] protein-builder cloning notebook page includes PCR program and prim
   assert.equal(state.protocols.length, 1);
   assert.equal(state.notebookEntries.length, 1);
   assert.equal(state.notebookEntries[0].notebookState, 'planned');
+  assert.equal(created.protocol.name, 'PCR Thermocycle Program');
+  assert.match(created.protocol.steps[0].text, /Initial denaturation.*98 C.*30 s/i);
+  assert.match(created.protocol.steps[1].text, /Repeat for 30 cycles.*Denaturation.*Annealing.*Extension/i);
+  assert.doesNotMatch(created.protocol.steps.map((step) => step.text).join('\n'), /Transform|ligation|assembly reaction/i);
+  assert.equal(state.notebookEntries[0].protocolSnapshot.name, 'PCR Thermocycle Program');
   assert.match(state.notebookEntries[0].result, /PCR program/i);
   assert.match(state.notebookEntries[0].result, /Primers/i);
   assert.equal(state.notebookEntries[0].resultTable.rows.length > 0, true);
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 1);
+  const reaction = state.notebookEntries[0].toolCalculations[0];
+  assert.equal(reaction.title, 'Fixed Volume Reaction');
+  assert.deepEqual(Array.from(reaction.table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume']);
+  assert.deepEqual(Array.from(reaction.table.rows).map((row) => row[0]), [
+    'Forward primer',
+    'Reverse primer',
+    'dNTP mix',
+    'High-fidelity DNA polymerase',
+    '5x polymerase buffer',
+    'Template DNA'
+  ]);
+  assert.equal(reaction.table.metaRows[0][1], '50 uL');
+  assert.equal(reaction.table.footerRows[0][0], 'Nuclease-free water');
+  assert.match(reaction.table.footerRows[0][3], /32\.5 uL/i);
   assert.equal(created.plan.primerOligoPlan.feasible, true);
 });
 test('[EDGE] protein-builder Gibson backbone keeps primer design on the Gibson route', () => {

@@ -90,24 +90,33 @@ await hikari.call('app.info');
 //   pluginId: 'notebook-results',
 //   permissions: ['notebook:read', 'notebook:write'],
 //   appearance: { mode: 'day', fontSize: 16 },
-//   storage: { configured: true }
+//   storage: { configured: true },
+//   layout: {
+//     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980 }
+//   }
 // }
 ```
 
 The storage value is deliberately a boolean. It lets a plugin disable file
 actions without revealing the user's storage path.
 
+`layout.leftRail` is safe presentation context for plugins that draw their own
+two-pane workspace. It reports the host's current persisted rail width and
+clamping limits; it does not expose host DOM or settings.
+
 ### 2.1 `app.context` event — *no permission required*
 
-The host pushes the same safe `appearance` and `storage` context when either
-changes. `changed` identifies the part that triggered the event:
+The host pushes the same safe `appearance`, `storage`, and `layout` context
+when any of them changes. `changed` identifies the part that triggered the
+event:
 
 ```js
-const unsubscribe = hikari.on('app.context', ({ appearance, storage, changed }) => {
+const unsubscribe = hikari.on('app.context', ({ appearance, storage, layout, changed }) => {
   document.body.dataset.appearanceMode = appearance.mode;
   saveButton.disabled = !storage.configured;
+  document.documentElement.style.setProperty('--shared-left-rail-width', `${layout.leftRail.width}px`);
 });
-// payload: { appearance: {...}, storage: {...}, changed: 'appearance' | 'storage' }
+// payload: { appearance: {...}, storage: {...}, layout: {...}, changed: 'appearance' | 'storage' | 'layout' }
 ```
 
 Call `app.info` for the initial snapshot; use the event to stay synchronized.
@@ -187,6 +196,25 @@ between a save that fails and a save they saw coming.
 ---
 
 ## 3. Write verbs
+
+### `app.setLeftRailWidth` — `layout`
+
+Commits the final width of a plugin-owned left rail to Hikari's shared layout
+preference. Clamp locally while the pointer moves so dragging stays smooth;
+call the host only once on pointer-up. The host clamps again, persists the
+accepted value, applies it to built-in modules, and broadcasts an
+`app.context` event with `changed: 'layout'`.
+
+```js
+const { leftRail } = await hikari.call('app.setLeftRailWidth', { width: 336 });
+// { width: 336, min: 240, max: 400, mobileBreakpoint: 980 }
+```
+
+`width` must be a finite JSON number. It grants no access to settings or host
+content, but it does write the host's `--shared-left-rail-width` variable and the
+host's stored layout preference (which survives a restart), and the resulting
+`app.context` broadcast reaches every other registered plugin frame — so it is
+gated on the `layout` permission rather than being free.
 
 ### `storage.set` — `storage`
 
@@ -285,6 +313,49 @@ await hikari.call('downloads.save', {
 Cancellation is a successful user choice, not an exception. Write failures are
 returned as normal host API errors.
 
+### `python.run` — `python`
+
+Runs Python in the host's sandbox and returns what it printed. Each call gets
+its own throwaway directory, which is deleted when the run ends — nothing
+persists between calls, so this is for computation, not storage.
+
+```js
+const result = await hikari.call('python.run', {
+  code: [
+    'import pathlib, statistics',
+    'values = [float(v) for v in pathlib.Path("bands.csv").read_text().split()]',
+    'print(statistics.mean(values))',
+    'pathlib.Path("mean.txt").write_text(str(statistics.mean(values)))'
+  ].join('\n'),
+  files: [{ path: 'bands.csv', content: '1.5\n2.5\n3.5\n' }],
+  readbackPaths: ['mean.txt']
+});
+// { ok: true, status: 'ok', stdout: '2.5\n', stderr: '', exitCode: 0,
+//   timedOut: false, error: '', files: [{ path: 'mean.txt', content: '2.5', truncated: false }] }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `code` | string | Required, up to 200 000 characters. Runs as `main.py`. |
+| `files` | array | Optional input files, up to 32, 4 000 000 characters of content total. Each `{ path, content }`, path **relative**. |
+| `readbackPaths` | array | Optional relative paths to read back after the run, up to 20. |
+| `timeoutMs` | number | Optional, clamped by the host to 500–15 000 ms. |
+
+- **A failed run is not a rejected promise.** Non-zero exits, timeouts, and
+  tracebacks come back as `ok: false` with `stderr` and `status` filled in. The
+  promise rejects only for bad params or a host with no Python installed.
+- **Paths are relative and confined to the run directory**, the same rule as
+  `files.*`. Absolute paths and `..` segments are rejected; the plugin never
+  learns where the directory is, and cannot reach its own plugin folder from
+  inside a run. Move bytes in through `files` and out through `readbackPaths`.
+- **`stdout`/`stderr` are capped at 120 000 characters** and readback content at
+  60 000 per file. Print a summary, not a dataset.
+- **The host's interpreter path, run id, and pid are not returned.** If you need
+  to know whether Python exists at all, make a trivial call and check `ok`.
+- **This grant is a subprocess, not a file read.** It is deliberately not
+  covered by `files` or `storage`; a plugin must ask for `python` by name and
+  the user sees it on the plugin's row in Settings before enabling it.
+
 ### `notebook.appendResult` — `notebook:write`
 
 Appends results to an **existing** notebook entry. This is the only verb that
@@ -372,7 +443,9 @@ rather than a plugin.
   file outside `<storage root>/Plugins/<its id>/`. `downloads.save` can write
   elsewhere only after the user chooses the exact destination in a save dialog.
 - **No agent, LLM, or network verbs.** A plugin can `fetch()` on its own like
-  any webpage; the host will not proxy it.
+  any webpage; the host will not proxy it. `python.run` is compute, not a
+  network door — but note it runs on the host with whatever the host's
+  interpreter can reach, which is why it is a permission of its own.
 - **No data subscriptions.** The host only pushes the safe `app.context`
   snapshot. Protocol, notebook, project, and sample data remain request/response.
 - **No cross-plugin calls.**

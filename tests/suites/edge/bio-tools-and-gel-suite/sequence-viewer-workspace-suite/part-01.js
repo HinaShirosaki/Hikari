@@ -59,6 +59,7 @@ test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspa
   assert.equal(Boolean(detailWorkspace.hidden), true);
   assert.equal(Boolean(openBtn.disabled), false);
   assert.match(homeStatus.textContent, /New or Open|Storage Folder Path|storage path|storage/i);
+  assert.equal(document.querySelector('[data-hikari-transient-toast]'), null);
 });
 test('[EDGE] sequence-viewer refreshes the library from the live storage root after a folder switch', async () => {
   const ids = [
@@ -423,10 +424,9 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
 
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
   const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
-  const status = document.getElementById('sequence-viewer-status');
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
-  assert.match(status.textContent, /Paste sequence text/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Paste sequence text/i);
 });
 test('[EDGE] sequence-viewer New action uses navigation callback', () => {
   const ids = [
@@ -521,7 +521,6 @@ ORIGIN
   await flushAsync();
   await flushAsync();
   assert.equal(transitions.length, 1);
-  assert.equal(document.getElementById('sequence-viewer-status').textContent, '');
 });
   }
 };

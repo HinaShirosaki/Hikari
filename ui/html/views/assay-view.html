@@ -149,14 +149,14 @@
       </div>
 
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
-        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
-          <div class="assay-results-browser-scroll left-rail-template__scroll">
-            <details id="assay-results-browser-panel" class="assay-browser-panel" open>
-              <summary class="assay-browser-summary">
+        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <div class="assay-results-rail-scroll left-rail-template__scroll">
+            <details id="assay-results-browser-panel" class="foldable-section" open>
+              <summary class="foldable-section__summary">
                 <span>Existing Assays</span>
                 <span id="assay-results-browser-count" class="small-note">0</span>
               </summary>
-              <div class="assay-browser-body">
+              <div class="foldable-section__body">
                 <label>
                   Search Assays
                   <input id="assay-results-search" placeholder="Search assay plates, projects, or notes" />
@@ -164,8 +164,12 @@
                 <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
               </div>
             </details>
-          </div>
-          <div class="assay-results-controls-pinned left-rail-template__pinned">
+
+            <details id="assay-analysis-panel" class="foldable-section" open>
+              <summary class="foldable-section__summary">
+                <span>Data Analysis</span>
+              </summary>
+              <div class="foldable-section__body">
             <div class="assay-results-control-section">
               <select id="assay-results-assay-select" hidden>
                 <option value="">Select assay plate</option>
@@ -197,7 +201,99 @@
               </div>
               <div id="assay-active-assay-info" class="small-note"></div>
               <div id="assay-result-status" class="small-note"></div>
+              <div id="assay-transform-summary" class="small-note"></div>
             </div>
+
+            <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
+              <summary class="foldable-section__summary">
+                <span>Transform Plate</span>
+              </summary>
+              <div class="foldable-section__body assay-results-control-section">
+              <label>
+                Mode
+                <select id="assay-transform-mode">
+                  <option value="steps" selected>Guided steps</option>
+                  <option value="formula">Formula</option>
+                </select>
+              </label>
+              <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
+                <label>
+                  Formula
+                  <textarea id="assay-transform-formula" rows="3" spellcheck="false"
+                    placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
+                </label>
+                <details class="assay-browser-panel assay-formula-help">
+                  <summary class="assay-browser-summary"><span>Functions and references</span></summary>
+                  <div class="assay-formula-help-body">
+                    <p><code>x</code> is this well's value.</p>
+                    <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
+                      block, <code>H</code> a whole row, or the name of a custom group. A reference
+                      covering more than one well must be wrapped in an aggregate.</p>
+                    <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
+                      <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
+                      <code>COUNT</code>.</p>
+                    <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
+                      <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
+                      <code>POWER</code>, <code>ROUND</code>.</p>
+                    <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
+                    <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
+                      <code>A-C</code> is subtraction in a formula.</p>
+                  </div>
+                </details>
+              </div>
+              <div data-transform-mode="steps" class="assay-transform-mode-panel">
+              <p class="small-note">
+                Each step is optional and applies in the order shown, to every well with a
+                numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
+                or a custom group name.
+              </p>
+              <label>
+                1. Subtract blank
+                <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
+              </label>
+              <label>
+                2. 100% reference
+                <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
+              </label>
+              <label>
+                0% reference (optional)
+                <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
+              </label>
+              <div class="assay-transform-arithmetic">
+                <label>
+                  3. Arithmetic
+                  <select id="assay-transform-arithmetic-op">
+                    <option value="none" selected>None</option>
+                    <option value="add">Add</option>
+                    <option value="subtract">Subtract</option>
+                    <option value="multiply">Multiply by</option>
+                    <option value="divide">Divide by</option>
+                  </select>
+                </label>
+                <label>
+                  Value
+                  <input id="assay-transform-arithmetic-value" type="number" step="any" />
+                </label>
+              </div>
+              <label>
+                4. Transform each value
+                <select id="assay-transform-value">
+                  <option value="none" selected>None</option>
+                  <option value="log10">log10(x)</option>
+                  <option value="ln">ln(x)</option>
+                  <option value="sqrt">sqrt(x)</option>
+                  <option value="reciprocal">1/x</option>
+                  <option value="square">x&sup2;</option>
+                </select>
+              </label>
+              </div>
+              <div id="assay-transform-status" class="small-note"></div>
+              <div class="form-actions">
+                <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
+              </div>
+              </div>
+            </details>
+
 
             <div class="assay-results-control-section">
               <span class="assay-display-label">Groups (optional)</span>
@@ -220,46 +316,98 @@
 
             <div class="assay-results-control-section">
               <label>
-                Analysis Method
-                <select id="assay-analysis-method">
-                  <option value="grouped_summary" selected>Grouped Summary</option>
-                  <option value="nested_summary">Nested Summary</option>
-                  <option value="row_summary">Row Summary</option>
-                  <option value="column_summary">Column Summary</option>
-                  <option value="linear_regression">Linear Regression</option>
-                  <option value="ec50">EC50 (4PL Fit)</option>
-                  <option value="ic50">IC50 (4PL Fit)</option>
-                  <option value="survival">Survival %</option>
-                  <optgroup label="Standard curves to interpolate">
-                    <option value="standard_curve_line">Line</option>
-                    <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
-                    <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
-                    <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
-                    <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
-                    <option value="standard_curve_semilog_line">Semilog line</option>
-                    <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
-                    <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
-                    <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
-                    <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
-                  </optgroup>
+                Group By
+                <select id="assay-analysis-group-by">
+                  <option value="auto" selected>Auto (from plate mapping)</option>
+                  <option value="sample">Sample ID</option>
+                  <option value="concentration">Concentration</option>
+                  <option value="sample_concentration">Sample ID &times; Concentration</option>
+                  <option value="row">Plate row</option>
+                  <option value="column">Plate column</option>
+                  <option value="custom">Custom groups</option>
                 </select>
               </label>
-              <label class="assay-analysis-checkbox">
-                <input id="assay-analysis-error-bars" type="checkbox" />
-                Show SD error bars (for Row/Column Summary)
+              <label>
+                Analysis
+                <select id="assay-analysis-kind">
+                  <option value="summary" selected>Summary statistics</option>
+                  <option value="linear">Linear fit</option>
+                  <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                  <option value="hyperbola">Hyperbola</option>
+                  <option value="polynomial">Polynomial</option>
+                  <option value="pade11">Pade (1,1)</option>
+                  <option value="normalize">Normalize to baseline</option>
+                </select>
+              </label>
+              <label id="assay-analysis-x-axis-field" hidden>
+                X Axis
+                <select id="assay-analysis-x-axis">
+                  <option value="auto" selected>Auto</option>
+                  <option value="concentration">Concentration</option>
+                  <option value="sample">Sample ID</option>
+                  <option value="column">Column number</option>
+                </select>
+              </label>
+              <div class="assay-analysis-modifiers">
+                <label id="assay-analysis-x-transform-field" hidden>
+                  X Transform
+                  <select id="assay-analysis-x-transform">
+                    <option value="none" selected>None</option>
+                    <option value="log10">log10</option>
+                  </select>
+                </label>
+                <label class="assay-analysis-checkbox" hidden>
+                  <input id="assay-analysis-asymmetric" type="checkbox" />
+                  Asymmetric (5PL)
+                </label>
+                <label id="assay-analysis-poly-order-field" hidden>
+                  Polynomial Order
+                  <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
+                </label>
+                <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
+                  <input id="assay-analysis-subtotals" type="checkbox" />
+                  Add subtotal rows per first group
+                </label>
+              </div>
+              <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
+                <input id="assay-analysis-error-bars" type="checkbox" checked />
+                Show SD error bars
               </label>
               <div id="assay-analysis-summary" class="small-note"></div>
             </div>
+              </div>
+            </details>
 
-            <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+            <details id="assay-chart-format-panel" class="foldable-section">
+              <summary class="foldable-section__summary">
+                <span>Chart Format</span>
+              </summary>
+              <div class="foldable-section__body">
+                <div id="assay-chart-style-panel" data-assay-chart-style-mount></div>
+              </div>
+            </details>
+
           </div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
           <div class="assay-results-table-stage">
-            <div id="assay-result-table" class="assay-plate-preview"></div>
+            <details id="assay-result-table-panel" class="assay-browser-panel assay-result-table-panel" open>
+              <summary class="assay-browser-summary">
+                <span>Plate Results</span>
+              </summary>
+              <div id="assay-result-table" class="assay-plate-preview"></div>
+            </details>
+            <details id="assay-derived-plate-panel" class="assay-browser-panel assay-result-table-panel" open hidden>
+              <summary class="assay-browser-summary">
+                <span>Derived Plate</span>
+              </summary>
+              <div id="assay-derived-plate-steps" class="small-note"></div>
+              <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+            </details>
           </div>
           <div class="assay-results-output-stage">
+            <div id="assay-chart-toolbar" class="assay-chart-toolbar" hidden></div>
             <div id="assay-analysis-table" class="list-table"></div>
           </div>
         </div>

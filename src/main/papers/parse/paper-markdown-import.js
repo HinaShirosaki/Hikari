@@ -10,6 +10,7 @@ const {
   normalizeDoi
 } = require('../store/agent-paper-knowledge-database.js');
 const { isLikelyJunkPdfTitle } = require('../store/paper-knowledge-paths.js');
+const { createReviewJournalSkipResult } = require('../shared/review-paper-filter.js');
 const {
   findExistingPaperRow,
   openKnowledgeDatabase,
@@ -336,6 +337,16 @@ async function transformPaperPdfToMarkdown({
     return { ok: false, status: 'missing', error: `Paper PDF was not found at ${resolvedFilePath}.` };
   }
 
+  const journal = cleanText(
+    normalizedPaper.journal || normalizedPaper.paper_journal || normalizedPaper.paperJournal,
+    320
+  );
+  const reviewJournalSkip = createReviewJournalSkipResult(journal);
+  if (reviewJournalSkip) {
+    applyKnowledgeResultToPaper(normalizedPaper, reviewJournalSkip);
+    return reviewJournalSkip;
+  }
+
   const title = getPaperTitle(normalizedPaper, resolvedFilePath);
   const doi = getPaperDoi(normalizedPaper);
   const expectedPaths = rebaseKnowledgePathsToRecordedFolder(resolvedStoragePath, buildKnowledgeDatabasePaths({
@@ -380,7 +391,7 @@ async function transformPaperPdfToMarkdown({
     paper_title: title,
     doi,
     authors: normalizedPaper.authors || normalizedPaper.paperAuthors || [],
-    journal: normalizedPaper.journal || normalizedPaper.paperJournal || '',
+    journal,
     year: normalizedPaper.year || normalizedPaper.publishedAt || normalizedPaper.published_at || '',
     url: normalizedPaper.url || normalizedPaper.paperUrl || normalizedPaper.paper_url || '',
     linked_type: normalizedPaper.linkedType || normalizedPaper.linked_type,

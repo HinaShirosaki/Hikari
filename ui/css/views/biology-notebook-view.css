@@ -21,14 +21,11 @@
 .left-rail-template.biology-notebook-layout {
   --left-rail-main-gap: 24px;
   display: grid;
-  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) 56px;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 24px;
   align-items: stretch;
   min-height: var(--shared-left-rail-layout-height);
-}
-
-.biology-notebook-layout.is-tool-sidebar-collapsed {
-  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr) 44px;
+  position: relative;
 }
 
 .biology-notebook-rail,
@@ -372,53 +369,50 @@
   line-height: 1.18;
 }
 
-.biology-notebook-tool-mobile-toggle {
-  display: none;
-  justify-self: start;
-}
-
 .biology-notebook-tool-sidebar {
-  position: sticky;
-  top: 16px;
-  max-height: var(--shared-left-rail-layout-height);
+  position: absolute;
+  z-index: 240;
+  top: 72px;
+  right: 16px;
+  width: 132px;
+  height: 132px;
+  max-height: 132px;
   overflow: visible;
-  padding: 0 0 16px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-radius: 12px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 18px 44px var(--theme-shadow-color-strong);
 }
 
 .biology-notebook-tool-content {
+  height: 100%;
   min-width: 0;
-  max-height: none;
   overflow: visible;
+  padding: 8px;
+}
+
+.biology-notebook-tool-toolbar {
   display: grid;
-  gap: 8px;
-  align-content: start;
-  padding: 2px 0 16px;
+  grid-template-columns: repeat(3, 36px);
+  grid-template-rows: repeat(3, 36px);
+  grid-auto-flow: row;
+  place-content: center;
+  gap: 4px;
 }
 
 .biology-notebook-tool-fold-toggle {
   display: none;
-  width: 38px;
-  min-width: 38px;
-  min-height: 148px;
-  padding: 10px 6px;
-  justify-content: center;
-  align-items: center;
-  justify-self: center;
-  align-self: start;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  text-align: center;
-  font-weight: 700;
-  color: var(--theme-text-strong);
-  border: 1px solid var(--theme-border-soft);
-  background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-accent) 6%);
-  box-shadow: none;
 }
 
 .biology-notebook-layout.is-tool-sidebar-collapsed .biology-notebook-tool-sidebar {
-  display: grid;
-  justify-items: center;
-  align-content: start;
+  width: 42px;
+  max-height: 42px;
+  overflow: visible;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  box-shadow: none;
 }
 
 .biology-notebook-layout.is-tool-sidebar-collapsed .biology-notebook-tool-content {
@@ -427,32 +421,157 @@
 
 .biology-notebook-layout.is-tool-sidebar-collapsed .biology-notebook-tool-fold-toggle {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, transparent);
+  border-radius: 9px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: none;
+  cursor: grab;
+  touch-action: none;
+}
+
+.biology-notebook-tool-sidebar.is-dragging .biology-notebook-tool-fold-toggle {
+  cursor: grabbing;
+}
+
+.biology-notebook-tool-fold-toggle svg,
+.biology-notebook-tool-collapse-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.biology-notebook-tool-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-x="left"] .biology-notebook-tool-collapse-btn {
+  grid-column: 3;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-x="right"] .biology-notebook-tool-collapse-btn {
+  grid-column: 1;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-y="down"] .biology-notebook-tool-collapse-btn {
+  grid-row: 1;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-y="up"] .biology-notebook-tool-collapse-btn {
+  grid-row: 3;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-x="right"] .biology-notebook-tool-collapse-btn svg {
+  transform: rotate(180deg);
 }
 
 .biology-notebook-tool-tabs {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
+  display: contents;
 }
 
-.biology-notebook-tool-tab {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
-  padding: 9px;
-  border: 1px solid var(--theme-border-soft);
+.biology-notebook-tool-icon-actions {
+  display: contents;
+}
+
+.biology-notebook-tool-tab,
+.biology-notebook-tool-icon-action {
+  position: relative;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 7px;
+  border: 0;
   border-radius: 8px;
-  background: var(--theme-surface);
+  background: transparent;
   color: var(--theme-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.biology-notebook-tool-tab svg {
-  width: 22px;
-  height: 22px;
+.biology-notebook-tool-fold-toggle,
+.biology-notebook-tool-collapse-btn {
+  position: relative;
+}
+
+.biology-notebook-tool-sidebar [data-hover-caption]::after {
+  content: attr(data-hover-caption);
+  position: absolute;
+  z-index: 3200;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  width: max-content;
+  max-width: 180px;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 6px 16px var(--theme-shadow-color);
+  color: var(--theme-text-strong);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+.biology-notebook-tool-sidebar [data-hover-caption]:hover::after,
+.biology-notebook-tool-sidebar [data-hover-caption]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 180ms;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-y="down"] [data-hover-caption]::after {
+  top: calc(100% + 7px);
+  bottom: auto;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-x="left"] [data-hover-caption]::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.biology-notebook-tool-sidebar[data-toolbox-expand-x="right"] [data-hover-caption]::after {
+  right: auto;
+  left: 0;
+  transform: none;
+}
+
+.biology-notebook-tool-tab svg,
+.biology-notebook-tool-icon-action svg {
+  width: 21px;
+  height: 21px;
   stroke: currentColor;
   stroke-width: 1.8;
   fill: none;
@@ -462,8 +581,7 @@
 
 .biology-notebook-tool-tab.is-active {
   color: var(--theme-text-strong);
-  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border-soft));
-  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-accent) 12%);
+  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-accent) 18%);
   box-shadow: none;
 }
 
@@ -1408,8 +1526,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   list-style: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 7px;
   cursor: pointer;
   font-weight: 600;
   color: var(--theme-text-strong);
@@ -1475,10 +1593,10 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 .biology-notebook-result-table-wrap {
   display: grid;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .biology-notebook-result-table-head p {
@@ -1741,8 +1859,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .inline-placeholder-editor {
   width: auto;
-  min-width: 90px;
-  max-width: 180px;
+  min-width: 0;
+  max-width: min(360px, calc(100vw - 96px));
   font-size: 0.85rem;
   padding: 2px 8px;
   border-radius: 6px;
@@ -1755,9 +1873,23 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .biology-notebook-placeholder-table-action {
+  appearance: none;
+  display: block;
   width: 100%;
-  justify-content: flex-start;
-  margin: 0 0 2px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biology-notebook-placeholder-table-action:hover,
+.biology-notebook-placeholder-table-action:focus-visible {
+  background: transparent;
+  outline: none;
 }
 
 #biology-notebook-view .inline-placeholder-token.is-linked-sample {
@@ -1770,78 +1902,268 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 .biology-notebook-sample-link-menu {
   position: fixed;
   z-index: 3000;
-  width: min(320px, calc(100vw - 24px));
-  max-height: min(360px, calc(100vh - 24px));
+  width: 132px;
   overflow: hidden;
-  display: grid;
-  gap: 6px;
-  padding: 8px;
+  padding: 4px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
   border-radius: 8px;
   background: var(--theme-surface-elevated);
-  box-shadow: 0 18px 42px var(--theme-shadow-color-strong);
+  box-shadow: 0 8px 22px var(--theme-shadow-color);
 }
 
 .biology-notebook-sample-link-menu[hidden] {
   display: none;
 }
 
-.biology-notebook-sample-link-menu-head {
+.biology-notebook-quick-sample-dialog.app-dialog-surface {
+  --app-dialog-width: 900px;
+  --app-dialog-max-height: min(620px, calc(100vh - 32px));
+  --app-dialog-gap: 12px;
+  box-sizing: border-box;
+}
+
+.biology-notebook-quick-sample-form {
   display: grid;
-  gap: 2px;
+  gap: 12px;
 }
 
-.biology-notebook-sample-link-search {
-  width: 100%;
-}
-
-.biology-notebook-sample-link-results {
-  min-height: 80px;
-  max-height: 240px;
-  overflow: auto;
+.biology-notebook-quick-sample-layout {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1.62fr) minmax(230px, 0.72fr);
+  gap: 14px;
+  align-items: stretch;
 }
 
-.biology-notebook-sample-link-option {
-  width: 100%;
+.biology-notebook-quick-sample-storage {
   min-width: 0;
   display: grid;
-  gap: 2px;
-  padding: 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--theme-text);
-  text-align: left;
-  cursor: pointer;
+  grid-template-columns: minmax(126px, 0.38fr) minmax(250px, 1fr);
+  gap: 12px;
 }
 
-.biology-notebook-sample-link-option:hover,
-.biology-notebook-sample-link-option:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-border) 84%, transparent);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated));
-  outline: none;
-}
-
-.biology-notebook-sample-link-option-main,
-.biology-notebook-sample-link-option-meta {
+.biology-notebook-quick-sample-position-panel,
+.biology-notebook-quick-sample-grid-panel,
+.biology-notebook-quick-sample-fields {
   min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--theme-surface) 96%, var(--theme-accent) 4%);
+}
+
+.biology-notebook-quick-sample-position-panel {
+  display: grid;
+  grid-template-rows: auto minmax(76px, 1fr) auto auto;
+  gap: 5px;
+  align-content: start;
+  padding: 12px;
+}
+
+.biology-notebook-quick-sample-position-label,
+.biology-notebook-quick-sample-grid-head strong {
+  color: var(--theme-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.biology-notebook-quick-sample-position {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  color: var(--theme-text-strong);
+  font-size: clamp(2.2rem, 5vw, 4.2rem);
+  font-weight: 760;
+  line-height: 1;
   overflow-wrap: anywhere;
 }
 
-.biology-notebook-sample-link-option-main {
-  font-weight: 600;
-  color: var(--theme-text-strong);
-}
-
-.biology-notebook-sample-link-option-meta {
-  font-size: 0.78rem;
-  color: var(--theme-text-muted);
-}
-
-.biology-notebook-sample-link-empty {
+.biology-notebook-quick-sample-position-panel > .small-note {
+  min-height: 1.2em;
   margin: 0;
+  text-align: center;
+}
+
+.biology-notebook-quick-sample-container-field {
+  display: grid;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 0.76rem;
+}
+
+.biology-notebook-quick-sample-container-field select {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 4px 28px 4px 7px;
+  font-size: 0.78rem;
+}
+
+.biology-notebook-quick-sample-grid-panel {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+}
+
+.biology-notebook-quick-sample-grid-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.biology-notebook-quick-sample-grid-head .small-note {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biology-notebook-quick-sample-grid {
+  --quick-sample-grid-cols: 9;
+  --quick-sample-grid-rows: 9;
+  --quick-sample-grid-aspect-x: 1;
+  --quick-sample-grid-aspect-y: 1;
+  align-self: center;
+  display: grid;
+  grid-template-columns: repeat(var(--quick-sample-grid-cols), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--quick-sample-grid-rows), minmax(0, 1fr));
+  width: 100%;
+  max-height: 360px;
+  aspect-ratio: var(--quick-sample-grid-aspect-x) / var(--quick-sample-grid-aspect-y);
+  gap: 3px;
+}
+
+.biology-notebook-quick-sample-grid.is-empty,
+.biology-notebook-quick-sample-grid.is-single {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+  place-items: center;
+  min-height: 180px;
+  aspect-ratio: auto;
+}
+
+.biology-notebook-quick-sample-grid.is-empty .small-note {
+  margin: 0;
+  text-align: center;
+}
+
+.biology-notebook-quick-sample-well {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  padding: 1px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-radius: 4px;
+  background: var(--theme-surface);
+  color: var(--theme-text-muted);
+  font-size: clamp(0.52rem, 0.75vw, 0.68rem);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.biology-notebook-quick-sample-well:hover,
+.biology-notebook-quick-sample-well:focus-visible {
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.biology-notebook-quick-sample-well.is-selected {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-surface));
+  color: var(--theme-text-strong);
+  box-shadow: 0 0 0 1px var(--theme-accent);
+}
+
+.biology-notebook-quick-sample-well.is-occupied::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: var(--theme-warning);
+}
+
+.biology-notebook-quick-sample-well > span {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  font-size: 0.48rem;
+}
+
+.biology-notebook-quick-sample-grid.is-single .biology-notebook-quick-sample-well {
+  width: 112px;
+  height: 112px;
+  font-size: 0.9rem;
+}
+
+.biology-notebook-quick-sample-fields {
+  align-content: start;
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+}
+
+.biology-notebook-quick-sample-fields label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--theme-text-muted);
+  font-size: 0.76rem;
+}
+
+.biology-notebook-quick-sample-fields input,
+.biology-notebook-quick-sample-fields select {
+  min-width: 0;
+  height: 34px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  color: var(--theme-text-strong);
+  font-size: 0.84rem;
+}
+
+.biology-notebook-quick-sample-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.biology-notebook-quick-sample-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.biology-notebook-quick-sample-footer > .small-note {
+  margin: 0;
+}
+
+.biology-notebook-quick-sample-status.is-error {
+  color: var(--theme-danger);
+}
+
+@media (max-width: 780px) {
+  .biology-notebook-quick-sample-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .biology-notebook-quick-sample-storage,
+  .biology-notebook-quick-sample-field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .biology-notebook-quick-sample-position-panel {
+    grid-template-rows: auto minmax(64px, auto) auto auto;
+  }
 }
 
 .biology-notebook-viewer-head {
@@ -1853,8 +2175,42 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-viewer-actions {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 4px;
+}
+
+.biology-notebook-viewer-icon-btn.ghost-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  line-height: 1;
+}
+
+.biology-notebook-viewer-icon-btn svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.biology-notebook-viewer-icon-btn.ghost-btn:hover,
+.biology-notebook-viewer-icon-btn.ghost-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 #biology-notebook-view .panel,
@@ -1872,10 +2228,6 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   .biology-notebook-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
-  }
-
-  .biology-notebook-layout.is-tool-sidebar-collapsed {
-    grid-template-columns: minmax(0, 1fr);
   }
 
   .left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main {
@@ -1897,42 +2249,26 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
     scrollbar-gutter: auto;
   }
 
-  .biology-notebook-tool-mobile-toggle {
-    display: inline-flex;
-  }
-
   .biology-notebook-tool-sidebar {
-    position: fixed;
-    z-index: 2600;
-    inset: 0 0 0 auto;
-    width: min(360px, calc(100vw - 28px));
-    max-height: none;
-    overflow: auto;
-    padding: 18px;
-    border-left: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+    top: 72px;
+    right: 12px;
+    width: 132px;
+    height: 132px;
+    max-height: 132px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
     background: var(--theme-surface-elevated);
-    box-shadow: -20px 0 44px var(--theme-shadow-color-strong);
-    transform: translateX(100%);
-    transition: transform 160ms ease;
+    box-shadow: 0 18px 44px var(--theme-shadow-color-strong);
   }
 
   .biology-notebook-tool-content {
     max-height: none;
-    padding: 0;
   }
 
-  .biology-notebook-tool-fold-toggle,
-  .biology-notebook-layout.is-tool-sidebar-collapsed .biology-notebook-tool-fold-toggle {
-    display: none;
-  }
-
-  .biology-notebook-layout.is-tool-sidebar-open .biology-notebook-tool-sidebar {
-    display: grid;
-    transform: translateX(0);
-  }
-
-  .biology-notebook-layout:not(.is-tool-sidebar-open) .biology-notebook-tool-sidebar {
-    display: none;
+  .biology-notebook-layout.is-tool-sidebar-collapsed .biology-notebook-tool-sidebar {
+    width: 42px;
+    max-height: 42px;
+    border: 0;
   }
 
   .left-rail-template.biology-notebook-layout > .biology-notebook-rail.left-rail-template__rail--pinned {

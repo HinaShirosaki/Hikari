@@ -94,10 +94,5 @@ Key boot-time or shell-level calls include:
 - `importStorageRoot(storagePath)` — hydrates from an external storage directory
 - `ensureStorageDirectory(path)` / `pickStorageDirectory(currentPath)` — storage path setup
 - `onProtocolRecordSaved(handler)` — subscribes to externally saved protocols (delegated to the protocol service)
-- `onTelegramCommand(handler)` — subscribes to Telegram command events
 
 Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-platform/README.md](../../main-platform/README.md).
-
-## External command hook
-
-During initialization, the topbar search controller's `initTelegramCommandBridge()` subscribes to `window.hikariApi.onTelegramCommand(...)` and routes open-view or search commands back through the normal navigation/search pipeline. The renderer core owns that bridge so external commands reuse the same aliases and target handlers as local search.

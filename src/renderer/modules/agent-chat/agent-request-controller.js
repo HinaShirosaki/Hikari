@@ -16,6 +16,7 @@ import {
   buildAssistantErrorMessage,
   buildAssistantResponseMessage
 } from './assistant-message-meta.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createAgentRequestController(deps) {
   const {
@@ -253,6 +254,7 @@ export function createAgentRequestController(deps) {
       clearLiveAssistantState(request);
       persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
       setRequestStatus(request, 'Error.');
+      showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
     } finally {
       getCanceledRequestIds().delete(clientRequestId);
       getActiveRequests().delete(clientRequestId);

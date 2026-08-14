@@ -11,6 +11,7 @@ export {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from './result-import-detector.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function toResultField(columnIndex) {
   return `c${columnIndex + 1}`;
@@ -319,8 +320,8 @@ export function createAssayResultsManager({
   function addSelectedRangeGroup(dimension) {
     const selection = updateResultRangeSelectionStatus();
     const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
-    if (members.length < 2) {
-      setAnalysisSelectionStatus(`Select at least two ${dimension === 'row' ? 'rows' : 'columns'} before adding a group.`);
+    if (!members.length) {
+      setAnalysisSelectionStatus(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`);
       return;
     }
 
@@ -411,6 +412,7 @@ export function createAssayResultsManager({
     }
     if (!TabulatorLib) {
       assayResultTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
+      showTransientNotice('Spreadsheet component failed to load (Tabulator).', { type: 'error' });
       return false;
     }
     const signature = buildResultGridSignature(def);
@@ -468,6 +470,14 @@ export function createAssayResultsManager({
       return;
     }
     setResultStatus('');
+  }
+
+  // Tabulator measures column widths on build, so a grid built (or resized) while its
+  // panel was folded away comes back with zero-width columns until it redraws.
+  function redrawResultGrid() {
+    if (typeof resultGrid?.redraw === 'function') {
+      resultGrid.redraw(true);
+    }
   }
 
   function syncCurrentResultsFromGrid() {
@@ -646,6 +656,7 @@ export function createAssayResultsManager({
     },
     onError: (error) => {
       setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'));
+      showTransientNotice(String(error?.message || error || 'Unable to import the dropped result file.'), { type: 'error' });
     }
   });
 
@@ -655,6 +666,7 @@ export function createAssayResultsManager({
     getResultValueCount,
     clearResultGrid,
     renderResultTable,
+    redrawResultGrid,
     syncCurrentResultsFromGrid,
     setAnalysisSelectionStatus,
     refreshAnalysisGroupDisplay,

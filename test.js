@@ -153,9 +153,9 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'resolveBaseFromPoint'
   ]
 );
-// Gel now ships as a plugin (examples/plugins/gel), not a renderer module, so
-// its suites run against the plugin's copy — the only copy there is.
-const GEL_PLUGIN_DIR = path.join('examples', 'plugins', 'gel', 'vendor', 'modules', 'gel');
+// Gel ships as an internal plugin (src/plugins/gel), not a renderer module, so
+// its suites run against the plugin-owned copy — the only implementation.
+const GEL_PLUGIN_DIR = path.join('src', 'plugins', 'gel', 'vendor', 'modules', 'gel');
 const gelAnalysisInternals = loadEsmStyleModule(
   path.join(__dirname, GEL_PLUGIN_DIR, 'public-api.js'),
   {},
@@ -200,7 +200,6 @@ const papersPdfViewerInternals = loadEsmStyleModule(
 );
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'analysis', 'index.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
-const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
 
@@ -271,7 +270,6 @@ const suiteScope = {
   papersPdfViewerInternals,
   assayAnalysis,
   mainUtils,
-  telegramBot,
   forgeConfig,
   packageManifest,
   readSource,
@@ -338,12 +336,12 @@ test('plugin system: bundled serve tokens resolve only to the matching packaged 
   const { resolvePluginServePath } = require(
     path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js')
   );
-  const getBundledPluginPath = (id) => (id === 'gel' ? '/app/examples/plugins/gel' : '');
+  const getBundledPluginPath = (id) => (id === 'gel' ? '/app/src/plugins/gel' : '');
   assert.equal(resolvePluginServePath({
     pluginId: 'gel',
     requestedPath: '@bundled/gel',
     getBundledPluginPath
-  }), '/app/examples/plugins/gel');
+  }), '/app/src/plugins/gel');
   assert.equal(resolvePluginServePath({
     pluginId: 'local',
     requestedPath: '/tmp/local',
@@ -365,11 +363,10 @@ test('plugin system: Gel has no active renderer-module integrations after the pl
   assert.equal(
     fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'gel')),
     false,
-    'the Gel implementation lives only in examples/plugins/gel'
+    'the Gel implementation must not leak back into renderer modules'
   );
   const activeHostSources = [
     ['topbar item handler', 'src/renderer/app/topbar-open-handlers.js', /\bGel\s*:/],
-    ['Telegram view/search routing', 'src/main/lib/telegram-bot/config.js', /\['gels?',\s*\{[^\n]*(?:gel-view|scope:\s*'gel')/],
     ['Agent sub-app API', 'src/main/agent/runtime/agent-sub-app-api.js', /\blistGelRecords\b|\bgel:\s*Object\.freeze/],
     ['shared renderer CSS', 'ui/css/base/core.css', /#gel-view\b/]
   ];
@@ -762,7 +759,9 @@ test('plugin system: state normalizer strips unsafe embeds and remote permission
   assert.equal(byId.nowhere, undefined, 'an entry with neither entryUrl nor embedUrl is dropped');
   assert.equal(byId.gel.bundled, true, 'the Gel plugin is restored as a bundled app');
   assert.equal(byId.gel.path, '@bundled/gel');
-  assert.deepEqual(byId.gel.permissions, ['storage', 'files', 'downloads']);
+  assert.equal(byId.gel.icon, 'gel-analysis');
+  assert.match(byId.gel.iconMarkup, /data-hikari-icon="gel-analysis"/);
+  assert.deepEqual(byId.gel.permissions, ['storage', 'files', 'downloads', 'layout']);
   assert.equal(byId.gel.enabled, false, 'the user can keep a bundled plugin disabled');
 
   assert.deepEqual(settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
@@ -813,8 +812,27 @@ test('plugin system: a plugin view is its frame, with no host chrome around it',
   const state = {
     settings: {
       plugins: [
-        { id: 'served-one', name: 'Served One', description: 'A served plugin', serve: true, path: '/tmp/served-one', permissions: [] },
-        { id: 'local-one', name: 'Local One', entryUrl: 'file:///tmp/local-one/index.html', permissions: ['notebook:read'] }
+        {
+          id: 'served-one',
+          name: 'Served One',
+          description: 'A served plugin',
+          serve: true,
+          path: '/tmp/served-one',
+          permissions: [],
+          iconMarkup: '<svg data-untrusted-icon="true"></svg>'
+        },
+        { id: 'local-one', name: 'Local One', entryUrl: 'file:///tmp/local-one/index.html', permissions: ['notebook:read'] },
+        {
+          id: 'gel',
+          name: 'Gel Analysis',
+          serve: true,
+          path: '@bundled/gel',
+          permissions: [],
+          bundled: true,
+          icon: 'gel-analysis',
+          iconMarkup: '<svg data-hikari-icon="gel-analysis"></svg>',
+          aliases: ['gel', 'electrophoresis']
+        }
       ]
     }
   };
@@ -823,7 +841,7 @@ test('plugin system: a plugin view is its frame, with no host chrome around it',
   // needed for the view-shape assertions.
   installPlugins({ state, documentObject, appRegistry, api: { servePluginFolder: () => new Promise(() => {}) } });
 
-  for (const pluginId of ['served-one', 'local-one']) {
+  for (const pluginId of ['served-one', 'local-one', 'gel']) {
     const section = documentObject.getElementById(`plugin-${pluginId}-view`);
     assert.ok(section, `${pluginId} view section exists`);
 
@@ -860,6 +878,20 @@ test('plugin system: a plugin view is its frame, with no host chrome around it',
   const localTitle = frameFor('local-one').title;
   assert.ok(localTitle.includes('Local plugin'), 'local plugin is labelled as such');
   assert.ok(localTitle.includes('notebook:read'), 'local plugin lists its declared permission');
+
+  const registryById = Object.fromEntries(appRegistry.map((app) => [app.id, app]));
+  assert.doesNotMatch(
+    registryById['plugin-served-one'].iconMarkup,
+    /data-untrusted-icon/,
+    'installable plugin SVG never enters the host document'
+  );
+  assert.match(
+    registryById['plugin-gel'].iconMarkup,
+    /data-hikari-icon="gel-analysis"/,
+    'the source-owned Gel icon reaches the navigation registry'
+  );
+  assert.equal(registryById['plugin-gel'].icon, 'gel-analysis');
+  assert.deepEqual(registryById['plugin-gel'].aliases, ['gel', 'electrophoresis']);
 });
 
 test('plugin system: bridge gates verbs on manifest permissions and frame identity', async () => {
@@ -873,10 +905,37 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   };
   let persisted = 0;
   const listeners = [];
+  const railStyles = new Map();
+  const railStorage = new Map();
+  const layoutEvents = [];
+  class FakeCustomEvent {
+    constructor(type, init = {}) {
+      this.type = type;
+      this.detail = init.detail;
+    }
+  }
+  const windowObject = {
+    innerWidth: 1280,
+    document: {
+      documentElement: {
+        style: { setProperty: (name, value) => railStyles.set(name, value) }
+      }
+    },
+    localStorage: {
+      getItem: (key) => railStorage.get(key) || null,
+      setItem: (key, value) => railStorage.set(key, String(value))
+    },
+    getComputedStyle: () => ({
+      getPropertyValue: (name) => railStyles.get(name) || ''
+    }),
+    CustomEvent: FakeCustomEvent,
+    addEventListener: (_type, fn) => listeners.push(fn),
+    dispatchEvent: (event) => layoutEvents.push(event)
+  };
   const bridge = createPluginBridge({
     state,
     persist: () => { persisted += 1; },
-    windowObject: { addEventListener: (_type, fn) => listeners.push(fn) }
+    windowObject
   });
   assert.equal(listeners.length, 1, 'bridge subscribes to window messages');
 
@@ -887,7 +946,9 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   };
   const reader = makeFrame();
   const stranger = makeFrame();
-  bridge.register(reader, { id: 'reader', permissions: ['notebook:read', 'notebook:write'] });
+  bridge.register(reader, { id: 'reader', permissions: ['notebook:read', 'notebook:write', 'layout'] });
+  const noLayout = makeFrame();
+  bridge.register(noLayout, { id: 'no-layout', permissions: ['notebook:read'] });
 
   const send = (source, verb, params = {}) => {
     bridge.handleMessage({ source, data: { hikari: 1, id: verb, verb, params } });
@@ -900,6 +961,26 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
 
   assert.equal(send(reader, 'notebook.list').ok, true);
   assert.equal(send(reader, 'notebook.list').result[0].experimentName, 'Exp 1');
+
+  const appInfo = send(reader, 'app.info');
+  assert.deepEqual(appInfo.result.layout.leftRail, {
+    width: 280,
+    min: 240,
+    max: 400,
+    mobileBreakpoint: 980
+  });
+  assert.equal(send(reader, 'app.setLeftRailWidth', { width: '360' }).ok, false, 'layout writes require a number');
+  // The rail write touches host CSS, host localStorage, and every other frame, so it
+  // is gated like any other write verb rather than being free.
+  const deniedRail = send(noLayout, 'app.setLeftRailWidth', { width: 360 });
+  assert.equal(deniedRail.ok, false, 'layout writes require the layout permission');
+  assert.ok(deniedRail.error.includes('layout'));
+  const resizedRail = send(reader, 'app.setLeftRailWidth', { width: 360 });
+  assert.equal(resizedRail.ok, true);
+  assert.equal(resizedRail.result.leftRail.width, 360);
+  assert.equal(railStyles.get('--shared-left-rail-width'), '360px');
+  assert.equal(railStorage.get('hikari_shared_left_rail_width_v2'), '360');
+  assert.equal(layoutEvents.at(-1).type, 'hikari:left-rail-width-changed');
 
   // Declared read/write permissions do not imply unrelated ones.
   const denied = send(reader, 'protocols.list');
@@ -1237,6 +1318,109 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
   });
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(other.replies.at(-1).ok, false, 'other plugin ids cannot claim Gel legacy data');
+});
+
+test('plugin system: python.run is permission gated and hands back no host paths', async () => {
+  const { createPluginBridge, PLUGIN_BRIDGE_VERBS } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const { PLUGIN_PERMISSIONS } = require(path.join(__dirname, 'src', 'main', 'lib', 'inspect-plugin-folder.js'));
+  // A verb whose permission is not installable is unreachable, so the two
+  // lists have to agree or the verb is dead on arrival.
+  assert.equal(PLUGIN_BRIDGE_VERBS['python.run'], 'python');
+  assert.ok(PLUGIN_PERMISSIONS.includes('python'), 'manifests must be able to request "python"');
+
+  const runs = [];
+  const bridge = createPluginBridge({
+    state: { settings: {} },
+    api: {
+      async runPython(payload) {
+        runs.push(payload);
+        return {
+          ok: true,
+          status: 'ok',
+          stdout: 'doubled 42\n',
+          stderr: '',
+          exit_code: 0,
+          timed_out: false,
+          readback_files: [{ path: 'out.txt', content: '42', truncated: false }],
+          // The host result carries these; the frame must not see them.
+          python_executable: '/usr/local/bin/python3',
+          run_id: 'run-1',
+          process_id: 4242
+        };
+      }
+    },
+    windowObject: { addEventListener() {} }
+  });
+  const makeFrame = () => {
+    const replies = [];
+    return { replies, postMessage: (payload) => replies.push(payload) };
+  };
+  const runner = makeFrame();
+  const reader = makeFrame();
+  bridge.register(runner, { id: 'runner', permissions: ['python'] });
+  bridge.register(reader, { id: 'reader', permissions: ['files', 'storage'] });
+
+  // Holding files/storage is not holding python: a subprocess is its own grant.
+  bridge.handleMessage({
+    source: reader,
+    data: { hikari: 1, id: 'denied', verb: 'python.run', params: { code: 'print(1)' } }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(reader.replies.at(-1).ok, false);
+  assert.match(reader.replies.at(-1).error, /did not declare the "python" permission/);
+  assert.equal(runs.length, 0, 'a denied call never reaches the host runner');
+
+  bridge.handleMessage({
+    source: runner,
+    data: { hikari: 1, id: 'empty', verb: 'python.run', params: { code: '   ' } }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(runner.replies.at(-1).ok, false);
+  assert.equal(runs.length, 0, 'blank code never reaches the host runner');
+
+  bridge.handleMessage({
+    source: runner,
+    data: {
+      hikari: 1,
+      id: 'run',
+      verb: 'python.run',
+      params: {
+        code: 'print("doubled 42")',
+        files: [{ path: 'in.txt', content: '21' }],
+        readbackPaths: ['out.txt'],
+        timeoutMs: 5000
+      }
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const reply = runner.replies.at(-1);
+  assert.equal(reply.ok, true);
+  assert.equal(reply.result.stdout, 'doubled 42\n', 'stdout crosses verbatim, not trimmed');
+  assert.equal(reply.result.exitCode, 0);
+  assert.deepEqual(reply.result.files, [{ path: 'out.txt', content: '42', truncated: false }]);
+  assert.equal(reply.result.pythonExecutable, undefined, 'the interpreter path stays host-side');
+  assert.equal(reply.result.python_executable, undefined);
+  assert.equal(reply.result.run_id, undefined);
+  assert.equal(reply.result.process_id, undefined);
+  assert.deepEqual(runs.at(-1).files, [{ path: 'in.txt', content: '21' }]);
+  assert.equal(runs.at(-1).timeout_ms, 5000);
+
+  // Oversized input is refused at the bridge rather than shipped to a subprocess.
+  bridge.handleMessage({
+    source: runner,
+    data: {
+      hikari: 1,
+      id: 'huge',
+      verb: 'python.run',
+      params: { code: 'print(1)', files: [{ path: 'big.txt', content: 'x'.repeat(4000001) }] }
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(runner.replies.at(-1).ok, false);
+  assert.match(runner.replies.at(-1).error, /exceeds the 4000000-character limit/);
+  assert.equal(runs.length, 1, 'oversized input never reaches the host runner');
 });
 
 test('plugin system: a frame with unsaved work reaches the host quit guard', async () => {

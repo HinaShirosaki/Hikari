@@ -5,7 +5,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
   with (scope) {
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
-      readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
@@ -22,8 +21,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js'),
       readLocalSource('src', 'main', 'preload', 'api', 'sequence-library-api.js'),
       readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js'),
-      readLocalSource('src', 'main', 'preload', 'api', 'system-api.js'),
-      readLocalSource('src', 'main', 'preload', 'api', 'telegram-api.js')
+      readLocalSource('src', 'main', 'preload', 'api', 'system-api.js')
     ].join('\n');
     const readRendererShellSource = () => [
       readLocalSource('src', 'renderer', 'renderer.js'),
@@ -160,6 +158,108 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, scrollRule);
     });
 
+    test('biology notebook protocol fold triangle sits beside its label', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+
+      assert.match(html, /class="biology-notebook-viewer-section-summary">\s*<span>Protocol<\/span>\s*<span class="biology-notebook-viewer-section-chevron"/);
+      assert.match(css, /\.biology-notebook-viewer-section-summary\s*\{[^}]*justify-content:\s*flex-start;[^}]*gap:\s*7px;/s);
+    });
+
+    test('biology notebook placeholder editors grow from their rendered token width', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const source = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'protocol', 'inline-placeholder-controller.js');
+
+      assert.match(css, /\.inline-placeholder-editor\s*\{[^}]*min-width:\s*0;[^}]*max-width:\s*min\(360px,\s*calc\(100vw - 96px\)\);/s);
+      assert.match(source, /function setEditorInitialWidth\(editor, token\)[\s\S]*?inlineEditorBaseWidth[\s\S]*?editor\.style\.width/);
+      assert.match(source, /function resizeEditorForValue\(editor\)[\s\S]*?editor\.scrollWidth[\s\S]*?Math\.max\(baseWidth, contentWidth\)/);
+      assert.match(source, /setEditorInitialWidth\(editor, token\);[\s\S]*?editor\.focus\(\)/);
+      assert.match(source, /stepsHost\.addEventListener\('input', onInput\)/);
+    });
+
+    test('biology notebook placeholder context menu contains only a plain Add Table action', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const source = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'samples', 'sample-link-menu.js');
+
+      assert.match(source, /class="biology-notebook-placeholder-table-action" role="menuitem" data-placeholder-add-table>[\s\S]*?Add Table[\s\S]*?<\/button>/);
+      assert.doesNotMatch(source, /Placeholder variable|Search samples|data-sample-link-results|ghost-btn|Add table from this variable/i);
+      assert.match(css, /\.biology-notebook-placeholder-table-action\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
+    });
+
+    test('biology notebook viewer uses four borderless icon actions with accessible labels', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+
+      assert.match(html, /class="biology-notebook-viewer-actions"[^>]*aria-label="Notebook page actions"/);
+      assert.match(html, /id="biology-notebook-edit-protocol-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Edit page copy"[^>]*title="Edit page copy"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Edit page copy<\/span>/);
+      assert.match(html, /id="biology-notebook-export-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Export PDF"[^>]*title="Export PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Export PDF<\/span>/);
+      assert.match(html, /id="biology-notebook-print-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Print"[^>]*title="Print"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Print<\/span>/);
+      assert.match(html, /id="save-biology-notebook-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Save notebook page"[^>]*title="Save notebook page"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save notebook page<\/span>/);
+      assert.equal((html.match(/id="save-biology-notebook-btn"/g) || []).length, 1);
+      assert.match(css, /\.biology-notebook-viewer-icon-btn\.ghost-btn\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
+    });
+
+    test('biology notebook bench tools live in a foldable floating icon toolbox', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const source = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js');
+      const notebookSource = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'index.js');
+      const linkedToolbar = html.match(/<div class="biology-notebook-linked-toolbar">([\s\S]*?)<\/div>/)?.[1] || '';
+
+      assert.match(html, /id="biology-notebook-layout" class="[^"]*is-tool-sidebar-collapsed/);
+      assert.match(html, /id="biology-notebook-tool-fold-toggle"[^>]*aria-label="Open bench toolbox"[^>]*aria-controls="biology-notebook-tool-content"[\s\S]*?<svg/);
+      assert.match(html, /class="biology-notebook-tool-toolbar"[\s\S]*?id="biology-notebook-tool-tab-molarity"[\s\S]*?id="biology-notebook-tool-tab-buffer"[\s\S]*?id="biology-notebook-tool-tab-reaction"[\s\S]*?id="biology-notebook-add-assay-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-samples-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-table-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-tool-collapse-btn"/);
+      assert.match(html, /id="biology-notebook-tool-tab-molarity"[^>]*data-hover-caption="Molarity calculator"/);
+      assert.match(html, /id="biology-notebook-tool-tab-molarity"[^>]*class="biology-notebook-tool-tab"[^>]*aria-selected="false"/);
+      assert.doesNotMatch(html, /id="biology-notebook-tool-tab-molarity"[^>]*class="[^"]*is-active/);
+      assert.match(html, /id="biology-notebook-tool-panel-molarity"[^>]*data-notebook-tool-panel="molarity"[^>]*hidden/);
+      assert.match(html, /id="biology-notebook-tool-tab-buffer"[^>]*data-hover-caption="Buffer preparer"/);
+      assert.match(html, /id="biology-notebook-tool-tab-reaction"[^>]*data-hover-caption="Fixed volume reaction"/);
+      assert.match(html, /id="biology-notebook-add-assay-btn"[^>]*data-hover-caption="Add assay"/);
+      assert.match(html, /id="biology-notebook-add-samples-btn"[^>]*data-hover-caption="Add samples"/);
+      assert.match(html, /id="biology-notebook-quick-sample-overlay"[^>]*hidden[\s\S]*?class="biology-notebook-quick-sample-layout"[\s\S]*?id="biology-notebook-quick-sample-position"[\s\S]*?id="biology-notebook-quick-sample-container"[\s\S]*?id="biology-notebook-quick-sample-grid"[\s\S]*?id="biology-notebook-quick-sample-name"/);
+      assert.match(html, /id="biology-notebook-add-table-btn"[^>]*data-hover-caption="Add table"/);
+      assert.match(html, /id="biology-notebook-tool-collapse-btn"[^>]*data-hover-caption="Fold toolbox"/);
+      assert.match(html, /id="biology-notebook-tool-workspace"[^>]*hidden[^>]*aria-label="Bench tool workspace"/);
+      assert.doesNotMatch(linkedToolbar, /biology-notebook-add-(?:assay|samples|table)-btn/);
+      assert.doesNotMatch(html, /id="biology-notebook-tool-mobile-toggle"/);
+      assert.match(css, /\.biology-notebook-tool-sidebar\s*\{[^}]*position:\s*absolute;[^}]*z-index:\s*240;[^}]*width:\s*132px;[^}]*height:\s*132px;[^}]*max-height:\s*132px;[^}]*box-shadow:/s);
+      assert.match(css, /\.biology-notebook-layout\.is-tool-sidebar-collapsed \.biology-notebook-tool-sidebar\s*\{[^}]*width:\s*42px;[^}]*max-height:\s*42px;/s);
+      assert.match(css, /\.biology-notebook-tool-tab,\s*\.biology-notebook-tool-icon-action\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*border:\s*0;/s);
+      assert.match(css, /\.biology-notebook-tool-sidebar \.biology-notebook-tool-body,[\s\S]*?\.biology-notebook-tool-sidebar \.biology-notebook-tool-status\s*\{\s*display:\s*none;/);
+      assert.match(source, /function mountToolWorkspace\(\)[\s\S]*?toolWorkspace\.appendChild\(element\)/);
+      assert.match(source, /let activeTool = '';/);
+      assert.match(source, /function clearToolSelection\(\)[\s\S]*?activeTool = '';[\s\S]*?syncToolSelection\(\);[\s\S]*?toolWorkspace\.hidden = true/);
+      assert.match(notebookSource, /notebookAddTableBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?resultTableController\.onAdd\(\)/);
+      assert.match(notebookSource, /notebookAddAssayBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?linkedWorkActions\.onAddAssayClick\(\)/);
+      assert.match(notebookSource, /notebookAddSamplesBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?quickSampleController\.open\(\)/);
+      assert.match(css, /\.biology-notebook-quick-sample-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.62fr\)\s*minmax\(230px,\s*0\.72fr\);/s);
+      assert.match(css, /\.biology-notebook-quick-sample-storage\s*\{[^}]*grid-template-columns:\s*minmax\(126px,\s*0\.38fr\)\s*minmax\(250px,\s*1fr\);/s);
+      assert.match(source, /function showToolWorkspace\(\)[\s\S]*?toolWorkspace\.hidden = false/);
+      assert.match(source, /addListener\(foldToggle, 'click',[\s\S]*?setSidebarOpen\(true\)[\s\S]*?biology-notebook-tool-tab-/);
+      assert.match(source, /addListener\(foldToggle, 'pointerdown', beginToolboxDrag\)/);
+      assert.match(source, /addListener\(win, 'pointermove', moveToolbox\)/);
+      assert.match(source, /function applyToolboxPosition\([\s\S]*?notebookToolboxMoved = 'true'/);
+      assert.match(source, /function positionExpandedToolbox\([\s\S]*?spaceRight[\s\S]*?spaceLeft[\s\S]*?spaceDown[\s\S]*?spaceUp[\s\S]*?toolboxExpandX[\s\S]*?toolboxExpandY/);
+      assert.match(source, /function storeToolboxAnchor\([\s\S]*?horizontalEdge[\s\S]*?verticalEdge/);
+      assert.match(source, /function resolveToolboxAnchor\([\s\S]*?horizontalEdge === 'right'[\s\S]*?verticalEdge === 'bottom'/);
+      assert.match(css, /\.biology-notebook-tool-toolbar\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*36px\);[^}]*grid-template-rows:\s*repeat\(3,\s*36px\);/s);
+      assert.match(css, /data-toolbox-expand-x="left"[^}]*biology-notebook-tool-collapse-btn[^}]*\{[^}]*grid-column:\s*3;/s);
+      assert.match(css, /data-toolbox-expand-y="up"[^}]*biology-notebook-tool-collapse-btn[^}]*\{[^}]*grid-row:\s*3;/s);
+      assert.match(css, /\.biology-notebook-layout\.is-tool-sidebar-collapsed \.biology-notebook-tool-fold-toggle\s*\{[^}]*border:\s*1px solid[^;]+;[^}]*background:\s*var\(--theme-surface-elevated\);[^}]*box-shadow:\s*none;[^}]*cursor:\s*grab;[^}]*touch-action:\s*none;/s);
+      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]::after\s*\{[^}]*content:\s*attr\(data-hover-caption\);[^}]*position:\s*absolute;[^}]*opacity:\s*0;[^}]*visibility:\s*hidden;/s);
+      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]:hover::after,[\s\S]*?focus-visible::after\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible;/s);
+      assert.match(css, /data-toolbox-expand-y="down"[^}]*data-hover-caption[^}]*\{[^}]*top:\s*calc\(100% \+ 7px\);[^}]*bottom:\s*auto;/s);
+      assert.match(css, /data-toolbox-expand-x="left"[^}]*data-hover-caption[^}]*\{[^}]*right:\s*0;[^}]*left:\s*auto;/s);
+      assert.match(source, /event\?\.key === 'Escape'[\s\S]*setSidebarOpen\(false\)/);
+    });
+
+    test('biology notebook result tables do not add an outer framed panel', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+
+      assert.match(css, /\.biology-notebook-result-table-wrap\s*\{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
+    });
+
     test('Samples and Inventory omits redundant container and section-count copy', () => {
       const html = readLocalSource('ui', 'html', 'views', 'personal-inventory-view.html');
       const containerForm = readLocalSource('src', 'renderer', 'modules', 'personal-inventory', 'container-form.js');
@@ -194,6 +294,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, listRule);
     });
 
+    test('protocol rail keeps its hover, selected fill, and row dividers on one width', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const tableRule = /\.protocol-list-scroll\s*>\s*\.list-table\s*\{[^}]*width:\s*calc\(100%\s*\+\s*var\(--protocol-list-row-inline-padding\)\s*\+\s*var\(--protocol-list-row-inline-padding\)\);[^}]*margin-inline:\s*calc\(-1\s*\*\s*var\(--protocol-list-row-inline-padding\)\);[^}]*\}/s;
+      const rowRule = /\.protocol-list-row\s*\{[^}]*box-sizing:\s*border-box;[^}]*width:\s*100%;[^}]*padding:\s*14px\s+var\(--protocol-list-row-inline-padding\);[^}]*\}/s;
+      const selectedRule = /\.protocol-list-row-selected\s*\{[^}]*margin-inline:\s*0;[^}]*padding-inline:\s*var\(--protocol-list-row-inline-padding\)\s*!important;[^}]*\}/s;
+
+      assert.match(css, tableRule);
+      assert.match(css, rowRule);
+      assert.match(css, selectedRule);
+    });
+
     test('protocol rail uses one borderless icon menu for its four sort combinations', () => {
       const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
       const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
@@ -201,6 +312,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="protocol-sort-menu-btn"[^>]*aria-label="Sort protocols"[\s\S]*<svg[\s\S]*id="protocol-sort-menu"[\s\S]*data-protocol-sort="time:asc"[\s\S]*data-protocol-sort="time:desc"[\s\S]*data-protocol-sort="name:asc"[\s\S]*data-protocol-sort="name:desc"/);
       assert.doesNotMatch(html, /id="protocol-sort-(?:field|order)-btn"/);
       assert.match(css, /\.protocol-sort-menu-btn\.ghost-btn\s*\{[^}]*border:\s*0;/s);
+    });
+
+    test('protocol viewer uses three borderless icon actions with accessible labels', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+
+      assert.match(html, /class="form-actions protocol-viewer-actions"[^>]*aria-label="Protocol actions"/);
+      assert.match(html, /id="protocol-view-edit-btn"[^>]*class="ghost-btn protocol-viewer-icon-btn"[^>]*aria-label="Edit protocol"[^>]*title="Edit protocol"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Edit protocol<\/span>/);
+      assert.match(html, /id="protocol-export-pdf-btn"[^>]*class="ghost-btn protocol-viewer-icon-btn"[^>]*aria-label="Export PDF"[^>]*title="Export PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Export PDF<\/span>/);
+      assert.match(html, /id="protocol-print-btn"[^>]*class="ghost-btn protocol-viewer-icon-btn"[^>]*aria-label="Print"[^>]*title="Print"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Print<\/span>/);
+      assert.match(css, /\.protocol-viewer-icon-btn\.ghost-btn\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
     });
 
     test('protocol placeholder presets keep the selected bar visibly active', () => {
@@ -233,6 +355,42 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
 
       assert.match(sequenceDetailHtml, /class="sequence-viewer-cloning-design-toolbar"[\s\S]*class="sequence-viewer-cloning-design-toolbar-nav"[\s\S]*id="sequence-viewer-cloning-design-back-btn"[\s\S]*class="sequence-viewer-cloning-design-toolbar-main"[\s\S]*id="sequence-viewer-cloning-design-run-btn"/);
+    });
+
+    test('sequence viewer detail toolbar contains controls, not inline status text', () => {
+      const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const toolbarMatch = sequenceDetailHtml.match(/<div class="form-actions sequence-viewer-detail-toolbar">([\s\S]*?)<\/div>\s*<label class="sequence-viewer-hidden-control"/);
+      const toolbar = toolbarMatch?.[1] || '';
+
+      assert.match(toolbar, /id="sequence-viewer-load-btn"[\s\S]*id="sequence-viewer-annotate-btn"[\s\S]*id="sequence-viewer-recognize-backbone-btn"/);
+      assert.match(toolbar, /id="sequence-viewer-recognize-backbone-btn"[^>]*>[\s\S]*?<\/button>\s*<div class="sequence-viewer-menu-anchor">\s*<button id="sequence-viewer-alignment-menu-btn"/);
+      assert.match(toolbar, /id="sequence-viewer-orf-menu-btn"/);
+      assert.doesNotMatch(toolbar, /id="sequence-viewer-status"|sequence-viewer-status-note/);
+    });
+
+    test('sequence viewer primary actions use accessible compact icons', () => {
+      const homeHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const detailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+      const iconButtonIds = [
+        'sequence-viewer-detail-new-btn',
+        'sequence-viewer-detail-open-btn',
+        'sequence-viewer-vector-builder-btn',
+        'sequence-viewer-annotate-btn',
+        'sequence-viewer-recognize-backbone-btn',
+        'sequence-viewer-alignment-menu-btn',
+        'sequence-viewer-orf-menu-btn',
+        'sequence-viewer-cutter-menu-btn'
+      ];
+
+      iconButtonIds.forEach((id) => {
+        assert.match(detailHtml, new RegExp(`id="${id}"[^>]*class="[^"]*sequence-viewer-icon-btn[^"]*"[^>]*aria-label="[^"]+"[^>]*>[\\s\\S]*?<svg`));
+      });
+      assert.match(homeHtml, /id="sequence-viewer-home-paste-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="New sequence"/);
+      assert.match(homeHtml, /id="sequence-viewer-home-open-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Open sequence"/);
+      assert.match(homeHtml, /id="sequence-viewer-home-vector-builder-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Vector Builder"/);
+      assert.match(detailHtml, /class="sequence-viewer-inline-toggle sequence-viewer-toolbar-icon-toggle"[^>]*aria-label="Show primer binding sites"[\s\S]*id="sequence-viewer-primers-toggle"/);
+      assert.match(css, /\.sequence-viewer-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
     });
 
     test('Workflow keeps the Add Blocks composer in the left rail for edit modes', () => {
@@ -314,14 +472,25 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('Assay Analyze uses the same searchable Existing Assays browser as Setup', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const foldableCss = readLocalSource('ui', 'css', 'components', 'foldable-section.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
       const browserView = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'browser-view.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
 
-      assert.match(html, /class="assay-results-browser-scroll left-rail-template__scroll"[\s\S]*?id="assay-results-browser-panel"[^>]*assay-browser-panel[^>]*open[\s\S]*?Existing Assays[\s\S]*?id="assay-results-search"[\s\S]*?id="assay-results-list"[^>]*assay-browser-list[\s\S]*?class="assay-results-controls-pinned left-rail-template__pinned"[\s\S]*?id="assay-chart-style-panel"/);
+      // The Analyze rail is one scroller of foldable sections: nothing is pinned.
+      assert.match(html, /class="assay-results-rail-scroll left-rail-template__scroll"[\s\S]*?id="assay-results-browser-panel"[^>]*foldable-section[^>]*open[\s\S]*?Existing Assays[\s\S]*?id="assay-results-search"[\s\S]*?id="assay-results-list"[^>]*assay-browser-list[\s\S]*?id="assay-analysis-panel"[\s\S]*?id="assay-chart-format-panel"[\s\S]*?id="assay-chart-style-panel"/);
       assert.match(html, /id="assay-results-assay-select" hidden/);
-      assert.match(css, /\.assay-results-controls-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*minmax\(148px,\s*1fr\) minmax\(0,\s*3fr\);/s);
-      assert.match(css, /\.assay-results-controls-pinned\.left-rail-template__pinned\s*\{[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto !important;[^}]*scrollbar-gutter:\s*stable;/s);
+      assert.doesNotMatch(html, /assay-results-controls-pinned|left-rail-template__pinned"[^>]*data-assay-rail-page/);
+      assert.match(css, /\.assay-results-controls-panel > \.assay-results-rail-scroll\.left-rail-template__scroll\s*\{[^}]*overflow-y:\s*auto !important;[^}]*scrollbar-gutter:\s*stable;/s);
+      // All three headline sections are <details> the user can fold away.
+      ['assay-results-browser-panel', 'assay-analysis-panel', 'assay-chart-format-panel'].forEach((id) => {
+        assert.match(html, new RegExp(`<details id="${id}"[^>]*foldable-section`), `${id} should use the shared foldable section`);
+      });
+      assert.match(foldableCss, /\.foldable-section\s*\{[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s);
+      assert.match(foldableCss, /\.foldable-section__summary::before\s*\{[^}]*left:\s*-8px;[^}]*width:\s*3px;[^}]*background:\s*var\(--theme-accent\);[^}]*opacity:\s*0;/s);
+      assert.match(foldableCss, /\.foldable-section__summary:focus-visible\s*\{[^}]*outline:\s*none;/s);
+      assert.match(foldableCss, /\.foldable-section__summary:focus-visible::before\s*\{[^}]*opacity:\s*1;/s);
+      assert.doesNotMatch(css, /\.assay-rail-section|\.assay-rail-subsection/);
       assert.match(dom, /assayResultsList:\s*root\.getElementById\('assay-results-list'\)/);
       assert.match(browserView, /data-assay-results-select=/);
       assert.match(bindings, /assayResultsList\?\.addEventListener\('click',\s*onListClick\)/);
@@ -330,7 +499,9 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
         'assay-results-list',
         'assay-result-file-input',
         'assay-analysis-group-visualization',
-        'assay-analysis-method',
+        'assay-analysis-group-by',
+        'assay-analysis-kind',
+        'assay-chart-format-panel',
         'assay-chart-style-panel'
       ];
       const workflowPositions = workflowIds.map((id) => html.indexOf(`id="${id}"`));
@@ -341,6 +512,85 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(html, /assay-analyze-results-btn|Analyze Results/);
       assert.doesNotMatch(dom, /assayAnalyzeResultsBtn/);
       assert.doesNotMatch(bindings, /onAnalyzeResults/);
+    });
+
+    test('Assay chart formatting is a toolbar plus a tabbed rail page, not a stack of fieldsets', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const foldableCss = readLocalSource('ui', 'css', 'components', 'foldable-section.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const controls = readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-controls.js');
+      const toolbar = readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-toolbar.js');
+      const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
+
+      // The toolbar sits with the figure it changes, above the analysis output.
+      assert.match(html, /class="assay-results-output-stage"[\s\S]*?id="assay-chart-toolbar"[\s\S]*?id="assay-analysis-table"/);
+      assert.match(dom, /assayChartToolbarMount:\s*root\.getElementById\('assay-chart-toolbar'\)/);
+
+      // Format is a foldable rail section, reachable whether or not a chart exists.
+      assert.match(html, /<details id="assay-chart-format-panel"[\s\S]*?Chart Format[\s\S]*?id="assay-chart-style-panel"/);
+      assert.match(dom, /assayChartFormatPanel:\s*root\.getElementById\('assay-chart-format-panel'\)/);
+      // The panel has no back button of its own; the fold's summary is its header.
+      assert.doesNotMatch(controls, /assay-chart-style-back|data-cc="backBtn"/);
+
+      // Five tabs replace the thirteen always-open fieldsets.
+      ['data', 'axes', 'series', 'style', 'text'].forEach((tab) => {
+        assert.match(controls, new RegExp(`id: '${tab}'`), `expected a ${tab} tab`);
+        assert.match(controls, new RegExp(`data-cc-panel="${tab}"`), `expected a ${tab} panel`);
+      });
+      assert.doesNotMatch(controls, /<details|<fieldset|<legend/);
+      assert.match(controls, /data-cc="resetTabBtn"/);
+
+      // Controls that cannot affect the current figure are marked, not left inert.
+      assert.match(controls, /data-cc-when="bar"/);
+      assert.match(controls, /data-cc-when="line"/);
+      assert.match(controls, /data-cc-needs="errorBars"/);
+
+      // The three column pickers that had no UI now have one.
+      ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
+        assert.match(controls, new RegExp(`data-cc="${key}"`), `expected a ${key} picker`);
+      });
+
+      // Chart type and export existed nowhere before.
+      assert.match(toolbar, /data-tb-chart-type="bar"/);
+      assert.match(toolbar, /data-tb="exportSvg"/);
+
+      assert.match(css, /\.assay-chart-toolbar\s*\{[^}]*display:\s*flex;/s);
+      assert.match(css, /\.assay-chart-style-tabs button\[aria-selected="true"\]\s*\{/);
+      assert.match(foldableCss, /\.foldable-section\s*\{[^}]*border-bottom:\s*1px solid var\(--app-left-rail-divider,/s);
+    });
+
+    test('Assay plate transform is its own rail page and is saved with the assay', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
+      const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
+      const storage = readLocalSource('src', 'renderer', 'modules', 'assay', 'artifact-storage.js');
+
+      // Transform folds inside Data Analysis rather than replacing the rail.
+      assert.match(html, /<details id="assay-analysis-panel"[\s\S]*?<details id="assay-transform-panel"[^>]*foldable-section--subsection/);
+      ['blank', 'normalize-hundred', 'normalize-zero', 'arithmetic-op', 'arithmetic-value', 'value']
+        .forEach((key) => assert.match(html, new RegExp(`id="assay-transform-${key}"`), `expected the ${key} control`));
+
+      // The derived plate is a foldable panel under the raw plate.
+      assert.match(html, /id="assay-result-table-panel"[\s\S]*?id="assay-derived-plate-panel"[^>]*hidden/);
+      assert.match(dom, /assayDerivedPlatePanel:\s*root\.getElementById\('assay-derived-plate-panel'\)/);
+      assert.match(dom, /assayTransformPanel:\s*root\.getElementById\('assay-transform-panel'\)/);
+
+      // Formula mode is a sibling of the guided steps, never stacked on top of them.
+      assert.match(html, /id="assay-transform-mode"/);
+      assert.match(html, /id="assay-transform-formula"/);
+      assert.match(html, /data-transform-mode="steps"/);
+      assert.match(html, /data-transform-mode="formula"/);
+      assert.match(dom, /assayTransformModePanels:\s*Array\.from\(root\.querySelectorAll\('#assay-view \[data-transform-mode\]'\)\)/);
+      assert.match(bindings, /assayTransformFormulaInput\?\.addEventListener\('input',\s*analysisView\.onFormulaInput\)/);
+
+      // Persisted with the assay, restored on load, and carried through a Setup save.
+      assert.match(assay, /activeAssay\.transformSpec\s*=\s*spec;/);
+      assert.match(assay, /analysisView\.loadTransformSpec\(assay\.transformSpec\)/);
+      assert.match(assay, /transformSpec:\s*existing\?\.transformSpec\s*\|\|\s*null/);
+      assert.match(assay, /chartStyle:\s*existing\?\.chartStyle\s*\|\|\s*null/);
+      assert.match(storage, /transformSpec:\s*assay\.transformSpec\s*\|\|\s*null/);
     });
 
     test('Assay setup actions stay at the top of the form as accessible compact icons', () => {
@@ -401,7 +651,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
-      const gelView = readLocalSource('examples', 'plugins', 'gel', 'vendor', 'gel-view.html');
+      const gelView = readLocalSource('src', 'plugins', 'gel', 'vendor', 'gel-view.html');
       const analysisStart = gelView.indexOf('<summary>Analysis</summary>');
       const ladderMwInput = gelView.indexOf('id="gel-ladder-band-mw"');
 
@@ -530,6 +780,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="sequence-viewer-feature-detail"/);
       assert.equal(html.includes('sequence-viewer-feature-table-body'), false);
       assert.equal(viewerSource.includes('featureTableBody'), false);
+    });
+
+    test('sequence viewer keeps forward and reverse strands closely paired', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+      const constants = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'constants.js');
+
+      assert.match(css, /\.sequence-viewer-strand-pair\s*\{[^}]*gap:\s*2px;/s);
+      assert.match(constants, /STRAND_PAIR_ROW_GAP_PX\s*=\s*2;/);
+      assert.match(css, /\.sequence-viewer-strand-row-top \.sequence-viewer-seq-highlight[^}]*\{[^}]*border-radius:\s*3px 3px 0 0;/s);
+      assert.match(css, /\.sequence-viewer-strand-row-top \.sequence-viewer-seq-highlight[^}]*::after\s*\{[^}]*top:\s*100%;[^}]*height:\s*calc\(2px \+ 0\.14em\);/s);
+      assert.match(css, /\.sequence-viewer-strand-row-bottom \.sequence-viewer-seq-highlight[^}]*\{[^}]*border-radius:\s*0 0 3px 3px;/s);
+      assert.doesNotMatch(css, /\.sequence-viewer-strand-row-(?:top|bottom) \.sequence-viewer-seq-highlight[^}]*\{[^}]*box-shadow:/s);
     });
 
     test('sequence viewer splits home and detail pages and removes home top caption/meta', () => {
@@ -730,13 +992,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(source, /nodeIntegration:\s*false/);
       assert.match(source, /sandbox:\s*false/);
       assert.match(source, /preload:\s*preloadPath/);
-    });
-
-    test('telegram bridge keeps only supported renderer IPC channel', () => {
-      const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
-      const preloadSource = readPreloadSource();
-      assert.equal(telegramBotSource.includes('telegram-message'), false);
-      assert.equal(preloadSource.includes('onTelegramCommand'), true);
     });
 
     test('main composes dedicated IPC registrars with generic tool runtime support', () => {

@@ -184,7 +184,7 @@ function registerSequenceViewerAgentBridgeForCtx(ctx) {
 function initializeSequenceViewerRuntime(ctx) {
   ctx.actions.setMode('paste');
   ctx.actions.setInputComposerVisible(true);
-  ctx.actions.setStatus('Paste sequence text, then click Load.');
+  ctx.actions.setStatus('');
   ctx.controllers.home.setHomeStatus('');
   ctx.actions.render();
 }

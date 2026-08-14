@@ -49,11 +49,6 @@
               <span>Plugins</span>
               <small>User plugin folders</small>
             </button>
-            <!-- ponytail: telegram unwired in main-services; drop `hidden` to bring it back. -->
-            <button type="button" class="settings-nav-item" data-settings-target="telegram" hidden>
-              <span>Telegram Bot</span>
-              <small>Bot token and status</small>
-            </button>
             </section>
           </div>
         </aside>
@@ -270,21 +265,6 @@
             </div>
           </section>
 
-          <section class="settings-section" data-settings-panel="telegram" hidden>
-            <div class="settings-section-head">
-              <h3>Telegram Bot</h3>
-            </div>
-            <form id="telegram-form" class="stack-form">
-              <label>
-                Bot Token
-                <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
-              </label>
-              <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Telegram Token</button>
-                <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
-              </div>
-            </form>
-          </section>
         </div>
       </div>
     </section>

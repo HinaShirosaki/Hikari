@@ -200,9 +200,11 @@ export function parseDimensionGroupSpec(rawSpec, dimension, maxMemberCount) {
       const index = dimension === 'row' ? rowLabelToIndex(member) : Number(member) - 1;
       return index >= 0 && index < maxMemberCount;
     });
+    // A one-member group is legitimate (a single control row/column), so only an
+    // entirely empty group is rejected.
     const uniqueMembers = [...new Set(withinBounds)];
-    if (uniqueMembers.length < 2) {
-      warnings.push(`Group "${groupLabel}" needs at least two valid ${itemLabel}s.`);
+    if (!uniqueMembers.length) {
+      warnings.push(`Group "${groupLabel}" has no valid ${itemLabel}s.`);
       return;
     }
 
@@ -215,8 +217,8 @@ export function parseDimensionGroupSpec(rawSpec, dimension, maxMemberCount) {
       }
       acceptedMembers.push(member);
     });
-    if (acceptedMembers.length < 2) {
-      warnings.push(`Group "${groupLabel}" needs at least two non-overlapping ${itemLabel}s.`);
+    if (!acceptedMembers.length) {
+      warnings.push(`Group "${groupLabel}" has no non-overlapping ${itemLabel}s.`);
       return;
     }
 
@@ -237,54 +239,6 @@ export function parseDimensionGroupSpec(rawSpec, dimension, maxMemberCount) {
   });
 
   return { groups, memberToGroup, warnings };
-}
-
-export function getDoseAxisConfig(observations) {
-  const axes = describeObservationAxes(observations);
-
-  if (axes.numericConcentrationCount >= 2) {
-    return {
-      xSource: 'Concentration',
-      xAccessor: (item) => item.concentrationValue,
-      xLabelAccessor: (item) => item.concentrationLabel,
-      seriesHeader: axes.hasSampleFactor ? 'Sample ID' : 'Series',
-      seriesAccessor: axes.hasSampleFactor
-        ? (item) => item.sampleId
-        : () => 'All Wells'
-    };
-  }
-
-  if (axes.numericSampleCount >= 2) {
-    return {
-      xSource: 'Sample ID',
-      xAccessor: (item) => item.sampleValue,
-      xLabelAccessor: (item) => item.sampleId,
-      seriesHeader: axes.hasConcentrationFactor ? 'Concentration' : 'Series',
-      seriesAccessor: axes.hasConcentrationFactor
-        ? (item) => item.concentrationLabel
-        : () => 'All Wells'
-    };
-  }
-
-  return null;
-}
-
-export function getRegressionAxisConfig(observations) {
-  const doseAxis = getDoseAxisConfig(observations);
-  if (doseAxis) {
-    return doseAxis;
-  }
-
-  const axes = describeObservationAxes(observations);
-  return {
-    xSource: 'Column',
-    xAccessor: (item) => item.columnNumber,
-    xLabelAccessor: (item) => String(item.columnNumber),
-    seriesHeader: axes.hasSampleFactor ? 'Sample ID' : 'Series',
-    seriesAccessor: axes.hasSampleFactor
-      ? (item) => item.sampleId
-      : () => 'All Wells'
-  };
 }
 
 export function linearRegression(points) {
@@ -335,22 +289,6 @@ export function summarizeModelFit(points, predictFn) {
     r2,
     rmse: Math.sqrt(ssRes / points.length),
     sse: ssRes
-  };
-}
-
-export function getConcentrationAxisConfig(observations) {
-  const axes = describeObservationAxes(observations);
-  if (axes.numericConcentrationCount < 2) {
-    return null;
-  }
-  return {
-    xSource: 'Concentration',
-    xAccessor: (item) => item.concentrationValue,
-    xLabelAccessor: (item) => item.concentrationLabel,
-    seriesHeader: axes.hasSampleFactor ? 'Sample ID' : 'Series',
-    seriesAccessor: axes.hasSampleFactor
-      ? (item) => item.sampleId
-      : () => 'All Wells'
   };
 }
 

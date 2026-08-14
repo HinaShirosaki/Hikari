@@ -47,7 +47,7 @@ const moduleExportContracts = [
   ['src/renderer/modules/assay/analysis/index.js', 'analyzeAssayData', 'function'],
   ['src/renderer/modules/biology-notebook/index.js', 'initLabNotebook', 'function'],
   ['src/renderer/lib/chemistry/buffer-compounds.js', 'BUFFER_COMPOUNDS', 'object'],
-  ['examples/plugins/gel/vendor/modules/gel/index.js', 'initGelAnalysis', 'function'],
+  ['src/plugins/gel/vendor/modules/gel/index.js', 'initGelAnalysis', 'function'],
   ['src/renderer/modules/lab-common-inventory/index.js', 'initLabCommonInventory', 'function'],
   ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
@@ -146,8 +146,7 @@ test('[P1] renderer folder modules have no obsolete top-level compatibility entr
 
 const removedCodeGuards = [
   ['src/renderer/modules/views.js', /LAB_NOTEBOOK/, false],
-  ['src/main/lib/telegramBot.js', /telegram-message/, false],
-  ['src/main/preload.js', /onTelegramMessage/, false],
+  ['src/main/preload.js', /Telegram/, false],
   ['index.html', /lab-notebook-view/, false],
   ['src/renderer/renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
   ['forge.config.js', /hikari-data/, true],

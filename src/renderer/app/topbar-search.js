@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../lib/notify.js';
+
 export function normalizeSearchToken(value) {
   return String(value || '')
     .trim()
@@ -556,7 +558,11 @@ export function createTopbarSearchController({
         console.error('Failed to open suggestion item:', error);
       }
     }
-    return applySearchTarget(suggestion.target, suggestion.applyQuery || '');
+    const opened = applySearchTarget(suggestion.target, suggestion.applyQuery || '');
+    if (!opened) {
+      showTransientNotice('Could not open that search result.', { type: 'error' });
+    }
+    return opened;
   }
 
   function executeTopbarSearch(rawQuery) {
@@ -652,68 +658,9 @@ export function createTopbarSearchController({
     return false;
   }
 
-  function handleTelegramCommand(payload) {
-    if (!payload || typeof payload !== 'object') {
-      return;
-    }
-
-    const type = String(payload.type || '');
-    if (type === 'open-view') {
-      const viewId = String(payload.viewId || '').trim();
-      if (viewId) {
-        showView(viewId);
-      }
-      return;
-    }
-
-    if (type === 'search-chemicals') {
-      showView(VIEWS.LAB_COMMON_INVENTORY);
-      setSearchInputValue('chemical-search', payload.query);
-      return;
-    }
-
-    if (type === 'search-samples') {
-      showView(VIEWS.SAMPLE_REGISTRY);
-      return;
-    }
-
-    if (type === 'search-assays') {
-      showView(VIEWS.ASSAY);
-      setSearchInputValue('assay-search', payload.query);
-      return;
-    }
-
-    if (type === 'global-search') {
-      const scope = String(payload.scope || '').trim();
-      const query = String(payload.query || '').trim();
-      const searchText = scope && query
-        ? `${scope}: ${query}`
-        : query || scope;
-      if (!searchText) {
-        return;
-      }
-      if (topbarSearchInput) {
-        topbarSearchInput.value = searchText;
-      }
-      executeTopbarSearch(searchText);
-    }
-  }
-
-  function initTelegramCommandBridge() {
-    if (!windowObject.hikariApi?.onTelegramCommand) {
-      return;
-    }
-
-    windowObject.hikariApi.onTelegramCommand((payload) => {
-      handleTelegramCommand(payload);
-    });
-  }
-
   return {
     executeTopbarSearch,
     getSearchSuggestions,
-    applySuggestion,
-    handleTelegramCommand,
-    initTelegramCommandBridge
+    applySuggestion
   };
 }

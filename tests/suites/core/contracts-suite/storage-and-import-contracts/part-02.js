@@ -5,7 +5,6 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
   with (scope) {
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
-      readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
@@ -243,11 +242,6 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.match(settingsSource, /const rootChanged = nextPath !== previousPath;/);
       assert.match(settingsSource, /onStoragePathSaved\(nextPath,\s*\{\s*resetWorkspace:\s*rootChanged,/);
       assert.equal(settingsSource.includes('state.settings.storagePath = nextPath;\n    persist();\n    if (!nextPath)'), false);
-    });
-    test('telegram bot writes events to data/telegram-events.log by default', () => {
-      const telegramLoggingSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegram-bot', 'logging.js'), 'utf8');
-      assert.match(telegramLoggingSource, /data', 'telegram-events\.log'/);
-      assert.equal(telegramLoggingSource.includes('telegram-messages.log'), false);
     });
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'agent');

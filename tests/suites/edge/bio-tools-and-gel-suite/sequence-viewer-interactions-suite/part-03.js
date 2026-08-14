@@ -134,6 +134,111 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
   assert.equal(statLength.textContent, '10');
   assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('ATACGTACGT'), true);
 });
+test('[EDGE] sequence-viewer right-click changes a translated amino acid through its codon', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-stat-restriction-sites',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-orf-toggle'
+  ];
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  const sequence = `ATG${'AAA'.repeat(80)}TAA`;
+  viewer.loadFromExternal({
+    name: 'amino_acid_edit',
+    sequence,
+    source: 'external',
+    features: []
+  });
+
+  const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
+  const featureRail = document.getElementById('sequence-viewer-feature-rail-host');
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const contextMenu = document.getElementById('sequence-viewer-feature-context-menu');
+
+  orfToggle.checked = true;
+  trigger(orfToggle, 'change');
+  const orfFeatureTarget = {
+    closest(selector) {
+      return selector === '[data-feature-index]'
+        ? { dataset: { featureIndex: '0' } }
+        : null;
+    }
+  };
+  trigger(featureRail, 'click', { target: orfFeatureTarget });
+
+  assert.match(sequenceHost.innerHTML, /data-aa="K"/);
+  assert.match(sequenceHost.innerHTML, /data-aa-codon="AAA"/);
+  assert.match(sequenceHost.innerHTML, /data-aa-codon-positions="3,4,5"/);
+
+  let contextMenuPrevented = false;
+  const aminoAcidTarget = {
+    dataset: {
+      aa: 'K',
+      aaCodon: 'AAA',
+      aaCodonPositions: '3,4,5',
+      aaStrand: '1'
+    },
+    closest(selector) {
+      return selector === '[data-aa-codon-positions]' ? this : null;
+    }
+  };
+  trigger(sequenceHost, 'contextmenu', {
+    target: aminoAcidTarget,
+    clientX: 120,
+    clientY: 80,
+    preventDefault() {
+      contextMenuPrevented = true;
+    }
+  });
+
+  assert.equal(contextMenuPrevented, true);
+  assert.equal(Boolean(contextMenu.hidden), false);
+  assert.match(contextMenu.innerHTML, /Change to \(uses the codon with the fewest DNA substitutions\)/);
+  assert.match(contextMenu.innerHTML, /data-sequence-aa-replacement="E"/);
+  assert.match(contextMenu.innerHTML, /Glutamic acid \(E\) - GAA/);
+
+  const glutamateTarget = {
+    dataset: { sequenceAaReplacement: 'E' },
+    closest(selector) {
+      return selector === '[data-sequence-aa-replacement]' ? this : null;
+    }
+  };
+  trigger(contextMenu, 'click', { target: glutamateTarget });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(Boolean(contextMenu.hidden), true);
+  assert.match(sequenceHost.innerHTML, /data-aa="E"/);
+  assert.match(sequenceHost.innerHTML, /data-aa-codon="GAA"/);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Changed amino acid K \(AAA\) to E \(GAA\) at bases 4-6/);
+});
 test('[EDGE] sequence-viewer opens cloning design after base edits and renders primers', async () => {
   const ids = [
     'sequence-viewer-home-workspace',

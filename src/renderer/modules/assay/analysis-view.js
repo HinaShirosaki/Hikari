@@ -1,4 +1,8 @@
-import { analyzeAssayData } from './analysis/index.js';
+import {
+  analyzeAssayData,
+  describeAnalysisSpec,
+  normalizeAnalysisSpec
+} from './analysis/index.js';
 import {
   layoutToMap,
   parseWellId,
@@ -6,7 +10,8 @@ import {
 } from './plate-model.js';
 import {
   parseFirstNumericToken,
-  parseNumericResult
+  parseNumericResult,
+  sanitizeFilePart
 } from './shared.js';
 import {
   createDefaultChartStyle,
@@ -14,8 +19,16 @@ import {
 } from './plotly/chart-style-model.js';
 import { createChartStyleStore } from './plotly/chart-style-store.js';
 import { mountChartControls } from './plotly/chart-controls.js';
+import { mountChartToolbar } from './plotly/chart-toolbar.js';
 import { createAssayPlotlyRenderer } from './plotly/plotly-renderer.js';
 import { buildAnalysisChartModel } from './analysis-chart-model.js';
+import {
+  applyPlateTransform,
+  buildDerivedPlateTable,
+  isTransformActive,
+  normalizeTransformSpec
+} from './derived-plate.js';
+import { compileFormula } from './formula.js';
 
 export {
   CHART_STYLE_OPTIONS,
@@ -124,24 +137,72 @@ export function createAssayAnalysisView({
   syncCurrentResultsFromGrid,
   getResultValueCount,
   onAnalysisRendered,
-  onChartStyleChanged
+  onChartStyleChanged,
+  onTransformChanged
 }) {
   const {
+    assayAnalysisAsymmetricInput,
     assayAnalysisColumnGroupsInput,
     assayAnalysisErrorBarsInput,
-    assayAnalysisMethodInput,
+    assayAnalysisErrorBarsField,
+    assayAnalysisGroupByInput,
+    assayAnalysisKindInput,
+    assayAnalysisPolyOrderField,
+    assayAnalysisPolyOrderInput,
+    assayAnalysisSubtotalsField,
+    assayAnalysisSubtotalsInput,
     assayAnalysisSummary,
     assayAnalysisRowGroupsInput,
     assayAnalysisTable,
-    assayChartStyleMount
+    assayAnalysisXAxisField,
+    assayAnalysisXAxisInput,
+    assayAnalysisXTransformField,
+    assayAnalysisXTransformInput,
+    assayChartStyleMount,
+    assayChartToolbarMount,
+    assayChartFormatPanel,
+    assayTransformModeInput,
+    assayTransformFormulaInput,
+    assayTransformModePanels,
+    assayTransformBlankInput,
+    assayTransformNormalizeHundredInput,
+    assayTransformNormalizeZeroInput,
+    assayTransformArithmeticOpInput,
+    assayTransformArithmeticValueInput,
+    assayTransformValueInput,
+    assayTransformStatus,
+    assayTransformSummary,
+    assayDerivedPlatePanel,
+    assayDerivedPlateSteps,
+    assayDerivedPlateTable
   } = elements;
   const hasPlotly = typeof window !== 'undefined' && Boolean(window.Plotly);
+  // Only these style fields feed buildAnalysisChartModel; everything else is pure
+  // presentation and needs a redraw, not a re-analysis.
+  const MODEL_STYLE_KEYS = ['xColumn', 'yColumn', 'seriesColumn'];
+
+  // Every analysis ships its own chartModel, which is what "auto" means. The moment a
+  // column is overridden that model no longer answers the question, so it has to be
+  // rebuilt from the result table -- otherwise the Data tab's selects do nothing.
+  function modelForStyle(result, analysis, style) {
+    const overridden = MODEL_STYLE_KEYS.some((key) => style?.[key] && style[key] !== 'auto');
+    return (!overridden && result.chartModel)
+      || buildAnalysisChartModel(result, analysis, style);
+  }
   let lastAnalysisContext = {
     headers: [],
     seriesLabels: [],
-    method: ''
+    method: '',
+    chartType: '',
+    hasErrorBars: false,
+    hasFittedCurve: false
   };
   let agentPlotlyTarget = null;
+  let lastResult = null;
+  let lastSpec = null;
+  let lastModel = null;
+  let previewSaveTimer = null;
+  let derivedPlate = null;
 
   if (!runtime.chartStyle || typeof runtime.chartStyle !== 'object') {
     runtime.chartStyle = createDefaultChartStyle();
@@ -152,16 +213,39 @@ export function createAssayAnalysisView({
   const plotlyRenderer = createAssayPlotlyRenderer();
   const chartStyleStore = createChartStyleStore({
     initialStyle: runtime.chartStyle,
-    onChange: (style) => {
+    onChange: (style, previous) => {
       runtime.chartStyle = style;
       if (typeof onChartStyleChanged === 'function') {
         onChartStyleChanged(style);
       }
-      onAnalysisConfigChange();
+      redrawForStyleChange(style, previous);
     }
   });
   const chartControls = assayChartStyleMount
-    ? mountChartControls(assayChartStyleMount, { store: chartStyleStore, safeText })
+    ? mountChartControls(assayChartStyleMount, {
+      store: chartStyleStore,
+      safeText
+    })
+    : null;
+  const chartToolbar = assayChartToolbarMount
+    ? mountChartToolbar(assayChartToolbarMount, {
+      store: chartStyleStore,
+      // Error bars belong to the analysis spec, so the toolbar drives the existing
+      // checkbox rather than holding a second copy of the state.
+      errorBars: {
+        isApplicable: () => Boolean(assayAnalysisErrorBarsField && !assayAnalysisErrorBarsField.hidden),
+        get: () => Boolean(assayAnalysisErrorBarsInput?.checked),
+        toggle: () => {
+          if (!assayAnalysisErrorBarsInput) {
+            return;
+          }
+          assayAnalysisErrorBarsInput.checked = !assayAnalysisErrorBarsInput.checked;
+          onAnalysisConfigChange();
+        }
+      },
+      onFormat: openChartFormat,
+      onExport: exportChartImage
+    })
     : null;
 
   function setChartContext(context) {
@@ -169,16 +253,101 @@ export function createAssayAnalysisView({
     chartControls?.refresh();
   }
 
+  // Every rail section is a fold now, so the toolbar's Format button just reveals the
+  // Chart Format panel rather than swapping the rail out from under you.
+  function openChartFormat() {
+    if (!assayChartFormatPanel) {
+      return;
+    }
+    assayChartFormatPanel.open = true;
+    chartControls?.refresh();
+    assayChartFormatPanel.scrollIntoView({ block: 'nearest' });
+  }
+
+  function setToolbarVisible(visible) {
+    if (assayChartToolbarMount) {
+      assayChartToolbarMount.hidden = !visible;
+    }
+  }
+
+  // Rebuilding the controls mid-drag tears out the colour input under the cursor, so
+  // only push a new context when something the controls actually render changed.
+  function applyChartContext(info) {
+    const seriesLabels = Array.isArray(info?.seriesLabels) ? info.seriesLabels : [];
+    const next = {
+      ...lastAnalysisContext,
+      seriesLabels,
+      chartType: info?.chartType || '',
+      hasErrorBars: Boolean(info?.hasErrorBars),
+      hasFittedCurve: Boolean(info?.hasFittedCurve)
+    };
+    // headers drives the column selects, so it has to be part of the comparison or a
+    // new analysis with the same series keeps offering the previous analysis's columns.
+    const renderedHeaders = chartStyleStore.getContext().headers;
+    const unchanged = next.chartType === lastAnalysisContext.chartType
+      && next.hasErrorBars === lastAnalysisContext.hasErrorBars
+      && next.hasFittedCurve === lastAnalysisContext.hasFittedCurve
+      && seriesLabels.length === lastAnalysisContext.seriesLabels.length
+      && seriesLabels.every((label, index) => label === lastAnalysisContext.seriesLabels[index])
+      && next.headers.length === renderedHeaders.length
+      && next.headers.every((header, index) => header === renderedHeaders[index]);
+    lastAnalysisContext = next;
+    if (unchanged) {
+      chartStyleStore.setContext(lastAnalysisContext);
+    } else {
+      setChartContext(lastAnalysisContext);
+    }
+    chartToolbar?.refresh();
+  }
+
   function unmountAnalysisChart() {
     plotlyRenderer.unmount();
+  }
+
+  function hasFittedCurve(model) {
+    return Boolean(model?.series?.some((series) => Array.isArray(series.markers)));
+  }
+
+  // The chart-type override applies to plain category/series models. A fitted curve is
+  // a densely sampled line plus its observed markers, so drawing it as bars would be
+  // meaningless and the override is ignored (and disabled in the toolbar).
+  function applyChartTypeOverride(model, style) {
+    if (!model || style.chartType === 'auto' || hasFittedCurve(model)) {
+      return model;
+    }
+    return { ...model, chartType: style.chartType };
   }
 
   function renderAnalysisChart(model) {
     const target = assayAnalysisTable?.querySelector('[data-assay-analysis-chart]');
     if (!target || !model) {
+      setToolbarVisible(false);
       return { seriesLabels: [] };
     }
-    return plotlyRenderer.render(target, model, chartStyleStore.getStyle());
+    const style = chartStyleStore.getStyle();
+    const info = plotlyRenderer.render(target, applyChartTypeOverride(model, style), style);
+    setToolbarVisible(Boolean(info.seriesLabels?.length));
+    return { ...info, hasFittedCurve: hasFittedCurve(model) };
+  }
+
+  async function exportChartImage(format) {
+    const extension = format === 'svg' ? 'svg' : 'png';
+    try {
+      const dataUrl = await plotlyRenderer.toImage(extension);
+      if (!dataUrl) {
+        showTransientNotice('Render a chart before exporting.', { type: 'error' });
+        return;
+      }
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${sanitizeFilePart(chartStyleStore.getStyle().title, 'assay-chart')}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      showTransientNotice(`Exported chart as ${extension.toUpperCase()}.`);
+    } catch (error) {
+      showTransientNotice(String(error?.message || error || 'Chart export failed.'), { type: 'error' });
+    }
   }
 
   function getChartStyle() {
@@ -212,13 +381,107 @@ export function createAssayAnalysisView({
     agentPlotlyTarget = null;
   }
 
+  function getTransformSpec() {
+    return normalizeTransformSpec({
+      mode: assayTransformModeInput?.value,
+      formula: assayTransformFormulaInput?.value,
+      blank: assayTransformBlankInput?.value,
+      normalizeHundred: assayTransformNormalizeHundredInput?.value,
+      normalizeZero: assayTransformNormalizeZeroInput?.value,
+      arithmeticOp: assayTransformArithmeticOpInput?.value,
+      arithmeticValue: assayTransformArithmeticValueInput?.value,
+      transform: assayTransformValueInput?.value
+    });
+  }
+
+  // Only the active mode's controls are on screen, so a guided step and a formula can
+  // never both look like they are running.
+  function syncTransformControls() {
+    const mode = assayTransformModeInput?.value === 'formula' ? 'formula' : 'steps';
+    (assayTransformModePanels || []).forEach((panel) => {
+      panel.hidden = panel.getAttribute('data-transform-mode') !== mode;
+    });
+  }
+
+  // Parsing is cheap, so the formula is checked on every keystroke; it is only applied
+  // to the plate on change.
+  function onFormulaInput() {
+    syncTransformControls();
+    if (!assayTransformStatus) {
+      return;
+    }
+    const text = String(assayTransformFormulaInput?.value || '').trim();
+    if (!text) {
+      assayTransformStatus.textContent = '';
+      return;
+    }
+    const compiled = compileFormula(text);
+    assayTransformStatus.textContent = compiled.error
+      ? `${compiled.error.message}${Number.isInteger(compiled.error.position) ? ` (position ${compiled.error.position + 1})` : ''}`
+      : 'Formula parses. Leave the field to apply it.';
+  }
+
+  function setTransformSummary(text) {
+    if (assayTransformSummary) {
+      assayTransformSummary.textContent = text;
+    }
+  }
+
+  // Recomputes the derived plate from the current raw results, renders its panel, and
+  // caches the numeric map the analysis will read instead of the raw one.
+  function refreshDerivedPlate() {
+    syncTransformControls();
+    const spec = getTransformSpec();
+    if (!isTransformActive(spec)) {
+      derivedPlate = null;
+      if (assayDerivedPlatePanel) assayDerivedPlatePanel.hidden = true;
+      if (assayDerivedPlateTable) assayDerivedPlateTable.innerHTML = '';
+      if (assayTransformStatus) assayTransformStatus.textContent = '';
+      setTransformSummary('');
+      return null;
+    }
+
+    const result = applyPlateTransform({
+      results: runtime.currentResults,
+      spec,
+      definition: getCurrentDefinition(),
+      rowGroupSpec: String(assayAnalysisRowGroupsInput?.value || ''),
+      columnGroupSpec: String(assayAnalysisColumnGroupsInput?.value || '')
+    });
+    derivedPlate = result;
+
+    const notes = [...result.steps, ...result.warnings].join(' ');
+    if (assayTransformStatus) {
+      assayTransformStatus.textContent = notes || 'No numeric wells to transform.';
+    }
+    setTransformSummary(result.steps.length
+      ? `Analysing the derived plate: ${result.steps.length} step(s), ${result.wellCount} well(s).`
+      : 'Transform set but no step applied.');
+
+    if (assayDerivedPlatePanel) {
+      assayDerivedPlatePanel.hidden = false;
+    }
+    if (assayDerivedPlateSteps) {
+      assayDerivedPlateSteps.textContent = notes;
+    }
+    if (assayDerivedPlateTable) {
+      assayDerivedPlateTable.innerHTML = result.wellCount
+        ? buildDerivedPlateTable(result.results, getCurrentDefinition(), safeText)
+        : '<p class="small-note">No numeric wells survive this transform.</p>';
+    }
+    return result;
+  }
+
   function collectNumericObservations() {
     const layoutMap = layoutToMap(runtime.currentLayout);
+    // A derived plate replaces the raw values wherever a transform is active; its map
+    // is already numeric, so nothing is re-parsed.
+    const derived = derivedPlate ? derivedPlate.numericResults : null;
     const observations = [];
     let nonNumericCount = 0;
 
-    Object.entries(runtime.currentResults || {}).forEach(([well, raw]) => {
-      const response = parseNumericResult(raw);
+    Object.entries(derived || runtime.currentResults || {}).forEach(([well, raw]) => {
+      const response = derived ? raw : parseNumericResult(raw);
       if (!Number.isFinite(response)) {
         nonNumericCount += 1;
         return;
@@ -267,17 +530,51 @@ export function createAssayAnalysisView({
     `;
   }
 
-  function getDimensionAnalysisOptions(dimension) {
+  function getGroupOptions() {
     const plate = getCurrentDefinition();
-    const maxMemberCount = dimension === 'row' ? plate.rows : plate.columns;
-    const groupSpec = dimension === 'row'
-      ? assayAnalysisRowGroupsInput?.value
-      : assayAnalysisColumnGroupsInput?.value;
     return {
-      groupSpec: String(groupSpec || ''),
-      maxMemberCount,
-      includeErrorBars: Boolean(assayAnalysisErrorBarsInput?.checked)
+      rowGroups: {
+        groupSpec: String(assayAnalysisRowGroupsInput?.value || ''),
+        maxMemberCount: plate.rows
+      },
+      columnGroups: {
+        groupSpec: String(assayAnalysisColumnGroupsInput?.value || ''),
+        maxMemberCount: plate.columns
+      }
     };
+  }
+
+  function getAnalysisSpec() {
+    return normalizeAnalysisSpec({
+      groupBy: assayAnalysisGroupByInput?.value,
+      xAxis: assayAnalysisXAxisInput?.value,
+      analysis: assayAnalysisKindInput?.value,
+      xTransform: assayAnalysisXTransformInput?.value,
+      polyOrder: Number(assayAnalysisPolyOrderInput?.value),
+      asymmetric: Boolean(assayAnalysisAsymmetricInput?.checked),
+      subtotals: Boolean(assayAnalysisSubtotalsInput?.checked),
+      errorBars: assayAnalysisErrorBarsInput ? assayAnalysisErrorBarsInput.checked : true
+    });
+  }
+
+  // Modifiers only exist for the analysis that owns them; a hidden control is a
+  // control that can't silently do nothing.
+  function syncAnalysisControls() {
+    const analysis = String(assayAnalysisKindInput?.value || 'summary');
+    const isSummary = analysis === 'summary';
+    const toggle = (element, visible) => {
+      if (element) {
+        element.hidden = !visible;
+      }
+    };
+    toggle(assayAnalysisXAxisField, !isSummary);
+    toggle(assayAnalysisXTransformField, !isSummary);
+    toggle(assayAnalysisSubtotalsField, isSummary);
+    toggle(assayAnalysisPolyOrderField, analysis === 'polynomial');
+    toggle(assayAnalysisErrorBarsField, isSummary || analysis === 'normalize');
+    if (assayAnalysisAsymmetricInput?.closest) {
+      toggle(assayAnalysisAsymmetricInput.closest('label'), analysis === 'sigmoidal');
+    }
   }
 
   function clearOutput() {
@@ -289,8 +586,60 @@ export function createAssayAnalysisView({
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
-    lastAnalysisContext = { headers: [], seriesLabels: [], method: '' };
+    if (previewSaveTimer) {
+      clearTimeout(previewSaveTimer);
+      previewSaveTimer = null;
+    }
+    lastResult = null;
+    lastSpec = null;
+    lastModel = null;
+    setToolbarVisible(false);
+    refreshDerivedPlate();
+    lastAnalysisContext = {
+      headers: [],
+      seriesLabels: [],
+      method: '',
+      chartType: '',
+      hasErrorBars: false,
+      hasFittedCurve: false
+    };
     setChartContext(lastAnalysisContext);
+  }
+
+  function emitAnalysisRendered() {
+    if (typeof onAnalysisRendered !== 'function' || !lastResult || !lastSpec) {
+      return;
+    }
+    onAnalysisRendered({
+      method: lastSpec.analysis,
+      spec: { ...lastSpec },
+      methodLabel: describeAnalysisSpec(lastSpec),
+      summary: assayAnalysisSummary?.textContent || '',
+      headers: Array.isArray(lastResult.headers) ? lastResult.headers.map((item) => String(item)) : [],
+      rows: Array.isArray(lastResult.rows) ? lastResult.rows : [],
+      chartDataUrl: plotlyRenderer.captureDataUrl(),
+      analyzedAt: new Date().toISOString()
+    });
+  }
+
+  // Style changes are presentation only: redraw the cached model rather than
+  // re-reading the grid and re-fitting the curve. Only the three column-selection
+  // fields can invalidate the model itself.
+  function redrawForStyleChange(style, previous) {
+    if (!lastResult || !lastSpec) {
+      return;
+    }
+    if (!previous || MODEL_STYLE_KEYS.some((key) => previous[key] !== style[key])) {
+      lastModel = modelForStyle(lastResult, lastSpec.analysis, style);
+    }
+    applyChartContext(renderAnalysisChart(lastModel));
+    if (previewSaveTimer) {
+      clearTimeout(previewSaveTimer);
+    }
+    previewSaveTimer = setTimeout(() => {
+      previewSaveTimer = null;
+      emitAnalysisRendered();
+    }, 600);
   }
 
   function renderAnalysis() {
@@ -301,44 +650,39 @@ export function createAssayAnalysisView({
     unmountAnalysisChart();
     purgeAgentPlotly();
     syncCurrentResultsFromGrid();
-    const method = String(assayAnalysisMethodInput?.value || 'grouped_summary');
+    refreshDerivedPlate();
+    const spec = getAnalysisSpec();
     const { observations, nonNumericCount } = collectNumericObservations();
     if (!observations.length) {
       assayAnalysisSummary.textContent = nonNumericCount
         ? `No numeric values found. Non-numeric result cells: ${nonNumericCount}.`
         : 'No result values to analyze.';
       assayAnalysisTable.innerHTML = '';
+      lastResult = null;
+      lastSpec = null;
+      lastModel = null;
       return;
     }
 
-    const result = analyzeAssayData({
-      method,
-      observations,
-      options: {
-        rowSummary: getDimensionAnalysisOptions('row'),
-        columnSummary: getDimensionAnalysisOptions('column')
-      }
-    });
+    const result = analyzeAssayData({ spec, observations, options: getGroupOptions() });
+    lastResult = result;
+    lastSpec = spec;
+    lastModel = null;
 
     lastAnalysisContext = {
+      ...lastAnalysisContext,
       headers: Array.isArray(result?.headers) ? result.headers.map(String) : [],
       seriesLabels: [],
-      method
+      method: spec.analysis
     };
 
     const ignoredNote = nonNumericCount ? ` Non-numeric cells ignored: ${nonNumericCount}.` : '';
     const rowCountNote = ` Rows: ${result.rows.length}.`;
     assayAnalysisSummary.textContent = `${result.summary}${rowCountNote}${ignoredNote}`;
     if (!result.rows.length) {
-      assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this method.</p>';
-      onAnalysisRendered?.({
-        method,
-        summary: assayAnalysisSummary.textContent,
-        headers: Array.isArray(result.headers) ? result.headers.map((item) => String(item)) : [],
-        rows: Array.isArray(result.rows) ? result.rows : [],
-        chartDataUrl: '',
-        analyzedAt: new Date().toISOString()
-      });
+      assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this analysis.</p>';
+      setChartContext(lastAnalysisContext);
+      emitAnalysisRendered();
       return;
     }
 
@@ -351,21 +695,9 @@ export function createAssayAnalysisView({
         </div>
       `
       : tableHtml;
-    const model = result.chartModel || buildAnalysisChartModel(result, method, getChartStyle());
-    const chartInfo = renderAnalysisChart(model);
-    lastAnalysisContext = {
-      ...lastAnalysisContext,
-      seriesLabels: chartInfo.seriesLabels
-    };
-    setChartContext(lastAnalysisContext);
-    onAnalysisRendered?.({
-      method,
-      summary: assayAnalysisSummary.textContent,
-      headers: Array.isArray(result.headers) ? result.headers.map((item) => String(item)) : [],
-      rows: Array.isArray(result.rows) ? result.rows : [],
-      chartDataUrl: plotlyRenderer.captureDataUrl(),
-      analyzedAt: new Date().toISOString()
-    });
+    lastModel = modelForStyle(result, spec.analysis, getChartStyle());
+    applyChartContext(renderAnalysisChart(lastModel));
+    emitAnalysisRendered();
   }
 
   function renderAgentPlotlyGraph(artifact = {}) {
@@ -379,6 +711,7 @@ export function createAssayAnalysisView({
     const plotly = getPlotlyRuntime();
     if (typeof plotly?.newPlot !== 'function') {
       assayAnalysisSummary.textContent = 'Plotly is unavailable, so the agent graph could not be rendered.';
+      showTransientNotice('Plotly is unavailable, so the agent graph could not be rendered.', { type: 'error' });
       assayAnalysisTable.innerHTML = '<p class="small-note">Plotly is unavailable in this workspace.</p>';
       return false;
     }
@@ -440,7 +773,10 @@ export function createAssayAnalysisView({
       lastAnalysisContext = {
         headers: [],
         seriesLabels: traceNames,
-        method: 'agent_plotly'
+        method: 'agent_plotly',
+        chartType: '',
+        hasErrorBars: false,
+        hasFittedCurve: false
       };
       setChartContext(lastAnalysisContext);
       return true;
@@ -452,6 +788,7 @@ export function createAssayAnalysisView({
   }
 
   function onAnalysisMethodChange() {
+    syncAnalysisControls();
     if (!assayAnalysisSummary || !assayAnalysisTable) {
       return;
     }
@@ -460,6 +797,78 @@ export function createAssayAnalysisView({
     if (getResultValueCount()) {
       renderAnalysis();
     }
+  }
+
+  // Writes the spec onto the inputs without reporting a change, so restoring a saved
+  // assay does not mark it dirty.
+  function loadTransformSpec(spec) {
+    const normalized = normalizeTransformSpec(spec);
+    if (assayTransformModeInput) {
+      assayTransformModeInput.value = normalized.mode;
+    }
+    if (assayTransformFormulaInput) {
+      assayTransformFormulaInput.value = normalized.formula;
+    }
+    if (assayTransformBlankInput) {
+      assayTransformBlankInput.value = normalized.blank;
+    }
+    if (assayTransformNormalizeHundredInput) {
+      assayTransformNormalizeHundredInput.value = normalized.normalizeHundred;
+    }
+    if (assayTransformNormalizeZeroInput) {
+      assayTransformNormalizeZeroInput.value = normalized.normalizeZero;
+    }
+    if (assayTransformArithmeticOpInput) {
+      assayTransformArithmeticOpInput.value = normalized.arithmeticOp;
+    }
+    if (assayTransformArithmeticValueInput) {
+      assayTransformArithmeticValueInput.value = Number.isFinite(normalized.arithmeticValue)
+        ? String(normalized.arithmeticValue)
+        : '';
+    }
+    if (assayTransformValueInput) {
+      assayTransformValueInput.value = normalized.transform;
+    }
+    refreshDerivedPlate();
+    return normalized;
+  }
+
+  function onTransformChange() {
+    if (typeof onTransformChanged === 'function') {
+      onTransformChanged(getTransformSpec());
+    }
+    syncCurrentResultsFromGrid();
+    if (getResultValueCount()) {
+      renderAnalysis();
+    } else {
+      refreshDerivedPlate();
+    }
+  }
+
+  function clearTransform() {
+    [
+      assayTransformBlankInput,
+      assayTransformNormalizeHundredInput,
+      assayTransformNormalizeZeroInput,
+      assayTransformArithmeticValueInput
+    ].forEach((input) => {
+      if (input) {
+        input.value = '';
+      }
+    });
+    if (assayTransformArithmeticOpInput) {
+      assayTransformArithmeticOpInput.value = 'none';
+    }
+    if (assayTransformValueInput) {
+      assayTransformValueInput.value = 'none';
+    }
+    if (assayTransformFormulaInput) {
+      assayTransformFormulaInput.value = '';
+    }
+    if (assayTransformModeInput) {
+      assayTransformModeInput.value = 'steps';
+    }
+    onTransformChange();
   }
 
   function onAnalysisConfigChange() {
@@ -473,16 +882,33 @@ export function createAssayAnalysisView({
     renderAnalysis();
   }
 
+  syncAnalysisControls();
+
   return {
     clearOutput,
     renderAnalysis,
     onAnalysisMethodChange,
     onAnalysisConfigChange,
+    syncAnalysisControls,
+    getAnalysisSpec,
+    getTransformSpec,
+    loadTransformSpec,
+    syncTransformControls,
+    onFormulaInput,
+    refreshDerivedPlate,
+    onTransformChange,
+    clearTransform,
+    openChartFormat,
     getChartStyle,
     loadChartStyle,
     refreshChartControls,
     renderAgentPlotlyGraph,
     destroy() {
+      if (previewSaveTimer) {
+        clearTimeout(previewSaveTimer);
+        previewSaveTimer = null;
+      }
+      chartToolbar?.destroy();
       chartControls?.destroy();
       unmountAnalysisChart();
       purgeAgentPlotly();

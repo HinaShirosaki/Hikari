@@ -8,6 +8,7 @@ import {
   normalizeNotebookResultTable,
   normalizeNotebookResultTables
 } from '../../../lib/notebook-result-tables.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 function getResultTableHeight(table) {
   const rowCount = Array.isArray(table?.rows) ? table.rows.length : 0;
@@ -169,6 +170,7 @@ export function createResultTableController({
 
     if (!TabulatorLib) {
       host.innerHTML = '<p class="small-note">Table editing is unavailable because Tabulator did not load.</p>';
+      showTransientNotice('Table editing is unavailable because Tabulator did not load.', { type: 'error' });
       setStatus(draftTables, 'Table data is saved, but the Tabulator editor is unavailable right now.');
       return;
     }

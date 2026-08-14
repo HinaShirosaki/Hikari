@@ -5,8 +5,10 @@
 - `artifact-storage.js`: folder-backed assay artifacts, analysis JSON, chart SVG persistence, and result-file attachment metadata.
 - `analysis-view.js`: analysis workflow controller, result summaries, analysis table rendering, and direct Plotly lifecycle ownership.
 - `analysis-chart-model.js`: pure chart-model selection for Assay analysis results.
-- `plotly/`: Assay-owned Plotly rendering, style state, controls, and SVG capture.
-- `analysis/`: pure curve fitting, dose response, grouped summaries, regression, and standard-curve math.
+- `derived-plate.js`: pure plate transform plus the well-reference grammar and the read-only derived-plate table. Two modes: guided steps (blank subtraction, normalisation, constant arithmetic, value transform, applied in that fixed order) or a formula. The analysis reads the derived plate whenever a transform is active.
+- `formula.js`: the spreadsheet-style formula language for the derived plate — tokenizer, recursive-descent parser, and AST evaluator. Never uses `eval`. Function names and arity are checked at parse time so typos surface while typing.
+- `plotly/`: Assay-owned Plotly rendering and figure formatting. `plotly-renderer.js` draws and exports the figure; `chart-style-model.js` / `chart-style-store.js` hold the style state and the rendered-figure context the controls key off; `chart-toolbar.js` is the strip above the chart; `chart-controls.js` is the tabbed Format rail page; `chart-presets.js` stores named styles; `chart-style-pickers.js` and `chart-text-controls.js` are the shared visual pickers.
+- `analysis/`: pure analysis math. `grouping.js` owns the analysis spec (`groupBy` / `xAxis` / `analysis` plus modifiers), legacy method migration, and the grouping every analysis shares; `grouped-summary.js` is the one summary table; `curve-fit.js` is the one curve runner (linear / sigmoidal / hyperbola / polynomial / Pade); `dose-response.js` is normalize-to-baseline; `curve-fitters.js` holds the fitters themselves.
 - `layout-manager.js` plus `layout/`: plate definition, concentration fill, CSV mapping, preview events, and layout state restoration.
 - `plate-preview-renderer.js`: HTML generation for the editable plate grid.
 - `inventory-sample-picker.js`: well context menu picker for applying inventory sample IDs.

@@ -59,6 +59,7 @@ export function setupSequenceViewerControllers(ctx) {
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
     onRequestRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
     onApplySequenceEdit: actions.applySequenceEdit,
+    onApplyAminoAcidEdit: actions.applyAminoAcidEdit,
     onRequestAlignment: () => controllers.alignment?.openSequencingAlignmentWorkspace?.(),
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
     hasCloningDesignSource: actions.hasCurrentCloningDesignSource,
@@ -100,6 +101,7 @@ export function setupSequenceViewerControllers(ctx) {
     getSelectedRecord: actions.getSelectedRecord,
     getCloningDesignSource: () => state.sequenceEditDesignSource,
     setStatus: actions.setStatus,
+    persistFeatureMutation: actions.persistFeatureMutation,
     onNavigateCloningDesign: actions.showCloningDesignWorkspace,
     onReturnToDetail: actions.returnToSequenceDetailFromCloningDesign
   });
@@ -117,6 +119,10 @@ export function setupSequenceViewerControllers(ctx) {
     onNavigateVectorBuilder: actions.showVectorBuilderWorkspace,
     onReturnToDetail: actions.returnToSequenceDetailFromVectorBuilder,
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
+    onRequestPrimerDesign: async (context) => {
+      await controllers.detail?.openPrimerDesignOverlay?.(context);
+      controllers.vectorBuilder?.render?.();
+    },
     onRequestProteinInsert: (target) => {
       actions.showProteinBuilderWorkspace();
       controllers.proteinBuilder?.render?.();

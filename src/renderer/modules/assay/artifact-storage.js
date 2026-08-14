@@ -104,6 +104,7 @@ export function createAssayArtifactStorage({
       wellLayout: assay.wellLayout,
       resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
       chartStyle: assay.chartStyle || null,
+      transformSpec: assay.transformSpec || null,
       updatedAt: assay.updatedAt
     };
     const latestAnalysis = assay.latestAnalysis && typeof assay.latestAnalysis === 'object'

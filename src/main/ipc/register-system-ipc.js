@@ -1,6 +1,6 @@
 'use strict';
 
-const { LLM, TELEGRAM, SYSTEM } = require('../../shared/ipc/channels');
+const { LLM, SYSTEM } = require('../../shared/ipc/channels');
 
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -27,11 +27,6 @@ function registerSystemIpc(deps = {}) {
   const directLlmRegistry = deps.directLlmRegistry && typeof deps.directLlmRegistry === 'object'
     ? deps.directLlmRegistry
     : null;
-  const restartTelegramBot = deps.restartTelegramBot;
-  const getTelegramState = typeof deps.getTelegramState === 'function'
-    ? deps.getTelegramState
-    : (() => ({ enabled: false, source: 'none', hasSavedToken: false, savedToken: '' }));
-  const writeSavedTelegramToken = deps.writeSavedTelegramToken;
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
     : ((value, _maxLength = 2400) => {
@@ -41,9 +36,6 @@ function registerSystemIpc(deps = {}) {
       }
       return text;
     });
-  const setSavedTelegramToken = typeof deps.setSavedTelegramToken === 'function'
-    ? deps.setSavedTelegramToken
-    : (() => {});
 
   function normalizeJsonPayload(payload, fallback = {}) {
     if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
@@ -265,56 +257,6 @@ function registerSystemIpc(deps = {}) {
         ok: false,
         error: cleanText(error?.message || error, 2400) || 'Direct LLM request failed.'
       };
-    }
-  });
-
-  ipcMain.handle(TELEGRAM.GET_CONFIG, async () => {
-    const state = getTelegramState();
-    return {
-      ok: true,
-      enabled: state.enabled === true,
-      source: cleanText(state.source, 80) || 'none',
-      hasSavedToken: state.hasSavedToken === true
-    };
-  });
-
-  ipcMain.handle(TELEGRAM.SET_TOKEN, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    const token = typeof normalizedPayload?.token === 'string' ? normalizedPayload.token.trim() : '';
-    if (!token) {
-      return { ok: false, error: 'Token is required.' };
-    }
-
-    try {
-      setSavedTelegramToken(token);
-      await writeSavedTelegramToken(token);
-      restartTelegramBot();
-      const state = getTelegramState();
-      return {
-        ok: true,
-        enabled: state.enabled === true,
-        source: cleanText(state.source, 80) || 'none',
-        hasSavedToken: state.hasSavedToken === true
-      };
-    } catch (error) {
-      return { ok: false, error: String(error) };
-    }
-  });
-
-  ipcMain.handle(TELEGRAM.CLEAR_TOKEN, async () => {
-    try {
-      setSavedTelegramToken('');
-      await writeSavedTelegramToken('');
-      restartTelegramBot();
-      const state = getTelegramState();
-      return {
-        ok: true,
-        enabled: state.enabled === true,
-        source: cleanText(state.source, 80) || 'none',
-        hasSavedToken: false
-      };
-    } catch (error) {
-      return { ok: false, error: String(error) };
     }
   });
 

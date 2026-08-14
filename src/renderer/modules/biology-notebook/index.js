@@ -39,6 +39,7 @@ import {
 } from './results/linked-previews-renderer.js';
 import { createResultTableController } from './results/result-table-controller.js';
 import { createSampleLinkMenuController } from './samples/sample-link-menu.js';
+import { createNotebookQuickSampleController } from './samples/quick-sample-controller.js';
 import { createInlinePlaceholderController } from './protocol/inline-placeholder-controller.js';
 import { createEntryListRenderer } from './entry/entry-list-renderer.js';
 import { createDropdownRenderer } from './entry/dropdown-renderer.js';
@@ -86,7 +87,6 @@ export function initLabNotebook({
   safeText,
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
-  onOpenSampleRecorder,
   onProjectsChanged,
   selectionInsightsController = null,
   onActiveNotebookPageChanged = () => {},
@@ -221,11 +221,6 @@ export function initLabNotebook({
   const sampleLinkMenu = createSampleLinkMenuController({
     doc: typeof document !== 'undefined' ? document : null,
     win: typeof window !== 'undefined' ? window : null,
-    getSamples: () => (Array.isArray(state.samples) ? state.samples : []),
-    getInventory: () => (state.inventory || {}),
-    getSettings: () => state.settings || {},
-    safeText,
-    onSelect: (sample, menuState) => inlinePlaceholders.linkSample({ menuState, sample }),
     onAddTable: (menuState) => resultTableController.onAddFromPlaceholder({
       name: menuState?.placeholderName,
       value: menuState?.value
@@ -235,13 +230,10 @@ export function initLabNotebook({
   const inlinePlaceholders = createInlinePlaceholderController({
     stepsHost: notebookSteps,
     getSampleLink: (key) => sampleLinkDrafts.get(key),
-    setSampleLink: (key, link) => sampleLinkDrafts.set(key, link),
     deleteSampleLink: (key) => sampleLinkDrafts.delete(key),
-    getInventory: () => state.inventory || {},
     getSettings: () => state.settings || {},
     onOpenSampleLinkMenu: (params) => sampleLinkMenu.open(params),
     onCloseSampleLinkMenu: () => sampleLinkMenu.close(),
-    onAppendResultLine: appendNotebookResultLine,
     onPersistSampleLinks: persistActiveEntrySampleLinks,
     onValueCommitted: () => { void maybeGenerateNotebookPageName(); }
   });
@@ -304,19 +296,23 @@ export function initLabNotebook({
 
   const linkedWorkActions = createLinkedWorkActions({
     notebookType,
-    experimentNameInput: notebookExperimentName,
     ensureEntry: () => ensureNotebookEntryForLinkedWork(),
     getNotebookEntries: () => state.notebookEntries,
     getProtocols: () => state.protocols,
     getGelAnalyses: () => getGelAnalyses(state),
     getAssays: () => state.assays,
-    getSettings: () => state.settings,
-    setSettings: (next) => { state.settings = next; },
-    persist,
     previewImageLoader,
     resultFileAttachmentLoader,
-    onCreateLinkedAssay,
-    onOpenSampleRecorder
+    onCreateLinkedAssay
+  });
+
+  const quickSampleController = createNotebookQuickSampleController({
+    doc: typeof document !== 'undefined' ? document : null,
+    state,
+    safeText,
+    createId,
+    ensureEntry: ensureNotebookEntryForLinkedWork,
+    onCreated: applyQuickSampleCapture
   });
 
   const toolSidebarController = createNotebookToolSidebarController({
@@ -954,6 +950,7 @@ export function initLabNotebook({
         return generated;
       } catch (error) {
         console.warn('Failed to generate notebook page name:', error);
+        showTransientNotice('Could not generate a page name automatically.', { type: 'error' });
         return null;
       } finally {
         if (pageNameGenerationPendingRevision === revision) {
@@ -1860,7 +1857,7 @@ export function initLabNotebook({
     if (!saveNotebookBtn) {
       return;
     }
-    saveNotebookBtn.textContent = 'Save';
+    setNotebookSaveButtonLabel('Save notebook page');
     if (clarifySaveNotebookBtn) {
       clarifySaveNotebookBtn.textContent = 'Clarify and Save';
     }
@@ -1873,11 +1870,23 @@ export function initLabNotebook({
   function setNotebookSaveBusy(isBusy, { clarify = false } = {}) {
     if (saveNotebookBtn) {
       saveNotebookBtn.disabled = isBusy;
-      saveNotebookBtn.textContent = isBusy && !clarify ? 'Saving...' : 'Save';
+      setNotebookSaveButtonLabel(isBusy && !clarify ? 'Saving notebook page…' : 'Save notebook page');
     }
     if (clarifySaveNotebookBtn) {
       clarifySaveNotebookBtn.disabled = isBusy;
       clarifySaveNotebookBtn.textContent = isBusy && clarify ? 'Clarifying...' : 'Clarify and Save';
+    }
+  }
+
+  function setNotebookSaveButtonLabel(label) {
+    if (!saveNotebookBtn) {
+      return;
+    }
+    saveNotebookBtn.setAttribute('aria-label', label);
+    saveNotebookBtn.title = label;
+    const accessibleLabel = saveNotebookBtn.querySelector('.sr-only');
+    if (accessibleLabel) {
+      accessibleLabel.textContent = label;
     }
   }
 
@@ -2002,6 +2011,20 @@ export function initLabNotebook({
     markDraftSaved();
   }
 
+  function applyQuickSampleCapture({ entry, record, sampleLink, note }) {
+    const index = state.notebookEntries.findIndex((item) => item.id === entry?.id && matchesType(item));
+    if (index < 0) {
+      throw new Error('The notebook page is no longer available.');
+    }
+    state.notebookEntries[index] = {
+      ...state.notebookEntries[index],
+      sampleLinks: normalizeNotebookSampleLinks(state.notebookEntries[index]?.sampleLinks).concat(sampleLink)
+    };
+    appendNotebookResultLine(note);
+    persistActiveEntrySampleLinks();
+    showTransientNotice(`Added sample ${record?.code || record?.name || ''} to this notebook page.`);
+  }
+
   function onDocumentClickForSampleLinkMenu(event) {
     if (!sampleLinkMenu.isOpen()) {
       return;
@@ -2085,13 +2108,22 @@ export function initLabNotebook({
       finishNotebookTitleRename({ cancel: true });
     }
   });
-  notebookAddTableBtn?.addEventListener('click', resultTableController.onAdd);
+  notebookAddTableBtn?.addEventListener('click', () => {
+    toolSidebarController.clearSelection();
+    resultTableController.onAdd();
+  });
   notebookAddTableRowBtn?.addEventListener('click', resultTableController.onAddRow);
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);
   notebookRemoveTableBtn?.addEventListener('click', resultTableController.onRemove);
   notebookResultFile?.addEventListener('change', () => renderResultFileAttachments());
-  notebookAddAssayBtn?.addEventListener('click', () => { void linkedWorkActions.onAddAssayClick(); });
-  notebookAddSamplesBtn?.addEventListener('click', () => { void linkedWorkActions.onAddSamplesClick(); });
+  notebookAddAssayBtn?.addEventListener('click', () => {
+    toolSidebarController.clearSelection();
+    void linkedWorkActions.onAddAssayClick();
+  });
+  notebookAddSamplesBtn?.addEventListener('click', () => {
+    toolSidebarController.clearSelection();
+    quickSampleController.open();
+  });
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookProjectDashboard?.addEventListener('input', onProjectDashboardDescriptionInput);

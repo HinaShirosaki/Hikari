@@ -8,6 +8,7 @@ const HANDLE_ATTR = 'data-shared-left-rail-handle';
 const FOLDABLE_ATTR = 'data-left-rail-foldable';
 const FOLD_TOGGLE_CLASS = 'app-left-rail-fold-toggle';
 const FOLDED_CLASS = 'is-left-rail-folded';
+export const SHARED_LEFT_RAIL_CHANGED_EVENT = 'hikari:left-rail-width-changed';
 
 function foldToggleIconMarkup() {
   return `
@@ -19,12 +20,16 @@ function foldToggleIconMarkup() {
   `;
 }
 
-function clampWidth(width, windowObject) {
-  const raw = Number(width);
+function getResponsiveMaxWidth(windowObject) {
   const viewportWidth = Number(windowObject?.innerWidth) || 0;
-  const responsiveMax = viewportWidth > MOBILE_BREAKPOINT
+  return viewportWidth > MOBILE_BREAKPOINT
     ? Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, Math.floor(viewportWidth * 0.38)))
     : MAX_WIDTH;
+}
+
+function clampWidth(width, windowObject) {
+  const raw = Number(width);
+  const responsiveMax = getResponsiveMaxWidth(windowObject);
   if (!Number.isFinite(raw)) {
     return DEFAULT_WIDTH;
   }
@@ -49,6 +54,63 @@ function writeStoredWidth(width, windowObject) {
   } catch {}
 }
 
+export function getSharedLeftRailLayout({
+  document: rootDocument = globalThis?.document || null,
+  windowObject = globalThis?.window || null
+} = {}) {
+  const root = rootDocument?.documentElement || null;
+  let computedWidth = 0;
+  try {
+    computedWidth = Number.parseFloat(
+      windowObject?.getComputedStyle?.(root)?.getPropertyValue?.('--shared-left-rail-width') || ''
+    );
+  } catch {}
+  return {
+    width: clampWidth(computedWidth || readStoredWidth(windowObject), windowObject),
+    min: MIN_WIDTH,
+    max: getResponsiveMaxWidth(windowObject),
+    mobileBreakpoint: MOBILE_BREAKPOINT
+  };
+}
+
+function announceSharedLeftRailWidth(layout, windowObject) {
+  if (typeof windowObject?.dispatchEvent !== 'function') {
+    return;
+  }
+  const detail = { ...layout };
+  if (typeof windowObject.CustomEvent === 'function') {
+    windowObject.dispatchEvent(new windowObject.CustomEvent(
+      SHARED_LEFT_RAIL_CHANGED_EVENT,
+      { detail }
+    ));
+    return;
+  }
+  windowObject.dispatchEvent({ type: SHARED_LEFT_RAIL_CHANGED_EVENT, detail });
+}
+
+export function setSharedLeftRailWidth(width, {
+  document: rootDocument = globalThis?.document || null,
+  windowObject = globalThis?.window || null,
+  persist = true,
+  notify = true
+} = {}) {
+  const nextWidth = clampWidth(width, windowObject);
+  rootDocument?.documentElement?.style?.setProperty?.('--shared-left-rail-width', `${nextWidth}px`);
+  if (persist) {
+    writeStoredWidth(nextWidth, windowObject);
+  }
+  const layout = {
+    width: nextWidth,
+    min: MIN_WIDTH,
+    max: getResponsiveMaxWidth(windowObject),
+    mobileBreakpoint: MOBILE_BREAKPOINT
+  };
+  if (notify) {
+    announceSharedLeftRailWidth(layout, windowObject);
+  }
+  return layout;
+}
+
 export function initSharedLeftRailResizers({
   document: rootDocument = globalThis?.document || null,
   windowObject = globalThis?.window || null
@@ -64,9 +126,12 @@ export function initSharedLeftRailResizers({
   let activeResize = null;
 
   function applyWidth(width) {
-    const nextWidth = clampWidth(width, windowObject);
-    root.style.setProperty('--shared-left-rail-width', `${nextWidth}px`);
-    return nextWidth;
+    return setSharedLeftRailWidth(width, {
+      document: rootDocument,
+      windowObject,
+      persist: false,
+      notify: false
+    }).width;
   }
 
   function syncWidth() {
@@ -83,7 +148,10 @@ export function initSharedLeftRailResizers({
     const { rail } = activeResize;
     rail?.classList?.remove('is-resizing');
     rootDocument.body?.classList?.remove('shared-left-rail-resizing');
-    writeStoredWidth(activeResize.currentWidth, windowObject);
+    setSharedLeftRailWidth(activeResize.currentWidth, {
+      document: rootDocument,
+      windowObject
+    });
     activeResize = null;
     rootDocument.removeEventListener('pointermove', onPointerMove);
     rootDocument.removeEventListener('pointerup', onPointerUp);

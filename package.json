@@ -3,7 +3,7 @@
   "productName": "Hikari",
   "version": "1.0.0",
   "description": "Electron shell for Hikari sub-app launcher",
-  "main": "src/main/main.js",
+  "main": "src/main/app/start-main-app.js",
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
     "check:css-colors": "node scripts/check-css-colors.mjs",
@@ -42,7 +42,6 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "electron-squirrel-startup": "^1.0.1",
-    "telegraf": "^4.16.3",
     "zod": "^3.25.0"
   }
 }

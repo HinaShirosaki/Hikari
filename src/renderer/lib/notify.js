@@ -82,8 +82,9 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
   const timerHost = typeof win?.setTimeout === 'function' && typeof win?.clearTimeout === 'function'
     ? win
     : globalThis;
-  if (typeof timerHost?.setTimeout !== 'function') {
-    // No timers here (test sandboxes): show the notice, let the next one replace it.
+  if (typeof timerHost?.setTimeout !== 'function' || typeof timerHost?.clearTimeout !== 'function') {
+    // No usable timer pair here (test sandboxes ship partial globals): show the
+    // notice and let the next one replace it rather than throwing.
     return;
   }
   timerHost.clearTimeout(activeToastTimer);

@@ -21,6 +21,19 @@ function countOccurrences(text, needle) {
   return String(text || '').split(needle).length - 1;
 }
 
+function sectionLines(markdown, heading, nextHeading) {
+  const source = String(markdown || '');
+  const startMarker = `${heading}\n`;
+  const start = source.indexOf(startMarker);
+  const end = start >= 0 ? source.indexOf(`\n${nextHeading}`, start + startMarker.length) : -1;
+  assert.notEqual(start, -1, `missing section: ${heading}`);
+  assert.notEqual(end, -1, `missing section after ${heading}: ${nextHeading}`);
+  return source
+    .slice(start + startMarker.length, end)
+    .split('\n')
+    .filter(Boolean);
+}
+
 function pagePayload(entry) {
   return JSON.stringify({
     schema_name: 'hikari_notebook_pages',
@@ -143,6 +156,8 @@ try {
     corpus: entry.result
   });
   assert.deepEqual(conclusionRequest.schema.required, ['conclusion', 'quotes']);
+  assert.match(conclusionRequest.prompt, /one concise, single-line experimental conclusion/);
+  assert.match(conclusionRequest.prompt, /one sentence with no newline characters or Markdown/);
   assert.match(conclusionRequest.prompt, /exactly two JSON fields: "conclusion".*"quotes"/);
   let modelCalls = 0;
   const validGenerator = async () => {
@@ -176,6 +191,24 @@ try {
   });
   await waitForProjectMemoryQueue(projectFolder);
   assert.equal(modelCalls, 1);
+
+  const generatedMemory = await fs.readFile(memoryPath, 'utf8');
+  assert.equal(generatedMemory.includes('## Linked Records'), false);
+  assert.equal(generatedMemory.includes('- Notebook pages:'), false);
+  assert.equal(generatedMemory.includes('## Memory Sync'), false);
+  assert.equal(generatedMemory.includes('- Fallback extracts:'), false);
+  assert.equal(generatedMemory.includes('\nID: project-1\n'), false);
+  assert.equal(generatedMemory.includes('\nFolder: Atlas\n'), false);
+  const generatedNotebookLines = sectionLines(
+    generatedMemory,
+    '## Experimental Conclusions',
+    PROJECT_MEMORY_AUTO_END
+  );
+  assert.equal(generatedNotebookLines.length, 1, 'each notebook page occupies one MEMORY.md line');
+  assert.equal(
+    generatedNotebookLines[0],
+    'Protein Yield Run; Purification produced a recorded yield of 42 mg.'
+  );
 
   const changedEntry = {
     ...entry,
@@ -318,10 +351,17 @@ try {
   ));
   assert.equal(Object.keys(capCache).length, 5);
   assert.equal(capCache['notebook:cap-1'].model, NOTEBOOK_MEMORY_MODEL_FALLBACK);
-  assert.match(
-    await fs.readFile(path.join(capFolder, 'MEMORY.md'), 'utf8'),
-    /Notebook conclusions awaiting generation: 0/
+  const capMemory = await fs.readFile(path.join(capFolder, 'MEMORY.md'), 'utf8');
+  assert.equal(capMemory.includes('## Memory Sync'), false);
+  const capNotebookLines = sectionLines(
+    capMemory,
+    '## Experimental Conclusions',
+    PROJECT_MEMORY_AUTO_END
   );
+  assert.equal(capNotebookLines.length, 5, 'five notebook pages produce exactly five MEMORY.md lines');
+  assert.equal(capNotebookLines.every((line) => /^Protein Yield Run; .+$/.test(line)), true);
+  assert.equal(capNotebookLines.some((line) => /(?:^- Page:|Generated conclusion:|Recorded result extract:)/.test(line)), false);
+  assert.equal(capNotebookLines.some((line) => /; (Protocol|Model|Generated|Result updated|Source):/.test(line)), false);
 
   // --- an unreadable saved page settles instead of re-asking every sync -------
   // No page.json is written for this project, so the post-generation check can

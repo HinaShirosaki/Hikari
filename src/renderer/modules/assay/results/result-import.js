@@ -3,6 +3,7 @@ import {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from '../result-import-detector.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 // Owns the "attach result file" flow: parsing, the candidate-picker overlay,
 // preview grid, and applying a detected matrix back into the result table.
@@ -241,6 +242,7 @@ export function createResultImportController({
     }
     if (typeof persistResultAttachment !== 'function') {
       setResultStatus('Result file attachment storage is unavailable.');
+      showTransientNotice('Result file attachment storage is unavailable.', { type: 'error' });
       return;
     }
 
@@ -298,6 +300,7 @@ export function createResultImportController({
     }
     if (typeof parseResultImportFile !== 'function') {
       setResultStatus('Result file parser is unavailable.');
+      showTransientNotice('Result file parser is unavailable.', { type: 'error' });
       return;
     }
 
@@ -350,6 +353,7 @@ export function createResultImportController({
   function onAttachResultFileClick() {
     if (!assayAttachResultFileBtn || !assayResultFileInput) {
       setResultStatus('Result file attachment control is unavailable.');
+      showTransientNotice('Result file attachment control is unavailable.', { type: 'error' });
       return;
     }
     const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';

@@ -80,6 +80,60 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 8px;
 }
 
+.sequence-viewer-icon-btn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.sequence-viewer-icon-btn svg,
+.sequence-viewer-toolbar-toggle-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:focus-visible,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-toolbar-menu-icon-btn {
+  width: 38px;
+  padding-right: 6px;
+}
+
+.sequence-viewer-toolbar-menu-icon-btn::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  bottom: 5px;
+  width: 0;
+  height: 0;
+  border-left: 2.5px solid transparent;
+  border-right: 2.5px solid transparent;
+  border-top: 3.5px solid currentColor;
+  opacity: 0.7;
+}
+
 .sequence-viewer-inline-select {
   display: inline-grid;
   gap: 4px;
@@ -1317,6 +1371,22 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   accent-color: var(--theme-accent);
 }
 
+.sequence-viewer-inline-toggle.sequence-viewer-toolbar-icon-toggle input[type="checkbox"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.sequence-viewer-toolbar-toggle-icon {
+  display: inline-grid;
+  place-items: center;
+  pointer-events: none;
+}
+
 .sequence-viewer-inline-select {
   display: inline-flex;
   align-items: center;
@@ -1606,7 +1676,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-strand-pair {
   position: relative;
   display: grid;
-  gap: 10px;
+  gap: 2px;
 }
 
 .sequence-viewer-strand-block {
@@ -1813,11 +1883,23 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
-  box-shadow: 0 5px 0 var(--sequence-viewer-selection-highlight);
+  position: relative;
+  border-radius: 3px 3px 0 0;
+}
+
+.sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment)::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: calc(2px + 0.14em);
+  background: var(--sequence-viewer-selection-highlight);
+  pointer-events: none;
 }
 
 .sequence-viewer-strand-row-bottom .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
-  box-shadow: 0 -5px 0 var(--sequence-viewer-selection-highlight);
+  border-radius: 0 0 3px 3px;
 }
 
 .sequence-viewer-seq-highlight-alignment {
@@ -1842,6 +1924,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-aa-chip {
+  appearance: none;
   position: absolute;
   top: 0;
   min-height: 22px;
@@ -1860,6 +1943,17 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   text-align: center;
   white-space: nowrap;
   box-sizing: border-box;
+  cursor: context-menu;
+  pointer-events: auto;
+  font-family: inherit;
+}
+
+.sequence-viewer-aa-chip:hover,
+.sequence-viewer-aa-chip:focus-visible {
+  z-index: 1;
+  filter: brightness(0.96);
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 1px;
 }
 
 .sequence-viewer-aa-chip-stop {
@@ -2198,6 +2292,58 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-context-item:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.sequence-viewer-aa-edit-context {
+  display: grid;
+  gap: 6px;
+  min-width: 270px;
+  padding: 3px;
+}
+
+.sequence-viewer-aa-edit-context p {
+  margin: 0;
+}
+
+.sequence-viewer-aa-edit-title {
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-aa-replacement-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sequence-viewer-aa-replacement-option {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 4px 3px;
+  border-color: transparent;
+  background: var(--theme-surface);
+}
+
+.sequence-viewer-aa-replacement-option:hover,
+.sequence-viewer-aa-replacement-option:focus-visible {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-aa-replacement-code {
+  color: var(--theme-text-strong);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.sequence-viewer-aa-replacement-short {
+  color: var(--theme-text-muted);
+  font-size: 0.62rem;
+  line-height: 1;
 }
 
 .sequence-viewer-context-item-danger {
@@ -2974,8 +3120,10 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   }
 }
 
+/* Sits between the action buttons and the toolbar menus. It must not grow, or an
+   empty status leaves a gap holding the menus against the far edge. */
 .sequence-viewer-status-note {
   align-self: center;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }

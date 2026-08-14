@@ -175,7 +175,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
   assert.equal(Boolean(confirmationBanner.hidden), false);
   assert.equal(confirmationSummary.innerHTML.includes('HostVector'), true);
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
   assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
   assert.equal(Boolean(loadBtn.hidden), true);
   assert.equal(Boolean(pastePanel.hidden), true);
@@ -189,7 +189,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   await flushAsync();
 
   assert.equal(Boolean(confirmationBanner.hidden), true);
-  assert.match(document.getElementById('sequence-viewer-status').textContent, /Construct confirmed.*cloning plan.*PCR program/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Construct confirmed.*cloning plan.*PCR program/i);
   assert.equal(persisted, true);
   assert.equal(notebookChangedCount >= 2, true);
   assert.equal(appState.notebookEntries.length, 1);

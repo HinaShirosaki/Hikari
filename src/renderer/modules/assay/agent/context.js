@@ -1,5 +1,6 @@
 import { axisLabel } from '../shared.js';
 import { getPlateDefinition, parseWellId, toRowLabel } from '../plate-model.js';
+import { describeAnalysisSpec } from '../analysis/index.js';
 
 // Builds the hidden agent-chat context describing the active assay plate.
 export function createAssayAgentContext({
@@ -200,7 +201,17 @@ export function createAssayAgentContext({
     const latestAnalysis = !resultsDraftChanged && assay?.latestAnalysis && typeof assay.latestAnalysis === 'object'
       ? assay.latestAnalysis
       : null;
-    const analysisMethod = compactAgentText(elements.assayAnalysisMethodInput?.value || latestAnalysis?.method || '', 120);
+    const analysisMethod = compactAgentText(
+      describeAnalysisSpec({
+        groupBy: elements.assayAnalysisGroupByInput?.value,
+        xAxis: elements.assayAnalysisXAxisInput?.value,
+        analysis: elements.assayAnalysisKindInput?.value,
+        xTransform: elements.assayAnalysisXTransformInput?.value,
+        polyOrder: Number(elements.assayAnalysisPolyOrderInput?.value),
+        asymmetric: Boolean(elements.assayAnalysisAsymmetricInput?.checked)
+      }) || latestAnalysis?.methodLabel || latestAnalysis?.method || '',
+      160
+    );
     const resultRows = buildAgentResultRows(layout, results);
     const resultTableLines = formatAgentTsvSection(
       'Assay plate data (TSV; complete active mapped wells/results for assay_table create)',

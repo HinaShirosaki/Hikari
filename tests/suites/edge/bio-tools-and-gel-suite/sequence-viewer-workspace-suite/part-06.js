@@ -167,7 +167,6 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   const dialogApplyBtn = document.getElementById('sequence-viewer-backbone-dialog-apply-btn');
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
-  const status = document.getElementById('sequence-viewer-status');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
   const initialFeatureCount = Number(statFeatures.textContent || 0);
 
@@ -181,7 +180,7 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   assert.equal(Boolean(dialogOverlay.hidden), false);
   assert.match(dialogCandidates.innerHTML, /T7 promoter/);
   assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
-  assert.match(status.textContent, /Review promoter \/ ORF candidates/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Review promoter \/ ORF candidates/i);
 
   trigger(dialogApplyBtn, 'click');
   await flushAsync();
@@ -197,8 +196,8 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   assert.equal(upsertBackboneCalls[0].backbone?.recognition?.promoter_name, 'T7 promoter');
   assert.equal(upsertBackboneCalls[0].backbone?.backbone?.sequence_length, 24);
   assert.equal(upsertBackboneCalls[0].backbone?.insert?.sequence_length, 6);
-  assert.match(status.textContent, /Stored a Protein Builder backbone selection/i);
-  assert.match(status.textContent, /original sequence was left unchanged/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Stored a Protein Builder backbone selection/i);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /original sequence was left unchanged/i);
 });
 test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to the current record', async () => {
   const ids = [
@@ -287,7 +286,6 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   const annotateBtn = document.getElementById('sequence-viewer-annotate-btn');
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
-  const status = document.getElementById('sequence-viewer-status');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
   const initialFeatureCount = Number(statFeatures.textContent || 0);
 
@@ -302,7 +300,7 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   assert.match(featureRailHost.innerHTML, /StrongPromoter/);
   assert.match(featureRailHost.innerHTML, /ReporterCds/);
   assert.match(featureDetail.innerHTML, /ReporterCds/);
-  assert.match(status.textContent, /Save the record to persist changes/);
+  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Save the record to persist changes/);
 });
 test('[EDGE] sequence-viewer annotation includes the active saved entry and reports existing matches accurately', async () => {
   const annotationModule = loadEsmStyleModule(

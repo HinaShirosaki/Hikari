@@ -114,14 +114,4 @@ The search system is powered by:
 
 When a target feature has its own search input, the shell sets that DOM value and dispatches an `input` event instead of trying to search the feature data directly.
 
-## Telegram command routing
-
-The search system also doubles as an automation target.
-
-`handleTelegramCommand(payload)` can:
-
-- open a view directly
-- route searches into chemical, sample, or assay views
-- trigger the same global-search path used by the topbar
-
-That is why the alias maps and target maps live in the renderer core instead of inside any single feature module.
+The alias maps and target maps live in the renderer core instead of inside any single feature module, so every entry point resolves the same way.

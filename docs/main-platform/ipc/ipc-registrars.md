@@ -46,7 +46,7 @@ The sequence endpoint group has its own registrar file so the top-level data reg
 
 ## `register-system-ipc.js`
 
-Settings/system endpoints from the `LLM`, `TELEGRAM`, and `SYSTEM` groups.
+Settings/system endpoints from the `LLM` and `SYSTEM` groups.
 
 **Codex CLI + direct LLM (`LLM.*`):**
 
@@ -55,12 +55,6 @@ Settings/system endpoints from the `LLM`, `TELEGRAM`, and `SYSTEM` groups.
 - `llm:direct-modules`, `llm:direct-generate`
 
 The Codex endpoints wrap the Codex CLI provider helpers. The direct endpoints expose the registered module-level LLM surface (`lib/llm/direct-llm-module-registry.js`) for app modules that need provider-backed text/file generation without entering the agent chat controller.
-
-**Telegram (`TELEGRAM.*`):**
-
-- `telegram:get-config`, `telegram:set-token`, `telegram:clear-token`
-
-These coordinate saved token state plus `restartTelegramBot()`; they do not implement the bot.
 
 **System (`SYSTEM.*`):**
 
@@ -77,12 +71,19 @@ Now a folder (`src/main/ipc/register-agent-ipc/`), not a single file. It is the 
 
 `index.js` composes the handlers from `agent-lifecycle-service.js`, `agent-controller-core.js`, `agent-chat-handler.js`, and `agent-log-handlers.js`. Use the dedicated walkthrough at [agent/architecture/request-lifecycle.md](../../agent/architecture/request-lifecycle.md) for the request flow.
 
+## `register-python-ipc.js`
+
+One channel, `python:run` (`PYTHON.*`), exposed to the renderer as `hikariApi.runPython({ code, files, readback_paths, timeout_ms })`.
+
+It hands the payload to the same sandbox runner the agent's `run_python_sandbox` tool uses (`agent/tools/agent-python-sandbox/runner.js`), so a run gets its own throwaway directory under the sandbox root and that directory is deleted when the run ends. `files` and `readback_paths` are resolved inside that directory — the channel never accepts a filesystem path, and plugins do not reach it, since the plugin bridge exposes its own verb table rather than the preload surface. Covered by `tests/python-ipc-selfcheck.mjs`.
+
 ## Practical takeaway
 
 When adding a renderer-facing capability, the first question is “which registrar owns this family?”:
 
 - data / storage / import parsers → `register-data-ipc.js`; sequence endpoints → its `register-data-ipc/` child package
 - chat / assistant / log replay → `register-agent-ipc/`
-- Codex CLI, direct LLM, Telegram, or open-external-url → `register-system-ipc.js`
+- Codex CLI, direct LLM, or open-external-url → `register-system-ipc.js`
+- running Python → `register-python-ipc.js`
 
 Then add the channel to `src/shared/ipc/channels.js` and wire the typed preload surface.
