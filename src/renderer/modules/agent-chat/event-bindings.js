@@ -50,12 +50,15 @@ export function bindAgentChatEvents({
     void requestController.stopMessage();
   });
 
-  dom.newChatBtn?.addEventListener('click', () => {
+  dom.newChatBtn?.addEventListener('click', async () => {
+    const didStart = await sessionManager.startNewChatSession();
+    if (!didStart) {
+      return;
+    }
     dom.input.value = '';
     attachmentsController.reset();
     payloadBuilder.consumeHiddenContexts?.();
     shell.syncComposerHeight();
-    void sessionManager.startNewChatSession();
   });
 
   dom.historyNode.addEventListener('click', (event) => {

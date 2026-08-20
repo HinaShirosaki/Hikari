@@ -74,39 +74,81 @@
 }
 
 .tool-subview {
+  display: grid;
+  align-content: start;
+  gap: 14px;
   margin-top: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Shared head for every tool: title, one-line note, optional actions. */
+.tool-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px 16px;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.tool-head h3 {
+  grid-column: 1;
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: -0.015em;
+}
+
+.tool-head-note {
+  grid-column: 1;
+  max-width: 70ch;
+  margin: 0;
+  color: var(--theme-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.tool-head-actions {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / -1;
+  align-items: center;
+  gap: 8px;
 }
 
 .calc-output {
   margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--theme-border);
+  padding: 12px 14px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 10px;
   background: var(--theme-surface-subtle);
   color: var(--theme-text);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+#tool-box-view .calc-output {
+  margin-top: 0;
+}
+
+/* No empty result boxes before a tool has run. */
+#tool-box-view .calc-output:empty {
+  display: none;
 }
 
 .sequence-block {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   word-break: break-all;
   line-height: 1.4;
-  padding: 8px;
-  border: 1px solid var(--theme-border);
+  padding: 12px 14px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 10px;
   background: var(--theme-surface-subtle);
 }
 
 .tool-box-sheet-shell {
   gap: 12px;
-}
-
-.tool-box-sheet-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.tool-box-sheet-header h3 {
-  margin: 0;
 }
 
 .tool-box-sheet-add-btn {
@@ -134,6 +176,7 @@
 .tool-box-reaction-sheet-wrap {
   max-width: 100%;
   overflow-x: auto;
+  border-radius: 10px;
 }
 
 .tool-box-buffer-sheet,
@@ -345,14 +388,6 @@
   border-right: 1px solid var(--theme-border-soft);
 }
 
-
-
-
-
-
-
-
-
 .result-card {
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-subtle);
@@ -372,11 +407,10 @@
   color: var(--theme-primary);
 }
 
-
-
 .result-table-wrap {
   margin-top: 0;
-  border: 1px solid var(--theme-border);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 10px;
   background: var(--theme-surface);
   overflow: auto;
   max-height: 458px;
@@ -408,54 +442,9 @@
   border-bottom: 0;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-@media (max-width: 1240px) {
-  }
-
-@media (max-width: 900px) {
-  
-  
-  
-  }
-
-@media (max-width: 640px) {
-  
-  
-  }
-
 .crispr-designer-shell {
   display: grid;
   gap: 12px;
-}
-
-.crispr-controls {
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  padding: 12px;
 }
 
 .crispr-target-grid {
@@ -541,13 +530,6 @@
   gap: 12px;
   align-content: start;
   min-width: 0;
-}
-
-.colony-counter-controls {
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  padding: 12px;
 }
 
 .colony-crop-actions {
@@ -637,7 +619,14 @@
 }
 
 .colony-preview-card {
+  display: grid;
+  gap: 8px;
   margin: 0;
+}
+
+.colony-preview-card h4 {
+  margin: 0;
+  font-size: 0.95rem;
 }
 
 .colony-cropper-shell {
@@ -670,22 +659,6 @@
   }
 }
 /* Extracted from ui/css/themes/modes.css */
-body.theme-night .calc-output {
-  color: var(--theme-text);
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
-body.theme-night .sequence-block {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
-body.theme-night .result-table-wrap {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
 body.theme-night .result-table th,
 body.theme-night .result-table td {
   border-bottom-color: var(--theme-border-soft);
@@ -693,43 +666,6 @@ body.theme-night .result-table td {
 
 body.theme-night .result-table th {
   background: var(--theme-surface-subtle);
-}
-
-body.theme-night .result-card {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-body.theme-night .crispr-controls {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
-body.theme-night .colony-counter-controls {
-  border-color: var(--theme-border);
-  background: var(--theme-surface);
-}
-
-body.theme-night .colony-preview-canvas {
-  border-color: var(--tool-box-canvas-border);
-  background: var(--tool-box-canvas-background);
-}
-
-body.theme-night .colony-cropper-shell {
-  border-color: var(--tool-box-canvas-border);
-  background: var(--tool-box-canvas-background);
 }
 
 body.theme-night .crispr-risk-low {
@@ -748,16 +684,6 @@ body.theme-night .crispr-risk-high {
   color: color-mix(in srgb, var(--theme-danger) 46%, var(--theme-surface-elevated));
   border-color: color-mix(in srgb, var(--theme-danger) 54%, var(--theme-border));
   background: color-mix(in srgb, var(--theme-danger) 24%, var(--theme-surface));
-}
-
-body.ui-neutral-compact .sequence-block,
-body.ui-neutral-compact .calc-output,
-body.ui-neutral-compact input[id*="id"],
-body.ui-neutral-compact input[id*="code"],
-body.ui-neutral-compact input[id*="cas"],
-body.ui-neutral-compact input[id*="lot"],
-body.ui-neutral-compact input[id*="api-key"] {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 body.ui-neutral-compact .calc-output,
@@ -810,19 +736,11 @@ body.ui-neutral-compact input[id*="api-key"] {
   }
 }
 
-.crispr-guide-seq {
-  letter-spacing: 0;
-}
-
+/* The view itself carries no chrome; boxes live only at the leaves. */
 #tool-box-view .panel,
 #tool-box-view .card,
 #tool-box-view .cards,
-.tool-grid,
-.tool-subview,
-.calc-output,
-.sequence-block,
-.result-card,
-.result-table-wrap {
+.tool-grid {
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -830,68 +748,10 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 /* Molarity calculator */
-.molarity-view-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 4px 2px 20px;
-  border-bottom: 1px solid var(--theme-border-soft);
-}
-
-.molarity-view-header h3 {
-  margin: 2px 0 6px;
-  color: var(--theme-text-strong);
-  font-size: clamp(1.45rem, 2vw, 1.85rem);
-  letter-spacing: -0.025em;
-}
-
-.molarity-kicker {
-  margin: 0;
-  color: var(--theme-accent);
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
-.molarity-lead {
-  max-width: 680px;
-  margin: 0;
-  color: var(--theme-text-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.molarity-auto-unit-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  flex: 0 0 auto;
-  min-height: 34px;
-  padding: 7px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border));
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
-  color: var(--theme-text-strong);
-  font-size: 0.78rem;
-  font-weight: 650;
-}
-
-.molarity-auto-unit-badge::before {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--theme-accent);
-  box-shadow: 0 0 0 4px var(--theme-accent-soft);
-  content: "";
-}
-
 .molarity-card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
-  gap: 16px;
-  margin-top: 18px;
+  gap: 14px;
 }
 
 #tool-molarity-view .molarity-block {
@@ -899,61 +759,40 @@ body.ui-neutral-compact input[id*="api-key"] {
   grid-template-rows: auto auto 1fr;
   min-width: 0;
   margin: 0;
-  padding: 20px;
+  padding: 16px 18px;
   border: 1px solid var(--theme-border-soft);
-  border-radius: 16px;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-accent) 4%),
-    var(--theme-surface)
-  );
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--theme-text) 8%, transparent);
+  border-radius: 12px;
+  background: var(--theme-surface);
 }
 
 .molarity-card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 18px;
+  display: grid;
+  gap: 2px;
+  margin-bottom: 14px;
 }
 
 .molarity-card-header h4 {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1.05rem;
+  font-size: 1rem;
   letter-spacing: -0.01em;
 }
 
 .molarity-card-header p {
   margin: 3px 0 0;
   color: var(--theme-text-muted);
-  font-size: 0.8rem;
-}
-
-.molarity-step {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border));
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
-  color: var(--theme-accent);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  font-size: 0.82rem;
 }
 
 #tool-molarity-view .molarity-form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
   align-items: end;
 }
 
 #tool-molarity-view .molarity-form > label {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
   color: var(--theme-text-muted);
   font-size: 0.8rem;
@@ -983,26 +822,26 @@ body.ui-neutral-compact input[id*="api-key"] {
   min-width: 70px;
 }
 
+/* Result sits inside the card, so it is a rule and not another box. */
 #tool-molarity-view .molarity-block .molarity-output {
   display: grid;
   align-content: center;
-  gap: 5px;
-  min-height: 72px;
-  margin: 18px 0 0;
-  padding: 13px 15px;
+  gap: 4px;
+  min-height: 58px;
+  margin: 14px 0 0;
+  padding: 13px 0 0;
   overflow-wrap: anywhere;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated));
+  border: 0;
+  border-top: 1px solid var(--theme-border-soft);
+  border-radius: 0;
+  background: transparent;
   color: var(--theme-text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   line-height: 1.45;
 }
 
 #tool-molarity-view .molarity-output::before {
   color: var(--theme-text-muted);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 0.68rem;
   font-weight: 750;
   letter-spacing: 0.03em;
@@ -1010,10 +849,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 #tool-molarity-view .molarity-output[data-state="calculated"] {
-  border-color: color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
   color: var(--theme-text-strong);
-  font-family: inherit;
   font-size: 1rem;
   font-weight: 700;
 }
@@ -1023,10 +859,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 #tool-molarity-view .molarity-output[data-state="warning"] {
-  border-color: color-mix(in srgb, var(--theme-danger) 34%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
   color: var(--theme-danger);
-  font-family: inherit;
   font-weight: 650;
 }
 
@@ -1041,20 +874,11 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 @media (max-width: 760px) {
-  .molarity-view-header {
-    display: grid;
-    gap: 14px;
-  }
-
-  .molarity-auto-unit-badge {
-    justify-self: start;
-  }
-
   #tool-molarity-view .molarity-form {
     grid-template-columns: minmax(0, 1fr);
   }
 
   #tool-molarity-view .molarity-block {
-    padding: 16px;
+    padding: 14px;
   }
 }

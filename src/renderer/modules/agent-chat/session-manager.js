@@ -33,6 +33,7 @@ export function createAgentChatSessionManager(deps = {}) {
     setSessionStatus,
     getRunningSessionIds = () => new Set(),
     onActiveSessionChanged = () => {},
+    onNewChatPendingChanged = () => {},
     onProjectScopeChanged = () => {}
   } = deps;
 
@@ -47,6 +48,7 @@ export function createAgentChatSessionManager(deps = {}) {
   let contextFolderId = '';
   let draggedSessionId = '';
   let activeDropTarget = null;
+  let newChatPromise = null;
 
   function readRunningSessionIds() {
     const value = getRunningSessionIds();
@@ -413,19 +415,24 @@ export function createAgentChatSessionManager(deps = {}) {
     return state.agentChat.currentSessionId;
   }
 
-  async function startNewChatSession() {
+  async function createNewChatSession() {
     ensureAgentState();
-    state.agentChat.messages = [];
     const selectedFolder = getFolderById(state, state.agentChat.selectedFolderId)
       || getFolderById(state, GENERAL_CHAT_FOLDER_ID);
-    if (selectedFolder?.projectId) {
+    const nextProjectId = selectedFolder?.projectId || state.agentChat.projectId || '';
+    const applySelectedProjectScope = () => {
+      if (!selectedFolder?.projectId || state.agentChat.projectId === selectedFolder.projectId) {
+        return;
+      }
       state.agentChat.projectId = selectedFolder.projectId;
       renderProjectOptions();
       renderContextSummary();
       onProjectScopeChanged(selectedFolder.projectId);
-    }
+    };
     const storagePath = getStoragePath();
     if (!storagePath || !api?.agentChatLogCreateSession) {
+      applySelectedProjectScope();
+      state.agentChat.messages = [];
       state.agentChat.currentSessionId = '';
       onActiveSessionChanged('');
       persist();
@@ -435,20 +442,22 @@ export function createAgentChatSessionManager(deps = {}) {
         ? 'Persistent chat sessions are unavailable in this build.'
         : 'Started a new local chat draft. Set Storage Folder Path to persist it.');
       setStatus('New chat ready.');
-      return;
+      return true;
     }
     try {
-      const projectId = state.agentChat.projectId || '';
-      const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+      const projectName = asArray(state.projects).find((item) => item.id === nextProjectId)?.name || '';
       const result = await api.agentChatLogCreateSession({
         storagePath,
-        projectId,
+        projectId: nextProjectId,
         projectName,
         title: 'New Chat'
       });
       if (!result?.ok || !result?.session?.id) {
         throw new Error(result?.error || 'Failed to create chat session.');
       }
+      // Do not discard the selected chat until the replacement session is durable.
+      applySelectedProjectScope();
+      state.agentChat.messages = [];
       state.agentChat.currentSessionId = trimText(result.session.id, 120);
       onActiveSessionChanged(state.agentChat.currentSessionId);
       upsertSessionSummary(result.session);
@@ -457,11 +466,25 @@ export function createAgentChatSessionManager(deps = {}) {
       renderHistory({ forceScroll: true });
       setSessionStatus('New chat session created.');
       setStatus('New chat ready.');
+      return true;
     } catch (error) {
       setSessionStatus(`New chat failed: ${String(error?.message || error)}`);
       showTransientNotice(`New chat failed: ${String(error?.message || error)}`, { type: 'error' });
       setStatus('Error.');
+      return false;
     }
+  }
+
+  function startNewChatSession() {
+    if (newChatPromise) {
+      return newChatPromise;
+    }
+    onNewChatPendingChanged(true);
+    newChatPromise = createNewChatSession().finally(() => {
+      newChatPromise = null;
+      onNewChatPendingChanged(false);
+    });
+    return newChatPromise;
   }
 
   function hideContextMenu() {

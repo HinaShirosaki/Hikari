@@ -518,7 +518,8 @@
   position: relative;
 }
 
-.biology-notebook-tool-sidebar [data-hover-caption]::after {
+.biology-notebook-tool-sidebar [data-hover-caption]::after,
+.biology-notebook-viewer-actions [data-hover-caption]::after {
   content: attr(data-hover-caption);
   position: absolute;
   z-index: 3200;
@@ -545,7 +546,9 @@
 }
 
 .biology-notebook-tool-sidebar [data-hover-caption]:hover::after,
-.biology-notebook-tool-sidebar [data-hover-caption]:focus-visible::after {
+.biology-notebook-tool-sidebar [data-hover-caption]:focus-visible::after,
+.biology-notebook-viewer-actions [data-hover-caption]:hover::after,
+.biology-notebook-viewer-actions [data-hover-caption]:focus-visible::after {
   opacity: 1;
   visibility: visible;
   transition-delay: 180ms;
@@ -565,6 +568,17 @@
 .biology-notebook-tool-sidebar[data-toolbox-expand-x="right"] [data-hover-caption]::after {
   right: auto;
   left: 0;
+  transform: none;
+}
+
+.biology-notebook-viewer-actions [data-hover-caption]::after {
+  top: calc(100% + 7px);
+  bottom: auto;
+}
+
+.biology-notebook-viewer-actions [data-hover-caption]:last-child::after {
+  right: 0;
+  left: auto;
   transform: none;
 }
 
@@ -1585,6 +1599,12 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   align-items: center;
 }
 
+.biology-notebook-linked-toolbar:not(:has(> button:not([hidden]))),
+.biology-notebook-linked-results:empty,
+.biology-notebook-tool-calculations:empty {
+  display: none;
+}
+
 .biology-notebook-linked-results {
   display: grid;
   gap: 12px;
@@ -1608,18 +1628,16 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   gap: 10px;
 }
 
+/* No outer panel: the grid's own border is the only frame around a result table. */
 .biology-notebook-result-table-editor {
   display: grid;
   gap: 8px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-panel));
 }
 
-.biology-notebook-result-table-editor.is-active {
+/* With the panel gone, the active table is marked on the grid border itself -- it is
+   the only thing left to mark, and it still only matters when there are several. */
+.biology-notebook-result-table-editor.is-active .biology-notebook-result-table {
   border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 14%, transparent);
 }
 
 .biology-notebook-result-table-editor-head {
@@ -1634,8 +1652,70 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: none;
 }
 
-.biology-notebook-result-table--untitled .tabulator-header {
-  display: none;
+/* Spreadsheet furniture: column letters in the header, row numbers in the gutter.
+   Both are muted so they frame the data instead of competing with it. */
+.biology-notebook-result-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.biology-notebook-result-head-address {
+  color: var(--theme-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.biology-notebook-result-head-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biology-notebook-result-table .tabulator-cell.biology-notebook-result-rownum {
+  color: var(--theme-text-muted);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 60%, var(--theme-surface-elevated));
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+}
+
+/* The fill handle sits inside the anchor cell, so it tracks the cell as the grid
+   scrolls. Cells clip their overflow, so it stays fully inside the corner. */
+.biology-notebook-result-fill-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  background: var(--theme-focus);
+  cursor: crosshair;
+}
+
+.biology-notebook-result-table .tabulator-cell.is-fill-target {
+  background: color-mix(in srgb, var(--theme-focus) 18%, transparent);
+}
+
+.biology-notebook-result-table-head .small-note.is-error {
+  color: var(--theme-danger);
+}
+
+/* A computed cell keeps the normal text colour — the accent is decorative and reads
+   as low-contrast on the lighter palettes. Numbers just line up. */
+.biology-notebook-result-cell--formula {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A formula still waiting on an empty cell shows the arithmetic that is left, so it
+   reads as a note-to-self rather than as a finished result. */
+.biology-notebook-result-cell--pending {
+  color: var(--theme-text-muted);
+  font-style: italic;
+}
+
+.biology-notebook-result-cell--error {
+  color: var(--theme-danger);
+  font-weight: 600;
 }
 
 .biology-notebook-result-table-select {
@@ -1656,7 +1736,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-result-table {
   border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   background: var(--theme-surface-elevated);
 }
@@ -1671,13 +1751,25 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   background: transparent;
 }
 
-.biology-notebook-result-table.tabulator .tabulator-table {
+/* Tabulator hard-codes background:#fff and color:#333 here, and its stylesheet loads
+   after ours — so this has to match its selector depth to win, not just be more
+   specific than the element. Inheriting picks up --theme-text in every palette. */
+.biology-notebook-result-table.tabulator .tabulator-tableholder .tabulator-table {
   background: transparent;
+  color: inherit;
 }
 
-.biology-notebook-result-table .tabulator-header {
+/* Vendor paints the header #e6e6e6 with #555 text at the same specificity, and loads
+   later, so this has to out-specify it the way the row rules do. */
+.biology-notebook-result-table.tabulator .tabulator-header {
   border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  background: color-mix(in srgb, var(--theme-surface-elevated) 90%, var(--theme-panel));
+  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
+  color: var(--theme-text);
+}
+
+.biology-notebook-result-table.tabulator .tabulator-header .tabulator-col {
+  background: transparent;
+  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .biology-notebook-result-table .tabulator-col,
@@ -1685,8 +1777,30 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
-.biology-notebook-result-table .tabulator-row {
+/* Tabulator ships its own zebra striping, grey hover and blue selection, and its
+   stylesheet loads after ours — so each of these has to out-specify the vendor rule
+   it replaces, not merely name the element. */
+.biology-notebook-result-table .tabulator-row,
+.biology-notebook-result-table .tabulator-row.tabulator-row-even,
+.biology-notebook-result-table .tabulator-row.tabulator-row-odd {
   background: var(--theme-surface-elevated);
+}
+
+.biology-notebook-result-table .tabulator-row.tabulator-selectable:hover {
+  background: var(--theme-surface-hover);
+  cursor: cell;
+}
+
+.biology-notebook-result-table .tabulator-row.tabulator-selected,
+.biology-notebook-result-table .tabulator-row.tabulator-selected:hover {
+  background: var(--theme-surface-active);
+}
+
+/* An empty cell has no content to give the row height, which collapses a new table
+   into a sliver. Keep every row clickable at a sensible size. */
+.biology-notebook-result-table .tabulator-cell {
+  min-height: 30px;
+  line-height: 22px;
 }
 
 .biology-notebook-result-table .tabulator-row:not(:last-child) {
@@ -1937,11 +2051,11 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 .biology-notebook-quick-sample-storage {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(126px, 0.38fr) minmax(250px, 1fr);
+  grid-template-columns: minmax(188px, 0.48fr) minmax(250px, 1fr);
   gap: 12px;
 }
 
-.biology-notebook-quick-sample-position-panel,
+.biology-notebook-quick-sample-location-panel,
 .biology-notebook-quick-sample-grid-panel,
 .biology-notebook-quick-sample-fields {
   min-width: 0;
@@ -1950,15 +2064,15 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   background: color-mix(in srgb, var(--theme-surface) 96%, var(--theme-accent) 4%);
 }
 
-.biology-notebook-quick-sample-position-panel {
+.biology-notebook-quick-sample-location-panel {
   display: grid;
-  grid-template-rows: auto minmax(76px, 1fr) auto auto;
-  gap: 5px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 8px;
   align-content: start;
-  padding: 12px;
+  padding: 10px;
 }
 
-.biology-notebook-quick-sample-position-label,
+.biology-notebook-quick-sample-location-label,
 .biology-notebook-quick-sample-grid-head strong {
   color: var(--theme-text-muted);
   font-size: 0.72rem;
@@ -1967,22 +2081,72 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   text-transform: uppercase;
 }
 
-.biology-notebook-quick-sample-position {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.biology-notebook-quick-sample-location-list {
+  display: grid;
+  gap: 4px;
+  align-content: start;
   min-width: 0;
-  color: var(--theme-text-strong);
-  font-size: clamp(2.2rem, 5vw, 4.2rem);
-  font-weight: 760;
-  line-height: 1;
-  overflow-wrap: anywhere;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
 }
 
-.biology-notebook-quick-sample-position-panel > .small-note {
-  min-height: 1.2em;
-  margin: 0;
-  text-align: center;
+.biology-notebook-quick-sample-location {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-strong);
+  text-align: left;
+  cursor: pointer;
+}
+
+.biology-notebook-quick-sample-location:hover,
+.biology-notebook-quick-sample-location:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  outline: none;
+}
+
+.biology-notebook-quick-sample-location.is-selected {
+  border-color: color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+}
+
+.biology-notebook-quick-sample-location-badge {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+  font-size: 0.68rem;
+  font-weight: 760;
+}
+
+.biology-notebook-quick-sample-location-copy {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.biology-notebook-quick-sample-location-copy strong {
+  overflow: hidden;
+  font-size: 0.76rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biology-notebook-quick-sample-location-copy small,
+.biology-notebook-quick-sample-location-count {
+  color: var(--theme-text-muted);
+  font-size: 0.64rem;
+  line-height: 1.1;
 }
 
 .biology-notebook-quick-sample-container-field {
@@ -2161,8 +2325,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .biology-notebook-quick-sample-position-panel {
-    grid-template-rows: auto minmax(64px, auto) auto auto;
+  .biology-notebook-quick-sample-location-list {
+    max-height: 220px;
   }
 }
 
@@ -2179,7 +2343,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   gap: 4px;
 }
 
-.biology-notebook-viewer-icon-btn.ghost-btn {
+.biology-notebook-viewer-icon-btn {
+  position: relative;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -2189,11 +2354,14 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   min-width: 30px;
   height: 30px;
   padding: 0;
+  line-height: 1;
+}
+
+.biology-notebook-viewer-icon-btn.ghost-btn {
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--theme-text);
-  line-height: 1;
 }
 
 .biology-notebook-viewer-icon-btn svg {

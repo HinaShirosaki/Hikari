@@ -366,54 +366,13 @@ function applyWorkflowStorageSchema(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS workflow_templates (
       id TEXT PRIMARY KEY,
-      name TEXT,
-      description TEXT,
-      folder_name TEXT,
-      relative_folder_path TEXT,
-      updated_at TEXT,
-      created_at TEXT,
       raw_json TEXT
     );
     CREATE TABLE IF NOT EXISTS workflow_runs (
       id TEXT PRIMARY KEY,
-      template_id TEXT,
-      template_name TEXT,
-      name TEXT,
-      description TEXT,
-      project_id TEXT,
-      project_name TEXT,
-      folder_name TEXT,
       relative_folder_path TEXT,
-      overall_status TEXT,
-      percent_complete INTEGER,
-      completed_steps INTEGER,
-      total_steps INTEGER,
-      notebook_count INTEGER,
-      paper_count INTEGER,
-      result_file_count INTEGER,
-      updated_at TEXT,
-      created_at TEXT,
       raw_json TEXT
     );
-    CREATE TABLE IF NOT EXISTS workflow_step_status (
-      workflow_id TEXT NOT NULL,
-      entry_id TEXT NOT NULL,
-      block_id TEXT NOT NULL,
-      entry_name TEXT,
-      block_name TEXT,
-      status TEXT,
-      notebook_entry_id TEXT,
-      values_json TEXT,
-      result_files_json TEXT,
-      assay_ids_json TEXT,
-      gel_analysis_ids_json TEXT,
-      completed_at TEXT,
-      updated_at TEXT,
-      PRIMARY KEY (workflow_id, entry_id, block_id)
-    );
-    CREATE INDEX IF NOT EXISTS idx_workflow_runs_template ON workflow_runs(template_id);
-    CREATE INDEX IF NOT EXISTS idx_workflow_runs_status ON workflow_runs(overall_status);
-    CREATE INDEX IF NOT EXISTS idx_workflow_step_status_status ON workflow_step_status(status);
   `);
 }
 
@@ -477,17 +436,9 @@ async function syncWorkflowRootFromSnapshot({
       template: ensureObject(template)
     });
     db.run(
-      `INSERT OR REPLACE INTO workflow_templates
-        (id, name, description, folder_name, relative_folder_path, updated_at, created_at, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO workflow_templates (id, raw_json) VALUES (?, ?)`,
       [
         cleanText(template.id, 220),
-        cleanText(template.name, 320),
-        cleanText(template.description, 4000),
-        folderName,
-        folderName,
-        cleanText(template.updatedAt, 80),
-        cleanText(template.createdAt, 80),
         JSON.stringify(ensureObject(template))
       ]
     );
@@ -576,68 +527,13 @@ async function syncWorkflowRootFromSnapshot({
     });
 
     db.run(
-      `INSERT OR REPLACE INTO workflow_runs
-        (id, template_id, template_name, name, description, project_id, project_name, folder_name, relative_folder_path,
-         overall_status, percent_complete, completed_steps, total_steps, notebook_count, paper_count, result_file_count,
-         updated_at, created_at, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT OR REPLACE INTO workflow_runs (id, relative_folder_path, raw_json) VALUES (?, ?, ?)`,
       [
         workflowId,
-        cleanText(template.id, 220),
-        cleanText(template.name, 320),
-        cleanText(workflow.name, 320),
-        cleanText(workflow.description, 4000),
-        cleanText(workflow.projectId, 220),
-        cleanText(project?.name, 320),
-        buildWorkflowFolderName(workflow),
         runLayout.relativeFolderPath,
-        workflowSummary.overallStatus,
-        workflowSummary.percentComplete,
-        workflowSummary.completedSteps,
-        workflowSummary.totalSteps,
-        notebookEntries.length,
-        relatedPapers.papers.length,
-        workflowSummary.resultFileCount,
-        cleanText(workflow.updatedAt, 80),
-        cleanText(workflow.createdAt, 80),
         JSON.stringify(portableWorkflow)
       ]
     );
-
-    asArray(workflow.entries).forEach((entry) => {
-      const stepStates = entry && typeof entry.stepStates === 'object' && !Array.isArray(entry.stepStates)
-        ? entry.stepStates
-        : {};
-      asArray(workflow.blocks).forEach((block) => {
-        const stepState = ensureObject(stepStates[block?.id]);
-        const portableResultFileRecords = asArray(stepState.resultFileRecords)
-          .map((record) => normalizePortableFileRecord(record))
-          .filter(Boolean);
-        db.run(
-          `INSERT OR REPLACE INTO workflow_step_status
-            (workflow_id, entry_id, block_id, entry_name, block_name, status, notebook_entry_id, values_json, result_files_json,
-             assay_ids_json, gel_analysis_ids_json, completed_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            workflowId,
-            cleanText(entry?.id, 220),
-            cleanText(block?.id, 220),
-            cleanText(entry?.name, 320),
-            cleanText(block?.text || block?.protocolId || block?.id, 320),
-            normalizeStepStatus(stepState),
-            cleanText(stepState.notebookEntryId, 220),
-            JSON.stringify(ensureObject(stepState.values)),
-            JSON.stringify(portableResultFileRecords.length
-              ? portableResultFileRecords
-              : asArray(stepState.resultFiles).map((name) => cleanText(name, 320)).filter(Boolean)),
-            JSON.stringify(asArray(stepState.assayIds).map((id) => cleanText(id, 220)).filter(Boolean)),
-            JSON.stringify(asArray(stepState.gelAnalysisIds).map((id) => cleanText(id, 220)).filter(Boolean)),
-            cleanText(stepState.completedAt, 80),
-            cleanText(stepState.updatedAt, 80)
-          ]
-        );
-      });
-    });
   }
 
   const bytes = db.export();

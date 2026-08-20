@@ -22,115 +22,6 @@ function extractProtocolStepText(step) {
   return cleanText(source.text || source.instruction || source.action || source.title, 1200);
 }
 
-function summarizeNotebookResultTable(rawTable) {
-  const source = ensureObject(rawTable);
-  const columns = asArray(source.columns);
-  if (!columns.length) {
-    return '';
-  }
-  const rows = asArray(source.rows);
-  const columnCount = columns.length;
-  const rowCount = rows.length;
-  return `${columnCount} columns x ${rowCount} rows`;
-}
-
-function normalizeNotebookResultTables(rawTables, legacyTable = null) {
-  const tables = Array.isArray(rawTables)
-    ? rawTables.filter((table) => summarizeNotebookResultTable(table))
-    : [];
-  if (tables.length) {
-    return tables;
-  }
-  const fallback = summarizeNotebookResultTable(Array.isArray(rawTables) ? legacyTable : rawTables)
-    ? (Array.isArray(rawTables) ? legacyTable : rawTables)
-    : legacyTable;
-  return summarizeNotebookResultTable(fallback) ? [fallback] : [];
-}
-
-function summarizeNotebookResultTables(rawTables, legacyTable = null) {
-  const tables = normalizeNotebookResultTables(rawTables, legacyTable);
-  if (!tables.length) {
-    return '';
-  }
-  if (tables.length === 1) {
-    return summarizeNotebookResultTable(tables[0]);
-  }
-  const parts = tables.map((table, index) => `Table ${index + 1}: ${summarizeNotebookResultTable(table)}`);
-  return `${tables.length} tables (${parts.join('; ')})`;
-}
-
-function flattenNotebookResultTableText(rawTable) {
-  const source = ensureObject(rawTable);
-  const columns = asArray(source.columns)
-    .map((column, index) => ({
-      field: cleanText(column?.field, 160),
-      title: cleanText(column?.title, 240) || `Column ${index + 1}`
-    }))
-    .filter((column) => column.field);
-  if (!columns.length) {
-    return '';
-  }
-  const headerText = columns.map((column) => column.title).join(' ');
-  const rowText = asArray(source.rows).map((rawRow) => {
-    const row = ensureObject(rawRow);
-    return columns.map((column) => cleanText(row[column.field], 320)).filter(Boolean).join(' ');
-  });
-  return buildSearchText([headerText, ...rowText]);
-}
-
-function flattenNotebookResultTablesText(rawTables, legacyTable = null) {
-  return buildSearchText(normalizeNotebookResultTables(rawTables, legacyTable).map((table, index) => (
-    `Table ${index + 1} ${flattenNotebookResultTableText(table)}`
-  )));
-}
-
-function normalizeNotebookToolCalculations(rawCalculations) {
-  return asArray(rawCalculations)
-    .map((rawCalculation) => {
-      const calculation = ensureObject(rawCalculation);
-      const id = cleanText(calculation.id, 220);
-      const type = cleanText(calculation.type, 80);
-      const title = cleanText(calculation.title, 320);
-      const result = cleanText(calculation.result || calculation.resultText, 2000);
-      const formula = cleanText(calculation.formula || calculation.formulaText, 2000);
-      const summary = cleanText(calculation.summary || calculation.summaryText || result || formula, 2000);
-      if (!id || !type || (!title && !summary)) {
-        return null;
-      }
-      return {
-        id,
-        type,
-        title: title || 'Bench Calculation',
-        result,
-        formula,
-        summary,
-        inputs: ensureObject(calculation.inputs)
-      };
-    })
-    .filter(Boolean);
-}
-
-function summarizeNotebookToolCalculations(rawCalculations) {
-  const calculations = normalizeNotebookToolCalculations(rawCalculations);
-  if (!calculations.length) {
-    return '';
-  }
-  const labels = calculations.map((calculation) => calculation.title).filter(Boolean).slice(0, 3);
-  const suffix = calculations.length > labels.length ? ` + ${calculations.length - labels.length} more` : '';
-  return `${calculations.length} calculation${calculations.length === 1 ? '' : 's'}${labels.length ? ` (${labels.join('; ')}${suffix})` : ''}`;
-}
-
-function flattenNotebookToolCalculationsText(rawCalculations) {
-  return buildSearchText(normalizeNotebookToolCalculations(rawCalculations).map((calculation) => [
-    calculation.title,
-    calculation.type,
-    calculation.result,
-    calculation.formula,
-    calculation.summary,
-    JSON.stringify(calculation.inputs || {})
-  ].filter(Boolean).join(' ')));
-}
-
 function resolvePersonalInventorySections(inventoryPayload) {
   const inventory = ensureObject(inventoryPayload);
   if (Array.isArray(inventory.personal)) {
@@ -184,163 +75,46 @@ function formatSampleLocationText(rawLocation) {
     .join(' / ');
 }
 
-function collectRecordIndexRows(snapshot, updatedAtDefault) {
+// Hydration reads only record_type and raw_json; the composite PK keeps the
+// upsert deduping. Everything else this used to derive was write-only.
+function collectRecordIndexRows(snapshot) {
   const rows = [];
-  const pushRow = (recordType, recordId, payload = {}) => {
+  const pushRow = (recordType, recordId, raw) => {
     const normalizedType = cleanText(recordType, 60);
     const normalizedId = cleanText(recordId, 220);
     if (!normalizedType || !normalizedId) {
       return;
     }
-    const title = cleanText(payload.title, 320) || `${normalizedType}:${normalizedId}`;
-    const projectId = cleanText(payload.projectId, 220);
-    const projectName = cleanText(payload.projectName, 320);
-    const summary = cleanText(payload.summary, 6000);
-    const linkedProtocolId = cleanText(payload.linkedProtocolId, 220);
-    const linkedProtocolName = cleanText(payload.linkedProtocolName, 320);
-    const updatedAt = cleanText(payload.updatedAt, 80) || updatedAtDefault;
-    const searchText = buildSearchText([
-      normalizedType,
-      normalizedId,
-      title,
-      projectId,
-      projectName,
-      summary,
-      linkedProtocolId,
-      linkedProtocolName,
-      updatedAt,
-      payload.searchHints
-    ]);
     rows.push({
       record_type: normalizedType,
       record_id: normalizedId,
-      title,
-      project_id: projectId,
-      project_name: projectName,
-      summary,
-      linked_protocol_id: linkedProtocolId,
-      linked_protocol_name: linkedProtocolName,
-      updated_at: updatedAt,
-      search_text: searchText,
-      raw_json: JSON.stringify(payload.raw || {})
+      raw_json: JSON.stringify(raw || {})
     });
   };
 
-  asArray(snapshot.notebookEntries).forEach((rawEntry) => {
-    const entry = ensureObject(rawEntry);
-    const tableSummary = summarizeNotebookResultTables(entry.resultTables, entry.resultTable);
-    const toolSummary = summarizeNotebookToolCalculations(entry.toolCalculations);
-    pushRow('notebook', entry.id, {
-      title: entry.protocolName || entry.id,
-      projectId: entry.projectId,
-      projectName: entry.projectName,
-      summary: [
-        cleanText(entry.result, 6000),
-        tableSummary ? `Result table: ${tableSummary}` : '',
-        toolSummary ? `Tool calculations: ${toolSummary}` : ''
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      linkedProtocolId: entry.protocolId,
-      linkedProtocolName: entry.protocolName,
-      updatedAt: entry.updatedAt || entry.createdAt,
-      searchHints: [
-        asArray(entry.resultFiles).join(' '),
-        JSON.stringify(entry.values || {}),
-        flattenNotebookResultTablesText(entry.resultTables, entry.resultTable),
-        flattenNotebookToolCalculationsText(entry.toolCalculations)
-      ].join(' '),
-      raw: entry
-    });
+  asArray(snapshot.notebookEntries).forEach((raw) => {
+    const entry = ensureObject(raw);
+    pushRow('notebook', entry.id, entry);
   });
-
-  asArray(snapshot.workflows).forEach((rawWorkflow) => {
-    const workflow = ensureObject(rawWorkflow);
-    pushRow('workflow', workflow.id, {
-      title: workflow.name || workflow.id,
-      projectId: workflow.projectId,
-      projectName: workflow.projectName,
-      summary: workflow.description,
-      updatedAt: workflow.updatedAt || workflow.createdAt,
-      searchHints: asArray(workflow.blocks).map((block) => block?.text || block?.protocolId || '').join(' '),
-      raw: workflow
-    });
+  asArray(snapshot.workflows).forEach((raw) => {
+    const workflow = ensureObject(raw);
+    pushRow('workflow', workflow.id, workflow);
   });
-
-  asArray(snapshot.assays).forEach((rawAssay) => {
-    const assay = ensureObject(rawAssay);
-    pushRow('assay', assay.id || assay.assay_number, {
-      title: assay.name || assay.assay_number || assay.id,
-      projectId: assay.project_id || assay.projectId,
-      projectName: assay.project_name || assay.projectName,
-      summary: assay.notes || assay.notebook_entry_protocol_name || assay.name,
-      linkedProtocolId: assay.notebook_entry_protocol_id || assay.protocolId,
-      linkedProtocolName: assay.notebook_entry_protocol_name || assay.protocolName,
-      updatedAt: assay.updated_at || assay.updatedAt || assay.created_at,
-      searchHints: [
-        assay.assay_number,
-        assay.sample_axis,
-        assay.concentration_axis
-      ].join(' '),
-      raw: assay
-    });
+  asArray(snapshot.assays).forEach((raw) => {
+    const assay = ensureObject(raw);
+    pushRow('assay', assay.id || assay.assay_number, assay);
   });
-
-  asArray(snapshot.gelAnalyses).forEach((rawGel) => {
-    const gel = ensureObject(rawGel);
-    pushRow('gel', gel.id, {
-      title: gel.name || gel.id,
-      projectId: gel.project_id || gel.projectId,
-      projectName: gel.project_name || gel.projectName,
-      summary: gel.analysis_type || gel.notebook_entry_protocol_name || gel.name,
-      linkedProtocolId: gel.notebook_entry_protocol_id || gel.protocolId,
-      linkedProtocolName: gel.notebook_entry_protocol_name || gel.protocolName,
-      updatedAt: gel.updated_at || gel.updatedAt || gel.created_at,
-      searchHints: asArray(gel.warnings).join(' '),
-      raw: gel
-    });
+  asArray(snapshot.gelAnalyses).forEach((raw) => {
+    const gel = ensureObject(raw);
+    pushRow('gel', gel.id, gel);
   });
-
-  asArray(snapshot.papers).forEach((rawPaper) => {
-    const paper = ensureObject(rawPaper);
-    pushRow('paper', paper.id, {
-      title: paper.title || paper.fileName || paper.id,
-      projectId: paper.linkedType === 'project' ? paper.linkedId : '',
-      projectName: paper.linkedType === 'project' ? paper.linkedName : '',
-      summary: paper.summary || paper.availabilityStatus || paper.ingestionStatus || paper.fileName,
-      updatedAt: paper.updatedAt || paper.createdAt,
-      searchHints: [
-        paper.fileName,
-        paper.linkedType,
-        paper.linkedName,
-        paper.availabilityStatus,
-        paper.ingestionStatus,
-        paper.summaryStatus,
-        paper.methodsStatus,
-        paper.reagentsStatus
-      ].join(' '),
-      raw: paper
-    });
+  asArray(snapshot.papers).forEach((raw) => {
+    const paper = ensureObject(raw);
+    pushRow('paper', paper.id, paper);
   });
-
-  asArray(snapshot.protocols).forEach((rawProtocol) => {
-    const protocol = ensureObject(rawProtocol);
-    const stepHints = asArray(protocol.steps).map((step) => (
-      typeof step === 'string'
-        ? cleanText(step, 220)
-        : cleanText(ensureObject(step).text || ensureObject(step).instruction || ensureObject(step).action, 220)
-    )).filter(Boolean).join(' ');
-    pushRow('protocol', protocol.id, {
-      title: protocol.name || protocol.id,
-      projectId: protocol.projectId,
-      projectName: protocol.projectName || protocol.linkedProject,
-      summary: protocol.purpose || protocol.description || protocol.category,
-      linkedProtocolId: protocol.id,
-      linkedProtocolName: protocol.name,
-      updatedAt: protocol.updatedAt || protocol.createdAt,
-      searchHints: stepHints,
-      raw: protocol
-    });
+  asArray(snapshot.protocols).forEach((raw) => {
+    const protocol = ensureObject(raw);
+    pushRow('protocol', protocol.id, protocol);
   });
 
   return rows;
@@ -503,23 +277,10 @@ function writeSqlProtocolIndex(db, snapshot, updatedAtDefault) {
     const tags = asArray(protocol.tags).map((value) => cleanText(value, 120)).filter(Boolean);
     const linkedProject = cleanText(protocol.linkedProject || protocol.projectName || protocol.projectId, 240);
     const steps = asArray(protocol.steps).map((step) => extractProtocolStepText(step)).filter(Boolean);
-    const searchText = buildSearchText([
-      id,
-      name,
-      category,
-      description,
-      linkedProject,
-      tags.join(' '),
-      asArray(protocol.materials).join(' '),
-      steps.join(' '),
-      asArray(protocol.troubleshooting)
-        .map((row) => (typeof row === 'string' ? row : JSON.stringify(row)))
-        .join(' ')
-    ]);
     db.run(
       `INSERT OR REPLACE INTO protocol_index
-        (id, name, category, description, tags_json, linked_project, step_count, steps_preview_json, search_text, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, name, category, description, tags_json, linked_project, step_count, steps_preview_json, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         name,
@@ -529,7 +290,6 @@ function writeSqlProtocolIndex(db, snapshot, updatedAtDefault) {
         linkedProject,
         Math.max(0, steps.length),
         JSON.stringify(steps.slice(0, 80)),
-        searchText,
         cleanText(protocol.updatedAt || protocol.createdAt, 80) || updatedAtDefault
       ]
     );
@@ -558,23 +318,10 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
       gels: asArray(entry.gelIds || entry.gels).map((value) => cleanText(value, 120)).filter(Boolean),
       files: asArray(entry.resultFiles || entry.resultFileAddresses).map((value) => cleanText(value, 240)).filter(Boolean)
     };
-    const searchText = buildSearchText([
-      id,
-      protocolName,
-      projectName,
-      result,
-      updatedAt,
-      asArray(entry.resultFiles).join(' '),
-      JSON.stringify(entry.values || {}),
-      flattenNotebookResultTablesText(entry.resultTables, entry.resultTable),
-      summarizeNotebookResultTables(entry.resultTables, entry.resultTable),
-      flattenNotebookToolCalculationsText(entry.toolCalculations),
-      summarizeNotebookToolCalculations(entry.toolCalculations)
-    ]);
     db.run(
       `INSERT OR REPLACE INTO notebook_index
-        (id, protocol_id, protocol_name, project_id, project_name, result, notebook_state, executed_at, agent_draft_status, workflow_id, proposal_id, updated_at, created_at, linked_refs_json, search_text)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, protocol_id, protocol_name, project_id, project_name, result, notebook_state, executed_at, agent_draft_status, workflow_id, proposal_id, updated_at, created_at, linked_refs_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         protocolId,
@@ -589,8 +336,7 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
         proposalId,
         updatedAt,
         createdAt,
-        JSON.stringify(linkedRefs),
-        searchText
+        JSON.stringify(linkedRefs)
       ]
     );
   });
@@ -614,28 +360,12 @@ function writeSqlPaperIndex(db, snapshot, updatedAtDefault) {
     const reagentsStatus = cleanText(paper.reagentsStatus, 80);
     const discoveredAt = cleanText(paper.discoveredAt || paper.createdAt, 80);
     const updatedAt = cleanText(paper.updatedAt || paper.createdAt, 80) || updatedAtDefault;
-    const searchText = buildSearchText([
-      id,
-      title,
-      fileName,
-      linkedType,
-      linkedId,
-      linkedName,
-      storedRelativePath,
-      availabilityStatus,
-      ingestionStatus,
-      summaryStatus,
-      methodsStatus,
-      reagentsStatus,
-      asArray(paper.keyReagents).map((item) => item?.name || item).join(' '),
-      asArray(paper.highlights).map((item) => item?.text || '').join(' ')
-    ]);
     db.run(
       `INSERT OR REPLACE INTO paper_index
         (id, title, file_name, linked_type, linked_id, linked_name, stored_relative_path,
          availability_status, ingestion_status, summary_status, methods_status, reagents_status,
-         discovered_at, updated_at, search_text, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         discovered_at, updated_at, raw_json)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         title,
@@ -651,7 +381,6 @@ function writeSqlPaperIndex(db, snapshot, updatedAtDefault) {
         reagentsStatus,
         discoveredAt,
         updatedAt,
-        searchText,
         JSON.stringify({
           ...paper,
           id,
@@ -676,26 +405,11 @@ function writeSqlPaperIndex(db, snapshot, updatedAtDefault) {
   });
 }
 
-function writeSqlRecordIndex(db, snapshot, updatedAtDefault) {
-  const rows = collectRecordIndexRows(snapshot, updatedAtDefault);
-  rows.forEach((row) => {
+function writeSqlRecordIndex(db, snapshot) {
+  collectRecordIndexRows(snapshot).forEach((row) => {
     db.run(
-      `INSERT OR REPLACE INTO record_index
-        (record_type, record_id, title, project_id, project_name, summary, linked_protocol_id, linked_protocol_name, updated_at, search_text, raw_json)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        row.record_type,
-        row.record_id,
-        row.title,
-        row.project_id,
-        row.project_name,
-        row.summary,
-        row.linked_protocol_id,
-        row.linked_protocol_name,
-        row.updated_at,
-        row.search_text,
-        row.raw_json
-      ]
+      'INSERT OR REPLACE INTO record_index (record_type, record_id, raw_json) VALUES (?, ?, ?)',
+      [row.record_type, row.record_id, row.raw_json]
     );
   });
 }
@@ -727,7 +441,7 @@ async function writeSqliteBundleIndex(sqlitePath, snapshot) {
     writeSqlProtocolIndex(db, snapshot, updatedAtDefault);
     writeSqlNotebookIndex(db, snapshot, updatedAtDefault);
     writeSqlPaperIndex(db, snapshot, updatedAtDefault);
-    writeSqlRecordIndex(db, snapshot, updatedAtDefault);
+    writeSqlRecordIndex(db, snapshot);
     const bytes = db.export();
     await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
     await fs.writeFile(sqlitePath, Buffer.from(bytes));

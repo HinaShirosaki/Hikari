@@ -6,6 +6,8 @@ export function createAgentChatRuntimeState() {
     inFlightClientRequestId: '',
     activeRequests: new Map(),
     canceledClientRequestIds: new Set(),
+    sendPending: false,
+    sessionTransitionPending: false,
     stopRequested: false,
     stopInProgress: false,
   };

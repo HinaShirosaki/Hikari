@@ -301,8 +301,10 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       page_url: cleanText(source.url, 1200) || doiUrl,
       candidate_urls: candidateUrls,
       paper_pdf_url: candidateUrls.find((url) => /\.(?:pdf)(?:$|[?#])/i.test(String(url || ''))) || '',
-      linked_type: 'literature-search',
-      linked_name: sanitizeFolderName(linkedName || input.topic || input.query || 'Literature Search'),
+      linked_type: cleanText(input.linked_type, 80) || 'literature-search',
+      // Raw name on purpose: the download runtime owns folder sanitizing, and
+      // the knowledge database stores this string as the searchable container.
+      linked_name: linkedName || cleanText(input.topic, 240) || cleanText(input.query, 220) || 'Literature Search',
       storage_path: storagePath,
       use_browser_fallback: true
     }).catch((error) => ({
@@ -601,12 +603,14 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       desiredSelectionCount,
       preferredJournal
     );
-    const linkedName = sanitizeFolderName(
-      cleanText(copiedContext.project?.name, 220)
+    // Papers found for a project belong in that project's Papers folder; a
+    // free-standing search gets its own collection folder under Papers/.
+    const projectName = cleanText(copiedContext.project?.name, 220);
+    const linkedType = projectName ? 'project' : 'literature-search';
+    const linkedName = projectName
       || cleanText(source.topic, 240)
       || cleanText(query, 220)
-      || 'Literature Search'
-    );
+      || 'Literature Search';
 
     const enrichedCandidates = [];
     for (const candidate of selectedCandidates) {
@@ -631,6 +635,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     }));
     const downloadInput = {
       ...source,
+      linked_type: linkedType,
       storage_path: copiedContext.storage_path
     };
     // Compare against the local knowledge database before downloading so papers

@@ -40,23 +40,16 @@
 
       <div class="tool-content left-rail-template__main">
       <div id="tool-molarity-view" class="panel tool-subview">
-        <header class="molarity-view-header">
-          <div>
-            <p class="molarity-kicker">Solution calculator</p>
-            <h3>Molarity Calculator</h3>
-            <p class="molarity-lead">Enter the values you know. Results update instantly and choose a practical unit automatically.</p>
-          </div>
-          <span class="molarity-auto-unit-badge">Automatic units</span>
+        <header class="tool-head">
+          <h3>Molarity Calculator</h3>
+          <p class="tool-head-note">Enter the values you know. Results update instantly and pick a practical unit.</p>
         </header>
 
         <div class="molarity-card-grid">
         <section class="molarity-block" data-molarity-mode="mass">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">01</span>
-            <div>
-              <h4>Mass</h4>
-              <p>From concentration and volume</p>
-            </div>
+            <h4>Mass</h4>
+            <p>From concentration and volume</p>
           </header>
           <form id="molarity-mass-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -95,11 +88,8 @@
 
         <section class="molarity-block" data-molarity-mode="volume">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">02</span>
-            <div>
-              <h4>Volume</h4>
-              <p>From mass and concentration</p>
-            </div>
+            <h4>Volume</h4>
+            <p>From mass and concentration</p>
           </header>
           <form id="molarity-volume-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -138,11 +128,8 @@
 
         <section class="molarity-block" data-molarity-mode="concentration">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">03</span>
-            <div>
-              <h4>Concentration</h4>
-              <p>From mass and volume</p>
-            </div>
+            <h4>Concentration</h4>
+            <p>From mass and volume</p>
           </header>
           <form id="molarity-concentration-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -179,11 +166,8 @@
 
         <section class="molarity-block" data-molarity-mode="dilution">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">04</span>
-            <div>
-              <h4>Dilution</h4>
-              <p>Prepare a stock dilution with C1V1 = C2V2</p>
-            </div>
+            <h4>Dilution</h4>
+            <p>Prepare a stock dilution with C1V1 = C2V2</p>
           </header>
           <form id="molarity-dilution-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -233,7 +217,10 @@
       </div>
 
       <div id="tool-peptide-view" class="panel tool-subview" hidden>
-        <h3>Peptide Property Calculator</h3>
+        <header class="tool-head">
+          <h3>Peptide Property Calculator</h3>
+          <p class="tool-head-note">Mass, charge, and isoelectric point from an amino acid sequence.</p>
+        </header>
         <form id="peptide-form" class="stack-form" autocomplete="off">
           <label>
             Amino Acid Sequence
@@ -244,10 +231,13 @@
       </div>
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
-        <div class="tool-box-sheet-header">
+        <header class="tool-head">
           <h3>Buffer Preparer</h3>
-          <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
-        </div>
+          <p class="tool-head-note">Weigh-outs and stock volumes for every ingredient in the recipe.</p>
+          <div class="tool-head-actions">
+            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
+          </div>
+        </header>
         <div class="stack-form tool-box-sheet-shell">
           <div class="tool-box-buffer-sheet-wrap">
             <table class="tool-box-buffer-sheet" aria-label="Buffer preparer table">
@@ -371,11 +361,14 @@
       </div>
 
       <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
-        <h3>Fixed Volume Reaction</h3>
-        <div class="stack-form tool-box-sheet-shell">
-          <div class="form-actions">
-            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
+        <header class="tool-head">
+          <h3>Fixed Volume Reaction</h3>
+          <p class="tool-head-note">Reagent volumes for a reaction of a fixed total volume.</p>
+          <div class="tool-head-actions">
+            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add reagent" title="Add reagent">+</button>
           </div>
+        </header>
+        <div class="stack-form tool-box-sheet-shell">
           <div class="tool-box-reaction-sheet-wrap">
             <table class="tool-box-reaction-sheet" aria-label="Fixed volume reaction preparer">
               <colgroup>
@@ -444,7 +437,10 @@
       </div>
 
       <div id="tool-dna-protein-view" class="panel tool-subview" hidden>
-        <h3>DNA Sequence to Protein Sequence</h3>
+        <header class="tool-head">
+          <h3>DNA Sequence to Protein Sequence</h3>
+          <p class="tool-head-note">Translate a nucleotide sequence in any reading frame.</p>
+        </header>
         <form id="dna-protein-form" class="stack-form" autocomplete="off">
           <label>
             DNA / RNA Sequence
@@ -482,7 +478,10 @@
       </div>
 
       <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
-        <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+        <header class="tool-head">
+          <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+          <p class="tool-head-note">Back-translate a protein using a codon usage profile.</p>
+        </header>
         <form id="reverse-translate-form" class="stack-form" autocomplete="off">
           <label>
             Protein Sequence
@@ -507,7 +506,10 @@
       </div>
 
       <div id="tool-oligo-view" class="panel tool-subview" hidden>
-        <h3>DNA / RNA Oligo Properties</h3>
+        <header class="tool-head">
+          <h3>DNA / RNA Oligo Properties</h3>
+          <p class="tool-head-note">Length, GC content, molecular weight, extinction, and Tm.</p>
+        </header>
         <form id="oligo-form" class="stack-form" autocomplete="off">
           <label>
             Oligo Sequence
@@ -527,7 +529,10 @@
       </div>
 
       <div id="tool-extinction-view" class="panel tool-subview" hidden>
-        <h3>Extinction Coefficient Calculator</h3>
+        <header class="tool-head">
+          <h3>Extinction Coefficient Calculator</h3>
+          <p class="tool-head-note">Molar extinction and A260/A280 conversions.</p>
+        </header>
         <form id="extinction-form" class="stack-form" autocomplete="off">
           <label>
             Sequence Type
@@ -546,7 +551,10 @@
       </div>
 
       <div id="tool-qpcr-view" class="panel tool-subview" hidden>
-        <h3>qPCR Efficiency Calculator</h3>
+        <header class="tool-head">
+          <h3>qPCR Efficiency Calculator</h3>
+          <p class="tool-head-note">Amplification efficiency from a slope or standard curve.</p>
+        </header>
         <form id="qpcr-form" class="stack-form" autocomplete="off">
           <label>
             Slope (optional; from standard curve)
@@ -561,10 +569,13 @@
       </div>
 
       <div id="tool-crispr-view" class="panel tool-subview" hidden>
-        <h3>CRISPR sgRNA Designer</h3>
+        <header class="tool-head">
+          <h3>CRISPR sgRNA Designer</h3>
+          <p class="tool-head-note">Rank candidate guides across the sequences you submit.</p>
+        </header>
 
         <div class="crispr-designer-shell">
-          <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
+          <form id="crispr-form" class="stack-form" autocomplete="off">
             <div class="form-grid">
               <label>
                 PAM Pattern
@@ -647,7 +658,10 @@
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
-        <h3>Colony Counter</h3>
+        <header class="tool-head">
+          <h3>Colony Counter</h3>
+          <p class="tool-head-note">Count colonies on a plate image, by model or by hand.</p>
+        </header>
 
         <div class="colony-counter-shell">
           <div class="colony-workspace-plate">
@@ -655,16 +669,14 @@
               <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
             </div>
 
-            <section class="result-card colony-preview-card">
-              <div class="result-card-head">
-                <h4>Annotated Colonies</h4>
-              </div>
+            <section class="colony-preview-card">
+              <h4>Annotated Colonies</h4>
               <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
             </section>
           </div>
 
           <div class="colony-workspace-settings">
-            <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+            <form id="colony-counter-form" class="stack-form colony-settings" autocomplete="off">
               <label>
                 Plate Image
                 <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />

@@ -89,8 +89,7 @@ function applyKnowledgeDatabaseSchema(db) {
       wiki_status TEXT,
       wiki_path TEXT,
       extraction_status TEXT,
-      notes TEXT,
-      search_text TEXT
+      notes TEXT
     );
     CREATE TABLE IF NOT EXISTS paper_locations (
       id TEXT PRIMARY KEY,
@@ -102,21 +101,7 @@ function applyKnowledgeDatabaseSchema(db) {
       pdf_path TEXT,
       discovered_at TEXT
     );
-    CREATE TABLE IF NOT EXISTS paper_tags (
-      paper_id TEXT NOT NULL,
-      tag TEXT NOT NULL,
-      PRIMARY KEY (paper_id, tag)
-    );
-    CREATE TABLE IF NOT EXISTS paper_links (
-      from_paper_id TEXT NOT NULL,
-      to_paper_id TEXT NOT NULL,
-      relation TEXT,
-      PRIMARY KEY (from_paper_id, to_paper_id, relation)
-    );
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_title ON papers(title);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_search ON papers(search_text);
     CREATE INDEX IF NOT EXISTS idx_knowledge_locations_paper ON paper_locations(paper_id);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_tags_tag ON paper_tags(tag);
   `);
   migratePaperColumns(db);
   db.run(`
@@ -197,17 +182,6 @@ function buildPaperId({ existing = null, doi = '', pdfSha256 = '', title = '' } 
     return `paper-sha256-${String(pdfSha256).slice(0, 16)}`;
   }
   return `paper-title-${sanitizeStorageName(title, 'paper')}`;
-}
-
-function buildSearchText(metadata = {}) {
-  return [
-    metadata.title,
-    metadata.doi,
-    metadata.abstract,
-    metadata.journal,
-    metadata.year,
-    asArrayDefault(metadata.authors).join(' ')
-  ].filter(Boolean).join(' ').toLowerCase();
 }
 
 async function readJsonObject(filePath) {
@@ -312,7 +286,6 @@ module.exports = {
   persistKnowledgeDatabase,
   findExistingPaperRow,
   buildPaperId,
-  buildSearchText,
   readJsonObject,
   writeJsonFile,
   pathExists,

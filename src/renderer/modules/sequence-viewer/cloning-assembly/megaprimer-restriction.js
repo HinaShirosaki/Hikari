@@ -2,7 +2,7 @@ import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
-import { selectBindingWindow } from './overlap-windows.js';
+import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designSimpleMutagenesisPrimers } from './mutagenesis-simple.js';
 import { designWithThresholdFallback } from './strategy.js';
@@ -31,7 +31,9 @@ function isSticky(feature) {
 
 // Nearest flanking unique cutter, sticky-overhang preferred. `side` picks which
 // edge of the edit the site must sit outside of.
-function pickFlankingSite(features, side, editStart, editEnd, excludeSite) {
+function pickFlankingSite(features, side, editStart, editEnd, excludeSite, options = {}) {
+  const circular = Boolean(options?.circular);
+  const sequenceLength = Math.max(0, Number(options?.sequenceLength) || 0);
   const candidates = features
     .filter((feature) => feature.site && feature.site !== excludeSite)
     .map((feature) => {
@@ -40,13 +42,20 @@ function pickFlankingSite(features, side, editStart, editEnd, excludeSite) {
       if (!Number.isFinite(start) || !Number.isFinite(end)) {
         return null;
       }
-      if (side === 'upstream' && end > editStart) {
+      if (start < editEnd && end > editStart) {
         return null;
       }
-      if (side === 'downstream' && start < editEnd) {
+      if (!circular && side === 'upstream' && end > editStart) {
         return null;
       }
-      const distance = side === 'upstream' ? editStart - end : start - editEnd;
+      if (!circular && side === 'downstream' && start < editEnd) {
+        return null;
+      }
+      const distance = circular
+        ? (side === 'upstream'
+            ? (editStart - end + sequenceLength) % sequenceLength
+            : (start - editEnd + sequenceLength) % sequenceLength)
+        : (side === 'upstream' ? editStart - end : start - editEnd);
       return { feature, distance };
     })
     .filter(Boolean);
@@ -57,8 +66,26 @@ function pickFlankingSite(features, side, editStart, editEnd, excludeSite) {
   return candidates[0]?.feature || null;
 }
 
-function withGroup(primer, groupLabel) {
-  return primer ? { ...primer, groupLabel } : primer;
+function circularWindow(sequence, start, length) {
+  if (!sequence.length || length <= 0) {
+    return '';
+  }
+  const normalizedStart = ((start % sequence.length) + sequence.length) % sequence.length;
+  const repeated = sequence.repeat(Math.ceil((normalizedStart + length) / sequence.length) + 1);
+  return repeated.slice(normalizedStart, normalizedStart + Math.min(length, sequence.length));
+}
+
+function circularWindowEndingAt(sequence, end, length) {
+  return circularWindow(sequence, end - Math.min(length, sequence.length), length);
+}
+
+function withGroup(primer, groupLabel, ampliconLength) {
+  return primer ? {
+    ...primer,
+    groupLabel,
+    ampliconLength: Math.max(0, Math.round(Number(ampliconLength) || 0)),
+    templateId: 'megaprimer_template'
+  } : primer;
 }
 
 function buildProcedure(recordName, siteUp, siteDn) {
@@ -80,6 +107,7 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
   const editedSequence = normalizeSequence(payload?.editedSequence || '');
   const recordName = String(payload?.recordName || '').trim() || 'the plasmid';
   const topology = String(payload?.topology || '').toLowerCase() === 'linear' ? 'linear' : 'circular';
+  config.topology = topology;
   const normalizedEdit = normalizeEditRequest(payload?.editRequest, originalSequence);
 
   const summary = {
@@ -87,13 +115,18 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
     resultLength: editedSequence.length,
     insertLength: 0
   };
-  const infeasible = (warning) => ({
-    feasible: false,
-    plans: [{ label: 'Megaprimer restriction cloning', plan: { feasible: false, recommendedAssemblyStrategy: 'restriction-ligation', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings: [warning] } }],
-    primers: [],
-    warnings: [warning],
-    summary
-  });
+  // Accepts one warning or a list, so a route can say what blocked it as well
+  // as that it was blocked.
+  const infeasible = (warning) => {
+    const warnings = [warning].flat().filter(Boolean);
+    return {
+      feasible: false,
+      plans: [{ label: 'Megaprimer restriction cloning', plan: { feasible: false, recommendedAssemblyStrategy: 'restriction-ligation', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings } }],
+      primers: [],
+      warnings,
+      summary
+    };
+  };
 
   if (!originalSequence.length || !normalizedEdit) {
     return infeasible('Edit the sequence before designing a megaprimer restriction route.');
@@ -103,21 +136,47 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
     vendorFilter: normalizeVendorFilter(config.vendorFilter)
   }).filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site');
 
-  const siteUp = pickFlankingSite(features, 'upstream', normalizedEdit.startIndex, normalizedEdit.endIndex);
-  const siteDn = pickFlankingSite(features, 'downstream', normalizedEdit.startIndex, normalizedEdit.endIndex, siteUp?.site);
+  const flankingOptions = { circular: topology === 'circular', sequenceLength: originalSequence.length };
+  const siteUp = pickFlankingSite(features, 'upstream', normalizedEdit.startIndex, normalizedEdit.endIndex, '', flankingOptions);
+  const siteDn = pickFlankingSite(features, 'downstream', normalizedEdit.startIndex, normalizedEdit.endIndex, siteUp?.site, flankingOptions);
   if (!siteUp || !siteDn) {
     return infeasible('No pair of unique restriction sites flanks the edit on both sides; try a different route or add sites.');
   }
 
-  summary.insertLength = Math.max(0, Number(siteDn.segments[0].end) - Number(siteUp.segments[0].start));
+  const siteUpStart = Number(siteUp.segments[0].start);
+  const siteDnEnd = Number(siteDn.segments[0].end);
+  summary.insertLength = topology === 'circular'
+    ? ((siteDnEnd - siteUpStart + originalSequence.length) % originalSequence.length || originalSequence.length)
+    : Math.max(0, siteDnEnd - siteUpStart);
+  const pcrOneLength = topology === 'circular'
+    ? ((siteDnEnd - normalizedEdit.startIndex + originalSequence.length) % originalSequence.length || originalSequence.length)
+    : Math.max(0, siteDnEnd - normalizedEdit.startIndex);
+  const pcrTwoLength = summary.insertLength;
 
   const design = designWithThresholdFallback((thresholds) => {
     const mutagenesis = designSimpleMutagenesisPrimers(originalSequence, normalizedEdit, thresholds, config);
     const mutForward = asArray(mutagenesis?.primers).find((primer) => primer.role === 'mutagenesis-forward');
-    const forwardWindow = selectBindingWindow(originalSequence.slice(Number(siteUp.segments[0].start)), 'forward', thresholds, 0, config);
-    const reverseWindow = selectBindingWindow(originalSequence.slice(0, Number(siteDn.segments[0].end)), 'reverse', thresholds, 0, config);
+    const windowLength = Math.min(originalSequence.length, 60);
+    const forwardTemplate = topology === 'circular'
+      ? circularWindow(originalSequence, siteUpStart, windowLength)
+      : originalSequence.slice(siteUpStart);
+    const reverseTemplate = topology === 'circular'
+      ? circularWindowEndingAt(originalSequence, siteDnEnd, windowLength)
+      : originalSequence.slice(0, siteDnEnd);
+    const specificityConfig = {
+      ...config,
+      specificitySequence: originalSequence,
+      specificityCircular: topology === 'circular'
+    };
+    const forwardWindow = selectBindingWindow(forwardTemplate, 'forward', thresholds, 0, specificityConfig);
+    const reverseWindow = selectBindingWindow(reverseTemplate, 'reverse', thresholds, 0, specificityConfig);
     if (!mutForward || !forwardWindow || !reverseWindow) {
-      return { feasible: false, warnings: ['No primer set matched the current threshold band for the megaprimer route.'] };
+      const reason = (forwardWindow ? '' : describeBindingWindowFailure(forwardTemplate, 'forward', thresholds, 0, specificityConfig))
+        || (reverseWindow ? '' : describeBindingWindowFailure(reverseTemplate, 'reverse', thresholds, 0, specificityConfig));
+      return {
+        feasible: false,
+        warnings: ['No primer set matched the current threshold band for the megaprimer route.', reason].filter(Boolean)
+      };
     }
 
     const primers = [
@@ -141,7 +200,7 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
   });
 
   if (!design.feasible) {
-    return infeasible(asArray(design.warnings)[0] || 'Unable to design the megaprimer primer set.');
+    return infeasible(asArray(design.warnings).filter(Boolean).length ? asArray(design.warnings) : 'Unable to design the megaprimer primer set.');
   }
 
   const [restrictionForward, mutForward, restrictionReverse] = design.primers;
@@ -163,9 +222,9 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
     plans: [{ label: 'Megaprimer restriction cloning', plan }],
     // groupLabel marks the PCR the primer is first added to (see procedure).
     primers: [
-      withGroup(mutForward, 'PCR 1'),
-      withGroup(restrictionReverse, 'PCR 1'),
-      withGroup(restrictionForward, 'PCR 2')
+      withGroup(mutForward, 'PCR 1', pcrOneLength),
+      withGroup(restrictionReverse, 'PCR 1', pcrOneLength),
+      withGroup(restrictionForward, 'PCR 2', pcrTwoLength)
     ],
     warnings: [],
     summary

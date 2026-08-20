@@ -371,9 +371,10 @@ test('[EDGE] sequence-viewer evaluateSiteDirectedMutagenesis supports short inse
   assert.equal(result.editType, 'insertion');
 });
 test('[EDGE] sequence-viewer designCloningPrimers designs simple site-directed mutagenesis primers', () => {
-  const leftFlank = 'GCGCGCGCGCGCGATATATATATATATATATATA';
-  const rightFlank = 'ATATATATATATATATATATGCGCGCGCGCGCGAT';
-  const template = `${leftFlank}AAA${rightFlank}`;
+  const template = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+  const mutationStart = 40;
   const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',
     selectedHost: {
@@ -383,9 +384,9 @@ test('[EDGE] sequence-viewer designCloningPrimers designs simple site-directed m
     },
     editRequest: {
       type: 'point-mutation',
-      start: leftFlank.length + 1,
-      end: leftFlank.length + 3,
-      originalSequence: 'AAA',
+      start: mutationStart + 1,
+      end: mutationStart + 3,
+      originalSequence: template.slice(mutationStart, mutationStart + 3),
       editedSequence: 'GAA'
     }
   });
@@ -400,8 +401,10 @@ test('[EDGE] sequence-viewer designCloningPrimers designs simple site-directed m
   assert.equal(primerPlan.primerTmDifferences[0].tmDifference, 0);
 });
 test('[EDGE] sequence-viewer designCloningPrimers preserves insertion boundaries for mutagenesis primers', () => {
-  const template = 'GCGCGCGCGCGCGATATATATATATATATATATAAAAACCCCCGGGGGTTTTTATATATATATGCGCGCGCGCGCGAT';
-  const insertAt = 36;
+  const template = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+  const insertAt = 70;
   const insertedSequence = 'CCATGG';
   const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',

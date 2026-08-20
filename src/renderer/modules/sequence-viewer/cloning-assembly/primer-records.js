@@ -1,12 +1,26 @@
-import { oligoTm } from '../calculations/oligo.js';
+import { cloningPrimerTm } from '../calculations/oligo.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
 import { asArray, computeGcContent, mean, normalizeSequence } from './sequence-utils.js';
+import { evaluatePrimerPairQuality, evaluatePrimerQuality } from './primer-quality.js';
 
-export function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSequence = '', tmSequence = '', warnings = [] }) {
+export function buildPrimerRecord({
+  name,
+  role,
+  sequence,
+  tailSequence = '',
+  bindingSequence = '',
+  tmSequence = '',
+  warnings = [],
+  groupLabel = '',
+  ampliconLength = 0,
+  templateId = ''
+}) {
   const safeSequence = normalizeSequence(sequence);
   const safeTail = normalizeSequence(tailSequence);
   const safeBinding = normalizeSequence(bindingSequence);
   const safeTmSequence = normalizeSequence(tmSequence);
   const tmTarget = safeTmSequence || (safeBinding.length ? safeBinding : safeSequence);
+  const quality = evaluatePrimerQuality(safeSequence);
 
   return {
     name: String(name || '').trim() || 'primer',
@@ -14,10 +28,14 @@ export function buildPrimerRecord({ name, role, sequence, tailSequence = '', bin
     sequence: safeSequence,
     tailSequence: safeTail,
     bindingSequence: safeBinding,
-    tm: tmTarget.length ? oligoTm(tmTarget, 'DNA') : 0,
+    tm: tmTarget.length ? cloningPrimerTm(tmTarget) : 0,
     length: safeSequence.length,
     gcContent: computeGcContent(safeSequence),
-    warnings: asArray(warnings).filter(Boolean)
+    warnings: asArray(warnings).filter(Boolean),
+    qualityWarnings: quality.warnings,
+    groupLabel: String(groupLabel || '').trim(),
+    ampliconLength: Math.max(0, Math.round(Number(ampliconLength) || 0)),
+    templateId: String(templateId || '').trim()
   };
 }
 
@@ -105,18 +123,21 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
   };
 }
 
-// Group primers into forward/reverse pairs by their shared `<base>_F` / `<base>_R`
-// name. Returns one entry per complete pair; primers without an `_F`/`_R` suffix
-// (e.g. multi-oligo tiles) are excluded.
+// Group primers into forward/reverse pairs by their shared `<base> F` / `<base> R`
+// name (an underscore separator is the older engine form). Returns one entry per
+// complete pair; primers without an F/R suffix (e.g. multi-oligo tiles) are excluded.
 export function forwardReversePairs(primers) {
   const pairs = new Map();
   asArray(primers).forEach((primer) => {
-    const match = String(primer?.name || '').match(/^(.*)_([FR])$/);
+    const match = String(primer?.name || '').match(/^(.*)[_ ]([FR])$/);
     if (!match) {
       return;
     }
     const group = pairs.get(match[1]) || { base: match[1] };
     group[match[2]] = Number(primer?.tm) || 0;
+    // Carry the primer itself: the separator varies, so callers must not have to
+    // rebuild the name to find its partner.
+    group[`primer${match[2]}`] = primer;
     pairs.set(match[1], group);
   });
   return [...pairs.values()].filter((group) => Number.isFinite(group.F) && Number.isFinite(group.R));
@@ -126,6 +147,20 @@ export function summarizePrimerPlan(primers, overlaps = []) {
   const safePrimers = asArray(primers);
   const tmValues = safePrimers.map((primer) => Number(primer?.tm) || 0);
   const sortedTm = [...tmValues].sort((left, right) => left - right);
+
+  const qualityWarnings = safePrimers.flatMap((primer) => (
+    asArray(primer?.qualityWarnings).map((warning) => `${primer.name}: ${warning}`)
+  ));
+  forwardReversePairs(safePrimers).forEach((group) => {
+    const forward = group.primerF;
+    const reverse = group.primerR;
+    if (reverseComplementDna(normalizeSequence(forward?.sequence || '')) === normalizeSequence(reverse?.sequence || '')) {
+      return;
+    }
+    evaluatePrimerPairQuality(forward, reverse).warnings.forEach((warning) => {
+      qualityWarnings.push(`${forward?.name}/${reverse?.name}: ${warning}`);
+    });
+  });
 
   return {
     primerCount: safePrimers.length,
@@ -137,8 +172,9 @@ export function summarizePrimerPlan(primers, overlaps = []) {
     },
     primerTmDifferences: forwardReversePairs(safePrimers).map((group) => ({
       pair: group.base,
-      tmDifference: Math.abs(group.F - group.R)
+      tmDifference: Math.abs(group.F - group.R) < 1e-9 ? 0 : Math.abs(group.F - group.R)
     })),
+    qualityWarnings: [...new Set(qualityWarnings)],
     overlapSummary: asArray(overlaps).map((item) => ({
       leftFragmentId: item.leftFragmentId,
       rightFragmentId: item.rightFragmentId,

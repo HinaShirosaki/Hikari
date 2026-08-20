@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   NOTEBOOK_MEMORY_MODEL_FALLBACK,
+  PAPER_SUMMARY_PENDING,
   PROJECT_MEMORY_AUTO_END,
   PROJECT_MEMORY_AUTO_START,
   buildNotebookConclusionRequest,
@@ -459,6 +460,95 @@ try {
   releaseBlockedCall();
   await secondSave;
   await waitForProjectMemoryQueue(saveFolder);
+
+  // --- typeless pages and un-analyzed papers both still reach MEMORY.md -------
+  // Most saved pages predate notebookType, and most linked papers predate
+  // intake.json. Excluding either one rendered a populated project as empty.
+  const legacyFolder = path.join(tempDir, 'Project', 'Legacy');
+  const legacyPage = {
+    ...entry,
+    id: 'legacy-1',
+    projectId: 'project-legacy',
+    projectName: 'Legacy',
+    experimentName: 'Legacy Run',
+    storageFolder: '',
+    result: 'Recovered 7 mg of protein.'
+  };
+  delete legacyPage.notebookType;
+  const legacyPageFolder = path.join(legacyFolder, 'Notebook', 'Protein_Yield__legacy-1');
+  await fs.mkdir(legacyPageFolder, { recursive: true });
+  await fs.writeFile(path.join(legacyPageFolder, 'page.json'), pagePayload(legacyPage), 'utf8');
+
+  const legacyPaperFolder = path.join(tempDir, 'KnowledgeBase', 'papers.md', 'Old_Paper');
+  await fs.mkdir(legacyPaperFolder, { recursive: true });
+  await fs.writeFile(path.join(legacyPaperFolder, 'Old_Paper.md'), '# Old Paper\n', 'utf8');
+
+  const legacySnapshot = {
+    ...snapshot,
+    projects: [{ id: 'project-legacy', name: 'Legacy' }],
+    notebookEntries: [legacyPage],
+    papers: [{
+      id: 'paper-old',
+      title: 'Old Paper',
+      linkedType: 'project',
+      linkedId: 'project-legacy',
+      knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/Old_Paper/Old_Paper.md'
+    }]
+  };
+  await writeProjectMemoryFile({
+    storageRootPath: tempDir,
+    folderPath: legacyFolder,
+    snapshot: legacySnapshot,
+    projectRecord: collectProjectMemoryRecords(legacySnapshot)[0],
+    requestNotebookConclusion: async () => ({ ok: false, error: 'offline' })
+  });
+  await waitForProjectMemoryQueue(legacyFolder);
+
+  const legacyMemory = await fs.readFile(path.join(legacyFolder, 'MEMORY.md'), 'utf8');
+  const legacyNotebookLines = sectionLines(
+    legacyMemory,
+    '## Experimental Conclusions',
+    PROJECT_MEMORY_AUTO_END
+  );
+  assert.deepEqual(
+    legacyNotebookLines,
+    ['Legacy Run; Recovered 7 mg of protein.'],
+    'a page without notebookType still reaches MEMORY.md'
+  );
+  const legacyPaperLines = sectionLines(
+    legacyMemory,
+    '## Paper Conclusions',
+    '## Experimental Conclusions'
+  );
+  assert.equal(legacyPaperLines.includes('### Old Paper'), true, 'an un-analyzed paper is listed');
+  assert.equal(legacyPaperLines.includes(`- Summary: ${PAPER_SUMMARY_PENDING}`), true);
+  assert.equal(
+    legacyPaperLines.includes('- Source: `KnowledgeBase/papers.md/Old_Paper/Old_Paper.md`'),
+    true,
+    'the paper path stays reachable without intake.json'
+  );
+
+  // An explicit non-biology type is still excluded; only an absent one is not.
+  const synthesisSnapshot = {
+    ...legacySnapshot,
+    notebookEntries: [{ ...legacyPage, notebookType: 'synthesis' }]
+  };
+  const synthesisFolder = path.join(tempDir, 'Project', 'Synthesis');
+  await fs.mkdir(synthesisFolder, { recursive: true });
+  await writeProjectMemoryFile({
+    storageRootPath: tempDir,
+    folderPath: synthesisFolder,
+    snapshot: synthesisSnapshot,
+    projectRecord: collectProjectMemoryRecords(synthesisSnapshot)[0],
+    requestNotebookConclusion: async () => ({ ok: false, error: 'offline' })
+  });
+  await waitForProjectMemoryQueue(synthesisFolder);
+  const synthesisMemory = await fs.readFile(path.join(synthesisFolder, 'MEMORY.md'), 'utf8');
+  assert.deepEqual(
+    sectionLines(synthesisMemory, '## Experimental Conclusions', PROJECT_MEMORY_AUTO_END),
+    ['- None recorded.'],
+    'an explicit synthesis page stays out of project memory'
+  );
 
   console.log('project research memory selfcheck OK');
 } finally {

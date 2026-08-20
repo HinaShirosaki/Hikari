@@ -2,6 +2,38 @@ module.exports = function registerAppLabAndProjectSuitePart03(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+test('biology-notebook derives legacy Protein Builder protocols from the stored thermocycle program', () => {
+  const entryHelpers = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-helpers.js')
+  );
+  const protocol = entryHelpers.resolveEntryProtocol({
+    protocolId: 'protein-builder-cloning-assembly-protocol',
+    protocolSnapshot: {
+      id: 'protein-builder-cloning-assembly-protocol',
+      name: 'Protein Builder Cloning Assembly',
+      steps: [{ id: 'legacy-step', text: 'Assemble reaction.', placeholders: [] }]
+    },
+    proteinBuilderCloningDesign: {
+      source: 'protein_builder_cloning_assembly',
+      pcrProgram: {
+        steps: [
+          { label: 'Initial denaturation', temperature: '98 C', time: '30 s', cycles: '1' },
+          { label: 'Denaturation', temperature: '98 C', time: '10 s', cycles: '30' },
+          { label: 'Annealing', temperature: '57 C', time: '20 s', cycles: '30' },
+          { label: 'Extension', temperature: '72 C', time: '1 min 45 s', cycles: '30' },
+          { label: 'Final extension', temperature: '72 C', time: '2 min', cycles: '1' },
+          { label: 'Hold', temperature: '4 C', time: 'hold', cycles: '1' }
+        ]
+      }
+    }
+  }, []);
+
+  assert.equal(protocol.name, 'PCR Thermocycle Program');
+  assert.match(protocol.steps[0].text, /Initial denaturation.*98 C.*30 s/i);
+  assert.match(protocol.steps[1].text, /Repeat for 30 cycles.*Annealing - 57 C - 20 s.*Extension - 72 C - 1 min 45 s/i);
+  assert.doesNotMatch(protocol.steps.map((step) => step.text).join('\n'), /Assemble reaction/i);
+});
+
 test('biology-notebook prefers stored protocol snapshots over live protocol records for saved pages', () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
@@ -474,7 +506,9 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
     'biology-notebook-view.css'
   ), 'utf8');
   assert.match(html, /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.match(html, /<label for="biology-notebook-result">Notes<\/label>/);
   assert.doesNotMatch(html, /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.match(css, /\.biology-notebook-linked-toolbar:not\(:has\(> button:not\(\[hidden\]\)\)\),[\s\S]*?\.biology-notebook-linked-results:empty,[\s\S]*?\.biology-notebook-tool-calculations:empty\s*\{[^}]*display:\s*none;/s);
   assert.match(css, /\.biology-notebook-notes-composer\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*10px\s+12px\s+50px;/s);
   assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
@@ -711,6 +745,18 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
       this.destroyed = true;
     }
 
+    // Rows and columns are added to the live grid rather than by rebuilding the
+    // editor, so the mock has to grow the same way a real Tabulator would.
+    addRow(row) {
+      this.data.push({ ...row });
+    }
+
+    addColumn(column) {
+      this.columns.push({ ...column });
+    }
+
+    setHeight() {}
+
     getData() {
       return this.data.map((row) => ({ ...row }));
     }
@@ -777,11 +823,15 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   assert.equal(document.getElementById('biology-notebook-add-table-btn').hidden, false);
 
   let tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
-  assert.equal(tableInstance.options.headerVisible, false);
+  // The header always shows: it carries the A/B/C letters that formulas reference.
+  assert.equal(tableInstance.options.headerVisible, true);
+  // Column 0 is the row-number gutter. It has no field, so it never reaches the
+  // stored table -- the data columns start at index 1.
+  assert.equal(tableInstance.columns[0].field, undefined);
   assert.equal(document.getElementById('biology-notebook-result-table-status').textContent, '');
   assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, true);
-  const firstField = tableInstance.columns[0].field;
-  tableInstance.columns[0].title = 'Sample';
+  const firstField = tableInstance.columns[1].field;
+  tableInstance.columns[1].title = 'Sample';
   tableInstance.data[0][firstField] = 'A1';
 
   trigger(document.getElementById('biology-notebook-add-table-column-btn'), 'click');
@@ -796,8 +846,8 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
 
   trigger(document.getElementById('biology-notebook-add-table-btn'), 'click');
   const secondTableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
-  const secondField = secondTableInstance.columns[0].field;
-  secondTableInstance.columns[0].title = 'Condition';
+  const secondField = secondTableInstance.columns[1].field;
+  secondTableInstance.columns[1].title = 'Condition';
   secondTableInstance.data[0][secondField] = 'Induced';
 
   document.getElementById('biology-notebook-result').value = 'Measured expression panel.';
@@ -819,13 +869,15 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   notebook.openEntry(state.notebookEntries[0].id);
   const reopenedTables = MockTabulator.instances.slice(-2);
   assert.equal(reopenedTables.length, 2);
-  assert.equal(reopenedTables[0].columns.length, 4);
-  assert.equal(reopenedTables[0].columns[0].title, 'Sample');
-  assert.equal(reopenedTables[0].columns[3].title, 'OD600');
-  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[0].field], 'A1');
-  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[3].field], '0.82');
-  assert.equal(reopenedTables[1].columns[0].title, 'Condition');
-  assert.equal(reopenedTables[1].data[0][reopenedTables[1].columns[0].field], 'Induced');
+  // Four data columns plus the row-number gutter Tabulator is handed at index 0.
+  assert.equal(reopenedTables[0].columns.length, 5);
+  assert.equal(reopenedTables[0].columns[0].field, undefined);
+  assert.equal(reopenedTables[0].columns[1].title, 'Sample');
+  assert.equal(reopenedTables[0].columns[4].title, 'OD600');
+  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[1].field], 'A1');
+  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[4].field], '0.82');
+  assert.equal(reopenedTables[1].columns[1].title, 'Condition');
+  assert.equal(reopenedTables[1].data[0][reopenedTables[1].columns[1].field], 'Induced');
   assert.equal(document.getElementById('biology-notebook-result-table-status').textContent, '');
   assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, true);
   assert.ok(persistCalls >= 1);
@@ -853,6 +905,16 @@ test('biology-notebook creates a result table from a placeholder variable', () =
     }
 
     destroy() {}
+
+    addRow(row) {
+      this.data.push({ ...row });
+    }
+
+    addColumn(column) {
+      this.columns.push({ ...column });
+    }
+
+    setHeight() {}
 
     getData() {
       return this.data.map((row) => ({ ...row }));
@@ -893,6 +955,109 @@ test('biology-notebook creates a result table from a placeholder variable', () =
   assert.equal(table.rows[0][table.columns[0].field], 'Incubation temperature');
   assert.equal(table.rows[0][table.columns[1].field], '37 °C');
   assert.equal(MockTabulator.instances.length, 1);
+});
+
+test('biology-notebook result table repaints edited cells and recomputes formulas', () => {
+  const document = createMockDocument([
+    'biology-notebook-result-table',
+    'biology-notebook-result-table-wrap',
+    'biology-notebook-result-table-status',
+    'biology-notebook-add-table-btn',
+    'biology-notebook-add-table-row-btn',
+    'biology-notebook-add-table-column-btn',
+    'biology-notebook-remove-table-btn'
+  ]);
+
+  // Tabulator 6 only fires callbacks registered with on(); a `cellEdited` passed in the
+  // options object is accepted and silently ignored. When that regressed, the formatter
+  // kept painting stale values over whatever had just been typed.
+  class MockTabulator {
+    static instances = [];
+
+    constructor(host, options = {}) {
+      this.options = { ...options };
+      this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
+      this.columns = Array.isArray(options.columns) ? options.columns.map((column) => ({ ...column })) : [];
+      this.events = {};
+      this.reformatted = 0;
+      MockTabulator.instances.push(this);
+    }
+
+    destroy() {}
+
+    on(eventName, handler) {
+      this.events[eventName] = handler;
+    }
+
+    getData() {
+      return this.data.map((row) => ({ ...row }));
+    }
+
+    getColumns() {
+      return this.columns.map((column) => ({
+        getField: () => column.field,
+        getDefinition: () => ({ ...column })
+      }));
+    }
+
+    getRows() {
+      return this.data.map(() => ({ reformat: () => { this.reformatted += 1; } }));
+    }
+
+    // Renders one cell exactly the way Tabulator would, so the assertions below see
+    // what actually reaches the screen.
+    renderCell(rowIndex, columnIndex) {
+      const column = this.columns[columnIndex];
+      const row = this.data[rowIndex];
+      return column.formatter({
+        getValue: () => row[column.field],
+        getField: () => column.field,
+        getRow: () => ({ getData: () => ({ ...row }) })
+      }).textContent;
+    }
+  }
+
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'results', 'result-table-controller.js'), { document });
+  const controller = resultTableModule.createResultTableController({
+    host: document.getElementById('biology-notebook-result-table'),
+    statusEl: document.getElementById('biology-notebook-result-table-status'),
+    wrapEl: document.getElementById('biology-notebook-result-table-wrap'),
+    addBtn: document.getElementById('biology-notebook-add-table-btn'),
+    addRowBtn: document.getElementById('biology-notebook-add-table-row-btn'),
+    addColBtn: document.getElementById('biology-notebook-add-table-column-btn'),
+    removeBtn: document.getElementById('biology-notebook-remove-table-btn'),
+    createId: (() => {
+      let index = 0;
+      return () => `edit-${index += 1}`;
+    })(),
+    TabulatorLib: MockTabulator
+  });
+
+  controller.onAdd();
+  const grid = MockTabulator.instances[MockTabulator.instances.length - 1];
+  assert.equal(typeof grid.events.cellEdited, 'function', 'cellEdited must be registered through on()');
+
+  // Column 0 is the row-number gutter, so the first data column is at index 1.
+  const firstField = grid.columns[1].field;
+  const secondField = grid.columns[2].field;
+
+  grid.data[0][firstField] = '7';
+  grid.events.cellEdited();
+  assert.equal(grid.renderCell(0, 1), '7', 'a typed value survives the repaint after an edit');
+
+  grid.data[1][firstField] = '5';
+  grid.data[0][secondField] = '=A1+A2';
+  grid.events.cellEdited();
+  assert.equal(grid.renderCell(0, 2), '12', 'a formula computes from the edited cells');
+
+  grid.data[1][firstField] = '13';
+  grid.events.cellEdited();
+  assert.equal(grid.renderCell(0, 2), '20', 'editing a referenced cell updates the formula that reads it');
+
+  grid.data[0][secondField] = '=A1+';
+  grid.events.cellEdited();
+  assert.equal(grid.renderCell(0, 2), '#ERROR', 'a broken formula reports instead of guessing');
+  assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, false);
 });
 
 test('biology-notebook placeholder context menu exposes only a plain Add Table action', () => {

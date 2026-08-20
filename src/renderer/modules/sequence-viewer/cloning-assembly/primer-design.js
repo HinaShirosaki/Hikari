@@ -1,7 +1,7 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
-import { selectBindingWindow } from './overlap-windows.js';
+import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designAssemblyPrimersForRoute, designRestrictionLigationPrimers } from './assembly-primers.js';
 import { designMutagenesisPrimers } from './mutagenesis.js';
@@ -16,6 +16,9 @@ export function designCloningPrimers(args = {}) {
   const fragmentMap = args?.fragmentMap || args?.orderedFragmentMap || null;
   const routeEvaluations = args?.routeEvaluations || {};
   const host = args?.selectedHost || args?.host || null;
+  if (host?.topology) {
+    config.topology = host.topology;
+  }
   const normalizedEdit = normalizeEditRequest(args?.editRequest, host?.sequence || fragmentMap?.resultSequence || '');
 
   return designWithThresholdFallback((thresholds) => {
@@ -115,22 +118,24 @@ export function designPcrPrimerPair(sequence, options = {}) {
     const forwardBinding = selectBindingWindow(templateSequence, 'forward', thresholds, 0, config);
     const reverseBinding = selectBindingWindow(templateSequence, 'reverse', thresholds, 0, config);
     if (!forwardBinding || !reverseBinding) {
+      const missing = forwardBinding ? 'reverse' : 'forward';
+      const reason = describeBindingWindowFailure(templateSequence, missing, thresholds, 0, config);
       return {
         feasible: false,
         primers: [],
-        warnings: ['No forward/reverse PCR primer pair matched the current threshold set for this sequence.']
+        warnings: [`No forward/reverse PCR primer pair matched the current threshold set for this sequence.${reason ? ` ${reason}` : ''}`]
       };
     }
 
     const primers = [
       buildPrimerRecord({
-        name: `${baseName}_F`,
+        name: `${baseName} F`,
         role: 'pcr-forward',
         sequence: forwardBinding.bindingSequence,
         bindingSequence: forwardBinding.bindingSequence
       }),
       buildPrimerRecord({
-        name: `${baseName}_R`,
+        name: `${baseName} R`,
         role: 'pcr-reverse',
         sequence: reverseBinding.bindingSequence,
         bindingSequence: reverseBinding.bindingSequence

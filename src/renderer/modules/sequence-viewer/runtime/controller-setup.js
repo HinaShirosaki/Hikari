@@ -98,6 +98,10 @@ export function setupSequenceViewerControllers(ctx) {
   controllers.cloningDesign = createSequenceViewerCloningDesignController({
     elements,
     state,
+    appState: options?.state,
+    persist: options?.persist,
+    createId: options?.createId,
+    onNotebookEntriesChanged: options?.onNotebookEntriesChanged,
     getSelectedRecord: actions.getSelectedRecord,
     getCloningDesignSource: () => state.sequenceEditDesignSource,
     setStatus: actions.setStatus,

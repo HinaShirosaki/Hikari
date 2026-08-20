@@ -3,7 +3,11 @@ import {
   getWellName,
   isMultiWellContainer
 } from '../../../lib/inventory-containers.js';
-import { getEditableSampleTypeEntries } from '../../../lib/inventory-settings.js';
+import {
+  getEditableSampleTypeEntries,
+  getSampleInventoryLocationDisplay,
+  getSampleInventoryLocationNames
+} from '../../../lib/inventory-settings.js';
 import {
   buildLocationFromInventoryLink,
   getContainerWellName
@@ -60,9 +64,8 @@ export function createNotebookQuickSampleController({
   const form = doc?.getElementById?.('biology-notebook-quick-sample-form');
   const closeBtn = doc?.getElementById?.('biology-notebook-quick-sample-close-btn');
   const cancelBtn = doc?.getElementById?.('biology-notebook-quick-sample-cancel-btn');
+  const locationList = doc?.getElementById?.('biology-notebook-quick-sample-location-list');
   const containerSelect = doc?.getElementById?.('biology-notebook-quick-sample-container');
-  const positionOutput = doc?.getElementById?.('biology-notebook-quick-sample-position');
-  const positionMeta = doc?.getElementById?.('biology-notebook-quick-sample-position-meta');
   const grid = doc?.getElementById?.('biology-notebook-quick-sample-grid');
   const gridLabel = doc?.getElementById?.('biology-notebook-quick-sample-grid-label');
   const nameInput = doc?.getElementById?.('biology-notebook-quick-sample-name');
@@ -73,6 +76,8 @@ export function createNotebookQuickSampleController({
   const status = doc?.getElementById?.('biology-notebook-quick-sample-status');
   const submitBtn = doc?.getElementById?.('biology-notebook-quick-sample-submit-btn');
   let containers = [];
+  let locationNames = [];
+  let selectedLocation = '';
   let selectedContainer = null;
   let selectedWellIndex = null;
 
@@ -116,29 +121,37 @@ export function createNotebookQuickSampleController({
     return count ? 0 : null;
   }
 
-  function renderPosition() {
-    if (!positionOutput || !positionMeta) {
+  function renderLocationList() {
+    if (!locationList) {
       return;
     }
-    if (!selectedContainer) {
-      positionOutput.textContent = '—';
-      positionMeta.textContent = 'No container selected';
+    locationList.innerHTML = locationNames.map((locationName) => {
+      const display = getSampleInventoryLocationDisplay(locationName);
+      const containerCount = asArray(state?.inventory?.[locationName]).length;
+      const sampleCount = asArray(state?.samples).filter((sample) => sample?.inventoryLink?.section === locationName).length;
+      const selected = locationName === selectedLocation;
+      return `
+        <button type="button" class="biology-notebook-quick-sample-location${selected ? ' is-selected' : ''}" data-quick-sample-location="${safeText(locationName)}" role="option" aria-selected="${selected ? 'true' : 'false'}">
+          <span class="biology-notebook-quick-sample-location-badge">${safeText(display.short)}</span>
+          <span class="biology-notebook-quick-sample-location-copy">
+            <strong>${safeText(display.title)}</strong>
+            <small>${safeText(`${containerCount} container${containerCount === 1 ? '' : 's'}`)}</small>
+          </span>
+          <span class="biology-notebook-quick-sample-location-count" aria-label="${safeText(`${sampleCount} sample${sampleCount === 1 ? '' : 's'}`)}">${safeText(String(sampleCount))}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function renderGridLabel() {
+    if (!gridLabel || !selectedContainer) {
       return;
     }
-    if (!isMultiWellContainer(selectedContainer.container)) {
-      const occupied = linkedSamplesAt(state, selectedContainer, null).length;
-      positionOutput.textContent = 'Single';
-      positionMeta.textContent = occupied ? `${occupied} sample${occupied === 1 ? '' : 's'} here` : 'Empty position';
-      return;
-    }
-    const label = Number.isInteger(selectedWellIndex)
-      ? getWellLabel(selectedContainer.container, selectedWellIndex)
-      : '—';
-    const occupied = Number.isInteger(selectedWellIndex)
-      ? linkedSamplesAt(state, selectedContainer, selectedWellIndex).length
-      : 0;
-    positionOutput.textContent = label;
-    positionMeta.textContent = occupied ? `${occupied} sample${occupied === 1 ? '' : 's'} here` : 'Empty position';
+    const containerName = selectedContainer.container.name || 'Container';
+    const positionLabel = isMultiWellContainer(selectedContainer.container)
+      ? (Number.isInteger(selectedWellIndex) ? getWellLabel(selectedContainer.container, selectedWellIndex) : 'Select position')
+      : 'Single position';
+    gridLabel.textContent = `${containerName} · ${positionLabel}`;
   }
 
   function renderGrid() {
@@ -146,16 +159,14 @@ export function createNotebookQuickSampleController({
       return;
     }
     if (!selectedContainer) {
-      gridLabel.textContent = 'Grid box';
+      gridLabel.textContent = selectedLocation ? 'Choose a container' : 'Grid box';
       grid.className = 'biology-notebook-quick-sample-grid is-empty';
       grid.removeAttribute?.('style');
-      grid.innerHTML = '<p class="small-note">No Personal Inventory containers are available.</p>';
-      renderPosition();
+      grid.innerHTML = '<p class="small-note">No containers in this location.</p>';
       return;
     }
 
     const container = selectedContainer.container;
-    gridLabel.textContent = container.name || 'Container';
     if (!isMultiWellContainer(container)) {
       const occupied = linkedSamplesAt(state, selectedContainer, null).length;
       grid.className = 'biology-notebook-quick-sample-grid is-single';
@@ -167,7 +178,7 @@ export function createNotebookQuickSampleController({
         </button>
       `;
       selectedWellIndex = null;
-      renderPosition();
+      renderGridLabel();
       return;
     }
 
@@ -189,7 +200,7 @@ export function createNotebookQuickSampleController({
         </button>
       `;
     }).join('');
-    renderPosition();
+    renderGridLabel();
   }
 
   function selectContainer(key) {
@@ -201,17 +212,33 @@ export function createNotebookQuickSampleController({
     renderGrid();
   }
 
-  function renderContainerOptions() {
-    containers = listContainers(state?.inventory);
-    const previousKey = selectedContainer?.key || containerSelect?.value || '';
+  function renderContainerOptions(previousKey = '') {
+    const locationContainers = containers.filter((item) => item.section === selectedLocation);
     if (containerSelect) {
       containerSelect.innerHTML = [
         '<option value="">No container</option>',
-        ...containers.map((item) => `<option value="${safeText(item.key)}">${safeText(`${item.section} / ${item.container.name || 'Container'}`)}</option>`)
+        ...locationContainers.map((item) => `<option value="${safeText(item.key)}">${safeText(item.container.name || 'Container')}</option>`)
       ].join('');
     }
-    const next = findContainer(containers, previousKey) || containers[0] || null;
+    const next = findContainer(locationContainers, previousKey) || locationContainers[0] || null;
     selectContainer(next?.key || '');
+  }
+
+  function selectLocation(locationName) {
+    selectedLocation = locationNames.includes(locationName) ? locationName : '';
+    const previousKey = selectedContainer?.section === selectedLocation ? selectedContainer.key : '';
+    renderLocationList();
+    renderContainerOptions(previousKey);
+  }
+
+  function renderLocationOptions() {
+    containers = listContainers(state?.inventory);
+    locationNames = getSampleInventoryLocationNames(state?.settings, state?.inventory);
+    const nextLocation = (selectedLocation && locationNames.includes(selectedLocation) ? selectedLocation : '')
+      || locationNames.find((locationName) => containers.some((item) => item.section === locationName))
+      || locationNames[0]
+      || '';
+    selectLocation(nextLocation);
   }
 
   function renderSampleTypes() {
@@ -241,7 +268,7 @@ export function createNotebookQuickSampleController({
       return;
     }
     resetFields();
-    renderContainerOptions();
+    renderLocationOptions();
     overlay.hidden = false;
     nameInput?.focus?.();
   }
@@ -339,6 +366,13 @@ export function createNotebookQuickSampleController({
     }
   }
 
+  locationList?.addEventListener?.('click', (event) => {
+    const location = event?.target?.closest?.('[data-quick-sample-location]');
+    if (!location) {
+      return;
+    }
+    selectLocation(String(location.dataset?.quickSampleLocation || ''));
+  });
   containerSelect?.addEventListener?.('change', () => selectContainer(containerSelect.value));
   grid?.addEventListener?.('click', (event) => {
     const well = event?.target?.closest?.('[data-quick-sample-well]');

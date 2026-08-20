@@ -89,11 +89,20 @@
   border-bottom: 0;
 }
 
+/* Subsections read as gel's tool groups: a quiet micro-label, not a second headline. */
 .foldable-section--subsection > .foldable-section__summary {
-  min-height: 40px;
-  padding-block: 9px;
-  font-size: 0.9rem;
+  min-height: 34px;
+  padding-block: 8px;
+  color: var(--theme-text-muted);
+  font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.foldable-section--subsection > .foldable-section__summary::after {
+  width: 8px;
+  height: 8px;
 }
 
 .foldable-section--subsection > .foldable-section__body {

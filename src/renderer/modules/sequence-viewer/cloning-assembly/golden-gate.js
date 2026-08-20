@@ -1,4 +1,5 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
@@ -18,6 +19,7 @@ const TYPE_IIS_ENZYMES = [
 
 const OVERHANG = 4;
 const SPACER_BASE = 'A';
+const MINIMUM_TYPE_IIS_FLANK = 6;
 
 function pickEnzyme(insert) {
   return TYPE_IIS_ENZYMES.find((enzyme) => !sequenceContainsSite(insert, enzyme.site)) || null;
@@ -25,11 +27,21 @@ function pickEnzyme(insert) {
 
 function buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang) {
   return [
-    { title: 'Order tailed insert primers', details: `Add ${enzyme.name} (${enzyme.site}) tails to the insert primers; the cuts leave native 4 nt overhangs ${upstreamOverhang} and ${downstreamOverhang}, so the junctions are scarless.` },
-    { title: 'Amplify the insert', details: `PCR the insert from ${recordName} with the ${enzyme.name}-tailed primers and purify the amplicon.` },
-    { title: 'One-pot Golden Gate', details: `Combine the insert with a ${enzyme.name}-compatible destination backbone that exposes the complementary ${upstreamOverhang}/${downstreamOverhang} overhangs; add ${enzyme.name} + T4 DNA ligase and cycle digest-ligation (e.g. 37 C / 16 C).` },
+    { title: 'Order insert and backbone primers', details: `The four ${enzyme.name} (${enzyme.site})-tailed primers generate the matched ${upstreamOverhang}/${downstreamOverhang} junction overhangs.` },
+    { title: 'Amplify both fragments', details: `PCR the insert and the linearized ${recordName} backbone separately, verify single products, and purify both amplicons.` },
+    { title: 'One-pot Golden Gate', details: `Combine the two amplicons with ${enzyme.name} + T4 DNA ligase and cycle digest-ligation (e.g. 37 C / 16 C).` },
     { title: 'Transform and screen', details: 'Transform the assembly, then confirm both junctions by colony PCR and sequencing.' }
   ];
+}
+
+function buildTypeIisFlank(config) {
+  const configured = normalizeSequence(config?.primerClampSequence || '');
+  let flank = configured;
+  const padding = 'GCGCGC';
+  while (flank.length < MINIMUM_TYPE_IIS_FLANK) {
+    flank += padding[flank.length % padding.length];
+  }
+  return flank;
 }
 
 export function buildGoldenGatePlan(payload = {}) {
@@ -39,67 +51,116 @@ export function buildGoldenGatePlan(payload = {}) {
   const start = Math.max(0, Math.min(sequence.length, Math.round(Number(payload?.range?.start) || 0)));
   const end = Math.max(start, Math.min(sequence.length, Math.round(Number(payload?.range?.end) || start)));
   const insert = sequence.slice(start, end);
+  const backbone = `${sequence.slice(end)}${sequence.slice(0, start)}`;
 
-  const summary = { templateLength: sequence.length, resultLength: sequence.length, insertLength: insert.length };
-  const infeasible = (warning) => ({
-    feasible: false,
-    plans: [{ label: 'Golden Gate assembly', plan: { feasible: false, recommendedAssemblyStrategy: 'golden-gate', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings: [warning] } }],
-    primers: [],
-    warnings: [warning],
-    summary
-  });
+  const summary = {
+    templateLength: sequence.length,
+    resultLength: sequence.length,
+    insertLength: insert.length,
+    backboneLength: backbone.length
+  };
+  // Accepts one warning or a list, so a route can say what blocked it as well
+  // as that it was blocked.
+  const infeasible = (warning) => {
+    const warnings = [warning].flat().filter(Boolean);
+    return {
+      feasible: false,
+      plans: [{ label: 'Golden Gate assembly', plan: { feasible: false, recommendedAssemblyStrategy: 'golden-gate', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings } }],
+      primers: [],
+      warnings,
+      summary
+    };
+  };
 
-  if (insert.length < OVERHANG * 2) {
-    return infeasible('The insert is too short for two distinct Golden Gate fusion overhangs.');
+  if (insert.length < OVERHANG * 2 || backbone.length < OVERHANG * 2) {
+    return infeasible('The selected insert and remaining backbone must each support two Golden Gate junctions.');
   }
 
-  const enzyme = pickEnzyme(insert);
+  const enzyme = pickEnzyme(sequence);
   if (!enzyme) {
-    return infeasible('The insert contains every candidate Type IIS site (BsaI/BbsI/BsmBI); domesticate one before using Golden Gate.');
+    return infeasible('The designed insert/backbone sequence contains every candidate Type IIS site (BsaI/BbsI/BsmBI); domesticate one before using Golden Gate.');
   }
 
   const upstreamOverhang = insert.slice(0, OVERHANG);
-  const downstreamOverhang = insert.slice(insert.length - OVERHANG);
-  const overhangWarnings = [];
-  if (upstreamOverhang === downstreamOverhang) {
-    overhangWarnings.push('Both junction overhangs are identical; the insert may ligate in either orientation. Shift the insert boundaries for a directional assembly.');
+  const downstreamOverhang = backbone.slice(0, OVERHANG);
+  if (
+    upstreamOverhang === downstreamOverhang
+    || upstreamOverhang === reverseComplementDna(downstreamOverhang)
+    || upstreamOverhang === reverseComplementDna(upstreamOverhang)
+    || downstreamOverhang === reverseComplementDna(downstreamOverhang)
+  ) {
+    return infeasible('The native 4 nt junction overhangs are identical, reverse-complementary, or self-complementary. Shift the insert boundaries before using Golden Gate.');
   }
 
-  const tail = `${normalizeSequence(config.primerClampSequence)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
+  const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
   const design = designWithThresholdFallback((thresholds) => {
-    const forwardBinding = selectBindingWindow(insert, 'forward', thresholds, tail.length, config);
-    const reverseBinding = selectBindingWindow(insert, 'reverse', thresholds, tail.length, config);
-    if (!forwardBinding || !reverseBinding) {
-      return { feasible: false, warnings: ['No insert-binding primer windows matched the current threshold band for the Golden Gate tails.'] };
+    const insertConfig = { ...config, specificitySequence: insert };
+    const backboneConfig = { ...config, specificitySequence: backbone };
+    const insertForward = selectBindingWindow(insert, 'forward', thresholds, baseTail.length, insertConfig);
+    const insertReverseTail = `${baseTail}${reverseComplementDna(downstreamOverhang)}`;
+    const insertReverse = selectBindingWindow(insert, 'reverse', thresholds, insertReverseTail.length, insertConfig);
+    const backboneForward = selectBindingWindow(backbone, 'forward', thresholds, baseTail.length, backboneConfig);
+    const backboneReverseTail = `${baseTail}${reverseComplementDna(upstreamOverhang)}`;
+    const backboneReverse = selectBindingWindow(backbone, 'reverse', thresholds, backboneReverseTail.length, backboneConfig);
+    if (!insertForward || !insertReverse || !backboneForward || !backboneReverse) {
+      return { feasible: false, warnings: ['No complete, unique insert/backbone primer set matched the current threshold band for the Golden Gate tails.'] };
     }
     const primers = [
       buildPrimerRecord({
         name: 'gg_insert_F',
         role: 'golden-gate-forward',
-        sequence: `${tail}${forwardBinding.bindingSequence}`,
-        tailSequence: tail,
-        bindingSequence: forwardBinding.bindingSequence,
-        warnings: [`${enzyme.name} cut exposes the ${upstreamOverhang} overhang.`]
+        sequence: `${baseTail}${insertForward.bindingSequence}`,
+        tailSequence: baseTail,
+        bindingSequence: insertForward.bindingSequence,
+        groupLabel: 'Golden Gate insert PCR',
+        ampliconLength: insert.length,
+        templateId: 'golden_gate_insert',
+        warnings: [`${enzyme.name} cut exposes the native ${upstreamOverhang} overhang.`]
       }),
       buildPrimerRecord({
         name: 'gg_insert_R',
         role: 'golden-gate-reverse',
-        sequence: `${tail}${reverseBinding.bindingSequence}`,
-        tailSequence: tail,
-        bindingSequence: reverseBinding.bindingSequence,
-        warnings: [`${enzyme.name} cut exposes the ${downstreamOverhang} overhang.`]
+        sequence: `${insertReverseTail}${insertReverse.bindingSequence}`,
+        tailSequence: insertReverseTail,
+        bindingSequence: insertReverse.bindingSequence,
+        groupLabel: 'Golden Gate insert PCR',
+        ampliconLength: insert.length,
+        templateId: 'golden_gate_insert',
+        warnings: [`${enzyme.name} cut exposes the matched ${downstreamOverhang} junction overhang.`]
+      }),
+      buildPrimerRecord({
+        name: 'gg_backbone_F',
+        role: 'golden-gate-backbone-forward',
+        sequence: `${baseTail}${backboneForward.bindingSequence}`,
+        tailSequence: baseTail,
+        bindingSequence: backboneForward.bindingSequence,
+        groupLabel: 'Golden Gate backbone PCR',
+        ampliconLength: backbone.length,
+        templateId: 'golden_gate_backbone',
+        warnings: [`${enzyme.name} cut exposes the native ${downstreamOverhang} overhang.`]
+      }),
+      buildPrimerRecord({
+        name: 'gg_backbone_R',
+        role: 'golden-gate-backbone-reverse',
+        sequence: `${backboneReverseTail}${backboneReverse.bindingSequence}`,
+        tailSequence: backboneReverseTail,
+        bindingSequence: backboneReverse.bindingSequence,
+        groupLabel: 'Golden Gate backbone PCR',
+        ampliconLength: backbone.length,
+        templateId: 'golden_gate_backbone',
+        warnings: [`${enzyme.name} cut exposes the matched ${upstreamOverhang} junction overhang.`]
       })
     ];
     return { feasible: true, primers, warnings: [], ...summarizePrimerPlan(primers) };
   });
 
   if (!design.feasible) {
-    return infeasible(asArray(design.warnings)[0] || 'Unable to design the Golden Gate primer pair.');
+    return infeasible(asArray(design.warnings).filter(Boolean).length ? asArray(design.warnings) : 'Unable to design the Golden Gate primer pair.');
   }
 
   const warnings = [
-    ...overhangWarnings,
-    'The destination backbone must expose the complementary overhangs (a Type IIS entry vector, or a PCR-linearised backbone with matching tails).'
+    ...asArray(design.warnings),
+    'Native junction overhangs were checked for identity, reverse complementarity, and self-complementarity; review ligation-fidelity data before ordering.'
   ].filter(Boolean);
 
   const plan = {
@@ -114,7 +175,7 @@ export function buildGoldenGatePlan(payload = {}) {
   return {
     feasible: true,
     plans: [{ label: 'Golden Gate assembly', plan }],
-    primers: design.primers.map((primer) => ({ ...primer, groupLabel: 'Insert PCR' })),
+    primers: design.primers,
     warnings,
     summary
   };

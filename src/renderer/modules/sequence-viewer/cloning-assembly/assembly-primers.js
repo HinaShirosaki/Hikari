@@ -1,7 +1,7 @@
 import { reverseComplementDna } from '../calculations/sequence.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
-import { selectBindingWindow } from './overlap-windows.js';
+import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, resolveFragmentPrimerTemplate } from './primer-records.js';
 
 export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluation, thresholds, config) {
@@ -22,9 +22,17 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
   const reverseBinding = selectBindingWindow(insert.sequence, 'reverse', thresholds, reverseTail.length, config);
 
   if (!forwardBinding || !reverseBinding) {
+    const missing = forwardBinding ? 'reverse' : 'forward';
+    const reason = describeBindingWindowFailure(
+      insert.sequence,
+      missing,
+      thresholds,
+      (missing === 'forward' ? forwardTail : reverseTail).length,
+      config
+    );
     return {
       feasible: false,
-      warnings: ['Unable to find insert-binding primer windows compatible with the selected restriction tails.']
+      warnings: [`Unable to find insert-binding primer windows compatible with the selected restriction tails.${reason ? ` ${reason}` : ''}`]
     };
   }
 
@@ -35,6 +43,9 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       sequence: `${forwardTail}${forwardBinding.bindingSequence}`,
       tailSequence: forwardTail,
       bindingSequence: forwardBinding.bindingSequence,
+      groupLabel: `${insert.name} PCR`,
+      ampliconLength: insert.sequence.length,
+      templateId: insert.id,
       warnings: [`Adds ${selectedSites[0].name || selectedSites[0].site} to the 5' end.`]
     }),
     buildPrimerRecord({
@@ -43,6 +54,9 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       sequence: `${reverseTail}${reverseBinding.bindingSequence}`,
       tailSequence: reverseTail,
       bindingSequence: reverseBinding.bindingSequence,
+      groupLabel: `${insert.name} PCR`,
+      ampliconLength: insert.sequence.length,
+      templateId: insert.id,
       warnings: [`Adds ${selectedSites[1].name || selectedSites[1].site} to the 5' end.`]
     })
   ];
@@ -74,7 +88,15 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, config);
 
     if (!forwardBinding || !reverseBinding) {
-      warnings.push(`Unable to find compatible binding windows for ${fragment.name}.`);
+      const missing = forwardBinding ? 'reverse' : 'forward';
+      const reason = describeBindingWindowFailure(
+        templateDesign.templateSequence,
+        missing,
+        thresholds,
+        (missing === 'forward' ? forwardTail : reverseTail).length,
+        config
+      );
+      warnings.push(`Unable to find compatible binding windows for ${fragment.name}.${reason ? ` ${reason}` : ''}`);
       return;
     }
 
@@ -100,6 +122,9 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         sequence: `${forwardTail}${forwardBinding.bindingSequence}`,
         tailSequence: forwardTail,
         bindingSequence: forwardBinding.bindingSequence,
+        groupLabel: `${fragment.name} PCR`,
+        ampliconLength: templateDesign.desiredSequence.length,
+        templateId: fragment.id,
         warnings: forwardWarnings
       })
     );
@@ -110,6 +135,9 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         sequence: `${reverseTail}${reverseBinding.bindingSequence}`,
         tailSequence: reverseTail,
         bindingSequence: reverseBinding.bindingSequence,
+        groupLabel: `${fragment.name} PCR`,
+        ampliconLength: templateDesign.desiredSequence.length,
+        templateId: fragment.id,
         warnings: reverseWarnings
       })
     );

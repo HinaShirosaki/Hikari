@@ -435,8 +435,6 @@ export function createAssayResultsManager({
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true,
-        cellEdited: onResultGridCellEdited,
-        cellClick: onResultGridCellClick
       };
       const gridHeight = getResultGridHeight(def);
       if (gridHeight) {
@@ -444,6 +442,11 @@ export function createAssayResultsManager({
       }
       resultGrid = new TabulatorLib(host, gridOptions);
       if (typeof resultGrid.on === 'function') {
+        // Tabulator 6 ignores callbacks passed in the options object, so these two have
+        // to be registered here like the rest -- cellEdited is what writes a typed
+        // value into the result model at all.
+        resultGrid.on('cellEdited', onResultGridCellEdited);
+        resultGrid.on('cellClick', onResultGridCellClick);
         resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
         resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
         resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);

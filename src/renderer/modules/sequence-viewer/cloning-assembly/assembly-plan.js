@@ -79,11 +79,12 @@ export function assembleCloningPlan(payload = {}) {
         warnings: [],
         reason: 'Restriction-ligation is disabled for this cloning plan.'
       }
-    : evaluateRestrictionLigation({
-        host: selectedHost,
-        fragmentMap: orderedFragmentMap,
-        preferences: config
-      });
+      : evaluateRestrictionLigation({
+          host: selectedHost,
+          fragmentMap: orderedFragmentMap,
+          resultSequence: normalizedResultSequence,
+          preferences: config
+        });
   const siteDirectedMutagenesis = evaluateSiteDirectedMutagenesis({
     host: selectedHost,
     resultSequence: normalizedResultSequence,

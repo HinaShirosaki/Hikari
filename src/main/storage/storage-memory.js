@@ -13,6 +13,7 @@ const PROJECT_MEMORY_AUTO_END = '<!-- /hikari:auto -->';
 const PROJECT_MEMORY_CACHE_FOLDER = '.hikari';
 const PROJECT_MEMORY_CACHE_FILE = 'research-memory.json';
 const NOTEBOOK_MEMORY_MODEL_FALLBACK = 'fallback-extract';
+const PAPER_SUMMARY_PENDING = 'Not analyzed yet — run paper intake to record a summary.';
 const projectMemoryQueues = new Map();
 const projectGenerationQueues = new Map();
 const latestProjectMemoryInputs = new Map();
@@ -175,9 +176,13 @@ function hasWorkflowNotebookContext(entry = {}) {
 
 function isEligibleNotebookMemoryEntry(entry = {}) {
   const normalized = ensureObject(entry);
+  // ponytail: pages saved before notebookType existed carry no type at all, and
+  // they are most of the recorded corpus. Only an explicit non-biology type
+  // excludes a page; an absent one does not.
+  const notebookType = cleanText(normalized.notebookType, 40).toLowerCase();
   if (
     !cleanText(normalized.id, 220)
-    || cleanText(normalized.notebookType, 40).toLowerCase() !== 'biology'
+    || (notebookType && notebookType !== 'biology')
     || hasWorkflowNotebookContext(normalized)
     || cleanText(normalized.notebookState, 40).toLowerCase() === 'planned'
   ) {
@@ -713,15 +718,15 @@ async function loadProjectPaperEntries(storageRootPath, paperSources) {
     );
     const intake = await readJsonObject(path.join(storageRootPath, ...sourceRelativePath.split('/')));
     const summary = cleanText(intake.one_sentence_summary, 1200);
-    if (!summary) {
-      continue;
-    }
     entries.push({
       paperId: source.paperId,
       title: cleanText(intake.title, 400) || source.fallbackTitle || source.paperId,
       docType: cleanText(intake.doc_type, 80) || 'other',
       doi: cleanText(intake.doi, 240),
-      summary,
+      // ponytail: papers predating intake.json used to be dropped here, so a
+      // project with linked-but-unanalyzed papers rendered the same as one with
+      // no papers. Keep the title and path; say the summary is missing.
+      summary: summary || PAPER_SUMMARY_PENDING,
       sourceRelativePath: normalizeRelativePath(intake.source_paths?.paper_md)
         || source.knowledgeMarkdownRelativePath
         || sourceRelativePath
@@ -1014,6 +1019,7 @@ module.exports = {
   CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   NOTEBOOK_MEMORY_MODEL_FALLBACK,
+  PAPER_SUMMARY_PENDING,
   PROJECT_MEMORY_AUTO_END,
   PROJECT_MEMORY_AUTO_START,
   buildNotebookConclusionRequest,

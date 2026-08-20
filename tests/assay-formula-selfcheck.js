@@ -8,7 +8,7 @@ const { loadEsmStyleModule } = require('./support/runtime.js');
 
 const root = path.resolve(__dirname, '..');
 const { compileFormula, parseFormula } = loadEsmStyleModule(
-  path.join(root, 'src/renderer/modules/assay/formula.js')
+  path.join(root, 'src/renderer/lib/formula.js')
 );
 const { applyPlateTransform } = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/derived-plate.js')

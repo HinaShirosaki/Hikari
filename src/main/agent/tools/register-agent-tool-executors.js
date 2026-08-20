@@ -177,6 +177,14 @@ function resolvePaperDownloadContext(args = {}, context = {}) {
     ? context.project
     : {};
   const message = cleanTextValue(args?.message || context?.message, 12000);
+  const projectName = cleanTextValue(project?.name || project?.id, 220);
+  const hasProjectContext = Boolean(projectName);
+  const collectionName = [
+    args?.collection_name,
+    args?.collectionName,
+    args?.linked_name,
+    args?.linkedName
+  ].map((value) => cleanTextValue(value, 220)).find(Boolean) || 'Literature Search';
   return {
     storage_path: cleanTextValue(
       args?.storage_path
@@ -186,27 +194,16 @@ function resolvePaperDownloadContext(args = {}, context = {}) {
       || snapshot?.storagePath,
       2000
     ),
-    linked_type: cleanTextValue(args?.linked_type || args?.linkedType, 80)
-      || (cleanTextValue(project?.id || project?.name, 120) ? 'project' : 'literature-search'),
-    linked_name: cleanTextValue(
-      args?.linked_name
-      || args?.linkedName
-      || project?.name
-      || project?.id
-      || context?.topic
-      || message,
-      220
-    ),
+    linked_type: hasProjectContext
+      ? 'project'
+      : (cleanTextValue(args?.linked_type || args?.linkedType, 80) || 'literature-search'),
+    linked_name: hasProjectContext ? projectName : collectionName,
     message
   };
 }
 
-function cleanTextValue(value, _maxLength = 500) {
-  const text = String(value || '');
-  if (!text) {
-    return '';
-  }
-  return text;
+function cleanTextValue(value, maxLength = 500) {
+  return String(value || '').trim().slice(0, maxLength);
 }
 
 function registerAgentToolExecutors(deps = {}) {
@@ -721,8 +718,9 @@ function registerAgentToolExecutors(deps = {}) {
       ...args,
       page_url: cleanText(args?.page_url || args?.pageUrl || context?.pageUrl, 2000),
       message: cleanText(args?.message || context?.message, 12000),
-      paper_title: cleanText(args?.paper_title || args?.paperTitle, 240),
+      paper_title: cleanText(args?.paper_title || args?.paperTitle, 320),
       linked_type: resolved.linked_type,
+      collection_name: resolved.linked_name,
       linked_name: resolved.linked_name,
       storage_path: resolved.storage_path
     }).catch((error) => ({

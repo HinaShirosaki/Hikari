@@ -435,10 +435,10 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     };
   }
 
-  async function searchInventorySqlite({ sqlitePath = '', query = '', searchTerms = [], limit = 8, kinds = [] }) {
+  // Chemicals live in their own bundle file; personal/samples live in the common one.
+  async function searchInventorySqlite({ sqlitePath = '', chemicalsSqlitePath = '', query = '', searchTerms = [], limit = 8, kinds = [] }) {
     const dbResult = await withSqliteDatabase(sqlitePath, async (db) => {
       const tables = readSqliteTables(db);
-      const hasChemicals = tables.has('inventory_chemicals');
       const hasPersonal = tables.has('inventory_personal');
       const hasSamples = tables.has('inventory_samples');
       const sampleRowCount = hasSamples
@@ -447,11 +447,11 @@ function createAgentInventoryLookupRuntime(deps = {}) {
 
       const terms = uniqueStrings(searchTerms, 10);
 
-      const chemicalRows = collectLikeMatches(db, {
+      const chemicalLookup = await withSqliteDatabase(chemicalsSqlitePath, async (chemicalDb) => collectLikeMatches(chemicalDb, {
         tableName: 'inventory_chemicals',
         selectColumns: ['id', 'name', 'amount', 'cas', 'location', 'supplier', 'search_text'],
         terms,
-        tableAvailable: hasChemicals,
+        tableAvailable: readSqliteTables(chemicalDb).has('inventory_chemicals'),
         mapRow: (row) => ({
           kind: 'chemical',
           zone: 'Lab Inventory',
@@ -465,7 +465,9 @@ function createAgentInventoryLookupRuntime(deps = {}) {
           search_text: cleanText(row?.search_text, 4000)
         }),
         dedupeKey: (row) => `chemical::${cleanText(row.id, 120).toLowerCase()}`
-      });
+      }));
+      const hasChemicals = chemicalLookup.ok;
+      const chemicalRows = asArray(chemicalLookup.result);
 
       const personalRows = collectLikeMatches(db, {
         tableName: 'inventory_personal',
@@ -638,6 +640,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
 
     const sqlResult = await searchInventorySqlite({
       sqlitePath: context.sqlitePath,
+      chemicalsSqlitePath: context.bundlePaths?.chemicalsSqlitePath || '',
       query,
       searchTerms: termsUsed,
       limit,
@@ -685,6 +688,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     if (backfilledSql) {
       const rerun = await searchInventorySqlite({
         sqlitePath: context.sqlitePath,
+        chemicalsSqlitePath: context.bundlePaths?.chemicalsSqlitePath || '',
         query,
         searchTerms: termsUsed,
         limit,

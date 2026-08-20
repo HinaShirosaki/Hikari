@@ -2,13 +2,14 @@
 
 body {
   --hikari-left-rail-list-radius: 8px;
-  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 64%, transparent);
+  /* Hover stays well under selected so a hovered row never reads as a second selection. */
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 28%, transparent);
   --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
   --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 22%, transparent);
 }
 
 body.theme-night {
-  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-surface-elevated) 4%);
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 32%, var(--theme-surface-elevated) 2%);
   --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated) 7%);
   --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 28%, transparent);
 }

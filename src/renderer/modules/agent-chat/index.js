@@ -135,6 +135,10 @@ export function initAgentChat({
     onActiveSessionChanged: () => {
       shell.syncActiveRequestState();
     },
+    onNewChatPendingChanged: (isPending) => {
+      runtime.sessionTransitionPending = isPending === true;
+      shell.syncActiveRequestState();
+    },
     onProjectScopeChanged: () => {}
   });
   shell.setSessionManager(sessionManager);

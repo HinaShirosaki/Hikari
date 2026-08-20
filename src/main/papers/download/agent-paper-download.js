@@ -67,6 +67,16 @@ function ensurePdfFileName(fileName, fallback = 'paper.pdf') {
   return /\.pdf$/i.test(sanitized) ? sanitized : `${sanitized}.pdf`;
 }
 
+function resolvePaperCollectionName(source = {}) {
+  return defaultCleanText(
+    source.collection_name
+      || source.collectionName
+      || source.linked_name
+      || source.linkedName,
+    220
+  );
+}
+
 function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
   const normalizedType = String(linkedType || '')
     .trim()
@@ -544,7 +554,7 @@ function createPaperDownloadRuntime(deps = {}) {
       throw createDownloadError('Paper download requires storage_path.');
     }
 
-    const linkedName = cleanText(source.linked_name || source.linkedName, 220);
+    const linkedName = cleanText(resolvePaperCollectionName(source), 220);
     if (!linkedName) {
       throw createDownloadError('Paper download requires linked_name.');
     }
@@ -593,6 +603,10 @@ function createPaperDownloadRuntime(deps = {}) {
     } = options;
 
     const sessionId = `paper-browser-${downloadId}`;
+    // One shared persistent partition: publisher logins and paywall cookies
+    // survive between downloads, and nothing accumulates on disk. A partition
+    // per download persisted a directory per download that no one reused.
+    const partition = 'persist:paper-browser';
     const browserWindow = new BrowserWindow({
       width: 1220,
       height: 900,
@@ -603,7 +617,8 @@ function createPaperDownloadRuntime(deps = {}) {
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
-        partition: sessionId
+        plugins: true,
+        partition
       }
     });
 
@@ -730,22 +745,7 @@ function createPaperDownloadRuntime(deps = {}) {
         if (popupUrl && !/^(?:https?:|blob:)/i.test(popupUrl)) {
           return { action: 'deny' };
         }
-        return {
-          action: 'allow',
-          overrideBrowserWindowOptions: {
-            width: 1100,
-            height: 820,
-            autoHideMenuBar: true,
-            show: true,
-            title: 'Paper PDF Viewer',
-            webPreferences: {
-              sandbox: true,
-              contextIsolation: true,
-              nodeIntegration: false,
-              partition: sessionId
-            }
-          }
-        };
+        return { action: 'allow' };
       });
       webContents?.on?.('did-create-window', (childWindow) => {
         if (!childWindow) {
@@ -994,7 +994,7 @@ function createPaperDownloadRuntime(deps = {}) {
       stored_relative_path: result.relative_path,
       source: cleanText(source.source, 80) || 'agent',
       linked_type: cleanText(source.linked_type || source.linkedType, 80),
-      linked_name: cleanText(source.linked_name || source.linkedName, 220),
+      linked_name: cleanText(resolvePaperCollectionName(source), 220),
       paper_title: cleanText(source.paper_title || source.paperTitle || result.file_name, 320),
       traceContext: source.traceContext || null
     }).catch((error) => ({
@@ -1119,7 +1119,7 @@ function createPaperDownloadRuntime(deps = {}) {
       updated_at: createdAt,
       started_at: createdAt,
       linked_type: cleanText(source.linked_type || source.linkedType, 80) || 'project',
-      linked_name: cleanText(source.linked_name || source.linkedName, 220),
+      linked_name: cleanText(resolvePaperCollectionName(source), 220),
       progress_ratio: 0,
       received_bytes: 0,
       total_bytes: 0,

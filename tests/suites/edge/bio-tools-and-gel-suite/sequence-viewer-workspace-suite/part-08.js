@@ -34,6 +34,15 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-sequence-edit-cancel',
   'sequence-viewer-protein-builder-insert-vector-btn',
   'sequence-viewer-protein-builder-assemble-btn',
+  'sequence-viewer-cloning-design-back-btn',
+  'sequence-viewer-cloning-design-status',
+  'sequence-viewer-cloning-design-run-btn',
+  'sequence-viewer-cloning-design-strategy-list',
+  'sequence-viewer-cloning-design-edit-summary',
+  'sequence-viewer-cloning-design-range-panel',
+  'sequence-viewer-cloning-design-insert-start',
+  'sequence-viewer-cloning-design-insert-end',
+  'sequence-viewer-cloning-design-result',
   'sequence-viewer-primer-design-overlay',
   'sequence-viewer-primer-design-title',
   'sequence-viewer-primer-design-note',
@@ -70,19 +79,20 @@ function contextActionTarget(action) {
   };
 }
 
-function bootVectorBuilder(features) {
+function bootVectorBuilder(features, options = {}, recordOverrides = {}) {
   const document = createMockDocument(VECTOR_BUILDER_IDS);
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
-  const viewer = viewerModule.initSequenceViewer();
+  const viewer = viewerModule.initSequenceViewer(options);
   viewer.loadFromExternal({
     name: 'pVector',
     sequence: 'ATGGCGCATCATCATCATCATCATTAAGGCCTTAACCGGTTACGTACGTAAGGCCTTAACC',
     topology: 'circular',
     source: 'external',
-    features
+    features,
+    ...recordOverrides
   });
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
   return { document, viewer };
@@ -377,6 +387,74 @@ test('[EDGE] sequence-viewer vector builder deletes a feature and its bases from
   assert.equal(/His6/.test(map.innerHTML), false);
 });
 
+test('[EDGE] sequence-viewer Vector Builder cloning design sends the shared thermocycle page to Notebook', async () => {
+  const template = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+  const insertion = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
+  let generatedId = 0;
+  let persistCalls = 0;
+  let notebookRefreshCalls = 0;
+  const appState = {
+    projects: [],
+    protocols: [],
+    notebookEntries: []
+  };
+  const { document } = bootVectorBuilder([
+    { name: 'Edit site', type: 'misc_feature', strand: 1, source: 'external', segments: [{ start: 6, end: 22 }] }
+  ], {
+    state: appState,
+    persist() {
+      persistCalls += 1;
+    },
+    createId() {
+      generatedId += 1;
+      return `cloning_vector_${generatedId}`;
+    },
+    onNotebookEntriesChanged() {
+      notebookRefreshCalls += 1;
+    }
+  }, {
+    name: 'pVector_cloning_design',
+    sequence: template
+  });
+
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
+  const editForm = document.getElementById('sequence-viewer-vector-builder-sequence-edit-form');
+  const editTextarea = document.getElementById('sequence-viewer-vector-builder-sequence-edit-textarea');
+
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
+  editTextarea.value = insertion;
+  trigger(editForm, 'submit', { preventDefault() {} });
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-vector-builder-cloning-design-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-cloning-design-strategy-list'), 'click', {
+    target: {
+      closest(selector) {
+        return selector === '[data-cloning-design-strategy]'
+          ? { dataset: { cloningDesignStrategy: 'q5-kld' } }
+          : null;
+      }
+    }
+  });
+  trigger(document.getElementById('sequence-viewer-cloning-design-run-btn'), 'click', { preventDefault() {} });
+
+  assert.equal(document.getElementById('sequence-viewer-cloning-design-workspace').hidden, false);
+  assert.equal(appState.notebookEntries.length, 1);
+  assert.equal(persistCalls, 1);
+  assert.equal(notebookRefreshCalls, 1);
+  const notebookEntry = appState.notebookEntries[0];
+  assert.equal(notebookEntry.protocolName, 'PCR Thermocycle Program');
+  assert.match(notebookEntry.result, /Sequence Viewer cloning design/);
+  assert.match(notebookEntry.result, /Ta: \d+ C/);
+  assert.match(notebookEntry.result, /Extension time:/);
+  assert.equal(notebookEntry.sequenceViewerCloningDesign.primerCount >= 2, true);
+});
+
 test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored database', async () => {
   const searchCalls = [];
   const document = createMockDocument(VECTOR_BUILDER_IDS);
@@ -589,8 +667,8 @@ test('[EDGE] sequence-viewer vector builder designs primers on the map and annot
   // Designing writes the pair onto the record, so the map redraws with the
   // primer track — the toggle's own track, only drawn for primer_bind features.
   assert.match(map.innerHTML, /vector-map__primer/);
-  assert.match(map.innerHTML, /selection_1_61_F/);
-  assert.match(map.innerHTML, /selection_1_61_R/);
+  assert.match(map.innerHTML, /pVector 1-61 F/);
+  assert.match(map.innerHTML, /pVector 1-61 R/);
 
   // Going back must not drag the dialog into the detail workspace.
   trigger(document.getElementById('sequence-viewer-vector-builder-back-btn'), 'click', { preventDefault() {} });

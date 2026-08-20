@@ -45,7 +45,6 @@ const {
   persistKnowledgeDatabase,
   findExistingPaperRow,
   buildPaperId,
-  buildSearchText,
   writeJsonFile,
   pathExists,
   updateJsonIndex,
@@ -397,8 +396,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       runStatement(db, `
         INSERT INTO papers (
           id, doi, pmid, pmcid, title, abstract, authors_json, journal, year, url, pdf_sha256,
-          added_at, updated_at, source, wiki_status, wiki_path, extraction_status, notes, search_text
-        ) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?)
+          added_at, updated_at, source, wiki_status, wiki_path, extraction_status, notes
+        ) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           doi = COALESCE(excluded.doi, papers.doi),
           pmid = COALESCE(excluded.pmid, papers.pmid),
@@ -415,8 +414,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
           wiki_status = excluded.wiki_status,
           wiki_path = excluded.wiki_path,
           extraction_status = excluded.extraction_status,
-          notes = excluded.notes,
-          search_text = excluded.search_text
+          notes = excluded.notes
       `, [
         resolvedPaperId,
         metadata.doi,
@@ -435,8 +433,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         wikiStatus,
         wikiPath,
         extractionStatus,
-        metadata.notes,
-        buildSearchText(metadata)
+        metadata.notes
       ]);
       runStatement(db, `
         INSERT INTO paper_locations (

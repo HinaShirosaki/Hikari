@@ -471,5 +471,68 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
 
       assert.equal(folder, path.join('/tmp/hikari-storage', 'Papers', 'Atlas'));
     });
+    test('literature search workflow routes project downloads into the project folder and keeps collection names raw', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-routing-'));
+      const downloadCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            searchLiteratureCandidates: async () => ({ ok: false, error: 'search should not run' })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push({
+                linked_type: String(input.linked_type || ''),
+                linked_name: String(input.linked_name || '')
+              });
+              return { ok: true, status: 'completed', file_name: 'paper.pdf' };
+            }
+          }
+        });
+        const candidateResult = {
+          ok: true,
+          status: 'completed',
+          query: 'MAPK resistance mechanisms',
+          sources: ['pubmed'],
+          items: [
+            {
+              id: 'paper-1',
+              source: 'pubmed',
+              title: 'MAPK resistance paper one',
+              summary: 'Mechanistic evidence for MAPK resistance and pathway reactivation.',
+              url: 'https://example.org/paper-1',
+              doi: '10.1000/paper-1'
+            }
+          ],
+          citations: [],
+          source_counts: { pubmed: 1 },
+          source_errors: {}
+        };
+        const baseInput = {
+          query: 'MAPK resistance mechanisms',
+          storage_path: storageRoot,
+          download_selected_papers: true
+        };
+        const projectInput = { ...baseInput, project: { id: 'project-atlas', name: 'Atlas' } };
+
+        await runtime.runLiteratureWorkflow(
+          projectInput,
+          runtime.buildCopiedContext(projectInput, projectInput.query),
+          candidateResult
+        );
+        await runtime.runLiteratureWorkflow(
+          baseInput,
+          runtime.buildCopiedContext(baseInput, baseInput.query),
+          candidateResult
+        );
+
+        assert.deepEqual(downloadCalls, [
+          { linked_type: 'project', linked_name: 'Atlas' },
+          { linked_type: 'literature-search', linked_name: 'MAPK resistance mechanisms' }
+        ]);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
   }
 };

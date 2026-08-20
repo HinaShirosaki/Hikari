@@ -1,5 +1,7 @@
 import { assembleCloningPlan } from './cloning-assembly.js';
 import { calculateFixedReaction } from '../../lib/bench-calculations.js';
+import { PROTEIN_ASSEMBLY_TAGS } from './protein-builder/assembly-model.js';
+import { renamePrimers } from './primer-naming.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
 
 const CLONING_NOTEBOOK_SOURCE = 'protein_builder_cloning_assembly';
@@ -7,6 +9,7 @@ const CLONING_PROJECT_NAME = 'Protein Builder';
 const CLONING_PROJECT_DESCRIPTION = 'Automatically collected cloning designs from Protein Builder.';
 const CLONING_PROTOCOL_ID = 'protein-builder-cloning-assembly-protocol';
 const CLONING_PROTOCOL_NAME = 'PCR Thermocycle Program';
+const LEGACY_CLONING_PROTOCOL_NAME = 'Protein Builder Cloning Assembly';
 const CLONING_REACTION_CALCULATION_ID = 'protein-builder-pcr-fixed-reaction';
 
 function asArray(value) {
@@ -73,7 +76,7 @@ function roundToFiveSeconds(seconds) {
   return Math.max(5, Math.ceil((Number(seconds) || 0) / 5) * 5);
 }
 
-function clampTemperature(value, min = 50, max = 68) {
+function clampTemperature(value, min = 50, max = 72) {
   return Math.max(min, Math.min(max, Math.round(Number(value) || min)));
 }
 
@@ -170,6 +173,25 @@ function resolvePcrTargets(plan = {}) {
   return fragments;
 }
 
+// A tag block at either end of the construct is what the flanking primer adds,
+// so it belongs in that primer's name: "GST APA2 F".
+function terminalTagLabels(dnaConstruct = {}) {
+  const parts = asArray(dnaConstruct?.parts);
+  // Longest first, so "6xHis-TEV" reports 6xHis and "8xHis" is not read as His.
+  const tagLabels = PROTEIN_ASSEMBLY_TAGS
+    .map((tag) => cleanText(tag?.label, 40))
+    .filter(Boolean)
+    .sort((left, right) => right.length - left.length);
+  const tagIn = (part) => {
+    const label = cleanText(part?.label, 60);
+    return tagLabels.find((tag) => label.toLowerCase().includes(tag.toLowerCase())) || '';
+  };
+  return {
+    start: tagIn(parts[0]),
+    end: parts.length > 1 ? tagIn(parts[parts.length - 1]) : ''
+  };
+}
+
 export function buildProteinBuilderCloningPlan({
   backbone = {},
   dnaConstruct = {},
@@ -190,7 +212,7 @@ export function buildProteinBuilderCloningPlan({
     return null;
   }
 
-  return assembleCloningPlan({
+  const plan = assembleCloningPlan({
     hostVectors: [
       {
         id: 'protein_builder_backbone',
@@ -216,6 +238,15 @@ export function buildProteinBuilderCloningPlan({
     resultSequence,
     preferences: resolveBackboneCloningPreferences(backbone)
   });
+
+  if (plan?.primerOligoPlan?.primers) {
+    plan.primerOligoPlan.primers = renamePrimers(plan.primerOligoPlan.primers, {
+      targetLabel: safeConstructName,
+      tags: terminalTagLabels(dnaConstruct),
+      backboneNames: [backboneName]
+    });
+  }
+  return plan;
 }
 
 export function buildProteinBuilderPcrProgram(plan = {}) {
@@ -224,7 +255,7 @@ export function buildProteinBuilderPcrProgram(plan = {}) {
     .map((primer) => Number(primer?.tm))
     .filter((tm) => Number.isFinite(tm) && tm > 0);
   const lowestPrimerTm = primerTms.length ? Math.min(...primerTms) : 60;
-  const annealingTemperature = clampTemperature(lowestPrimerTm - 3);
+  const annealingTemperature = clampTemperature(lowestPrimerTm + 3);
   const pcrTargets = resolvePcrTargets(plan);
   const longestAmpliconLength = Math.max(
     0,
@@ -246,7 +277,8 @@ export function buildProteinBuilderPcrProgram(plan = {}) {
       { label: 'Hold', temperature: '4 C', time: 'hold', cycles: '1' }
     ],
     notes: [
-      `Annealing temperature is estimated from the lowest primer binding Tm (${formatNumber(lowestPrimerTm, 1)} C) minus 3 C.`,
+      `Annealing temperature is estimated from the lowest primer binding Tm (${formatNumber(lowestPrimerTm, 1)} C) plus 3 C for Q5-style high-fidelity PCR.`,
+      'Binding Tm uses a SantaLucia nearest-neighbour estimate at 0.5 uM primer and 80 mM sodium-equivalent salt.',
       `Extension is estimated at 30 s/kb for the longest planned PCR target (${formatBp(longestAmpliconLength)}). Adjust to the polymerase data sheet.`
     ]
   };
@@ -275,7 +307,7 @@ export function buildProteinBuilderPrimerResultTable(plan = {}) {
     length: String(Math.max(0, Number(primer?.length) || normalizeSequenceText(primer?.sequence || '').length)),
     tm: `${formatNumber(primer?.tm, 1)} C`,
     gc: `${formatNumber(primer?.gcContent, 1)}%`,
-    notes: asArray(primer?.warnings).filter(Boolean).join(' | ')
+    notes: [...asArray(primer?.warnings), ...asArray(primer?.qualityWarnings)].filter(Boolean).join(' | ')
   }));
 
   return {
@@ -304,7 +336,7 @@ function formatPrimerLines(plan = {}) {
     return ['No primer set was generated for the selected route.'];
   }
   return primers.map((primer) => {
-    const notes = asArray(primer?.warnings).filter(Boolean).join(' ');
+    const notes = [...asArray(primer?.warnings), ...asArray(primer?.qualityWarnings)].filter(Boolean).join(' ');
     return [
       `- ${cleanText(primer?.name, 160) || 'Primer'}`,
       `role: ${formatPrimerRole(primer?.role)}`,
@@ -382,7 +414,7 @@ function formatThermocycleCondition(step = {}) {
   ].filter(Boolean).join(' - ');
 }
 
-function buildProtocolSteps(pcrProgram = {}) {
+export function buildProteinBuilderCloningProtocolSteps(pcrProgram = {}) {
   const programSteps = asArray(pcrProgram?.steps);
   if (!programSteps.length) {
     return [{
@@ -414,7 +446,7 @@ function buildProtocolSteps(pcrProgram = {}) {
   }));
 }
 
-function buildCloningProtocol(pcrProgram = {}, nowIso = '') {
+export function buildProteinBuilderCloningProtocol(pcrProgram = {}, nowIso = '') {
   return {
     id: CLONING_PROTOCOL_ID,
     name: CLONING_PROTOCOL_NAME,
@@ -427,12 +459,36 @@ function buildCloningProtocol(pcrProgram = {}, nowIso = '') {
       'Polymerase buffer',
       'Nuclease-free water'
     ],
-    steps: buildProtocolSteps(pcrProgram),
+    steps: buildProteinBuilderCloningProtocolSteps(pcrProgram),
     troubleshooting: 'If amplification is weak or nonspecific, adjust annealing temperature and extension time for the selected primer pair and polymerase.',
     createdAt: nowIso,
     updatedAt: nowIso,
     source: CLONING_NOTEBOOK_SOURCE
   };
+}
+
+export function resolveProteinBuilderCloningNotebookProtocol(entry = {}) {
+  const design = entry?.proteinBuilderCloningDesign;
+  const source = cleanText(design?.source, 80);
+  const protocolId = cleanText(entry?.protocolId || entry?.protocolSnapshot?.id, 160);
+  const pcrProgram = design?.pcrProgram;
+  const snapshotName = cleanText(entry?.protocolSnapshot?.name, 220);
+  const protocolName = cleanText(entry?.protocolName, 220);
+  const hasLegacySnapshot = !entry?.protocolSnapshot
+    || snapshotName === LEGACY_CLONING_PROTOCOL_NAME
+    || protocolName === LEGACY_CLONING_PROTOCOL_NAME;
+  if (
+    (source !== CLONING_NOTEBOOK_SOURCE && protocolId !== CLONING_PROTOCOL_ID)
+    || !asArray(pcrProgram?.steps).length
+    || !hasLegacySnapshot
+  ) {
+    return null;
+  }
+
+  return buildProteinBuilderCloningProtocol(
+    pcrProgram,
+    cleanText(entry?.updatedAt || entry?.createdAt, 120)
+  );
 }
 
 function ensureProteinBuilderProject(state, createId, nowIso) {
@@ -459,7 +515,7 @@ function ensureProteinBuilderProject(state, createId, nowIso) {
 
 function ensureProteinBuilderProtocol(state, pcrProgram, nowIso) {
   state.protocols = asArray(state.protocols);
-  const nextProtocol = buildCloningProtocol(pcrProgram, nowIso);
+  const nextProtocol = buildProteinBuilderCloningProtocol(pcrProgram, nowIso);
   const existingIndex = state.protocols.findIndex((protocol) => (
     cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID
   ));
@@ -552,6 +608,48 @@ function cloneProtocolSnapshot(protocol = {}) {
       }))
     }))
   };
+}
+
+export function migrateProteinBuilderCloningNotebookState(state = {}) {
+  if (!state || typeof state !== 'object') {
+    return 0;
+  }
+
+  let migratedCount = 0;
+  let latestProtocol = null;
+  state.notebookEntries = asArray(state.notebookEntries).map((entry) => {
+    const protocol = resolveProteinBuilderCloningNotebookProtocol(entry);
+    if (!protocol) {
+      return entry;
+    }
+    migratedCount += 1;
+    latestProtocol = protocol;
+    return {
+      ...entry,
+      protocolId: protocol.id,
+      protocolName: protocol.name,
+      protocolSnapshot: cloneProtocolSnapshot(protocol)
+    };
+  });
+
+  if (latestProtocol) {
+    state.protocols = asArray(state.protocols);
+    const protocolIndex = state.protocols.findIndex((protocol) => (
+      cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID
+    ));
+    if (protocolIndex >= 0) {
+      const existingProtocol = state.protocols[protocolIndex];
+      state.protocols[protocolIndex] = {
+        ...existingProtocol,
+        ...latestProtocol,
+        createdAt: cleanText(existingProtocol?.createdAt, 120) || latestProtocol.createdAt
+      };
+    } else {
+      state.protocols.push(latestProtocol);
+    }
+  }
+
+  return migratedCount;
 }
 
 export function createProteinBuilderCloningNotebookPage({

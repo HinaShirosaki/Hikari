@@ -714,6 +714,118 @@ module.exports = function registerCodexCliProviderSuitePart08(context = {}) {
       assert.equal(downloadCalls, 0);
     });
 
+    test('paper download executor keeps paper titles separate from destination collections', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      const downloadInputs = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        paperDownloadRuntime: {
+          async downloadPaper(input = {}) {
+            downloadInputs.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              file_name: `${String(input.paper_title || 'paper')}.pdf`,
+              relative_path: 'Papers/test/paper.pdf'
+            };
+          }
+        }
+      });
+
+      const execute = executors.get('paper-download');
+      await execute({
+        args: {
+          doi: '10.1000/project-paper',
+          paper_title: 'Project paper',
+          collection_name: 'Ignored search collection'
+        },
+        context: {
+          project: { id: 'project-atlas', name: 'Atlas' },
+          snapshot: { settings: { storagePath: '/tmp/hikari-storage' } }
+        }
+      });
+      await execute({
+        args: {
+          doi: '10.1000/search-paper',
+          paper_title: 'Search paper',
+          collection_name: 'MAPK resistance mechanisms'
+        },
+        context: {
+          snapshot: { settings: { storagePath: '/tmp/hikari-storage' } }
+        }
+      });
+      await execute({
+        args: {
+          doi: '10.1000/standalone-paper',
+          paper_title: 'Standalone paper'
+        },
+        context: {
+          message: 'Download this DOI for me.',
+          topic: 'Current chat topic must not become a paper folder',
+          snapshot: { settings: { storagePath: '/tmp/hikari-storage' } }
+        }
+      });
+      await execute({
+        args: {
+          doi: '10.1000/legacy-paper',
+          paper_title: 'Legacy paper',
+          linked_name: 'Legacy collection'
+        },
+        context: {
+          snapshot: { settings: { storagePath: '/tmp/hikari-storage' } }
+        }
+      });
+
+      assert.deepEqual(downloadInputs.map((input) => ({
+        paper_title: input.paper_title,
+        linked_type: input.linked_type,
+        collection_name: input.collection_name,
+        linked_name: input.linked_name,
+        storage_path: input.storage_path
+      })), [
+        {
+          paper_title: 'Project paper',
+          linked_type: 'project',
+          collection_name: 'Atlas',
+          linked_name: 'Atlas',
+          storage_path: '/tmp/hikari-storage'
+        },
+        {
+          paper_title: 'Search paper',
+          linked_type: 'literature-search',
+          collection_name: 'MAPK resistance mechanisms',
+          linked_name: 'MAPK resistance mechanisms',
+          storage_path: '/tmp/hikari-storage'
+        },
+        {
+          paper_title: 'Standalone paper',
+          linked_type: 'literature-search',
+          collection_name: 'Literature Search',
+          linked_name: 'Literature Search',
+          storage_path: '/tmp/hikari-storage'
+        },
+        {
+          paper_title: 'Legacy paper',
+          linked_type: 'literature-search',
+          collection_name: 'Legacy collection',
+          linked_name: 'Legacy collection',
+          storage_path: '/tmp/hikari-storage'
+        }
+      ]);
+    });
+
     test('paper finding policy survives agent snapshot normalization', () => {
       const { createAgentRuntimeSupport } = require(path.join(
         __dirname,

@@ -447,9 +447,10 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-main-browser-'));
       const openedUrls = [];
       const createdWindows = [];
+      const createdWindowOptions = [];
 
       class FakeBrowserWindow {
-        constructor() {
+        constructor(options = {}) {
           this.destroyed = false;
           this.handlers = new Map();
           this.sessionHandlers = new Map();
@@ -463,6 +464,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
             downloadURL: () => {}
           };
           createdWindows.push(this);
+          createdWindowOptions.push(options);
         }
 
         on(eventName, listener) {
@@ -525,6 +527,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         assert.equal(result.method, 'browser');
         assert.equal(openedUrls[0], 'https://doi.org/10.1000/example-doi');
         assert.equal(createdWindows.length, 1);
+        assert.equal(createdWindowOptions[0]?.webPreferences?.plugins, true);
+        assert.equal(createdWindowOptions[0]?.webPreferences?.partition, 'persist:paper-browser');
         assert.equal(await fsPromises.readFile(result.file_path, 'utf8'), '%PDF-1.7\nmain service browser fallback\n');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
@@ -736,7 +740,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         });
 
         assert.equal(popupDecision?.action, 'allow');
-        assert.equal(popupDecision?.overrideBrowserWindowOptions?.show, true);
+        assert.equal(popupDecision?.overrideBrowserWindowOptions, undefined);
         assert.equal(childWindowShown, true);
         assert.equal(result.ok, true);
         assert.equal(result.method, 'browser');
@@ -1009,6 +1013,62 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         assert.equal(terminatedSession, 'browser-session-1');
         const saved = await fsPromises.readFile(result.file_path);
         assert.equal(saved.subarray(0, 5).toString('utf8'), '%PDF-');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper downloads from one search share a collection folder and keep title-derived filenames', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-collection-'));
+      let nextId = 0;
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => `paper-download-collection-${++nextId}`,
+          fetch: async () => ({
+            ok: true,
+            status: 200,
+            headers: {
+              get(name) {
+                const normalized = String(name || '').toLowerCase();
+                if (normalized === 'content-type') {
+                  return 'application/pdf';
+                }
+                if (normalized === 'content-length') {
+                  return '24';
+                }
+                return '';
+              }
+            },
+            body: {
+              async *[Symbol.asyncIterator]() {
+                yield Buffer.from('%PDF-1.7 collection test');
+              }
+            }
+          })
+        });
+        const paperTitles = [
+          'MAPK resistance paper one',
+          'MAPK resistance paper two',
+          'MAPK resistance paper three'
+        ];
+        const results = [];
+        for (const [index, paperTitle] of paperTitles.entries()) {
+          results.push(await runtime.downloadPaper({
+            paper_pdf_url: `https://example.org/paper-${index + 1}.pdf`,
+            paper_title: paperTitle,
+            collection_name: 'MAPK resistance mechanisms',
+            linked_type: 'literature-search',
+            storage_path: storageRoot,
+            knowledge_database: false
+          }));
+        }
+
+        assert.equal(results.every((result) => result.ok === true), true);
+        assert.deepEqual(results.map((result) => result.relative_path), [
+          'Papers/MAPK_resistance_mechanisms/MAPK_resistance_paper_one.pdf',
+          'Papers/MAPK_resistance_mechanisms/MAPK_resistance_paper_two.pdf',
+          'Papers/MAPK_resistance_mechanisms/MAPK_resistance_paper_three.pdf'
+        ]);
+        assert.equal(new Set(results.map((result) => path.dirname(result.file_path))).size, 1);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

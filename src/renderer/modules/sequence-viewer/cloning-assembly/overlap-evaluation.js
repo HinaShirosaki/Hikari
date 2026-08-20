@@ -1,4 +1,4 @@
-import { oligoTm } from '../calculations/oligo.js';
+import { cloningPrimerTm } from '../calculations/oligo.js';
 import {
   CLONING_PRIMER_TM_THRESHOLDS,
   DEFAULT_CLONING_PREFERENCES,
@@ -7,16 +7,19 @@ import {
 } from './constants.js';
 import { asArray, computeGcContent } from './sequence-utils.js';
 import { normalizeFragment } from './fragments.js';
-import { longestTerminalOverlap, selectEngineeredOverlap } from './overlap-windows.js';
+import {
+  describeEngineeredOverlapFailure,
+  longestTerminalOverlap,
+  selectEngineeredOverlap
+} from './overlap-windows.js';
 
 export function evaluateJunction(leftFragment, rightFragment, thresholds, config = DEFAULT_CLONING_PREFERENCES) {
   const natural = longestTerminalOverlap(leftFragment?.sequence || '', rightFragment?.sequence || '');
-  const naturalTm = natural.length ? oligoTm(natural.sequence, 'DNA') : 0;
+  const naturalTm = natural.length ? cloningPrimerTm(natural.sequence) : 0;
   const naturalGc = natural.length ? computeGcContent(natural.sequence) : 0;
   if (
     natural.length
     && naturalTm >= thresholds.overlapTm.min
-    && naturalTm <= thresholds.overlapTm.max
   ) {
     return {
       feasible: true,
@@ -59,8 +62,9 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
     warnings: [
       natural.length
         ? 'Existing overlap does not reach the required Tm range and no primer-compatible engineered overlap was found.'
-        : 'No terminal overlap is present and no primer-compatible engineered overlap was found.'
-    ]
+        : 'No terminal overlap is present and no primer-compatible engineered overlap was found.',
+      describeEngineeredOverlapFailure(leftFragment, rightFragment, thresholds, config)
+    ].filter(Boolean)
   };
 }
 

@@ -486,6 +486,9 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.match(firstContent, /paper_download/);
         assert.match(firstContent, /Interactive paper-search download policy/);
         assert.match(firstContent, /MUST call `paper_download` once for every distinct selected paper before answering/);
+        assert.match(firstContent, /pass its title as `paper_title`/);
+        assert.match(firstContent, /original `literature_search\.query` as `collection_name`/);
+        assert.doesNotMatch(firstContent, /use its title as `linked_name`/);
         assert.match(firstContent, /deny_paper_download: true/);
         assert.match(firstContent, /load bounded paper context blocks/);
         assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);

@@ -6,6 +6,8 @@ import { buildGoldenGatePlan } from './cloning-assembly/golden-gate.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
 import { annotatePrimersOnSelectedRecord } from './primer-annotation.js';
+import { describeEditTarget, renamePrimers } from './primer-naming.js';
+import { createSequenceViewerCloningDesignNotebookPage } from './cloning-design-notebook.js';
 
 const STRATEGY_WHOLE_PLASMID = 'whole-plasmid';
 const STRATEGY_Q5_KLD = 'q5-kld';
@@ -339,7 +341,7 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy)
 function planPrimers(plan = {}, groupLabel = '') {
   return asArray(plan?.primerOligoPlan?.primers).map((primer) => ({
     ...primer,
-    groupLabel
+    groupLabel: cleanText(primer?.groupLabel, 120) || groupLabel
   }));
 }
 
@@ -360,7 +362,36 @@ function collectWarnings(...plans) {
   return warnings;
 }
 
-export function buildDisplayPlan({ strategy, source, record, range }) {
+function firstEnzymeName(displayPlan = {}) {
+  const selection = asArray(displayPlan?.plans)
+    .map((entry) => asArray(entry?.plan?.restrictionEnzymeSelection))
+    .find((entry) => entry.length) || [];
+  return cleanText(selection[0]?.name, 40);
+}
+
+// Route names ("mutagenesis_F", "gg_backbone_R") become bench names once the
+// record is known: "MPM2 A34J F", "BsaI vector R".
+export function buildDisplayPlan(args = {}) {
+  const { source, record } = args;
+  const displayPlan = buildRoutePlan(args);
+  const { gene, mutation } = describeEditTarget({
+    record,
+    originalSequence: source?.originalSequence,
+    editRequest: source?.editRequest
+  });
+  return {
+    ...displayPlan,
+    primers: renamePrimers(displayPlan.primers, {
+      gene,
+      mutation,
+      targetLabel: gene,
+      enzyme: firstEnzymeName(displayPlan),
+      backboneNames: [`${cleanText(record?.name || source?.recordName, 120) || 'Vector'} backbone`]
+    })
+  };
+}
+
+function buildRoutePlan({ strategy, source, record, range }) {
   if (strategy === STRATEGY_WHOLE_PLASMID) {
     const wholePlasmidPlan = buildWholePlasmidPlan(source, record);
     return {
@@ -612,6 +643,10 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onNavigateCloningDesign = config?.onNavigateCloningDesign || (() => {});
   const onReturnToDetail = config?.onReturnToDetail || (() => {});
+  const appState = config?.appState;
+  const persist = config?.persist;
+  const createId = config?.createId;
+  const onNotebookEntriesChanged = config?.onNotebookEntriesChanged;
 
   function getDesignState() {
     if (!state.cloningDesign || typeof state.cloningDesign !== 'object') {
@@ -669,6 +704,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     designState.insertStart = defaultRange.start;
     designState.insertEnd = defaultRange.end;
     designState.displayPlan = null;
+    designState.notebookEntryId = '';
   }
 
   function hasDesignSource() {
@@ -832,7 +868,32 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     designState.displayPlan = displayPlan;
     const primers = asArray(displayPlan?.primers);
     const primerCount = primers.length;
-    setStatus(`${formatStrategyLabel(designState.strategy)} designed ${primerCount.toLocaleString()} primer${primerCount === 1 ? '' : 's'}.`, !displayPlan?.feasible);
+    let notebookResult = null;
+    let notebookError = '';
+    try {
+      notebookResult = createSequenceViewerCloningDesignNotebookPage({
+        state: appState,
+        persist,
+        createId,
+        onNotebookEntriesChanged,
+        entryId: designState.notebookEntryId,
+        source,
+        record,
+        displayPlan
+      });
+      if (notebookResult?.entry?.id) {
+        designState.notebookEntryId = notebookResult.entry.id;
+      }
+    } catch (error) {
+      notebookError = cleanText(error?.message || error, 400) || 'Unknown persistence error';
+    }
+    const notebookStatus = notebookResult?.entry
+      ? ` Saved Notebook page “${notebookResult.entry.experimentName}”.`
+      : (notebookError ? ` The Notebook page could not be saved: ${notebookError}.` : '');
+    setStatus(
+      `${formatStrategyLabel(designState.strategy)} designed ${primerCount.toLocaleString()} primer${primerCount === 1 ? '' : 's'}.${notebookStatus}`,
+      !displayPlan?.feasible || Boolean(notebookError)
+    );
     render();
     void annotatePrimersOnSelectedRecord({
       state,

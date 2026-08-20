@@ -82,7 +82,15 @@ export function buildAssemblyDesign(strategy, fragmentMap, routeEvaluations, res
     ? asArray(routeEvaluations?.gibson?.junctions)
     : strategyName === 'overlap-pcr'
       ? asArray(routeEvaluations?.overlapPCR?.junctions)
-      : [];
+      : strategyName === 'restriction-ligation'
+        ? asArray(routeEvaluations?.restrictionLigation?.selectedSites).map((site, index) => ({
+            mode: 'restriction-ligation',
+            junction: index === 0 ? 'upstream' : 'downstream',
+            enzyme: site?.name || site?.site,
+            site: site?.site,
+            segments: asArray(site?.segments)
+          }))
+        : [];
 
   return {
     strategy: strategyName,

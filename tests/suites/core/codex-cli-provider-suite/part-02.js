@@ -461,6 +461,16 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       );
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
+      assert.deepEqual(Object.keys(paperDownloadDefinition.inputSchema.properties).sort(), [
+        'candidate_urls',
+        'collection_name',
+        'doi',
+        'linked_name',
+        'paper_title'
+      ]);
+      assert.equal(paperDownloadDefinition.inputSchema.properties.linked_name.deprecated, true);
+      const checkedPaperDownload = checkedContract.mcp.tools.find((tool) => tool.name === 'paper_download');
+      assert.deepEqual(checkedPaperDownload, paperDownloadDefinition);
 
       const hiddenSearchResult = await gateway.callGatewayTool('unknown_direct_tool', {
         query: 'download paper pdf'

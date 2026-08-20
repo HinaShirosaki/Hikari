@@ -12,9 +12,8 @@ const ids = [
   'biology-notebook-quick-sample-form',
   'biology-notebook-quick-sample-close-btn',
   'biology-notebook-quick-sample-cancel-btn',
+  'biology-notebook-quick-sample-location-list',
   'biology-notebook-quick-sample-container',
-  'biology-notebook-quick-sample-position',
-  'biology-notebook-quick-sample-position-meta',
   'biology-notebook-quick-sample-grid',
   'biology-notebook-quick-sample-grid-label',
   'biology-notebook-quick-sample-name',
@@ -73,9 +72,23 @@ const controller = quickSampleModule.createNotebookQuickSampleController({
   controller.open();
   assert.equal(overlay.hidden, false);
   assert.equal(document.getElementById('biology-notebook-quick-sample-container').value, '-20 Degree::box-1');
-  assert.equal(document.getElementById('biology-notebook-quick-sample-position').textContent, 'W2');
+  assert.match(document.getElementById('biology-notebook-quick-sample-location-list').innerHTML, /data-quick-sample-location="-20 Degree"[^>]*aria-selected="true"/);
+  assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Cloning Box · W2');
   assert.equal((document.getElementById('biology-notebook-quick-sample-grid').innerHTML.match(/data-quick-sample-well=/g) || []).length, 25);
   assert.match(document.getElementById('biology-notebook-quick-sample-grid').innerHTML, /is-occupied/);
+
+  const locationTarget = (locationName) => ({
+    dataset: { quickSampleLocation: locationName },
+    closest(selector) {
+      return selector === '[data-quick-sample-location]' ? this : null;
+    }
+  });
+  trigger(document.getElementById('biology-notebook-quick-sample-location-list'), 'click', { target: locationTarget('Room Temp') });
+  assert.equal(document.getElementById('biology-notebook-quick-sample-container').value, '');
+  assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Choose a container');
+  trigger(document.getElementById('biology-notebook-quick-sample-location-list'), 'click', { target: locationTarget('-20 Degree') });
+  assert.equal(document.getElementById('biology-notebook-quick-sample-container').value, '-20 Degree::box-1');
+  assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Cloning Box · W2');
 
   const wellTarget = {
     dataset: { quickSampleWell: '4' },
@@ -84,7 +97,7 @@ const controller = quickSampleModule.createNotebookQuickSampleController({
     }
   };
   trigger(document.getElementById('biology-notebook-quick-sample-grid'), 'click', { target: wellTarget });
-  assert.equal(document.getElementById('biology-notebook-quick-sample-position').textContent, 'W5');
+  assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Cloning Box · W5');
 
   document.getElementById('biology-notebook-quick-sample-name').value = 'Notebook plasmid';
   document.getElementById('biology-notebook-quick-sample-code').value = 'NB-PLASMID-1';

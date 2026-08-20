@@ -36,12 +36,21 @@ function locateBinding(sequence, binding, isCircular) {
   const haystack = isCircular && binding.length > 1
     ? sequence + sequence.slice(0, binding.length - 1)
     : sequence;
-  const forward = haystack.indexOf(binding);
-  if (forward >= 0) {
-    return { start: forward, strand: 1 };
+  const matches = [];
+  const limit = isCircular ? sequence.length : Math.max(0, sequence.length - binding.length + 1);
+  const reverseBinding = reverseComplementIupac(binding);
+  for (let start = 0; start < limit; start += 1) {
+    if (haystack.slice(start, start + binding.length) === binding) {
+      matches.push({ start, strand: 1 });
+    }
+    if (reverseBinding !== binding && haystack.slice(start, start + binding.length) === reverseBinding) {
+      matches.push({ start, strand: -1 });
+    }
   }
-  const reverse = haystack.indexOf(reverseComplementIupac(binding));
-  return reverse >= 0 ? { start: reverse, strand: -1 } : null;
+  if (matches.length !== 1) {
+    return matches.length ? { ambiguous: true, count: matches.length } : null;
+  }
+  return matches[0];
 }
 
 function segmentsFor(start, length, sequenceLength) {
@@ -72,20 +81,30 @@ export function withPrimerBindFeatures(record, primers) {
   const used = new Set();
   const added = [];
   const unplaced = [];
+  const ambiguous = [];
 
   safePrimers.forEach((primer, index) => {
     const name = String(primer?.name || '').trim() || `Primer ${index + 1}`;
     let hit = null;
     let binding = '';
+    let ambiguousHit = false;
     for (const candidate of (sequence.length ? bindingCandidates(primer) : [])) {
       hit = locateBinding(sequence, candidate, isCircular);
       binding = candidate;
+      if (hit?.ambiguous) {
+        ambiguous.push({ name, count: hit.count });
+        ambiguousHit = true;
+        hit = null;
+        break;
+      }
       if (hit) {
         break;
       }
     }
     if (!hit) {
-      unplaced.push(name);
+      if (!ambiguousHit) {
+        unplaced.push(name);
+      }
       return;
     }
     const id = primerFeatureId(name, index, used);
@@ -108,7 +127,8 @@ export function withPrimerBindFeatures(record, primers) {
     // leave the old annotation behind forever.
     features: [...existing.filter((feature) => feature?.source !== PRIMER_FEATURE_SOURCE), ...added],
     added,
-    unplaced
+    unplaced,
+    ambiguous
   };
 }
 

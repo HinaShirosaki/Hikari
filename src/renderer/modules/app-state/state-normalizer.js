@@ -23,6 +23,7 @@ import {
 } from './dashboard-normalizers.js';
 import { normalizePaperRecord } from './paper-normalizers.js';
 import { normalizeSampleRecord } from './sample-normalizers.js';
+import { migrateProteinBuilderCloningNotebookState } from '../sequence-viewer/protein-builder-cloning-notebook.js';
 
 export { defaultState };
 
@@ -223,7 +224,7 @@ export function normalizeState(parsed) {
   const source = { ...asObject(parsed) };
   delete source.objectGraph;
   delete source.synthesisChemistryDrafts;
-  return {
+  const normalizedState = {
     ...structuredClone(defaultState),
     ...source,
     members: Array.isArray(source.members) ? source.members : [],
@@ -269,4 +270,6 @@ export function normalizeState(parsed) {
       ...asObject(source.inventoryFolders)
     }
   };
+  migrateProteinBuilderCloningNotebookState(normalizedState);
+  return normalizedState;
 }

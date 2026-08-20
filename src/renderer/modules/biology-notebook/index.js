@@ -72,6 +72,7 @@ import { bindFileDropTarget, mergeFilesIntoInput } from '../../lib/file-drop.js'
 import { printElement } from '../print/index.js';
 import { serializeDraftSnapshot } from '../../lib/unsaved-draft.js';
 import { flattenNotebookResultTablesText } from '../../lib/notebook-result-tables.js';
+import { resolveNotebookResultTablesValues } from '../../lib/notebook-table-formulas.js';
 import {
   areAllNotebookPlaceholdersFilled,
   generateNotebookPageName,
@@ -1081,7 +1082,11 @@ export function initLabNotebook({
     );
     const resultText = compactContextBlock(notebookResult?.value || entry?.result || '', 12000);
     const resultTables = resultTableController.getCurrentTables();
-    const tableText = compactContextBlock(flattenNotebookResultTablesText(resultTables, entry?.resultTable), 12000);
+    const tableText = compactContextBlock(
+      // The model reads what the table shows, not the formulas behind it.
+      flattenNotebookResultTablesText(resolveNotebookResultTablesValues(resultTables, entry?.resultTable)),
+      12000
+    );
     const toolCalculations = toolSidebarController.getCalculations();
     const toolCalculationText = compactContextBlock(JSON.stringify(toolCalculations, null, 2), 8000);
     const linkedGel = entry?.id ? findLatestLinkedRecord(getGelAnalyses(state), entry.id) : null;
@@ -1883,7 +1888,8 @@ export function initLabNotebook({
       return;
     }
     saveNotebookBtn.setAttribute('aria-label', label);
-    saveNotebookBtn.title = label;
+    saveNotebookBtn.setAttribute('data-hover-caption', label);
+    saveNotebookBtn.removeAttribute('title');
     const accessibleLabel = saveNotebookBtn.querySelector('.sr-only');
     if (accessibleLabel) {
       accessibleLabel.textContent = label;

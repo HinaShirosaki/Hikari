@@ -824,7 +824,6 @@ export function createSequenceViewerHomeController(config = {}) {
     setInputComposerVisible(true);
     setStatus('Paste sequence text, then click Load.');
     elements.inputTextarea?.focus?.();
-    setHomeStatus('Opened a new sequence detail page.');
   }
 
   function openSequenceFilePicker(input = elements.homeOpenInput) {

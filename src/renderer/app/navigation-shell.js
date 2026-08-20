@@ -130,16 +130,16 @@ export function createNavigationShell({
     if (expanded) {
       return `
         <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-          <rect x="4.5" y="4.5" width="15" height="15" rx="2.25"></rect>
-          <path d="M9 4.5v15M15.25 9.25 18 12l-2.75 2.75"></path>
+          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
+          <path d="M14.5 4.5v15"></path>
+          <path d="m7.25 9.5 2.5 2.5-2.5 2.5"></path>
         </svg>
       `;
     }
     return `
       <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-        <path d="M6.25 6.75A2.75 2.75 0 0 1 9 4h6.25A2.75 2.75 0 0 1 18 6.75v6.5A2.75 2.75 0 0 1 15.25 16H10l-4 3v-3.5a2.75 2.75 0 0 1-2.25-2.7v-6.05Z"></path>
-        <path d="M9.25 10h5.5M12 7.25v5.5"></path>
-        <path d="M19.5 3.5v2.5M18.25 4.75h2.5"></path>
+        <path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"></path>
+        <path d="M8.5 10h.01M12 10h.01M15.5 10h.01"></path>
       </svg>
     `;
   }

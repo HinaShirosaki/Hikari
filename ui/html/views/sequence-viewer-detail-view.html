@@ -24,14 +24,14 @@
                       <path d="M12 5v14"></path>
                       <path d="M5 12h14"></path>
                     </svg>
-                    <span class="sr-only">New sequence</span>
+                    <span class="sequence-viewer-button-caption">New</span>
                   </button>
                   <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
                       <path d="M3.5 7.5V5h7l2 2.5"></path>
                     </svg>
-                    <span class="sr-only">Open sequence</span>
+                    <span class="sequence-viewer-button-caption">Open</span>
                   </button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                   <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
@@ -41,7 +41,7 @@
                       <path d="m17.5 5.75 1 2.5-2.65.45"></path>
                       <circle cx="7.25" cy="15.5" r="1"></circle>
                     </svg>
-                    <span class="sr-only">Vector Builder</span>
+                    <span class="sequence-viewer-button-caption">Vector Builder</span>
                   </button>
                 </div>
               </section>
@@ -100,7 +100,7 @@
                 <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
                 <circle cx="8.5" cy="9" r="1"></circle>
               </svg>
-              <span class="sr-only">Annotate sequence</span>
+              <span class="sequence-viewer-button-caption">Annotate</span>
             </button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Recognize backbone and insert" title="Recognize backbone and insert">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -108,7 +108,7 @@
                 <path d="m14.5 14.5 5 5"></path>
                 <path d="M8.5 8.5h4v4h-4Z"></path>
               </svg>
-              <span class="sr-only">Recognize backbone and insert</span>
+              <span class="sequence-viewer-button-caption">Recognize</span>
             </button>
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false">
@@ -118,7 +118,7 @@
                   <path d="M5 17h14"></path>
                   <path d="M9 5v4M15 10v4M11 15v4"></path>
                 </svg>
-                <span class="sr-only">Alignment options</span>
+                <span class="sequence-viewer-button-caption">Alignment</span>
               </button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
@@ -142,7 +142,7 @@
                   <path d="M5 6h14v12H5Z"></path>
                   <path d="m10 9 5 3-5 3Z"></path>
                 </svg>
-                <span class="sr-only">ORF View options</span>
+                <span class="sequence-viewer-button-caption">ORF</span>
               </button>
               <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
@@ -194,17 +194,9 @@
               </div>
             </div>
 
-            <label class="sequence-viewer-inline-toggle sequence-viewer-toolbar-icon-toggle" title="Show primer binding sites" aria-label="Show primer binding sites">
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
               <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
-              <span class="sequence-viewer-toolbar-toggle-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-                  <path d="M5 8h11"></path>
-                  <path d="m13 5 3 3-3 3"></path>
-                  <path d="M19 16H8"></path>
-                  <path d="m11 13-3 3 3 3"></path>
-                </svg>
-              </span>
-              <span class="sr-only">Show primer binding sites</span>
+              <span>Primers</span>
             </label>
 
             <div class="sequence-viewer-menu-anchor">
@@ -215,7 +207,7 @@
                   <path d="m8.5 8.5 11 8.5"></path>
                   <path d="m8.5 15.5 11-8.5"></path>
                 </svg>
-                <span class="sr-only">Restriction cutter options</span>
+                <span class="sequence-viewer-button-caption">Cutters</span>
               </button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">

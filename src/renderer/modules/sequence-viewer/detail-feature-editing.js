@@ -320,7 +320,12 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       end,
       rangeLabel,
       label: featureName ? `${featureName} - ${rangeLabel}` : `Selection - ${rangeLabel}`,
-      primerBaseName: normalizeRecordName(featureName || `selection_${start + 1}_${end}`, 'selection'),
+      // The feature is the best name; a bare selection falls back to the record
+      // and its coordinates, e.g. "pVector 120-460 F".
+      primerBaseName: normalizeRecordName(
+        featureName || `${cleanText(record?.name, 80) || 'selection'} ${start + 1}-${end}`,
+        'selection'
+      ),
       sequence: sequence.slice(start, end)
     };
   }

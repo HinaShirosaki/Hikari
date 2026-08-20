@@ -3,6 +3,9 @@ module.exports = function registerEdgeSequenceViewerWorkspaceSuitePart04(context
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
 test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from a stored backbone', async () => {
+  const storedBackboneSequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
@@ -78,9 +81,9 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
             hostVectorName: 'HostVector',
             sourceRecordName: 'HostVector',
             backboneName: 'Backbone (HostVector)',
-            backboneSequence: 'ATGCGTACGCTAGTTACC',
-            backboneLength: 18,
-            insertionOffset: 10,
+            backboneSequence: storedBackboneSequence,
+            backboneLength: storedBackboneSequence.length,
+            insertionOffset: 70,
             insertLength: 6,
             variantMode: 'restriction',
             updatedAt: '2026-04-23T12:00:00.000Z'
@@ -197,7 +200,10 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.match(appState.notebookEntries[0].result, /Protein Builder cloning assembly design/i);
   assert.match(appState.notebookEntries[0].result, /PCR program/i);
   assert.match(appState.notebookEntries[0].result, /Primers/i);
-  assert.equal(appState.notebookEntries[0].resultTable.rows.length > 0, true);
+  assert.ok(
+    appState.notebookEntries[0].resultTable?.rows?.length > 0,
+    JSON.stringify(appState.notebookEntries[0].proteinBuilderCloningDesign)
+  );
 });
 test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence for cloning primers', async () => {
   const ids = [
@@ -336,7 +342,8 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
   assert.equal(appState.notebookEntries.length, 1);
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.insertLength, editedInsert.length);
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.assembledLength, editedSequence.length);
-  const forwardPrimer = appState.notebookEntries[0].resultTable.rows.find((row) => row.name === 'Tagged-POI_F');
+  // Bench-style name: the terminal tag the primer adds, the insert, then F.
+  const forwardPrimer = appState.notebookEntries[0].resultTable.rows.find((row) => row.name === '6xHis Tagged-POI F');
   assert.equal(Boolean(forwardPrimer), true);
   assert.equal(forwardPrimer.sequence.startsWith(editedTag), true);
   assert.match(forwardPrimer.notes, new RegExp(`Adds ${editedTag.length} nt at the 5' end`, 'i'));

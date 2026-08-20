@@ -77,6 +77,21 @@ test('[EDGE] sequence-viewer feature detail formatter derives CDS protein proper
   assert.match(html, /Monoisotopic MW 277\.15 Da/);
   assert.match(html, /derived from CDS DNA/);
 });
+test('[EDGE] sequence-viewer feature detail formatter exposes an expandable CDS protein detail block', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'detail_cds',
+    type: 'cds',
+    strand: 1,
+    segments: [{ start: 0, end: 36 }]
+  }, 36, {
+    sequence: 'ATGAAAGCTAAAGGTTTTAAAGCTTGGAAATAA'
+  });
+
+  assert.match(html, /<details class="sequence-viewer-protein-details">/);
+  assert.match(html, /CDS length: 33 nt/);
+  assert.match(html, /Composition: A 2 \(20\.0%\) · F 1 \(10\.0%\)/);
+  assert.match(html, /MKAKGFKAWK/);
+});
 const MAP_FEATURES = [
   { name: 'AmpR', type: 'cds', strand: 1, segments: [{ start: 140, end: 980 }] },
   { name: 'pUC origin', type: 'rep_origin', strand: 0, segments: [{ start: 2100, end: 2780 }] },

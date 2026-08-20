@@ -381,7 +381,7 @@
       },
       {
         "name": "paper_download",
-        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename and `collection_name` for the non-project destination folder; papers from one literature search should share its original query as `collection_name`. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
         "annotations": {
           "title": "Paper Download",
           "readOnlyHint": false,
@@ -403,9 +403,21 @@
               },
               "maxItems": 24
             },
+            "paper_title": {
+              "type": "string",
+              "maxLength": 320,
+              "description": "Paper title used to derive the downloaded PDF filename."
+            },
+            "collection_name": {
+              "type": "string",
+              "maxLength": 220,
+              "description": "Destination collection for a non-project download, normally the original literature-search query."
+            },
             "linked_name": {
               "type": "string",
-              "maxLength": 220
+              "maxLength": 220,
+              "description": "Deprecated compatibility alias for collection_name.",
+              "deprecated": true
             }
           }
         }

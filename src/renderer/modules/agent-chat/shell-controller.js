@@ -292,19 +292,27 @@ export function createAgentChatShellController({
   }
 
   function applyInFlightControls() {
+    const sendPending = runtime.sendPending === true;
+    const sessionTransitionPending = runtime.sessionTransitionPending === true;
+    const composerBusy = runtime.inFlight || sendPending || sessionTransitionPending;
+    const localRequestInFlight = runtime.inFlight
+      && !trimText(state.agentChat?.currentSessionId, 120);
     if (dom.newChatBtn) {
-      dom.newChatBtn.disabled = false;
+      // Saved chats can be switched while their request runs. An unpersisted local
+      // draft has no separate history to return to, so keep it selected until its
+      // request settles instead of letting a second draft inherit the empty ID.
+      dom.newChatBtn.disabled = sendPending || sessionTransitionPending || localRequestInFlight;
     }
-    dom.sendBtn.disabled = runtime.inFlight;
+    dom.sendBtn.disabled = composerBusy;
     if (dom.stopBtn) {
       dom.stopBtn.hidden = !runtime.inFlight;
       dom.stopBtn.disabled = !runtime.inFlight || runtime.stopInProgress;
       dom.stopBtn.textContent = runtime.stopInProgress ? 'Stopping...' : 'Stop';
     }
     if (dom.projectSelect) {
-      dom.projectSelect.disabled = runtime.inFlight;
+      dom.projectSelect.disabled = composerBusy;
     }
-    dom.input.disabled = runtime.inFlight;
+    dom.input.disabled = composerBusy;
     sessionManager?.renderSessionList();
   }
 

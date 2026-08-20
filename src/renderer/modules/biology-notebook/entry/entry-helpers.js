@@ -1,4 +1,5 @@
 import { buildNotebookFolderPath, sanitizeFolderName } from '../../../lib/storage-paths.js';
+import { resolveProteinBuilderCloningNotebookProtocol } from '../../sequence-viewer/protein-builder-cloning-notebook.js';
 
 export { buildNotebookFolderPath, sanitizeFolderName };
 
@@ -86,6 +87,10 @@ export function resolveEntryProject(entry, projects = []) {
 }
 
 export function resolveEntryProtocol(entry, protocols = []) {
+  const generatedCloningProtocol = resolveProteinBuilderCloningNotebookProtocol(entry);
+  if (generatedCloningProtocol) {
+    return generatedCloningProtocol;
+  }
   const snapshot = cloneProtocolSnapshot(entry?.protocolSnapshot);
   if (snapshot) {
     return snapshot;

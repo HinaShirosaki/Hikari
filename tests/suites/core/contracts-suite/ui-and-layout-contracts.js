@@ -186,17 +186,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.biology-notebook-placeholder-table-action\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
     });
 
-    test('biology notebook viewer uses four borderless icon actions with accessible labels', () => {
+    test('biology notebook viewer uses compact icon actions with accessible hover captions', () => {
       const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
 
       assert.match(html, /class="biology-notebook-viewer-actions"[^>]*aria-label="Notebook page actions"/);
-      assert.match(html, /id="biology-notebook-edit-protocol-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Edit page copy"[^>]*title="Edit page copy"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Edit page copy<\/span>/);
-      assert.match(html, /id="biology-notebook-export-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Export PDF"[^>]*title="Export PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Export PDF<\/span>/);
-      assert.match(html, /id="biology-notebook-print-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Print"[^>]*title="Print"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Print<\/span>/);
-      assert.match(html, /id="save-biology-notebook-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Save notebook page"[^>]*title="Save notebook page"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save notebook page<\/span>/);
+      assert.match(html, /id="biology-notebook-edit-protocol-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Edit page copy"[^>]*data-hover-caption="Edit page copy"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Edit page copy<\/span>/);
+      assert.match(html, /id="biology-notebook-apply-protocol-edit-btn"[^>]*class="primary-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Apply page edit"[^>]*data-hover-caption="Apply page edit"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Apply page edit<\/span>/);
+      assert.match(html, /id="biology-notebook-cancel-protocol-edit-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Cancel page edit"[^>]*data-hover-caption="Cancel page edit"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Cancel page edit<\/span>/);
+      assert.match(html, /id="biology-notebook-export-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Export PDF"[^>]*data-hover-caption="Export PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Export PDF<\/span>/);
+      assert.match(html, /id="biology-notebook-print-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Print"[^>]*data-hover-caption="Print"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Print<\/span>/);
+      assert.match(html, /id="save-biology-notebook-btn"[^>]*class="ghost-btn biology-notebook-viewer-icon-btn"[^>]*aria-label="Save notebook page"[^>]*data-hover-caption="Save notebook page"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save notebook page<\/span>/);
       assert.equal((html.match(/id="save-biology-notebook-btn"/g) || []).length, 1);
-      assert.match(css, /\.biology-notebook-viewer-icon-btn\.ghost-btn\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
+      assert.match(css, /\.biology-notebook-viewer-icon-btn\s*\{[^}]*position:\s*relative;[^}]*width:\s*30px;[^}]*height:\s*30px;/s);
+      assert.match(css, /\.biology-notebook-viewer-actions \[data-hover-caption\]::after\s*\{[^}]*top:\s*calc\(100% \+ 7px\);[^}]*bottom:\s*auto;/s);
     });
 
     test('biology notebook bench tools live in a foldable floating icon toolbox', () => {
@@ -217,7 +220,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="biology-notebook-tool-tab-reaction"[^>]*data-hover-caption="Fixed volume reaction"/);
       assert.match(html, /id="biology-notebook-add-assay-btn"[^>]*data-hover-caption="Add assay"/);
       assert.match(html, /id="biology-notebook-add-samples-btn"[^>]*data-hover-caption="Add samples"/);
-      assert.match(html, /id="biology-notebook-quick-sample-overlay"[^>]*hidden[\s\S]*?class="biology-notebook-quick-sample-layout"[\s\S]*?id="biology-notebook-quick-sample-position"[\s\S]*?id="biology-notebook-quick-sample-container"[\s\S]*?id="biology-notebook-quick-sample-grid"[\s\S]*?id="biology-notebook-quick-sample-name"/);
+      assert.match(html, /id="biology-notebook-quick-sample-overlay"[^>]*hidden[\s\S]*?class="biology-notebook-quick-sample-layout"[\s\S]*?id="biology-notebook-quick-sample-container"[\s\S]*?id="biology-notebook-quick-sample-grid"[\s\S]*?id="biology-notebook-quick-sample-name"/);
       assert.match(html, /id="biology-notebook-add-table-btn"[^>]*data-hover-caption="Add table"/);
       assert.match(html, /id="biology-notebook-tool-collapse-btn"[^>]*data-hover-caption="Fold toolbox"/);
       assert.match(html, /id="biology-notebook-tool-workspace"[^>]*hidden[^>]*aria-label="Bench tool workspace"/);
@@ -234,7 +237,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(notebookSource, /notebookAddAssayBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?linkedWorkActions\.onAddAssayClick\(\)/);
       assert.match(notebookSource, /notebookAddSamplesBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?quickSampleController\.open\(\)/);
       assert.match(css, /\.biology-notebook-quick-sample-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.62fr\)\s*minmax\(230px,\s*0\.72fr\);/s);
-      assert.match(css, /\.biology-notebook-quick-sample-storage\s*\{[^}]*grid-template-columns:\s*minmax\(126px,\s*0\.38fr\)\s*minmax\(250px,\s*1fr\);/s);
+      assert.match(css, /\.biology-notebook-quick-sample-storage\s*\{[^}]*grid-template-columns:\s*minmax\(188px,\s*0\.48fr\)\s*minmax\(250px,\s*1fr\);/s);
       assert.match(source, /function showToolWorkspace\(\)[\s\S]*?toolWorkspace\.hidden = false/);
       assert.match(source, /addListener\(foldToggle, 'click',[\s\S]*?setSidebarOpen\(true\)[\s\S]*?biology-notebook-tool-tab-/);
       assert.match(source, /addListener\(foldToggle, 'pointerdown', beginToolboxDrag\)/);
@@ -247,8 +250,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /data-toolbox-expand-x="left"[^}]*biology-notebook-tool-collapse-btn[^}]*\{[^}]*grid-column:\s*3;/s);
       assert.match(css, /data-toolbox-expand-y="up"[^}]*biology-notebook-tool-collapse-btn[^}]*\{[^}]*grid-row:\s*3;/s);
       assert.match(css, /\.biology-notebook-layout\.is-tool-sidebar-collapsed \.biology-notebook-tool-fold-toggle\s*\{[^}]*border:\s*1px solid[^;]+;[^}]*background:\s*var\(--theme-surface-elevated\);[^}]*box-shadow:\s*none;[^}]*cursor:\s*grab;[^}]*touch-action:\s*none;/s);
-      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]::after\s*\{[^}]*content:\s*attr\(data-hover-caption\);[^}]*position:\s*absolute;[^}]*opacity:\s*0;[^}]*visibility:\s*hidden;/s);
-      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]:hover::after,[\s\S]*?focus-visible::after\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible;/s);
+      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]::after,\s*\.biology-notebook-viewer-actions \[data-hover-caption\]::after\s*\{[^}]*content:\s*attr\(data-hover-caption\);[^}]*position:\s*absolute;[^}]*opacity:\s*0;[^}]*visibility:\s*hidden;/s);
+      assert.match(css, /\.biology-notebook-tool-sidebar \[data-hover-caption\]:hover::after,[\s\S]*?\.biology-notebook-viewer-actions \[data-hover-caption\]:focus-visible::after\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible;/s);
       assert.match(css, /data-toolbox-expand-y="down"[^}]*data-hover-caption[^}]*\{[^}]*top:\s*calc\(100% \+ 7px\);[^}]*bottom:\s*auto;/s);
       assert.match(css, /data-toolbox-expand-x="left"[^}]*data-hover-caption[^}]*\{[^}]*right:\s*0;[^}]*left:\s*auto;/s);
       assert.match(source, /event\?\.key === 'Escape'[\s\S]*setSidebarOpen\(false\)/);
@@ -368,29 +371,30 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(toolbar, /id="sequence-viewer-status"|sequence-viewer-status-note/);
     });
 
-    test('sequence viewer primary actions use accessible compact icons', () => {
+    test('sequence viewer primary actions pair accessible icons with visible captions', () => {
       const homeHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
       const detailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
-      const iconButtonIds = [
-        'sequence-viewer-detail-new-btn',
-        'sequence-viewer-detail-open-btn',
-        'sequence-viewer-vector-builder-btn',
-        'sequence-viewer-annotate-btn',
-        'sequence-viewer-recognize-backbone-btn',
-        'sequence-viewer-alignment-menu-btn',
-        'sequence-viewer-orf-menu-btn',
-        'sequence-viewer-cutter-menu-btn'
-      ];
+      const iconButtonCaptions = {
+        'sequence-viewer-detail-new-btn': 'New',
+        'sequence-viewer-detail-open-btn': 'Open',
+        'sequence-viewer-vector-builder-btn': 'Vector Builder',
+        'sequence-viewer-annotate-btn': 'Annotate',
+        'sequence-viewer-recognize-backbone-btn': 'Recognize',
+        'sequence-viewer-alignment-menu-btn': 'Alignment',
+        'sequence-viewer-orf-menu-btn': 'ORF',
+        'sequence-viewer-cutter-menu-btn': 'Cutters'
+      };
 
-      iconButtonIds.forEach((id) => {
-        assert.match(detailHtml, new RegExp(`id="${id}"[^>]*class="[^"]*sequence-viewer-icon-btn[^"]*"[^>]*aria-label="[^"]+"[^>]*>[\\s\\S]*?<svg`));
+      Object.entries(iconButtonCaptions).forEach(([id, caption]) => {
+        assert.match(detailHtml, new RegExp(`id="${id}"[^>]*class="[^"]*sequence-viewer-icon-btn[^"]*"[^>]*aria-label="[^"]+"[^>]*>[\\s\\S]*?<svg[\\s\\S]*?<span class="sequence-viewer-button-caption">${caption}<\\/span>`));
       });
-      assert.match(homeHtml, /id="sequence-viewer-home-paste-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="New sequence"/);
-      assert.match(homeHtml, /id="sequence-viewer-home-open-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Open sequence"/);
-      assert.match(homeHtml, /id="sequence-viewer-home-vector-builder-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Vector Builder"/);
-      assert.match(detailHtml, /class="sequence-viewer-inline-toggle sequence-viewer-toolbar-icon-toggle"[^>]*aria-label="Show primer binding sites"[\s\S]*id="sequence-viewer-primers-toggle"/);
-      assert.match(css, /\.sequence-viewer-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.match(homeHtml, /id="sequence-viewer-home-paste-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="New sequence"[\s\S]*?<span class="sequence-viewer-button-caption">New<\/span>/);
+      assert.match(homeHtml, /id="sequence-viewer-home-open-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Open sequence"[\s\S]*?<span class="sequence-viewer-button-caption">Open<\/span>/);
+      assert.match(homeHtml, /id="sequence-viewer-home-vector-builder-btn"[^>]*sequence-viewer-icon-btn[^>]*aria-label="Vector Builder"[\s\S]*?<span class="sequence-viewer-button-caption">Vector Builder<\/span>/);
+      assert.match(detailHtml, /class="sequence-viewer-inline-toggle"[^>]*title="Show primer binding sites[^\"]*"[\s\S]*id="sequence-viewer-primers-toggle"[\s\S]*<span>Primers<\/span>/);
+      assert.match(css, /\.sequence-viewer-icon-btn\s*\{[^}]*display:\s*inline-flex;[^}]*width:\s*auto;[^}]*height:\s*34px;/s);
+      assert.match(css, /\.sequence-viewer-button-caption\s*\{[^}]*font-size:\s*0\.78rem;/s);
     });
 
     test('Workflow keeps the Add Blocks composer in the left rail for edit modes', () => {
@@ -507,8 +511,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const workflowPositions = workflowIds.map((id) => html.indexOf(`id="${id}"`));
       assert.equal(workflowPositions.every((position) => position >= 0), true);
       assert.equal(workflowPositions.every((position, index) => index === 0 || position > workflowPositions[index - 1]), true);
-      assert.match(html, /assay-display-label">Result Data</);
-      assert.match(html, /assay-display-label">Groups \(optional\)</);
+      // Inside Data Analysis every block is a subsection fold, gel-style, not a flat label stack.
+      ['assay-result-data-panel', 'assay-transform-panel', 'assay-groups-panel', 'assay-analysis-settings-panel']
+        .forEach((id) => assert.match(
+          html,
+          new RegExp(`<details id="${id}"[^>]*foldable-section foldable-section--subsection`),
+          `${id} should be a foldable subsection`
+        ));
+      assert.doesNotMatch(html, /assay-display-label">(?:Result Data|Groups \(optional\))</);
+      // The workspace plate panels share the same component instead of a private fold style.
+      ['assay-result-table-panel', 'assay-derived-plate-panel'].forEach((id) => assert.match(
+        html,
+        new RegExp(`<details id="${id}"[^>]*foldable-section`),
+        `${id} should use the shared foldable section`
+      ));
       assert.doesNotMatch(html, /assay-analyze-results-btn|Analyze Results/);
       assert.doesNotMatch(dom, /assayAnalyzeResultsBtn/);
       assert.doesNotMatch(bindings, /onAnalyzeResults/);
@@ -845,14 +861,26 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
     });
 
+    test('every tool box tool shares one head and no nested boxes', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'tool-box-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'tool-box-view.css');
+
+      const toolViews = html.match(/class="panel tool-subview"/g) || [];
+      assert.equal((html.match(/<header class="tool-head">/g) || []).length, toolViews.length);
+      assert.equal((html.match(/class="tool-head-note"/g) || []).length, toolViews.length);
+      assert.doesNotMatch(html, /class="molarity-view-header"|molarity-kicker|molarity-auto-unit-badge|molarity-step/);
+      assert.doesNotMatch(html, /class="stack-form crispr-controls"|colony-counter-controls|class="result-card /);
+      assert.match(css, /\.tool-head \{/);
+      assert.doesNotMatch(css, /\.crispr-controls \{|\.colony-counter-controls \{/);
+    });
+
     test('molarity calculator uses responsive cards with automatic result states', () => {
       const html = readLocalSource('ui', 'html', 'views', 'tool-box-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'tool-box-view.css');
       const source = readLocalSource('src', 'renderer', 'modules', 'tool-box', 'molarity-ui.js');
 
-      assert.match(html, /class="molarity-view-header"[\s\S]*class="molarity-auto-unit-badge"[\s\S]*class="molarity-card-grid"/);
+      assert.match(html, /class="tool-head"[\s\S]*class="molarity-card-grid"/);
       assert.equal((html.match(/class="molarity-block"/g) || []).length, 4);
-      assert.match(html, /class="molarity-step"[^>]*>01<[\s\S]*class="molarity-step"[^>]*>04</);
       assert.equal((html.match(/class="form-grid molarity-form"/g) || []).length, 4);
       assert.equal((html.match(/class="calc-output molarity-output" aria-live="polite"/g) || []).length, 4);
       assert.doesNotMatch(html, /(?:mass|volume|conc|dilution)-calc-output-unit/);

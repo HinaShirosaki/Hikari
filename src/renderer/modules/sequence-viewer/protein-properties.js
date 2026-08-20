@@ -192,6 +192,7 @@ export function calculateProteinProperties(proteinSequence) {
     length: sequence.length,
     monoisotopicMass,
     pI: canCalculateExactProperties ? estimatePI(sequence) : null,
+    composition: countResidues(sequence),
     invalidResidues
   };
 }

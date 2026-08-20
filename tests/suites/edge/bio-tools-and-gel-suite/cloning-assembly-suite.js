@@ -106,6 +106,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       // one mutagenesis primer + two native-site primers, first added across two PCRs
       assert.equal(plan.primers.filter((p) => p.groupLabel === 'PCR 1').length, 2);
       assert.equal(plan.primers.filter((p) => p.groupLabel === 'PCR 2').length, 1);
+      assert.equal(plan.primers.every((primer) => primer.ampliconLength > 0), true);
       const enzymes = plan.plans[0].plan.restrictionEnzymeSelection;
       assert.equal(enzymes.length, 2);
       assert.notEqual(enzymes[0].site, enzymes[1].site);
@@ -156,21 +157,107 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(plan.plans[0].plan.restrictionEnzymeSelection, null);
     });
 
+    test('[EDGE] cloning buildQ5KldPlan splits a long insertion across correctly oriented 5-prime tails', () => {
+      const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
+      const sequence = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js'));
+      const left = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG';
+      const right = 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA';
+      const insertion = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
+      const original = `${left}${right}`;
+      const plan = q5.buildQ5KldPlan({
+        originalSequence: original,
+        editedSequence: `${left}${insertion}${right}`,
+        editRequest: { type: 'insertion', position: left.length + 1, editedSequence: insertion },
+        recordName: 'pLong',
+        topology: 'circular'
+      });
+
+      assert.equal(plan.feasible, true);
+      const forward = plan.primers.find((primer) => primer.name === 'q5_F');
+      const reverse = plan.primers.find((primer) => primer.name === 'q5_R');
+      assert.equal(forward.length <= 60, true);
+      assert.equal(reverse.length <= 60, true);
+      assert.equal(`${sequence.reverseComplementDna(reverse.tailSequence)}${forward.tailSequence}`, insertion);
+      assert.equal(original.includes(forward.sequence.slice(-12)), true);
+      assert.equal(original.includes(sequence.reverseComplementDna(reverse.sequence.slice(-12))), true);
+    });
+
+    test('[EDGE] cloning buildQ5KldPlan rejects a linear template', () => {
+      const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
+      const original = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG';
+      const plan = q5.buildQ5KldPlan({
+        originalSequence: original,
+        editedSequence: `${original.slice(0, 30)}A${original.slice(31)}`,
+        editRequest: { type: 'point-mutation', start: 31, end: 31, originalSequence: original[30], editedSequence: 'A' },
+        topology: 'linear'
+      });
+      assert.equal(plan.feasible, false);
+      assert.match(plan.warnings[0], /circular plasmid template/);
+    });
+
     // --- Golden Gate (Type IIS) route ---
     test('[EDGE] cloning buildGoldenGatePlan tails primers with a clean Type IIS enzyme', () => {
       const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
-      const seq = `${'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(3)}CATTGCAGATCTTAGGCCATTAGCTAACGTTAGCGATCGT${'TTGACATGTCAGTACGT'.repeat(3)}`;
-      const start = 84;
-      const end = 124;
+      const seq = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+        + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+        + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+      const start = 20;
+      const end = 80;
       const insert = seq.slice(start, end);
 
       const plan = gg.buildGoldenGatePlan({ sequence: seq, range: { start, end }, recordName: 'pGG', topology: 'circular' });
       assert.equal(plan.feasible, true);
-      assert.equal(plan.primers.length, 2);
+      assert.equal(plan.primers.length, 4);
+      assert.equal(new Set(plan.primers.map((primer) => primer.groupLabel)).size, 2);
       const enzyme = plan.plans[0].plan.restrictionEnzymeSelection[0];
       assert.equal(plan.primers.every((p) => p.sequence.includes(enzyme.site)), true);
+      assert.equal(plan.primers.every((p) => p.sequence.indexOf(enzyme.site) >= 6), true);
       // scarless: the exposed overhang is the native first 4 nt of the insert
       assert.equal(plan.primers[0].bindingSequence.slice(0, 4), insert.slice(0, 4));
+    });
+
+    test('[EDGE] cloning restriction-ligation rejects a digest that cannot recreate the requested construct', () => {
+      const host = 'TTTGGATCCAAAAAAGGTACCTTT';
+      const insert = 'GCGCCGCGGCCGCGATATGACGTAGCTAGCCCGCGGCGCCGGCGC';
+      const plan = assembly.assembleCloningPlan({
+        hostVectors: [{ id: 'h', name: 'Host', topology: 'circular', sequence: host }],
+        hostVectorId: 'h',
+        fragments: [{ id: 'i', name: 'Insert', type: 'insert', sequence: insert }],
+        resultSequence: `${host}${insert}`
+      });
+
+      assert.equal(plan.routeEvaluations.restrictionLigation.feasible, false);
+      assert.match(plan.routeEvaluations.restrictionLigation.reason, /matches the requested result/i);
+      assert.notEqual(plan.recommendedAssemblyStrategy, 'restriction-ligation');
+    });
+
+    test('[EDGE] cloning megaprimer restriction design wraps flanking sites across a circular origin', () => {
+      const mega = loadEsmStyleModule(path.join(cloningAssemblyPath, 'megaprimer-restriction.js'));
+      const core = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
+      const original = `ATGCGTACGGATCC${core}GAATTCTGCA`;
+      const plan = mega.buildMegaprimerRestrictionPlan({
+        originalSequence: original,
+        editedSequence: `C${original.slice(1)}`,
+        editRequest: { type: 'point-mutation', start: 1, end: 1, originalSequence: 'A', editedSequence: 'C' },
+        recordName: 'pOrigin',
+        topology: 'circular'
+      });
+
+      assert.equal(plan.feasible, true);
+      const selected = plan.plans[0].plan.restrictionEnzymeSelection;
+      assert.equal(selected[0].segments[0].start > selected[1].segments[0].start, true);
+      const pcrOneLength = plan.primers.find((primer) => primer.groupLabel === 'PCR 1').ampliconLength;
+      const pcrTwoLength = plan.primers.find((primer) => primer.groupLabel === 'PCR 2').ampliconLength;
+      assert.equal(pcrOneLength < original.length, true);
+      assert.equal(pcrTwoLength < original.length, true);
+    });
+
+    test('[EDGE] cloning PCR primer design rejects exact multi-site binding', () => {
+      const unit = 'GCGTACGATCGTACGCGTATCGATGCTAGCCAGTACGATGCGTACGATCG';
+      const repeated = `${unit}AATTCCGG${unit}TTGGCCAA${unit}`;
+      const result = assembly.designPcrPrimerPair(repeated, { name: 'repeat' });
+      assert.equal(result.feasible, false);
+      assert.equal(result.primers.length, 0);
     });
 
     test('[EDGE] cloning buildGoldenGatePlan reports when the insert needs domestication', () => {
@@ -179,6 +266,19 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       const plan = gg.buildGoldenGatePlan({ sequence: `AAAAAAAA${dirty}AAAAAAAA`, range: { start: 8, end: 8 + dirty.length }, recordName: 'pDirty' });
       assert.equal(plan.feasible, false);
       assert.ok(/domesticate/i.test(plan.warnings[0]));
+    });
+
+    test('[EDGE] cloning buildGoldenGatePlan rejects reverse-complementary junction overhangs', () => {
+      const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
+      const insert = 'AAGCATGCGTACCTAGGCACTGATCCGTA';
+      const backbone = 'GCTTTACGATGCCATAGTCCGATACGTA'; // GCTT is reverse-complementary to AAGC.
+      const plan = gg.buildGoldenGatePlan({
+        sequence: `${insert}${backbone}`,
+        range: { start: 0, end: insert.length },
+        recordName: 'pCrossCompatible'
+      });
+      assert.equal(plan.feasible, false);
+      assert.match(plan.warnings[0], /reverse-complementary/i);
     });
 
     // --- sequence_viewer / sequence_edit MCP contract core ---
@@ -316,11 +416,200 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       );
     });
 
+    test('[EDGE] a repeated template is reported as a specificity failure, not a Tm failure', () => {
+      const windows = loadEsmStyleModule(path.join(cloningAssemblyPath, 'overlap-windows.js'));
+      const thresholds = { primerTm: { min: 55, max: 70 }, primerLength: { min: 18, max: 30 }, overlapTm: { min: 45, max: 70 } };
+      const unit = 'ATGCGATCGATCGGCTAGCTAGCTAGCATCGATCGGCTAGCGCGATCGATCGTAGCTAGCTAGC'
+        + 'GGTTACCAGTTTACAGGATCCATTCGGAAACCTTAGCATCGGATCCAATTCGGATTCAGGCATT';
+      const tandem = unit.repeat(2);
+      const unique = unit + [...unit].reverse().join('');
+      const config = { specificityCircular: true };
+
+      // Every window on a tandem-duplicated template binds twice, and no
+      // threshold level can fix that, so the message must say so.
+      assert.equal(windows.selectBindingWindow(tandem, 'forward', thresholds, 0, { ...config, specificitySequence: tandem }), null);
+      assert.match(
+        windows.describeBindingWindowFailure(tandem, 'forward', thresholds, 0, { ...config, specificitySequence: tandem }),
+        /binds more than one site/
+      );
+
+      // A template that does design a primer explains nothing.
+      assert.notEqual(windows.selectBindingWindow(unique, 'forward', thresholds, 0, { ...config, specificitySequence: unique }), null);
+      assert.equal(windows.describeBindingWindowFailure(unique, 'forward', thresholds, 0, { ...config, specificitySequence: unique }), '');
+
+      // Nor does a plain Tm/length miss, which the threshold ladder can still fix.
+      // Non-repeating, so the only reason nothing matches is the Tm window.
+      const shortTemplate = 'GCTAAAGACAATTACATAACATACACGTCAGCA';
+      assert.equal(
+        windows.describeBindingWindowFailure(shortTemplate, 'forward', { ...thresholds, primerTm: { min: 90, max: 95 } }, 0, {
+          specificitySequence: shortTemplate
+        }),
+        ''
+      );
+    });
+
+    test('[EDGE] mutagenesis routes name the repeat when a flank is not unique', () => {
+      const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
+      const mutagenesis = loadEsmStyleModule(path.join(cloningAssemblyPath, 'mutagenesis-simple.js'));
+      const editMap = loadEsmStyleModule(path.join(cloningAssemblyPath, 'edit-map.js'));
+
+      // A plasmid built from one repeated unit: every flank of the edit occurs twice.
+      const unit = 'ACAGTCATGACTTGACATGTCAGTACGTTTGACCATGGTACCATTGACCATGGTACCATTGACCA';
+      const original = unit.repeat(2);
+      const editIndex = 20;
+      const edited = `${original.slice(0, editIndex)}A${original.slice(editIndex + 1)}`;
+      const editRequest = {
+        type: 'point-mutation', start: editIndex + 1, end: editIndex + 1,
+        originalSequence: original[editIndex], editedSequence: 'A'
+      };
+
+      const q5Plan = q5.buildQ5KldPlan({
+        originalSequence: original, editedSequence: edited, editRequest, recordName: 'pRepeat', topology: 'circular'
+      });
+      assert.equal(q5Plan.feasible, false);
+      assert.equal(q5Plan.warnings.some((warning) => /binds more than one site/.test(warning)), true);
+
+      // The overlapping-SDM route checks its own 3' ends, so it has its own wording.
+      const normalized = editMap.normalizeEditRequest(editRequest, original);
+      const simple = mutagenesis.designSimpleMutagenesisPrimers(
+        original,
+        normalized,
+        { primerTm: { min: 55, max: 72 }, primerLength: { min: 18, max: 45 } },
+        { topology: 'circular' }
+      );
+      assert.equal(simple.feasible, false);
+      assert.equal(simple.warnings.some((warning) => /repeats elsewhere on the plasmid/.test(warning)), true);
+
+      // A unique plasmid designs the pair and says nothing about repeats.
+      const uniqueOriginal = unit + [...unit].reverse().join('');
+      const uniqueEdited = `${uniqueOriginal.slice(0, editIndex)}A${uniqueOriginal.slice(editIndex + 1)}`;
+      const uniquePlan = q5.buildQ5KldPlan({
+        originalSequence: uniqueOriginal,
+        editedSequence: uniqueEdited,
+        editRequest: { ...editRequest, originalSequence: uniqueOriginal[editIndex] },
+        recordName: 'pUnique',
+        topology: 'circular'
+      });
+      assert.equal(uniquePlan.feasible, true);
+      assert.equal(uniquePlan.warnings.some((warning) => /binds more than one site/.test(warning)), false);
+    });
+
+    test('[EDGE] a repeated backbone says why the Gibson junction failed', () => {
+      const notebook = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+      );
+      const unit = 'ATGCGATCGATCGGCTAGCTAGCTAGCATCGATCGGCTAGCGCGATCGATCGTAGCTAGCTAGC'
+        + 'GGTTACCAGTTTACAGGATCCATTCGGAAACCTTAGCATCGGATCCAATTCGGATTCAGGCATT';
+      const insert = 'ATGGGCAGCAGCCATCATCATCATCATCACAGCAGCGGCCTGGAAAACCTGTATTTTCAGGGCGCCATGGATCCGGAATTCG';
+      const dnaConstruct = { ok: true, sequence: insert, parts: [{ label: 'POI', dnaSequence: insert }] };
+      const planFor = (backboneSequence) => notebook.buildProteinBuilderCloningPlan({
+        constructName: 'POI',
+        backbone: { backboneSequence, backboneName: 'pBB', topology: 'circular', insertionOffset: 40 },
+        dnaConstruct,
+        assembledRecord: { name: 'POI (pBB)', sequence: `${backboneSequence.slice(0, 40)}${insert}${backboneSequence.slice(40)}` }
+      });
+
+      const repeated = planFor(unit.repeat(2));
+      assert.equal(repeated.recommendedAssemblyStrategy, null);
+      assert.equal(repeated.warnings.some((warning) => /binds more than one site/.test(warning)), true);
+
+      // The same design on a non-repeating backbone still runs the Gibson route.
+      const clean = planFor(unit + [...unit].reverse().join(''));
+      assert.equal(clean.recommendedAssemblyStrategy, 'gibson');
+      assert.equal(clean.warnings.some((warning) => /binds more than one site/.test(warning)), false);
+    });
+
+    test('[EDGE] primer names read as bench labels: what is added, the target, then F/R', () => {
+      const naming = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-naming.js')
+      );
+      const named = (primers, context) => naming.renamePrimers(primers, context).map((primer) => primer.name);
+
+      // Site-directed mutagenesis names the gene and the residue change.
+      assert.deepEqual(
+        named(
+          [{ name: 'q5_F', role: 'mutagenesis-forward' }, { name: 'q5_R', role: 'mutagenesis-reverse' }],
+          { gene: 'MPM2', mutation: 'A34J' }
+        ),
+        ['MPM2 A34J F', 'MPM2 A34J R']
+      );
+
+      // An expression construct names the terminal tag the primer adds, then the
+      // insert; the backbone half is just the vector.
+      assert.deepEqual(
+        named(
+          [{ name: 'APA2_F', role: 'assembly-forward' }, { name: 'APA2_R', role: 'assembly-reverse' },
+            { name: 'pGEX_R', role: 'assembly-reverse' }],
+          { targetLabel: 'APA2', tags: { start: 'GST', end: '' }, backboneNames: ['pGEX'] }
+        ),
+        ['GST APA2 F', 'APA2 R', 'vector R']
+      );
+
+      // A primer carrying a restriction site leads with the enzyme.
+      assert.deepEqual(
+        named(
+          [{ name: 'EcoRI_F', role: 'restriction-forward' }, { name: 'gg_backbone_R', role: 'golden-gate-backbone-reverse' }],
+          { targetLabel: '', tags: { start: '6xHis' }, enzyme: 'BsaI' }
+        ),
+        ['EcoRI 6xHis F', 'BsaI vector R']
+      );
+
+      // Two primers that reduce to the same label stay distinguishable.
+      assert.deepEqual(
+        named([{ name: 'a_F', role: 'assembly-forward' }, { name: 'b_F', role: 'assembly-forward' }], { targetLabel: 'APA2' }),
+        ['APA2 F', 'APA2 F 2']
+      );
+    });
+
+    test('[EDGE] mutation labels come from the codon the edit lands in', () => {
+      const naming = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-naming.js')
+      );
+      const flank = 'ACAGTCATGACTTGACATGTCAGTACGT';
+      const cds = 'ATGGCACCGACCAGCGGTAAAGAAGCGCTGATTGCGCAGTATGGCACCAGCCTGGAAGCGATTAAA';
+      const original = `${flank}${cds}${flank}`;
+      // Codon 4 is ACC (Thr); changing its first base to G makes GCC (Ala).
+      const editIndex = flank.length + 9;
+      const edited = `${original.slice(0, editIndex)}G${original.slice(editIndex + 1)}`;
+      const record = {
+        name: 'pMPM2',
+        sequence: edited,
+        features: [{ name: 'MPM2', type: 'CDS', strand: 1, segments: [{ start: flank.length, end: flank.length + cds.length }] }]
+      };
+      const editRequest = {
+        type: 'point-mutation', start: editIndex + 1, end: editIndex + 1,
+        originalSequence: original[editIndex], editedSequence: 'G'
+      };
+
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(naming.describeEditTarget({ record, originalSequence: original, editRequest }))),
+        { gene: 'MPM2', mutation: 'T4A' }
+      );
+
+      // Outside a CDS there is no residue to name, so the base change is used.
+      const bare = { name: 'pMPM2', sequence: edited, features: [] };
+      assert.equal(
+        naming.describeEditTarget({ record: bare, originalSequence: original, editRequest }).mutation,
+        `${original[editIndex]}${editIndex + 1}G`
+      );
+
+      // Length changes get the shorthand the bench uses.
+      assert.equal(
+        naming.describeEditTarget({
+          record: bare,
+          originalSequence: original,
+          editRequest: { type: 'deletion', start: editIndex + 1, end: editIndex + 9, originalSequence: original.slice(editIndex, editIndex + 9), editedSequence: '' }
+        }).mutation,
+        'del9'
+      );
+    });
+
     test('[EDGE] annotatePrimersOnSelectedRecord writes and persists onto the selected record', async () => {
       const primerAnnotation = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
       );
-      const sequence = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
+      const sequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+        + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA';
       const binding = sequence.slice(12, 34);
       const state = {
         records: [{ name: 'other', sequence, features: [] }, { name: 'target', sequence, features: [] }],

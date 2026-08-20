@@ -28,7 +28,7 @@ import {
   isTransformActive,
   normalizeTransformSpec
 } from './derived-plate.js';
-import { compileFormula } from './formula.js';
+import { compileFormula } from '../../lib/formula.js';
 
 export {
   CHART_STYLE_OPTIONS,

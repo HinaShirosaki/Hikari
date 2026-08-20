@@ -287,8 +287,8 @@ test('[EDGE] sequence-viewer context menu designs primers for selected sequence 
 
   assert.equal(Boolean(overlay.hidden), false);
   assert.match(note.textContent, /Feature_A/);
-  assert.match(result.innerHTML, /Feature_A_F/);
-  assert.match(result.innerHTML, /Feature_A_R/);
+  assert.match(result.innerHTML, /Feature_A F/);
+  assert.match(result.innerHTML, /Feature_A R/);
 });
 test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence edit dialog', async () => {
   const ids = [

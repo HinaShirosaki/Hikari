@@ -8,7 +8,7 @@ import {
 } from './plate-model.js';
 import { parseDimensionGroupSpec } from './analysis/shared.js';
 import { parseNumericResult } from './shared.js';
-import { compileFormula, FormulaError } from './formula.js';
+import { compileFormula, FormulaError } from '../../lib/formula.js';
 
 // A derived plate: the raw result plate with up to four optional steps applied, in a
 // fixed order that matches how the numbers are meant to be handled --

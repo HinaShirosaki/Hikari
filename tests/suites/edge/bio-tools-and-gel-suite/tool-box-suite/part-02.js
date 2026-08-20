@@ -14,7 +14,7 @@ test('[EDGE] sequence-viewer designCloningPrimers falls back to relaxed threshol
           id: 'insert-1',
           name: 'Insert 1',
           role: 'insert',
-          sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+          sequence: 'GCGCCGCGGCCGCGATATGACGTAGCTAGCCCGCGGCGCCGGCGC'
         }
       ]
     },
@@ -32,7 +32,7 @@ test('[EDGE] sequence-viewer designCloningPrimers falls back to relaxed threshol
   assert.equal(primerPlan.selectedThresholdLevel, 'relaxed');
   assert.equal(primerPlan.primers.length, 2);
 });
-test('[EDGE] sequence-viewer designCloningPrimers supports multi-primer tiling for long insertions', () => {
+test('[EDGE] sequence-viewer designCloningPrimers rejects non-annealing same-strand insertion tiles', () => {
   const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',
     selectedHost: {
@@ -47,9 +47,9 @@ test('[EDGE] sequence-viewer designCloningPrimers supports multi-primer tiling f
     }
   });
 
-  assert.equal(primerPlan.feasible, true);
-  assert.equal(primerPlan.primerCount > 2, true);
-  assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
+  assert.equal(primerPlan.feasible, false);
+  assert.equal(primerPlan.primers.length, 0);
+  assert.match(primerPlan.warnings.join(' '), /Q5\/KLD split-tail primers/);
 });
 test('[EDGE] sequence-viewer designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
   const fragmentMap = {
@@ -60,6 +60,7 @@ test('[EDGE] sequence-viewer designCloningPrimers enforces the per-level overlap
   };
   const planWithOverlapTms = (leftTm, rightTm) => sequenceViewerInternals.designCloningPrimers({
     strategy: 'overlap-pcr',
+    preferences: { requireUniqueBinding: false },
     fragmentMap,
     routeEvaluations: {
       overlapPCR: {
@@ -116,8 +117,8 @@ test('[EDGE] sequence-viewer designPcrPrimerPair designs a forward and reverse p
 
   assert.equal(primerPlan.feasible, true);
   assert.equal(primerPlan.primerCount, 2);
-  assert.equal(primerPlan.primers[0].name, 'selected_region_F');
-  assert.equal(primerPlan.primers[1].name, 'selected_region_R');
+  assert.equal(primerPlan.primers[0].name, 'selected_region F');
+  assert.equal(primerPlan.primers[1].name, 'selected_region R');
   assert.equal(primerPlan.primers[0].role, 'pcr-forward');
   assert.equal(primerPlan.primers[1].role, 'pcr-reverse');
 });
@@ -336,7 +337,7 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   assert.equal(floatingMenu.style.maxHeight, '230px');
   assert.equal(floatingMenu.style.width, '242px');
 });
-test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
+test('[EDGE] sequence-viewer assembleCloningPlan can prefer restriction-ligation when no final product was supplied', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({
     hostVectors: [
       {
@@ -352,7 +353,7 @@ test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation fo
         id: 'insert-1',
         name: 'Insert 1',
         type: 'insert',
-        sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+        sequence: 'GCGCCGCGGCCGCGATATGACGTAGCTAGCCCGCGGCGCCGGCGC'
       }
     ]
   });
@@ -394,6 +395,10 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   let nextId = 0;
   let persisted = false;
   let changedCount = 0;
+  const backboneSequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+  const insertSequence = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
   const created = notebookAdapter.createProteinBuilderCloningNotebookPage({
     state,
     persist: () => {
@@ -407,16 +412,17 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
     backbone: {
       hostVectorName: 'Host Backbone',
       topology: 'circular',
-      backboneSequence: 'TTTGGATCCAAAAAAGGTACCTTT'
+      variantMode: 'gibson',
+      backboneSequence
     },
     dnaConstruct: {
-      sequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT',
-      length: 43,
-      parts: [{ label: 'POI', dnaSequence: 'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT' }]
+      sequence: insertSequence,
+      length: insertSequence.length,
+      parts: [{ label: 'POI', dnaSequence: insertSequence }]
     },
     assembledRecord: {
       name: 'His6-TEV-POI (Host Backbone)',
-      sequence: 'TTTGGATCCAAAAAAGGTACCTTTGCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'
+      sequence: `${backboneSequence}${insertSequence}`
     }
   });
 
@@ -451,6 +457,59 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   assert.equal(reaction.table.footerRows[0][0], 'Nuclease-free water');
   assert.match(reaction.table.footerRows[0][3], /32\.5 uL/i);
   assert.equal(created.plan.primerOligoPlan.feasible, true);
+});
+test('[EDGE] builder cloning notebook migration replaces only legacy assembly protocols', () => {
+  const notebookAdapter = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+  const pcrProgram = {
+    steps: [
+      { label: 'Initial denaturation', temperature: '98 C', time: '30 s', cycles: '1' },
+      { label: 'Denaturation', temperature: '98 C', time: '10 s', cycles: '30' },
+      { label: 'Annealing', temperature: '57 C', time: '20 s', cycles: '30' },
+      { label: 'Extension', temperature: '72 C', time: '1 min 45 s', cycles: '30' },
+      { label: 'Final extension', temperature: '72 C', time: '2 min', cycles: '1' },
+      { label: 'Hold', temperature: '4 C', time: 'hold', cycles: '1' }
+    ]
+  };
+  const legacyEntry = {
+    id: 'legacy-cloning-page',
+    protocolId: 'protein-builder-cloning-assembly-protocol',
+    protocolName: 'Protein Builder Cloning Assembly',
+    protocolSnapshot: {
+      id: 'protein-builder-cloning-assembly-protocol',
+      name: 'Protein Builder Cloning Assembly',
+      steps: [{ id: 'legacy-step', text: 'Assemble reaction.', placeholders: [] }]
+    },
+    proteinBuilderCloningDesign: { source: 'protein_builder_cloning_assembly', pcrProgram }
+  };
+  const editedEntry = {
+    ...legacyEntry,
+    id: 'edited-cloning-page',
+    protocolName: 'My edited PCR protocol',
+    protocolSnapshot: {
+      id: 'protein-builder-cloning-assembly-protocol',
+      name: 'My edited PCR protocol',
+      steps: [{ id: 'edited-step', text: 'Use my validated cycling conditions.', placeholders: [] }]
+    }
+  };
+  const state = {
+    protocols: [{
+      id: 'protein-builder-cloning-assembly-protocol',
+      name: 'Protein Builder Cloning Assembly',
+      steps: legacyEntry.protocolSnapshot.steps,
+      createdAt: '2026-04-27T00:00:00.000Z'
+    }],
+    notebookEntries: [legacyEntry, editedEntry]
+  };
+
+  assert.equal(notebookAdapter.migrateProteinBuilderCloningNotebookState(state), 1);
+  assert.equal(state.protocols[0].name, 'PCR Thermocycle Program');
+  assert.equal(state.protocols[0].createdAt, '2026-04-27T00:00:00.000Z');
+  assert.equal(state.notebookEntries[0].protocolName, 'PCR Thermocycle Program');
+  assert.match(state.notebookEntries[0].protocolSnapshot.steps[1].text, /Annealing - 57 C.*Extension - 72 C - 1 min 45 s/i);
+  assert.equal(state.notebookEntries[1].protocolName, 'My edited PCR protocol');
+  assert.equal(state.notebookEntries[1].protocolSnapshot.steps[0].text, 'Use my validated cycling conditions.');
 });
 test('[EDGE] protein-builder Gibson backbone keeps primer design on the Gibson route', () => {
   const notebookAdapter = loadEsmStyleModule(
@@ -520,8 +579,8 @@ test('[EDGE] protein-builder Gibson backbone uses the saved insertion offset for
     }
   });
   const wrapJunction = plan.routeEvaluations.gibson.junctions.find((junction) => junction.wrapAround);
-  const hostForward = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Host Backbone_F');
-  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Offset-POI_R');
+  const hostForward = plan.primerOligoPlan.primers.find((primer) => primer.name === 'vector F');
+  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Offset-POI R');
 
   assert.equal(plan.recommendedAssemblyStrategy, 'gibson');
   assert.equal(plan.primerOligoPlan.feasible, true);
@@ -569,8 +628,8 @@ test('[EDGE] protein-builder Gibson insert primers bind the linked source CDS an
       sequence: `${upstreamBackbone}${insertSequence}${downstreamBackbone}`
     }
   });
-  const insertForward = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Tagged-POI_F');
-  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Tagged-POI_R');
+  const insertForward = plan.primerOligoPlan.primers.find((primer) => primer.name === '6xHis Tagged-POI F');
+  const insertReverse = plan.primerOligoPlan.primers.find((primer) => primer.name === 'Tagged-POI R');
   const wrapJunction = plan.routeEvaluations.gibson.junctions.find((junction) => junction.wrapAround);
 
   assert.equal(plan.recommendedAssemblyStrategy, 'gibson');

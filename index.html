@@ -683,17 +683,28 @@
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
               <div class="biology-notebook-viewer-actions" aria-label="Notebook page actions">
-                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" title="Edit page copy" hidden>
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" data-hover-caption="Edit page copy" hidden>
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
                     <path d="m13.75 7 3.25 3.25"></path>
                   </svg>
                   <span class="sr-only">Edit page copy</span>
                 </button>
-                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn" type="button" hidden>Apply Page Edit</button>
-                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
+                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Apply page edit" data-hover-caption="Apply page edit" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m5 12.5 4.5 4.5L19 7.5"></path>
+                  </svg>
+                  <span class="sr-only">Apply page edit</span>
+                </button>
+                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Cancel page edit" data-hover-caption="Cancel page edit" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m6.5 6.5 11 11"></path>
+                    <path d="m17.5 6.5-11 11"></path>
+                  </svg>
+                  <span class="sr-only">Cancel page edit</span>
+                </button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
-                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" title="Export PDF" hidden>
+                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" data-hover-caption="Export PDF" hidden>
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
                     <path d="M14 3.75v4h4"></path>
@@ -702,7 +713,7 @@
                   </svg>
                   <span class="sr-only">Export PDF</span>
                 </button>
-                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" title="Print" hidden>
+                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" data-hover-caption="Print" hidden>
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M7 8V4.75h10V8"></path>
                     <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
@@ -711,7 +722,7 @@
                   </svg>
                   <span class="sr-only">Print</span>
                 </button>
-                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" title="Save notebook page">
+                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" data-hover-caption="Save notebook page">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M5 3.75h12.25L20 6.5v13.75H5V3.75Z"></path>
                     <path d="M8 3.75v6h8v-6"></path>
@@ -755,10 +766,8 @@
                     <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
                     <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
                   </div>
-                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
-                  </div>
-                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
-                  </div>
+                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
+                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
                   <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
                   <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                     <div class="biology-notebook-result-table-head">
@@ -767,7 +776,7 @@
                     <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                   </div>
                   <div class="biology-notebook-notes-field">
-                    <label for="biology-notebook-result">Experiment Results File / Notes</label>
+                    <label for="biology-notebook-result">Notes</label>
                     <div class="biology-notebook-notes-composer">
                       <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
                       <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
@@ -1137,11 +1146,10 @@
           </div>
           <form id="biology-notebook-quick-sample-form" class="biology-notebook-quick-sample-form">
             <div class="biology-notebook-quick-sample-layout">
-              <section class="biology-notebook-quick-sample-storage" aria-label="Sample position and container">
-                <div class="biology-notebook-quick-sample-position-panel">
-                  <span class="biology-notebook-quick-sample-position-label">Position</span>
-                  <output id="biology-notebook-quick-sample-position" class="biology-notebook-quick-sample-position">—</output>
-                  <span id="biology-notebook-quick-sample-position-meta" class="small-note">No container selected</span>
+              <section class="biology-notebook-quick-sample-storage" aria-label="Sample storage and position">
+                <div class="biology-notebook-quick-sample-location-panel">
+                  <span class="biology-notebook-quick-sample-location-label">Location</span>
+                  <div id="biology-notebook-quick-sample-location-list" class="biology-notebook-quick-sample-location-list" role="listbox" aria-label="Storage locations"></div>
                   <label class="biology-notebook-quick-sample-container-field">
                     Container
                     <select id="biology-notebook-quick-sample-container">
@@ -1621,211 +1629,221 @@
                 <span>Data Analysis</span>
               </summary>
               <div class="foldable-section__body">
-            <div class="assay-results-control-section">
-              <select id="assay-results-assay-select" hidden>
-                <option value="">Select assay plate</option>
-              </select>
-              <span class="assay-display-label">Result Data</span>
-              <div class="form-actions assay-results-actions">
-                <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                  </svg>
-                </button>
-                <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-                <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M5 3h12l3 3v15H4V3Z"></path>
-                    <path d="M8 3v6h8V3"></path>
-                    <path d="M8 21v-7h8v7"></path>
-                  </svg>
-                </button>
-                <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M3 6h18"></path>
-                    <path d="M8 6V4h8v2"></path>
-                    <path d="m19 6-1 14H6L5 6"></path>
-                    <path d="M10 11v5"></path>
-                    <path d="M14 11v5"></path>
-                  </svg>
-                </button>
-              </div>
-              <div id="assay-active-assay-info" class="small-note"></div>
-              <div id="assay-result-status" class="small-note"></div>
-              <div id="assay-transform-summary" class="small-note"></div>
-            </div>
-
-            <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
-              <summary class="foldable-section__summary">
-                <span>Transform Plate</span>
-              </summary>
-              <div class="foldable-section__body assay-results-control-section">
-              <label>
-                Mode
-                <select id="assay-transform-mode">
-                  <option value="steps" selected>Guided steps</option>
-                  <option value="formula">Formula</option>
-                </select>
-              </label>
-              <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
-                <label>
-                  Formula
-                  <textarea id="assay-transform-formula" rows="3" spellcheck="false"
-                    placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
-                </label>
-                <details class="assay-browser-panel assay-formula-help">
-                  <summary class="assay-browser-summary"><span>Functions and references</span></summary>
-                  <div class="assay-formula-help-body">
-                    <p><code>x</code> is this well's value.</p>
-                    <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
-                      block, <code>H</code> a whole row, or the name of a custom group. A reference
-                      covering more than one well must be wrapped in an aggregate.</p>
-                    <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
-                      <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
-                      <code>COUNT</code>.</p>
-                    <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
-                      <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
-                      <code>POWER</code>, <code>ROUND</code>.</p>
-                    <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
-                    <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
-                      <code>A-C</code> is subtraction in a formula.</p>
+                <details id="assay-result-data-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Result Data</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <select id="assay-results-assay-select" hidden>
+                      <option value="">Select assay plate</option>
+                    </select>
+                    <div class="form-actions assay-results-actions">
+                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                        </svg>
+                      </button>
+                      <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                      <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M5 3h12l3 3v15H4V3Z"></path>
+                          <path d="M8 3v6h8V3"></path>
+                          <path d="M8 21v-7h8v7"></path>
+                        </svg>
+                      </button>
+                      <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="m19 6-1 14H6L5 6"></path>
+                          <path d="M10 11v5"></path>
+                          <path d="M14 11v5"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div id="assay-active-assay-info" class="small-note"></div>
+                    <div id="assay-result-status" class="small-note"></div>
+                    <div id="assay-transform-summary" class="small-note"></div>
                   </div>
                 </details>
-              </div>
-              <div data-transform-mode="steps" class="assay-transform-mode-panel">
-              <p class="small-note">
-                Each step is optional and applies in the order shown, to every well with a
-                numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
-                or a custom group name.
-              </p>
-              <label>
-                1. Subtract blank
-                <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
-              </label>
-              <label>
-                2. 100% reference
-                <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
-              </label>
-              <label>
-                0% reference (optional)
-                <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
-              </label>
-              <div class="assay-transform-arithmetic">
-                <label>
-                  3. Arithmetic
-                  <select id="assay-transform-arithmetic-op">
-                    <option value="none" selected>None</option>
-                    <option value="add">Add</option>
-                    <option value="subtract">Subtract</option>
-                    <option value="multiply">Multiply by</option>
-                    <option value="divide">Divide by</option>
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input id="assay-transform-arithmetic-value" type="number" step="any" />
-                </label>
-              </div>
-              <label>
-                4. Transform each value
-                <select id="assay-transform-value">
-                  <option value="none" selected>None</option>
-                  <option value="log10">log10(x)</option>
-                  <option value="ln">ln(x)</option>
-                  <option value="sqrt">sqrt(x)</option>
-                  <option value="reciprocal">1/x</option>
-                  <option value="square">x&sup2;</option>
-                </select>
-              </label>
-              </div>
-              <div id="assay-transform-status" class="small-note"></div>
-              <div class="form-actions">
-                <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
-              </div>
-              </div>
-            </details>
 
+                <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
+                  <summary class="foldable-section__summary">
+                    <span>Transform Plate</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <label>
+                      Mode
+                      <select id="assay-transform-mode">
+                        <option value="steps" selected>Guided steps</option>
+                        <option value="formula">Formula</option>
+                      </select>
+                    </label>
+                    <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
+                      <label>
+                        Formula
+                        <textarea id="assay-transform-formula" rows="3" spellcheck="false"
+                          placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
+                      </label>
+                      <details class="foldable-section foldable-section--subsection assay-formula-help">
+                        <summary class="foldable-section__summary"><span>Functions and references</span></summary>
+                        <div class="foldable-section__body assay-formula-help-body">
+                          <p><code>x</code> is this well's value.</p>
+                          <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
+                            block, <code>H</code> a whole row, or the name of a custom group. A reference
+                            covering more than one well must be wrapped in an aggregate.</p>
+                          <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
+                            <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
+                            <code>COUNT</code>.</p>
+                          <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
+                            <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
+                            <code>POWER</code>, <code>ROUND</code>.</p>
+                          <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
+                          <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
+                            <code>A-C</code> is subtraction in a formula.</p>
+                        </div>
+                      </details>
+                    </div>
+                    <div data-transform-mode="steps" class="assay-transform-mode-panel">
+                      <p class="small-note">
+                        Each step is optional and applies in the order shown, to every well with a
+                        numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
+                        or a custom group name.
+                      </p>
+                      <label>
+                        1. Subtract blank
+                        <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
+                      </label>
+                      <label>
+                        2. 100% reference
+                        <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
+                      </label>
+                      <label>
+                        0% reference (optional)
+                        <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
+                      </label>
+                      <div class="assay-transform-arithmetic">
+                        <label>
+                          3. Arithmetic
+                          <select id="assay-transform-arithmetic-op">
+                            <option value="none" selected>None</option>
+                            <option value="add">Add</option>
+                            <option value="subtract">Subtract</option>
+                            <option value="multiply">Multiply by</option>
+                            <option value="divide">Divide by</option>
+                          </select>
+                        </label>
+                        <label>
+                          Value
+                          <input id="assay-transform-arithmetic-value" type="number" step="any" />
+                        </label>
+                      </div>
+                      <label>
+                        4. Transform each value
+                        <select id="assay-transform-value">
+                          <option value="none" selected>None</option>
+                          <option value="log10">log10(x)</option>
+                          <option value="ln">ln(x)</option>
+                          <option value="sqrt">sqrt(x)</option>
+                          <option value="reciprocal">1/x</option>
+                          <option value="square">x&sup2;</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div id="assay-transform-status" class="small-note"></div>
+                    <div class="form-actions">
+                      <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
+                    </div>
+                  </div>
+                </details>
 
-            <div class="assay-results-control-section">
-              <span class="assay-display-label">Groups (optional)</span>
-              <div class="assay-analysis-controls">
-                <input id="assay-analysis-row-groups" type="hidden" />
-                <input id="assay-analysis-column-groups" type="hidden" />
-                <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
-                <label>
-                  Replicate Group Name (optional)
-                  <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-                </label>
-                <div class="form-actions assay-analysis-group-actions">
-                  <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-                  <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-                  <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
-                </div>
-                <div id="assay-analysis-selection-status" class="small-note"></div>
-              </div>
-            </div>
+                <details id="assay-groups-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Groups (optional)</span>
+                  </summary>
+                  <div class="foldable-section__body assay-analysis-controls">
+                    <input id="assay-analysis-row-groups" type="hidden" />
+                    <input id="assay-analysis-column-groups" type="hidden" />
+                    <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+                    <label>
+                      Replicate Group Name (optional)
+                      <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+                    </label>
+                    <div class="form-actions assay-analysis-group-actions">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+                    </div>
+                    <div id="assay-analysis-selection-status" class="small-note"></div>
+                  </div>
+                </details>
 
-            <div class="assay-results-control-section">
-              <label>
-                Group By
-                <select id="assay-analysis-group-by">
-                  <option value="auto" selected>Auto (from plate mapping)</option>
-                  <option value="sample">Sample ID</option>
-                  <option value="concentration">Concentration</option>
-                  <option value="sample_concentration">Sample ID &times; Concentration</option>
-                  <option value="row">Plate row</option>
-                  <option value="column">Plate column</option>
-                  <option value="custom">Custom groups</option>
-                </select>
-              </label>
-              <label>
-                Analysis
-                <select id="assay-analysis-kind">
-                  <option value="summary" selected>Summary statistics</option>
-                  <option value="linear">Linear fit</option>
-                  <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
-                  <option value="hyperbola">Hyperbola</option>
-                  <option value="polynomial">Polynomial</option>
-                  <option value="pade11">Pade (1,1)</option>
-                  <option value="normalize">Normalize to baseline</option>
-                </select>
-              </label>
-              <label id="assay-analysis-x-axis-field" hidden>
-                X Axis
-                <select id="assay-analysis-x-axis">
-                  <option value="auto" selected>Auto</option>
-                  <option value="concentration">Concentration</option>
-                  <option value="sample">Sample ID</option>
-                  <option value="column">Column number</option>
-                </select>
-              </label>
-              <div class="assay-analysis-modifiers">
-                <label id="assay-analysis-x-transform-field" hidden>
-                  X Transform
-                  <select id="assay-analysis-x-transform">
-                    <option value="none" selected>None</option>
-                    <option value="log10">log10</option>
-                  </select>
-                </label>
-                <label class="assay-analysis-checkbox" hidden>
-                  <input id="assay-analysis-asymmetric" type="checkbox" />
-                  Asymmetric (5PL)
-                </label>
-                <label id="assay-analysis-poly-order-field" hidden>
-                  Polynomial Order
-                  <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
-                </label>
-                <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
-                  <input id="assay-analysis-subtotals" type="checkbox" />
-                  Add subtotal rows per first group
-                </label>
-              </div>
-              <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
-                <input id="assay-analysis-error-bars" type="checkbox" checked />
-                Show SD error bars
-              </label>
-              <div id="assay-analysis-summary" class="small-note"></div>
-            </div>
+                <details id="assay-analysis-settings-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Fit &amp; Summary</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <label>
+                      Group By
+                      <select id="assay-analysis-group-by">
+                        <option value="auto" selected>Auto (from plate mapping)</option>
+                        <option value="sample">Sample ID</option>
+                        <option value="concentration">Concentration</option>
+                        <option value="sample_concentration">Sample ID &times; Concentration</option>
+                        <option value="row">Plate row</option>
+                        <option value="column">Plate column</option>
+                        <option value="custom">Custom groups</option>
+                      </select>
+                    </label>
+                    <label>
+                      Analysis
+                      <select id="assay-analysis-kind">
+                        <option value="summary" selected>Summary statistics</option>
+                        <option value="linear">Linear fit</option>
+                        <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                        <option value="hyperbola">Hyperbola</option>
+                        <option value="polynomial">Polynomial</option>
+                        <option value="pade11">Pade (1,1)</option>
+                        <option value="normalize">Normalize to baseline</option>
+                      </select>
+                    </label>
+                    <label id="assay-analysis-x-axis-field" hidden>
+                      X Axis
+                      <select id="assay-analysis-x-axis">
+                        <option value="auto" selected>Auto</option>
+                        <option value="concentration">Concentration</option>
+                        <option value="sample">Sample ID</option>
+                        <option value="column">Column number</option>
+                      </select>
+                    </label>
+                    <div class="assay-analysis-modifiers">
+                      <label id="assay-analysis-x-transform-field" hidden>
+                        X Transform
+                        <select id="assay-analysis-x-transform">
+                          <option value="none" selected>None</option>
+                          <option value="log10">log10</option>
+                        </select>
+                      </label>
+                      <label class="assay-analysis-checkbox" hidden>
+                        <input id="assay-analysis-asymmetric" type="checkbox" />
+                        Asymmetric (5PL)
+                      </label>
+                      <label id="assay-analysis-poly-order-field" hidden>
+                        Polynomial Order
+                        <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
+                      </label>
+                      <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
+                        <input id="assay-analysis-subtotals" type="checkbox" />
+                        Add subtotal rows per first group
+                      </label>
+                    </div>
+                    <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
+                      <input id="assay-analysis-error-bars" type="checkbox" checked />
+                      Show SD error bars
+                    </label>
+                    <div id="assay-analysis-summary" class="small-note"></div>
+                  </div>
+                </details>
               </div>
             </details>
 
@@ -1843,18 +1861,22 @@
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
           <div class="assay-results-table-stage">
-            <details id="assay-result-table-panel" class="assay-browser-panel assay-result-table-panel" open>
-              <summary class="assay-browser-summary">
+            <details id="assay-result-table-panel" class="foldable-section assay-result-table-panel" open>
+              <summary class="foldable-section__summary">
                 <span>Plate Results</span>
               </summary>
-              <div id="assay-result-table" class="assay-plate-preview"></div>
+              <div class="foldable-section__body">
+                <div id="assay-result-table" class="assay-plate-preview"></div>
+              </div>
             </details>
-            <details id="assay-derived-plate-panel" class="assay-browser-panel assay-result-table-panel" open hidden>
-              <summary class="assay-browser-summary">
+            <details id="assay-derived-plate-panel" class="foldable-section assay-result-table-panel" open hidden>
+              <summary class="foldable-section__summary">
                 <span>Derived Plate</span>
               </summary>
-              <div id="assay-derived-plate-steps" class="small-note"></div>
-              <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+              <div class="foldable-section__body">
+                <div id="assay-derived-plate-steps" class="small-note"></div>
+                <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+              </div>
             </details>
           </div>
           <div class="assay-results-output-stage">
@@ -2821,23 +2843,16 @@
 
       <div class="tool-content left-rail-template__main">
       <div id="tool-molarity-view" class="panel tool-subview">
-        <header class="molarity-view-header">
-          <div>
-            <p class="molarity-kicker">Solution calculator</p>
-            <h3>Molarity Calculator</h3>
-            <p class="molarity-lead">Enter the values you know. Results update instantly and choose a practical unit automatically.</p>
-          </div>
-          <span class="molarity-auto-unit-badge">Automatic units</span>
+        <header class="tool-head">
+          <h3>Molarity Calculator</h3>
+          <p class="tool-head-note">Enter the values you know. Results update instantly and pick a practical unit.</p>
         </header>
 
         <div class="molarity-card-grid">
         <section class="molarity-block" data-molarity-mode="mass">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">01</span>
-            <div>
-              <h4>Mass</h4>
-              <p>From concentration and volume</p>
-            </div>
+            <h4>Mass</h4>
+            <p>From concentration and volume</p>
           </header>
           <form id="molarity-mass-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -2876,11 +2891,8 @@
 
         <section class="molarity-block" data-molarity-mode="volume">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">02</span>
-            <div>
-              <h4>Volume</h4>
-              <p>From mass and concentration</p>
-            </div>
+            <h4>Volume</h4>
+            <p>From mass and concentration</p>
           </header>
           <form id="molarity-volume-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -2919,11 +2931,8 @@
 
         <section class="molarity-block" data-molarity-mode="concentration">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">03</span>
-            <div>
-              <h4>Concentration</h4>
-              <p>From mass and volume</p>
-            </div>
+            <h4>Concentration</h4>
+            <p>From mass and volume</p>
           </header>
           <form id="molarity-concentration-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -2960,11 +2969,8 @@
 
         <section class="molarity-block" data-molarity-mode="dilution">
           <header class="molarity-card-header">
-            <span class="molarity-step" aria-hidden="true">04</span>
-            <div>
-              <h4>Dilution</h4>
-              <p>Prepare a stock dilution with C1V1 = C2V2</p>
-            </div>
+            <h4>Dilution</h4>
+            <p>Prepare a stock dilution with C1V1 = C2V2</p>
           </header>
           <form id="molarity-dilution-form" class="form-grid molarity-form" autocomplete="off">
             <label>
@@ -3014,7 +3020,10 @@
       </div>
 
       <div id="tool-peptide-view" class="panel tool-subview" hidden>
-        <h3>Peptide Property Calculator</h3>
+        <header class="tool-head">
+          <h3>Peptide Property Calculator</h3>
+          <p class="tool-head-note">Mass, charge, and isoelectric point from an amino acid sequence.</p>
+        </header>
         <form id="peptide-form" class="stack-form" autocomplete="off">
           <label>
             Amino Acid Sequence
@@ -3025,10 +3034,13 @@
       </div>
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
-        <div class="tool-box-sheet-header">
+        <header class="tool-head">
           <h3>Buffer Preparer</h3>
-          <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
-        </div>
+          <p class="tool-head-note">Weigh-outs and stock volumes for every ingredient in the recipe.</p>
+          <div class="tool-head-actions">
+            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
+          </div>
+        </header>
         <div class="stack-form tool-box-sheet-shell">
           <div class="tool-box-buffer-sheet-wrap">
             <table class="tool-box-buffer-sheet" aria-label="Buffer preparer table">
@@ -3152,11 +3164,14 @@
       </div>
 
       <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
-        <h3>Fixed Volume Reaction</h3>
-        <div class="stack-form tool-box-sheet-shell">
-          <div class="form-actions">
-            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
+        <header class="tool-head">
+          <h3>Fixed Volume Reaction</h3>
+          <p class="tool-head-note">Reagent volumes for a reaction of a fixed total volume.</p>
+          <div class="tool-head-actions">
+            <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add reagent" title="Add reagent">+</button>
           </div>
+        </header>
+        <div class="stack-form tool-box-sheet-shell">
           <div class="tool-box-reaction-sheet-wrap">
             <table class="tool-box-reaction-sheet" aria-label="Fixed volume reaction preparer">
               <colgroup>
@@ -3225,7 +3240,10 @@
       </div>
 
       <div id="tool-dna-protein-view" class="panel tool-subview" hidden>
-        <h3>DNA Sequence to Protein Sequence</h3>
+        <header class="tool-head">
+          <h3>DNA Sequence to Protein Sequence</h3>
+          <p class="tool-head-note">Translate a nucleotide sequence in any reading frame.</p>
+        </header>
         <form id="dna-protein-form" class="stack-form" autocomplete="off">
           <label>
             DNA / RNA Sequence
@@ -3263,7 +3281,10 @@
       </div>
 
       <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
-        <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+        <header class="tool-head">
+          <h3>Protein Sequence to DNA Sequence (Reverse Translation)</h3>
+          <p class="tool-head-note">Back-translate a protein using a codon usage profile.</p>
+        </header>
         <form id="reverse-translate-form" class="stack-form" autocomplete="off">
           <label>
             Protein Sequence
@@ -3288,7 +3309,10 @@
       </div>
 
       <div id="tool-oligo-view" class="panel tool-subview" hidden>
-        <h3>DNA / RNA Oligo Properties</h3>
+        <header class="tool-head">
+          <h3>DNA / RNA Oligo Properties</h3>
+          <p class="tool-head-note">Length, GC content, molecular weight, extinction, and Tm.</p>
+        </header>
         <form id="oligo-form" class="stack-form" autocomplete="off">
           <label>
             Oligo Sequence
@@ -3308,7 +3332,10 @@
       </div>
 
       <div id="tool-extinction-view" class="panel tool-subview" hidden>
-        <h3>Extinction Coefficient Calculator</h3>
+        <header class="tool-head">
+          <h3>Extinction Coefficient Calculator</h3>
+          <p class="tool-head-note">Molar extinction and A260/A280 conversions.</p>
+        </header>
         <form id="extinction-form" class="stack-form" autocomplete="off">
           <label>
             Sequence Type
@@ -3327,7 +3354,10 @@
       </div>
 
       <div id="tool-qpcr-view" class="panel tool-subview" hidden>
-        <h3>qPCR Efficiency Calculator</h3>
+        <header class="tool-head">
+          <h3>qPCR Efficiency Calculator</h3>
+          <p class="tool-head-note">Amplification efficiency from a slope or standard curve.</p>
+        </header>
         <form id="qpcr-form" class="stack-form" autocomplete="off">
           <label>
             Slope (optional; from standard curve)
@@ -3342,10 +3372,13 @@
       </div>
 
       <div id="tool-crispr-view" class="panel tool-subview" hidden>
-        <h3>CRISPR sgRNA Designer</h3>
+        <header class="tool-head">
+          <h3>CRISPR sgRNA Designer</h3>
+          <p class="tool-head-note">Rank candidate guides across the sequences you submit.</p>
+        </header>
 
         <div class="crispr-designer-shell">
-          <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
+          <form id="crispr-form" class="stack-form" autocomplete="off">
             <div class="form-grid">
               <label>
                 PAM Pattern
@@ -3428,7 +3461,10 @@
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
-        <h3>Colony Counter</h3>
+        <header class="tool-head">
+          <h3>Colony Counter</h3>
+          <p class="tool-head-note">Count colonies on a plate image, by model or by hand.</p>
+        </header>
 
         <div class="colony-counter-shell">
           <div class="colony-workspace-plate">
@@ -3436,16 +3472,14 @@
               <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
             </div>
 
-            <section class="result-card colony-preview-card">
-              <div class="result-card-head">
-                <h4>Annotated Colonies</h4>
-              </div>
+            <section class="colony-preview-card">
+              <h4>Annotated Colonies</h4>
               <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
             </section>
           </div>
 
           <div class="colony-workspace-settings">
-            <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+            <form id="colony-counter-form" class="stack-form colony-settings" autocomplete="off">
               <label>
                 Plate Image
                 <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
@@ -3534,14 +3568,14 @@
                         <path d="M12 5v14"></path>
                         <path d="M5 12h14"></path>
                       </svg>
-                      <span class="sr-only">New sequence</span>
+                      <span class="sequence-viewer-button-caption">New</span>
                     </button>
                     <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
                       <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
                         <path d="M3.5 7.5V5h7l2 2.5"></path>
                       </svg>
-                      <span class="sr-only">Open sequence</span>
+                      <span class="sequence-viewer-button-caption">Open</span>
                     </button>
                     <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
                       <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -3550,7 +3584,7 @@
                         <path d="m17.5 5.75 1 2.5-2.65.45"></path>
                         <circle cx="7.25" cy="15.5" r="1"></circle>
                       </svg>
-                      <span class="sr-only">Vector Builder</span>
+                      <span class="sequence-viewer-button-caption">Vector Builder</span>
                     </button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
@@ -3771,14 +3805,14 @@
                       <path d="M12 5v14"></path>
                       <path d="M5 12h14"></path>
                     </svg>
-                    <span class="sr-only">New sequence</span>
+                    <span class="sequence-viewer-button-caption">New</span>
                   </button>
                   <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
                       <path d="M3.5 7.5V5h7l2 2.5"></path>
                     </svg>
-                    <span class="sr-only">Open sequence</span>
+                    <span class="sequence-viewer-button-caption">Open</span>
                   </button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                   <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
@@ -3788,7 +3822,7 @@
                       <path d="m17.5 5.75 1 2.5-2.65.45"></path>
                       <circle cx="7.25" cy="15.5" r="1"></circle>
                     </svg>
-                    <span class="sr-only">Vector Builder</span>
+                    <span class="sequence-viewer-button-caption">Vector Builder</span>
                   </button>
                 </div>
               </section>
@@ -3847,7 +3881,7 @@
                 <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
                 <circle cx="8.5" cy="9" r="1"></circle>
               </svg>
-              <span class="sr-only">Annotate sequence</span>
+              <span class="sequence-viewer-button-caption">Annotate</span>
             </button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Recognize backbone and insert" title="Recognize backbone and insert">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -3855,7 +3889,7 @@
                 <path d="m14.5 14.5 5 5"></path>
                 <path d="M8.5 8.5h4v4h-4Z"></path>
               </svg>
-              <span class="sr-only">Recognize backbone and insert</span>
+              <span class="sequence-viewer-button-caption">Recognize</span>
             </button>
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false">
@@ -3865,7 +3899,7 @@
                   <path d="M5 17h14"></path>
                   <path d="M9 5v4M15 10v4M11 15v4"></path>
                 </svg>
-                <span class="sr-only">Alignment options</span>
+                <span class="sequence-viewer-button-caption">Alignment</span>
               </button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
@@ -3889,7 +3923,7 @@
                   <path d="M5 6h14v12H5Z"></path>
                   <path d="m10 9 5 3-5 3Z"></path>
                 </svg>
-                <span class="sr-only">ORF View options</span>
+                <span class="sequence-viewer-button-caption">ORF</span>
               </button>
               <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
@@ -3941,17 +3975,9 @@
               </div>
             </div>
 
-            <label class="sequence-viewer-inline-toggle sequence-viewer-toolbar-icon-toggle" title="Show primer binding sites" aria-label="Show primer binding sites">
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
               <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
-              <span class="sequence-viewer-toolbar-toggle-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" role="presentation" focusable="false">
-                  <path d="M5 8h11"></path>
-                  <path d="m13 5 3 3-3 3"></path>
-                  <path d="M19 16H8"></path>
-                  <path d="m11 13-3 3 3 3"></path>
-                </svg>
-              </span>
-              <span class="sr-only">Show primer binding sites</span>
+              <span>Primers</span>
             </label>
 
             <div class="sequence-viewer-menu-anchor">
@@ -3962,7 +3988,7 @@
                   <path d="m8.5 8.5 11 8.5"></path>
                   <path d="m8.5 15.5 11-8.5"></path>
                 </svg>
-                <span class="sr-only">Restriction cutter options</span>
+                <span class="sequence-viewer-button-caption">Cutters</span>
               </button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
@@ -4361,9 +4387,8 @@
       <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" data-state="collapsed" hidden>
         <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">
           <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-            <path d="M6.25 6.75A2.75 2.75 0 0 1 9 4h6.25A2.75 2.75 0 0 1 18 6.75v6.5A2.75 2.75 0 0 1 15.25 16H10l-4 3v-3.5a2.75 2.75 0 0 1-2.25-2.7v-6.05Z"></path>
-            <path d="M9.25 10h5.5M12 7.25v5.5"></path>
-            <path d="M19.5 3.5v2.5M18.25 4.75h2.5"></path>
+            <path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"></path>
+            <path d="M8.5 10h.01M12 10h.01M15.5 10h.01"></path>
           </svg>
         </button>
         <div class="universal-agent-chat-rail__content">

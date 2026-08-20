@@ -2,6 +2,7 @@ import {
   normalizeNotebookResultTable,
   normalizeNotebookResultTables
 } from '../../lib/notebook-result-tables.js';
+import { resolveNotebookResultTablesValues } from '../../lib/notebook-table-formulas.js';
 import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
 import { showTransientNotice } from '../../lib/notify.js';
 
@@ -904,7 +905,7 @@ async function writeNotebookEntryBody(ctx, {
   linkedAssayPlotImage = '',
   resultFileImages = []
 }) {
-  const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+  const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
 
   writeHeading(ctx, 'Protocol steps');
   const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
@@ -1062,7 +1063,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     }
 
     const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
-    const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+    const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
     const useWideLayout = hasWideNotebookResultTable(resultTables);
     const ctx = createContext({
       title,

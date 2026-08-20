@@ -170,211 +170,221 @@
                 <span>Data Analysis</span>
               </summary>
               <div class="foldable-section__body">
-            <div class="assay-results-control-section">
-              <select id="assay-results-assay-select" hidden>
-                <option value="">Select assay plate</option>
-              </select>
-              <span class="assay-display-label">Result Data</span>
-              <div class="form-actions assay-results-actions">
-                <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                  </svg>
-                </button>
-                <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-                <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M5 3h12l3 3v15H4V3Z"></path>
-                    <path d="M8 3v6h8V3"></path>
-                    <path d="M8 21v-7h8v7"></path>
-                  </svg>
-                </button>
-                <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M3 6h18"></path>
-                    <path d="M8 6V4h8v2"></path>
-                    <path d="m19 6-1 14H6L5 6"></path>
-                    <path d="M10 11v5"></path>
-                    <path d="M14 11v5"></path>
-                  </svg>
-                </button>
-              </div>
-              <div id="assay-active-assay-info" class="small-note"></div>
-              <div id="assay-result-status" class="small-note"></div>
-              <div id="assay-transform-summary" class="small-note"></div>
-            </div>
-
-            <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
-              <summary class="foldable-section__summary">
-                <span>Transform Plate</span>
-              </summary>
-              <div class="foldable-section__body assay-results-control-section">
-              <label>
-                Mode
-                <select id="assay-transform-mode">
-                  <option value="steps" selected>Guided steps</option>
-                  <option value="formula">Formula</option>
-                </select>
-              </label>
-              <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
-                <label>
-                  Formula
-                  <textarea id="assay-transform-formula" rows="3" spellcheck="false"
-                    placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
-                </label>
-                <details class="assay-browser-panel assay-formula-help">
-                  <summary class="assay-browser-summary"><span>Functions and references</span></summary>
-                  <div class="assay-formula-help-body">
-                    <p><code>x</code> is this well's value.</p>
-                    <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
-                      block, <code>H</code> a whole row, or the name of a custom group. A reference
-                      covering more than one well must be wrapped in an aggregate.</p>
-                    <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
-                      <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
-                      <code>COUNT</code>.</p>
-                    <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
-                      <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
-                      <code>POWER</code>, <code>ROUND</code>.</p>
-                    <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
-                    <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
-                      <code>A-C</code> is subtraction in a formula.</p>
+                <details id="assay-result-data-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Result Data</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <select id="assay-results-assay-select" hidden>
+                      <option value="">Select assay plate</option>
+                    </select>
+                    <div class="form-actions assay-results-actions">
+                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                        </svg>
+                      </button>
+                      <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                      <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M5 3h12l3 3v15H4V3Z"></path>
+                          <path d="M8 3v6h8V3"></path>
+                          <path d="M8 21v-7h8v7"></path>
+                        </svg>
+                      </button>
+                      <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="m19 6-1 14H6L5 6"></path>
+                          <path d="M10 11v5"></path>
+                          <path d="M14 11v5"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div id="assay-active-assay-info" class="small-note"></div>
+                    <div id="assay-result-status" class="small-note"></div>
+                    <div id="assay-transform-summary" class="small-note"></div>
                   </div>
                 </details>
-              </div>
-              <div data-transform-mode="steps" class="assay-transform-mode-panel">
-              <p class="small-note">
-                Each step is optional and applies in the order shown, to every well with a
-                numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
-                or a custom group name.
-              </p>
-              <label>
-                1. Subtract blank
-                <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
-              </label>
-              <label>
-                2. 100% reference
-                <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
-              </label>
-              <label>
-                0% reference (optional)
-                <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
-              </label>
-              <div class="assay-transform-arithmetic">
-                <label>
-                  3. Arithmetic
-                  <select id="assay-transform-arithmetic-op">
-                    <option value="none" selected>None</option>
-                    <option value="add">Add</option>
-                    <option value="subtract">Subtract</option>
-                    <option value="multiply">Multiply by</option>
-                    <option value="divide">Divide by</option>
-                  </select>
-                </label>
-                <label>
-                  Value
-                  <input id="assay-transform-arithmetic-value" type="number" step="any" />
-                </label>
-              </div>
-              <label>
-                4. Transform each value
-                <select id="assay-transform-value">
-                  <option value="none" selected>None</option>
-                  <option value="log10">log10(x)</option>
-                  <option value="ln">ln(x)</option>
-                  <option value="sqrt">sqrt(x)</option>
-                  <option value="reciprocal">1/x</option>
-                  <option value="square">x&sup2;</option>
-                </select>
-              </label>
-              </div>
-              <div id="assay-transform-status" class="small-note"></div>
-              <div class="form-actions">
-                <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
-              </div>
-              </div>
-            </details>
 
+                <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
+                  <summary class="foldable-section__summary">
+                    <span>Transform Plate</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <label>
+                      Mode
+                      <select id="assay-transform-mode">
+                        <option value="steps" selected>Guided steps</option>
+                        <option value="formula">Formula</option>
+                      </select>
+                    </label>
+                    <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
+                      <label>
+                        Formula
+                        <textarea id="assay-transform-formula" rows="3" spellcheck="false"
+                          placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
+                      </label>
+                      <details class="foldable-section foldable-section--subsection assay-formula-help">
+                        <summary class="foldable-section__summary"><span>Functions and references</span></summary>
+                        <div class="foldable-section__body assay-formula-help-body">
+                          <p><code>x</code> is this well's value.</p>
+                          <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
+                            block, <code>H</code> a whole row, or the name of a custom group. A reference
+                            covering more than one well must be wrapped in an aggregate.</p>
+                          <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
+                            <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
+                            <code>COUNT</code>.</p>
+                          <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
+                            <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
+                            <code>POWER</code>, <code>ROUND</code>.</p>
+                          <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
+                          <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
+                            <code>A-C</code> is subtraction in a formula.</p>
+                        </div>
+                      </details>
+                    </div>
+                    <div data-transform-mode="steps" class="assay-transform-mode-panel">
+                      <p class="small-note">
+                        Each step is optional and applies in the order shown, to every well with a
+                        numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
+                        or a custom group name.
+                      </p>
+                      <label>
+                        1. Subtract blank
+                        <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
+                      </label>
+                      <label>
+                        2. 100% reference
+                        <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
+                      </label>
+                      <label>
+                        0% reference (optional)
+                        <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
+                      </label>
+                      <div class="assay-transform-arithmetic">
+                        <label>
+                          3. Arithmetic
+                          <select id="assay-transform-arithmetic-op">
+                            <option value="none" selected>None</option>
+                            <option value="add">Add</option>
+                            <option value="subtract">Subtract</option>
+                            <option value="multiply">Multiply by</option>
+                            <option value="divide">Divide by</option>
+                          </select>
+                        </label>
+                        <label>
+                          Value
+                          <input id="assay-transform-arithmetic-value" type="number" step="any" />
+                        </label>
+                      </div>
+                      <label>
+                        4. Transform each value
+                        <select id="assay-transform-value">
+                          <option value="none" selected>None</option>
+                          <option value="log10">log10(x)</option>
+                          <option value="ln">ln(x)</option>
+                          <option value="sqrt">sqrt(x)</option>
+                          <option value="reciprocal">1/x</option>
+                          <option value="square">x&sup2;</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div id="assay-transform-status" class="small-note"></div>
+                    <div class="form-actions">
+                      <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
+                    </div>
+                  </div>
+                </details>
 
-            <div class="assay-results-control-section">
-              <span class="assay-display-label">Groups (optional)</span>
-              <div class="assay-analysis-controls">
-                <input id="assay-analysis-row-groups" type="hidden" />
-                <input id="assay-analysis-column-groups" type="hidden" />
-                <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
-                <label>
-                  Replicate Group Name (optional)
-                  <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-                </label>
-                <div class="form-actions assay-analysis-group-actions">
-                  <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-                  <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-                  <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
-                </div>
-                <div id="assay-analysis-selection-status" class="small-note"></div>
-              </div>
-            </div>
+                <details id="assay-groups-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Groups (optional)</span>
+                  </summary>
+                  <div class="foldable-section__body assay-analysis-controls">
+                    <input id="assay-analysis-row-groups" type="hidden" />
+                    <input id="assay-analysis-column-groups" type="hidden" />
+                    <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+                    <label>
+                      Replicate Group Name (optional)
+                      <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+                    </label>
+                    <div class="form-actions assay-analysis-group-actions">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+                    </div>
+                    <div id="assay-analysis-selection-status" class="small-note"></div>
+                  </div>
+                </details>
 
-            <div class="assay-results-control-section">
-              <label>
-                Group By
-                <select id="assay-analysis-group-by">
-                  <option value="auto" selected>Auto (from plate mapping)</option>
-                  <option value="sample">Sample ID</option>
-                  <option value="concentration">Concentration</option>
-                  <option value="sample_concentration">Sample ID &times; Concentration</option>
-                  <option value="row">Plate row</option>
-                  <option value="column">Plate column</option>
-                  <option value="custom">Custom groups</option>
-                </select>
-              </label>
-              <label>
-                Analysis
-                <select id="assay-analysis-kind">
-                  <option value="summary" selected>Summary statistics</option>
-                  <option value="linear">Linear fit</option>
-                  <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
-                  <option value="hyperbola">Hyperbola</option>
-                  <option value="polynomial">Polynomial</option>
-                  <option value="pade11">Pade (1,1)</option>
-                  <option value="normalize">Normalize to baseline</option>
-                </select>
-              </label>
-              <label id="assay-analysis-x-axis-field" hidden>
-                X Axis
-                <select id="assay-analysis-x-axis">
-                  <option value="auto" selected>Auto</option>
-                  <option value="concentration">Concentration</option>
-                  <option value="sample">Sample ID</option>
-                  <option value="column">Column number</option>
-                </select>
-              </label>
-              <div class="assay-analysis-modifiers">
-                <label id="assay-analysis-x-transform-field" hidden>
-                  X Transform
-                  <select id="assay-analysis-x-transform">
-                    <option value="none" selected>None</option>
-                    <option value="log10">log10</option>
-                  </select>
-                </label>
-                <label class="assay-analysis-checkbox" hidden>
-                  <input id="assay-analysis-asymmetric" type="checkbox" />
-                  Asymmetric (5PL)
-                </label>
-                <label id="assay-analysis-poly-order-field" hidden>
-                  Polynomial Order
-                  <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
-                </label>
-                <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
-                  <input id="assay-analysis-subtotals" type="checkbox" />
-                  Add subtotal rows per first group
-                </label>
-              </div>
-              <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
-                <input id="assay-analysis-error-bars" type="checkbox" checked />
-                Show SD error bars
-              </label>
-              <div id="assay-analysis-summary" class="small-note"></div>
-            </div>
+                <details id="assay-analysis-settings-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Fit &amp; Summary</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <label>
+                      Group By
+                      <select id="assay-analysis-group-by">
+                        <option value="auto" selected>Auto (from plate mapping)</option>
+                        <option value="sample">Sample ID</option>
+                        <option value="concentration">Concentration</option>
+                        <option value="sample_concentration">Sample ID &times; Concentration</option>
+                        <option value="row">Plate row</option>
+                        <option value="column">Plate column</option>
+                        <option value="custom">Custom groups</option>
+                      </select>
+                    </label>
+                    <label>
+                      Analysis
+                      <select id="assay-analysis-kind">
+                        <option value="summary" selected>Summary statistics</option>
+                        <option value="linear">Linear fit</option>
+                        <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                        <option value="hyperbola">Hyperbola</option>
+                        <option value="polynomial">Polynomial</option>
+                        <option value="pade11">Pade (1,1)</option>
+                        <option value="normalize">Normalize to baseline</option>
+                      </select>
+                    </label>
+                    <label id="assay-analysis-x-axis-field" hidden>
+                      X Axis
+                      <select id="assay-analysis-x-axis">
+                        <option value="auto" selected>Auto</option>
+                        <option value="concentration">Concentration</option>
+                        <option value="sample">Sample ID</option>
+                        <option value="column">Column number</option>
+                      </select>
+                    </label>
+                    <div class="assay-analysis-modifiers">
+                      <label id="assay-analysis-x-transform-field" hidden>
+                        X Transform
+                        <select id="assay-analysis-x-transform">
+                          <option value="none" selected>None</option>
+                          <option value="log10">log10</option>
+                        </select>
+                      </label>
+                      <label class="assay-analysis-checkbox" hidden>
+                        <input id="assay-analysis-asymmetric" type="checkbox" />
+                        Asymmetric (5PL)
+                      </label>
+                      <label id="assay-analysis-poly-order-field" hidden>
+                        Polynomial Order
+                        <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
+                      </label>
+                      <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
+                        <input id="assay-analysis-subtotals" type="checkbox" />
+                        Add subtotal rows per first group
+                      </label>
+                    </div>
+                    <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
+                      <input id="assay-analysis-error-bars" type="checkbox" checked />
+                      Show SD error bars
+                    </label>
+                    <div id="assay-analysis-summary" class="small-note"></div>
+                  </div>
+                </details>
               </div>
             </details>
 
@@ -392,18 +402,22 @@
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
           <div class="assay-results-table-stage">
-            <details id="assay-result-table-panel" class="assay-browser-panel assay-result-table-panel" open>
-              <summary class="assay-browser-summary">
+            <details id="assay-result-table-panel" class="foldable-section assay-result-table-panel" open>
+              <summary class="foldable-section__summary">
                 <span>Plate Results</span>
               </summary>
-              <div id="assay-result-table" class="assay-plate-preview"></div>
+              <div class="foldable-section__body">
+                <div id="assay-result-table" class="assay-plate-preview"></div>
+              </div>
             </details>
-            <details id="assay-derived-plate-panel" class="assay-browser-panel assay-result-table-panel" open hidden>
-              <summary class="assay-browser-summary">
+            <details id="assay-derived-plate-panel" class="foldable-section assay-result-table-panel" open hidden>
+              <summary class="foldable-section__summary">
                 <span>Derived Plate</span>
               </summary>
-              <div id="assay-derived-plate-steps" class="small-note"></div>
-              <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+              <div class="foldable-section__body">
+                <div id="assay-derived-plate-steps" class="small-note"></div>
+                <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+              </div>
             </details>
           </div>
           <div class="assay-results-output-stage">

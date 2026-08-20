@@ -429,6 +429,219 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   assert.match(sessionList.innerHTML, /data-agent-folder-id="project:p2"/);
   assert.match(sessionList.innerHTML, />Second Study</);
 });
+test('agent-chat keeps the selected session intact when new-chat creation fails', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-status'
+  ]);
+  const originalMessages = [
+    { id: 'old-user', role: 'user', text: 'Keep this question.' },
+    { id: 'old-assistant', role: 'assistant', text: 'Keep this answer.' }
+  ];
+  const state = {
+    projects: [
+      { id: 'project-existing', name: 'Existing project' },
+      { id: 'project-next', name: 'Next project' }
+    ],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '/tmp/hikari-storage', agent: {} },
+    agentChat: {
+      projectId: 'project-existing',
+      currentSessionId: 'chat-existing',
+      selectedFolderId: 'project:project-next',
+      sessions: [{ id: 'chat-existing', title: 'Existing chat' }],
+      messages: originalMessages.map((message) => ({ ...message }))
+    }
+  };
+  const window = {
+    hikariApi: {
+      agentChatLogCreateSession: async () => ({ ok: false, error: 'Storage is unavailable.' })
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: () => 'new-chat-id',
+    safeText: shared.safeText,
+    loadPersistentSessions: false,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  document.getElementById('agent-message-input').value = 'Keep this draft too.';
+  trigger(document.getElementById('agent-new-chat-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-existing');
+  assert.equal(state.agentChat.projectId, 'project-existing');
+  assert.deepEqual(state.agentChat.messages, originalMessages);
+  assert.equal(document.getElementById('agent-message-input').value, 'Keep this draft too.');
+  assert.match(document.getElementById('agent-chat-history').innerHTML, /Keep this answer/);
+  assert.match(document.getElementById('agent-session-status').textContent, /New chat failed/);
+});
+test('agent-chat locks duplicate sends while the first session is being created', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-stop-btn',
+    'agent-status'
+  ]);
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '/tmp/hikari-storage', agent: {} },
+    agentChat: { projectId: '', currentSessionId: '', sessions: [], messages: [] }
+  };
+  let createSessionCalls = 0;
+  let agentChatCalls = 0;
+  let releaseSessionCreation = null;
+  const window = {
+    hikariApi: {
+      agentChatLogCreateSession: () => {
+        createSessionCalls += 1;
+        return new Promise((resolve) => {
+          releaseSessionCreation = () => resolve({
+            ok: true,
+            session: { id: 'chat-created-once', title: 'First question' }
+          });
+        });
+      },
+      agentChat: async () => {
+        agentChatCalls += 1;
+        return { ok: false, canceled: true, error: 'Test request finished.' };
+      }
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let index = 0;
+      return () => `first-send-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    loadPersistentSessions: false,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  document.getElementById('agent-message-input').value = 'Send this exactly once.';
+  trigger(document.getElementById('agent-send-btn'), 'click');
+  trigger(document.getElementById('agent-send-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(createSessionCalls, 1);
+  assert.equal(agentChatCalls, 0);
+  assert.equal(document.getElementById('agent-send-btn').disabled, true);
+  assert.equal(document.getElementById('agent-new-chat-btn').disabled, true);
+
+  releaseSessionCreation();
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(state.agentChat.currentSessionId, 'chat-created-once');
+  assert.equal(agentChatCalls, 1);
+  assert.equal(state.agentChat.messages.filter((message) => message.role === 'user').length, 1);
+});
+test('agent-chat keeps New Chat disabled while an unpersisted local request runs', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-stop-btn',
+    'agent-status'
+  ]);
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '', agent: {} },
+    agentChat: { projectId: '', currentSessionId: '', sessions: [], messages: [] }
+  };
+  let finishRequest = null;
+  const window = {
+    hikariApi: {
+      agentChat: () => new Promise((resolve) => {
+        finishRequest = resolve;
+      })
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let index = 0;
+      return () => `local-request-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    loadPersistentSessions: false,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  document.getElementById('agent-message-input').value = 'Finish before starting another local draft.';
+  trigger(document.getElementById('agent-send-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(typeof finishRequest, 'function');
+  assert.equal(document.getElementById('agent-new-chat-btn').disabled, true);
+
+  finishRequest({ ok: false, canceled: true, error: 'Local request finished.' });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(document.getElementById('agent-new-chat-btn').disabled, false);
+});
 test('agent-chat session switching honors nested click targets and replays the latest click after an in-flight load', async () => {
   const document = createMockDocument([
     'agent-project-select',

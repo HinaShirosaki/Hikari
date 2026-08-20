@@ -1,5 +1,6 @@
 import { defaultState } from '../modules/app-state.js';
 import { showTransientNotice } from '../lib/notify.js';
+import { migrateProteinBuilderCloningNotebookState } from '../modules/sequence-viewer/protein-builder-cloning-notebook.js';
 
 const WORKSPACE_STATE_KEYS = [
   'members',
@@ -295,6 +296,7 @@ export function createStorageImportController({
       : {};
     state.labInventory = mergeLabInventory(existingLabInventory, importedLabInventory);
     state.inventory = mergeInventoryMap(state.inventory, patch.inventory);
+    migrateProteinBuilderCloningNotebookState(state);
   }
 
   function updateStorageImportState(payload) {

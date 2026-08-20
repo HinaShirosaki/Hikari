@@ -2,6 +2,32 @@ module.exports = function registerAppPapersSuitePart02(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+test('paper storage treats literature-search collections like journal-club folders', () => {
+  const storageModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'papers',
+    'storage.js'
+  ));
+  assert.equal(
+    storageModule.buildPaperStorageFolder({
+      rootPath: '/tmp/hikari-storage',
+      linkedType: 'literature_search',
+      linkedName: 'MAPK resistance mechanisms'
+    }),
+    '/tmp/hikari-storage/Papers/MAPK_resistance_mechanisms'
+  );
+  assert.equal(
+    storageModule.buildPaperStorageFolder({
+      rootPath: '/tmp/hikari-storage',
+      linkedType: 'project',
+      linkedName: 'Atlas'
+    }),
+    '/tmp/hikari-storage/Project/Atlas/Papers'
+  );
+});
 function buildFakePapersViewerFactory() {
   const controller = {
     activePaperId: '',
@@ -421,6 +447,19 @@ test('papers selection search popover omits result lists and keeps match arrows 
   assert.equal(viewerSource.includes('papers-selection-search-result-list'), false);
   assert.equal(css.includes('papers-selection-search-result-list'), false);
   assert.match(css, /\.papers-selection-search-nav\s*\{[\s\S]*display:\s*inline-flex;/);
+});
+test('papers PDF pages keep square edges between stacked pages', () => {
+  const viewerCss = fs.readFileSync(
+    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
+    'utf8'
+  );
+  const shellCss = fs.readFileSync(
+    path.join(__dirname, 'ui', 'css', 'views', 'papers-shell-overrides.css'),
+    'utf8'
+  );
+
+  assert.match(viewerCss, /\.papers-viewer-page\s*\{[^}]*border-radius:\s*0;/s);
+  assert.match(shellCss, /#papers-view \.papers-viewer-canvas\s*\{[^}]*border-radius:\s*0;/s);
 });
 test('papers selection search popover dismisses on outside document pointer down', () => {
   const searchUiSource = fs.readFileSync(
