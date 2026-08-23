@@ -8,6 +8,7 @@ const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 const { createIntakePipeline } = require('./intake/intake-pipeline.js');
 const { createReviewJournalSkipResult } = require('../shared/review-paper-filter.js');
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 const {
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction
@@ -56,10 +57,6 @@ const DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT = 120000;
 // known. Lives beside papers.md so listPaperIds() never enumerates it.
 const FIGURE_STAGING_FOLDER_NAME = '.figures-staging';
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
 function asArrayDefault(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -71,14 +68,6 @@ function limitText(value, maxLength = 4000) {
     return text;
   }
   return text.length > numericMax ? text.slice(0, numericMax) : text;
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function isExplicitFalse(value) {

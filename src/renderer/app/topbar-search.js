@@ -1,4 +1,5 @@
 import { showTransientNotice } from '../lib/notify.js';
+import { asArray } from '../lib/normalize.js';
 
 export function normalizeSearchToken(value) {
   return String(value || '')
@@ -53,10 +54,6 @@ export function buildSearchScopeMap({ apps = [], normalizeViewId }) {
     });
   });
   return map;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function tokenizeSearchQuery(value) {

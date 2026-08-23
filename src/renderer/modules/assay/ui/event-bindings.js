@@ -68,21 +68,13 @@ export function bindAssayEvents({
   elements.assayAnalysisRowGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisColumnGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisErrorBarsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayTransformOpenBtn?.addEventListener('click', analysisView.createTransformPlate);
   elements.assayTransformClearBtn?.addEventListener('click', analysisView.clearTransform);
-  [
-    elements.assayTransformBlankInput,
-    elements.assayTransformNormalizeHundredInput,
-    elements.assayTransformNormalizeZeroInput,
-    elements.assayTransformArithmeticValueInput
-  ].forEach((input) => input?.addEventListener('change', analysisView.onTransformChange));
-  [
-    elements.assayTransformArithmeticOpInput,
-    elements.assayTransformValueInput,
-    elements.assayTransformModeInput,
-    elements.assayTransformFormulaInput
-  ].forEach((control) => control?.addEventListener('change', analysisView.onTransformChange));
-  // Parsing is cheap: check the formula as it is typed, apply it on blur.
-  elements.assayTransformFormulaInput?.addEventListener('input', analysisView.onFormulaInput);
+  elements.assayDerivedPlatePanel?.addEventListener('toggle', () => {
+    if (elements.assayDerivedPlatePanel.open) {
+      analysisView.redrawTransformGrid();
+    }
+  });
   elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);

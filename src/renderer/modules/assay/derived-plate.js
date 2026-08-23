@@ -18,7 +18,7 @@ import { compileFormula, FormulaError } from '../../lib/formula.js';
 
 export const ARITHMETIC_OPS = Object.freeze(['none', 'add', 'subtract', 'multiply', 'divide']);
 export const VALUE_TRANSFORMS = Object.freeze(['none', 'log10', 'ln', 'sqrt', 'reciprocal', 'square']);
-export const TRANSFORM_MODES = Object.freeze(['steps', 'formula']);
+export const TRANSFORM_MODES = Object.freeze(['steps', 'formula', 'cells']);
 
 const TRANSFORM_LABELS = Object.freeze({
   log10: 'log10(x)',
@@ -43,6 +43,20 @@ function cleanReference(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function cleanFormulaCells(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return Object.entries(value).reduce((cells, [rawWell, rawFormula]) => {
+    const well = String(rawWell || '').trim().toUpperCase();
+    const formula = String(rawFormula || '').trim().slice(0, 500);
+    if (well && formula) {
+      cells[well] = formula;
+    }
+    return cells;
+  }, {});
+}
+
 export function normalizeTransformSpec(input) {
   const source = input && typeof input === 'object' ? input : {};
   // Number('') is 0, and the operand arrives as a raw DOM string: an empty box has to
@@ -51,6 +65,7 @@ export function normalizeTransformSpec(input) {
   const arithmeticValue = rawArithmetic ? Number(rawArithmetic) : NaN;
   return {
     mode: pick(source.mode, TRANSFORM_MODES, 'steps'),
+    formulas: cleanFormulaCells(source.formulas),
     formula: String(source.formula || '').slice(0, 500),
     blank: cleanReference(source.blank),
     normalizeHundred: cleanReference(source.normalizeHundred),
@@ -63,6 +78,9 @@ export function normalizeTransformSpec(input) {
 
 export function isTransformActive(spec) {
   const normalized = normalizeTransformSpec(spec);
+  if (normalized.mode === 'cells') {
+    return Boolean(Object.keys(normalized.formulas).length);
+  }
   if (normalized.mode === 'formula') {
     return Boolean(normalized.formula.trim());
   }
@@ -361,6 +379,100 @@ export function applyPlateFormula({
   };
 }
 
+// Evaluates the formula stored in each transformed cell. Every reference resolves
+// against the original result plate, never against another transformed cell. This
+// keeps formulas such as =A2 and =A2/MAX(A1:A8) deterministic even when formulas
+// point at cells that also have transformations of their own.
+export function applyPlateCellFormulas({
+  results = {},
+  formulas = {},
+  definition,
+  rowGroupSpec = '',
+  columnGroupSpec = ''
+} = {}) {
+  const def = definition;
+  const numeric = readNumericPlate(results, def);
+  const normalizedFormulas = cleanFormulaCells(formulas);
+  const groupSpecs = {
+    row: parseDimensionGroupSpec(rowGroupSpec, 'row', def.rows),
+    column: parseDimensionGroupSpec(columnGroupSpec, 'column', def.columns)
+  };
+  const next = {};
+  const derived = {};
+  const cells = {};
+  const warnings = [];
+
+  Object.entries(normalizedFormulas).forEach(([well, formula]) => {
+    if (!isValidWellForDefinition(well, def)) {
+      return;
+    }
+    const compiled = compileFormula(formula);
+    if (compiled.error) {
+      const error = describeFormulaError(compiled.error);
+      cells[well] = { formula, error };
+      warnings.push(`${well}: ${error}`);
+      return;
+    }
+
+    const resolved = new Map();
+    try {
+      collectReferenceNodes(compiled.ast).forEach((node) => {
+        const key = node.kind === 'range' ? `${node.from}:${node.to}` : node.name;
+        if (resolved.has(key)) {
+          return;
+        }
+        const wells = node.kind === 'range'
+          ? blockWells(node.from, node.to, def)
+          : (() => {
+            const hit = resolveReferenceWells(node.name, def, groupSpecs);
+            return hit.unresolved.length || !hit.wells.length ? null : hit.wells;
+          })();
+        if (!wells) {
+          throw new FormulaError(`"${key}" is not a well, row, block or group on this plate.`, node.position);
+        }
+        const values = wells.map((sourceWell) => numeric[sourceWell]).filter((value) => Number.isFinite(value));
+        if (!values.length) {
+          throw new FormulaError(`"${key}" has no numeric results.`, node.position);
+        }
+        resolved.set(key, values);
+      });
+
+      const computed = compiled.evaluate({
+        value: numeric[well],
+        resolveRef: (node) => resolved.get(node.kind === 'range' ? `${node.from}:${node.to}` : node.name)
+      });
+      if (!Number.isFinite(computed)) {
+        throw new FormulaError('The formula result is not a finite number.');
+      }
+      next[well] = computed;
+      derived[well] = formatValue(computed);
+      cells[well] = { formula, value: computed, text: derived[well], error: '' };
+    } catch (error) {
+      const message = describeFormulaError(error);
+      cells[well] = { formula, error: message };
+      warnings.push(`${well}: ${message}`);
+    }
+  });
+
+  const formulaCount = Object.keys(normalizedFormulas)
+    .filter((well) => isValidWellForDefinition(well, def))
+    .length;
+  const errorCount = formulaCount - Object.keys(next).length;
+  return {
+    results: derived,
+    numericResults: next,
+    formulas: normalizedFormulas,
+    cells,
+    steps: formulaCount
+      ? [`Calculated ${Object.keys(next).length} of ${formulaCount} transformed cell(s) from the original Plate Results.`]
+      : [],
+    warnings,
+    formulaCount,
+    errorCount,
+    wellCount: Object.keys(next).length
+  };
+}
+
 // Returns the derived results map plus a plain-language description of each step, so
 // the panel can say exactly what was done to the numbers being analysed.
 export function applyPlateTransform({
@@ -372,6 +484,16 @@ export function applyPlateTransform({
 } = {}) {
   const normalized = normalizeTransformSpec(spec);
   const def = definition;
+
+  if (normalized.mode === 'cells') {
+    return applyPlateCellFormulas({
+      results,
+      formulas: normalized.formulas,
+      definition: def,
+      rowGroupSpec,
+      columnGroupSpec
+    });
+  }
 
   if (normalized.mode === 'formula') {
     return applyPlateFormula({

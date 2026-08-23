@@ -1,29 +1,14 @@
 'use strict';
 
 const path = require('node:path');
+const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
 
-function defaultCleanText(value, _maxLength = 2000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function isFilesystemRoot(directoryPath = '') {

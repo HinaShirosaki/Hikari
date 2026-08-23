@@ -415,6 +415,358 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-include-ladder/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-image>Generate image/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-pptx>Generate PowerPoint/);
+});
+
+test('[EDGE] gel-analysis figure plan crops between band lines and removes the ladder from table and gel', () => {
+  const manualOverrides = {
+    laneSegmentation: {
+      gelLeft: 10,
+      gelRight: 110,
+      dividers: [35, 65, 90],
+      dividerDone: true,
+      bandTop: 20,
+      bandBottom: 80
+    },
+    ladderLane: 2,
+    laneTable: {
+      rows: [
+        { label: 'SENP1', values: ['+', '-', '+', '-'] },
+        { label: 'WT', values: ['-', '+', '-', '+'] }
+      ]
+    }
+  };
+
+  const plan = gelLaneTableInternals.buildGelFigurePlan({
+    imageWidth: 120,
+    imageHeight: 100,
+    manualOverrides,
+    includeLadder: false,
+    ladderLane: 2
+  });
+
+  assert.equal(plan.croppedToBandLines, true);
+  assert.equal(plan.sourceTop, 20);
+  assert.equal(plan.sourceBottom, 80);
+  assert.equal(plan.sourceHeight, 61);
+  assert.equal(plan.includeLadder, false);
+  assert.equal(JSON.stringify(plan.slices.map((slice) => slice.laneIndex)), JSON.stringify([1, 3, 4]));
+  assert.equal(JSON.stringify(plan.slices.map((slice) => slice.sourceWidth)), JSON.stringify([25, 25, 20]));
+  assert.equal(JSON.stringify(plan.rows[0].values), JSON.stringify(['+', '+', '-']));
+  assert.equal(plan.canvasWidth, plan.labelWidth + 70);
+  assert.equal(plan.canvasHeight, plan.tableHeight + 61);
+});
+
+test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers its text', () => {
+  const calls = { clear: [], draw: [], text: [], put: [] };
+  const sourceContext = {
+    putImageData: (...args) => calls.put.push(args)
+  };
+  const outputContext = {
+    clearRect: (...args) => calls.clear.push(args),
+    drawImage: (...args) => calls.draw.push(args),
+    fillText: (...args) => calls.text.push(args),
+    save() {},
+    restore() {}
+  };
+  const canvases = [];
+  const documentObject = {
+    createElement(tagName) {
+      assert.equal(tagName, 'canvas');
+      const canvasIndex = canvases.length;
+      const canvas = {
+        width: 0,
+        height: 0,
+        getContext: () => (canvasIndex === 0 ? sourceContext : outputContext)
+      };
+      canvases.push(canvas);
+      return canvas;
+    }
+  };
+  const result = gelLaneTableInternals.createGelFigureCanvas({
+    documentObject,
+    imageData: { tag: 'source-image-data' },
+    imageWidth: 100,
+    imageHeight: 80,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      laneTable: {
+        rows: [{ label: 'Mutant', values: ['-', '+'] }]
+      }
+    }
+  });
+
+  assert.equal(calls.put.length, 1);
+  assert.equal(calls.clear.length, 1, 'a cleared canvas keeps the table area transparent');
+  assert.equal(calls.draw.length, 2);
+  assert.equal(calls.draw[0][2], 12, 'gel extraction starts at the settled top line');
+  assert.equal(calls.draw[0][4], 41, 'gel extraction ends at the settled bottom line');
+  assert.equal(calls.draw[0][6], result.plan.tableHeight, 'gel pixels start below the transparent table');
+  assert.equal(outputContext.textAlign, 'center');
+  assert.equal(outputContext.textBaseline, 'middle');
+  assert.equal(calls.text.length, 3);
+  assert.equal(calls.text[0][0], 'Mutant');
+  assert.equal(calls.text[0][1], result.plan.labelWidth / 2);
+});
+
+test('[EDGE] gel-analysis generated figure uses the PNG save path and current ladder choice', async () => {
+  const runtime = {
+    currentImage: { width: 100, height: 80, imageData: { tag: 'source' } },
+    cropperActive: false,
+    figureExportIncludeLadder: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      ladderLane: 1,
+      laneTable: {
+        rows: [{ label: 'WT', values: ['M', 'Sample'] }]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelLadderLaneInput: Object.assign(new MockElement('gel-ladder-lane'), { value: '1' }),
+    gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
+  };
+  const statuses = [];
+  const exported = [];
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {
+      createGelFigureCanvas: (options) => {
+        assert.equal(options.includeLadder, false);
+        assert.equal(options.ladderLane, 1);
+        return {
+          canvas: { toDataURL: () => 'data:image/png;base64,cG5n' },
+          plan: {
+            croppedToBandLines: true,
+            sourceTop: 12,
+            sourceBottom: 52,
+            includeLadder: false,
+            ladderLane: 1
+          }
+        };
+      },
+      downloadDataUrlFile: async (payload) => {
+        exported.push(payload);
+        return { saved: true, fileName: payload.fileName };
+      },
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+  const button = Object.assign(new MockElement('generate-image'), { textContent: 'Generate image' });
+
+  await controller.onGenerateFigureClick(button);
+
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].fileName, 'My-gel.png');
+  assert.equal(exported[0].dataUrl, 'data:image/png;base64,cG5n');
+  assert.match(statuses[statuses.length - 1], /rows 12-52/);
+  assert.match(statuses[statuses.length - 1], /Ladder lane 1 excluded/);
+  assert.equal(button.textContent, 'Generate image');
+  assert.equal(button.disabled, false);
+});
+
+test('[EDGE] gel-analysis PNG downloader forwards canonical image bytes to the plugin bridge', async () => {
+  const calls = [];
+  const exportModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'export.js'),
+    {
+      window: {
+        hikariApi: {
+          exportBinaryFile: async (payload) => {
+            calls.push(payload);
+            return { saved: true, fileName: payload.fileName };
+          }
+        }
+      }
+    }
+  );
+
+  const result = await exportModule.downloadDataUrlFile({
+    dataUrl: 'data:image/png;base64,cG5nLWJ5dGVz',
+    fileName: 'gel-figure.png'
+  });
+
+  assert.equal(
+    JSON.stringify(calls),
+    JSON.stringify([{ dataBase64: 'cG5nLWJ5dGVz', fileName: 'gel-figure.png' }])
+  );
+  assert.equal(result.saved, true);
+});
+
+test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent table and one gel image', () => {
+  const powerPointModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'powerpoint-export.js'),
+    { TextEncoder, atob }
+  );
+  const result = powerPointModule.createGelPowerPoint({
+    title: 'SENP1 & WT',
+    createdAt: new Date('2026-08-23T12:00:00.000Z'),
+    gelImageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Av5PAAAAAElFTkSuQmCC',
+    plan: {
+      canvasWidth: 318,
+      gelWidth: 200,
+      labelWidth: 118,
+      sourceHeight: 80,
+      slices: [
+        { laneIndex: 1, sourceWidth: 100 },
+        { laneIndex: 2, sourceWidth: 100 }
+      ],
+      rows: [
+        { label: 'SENP1', values: ['+', '+'] },
+        { label: 'WT', values: ['-', '+'] }
+      ]
+    }
+  });
+  const archiveText = new TextDecoder().decode(result.bytes);
+
+  assert.equal(result.bytes[0], 0x50);
+  assert.equal(result.bytes[1], 0x4B);
+  assert.match(archiveText, /ppt\/slides\/slide1\.xml/);
+  assert.match(archiveText, /ppt\/media\/image1\.png/);
+  assert.match(archiveText, /<a:tbl>/, 'lane metadata must be a native PowerPoint table');
+  assert.match(archiveText, /name="Editable lane table"/);
+  assert.match(archiveText, /name="Cropped gel image"/);
+  assert.match(archiveText, /<a:t xml:space="preserve">SENP1<\/a:t>/);
+  assert.match(archiveText, /<a:t xml:space="preserve">\+<\/a:t>/);
+  assert.match(archiveText, /<a:tcPr[^>]*anchor="ctr"/);
+  assert.match(archiveText, /<a:pPr algn="ctr"/);
+  assert.match(archiveText, /<a:alpha val="0"\/>/, 'table cells must have fully transparent fill');
+  assert.equal((archiveText.match(/<a:ln[LTRB][^>]*><a:noFill\/><\/a:ln[LTRB]>/g) || []).length, 24);
+  assert.equal((archiveText.match(/<a:tc>/g) || []).length, 6);
+  assert.doesNotMatch(archiveText, /Lane 1|Lane 2/, 'the exported table should not add a synthetic lane-header row');
+  assert.ok(result.layout.gelLeft > result.layout.tableLeft);
+});
+
+test('[EDGE] gel-analysis PowerPoint action exports PPTX bytes with the current ladder choice', async () => {
+  const runtime = {
+    currentImage: { width: 100, height: 80, imageData: { tag: 'source' } },
+    cropperActive: false,
+    figureExportIncludeLadder: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      ladderLane: 1,
+      laneTable: {
+        rows: [{ label: 'WT', values: ['M', 'Sample'] }]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelLadderLaneInput: Object.assign(new MockElement('gel-ladder-lane'), { value: '1' }),
+    gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
+  };
+  const statuses = [];
+  const exported = [];
+  const plan = {
+    croppedToBandLines: true,
+    sourceTop: 12,
+    sourceBottom: 52,
+    includeLadder: false,
+    ladderLane: 1,
+    slices: [{ laneIndex: 2, sourceWidth: 40 }],
+    rows: [{ label: 'WT', values: ['Sample'] }]
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {
+      createGelImageCanvas: (options) => {
+        assert.equal(options.includeLadder, false);
+        assert.equal(options.ladderLane, 1);
+        return {
+          canvas: { toDataURL: () => 'data:image/png;base64,cG5n' },
+          plan
+        };
+      },
+      createGelPowerPoint: (options) => {
+        assert.equal(options.plan, plan);
+        assert.equal(options.title, 'My gel');
+        return { bytes: new Uint8Array([1, 2, 3]) };
+      },
+      downloadBinaryFile: async (payload) => {
+        exported.push(payload);
+        return { saved: true, fileName: payload.fileName };
+      },
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+  const button = Object.assign(new MockElement('generate-pptx'), { textContent: 'Generate PowerPoint' });
+
+  await controller.onGeneratePowerPointClick(button);
+
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].fileName, 'My-gel.pptx');
+  assert.equal(exported[0].mimeType, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  assert.equal(JSON.stringify(Array.from(exported[0].bytes)), JSON.stringify([1, 2, 3]));
+  assert.match(statuses[statuses.length - 1], /editable table/);
+  assert.match(statuses[statuses.length - 1], /rows 12-52/);
+  assert.match(statuses[statuses.length - 1], /Ladder lane 1 excluded/);
+  assert.equal(button.textContent, 'Generate PowerPoint');
+  assert.equal(button.disabled, false);
+});
+
+test('[EDGE] gel-analysis binary downloader forwards PPTX bytes through the native save bridge', async () => {
+  const calls = [];
+  const exportModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'export.js'),
+    {
+      btoa,
+      window: {
+        hikariApi: {
+          exportBinaryFile: async (payload) => {
+            calls.push(payload);
+            return { saved: true, fileName: payload.fileName };
+          }
+        }
+      }
+    }
+  );
+
+  await exportModule.downloadBinaryFile({
+    bytes: new Uint8Array([1, 2, 3]),
+    fileName: 'gel-figure.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  });
+
+  assert.equal(
+    JSON.stringify(calls),
+    JSON.stringify([{ dataBase64: 'AQID', fileName: 'gel-figure.pptx' }])
+  );
 });
 
 test('[EDGE] gel-analysis outermost lane dividers define gel edges without separate border tools', () => {

@@ -7,7 +7,7 @@ const {
   STATUS_TEMPORARY
 } = require('./constants');
 
-function cleanText(value, _maxLength = 300) {
+function cleanText(value) {
   const text = String(value || '');
   return text || '';
 }

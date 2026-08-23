@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../../lib/normalize.js');
+
 const CONVERSATIONAL_PATTERNS = [
   /\b(?:can|could|would|will)\s+you\b/gi,
   /\b(?:please|kindly)\b/gi,
@@ -42,7 +44,7 @@ const GENERIC_STRUCTURED_TERMS = new Set([
   'references'
 ]);
 
-function cleanText(value, _maxLength = 2000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -54,7 +56,7 @@ function uniqueStrings(values, max = 50) {
   const seen = new Set();
   const output = [];
   (Array.isArray(values) ? values : []).forEach((value) => {
-    const normalized = cleanText(value, 240);
+    const normalized = cleanText(value);
     if (!normalized) {
       return;
     }
@@ -68,12 +70,8 @@ function uniqueStrings(values, max = 50) {
   return output;
 }
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
 function applyQueryRephrasings(text) {
-  let normalized = cleanText(text, 1200);
+  let normalized = cleanText(text);
   TARGET_REPHRASING_PATTERNS.forEach((pattern) => {
     normalized = normalized.replace(pattern, (_match, target) => ` ${String(target || '').trim()} resistance `);
   });
@@ -94,7 +92,7 @@ function normalizePhraseText(value) {
 }
 
 function normalizeToken(token) {
-  const text = cleanText(token, 80).replace(/_/g, ' ').trim();
+  const text = cleanText(token).replace(/_/g, ' ').trim();
   if (!text) {
     return '';
   }
@@ -125,7 +123,7 @@ function shouldSkipToken(token) {
 }
 
 function shouldKeepPhrase(phrase) {
-  const text = cleanText(phrase, 180);
+  const text = cleanText(phrase);
   if (!text) {
     return false;
   }
@@ -216,7 +214,7 @@ function compactPhraseList(phrases, maxLength = null) {
 }
 
 function normalizeStructuredPhrase(value) {
-  const text = cleanText(value, 220);
+  const text = cleanText(value);
   if (!text) {
     return '';
   }

@@ -1,4 +1,8 @@
 import { cleanText, normalizeSequenceText } from '../shared.js';
+import {
+  buildProteinArchitectureName,
+  buildProteinTargetLabel
+} from '../sequence-naming.js';
 import { DEFAULT_CHAIN } from './constants.js';
 import { resolvePoiSourceFromRecord } from './record-dna.js';
 import { cloneLibraryRow, createPoiRow } from './row-factory.js';
@@ -17,6 +21,8 @@ export function createProteinBuilderContext(config = {}) {
     isPreparingAssembly: false,
     storedBackbones: [],
     selectedBackboneId: '',
+    suggestedConstructName: '',
+    constructNameEdited: false,
     statusMessage: '',
     statusError: false
   };
@@ -94,7 +100,7 @@ export function createProteinBuilderContext(config = {}) {
     ctx.syncVectorInsertControls();
     try {
       const applied = await ctx.onInsertIntoVector({
-        constructName: cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert',
+        constructName: ctx.resolveConstructName(),
         dnaConstruct: state.dnaConstruct
       });
       if (applied) {
@@ -140,6 +146,11 @@ export function createProteinBuilderContext(config = {}) {
 
   ctx.resetRows = function resetRows() {
     state.rows = [];
+    state.suggestedConstructName = '';
+    state.constructNameEdited = false;
+    if (elements.proteinBuilderNameInput) {
+      elements.proteinBuilderNameInput.value = '';
+    }
     ctx.invalidateDnaConstruct();
     DEFAULT_CHAIN.forEach((entry) => {
       if (entry.kind === 'library') {
@@ -159,9 +170,42 @@ export function createProteinBuilderContext(config = {}) {
     return resolvePoiSourceFromRecord(ctx.getSelectedRecord(), ctx.getSelectedFeature());
   };
 
+  ctx.getSuggestedConstructName = function getSuggestedConstructName() {
+    const sourceName = buildProteinTargetLabel({
+      recordName: ctx.getSelectedRecord()?.name,
+      targetName: cleanText(ctx.getCurrentDnaSource()?.label, 140) || 'Current DNA'
+    });
+    return buildProteinArchitectureName({
+      parts: state.rows.map((row) => ({
+        label: row.type === 'poi' ? sourceName : row.label,
+        type: row.type
+      }))
+    });
+  };
+
+  ctx.syncSuggestedConstructName = function syncSuggestedConstructName() {
+    const suggested = ctx.getSuggestedConstructName();
+    const current = cleanText(elements.proteinBuilderNameInput?.value, 140).trim();
+    if (elements.proteinBuilderNameInput && (
+      !state.constructNameEdited
+      || !current
+      || current === state.suggestedConstructName
+    )) {
+      elements.proteinBuilderNameInput.value = suggested;
+    }
+    state.suggestedConstructName = suggested;
+    return suggested;
+  };
+
+  ctx.resolveConstructName = function resolveConstructName() {
+    return cleanText(elements.proteinBuilderNameInput?.value, 140).trim()
+      || state.suggestedConstructName
+      || ctx.getSuggestedConstructName();
+  };
+
   ctx.getProteinBuilderPayload = function getProteinBuilderPayload() {
     return {
-      constructName: elements.proteinBuilderNameInput?.value,
+      constructName: ctx.resolveConstructName(),
       activeDnaSource: ctx.getCurrentDnaSource(),
       rows: ctx.currentRows()
     };

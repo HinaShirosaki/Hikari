@@ -17,10 +17,7 @@ import {
   normalizeCode
 } from '../../sample-registry/sample-utils.js';
 import { buildNotebookSampleCapture } from '../../sample-registry/notebook-capture-record.js';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../../../lib/normalize.js';
 
 function listContainers(inventory = {}) {
   return Object.entries(inventory || {}).flatMap(([section, containers]) => (

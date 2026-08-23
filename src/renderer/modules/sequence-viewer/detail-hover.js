@@ -1,8 +1,11 @@
 import { escapeHtml } from '../../lib/html.js';
 import { buildFeatureLocationText } from './feature-model.js';
 import { FEATURE_TOOLTIP_OFFSET_PX } from './constants.js';
+import { createHoverTooltipInteractivity, renderPrimerHoverSection } from './primer-hover.js';
+import { copyPrimerValueFromEvent } from './primer-copy.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
-function buildFeatureHoverTooltipHtml(feature, sequenceLength) {
+function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
   const strand = feature?.strand === -1 ? '-' : '+';
   const location = buildFeatureLocationText(feature, sequenceLength);
   const identity = Number.isFinite(feature?.identity) ? `${feature.identity.toFixed(2)}%` : '';
@@ -17,6 +20,7 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength) {
     <p>${escapeHtml(feature?.type || '-')} | Strand ${strand}</p>
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
+    ${renderPrimerHoverSection(feature, recordSequence)}
   `;
 }
 
@@ -32,23 +36,48 @@ export function createSequenceHoverTooltipController(rootDocument) {
     }
     const node = rootDocument.createElement('div');
     node.className = 'sequence-viewer-feature-hover-tooltip';
+    node.setAttribute?.('data-sequence-hover-tooltip', 'feature');
     node.hidden = true;
     rootDocument.body.appendChild(node);
     return node;
   })();
 
-  function hide() {
+  function hideNow() {
     if (tooltip) {
       tooltip.hidden = true;
     }
   }
 
-  function show(event, feature, sequenceLength) {
+  const interactivity = createHoverTooltipInteractivity(tooltip, hideNow);
+
+  // Deferred while a primer readout is up, so the pointer can cross the gap to
+  // the copy button; immediate for every other feature, as before.
+  function hide() {
+    interactivity.requestHide();
+  }
+
+  tooltip?.addEventListener?.('click', (event) => {
+    void (async () => {
+      const result = await copyPrimerValueFromEvent(event);
+      if (!result.handled) {
+        return;
+      }
+      showTransientNotice(
+        result.copied ? 'Copied primer sequence.' : 'Clipboard access is unavailable.',
+        { type: result.copied ? 'success' : 'error' }
+      );
+      hideNow();
+    })();
+  });
+
+  function show(event, feature, sequenceLength, recordSequence = '') {
     if (!tooltip || !feature) {
       return;
     }
 
-    tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength);
+    interactivity.cancelHide();
+    tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
+    interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-hover'));
     tooltip.hidden = false;
 
     const rawX = Number(event?.clientX);
@@ -75,6 +104,7 @@ export function createSequenceHoverTooltipController(rootDocument) {
 
   return {
     hide,
+    hideNow,
     show
   };
 }

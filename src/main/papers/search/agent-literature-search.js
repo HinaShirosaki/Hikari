@@ -8,6 +8,7 @@ const {
   prioritizePreferredWebSource
 } = require('./agent-search-source-preferences.js');
 const { normalizePaperDoi } = require('./literature-candidates.js');
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',
@@ -42,18 +43,6 @@ const SOURCE_LABELS = Object.freeze({
   [LITERATURE_SOURCES.UNIPROT]: 'UniProt',
   [LITERATURE_SOURCES.EUROPE_PMC]: 'Europe PMC'
 });
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 function toFiniteInteger(value, fallback = 0) {
   const parsed = Number(value);

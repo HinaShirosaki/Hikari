@@ -1,5 +1,7 @@
 const DEFAULT_NOTEBOOK_TABLE_COLUMNS = 3;
 const DEFAULT_NOTEBOOK_TABLE_ROWS = 3;
+export const MAX_NOTEBOOK_TABLE_COLUMNS = 50;
+export const MAX_NOTEBOOK_TABLE_ROWS = 500;
 
 function sanitizeFieldName(value, fallback) {
   const clean = String(value || '')
@@ -97,8 +99,12 @@ export function createDefaultNotebookResultTable(createId, {
   columnCount = DEFAULT_NOTEBOOK_TABLE_COLUMNS,
   rowCount = DEFAULT_NOTEBOOK_TABLE_ROWS
 } = {}) {
-  const safeColumnCount = Math.max(1, Number(columnCount) || DEFAULT_NOTEBOOK_TABLE_COLUMNS);
-  const safeRowCount = Math.max(1, Number(rowCount) || DEFAULT_NOTEBOOK_TABLE_ROWS);
+  // Upper bounds because the size can be typed: every cell is a real DOM node, and a
+  // stray extra digit would otherwise build a grid big enough to hang the renderer.
+  const safeColumnCount = Math.min(MAX_NOTEBOOK_TABLE_COLUMNS,
+    Math.max(1, Math.trunc(Number(columnCount)) || DEFAULT_NOTEBOOK_TABLE_COLUMNS));
+  const safeRowCount = Math.min(MAX_NOTEBOOK_TABLE_ROWS,
+    Math.max(1, Math.trunc(Number(rowCount)) || DEFAULT_NOTEBOOK_TABLE_ROWS));
   const columns = Array.from({ length: safeColumnCount }, (_unused, index) => ({
     field: buildFieldId(createId, 'column', index),
     title: buildColumnTitle(index)

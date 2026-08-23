@@ -2,6 +2,7 @@
 
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 
 const PAPER_DOWNLOAD_ACTIONS = Object.freeze({
   DOWNLOAD: 'download',
@@ -19,24 +20,12 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function createDownloadId() {
@@ -72,9 +61,7 @@ function resolvePaperCollectionName(source = {}) {
     source.collection_name
       || source.collectionName
       || source.linked_name
-      || source.linkedName,
-    220
-  );
+      || source.linkedName);
 }
 
 function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
@@ -136,7 +123,7 @@ async function getUniqueFilePath(folderPath, fileName) {
 }
 
 function normalizeAction(value) {
-  const normalized = defaultCleanText(value, 40).toLowerCase();
+  const normalized = defaultCleanText(value).toLowerCase();
   if (!normalized) {
     return PAPER_DOWNLOAD_ACTIONS.DOWNLOAD;
   }
@@ -233,8 +220,8 @@ function dedupeCandidateUrls(entries = []) {
   const seen = new Set();
   return defaultAsArray(entries)
     .map((entry) => ({
-      url: defaultCleanText(entry?.url, 2400),
-      source: defaultCleanText(entry?.source, 80)
+      url: defaultCleanText(entry?.url),
+      source: defaultCleanText(entry?.source)
     }))
     .filter((entry) => entry.url)
     .filter((entry) => {
@@ -252,8 +239,8 @@ function extractPaperDownloadTargets(input = {}) {
   const doiUrl = resolveDoiUrl(source.doi || source.paper_doi || source.paperDoi || '');
   const pageUrl = resolveAbsoluteUrl(source.page_url || source.pageUrl || source.paper_url || source.paperUrl || '')
     || doiUrl;
-  const pageHtml = defaultCleanText(source.page_html || source.pageHtml, 400000);
-  const message = defaultCleanText(source.message, 12000);
+  const pageHtml = defaultCleanText(source.page_html || source.pageHtml);
+  const message = defaultCleanText(source.message);
 
   const candidates = dedupeCandidateUrls([
     { url: resolveAbsoluteUrl(source.paper_pdf_url || source.paperPdfUrl || '', pageUrl), source: 'paper_pdf_url' },
@@ -311,7 +298,7 @@ function parseContentDispositionFileName(value) {
 
 function inferPdfFileName(input = {}, responseUrl = '', headers = null) {
   const source = ensureObject(input);
-  const directName = defaultCleanText(source.file_name || source.fileName || source.paper_file_name || source.paperFileName, 240);
+  const directName = defaultCleanText(source.file_name || source.fileName || source.paper_file_name || source.paperFileName);
   if (directName) {
     return ensurePdfFileName(directName);
   }
@@ -323,7 +310,7 @@ function inferPdfFileName(input = {}, responseUrl = '', headers = null) {
     return ensurePdfFileName(contentDisposition);
   }
 
-  const title = defaultCleanText(source.paper_title || source.paperTitle || source.title, 240);
+  const title = defaultCleanText(source.paper_title || source.paperTitle || source.title);
   if (title) {
     return ensurePdfFileName(`${title}.pdf`);
   }
@@ -341,8 +328,8 @@ function normalizeHeadersObject(headers) {
   const source = ensureObject(headers);
   const normalized = {};
   Object.entries(source).forEach(([key, value]) => {
-    const name = defaultCleanText(key, 120);
-    const headerValue = defaultCleanText(value, 2000);
+    const name = defaultCleanText(key);
+    const headerValue = defaultCleanText(value);
     if (name && headerValue) {
       normalized[name] = headerValue;
     }
@@ -351,7 +338,7 @@ function normalizeHeadersObject(headers) {
 }
 
 function createDownloadError(message, extra = {}) {
-  const error = new Error(defaultCleanText(message, 1200) || 'Paper download failed.');
+  const error = new Error(defaultCleanText(message) || 'Paper download failed.');
   Object.assign(error, extra);
   return error;
 }

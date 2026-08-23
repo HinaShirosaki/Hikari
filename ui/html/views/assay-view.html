@@ -28,13 +28,13 @@
                 <span class="sr-only">Import CSV</span>
               </button>
               <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+              <button id="assay-save-btn" type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M5 3h12l3 3v15H4V3Z"></path>
                   <path d="M8 3v6h8V3"></path>
                   <path d="M8 21v-7h8v7"></path>
                 </svg>
-                <span class="sr-only">Save assay</span>
+                <span class="assay-form-button-caption">Save</span>
               </button>
               <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" title="Cancel edit">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -192,6 +192,14 @@
                           <path d="M8 21v-7h8v7"></path>
                         </svg>
                       </button>
+                      <button type="button" id="assay-transform-open-btn" class="ghost-btn assay-results-icon-btn" aria-label="Transform plate" title="Transform plate">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M4 7h11"></path>
+                          <path d="m12 4 3 3-3 3"></path>
+                          <path d="M20 17H9"></path>
+                          <path d="m12 14-3 3 3 3"></path>
+                        </svg>
+                      </button>
                       <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 6h18"></path>
@@ -205,96 +213,6 @@
                     <div id="assay-active-assay-info" class="small-note"></div>
                     <div id="assay-result-status" class="small-note"></div>
                     <div id="assay-transform-summary" class="small-note"></div>
-                  </div>
-                </details>
-
-                <details id="assay-transform-panel" class="foldable-section foldable-section--subsection">
-                  <summary class="foldable-section__summary">
-                    <span>Transform Plate</span>
-                  </summary>
-                  <div class="foldable-section__body">
-                    <label>
-                      Mode
-                      <select id="assay-transform-mode">
-                        <option value="steps" selected>Guided steps</option>
-                        <option value="formula">Formula</option>
-                      </select>
-                    </label>
-                    <div data-transform-mode="formula" class="assay-transform-mode-panel" hidden>
-                      <label>
-                        Formula
-                        <textarea id="assay-transform-formula" rows="3" spellcheck="false"
-                          placeholder="=(x - MEAN(H1:H12)) / MEAN(A1:A12) * 100"></textarea>
-                      </label>
-                      <details class="foldable-section foldable-section--subsection assay-formula-help">
-                        <summary class="foldable-section__summary"><span>Functions and references</span></summary>
-                        <div class="foldable-section__body assay-formula-help-body">
-                          <p><code>x</code> is this well's value.</p>
-                          <p><strong>References</strong> &mdash; <code>A1</code> one well, <code>A1:H12</code> a
-                            block, <code>H</code> a whole row, or the name of a custom group. A reference
-                            covering more than one well must be wrapped in an aggregate.</p>
-                          <p><strong>Aggregates</strong> &mdash; <code>MEAN</code>, <code>MEDIAN</code>,
-                            <code>MIN</code>, <code>MAX</code>, <code>SUM</code>, <code>SD</code>,
-                            <code>COUNT</code>.</p>
-                          <p><strong>Functions</strong> &mdash; <code>LOG10</code>, <code>LOG</code>,
-                            <code>LN</code>, <code>EXP</code>, <code>SQRT</code>, <code>ABS</code>,
-                            <code>POWER</code>, <code>ROUND</code>.</p>
-                          <p><strong>Operators</strong> &mdash; <code>+ - * / ^</code> and parentheses.</p>
-                          <p class="small-note">Row ranges use a colon here (<code>A1:C12</code>);
-                            <code>A-C</code> is subtraction in a formula.</p>
-                        </div>
-                      </details>
-                    </div>
-                    <div data-transform-mode="steps" class="assay-transform-mode-panel">
-                      <p class="small-note">
-                        Each step is optional and applies in the order shown, to every well with a
-                        numeric result. References accept wells (A1), rows (A, A-C), columns (3, 3-5)
-                        or a custom group name.
-                      </p>
-                      <label>
-                        1. Subtract blank
-                        <input id="assay-transform-blank" placeholder="e.g. H1,H2 or H or Blank" />
-                      </label>
-                      <label>
-                        2. 100% reference
-                        <input id="assay-transform-normalize-hundred" placeholder="e.g. 12 or Untreated" />
-                      </label>
-                      <label>
-                        0% reference (optional)
-                        <input id="assay-transform-normalize-zero" placeholder="defaults to 0" />
-                      </label>
-                      <div class="assay-transform-arithmetic">
-                        <label>
-                          3. Arithmetic
-                          <select id="assay-transform-arithmetic-op">
-                            <option value="none" selected>None</option>
-                            <option value="add">Add</option>
-                            <option value="subtract">Subtract</option>
-                            <option value="multiply">Multiply by</option>
-                            <option value="divide">Divide by</option>
-                          </select>
-                        </label>
-                        <label>
-                          Value
-                          <input id="assay-transform-arithmetic-value" type="number" step="any" />
-                        </label>
-                      </div>
-                      <label>
-                        4. Transform each value
-                        <select id="assay-transform-value">
-                          <option value="none" selected>None</option>
-                          <option value="log10">log10(x)</option>
-                          <option value="ln">ln(x)</option>
-                          <option value="sqrt">sqrt(x)</option>
-                          <option value="reciprocal">1/x</option>
-                          <option value="square">x&sup2;</option>
-                        </select>
-                      </label>
-                    </div>
-                    <div id="assay-transform-status" class="small-note"></div>
-                    <div class="form-actions">
-                      <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Clear Transform</button>
-                    </div>
                   </div>
                 </details>
 
@@ -412,11 +330,14 @@
             </details>
             <details id="assay-derived-plate-panel" class="foldable-section assay-result-table-panel" open hidden>
               <summary class="foldable-section__summary">
-                <span>Derived Plate</span>
+                <span>Transformed Plate</span>
               </summary>
               <div class="foldable-section__body">
-                <div id="assay-derived-plate-steps" class="small-note"></div>
-                <div id="assay-derived-plate-table" class="assay-derived-plate-host"></div>
+                <div class="assay-transformed-plate-intro">
+                  <p id="assay-derived-plate-steps" class="small-note"></p>
+                  <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Remove transformed plate</button>
+                </div>
+                <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
               </div>
             </details>
           </div>

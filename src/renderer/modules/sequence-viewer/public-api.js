@@ -45,6 +45,15 @@ export {
 } from './amino-acid-substitution.js';
 
 export {
+  buildEditedSequenceName,
+  buildProteinArchitectureName,
+  buildProteinTargetLabel,
+  buildVectorSequenceName,
+  describeSequenceChanges,
+  resolveVectorBackboneName
+} from './sequence-naming.js';
+
+export {
   formatSelectedFeatureDetailHtml,
   renderDualStrandSequenceLinesHtml
 } from './rendering.js';

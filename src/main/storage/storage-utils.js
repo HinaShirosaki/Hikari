@@ -3,14 +3,11 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { resolveSqlJsWasmJsPath } = require('../lib/sqljs-path.js');
+const { asArray } = require('../lib/normalize.js');
 
 const SQLJS_WASM_JS_PATH = resolveSqlJsWasmJsPath(__dirname);
 
 let sqlJsInitPromise = null;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function sanitizeFolderName(value, fallback = 'item') {
   const cleaned = String(value || '')
@@ -26,7 +23,7 @@ function toPosixRelative(rootPath, targetPath) {
   return path.relative(rootPath, targetPath).split(path.sep).join('/');
 }
 
-function cleanText(value, _maxLength = 2000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -112,7 +109,7 @@ function normalizeFileTimestamp(stat) {
 
 function buildSearchText(parts) {
   return asArray(parts)
-    .map((value) => cleanText(value, 400))
+    .map((value) => cleanText(value))
     .filter(Boolean)
     .join(' ')
     .toLowerCase();

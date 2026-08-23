@@ -28,6 +28,13 @@ assert.equal(isTransformActive({}), false, 'an empty spec is inactive');
 assert.equal(isTransformActive({ blank: 'H1' }), true, 'a blank reference activates it');
 assert.equal(isTransformActive({ arithmeticOp: 'add' }), false, 'an op with no operand stays inactive');
 assert.equal(isTransformActive({ arithmeticOp: 'add', arithmeticValue: 2 }), true, 'op plus operand activates it');
+assert.equal(
+  JSON.stringify(normalizeTransformSpec({ mode: 'cells', formulas: { a1: ' =A2 ', A2: '' } }).formulas),
+  JSON.stringify({ A1: '=A2' }),
+  'cell formula maps normalize addresses and discard empty formulas'
+);
+assert.equal(isTransformActive({ mode: 'cells', formulas: { A1: '=A1' } }), true, 'one cell formula activates the transformed plate');
+assert.equal(isTransformActive({ mode: 'cells', formulas: {} }), false, 'an empty transformed plate is inactive');
 
 // --- reference grammar ---
 assert.equal(resolveReferenceWells('A1', DEF, NO_GROUPS).wells.join('|'), 'A1', 'a single well');

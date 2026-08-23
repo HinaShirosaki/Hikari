@@ -65,7 +65,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
     });
   }
 
-  function buildResultGridColumns(def) {
+  function buildResultGridColumns(def, options = {}) {
     const metadata = buildAxisMetadata(def);
     const columns = [
       {
@@ -100,13 +100,17 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
           </div>
         `,
         field: toResultField(columnIndex),
-        editor: 'input',
+        editor: options.editor || 'input',
         editable: (cell) => {
           const rowIndex = Number(cell.getRow()?.getData()?.__rowIndex);
           if (!Number.isFinite(rowIndex) || rowIndex < 0) {
             return false;
           }
-          return isMappedWell(wellIdFor(rowIndex, columnIndex));
+          const well = wellIdFor(rowIndex, columnIndex);
+          const mapped = isMappedWell(well);
+          return typeof options.editable === 'function'
+            ? options.editable(cell, { rowIndex, columnIndex, well, mapped })
+            : mapped;
         },
         formatter: (cell) => {
           const rowIndex = Number(cell.getRow()?.getData()?.__rowIndex);
@@ -118,6 +122,9 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
           const mapped = isMappedWell(well);
           const element = cell.getElement();
           element.classList.toggle('assay-result-disabled', !mapped);
+          if (typeof options.formatter === 'function') {
+            return options.formatter(cell, { rowIndex, columnIndex, well, mapped, value });
+          }
           if (!mapped) {
             return value || '—';
           }
@@ -132,7 +139,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
     return columns;
   }
 
-  function buildResultGridData(def) {
+  function buildResultGridData(def, values = runtime.currentResults) {
     const metadata = buildAxisMetadata(def);
     const rows = [];
     for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
@@ -143,7 +150,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
       };
       for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
         const well = wellIdFor(rowIndex, columnIndex);
-        row[toResultField(columnIndex)] = runtime.currentResults[well] || '';
+        row[toResultField(columnIndex)] = values?.[well] ?? '';
       }
       rows.push(row);
     }

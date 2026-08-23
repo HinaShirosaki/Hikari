@@ -95,6 +95,14 @@
           <div class="form-actions sequence-viewer-detail-toolbar">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
             <button id="sequence-viewer-load-btn" type="submit" class="primary-btn">Load</button>
+            <button id="sequence-viewer-save-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Save sequence to library" title="Save to library" hidden>
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
+                <path d="M8.5 5.5h7v4h-7Z"></path>
+                <path d="M8 12.5h8v6h-8Z"></path>
+              </svg>
+              <span class="sequence-viewer-button-caption">Save</span>
+            </button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Annotate sequence" title="Annotate sequence">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
@@ -194,11 +202,6 @@
               </div>
             </div>
 
-            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
-              <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
-              <span>Primers</span>
-            </label>
-
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Restriction cutter options" title="Restriction cutters" aria-haspopup="true" aria-expanded="false">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -222,6 +225,11 @@
                 </div>
               </div>
             </div>
+
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
+              <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
+              <span>Primers</span>
+            </label>
 
           </div>
 

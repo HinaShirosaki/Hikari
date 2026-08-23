@@ -4,9 +4,11 @@ import {
   normalizeAnalysisSpec
 } from './analysis/index.js';
 import {
+  isValidWellForDefinition,
   layoutToMap,
   parseWellId,
-  toRowLabel
+  toRowLabel,
+  wellIdFor
 } from './plate-model.js';
 import {
   parseFirstNumericToken,
@@ -21,14 +23,13 @@ import { createChartStyleStore } from './plotly/chart-style-store.js';
 import { mountChartControls } from './plotly/chart-controls.js';
 import { mountChartToolbar } from './plotly/chart-toolbar.js';
 import { createAssayPlotlyRenderer } from './plotly/plotly-renderer.js';
+import { applyPrismDefaults } from './plotly/prism-theme.js';
 import { buildAnalysisChartModel } from './analysis-chart-model.js';
 import {
   applyPlateTransform,
-  buildDerivedPlateTable,
   isTransformActive,
   normalizeTransformSpec
 } from './derived-plate.js';
-import { compileFormula } from '../../lib/formula.js';
 
 export {
   CHART_STYLE_OPTIONS,
@@ -36,22 +37,7 @@ export {
   normalizeChartStyle
 } from './plotly/chart-style-model.js';
 import { showTransientNotice } from '../../lib/notify.js';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
+import { asArray, cloneJson, ensureObject } from '../../lib/normalize.js';
 
 function compactObject(value = {}) {
   return Object.entries(ensureObject(value)).reduce((out, [key, entryValue]) => {
@@ -133,9 +119,14 @@ export function createAssayAnalysisView({
   runtime,
   elements,
   safeText,
+  TabulatorLib,
   getCurrentDefinition,
   syncCurrentResultsFromGrid,
   getResultValueCount,
+  buildResultGridSignature,
+  buildResultGridColumns,
+  buildResultGridData,
+  getResultGridHeight,
   onAnalysisRendered,
   onChartStyleChanged,
   onTransformChanged
@@ -161,16 +152,6 @@ export function createAssayAnalysisView({
     assayChartStyleMount,
     assayChartToolbarMount,
     assayChartFormatPanel,
-    assayTransformModeInput,
-    assayTransformFormulaInput,
-    assayTransformModePanels,
-    assayTransformBlankInput,
-    assayTransformNormalizeHundredInput,
-    assayTransformNormalizeZeroInput,
-    assayTransformArithmeticOpInput,
-    assayTransformArithmeticValueInput,
-    assayTransformValueInput,
-    assayTransformStatus,
     assayTransformSummary,
     assayDerivedPlatePanel,
     assayDerivedPlateSteps,
@@ -203,6 +184,9 @@ export function createAssayAnalysisView({
   let lastModel = null;
   let previewSaveTimer = null;
   let derivedPlate = null;
+  let transformFormulas = {};
+  let transformGrid = null;
+  let transformGridSignature = '';
 
   if (!runtime.chartStyle || typeof runtime.chartStyle !== 'object') {
     runtime.chartStyle = createDefaultChartStyle();
@@ -382,43 +366,7 @@ export function createAssayAnalysisView({
   }
 
   function getTransformSpec() {
-    return normalizeTransformSpec({
-      mode: assayTransformModeInput?.value,
-      formula: assayTransformFormulaInput?.value,
-      blank: assayTransformBlankInput?.value,
-      normalizeHundred: assayTransformNormalizeHundredInput?.value,
-      normalizeZero: assayTransformNormalizeZeroInput?.value,
-      arithmeticOp: assayTransformArithmeticOpInput?.value,
-      arithmeticValue: assayTransformArithmeticValueInput?.value,
-      transform: assayTransformValueInput?.value
-    });
-  }
-
-  // Only the active mode's controls are on screen, so a guided step and a formula can
-  // never both look like they are running.
-  function syncTransformControls() {
-    const mode = assayTransformModeInput?.value === 'formula' ? 'formula' : 'steps';
-    (assayTransformModePanels || []).forEach((panel) => {
-      panel.hidden = panel.getAttribute('data-transform-mode') !== mode;
-    });
-  }
-
-  // Parsing is cheap, so the formula is checked on every keystroke; it is only applied
-  // to the plate on change.
-  function onFormulaInput() {
-    syncTransformControls();
-    if (!assayTransformStatus) {
-      return;
-    }
-    const text = String(assayTransformFormulaInput?.value || '').trim();
-    if (!text) {
-      assayTransformStatus.textContent = '';
-      return;
-    }
-    const compiled = compileFormula(text);
-    assayTransformStatus.textContent = compiled.error
-      ? `${compiled.error.message}${Number.isInteger(compiled.error.position) ? ` (position ${compiled.error.position + 1})` : ''}`
-      : 'Formula parses. Leave the field to apply it.';
+    return normalizeTransformSpec({ mode: 'cells', formulas: transformFormulas });
   }
 
   function setTransformSummary(text) {
@@ -427,16 +375,101 @@ export function createAssayAnalysisView({
     }
   }
 
-  // Recomputes the derived plate from the current raw results, renders its panel, and
-  // caches the numeric map the analysis will read instead of the raw one.
+  function clearTransformGrid() {
+    transformGrid?.destroy?.();
+    transformGrid = null;
+    transformGridSignature = '';
+    if (assayDerivedPlateTable) {
+      assayDerivedPlateTable.innerHTML = '';
+    }
+  }
+
+  function transformColumnIndex(field) {
+    const parsed = Number(String(field || '').replace(/^c/, ''));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed - 1 : -1;
+  }
+
+  function formatTransformCell(_cell, { well, mapped, value }) {
+    if (!mapped) {
+      return value || '—';
+    }
+    if (!value) {
+      return '';
+    }
+    const computed = derivedPlate?.cells?.[well];
+    const element = document.createElement('span');
+    element.className = computed?.error
+      ? 'assay-transform-cell assay-transform-cell--error'
+      : 'assay-transform-cell assay-transform-cell--formula';
+    element.textContent = computed?.error ? '#ERROR' : (computed?.text ?? value);
+    element.title = computed?.error ? `${value} — ${computed.error}` : value;
+    return element;
+  }
+
+  function onTransformGridCellEdited(cell) {
+    const columnIndex = transformColumnIndex(cell?.getField?.());
+    const rowIndex = Number(cell?.getRow?.()?.getData?.()?.__rowIndex);
+    if (columnIndex < 0 || !Number.isFinite(rowIndex) || rowIndex < 0) {
+      return;
+    }
+    const well = wellIdFor(rowIndex, columnIndex);
+    const formula = String(cell?.getValue?.() ?? '').trim();
+    if (formula) {
+      transformFormulas[well] = formula;
+    } else {
+      delete transformFormulas[well];
+    }
+    onTransformChange();
+  }
+
+  function ensureTransformGrid(def) {
+    if (!assayDerivedPlateTable || !isTransformActive(getTransformSpec())) {
+      return false;
+    }
+    if (!TabulatorLib) {
+      assayDerivedPlateTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
+      return false;
+    }
+    const signature = buildResultGridSignature(def);
+    if (!transformGrid || transformGridSignature !== signature) {
+      clearTransformGrid();
+      const host = document.createElement('div');
+      host.className = 'assay-tabulator assay-transform-grid';
+      host.tabIndex = 0;
+      host.setAttribute('role', 'grid');
+      host.setAttribute('aria-label', 'Transformed assay plate spreadsheet');
+      assayDerivedPlateTable.append(host);
+      const options = {
+        data: buildResultGridData(def, transformFormulas),
+        columns: buildResultGridColumns(def, { formatter: formatTransformCell }),
+        index: '__rowIndex',
+        layout: 'fitDataTable',
+        reactiveData: false,
+        selectableRange: true,
+        selectableRangeColumns: true,
+        selectableRangeRows: true
+      };
+      const height = getResultGridHeight(def);
+      if (height) {
+        options.height = height;
+      }
+      transformGrid = new TabulatorLib(host, options);
+      transformGrid?.on?.('cellEdited', onTransformGridCellEdited);
+      transformGridSignature = signature;
+      return true;
+    }
+    transformGrid.replaceData?.(buildResultGridData(def, transformFormulas));
+    return true;
+  }
+
+  // Recomputes every formula from the original result grid, then updates the formula
+  // table and the numeric map used by analysis.
   function refreshDerivedPlate() {
-    syncTransformControls();
     const spec = getTransformSpec();
     if (!isTransformActive(spec)) {
       derivedPlate = null;
       if (assayDerivedPlatePanel) assayDerivedPlatePanel.hidden = true;
-      if (assayDerivedPlateTable) assayDerivedPlateTable.innerHTML = '';
-      if (assayTransformStatus) assayTransformStatus.textContent = '';
+      clearTransformGrid();
       setTransformSummary('');
       return null;
     }
@@ -450,25 +483,18 @@ export function createAssayAnalysisView({
     });
     derivedPlate = result;
 
-    const notes = [...result.steps, ...result.warnings].join(' ');
-    if (assayTransformStatus) {
-      assayTransformStatus.textContent = notes || 'No numeric wells to transform.';
-    }
-    setTransformSummary(result.steps.length
-      ? `Analysing the derived plate: ${result.steps.length} step(s), ${result.wellCount} well(s).`
-      : 'Transform set but no step applied.');
+    const errorNote = result.errorCount
+      ? ` ${result.errorCount} formula error(s); hover #ERROR for details.`
+      : '';
+    setTransformSummary(`Analysing the transformed plate: ${result.wellCount} computed well(s).${errorNote}`);
 
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
     }
     if (assayDerivedPlateSteps) {
-      assayDerivedPlateSteps.textContent = notes;
+      assayDerivedPlateSteps.textContent = 'Edit any cell with a formula such as =A2 or =A2/MAX(A1:A8). All references read the original Plate Results table.';
     }
-    if (assayDerivedPlateTable) {
-      assayDerivedPlateTable.innerHTML = result.wellCount
-        ? buildDerivedPlateTable(result.results, getCurrentDefinition(), safeText)
-        : '<p class="small-note">No numeric wells survive this transform.</p>';
-    }
+    ensureTransformGrid(getCurrentDefinition());
     return result;
   }
 
@@ -740,27 +766,30 @@ export function createAssayAnalysisView({
       return false;
     }
 
+    // Agent figures get the same Prism defaults as the built-in charts; anything the
+    // agent stated itself (colours, gridlines, its own frame) still wins.
+    const themed = applyPrismDefaults(normalized.figure, getChartStyle());
     const layout = {
       autosize: true,
-      height: Number(normalized.figure.layout?.height) || 360,
+      height: Number(themed.layout?.height) || 360,
       margin: {
         l: 56,
         r: 24,
         t: 56,
         b: 52,
-        ...ensureObject(normalized.figure.layout?.margin)
+        ...ensureObject(themed.layout?.margin)
       },
-      ...ensureObject(normalized.figure.layout)
+      ...ensureObject(themed.layout)
     };
     const config = {
       responsive: true,
       displayModeBar: true,
-      ...ensureObject(normalized.figure.config)
+      ...ensureObject(themed.config)
     };
     try {
       const renderResult = plotly.newPlot(
         agentPlotlyTarget,
-        normalized.figure.data,
+        themed.data,
         layout,
         config
       );
@@ -799,38 +828,57 @@ export function createAssayAnalysisView({
     }
   }
 
-  // Writes the spec onto the inputs without reporting a change, so restoring a saved
-  // assay does not mark it dirty.
+  // Restores the cell formulas without reporting a change, so loading a saved assay
+  // does not mark it dirty. Legacy global formulas remain usable by copying that
+  // formula into each numeric source cell; legacy guided transforms are preserved as
+  // formula constants until the user edits them.
   function loadTransformSpec(spec) {
     const normalized = normalizeTransformSpec(spec);
-    if (assayTransformModeInput) {
-      assayTransformModeInput.value = normalized.mode;
-    }
-    if (assayTransformFormulaInput) {
-      assayTransformFormulaInput.value = normalized.formula;
-    }
-    if (assayTransformBlankInput) {
-      assayTransformBlankInput.value = normalized.blank;
-    }
-    if (assayTransformNormalizeHundredInput) {
-      assayTransformNormalizeHundredInput.value = normalized.normalizeHundred;
-    }
-    if (assayTransformNormalizeZeroInput) {
-      assayTransformNormalizeZeroInput.value = normalized.normalizeZero;
-    }
-    if (assayTransformArithmeticOpInput) {
-      assayTransformArithmeticOpInput.value = normalized.arithmeticOp;
-    }
-    if (assayTransformArithmeticValueInput) {
-      assayTransformArithmeticValueInput.value = Number.isFinite(normalized.arithmeticValue)
-        ? String(normalized.arithmeticValue)
-        : '';
-    }
-    if (assayTransformValueInput) {
-      assayTransformValueInput.value = normalized.transform;
+    transformFormulas = {};
+    if (normalized.mode === 'cells') {
+      transformFormulas = { ...normalized.formulas };
+    } else if (normalized.mode === 'formula' && normalized.formula.trim()) {
+      Object.entries(runtime.currentResults || {}).forEach(([well, raw]) => {
+        if (Number.isFinite(parseNumericResult(raw)) && isValidWellForDefinition(well, getCurrentDefinition())) {
+          transformFormulas[well] = normalized.formula;
+        }
+      });
+    } else if (isTransformActive(normalized)) {
+      const legacy = applyPlateTransform({
+        results: runtime.currentResults,
+        spec: normalized,
+        definition: getCurrentDefinition(),
+        rowGroupSpec: String(assayAnalysisRowGroupsInput?.value || ''),
+        columnGroupSpec: String(assayAnalysisColumnGroupsInput?.value || '')
+      });
+      Object.entries(legacy.numericResults || {}).forEach(([well, value]) => {
+        transformFormulas[well] = `=${value}`;
+      });
     }
     refreshDerivedPlate();
-    return normalized;
+    return getTransformSpec();
+  }
+
+  function createTransformPlate() {
+    syncCurrentResultsFromGrid();
+    if (!Object.keys(transformFormulas).length) {
+      Object.entries(runtime.currentResults || {}).forEach(([well, raw]) => {
+        if (Number.isFinite(parseNumericResult(raw)) && isValidWellForDefinition(well, getCurrentDefinition())) {
+          transformFormulas[well] = `=${well}`;
+        }
+      });
+    }
+    if (!Object.keys(transformFormulas).length) {
+      setTransformSummary('Add at least one numeric result before creating a transformed plate.');
+      return false;
+    }
+    if (assayDerivedPlatePanel) {
+      assayDerivedPlatePanel.hidden = false;
+      assayDerivedPlatePanel.open = true;
+    }
+    onTransformChange();
+    assayDerivedPlatePanel?.scrollIntoView?.({ block: 'nearest' });
+    return true;
   }
 
   function onTransformChange() {
@@ -838,7 +886,7 @@ export function createAssayAnalysisView({
       onTransformChanged(getTransformSpec());
     }
     syncCurrentResultsFromGrid();
-    if (getResultValueCount()) {
+    if (lastResult && getResultValueCount()) {
       renderAnalysis();
     } else {
       refreshDerivedPlate();
@@ -846,29 +894,18 @@ export function createAssayAnalysisView({
   }
 
   function clearTransform() {
-    [
-      assayTransformBlankInput,
-      assayTransformNormalizeHundredInput,
-      assayTransformNormalizeZeroInput,
-      assayTransformArithmeticValueInput
-    ].forEach((input) => {
-      if (input) {
-        input.value = '';
-      }
-    });
-    if (assayTransformArithmeticOpInput) {
-      assayTransformArithmeticOpInput.value = 'none';
-    }
-    if (assayTransformValueInput) {
-      assayTransformValueInput.value = 'none';
-    }
-    if (assayTransformFormulaInput) {
-      assayTransformFormulaInput.value = '';
-    }
-    if (assayTransformModeInput) {
-      assayTransformModeInput.value = 'steps';
-    }
+    transformFormulas = {};
     onTransformChange();
+  }
+
+  function redrawTransformGrid() {
+    transformGrid?.redraw?.(true);
+  }
+
+  function onSourceResultsChanged() {
+    if (isTransformActive(getTransformSpec())) {
+      refreshDerivedPlate();
+    }
   }
 
   function onAnalysisConfigChange() {
@@ -893,11 +930,11 @@ export function createAssayAnalysisView({
     getAnalysisSpec,
     getTransformSpec,
     loadTransformSpec,
-    syncTransformControls,
-    onFormulaInput,
     refreshDerivedPlate,
-    onTransformChange,
+    createTransformPlate,
     clearTransform,
+    redrawTransformGrid,
+    onSourceResultsChanged,
     openChartFormat,
     getChartStyle,
     loadChartStyle,
@@ -910,6 +947,7 @@ export function createAssayAnalysisView({
       }
       chartToolbar?.destroy();
       chartControls?.destroy();
+      clearTransformGrid();
       unmountAnalysisChart();
       purgeAgentPlotly();
     }

@@ -58,6 +58,7 @@ export function initGelAnalysis({
     currentReport: null,
     enhancementRerunTimer: null,
     imageRevision: 0,
+    figureExportIncludeLadder: true,
     manualDividerConfirmed: false,
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
@@ -113,6 +114,13 @@ export function initGelAnalysis({
     elements,
     safeText,
     deps: {
+      documentObject: rootDocument,
+      getFigureImageData: () => {
+        const preprocessed = runtime.viewerMode === 'processed'
+          ? imageController.getPreprocessedImageForCurrentSettings?.()
+          : null;
+        return selectViewerBaseImageData(runtime.currentImage, preprocessed, runtime.viewerMode);
+      },
       setStatus
     }
   });

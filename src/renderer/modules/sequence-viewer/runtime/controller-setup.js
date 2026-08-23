@@ -56,6 +56,7 @@ export function setupSequenceViewerControllers(ctx) {
     setStatus: actions.setStatus,
     hasStoragePath: actions.hasStoragePath,
     persistFeatureMutation: actions.persistFeatureMutation,
+    onRequestSave: actions.saveCurrentRecordToLibrary,
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
     onRequestRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
     onApplySequenceEdit: actions.applySequenceEdit,

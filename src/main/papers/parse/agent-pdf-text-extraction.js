@@ -6,6 +6,7 @@ const { Buffer } = require('node:buffer');
 const { buildPdfMarkdownFromExtraction } = require('./pdf-to-md.js');
 const { joinTextItems, stripRunningHeadersAndFooters } = require('./pdf-text-layout.js');
 const { extractFiguresFromPdfDocument } = require('./pdf-figure-extraction.js');
+const { ensureObject } = require('../../lib/normalize.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'
@@ -132,10 +133,6 @@ function defaultCleanText(value, maxLength = 4000) {
     return text;
   }
   return text.length > numericMax ? text.slice(0, numericMax) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function readPdfMetadataValue(metadata, keys = []) {

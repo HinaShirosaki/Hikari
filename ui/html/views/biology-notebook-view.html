@@ -452,6 +452,33 @@
         </aside>
       </div>
 
+      <div id="biology-notebook-table-size-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-table-size-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-table-size-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-table-size-title">Add Table</h3>
+              <p class="small-note">Rows and columns can be added later.</p>
+            </div>
+            <button id="biology-notebook-table-size-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add table dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-table-size-form" class="stack-form biology-notebook-table-size-form">
+            <div class="biology-notebook-table-size-fields">
+              <label>
+                Columns
+                <input id="biology-notebook-table-size-columns" type="number" min="1" max="50" step="1" value="3" />
+              </label>
+              <label>
+                Rows
+                <input id="biology-notebook-table-size-rows" type="number" min="1" max="500" step="1" value="3" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit">Add Table</button>
+              <button id="biology-notebook-table-size-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
       <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">
           <div class="app-dialog-head">

@@ -8,6 +8,7 @@
 // Node.js filesystem/path utilities used by the chat log runtime.
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { asArray, cloneJson } = require('../../lib/normalize.js');
 
 // Storage constants shared by the index file and per-session log files.
 const CHAT_LOG_FOLDER_NAME = 'chat_log';
@@ -24,12 +25,9 @@ const CHAT_LOG_EVENT_TYPES = Object.freeze({
 });
 
 // Return the input only when it is already an array; otherwise fall back to an empty array.
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 // Normalize unknown input into a string without trimming or clipping chat fields.
-function cleanText(value, _maxLength = 4000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -38,13 +36,6 @@ function cleanText(value, _maxLength = 4000) {
 }
 
 // Deep-clone JSON-safe values so stored payloads are detached from live objects.
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 // Convert arbitrary session identifiers into safe file-name fragments.
 function sanitizeFileName(value, fallback = 'chat-session') {
@@ -65,12 +56,12 @@ function createDefaultId() {
 
 // Use the first non-empty line of user text as a human-friendly session title.
 function deriveSessionTitle(text, fallback = 'New Chat') {
-  const firstLine = cleanText(String(text || '').split('\n').find((line) => String(line || '').trim()) || '', 120);
+  const firstLine = cleanText(String(text || '').split('\n').find((line) => String(line || '').trim()) || '');
   return firstLine || fallback;
 }
 
 function normalizeSessionBrief(text, fallback = 'New Chat') {
-  const normalized = cleanText(String(text || '').replace(/\s+/g, ' '), 160)
+  const normalized = cleanText(String(text || '').replace(/\s+/g, ' '))
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/[.!?;,:\s]+$/g, '')
     .trim();
@@ -78,7 +69,7 @@ function normalizeSessionBrief(text, fallback = 'New Chat') {
 }
 
 function slugText(value, fallback = 'option') {
-  const normalized = cleanText(value, 120)
+  const normalized = cleanText(value)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
@@ -91,9 +82,7 @@ function normalizeAgentUserQuestion(value, fallbackQuestion = '') {
     source.question
       || source.prompt
       || source.title
-      || fallbackQuestion,
-    600
-  );
+      || fallbackQuestion);
   if (!question) {
     return null;
   }
@@ -102,46 +91,51 @@ function normalizeAgentUserQuestion(value, fallbackQuestion = '') {
       const option = item && typeof item === 'object' && !Array.isArray(item)
         ? item
         : { label: item };
-      const label = cleanText(option.label || option.title || option.text || option.value, 160);
-      const valueText = cleanText(option.value || option.answer || label, 1000);
+      const label = cleanText(option.label || option.title || option.text || option.value);
+      const valueText = cleanText(option.value || option.answer || label);
       if (!label || !valueText) {
         return null;
       }
       return {
-        id: cleanText(option.id || option.key, 120) || `${slugText(label)}-${index + 1}`,
+        id: cleanText(option.id || option.key) || `${slugText(label)}-${index + 1}`,
         label,
         value: valueText,
-        description: cleanText(option.description || option.detail || option.reason, 260)
+        description: cleanText(option.description || option.detail || option.reason)
       };
     })
     .filter(Boolean)
     .slice(0, 6);
   const answered = source.answered && typeof source.answered === 'object' && !Array.isArray(source.answered)
     ? {
-      answer: cleanText(source.answered.answer || source.answered.value, 1000),
-      answered_at: cleanText(source.answered.answered_at || source.answered.answeredAt, 80)
+      answer: cleanText(source.answered.answer || source.answered.value),
+      answered_at: cleanText(source.answered.answered_at || source.answered.answeredAt)
     }
     : null;
   return {
-    id: cleanText(source.id || source.question_id || source.questionId, 120) || slugText(question, 'question'),
+    id: cleanText(source.id || source.question_id || source.questionId) || slugText(question, 'question'),
     question,
-    context: cleanText(source.context || source.help_text || source.helpText, 700),
+    context: cleanText(source.context || source.help_text || source.helpText),
     options,
     allow_custom: source.allow_custom !== false && source.allowCustom !== false,
-    placeholder: cleanText(source.placeholder || source.custom_placeholder || source.customPlaceholder, 160)
+    placeholder: cleanText(source.placeholder || source.custom_placeholder || source.customPlaceholder)
       || 'Type another answer',
-    submit_label: cleanText(source.submit_label || source.submitLabel, 80) || 'Send answer',
-    status: cleanText(source.status, 40),
+    submit_label: cleanText(source.submit_label || source.submitLabel) || 'Send answer',
+    status: cleanText(source.status),
     answered
   };
 }
 
-function extractCodexSessionId(value = {}) {
+function resolveCodexSessionSources(value = {}) {
   const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   const meta = source.meta && typeof source.meta === 'object' && !Array.isArray(source.meta) ? source.meta : {};
   const codexAgent = source.codex_agent && typeof source.codex_agent === 'object' && !Array.isArray(source.codex_agent)
     ? source.codex_agent
     : (meta.codex_agent && typeof meta.codex_agent === 'object' && !Array.isArray(meta.codex_agent) ? meta.codex_agent : {});
+  return { source, meta, codexAgent };
+}
+
+function extractCodexSessionId(value = {}) {
+  const { source, meta, codexAgent } = resolveCodexSessionSources(value);
   return cleanText(
     source.codex_session_id
       || source.codexSessionId
@@ -149,43 +143,64 @@ function extractCodexSessionId(value = {}) {
       || meta.codex_session_id
       || meta.codexSessionId
       || codexAgent.codex_session_id
-      || codexAgent.codexSessionId,
-    240
-  );
+      || codexAgent.codexSessionId);
+}
+
+function extractRecoveredFromCodexSessionId(value = {}) {
+  const { source, meta, codexAgent } = resolveCodexSessionSources(value);
+  return cleanText(
+    source.recovered_from_codex_session_id
+      || source.recoveredFromCodexSessionId
+      || meta.recovered_from_codex_session_id
+      || meta.recoveredFromCodexSessionId
+      || codexAgent.recovered_from_codex_session_id
+      || codexAgent.recoveredFromCodexSessionId);
+}
+
+// A recovery row names the Codex session that could not be reopened. Once a turn
+// reports that id as dead the stored one must not survive as a fallback, or every
+// later turn resumes it, fails, and recovers again.
+function mergeCodexSessionId(previousId, row) {
+  const nextId = extractCodexSessionId(row);
+  const recoveredFrom = extractRecoveredFromCodexSessionId(row);
+  if (recoveredFrom && recoveredFrom === previousId) {
+    return nextId;
+  }
+  return nextId || previousId;
 }
 
 // Build a concise assistant-facing summary from inventory lookup results.
 function summarizeInventoryLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
-  const status = cleanText(payload.status, 40);
+  const status = cleanText(payload.status);
   if (!status) {
     return '';
   }
   if (status === 'needs_more_info') {
-    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more details to run inventory lookup.';
   }
-  const query = cleanText(payload.query, 220);
+  const query = cleanText(payload.query);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
     const previewLines = items
       .slice(0, 3)
       .map((item, index) => {
         const source = item && typeof item === 'object' ? item : {};
-        const label = cleanText(source.name || source.id, 140);
+        const label = cleanText(source.name || source.id);
         if (!label) {
           return '';
         }
         const details = [
-          cleanText(source.location, 180) ? `location ${cleanText(source.location, 180)}` : '',
-          cleanText(source.container_name, 180) ? `container ${cleanText(source.container_name, 180)}` : '',
+          cleanText(source.location) ? `location ${cleanText(source.location)}` : '',
+          cleanText(source.container_name) ? `container ${cleanText(source.container_name)}` : '',
           Number.isFinite(Number(source.well_index)) ? `well ${Number(source.well_index)}` : '',
-          cleanText(source.quantity, 80)
-            ? `${cleanText(source.kind, 40) === 'personal_sample' ? 'concentration' : 'quantity'} ${cleanText(source.quantity, 80)}`
+          cleanText(source.quantity)
+            ? `${cleanText(source.kind) === 'personal_sample' ? 'concentration' : 'quantity'} ${cleanText(source.quantity)}`
             : '',
-          cleanText(source.amount, 80) ? `amount ${cleanText(source.amount, 80)}` : '',
-          cleanText(source.supplier, 160) ? `supplier ${cleanText(source.supplier, 160)}` : '',
-          !cleanText(source.location, 180) && cleanText(source.zone, 120) ? `zone ${cleanText(source.zone, 120)}` : ''
+          cleanText(source.amount) ? `amount ${cleanText(source.amount)}` : '',
+          cleanText(source.supplier) ? `supplier ${cleanText(source.supplier)}` : '',
+          !cleanText(source.location) && cleanText(source.zone) ? `zone ${cleanText(source.zone)}` : ''
         ].filter(Boolean).slice(0, 4);
         return `${index + 1}. ${label}${details.length ? ` (${details.join('; ')})` : ''}`;
       })
@@ -206,30 +221,30 @@ function summarizeInventoryLookup(lookup) {
 // Build a concise assistant-facing summary from notebook lookup results.
 function summarizeNotebookLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
-  const status = cleanText(payload.status, 40);
+  const status = cleanText(payload.status);
   if (!status) {
     return '';
   }
   if (status === 'needs_more_info') {
-    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more details to run notebook lookup.';
   }
-  const query = cleanText(payload.query, 220);
+  const query = cleanText(payload.query);
   const items = asArray(payload.items);
   if (status === 'matched' && items.length) {
     const previewLines = items
       .slice(0, 3)
       .map((item, index) => {
         const source = item && typeof item === 'object' ? item : {};
-        const label = cleanText(source.title || source.id, 140);
+        const label = cleanText(source.title || source.id);
         if (!label) {
           return '';
         }
-        const recordType = cleanText(source.record_type, 40).replace(/_/g, ' ');
+        const recordType = cleanText(source.record_type).replace(/_/g, ' ');
         const details = [
-          cleanText(source.project_name, 180) ? `project ${cleanText(source.project_name, 180)}` : '',
-          cleanText(source.linked_protocol_name, 180) ? `protocol ${cleanText(source.linked_protocol_name, 180)}` : '',
-          cleanText(source.updated_at, 80) ? `updated ${cleanText(source.updated_at, 80)}` : ''
+          cleanText(source.project_name) ? `project ${cleanText(source.project_name)}` : '',
+          cleanText(source.linked_protocol_name) ? `protocol ${cleanText(source.linked_protocol_name)}` : '',
+          cleanText(source.updated_at) ? `updated ${cleanText(source.updated_at)}` : ''
         ].filter(Boolean).slice(0, 3);
         return `${index + 1}. ${recordType ? `${recordType}: ` : ''}${label}${details.length ? ` (${details.join('; ')})` : ''}`;
       })
@@ -249,18 +264,18 @@ function summarizeNotebookLookup(lookup) {
 
 function summarizePurchaseRecommendation(purchaseRecommendation) {
   const payload = purchaseRecommendation && typeof purchaseRecommendation === 'object' ? purchaseRecommendation : {};
-  const status = cleanText(payload.status, 40);
+  const status = cleanText(payload.status);
   if (!status) {
     return '';
   }
   if (status === 'needs_more_info') {
-    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more detail before I can recommend something to buy.';
   }
-  const query = cleanText(payload.query, 220);
+  const query = cleanText(payload.query);
   const items = asArray(payload.items);
-  const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => cleanText(item, 120)).filter(Boolean);
-  const matchMode = cleanText(payload.match_mode, 20);
+  const requiredTerms = asArray(payload?.filters?.required_terms).map((item) => cleanText(item)).filter(Boolean);
+  const matchMode = cleanText(payload.match_mode);
   if (status === 'matched' && items.length) {
     if (matchMode === 'partial') {
       return `Found ${items.length} likely product match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}, but I could not verify every requested attribute from the vendor pages.`;
@@ -275,7 +290,7 @@ function summarizePurchaseRecommendation(purchaseRecommendation) {
 
 function summarizeCodexAgent(codexAgent) {
   const payload = codexAgent && typeof codexAgent === 'object' ? codexAgent : {};
-  const status = cleanText(payload.status, 40);
+  const status = cleanText(payload.status);
   if (!status) {
     return '';
   }
@@ -287,11 +302,11 @@ function summarizeCodexAgent(codexAgent) {
     if (userQuestion?.question) {
       return userQuestion.question;
     }
-    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 500)).filter(Boolean).join(' ')
-      || cleanText(payload.answer, 12000)
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
+      || cleanText(payload.answer)
       || 'I need more detail before I can continue.';
   }
-  return cleanText(payload.answer || payload.assistant_text, 12000);
+  return cleanText(payload.answer || payload.assistant_text);
 }
 
 function summarizeSkillCommand(skillCommand) {
@@ -299,13 +314,11 @@ function summarizeSkillCommand(skillCommand) {
   if (!Object.keys(payload).length) {
     return '';
   }
-  const summary = cleanText(payload.summary, 12000);
+  const summary = cleanText(payload.summary);
   const result = payload.result && typeof payload.result === 'object' ? payload.result : {};
   const output = cleanText(
     result.output
-      || [result.stdout, result.stderr].filter(Boolean).join(result.stdout && result.stderr ? '\n' : ''),
-    12000
-  );
+      || [result.stdout, result.stderr].filter(Boolean).join(result.stdout && result.stderr ? '\n' : ''));
   if (summary && output && !summary.includes(output)) {
     return `${summary}\n\n${output}`;
   }
@@ -315,36 +328,36 @@ function summarizeSkillCommand(skillCommand) {
 // Extract the main answer or follow-up prompt from a science-question result payload.
 function summarizeScienceResult(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
-  const status = cleanText(source.status, 40);
+  const status = cleanText(source.status);
   if (!status) {
     return '';
   }
   if (status === 'needs_more_info') {
-    return asArray(source.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+    return asArray(source.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more detail before I can continue.';
   }
-  const answer = cleanText(source.answer, 12000);
+  const answer = cleanText(source.answer);
   if (answer) {
     return answer;
   }
-  return asArray(source.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ');
+  return asArray(source.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ');
 }
 
 // Build a concise assistant-facing summary from notebook draft proposal results.
 function summarizeNotebookDraft(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
-  const status = cleanText(source.status, 40);
+  const status = cleanText(source.status);
   if (!status) {
     return '';
   }
   if (status === 'needs_more_info') {
-    return asArray(source.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+    return asArray(source.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more detail before I can plan the next notebook page.';
   }
   const proposal = source.proposal && typeof source.proposal === 'object' ? source.proposal : {};
-  const title = cleanText(proposal.title, 220);
-  const purpose = cleanText(proposal.purpose, 320);
-  const protocolName = cleanText(source?.selected_protocol?.name, 220);
+  const title = cleanText(proposal.title);
+  const purpose = cleanText(proposal.purpose);
+  const protocolName = cleanText(source?.selected_protocol?.name);
   if (status === 'proposal_ready') {
     return title && purpose
       ? `Planned notebook draft ready: ${title}. ${purpose}`
@@ -355,10 +368,10 @@ function summarizeNotebookDraft(payload) {
 
 function summarizeNotebookAppend(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
-  if (cleanText(source.status, 40) !== 'proposal_ready') {
+  if (cleanText(source.status) !== 'proposal_ready') {
     return '';
   }
-  const sectionTitle = cleanText(source?.proposal?.section_title, 220);
+  const sectionTitle = cleanText(source?.proposal?.section_title);
   return `Notebook enrichment is ready for review${sectionTitle ? `: ${sectionTitle}` : ''}.`;
 }
 
@@ -370,7 +383,7 @@ function summarizeProtocolGeneration(payload) {
   if (!protocols.length) {
     return '';
   }
-  const names = protocols.map((protocol) => cleanText(protocol?.name || protocol?.title, 160)).filter(Boolean);
+  const names = protocols.map((protocol) => cleanText(protocol?.name || protocol?.title)).filter(Boolean);
   const prefix = protocols.length === 1
     ? `Generated protocol ready${names[0] ? `: ${names[0]}` : ''}.`
     : `Generated ${protocols.length} protocols${names.length ? `: ${names.slice(0, 3).join(', ')}` : ''}.`;
@@ -426,7 +439,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     || payload.userQuestion
     || payload.codex_agent?.user_question
     || payload.codex_agent?.userQuestion;
-  const codexStatus = cleanText(payload.codex_agent?.status, 40);
+  const codexStatus = cleanText(payload.codex_agent?.status);
   const keepUserQuestion = Boolean(
     explicitUserQuestion
     && (
@@ -472,7 +485,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     thinking_trace: extractStructuredThinkingTrace(payload),
     notebookDraft: notebookPayload ? cloneJson(notebookPayload, null) : null,
     notebookAppend: notebookAppendWorkflow ? cloneJson(notebookAppendWorkflow, null) : null,
-    requestText: cleanText(requestText, 3000)
+    requestText: cleanText(requestText)
   };
 }
 
@@ -517,14 +530,12 @@ function buildAssistantTextFromResult(result) {
   const resultAnalysis = payload.result_analysis && typeof payload.result_analysis === 'object'
     ? payload.result_analysis
     : null;
-  const protocolStatus = cleanText(protocolWorkflow?.status, 40);
-  const followUpQuestions = asArray(protocolWorkflow?.follow_up_questions).map((item) => cleanText(item, 320)).filter(Boolean);
+  const protocolStatus = cleanText(protocolWorkflow?.status);
+  const followUpQuestions = asArray(protocolWorkflow?.follow_up_questions).map((item) => cleanText(item)).filter(Boolean);
   const completedNotebookText = cleanText(
     protocolWorkflow?.notebook?.entry_template?.result
       || protocolWorkflow?.notebook?.save?.reason
-      || '',
-    12000
-  );
+      || '');
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const notebookSummaryText = summarizeNotebookLookup(notebookLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
@@ -551,7 +562,7 @@ function buildAssistantTextFromResult(result) {
   // Prefer notebook completion text when a protocol-to-notebook workflow succeeded.
   if (protocolStatus === 'completed') {
     return completedNotebookText
-      || `Notebook draft completed using protocol ${cleanText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`;
+      || `Notebook draft completed using protocol ${cleanText(protocolWorkflow?.selected_protocol?.name) || 'selection'}.`;
   }
   // Surface follow-up questions when the workflow cannot continue without more user input.
   if (protocolStatus === 'needs_more_info') {
@@ -563,15 +574,15 @@ function buildAssistantTextFromResult(result) {
     || purchaseRecommendationText
     || inventorySummaryText
     || notebookSummaryText
-    || cleanText(parser.reasoning_summary, 12000)
+    || cleanText(parser.reasoning_summary)
     || 'Intent parsing completed.';
 }
 
 // Create a normalized assistant chat message from a successful agent response payload.
 function buildAssistantMessageFromResult({ result, requestText = '', messageId = '', timestamp = '' } = {}) {
-  const createdAt = cleanText(timestamp, 80) || new Date().toISOString();
+  const createdAt = cleanText(timestamp) || new Date().toISOString();
   return {
-    id: cleanText(messageId, 120) || createDefaultId(),
+    id: cleanText(messageId) || createDefaultId(),
     role: 'assistant',
     text: buildAssistantTextFromResult(result),
     createdAt,
@@ -581,10 +592,10 @@ function buildAssistantMessageFromResult({ result, requestText = '', messageId =
 
 // Create a normalized assistant chat message representing an agent failure.
 function buildAssistantMessageFromError({ errorMessage = '', requestText = '', messageId = '', timestamp = '' } = {}) {
-  const createdAt = cleanText(timestamp, 80) || new Date().toISOString();
-  const message = cleanText(errorMessage, 1200) || 'Unknown error';
+  const createdAt = cleanText(timestamp) || new Date().toISOString();
+  const message = cleanText(errorMessage) || 'Unknown error';
   return {
-    id: cleanText(messageId, 120) || createDefaultId(),
+    id: cleanText(messageId) || createDefaultId(),
     role: 'assistant',
     text: `Agent failed: ${message}`,
     createdAt,
@@ -616,16 +627,16 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       thinking_trace: null,
       notebookDraft: null,
       notebookAppend: null,
-      requestText: cleanText(requestText, 3000)
+      requestText: cleanText(requestText)
     }
   };
 }
 
 function buildAssistantMessageFromCancellation({ message = '', requestText = '', messageId = '', timestamp = '' } = {}) {
-  const createdAt = cleanText(timestamp, 80) || new Date().toISOString();
-  const stopMessage = cleanText(message, 1200) || 'Agent request stopped.';
+  const createdAt = cleanText(timestamp) || new Date().toISOString();
+  const stopMessage = cleanText(message) || 'Agent request stopped.';
   return {
-    id: cleanText(messageId, 120) || createDefaultId(),
+    id: cleanText(messageId) || createDefaultId(),
     role: 'assistant',
     text: 'Agent stopped.',
     createdAt,
@@ -635,7 +646,7 @@ function buildAssistantMessageFromCancellation({ message = '', requestText = '',
         message: stopMessage
       },
       thinking_trace: null,
-      requestText: cleanText(requestText, 3000)
+      requestText: cleanText(requestText)
     }
   };
 }
@@ -643,48 +654,48 @@ function buildAssistantMessageFromCancellation({ message = '', requestText = '',
 // Normalize one chat-session summary entry as stored in the index file.
 function normalizeSessionSummary(rawSummary = {}) {
   const source = rawSummary && typeof rawSummary === 'object' ? rawSummary : {};
-  const id = cleanText(source.id || source.session_id || source.sessionId, 120);
+  const id = cleanText(source.id || source.session_id || source.sessionId);
   if (!id) {
     return null;
   }
   return {
     id,
-    title: cleanText(source.title, 220) || 'New Chat',
-    project_id: cleanText(source.project_id || source.projectId, 120),
-    project_name: cleanText(source.project_name || source.projectName, 220),
-    log_file: cleanText(source.log_file || source.logFile, 240) || `${sanitizeFileName(id)}.log`,
-    created_at: cleanText(source.created_at || source.createdAt, 80),
-    updated_at: cleanText(source.updated_at || source.updatedAt, 80),
+    title: cleanText(source.title) || 'New Chat',
+    project_id: cleanText(source.project_id || source.projectId),
+    project_name: cleanText(source.project_name || source.projectName),
+    log_file: cleanText(source.log_file || source.logFile) || `${sanitizeFileName(id)}.log`,
+    created_at: cleanText(source.created_at || source.createdAt),
+    updated_at: cleanText(source.updated_at || source.updatedAt),
     codex_session_id: extractCodexSessionId(source),
-    status: cleanText(source.status, 40) || 'ready',
+    status: cleanText(source.status) || 'ready',
     message_count: Math.max(0, Number(source.message_count) || 0),
     request_count: Math.max(0, Number(source.request_count) || 0),
-    last_message_preview: cleanText(source.last_message_preview, 320),
-    last_user_message_preview: cleanText(source.last_user_message_preview, 320),
-    response_type: cleanText(source.response_type, 80),
-    last_request_id: cleanText(source.last_request_id, 120),
-    last_error: cleanText(source.last_error, 400)
+    last_message_preview: cleanText(source.last_message_preview),
+    last_user_message_preview: cleanText(source.last_user_message_preview),
+    response_type: cleanText(source.response_type),
+    last_request_id: cleanText(source.last_request_id),
+    last_error: cleanText(source.last_error)
   };
 }
 
 function normalizeTransformStatus(rawStatus = {}) {
   const source = rawStatus && typeof rawStatus === 'object' ? rawStatus : {};
-  const sourceFile = cleanText(source.source_file || source.sourceFile, 240);
+  const sourceFile = cleanText(source.source_file || source.sourceFile);
   if (!sourceFile) {
     return null;
   }
   return {
     source_file: sourceFile,
-    output_file: cleanText(source.output_file || source.outputFile, 400),
-    status: cleanText(source.status, 40) || 'pending',
+    output_file: cleanText(source.output_file || source.outputFile),
+    status: cleanText(source.status) || 'pending',
     source_mtime_ms: Number.isFinite(Number(source.source_mtime_ms ?? source.sourceMtimeMs))
       ? Number(source.source_mtime_ms ?? source.sourceMtimeMs)
       : 0,
     source_size: Math.max(0, Number(source.source_size ?? source.sourceSize) || 0),
     source_line_count: Math.max(0, Number(source.source_line_count ?? source.sourceLineCount) || 0),
     trace_count: Math.max(0, Number(source.trace_count ?? source.traceCount) || 0),
-    transformed_at: cleanText(source.transformed_at || source.transformedAt, 80),
-    error: cleanText(source.error, 2400)
+    transformed_at: cleanText(source.transformed_at || source.transformedAt),
+    error: cleanText(source.error)
   };
 }
 
@@ -696,17 +707,15 @@ function normalizeTransformIndex(rawTransforms = {}) {
     const normalized = normalizeTransformStatus({
       ...(value && typeof value === 'object' ? value : {}),
       source_file: cleanText(
-        value?.source_file || value?.sourceFile || key,
-        240
-      )
+        value?.source_file || value?.sourceFile || key)
     });
     if (normalized?.source_file) {
       files[normalized.source_file] = normalized;
     }
   });
   return {
-    updated_at: cleanText(source.updated_at || source.updatedAt, 80),
-    output_folder: cleanText(source.output_folder || source.outputFolder, 120) || 'transformed',
+    updated_at: cleanText(source.updated_at || source.updatedAt),
+    output_folder: cleanText(source.output_folder || source.outputFolder) || 'transformed',
     files
   };
 }
@@ -729,7 +738,7 @@ function normalizeIndexPayload(rawIndex = {}) {
   const source = rawIndex && typeof rawIndex === 'object' ? rawIndex : {};
   return {
     version: 1,
-    updated_at: cleanText(source.updated_at || source.updatedAt, 80),
+    updated_at: cleanText(source.updated_at || source.updatedAt),
     sessions: asArray(source.sessions).map((item) => normalizeSessionSummary(item)).filter(Boolean),
     transforms: normalizeTransformIndex(source.transforms)
   };
@@ -738,9 +747,9 @@ function normalizeIndexPayload(rawIndex = {}) {
 // Normalize one log row so event processing can rely on consistent field names.
 function normalizeSessionRow(rawRow = {}) {
   const source = rawRow && typeof rawRow === 'object' ? rawRow : {};
-  const type = cleanText(source.type, 80);
-  const sessionId = cleanText(source.session_id || source.sessionId, 120);
-  const timestamp = cleanText(source.timestamp || source.createdAt || source.created_at, 80) || new Date().toISOString();
+  const type = cleanText(source.type);
+  const sessionId = cleanText(source.session_id || source.sessionId);
+  const timestamp = cleanText(source.timestamp || source.createdAt || source.created_at) || new Date().toISOString();
   if (!type || !sessionId) {
     return null;
   }
@@ -761,9 +770,9 @@ function buildMessageRow(message, sessionId) {
   return normalizeSessionRow({
     type: role === 'assistant' ? CHAT_LOG_EVENT_TYPES.ASSISTANT_MESSAGE : CHAT_LOG_EVENT_TYPES.USER_MESSAGE,
     session_id: sessionId,
-    message_id: cleanText(source.id || source.message_id || source.messageId, 120) || createDefaultId(),
-    timestamp: cleanText(source.createdAt || source.timestamp, 80) || new Date().toISOString(),
-    text: cleanText(source.text, 24000),
+    message_id: cleanText(source.id || source.message_id || source.messageId) || createDefaultId(),
+    timestamp: cleanText(source.createdAt || source.timestamp) || new Date().toISOString(),
+    text: cleanText(source.text),
     meta: role === 'assistant' ? cloneJson(source.meta, null) : undefined
   });
 }
@@ -779,21 +788,21 @@ function applyEntryToSummary(summary, entry) {
   // Session creation establishes the initial title/project metadata and resets the status.
   if (row.type === CHAT_LOG_EVENT_TYPES.SESSION_CREATED) {
     next.status = 'ready';
-    next.project_id = cleanText(row.project_id || next.project_id, 120) || next.project_id;
-    next.project_name = cleanText(row.project_name || next.project_name, 220) || next.project_name;
-    next.title = cleanText(row.title, 220) || next.title;
-    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
+    next.project_id = cleanText(row.project_id || next.project_id) || next.project_id;
+    next.project_name = cleanText(row.project_name || next.project_name) || next.project_name;
+    next.title = cleanText(row.title) || next.title;
+    next.codex_session_id = mergeCodexSessionId(next.codex_session_id, row);
     return next;
   }
 
   // User messages advance message counters and can rename untitled sessions.
   if (row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE) {
-    const text = cleanText(row.text, 320);
+    const text = cleanText(row.text);
     next.message_count += 1;
     next.last_message_preview = text;
     next.last_user_message_preview = text;
     next.status = 'active';
-    if (!cleanText(next.title, 40) || next.title === 'New Chat') {
+    if (!cleanText(next.title) || next.title === 'New Chat') {
       next.title = deriveSessionTitle(text, next.title || 'New Chat');
     }
     return next;
@@ -802,33 +811,33 @@ function applyEntryToSummary(summary, entry) {
   // Assistant replies update the latest preview and clear any previous error marker.
   if (row.type === CHAT_LOG_EVENT_TYPES.ASSISTANT_MESSAGE) {
     next.message_count += 1;
-    next.last_message_preview = cleanText(row.text, 320);
+    next.last_message_preview = cleanText(row.text);
     next.status = 'active';
     next.last_error = '';
-    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
+    next.codex_session_id = mergeCodexSessionId(next.codex_session_id, row);
     return next;
   }
 
   // Request events track how many agent calls were made and which project they belonged to.
   if (row.type === CHAT_LOG_EVENT_TYPES.AGENT_CHAT_REQUEST) {
     next.request_count += 1;
-    next.last_request_id = cleanText(row.requestId, 120) || next.last_request_id;
-    next.project_id = cleanText(row.projectId || row.project_id || next.project_id, 120) || next.project_id;
-    next.project_name = cleanText(row.projectName || row.project_name || next.project_name, 220) || next.project_name;
+    next.last_request_id = cleanText(row.requestId) || next.last_request_id;
+    next.project_id = cleanText(row.projectId || row.project_id || next.project_id) || next.project_id;
+    next.project_name = cleanText(row.projectName || row.project_name || next.project_name) || next.project_name;
     return next;
   }
 
   // Result events record the latest response type and clear stale errors.
   if (row.type === CHAT_LOG_EVENT_TYPES.AGENT_CHAT_RESULT) {
-    next.response_type = cleanText(row.response_type || row.responseType, 80);
-    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
+    next.response_type = cleanText(row.response_type || row.responseType);
+    next.codex_session_id = mergeCodexSessionId(next.codex_session_id, row);
     next.last_error = '';
     return next;
   }
 
   // Error events preserve the latest failure summary for the session list.
   if (row.type === CHAT_LOG_EVENT_TYPES.AGENT_CHAT_ERROR) {
-    next.last_error = cleanText(row.error, 400);
+    next.last_error = cleanText(row.error);
     return next;
   }
 
@@ -844,18 +853,18 @@ function buildRendererMessages(rows) {
     }
     if (entry.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE) {
       messages.push({
-        id: cleanText(entry.message_id, 120) || createDefaultId(),
+        id: cleanText(entry.message_id) || createDefaultId(),
         role: 'user',
-        text: cleanText(entry.text, 24000),
+        text: cleanText(entry.text),
         createdAt: entry.timestamp
       });
       return messages;
     }
     if (entry.type === CHAT_LOG_EVENT_TYPES.ASSISTANT_MESSAGE) {
       messages.push({
-        id: cleanText(entry.message_id, 120) || createDefaultId(),
+        id: cleanText(entry.message_id) || createDefaultId(),
         role: 'assistant',
-        text: cleanText(entry.text, 24000),
+        text: cleanText(entry.text),
         createdAt: entry.timestamp,
         meta: ensureThinkingTraceMeta(entry.meta)
       });
@@ -896,15 +905,15 @@ function createAgentChatLogRuntime(deps = {}) {
     projectId = '',
     projectName = ''
   } = {}) {
-    const prompt = cleanText(message, 6000);
+    const prompt = cleanText(message);
     const fallback = deriveSessionTitle(prompt, 'New Chat');
     if (!prompt || !requestAssistantText) {
       return fallback;
     }
-    const provider = cleanText(llm?.provider, 80);
-    const endpoint = cleanText(llm?.apiEndpoint || llm?.endpoint, 2400);
-    const apiKey = cleanText(llm?.apiKey, 2400);
-    const model = cleanText(llm?.model, 160);
+    const provider = cleanText(llm?.provider);
+    const endpoint = cleanText(llm?.apiEndpoint || llm?.endpoint);
+    const apiKey = cleanText(llm?.apiKey);
+    const model = cleanText(llm?.model);
     if ((!provider && !endpoint) || !model || !apiKey) {
       return fallback;
     }
@@ -920,8 +929,8 @@ function createAgentChatLogRuntime(deps = {}) {
         'No quotes, no markdown, no ending punctuation.'
       ].join(' '),
       userPrompt: [
-        projectName ? `Project: ${cleanText(projectName, 220)}` : '',
-        projectId && !projectName ? `Project ID: ${cleanText(projectId, 120)}` : '',
+        projectName ? `Project: ${cleanText(projectName)}` : '',
+        projectId && !projectName ? `Project ID: ${cleanText(projectId)}` : '',
         `First user message: ${prompt}`,
         'Return only the label.'
       ].filter(Boolean).join('\n')
@@ -934,7 +943,7 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Resolve the base storage path plus the chat-log folder and index file locations.
   function resolvePaths(storagePath) {
-    const resolvedStoragePath = runtimePath.resolve(cleanText(storagePath, 2400));
+    const resolvedStoragePath = runtimePath.resolve(cleanText(storagePath));
     if (!resolvedStoragePath) {
       throw new Error('Missing storage path.');
     }
@@ -988,7 +997,7 @@ function createAgentChatLogRuntime(deps = {}) {
       ...index,
       transforms: mergeTransformIndexes(index?.transforms, existingTransforms)
     });
-    normalized.updated_at = cleanText(normalized.updated_at, 80) || now();
+    normalized.updated_at = cleanText(normalized.updated_at) || now();
     await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
     await runtimeFs.writeFile(paths.indexPath, JSON.stringify(normalized, null, 2), 'utf8');
     return normalized;
@@ -1006,7 +1015,7 @@ function createAgentChatLogRuntime(deps = {}) {
       };
     }
     const { paths, index } = await readIndex(storagePath);
-    const normalizedSessionId = cleanText(sessionId, 120);
+    const normalizedSessionId = cleanText(sessionId);
     if (!normalizedSessionId) {
       throw new Error('sessionId is required.');
     }
@@ -1015,8 +1024,8 @@ function createAgentChatLogRuntime(deps = {}) {
       session = normalizeSessionSummary({
         id: normalizedSessionId,
         title: 'New Chat',
-        project_id: cleanText(filteredRows[0]?.project_id || filteredRows[0]?.projectId, 120),
-        project_name: cleanText(filteredRows[0]?.project_name || filteredRows[0]?.projectName, 220),
+        project_id: cleanText(filteredRows[0]?.project_id || filteredRows[0]?.projectId),
+        project_name: cleanText(filteredRows[0]?.project_name || filteredRows[0]?.projectName),
         created_at: filteredRows[0]?.timestamp || now(),
         updated_at: filteredRows[0]?.timestamp || now(),
         log_file: `${sanitizeFileName(normalizedSessionId)}.log`
@@ -1025,20 +1034,20 @@ function createAgentChatLogRuntime(deps = {}) {
     }
 
     const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
-    const titleWasUntitled = !cleanText(session?.title, 40) || session.title === 'New Chat';
+    const titleWasUntitled = !cleanText(session?.title) || session.title === 'New Chat';
     const payload = filteredRows.map((row) => JSON.stringify(row)).join('\n');
     await runtimeFs.appendFile(logPath, `${payload}\n`, 'utf8');
     filteredRows.forEach((row) => {
       session = applyEntryToSummary(session, row);
     });
     if (titleWasUntitled) {
-      const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text, 24000));
+      const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text));
       if (firstUserRow) {
         session.title = await summarizeFirstUserMessageAsTitle({
           message: firstUserRow.text,
           llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
-          projectId: cleanText(options?.projectId || firstUserRow?.project_id || firstUserRow?.projectId, 120),
-          projectName: cleanText(options?.projectName || firstUserRow?.project_name || firstUserRow?.projectName, 220)
+          projectId: cleanText(options?.projectId || firstUserRow?.project_id || firstUserRow?.projectId),
+          projectName: cleanText(options?.projectName || firstUserRow?.project_name || firstUserRow?.projectName)
         });
       }
     }
@@ -1052,12 +1061,12 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Create a brand-new session summary and seed its log with a creation event.
   async function createSession(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path, 2400);
-    const title = cleanText(input.title, 220) || 'New Chat';
-    const projectId = cleanText(input.projectId || input.project_id, 120);
-    const projectName = cleanText(input.projectName || input.project_name, 220);
-    const sessionId = cleanText(input.sessionId || input.session_id, 120) || createId();
-    const timestamp = cleanText(input.created_at || input.createdAt, 80) || now();
+    const storagePath = cleanText(input.storagePath || input.storage_path);
+    const title = cleanText(input.title) || 'New Chat';
+    const projectId = cleanText(input.projectId || input.project_id);
+    const projectName = cleanText(input.projectName || input.project_name);
+    const sessionId = cleanText(input.sessionId || input.session_id) || createId();
+    const timestamp = cleanText(input.created_at || input.createdAt) || now();
     const { paths, index } = await readIndex(storagePath);
     const existing = index.sessions.find((item) => item.id === sessionId);
     if (existing) {
@@ -1097,8 +1106,8 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Reuse an existing session when possible, otherwise create one from the provided input.
   async function ensureSession(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path, 2400);
-    const sessionId = cleanText(input.sessionId || input.session_id, 120);
+    const storagePath = cleanText(input.storagePath || input.storage_path);
+    const sessionId = cleanText(input.sessionId || input.session_id);
     if (!sessionId) {
       return createSession(input);
     }
@@ -1118,7 +1127,7 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Return the most recent chat sessions for sidebar or picker views.
   async function listSessions(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path, 2400);
+    const storagePath = cleanText(input.storagePath || input.storage_path);
     const limit = Math.max(1, Number(input.limit) || 100);
     const { index } = await readIndex(storagePath);
     return {
@@ -1129,8 +1138,8 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Load and normalize all persisted rows for a single session log file.
   async function readSessionRows(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path, 2400);
-    const sessionId = cleanText(input.sessionId || input.session_id, 120);
+    const storagePath = cleanText(input.storagePath || input.storage_path);
+    const sessionId = cleanText(input.sessionId || input.session_id);
     if (!sessionId) {
       throw new Error('sessionId is required.');
     }
@@ -1174,8 +1183,8 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Return one session summary together with its reconstructed chat messages.
   async function getSession(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path, 2400);
-    const sessionId = cleanText(input.sessionId || input.session_id, 120);
+    const storagePath = cleanText(input.storagePath || input.storage_path);
+    const sessionId = cleanText(input.sessionId || input.session_id);
     if (!sessionId) {
       throw new Error('sessionId is required.');
     }
@@ -1200,35 +1209,35 @@ function createAgentChatLogRuntime(deps = {}) {
 
   // Normalize and append a user-authored chat message into the session log.
   async function appendUserMessage(input = {}) {
-    const sessionId = cleanText(input.sessionId || input.session_id, 120);
+    const sessionId = cleanText(input.sessionId || input.session_id);
     const message = {
-      id: cleanText(input.messageId || input.message_id, 120) || createId(),
+      id: cleanText(input.messageId || input.message_id) || createId(),
       role: 'user',
-      text: cleanText(input.text || input.message, 24000),
-      createdAt: cleanText(input.createdAt || input.timestamp, 80) || now()
+      text: cleanText(input.text || input.message),
+      createdAt: cleanText(input.createdAt || input.timestamp) || now()
     };
     const row = buildMessageRow(message, sessionId);
     if (row) {
-      row.project_id = cleanText(input.projectId || input.project_id, 120);
-      row.project_name = cleanText(input.projectName || input.project_name, 220);
+      row.project_id = cleanText(input.projectId || input.project_id);
+      row.project_name = cleanText(input.projectName || input.project_name);
     }
     return appendRows(input.storagePath || input.storage_path, sessionId, [row], {
       llm: input?.llm && typeof input.llm === 'object' ? input.llm : {},
-      projectId: cleanText(input.projectId || input.project_id, 120),
-      projectName: cleanText(input.projectName || input.project_name, 220)
+      projectId: cleanText(input.projectId || input.project_id),
+      projectName: cleanText(input.projectName || input.project_name)
     });
   }
 
   // Normalize and append an assistant-authored chat message into the session log.
   async function appendAssistantMessage(input = {}) {
-    const sessionId = cleanText(input.sessionId || input.session_id, 120);
+    const sessionId = cleanText(input.sessionId || input.session_id);
     const message = input.message && typeof input.message === 'object'
       ? input.message
       : {
-        id: cleanText(input.messageId || input.message_id, 120) || createId(),
+        id: cleanText(input.messageId || input.message_id) || createId(),
         role: 'assistant',
-        text: cleanText(input.text || input.message_text, 24000),
-        createdAt: cleanText(input.createdAt || input.timestamp, 80) || now(),
+        text: cleanText(input.text || input.message_text),
+        createdAt: cleanText(input.createdAt || input.timestamp) || now(),
         meta: cloneJson(input.meta, {})
       };
     return appendRows(input.storagePath || input.storage_path, sessionId, [buildMessageRow(message, sessionId)]);

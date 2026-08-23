@@ -519,6 +519,39 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(clean.warnings.some((warning) => /binds more than one site/.test(warning)), false);
     });
 
+    test('[EDGE] hovering a primer feature offers the oligo and a copy button', () => {
+      const hover = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-hover.js')
+      );
+      const sequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG';
+
+      // A designed primer carries the oligo as ordered, tail included, which is
+      // longer than the footprint the feature spans.
+      const designed = {
+        name: 'APA2 F', type: 'primer_bind', strand: 1,
+        primerSequence: `CACCAGGGGGG${sequence.slice(10, 34)}`,
+        segments: [{ start: 10, end: 34 }]
+      };
+      assert.equal(hover.primerFeatureSequence(designed, sequence), `CACCAGGGGGG${sequence.slice(10, 34)}`);
+
+      // An imported primer_bind has no stored oligo, so it is read off the record
+      // — reverse complemented when it sits on the minus strand.
+      const imported = { name: 'M13 rev', type: 'primer_bind', strand: -1, segments: [{ start: 10, end: 34 }] };
+      const slice = sequence.slice(10, 34);
+      const revcomp = [...slice].reverse().map((base) => ({ A: 'T', T: 'A', G: 'C', C: 'G' }[base] || 'N')).join('');
+      assert.equal(hover.primerFeatureSequence(imported, sequence), revcomp);
+
+      const html = hover.renderPrimerHoverSection(designed, sequence);
+      assert.match(html, /CACCAGGGGGG/);
+      assert.match(html, /data-sequence-primer-copy="CACCAGGGGGG/);
+      assert.match(html, /35 nt/);
+
+      // Everything else keeps the plain readout it had before.
+      assert.equal(hover.renderPrimerHoverSection({ name: 'His6', type: 'CDS', segments: [{ start: 0, end: 18 }] }, sequence), '');
+      // A primer with nothing to show is not given an empty copy button.
+      assert.equal(hover.renderPrimerHoverSection({ name: 'ghost', type: 'primer_bind', segments: [] }, ''), '');
+    });
+
     test('[EDGE] primer names read as bench labels: what is added, the target, then F/R', () => {
       const naming = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-naming.js')
@@ -602,6 +635,198 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         }).mutation,
         'del9'
       );
+    });
+
+    test('[EDGE] generated sequence names describe cumulative variants and construct hierarchy', () => {
+      const naming = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'sequence-naming.js')
+      );
+      const codons = Array.from({ length: 50 }, () => 'GCT');
+      codons[44] = 'GAA'; // E45
+      codons[46] = 'CGT'; // R47
+      const original = codons.join('');
+      const e45gIndex = (44 * 3) + 1;
+      const r47aIndex = 46 * 3;
+      let edited = `${original.slice(0, e45gIndex)}G${original.slice(e45gIndex + 1)}`;
+      edited = `${edited.slice(0, r47aIndex)}GC${edited.slice(r47aIndex + 2)}`;
+      const record = {
+        name: 'pET28a',
+        sequence: original,
+        features: [{ name: 'MDM2', type: 'CDS', strand: 1, segments: [{ start: 0, end: original.length }] }]
+      };
+
+      assert.equal(
+        naming.buildEditedSequenceName({ record, baseName: 'MDM2', originalSequence: original, editedSequence: edited }),
+        'MDM2 E45G/R47A'
+      );
+      assert.equal(
+        naming.buildEditedSequenceName({ record, baseName: 'pET28a', originalSequence: original, editedSequence: edited }),
+        'pET28a · MDM2 E45G/R47A'
+      );
+      const reverseComplement = (sequence) => [...sequence].reverse()
+        .map((base) => ({ A: 'T', T: 'A', G: 'C', C: 'G' }[base] || 'N'))
+        .join('');
+      const reverseOriginal = reverseComplement(original);
+      const reverseEdited = reverseComplement(edited);
+      const reverseRecord = {
+        name: 'MDM2',
+        sequence: reverseOriginal,
+        features: [{ name: 'MDM2', type: 'CDS', strand: -1, segments: [{ start: 0, end: reverseOriginal.length }] }]
+      };
+      assert.equal(
+        naming.buildEditedSequenceName({ record: reverseRecord, originalSequence: reverseOriginal, editedSequence: reverseEdited }),
+        'MDM2 E45G/R47A'
+      );
+
+      const synonymous = `${original.slice(0, (44 * 3) + 2)}G${original.slice((44 * 3) + 3)}`;
+      assert.equal(
+        naming.buildEditedSequenceName({ record, baseName: 'MDM2', originalSequence: original, editedSequence: synonymous }),
+        'MDM2 E45='
+      );
+      assert.equal(
+        naming.buildProteinTargetLabel({ recordName: 'pET28a-MDM2 E45G/R47A', targetName: 'MDM2' }),
+        'MDM2 E45G/R47A'
+      );
+      assert.equal(
+        naming.buildProteinArchitectureName({ parts: [{ label: '6xHis' }, { label: 'TEV' }, { label: 'MDM2 E45G/R47A' }] }),
+        '6xHis–TEV–MDM2(E45G/R47A)'
+      );
+      assert.equal(
+        naming.buildVectorSequenceName({ backboneName: 'pET28a', payloadName: '6xHis–TEV–MDM2(E45G)' }),
+        'pET28a · 6xHis–TEV–MDM2(E45G)'
+      );
+
+      const assemblyPayload = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'assembly-payload.js')
+      );
+      const assembled = assemblyPayload.buildAssembledPlasmidPayload(
+        { hostVectorName: 'pET28a', backboneSequence: 'A'.repeat(60), insertionOffset: 30, topology: 'circular' },
+        { sequence: 'ATGGGCTAA', parts: [{ label: 'MDM2 E45G', dnaSequence: 'ATGGGCTAA' }] },
+        { constructName: '6xHis–TEV–MDM2(E45G)' }
+      );
+      assert.equal(assembled.name, 'pET28a · 6xHis–TEV–MDM2(E45G)');
+    });
+
+    test('[EDGE] editing a saved sequence creates a named local derivative instead of overwriting its entry', async () => {
+      const workflow = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-workflow.js')
+      );
+      const codons = Array.from({ length: 50 }, () => 'GCT');
+      codons[44] = 'GAA';
+      const original = codons.join('');
+      const record = {
+        name: 'MDM2',
+        sequence: original,
+        features: [{ name: 'MDM2', type: 'CDS', strand: 1, segments: [{ start: 0, end: original.length }] }]
+      };
+      const state = {
+        records: [record],
+        selectedRecordIndex: 0,
+        selectedFeatureIndex: -1,
+        activeEntryId: 'saved_mdm2',
+        activeEntryStatus: 'saved',
+        sequenceEditDesignSource: null,
+        cloningDesign: {},
+        warnings: []
+      };
+      const persistenceCalls = [];
+      const actions = {
+        getSelectedRecord: () => state.records[0],
+        persistFeatureMutation: async (nextRecord) => {
+          persistenceCalls.push({ name: nextRecord.name, activeEntryId: state.activeEntryId });
+        },
+        resetAlignmentState() {}
+      };
+      const noOp = () => {};
+      const controllers = {
+        detail: {
+          clearSequenceSelection: noOp,
+          hideFeatureContextMenu: noOp,
+          hideFeatureEditor: noOp,
+          hidePrimerDesignOverlay: noOp,
+          updateRecordSelect: noOp,
+          renderActiveRecord: noOp
+        },
+        cloningDesign: { render: noOp },
+        vectorBuilder: { render: noOp },
+        alignment: { handleReferenceRecordChanged: noOp }
+      };
+      const editActions = workflow.createSequenceEditActions({ state, actions, controllers });
+      const editIndex = (44 * 3) + 1;
+
+      await editActions.applySequenceEdit({
+        mode: 'replace',
+        range: { start: editIndex, end: editIndex + 1 },
+        sequence: 'G'
+      });
+
+      assert.equal(state.records[0].name, 'MDM2 E45G');
+      assert.equal(state.activeEntryId, '');
+      assert.equal(state.activeEntryStatus, '');
+      assert.deepEqual(persistenceCalls, [{ name: 'MDM2 E45G', activeEntryId: '' }]);
+      assert.equal(state.sequenceEditDesignSource.parentEntryId, 'saved_mdm2');
+      assert.equal(state.sequenceEditDesignSource.sourceKind, 'sequence_edit');
+    });
+
+    test('[EDGE] Vector Builder names a Protein Builder insertion as backbone then payload', async () => {
+      const vectorBuilder = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'vector-builder', 'controller.js')
+      );
+      const state = {
+        records: [{
+          name: 'pET28a old construct',
+          sequence: 'A'.repeat(90),
+          topology: 'circular',
+          features: [{
+            name: 'Backbone (pET28a)',
+            type: 'backbone',
+            strand: 1,
+            segments: [{ start: 0, end: 90 }]
+          }]
+        }],
+        selectedRecordIndex: 0,
+        selectedFeatureIndex: -1,
+        vectorBuilder: {
+          selectedFeatureIndex: -1,
+          selectionAnchor: null,
+          selectionFocus: null,
+          cursorBase: 30,
+          isSelecting: false,
+          showCutters: false,
+          insertTarget: { mode: 'insert', start: 30, end: 30 },
+          sequenceLayout: null,
+          zoom: 1
+        },
+        sequenceEditDesignSource: { recordName: 'pET28a old construct', sourceKind: 'sequence_edit' }
+      };
+      const persisted = [];
+      const controller = vectorBuilder.createSequenceViewerVectorBuilderController({
+        state,
+        elements: {},
+        getSelectedRecord: () => state.records[0],
+        onApplySequenceEdit: async ({ range, sequence }) => {
+          const current = state.records[0];
+          state.records[0] = {
+            ...current,
+            sequence: `${current.sequence.slice(0, range.start)}${sequence}${current.sequence.slice(range.end)}`
+          };
+        },
+        persistFeatureMutation: async (record) => persisted.push(record.name)
+      });
+
+      const applied = await controller.applyProteinConstruct({
+        constructName: '6xHis–MDM2(E45G)',
+        dnaConstruct: {
+          sequence: 'ATGGGCTAA',
+          parts: [{ label: 'MDM2 E45G', dnaSequence: 'ATGGGCTAA' }]
+        }
+      });
+
+      assert.equal(applied, true);
+      assert.equal(state.records[0].name, 'pET28a · 6xHis–MDM2(E45G)');
+      assert.deepEqual(persisted, ['pET28a · 6xHis–MDM2(E45G)']);
+      assert.equal(state.sequenceEditDesignSource.sourceKind, 'vector_builder');
+      assert.equal(state.sequenceEditDesignSource.backboneName, 'pET28a');
     });
 
     test('[EDGE] annotatePrimersOnSelectedRecord writes and persists onto the selected record', async () => {

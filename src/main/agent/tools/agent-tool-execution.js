@@ -1,6 +1,7 @@
 'use strict';
 
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
+const { cloneJson } = require('../../lib/normalize.js');
 
 const {
   normalizeToolArgumentsPayload,
@@ -14,7 +15,7 @@ function defaultAsArray(value) {
 }
 
 // Convert unknown input to a string without trimming or clipping payload fields.
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -28,13 +29,6 @@ function defaultEnsureObject(value) {
 }
 
 // Deep-clone JSON-safe data structures so downstream mutations do not affect source data.
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 // Check whether a value is a non-array object.
 function isPlainObject(value) {
@@ -71,7 +65,7 @@ function uniqueStrings(values, max = 20) {
   const seen = new Set();
   const out = [];
   defaultAsArray(values).forEach((value) => {
-    const normalized = defaultCleanText(value, 220);
+    const normalized = defaultCleanText(value);
     if (!normalized) {
       return;
     }
@@ -88,26 +82,20 @@ function uniqueStrings(values, max = 20) {
 // Generate a short human-readable summary from a tool execution result.
 function summarizeToolResult(toolName, result) {
   const source = defaultEnsureObject(result);
-  if (defaultCleanText(source.summary, 320)) {
-    return defaultCleanText(source.summary, 320);
+  if (defaultCleanText(source.summary)) {
+    return defaultCleanText(source.summary);
   }
-  if (defaultCleanText(source.status, 40)) {
+  if (defaultCleanText(source.status)) {
     return defaultCleanText(
-      `${toolName} status=${defaultCleanText(source.status, 40)}.`,
-      320
-    );
+      `${toolName} status=${defaultCleanText(source.status, 40)}.`);
   }
   if (isPlainObject(source.selected_protocol)) {
     return defaultCleanText(
-      `${toolName} selected ${defaultCleanText(source.selected_protocol?.name, 220) || 'a protocol'}.`,
-      320
-    );
+      `${toolName} selected ${defaultCleanText(source.selected_protocol?.name, 220) || 'a protocol'}.`);
   }
   if (Array.isArray(source.items)) {
     return defaultCleanText(
-      `${toolName} returned ${defaultAsArray(source.items).length} items.`,
-      320
-    );
+      `${toolName} returned ${defaultAsArray(source.items).length} items.`);
   }
   return `${toolName} completed.`;
 }
@@ -117,18 +105,16 @@ function buildExecutionEnvelope(toolName, input, result, options = {}) {
   const normalizedResult = cloneJson(result, result);
   const ok = options.ok !== false;
   const summary = defaultCleanText(
-    options.summary,
-    320
-  ) || (ok ? summarizeToolResult(toolName, normalizedResult) : defaultCleanText(options.error, 320));
+    options.summary) || (ok ? summarizeToolResult(toolName, normalizedResult) : defaultCleanText(options.error));
   return {
     ok,
-    tool_name: defaultCleanText(toolName, 120),
+    tool_name: defaultCleanText(toolName),
     input: cloneJson(defaultEnsureObject(input), {}),
     result: normalizedResult,
     items: defaultAsArray(normalizedResult?.items),
     summary,
     generated_at: new Date().toISOString(),
-    ...(defaultCleanText(options.error, 600) ? { error: defaultCleanText(options.error, 600) } : {})
+    ...(defaultCleanText(options.error) ? { error: defaultCleanText(options.error) } : {})
   };
 }
 

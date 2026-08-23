@@ -2,16 +2,9 @@
 
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cleanText(value, _maxLength = 500) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -34,7 +27,7 @@ function uniqueStrings(values, max = 20) {
   const seen = new Set();
   const output = [];
   asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 220);
+    const normalized = cleanText(value);
     if (!normalized) {
       return;
     }
@@ -274,14 +267,14 @@ function parseDelimitedTerms(value, max = 12) {
   return uniqueStrings(
     String(value || '')
       .split(/\s*(?:,|;|\n|(?:\band\b)|(?:\bor\b))\s*/i)
-      .map((part) => cleanText(part, 120))
+      .map((part) => cleanText(part))
       .filter(Boolean),
     max
   );
 }
 
 function normalizeBudgetPreference(value) {
-  const normalized = cleanText(value, 80).toLowerCase();
+  const normalized = cleanText(value).toLowerCase();
   if (!normalized) {
     return '';
   }
@@ -295,7 +288,7 @@ function normalizeBudgetPreference(value) {
 }
 
 function looksLikeExplicitAttributeTerm(value) {
-  const normalized = cleanText(value, 120).toLowerCase();
+  const normalized = cleanText(value).toLowerCase();
   if (!normalized) {
     return false;
   }
@@ -331,18 +324,18 @@ function hasFiniteNumber(value) {
 }
 
 function formatCurrency(priceValue, currency = '', rawPriceText = '') {
-  if (hasFiniteNumber(priceValue) && cleanText(currency, 12)) {
+  if (hasFiniteNumber(priceValue) && cleanText(currency)) {
     try {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: cleanText(currency, 12).toUpperCase()
+        currency: cleanText(currency).toUpperCase()
       }).format(Number(priceValue));
     } catch {
       // Fall through to simpler formatting.
     }
   }
-  if (cleanText(rawPriceText, 120)) {
-    return cleanText(rawPriceText, 120);
+  if (cleanText(rawPriceText)) {
+    return cleanText(rawPriceText);
   }
   if (hasFiniteNumber(priceValue)) {
     return `$${Number(priceValue).toFixed(2)}`;
@@ -351,7 +344,7 @@ function formatCurrency(priceValue, currency = '', rawPriceText = '') {
 }
 
 function normalizePriceValue(value) {
-  const text = cleanText(value, 120);
+  const text = cleanText(value);
   if (!text) {
     return null;
   }
@@ -364,7 +357,7 @@ function normalizePriceValue(value) {
 }
 
 function normalizeCurrency(value) {
-  const text = cleanText(value, 12).toUpperCase();
+  const text = cleanText(value).toUpperCase();
   if (/^[A-Z]{3}$/.test(text)) {
     return text;
   }
@@ -375,7 +368,7 @@ function normalizeCurrency(value) {
 }
 
 function inferCurrencyFromText(value) {
-  const text = cleanText(value, 120).toUpperCase();
+  const text = cleanText(value).toUpperCase();
   if (!text) {
     return '';
   }
@@ -395,7 +388,7 @@ function normalizeVendorName(value, fallbackUrl = '') {
   const source = value && typeof value === 'object'
     ? (value.name || value.brand || value.legalName || value.alternateName)
     : value;
-  const text = cleanText(source, 180);
+  const text = cleanText(source);
   if (text) {
     return text;
   }
@@ -416,7 +409,7 @@ function normalizeOffer(offer = {}, baseUrl = '') {
   const source = ensureObject(offer);
   const priceValue = normalizePriceValue(source.price || source.lowPrice || source.highPrice);
   const currency = normalizeCurrency(source.priceCurrency || source.currency);
-  const rawPriceText = cleanText(source.price, 120);
+  const rawPriceText = cleanText(source.price);
   return {
     price_value: priceValue,
     currency,
@@ -449,7 +442,7 @@ function extractJsonLdBlocks(html = '') {
   const pattern = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match = pattern.exec(String(html || ''));
   while (match) {
-    const rawBlock = cleanText(match[1], 200000)
+    const rawBlock = cleanText(match[1])
       .replace(/^<!\[CDATA\[/, '')
       .replace(/\]\]>$/, '');
     if (rawBlock) {
@@ -467,7 +460,7 @@ function extractJsonLdBlocks(html = '') {
 function nodeLooksLikeProduct(node = {}) {
   const rawType = node?.['@type'];
   const types = asArray(rawType).concat(typeof rawType === 'string' ? [rawType] : [])
-    .map((item) => cleanText(item, 80).toLowerCase());
+    .map((item) => cleanText(item).toLowerCase());
   return types.includes('product');
 }
 
@@ -485,7 +478,7 @@ function extractJsonLdProducts(html = '', pageUrl = '') {
         || normalizedOffers[0]
         || {};
       const productUrl = safeUrl(source.url, pageUrl)
-        || cleanText(selectedOffer.product_url, 2000)
+        || cleanText(selectedOffer.product_url)
         || readCanonicalUrl(html, pageUrl);
       const vendor = normalizeVendorName(
         source.brand || source.manufacturer || source.seller || selectedOffer.vendor,
@@ -493,18 +486,16 @@ function extractJsonLdProducts(html = '', pageUrl = '') {
       );
       const priceValue = selectedOffer.price_value;
       const currency = selectedOffer.currency;
-      const rawPriceText = selectedOffer.price_text || cleanText(source.price, 120);
+      const rawPriceText = selectedOffer.price_text || cleanText(source.price);
       const priceText = formatCurrency(priceValue, currency, rawPriceText);
       const description = cleanText(
         source.description
           || source.disambiguatingDescription
           || source.category
-          || source.keywords,
-        1600
-      );
+          || source.keywords);
       return {
-        id: cleanText(source.sku || source.productID || source.mpn || source.gtin13 || source.name || productUrl, 220),
-        title: cleanText(source.name, 320),
+        id: cleanText(source.sku || source.productID || source.mpn || source.gtin13 || source.name || productUrl),
+        title: cleanText(source.name),
         description,
         vendor,
         price_value: priceValue,
@@ -531,9 +522,7 @@ function extractFallbackProduct(html = '', pageUrl = '') {
     readMetaContent(html, 'property', 'product:price:amount')
       || readMetaContent(html, 'name', 'twitter:data1')
       || readMetaContent(html, 'itemprop', 'price')
-      || readMetaContent(html, 'property', 'og:price:amount'),
-    120
-  );
+      || readMetaContent(html, 'property', 'og:price:amount'));
   const currency = normalizeCurrency(
     readMetaContent(html, 'property', 'product:price:currency')
       || readMetaContent(html, 'itemprop', 'priceCurrency')
@@ -543,22 +532,18 @@ function extractFallbackProduct(html = '', pageUrl = '') {
   const normalizedCurrency = currency || loosePrice.currency;
   const normalizedPriceText = formatCurrency(priceValue, normalizedCurrency, priceText || loosePrice.price_text);
   return {
-    id: cleanText(canonicalUrl || pageUrl || readTagValue(html, 'title'), 220),
+    id: cleanText(canonicalUrl || pageUrl || readTagValue(html, 'title')),
     title: cleanText(
       readMetaContent(html, 'property', 'og:title')
       || readMetaContent(html, 'name', 'twitter:title')
       || readMetaContent(html, 'itemprop', 'name')
       || readFirstHeadingText(html, 'h1')
-      || readTagValue(html, 'title'),
-      320
-    ),
+      || readTagValue(html, 'title')),
     description: cleanText(
       readMetaContent(html, 'property', 'og:description')
       || readMetaContent(html, 'name', 'description')
       || readMetaContent(html, 'name', 'twitter:description')
-      || readMetaContent(html, 'itemprop', 'description'),
-      1600
-    ),
+      || readMetaContent(html, 'itemprop', 'description')),
     vendor,
     price_value: priceValue,
     currency: normalizedCurrency,
@@ -575,7 +560,7 @@ function extractFallbackProduct(html = '', pageUrl = '') {
 }
 
 function extractLoosePrice(source = '') {
-  const text = cleanText(source, 120000);
+  const text = cleanText(source);
   if (!text) {
     return {
       price_value: null,
@@ -599,14 +584,14 @@ function extractLoosePrice(source = '') {
   patterns.forEach((pattern) => {
     let match = pattern.exec(text);
     while (match) {
-      const rawPrice = cleanText(match?.[1] || `${match?.[1] || ''} ${match?.[2] || ''}`.trim(), 120)
-        || cleanText(match?.[0], 120);
+      const rawPrice = cleanText(match?.[1] || `${match?.[1] || ''} ${match?.[2] || ''}`.trim())
+        || cleanText(match?.[0]);
       const priceValue = normalizePriceValue(rawPrice);
       if (priceValue && priceValue > 0) {
         const currency = normalizeCurrency(
           inferCurrencyFromText(rawPrice)
           || inferCurrencyFromText(match?.[0])
-          || cleanText(match?.[2], 12)
+          || cleanText(match?.[2])
           || defaultCurrency
         );
         candidates.push({
@@ -642,19 +627,19 @@ function extractProductFromHtml(html = '', pageUrl = '') {
 function evaluateProductCandidate(item = {}, html = '', searchResult = {}) {
   const rawHtml = String(html || '');
   const titleAndUrl = [
-    cleanText(item.title, 320),
-    cleanText(searchResult.title, 320),
-    cleanText(item.product_url, 2000),
-    cleanText(searchResult.url, 2000)
+    cleanText(item.title),
+    cleanText(searchResult.title),
+    cleanText(item.product_url),
+    cleanText(searchResult.url)
   ].join(' ');
   let score = 0;
   const signals = [];
   const blockers = [];
-  if (hasFiniteNumber(item.price_value) || /[$€£]|\b(?:USD|EUR|GBP)\b/i.test(cleanText(item.price_text, 120))) {
+  if (hasFiniteNumber(item.price_value) || /[$€£]|\b(?:USD|EUR|GBP)\b/i.test(cleanText(item.price_text))) {
     score += 3;
     signals.push('price_detected');
   }
-  if (cleanText(item.image_url, 2000)) {
+  if (cleanText(item.image_url)) {
     score += 1;
     signals.push('image_detected');
   }
@@ -662,7 +647,7 @@ function evaluateProductCandidate(item = {}, html = '', searchResult = {}) {
     score += 3;
     signals.push('commerce_page_cues');
   }
-  if (/(?:\/|^)(?:products?|product-category|shop|store|item|items|catalog|sku|dp|p)(?:\/|$)/i.test(cleanText(item.product_url || searchResult.url, 2000))) {
+  if (/(?:\/|^)(?:products?|product-category|shop|store|item|items|catalog|sku|dp|p)(?:\/|$)/i.test(cleanText(item.product_url || searchResult.url))) {
     score += 2;
     signals.push('product_like_url');
   }
@@ -674,10 +659,10 @@ function evaluateProductCandidate(item = {}, html = '', searchResult = {}) {
     score -= 3;
     blockers.push('article_like_page');
   }
-  if (!cleanText(item.title, 320)) {
+  if (!cleanText(item.title)) {
     blockers.push('missing_title');
   }
-  if (!cleanText(item.product_url, 2000)) {
+  if (!cleanText(item.product_url)) {
     blockers.push('missing_product_url');
   }
   return {
@@ -689,7 +674,7 @@ function evaluateProductCandidate(item = {}, html = '', searchResult = {}) {
 }
 
 function buildQuerySurfaceForms(query = '') {
-  const base = cleanText(query, 600);
+  const base = cleanText(query);
   if (!base) {
     return [];
   }
@@ -717,7 +702,7 @@ function buildSearchQueries(input = {}) {
 }
 
 function usesCodexAgentPurchasePath(input = {}) {
-  const provider = cleanText(input.provider, 80).toLowerCase();
+  const provider = cleanText(input.provider).toLowerCase();
   return provider === 'codex';
 }
 
@@ -746,8 +731,8 @@ function extractCandidateProductLinks(html = '', pageUrl = '', query = '', limit
   let match = pattern.exec(source);
   while (match && candidates.length < limit * 8) {
     const url = safeUrl(match?.[1], pageUrl);
-    const key = cleanText(url, 2000).toLowerCase();
-    const anchorText = cleanText(stripHtml(match?.[2]), 240);
+    const key = cleanText(url).toLowerCase();
+    const anchorText = cleanText(stripHtml(match?.[2]));
     const combined = `${anchorText} ${url}`.trim();
     if (!key || seen.has(key)) {
       match = pattern.exec(source);
@@ -822,7 +807,7 @@ function deriveAdaptiveSearchQueries({ query = '', filters = {}, priorRounds = [
 function createReasoningRound(roundIndex = 0, reason = '', queries = []) {
   return {
     round_index: roundIndex + 1,
-    reason: cleanText(reason, 120),
+    reason: cleanText(reason),
     queries: uniqueStrings(queries, 8),
     search_query_count: uniqueStrings(queries, 8).length,
     search_result_count: 0,
@@ -848,7 +833,7 @@ function buildPurchaseSearchPlannerPrompt({
     `User product request: ${query || '-'}`,
     `Required attributes: ${asArray(filters.required_terms).join(', ') || '-'}`,
     `Excluded attributes: ${asArray(filters.excluded_terms).join(', ') || '-'}`,
-    `Budget preference: ${cleanText(filters.budget_preference, 40) || '-'}`,
+    `Budget preference: ${cleanText(filters.budget_preference) || '-'}`,
     `Fallback heuristic queries: ${uniqueStrings(heuristicQueries, 6).join(' | ') || '-'}`,
     `Prior rounds: ${asArray(priorRounds).length
       ? asArray(priorRounds).map((round) => [
@@ -879,16 +864,16 @@ function buildPurchaseCandidateJudgePrompt({
     `User product request: ${query || '-'}`,
     `Required attributes: ${asArray(filters.required_terms).join(', ') || '-'}`,
     `Excluded attributes: ${asArray(filters.excluded_terms).join(', ') || '-'}`,
-    `Search result title: ${cleanText(searchResult.title, 320) || '-'}`,
-    `Search result url: ${cleanText(searchResult.url, 2000) || '-'}`,
-    `Heuristic extracted title: ${cleanText(normalizedProduct.title, 320) || '-'}`,
-    `Heuristic extracted vendor: ${cleanText(normalizedProduct.vendor, 180) || '-'}`,
-    `Heuristic extracted price: ${cleanText(normalizedProduct.price_text, 120) || '-'}`,
-    `Heuristic extracted image_url: ${cleanText(normalizedProduct.image_url, 2000) || '-'}`,
+    `Search result title: ${cleanText(searchResult.title) || '-'}`,
+    `Search result url: ${cleanText(searchResult.url) || '-'}`,
+    `Heuristic extracted title: ${cleanText(normalizedProduct.title) || '-'}`,
+    `Heuristic extracted vendor: ${cleanText(normalizedProduct.vendor) || '-'}`,
+    `Heuristic extracted price: ${cleanText(normalizedProduct.price_text) || '-'}`,
+    `Heuristic extracted image_url: ${cleanText(normalizedProduct.image_url) || '-'}`,
     `Heuristic product gate: ${heuristicReasoning?.product_gate?.is_product === true ? 'product' : 'not_product'}`,
     `Heuristic matched requirements: ${asArray(heuristicReasoning?.requirement_gate?.matched_requirements).join(', ') || '-'}`,
     `Heuristic missing requirements: ${asArray(heuristicReasoning?.requirement_gate?.missing_requirements).join(', ') || '-'}`,
-    `Likely same-site product links: ${asArray(candidateLinks).map((item) => cleanText(item?.url || item, 2000)).filter(Boolean).join(' | ') || '-'}`,
+    `Likely same-site product links: ${asArray(candidateLinks).map((item) => cleanText(item?.url || item)).filter(Boolean).join(' | ') || '-'}`,
     `Page excerpt:\n${sliceText(pageText, 3500) || '-'}`,
     'Return JSON with purchasable-item judgment, requirement judgment, normalized item metadata when available, and same-site likely_product_links if the page is not itself the product detail page.'
   ].join('\n\n');
@@ -901,7 +886,7 @@ function normalizePurchaseSearchPlan(payload = {}, fallbackQueries = []) {
       ...asArray(source.search_queries),
       ...fallbackQueries
     ], 4),
-    reasoning: cleanText(source.reasoning, 500)
+    reasoning: cleanText(source.reasoning)
   };
 }
 
@@ -934,23 +919,23 @@ function normalizePurchaseCandidateJudgment(payload = {}, fallback = {}, filters
   const priceText = formatCurrency(
     priceValue != null ? priceValue : fallback.price_value,
     currency || fallback.currency,
-    cleanText(source.price_text, 120) || fallback.price_text
+    cleanText(source.price_text) || fallback.price_text
   );
   return {
     is_purchasable_item: source.is_purchasable_item === true,
     meets_requirements: source.meets_requirements === true,
-    title: cleanText(source.title, 320) || cleanText(fallback.title, 320),
-    vendor: cleanText(source.vendor, 180) || cleanText(fallback.vendor, 180),
+    title: cleanText(source.title) || cleanText(fallback.title),
+    vendor: cleanText(source.vendor) || cleanText(fallback.vendor),
     price_value: priceValue != null ? priceValue : fallback.price_value,
     currency: currency || fallback.currency,
     price_text: priceText,
-    image_url: safeUrl(source.image_url, fallback.product_url || fallback.page_url) || cleanText(fallback.image_url, 2000),
-    product_url: safeUrl(source.product_url, fallback.page_url) || cleanText(fallback.product_url || fallback.page_url, 2000),
+    image_url: safeUrl(source.image_url, fallback.product_url || fallback.page_url) || cleanText(fallback.image_url),
+    product_url: safeUrl(source.product_url, fallback.page_url) || cleanText(fallback.product_url || fallback.page_url),
     matched_requirements: matchedRequirements,
     missing_requirements: missingRequirements,
     excluded_hits: excludedHits,
-    product_reason: cleanText(source.product_reason, 600),
-    requirement_reason: cleanText(source.requirement_reason, 600),
+    product_reason: cleanText(source.product_reason),
+    requirement_reason: cleanText(source.requirement_reason),
     likely_product_links: uniqueStrings(asArray(source.likely_product_links), 4)
       .map((url) => safeUrl(url, fallback.page_url))
       .filter(Boolean)
@@ -1006,25 +991,25 @@ function normalizeSearchResult(raw = {}) {
   const source = ensureObject(raw);
   const url = safeUrl(source.url || source.link);
   return {
-    title: cleanText(source.title, 320),
+    title: cleanText(source.title),
     url,
-    summary: cleanText(source.summary || source.snippet || source.description, 600),
-    source_domain: cleanText(source.source_domain, 120).toLowerCase() || extractSourceDomain(url)
+    summary: cleanText(source.summary || source.snippet || source.description),
+    source_domain: cleanText(source.source_domain).toLowerCase() || extractSourceDomain(url)
   };
 }
 
 function buildRequirementHaystack(item = {}, pageText = '') {
   return [
-    cleanText(item.title, 400),
-    cleanText(item.description, 1600),
-    cleanText(item.vendor, 220),
-    cleanText(item.price_text, 80),
-    cleanText(pageText, 40000)
+    cleanText(item.title),
+    cleanText(item.description),
+    cleanText(item.vendor),
+    cleanText(item.price_text),
+    cleanText(pageText)
   ].filter(Boolean).join(' ').toLowerCase();
 }
 
 function expandRequirementTermVariants(term = '') {
-  const canonical = cleanText(term, 120).toLowerCase();
+  const canonical = cleanText(term).toLowerCase();
   if (!canonical) {
     return [];
   }
@@ -1056,7 +1041,7 @@ function dedupeAndRankProducts(items = [], filters = {}, limit = 6) {
   const seen = new Set();
   const deduped = [];
   asArray(items).forEach((item) => {
-    const key = cleanText(item.product_url || `${item.title}|${item.vendor}|${item.price_text}`, 400).toLowerCase();
+    const key = cleanText(item.product_url || `${item.title}|${item.vendor}|${item.price_text}`).toLowerCase();
     if (!key || seen.has(key)) {
       return;
     }
@@ -1086,7 +1071,7 @@ function dedupeAndRankProducts(items = [], filters = {}, limit = 6) {
 function resolveFilters(input = {}) {
   const parserPayload = ensureObject(input.parser_payload || input.parserPayload);
   const entities = ensureObject(parserPayload.entities);
-  const message = cleanText(input.message, 1200);
+  const message = cleanText(input.message);
   const query = deriveProductQuery(input);
   const requiredTerms = normalizeRequiredTerms([
     ...parseDelimitedTerms(entities.required_attributes, 12),
@@ -1116,9 +1101,7 @@ function deriveProductQuery(input = {}) {
       || entities.product_query
       || entities.compound_name
       || entities.inventory_item
-      || input.message,
-    600
-  );
+      || input.message);
 }
 
 function buildSearchQuery(input = {}) {
@@ -1170,17 +1153,17 @@ function runProductReasoningLoop({ item = {}, html = '', searchResult = {}, filt
 function summarizePurchaseRecommendation(result = {}) {
   const payload = ensureObject(result);
   const items = asArray(payload.items);
-  const query = cleanText(payload.query, 220);
+  const query = cleanText(payload.query);
   const requiredTerms = asArray(payload.filters?.required_terms);
-  const matchMode = cleanText(payload.match_mode, 20);
-  if (cleanText(payload.status, 40) === 'matched' && items.length) {
+  const matchMode = cleanText(payload.match_mode);
+  if (cleanText(payload.status) === 'matched' && items.length) {
     if (matchMode === 'partial') {
       return `Found ${items.length} likely product match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}, but I could not verify every requested attribute from the vendor pages.`;
     }
     return `Found ${items.length} purchase recommendation${items.length === 1 ? '' : 's'}${query ? ` for "${query}"` : ''}${requiredTerms.length ? ` matching ${requiredTerms.join(', ')}` : ''}.`;
   }
-  if (cleanText(payload.status, 40) === 'needs_more_info') {
-    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
+  if (cleanText(payload.status) === 'needs_more_info') {
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item)).filter(Boolean).join(' ')
       || 'I need more detail before I can recommend something to buy.';
   }
   return `No purchase recommendations found${query ? ` for "${query}"` : ''}.`;
@@ -1240,7 +1223,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
       if (providerSearch?.ok) {
         return asArray(providerSearch.results).map((item) => normalizeSearchResult(item)).filter((item) => item.url).slice(0, limit);
       }
-      throw new Error(cleanText(providerSearch?.error, 320) || 'Provider-layer web search is unavailable.');
+      throw new Error(cleanText(providerSearch?.error) || 'Provider-layer web search is unavailable.');
     }
     throw new Error('Purchase recommendation requires provider-layer web search support.');
   }
@@ -1285,7 +1268,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
       if (!llmResult?.ok || !llmResult.payload) {
         return {
           planner: 'heuristic_fallback',
-          reasoning: cleanText(llmResult?.error, 320) || 'Falling back to heuristic search planning.',
+          reasoning: cleanText(llmResult?.error) || 'Falling back to heuristic search planning.',
           queries: heuristicQueries
         };
       }
@@ -1339,7 +1322,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
       }
       return normalizePurchaseCandidateJudgment(llmResult.payload, {
         ...normalizedProduct,
-        page_url: cleanText(searchResult.url, 2000)
+        page_url: cleanText(searchResult.url)
       }, filters);
     } catch {
       return null;
@@ -1356,7 +1339,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
       non_product_candidate_count: asArray(rounds).reduce((sum, round) => sum + Number(round?.non_product_candidate_count || 0), 0),
       filtered_out_count: asArray(rounds).reduce((sum, round) => sum + Number(round?.filtered_out_count || 0), 0),
       followed_product_link_count: asArray(rounds).reduce((sum, round) => sum + Number(round?.followed_product_link_count || 0), 0),
-      last_error: cleanText(lastError, 320),
+      last_error: cleanText(lastError),
       reasoning_rounds: asArray(rounds).map((round) => ({
         ...round,
         queries: uniqueStrings(round?.queries, 8),
@@ -1397,7 +1380,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     let lastError = '';
 
     async function inspectCandidateUrl(searchResult = {}, round = {}, searchIndex = 0, depth = 0, inspectionPath = []) {
-      const currentUrl = cleanText(searchResult.url, 2000);
+      const currentUrl = cleanText(searchResult.url);
       const currentKey = currentUrl.toLowerCase();
       if (!currentUrl || seenInspectedUrls.has(currentKey)) {
         return;
@@ -1411,13 +1394,13 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         const snippetPrice = extractLoosePrice(searchResult.summary);
         const normalizedProduct = {
           ...product,
-          title: cleanText(product.title || searchResult.title, 320),
-          image_url: cleanText(product.image_url, 2000) || readFirstImageUrl(html, currentUrl),
+          title: cleanText(product.title || searchResult.title),
+          image_url: cleanText(product.image_url) || readFirstImageUrl(html, currentUrl),
           price_value: product.price_value ?? snippetPrice.price_value,
           currency: product.currency || snippetPrice.currency,
           price_text: product.price_text || snippetPrice.price_text,
-          product_url: cleanText(product.product_url, 2000) || currentUrl,
-          source_domain: cleanText(product.source_domain, 120) || searchResult.source_domain
+          product_url: cleanText(product.product_url) || currentUrl,
+          source_domain: cleanText(product.source_domain) || searchResult.source_domain
         };
         const heuristicReasoning = runProductReasoningLoop({
           item: normalizedProduct,
@@ -1444,19 +1427,19 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         const resolvedProduct = llmJudgment
           ? {
             ...normalizedProduct,
-            title: cleanText(llmJudgment.title, 320) || normalizedProduct.title,
-            vendor: cleanText(llmJudgment.vendor, 180) || normalizedProduct.vendor,
+            title: cleanText(llmJudgment.title) || normalizedProduct.title,
+            vendor: cleanText(llmJudgment.vendor) || normalizedProduct.vendor,
             price_value: llmJudgment.price_value ?? normalizedProduct.price_value,
             currency: llmJudgment.currency || normalizedProduct.currency,
             price_text: llmJudgment.price_text || normalizedProduct.price_text,
-            image_url: cleanText(llmJudgment.image_url, 2000) || normalizedProduct.image_url,
-            product_url: cleanText(llmJudgment.product_url, 2000) || normalizedProduct.product_url
+            image_url: cleanText(llmJudgment.image_url) || normalizedProduct.image_url,
+            product_url: cleanText(llmJudgment.product_url) || normalizedProduct.product_url
           }
           : normalizedProduct;
         const evaluation = reasoning.requirement_gate || evaluateProductRequirementMatch(resolvedProduct, filters, pageText);
         const followUpLinks = uniqueStrings([
           ...asArray(reasoning.suggested_links),
-          ...heuristicLinks.map((item) => cleanText(item?.url, 2000))
+          ...heuristicLinks.map((item) => cleanText(item?.url))
         ], maxLinkedPagesPerResult);
 
         if (asArray(evaluation.missing_requirements).length) {
@@ -1473,9 +1456,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
               round.followed_product_link_count += 1;
               await inspectCandidateUrl({
                 title: cleanText(
-                  heuristicLinks.find((item) => cleanText(item?.url, 2000) === followUpUrl)?.anchor_text || searchResult.title,
-                  320
-                ),
+                  heuristicLinks.find((item) => cleanText(item?.url, 2000) === followUpUrl)?.anchor_text || searchResult.title),
                 url: followUpUrl,
                 summary: searchResult.summary,
                 source_domain: extractSourceDomain(followUpUrl)
@@ -1486,10 +1467,10 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         }
 
         const hasCompleteCard = !!(
-          cleanText(resolvedProduct.image_url, 2000)
-          && cleanText(resolvedProduct.vendor, 180)
-          && cleanText(resolvedProduct.price_text, 120)
-          && cleanText(resolvedProduct.product_url, 2000)
+          cleanText(resolvedProduct.image_url)
+          && cleanText(resolvedProduct.vendor)
+          && cleanText(resolvedProduct.price_text)
+          && cleanText(resolvedProduct.product_url)
         );
         if (!hasCompleteCard) {
           round.incomplete_candidate_count += 1;
@@ -1501,9 +1482,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
               round.followed_product_link_count += 1;
               await inspectCandidateUrl({
                 title: cleanText(
-                  heuristicLinks.find((item) => cleanText(item?.url, 2000) === followUpUrl)?.anchor_text || searchResult.title,
-                  320
-                ),
+                  heuristicLinks.find((item) => cleanText(item?.url, 2000) === followUpUrl)?.anchor_text || searchResult.title),
                 url: followUpUrl,
                 summary: searchResult.summary,
                 source_domain: extractSourceDomain(followUpUrl)
@@ -1520,17 +1499,17 @@ function createPurchaseRecommendationRuntime(deps = {}) {
 
         const normalizedCandidate = {
           ...resolvedProduct,
-          id: cleanText(resolvedProduct.id, 220) || `product-${searchIndex + 1}`,
-          source_domain: cleanText(resolvedProduct.source_domain, 120) || searchResult.source_domain,
+          id: cleanText(resolvedProduct.id) || `product-${searchIndex + 1}`,
+          source_domain: cleanText(resolvedProduct.source_domain) || searchResult.source_domain,
           matched_requirements: asArray(evaluation.matched_requirements),
           unverified_requirements: asArray(evaluation.missing_requirements),
           candidate_reasoning: {
             product_gate: reasoning.product_gate,
             requirement_gate: evaluation,
-            reasoning_source: cleanText(reasoning.reasoning_source, 40) || 'heuristic',
+            reasoning_source: cleanText(reasoning.reasoning_source) || 'heuristic',
             inspection_path: uniqueStrings([...inspectionPath, currentUrl], 6),
-            product_reason: cleanText(llmJudgment?.product_reason, 600),
-            requirement_reason: cleanText(llmJudgment?.requirement_reason, 600)
+            product_reason: cleanText(llmJudgment?.product_reason),
+            requirement_reason: cleanText(llmJudgment?.requirement_reason)
           },
           _search_index: searchIndex
         };
@@ -1556,7 +1535,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
       const plan = await planSearchQueriesWithLlm(input, filters, reasoningRounds);
       const plannedQueries = uniqueStrings(plan.queries, 8)
         .filter((queryText) => {
-          const key = cleanText(queryText, 320).toLowerCase();
+          const key = cleanText(queryText).toLowerCase();
           if (!key || seenSearchQueryKeys.has(key)) {
             return false;
           }
@@ -1567,7 +1546,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         return null;
       }
       const round = createReasoningRound(roundIndex, plan.reasoning || plan.planner, plannedQueries);
-      round.planner = cleanText(plan.planner, 40) || 'heuristic';
+      round.planner = cleanText(plan.planner) || 'heuristic';
       const searchResults = [];
       for (const searchQuery of plannedQueries) {
         let batch = [];
@@ -1585,7 +1564,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
             return;
           }
           const normalized = normalizeSearchResult(rawResult);
-          const key = cleanText(normalized.url, 2000).toLowerCase();
+          const key = cleanText(normalized.url).toLowerCase();
           if (!key || seenSearchResultUrls.has(key)) {
             return;
           }

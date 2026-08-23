@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../../lib/normalize.js');
+
 const CONTAINER_ACTIONS = Object.freeze([
   'create',
   'read',
@@ -27,10 +29,6 @@ function cleanText(value, maxLength = 2000) {
 function rawString(value, maxLength = MAX_STRING_LENGTH) {
   const text = String(value ?? '');
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function isFiniteNumber(value) {

@@ -1,6 +1,7 @@
 import { DEFAULT_MAX_RECORDS } from './constants.js';
 import { parseAb1Record, parseInputRecords } from './parsing.js';
 import { buildSequenceSignature } from './shared.js';
+import { cloneJson } from '../../lib/normalize.js';
 
 function getFileExtension(name) {
   const text = String(name || '').trim().toLowerCase();
@@ -54,14 +55,6 @@ export function coerceArrayBuffer(value) {
     return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
   }
   return null;
-}
-
-export function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 async function readTextInput(input, readFileAsText) {
@@ -230,3 +223,5 @@ export function upsertAlignmentSessionInList(sessions, session) {
 
   return next.sort((left, right) => String(right?.updatedAt || '').localeCompare(String(left?.updatedAt || '')));
 }
+
+export { cloneJson };

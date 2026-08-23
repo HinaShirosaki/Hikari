@@ -15,6 +15,7 @@
  */
 
 const path = require('node:path');
+const { asArray, ensureObject } = require('../../../lib/normalize.js');
 const {
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   PAPER_MARKDOWN_ROOT_FOLDER_NAME
@@ -38,20 +39,12 @@ const DOC_TYPES = Object.freeze([
   'other'
 ]);
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
 function cleanText(value, maxLength = 2000) {
   const text = String(value == null ? '' : value).trim();
   if (!text) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function uniqueStrings(values = [], max = 50) {

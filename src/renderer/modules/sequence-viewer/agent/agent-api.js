@@ -3,6 +3,7 @@ import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { buildOrfFeatures } from '../orf-analysis.js';
 import { buildSequenceEditDesignSource } from '../runtime/sequence-edit-helpers.js';
 import { designCloningRoute } from './cloning-adapter.js';
+import { asArray } from '../../../lib/normalize.js';
 
 // Pure core for the sequence_viewer / sequence_edit MCP contract. It never
 // mutates: reads are windowed, `design_cloning` is compute-only, and the
@@ -23,10 +24,6 @@ const CODON_TABLE = {
   TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W', CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
   AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R', GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
 };
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function fail(code, message) {
   return { error: { code, message } };

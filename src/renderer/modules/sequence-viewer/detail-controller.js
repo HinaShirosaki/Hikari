@@ -13,6 +13,7 @@ import { createSequenceViewerFeatureEditingController } from './detail-feature-e
 import { createSequenceHoverTooltipController } from './detail-hover.js';
 import { resolveSequenceBoundaryFromEvent as resolveSequenceBoundaryFromEventShared } from './detail-layout.js';
 import { createSequenceViewerDetailRenderingController } from './detail-rendering.js';
+import { LIBRARY_STATUS_SAVED } from './runtime/config.js';
 import { createSequenceViewerSequenceEditingController } from './detail-sequence-editing.js';
 import { normalizeRestrictionVendorFilter } from './restriction-analysis.js';
 import {
@@ -50,6 +51,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
@@ -65,7 +67,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
   const showSequenceHoverTooltip = (event, feature, sequenceLength) => {
-    hoverController.show(event, feature, sequenceLength);
+    hoverController.show(event, feature, sequenceLength, getSelectedRecord()?.sequence || '');
   };
   let aminoAcidEditingController = null;
   let featureEditingController = null;
@@ -279,6 +281,12 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function syncActionButtonsState() {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
+    if (elements.saveBtn) {
+      // Only unsaved (temporary or not-yet-persisted) records need saving.
+      const canSave = hasRecord && hasStoragePath() && state.activeEntryStatus !== LIBRARY_STATUS_SAVED;
+      elements.saveBtn.hidden = !canSave;
+      elements.saveBtn.disabled = !canSave;
+    }
     if (elements.annotateBtn) {
       elements.annotateBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isAnnotating);
     }
@@ -674,6 +682,7 @@ export function createSequenceViewerDetailController(config = {}) {
       openSequenceEditFromKeyboardEvent,
       applySequenceEditDialog,
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
+      onRequestSave,
       onRequestAnnotate,
       onRequestRecognizeBackbone,
       onRequestAlignment,

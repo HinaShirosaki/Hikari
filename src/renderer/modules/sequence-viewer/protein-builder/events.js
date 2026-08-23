@@ -23,7 +23,10 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setBuilderStatus('Added a custom block.');
     });
 
-    elements.proteinBuilderForm?.addEventListener('input', () => {
+    elements.proteinBuilderForm?.addEventListener('input', (event) => {
+      if (event?.target === elements.proteinBuilderNameInput) {
+        state.constructNameEdited = Boolean(cleanText(elements.proteinBuilderNameInput?.value, 140).trim());
+      }
       ctx.render();
     });
 

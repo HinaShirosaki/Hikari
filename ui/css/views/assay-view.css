@@ -170,7 +170,7 @@
 
 .assay-browser-list {
   display: grid;
-  gap: 0;
+  gap: 2px;
 }
 
 .assay-browser-empty {
@@ -178,11 +178,12 @@
 }
 
 .assay-browser-item {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 0;
+  padding: 12px 72px 12px 8px;
 }
 
 .assay-browser-item-copy {
@@ -208,8 +209,9 @@
 .assay-browser-item-title {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 0.94rem;
+  font-size: 0.88rem;
   font-weight: 650;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -231,7 +233,10 @@
 }
 
 .assay-browser-item-actions {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -296,6 +301,7 @@
 }
 
 .assay-results-workspace #assay-result-table,
+.assay-results-workspace #assay-derived-plate-table,
 .assay-results-workspace #assay-analysis-table {
   margin-top: 0;
 }
@@ -408,7 +414,18 @@
 }
 
 .assay-form-actions > .assay-form-save-icon-btn.primary-btn {
+  width: auto;
+  min-width: 72px;
+  padding: 0 10px;
+  display: inline-flex;
+  gap: 6px;
   border-color: transparent;
+}
+
+.assay-form-button-caption {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
 }
 
 .assay-form-actions > .assay-plate-type-field {
@@ -1182,54 +1199,33 @@
   justify-content: flex-start;
 }
 
-.assay-transform-mode-panel {
-  display: grid;
+.assay-transformed-plate-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 12px;
+  margin-bottom: 10px;
 }
 
-.assay-transform-mode-panel[hidden] {
-  display: none;
-}
-
-#assay-transform-formula {
-  font-family: var(--app-font-mono, ui-monospace, monospace);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  resize: vertical;
-}
-
-.assay-formula-help-body {
-  gap: 6px;
-  font-size: 0.78rem;
-  color: var(--theme-text-muted);
-}
-
-.assay-formula-help-body p {
+.assay-transformed-plate-intro .small-note {
   margin: 0;
 }
 
-.assay-formula-help-body code {
-  font-size: 0.92em;
-}
-
-.assay-transform-arithmetic {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
-}
-
-.assay-derived-plate-host {
-  overflow-x: auto;
-}
-
-.assay-derived-plate-table {
+.assay-transform-cell {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
 }
 
-.assay-derived-plate-table th[scope="row"] {
-  position: sticky;
-  left: 0;
-  background: var(--theme-surface-subtle);
+.assay-transform-cell--formula {
+  color: var(--theme-text-strong);
+}
+
+.assay-transform-cell--error {
+  color: var(--assay-plate-danger);
+  font-weight: 650;
 }
 
 .assay-analysis-modifiers {

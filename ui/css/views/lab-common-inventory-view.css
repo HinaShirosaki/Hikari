@@ -50,14 +50,43 @@
   border-top: 0;
 }
 
-.chemical-add-btn {
-  width: 100%;
-  min-height: 46px;
+.chemical-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.chemical-import-btn {
-  width: 100%;
-  min-height: 42px;
+.chemical-action-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.chemical-action-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chemical-import-btn.ghost-btn {
+  border-color: transparent;
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+.chemical-import-btn.ghost-btn:hover,
+.chemical-import-btn.ghost-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .chemical-import-status {

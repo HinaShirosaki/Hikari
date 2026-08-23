@@ -13,7 +13,6 @@ import {
 } from './constants.js';
 import {
   buildFeatureLocationText,
-  getContrastTextColor,
   hashTypeToColor
 } from './feature-model.js';
 import { isPrimerBindingFeature } from './feature-types.js';
@@ -513,7 +512,6 @@ function renderLineFeatureButtonsHtml(
       const location = buildFeatureLocationText(feature, sequenceLength);
       const title = `${feature.name || '-'} (${location})`;
       const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
-      const textColor = getContrastTextColor(color);
       const isPrimer = isPrimerBindingFeature(feature?.type);
       const direction = feature?.strand === -1 ? -1 : 1;
       return segments
@@ -527,7 +525,6 @@ function renderLineFeatureButtonsHtml(
             index,
             title,
             color,
-            textColor,
             isPrimer,
             direction,
             hasFivePrime: isPrimer && (direction === -1
@@ -629,7 +626,7 @@ function buildLineFeatureTrackHtml(fragments, options) {
           type="button"
           class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
           data-feature-index="${fragment.index}"
-          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};color:${fragment.textColor};"
+          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;--sequence-viewer-feature-color:${fragment.color};"
           title="${escapeHtml(fragment.title)}"
         >${showLabel ? `<span class="sequence-viewer-line-feature-label">${escapeHtml(label)}</span>` : ''}</button>
       `;

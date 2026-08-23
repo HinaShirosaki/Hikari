@@ -1,4 +1,11 @@
-import { CHART_FONT_FAMILY, DEFAULT_CHART_PALETTE } from './chart-style-model.js';
+import { DEFAULT_CHART_PALETTE } from './chart-style-model.js';
+import {
+  PRISM_BAR_GAP,
+  PRISM_BAR_GROUP_GAP,
+  prismAxisDefaults,
+  prismFonts,
+  prismFrameShapes
+} from './prism-theme.js';
 
 const LINE_DASH_MAP = { solid: 'solid', dashed: 'dash', dotted: 'dot' };
 const POINT_SYMBOL_MAP = {
@@ -19,18 +26,6 @@ function scaleAxis(scale) {
   if (scale === 'log2') return { type: 'log', dtick: LOG10_2 };
   if (scale === 'ln') return { type: 'log', dtick: LOG10_E };
   return { type: 'linear', dtick: null };
-}
-
-// Maps the style's tickFormat enum onto Plotly axis number-formatting attributes.
-function tickFormatSpec(format) {
-  switch (format) {
-    case 'fixed1': return { tickformat: '.1f' };
-    case 'fixed2': return { tickformat: '.2f' };
-    case 'sci': return { exponentformat: 'e' };
-    case 'si': return { exponentformat: 'SI' };
-    case 'power': return { exponentformat: 'power' };
-    default: return {};
-  }
 }
 
 function legendLayout(position, font) {
@@ -84,7 +79,8 @@ function serializeSvgToDataUrl(svgElement) {
 }
 
 // Assay Plotly renderer: render(target, chartModel, style) -> { seriesLabels }.
-// chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?}], markers? }] }
+// chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?,points?}], markers? }] }
+// data[].points = the group's raw replicates, dotted over a single-series bar (Prism style).
 // Plotly is loaded as a window global by index.html.
 export function createAssayPlotlyRenderer() {
   let chartHost = null;
@@ -119,20 +115,8 @@ export function createAssayPlotlyRenderer() {
     // NaN and silently drops every point, which is what a bar -> line override used to do.
     const hasCategoryX = chartModel.series.some((series) => (series.data || [])
       .some((point) => point && !Number.isFinite(Number(point.x))));
-    const textStyle = st.text || {};
-    const fontFamily = textStyle.fontFamily
-      ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}`
-      : CHART_FONT_FAMILY;
-    const font = {
-      family: fontFamily,
-      size: Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11,
-      color: textStyle.color || st.frameStroke || '#000000',
-      weight: textStyle.bold ? 700 : 400,
-      style: textStyle.italic ? 'italic' : 'normal',
-      lineposition: textStyle.underline ? 'under' : 'none'
-    };
+    const { font, tickFont } = prismFonts(st);
     const axisColor = st.frameStroke || '#9bb0c9';
-    const gridColor = st.gridColor || '#9bb0c9';
     const dash = LINE_DASH_MAP[st.lineStyle] || 'solid';
     const lineShape = LINE_SHAPE_MAP[st.curve] || 'spline';
     const pointSize = Number.isFinite(st.pointSize) ? st.pointSize : 6;
@@ -159,12 +143,21 @@ export function createAssayPlotlyRenderer() {
       if (chartModel.showErrorBars) {
         const array = data.map((p) => (Number.isFinite(p.yVariance) && p.yVariance > 0 ? p.yVariance : 0));
         if (array.some((v) => v > 0)) {
-          error_y = { type: 'data', array, color, thickness: errThickness, width: errCapWidth, visible: true };
+          // Prism draws bar error bars in the axis colour and line error bars in the series colour.
+          error_y = {
+            type: 'data',
+            array,
+            color: isBar ? axisColor : color,
+            thickness: errThickness,
+            width: errCapWidth,
+            visible: true
+          };
         }
       }
 
       if (isBar) {
-        const marker = { color };
+        // Prism outlines every bar in the axis colour.
+        const marker = { color, line: { color: axisColor, width: 1 } };
         if (Number.isFinite(st.barCornerRadius) && st.barCornerRadius > 0) {
           marker.cornerradius = st.barCornerRadius;
         }
@@ -183,6 +176,39 @@ export function createAssayPlotlyRenderer() {
           bar.textfont = font;
         }
         traces.push(bar);
+        // Prism's scatter-over-bar: each replicate dotted above its own bar, aligned in a
+        // column (no jitter) so the same data always renders identically.
+        // ponytail: single-series only - Plotly scatter traces ignore bar offsetgroup, so
+        // with grouped bars every dot would land on the category centre. Compute manual
+        // x offsets if grouped bars ever need dots.
+        if (chartModel.series.length === 1) {
+          const dotX = [];
+          const dotY = [];
+          data.forEach((point) => {
+            (Array.isArray(point.points) ? point.points : []).forEach((value) => {
+              if (Number.isFinite(value)) {
+                dotX.push(point.x);
+                dotY.push(value);
+              }
+            });
+          });
+          if (dotX.length) {
+            traces.push({
+              type: 'scatter',
+              mode: 'markers',
+              name,
+              showlegend: false,
+              x: dotX,
+              y: dotY,
+              marker: {
+                color: bgColor,
+                size: Math.max(4, pointSize - 1),
+                symbol: sym,
+                line: { color: axisColor, width: 1 }
+              }
+            });
+          }
+        }
         return;
       }
 
@@ -218,24 +244,9 @@ export function createAssayPlotlyRenderer() {
     const width = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : autoWidth;
     const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : 280;
 
-    const frameStyle = st.frameStyle || 'box';
     const tickMark = st.tickDir === 'none' ? '' : (st.tickDir || 'outside');
     const tickLen = Number.isFinite(st.tickLen) ? st.tickLen : 5;
-    const axisBase = {
-      showline: frameStyle !== 'none',
-      linecolor: axisColor,
-      linewidth: st.frameStrokeWidth ?? 1,
-      mirror: frameStyle === 'box',
-      zeroline: false,
-      gridcolor: gridColor,
-      gridwidth: st.gridStrokeWidth ?? 1,
-      tickfont: font,
-      ticks: tickMark,
-      ticklen: tickLen,
-      tickcolor: axisColor,
-      automargin: true,
-      ...tickFormatSpec(st.tickFormat)
-    };
+    const axisBase = prismAxisDefaults(st, tickFont);
     const minorFor = (cfg) => {
       if (!st.minorTicks) return undefined;
       const minor = {
@@ -251,19 +262,24 @@ export function createAssayPlotlyRenderer() {
     const xScaleCfg = isBar || hasCategoryX ? { type: 'category', dtick: null } : scaleAxis(st.xScale);
     const yScaleCfg = scaleAxis(st.yScale);
 
+    // Prism writes category labels horizontally; only tilt them when they would collide.
+    const longestCategory = !isBar ? 0 : chartModel.series.reduce((max, series) => (series.data || [])
+      .reduce((inner, point) => Math.max(inner, String(point.x ?? '').length), max), 0);
+    const categoryTickAngle = isBar && longestCategory > 10 ? -35 : 0;
+
     // An explicit axis title wins; otherwise the analysis names its own axes.
     const xaxis = {
       ...axisBase,
       title: { text: st.xTitle || chartModel.xLabel || '', font },
       type: xScaleCfg.type,
-      showgrid: st.showVerticalGrid !== false,
-      tickangle: isBar ? -35 : 0
+      showgrid: st.showVerticalGrid === true,
+      tickangle: categoryTickAngle
     };
     const yaxis = {
       ...axisBase,
       title: { text: st.yTitle || chartModel.yLabel || '', font },
       type: yScaleCfg.type,
-      showgrid: st.showHorizontalGrid !== false
+      showgrid: st.showHorizontalGrid === true
     };
     // Tick interval: user value on linear axes; log axes tick by their base (2/e/10).
     const xDtick = xScaleCfg.type === 'linear' && Number.isFinite(st.xTick) && st.xTick > 0
@@ -291,7 +307,7 @@ export function createAssayPlotlyRenderer() {
     const layout = {
       width,
       height,
-      margin: { l: 70, r: 24, t: st.title ? 44 : 24, b: isBar ? 96 : 56 },
+      margin: { l: 70, r: 24, t: st.title ? 44 : 24, b: categoryTickAngle ? 96 : 56 },
       paper_bgcolor: bgColor,
       plot_bgcolor: bgColor,
       font,
@@ -299,8 +315,12 @@ export function createAssayPlotlyRenderer() {
       yaxis,
       showlegend,
       legend: legendLayout(st.legendPosition, font),
-      barmode: st.barMode || 'group'
+      barmode: st.barMode || 'group',
+      // Prism bars sit apart with tight groups.
+      bargap: PRISM_BAR_GAP,
+      bargroupgap: PRISM_BAR_GROUP_GAP
     };
+    const shapes = prismFrameShapes(st);
     if (st.title) {
       layout.title = { text: st.title, font, x: 0.5, xanchor: 'center' };
     }
@@ -311,10 +331,13 @@ export function createAssayPlotlyRenderer() {
       const v = cfg.type === 'log' ? (st.refLineValue > 0 ? Math.log10(st.refLineValue) : null) : st.refLineValue;
       if (v != null) {
         const line = { color: '#666666', width: 1.5, dash: 'dash' };
-        layout.shapes = [onY
+        shapes.push(onY
           ? { type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: v, y1: v, line }
-          : { type: 'line', xref: 'x', yref: 'paper', x0: v, x1: v, y0: 0, y1: 1, line }];
+          : { type: 'line', xref: 'x', yref: 'paper', x0: v, x1: v, y0: 0, y1: 1, line });
       }
+    }
+    if (shapes.length) {
+      layout.shapes = shapes;
     }
 
     Plotly.newPlot(target, traces, layout, { displayModeBar: false, responsive: false });

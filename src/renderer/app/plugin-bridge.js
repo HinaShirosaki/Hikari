@@ -21,6 +21,7 @@ import {
   getSharedLeftRailLayout,
   setSharedLeftRailWidth
 } from './shared-left-rail.js';
+import { asArray } from '../lib/normalize.js';
 
 const PROTOCOL_MARKER = 1;
 const MAX_LIST_SIZE = 500;
@@ -28,10 +29,6 @@ const MAX_LIST_SIZE = 500;
 const PLUGIN_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 // How long the quit guard waits for a frame to answer an app.save broadcast.
 const PLUGIN_SAVE_TIMEOUT_MS = 15000;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};

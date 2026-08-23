@@ -1,10 +1,7 @@
+import { asArray } from '../../lib/normalize.js';
 const DEFAULT_SCOPE_KEY = 'papers:library';
 const DEFAULT_NOTEBOOK_SCOPE_KEY = 'notebook:workspace';
 const DEFAULT_ASSAY_SCOPE_KEY = 'assay:workspace';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();

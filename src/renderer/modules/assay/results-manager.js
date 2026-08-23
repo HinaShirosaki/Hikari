@@ -666,6 +666,10 @@ export function createAssayResultsManager({
   refreshAnalysisGroupDisplay();
 
   return {
+    buildResultGridSignature,
+    buildResultGridColumns,
+    buildResultGridData,
+    getResultGridHeight,
     getResultValueCount,
     clearResultGrid,
     renderResultTable,

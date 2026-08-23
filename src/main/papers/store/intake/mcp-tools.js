@@ -16,6 +16,7 @@
  */
 
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
+const { asArray, ensureObject } = require('../../../lib/normalize.js');
 const {
   tokenize,
   scoreSummary,
@@ -31,14 +32,6 @@ const TOOL_NAMES = Object.freeze({
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value == null ? '' : value).trim();

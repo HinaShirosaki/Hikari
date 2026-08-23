@@ -58,6 +58,16 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="app-more-menu"/);
     });
 
+    test('Home gives paper results and notebook notes matching tall cards while keeping quick log short', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'home-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'home-view.html');
+      assert.match(css, /#home-view \.home-layout\s*\{[\s\S]*?grid-template-columns:\s*repeat\(12, minmax\(0, 1fr\)\);/);
+      assert.match(css, /grid-template-areas:\s*\n\s*"timer timer timer timer notebook notebook notebook notebook paper-finding paper-finding paper-finding paper-finding"\s*\n\s*"contribution contribution contribution contribution notebook notebook notebook notebook paper-finding paper-finding paper-finding paper-finding"\s*\n\s*"quicklog quicklog quicklog quicklog passage passage passage passage incubation incubation incubation incubation";/);
+      assert.match(css, /@media \(max-width: 1279px\)[\s\S]*?grid-template-areas:\s*\n\s*"timer contribution"\s*\n\s*"notebook paper-finding"\s*\n\s*"quicklog passage"\s*\n\s*"incubation incubation";/);
+      assert.match(css, /#home-view \.home-quicklog-body\s*\{[\s\S]*?grid-template-rows:\s*minmax\(0, 1fr\) auto;/);
+      assert.doesNotMatch(html, /data-dashboard-quicklog-chip|home-quicklog-chips/);
+    });
+
     test('sample and inventory use a merged navigation entry', () => {
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
@@ -233,7 +243,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(source, /function mountToolWorkspace\(\)[\s\S]*?toolWorkspace\.appendChild\(element\)/);
       assert.match(source, /let activeTool = '';/);
       assert.match(source, /function clearToolSelection\(\)[\s\S]*?activeTool = '';[\s\S]*?syncToolSelection\(\);[\s\S]*?toolWorkspace\.hidden = true/);
-      assert.match(notebookSource, /notebookAddTableBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?resultTableController\.onAdd\(\)/);
+      assert.match(notebookSource, /notebookAddTableBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?setTableSizeDialog\(true\)/);
       assert.match(notebookSource, /notebookAddAssayBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?linkedWorkActions\.onAddAssayClick\(\)/);
       assert.match(notebookSource, /notebookAddSamplesBtn\?\.addEventListener\('click',[\s\S]*?toolSidebarController\.clearSelection\(\);[\s\S]*?quickSampleController\.open\(\)/);
       assert.match(css, /\.biology-notebook-quick-sample-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.62fr\)\s*minmax\(230px,\s*0\.72fr\);/s);
@@ -512,7 +522,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(workflowPositions.every((position) => position >= 0), true);
       assert.equal(workflowPositions.every((position, index) => index === 0 || position > workflowPositions[index - 1]), true);
       // Inside Data Analysis every block is a subsection fold, gel-style, not a flat label stack.
-      ['assay-result-data-panel', 'assay-transform-panel', 'assay-groups-panel', 'assay-analysis-settings-panel']
+      ['assay-result-data-panel', 'assay-groups-panel', 'assay-analysis-settings-panel']
         .forEach((id) => assert.match(
           html,
           new RegExp(`<details id="${id}"[^>]*foldable-section foldable-section--subsection`),
@@ -576,30 +586,35 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(foldableCss, /\.foldable-section\s*\{[^}]*border-bottom:\s*1px solid var\(--app-left-rail-divider,/s);
     });
 
-    test('Assay plate transform is its own rail page and is saved with the assay', () => {
+    test('Assay plate transform creates a formula grid with the result-table layout and is saved', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
       const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
+      const analysis = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
+      const derived = readLocalSource('src', 'renderer', 'modules', 'assay', 'derived-plate.js');
+      const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
       const storage = readLocalSource('src', 'renderer', 'modules', 'assay', 'artifact-storage.js');
 
-      // Transform folds inside Data Analysis rather than replacing the rail.
-      assert.match(html, /<details id="assay-analysis-panel"[\s\S]*?<details id="assay-transform-panel"[^>]*foldable-section--subsection/);
-      ['blank', 'normalize-hundred', 'normalize-zero', 'arithmetic-op', 'arithmetic-value', 'value']
-        .forEach((key) => assert.match(html, new RegExp(`id="assay-transform-${key}"`), `expected the ${key} control`));
-
-      // The derived plate is a foldable panel under the raw plate.
+      // The action creates a second grid beneath Plate Results; there is no separate
+      // global-formula or guided-steps dialog.
+      assert.match(html, /id="assay-result-data-panel"[\s\S]*?id="assay-transform-open-btn"/);
       assert.match(html, /id="assay-result-table-panel"[\s\S]*?id="assay-derived-plate-panel"[^>]*hidden/);
+      assert.match(html, /id="assay-derived-plate-panel"[\s\S]*?>Transformed Plate<[\s\S]*?id="assay-derived-plate-table"/);
+      assert.match(html, /id="assay-transform-clear-btn"/);
+      assert.doesNotMatch(html, /assay-transform-overlay|assay-transform-mode|assay-transform-formula/);
       assert.match(dom, /assayDerivedPlatePanel:\s*root\.getElementById\('assay-derived-plate-panel'\)/);
-      assert.match(dom, /assayTransformPanel:\s*root\.getElementById\('assay-transform-panel'\)/);
+      assert.match(bindings, /assayTransformOpenBtn\?\.addEventListener\('click',\s*analysisView\.createTransformPlate\)/);
+      assert.match(bindings, /analysisView\.redrawTransformGrid\(\)/);
 
-      // Formula mode is a sibling of the guided steps, never stacked on top of them.
-      assert.match(html, /id="assay-transform-mode"/);
-      assert.match(html, /id="assay-transform-formula"/);
-      assert.match(html, /data-transform-mode="steps"/);
-      assert.match(html, /data-transform-mode="formula"/);
-      assert.match(dom, /assayTransformModePanels:\s*Array\.from\(root\.querySelectorAll\('#assay-view \[data-transform-mode\]'\)\)/);
-      assert.match(bindings, /assayTransformFormulaInput\?\.addEventListener\('input',\s*analysisView\.onFormulaInput\)/);
+      // Both tables are built from the same column, data, signature, and height
+      // builders. Formula references are resolved only from the original result map.
+      assert.match(resultsManager, /buildResultGridColumns,/);
+      assert.match(analysis, /buildResultGridColumns\(def,\s*\{ formatter: formatTransformCell \}\)/);
+      assert.match(analysis, /buildResultGridData\(def,\s*transformFormulas\)/);
+      assert.match(analysis, /transformFormulas\[well\]\s*=\s*`=\$\{well\}`/);
+      assert.match(derived, /Every reference resolves[\s\S]*original result plate/);
+      assert.match(derived, /applyPlateCellFormulas/);
 
       // Persisted with the assay, restored on load, and carried through a Setup save.
       assert.match(assay, /activeAssay\.transformSpec\s*=\s*spec;/);
@@ -620,10 +635,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="assay-new-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Create new assay"[\s\S]*?<svg/);
       assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
       assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
-      assert.match(html, /type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-save-btn"[^>]*type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg[\s\S]*?<span class="assay-form-button-caption">Save<\/span>/);
       assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
       assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-save-icon-btn\.primary-btn\s*\{[^}]*width:\s*auto;[^}]*min-width:\s*72px;/s);
+      assert.match(css, /\.assay-form-button-caption\s*\{[^}]*font-size:\s*0\.78rem;/s);
+      assert.match(dom, /assaySaveBtn:\s*root\.getElementById\('assay-save-btn'\)/);
       assert.match(dom, /assayNewBtn:\s*root\.getElementById\('assay-new-btn'\)/);
       assert.match(bindings, /assayNewBtn\?\.addEventListener\('click',\s*startNewAssay\)/);
       assert.match(assay, /function startNewAssay\(\)\s*\{\s*resetForm\(\);\s*elements\.assayNameInput\?\.focus\(\);\s*\}/s);

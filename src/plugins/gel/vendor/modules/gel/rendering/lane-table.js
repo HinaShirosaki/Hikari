@@ -1,5 +1,10 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
-import { normalizeManualOverrides } from '../shared.js';
+import { downloadBinaryFile, downloadDataUrlFile } from '../export.js';
+import { normalizeManualOverrides, safeFilePart } from '../shared.js';
+import { buildGelFigurePlan, createGelFigureCanvas, createGelImageCanvas } from './figure-export.js';
+import { createGelPowerPoint } from './powerpoint-export.js';
+
+export { buildGelFigurePlan, createGelFigureCanvas, createGelImageCanvas, createGelPowerPoint };
 
 const LABEL_COLUMN_WIDTH_PX = 118;
 
@@ -60,6 +65,16 @@ function hasDividerLayout(overrides) {
 }
 
 export function createLaneTableController({ runtime, elements, safeText, deps = {} }) {
+  let figureExportPromise = null;
+
+  function resolveLadderLane(layout = resolveLaneLayout(runtime)) {
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const requested = Math.floor(Number(normalized.ladderLane || elements.gelLadderLaneInput?.value));
+    return Number.isFinite(requested) && requested >= 1 && requested <= (layout?.laneCount || 0)
+      ? requested
+      : null;
+  }
+
   function updateRows(updater) {
     if (typeof updater !== 'function') {
       return [];
@@ -110,6 +125,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const rows = cloneLaneTableRows(overrides.laneTable?.rows || []);
     const hasTable = Boolean(layout && rows.length && !runtime.cropperActive);
     const canAddTable = dividerReady && Boolean(layout) && !runtime.cropperActive;
+    const ladderLane = resolveLadderLane(layout);
+    const includeLadder = runtime.figureExportIncludeLadder !== false;
 
     elements.gelAddTableBtn.hidden = false;
     elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
@@ -170,7 +187,20 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     elements.gelLaneTableShell.innerHTML = `
       <div class="gel-lane-table-toolbar">
         <p class="small-note">Lane columns stay aligned with the current gel borders and dividers.</p>
-        <button type="button" class="ghost-btn" data-gel-table-add-row>Add row</button>
+        <div class="gel-lane-table-actions">
+          <label class="small-note gel-lane-table-ladder-choice">
+            <input
+              type="checkbox"
+              data-gel-table-include-ladder
+              ${includeLadder ? 'checked' : ''}
+              ${ladderLane ? '' : 'disabled'}
+            />
+            Include ladder lane
+          </label>
+          <button type="button" class="ghost-btn" data-gel-table-add-row>Add row</button>
+          <button type="button" class="primary-btn" data-gel-table-generate-image>Generate image</button>
+          <button type="button" class="ghost-btn" data-gel-table-generate-pptx>Generate PowerPoint</button>
+        </div>
       </div>
       <div class="gel-lane-table-labels">
         <div class="gel-lane-table-label-head">Label</div>
@@ -219,7 +249,153 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     });
   }
 
+  async function onGenerateFigureClick(button = null) {
+    if (figureExportPromise) {
+      return figureExportPromise;
+    }
+    if (!runtime.currentImage?.imageData) {
+      deps.setStatus?.('Load a gel image before generating a figure.');
+      return null;
+    }
+
+    const layout = resolveLaneLayout(runtime);
+    const includeLadder = runtime.figureExportIncludeLadder !== false;
+    const ladderLane = resolveLadderLane(layout);
+    const originalLabel = button?.textContent || 'Generate image';
+    if (button) {
+      button.disabled = true;
+      button.setAttribute?.('aria-busy', 'true');
+      button.textContent = 'Generating…';
+    }
+
+    figureExportPromise = Promise.resolve()
+      .then(async () => {
+        const imageData = deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const createFigure = deps.createGelFigureCanvas || createGelFigureCanvas;
+        const result = createFigure({
+          documentObject: deps.documentObject || elements.gelLaneTableShell?.ownerDocument || globalThis?.document,
+          imageData,
+          imageWidth: runtime.currentImage.width,
+          imageHeight: runtime.currentImage.height,
+          manualOverrides: runtime.manualOverrides,
+          includeLadder,
+          ladderLane
+        });
+        const fileName = `${safeFilePart(elements.gelNameInput?.value, 'gel-figure')}.png`;
+        const dataUrl = result.canvas.toDataURL('image/png');
+        const downloadFigure = deps.downloadDataUrlFile || downloadDataUrlFile;
+        const downloadResult = await downloadFigure({ dataUrl, fileName });
+        if (downloadResult?.canceled) {
+          deps.setStatus?.('Image export canceled.');
+          return downloadResult;
+        }
+        const cropSummary = result.plan.croppedToBandLines
+          ? ` Cropped to rows ${result.plan.sourceTop}-${result.plan.sourceBottom}.`
+          : '';
+        const ladderSummary = !result.plan.includeLadder && result.plan.ladderLane
+          ? ` Ladder lane ${result.plan.ladderLane} excluded.`
+          : '';
+        deps.setStatus?.(`Generated ${downloadResult?.fileName || fileName}.${cropSummary}${ladderSummary}`);
+        return downloadResult;
+      })
+      .catch((error) => {
+        deps.setStatus?.(`Could not generate image: ${error?.message || error}`);
+        return null;
+      })
+      .finally(() => {
+        if (button) {
+          button.disabled = false;
+          button.removeAttribute?.('aria-busy');
+          button.textContent = originalLabel;
+        }
+        figureExportPromise = null;
+      });
+    return figureExportPromise;
+  }
+
+  async function onGeneratePowerPointClick(button = null) {
+    if (figureExportPromise) {
+      return figureExportPromise;
+    }
+    if (!runtime.currentImage?.imageData) {
+      deps.setStatus?.('Load a gel image before generating a PowerPoint.');
+      return null;
+    }
+
+    const layout = resolveLaneLayout(runtime);
+    const includeLadder = runtime.figureExportIncludeLadder !== false;
+    const ladderLane = resolveLadderLane(layout);
+    const originalLabel = button?.textContent || 'Generate PowerPoint';
+    if (button) {
+      button.disabled = true;
+      button.setAttribute?.('aria-busy', 'true');
+      button.textContent = 'Generating…';
+    }
+
+    figureExportPromise = Promise.resolve()
+      .then(async () => {
+        const imageData = deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const createGelImage = deps.createGelImageCanvas || createGelImageCanvas;
+        const gelResult = createGelImage({
+          documentObject: deps.documentObject || elements.gelLaneTableShell?.ownerDocument || globalThis?.document,
+          imageData,
+          imageWidth: runtime.currentImage.width,
+          imageHeight: runtime.currentImage.height,
+          manualOverrides: runtime.manualOverrides,
+          includeLadder,
+          ladderLane
+        });
+        const title = String(elements.gelNameInput?.value || '').trim() || 'Gel figure';
+        const createPowerPoint = deps.createGelPowerPoint || createGelPowerPoint;
+        const powerPoint = createPowerPoint({
+          plan: gelResult.plan,
+          gelImageDataUrl: gelResult.canvas.toDataURL('image/png'),
+          title
+        });
+        const fileName = `${safeFilePart(title, 'gel-figure')}.pptx`;
+        const downloadPowerPoint = deps.downloadBinaryFile || downloadBinaryFile;
+        const downloadResult = await downloadPowerPoint({
+          bytes: powerPoint.bytes,
+          fileName,
+          mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+        });
+        if (downloadResult?.canceled) {
+          deps.setStatus?.('PowerPoint export canceled.');
+          return downloadResult;
+        }
+        const cropSummary = gelResult.plan.croppedToBandLines
+          ? ` Cropped to rows ${gelResult.plan.sourceTop}-${gelResult.plan.sourceBottom}.`
+          : '';
+        const ladderSummary = !gelResult.plan.includeLadder && gelResult.plan.ladderLane
+          ? ` Ladder lane ${gelResult.plan.ladderLane} excluded.`
+          : '';
+        deps.setStatus?.(`Generated ${downloadResult?.fileName || fileName} with an editable table.${cropSummary}${ladderSummary}`);
+        return downloadResult;
+      })
+      .catch((error) => {
+        deps.setStatus?.(`Could not generate PowerPoint: ${error?.message || error}`);
+        return null;
+      })
+      .finally(() => {
+        if (button) {
+          button.disabled = false;
+          button.removeAttribute?.('aria-busy');
+          button.textContent = originalLabel;
+        }
+        figureExportPromise = null;
+      });
+    return figureExportPromise;
+  }
+
   function onShellClick(event) {
+    const powerPointButton = event?.target?.closest?.('[data-gel-table-generate-pptx]');
+    if (powerPointButton) {
+      return onGeneratePowerPointClick(powerPointButton);
+    }
+    const generateButton = event?.target?.closest?.('[data-gel-table-generate-image]');
+    if (generateButton) {
+      return onGenerateFigureClick(generateButton);
+    }
     const addRowButton = event?.target?.closest?.('[data-gel-table-add-row]');
     if (!addRowButton) {
       return;
@@ -240,6 +416,11 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
   }
 
   function onShellInput(event) {
+    const ladderToggle = event?.target?.closest?.('[data-gel-table-include-ladder]');
+    if (ladderToggle) {
+      runtime.figureExportIncludeLadder = Boolean(ladderToggle.checked);
+      return;
+    }
     const input = event?.target?.closest?.('[data-gel-table-row]');
     if (!input) {
       return;
@@ -274,6 +455,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
   return {
     onAddTableClick,
+    onGenerateFigureClick,
+    onGeneratePowerPointClick,
     onShellClick,
     onShellInput,
     render

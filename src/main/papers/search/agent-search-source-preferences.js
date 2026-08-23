@@ -1,8 +1,6 @@
 'use strict';
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray } = require('../../lib/normalize.js');
 
 function uniqueStrings(values = []) {
   const seen = new Set();

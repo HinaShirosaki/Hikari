@@ -133,6 +133,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
   };
 
   ctx.render = function render() {
+    ctx.syncSuggestedConstructName();
     ctx.renderCommonBlocks();
     ctx.renderFeatureSearchResults();
     ctx.renderWorkflow();

@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 const {
   releaseOfficialMcpSkillsForWorkspace
 } = require('../../agent/codex-agent/official-mcp-skills.js');
@@ -20,20 +21,12 @@ function defaultCleanText(value, maxLength = 2000) {
   return maxLength > 0 ? text.slice(0, maxLength) : text;
 }
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
 function parseJsonObject(value = '') {
   try {
     return ensureObject(JSON.parse(String(value || '')));
   } catch {
     return {};
   }
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function isFilesystemRoot(candidatePath = '') {

@@ -762,6 +762,25 @@
   margin: 0;
 }
 
+.gel-lane-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gel-lane-table-ladder-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.gel-lane-table-ladder-choice input {
+  margin: 0;
+}
+
 .gel-lane-table-wrap {
   overflow-x: auto;
 }
@@ -1100,6 +1119,10 @@ body.theme-night .gel-lane-table-input:focus {
   .gel-lane-table-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .gel-lane-table-actions {
+    justify-content: flex-start;
   }
 
   .gel-lane-table-shell {

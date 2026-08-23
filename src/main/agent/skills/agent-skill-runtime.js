@@ -3,29 +3,18 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function stripWrappingQuotes(value = '') {

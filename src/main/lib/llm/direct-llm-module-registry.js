@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray, ensureObject } = require('../normalize.js');
+
 const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   {
     id: 'papers',
@@ -55,20 +57,12 @@ const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   }
 ]);
 
-function defaultCleanText(value, _maxLength = 2000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function normalizeRegistryId(value) {

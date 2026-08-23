@@ -1,4 +1,5 @@
 import { buildDisplayPlan } from '../cloning-design.js';
+import { asArray } from '../../../lib/normalize.js';
 
 // Adapter for the sequence_viewer MCP `design_cloning` action. The UI-facing
 // strategy IDs (q5-kld, two-step-ligation, in-fusion, ...) are not the engine's
@@ -16,10 +17,6 @@ const CONTRACT_STRATEGIES = new Set([
   'gibson',
   'in-fusion'
 ]);
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function normalizePrimer(primer = {}) {
   return {

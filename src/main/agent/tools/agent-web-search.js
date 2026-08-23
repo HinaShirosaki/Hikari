@@ -2,10 +2,7 @@
 
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
+const { ensureObject } = require('../../lib/normalize.js');
 
 function clampInteger(value, fallback, min, max) {
   const parsed = Number(value);

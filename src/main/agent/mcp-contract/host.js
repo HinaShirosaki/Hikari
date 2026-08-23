@@ -5,6 +5,7 @@ const http = require('node:http');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
+const { ensureObject } = require('../../lib/normalize.js');
 const {
   HIKARI_MCP_HEADERS_TIMEOUT_MS,
   HIKARI_MCP_KEEP_ALIVE_TIMEOUT_MS,
@@ -20,10 +21,6 @@ const LITERATURE_SEARCH_REQUEST_TTL_MS = HIKARI_MCP_TOOL_TIMEOUT_MS;
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
   return text && maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function captureEnvValue(env, key) {

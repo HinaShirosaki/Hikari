@@ -363,9 +363,13 @@ export function createSequenceViewerHomeController(config = {}) {
     }
   }
 
+  // Held so the hover readout can resolve an arc back to its feature.
+  let previewedRecord = null;
   const previewHover = attachMapHoverLabel({
     host: () => elements.previewHost,
-    rootDocument
+    rootDocument,
+    getFeature: (index) => (Array.isArray(previewedRecord?.features) ? previewedRecord.features[index] : null) || null,
+    getSequence: () => previewedRecord?.sequence || ''
   });
 
   const previewZoom = attachMapZoomGestures({
@@ -380,6 +384,7 @@ export function createSequenceViewerHomeController(config = {}) {
   // SVG. No iframe, so it inherits the app theme and needs no height syncing,
   // and no preview document has to be generated or kept on disk.
   function renderPreview(record) {
+    previewedRecord = record || null;
     if (!elements.previewHost) {
       return;
     }

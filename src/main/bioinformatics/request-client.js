@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../lib/normalize.js');
+
 const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_RESPONSE_BYTES = 25 * 1024 * 1024;
 const DEFAULT_USER_AGENT = 'Hikari/1.0';
@@ -20,10 +22,6 @@ class BioinformaticsServiceError extends Error {
       ? Math.max(0, Number(options.retryAfterMs))
       : null;
   }
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function cleanText(value, maxLength = 2400) {

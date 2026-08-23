@@ -8,6 +8,7 @@ import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.
 import { annotatePrimersOnSelectedRecord } from './primer-annotation.js';
 import { describeEditTarget, renamePrimers } from './primer-naming.js';
 import { createSequenceViewerCloningDesignNotebookPage } from './cloning-design-notebook.js';
+import { asArray } from '../../lib/normalize.js';
 
 const STRATEGY_WHOLE_PLASMID = 'whole-plasmid';
 const STRATEGY_Q5_KLD = 'q5-kld';
@@ -55,10 +56,6 @@ const STRATEGIES = Object.freeze([
     shortLabel: 'In-Fusion'
   }
 ]);
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function formatNumber(value, digits = 1) {
   const number = Number(value);

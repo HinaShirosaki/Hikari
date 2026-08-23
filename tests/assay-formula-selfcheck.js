@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..');
 const { compileFormula, parseFormula } = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/formula.js')
 );
-const { applyPlateTransform } = loadEsmStyleModule(
+const { applyPlateCellFormulas, applyPlateTransform } = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/derived-plate.js')
 );
 
@@ -130,6 +130,38 @@ assert.equal(grouped.numericResults.A1, 10 / 3, 'a group name works as a referen
 const stable = transform('=x - MIN(A1:A3)');
 assert.equal(stable.numericResults.A1, 0, 'A1 - min(10,20,30)');
 assert.equal(stable.numericResults.A3, 20, 'A3 - min(10,20,30), not min of already-shifted values');
+
+// --- each transformed cell can carry its own spreadsheet formula ---
+const CELL_DEF = { value: '96', label: '96 well', rows: 8, columns: 12 };
+const cellSource = plate({
+  A1: 10, A2: 20, A3: 30, A4: 40,
+  A5: 50, A6: 60, A7: 70, A8: 80
+});
+const cellTransforms = applyPlateCellFormulas({
+  results: cellSource,
+  formulas: {
+    A1: '=A2',
+    A2: '=A1',
+    A3: '=A2/MAX(A1:A8)',
+    A4: '=x * 2'
+  },
+  definition: CELL_DEF
+});
+assert.equal(cellTransforms.numericResults.A1, 20, 'a transformed cell can read one original cell');
+assert.equal(cellTransforms.numericResults.A2, 10, 'references never read another transformed value');
+assert.equal(cellTransforms.numericResults.A3, 0.25, 'a cell formula can aggregate an original range');
+assert.equal(cellTransforms.numericResults.A4, 80, 'x remains the original value at the output address');
+assert.equal(cellTransforms.formulaCount, 4, 'the transformed plate reports its formula count');
+assert.equal(cellTransforms.errorCount, 0, 'valid cell formulas report no errors');
+
+const cellError = applyPlateCellFormulas({
+  results: cellSource,
+  formulas: { B1: '=A2/', B2: '=ZZ99' },
+  definition: CELL_DEF
+});
+assert.equal(cellError.wellCount, 0, 'invalid formulas do not create numeric transformed cells');
+assert.equal(cellError.errorCount, 2, 'formula failures stay attached to their individual cells');
+assert.ok(cellError.cells.B1.error.includes('Formula error'), 'a syntax error is available to the grid formatter');
 
 // --- reference errors report once, not once per well ---
 const badRef = transform('=x - MEAN(ZZ9)');

@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
+
 const MAX_TEXT_LENGTH = 2000;
 
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
@@ -8,22 +10,6 @@ function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function compactObject(value = {}) {

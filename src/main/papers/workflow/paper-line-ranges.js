@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../../lib/normalize.js');
+
 /**
  * Line-range parsing + Markdown line extraction for the Codex paper-context
  * workflow. The Codex sub-agent returns 1-based line ranges into paper.md;
@@ -13,11 +15,7 @@
 const DEFAULT_MAX_LINE_RANGES_PER_SELECTION = 8;
 const DEFAULT_MAX_LINES_PER_SELECTION = 120;
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cleanText(value, _maxLength = 4000) {
+function cleanText(value) {
   return String(value || '');
 }
 
@@ -156,7 +154,7 @@ function inferMarkdownSectionLabel(lines = [], startLine = 1, fallback = '') {
       return cleanText(heading[1].replace(/\s*\(pp?\.\s*[^)]+\)\s*$/i, ''), 160);
     }
   }
-  return cleanText(fallback, 160) || 'Paper lines';
+  return cleanText(fallback) || 'Paper lines';
 }
 
 function readLineRangesFromText(text = '', ranges = []) {

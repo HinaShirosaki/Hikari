@@ -37,7 +37,7 @@ import {
   buildLinkedGelPreviewHtml,
   createLinkedPreviewImageLoader
 } from './results/linked-previews-renderer.js';
-import { createResultTableController } from './results/result-table-controller.js';
+import { createSpreadsheetTables } from '../../lib/spreadsheet-tables.js';
 import { createSampleLinkMenuController } from './samples/sample-link-menu.js';
 import { createNotebookQuickSampleController } from './samples/quick-sample-controller.js';
 import { createInlinePlaceholderController } from './protocol/inline-placeholder-controller.js';
@@ -140,6 +140,12 @@ export function initLabNotebook({
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
   const notebookResultAttachments = document.getElementById('biology-notebook-result-attachments');
   const notebookAddTableBtn = document.getElementById('biology-notebook-add-table-btn');
+  const notebookTableSizeOverlay = document.getElementById('biology-notebook-table-size-overlay');
+  const notebookTableSizeForm = document.getElementById('biology-notebook-table-size-form');
+  const notebookTableSizeColumns = document.getElementById('biology-notebook-table-size-columns');
+  const notebookTableSizeRows = document.getElementById('biology-notebook-table-size-rows');
+  const notebookTableSizeCloseBtn = document.getElementById('biology-notebook-table-size-close-btn');
+  const notebookTableSizeCancelBtn = document.getElementById('biology-notebook-table-size-cancel-btn');
   const notebookAddTableRowBtn = document.getElementById('biology-notebook-add-table-row-btn');
   const notebookAddTableColumnBtn = document.getElementById('biology-notebook-add-table-column-btn');
   const notebookRemoveTableBtn = document.getElementById('biology-notebook-remove-table-btn');
@@ -192,7 +198,7 @@ export function initLabNotebook({
     loader: resultFileAttachmentLoader
   });
 
-  const resultTableController = createResultTableController({
+  const resultTableController = createSpreadsheetTables({
     host: notebookResultTableHost,
     statusEl: notebookResultTableStatus,
     wrapEl: notebookResultTableWrap,
@@ -201,7 +207,10 @@ export function initLabNotebook({
     addColBtn: notebookAddTableColumnBtn,
     removeBtn: notebookRemoveTableBtn,
     createId,
-    TabulatorLib
+    TabulatorLib,
+    label: 'Notebook result table',
+    emptyMessage: 'Add a table to capture structured notebook results.',
+    placeholder: 'Use Add row / Add column to shape this notebook table.'
   });
 
   const protocolEditor = createProtocolSnapshotEditor({
@@ -2114,9 +2123,35 @@ export function initLabNotebook({
       finishNotebookTitleRename({ cancel: true });
     }
   });
+  // Adding a table asks for its size first; the counts are clamped in the model, so a
+  // stray digit cannot build a grid big enough to hang the renderer.
+  function setTableSizeDialog(open) {
+    if (notebookTableSizeOverlay) {
+      notebookTableSizeOverlay.hidden = !open;
+    }
+    if (open) {
+      notebookTableSizeColumns?.focus?.();
+      notebookTableSizeColumns?.select?.();
+    }
+  }
+  notebookTableSizeCloseBtn?.addEventListener('click', () => setTableSizeDialog(false));
+  notebookTableSizeCancelBtn?.addEventListener('click', () => setTableSizeDialog(false));
+  notebookTableSizeOverlay?.addEventListener('click', (event) => {
+    if (event.target === notebookTableSizeOverlay) {
+      setTableSizeDialog(false);
+    }
+  });
+  notebookTableSizeForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    resultTableController.onAdd({
+      columnCount: Number(notebookTableSizeColumns?.value),
+      rowCount: Number(notebookTableSizeRows?.value)
+    });
+    setTableSizeDialog(false);
+  });
   notebookAddTableBtn?.addEventListener('click', () => {
     toolSidebarController.clearSelection();
-    resultTableController.onAdd();
+    setTableSizeDialog(true);
   });
   notebookAddTableRowBtn?.addEventListener('click', resultTableController.onAddRow);
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);

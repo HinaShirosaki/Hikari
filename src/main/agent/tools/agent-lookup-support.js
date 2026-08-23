@@ -25,7 +25,7 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   return String(value || '');
 }
 

@@ -1,27 +1,17 @@
 'use strict';
 
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
+
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function safeTimestampMs(value) {
@@ -55,36 +45,36 @@ const SUB_AGENT_ACTIONS = Object.freeze({
 });
 
 function normalizeAction(value) {
-  const normalized = defaultCleanText(value, 40).toLowerCase();
+  const normalized = defaultCleanText(value).toLowerCase();
   return Object.values(SUB_AGENT_ACTIONS).includes(normalized) ? normalized : '';
 }
 
 function normalizeMessage(role, text, timestamp) {
   return {
     role: role === 'assistant' ? 'assistant' : 'user',
-    text: defaultCleanText(text, 20000),
-    timestamp: defaultCleanText(timestamp, 80)
+    text: defaultCleanText(text),
+    timestamp: defaultCleanText(timestamp)
   };
 }
 
 function normalizeTurnResult(rawResult) {
   if (typeof rawResult === 'string') {
     return {
-      assistant_message: defaultCleanText(rawResult, 20000),
+      assistant_message: defaultCleanText(rawResult),
       summary: ''
     };
   }
   const source = ensureObject(rawResult);
   return {
-    assistant_message: defaultCleanText(source.assistant_message || source.reply || source.message, 20000),
-    summary: defaultCleanText(source.summary, 500),
+    assistant_message: defaultCleanText(source.assistant_message || source.reply || source.message),
+    summary: defaultCleanText(source.summary),
     output: cloneJson(source.output, null),
     metadata: cloneJson(ensureObject(source.metadata), {})
   };
 }
 
 function normalizeTaskState(value) {
-  const normalized = defaultCleanText(value, 40).toLowerCase();
+  const normalized = defaultCleanText(value).toLowerCase();
   return ['running', 'completed', 'failed'].includes(normalized) ? normalized : '';
 }
 
@@ -92,9 +82,7 @@ function defaultSubAgentSystemPrompt(source = {}) {
   const normalizedSource = ensureObject(source);
   const metadata = ensureObject(normalizedSource.metadata);
   const taskType = defaultCleanText(
-    metadata.task_type || normalizedSource.task_type || normalizedSource.taskType,
-    120
-  ).toLowerCase();
+    metadata.task_type || normalizedSource.task_type || normalizedSource.taskType).toLowerCase();
   if (taskType === 'python-sandbox') {
     return 'You are the Python sandbox supervisor sub-agent. Track one sandbox run, keep liveness accurate, and diagnose failures from the actual sandbox output.';
   }
@@ -103,17 +91,17 @@ function defaultSubAgentSystemPrompt(source = {}) {
 
 function buildCodexSubAgentPrompt(input = {}) {
   const source = ensureObject(input);
-  const phase = defaultCleanText(source.phase, 40) || 'message';
-  const systemPrompt = defaultCleanText(source.system_prompt || source.systemPrompt, 40000);
-  const message = defaultCleanText(source.message, 40000);
+  const phase = defaultCleanText(source.phase) || 'message';
+  const systemPrompt = defaultCleanText(source.system_prompt || source.systemPrompt);
+  const message = defaultCleanText(source.message);
   const agent = ensureObject(source.agent);
-  const agentName = defaultCleanText(agent.name, 160) || defaultCleanText(agent.id, 160) || 'sub-agent';
+  const agentName = defaultCleanText(agent.name) || defaultCleanText(agent.id) || 'sub-agent';
   const transcript = defaultAsArray(source.messages)
     .slice(-16)
     .map((entry) => {
       const row = ensureObject(entry);
-      const role = defaultCleanText(row.role, 40) || 'user';
-      const text = defaultCleanText(row.text || row.content || row.message, 6000);
+      const role = defaultCleanText(row.role) || 'user';
+      const text = defaultCleanText(row.text || row.content || row.message);
       return text ? `${role}: ${text}` : '';
     })
     .filter(Boolean)

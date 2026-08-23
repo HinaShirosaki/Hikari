@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../../lib/normalize.js');
+
 /**
  * Text + parsing helpers for the paper context loader.
  *
@@ -21,10 +23,6 @@ const QUERY_STOP_WORDS = new Set([
   'in', 'into', 'is', 'it', 'its', 'of', 'on', 'or', 'that', 'the', 'their', 'then', 'there',
   'these', 'this', 'to', 'was', 'were', 'what', 'when', 'where', 'which', 'why', 'with'
 ]);
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function decodeXmlEntities(value) {
   return String(value || '')

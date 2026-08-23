@@ -1,8 +1,5 @@
 import { ACTION_WHERE_TO_BUY } from './constants.js';
-
-export function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../../lib/normalize.js';
 
 export function cleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();
@@ -75,3 +72,5 @@ export function normalizeActionLabel(actionType) {
   }
   return 'What is it';
 }
+
+export { asArray };

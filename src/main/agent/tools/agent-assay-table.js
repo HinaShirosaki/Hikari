@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
+
 const ASSAY_TABLE_ACTIONS = Object.freeze([
   'create',
   'read',
@@ -24,22 +26,6 @@ function cleanText(value, maxLength = 2000) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function normalizeCell(value) {

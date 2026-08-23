@@ -33,17 +33,34 @@ export function notebookTableColumnLetter(index) {
   }
 }
 
-function parseCellAddress(name) {
+// Two addressing schemes share one parser. In a plain grid the letters pick the column
+// and the digits the row (A1 = first column, first row). On a microplate the letters
+// are the ROW and the digits the column, so "B3" is row B, column 3 -- the well id the
+// user already knows. Getting this backwards silently reads the transposed cell.
+function lettersToIndex(letters) {
+  let index = 0;
+  for (let at = 0; at < letters.length; at += 1) {
+    index = (index * 26) + (letters.charCodeAt(at) - 64);
+  }
+  return index - 1;
+}
+
+function parseCellAddress(name, plate = false) {
   const match = CELL_PATTERN.exec(String(name || '').trim());
   if (!match) {
     return null;
   }
-  const letters = match[1].toUpperCase();
-  let column = 0;
-  for (let index = 0; index < letters.length; index += 1) {
-    column = (column * 26) + (letters.charCodeAt(index) - 64);
-  }
-  return { column: column - 1, row: Number(match[2]) - 1 };
+  const letterIndex = lettersToIndex(match[1].toUpperCase());
+  const digitIndex = Number(match[2]) - 1;
+  return plate
+    ? { column: digitIndex, row: letterIndex }
+    : { column: letterIndex, row: digitIndex };
+}
+
+export function formatCellAddress(column, row, plate = false) {
+  return plate
+    ? `${notebookTableColumnLetter(row)}${column + 1}`
+    : `${notebookTableColumnLetter(column)}${row + 1}`;
 }
 
 // Error kinds have to survive dependency traversal so a source #NUM! remains #NUM!
@@ -90,7 +107,7 @@ export function formatNotebookTableNumber(value) {
 
 // ponytail: every cell is recomputed on each call — a notebook table is tens of cells,
 // so there is no dependency graph. Add incremental recalc if tables ever get large.
-export function computeNotebookResultTable(rawTable) {
+export function computeNotebookResultTable(rawTable, { plateAddressing = false } = {}) {
   const table = normalizeNotebookResultTable(rawTable);
   const byRowId = {};
   if (!table) {
@@ -120,12 +137,12 @@ export function computeNotebookResultTable(rawTable) {
       return cached.value;
     }
     if (visiting.has(key)) {
-      throw fail(`"${notebookTableColumnLetter(column)}${row + 1}" refers to itself.`, true);
+      throw fail(`"${formatCellAddress(column, row, plateAddressing)}" refers to itself.`, true);
     }
 
     const raw = rawAt(column, row);
     if (raw === null) {
-      throw fail(`"${notebookTableColumnLetter(column)}${row + 1}" is outside this table.`);
+      throw fail(`"${formatCellAddress(column, row, plateAddressing)}" is outside this table.`);
     }
     if (!raw) {
       return 0;
@@ -162,8 +179,8 @@ export function computeNotebookResultTable(rawTable) {
 
   function resolveRef(node) {
     if (node.kind === 'range') {
-      const from = parseCellAddress(node.from);
-      const to = parseCellAddress(node.to);
+      const from = parseCellAddress(node.from, plateAddressing);
+      const to = parseCellAddress(node.to, plateAddressing);
       if (!from || !to) {
         throw fail(`"${node.from}:${node.to}" is not a range of cells.`);
       }
@@ -187,7 +204,7 @@ export function computeNotebookResultTable(rawTable) {
       return values;
     }
 
-    const address = parseCellAddress(node.name);
+    const address = parseCellAddress(node.name, plateAddressing);
     if (!address) {
       throw fail(`"${node.name}" is not a cell reference.`);
     }
@@ -264,8 +281,8 @@ export function computeNotebookResultTable(rawTable) {
 
 // The computed view of a table, for anything that renders cells as plain text
 // (PDF export, the AI context block) rather than as an editor.
-export function resolveNotebookResultTableValues(rawTable) {
-  const { table, byRowId } = computeNotebookResultTable(rawTable);
+export function resolveNotebookResultTableValues(rawTable, options = {}) {
+  const { table, byRowId } = computeNotebookResultTable(rawTable, options);
   if (!table) {
     return null;
   }
@@ -346,7 +363,7 @@ export function applyReferencePick({
 //
 // ponytail: relative references only -- this language has no $ absolute form, and
 // adding one means changing the tokenizer that Assay's plate formulas share.
-export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0) {
+export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0, { plateAddressing = false } = {}) {
   const source = String(text ?? '');
   if (!isNotebookTableFormula(source) || (!columnDelta && !rowDelta)) {
     return source;
@@ -357,7 +374,7 @@ export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0) 
     if (/^\s*\(/.test(rest)) {
       return match;
     }
-    const address = parseCellAddress(match);
+    const address = parseCellAddress(match, plateAddressing);
     if (!address) {
       return match;
     }
@@ -366,16 +383,16 @@ export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0) 
     if (column < 0 || row < 0) {
       return '#REF!';
     }
-    return `${notebookTableColumnLetter(column)}${row + 1}`;
+    return formatCellAddress(column, row, plateAddressing);
   });
 }
 
 // One cell's content copied to an offset cell: formulas shift their references, plain
 // text is copied as-is. Excel grows number series when several cells are dragged; a
 // single-cell drag copies, which is all this does.
-export function fillCellContent(sourceText, columnDelta, rowDelta) {
+export function fillCellContent(sourceText, columnDelta, rowDelta, options = {}) {
   return isNotebookTableFormula(sourceText)
-    ? translateFormulaReferences(sourceText, columnDelta, rowDelta)
+    ? translateFormulaReferences(sourceText, columnDelta, rowDelta, options)
     : String(sourceText ?? '');
 }
 

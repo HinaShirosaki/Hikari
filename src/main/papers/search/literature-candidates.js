@@ -1,6 +1,7 @@
 'use strict';
 
 const { normalizeDoi } = require('../identity/paper-identity.js');
+const { ensureObject } = require('../../lib/normalize.js');
 
 /**
  * Candidate ranking and de-duplication for the literature-search workflow.
@@ -30,10 +31,6 @@ const SOURCE_ORDER = new Map([
   ['uniprot', 3],
   ['web', 4]
 ]);
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function parseDateToTimestamp(value) {
   const parsed = Date.parse(String(value || '').trim());

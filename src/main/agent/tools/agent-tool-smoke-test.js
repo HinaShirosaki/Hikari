@@ -25,16 +25,13 @@ const { createPaperDownloadRuntime } = require('../../papers/download/agent-pape
 const { createPaperAnalysisRuntime } = require('../../papers/analysis/agent-paper-analysis.js');
 const { createProtocolGenerationRuntime } = require('./agent-protocol-generation.js');
 const { createProtocolSaveRuntime } = require('./agent-protocol-save.js');
+const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
 const {
   hydrateSnapshotFromBundle,
   syncBundleFromSnapshot
 } = require('../../storage');
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cleanText(value, _maxLength = 500) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -42,23 +39,11 @@ function cleanText(value, _maxLength = 500) {
   return text;
 }
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
-
 function uniqueStrings(values, max = 20) {
   const seen = new Set();
   const out = [];
   asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 220);
+    const normalized = cleanText(value);
     if (!normalized) {
       return;
     }
@@ -73,7 +58,7 @@ function uniqueStrings(values, max = 20) {
 }
 
 function countWords(value) {
-  return cleanText(value, 400)
+  return cleanText(value)
     .split(/\s+/)
     .map((part) => part.trim())
     .filter(Boolean)
@@ -81,18 +66,18 @@ function countWords(value) {
 }
 
 function resolveToolMessage(message, fallback) {
-  return cleanText(message, 3000) || cleanText(fallback, 3000);
+  return cleanText(message) || cleanText(fallback);
 }
 
 function resolveFocusedToolText(message, fallback, maxWords = 6) {
-  const normalizedMessage = cleanText(message, 300);
+  const normalizedMessage = cleanText(message);
   if (!normalizedMessage) {
-    return cleanText(fallback, 300);
+    return cleanText(fallback);
   }
   if (countWords(normalizedMessage) <= maxWords) {
     return normalizedMessage;
   }
-  return cleanText(fallback, 300);
+  return cleanText(fallback);
 }
 
 function buildSmokeSnapshot() {
@@ -278,7 +263,7 @@ function buildSmokeSnapshot() {
 
 function createStructuredJsonResponder() {
   return async function requestStructuredJsonPayload(options = {}) {
-    const stage = cleanText(options.stage, 120);
+    const stage = cleanText(options.stage);
     if (stage === 'paper_analysis_tool') {
       return {
         ok: true,
@@ -349,52 +334,52 @@ function createStructuredJsonResponder() {
 function buildPreview(toolName, result) {
   const source = ensureObject(result);
   if (toolName === 'inventory-lookup') {
-    return cleanText(source.items?.[0]?.name || source.items?.[0]?.id, 220);
+    return cleanText(source.items?.[0]?.name || source.items?.[0]?.id);
   }
   if (toolName === 'notebook-lookup') {
-    return cleanText(source.items?.[0]?.title || source.items?.[0]?.protocolName || source.items?.[0]?.id, 220);
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.protocolName || source.items?.[0]?.id);
   }
   if (toolName === 'protocol-matching') {
-    return cleanText(source.selected_protocol?.name, 220);
+    return cleanText(source.selected_protocol?.name);
   }
   if (toolName === 'notebook-generation') {
-    return cleanText(source.rendered_step_preview || source.summary, 220);
+    return cleanText(source.rendered_step_preview || source.summary);
   }
   if (toolName === 'notebook-draft') {
-    return cleanText(source.proposal?.title || source.selected_protocol?.name || source.summary, 220);
+    return cleanText(source.proposal?.title || source.selected_protocol?.name || source.summary);
   }
   if (toolName === 'python-sandbox') {
-    return cleanText(source.readback_files?.[0]?.path, 220);
+    return cleanText(source.readback_files?.[0]?.path);
   }
   if (toolName === 'sub-agent') {
-    return cleanText(source.agent_id, 220);
+    return cleanText(source.agent_id);
   }
   if (toolName === 'memory') {
-    return cleanText(source.items?.[0]?.summary || source.items?.[0]?.key, 220);
+    return cleanText(source.items?.[0]?.summary || source.items?.[0]?.key);
   }
   if (toolName === 'container') {
-    return cleanText(source.container?.name || source.container?.id || source.items?.[0]?.name, 220);
+    return cleanText(source.container?.name || source.container?.id || source.items?.[0]?.name);
   }
   if (toolName === 'web-search') {
-    return cleanText(source.items?.[0]?.title || source.items?.[0]?.url, 220);
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.url);
   }
   if (toolName === 'literature-search') {
-    return cleanText(source.items?.[0]?.title || source.items?.[0]?.accession, 220);
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.accession);
   }
   if (toolName === 'purchase-recommendation') {
-    return cleanText(source.items?.[0]?.title || source.items?.[0]?.vendor, 220);
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.vendor);
   }
   if (toolName === 'paper-download') {
-    return cleanText(source.relative_path || source.file_name, 220);
+    return cleanText(source.relative_path || source.file_name);
   }
   if (toolName === 'paper-analysis') {
-    return cleanText(source.generated_protocol?.name || source.paper_title, 220);
+    return cleanText(source.generated_protocol?.name || source.paper_title);
   }
   if (toolName === 'paper-search') {
-    return cleanText(source.items?.[0]?.section_heading || source.items?.[0]?.title, 220);
+    return cleanText(source.items?.[0]?.section_heading || source.items?.[0]?.title);
   }
   if (toolName === 'protocol-generation') {
-    return cleanText(source.protocol?.name, 220);
+    return cleanText(source.protocol?.name);
   }
   return '';
 }
@@ -426,22 +411,22 @@ function buildResultMessage(toolName, result, fallbackSummary = '') {
     source.error,
     fallbackSummary
   );
-  return cleanText(candidates.find((value) => cleanText(value, 6000)), 6000);
+  return cleanText(candidates.find((value) => cleanText(value, 6000)));
 }
 
 function normalizeToolSmokeItem(toolName, result, durationMs, options = {}) {
   const source = ensureObject(result);
-  const summary = cleanText(source.summary || source.error || `${toolName} smoke test completed.`, 320);
-  const requestMessage = cleanText(options.requestMessage, 3000);
+  const summary = cleanText(source.summary || source.error || `${toolName} smoke test completed.`);
+  const requestMessage = cleanText(options.requestMessage);
   return {
-    tool_name: cleanText(toolName, 120),
+    tool_name: cleanText(toolName),
     ok: source.ok !== false,
-    status: cleanText(source.status, 80) || (source.ok === false ? 'error' : 'ok'),
+    status: cleanText(source.status) || (source.ok === false ? 'error' : 'ok'),
     summary,
     request_message: requestMessage,
     result_message: buildResultMessage(toolName, source, summary),
     preview: buildPreview(toolName, source),
-    error: source.ok === false ? cleanText(source.error, 600) : '',
+    error: source.ok === false ? cleanText(source.error) : '',
     duration_ms: Math.max(0, Number(durationMs) || 0),
     raw_result: cloneJson(source, {})
   };
@@ -450,7 +435,7 @@ function normalizeToolSmokeItem(toolName, result, durationMs, options = {}) {
 function createAgentToolSmokeTestRuntime(deps = {}) {
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const pythonSandboxFn = typeof deps.runPythonSandbox === 'function' ? deps.runPythonSandbox : runPythonSandbox;
-  const pythonSandboxRoot = cleanText(deps.pythonSandboxRoot, 1200)
+  const pythonSandboxRoot = cleanText(deps.pythonSandboxRoot)
     || path.join(os.tmpdir(), 'hikari-agent-tool-smoke-python');
   const structuredResponder = createStructuredJsonResponder();
 
@@ -476,10 +461,10 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const itemCount = asArray(result.items).length;
     return {
       ...result,
-      ok: options.strict === true ? itemCount > 0 : cleanText(result.status, 80) !== 'error',
+      ok: options.strict === true ? itemCount > 0 : cleanText(result.status) !== 'error',
       summary: itemCount > 0
-        ? `Found ${itemCount} inventory match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
-        : `No inventory matches found for ${cleanText(result.query || focusedQuery, 220)}.`
+        ? `Found ${itemCount} inventory match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery)}.`
+        : `No inventory matches found for ${cleanText(result.query || focusedQuery)}.`
     };
   }
 
@@ -502,14 +487,14 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const itemCount = items.length;
     return {
       status: itemCount ? 'matched' : 'no_match',
-      query: cleanText(result.query || focusedQuery, 220),
-      source: cleanText(result.source, 80) || 'fallback_json',
+      query: cleanText(result.query || focusedQuery),
+      source: cleanText(result.source) || 'fallback_json',
       backfilled_sql: result.backfilled_sql === true,
       items,
       ok: options.strict === true ? itemCount > 0 : true,
       summary: itemCount > 0
-        ? `Found ${itemCount} notebook match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
-        : `No notebook matches found for ${cleanText(result.query || focusedQuery, 220)}.`
+        ? `Found ${itemCount} notebook match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery)}.`
+        : `No notebook matches found for ${cleanText(result.query || focusedQuery)}.`
     };
   }
 
@@ -531,15 +516,15 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
         }
       }
     });
-    const selectedProtocolName = cleanText(result.selected_protocol?.name, 220);
+    const selectedProtocolName = cleanText(result.selected_protocol?.name);
     return {
       ok: options.strict === true ? Boolean(result.selected_protocol?.id) : true,
-      status: cleanText(result.selection_method, 80) || (selectedProtocolName ? 'matched' : 'no_match'),
+      status: cleanText(result.selection_method) || (selectedProtocolName ? 'matched' : 'no_match'),
       summary: selectedProtocolName
         ? `Selected ${selectedProtocolName} during protocol matching.`
         : 'Protocol matching completed without selecting a protocol.',
       selected_protocol: result.selected_protocol,
-      rationale: cleanText(result.rationale, 260)
+      rationale: cleanText(result.rationale)
     };
   }
 
@@ -571,11 +556,11 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     });
     return {
       ok: options.strict === true
-        ? cleanText(result.status, 80) === 'completed'
-        : cleanText(result.status, 80) !== 'error',
-      status: cleanText(result.status, 80),
-      summary: cleanText(result.notebook?.entry_template?.result, 320) || 'Notebook generation smoke test completed.',
-      rendered_step_preview: cleanText(asArray(result.notebook?.rendered_steps)[0], 220)
+        ? cleanText(result.status) === 'completed'
+        : cleanText(result.status) !== 'error',
+      status: cleanText(result.status),
+      summary: cleanText(result.notebook?.entry_template?.result) || 'Notebook generation smoke test completed.',
+      rendered_step_preview: cleanText(asArray(result.notebook?.rendered_steps)[0])
     };
   }
 
@@ -609,9 +594,9 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     return {
       ...result,
       ok: options.strict === true
-        ? cleanText(result.status, 80) === 'proposal_ready'
-        : cleanText(result.status, 80) !== 'error',
-      summary: cleanText(result.summary, 320) || 'Notebook draft smoke test completed.'
+        ? cleanText(result.status) === 'proposal_ready'
+        : cleanText(result.status) !== 'error',
+      summary: cleanText(result.summary) || 'Notebook draft smoke test completed.'
     };
   }
 
@@ -629,7 +614,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       ...result,
       ok: result?.ok !== false,
       summary: result?.ok === false
-        ? cleanText(result?.error, 320) || 'Python sandbox smoke test failed.'
+        ? cleanText(result?.error) || 'Python sandbox smoke test failed.'
         : 'Python sandbox completed and wrote out.json.'
     };
   }
@@ -647,7 +632,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     return {
       ...result,
       ok: result?.status === 'completed',
-      summary: cleanText(result?.summary, 320) || 'Command-line smoke test completed.'
+      summary: cleanText(result?.summary) || 'Command-line smoke test completed.'
     };
   }
 
@@ -656,7 +641,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const runtime = createAgentSubAgentRuntime({
       now,
       runSubAgentTurn: async ({ phase, message }) => ({
-        assistant_message: `Handled ${phase}: ${cleanText(message, 120)}`,
+        assistant_message: `Handled ${phase}: ${cleanText(message)}`,
         summary: `sub-agent ${phase} ok`
       })
     });
@@ -670,11 +655,11 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       return {
         ok: false,
         status: 'error',
-        error: cleanText(created?.error, 600) || 'Sub-agent create failed.',
+        error: cleanText(created?.error) || 'Sub-agent create failed.',
         summary: 'Sub-agent smoke test failed during creation.'
       };
     }
-    const agentId = cleanText(created.agent.id, 160);
+    const agentId = cleanText(created.agent.id);
     const updated = await runtime.execute({
       action: 'message',
       agent_id: agentId,
@@ -760,7 +745,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       value: requestMessage,
       source: 'direct_literal:smoke'
     });
-    const id = cleanText(created?.container?.id, 40);
+    const id = cleanText(created?.container?.id);
     const edited = await runtime.execute({
       action: 'replace_range',
       id,
@@ -775,7 +760,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     const ok = created?.ok !== false
       && edited?.ok !== false
       && read?.ok !== false
-      && cleanText(read?.container?.id, 40) === '1';
+      && cleanText(read?.container?.id) === '1';
     return {
       ...read,
       ok,
@@ -827,7 +812,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       status: ok ? 'completed' : 'error',
       items: asArray(result?.records),
       summary: ok ? `sequence-viewer smoke listed ${result.records.length} record(s).` : 'sequence-viewer smoke failed.',
-      error: ok ? '' : cleanText(result?.error?.message, 600)
+      error: ok ? '' : cleanText(result?.error?.message)
     };
   }
 
@@ -863,7 +848,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       status: ok ? 'pending_approval' : 'error',
       items: ok ? [{ approvalToken: result.approvalToken, summary: result.summary }] : [],
       summary: ok ? 'sequence-edit smoke prepared a pending proposal.' : 'sequence-edit smoke failed.',
-      error: ok ? '' : cleanText(result?.error?.message, 600)
+      error: ok ? '' : cleanText(result?.error?.message)
     };
   }
 
@@ -1109,8 +1094,8 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
         ...result,
         ok: result?.ok !== false,
         summary: result?.ok === false
-          ? cleanText(result?.error, 320) || 'Paper download smoke test failed.'
-          : `Downloaded PDF to ${cleanText(result?.relative_path || result?.file_name, 220) || 'storage'}.`
+          ? cleanText(result?.error) || 'Paper download smoke test failed.'
+          : `Downloaded PDF to ${cleanText(result?.relative_path || result?.file_name) || 'storage'}.`
       };
     } finally {
       await fsPromises.rm(storageRoot, { recursive: true, force: true }).catch(() => {});
@@ -1139,7 +1124,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     return {
       ...result,
       ok: result?.ok !== false,
-      summary: cleanText(result?.result_summary || result?.brief_summary, 320) || 'Paper analysis smoke test completed.'
+      summary: cleanText(result?.result_summary || result?.brief_summary) || 'Paper analysis smoke test completed.'
     };
   }
 
@@ -1158,7 +1143,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
             journal: 'Hikari Smoke Journal',
             section_heading: 'Methods',
             section_text: 'The binder workflow clarifies lysate and binds the clarified sample to Ni-NTA resin.',
-            snippet: `The binder workflow uses Ni-NTA resin for ${cleanText(query, 120) || 'purification'}.`,
+            snippet: `The binder workflow uses Ni-NTA resin for ${cleanText(query) || 'purification'}.`,
             page_citation: 'p. 3',
             page_start: 3,
             page_end: 3,
@@ -1192,11 +1177,11 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       citations: matches.slice(0, 8).map((match, index) => ({
         source: 'paper-wiki',
         pointer: [
-          cleanText(match?.title, 200),
+          cleanText(match?.title),
           match?.page_citation ? `(${match.page_citation})` : '',
-          cleanText(match?.doi, 120)
+          cleanText(match?.doi)
         ].filter(Boolean).join(' ') || `paper-wiki:${index + 1}`,
-        reason: cleanText(match?.section_heading, 120) || 'Matched section from paper wiki.'
+        reason: cleanText(match?.section_heading) || 'Matched section from paper wiki.'
       })),
       summary: matches.length
         ? `paper-search matched ${matches.length} section${matches.length === 1 ? '' : 's'}.`
@@ -1239,8 +1224,8 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       });
       return {
         ...result,
-        ok: result?.ok !== false && Boolean(cleanText(emittedPayload?.protocol?.id, 120)),
-        summary: cleanText(result?.summary, 320) || 'Protocol generation smoke test completed.'
+        ok: result?.ok !== false && Boolean(cleanText(emittedPayload?.protocol?.id)),
+        summary: cleanText(result?.summary) || 'Protocol generation smoke test completed.'
       };
     } finally {
       await fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
@@ -1305,7 +1290,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     return {
       ...result,
       ok: result?.ok !== false,
-      summary: cleanText(result?.summary, 320) || 'Purchase recommendation smoke test completed.'
+      summary: cleanText(result?.summary) || 'Purchase recommendation smoke test completed.'
     };
   }
 
@@ -1334,7 +1319,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   };
 
   const missingSmokeTests = AGENT_TOOL_CATALOG
-    .map((entry) => cleanText(entry?.name, 120))
+    .map((entry) => cleanText(entry?.name))
     .filter(Boolean)
     .filter((toolName) => typeof smokeRunners[toolName] !== 'function');
   if (missingSmokeTests.length) {
@@ -1342,7 +1327,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function runToolEntry(toolName, options = {}) {
-    const normalizedToolName = cleanText(toolName, 120);
+    const normalizedToolName = cleanText(toolName);
     const startedAt = Date.now();
     if (!normalizedToolName || typeof smokeRunners[normalizedToolName] !== 'function') {
       return normalizeToolSmokeItem(normalizedToolName || 'unknown-tool', {
@@ -1363,7 +1348,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       return normalizeToolSmokeItem(normalizedToolName, {
         ok: false,
         status: 'error',
-        error: cleanText(error?.message || error, 600) || `${normalizedToolName} smoke test failed.`,
+        error: cleanText(error?.message || error) || `${normalizedToolName} smoke test failed.`,
         summary: `${normalizedToolName} smoke test failed.`
       }, Date.now() - startedAt, {
         requestMessage: options.message
@@ -1372,8 +1357,8 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function runTool(options = {}) {
-    const toolName = cleanText(options?.toolName, 120);
-    const requestMessage = cleanText(options?.message, 3000);
+    const toolName = cleanText(options?.toolName);
+    const requestMessage = cleanText(options?.message);
     const item = await runToolEntry(toolName, {
       message: requestMessage,
       strict: false
@@ -1397,7 +1382,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   async function runAllTools() {
     const items = [];
     for (const entry of AGENT_TOOL_CATALOG) {
-      const toolName = cleanText(entry?.name, 120);
+      const toolName = cleanText(entry?.name);
       items.push(await runToolEntry(toolName, { strict: true }));
     }
 
@@ -1419,7 +1404,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   return {
-    toolNames: AGENT_TOOL_CATALOG.map((entry) => cleanText(entry?.name, 120)).filter(Boolean),
+    toolNames: AGENT_TOOL_CATALOG.map((entry) => cleanText(entry?.name)).filter(Boolean),
     runTool,
     runAllTools
   };

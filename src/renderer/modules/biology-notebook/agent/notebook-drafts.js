@@ -1,10 +1,7 @@
 import { normalizeNotebookState } from '../entry/entry-helpers.js';
+import { asArray } from '../../../lib/normalize.js';
 
 export { normalizeNotebookState };
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function trimText(value, limit = 0) {
   const text = String(value || '').trim();

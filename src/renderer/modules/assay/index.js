@@ -77,7 +77,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     resultsManager?.syncCurrentResultsFromGrid?.();
     return serializeDraftSnapshot({
       assayId: runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '',
-      currentResults: runtime.currentResults
+      currentResults: runtime.currentResults,
+      transformSpec: analysisView?.getTransformSpec?.() || null
     });
   }
 
@@ -314,16 +315,24 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     parseResultImportFile: parseAssayResultImport,
     persistResultAttachment: artifactStorage.persistAssayResultAttachment,
     onResultImportApplied: onAssayResultImportApplied,
-    onResultsChanged: () => notifyActiveAssayChanged()
+    onResultsChanged: () => {
+      analysisView?.onSourceResultsChanged();
+      notifyActiveAssayChanged();
+    }
   });
 
   analysisView = createAssayAnalysisView({
     runtime,
     elements,
     safeText,
+    TabulatorLib,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     syncCurrentResultsFromGrid: resultsManager.syncCurrentResultsFromGrid,
     getResultValueCount: resultsManager.getResultValueCount,
+    buildResultGridSignature: resultsManager.buildResultGridSignature,
+    buildResultGridColumns: resultsManager.buildResultGridColumns,
+    buildResultGridData: resultsManager.buildResultGridData,
+    getResultGridHeight: resultsManager.getResultGridHeight,
     onAnalysisRendered: (info) => {
       saveAssayAnalysisPreview(info);
     },
@@ -445,6 +454,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
     resultsManager.syncCurrentResultsFromGrid();
     assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    assay.transformSpec = analysisView.getTransformSpec();
     assay.latestAnalysis = null;
     assay.updatedAt = new Date().toISOString();
     syncNotebookAssayLinks();

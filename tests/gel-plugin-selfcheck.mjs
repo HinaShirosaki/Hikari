@@ -164,11 +164,12 @@ async function checkLeftRailContract() {
 }
 
 async function checkAdapterContract() {
-  const [mainSource, exportSource, recordSource, controllerSource, htmlSource, viewSource, coreCss] = await Promise.all([
+  const [mainSource, exportSource, recordSource, controllerSource, powerPointSource, htmlSource, viewSource, coreCss] = await Promise.all([
     fs.readFile(path.join(pluginDir, 'main.js'), 'utf8'),
     fs.readFile(path.join(vendor, 'export.js'), 'utf8'),
     fs.readFile(path.join(vendor, 'records-manager.js'), 'utf8'),
     fs.readFile(path.join(vendor, 'index.js'), 'utf8'),
+    fs.readFile(path.join(vendor, 'rendering/powerpoint-export.js'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'index.html'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'vendor/gel-view.html'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'vendor/css/base/core.css'), 'utf8')
@@ -189,6 +190,10 @@ async function checkAdapterContract() {
     'record deletion has an explicit user confirmation'
   );
   assert.match(exportSource, /hikariApi\?\.exportTextFile/, 'exports use the host save dialog API');
+  assert.match(exportSource, /hikariApi\?\.exportBinaryFile/, 'generated PNGs use the host save dialog API');
+  assert.match(mainSource, /async exportBinaryFile\(\{ dataBase64, fileName \}\)/, 'the Gel adapter forwards PNG bytes without text encoding');
+  assert.match(powerPointSource, /<a:tbl>/, 'PowerPoint exports keep lane metadata as a native table');
+  assert.match(powerPointSource, /createStoredZip/, 'PowerPoint exports are packaged inside the sandbox without a new dependency');
   assert.match(htmlSource, /id="boot-retry"/, 'boot failures expose a retry action');
   assert.match(htmlSource, /<script src="\.\/hikari\.js"><\/script>/, 'the classic host client loads before the module adapter');
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');

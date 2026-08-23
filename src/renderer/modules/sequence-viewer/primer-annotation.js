@@ -115,6 +115,9 @@ export function withPrimerBindFeatures(record, primers) {
       type: 'primer_bind',
       strand: hit.strand,
       source: PRIMER_FEATURE_SOURCE,
+      // The oligo as ordered, tail included: the feature only spans the part
+      // that matches here, but the hover readout has to show the whole primer.
+      primerSequence: searchableSequence(primer?.sequence || '') || binding,
       description: describePrimer(primer, binding.length),
       locationText: '',
       segments: segmentsFor(hit.start, binding.length, sequence.length)

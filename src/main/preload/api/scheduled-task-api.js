@@ -1,15 +1,12 @@
 'use strict';
 
 const { SCHEDULED_TASK } = require('../../../shared/ipc/channels');
+const { ensureObject } = require('../../lib/normalize.js');
 const {
   buildPaperFindingInputFromTask,
   buildPaperFindingScheduledTaskInput,
   isPaperFindingTask
 } = require('../../papers/finding/paper-finding-task.js');
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function cleanText(value, maxLength = 2400) {
   return String(value || '').trim().slice(0, maxLength);

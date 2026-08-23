@@ -58,11 +58,11 @@ body.theme-night #home-view {
   align-content: stretch;
   height: 100%;
   min-height: 0;
-  grid-template-columns: repeat(13, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   grid-template-areas:
-    "timer timer timer timer notebook notebook notebook notebook quicklog quicklog quicklog quicklog quicklog"
-    "contribution contribution contribution contribution notebook notebook notebook notebook quicklog quicklog quicklog quicklog quicklog"
-    "paper-finding paper-finding paper-finding paper-finding passage passage passage passage passage incubation incubation incubation incubation";
+    "timer timer timer timer notebook notebook notebook notebook paper-finding paper-finding paper-finding paper-finding"
+    "contribution contribution contribution contribution notebook notebook notebook notebook paper-finding paper-finding paper-finding paper-finding"
+    "quicklog quicklog quicklog quicklog passage passage passage passage incubation incubation incubation incubation";
   grid-template-rows: minmax(0, 4fr) minmax(0, 4fr) minmax(0, 3fr);
   gap: var(--home-gap);
 }
@@ -299,6 +299,110 @@ body.theme-night #home-view {
   grid-template-columns: minmax(0, 1fr);
 }
 
+#home-view .home-paper-finding-result {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 0;
+  border-top: 1px solid var(--home-tile-line-soft);
+}
+
+#home-view .home-paper-finding-result:first-child {
+  padding-top: 2px;
+  border-top: 0;
+}
+
+#home-view .home-paper-finding-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+#home-view .home-paper-finding-project,
+#home-view .home-paper-finding-policy {
+  color: var(--home-tile-muted);
+  font-size: 0.7rem;
+  line-height: 1.2;
+}
+
+#home-view .home-paper-finding-project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#home-view .home-paper-finding-policy {
+  flex: 0 0 auto;
+  padding: 2px 5px;
+  border: 1px solid var(--home-tile-line);
+  border-radius: 999px;
+}
+
+#home-view .home-paper-finding-title {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+#home-view .home-paper-finding-authors,
+#home-view .home-paper-finding-meta,
+#home-view .home-paper-finding-summary,
+#home-view .home-paper-finding-reason {
+  margin: 0;
+}
+
+#home-view .home-paper-finding-authors,
+#home-view .home-paper-finding-meta {
+  overflow: hidden;
+  color: var(--home-tile-muted);
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#home-view .home-paper-finding-summary,
+#home-view .home-paper-finding-reason {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--home-tile-text);
+  font-size: 0.74rem;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+#home-view .home-paper-finding-reason {
+  color: var(--home-tile-muted);
+}
+
+#home-view .home-paper-finding-reason strong {
+  color: var(--theme-text-strong);
+  font-weight: 600;
+}
+
+#home-view .home-paper-finding-source {
+  justify-self: start;
+  color: var(--theme-accent);
+  font-size: 0.74rem;
+  font-weight: 550;
+  text-decoration: none;
+}
+
+#home-view .home-paper-finding-source:hover,
+#home-view .home-paper-finding-source:focus-visible {
+  text-decoration: underline;
+}
+
 #home-view .home-row-meta {
   margin: 1px 0 0;
   font-size: 0.76rem;
@@ -509,31 +613,9 @@ body.theme-night #home-view {
 
 #home-view .home-quicklog-body {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 10px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
   min-height: 0;
-}
-
-#home-view .home-quicklog-chips {
-  display: grid;
-  grid-template-columns: repeat(2, max-content);
-  gap: 6px;
-}
-
-#home-view .home-tile .home-chip {
-  padding: 4px 10px;
-  border: 1px solid var(--home-tile-line);
-  border-radius: 999px;
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text-strong);
-  font-size: 0.76rem;
-  line-height: 1.4;
-  cursor: pointer;
-}
-
-#home-view .home-tile .home-chip:hover,
-#home-view .home-tile .home-chip:focus-visible {
-  background: var(--theme-surface-subtle);
 }
 
 #home-view .home-tile .home-quicklog-input {
@@ -977,6 +1059,7 @@ body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
 
 #home-view .home-dialog {
   width: min(100%, 320px);
+  max-height: 100%;
   padding: 18px;
   border: 1px solid var(--home-tile-line);
   border-radius: 8px;
@@ -1001,6 +1084,35 @@ body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
 
 #home-view .home-notebook-note-dialog {
   width: min(100%, 380px);
+}
+
+#home-view .home-tile-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#home-view .home-passage-dialog,
+#home-view .home-incubation-dialog {
+  width: min(100%, 420px);
+}
+
+#home-view .home-dialog-list {
+  min-height: 0;
+  max-height: min(40vh, 280px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+#home-view .home-dialog-form h4 {
+  margin: 0;
+  color: var(--home-tile-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 body.theme-night #home-view .home-dialog {
@@ -1104,12 +1216,11 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
   #home-view .home-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      "timer notebook"
-      "contribution notebook"
-      "quicklog quicklog"
-      "paper-finding passage"
+      "timer contribution"
+      "notebook paper-finding"
+      "quicklog passage"
       "incubation incubation";
-    grid-template-rows: repeat(5, auto);
+    grid-template-rows: repeat(4, auto);
     height: auto;
     min-height: auto;
   }
@@ -1132,8 +1243,8 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
       "timer"
       "contribution"
       "notebook"
-      "quicklog"
       "paper-finding"
+      "quicklog"
       "passage"
       "incubation";
     grid-template-rows: none;

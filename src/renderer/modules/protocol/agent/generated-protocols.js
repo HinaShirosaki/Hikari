@@ -1,6 +1,4 @@
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../../../lib/normalize.js';
 
 function trimText(value, limit = 0) {
   const text = String(value || '').trim();

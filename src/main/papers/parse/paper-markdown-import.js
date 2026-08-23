@@ -11,6 +11,7 @@ const {
 } = require('../store/agent-paper-knowledge-database.js');
 const { isLikelyJunkPdfTitle } = require('../store/paper-knowledge-paths.js');
 const { createReviewJournalSkipResult } = require('../shared/review-paper-filter.js');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 const {
   findExistingPaperRow,
   openKnowledgeDatabase,
@@ -30,14 +31,6 @@ function cleanText(value, maxLength = 4000) {
     return text;
   }
   return text.length > numericMax ? text.slice(0, numericMax) : text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function isPathInside(parentPath, childPath) {

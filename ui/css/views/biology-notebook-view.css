@@ -1629,18 +1629,18 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 /* No outer panel: the grid's own border is the only frame around a result table. */
-.biology-notebook-result-table-editor {
+.spreadsheet-table-editor {
   display: grid;
   gap: 8px;
 }
 
 /* With the panel gone, the active table is marked on the grid border itself -- it is
    the only thing left to mark, and it still only matters when there are several. */
-.biology-notebook-result-table-editor.is-active .biology-notebook-result-table {
+.spreadsheet-table-editor.is-active .spreadsheet-table {
   border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
 }
 
-.biology-notebook-result-table-editor-head {
+.spreadsheet-table-editor-head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -1654,26 +1654,26 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 /* Spreadsheet furniture: column letters in the header, row numbers in the gutter.
    Both are muted so they frame the data instead of competing with it. */
-.biology-notebook-result-head {
+.spreadsheet-head {
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
 }
 
-.biology-notebook-result-head-address {
+.spreadsheet-head-address {
   color: var(--theme-text-muted);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.biology-notebook-result-head-name {
+.spreadsheet-head-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.biology-notebook-result-table .tabulator-cell.biology-notebook-result-rownum {
+.spreadsheet-table .tabulator-cell.spreadsheet-rownum {
   color: var(--theme-text-muted);
   background: color-mix(in srgb, var(--theme-surface-subtle) 60%, var(--theme-surface-elevated));
   font-variant-numeric: tabular-nums;
@@ -1682,17 +1682,32 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 /* The fill handle sits inside the anchor cell, so it tracks the cell as the grid
    scrolls. Cells clip their overflow, so it stays fully inside the corner. */
-.biology-notebook-result-fill-handle {
+/* Drag-to-fill lives on the cell borders: hovering the bottom or right edge raises a
+   run of chevrons pointing the way a fill would go, fading with distance. They are
+   decoration only -- pointer-events stay off so they never swallow a click for the
+   cell they overlap. The drag itself starts from the border strip under the pointer. */
+.spreadsheet-fill-arrows {
   position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 7px;
-  height: 7px;
-  background: var(--theme-focus);
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+  color: var(--theme-accent);
+}
+
+.spreadsheet-fill-arrows svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The chevrons are open strokes, not shapes. A CSS fill here would beat the markup's
+     fill="none" and close each V into a solid triangle. */
+  fill: none;
+}
+
+.spreadsheet-table .tabulator-cell.is-fill-edge {
   cursor: crosshair;
 }
 
-.biology-notebook-result-table .tabulator-cell.is-fill-target {
+.spreadsheet-table .tabulator-cell.is-fill-target {
   background: color-mix(in srgb, var(--theme-focus) 18%, transparent);
 }
 
@@ -1702,23 +1717,23 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 /* A computed cell keeps the normal text colour — the accent is decorative and reads
    as low-contrast on the lighter palettes. Numbers just line up. */
-.biology-notebook-result-cell--formula {
+.spreadsheet-cell--formula {
   font-variant-numeric: tabular-nums;
 }
 
 /* A formula still waiting on an empty cell shows the arithmetic that is left, so it
    reads as a note-to-self rather than as a finished result. */
-.biology-notebook-result-cell--pending {
+.spreadsheet-cell--pending {
   color: var(--theme-text-muted);
   font-style: italic;
 }
 
-.biology-notebook-result-cell--error {
+.spreadsheet-cell--error {
   color: var(--theme-danger);
   font-weight: 600;
 }
 
-.biology-notebook-result-table-select {
+.spreadsheet-table-select {
   border: 0 !important;
   background: transparent !important;
   box-shadow: none;
@@ -1729,85 +1744,85 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   cursor: pointer;
 }
 
-.biology-notebook-result-table-select:focus-visible {
+.spreadsheet-table-select:focus-visible {
   outline: none;
   border-color: var(--theme-focus) !important;
 }
 
-.biology-notebook-result-table {
+.spreadsheet-table {
   border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 0;
   overflow: hidden;
   background: var(--theme-surface-elevated);
 }
 
-.biology-notebook-result-table.tabulator {
+.spreadsheet-table.tabulator {
   border: 0;
   background: transparent;
   font-size: 0.92rem;
 }
 
-.biology-notebook-result-table.tabulator .tabulator-tableholder {
+.spreadsheet-table.tabulator .tabulator-tableholder {
   background: transparent;
 }
 
 /* Tabulator hard-codes background:#fff and color:#333 here, and its stylesheet loads
    after ours — so this has to match its selector depth to win, not just be more
    specific than the element. Inheriting picks up --theme-text in every palette. */
-.biology-notebook-result-table.tabulator .tabulator-tableholder .tabulator-table {
+.spreadsheet-table.tabulator .tabulator-tableholder .tabulator-table {
   background: transparent;
   color: inherit;
 }
 
 /* Vendor paints the header #e6e6e6 with #555 text at the same specificity, and loads
    later, so this has to out-specify it the way the row rules do. */
-.biology-notebook-result-table.tabulator .tabulator-header {
+.spreadsheet-table.tabulator .tabulator-header {
   border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   background: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
   color: var(--theme-text);
 }
 
-.biology-notebook-result-table.tabulator .tabulator-header .tabulator-col {
+.spreadsheet-table.tabulator .tabulator-header .tabulator-col {
   background: transparent;
   border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
-.biology-notebook-result-table .tabulator-col,
-.biology-notebook-result-table .tabulator-cell {
+.spreadsheet-table .tabulator-col,
+.spreadsheet-table .tabulator-cell {
   border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 /* Tabulator ships its own zebra striping, grey hover and blue selection, and its
    stylesheet loads after ours — so each of these has to out-specify the vendor rule
    it replaces, not merely name the element. */
-.biology-notebook-result-table .tabulator-row,
-.biology-notebook-result-table .tabulator-row.tabulator-row-even,
-.biology-notebook-result-table .tabulator-row.tabulator-row-odd {
+.spreadsheet-table .tabulator-row,
+.spreadsheet-table .tabulator-row.tabulator-row-even,
+.spreadsheet-table .tabulator-row.tabulator-row-odd {
   background: var(--theme-surface-elevated);
 }
 
-.biology-notebook-result-table .tabulator-row.tabulator-selectable:hover {
+.spreadsheet-table .tabulator-row.tabulator-selectable:hover {
   background: var(--theme-surface-hover);
   cursor: cell;
 }
 
-.biology-notebook-result-table .tabulator-row.tabulator-selected,
-.biology-notebook-result-table .tabulator-row.tabulator-selected:hover {
+.spreadsheet-table .tabulator-row.tabulator-selected,
+.spreadsheet-table .tabulator-row.tabulator-selected:hover {
   background: var(--theme-surface-active);
 }
 
 /* An empty cell has no content to give the row height, which collapses a new table
    into a sliver. Keep every row clickable at a sensible size. */
-.biology-notebook-result-table .tabulator-cell {
+.spreadsheet-table .tabulator-cell {
   min-height: 30px;
   line-height: 22px;
 }
 
-.biology-notebook-result-table .tabulator-row:not(:last-child) {
+.spreadsheet-table .tabulator-row:not(:last-child) {
   border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 66%, transparent);
 }
 
-.biology-notebook-result-table .tabulator-cell:focus {
+.spreadsheet-table .tabulator-cell:focus {
   outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
   outline-offset: -2px;
 }
@@ -2459,4 +2474,15 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Add Table asks for a size before creating the grid. */
+.biology-notebook-table-size-dialog {
+  width: min(340px, 92vw);
+}
+
+.biology-notebook-table-size-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }

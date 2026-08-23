@@ -19,7 +19,7 @@ const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
 const HIKARI_MCP_CONFIG_END = '# HIKARI_MCP_CONFIG_END';
 
-function cleanText(value, _maxLength = 1200) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -28,7 +28,7 @@ function cleanText(value, _maxLength = 1200) {
 }
 
 function isFilesystemRoot(directoryPath = '') {
-  const text = cleanText(directoryPath, 2400).trim();
+  const text = cleanText(directoryPath).trim();
   if (!text) {
     return false;
   }
@@ -69,7 +69,7 @@ function removeManagedBlock(existing = '', start = '', end = '') {
 }
 
 function resolveUnpackedAsarPath(filePath = '') {
-  const targetPath = cleanText(filePath, 2400);
+  const targetPath = cleanText(filePath);
   if (targetPath.includes(`${path.sep}app.asar${path.sep}`)) {
     return targetPath.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
   }
@@ -82,7 +82,7 @@ function resolveHikariAgentMcpServerPath() {
 }
 
 function fileIsExecutable(filePath = '') {
-  const target = cleanText(filePath, 2400);
+  const target = cleanText(filePath);
   if (!target) {
     return false;
   }
@@ -95,26 +95,26 @@ function fileIsExecutable(filePath = '') {
 }
 
 function commandLooksLikeNode(commandPath = '') {
-  return /^node(?:\.exe)?$/iu.test(path.basename(cleanText(commandPath, 2400)));
+  return /^node(?:\.exe)?$/iu.test(path.basename(cleanText(commandPath)));
 }
 
 function findExecutableOnPath(commandName = 'node', envPath = process.env.PATH) {
-  const command = cleanText(commandName, 240);
+  const command = cleanText(commandName);
   if (!command) {
     return '';
   }
   if (command.includes(path.sep) && fileIsExecutable(command)) {
     return command;
   }
-  const pathText = cleanText(envPath, 12000);
+  const pathText = cleanText(envPath);
   if (!pathText) {
     return '';
   }
   const pathExts = process.platform === 'win32'
-    ? cleanText(process.env.PATHEXT, 1200).split(path.delimiter).filter(Boolean)
+    ? cleanText(process.env.PATHEXT).split(path.delimiter).filter(Boolean)
     : [''];
   for (const dir of pathText.split(path.delimiter)) {
-    const cleanDir = cleanText(dir, 2400);
+    const cleanDir = cleanText(dir);
     if (!cleanDir) {
       continue;
     }
@@ -132,22 +132,18 @@ function resolveHikariCodexMcpCommandPath(options = {}) {
   const configured = cleanText(
     options.mcpCommandPath
       || options.commandPath
-      || options.nodeCommand,
-    2400
-  );
+      || options.nodeCommand);
   if (configured) {
     return configured;
   }
   const envNodeCommand = cleanText(
     process.env.HIKARI_CODEX_NODE_PATH
-      || process.env.HIKARI_NODE_PATH,
-    2400
-  );
+      || process.env.HIKARI_NODE_PATH);
   if (envNodeCommand) {
     return envNodeCommand;
   }
   const processExecPath = Object.prototype.hasOwnProperty.call(options, 'processExecPath')
-    ? cleanText(options.processExecPath, 2400)
+    ? cleanText(options.processExecPath)
     : process.execPath;
   if (processExecPath && commandLooksLikeNode(processExecPath)) {
     return processExecPath;
@@ -194,13 +190,13 @@ function getMcpConfigEnvSource(options = {}) {
 
 function readFirstEnvValue(envSource = {}, keys = []) {
   for (const key of keys) {
-    const value = cleanText(envSource[key], 120000);
+    const value = cleanText(envSource[key]);
     if (value) {
       return value;
     }
   }
   for (const key of keys) {
-    const value = cleanText(process.env[key], 120000);
+    const value = cleanText(process.env[key]);
     if (value) {
       return value;
     }
@@ -263,7 +259,7 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
 }
 
 async function ensureHikariCodexAgentsFile(cwd = '') {
-  const safeCwd = cleanText(cwd, 2400);
+  const safeCwd = cleanText(cwd);
   if (!safeCwd || isFilesystemRoot(safeCwd)) {
     return '';
   }
@@ -294,7 +290,7 @@ async function ensureHikariCodexAgentsFile(cwd = '') {
 }
 
 async function removeHikariCodexAgentsFileIfOnlyManaged(cwd = '') {
-  const safeCwd = cleanText(cwd, 2400);
+  const safeCwd = cleanText(cwd);
   if (!safeCwd || isFilesystemRoot(safeCwd)) {
     return false;
   }
@@ -321,7 +317,7 @@ async function removeHikariCodexAgentsFileIfOnlyManaged(cwd = '') {
 }
 
 async function ensureHikariCodexMcpConfig(configPath = '', options = {}) {
-  const targetPath = cleanText(configPath, 2400);
+  const targetPath = cleanText(configPath);
   if (!targetPath) {
     return '';
   }

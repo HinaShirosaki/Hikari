@@ -66,7 +66,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
           ].filter(Boolean).join(' ');
           const style = isPrimer
             ? `left:${left}%;width:${width}%;max-width:calc(100% - ${left}%);top:${top}px;--sequence-viewer-primer-color:${color};`
-            : `left:${left}%;width:${width}%;top:${top}px;background:${color};`;
+            : `left:${left}%;width:${width}%;top:${top}px;--sequence-viewer-feature-color:${color};`;
           return `
             <button
               class="${className}"

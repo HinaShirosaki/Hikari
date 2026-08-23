@@ -4,7 +4,15 @@
           <div class="protocol-list-pinned left-rail-template__pinned">
             <div class="protocol-list-head">
               <div class="inline-row protocol-sort-controls">
-                <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+                <button type="button" id="create-protocol-btn" class="primary-btn protocol-create-icon-btn" aria-label="Create protocol" title="Create protocol">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 3h7l4 4v14H7z"></path>
+                    <path d="M14 3v5h5"></path>
+                    <path d="M12.5 11v6"></path>
+                    <path d="M9.5 14h6"></path>
+                  </svg>
+                  <span class="sr-only">Create protocol</span>
+                </button>
                 <div class="protocol-sort-menu">
                   <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">

@@ -156,14 +156,23 @@ export function installSectionNavigation(ctx) {
       const folderMeta = folderCount ? ` · ${folderCount} folder${folderCount === 1 ? '' : 's'}` : '';
       return `
         <div class="inventory-location-group">
-          <button type="button" class="inventory-location-btn${section === activeSection ? ' active' : ''}" data-inventory-section="${safeText(section)}">
-            <span class="inventory-location-icon">${safeText(display.short)}</span>
-            <span class="inventory-location-copy">
-              <span class="inventory-location-title">${safeText(display.title)}</span>
-              <span class="inventory-location-meta">${safeText(`${containerCount} container${containerCount === 1 ? '' : 's'}${folderMeta}`)}</span>
-            </span>
-            <span class="inventory-location-count">${safeText(String(sampleCount))}</span>
-          </button>
+          <div class="inventory-location-row">
+            <button type="button" class="inventory-location-btn${section === activeSection ? ' active' : ''}" data-inventory-section="${safeText(section)}">
+              <span class="inventory-location-icon">${safeText(display.short)}</span>
+              <span class="inventory-location-copy">
+                <span class="inventory-location-title">${safeText(display.title)}</span>
+                <span class="inventory-location-meta">${safeText(`${containerCount} container${containerCount === 1 ? '' : 's'}${folderMeta}`)}</span>
+              </span>
+              <span class="inventory-location-count">${safeText(String(sampleCount))}</span>
+            </button>
+            <button
+              type="button"
+              class="inventory-location-add-container-btn folder-tree-template__action"
+              data-location-add-container="${safeText(section)}"
+              aria-label="Add a physical container to ${safeText(display.title)}"
+              title="Add container here"
+            ><span aria-hidden="true">+</span></button>
+          </div>
           ${containerMarkup}
         </div>
       `;
@@ -226,6 +235,15 @@ export function installSectionNavigation(ctx) {
           section: button.dataset.section,
           folderId: button.dataset.folderAddContainer
         });
+      });
+    });
+
+    inventoryLocationNav.querySelectorAll('[data-location-add-container]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+        ctx.hideContainerContextMenu?.();
+        ctx.beginAddContainer?.({ section: button.dataset.locationAddContainer });
       });
     });
   }

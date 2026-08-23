@@ -30,17 +30,10 @@
 const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
 const { findReviewJournalKeyword } = require('../../shared/review-paper-filter.js');
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
+const { asArray, ensureObject } = require('../../../lib/normalize.js');
 
 const DEFAULT_MARKDOWN_CHAR_LIMIT = 24000;
 const DEFAULT_FALLBACK_PAGE_CHARS = 12000;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value == null ? '' : value).trim();

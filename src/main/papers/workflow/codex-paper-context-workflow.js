@@ -1,6 +1,7 @@
 'use strict';
 
 const fsPromises = require('node:fs/promises');
+const { ensureObject } = require('../../lib/normalize.js');
 
 const {
   attachRelatedCommentsToContextBlocks,
@@ -26,18 +27,13 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
 }
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
 
 function normalizeProvider(value = '') {
   return String(value || '')
@@ -197,11 +193,11 @@ function buildSubAgentSummary(agent = null) {
     return null;
   }
   return {
-    id: defaultCleanText(source.id, 160),
-    name: defaultCleanText(source.name, 160),
-    status: defaultCleanText(source.status, 40),
-    created_at: defaultCleanText(source.created_at, 80),
-    updated_at: defaultCleanText(source.updated_at, 80),
+    id: defaultCleanText(source.id),
+    name: defaultCleanText(source.name),
+    status: defaultCleanText(source.status),
+    created_at: defaultCleanText(source.created_at),
+    updated_at: defaultCleanText(source.updated_at),
     message_count: defaultAsArray(source.messages).length,
     metadata: cloneJson(ensureObject(source.metadata), {}),
     task: cloneJson(ensureObject(source.task), null),
@@ -216,9 +212,7 @@ function getKnowledgeMarkdownPath(paperTarget = {}) {
     download.knowledge_markdown_path
       || download.knowledgeMarkdownPath
       || source.knowledge_markdown_path
-      || source.knowledgeMarkdownPath,
-    4000
-  );
+      || source.knowledgeMarkdownPath);
 }
 
 function getKnowledgeMarkdownRelativePath(paperTarget = {}) {
@@ -228,9 +222,7 @@ function getKnowledgeMarkdownRelativePath(paperTarget = {}) {
     download.knowledge_markdown_relative_path
       || download.knowledgeMarkdownRelativePath
       || source.knowledge_markdown_relative_path
-      || source.knowledgeMarkdownRelativePath,
-    2000
-  );
+      || source.knowledgeMarkdownRelativePath);
 }
 
 async function hydrateLineSelectionsForPaper({

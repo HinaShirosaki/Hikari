@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray } = require('../../../lib/normalize.js');
+
 /**
  * Tokenization + scoring helpers for paper-intake search. Mirrors the spirit of
  * the existing paper-wiki search but tuned for short, single-sentence summaries
@@ -35,10 +37,6 @@ function tokenize(value) {
     .map((token) => token.trim())
     .filter((token) => token.length >= MIN_TERM_LENGTH && !STOPWORDS.has(token))
     .slice(0, MAX_TERMS);
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function uniqueTokens(values = []) {

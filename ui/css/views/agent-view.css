@@ -1106,7 +1106,9 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-history-viewport {
   position: relative;
+  min-width: 0;
   min-height: 0;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -1114,8 +1116,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   display: flex;
   flex-direction: column;
   gap: 26px;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
+  max-width: 100%;
   height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: 28px 4px 34px;
   scrollbar-gutter: stable both-edges;
@@ -1483,6 +1489,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-chat-item {
   width: min(100%, 760px);
+  min-width: 0;
+  max-width: 100%;
   padding: 0;
 }
 
@@ -1538,8 +1546,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-chat-body {
+  min-width: 0;
+  max-width: 100%;
   line-height: 1.65;
   color: var(--theme-text-strong);
+  overflow-wrap: anywhere;
 }
 
 .agent-chat-body-plain {

@@ -2,10 +2,7 @@
 // The mapper intentionally caps large arrays to keep prompts small and predictable.
 
 import { getGelAnalyses } from '../lib/gel-records.js';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../lib/normalize.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();

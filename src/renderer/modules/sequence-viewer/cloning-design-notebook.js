@@ -1,14 +1,11 @@
 import { cleanText, normalizeSequenceText } from './shared.js';
+import { asArray } from '../../lib/normalize.js';
 
 const CLONING_NOTEBOOK_SOURCE = 'sequence_viewer_cloning_design';
 const CLONING_PROJECT_NAME = 'Sequence Viewer';
 const CLONING_PROJECT_DESCRIPTION = 'Automatically collected cloning designs from Sequence Viewer.';
 const CLONING_PROTOCOL_ID = 'sequence-viewer-cloning-design-pcr-protocol';
 const CLONING_PROTOCOL_NAME = 'PCR Thermocycle Program';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function fallbackCreateId(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;

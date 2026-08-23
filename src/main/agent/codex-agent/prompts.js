@@ -11,6 +11,9 @@ const {
   buildHikariMcpToolName,
   buildProtocolNotebookHandoffInstructionLines
 } = require('../mcp-contract/instructions.js');
+const {
+  buildCodexSessionRecoveryBlock
+} = require('./session-recovery.js');
 
 function summarizeAttachments(cleanText, attachments = []) {
   return asArray(attachments)
@@ -162,6 +165,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
   const savedSettingsBlock = buildSavedSettingsBlock(input, cleanText);
+  const sessionRecoveryBlock = buildCodexSessionRecoveryBlock(input, { cleanText });
   const protocolGenerationTool = buildHikariMcpToolName('protocol_generation');
   const assayTableTool = buildHikariMcpToolName('assay_table');
   const plotlyGraphTool = buildHikariMcpToolName('plotly_graph');
@@ -191,6 +195,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     savedSettingsBlock,
     paperAgentSessionBlock,
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
+    sessionRecoveryBlock,
     '',
     `Current user request:\n${message}`
   ];
@@ -273,6 +278,8 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     chatSessionId: cleanText(input.chatSessionId || input.chat_session_id, 120),
     codexSessionId: cleanText(input.codexSessionId || input.codex_session_id, 240),
     message: cleanText(input.message, 3200),
+    // Always empty: the Codex session carries the turn history itself, and
+    // Hikari's copy is reserved for session recovery.
     conversation: [],
     project: {
       id: cleanText(input.projectId, 120),

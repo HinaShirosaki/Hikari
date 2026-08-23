@@ -106,3 +106,48 @@ export async function downloadTextFile({ content, fileName, mimeType }) {
   URL.revokeObjectURL(url);
   return { saved: true, fileName };
 }
+
+export async function downloadDataUrlFile({ dataUrl, fileName }) {
+  const match = String(dataUrl || '').match(/^data:[^;,]+;base64,([A-Za-z0-9+/]+={0,2})$/);
+  if (!match) {
+    throw new Error('The generated image data is invalid.');
+  }
+  if (typeof window !== 'undefined' && typeof window.hikariApi?.exportBinaryFile === 'function') {
+    return window.hikariApi.exportBinaryFile({ dataBase64: match[1], fileName });
+  }
+  const anchor = document.createElement('a');
+  anchor.href = dataUrl;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  return { saved: true, fileName };
+}
+
+function bytesToBase64(bytes) {
+  const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+  const chunks = [];
+  for (let offset = 0; offset < source.length; offset += 0x8000) {
+    chunks.push(String.fromCharCode(...source.subarray(offset, offset + 0x8000)));
+  }
+  return btoa(chunks.join(''));
+}
+
+export async function downloadBinaryFile({ bytes, fileName, mimeType = 'application/octet-stream' }) {
+  if (!bytes?.length) {
+    throw new Error('The generated file is empty.');
+  }
+  if (typeof window !== 'undefined' && typeof window.hikariApi?.exportBinaryFile === 'function') {
+    return window.hikariApi.exportBinaryFile({ dataBase64: bytesToBase64(bytes), fileName });
+  }
+  const blob = new Blob([bytes], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  return { saved: true, fileName };
+}

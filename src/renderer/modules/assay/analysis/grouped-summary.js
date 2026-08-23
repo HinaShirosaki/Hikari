@@ -111,6 +111,11 @@ export function analyzeSummary(observations, grouping, spec) {
     if (showErrorBars && bucket.stats.n > 1 && bucket.stats.sd > 0) {
       point.yVariance = bucket.stats.sd * 2;
     }
+    // Replicates for Prism's scatter-over-bar overlay. All of them or none: a truncated
+    // dot cloud would misread as the whole group, so wide buckets just show the bar.
+    if (bucket.stats.n > 1 && bucket.stats.n <= 12) {
+      point.points = bucket.responses.slice();
+    }
     if (!seriesMap.has(seriesLabel)) {
       seriesMap.set(seriesLabel, []);
     }

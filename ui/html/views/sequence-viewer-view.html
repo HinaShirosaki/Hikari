@@ -106,8 +106,9 @@
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <label>
                       Construct Name
-                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
+                      <input id="sequence-viewer-protein-builder-name" placeholder="Suggested from the N-to-C block order" aria-describedby="sequence-viewer-protein-builder-name-note" />
                     </label>
+                    <p id="sequence-viewer-protein-builder-name-note" class="small-note">Suggested automatically from the block chain; edit it when the construct needs a custom bench name.</p>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
                       <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>

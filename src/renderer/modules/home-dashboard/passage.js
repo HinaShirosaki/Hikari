@@ -19,7 +19,10 @@ export function initPassageWidget({
   const {
     summary,
     list,
+    panelList,
     addBtn,
+    openBtn,
+    closeBtn,
     dialogOverlay,
     dialogForm,
     strainInput,
@@ -28,13 +31,19 @@ export function initPassageWidget({
   } = elements;
 
   list.addEventListener('click', onPassageListClick);
-  addBtn.addEventListener('click', openPassageDialog);
+  panelList.addEventListener('click', onPassageListClick);
+  addBtn.addEventListener('click', () => openPassageDialog(true));
+  openBtn.addEventListener('click', () => openPassageDialog(false));
+  closeBtn.addEventListener('click', closePassageDialog);
   dialogForm.addEventListener('submit', onPassageDialogSubmit);
   dialogOverlay.addEventListener('click', onPassageDialogOverlayClick);
 
-  function openPassageDialog() {
+  function openPassageDialog(focusForm) {
     dialogForm.reset();
     dialogOverlay.hidden = false;
+    if (!focusForm) {
+      return;
+    }
     window.requestAnimationFrame(() => {
       strainInput.focus();
     });
@@ -363,6 +372,7 @@ export function initPassageWidget({
     if (!passageRows.rows.length) {
       summary.textContent = 'No cell line reminders yet.';
       list.innerHTML = '<p class="small-note">No cell line reminders yet.</p>';
+      panelList.innerHTML = list.innerHTML;
       return;
     }
     const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
@@ -383,6 +393,7 @@ export function initPassageWidget({
       </article>
     `;
     }).join('');
+    panelList.innerHTML = list.innerHTML;
   }
 
   function onPassageListClick(event) {

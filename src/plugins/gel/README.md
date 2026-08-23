@@ -20,7 +20,7 @@ Its public permissions are intentionally small:
 | --- | --- |
 | `storage` | Compact versioned index of saved Gel records. |
 | `files` | Source/preview images, report JSON, and record metadata under the plugin's own folder. |
-| `downloads` | Native save dialog for JSON and CSV exports. |
+| `downloads` | Native save dialog for JSON, CSV, generated PNG, and editable-table PowerPoint exports. |
 
 Gel does not request notebook, project, sample, or protocol access, so the
 plugin cannot open or mutate those host features. Host-owned readers may still
@@ -38,7 +38,7 @@ the iframe another capability. Old action hooks such as Notebook "Add Gel" and
 | Plugin-owned `state.gelAnalyses` | Hydrated from a compact `storage` index plus JSON artifacts in `files`. |
 | `persist` | Awaited `storage.set`; a record is marked saved only after the host acknowledges it. |
 | disk artifact methods | `files.write` / `files.read`, namespaced below `Plugins/gel/`. |
-| JSON/CSV export | `downloads.save`, which opens a user-controlled native save dialog. |
+| JSON/CSV/PNG/PPTX export | `downloads.save`, which opens a user-controlled native save dialog. |
 | theme and font size | Initial `app.info` snapshot plus `app.context` updates. |
 | shared left-rail width | `app.info.layout.leftRail` initializes the in-frame rail; `app.setLeftRailWidth` commits a settled drag and synchronizes normal modules. |
 | storage availability | Safe `storage.configured` boolean; the path itself is never exposed. |

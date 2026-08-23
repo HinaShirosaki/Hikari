@@ -66,7 +66,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
       ctx.syncFeatureSearchControls();
       ctx.setBuilderStatus(`Loading ${buildStoredBackboneDisplayName(selectedBackbone)}...`);
       const hydratedBackbone = await ctx.hydrateStoredBackbone(selectedBackbone);
-      const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
+      const constructName = ctx.resolveConstructName();
       const payload = buildAssembledPlasmidPayload(hydratedBackbone, state.dnaConstruct, { constructName });
       if (!payload?.sequence) {
         ctx.setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);

@@ -85,6 +85,26 @@ export function createLibraryPersistenceActions(ctx) {
     }
   }
 
+  async function saveCurrentRecordToLibrary() {
+    const record = actions.getSelectedRecord();
+    if (!record?.sequence?.length) {
+      actions.setStatus('Load a sequence before saving.', true);
+      return;
+    }
+    try {
+      const entry = await persistRecordToLibrary(record, {
+        id: state.activeEntryId,
+        status: LIBRARY_STATUS_SAVED,
+        name: record.name || 'sequence'
+      });
+      await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: LIBRARY_STATUS_SAVED, silent: true });
+      controllers.detail?.syncActionButtonsState?.();
+      actions.setStatus(`Saved ${entry.name} to the library.`);
+    } catch (error) {
+      actions.setStatus(`Failed to save: ${error?.message || 'Unknown error.'}`, true);
+    }
+  }
+
   async function renameLibraryEntry(entryId, requestedName) {
     const bridge = actions.getBridge();
     const storagePath = actions.getStoragePath();
@@ -278,6 +298,7 @@ export function createLibraryPersistenceActions(ctx) {
     persistFeatureMutation,
     persistRecordToLibrary,
     renameLibraryEntry,
+    saveCurrentRecordToLibrary,
     upsertLibraryFolder
   };
 }

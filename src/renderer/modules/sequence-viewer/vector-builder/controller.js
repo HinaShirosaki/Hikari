@@ -11,6 +11,10 @@ import {
   normalizeHighlightSegments,
   renderDualStrandSequenceLinesHtml
 } from '../rendering.js';
+import {
+  buildVectorSequenceName,
+  resolveVectorBackboneName
+} from '../sequence-naming.js';
 import { cleanText, clamp, normalizeSequenceText, reverseComplementIupac } from '../shared.js';
 import { attachMapHoverLabel } from './map-hover.js';
 import { attachMapZoomGestures } from './map-zoom.js';
@@ -110,7 +114,9 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   const mapHover = attachMapHoverLabel({
     host: () => elements.vectorBuilderMap,
-    rootDocument
+    rootDocument,
+    getFeature: (index) => getFeatureByIndex(getSelectedRecord(), index),
+    getSequence: () => getSelectedRecord()?.sequence || ''
   });
 
   const editingElements = {};
@@ -796,6 +802,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     }
 
     const label = cleanText(constructName, 140) || 'Protein construct';
+    const backboneName = resolveVectorBackboneName(record, record.name || 'Vector');
     try {
       await onApplySequenceEdit({ mode, range: { start, end }, sequence: insertSequence });
     } catch (error) {
@@ -835,9 +842,20 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
     const records = [...state.records];
     const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, records.length - 1));
-    const nextRecord = { ...records[selectedIndex], features: nextFeatures };
+    const generatedName = buildVectorSequenceName({ backboneName, payloadName: label });
+    const nextRecord = { ...records[selectedIndex], name: generatedName, features: nextFeatures };
     records[selectedIndex] = nextRecord;
     state.records = records;
+    if (state.sequenceEditDesignSource) {
+      state.sequenceEditDesignSource = {
+        ...state.sequenceEditDesignSource,
+        recordName: generatedName,
+        generatedName,
+        sourceKind: 'vector_builder',
+        backboneName,
+        constructName: label
+      };
+    }
 
     vb().insertTarget = null;
     clearSelection();

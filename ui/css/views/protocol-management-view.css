@@ -39,11 +39,30 @@
   gap: 8px;
 }
 
-#create-protocol-btn,
 #open-protocol-json-import-btn,
 #protocol-generate-btn,
 #protocol-polish-btn {
   min-height: 36px;
+}
+
+.protocol-create-icon-btn.primary-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.protocol-create-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .protocol-sort-menu {

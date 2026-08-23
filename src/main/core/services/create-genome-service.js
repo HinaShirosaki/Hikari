@@ -13,6 +13,7 @@
 //   bases they need instead of walking the file.
 
 const crypto = require('node:crypto');
+const { ensureObject } = require('../../lib/normalize.js');
 
 const FILE_VERSION = 1;
 const MAX_GENOMES = 32;
@@ -27,10 +28,6 @@ const GREATER_THAN = 0x3e;
 function fallbackCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function toPositiveInteger(value, fallback) {

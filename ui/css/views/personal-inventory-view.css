@@ -82,6 +82,7 @@
 
 .inventory-location-btn {
   width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -92,6 +93,20 @@
   background: transparent;
   color: inherit;
   text-align: left;
+}
+
+.inventory-location-row {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 4px;
+  align-items: center;
+}
+
+.inventory-location-add-container-btn.folder-tree-template__action,
+.inventory-folder-add-container-btn.folder-tree-template__action {
+  opacity: 1;
 }
 
 /* ponytail: border only on keyboard focus; .active/:hover drop it to kill the card-in-card seam line */

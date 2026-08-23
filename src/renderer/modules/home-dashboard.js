@@ -33,7 +33,10 @@ export function initHomeDashboard({
   const passageElements = {
     summary: document.getElementById('dashboard-passage-summary'),
     list: document.getElementById('dashboard-passage-list'),
+    panelList: document.getElementById('dashboard-passage-panel-list'),
     addBtn: document.getElementById('dashboard-passage-add-btn'),
+    openBtn: document.getElementById('dashboard-passage-open-btn'),
+    closeBtn: document.getElementById('dashboard-passage-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-passage-dialog-overlay'),
     dialogForm: document.getElementById('dashboard-passage-dialog-form'),
     strainInput: document.getElementById('dashboard-passage-strain-input'),
@@ -61,7 +64,10 @@ export function initHomeDashboard({
   const incubationElements = {
     summary: document.getElementById('dashboard-incubation-summary'),
     list: document.getElementById('dashboard-incubation-list'),
+    panelList: document.getElementById('dashboard-incubation-panel-list'),
     addBtn: document.getElementById('dashboard-incubation-add-btn'),
+    openBtn: document.getElementById('dashboard-incubation-open-btn'),
+    closeBtn: document.getElementById('dashboard-incubation-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-incubation-dialog-overlay'),
     locationList: document.getElementById('dashboard-incubation-location-list'),
     locationForm: document.getElementById('dashboard-incubation-location-form'),
@@ -73,8 +79,7 @@ export function initHomeDashboard({
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
     quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')],
-    quickLogChips: [...document.querySelectorAll('[data-dashboard-quicklog-chip]')]
+    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
   };
 
   const notebookElements = {

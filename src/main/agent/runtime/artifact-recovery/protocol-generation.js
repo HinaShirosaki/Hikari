@@ -1,5 +1,7 @@
 'use strict';
 
+const { ensureObject } = require('../../../lib/normalize.js');
+
 const {
   buildDirectProtocolGenerationFallbackArgs,
   buildProtocolGenerationAggregate,
@@ -13,10 +15,6 @@ function defaultCleanText(value, maxLength = 2000) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function stripInlineMarkdown(rawText = '') {

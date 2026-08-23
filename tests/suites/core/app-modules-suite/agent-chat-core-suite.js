@@ -1,10 +1,10 @@
 module.exports = function registerAppAgentChatCoreSuite(context = {}) {
   const registerParts = [
-    require('./agent-chat-core-suite/part-01.js'),
-    require('./agent-chat-core-suite/part-02.js'),
-    require('./agent-chat-core-suite/part-03.js'),
-    require('./agent-chat-core-suite/part-04.js'),
-    require('./agent-chat-core-suite/part-05.js')
+    require('./agent-chat-core-suite/assistant-message-rendering.js'),
+    require('./agent-chat-core-suite/sandbox-and-purchase-rendering.js'),
+    require('./agent-chat-core-suite/scoped-chat-context.js'),
+    require('./agent-chat-core-suite/request-failure-handling.js'),
+    require('./agent-chat-core-suite/notebook-proposal-approval.js')
   ];
 
   registerParts.forEach((registerPart) => registerPart(context));

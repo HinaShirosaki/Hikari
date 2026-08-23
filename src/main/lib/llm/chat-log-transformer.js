@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { asArray, cloneJson } = require('../normalize.js');
 
 const CHAT_LOG_FOLDER_NAME = 'chat_log';
 const CHAT_LOG_INDEX_FILE_NAME = 'index.json';
@@ -31,24 +32,12 @@ const CONTEXT_SECTION_MARKERS = Object.freeze([
   'Tool outputs:'
 ]);
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function normalizeFiniteNumber(value, fallback = 0) {
@@ -87,20 +76,20 @@ function formatPayload(value) {
 
 function normalizeTransformFileStatus(rawStatus = {}) {
   const source = rawStatus && typeof rawStatus === 'object' ? rawStatus : {};
-  const sourceFile = defaultCleanText(source.source_file || source.sourceFile, 240);
+  const sourceFile = defaultCleanText(source.source_file || source.sourceFile);
   if (!sourceFile) {
     return null;
   }
   return {
     source_file: sourceFile,
-    output_file: defaultCleanText(source.output_file || source.outputFile, 400),
-    status: defaultCleanText(source.status, 40) || 'pending',
+    output_file: defaultCleanText(source.output_file || source.outputFile),
+    status: defaultCleanText(source.status) || 'pending',
     source_mtime_ms: normalizeFiniteNumber(source.source_mtime_ms ?? source.sourceMtimeMs, 0),
     source_size: Math.max(0, normalizeFiniteNumber(source.source_size ?? source.sourceSize, 0)),
     source_line_count: Math.max(0, normalizeFiniteNumber(source.source_line_count ?? source.sourceLineCount, 0)),
     trace_count: Math.max(0, normalizeFiniteNumber(source.trace_count ?? source.traceCount, 0)),
-    transformed_at: defaultCleanText(source.transformed_at || source.transformedAt, 80),
-    error: defaultCleanText(source.error, 2400)
+    transformed_at: defaultCleanText(source.transformed_at || source.transformedAt),
+    error: defaultCleanText(source.error)
   };
 }
 
@@ -112,17 +101,15 @@ function normalizeTransformState(rawState = {}) {
     const normalized = normalizeTransformFileStatus({
       ...(value && typeof value === 'object' ? value : {}),
       source_file: defaultCleanText(
-        value?.source_file || value?.sourceFile || key,
-        240
-      )
+        value?.source_file || value?.sourceFile || key)
     });
     if (normalized?.source_file) {
       files[normalized.source_file] = normalized;
     }
   });
   return {
-    updated_at: defaultCleanText(source.updated_at || source.updatedAt, 80),
-    output_folder: defaultCleanText(source.output_folder || source.outputFolder, 120)
+    updated_at: defaultCleanText(source.updated_at || source.updatedAt),
+    output_folder: defaultCleanText(source.output_folder || source.outputFolder)
       || TRANSFORMED_CHAT_LOG_FOLDER_NAME,
     files
   };
@@ -132,7 +119,7 @@ function normalizeIndexPayload(rawIndex = {}) {
   const source = rawIndex && typeof rawIndex === 'object' ? rawIndex : {};
   return {
     version: Math.max(1, normalizeFiniteNumber(source.version, 1)),
-    updated_at: defaultCleanText(source.updated_at || source.updatedAt, 80),
+    updated_at: defaultCleanText(source.updated_at || source.updatedAt),
     sessions: Array.isArray(source.sessions) ? cloneJson(source.sessions, []) : [],
     transforms: normalizeTransformState(source.transforms)
   };
@@ -141,7 +128,7 @@ function normalizeIndexPayload(rawIndex = {}) {
 function buildFallbackContext(requestContext) {
   const source = requestContext && typeof requestContext === 'object' ? requestContext : {};
   const lines = [];
-  const message = defaultCleanText(source.message, 24000);
+  const message = defaultCleanText(source.message);
   const conversation = asArray(source.conversation);
   if (message) {
     lines.push(`User message:\n${message}`);
@@ -153,7 +140,7 @@ function buildFallbackContext(requestContext) {
 }
 
 function splitCombinedPrompt(prompt = '') {
-  const rawPrompt = defaultCleanText(prompt, 240000);
+  const rawPrompt = defaultCleanText(prompt);
   if (!rawPrompt) {
     return {
       systemPrompt: '',
@@ -191,7 +178,7 @@ function extractPromptSections(requestPayload, requestContext) {
     ? requestPayload
     : {};
   const sections = [];
-  let systemPrompt = defaultCleanText(payload.system_prompt || payload.systemPrompt, 240000);
+  let systemPrompt = defaultCleanText(payload.system_prompt || payload.systemPrompt);
 
   if (Array.isArray(payload.conversation) && payload.conversation.length) {
     sections.push(`Conversation:\n${JSON.stringify(payload.conversation, null, 2)}`);
@@ -208,7 +195,7 @@ function extractPromptSections(requestPayload, requestContext) {
     ['feedbackMessage', 'Feedback message']
   ];
   fieldMap.forEach(([fieldName, label]) => {
-    const value = defaultCleanText(payload[fieldName], 240000);
+    const value = defaultCleanText(payload[fieldName]);
     if (value) {
       sections.push(`${label}:\n${value}`);
     }
@@ -219,7 +206,7 @@ function extractPromptSections(requestPayload, requestContext) {
   }
 
   if (!systemPrompt) {
-    const combinedPrompt = defaultCleanText(payload.prompt, 240000);
+    const combinedPrompt = defaultCleanText(payload.prompt);
     if (combinedPrompt) {
       const split = splitCombinedPrompt(combinedPrompt);
       systemPrompt = split.systemPrompt;
@@ -229,8 +216,8 @@ function extractPromptSections(requestPayload, requestContext) {
     }
   }
 
-  if (!systemPrompt && defaultCleanText(payload.prompt, 240000)) {
-    systemPrompt = defaultCleanText(payload.prompt, 240000);
+  if (!systemPrompt && defaultCleanText(payload.prompt)) {
+    systemPrompt = defaultCleanText(payload.prompt);
   }
 
   if (!sections.length) {
@@ -252,12 +239,12 @@ function buildRequestContextMap(rows = []) {
     if (!row || typeof row !== 'object' || row.type !== 'agent-chat-request') {
       return;
     }
-    const requestId = defaultCleanText(row.requestId, 120);
+    const requestId = defaultCleanText(row.requestId);
     if (!requestId) {
       return;
     }
     byRequestId.set(requestId, {
-      message: defaultCleanText(row.message, 24000),
+      message: defaultCleanText(row.message),
       conversation: Array.isArray(row.conversation) ? cloneJson(row.conversation, []) : []
     });
   });
@@ -266,13 +253,13 @@ function buildRequestContextMap(rows = []) {
 
 function transformTraceRow(row, requestContextById) {
   const source = row && typeof row === 'object' ? row : {};
-  const requestId = defaultCleanText(source.requestId, 120);
+  const requestId = defaultCleanText(source.requestId);
   const requestContext = requestContextById.get(requestId) || null;
   const promptSections = extractPromptSections(source.request_payload, requestContext);
   return {
-    stage: defaultCleanText(source.stage, 120),
+    stage: defaultCleanText(source.stage),
     request_id: requestId,
-    timestamp: defaultCleanText(source.timestamp, 80),
+    timestamp: defaultCleanText(source.timestamp),
     system_prompt: promptSections.systemPrompt,
     context: promptSections.context,
     response: formatPayload(source.response_payload)
@@ -280,7 +267,7 @@ function transformTraceRow(row, requestContextById) {
 }
 
 function normalizeStoragePath(storagePath = '') {
-  const clean = defaultCleanText(storagePath, 2400);
+  const clean = defaultCleanText(storagePath);
   return clean ? path.resolve(clean) : '';
 }
 
@@ -389,9 +376,7 @@ function createChatLogTransformRuntime(deps = {}) {
       rows.find((row) => row && typeof row === 'object' && defaultCleanText(row.session_id || row.sessionId, 120))
         ?.session_id
         || rows.find((row) => row && typeof row === 'object' && defaultCleanText(row.sessionId, 120))
-          ?.sessionId,
-      120
-    ) || sourceFile.replace(/\.log$/i, '');
+          ?.sessionId) || sourceFile.replace(/\.log$/i, '');
     const outputPayload = {
       session_id: sessionId,
       source_log_file: sourceFile,

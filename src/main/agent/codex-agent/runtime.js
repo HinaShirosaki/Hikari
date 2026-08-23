@@ -19,6 +19,10 @@ const {
 const {
   createCodexStreamProgressHandler
 } = require('./stream-events.js');
+const {
+  isCodexResumeUnavailableError,
+  normalizeRecoveryConversation
+} = require('./session-recovery.js');
 const { callProtocolGeneration } = require('../mcp-contract/direct-tools/protocol-generation.js');
 const {
   resolveProtocolGenerationArtifact
@@ -69,7 +73,7 @@ function createCodexAgentRuntime(deps = {}) {
         // Falling back to the normal Codex workspace still keeps the turn usable.
       }
     }
-    const prompt = buildCodexAgentPrompt(input, { cleanText });
+    let prompt = buildCodexAgentPrompt(input, { cleanText });
     const traceContext = input.traceContext || null;
     const lifecycleRecorder = input.lifecycleRecorder || null;
     const emitAgentProgress = typeof input.emitAgentProgress === 'function'
@@ -82,12 +86,13 @@ function createCodexAgentRuntime(deps = {}) {
       ? requestedTimeoutMs
       : null;
     const resumeSessionId = cleanText(input.codexSessionId || input.codex_session_id, 240);
-    const streamProgress = createCodexStreamProgressHandler({
+    const createStreamProgress = () => createCodexStreamProgressHandler({
       cleanText,
       emitAgentProgress,
       lifecycleRecorder,
       recordLifecycleEvent
     });
+    let streamProgress = createStreamProgress();
 
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'codex_agent_started',
@@ -113,28 +118,91 @@ function createCodexAgentRuntime(deps = {}) {
     });
 
     throwIfAgentRequestAborted('Agent request stopped before starting Codex agent.');
-    const mcpContextJson = JSON.stringify(buildCodexMcpContext({
-      ...input,
-      cwd,
-      model
-    }, { cleanText }));
-    const codexTextResult = await requestCodexAgentText({
-      prompt,
-      model,
-      reasoningEffort,
-      cwd,
-      enableWebSearch: input.enableWebSearch !== false && input.enable_web_search !== false,
-      attachments: asArray(input.attachments),
-      timeoutMs,
-      stream: true,
-      onStream: streamProgress.emitStreamProgress,
-      resumeSessionId,
-      returnMetadata: true,
-      envOverrides: {
-        HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
-        HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson
+    const buildCodexRequest = ({
+      requestPrompt,
+      requestInput,
+      requestResumeSessionId
+    }) => {
+      const mcpContextJson = JSON.stringify(buildCodexMcpContext({
+        ...requestInput,
+        cwd,
+        model
+      }, { cleanText }));
+      return {
+        prompt: requestPrompt,
+        model,
+        reasoningEffort,
+        cwd,
+        enableWebSearch: input.enableWebSearch !== false && input.enable_web_search !== false,
+        attachments: asArray(input.attachments),
+        timeoutMs,
+        stream: true,
+        onStream: streamProgress.emitStreamProgress,
+        resumeSessionId: requestResumeSessionId,
+        returnMetadata: true,
+        envOverrides: {
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+          HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson
+        }
+      };
+    };
+    let activeResumeSessionId = resumeSessionId;
+    let recoveredFromCodexSessionId = '';
+    let effectiveInput = input;
+    let codexTextResult;
+    try {
+      codexTextResult = await requestCodexAgentText(buildCodexRequest({
+        requestPrompt: prompt,
+        requestInput: effectiveInput,
+        requestResumeSessionId: activeResumeSessionId
+      }));
+    } catch (error) {
+      if (!activeResumeSessionId || !isCodexResumeUnavailableError(error)) {
+        throw error;
       }
-    });
+      throwIfAgentRequestAborted('Agent request stopped before recovering the Codex session.');
+      recoveredFromCodexSessionId = activeResumeSessionId;
+      activeResumeSessionId = '';
+      const recoveryConversation = asArray(input.recoveryConversation);
+      effectiveInput = {
+        ...input,
+        codexSessionId: '',
+        codex_session_id: '',
+        sessionRecovery: {
+          previousSessionId: recoveredFromCodexSessionId,
+          conversation: recoveryConversation
+        }
+      };
+      prompt = buildCodexAgentPrompt(effectiveInput, { cleanText });
+      // The failed attempt may have streamed artifacts before dying; a fresh
+      // handler keeps them from merging into the recovered turn's result.
+      streamProgress = createStreamProgress();
+      recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'codex_agent_session_recovery',
+        status: 'started',
+        routing_intent: 'codex_agent',
+        message: 'The saved Codex session was unavailable. Reopening this chat from Hikari history.',
+        meta: {
+          unavailable_codex_session_id: recoveredFromCodexSessionId,
+          recovery_turn_count: normalizeRecoveryConversation(recoveryConversation).length
+        }
+      });
+      await recordAgentLlmTrace(traceContext, {
+        stage: 'codex_agent_session_recovery',
+        provider: 'codex',
+        model,
+        summary: 'Starting a new Codex session with bounded Hikari chat history.',
+        request_payload: {
+          unavailable_codex_session_id: recoveredFromCodexSessionId,
+          prompt
+        }
+      });
+      codexTextResult = await requestCodexAgentText(buildCodexRequest({
+        requestPrompt: prompt,
+        requestInput: effectiveInput,
+        requestResumeSessionId: activeResumeSessionId
+      }));
+    }
     throwIfAgentRequestAborted('Agent request stopped after Codex agent completed.');
 
     const rawText = typeof codexTextResult === 'string'
@@ -148,7 +216,7 @@ function createCodexAgentRuntime(deps = {}) {
         || codexMetadata.sessionId
         || codexMetadata.resumed_session_id
         || codexMetadata.resumedSessionId
-        || resumeSessionId,
+        || activeResumeSessionId,
       240
     );
     const parsed = parseJsonObjectFromText(rawText);
@@ -184,9 +252,10 @@ function createCodexAgentRuntime(deps = {}) {
     }
     codexAgent.codex_session_id = codexSessionId;
     codexAgent.resumed_codex_session_id = cleanText(
-      codexMetadata.resumed_session_id || codexMetadata.resumedSessionId || resumeSessionId,
+      codexMetadata.resumed_session_id || codexMetadata.resumedSessionId || activeResumeSessionId,
       240
     );
+    codexAgent.recovered_from_codex_session_id = recoveredFromCodexSessionId;
 
     const protocolGenerationArtifact = await resolveProtocolGenerationArtifact({
       agentResult: codexAgent,
@@ -200,7 +269,7 @@ function createCodexAgentRuntime(deps = {}) {
         : null,
       streamedProtocolGenerationPayloads: streamState.streamedProtocolGenerationPayloads,
       toolContext: {
-        ...buildCodexMcpContext({ ...input, cwd, model }, { cleanText }),
+        ...buildCodexMcpContext({ ...effectiveInput, cwd, model }, { cleanText }),
         snapshot: ensureObject(input.snapshot),
         traceContext,
         lifecycleRecorder
@@ -232,6 +301,7 @@ function createCodexAgentRuntime(deps = {}) {
       metadata: {
         codex_session_id: codexSessionId,
         resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
+        recovered_from_codex_session_id: recoveredFromCodexSessionId,
         command: cleanText(codexMetadata.command, 80)
       }
     });
@@ -245,7 +315,8 @@ function createCodexAgentRuntime(deps = {}) {
         status: codexAgent.status,
         citation_count: asArray(codexAgent.citations).length,
         codex_session_id: codexSessionId,
-        resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240)
+        resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
+        recovered_from_codex_session_id: recoveredFromCodexSessionId
       }
     });
 
@@ -255,6 +326,7 @@ function createCodexAgentRuntime(deps = {}) {
       model,
       codex_session_id: codexSessionId,
       resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
+      recovered_from_codex_session_id: recoveredFromCodexSessionId,
       parser,
       codex_agent: codexAgent,
       ...(streamState.streamedNotebookDraftPayload

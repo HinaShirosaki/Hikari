@@ -385,6 +385,10 @@ function createAgentControllerUtils(deps = {}) {
           status: cleanText(codexAgent.status, 40),
           codex_session_id: cleanText(codexAgent.codex_session_id || codexAgent.codexSessionId, 240),
           resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id || codexAgent.resumedCodexSessionId, 240),
+          recovered_from_codex_session_id: cleanText(
+            codexAgent.recovered_from_codex_session_id || codexAgent.recoveredFromCodexSessionId,
+            240
+          ),
           answer: cleanText(codexAgent.answer, 500),
           reasoning_summary: cleanText(codexAgent.reasoning_summary, 500),
           follow_up_count: asArray(codexAgent.follow_up_questions).length,
@@ -403,6 +407,13 @@ function createAgentControllerUtils(deps = {}) {
           || source.resumedCodexSessionId
           || codexAgent?.resumed_codex_session_id
           || codexAgent?.resumedCodexSessionId,
+        240
+      ),
+      recovered_from_codex_session_id: cleanText(
+        source.recovered_from_codex_session_id
+          || source.recoveredFromCodexSessionId
+          || codexAgent?.recovered_from_codex_session_id
+          || codexAgent?.recoveredFromCodexSessionId,
         240
       ),
       general_science_question: generalScienceQuestion

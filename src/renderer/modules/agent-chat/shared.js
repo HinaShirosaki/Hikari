@@ -1,6 +1,4 @@
-export function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../../lib/normalize.js';
 
 export function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
@@ -328,3 +326,5 @@ export function formatWriteActivity(action) {
   }
   return `Write action pending approval: ${toolName || 'unspecified action'}`;
 }
+
+export { asArray };

@@ -1,8 +1,9 @@
 'use strict';
 
 const { toIntegerInRange } = require('../../data/value-utils.js');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -77,14 +78,6 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
     );
   }
   return `${cleanText(toolName, 120) || 'Tool'} matched ${count} item${count === 1 ? '' : 's'}.`;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function hasOwn(value, key) {

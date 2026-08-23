@@ -1,15 +1,8 @@
 import { showTransientNotice } from '../../../lib/notify.js';
+import { asArray, ensureObject } from '../../../lib/normalize.js';
 
 function cleanText(value) {
   return String(value || '').trim();
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function taskConfig(task = {}) {

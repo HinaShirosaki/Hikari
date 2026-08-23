@@ -1,8 +1,6 @@
 'use strict';
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 
 function cleanText(value, maxLength = 1200) {
   const text = String(value || '').trim();
@@ -10,10 +8,6 @@ function cleanText(value, maxLength = 1200) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function parseJsonObject(raw = '') {

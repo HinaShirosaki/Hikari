@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray } = require('../lib/normalize.js');
+
 const {
   BioinformaticsServiceError,
   clampInteger,
@@ -10,10 +12,6 @@ const {
 
 const UNIPROT_BASE_URL = 'https://rest.uniprot.org';
 const MAX_UNIPROT_QUERY_LENGTH = 2000;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function nestedValue(value) {
   return cleanText(value?.value ?? value, 600);

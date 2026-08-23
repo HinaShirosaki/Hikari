@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('node:crypto');
+const { ensureObject } = require('../../lib/normalize.js');
 
 const FILE_VERSION = 1;
 const MAX_TIMER_DELAY_MS = 2_147_000_000;
@@ -18,10 +19,6 @@ const STAGGER_STEP_MS = 5_000;
 function fallbackCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function cloneJson(value) {

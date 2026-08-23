@@ -3,6 +3,7 @@ import { calculateFixedReaction } from '../../lib/bench-calculations.js';
 import { PROTEIN_ASSEMBLY_TAGS } from './protein-builder/assembly-model.js';
 import { renamePrimers } from './primer-naming.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
+import { asArray } from '../../lib/normalize.js';
 
 const CLONING_NOTEBOOK_SOURCE = 'protein_builder_cloning_assembly';
 const CLONING_PROJECT_NAME = 'Protein Builder';
@@ -11,10 +12,6 @@ const CLONING_PROTOCOL_ID = 'protein-builder-cloning-assembly-protocol';
 const CLONING_PROTOCOL_NAME = 'PCR Thermocycle Program';
 const LEGACY_CLONING_PROTOCOL_NAME = 'Protein Builder Cloning Assembly';
 const CLONING_REACTION_CALCULATION_ID = 'protein-builder-pcr-fixed-reaction';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function fallbackCreateId(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;

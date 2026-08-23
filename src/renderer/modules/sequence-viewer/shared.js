@@ -29,7 +29,7 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
-export function cleanText(value, _maxLength = 500) {
+export function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';

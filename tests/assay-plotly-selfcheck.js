@@ -123,4 +123,127 @@ assert.equal(presets.deleteChartPreset('Publication'), false, 'deleting twice is
 storage.setItem('hikari_assay_chart_presets_v1', 'not json');
 assert.deepEqual(presets.listChartPresets(), [], 'corrupt storage reads as empty, not a throw');
 
+// --- renderer: the Prism defaults (offset frame, no grid, plain tick numbers) ---
+const plots = [];
+const { createAssayPlotlyRenderer } = loadEsmStyleModule(
+  path.join(root, 'src/renderer/modules/assay/plotly/plotly-renderer.js'),
+  {
+    window: {
+      Plotly: {
+        newPlot: (_target, traces, layout) => { plots.push({ traces, layout }); },
+        purge: () => {}
+      }
+    }
+  }
+);
+const renderer = createAssayPlotlyRenderer();
+const draw = (model, styleOverrides) => {
+  plots.length = 0;
+  renderer.render({}, model, normalizeChartStyle(styleOverrides || {}));
+  return plots[0];
+};
+
+const barModel = {
+  chartType: 'bar',
+  xLabel: 'Group',
+  yLabel: 'Mean',
+  showErrorBars: true,
+  series: [{
+    label: 'Treated',
+    data: [
+      { x: 'DMSO', y: 10, yVariance: 2, points: [9, 10, 11] },
+      { x: 'Drug', y: 4, yVariance: 1, points: [3, 4, 5] }
+    ]
+  }]
+};
+
+const bar = draw(barModel);
+assert.equal(bar.layout.xaxis.showline, false, 'offset frame does not use Plotly axis lines');
+assert.equal(bar.layout.shapes.length, 2, 'offset frame draws both axis arms as shapes');
+assert.equal(bar.layout.shapes[0].x0 > 0, true, 'x arm starts past the origin corner');
+assert.equal(bar.layout.shapes[1].y0 > 0, true, 'y arm starts past the origin corner');
+assert.equal(bar.layout.xaxis.showgrid, false, 'no vertical gridlines by default');
+assert.equal(bar.layout.yaxis.showgrid, false, 'no horizontal gridlines by default');
+assert.equal(bar.layout.xaxis.tickfont.weight, 400, 'tick numbers are never bold');
+assert.equal(bar.layout.xaxis.title.font.weight, 700, 'axis titles still follow the text style');
+assert.equal(bar.layout.xaxis.tickangle, 0, 'short category labels stay horizontal');
+assert.equal(bar.layout.bargap, 0.35, 'Prism bar spacing');
+assert.equal(bar.traces[0].marker.line.width, 1, 'bars are outlined');
+assert.equal(bar.traces.length, 2, 'single-series bar gets a replicate dot trace');
+// vm-realm arrays are not deepStrictEqual to test-realm literals (see the note above).
+assert.equal(bar.traces[1].x.join('|'), 'DMSO|DMSO|DMSO|Drug|Drug|Drug', 'dots sit on their own category');
+assert.equal(bar.traces[1].y.join('|'), '9|10|11|3|4|5', 'dots carry every replicate');
+assert.equal(bar.traces[1].showlegend, false, 'the dot trace stays out of the legend');
+
+// Grouped bars: dots would land on the category centre, so they are skipped.
+const grouped = draw({
+  ...barModel,
+  series: [barModel.series[0], { label: 'Control', data: [{ x: 'DMSO', y: 8, points: [7, 9] }] }]
+});
+assert.equal(grouped.traces.length, 2, 'grouped bars render one trace per series, no dots');
+
+// Long category labels still tilt.
+const longLabels = draw({
+  ...barModel,
+  series: [{ label: 'Treated', data: [{ x: 'Vehicle control 0.1%', y: 1 }] }]
+});
+assert.equal(longLabels.layout.xaxis.tickangle, -35, 'long category labels tilt');
+
+// A reference line coexists with the offset frame instead of replacing it.
+const withRefLine = draw(barModel, { refLineValue: 5 });
+assert.equal(withRefLine.layout.shapes.length, 3, 'reference line adds to the frame shapes');
+
+// Explicit opt-ins still win over the Prism defaults.
+const boxed = draw(barModel, { frameStyle: 'box', showHorizontalGrid: true });
+assert.equal(boxed.layout.shapes, undefined, 'box frame draws no offset arms');
+assert.equal(boxed.layout.xaxis.showline, true, 'box frame uses Plotly axis lines');
+assert.equal(boxed.layout.yaxis.showgrid, true, 'gridlines can be turned back on');
+assert.equal(createDefaultChartStyle().frameStyle, 'offset', 'offset is the default frame');
+
+// --- agent-authored figures pick up the same Prism defaults ---
+const { applyPrismDefaults } = loadEsmStyleModule(
+  path.join(root, 'src/renderer/modules/assay/plotly/prism-theme.js')
+);
+const prismStyle = normalizeChartStyle({});
+const agentBar = applyPrismDefaults({
+  data: [{ type: 'bar', x: ['A', 'B'], y: [1, 2] }],
+  layout: { title: { text: 'Agent figure' } }
+}, prismStyle);
+assert.equal(agentBar.layout.shapes.length, 2, 'agent figure gets the offset frame');
+assert.equal(agentBar.layout.xaxis.showgrid, false, 'agent figure loses gridlines');
+assert.equal(agentBar.layout.yaxis.ticks, 'outside', 'agent figure gets outward ticks');
+assert.equal(agentBar.layout.xaxis.tickfont.weight, 400, 'agent tick numbers are not bold');
+assert.equal(agentBar.layout.plot_bgcolor, '#ffffff', 'agent figure gets the white plot ground');
+assert.equal(agentBar.layout.bargap, 0.35, 'agent bars get Prism spacing');
+assert.equal(agentBar.layout.title.text, 'Agent figure', 'the agent title survives');
+assert.equal(agentBar.data[0].marker.line.width, 1, 'agent bars are outlined');
+assert.equal(agentBar.data[0].marker.color, normalizeChartStyle({}).palette[0], 'uncoloured traces take the palette');
+
+// Whatever the agent stated itself wins over the defaults.
+const agentStated = applyPrismDefaults({
+  data: [{ type: 'bar', x: ['A'], y: [1], marker: { color: '#123456', line: { width: 3, color: '#654321' } } }],
+  layout: {
+    xaxis: { showgrid: true, ticks: 'inside' },
+    shapes: [{ type: 'line', x0: 0, x1: 1, y0: 1, y1: 1 }],
+    paper_bgcolor: '#eeeeee'
+  }
+}, prismStyle);
+assert.equal(agentStated.layout.xaxis.showgrid, true, 'an agent that asks for gridlines keeps them');
+assert.equal(agentStated.layout.xaxis.ticks, 'inside', 'agent tick direction wins');
+assert.equal(agentStated.layout.paper_bgcolor, '#eeeeee', 'agent background wins');
+assert.equal(agentStated.data[0].marker.color, '#123456', 'agent bar colour wins');
+assert.equal(agentStated.data[0].marker.line.width, 3, 'agent bar outline wins');
+assert.equal(agentStated.layout.shapes.length, 3, 'agent shapes are kept alongside the frame arms');
+
+// Subplot axes are themed too; non-cartesian figures are left alone.
+const subplot = applyPrismDefaults({
+  data: [{ type: 'scatter', x: [1], y: [1] }],
+  layout: { xaxis2: { anchor: 'y2' }, yaxis2: {} }
+}, prismStyle);
+assert.equal(subplot.layout.xaxis2.ticks, 'outside', 'secondary axes are themed');
+assert.equal(subplot.layout.xaxis2.anchor, 'y2', 'secondary axis settings survive');
+const pie = applyPrismDefaults({ data: [{ type: 'pie', values: [1, 2] }], layout: {} }, prismStyle);
+assert.equal(pie.layout.shapes, undefined, 'a pie gets no floating axis arms');
+assert.equal(pie.layout.xaxis, undefined, 'a pie gets no cartesian axes');
+
 console.log('assay Plotly self-check passed');

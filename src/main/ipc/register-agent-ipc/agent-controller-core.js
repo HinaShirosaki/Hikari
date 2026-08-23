@@ -367,7 +367,9 @@ function createAgentControllerCore({
         model,
         reasoningEffort,
         message: effectiveMessage,
-        conversation: [],
+        // A resumed Codex session owns its own history, so Hikari's copy travels
+        // under a name that says it is only there to rebuild a lost session.
+        recoveryConversation: controllerUtils.extractConversation(payload?.conversation),
         attachments,
         snapshot,
         ...(snapshotDataFilePath ? { dataFilePath: snapshotDataFilePath } : {}),

@@ -94,6 +94,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   white-space: nowrap;
 }
 
+.sequence-viewer-icon-btn[hidden] {
+  display: none;
+}
+
 .sequence-viewer-icon-btn svg {
   flex: 0 0 auto;
   width: 18px;
@@ -1478,11 +1482,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-feature-bar {
   position: absolute;
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--sequence-viewer-feature-color) 58%, var(--theme-border));
   border-radius: 6px;
   height: 11px;
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
+  box-shadow: inset 2px 0 0 var(--sequence-viewer-feature-color);
   cursor: pointer;
-  opacity: 0.9;
+  opacity: 1;
 }
 
 .sequence-viewer-feature-bar-active {
@@ -2081,6 +2087,17 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   opacity: 0.95;
 }
 
+/* Keep the biological category color without filling every annotation lane
+   with a dark block. The soft tint leaves labels readable at a glance, while
+   the inset edge still makes neighboring feature types easy to distinguish. */
+.sequence-viewer-line-feature-bar {
+  border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 58%, var(--theme-border));
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
+  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color);
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 68%, var(--theme-text-strong));
+  opacity: 1;
+}
+
 .sequence-viewer-line-feature-label {
   display: block;
   width: 100%;
@@ -2217,9 +2234,14 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-line-feature-active {
   border-color: var(--sequence-viewer-active-blue);
-  box-shadow: none;
+  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color), 0 0 0 1px var(--sequence-viewer-active-blue);
   color: inherit;
   opacity: 1;
+}
+
+.sequence-viewer-line-feature-bar:hover,
+.sequence-viewer-line-feature-bar:focus-visible {
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 22%, var(--theme-surface-elevated));
 }
 
 .sequence-viewer-line-feature:hover,
@@ -2698,6 +2720,21 @@ body.theme-night .sequence-viewer-feature-rail {
   background-size: 12.5% 100%;
 }
 
+body.theme-night .sequence-viewer-feature-bar,
+body.theme-night .sequence-viewer-line-feature-bar {
+  border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 66%, var(--theme-border));
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 20%, var(--theme-surface-elevated));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar {
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 34%, var(--theme-text-strong));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar:hover,
+body.theme-night .sequence-viewer-line-feature-bar:focus-visible {
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 28%, var(--theme-surface-elevated));
+}
+
 body.theme-night .sequence-viewer-feature-axis span,
 body.theme-night .sequence-viewer-seq-coord,
 body.theme-night .sequence-viewer-strand-end {
@@ -2727,15 +2764,19 @@ body.theme-night .sequence-viewer-restriction-annot-active .sequence-viewer-rest
   background: var(--sequence-viewer-night-active-bg);
 }
 
-body.theme-night .sequence-viewer-line-feature {
+body.theme-night .sequence-viewer-line-feature:not(.sequence-viewer-line-feature-bar) {
   border-color: var(--sequence-viewer-night-feature-border);
   color: inherit;
 }
 
 body.theme-night .sequence-viewer-line-feature-active {
   border-color: var(--sequence-viewer-night-feature-active-border);
-  box-shadow: 0 0 0 1px var(--sequence-viewer-night-feature-ring);
+  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color), 0 0 0 1px var(--sequence-viewer-night-feature-ring);
   color: inherit;
+}
+
+body.theme-night .sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
 }
 
 body.theme-night .sequence-viewer-feature-hover-tooltip {
@@ -3114,6 +3155,49 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
 
 .vector-map__tooltip[hidden] {
   display: none !important;
+}
+
+/* A primer readout carries a copy button, so it has to accept the pointer and
+   wrap a full-length oligo instead of ellipsing it. */
+.vector-map__tooltip.is-interactive,
+.sequence-viewer-feature-hover-tooltip.is-interactive {
+  pointer-events: auto;
+  white-space: normal;
+  overflow: visible;
+  max-width: 340px;
+}
+
+.vector-map__tooltip-title {
+  display: block;
+  font-weight: 600;
+}
+
+.sequence-viewer-primer-hover {
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.sequence-viewer-primer-hover-seq {
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  word-break: break-all;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-primer-hover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sequence-viewer-primer-hover-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.68rem;
 }
 
 .sequence-viewer-context-divider {

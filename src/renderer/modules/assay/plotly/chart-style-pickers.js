@@ -133,6 +133,12 @@ function frameStyleSvg(style) {
       x: '3', y: '3', width: String(w - 6), height: String(h - 6),
       fill: 'none', stroke, 'stroke-width': sw, rx: '2'
     }));
+  } else if (style === 'offset') {
+    // Prism offset axes: the two arms stop short of the origin corner.
+    svg.appendChild(svgEl('path', {
+      d: `M 3 3 V ${h - 8} M 8 ${h - 3} H ${w - 3}`,
+      fill: 'none', stroke, 'stroke-width': sw, 'stroke-linecap': 'round'
+    }));
   } else if (style === 'l-shape') {
     svg.appendChild(svgEl('path', {
       d: `M 3 3 V ${h - 3} H ${w - 3}`,
@@ -472,6 +478,7 @@ export const LINE_STYLE_OPTIONS = [
   { value: 'dotted', label: 'Dotted' }
 ];
 export const FRAME_STYLE_OPTIONS = [
+  { value: 'offset', label: 'Offset' },
   { value: 'box', label: 'Box' },
   { value: 'l-shape', label: 'L-shape' },
   { value: 'none', label: 'None' }

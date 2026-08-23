@@ -7,13 +7,23 @@
 // the name (and its span) right at the pointer. It replaces the native <title>
 // tooltip, which took about a second to appear and could not be styled.
 
+import { escapeHtml } from '../../../lib/html.js';
+import { showTransientNotice } from '../../../lib/notify.js';
+import { copyPrimerValueFromEvent } from '../primer-copy.js';
+import { createHoverTooltipInteractivity, renderPrimerHoverSection } from '../primer-hover.js';
+
 const TOOLTIP_CLASS = 'vector-map__tooltip';
 const POINTER_OFFSET_PX = 14;
 
 export function attachMapHoverLabel(config = {}) {
   const resolveHost = typeof config?.host === 'function' ? config.host : () => config?.host || null;
   const rootDocument = config?.rootDocument || globalThis?.document || null;
+  // Supplied by the map's owner so a primer arc can show the oligo itself; the
+  // aria-label alone only carries the name and span.
+  const getFeature = typeof config?.getFeature === 'function' ? config.getFeature : () => null;
+  const getSequence = typeof config?.getSequence === 'function' ? config.getSequence : () => '';
   let node = null;
+  let interactivity = null;
 
   function ensureNode() {
     if (node || !rootDocument?.createElement || !rootDocument?.body?.appendChild) {
@@ -21,23 +31,55 @@ export function attachMapHoverLabel(config = {}) {
     }
     node = rootDocument.createElement('div');
     node.className = TOOLTIP_CLASS;
+    node.setAttribute?.('data-sequence-hover-tooltip', 'map');
     node.hidden = true;
     rootDocument.body.appendChild(node);
+    interactivity = createHoverTooltipInteractivity(node, hideNow);
+    node.addEventListener('click', (event) => {
+      void (async () => {
+        const result = await copyPrimerValueFromEvent(event);
+        if (!result.handled) {
+          return;
+        }
+        showTransientNotice(
+          result.copied ? 'Copied primer sequence.' : 'Clipboard access is unavailable.',
+          { type: result.copied ? 'success' : 'error' }
+        );
+        hideNow();
+      })();
+    });
     return node;
   }
 
-  function hide() {
+  function hideNow() {
+    if (interactivity) {
+      interactivity.cancelHide();
+    }
     if (node) {
       node.hidden = true;
     }
   }
 
-  function show(text, clientX, clientY) {
+  function hide() {
+    if (!interactivity) {
+      hideNow();
+      return;
+    }
+    interactivity.requestHide();
+  }
+
+  function show(text, primerHtml, clientX, clientY) {
     const element = ensureNode();
     if (!element) {
       return;
     }
-    element.textContent = text;
+    interactivity?.cancelHide();
+    if (primerHtml) {
+      element.innerHTML = `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${primerHtml}`;
+    } else {
+      element.textContent = text;
+    }
+    interactivity?.setInteractive(Boolean(primerHtml));
     element.hidden = false;
 
     // Flip to the other side of the cursor rather than letting the readout run
@@ -75,15 +117,16 @@ export function attachMapHoverLabel(config = {}) {
         hide();
         return;
       }
-      show(label, event.clientX, event.clientY);
+      const feature = getFeature(Number(trigger.dataset.featureIndex));
+      show(label, renderPrimerHoverSection(feature, getSequence()), event.clientX, event.clientY);
     });
 
     host.addEventListener('mouseleave', hide);
     // Zooming and panning move the map out from under the pointer.
-    host.addEventListener('wheel', hide, { passive: true });
-    host.addEventListener('scroll', hide, { passive: true });
-    host.addEventListener('mousedown', hide);
+    host.addEventListener('wheel', hideNow, { passive: true });
+    host.addEventListener('scroll', hideNow, { passive: true });
+    host.addEventListener('mousedown', hideNow);
   }
 
-  return { bind, hide };
+  return { bind, hide: hideNow };
 }

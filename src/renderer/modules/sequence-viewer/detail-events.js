@@ -39,6 +39,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const openSequenceEditFromKeyboardEvent = config?.openSequenceEditFromKeyboardEvent || (() => false);
   const applySequenceEditDialog = config?.applySequenceEditDialog || (async () => {});
   const hasOpenSequenceEditDialog = config?.hasOpenSequenceEditDialog || (() => false);
+  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
@@ -47,6 +48,11 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
+
+  elements.saveBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void onRequestSave();
+  });
 
   elements.annotateBtn?.addEventListener('click', (event) => {
     event.preventDefault();
@@ -489,7 +495,34 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
   });
 
-  globalThis.addEventListener?.('resize', () => {
-    renderSequence(getSelectedRecord(), { preserveScroll: true });
-  });
+  // The host resizes whenever the window or a rail does, so watching it covers
+  // both; a separate window resize listener would only re-flow a second time.
+  if (elements.sequenceHost
+    && typeof globalThis.ResizeObserver === 'function'
+    && typeof globalThis.requestAnimationFrame === 'function') {
+    let lastWidth = elements.sequenceHost.clientWidth || 0;
+    let reflowPending = false;
+    const reflowSequence = () => {
+      reflowPending = false;
+      const width = elements.sequenceHost.clientWidth || 0;
+      // A hidden host measures 0 and would re-flow at the fallback line length.
+      if (!width || width === lastWidth) {
+        return;
+      }
+      renderSequence(getSelectedRecord(), { preserveScroll: true });
+      // Store the post-render width so a scrollbar appearing/disappearing during
+      // the re-flow settles instead of bouncing the observer.
+      lastWidth = elements.sequenceHost.clientWidth || width;
+    };
+    const observer = new globalThis.ResizeObserver(() => {
+      // A rail drag fires this every frame, and re-rendering inside the callback
+      // is what trips Chromium's undelivered-notifications warning.
+      if (reflowPending) {
+        return;
+      }
+      reflowPending = true;
+      globalThis.requestAnimationFrame(reflowSequence);
+    });
+    observer.observe(elements.sequenceHost);
+  }
 }

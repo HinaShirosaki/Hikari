@@ -1,6 +1,7 @@
 import { defaultState } from '../modules/app-state.js';
 import { showTransientNotice } from '../lib/notify.js';
 import { migrateProteinBuilderCloningNotebookState } from '../modules/sequence-viewer/protein-builder-cloning-notebook.js';
+import { asArray } from '../lib/normalize.js';
 
 const WORKSPACE_STATE_KEYS = [
   'members',
@@ -38,10 +39,6 @@ function cloneDefaultValue(value) {
     return structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function mergeRecordsById(existingRecords, importedRecords, fallbackPrefix) {

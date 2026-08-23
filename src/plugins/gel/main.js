@@ -139,6 +139,12 @@ window.hikariApi = {
       fileName,
       dataBase64: toBase64(content)
     });
+  },
+  async exportBinaryFile({ dataBase64, fileName }) {
+    return hikari.call('downloads.save', {
+      fileName,
+      dataBase64
+    });
   }
 };
 

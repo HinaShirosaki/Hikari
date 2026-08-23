@@ -15,7 +15,7 @@ const {
   notebookTableColumnLetter,
   resolveNotebookResultTableValues
 } = loadEsmStyleModule(path.join(root, 'src/renderer/lib/notebook-table-formulas.js'));
-const { addNotebookResultTableColumn } = loadEsmStyleModule(
+const { addNotebookResultTableColumn, createDefaultNotebookResultTable } = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/notebook-result-tables.js')
 );
 
@@ -282,5 +282,51 @@ assert.equal(cellAt(chained, 1, 1).text, 'B1*2', 'a formula reading a waiting ce
 
 // A cell that does not exist cannot be filled in, so it stays an error.
 assert.equal(text(tableOf([['10', '=A1+Z9']]), 1, 0), '#ERROR', 'a reference off the table is still an error');
+
+// --- plate addressing: letters are rows, digits are columns ---
+// A microplate names B3 as row B, column 3. The same parser reads it the other way
+// round for a plain grid, and reading it backwards silently returns the transposed
+// cell -- a wrong number rather than an error.
+const plateGrid = (formula) => tableOf([
+  ['1', '2', '3'],
+  ['4', '5', '6'],
+  ['7', '8', '9'],
+  [formula, '', '']
+]);
+const onPlate = (formula) => computeNotebookResultTable(plateGrid(formula), { plateAddressing: true })
+  .byRowId.row_4.column_1.text;
+const onGrid = (formula) => computeNotebookResultTable(plateGrid(formula))
+  .byRowId.row_4.column_1.text;
+
+assert.equal(onPlate('=B3'), '6', 'on a plate B3 is row B, column 3');
+assert.equal(onGrid('=B3'), '8', 'on a plain grid B3 is column B, row 3');
+assert.equal(onPlate('=C1'), '7', 'on a plate C1 is row C, column 1');
+assert.equal(onPlate('=SUM(A1:C1)'), '12', 'a plate range down column 1');
+assert.equal(onPlate('=MEAN(A1:A3)'), '2', 'a plate range across row A');
+
+// Filling down a plate steps the row letter; filling across steps the column number.
+assert.equal(
+  translateFormulaReferences('=A1*2', 0, 1, { plateAddressing: true }),
+  '=B1*2',
+  'filling down a plate column advances the row letter'
+);
+assert.equal(
+  translateFormulaReferences('=A1*2', 1, 0, { plateAddressing: true }),
+  '=A2*2',
+  'filling across a plate row advances the column number'
+);
+assert.equal(translateFormulaReferences('=A1*2', 0, 1), '=A2*2', 'a plain grid still steps the digit');
+
+// --- a typed table size is honoured, and bounded ---
+const sized = (options) => {
+  const table = createDefaultNotebookResultTable(null, options);
+  return `${table.columns.length}x${table.rows.length}`;
+};
+assert.equal(sized(undefined), '3x3', 'the default table is 3x3');
+assert.equal(sized({ columnCount: 5, rowCount: 8 }), '5x8', 'a typed size is used as given');
+assert.equal(sized({ columnCount: 0, rowCount: 0 }), '3x3', 'zero falls back to the default');
+assert.equal(sized({ columnCount: 2.7, rowCount: 4.9 }), '2x4', 'fractions are truncated, not rounded up');
+// Every cell is a DOM node, so a stray digit must not build a grid that hangs the app.
+assert.equal(sized({ columnCount: 9999, rowCount: 99999 }), '50x500', 'an absurd size is clamped');
 
 console.log('notebook table formula self-check passed');

@@ -3,6 +3,7 @@
 // Static catalog definitions loaded from JSON files.
 const RAW_AGENT_TOOL_CATALOG = require('./Tools.json');
 const RAW_AGENT_TOOL_CALL_CATALOG = require('./Tool-call.json');
+const { cloneJson } = require('../../lib/normalize.js');
 
 // Return the input only when it is already an array; otherwise use an empty array fallback.
 function defaultAsArray(value) {
@@ -10,7 +11,7 @@ function defaultAsArray(value) {
 }
 
 // Convert unknown input to a string without trimming or clipping content.
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -40,13 +41,6 @@ function safeParseJson(value, fallback = null) {
 }
 
 // Deep-clone JSON-safe data structures so downstream mutations do not affect source data.
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 // Normalize a value into an object payload, accepting either raw objects or JSON strings.
 function normalizeJsonPayload(value, fallback = {}) {
@@ -310,8 +304,8 @@ function validateAgentToolCatalog(catalog) {
   const seen = new Set();
   return catalog.map((entry, index) => {
     const source = defaultEnsureObject(entry);
-    const name = defaultCleanText(source.name, 120);
-    const description = defaultCleanText(source.description, 400);
+    const name = defaultCleanText(source.name);
+    const description = defaultCleanText(source.description);
     if (!name) {
       throw new Error(`Agent tool catalog entry ${index + 1} is missing name.`);
     }
@@ -352,7 +346,7 @@ function validateAgentToolCallCatalog(toolCallCatalog, toolCatalog = []) {
       throw new Error(`Tool-call catalog includes unknown tool "${toolName}".`);
     }
     const entry = defaultEnsureObject(source[toolName]);
-    const description = defaultCleanText(entry.description, 2400);
+    const description = defaultCleanText(entry.description);
     const inputSchema = defaultEnsureObject(entry.input_schema);
     if (!description) {
       throw new Error(`Tool-call schema for "${toolName}" is missing description.`);
@@ -384,7 +378,7 @@ const AGENT_TOOL_NAME_MAP = new Map(
 
 // Map a user/model-provided tool name to the canonical catalog entry.
 function resolveCanonicalToolName(value) {
-  const normalized = defaultCleanText(value, 120).toLowerCase();
+  const normalized = defaultCleanText(value).toLowerCase();
   return normalized ? (AGENT_TOOL_NAME_MAP.get(normalized) || '') : '';
 }
 
@@ -405,7 +399,7 @@ function normalizeRequestedToolNames(selectedToolNames) {
   return selectedToolNames.map((toolName) => {
     const canonicalName = resolveCanonicalToolName(toolName);
     if (!canonicalName) {
-      throw new Error(`Unknown tool "${defaultCleanText(toolName, 120) || 'unknown'}".`);
+      throw new Error(`Unknown tool "${defaultCleanText(toolName) || 'unknown'}".`);
     }
     return canonicalName;
   });
@@ -422,7 +416,7 @@ function getToolInputSchemas(selectedToolNames = null) {
     return {
       name: entry.name,
       description: entry.description,
-      detailed_description: defaultCleanText(schemaEntry.description, 2400),
+      detailed_description: defaultCleanText(schemaEntry.description),
       input_schema: cloneJson(schemaEntry.input_schema, {})
     };
   });
@@ -434,7 +428,7 @@ function buildConversationPromptBlock(conversation) {
     .slice(-8)
     .map((row, index) => {
       const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = defaultCleanText(row?.text, 1200);
+      const text = defaultCleanText(row?.text);
       return text ? `${index + 1}. ${role}: ${text}` : '';
     })
     .filter(Boolean)
@@ -456,9 +450,9 @@ function buildToolSelectionPrompt({
     'Return JSON only in the shape {"tool_calls":[{"tool_name":"<tool-name>","rationale":"..."}],"reasoning_summary":"..."}',
     'Reject duplicate tools and unknown tools.',
     `Available tools:\n${toolRows}`,
-    projectName ? `Active project context: ${defaultCleanText(projectName, 220)}` : '',
+    projectName ? `Active project context: ${defaultCleanText(projectName)}` : '',
     conversationBlock ? `Recent conversation:\n${conversationBlock}` : '',
-    `User message: ${defaultCleanText(message, 3200)}`,
+    `User message: ${defaultCleanText(message)}`,
     `Parser payload JSON:\n${JSON.stringify(defaultEnsureObject(parserPayload), null, 2)}`
   ].filter(Boolean);
   return promptRows.join('\n\n');
@@ -483,7 +477,7 @@ function normalizeToolSelectionPayload(rawPayload) {
     if (!toolName) {
       return {
         ok: false,
-        error: `Unknown tool in selection payload: ${defaultCleanText(source.tool_name || source.name, 120) || 'unknown'}.`
+        error: `Unknown tool in selection payload: ${defaultCleanText(source.tool_name || source.name) || 'unknown'}.`
       };
     }
     const dedupeKey = toolName.toLowerCase();
@@ -496,7 +490,7 @@ function normalizeToolSelectionPayload(rawPayload) {
     seen.add(dedupeKey);
     toolCalls.push({
       tool_name: toolName,
-      ...(defaultCleanText(source.rationale, 320) ? { rationale: defaultCleanText(source.rationale, 320) } : {})
+      ...(defaultCleanText(source.rationale) ? { rationale: defaultCleanText(source.rationale) } : {})
     });
   }
 
@@ -504,7 +498,7 @@ function normalizeToolSelectionPayload(rawPayload) {
     ok: true,
     payload: {
       tool_calls: toolCalls,
-      reasoning_summary: defaultCleanText(payload.reasoning_summary, 800)
+      reasoning_summary: defaultCleanText(payload.reasoning_summary)
     }
   };
 }
@@ -534,7 +528,7 @@ function buildToolArgumentsPrompt({
     `Selected tools in order: ${toolNameRows}`,
     schemaRows,
     conversationBlock ? `Recent conversation:\n${conversationBlock}` : '',
-    `User message: ${defaultCleanText(message, 3200)}`,
+    `User message: ${defaultCleanText(message)}`,
     `Parser payload JSON:\n${JSON.stringify(defaultEnsureObject(parserPayload), null, 2)}`
   ].filter(Boolean);
   return promptRows.join('\n\n');
@@ -552,7 +546,7 @@ function normalizeToolArgumentsPayload(rawPayload, options = {}) {
   } catch (error) {
     return {
       ok: false,
-      error: defaultCleanText(error?.message || error, 320) || 'Selected tool names are invalid.'
+      error: defaultCleanText(error?.message || error) || 'Selected tool names are invalid.'
     };
   }
   if (!rawToolCalls.length) {

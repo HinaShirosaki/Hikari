@@ -1,15 +1,8 @@
 import { showTransientNotice } from '../../lib/notify.js';
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray, ensureObject } from '../../lib/normalize.js';
 
 function cleanText(value) {
   return String(value || '').trim();
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function paperFindingConfig(task = {}) {
@@ -50,6 +43,68 @@ function nextRunForTask(task = {}) {
   })}`;
 }
 
+function taskRunResult(task = {}) {
+  return ensureObject(ensureObject(task).last_run?.result);
+}
+
+function safeHttpUrl(value) {
+  const raw = cleanText(value);
+  if (!raw) {
+    return '';
+  }
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function authorName(author) {
+  if (author && typeof author === 'object' && !Array.isArray(author)) {
+    return cleanText(author.name || [author.given, author.family].filter(Boolean).join(' '));
+  }
+  return cleanText(author);
+}
+
+function authorsForPaper(paper = {}) {
+  const source = ensureObject(paper);
+  const authors = asArray(source.authors || source.author)
+    .map(authorName)
+    .filter(Boolean);
+  if (!authors.length && cleanText(source.author)) {
+    authors.push(cleanText(source.author));
+  }
+  if (authors.length <= 3) {
+    return authors.join(', ');
+  }
+  return `${authors.slice(0, 3).join(', ')}, et al.`;
+}
+
+function sortTasksByLatestResult(tasks = []) {
+  return tasks.slice().sort((left, right) => {
+    const leftRun = ensureObject(left?.last_run);
+    const rightRun = ensureObject(right?.last_run);
+    const leftResult = taskRunResult(left);
+    const rightResult = taskRunResult(right);
+    const leftTime = new Date(
+      leftRun.completed_at || leftRun.completedAt || leftResult.generated_at || leftResult.generatedAt || ''
+    ).getTime();
+    const rightTime = new Date(
+      rightRun.completed_at || rightRun.completedAt || rightResult.generated_at || rightResult.generatedAt || ''
+    ).getTime();
+    const safeLeft = Number.isFinite(leftTime) ? leftTime : Number.NEGATIVE_INFINITY;
+    const safeRight = Number.isFinite(rightTime) ? rightTime : Number.NEGATIVE_INFINITY;
+    return safeRight - safeLeft;
+  });
+}
+
+function papersForTasks(tasks = []) {
+  return sortTasksByLatestResult(tasks).flatMap((task) => (
+    asArray(taskRunResult(task).papers).map((paper) => ({ paper, task }))
+  ));
+}
+
 function sortScheduledTasks(tasks) {
   return tasks.slice().sort((left, right) => {
     const leftTime = new Date(left?.next_run_at || left?.nextRunAt || '').getTime();
@@ -78,6 +133,42 @@ export function initPaperFindingWidget({
 
   openBtn?.addEventListener?.('click', () => onOpenNotebook());
 
+  function renderPaperResult({ paper, task }) {
+    const source = ensureObject(paper);
+    const projectName = projectNameForTask(task);
+    const title = cleanText(source.title) || 'Untitled paper';
+    const authors = authorsForPaper(source);
+    const meta = [source.journal, source.published_at, source.source]
+      .map(cleanText)
+      .filter(Boolean);
+    if (cleanText(source.doi)) {
+      meta.push(`DOI ${cleanText(source.doi)}`);
+    }
+    if (cleanText(source.pmid)) {
+      meta.push(`PMID ${cleanText(source.pmid)}`);
+    }
+    if (cleanText(source.pmcid)) {
+      meta.push(`PMCID ${cleanText(source.pmcid)}`);
+    }
+    const summaryText = cleanText(source.summary);
+    const reasonText = cleanText(source.relevance_reason);
+    const url = safeHttpUrl(source.url);
+    return `
+      <article class="home-paper-finding-result" data-paper-finding-result>
+        <div class="home-paper-finding-result-head">
+          <span class="home-paper-finding-project">${escapeText(projectName)}</span>
+          <span class="home-paper-finding-policy">Metadata only</span>
+        </div>
+        <h3 class="home-paper-finding-title">${escapeText(title)}</h3>
+        ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
+        ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
+        ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
+        ${reasonText ? `<p class="home-paper-finding-reason"><strong>Why it matters:</strong> ${escapeText(reasonText)}</p>` : ''}
+        ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">View source ↗</a>` : ''}
+      </article>
+    `;
+  }
+
   function renderTasks() {
     if (tasks === null) {
       summary.textContent = 'Loading schedules…';
@@ -86,12 +177,20 @@ export function initPaperFindingWidget({
     }
 
     const activeTasks = tasks.filter((task) => task?.enabled !== false);
-    summary.textContent = tasks.length
-      ? `${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
-      : 'No schedules yet.';
+    const foundPapers = papersForTasks(tasks);
+    summary.textContent = foundPapers.length
+      ? `${foundPapers.length} paper${foundPapers.length === 1 ? '' : 's'} found · ${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
+      : tasks.length
+        ? `${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
+        : 'No schedules yet.';
 
     if (!tasks.length) {
       list.innerHTML = '<p class="small-note">Set up paper finding from a project notebook.</p>';
+      return;
+    }
+
+    if (foundPapers.length) {
+      list.innerHTML = foundPapers.map(renderPaperResult).join('');
       return;
     }
 
@@ -148,6 +247,14 @@ export function initPaperFindingWidget({
     }
     renderTasks();
   }
+
+  const windowObject = summary.ownerDocument?.defaultView;
+  windowObject?.setInterval?.(() => {
+    const homeView = summary.closest?.('#home-view');
+    if (!homeView || homeView.classList?.contains?.('is-active')) {
+      refresh();
+    }
+  }, 20_000);
 
   return { render: renderWidget };
 }

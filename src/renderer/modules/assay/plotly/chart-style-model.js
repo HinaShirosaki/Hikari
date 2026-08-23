@@ -11,7 +11,7 @@ export const DEFAULT_CHART_PALETTE = Object.freeze([
 
 const POINT_SHAPES = Object.freeze(['circle', 'square', 'triangle', 'diamond', 'cross']);
 const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
-const FRAME_STYLES = Object.freeze(['box', 'l-shape', 'none']);
+const FRAME_STYLES = Object.freeze(['offset', 'box', 'l-shape', 'none']);
 const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
 const SCALE_TYPES = Object.freeze(['linear', 'log10', 'log2', 'ln']);
 const TEXT_BASELINES = Object.freeze(['baseline', 'super', 'sub']);
@@ -79,7 +79,7 @@ export function createDefaultChartStyle() {
     lineStyle: 'solid',
     lineWidth: 2.5,
     curve: 'curveMonotoneX',
-    frameStyle: 'l-shape',
+    frameStyle: 'offset',
     frameStroke: '#000000',
     frameStrokeWidth: 2,
     backgroundColor: '#ffffff',
@@ -204,8 +204,8 @@ export function normalizeChartStyle(input) {
     sizeAuto: input.sizeAuto !== false,
     frameWidth: clampNumber(input.frameWidth, 320, 2000, base.frameWidth),
     frameHeight: clampNumber(input.frameHeight, 180, 1200, base.frameHeight),
-    showVerticalGrid: input.showVerticalGrid !== false,
-    showHorizontalGrid: input.showHorizontalGrid !== false,
+    showVerticalGrid: input.showVerticalGrid === true,
+    showHorizontalGrid: input.showHorizontalGrid === true,
     gridColor: sanitizeColor(input.gridColor, base.gridColor),
     gridStrokeWidth: clampNumber(input.gridStrokeWidth, 0, 6, base.gridStrokeWidth),
     title: typeof input.title === 'string' ? input.title.slice(0, 200) : base.title,

@@ -4,17 +4,10 @@ const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.
 const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
+const { cloneJson } = require('../../lib/normalize.js');
 
 function defaultEnsureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function createNotebookDraftRuntime(deps = {}) {

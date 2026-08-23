@@ -1,10 +1,7 @@
 'use strict';
 
 const { GENOME } = require('../../shared/ipc/channels');
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
+const { ensureObject } = require('../lib/normalize.js');
 
 // Note there is deliberately no channel that takes a filesystem path. ADD opens the picker in the
 // main process and every read is addressed by registered genome id, so the renderer cannot use this

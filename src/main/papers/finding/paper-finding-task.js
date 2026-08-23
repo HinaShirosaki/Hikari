@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray, ensureObject } = require('../../lib/normalize.js');
+
 const PAPER_FINDING_TASK_TYPE = 'paper_finding';
 const PAPER_FINDING_RESULT_TYPE = 'paper_finding_result';
 const DEFAULT_FREQUENCY_VALUE = 1;
@@ -19,14 +21,6 @@ const FREQUENCY_UNIT_MINUTES = Object.freeze({
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function hasOwn(value, key) {

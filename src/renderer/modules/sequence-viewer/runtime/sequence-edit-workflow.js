@@ -3,6 +3,8 @@ import {
   normalizeSequenceText
 } from '../shared.js';
 import { buildAminoAcidSubstitution } from '../amino-acid-substitution.js';
+import { buildEditedSequenceName } from '../sequence-naming.js';
+import { LIBRARY_STATUS_SAVED } from './config.js';
 import {
   adjustFeatureSegmentsForSequenceEdit,
   buildSequenceEditDesignSource,
@@ -108,15 +110,39 @@ export function createSequenceEditActions(ctx) {
     // source ended on exactly this edit's starting sequence, the edits chain, so
     // carry its original forward instead of resetting to the pre-edit sequence.
     const existing = state.sequenceEditDesignSource;
-    const baseline = existing
-      && normalizeSequenceText(existing.editedSequence || '') === normalizeSequenceText(edit.sequence)
-      ? existing.originalSequence
-      : edit.sequence;
-    state.sequenceEditDesignSource = buildSequenceEditDesignSource({
+    const isChainedEdit = existing
+      && normalizeSequenceText(existing.editedSequence || '') === normalizeSequenceText(edit.sequence);
+    const baseline = isChainedEdit ? existing.originalSequence : edit.sequence;
+    const baseName = isChainedEdit
+      ? (existing.baseName || existing.parentRecordName || existing.recordName)
+      : current?.name;
+    const parentEntryId = state.activeEntryId;
+    const designSource = buildSequenceEditDesignSource({
       record: current,
       originalSequence: baseline,
-      nextSequence
+      nextSequence,
+      baseName,
+      parentEntryId
     });
+    const generatedName = buildEditedSequenceName({
+      record: current,
+      baseName,
+      originalSequence: baseline,
+      editedSequence: nextSequence,
+      editRequest: designSource.editRequest
+    });
+    nextRecord.name = generatedName;
+    state.sequenceEditDesignSource = {
+      ...designSource,
+      recordName: generatedName,
+      generatedName
+    };
+    // Editing a saved library entry creates a local derived sequence. The Save
+    // action will allocate a new entry instead of overwriting the parent.
+    if (state.activeEntryStatus === LIBRARY_STATUS_SAVED) {
+      state.activeEntryId = '';
+      state.activeEntryStatus = '';
+    }
     state.cloningDesign = {};
     if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {
       nextRecord.quality = '';
