@@ -9,7 +9,6 @@ export function createInlinePlaceholderController({
   deleteSampleLink,
   getSettings,
   onOpenSampleLinkMenu,
-  onCloseSampleLinkMenu,
   onPersistSampleLinks,
   onValueCommitted
 } = {}) {

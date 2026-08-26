@@ -1,4 +1,5 @@
 import {
+  cleanText,
   clamp,
   normalizeSequenceText
 } from '../shared.js';
@@ -41,7 +42,18 @@ export function createSequenceEditActions(ctx) {
       sequence: nextSequence,
       features: adjustFeatureSegmentsForSequenceEdit(current?.features, { start: edit.start, end: edit.end }, edit.replacement.length, nextSequence.length)
     };
-    updateEditState({ current, nextRecord, nextRecords, selectedIndex, nextSequence, edit });
+    updateEditState({
+      current,
+      nextRecord,
+      nextRecords,
+      selectedIndex,
+      nextSequence,
+      edit,
+      // Vector Builder passes the stored vector the replacement was taken from;
+      // the cloning design then templates that PCR off it.
+      donorEntryId: payload?.donorEntryId,
+      donorName: payload?.donorName
+    });
     renderAfterEdit();
     await actions.persistFeatureMutation(nextRecord, buildSequenceEditStatus(edit.mode, { start: edit.start, end: edit.end }, edit.replacement.length));
   }
@@ -105,7 +117,17 @@ export function createSequenceEditActions(ctx) {
     return { sequence, mode, start, end, replacement };
   }
 
-  function updateEditState({ current, nextRecord, nextRecords, selectedIndex, nextSequence, edit, cursorBase }) {
+  function updateEditState({
+    current,
+    nextRecord,
+    nextRecords,
+    selectedIndex,
+    nextSequence,
+    edit,
+    cursorBase,
+    donorEntryId = '',
+    donorName = ''
+  }) {
     // Keep the earliest original as the design baseline: if the prior design
     // source ended on exactly this edit's starting sequence, the edits chain, so
     // carry its original forward instead of resetting to the pre-edit sequence.
@@ -116,7 +138,7 @@ export function createSequenceEditActions(ctx) {
     const baseName = isChainedEdit
       ? (existing.baseName || existing.parentRecordName || existing.recordName)
       : current?.name;
-    const parentEntryId = state.activeEntryId;
+    const parentEntryId = isChainedEdit ? existing.parentEntryId : state.activeEntryId;
     const designSource = buildSequenceEditDesignSource({
       record: current,
       originalSequence: baseline,
@@ -135,7 +157,9 @@ export function createSequenceEditActions(ctx) {
     state.sequenceEditDesignSource = {
       ...designSource,
       recordName: generatedName,
-      generatedName
+      generatedName,
+      donorEntryId: cleanText(donorEntryId, 200),
+      donorName: cleanText(donorName, 160)
     };
     // Editing a saved library entry creates a local derived sequence. The Save
     // action will allocate a new entry instead of overwriting the parent.

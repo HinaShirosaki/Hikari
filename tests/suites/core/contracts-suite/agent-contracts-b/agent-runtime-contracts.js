@@ -465,7 +465,9 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
       assert.match(directLlmSource, /runDirectLlmPrompt/);
       assert.match(papersLlmSource, /requestDirectLlmText/);
       assert.doesNotMatch(papersLlmSource, /runDirectLlmPrompt/);
-      assert.match(protocolGenerationSource, /task:\s*'protocol-generation'/);
+      assert.doesNotMatch(protocolGenerationSource, /requestDirectLlmText/);
+      assert.match(protocolGenerationSource, /api\.agentGenerateProtocol/);
+      assert.match(protocolGenerationSource, /Research online and search papers/);
       assert.match(chemicalImportMappingSource, /chemical-header-mapping/);
     });
     test('purchase recommendation helper exposes reusable runtime and tool contracts', () => {

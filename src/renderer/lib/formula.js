@@ -18,6 +18,7 @@ export class FormulaError extends Error {
 }
 
 const WELL_PATTERN = /^[A-Za-z]+\d+$/;
+const TABLE_PATTERN = /^Table\d+$/i;
 
 function mean(values) {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -242,6 +243,30 @@ export function parseFormula(input) {
       if (token.value.toLowerCase() === 'x') {
         return { kind: 'value', position: token.position };
       }
+      // A table-qualified address keeps point-mode clicks unambiguous when two
+      // spreadsheets are visible together. A qualified range is written as
+      // Table1:A1:A8; the first colon selects the table and the second spans cells.
+      if (TABLE_PATTERN.test(token.value) && peek().type === ':') {
+        next();
+        const from = expect('name', `a cell reference after ${token.value}:`);
+        if (peek().type === ':') {
+          next();
+          const to = expect('name', 'a cell reference at the end of the range');
+          return {
+            kind: 'range',
+            table: token.value,
+            from: from.value,
+            to: to.value,
+            position: token.position
+          };
+        }
+        return {
+          kind: 'ref',
+          table: token.value,
+          name: from.value,
+          position: token.position
+        };
+      }
       // A reference, optionally the start of an A1:H12 block.
       if (peek().type === ':') {
         next();
@@ -325,7 +350,8 @@ function evaluateNode(node, context) {
 function scalarOf(node, context, what) {
   const values = evaluateNode(node, context);
   if (values.length !== 1) {
-    const label = node.kind === 'range' ? `${node.from}:${node.to}` : node.name;
+    const prefix = node.table ? `${node.table}:` : '';
+    const label = node.kind === 'range' ? `${prefix}${node.from}:${node.to}` : `${prefix}${node.name}`;
     throw new FormulaError(
       `"${label}" covers ${values.length} wells; wrap it in MEAN(), MAX(), MIN(), SUM() or MEDIAN() to use it as ${what}.`,
       node.position

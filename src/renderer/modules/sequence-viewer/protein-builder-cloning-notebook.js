@@ -1,5 +1,7 @@
 import { assembleCloningPlan } from './cloning-assembly.js';
-import { calculateFixedReaction } from '../../lib/bench-calculations.js';
+import { buildCloningReactionSteps } from './cloning-reaction-steps.js';
+import { syncCloningReactionStepPages } from './cloning-step-pages.js';
+import { appendGeneratedPcrReaction, buildPcrFixedReactionCalculation } from './pcr-reaction-setup.js';
 import { PROTEIN_ASSEMBLY_TAGS } from './protein-builder/assembly-model.js';
 import { renamePrimers } from './primer-naming.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
@@ -108,21 +110,28 @@ function linearizeBackboneAtInsertionOffset(backboneSequence, backbone = {}) {
   return `${sequence.slice(insertionOffset)}${sequence.slice(0, insertionOffset)}`;
 }
 
-function resolveDnaConstructTemplateSequence(dnaConstruct = {}) {
-  const desiredSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
-  if (!desiredSequence.length) {
-    return '';
+// The longest part template stands in for the insert's own template, and it
+// carries the vector it came from: that plasmid is the PCR tube, so primer
+// specificity has to be judged over all of it.
+function resolveDnaConstructTemplate(dnaConstruct = {}) {
+  const empty = { sequence: '', name: '', hostSequence: '' };
+  if (!normalizeSequenceText(dnaConstruct?.sequence || '').length) {
+    return empty;
   }
 
   return asArray(dnaConstruct?.parts)
-    .map((part) => normalizeSequenceText(
-      part?.templateSequence
-      || part?.sourceTemplateSequence
-      || part?.sourceDnaSequence
-      || ''
-    ))
-    .filter((sequence) => sequence.length)
-    .sort((left, right) => right.length - left.length)[0] || '';
+    .map((part) => ({
+      sequence: normalizeSequenceText(
+        part?.templateSequence
+        || part?.sourceTemplateSequence
+        || part?.sourceDnaSequence
+        || ''
+      ),
+      name: cleanText(part?.templateName, 160),
+      hostSequence: normalizeSequenceText(part?.templateHostSequence || '')
+    }))
+    .filter((entry) => entry.sequence.length)
+    .sort((left, right) => right.sequence.length - left.sequence.length)[0] || empty;
 }
 
 function resolveBackboneCloningPreferences(backbone = {}) {
@@ -198,7 +207,7 @@ export function buildProteinBuilderCloningPlan({
   const rawBackboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
   const backboneSequence = linearizeBackboneAtInsertionOffset(rawBackboneSequence, backbone);
   const insertSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
-  const insertTemplateSequence = resolveDnaConstructTemplateSequence(dnaConstruct);
+  const insertTemplate = resolveDnaConstructTemplate(dnaConstruct);
   const resultSequence = normalizeSequenceText(assembledRecord?.sequence || '');
   const safeConstructName = cleanText(constructName, 160)
     || cleanText(assembledRecord?.name, 160)
@@ -228,7 +237,12 @@ export function buildProteinBuilderCloningPlan({
         metadata: {
           source: 'protein_builder',
           partCount: asArray(dnaConstruct?.parts).length,
-          templateSequence: insertTemplateSequence
+          templateSequence: insertTemplate.sequence,
+          templateName: insertTemplate.name,
+          // Uniqueness is judged over the whole source plasmid, since that is
+          // the DNA in the tube.
+          specificitySequence: insertTemplate.hostSequence,
+          specificityCircular: Boolean(insertTemplate.hostSequence)
         }
       }
     ],
@@ -528,68 +542,6 @@ function ensureProteinBuilderProtocol(state, pcrProgram, nowIso) {
   return nextProtocol;
 }
 
-function resultTextAfterName(text) {
-  const source = String(text || '').trim();
-  const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
-  return match ? match[1].trim() : source;
-}
-
-export function buildProteinBuilderPcrReactionCalculation(pcrProgram = {}, nowIso = '') {
-  const polymerase = cleanText(pcrProgram?.polymerase, 160) || 'High-fidelity DNA polymerase';
-  const result = calculateFixedReaction({
-    totalVolumeValue: '50 uL',
-    totalVolumeUnit: 'uL',
-    fillName: 'Nuclease-free water',
-    reagents: [
-      { rowIndex: 1, name: 'Forward primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
-      { rowIndex: 2, name: 'Reverse primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
-      { rowIndex: 3, name: 'dNTP mix', stockConcentration: '10 mM', finalConcentration: '0.2 mM' },
-      { rowIndex: 4, name: polymerase, manualVolumeValue: '0.5 uL' },
-      { rowIndex: 5, name: '5x polymerase buffer', stockConcentration: '5x', finalConcentration: '1x' },
-      { rowIndex: 6, name: 'Template DNA', manualVolumeValue: '1 uL' }
-    ]
-  });
-  const rowsByIndex = new Map(asArray(result?.inputs?.reagents).map((row, index) => (
-    [Math.max(1, Number(row?.rowIndex) || index + 1), row]
-  )));
-  const rows = asArray(result?.details).map((detail, index) => {
-    const rowDetail = asArray(detail?.details)[0] || {};
-    const rowInput = rowsByIndex.get(Math.max(1, Number(detail?.rowIndex) || index + 1)) || {};
-    return [
-      cleanText(rowDetail?.name || detail?.inputs?.name || rowInput?.name, 160),
-      cleanText(rowInput?.stockConcentration, 80),
-      cleanText(rowInput?.finalConcentration, 80),
-      cleanText(rowDetail?.quantityText || resultTextAfterName(detail?.resultText), 80)
-    ];
-  });
-
-  return {
-    id: CLONING_REACTION_CALCULATION_ID,
-    type: result.type,
-    mode: result.mode,
-    title: result.title,
-    inputs: result.inputs,
-    table: {
-      caption: 'Fixed Volume Reaction',
-      metaRows: [['Total volume', '50 uL', '', '']],
-      headers: ['Item', 'Stock Conc.', 'Final Conc.', 'Volume'],
-      rows,
-      footerRows: [[result?.fill?.name || 'Nuclease-free water', '', '', result?.fill?.text || '']]
-    },
-    result: result.resultText,
-    formula: result.formulaText,
-    summary: result.resultText || result.formulaText,
-    createdAt: nowIso,
-    status: result.status || ''
-  };
-}
-
-function appendGeneratedPcrReaction(calculations, reactionCalculation) {
-  return asArray(calculations)
-    .filter((calculation) => cleanText(calculation?.id, 160) !== CLONING_REACTION_CALCULATION_ID)
-    .concat(reactionCalculation);
-}
-
 function cloneProtocolSnapshot(protocol = {}) {
   return {
     id: cleanText(protocol?.id, 160),
@@ -712,7 +664,7 @@ export function createProteinBuilderCloningNotebookPage({
     resultTables: resultTable ? [resultTable] : [],
     toolCalculations: appendGeneratedPcrReaction(
       existingEntry?.toolCalculations,
-      buildProteinBuilderPcrReactionCalculation(pcrProgram, nowIso)
+      buildPcrFixedReactionCalculation(pcrProgram, nowIso, { id: CLONING_REACTION_CALCULATION_ID })
     ),
     resultFiles: [],
     resultFileRecords: [],
@@ -745,6 +697,23 @@ export function createProteinBuilderCloningNotebookPage({
   } else {
     state.notebookEntries.push(entry);
   }
+  // The assembly this route ends in — Gibson, or a digest and a ligation — is
+  // its own bench session, so it gets its own page and reaction table.
+  const stepEntries = syncCloningReactionStepPages({
+    state,
+    createId,
+    nowIso,
+    project,
+    source: CLONING_NOTEBOOK_SOURCE,
+    pageKey: entryId,
+    subjectName: safeConstructName,
+    strategy: cloningPlan.recommendedAssemblyStrategy,
+    steps: buildCloningReactionSteps({
+      strategy: cloningPlan.recommendedAssemblyStrategy,
+      displayPlan: { plans: [{ plan: cloningPlan }] },
+      pcrPrograms: [pcrProgram]
+    })
+  });
   if (typeof persist === 'function') {
     persist();
   }
@@ -756,6 +725,7 @@ export function createProteinBuilderCloningNotebookPage({
     entry,
     project,
     protocol,
+    stepEntries,
     plan: cloningPlan,
     pcrProgram
   };

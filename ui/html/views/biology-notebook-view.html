@@ -158,9 +158,6 @@
           <div id="biology-notebook-tool-content" class="biology-notebook-tool-content">
             <div class="biology-notebook-tool-toolbar">
               <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
-                <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="false" aria-label="Open molarity calculator" data-hover-caption="Molarity calculator">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
-                </button>
                 <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" data-hover-caption="Buffer preparer">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
                 </button>
@@ -201,69 +198,6 @@
             </div>
 
             <div class="biology-notebook-tool-body">
-              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity" hidden>
-              <label>
-                Calculation
-                <select id="biology-notebook-tool-molarity-mode">
-                  <option value="mass" selected>Mass from concentration</option>
-                  <option value="volume">Volume from mass</option>
-                  <option value="concentration">Concentration from mass</option>
-                  <option value="dilution">Dilute stock</option>
-                </select>
-              </label>
-
-              <div id="biology-notebook-tool-molarity-mass" class="biology-notebook-tool-mode">
-                <label>Concentration <input id="biology-notebook-tool-mass-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-mass-concentration-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-mass-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Volume <input id="biology-notebook-tool-mass-volume" type="number" min="0" step="0.000001" placeholder="100" /></label>
-                <select id="biology-notebook-tool-mass-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-volume" class="biology-notebook-tool-mode" hidden>
-                <label>Mass <input id="biology-notebook-tool-volume-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
-                <select id="biology-notebook-tool-volume-mass-unit">
-                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-volume-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Concentration <input id="biology-notebook-tool-volume-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-volume-concentration-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-concentration" class="biology-notebook-tool-mode" hidden>
-                <label>Mass <input id="biology-notebook-tool-concentration-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
-                <select id="biology-notebook-tool-concentration-mass-unit">
-                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-concentration-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Volume <input id="biology-notebook-tool-concentration-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
-                <select id="biology-notebook-tool-concentration-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-dilution" class="biology-notebook-tool-mode" hidden>
-                <label>Stock Conc <input id="biology-notebook-tool-dilution-stock" type="number" min="0" step="0.000001" placeholder="100" /></label>
-                <select id="biology-notebook-tool-dilution-stock-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Desired Conc <input id="biology-notebook-tool-dilution-target" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-dilution-target-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Final Volume <input id="biology-notebook-tool-dilution-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
-                <select id="biology-notebook-tool-dilution-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-            </section>
-
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
               <div class="biology-notebook-buffer-sheet-wrap">
                 <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">

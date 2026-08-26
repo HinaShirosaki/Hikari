@@ -466,6 +466,7 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       assert.match(calls[0].prompt, /Do not call memory just to rediscover these saved settings/);
       assert.match(calls[0].prompt, /soft ranking preferences/);
       assert.match(calls[0].prompt, /including when the user says "from my preferred journals"/);
+      assert.match(calls[0].prompt, /native Codex web search.*canonical publisher pages/);
       assert.match(calls[0].prompt, /make at most one `literature_search` call/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);

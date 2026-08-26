@@ -1,3 +1,6 @@
+import { buildCloningReactionSteps } from './cloning-reaction-steps.js';
+import { syncCloningReactionStepPages } from './cloning-step-pages.js';
+import { appendGeneratedPcrReaction, buildPcrFixedReactionCalculation } from './pcr-reaction-setup.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
 import { asArray } from '../../lib/normalize.js';
 
@@ -6,6 +9,7 @@ const CLONING_PROJECT_NAME = 'Sequence Viewer';
 const CLONING_PROJECT_DESCRIPTION = 'Automatically collected cloning designs from Sequence Viewer.';
 const CLONING_PROTOCOL_ID = 'sequence-viewer-cloning-design-pcr-protocol';
 const CLONING_PROTOCOL_NAME = 'PCR Thermocycle Program';
+const CLONING_REACTION_CALCULATION_ID = 'sequence-viewer-pcr-fixed-reaction';
 
 function fallbackCreateId(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -50,7 +54,8 @@ function formatStrategy(strategy) {
     'two-step-ligation': 'Two-step PCR and digestion-ligation',
     'golden-gate': 'Golden Gate assembly',
     gibson: 'Gibson assembly',
-    'in-fusion': 'In-Fusion cloning'
+    'in-fusion': 'In-Fusion cloning',
+    'overlap-extension': 'Overlap-extension PCR and digestion-ligation'
   };
   return labels[cleanText(strategy, 80)] || formatPrimerRole(strategy) || 'Cloning design';
 }
@@ -279,10 +284,11 @@ function ensureProject(state, createId, nowIso) {
   return project;
 }
 
-function ensureProtocol(state, pcrPrograms, nowIso) {
+function upsertProtocol(state, nextProtocol, nowIso) {
   state.protocols = asArray(state.protocols);
-  const nextProtocol = buildProtocol(pcrPrograms, nowIso);
-  const existingIndex = state.protocols.findIndex((protocol) => cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID);
+  const existingIndex = state.protocols.findIndex((protocol) => (
+    cleanText(protocol?.id, 160) === cleanText(nextProtocol?.id, 160)
+  ));
   if (existingIndex >= 0) {
     state.protocols[existingIndex] = {
       ...state.protocols[existingIndex],
@@ -293,6 +299,10 @@ function ensureProtocol(state, pcrPrograms, nowIso) {
   }
   state.protocols.push(nextProtocol);
   return nextProtocol;
+}
+
+function ensureProtocol(state, pcrPrograms, nowIso) {
+  return upsertProtocol(state, buildProtocol(pcrPrograms, nowIso), nowIso);
 }
 
 function buildPrimerResultTable(primers = []) {
@@ -431,7 +441,16 @@ export function createSequenceViewerCloningDesignNotebookPage({
     result: formatNotebookResult({ source, record, displayPlan, pcrPrograms }),
     resultTable,
     resultTables: resultTable ? [resultTable] : [],
-    toolCalculations: asArray(existingEntry?.toolCalculations),
+    // The thermocycle program says how to run the PCR; the reaction table says
+    // what to put in the tube. Every route on this page starts with a PCR, so
+    // the page carries both.
+    toolCalculations: appendGeneratedPcrReaction(
+      existingEntry?.toolCalculations,
+      buildPcrFixedReactionCalculation(pcrPrograms[0], nowIso, {
+        id: CLONING_REACTION_CALCULATION_ID,
+        reactionLabels: pcrPrograms.map((program) => program?.label)
+      })
+    ),
     resultFiles: asArray(existingEntry?.resultFiles),
     resultFileRecords: asArray(existingEntry?.resultFileRecords),
     storageFolder: cleanText(existingEntry?.storageFolder, 600),
@@ -461,11 +480,23 @@ export function createSequenceViewerCloningDesignNotebookPage({
   } else {
     state.notebookEntries.push(entry);
   }
+  const strategy = cleanText(displayPlan?.strategy, 80);
+  const stepEntries = syncCloningReactionStepPages({
+    state,
+    createId,
+    nowIso,
+    project,
+    source: CLONING_NOTEBOOK_SOURCE,
+    pageKey: sourceKey,
+    subjectName: recordName,
+    strategy,
+    steps: buildCloningReactionSteps({ strategy, displayPlan, pcrPrograms })
+  });
   if (typeof persist === 'function') {
     persist();
   }
   if (typeof onNotebookEntriesChanged === 'function') {
     onNotebookEntriesChanged();
   }
-  return { entry, project, protocol, pcrPrograms };
+  return { entry, project, protocol, pcrPrograms, stepEntries };
 }

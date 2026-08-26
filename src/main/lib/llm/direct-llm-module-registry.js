@@ -225,7 +225,6 @@ function createDirectLlmModuleRegistry(deps = {}) {
     }
 
     const llmSource = normalizeLlmSource(source.llm || source);
-    const codexProvider = normalizeRegistryId(LLM_PROVIDERS.CODEX || 'codex');
     if (!llmSource.provider) {
       return { ok: false, error: 'LLM provider is required.' };
     }

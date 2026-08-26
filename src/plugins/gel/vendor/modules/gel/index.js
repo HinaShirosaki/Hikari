@@ -4,8 +4,10 @@ import { getGelElements } from './dom.js';
 import { createImageController } from './images/image-controller.js';
 import { createLaneTableController } from './rendering/lane-table.js';
 import { createManualWorkflowController } from './manual/manual-workflow.js';
+import { createHistoryController } from './history.js';
 import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering/index.js';
+import { DEFAULT_LADDER_PRESET_ID, LADDER_PRESETS, getLadderPresetBands } from './constants.js';
 import { createEmptyManualOverrides } from './shared.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
@@ -18,6 +20,7 @@ export function initGelAnalysis({
   createId,
   safeText,
   onGelAnalysesChanged,
+  onHistoryChanged = null,
   document: rootDocument = globalThis?.document || null
 }) {
   if (!state || typeof state !== 'object') {
@@ -35,7 +38,6 @@ export function initGelAnalysis({
     'gelNameInput',
     'gelImageFileInput',
     'gelStatus',
-    'gelRunBtn',
     'gelSaveBtn',
     'gelViewerStage',
     'gelCanvas',
@@ -59,6 +61,7 @@ export function initGelAnalysis({
     enhancementRerunTimer: null,
     imageRevision: 0,
     figureExportIncludeLadder: true,
+    ladderBandDrag: null,
     manualDividerConfirmed: false,
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
@@ -66,6 +69,7 @@ export function initGelAnalysis({
     pendingNotebookLink: null,
     persist,
     preprocessedCache: null,
+    cellTableDialogOpen: false,
     reportDialogOpen: false,
     safeText,
     laneProfileHoverY: null,
@@ -109,6 +113,31 @@ export function initGelAnalysis({
   }
 
   let rendering;
+  function renderCanvasAndCommit() {
+    rendering.renderCanvas();
+    // One gesture, one undo step. A drag re-renders on every pointer sample, so
+    // committing those would push dozens of entries and shove every earlier edit
+    // off the end of the stack. Both drags clear their flag before the mouseup
+    // render, so the settled position is what gets committed.
+    if (runtime.laneVertexDrag || runtime.ladderBandDrag) {
+      return;
+    }
+    history.commit();
+  }
+
+  const history = createHistoryController({
+    runtime,
+    deps: {
+      onHistoryChanged: (historyState) => onHistoryChanged?.(historyState),
+      renderAll: () => {
+        manualWorkflow.renderOverrideStatus();
+        rendering.renderCanvas();
+        rendering.renderReport();
+        onRunAnalysis();
+      }
+    }
+  });
+
   const laneTable = createLaneTableController({
     runtime,
     elements,
@@ -130,7 +159,7 @@ export function initGelAnalysis({
     deps: {
       leaveCropMode: () => cropController.leaveCropMode(),
       onRunAnalysis,
-      renderCanvas: () => rendering.renderCanvas(),
+      renderCanvas: renderCanvasAndCommit,
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
       renderReport: () => rendering.renderReport(),
       setStatus
@@ -143,7 +172,7 @@ export function initGelAnalysis({
       copyNormalizedImage: imageController.copyNormalizedImage,
       imageDataToDataUrl: imageController.imageDataToDataUrl,
       normalizeCurrentCanvasCrop: imageController.normalizeCurrentCanvasCrop,
-      renderCanvas: () => rendering.renderCanvas(),
+      renderCanvas: renderCanvasAndCommit,
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
       renderReport: () => rendering.renderReport(),
       setCurrentImage: imageController.setCurrentImage,
@@ -155,7 +184,7 @@ export function initGelAnalysis({
     elements,
     deps: {
       onRunAnalysis,
-      renderCanvas: () => rendering.renderCanvas(),
+      renderCanvas: renderCanvasAndCommit,
       renderLaneTable: () => laneTable.render(),
       renderReport: () => rendering.renderReport(),
       setStatus
@@ -176,7 +205,7 @@ export function initGelAnalysis({
       imageDataToDataUrl: imageController.imageDataToDataUrl,
       leaveCropMode: () => cropController.leaveCropMode(),
       readEnhancementSettingsFromUi: imageController.readEnhancementSettingsFromUi,
-      renderCanvas: () => rendering.renderCanvas(),
+      renderCanvas: renderCanvasAndCommit,
       renderEnhancementValues: () => imageController.renderEnhancementValues(),
       renderManualProgress: () => manualWorkflow.renderManualProgress(),
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
@@ -210,14 +239,12 @@ export function initGelAnalysis({
   });
   elements.gelDenoiseStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelContrastStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
-  elements.gelRunBtn?.addEventListener('click', onRunAnalysis);
   elements.gelResetOverridesBtn?.addEventListener('click', manualWorkflow.onResetManualOverrides);
   elements.gelCropModeBtn?.addEventListener('click', cropController.onCropModeAction);
   elements.gelApplyCropBtn?.addEventListener('click', cropController.onApplyCrop);
   elements.gelResetCropBtn?.addEventListener('click', cropController.onResetCrop);
   elements.gelViewerStage?.addEventListener('pointerdown', cropController.onRotationDragStart, true);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
-  elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
   elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);
   if (rootWindow) {
     rootWindow.addEventListener('pointermove', cropController.onRotationDragMove);
@@ -225,11 +252,37 @@ export function initGelAnalysis({
     rootWindow.addEventListener('pointercancel', cropController.onRotationDragEnd);
     rootWindow.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
     rootWindow.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
+    if (rootWindow.ResizeObserver && elements.gelViewerStage) {
+      new rootWindow.ResizeObserver(() => laneTable.fitViewerToStage())
+        .observe(elements.gelViewerStage);
+    }
   }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
-  elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
+  elements.gelToolLadderMwBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder-mw'));
+  elements.gelDetectLadderBtn?.addEventListener('click', manualWorkflow.onDetectLadderBands);
+  if (elements.gelLadderPresetSelect && !elements.gelLadderPresetSelect.options.length) {
+    const groups = [...new Set(LADDER_PRESETS.map((preset) => preset.group))];
+    elements.gelLadderPresetSelect.innerHTML = groups.map((group) => {
+      const options = LADDER_PRESETS
+        .filter((preset) => preset.group === group)
+        .map((preset) => `<option value="${preset.id}">${safeText(preset.label)}</option>`)
+        .join('');
+      return `<optgroup label="${safeText(group)}">${options}</optgroup>`;
+    }).join('');
+    elements.gelLadderPresetSelect.value = DEFAULT_LADDER_PRESET_ID;
+  }
+  // ponytail: the MW suggestions are rebuilt on focus rather than tracked from
+  // every place the preset can change (reset, record load, user pick).
+  elements.gelLadderBandMwInput?.addEventListener('focus', () => {
+    if (!elements.gelLadderBandMwOptions) {
+      return;
+    }
+    elements.gelLadderBandMwOptions.innerHTML = getLadderPresetBands(elements.gelLadderPresetSelect?.value)
+      .map((size) => `<option value="${size}"></option>`)
+      .join('');
+  });
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
   elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));
   elements.gelToolBandTopBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-top'));
@@ -293,6 +346,9 @@ export function initGelAnalysis({
   elements.gelOpenReportBtn?.addEventListener('click', rendering.onReportOpen);
   elements.gelReportCloseBtn?.addEventListener('click', rendering.onReportClose);
   elements.gelReportOverlay?.addEventListener('click', rendering.onReportOverlayClick);
+  elements.gelOpenCellTableBtn?.addEventListener('click', rendering.onCellTableOpen);
+  elements.gelCellTableCloseBtn?.addEventListener('click', rendering.onCellTableClose);
+  elements.gelCellTableOverlay?.addEventListener('click', rendering.onCellTableOverlayClick);
   rootDocument?.addEventListener?.('keydown', rendering.onReportKeyDown);
   elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
   elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
@@ -370,6 +426,10 @@ export function initGelAnalysis({
 
   return {
     destroy,
+    getHistoryState: history.getHistoryState,
+    redo: history.redo,
+    resetHistory: history.reset,
+    undo: history.undo,
     hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: recordsManager.renderList,

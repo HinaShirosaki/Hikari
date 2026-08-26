@@ -462,12 +462,13 @@ test('plugin system: service plugins declare file conversions and stay local', a
   await fsPromises.mkdir(dir, { recursive: true });
   await fsPromises.writeFile(path.join(dir, 'index.html'), '<!doctype html><title>svc</title>');
   const writeManifest = (manifest) => fsPromises.writeFile(path.join(dir, 'plugin.json'), JSON.stringify(manifest));
-  const valid = { id: 'svc-plugin', name: 'Svc', version: '1.0.0', service: { fileConversions: [{ from: '.DNA', to: 'gbk' }] } };
+  const valid = { id: 'svc-plugin', name: 'Svc', version: '1.0.0', permissions: ['python'], service: { fileConversions: [{ from: '.DNA', to: 'gbk' }] } };
 
   await writeManifest(valid);
   const ok = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
   assert.equal(ok.ok, true);
   assert.deepEqual(ok.service, { fileConversions: [{ from: 'dna', to: 'gbk' }] }, 'extensions normalized (lower-case, no dot)');
+  assert.deepEqual(ok.permissions, ['python'], 'a service may request a narrow host capability');
   assert.equal(ok.embedUrl, '', 'a service is not a remote embed');
   assert.equal(ok.serve, false, 'a service is not served');
 
@@ -523,22 +524,62 @@ test('plugin service registry routes a conversion to the owning frame', async ()
   await assert.rejects(registry.convert({ extension: 'ab1', bytes }), /No installed service converts/);
 });
 
-test('plugin service: .dna converts to GenBank the sequence viewer can parse', async () => {
-  const { buildSnapGeneDnaFixture, convertDnaToGenBank } = require(
-    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'dna-to-genbank.js')
+test('plugin service: Biopython converts .dna through the host API into GenBank the sequence viewer can parse', async () => {
+  const converter = require(
+    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'biopython-converter.js')
+  );
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const { runPythonSandbox } = require(
+    path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js')
   );
   const { parseGenBankRecords } = sequenceViewerInternals;
 
   const sequence = 'ATGCAAACCCGGGTTTAAACCGGTTAACCGGTTAACCATGC';
-  const featuresXml = '<Features><Feature name="ori" type="rep_origin" directionality="1">'
-    + '<Segment range="5-20"/></Feature></Features>';
-  const dna = buildSnapGeneDnaFixture({ sequence, circular: true, featuresXml });
+  const dna = Buffer.from(
+    'CQAAAA5TbmFwR2VuZQABAAAAAAAAAAAqAUFUR0NBQUFDQ0NHR0dUVFRBQUFDQ0dHVFRBQUNDR0dUVEFBQ0NBVEdDCgAAAMc8RmVhdHVyZXM+PEZlYXR1cmUgbmFtZT0ib3JpIiB0eXBlPSJyZXBfb3JpZ2luIiBkaXJlY3Rpb25hbGl0eT0iMSI+PFNlZ21lbnQgcmFuZ2U9IjUtMjAiLz48L0ZlYXR1cmU+PEZlYXR1cmUgbmFtZT0icmV2R2VuZSIgdHlwZT0iQ0RTIiBkaXJlY3Rpb25hbGl0eT0iMiI+PFNlZ21lbnQgcmFuZ2U9IjIxLTMwIi8+PC9GZWF0dXJlPjwvRmVhdHVyZXM+',
+    'base64'
+  );
+  const frame = {
+    replies: [],
+    postMessage(payload) {
+      this.replies.push(payload);
+    }
+  };
+  const bridge = createPluginBridge({
+    state: { settings: {} },
+    api: {
+      runPython: (payload) => runPythonSandbox(payload, {
+        sandboxRoot: path.join(__dirname, 'tmp', 'snapgene-biopython-plugin')
+      })
+    },
+    windowObject: { addEventListener() {} }
+  });
+  bridge.register(frame, { id: 'snapgene-dna', permissions: ['python'] });
+  bridge.handleMessage({
+    source: frame,
+    data: {
+      hikari: 1,
+      id: 'convert-with-biopython',
+      verb: 'python.run',
+      params: converter.buildPythonRunParams(dna, { filename: 'pDemo.dna' })
+    }
+  });
+  for (let attempt = 0; attempt < 1500 && !frame.replies.length; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 
-  const gbk = convertDnaToGenBank(dna, { name: 'pDemo' });
+  assert.equal(frame.replies.length, 1, 'python.run should reply within the service conversion timeout');
+  const pythonReply = frame.replies.at(-1);
+  assert.equal(pythonReply.ok, true, pythonReply.error || 'python.run bridge failed');
+  const gbk = converter.extractGenBankResult(pythonReply.result);
   const { records } = parseGenBankRecords(gbk);
   assert.ok(records && records.length, 'the converted GenBank parses');
   assert.equal(records[0].sequence.toUpperCase(), sequence, 'sequence survives .dna -> gbk -> parse');
   assert.equal(records[0].topology, 'circular', 'topology survives the round-trip');
+  assert.equal(records[0].features.some((feature) => feature.name === 'ori'), true, 'forward feature survives');
+  assert.equal(records[0].features.some((feature) => feature.name === 'revGene' && feature.strand === -1), true, 'reverse feature survives');
 });
 
 test('plugin system: a service plugin mounts a hidden frame and no view', async () => {
@@ -546,13 +587,17 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
   );
   function makeNode(tag) {
-    return {
+    const node = {
       tagName: String(tag).toUpperCase(), id: '', className: '', hidden: false, src: '',
       children: [], attributes: new Map(),
       setAttribute(n, v) { this.attributes.set(n, String(v)); },
       getAttribute(n) { return this.attributes.has(n) ? this.attributes.get(n) : null; },
       append(...kids) { this.children.push(...kids); }
     };
+    if (node.tagName === 'IFRAME') {
+      node.contentWindow = {};
+    }
+    return node;
   }
   const workspace = makeNode('div');
   workspace.className = 'workspace-main';
@@ -572,13 +617,15 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
     }
   };
   const registered = [];
+  const bridged = [];
   const services = { register: (frame, plugin) => registered.push({ frame, plugin }) };
+  const bridge = { register: (frameWindow, plugin) => bridged.push({ frameWindow, plugin }) };
   const appRegistry = [];
 
   const state = { settings: { plugins: [
-    { id: 'snapgene-dna', name: 'Svc', entryUrl: 'file:///tmp/snapgene-dna/index.html', path: '/tmp/snapgene-dna', service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
+    { id: 'snapgene-dna', name: 'Svc', entryUrl: 'file:///tmp/snapgene-dna/index.html', path: '/tmp/snapgene-dna', permissions: ['python'], service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
   ] } };
-  installPlugins({ state, documentObject, appRegistry, services });
+  installPlugins({ state, documentObject, appRegistry, services, bridge });
 
   assert.equal(documentObject.getElementById('plugin-snapgene-dna-view'), null, 'a service has no view section');
   assert.equal(appRegistry.length, 0, 'a service adds no navigation entry');
@@ -592,6 +639,9 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-forms allow-modals allow-popups', 'opaque-origin sandbox, no allow-same-origin');
   assert.equal(registered.length, 1, 'the frame is registered with the service registry');
   assert.equal(registered[0].plugin.id, 'snapgene-dna');
+  assert.equal(bridged.length, 1, 'the frame is registered with the permission bridge');
+  assert.equal(bridged[0].frameWindow, frame.contentWindow);
+  assert.deepEqual(bridged[0].plugin.permissions, ['python']);
 
   // The host must pin service frames to display:none, not merely rely on the
   // `hidden` attribute, so a service cannot render even with markup.
@@ -614,6 +664,65 @@ test('plugin service: the example service ships no UI', () => {
   // The service worker must not touch the DOM.
   const worker = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
   assert.equal(/\bdocument\./.test(worker), false, 'the service worker touches no DOM');
+  const converter = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'biopython-converter.js'));
+  assert.match(converter, /hikari\.call\('python\.run'/, 'the service delegates conversion to the Python API');
+  assert.match(converter, /from Bio import SeqIO/, 'the Python program uses Biopython');
+  const manifest = JSON.parse(readSource(path.join('examples', 'plugins', 'snapgene-dna', 'plugin.json')));
+  assert.deepEqual(manifest.permissions, ['python'], 'the headless service declares only Python access');
+});
+
+test('plugin service: the headless worker routes conversion through python.run and replies with GenBank', async () => {
+  const workerSource = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
+  const converter = require(
+    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'biopython-converter.js')
+  );
+  const genBank = [
+    'LOCUS       pWorker         4 bp    DNA     linear   SYN 01-JAN-1980',
+    'FEATURES             Location/Qualifiers',
+    'ORIGIN',
+    '        1 acgt',
+    '//',
+    ''
+  ].join('\n');
+  const calls = [];
+  const replies = [];
+  let messageHandler = null;
+  const windowObject = {
+    parent: { postMessage: (payload) => replies.push(payload) },
+    HikariPlugin: {
+      hikari: {
+        call: async (verb, params) => {
+          calls.push({ verb, params });
+          return { ok: true, files: [{ path: 'output.gbk', content: genBank, truncated: false }] };
+        }
+      }
+    },
+    SnapGeneBiopython: converter,
+    addEventListener: (_type, listener) => { messageHandler = listener; }
+  };
+  vm.runInNewContext(workerSource, { window: windowObject, console });
+
+  messageHandler({
+    data: {
+      hikari: 1,
+      call: 'convert',
+      id: 'svc_worker',
+      from: 'dna',
+      to: 'gbk',
+      filename: 'pWorker.dna',
+      bytes: new Uint8Array([1, 2, 3, 4])
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].verb, 'python.run');
+  assert.equal(calls[0].params.readbackPaths[0], 'output.gbk');
+  assert.equal(replies.length, 1);
+  assert.deepEqual(
+    { call: replies[0].call, id: replies[0].id, ok: replies[0].ok, text: replies[0].text },
+    { call: 'convert:result', id: 'svc_worker', ok: true, text: genBank }
+  );
 });
 
 test('plugin system: only non-host origins get allow-same-origin', async () => {
@@ -1406,6 +1515,17 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.equal(reply.result.process_id, undefined);
   assert.deepEqual(runs.at(-1).files, [{ path: 'in.txt', content: '21' }]);
   assert.equal(runs.at(-1).timeout_ms, 5000);
+
+  const repliesBeforeServiceMessage = runner.replies.length;
+  bridge.handleMessage({
+    source: runner,
+    data: { hikari: 1, call: 'convert:result', id: 'svc_1', ok: true, text: 'LOCUS ...' }
+  });
+  assert.equal(
+    runner.replies.length,
+    repliesBeforeServiceMessage,
+    'service protocol replies stay off the host-verb channel'
+  );
 
   // Oversized input is refused at the bridge rather than shipped to a subprocess.
   bridge.handleMessage({

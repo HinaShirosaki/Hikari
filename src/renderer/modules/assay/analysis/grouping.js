@@ -221,6 +221,15 @@ export function resolveGrouping(observations, spec, options = {}, xAxis = null) 
   const warnings = [];
   const axes = describeObservationAxes(observations);
   let groupBy = spec.groupBy;
+  // Row/column groups drawn on the plate are an explicit statement of intent, so auto
+  // honours them instead of falling back to the plate mapping. Without this they were
+  // parsed only for groupBy === 'custom' and the Groups panel silently did nothing.
+  const custom = groupBy === 'auto' || groupBy === 'custom'
+    ? resolveCustomKeys(options, warnings)
+    : null;
+  if (groupBy === 'auto' && custom.keys.length) {
+    groupBy = 'custom';
+  }
 
   if (groupBy === 'auto') {
     if (axes.hasSampleFactor && axes.hasConcentrationFactor) {
@@ -238,7 +247,6 @@ export function resolveGrouping(observations, spec, options = {}, xAxis = null) 
   let detail = null;
 
   if (groupBy === 'custom') {
-    const custom = resolveCustomKeys(options, warnings);
     if (!custom.keys.length) {
       warnings.push('No custom groups defined; falling back to automatic grouping.');
       return resolveGrouping(observations, { ...spec, groupBy: 'auto' }, options, xAxis);

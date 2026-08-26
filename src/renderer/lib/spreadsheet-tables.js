@@ -9,12 +9,12 @@ import {
   normalizeNotebookResultTables
 } from './notebook-result-tables.js';
 import {
-  applyReferencePick,
-  computeNotebookResultTable,
+  computeNotebookResultTables,
   fillCellContent,
   isNotebookTableFormula,
   notebookTableColumnLetter
 } from './notebook-table-formulas.js';
+import { createSpreadsheetReferencePicker } from './spreadsheet-reference-picker.js';
 import { showTransientNotice } from './notify.js';
 
 function getResultTableHeight(table) {
@@ -50,7 +50,7 @@ export function createSpreadsheetTables({
   let computedTables = [];
 
   function recomputeTables() {
-    computedTables = draftTables.map((table) => computeNotebookResultTable(table).byRowId);
+    computedTables = computeNotebookResultTables(draftTables).map((result) => result.byRowId);
   }
 
   function firstFormulaError() {
@@ -159,11 +159,6 @@ export function createSpreadsheetTables({
     setStatus(tables);
   }
 
-  // Excel's "point mode": while a cell is being edited as a formula, clicking another
-  // cell types its address into the formula instead of moving the edit there.
-  let swallowNextClick = false;
-  let lastPick = null;
-
   function addressOfCellElement(grid, tableIndex, cellElement) {
     const field = cellElement.getAttribute?.('tabulator-field');
     const columns = draftTables[tableIndex]?.columns || [];
@@ -178,22 +173,6 @@ export function createSpreadsheetTables({
       return '';
     }
     return `${notebookTableColumnLetter(columnIndex)}${rowIndex + 1}`;
-  }
-
-  function insertReference(input, address, extendRange) {
-    const result = applyReferencePick({
-      value: input.value,
-      caretStart: Number.isFinite(input.selectionStart) ? input.selectionStart : input.value.length,
-      caretEnd: Number.isFinite(input.selectionEnd) ? input.selectionEnd : input.value.length,
-      address,
-      extendRange,
-      // A pick only stays live on the input that made it.
-      pick: lastPick && lastPick.input === input ? lastPick.pick : null
-    });
-    input.value = result.value;
-    input.setSelectionRange?.(result.caret, result.caret);
-    input.focus?.();
-    lastPick = { input, pick: result.pick };
   }
 
   /* -------------------------------------------------------------- fill edges */
@@ -429,9 +408,6 @@ export function createSpreadsheetTables({
     document.removeEventListener('mousemove', onFillMove, true);
     document.removeEventListener('mouseup', onFillUp, true);
     fillDrag = null;
-    // A drag ends without a click, so the swallow armed on mousedown has to be
-    // disarmed here or it eats the user's next click on the table.
-    swallowNextClick = false;
 
     const table = draftTables[tableIndex];
     const grid = grids[tableIndex];
@@ -459,7 +435,6 @@ export function createSpreadsheetTables({
     }
     event.preventDefault?.();
     event.stopPropagation?.();
-    swallowNextClick = true;
     // Starting a fill mid-edit commits first, so it copies what is on screen rather
     // than the value from before the edit. Tabulator discards the edit on blur and
     // offers no commit call, so this sends the Enter the user would have pressed.
@@ -478,50 +453,26 @@ export function createSpreadsheetTables({
     return input && isNotebookTableFormula(input.value) ? input : null;
   }
 
-  function onHostPointerDown(event) {
-    swallowNextClick = false;
+  function onHostFillPointerDown(event) {
     if (pointerInFillZone(event) && startFillDrag(event)) {
       return;
     }
-    const input = findOpenFormulaEditor();
-    const cellElement = event?.target?.closest?.('.tabulator-cell');
-    const tableHost = cellElement?.closest?.('[data-result-table-host]');
-    const tableIndex = Number(tableHost?.dataset?.resultTableHost);
-    const grid = grids[tableIndex];
-    if (!cellElement || !grid) {
-      return;
-    }
-
-    if (!input) {
-      return;
-    }
-    // Clicking inside the cell being edited just moves the caret, as it should.
-    if (cellElement.contains(input)) {
-      return;
-    }
-    const address = addressOfCellElement(grid, tableIndex, cellElement);
-    if (!address) {
-      return;
-    }
-    // Swallowed in the capture phase: left alone, the click would blur this editor and
-    // start editing the cell that was only meant to be referenced.
-    event.preventDefault?.();
-    event.stopPropagation?.();
-    swallowNextClick = true;
-    insertReference(input, address, Boolean(event.shiftKey));
   }
 
-  // The click that follows a consumed mousedown has to be swallowed too, or Tabulator
-  // opens an editor on the cell that was only being pointed at. It must not insert a
-  // second reference -- one gesture, one address.
-  function onHostPointerClick(event) {
-    if (!swallowNextClick) {
-      return;
+  createSpreadsheetReferencePicker({
+    roots: [host],
+    findEditor: findOpenFormulaEditor,
+    shouldIgnore: (event) => pointerInFillZone(event),
+    addressOfCell: ({ cellElement }) => {
+      const tableHost = cellElement?.closest?.('[data-result-table-host]');
+      const tableIndex = Number(tableHost?.dataset?.resultTableHost);
+      const grid = grids[tableIndex];
+      const address = cellElement && grid
+        ? addressOfCellElement(grid, tableIndex, cellElement)
+        : '';
+      return address ? `Table${tableIndex + 1}:${address}` : '';
     }
-    swallowNextClick = false;
-    event.preventDefault?.();
-    event.stopPropagation?.();
-  }
+  });
 
   function destroyGrids() {
     grids.forEach((grid) => {
@@ -645,8 +596,8 @@ export function createSpreadsheetTables({
     activeTableIndex = clampActiveIndex(tableIndex, draftTables);
     const tables = syncDraftFromGrid();
     recomputeTables();
-    // One edit can change every formula that reads it, so the whole grid re-renders.
-    grids[tableIndex]?.getRows?.().forEach((row) => row?.reformat?.());
+    // One edit can change formulas in any sibling table, so every grid re-renders.
+    grids.forEach((grid) => grid?.getRows?.().forEach((row) => row?.reformat?.()));
     setStatus(tables);
   }
 
@@ -678,7 +629,7 @@ export function createSpreadsheetTables({
       <section class="spreadsheet-table-editor${index === activeTableIndex ? ' is-active' : ''}" data-result-table-editor="${index}">
         ${showTablePicker ? `
           <div class="spreadsheet-table-editor-head">
-            <button class="spreadsheet-table-select" type="button" data-result-table-select="${index}">Table ${index + 1}</button>
+            <button class="spreadsheet-table-select" type="button" data-result-table-select="${index}">Table${index + 1}</button>
           </div>
         ` : ''}
         <div class="spreadsheet-table" data-result-table-host="${index}" aria-label="${label} ${index + 1}"></div>
@@ -800,8 +751,7 @@ export function createSpreadsheetTables({
   host?.addEventListener?.('click', onHostClick);
   host?.addEventListener?.('mousemove', onHostMouseMove);
   host?.addEventListener?.('mouseleave', hideFillArrows);
-  host?.addEventListener?.('mousedown', onHostPointerDown, true);
-  host?.addEventListener?.('click', onHostPointerClick, true);
+  host?.addEventListener?.('mousedown', onHostFillPointerDown, true);
 
   return {
     renderEditor,

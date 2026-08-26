@@ -108,8 +108,8 @@
               </summary>
               <div class="assay-browser-body">
                 <label>
-                  Search Assays
-                  <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+                  <span class="sr-only">Search Assays</span>
+                  <input id="assay-search" type="search" placeholder="Search assay plates, projects, or notes" />
                 </label>
                 <div id="assay-list" class="assay-browser-list"></div>
               </div>
@@ -158,8 +158,8 @@
               </summary>
               <div class="foldable-section__body">
                 <label>
-                  Search Assays
-                  <input id="assay-results-search" placeholder="Search assay plates, projects, or notes" />
+                  <span class="sr-only">Search Assays</span>
+                  <input id="assay-results-search" type="search" placeholder="Search assay plates, projects, or notes" />
                 </label>
                 <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
               </div>
@@ -223,15 +223,34 @@
                   <div class="foldable-section__body assay-analysis-controls">
                     <input id="assay-analysis-row-groups" type="hidden" />
                     <input id="assay-analysis-column-groups" type="hidden" />
-                    <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
-                    <label>
-                      Replicate Group Name (optional)
-                      <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-                    </label>
-                    <div class="form-actions assay-analysis-group-actions">
-                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+                    <div class="form-actions assay-analysis-group-actions" role="group" aria-label="Grouping actions">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn" aria-label="Add selected rows as group" data-icon-caption="Add selected rows as group">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M3 4h12v16H3Z"></path>
+                          <path d="M3 9h12"></path>
+                          <path d="M3 15h12"></path>
+                          <path d="M19 9v6"></path>
+                          <path d="M16 12h6"></path>
+                        </svg>
+                      </button>
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn" aria-label="Add selected columns as group" data-icon-caption="Add selected columns as group">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M4 3h16v12H4Z"></path>
+                          <path d="M9 3v12"></path>
+                          <path d="M15 3v12"></path>
+                          <path d="M9 19h6"></path>
+                          <path d="M12 16v6"></path>
+                        </svg>
+                      </button>
+                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn assay-analysis-group-icon-btn row-action-icon-btn-danger" aria-label="Clear groups" data-icon-caption="Clear groups">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M3 6h18"></path>
+                          <path d="M8 6V4h8v2"></path>
+                          <path d="m19 6-1 14H6L5 6"></path>
+                          <path d="M10 11v5"></path>
+                          <path d="M14 11v5"></path>
+                        </svg>
+                      </button>
                     </div>
                     <div id="assay-analysis-selection-status" class="small-note"></div>
                   </div>
@@ -322,7 +341,7 @@
           <div class="assay-results-table-stage">
             <details id="assay-result-table-panel" class="foldable-section assay-result-table-panel" open>
               <summary class="foldable-section__summary">
-                <span>Plate Results</span>
+                <span>Plate Results (Table1)</span>
               </summary>
               <div class="foldable-section__body">
                 <div id="assay-result-table" class="assay-plate-preview"></div>
@@ -330,13 +349,18 @@
             </details>
             <details id="assay-derived-plate-panel" class="foldable-section assay-result-table-panel" open hidden>
               <summary class="foldable-section__summary">
-                <span>Transformed Plate</span>
+                <span>Transformed Plate (Table2)</span>
+                <button type="button" id="assay-transform-clear-btn" class="ghost-btn assay-transform-remove-icon-btn row-action-icon-btn-danger" aria-label="Remove transformed plate" title="Remove transformed plate">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="m19 6-1 14H6L5 6"></path>
+                    <path d="M10 11v5"></path>
+                    <path d="M14 11v5"></path>
+                  </svg>
+                </button>
               </summary>
               <div class="foldable-section__body">
-                <div class="assay-transformed-plate-intro">
-                  <p id="assay-derived-plate-steps" class="small-note"></p>
-                  <button type="button" id="assay-transform-clear-btn" class="ghost-btn">Remove transformed plate</button>
-                </div>
                 <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
               </div>
             </details>

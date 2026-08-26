@@ -26,6 +26,16 @@ function pickChartMetricIndex(method, headers, numericIndexes) {
   return numericIndexes[0];
 }
 
+// The fallback rebuilds from the rendered table, which has no replicate structure --
+// only the summary table's own SD column. An error bar is honest only when the plotted
+// Y is the Mean that SD describes, so any other Y column simply gets none.
+function findSdIndex(headers, yIndex) {
+  if (String(headers[yIndex] || '').trim().toLowerCase() !== 'mean') {
+    return -1;
+  }
+  return headers.findIndex((header) => String(header).trim().toLowerCase() === 'sd');
+}
+
 function resolveColumnIndex(headers, override, fallbackIndex) {
   if (typeof override === 'string' && override && override !== 'auto') {
     const matched = headers.findIndex((header) => String(header) === override);
@@ -34,6 +44,14 @@ function resolveColumnIndex(headers, override, fallbackIndex) {
     }
   }
   return fallbackIndex;
+}
+
+// One table row per plotted point is the normal case, and its SD is the error bar.
+// Several rows collapsing into one point would need pooling, which the table no longer
+// carries -- that point just gets no bar rather than a wrong one.
+function variance(items) {
+  const sd = items.length === 1 ? items[0].sd : NaN;
+  return Number.isFinite(sd) && sd > 0 ? { yVariance: sd } : null;
 }
 
 export function buildAnalysisChartModel(result, method, style) {
@@ -60,6 +78,10 @@ export function buildAnalysisChartModel(result, method, style) {
   const xIndex = resolveColumnIndex(headers, style?.xColumn, autoX);
   const autoSeries = nonNumericIndexes.find((index) => index !== xIndex) ?? null;
   const seriesIndex = resolveColumnIndex(headers, style?.seriesColumn, autoSeries);
+  const sdIndex = findSdIndex(headers, yIndex);
+  // The analysis already decided whether error bars are wanted; overriding a column
+  // changes what is plotted, not that choice.
+  const showErrorBars = result?.chartModel?.showErrorBars !== false;
   const seriesMap = new Map();
   let numericXCount = 0;
   let totalCount = 0;
@@ -81,7 +103,8 @@ export function buildAnalysisChartModel(result, method, style) {
     if (!seriesMap.has(seriesLabel)) {
       seriesMap.set(seriesLabel, []);
     }
-    seriesMap.get(seriesLabel).push({ xLabel, xNumeric, y });
+    const sd = sdIndex >= 0 ? parseAnalysisCellNumber(row[sdIndex]) : NaN;
+    seriesMap.get(seriesLabel).push({ xLabel, xNumeric, y, sd });
     totalCount += 1;
   });
 
@@ -104,12 +127,12 @@ export function buildAnalysisChartModel(result, method, style) {
           if (!xBuckets.has(point.xNumeric)) {
             xBuckets.set(point.xNumeric, []);
           }
-          xBuckets.get(point.xNumeric).push(point.y);
+          xBuckets.get(point.xNumeric).push(point);
         });
         const data = Array.from(xBuckets.entries())
-          .map(([x, values]) => {
-            const stats = summarizeNumeric(values);
-            return stats ? { x: Number(x), y: stats.mean } : null;
+          .map(([x, items]) => {
+            const stats = summarizeNumeric(items.map((item) => item.y));
+            return stats ? { x: Number(x), y: stats.mean, ...variance(items) } : null;
           })
           .filter(Boolean)
           .sort((a, b) => a.x - b.x);
@@ -125,6 +148,7 @@ export function buildAnalysisChartModel(result, method, style) {
       chartType,
       xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'X'),
       yLabel: String(headers[yIndex] || 'Y'),
+      showErrorBars,
       series
     };
   }
@@ -147,13 +171,13 @@ export function buildAnalysisChartModel(result, method, style) {
         if (!categoryValues.has(point.xLabel)) {
           categoryValues.set(point.xLabel, []);
         }
-        categoryValues.get(point.xLabel).push(point.y);
+        categoryValues.get(point.xLabel).push(point);
       });
       const data = categories
         .map((category) => {
-          const values = categoryValues.get(category) || [];
-          const stats = summarizeNumeric(values);
-          return stats ? { x: category, y: stats.mean } : null;
+          const items = categoryValues.get(category) || [];
+          const stats = summarizeNumeric(items.map((item) => item.y));
+          return stats ? { x: category, y: stats.mean, ...variance(items) } : null;
         })
         .filter(Boolean);
       return { label, data };
@@ -168,6 +192,7 @@ export function buildAnalysisChartModel(result, method, style) {
     chartType,
     xLabel: xIndex === null ? 'Row' : String(headers[xIndex] || 'Group'),
     yLabel: String(headers[yIndex] || 'Value'),
+    showErrorBars,
     series
   };
 }

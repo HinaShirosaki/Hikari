@@ -63,6 +63,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
   const onApplyAminoAcidEdit = config?.onApplyAminoAcidEdit || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
+  const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
@@ -514,7 +515,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   // Changing what is visible renumbers the feature list, so the selection has to
@@ -537,7 +538,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   function setRestrictionVendorFilter(nextFilter) {
@@ -574,7 +575,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   function setOrfFrameFilter(nextFilter) {
@@ -595,7 +596,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   featureEditingController = createSequenceViewerFeatureEditingController({
@@ -609,7 +610,8 @@ export function createSequenceViewerDetailController(config = {}) {
     clearSequenceSelection,
     renderActiveRecord,
     setStatus,
-    persistFeatureMutation
+    persistFeatureMutation,
+    onRequestPrimerOrder
   });
 
   sequenceEditingController = createSequenceViewerSequenceEditingController({
@@ -676,6 +678,7 @@ export function createSequenceViewerDetailController(config = {}) {
       applyAminoAcidReplacement,
       openFeatureEditor,
       openPrimerDesignOverlay,
+      orderDesignedPrimers: () => featureEditingController?.orderDesignedPrimers?.(),
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,

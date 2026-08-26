@@ -18,6 +18,8 @@ export function buildDnaPartFromProtein(part, options = {}) {
       label: cleanText(part?.label, 160) || 'Block',
       dnaSequence: alignedSequence,
       templateSequence: alignedSequence,
+      templateName: cleanText(part?.sourceVectorName, 160),
+      templateHostSequence: normalizeSequenceText(part?.sourceVectorSequence || ''),
       reusedSource: cleanText(part?.sourceDnaNote, 240)
         || (cleanText(part?.kind, 40).toLowerCase() === 'feature'
           ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
@@ -86,6 +88,8 @@ export function buildDnaConstruct(payload = {}, options = {}) {
       label: dnaPart.label,
       dnaSequence: dnaPart.dnaSequence,
       templateSequence: normalizeSequenceText(dnaPart.templateSequence || ''),
+      templateName: cleanText(dnaPart.templateName, 160),
+      templateHostSequence: normalizeSequenceText(dnaPart.templateHostSequence || ''),
       length: dnaPart.dnaSequence.length
     });
   });

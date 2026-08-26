@@ -598,9 +598,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     if (elements.assayAnalysisErrorBarsInput) {
       elements.assayAnalysisErrorBarsInput.checked = true;
     }
-    if (elements.assayAnalysisGroupNameInput) {
-      elements.assayAnalysisGroupNameInput.value = '';
-    }
     resultsManager.setAnalysisSelectionStatus('');
     resultsManager.refreshAnalysisGroupDisplay();
     setCsvStatus('');

@@ -137,6 +137,37 @@ function formatGenbankOriginLines(sequence) {
   return lines;
 }
 
+// The GenBank lines for a single feature. Split out so an annotation can be
+// spliced into a file that already exists without rewriting the rest of it.
+export function buildGenbankFeatureLines(feature, sequenceLength) {
+  const location = buildGenbankFeatureLocation(feature, sequenceLength);
+  if (!location) {
+    return [];
+  }
+  const type = sanitizeGenbankFeatureType(feature?.type).slice(0, 16);
+  const featurePrefix = `     ${type.padEnd(16, ' ')}`;
+  const qualifierPrefix = '                     ';
+  const lines = [...wrapGenbankLine(location, featurePrefix, qualifierPrefix)];
+
+  [
+    ['label', feature?.name || type],
+    ['note', feature?.description || ''],
+    // Without this the oligo is lost on the way to disk, and reopening the file
+    // would rebuild it from the template -- which on the plasmid a mutagenic
+    // primer was designed against gives back the wild-type bases, not the
+    // primer that was ordered.
+    ['primer_sequence', sanitizeGenbankQualifierValue(feature?.primerSequence || '')],
+    ['translation', sanitizeGenbankProteinQualifierValue(feature?.translation || '')]
+  ].forEach(([key, rawValue]) => {
+    const value = sanitizeGenbankQualifierValue(rawValue);
+    if (!value) {
+      return;
+    }
+    lines.push(...wrapGenbankLine(`/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
+  });
+  return lines;
+}
+
 export function buildRecordGenbankText(record) {
   const sequence = normalizeSequenceText(record?.sequence || '');
   if (!sequence.length) {
@@ -163,28 +194,7 @@ export function buildRecordGenbankText(record) {
   ];
 
   features.forEach((feature) => {
-    const location = buildGenbankFeatureLocation(feature, sequence.length);
-    if (!location) {
-      return;
-    }
-    const type = sanitizeGenbankFeatureType(feature?.type).slice(0, 16);
-    const featurePrefix = `     ${type.padEnd(16, ' ')}`;
-    const qualifierPrefix = '                     ';
-
-    lines.push(...wrapGenbankLine(location, featurePrefix, qualifierPrefix));
-    const qualifiers = [
-      ['label', feature?.name || type],
-      ['note', feature?.description || ''],
-      ['translation', sanitizeGenbankProteinQualifierValue(feature?.translation || '')]
-    ];
-
-    qualifiers.forEach(([key, rawValue]) => {
-      const value = sanitizeGenbankQualifierValue(rawValue);
-      if (!value) {
-        return;
-      }
-      lines.push(...wrapGenbankLine(`/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
-    });
+    lines.push(...buildGenbankFeatureLines(feature, sequence.length));
   });
 
   lines.push(...formatGenbankOriginLines(sequence));

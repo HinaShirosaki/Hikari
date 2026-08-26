@@ -150,7 +150,7 @@ function autoBandYWindow(gray, width, height, edges, fraction = 0.30) {
   return { yStart, yEnd };
 }
 
-function findLocalMaxima(values, fromX, toX) {
+export function findLocalMaxima(values, fromX, toX) {
   const peaks = [];
   for (let x = fromX + 1; x < toX; x += 1) {
     const v = values[x];
@@ -164,7 +164,7 @@ function findLocalMaxima(values, fromX, toX) {
 
 // Prominence = peak height minus the highest of the lowest valleys on either
 // side, walking outward until we hit a strictly higher point or the edge.
-function computeProminence(values, peakX, fromX, toX) {
+export function computeProminence(values, peakX, fromX, toX) {
   const v = values[peakX];
   let leftMin = v;
   for (let x = peakX - 1; x >= fromX; x -= 1) {

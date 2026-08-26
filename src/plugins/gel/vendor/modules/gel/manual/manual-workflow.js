@@ -1,5 +1,7 @@
-import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
+import { buildLanesFromManualSegmentation, detectLadderBandRows } from '../analysis/analysis-core.js';
 import { detectLanes } from '../analysis/auto-lanes.js';
+import { buildQuantificationSignal } from '../analysis/image-processing.js';
+import { getLadderPresetBands } from '../constants.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import {
   clamp,
@@ -17,6 +19,7 @@ import {
   normalizeManualOverrides
 } from '../shared.js';
 
+const LADDER_BAND_GRAB_PX = 6;
 const LANE_VERTEX_KEYS = Object.freeze(['topLeft', 'topRight', 'bottomRight', 'bottomLeft']);
 const LANE_VERTEX_LABELS = Object.freeze({
   topLeft: 'top-left',
@@ -38,6 +41,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     }
     runtime.laneVertexDrag = null;
     runtime.suppressNextLaneVertexClick = false;
+    runtime.ladderBandDrag = null;
+    runtime.suppressNextLadderBandClick = false;
   }
 
   function clearCanvasTool(tool) {
@@ -243,6 +248,93 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       ...normalized,
       ladderBands: points
     };
+  }
+
+  function getLadderLaneShape(overrides) {
+    if (!runtime.currentImage || !Number.isFinite(overrides.ladderLane)) {
+      return null;
+    }
+    const lanes = buildLanesFromManualSegmentation(
+      overrides,
+      runtime.currentImage.width,
+      runtime.currentImage.height
+    ) || [];
+    return lanes.find((lane) => lane.index + 1 === overrides.ladderLane) || null;
+  }
+
+  function onDetectLadderBands() {
+    if (!runtime.currentImage) {
+      deps.setStatus('Load a gel image before detecting ladder bands.');
+      return;
+    }
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    const lane = getLadderLaneShape(overrides);
+    if (!lane) {
+      deps.setStatus('Set the ladder lane before detecting its bands.');
+      return;
+    }
+    const standards = getLadderPresetBands(elements.gelLadderPresetSelect?.value)
+      .filter((mw) => Number.isFinite(mw) && mw > 0)
+      .sort((a, b) => b - a);
+    if (!standards.length) {
+      deps.setStatus('Choose a ladder preset before detecting its bands.');
+      return;
+    }
+    const { signal } = buildQuantificationSignal(runtime.currentImage.gray);
+    const rows = detectLadderBandRows({
+      signal,
+      width: runtime.currentImage.width,
+      height: runtime.currentImage.height,
+      lane,
+      count: standards.length
+    });
+    if (!rows.length) {
+      deps.setStatus('No ladder bands detected. Set them by hand with Set MW.');
+      return;
+    }
+    // ponytail: highest MW migrates least, so rows top-to-bottom pair with the preset
+    // descending. A missed band shifts every label below it, which is what dragging and
+    // Set MW are for; detecting per-band MW from spacing would need a real fit.
+    runtime.manualOverrides = {
+      ...overrides,
+      ladderBands: rows.map((row, index) => ({ pixelY: row, mw: standards[index] })),
+      ladderBandsDone: true
+    };
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.setStatus(rows.length === standards.length
+      ? `Annotated ${rows.length} ladder bands from the preset. Drag a band to adjust it.`
+      : `Only ${rows.length} of ${standards.length} preset bands were detected. Check the labels and drag to adjust.`);
+    deps.onRunAnalysis();
+  }
+
+  function findLadderBandNearPoint(point, overrides) {
+    if (!Number.isFinite(overrides.ladderLane)) {
+      return null;
+    }
+    if (inferLaneIndexFromSegmentationPoint(point) !== overrides.ladderLane) {
+      return null;
+    }
+    const rowY = getRectifiedLaneRowFromPoint(point, overrides.ladderLane);
+    return overrides.ladderBands.reduce((best, band) => {
+      const distance = Math.abs(band.pixelY - rowY);
+      if (distance > LADDER_BAND_GRAB_PX || (best && best.distance <= distance)) {
+        return best;
+      }
+      return { mw: band.mw, distance };
+    }, null);
+  }
+
+  function moveLadderBand(mw, point) {
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    const rowY = getRectifiedLaneRowFromPoint(point, overrides.ladderLane);
+    runtime.manualOverrides = {
+      ...overrides,
+      ladderBands: overrides.ladderBands
+        .map((band) => (band.mw === mw ? { ...band, pixelY: rowY } : band))
+        .sort((a, b) => a.pixelY - b.pixelY)
+    };
+    return rowY;
   }
 
   function inferLaneIndexFromSegmentationPoint(pointOrX, y = null) {
@@ -752,62 +844,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     };
   }
 
-  function promptForLadderBandMw(rowY, normalized) {
-    const promptHost = typeof window !== 'undefined' ? window : null;
-    if (!promptHost?.prompt) {
-      deps.setStatus('Ladder MW prompt is unavailable in this environment.');
-      return null;
-    }
-    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - rowY) <= 8);
-    const promptDefault = existing ? String(existing.mw) : (elements.gelLadderBandMwInput?.value || '');
-    const raw = promptHost.prompt(`MW for ladder band at row=${rowY} (kDa):`, promptDefault);
-    if (raw === null) {
-      return null;
-    }
-    const mw = Number(String(raw).trim());
-    if (!Number.isFinite(mw) || mw <= 0) {
-      deps.setStatus('Invalid MW value. Right-click again and enter a positive number (kDa).');
-      return null;
-    }
-    return mw;
-  }
-
-  function onCanvasContextMenu(event) {
-    if (!runtime.currentImage || runtime.cropperActive) {
-      return;
-    }
-    const point = getCanvasPoint(event);
-    if (!point) {
-      return;
-    }
-    const normalized = normalizeManualOverrides(runtime.manualOverrides);
-    if (!Number.isFinite(normalized.ladderLane) || normalized.ladderLane < 1) {
-      event.preventDefault?.();
-      deps.setStatus('Set the ladder lane before assigning ladder MW.');
-      return;
-    }
-    const laneIndex = inferLaneIndexFromSegmentationPoint(point);
-    event.preventDefault?.();
-    if (!laneIndex || laneIndex !== normalized.ladderLane) {
-      deps.setStatus(`Right-click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
-      return;
-    }
-
-    const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
-    const mw = promptForLadderBandMw(rowY, normalized);
-    if (!Number.isFinite(mw)) {
-      return;
-    }
-    upsertLadderBandMw(rowY, mw);
-    if (elements.gelLadderBandMwInput) {
-      elements.gelLadderBandMwInput.value = String(mw);
-    }
-    renderOverrideStatus();
-    deps.renderCanvas();
-    deps.setStatus(`Added ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
-    deps.onRunAnalysis();
-  }
-
   function getCanvasPoint(event) {
     const rect = elements.gelCanvas?.getBoundingClientRect();
     if (!rect || !runtime.currentImage) {
@@ -822,7 +858,22 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   function onCanvasMouseDown(event) {
-    if (!runtime.currentImage || runtime.cropperActive || getCanvasInteractionStep() !== 'lane-vertices') {
+    if (!runtime.currentImage || runtime.cropperActive) {
+      return;
+    }
+    const step = getCanvasInteractionStep();
+    if (step === 'ladder-mw') {
+      const point = getCanvasPoint(event);
+      const grabbed = point && findLadderBandNearPoint(point, normalizeManualOverrides(runtime.manualOverrides));
+      if (grabbed) {
+        runtime.ladderBandDrag = { mw: grabbed.mw };
+        runtime.suppressNextLadderBandClick = true;
+        deps.setStatus(`Drag the ${grabbed.mw} kDa band to its row.`);
+        event.preventDefault?.();
+      }
+      return;
+    }
+    if (step !== 'lane-vertices') {
       return;
     }
     const point = getCanvasPoint(event);
@@ -846,7 +897,20 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   function onCanvasMouseMove(event) {
-    if (!runtime.currentImage || runtime.cropperActive || !runtime.laneVertexDrag) {
+    if (!runtime.currentImage || runtime.cropperActive) {
+      return;
+    }
+    if (runtime.ladderBandDrag) {
+      const dragPoint = getCanvasPoint(event);
+      if (dragPoint) {
+        moveLadderBand(runtime.ladderBandDrag.mw, dragPoint);
+        renderOverrideStatus();
+        deps.renderCanvas();
+        event.preventDefault?.();
+      }
+      return;
+    }
+    if (!runtime.laneVertexDrag) {
       return;
     }
     const point = getCanvasPoint(event);
@@ -861,7 +925,22 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   function onCanvasMouseUp(event) {
-    if (!runtime.currentImage || !runtime.laneVertexDrag) {
+    if (!runtime.currentImage) {
+      return;
+    }
+    if (runtime.ladderBandDrag) {
+      const point = getCanvasPoint(event);
+      const { mw } = runtime.ladderBandDrag;
+      const rowY = point ? moveLadderBand(mw, point) : null;
+      runtime.ladderBandDrag = null;
+      renderOverrideStatus();
+      deps.renderCanvas();
+      deps.setStatus(`Ladder band ${mw} kDa moved to row=${rowY ?? '-'}.`);
+      deps.onRunAnalysis();
+      event.preventDefault?.();
+      return;
+    }
+    if (!runtime.laneVertexDrag) {
       return;
     }
     const point = getCanvasPoint(event);
@@ -957,6 +1036,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'ladder-mw') {
+      if (runtime.suppressNextLadderBandClick) {
+        runtime.suppressNextLadderBandClick = false;
+        return;
+      }
       const normalized = normalizeManualOverrides(runtime.manualOverrides);
       const laneIndex = inferLaneIndexFromSegmentationPoint(point);
       if (!laneIndex || laneIndex !== normalized.ladderLane) {
@@ -1134,7 +1217,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     getManualStep,
     onAutoDetectLanes,
     onCanvasClick,
-    onCanvasContextMenu,
+    onDetectLadderBands,
     onCanvasMouseDown,
     onCanvasMouseMove,
     onCanvasMouseUp,

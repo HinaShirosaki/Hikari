@@ -4,6 +4,7 @@
 import { initGelAnalysis } from './vendor/modules/gel/index.js';
 import { createId, safeText } from './vendor/modules/utils.js';
 import { initPluginLeftRailResizer } from './left-rail.js';
+import { installSearchFieldLens } from './vendor/lib/search-field-lens.js';
 
 const hikari = window.HikariPlugin?.hikari;
 const PLUGIN_STORAGE_ROOT = '.';
@@ -415,7 +416,8 @@ async function start() {
       createId,
       safeText,
       document,
-      onGelAnalysesChanged: () => {}
+      onGelAnalysesChanged: () => {},
+      onHistoryChanged: reportHistoryState
     });
     gelController.render();
     workspaceReady = true;
@@ -454,20 +456,14 @@ bootRetryButton?.addEventListener('click', () => {
   });
 });
 
-window.addEventListener('beforeunload', (event) => {
-  if (persistFailure || gelController?.hasUnsavedChanges?.()) {
-    event.preventDefault();
-    event.returnValue = '';
-  }
-});
-
 window.addEventListener('pagehide', () => {
   leftRailController?.destroy?.();
 });
 
-// The frame's own beforeunload never runs on quit — the host answers the close
-// request without unloading us — so the dirty flag has to be pushed to the host
-// instead, and the host asks us to save with an app.save broadcast.
+// No beforeunload guard here on purpose: a subframe that cancels beforeunload
+// vetoes the whole window close in Electron, silently — the red X just stops
+// working. The dirty flag is pushed to the host instead, and the host asks us
+// to save with an app.save broadcast before it lets the window go.
 let reportedUnsaved = null;
 
 function reportUnsavedState() {
@@ -493,4 +489,59 @@ hikari?.on('app.save', () => {
     .finally(reportUnsavedState);
 });
 
+// Undo/redo. The workspace owns its own history because the host's global
+// service snapshots the renderer's state object, which never holds this frame's
+// in-progress lane and band edits.
+//
+// Two entry points, because neither covers the other: keyboard events inside a
+// focused frame never reach the host document, and the host's toolbar buttons
+// are outside this frame. `app.setHistory` is what lets those buttons light up.
+let reportedHistory = '';
+
+function reportHistoryState(historyState) {
+  const history = {
+    canUndo: historyState?.canUndo === true,
+    canRedo: historyState?.canRedo === true
+  };
+  const signature = `${history.canUndo}:${history.canRedo}`;
+  if (signature === reportedHistory) {
+    return;
+  }
+  reportedHistory = signature;
+  hikari?.call('app.setHistory', history).catch(() => {
+    // A host that predates this verb keeps working; only its buttons stay dark.
+    reportedHistory = '';
+  });
+}
+
+hikari?.on('app.undo', () => {
+  gelController?.undo?.();
+});
+
+hikari?.on('app.redo', () => {
+  gelController?.redo?.();
+});
+
+function isEditableTarget(target) {
+  return Boolean(target?.closest?.('input, textarea, select, [contenteditable="true"]'));
+}
+
+document.addEventListener('keydown', (event) => {
+  const key = String(event.key || '').toLowerCase();
+  if ((key !== 'z' && key !== 'y') || !(event.metaKey || event.ctrlKey) || event.altKey) {
+    return;
+  }
+  // Let a focused field keep its own native undo.
+  if (event.defaultPrevented || isEditableTarget(event.target)) {
+    return;
+  }
+  event.preventDefault();
+  if (key === 'y' || event.shiftKey) {
+    gelController?.redo?.();
+  } else {
+    gelController?.undo?.();
+  }
+});
+
+installSearchFieldLens();
 void start();

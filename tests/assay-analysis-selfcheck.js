@@ -221,4 +221,47 @@ const noNumericX = analyzeAssayData({
 assert.equal(noNumericX.rows.length, 0, 'a non-numeric X axis reports instead of throwing');
 assert.ok(noNumericX.summary.includes('numeric'), 'and says why');
 
+// --- row/column groups apply on 'auto', not only on an explicit 'custom' ---
+// Without this the Groups panel silently did nothing: every well stayed its own bucket
+// (n = 1), so the chart never changed and no SD error bar could be drawn.
+const replicates = [];
+['A', 'B', 'C'].forEach((row) => [1, 2, 3].forEach((column) => {
+  replicates.push(obs(row, column, '', '', 10 + ROWS.indexOf(row) * 5 + column));
+}));
+const groupOptions = {
+  rowGroups: { groupSpec: 'Treated: A,B\nControl: C', maxMemberCount: 4 },
+  columnGroups: { groupSpec: '', maxMemberCount: 12 }
+};
+const autoGrouped = analyzeAssayData({
+  spec: { analysis: 'summary', groupBy: 'auto' },
+  observations: replicates,
+  options: groupOptions
+});
+assert.equal(
+  autoGrouped.rows.map((row) => row[0]).join('|'),
+  'Treated|Control',
+  'auto grouping pools the defined row groups'
+);
+assert.equal(
+  autoGrouped.chartModel.series[0].data.map((point) => point.x).join('|'),
+  'Treated|Control',
+  'and the chart plots those groups'
+);
+// Error bar length is exactly the SD reported in the table, not a multiple of it.
+const sdIndex = autoGrouped.headers.indexOf('SD');
+assert.equal(
+  autoGrouped.chartModel.series[0].data[0].yVariance.toFixed(4),
+  autoGrouped.rows[0][sdIndex],
+  'the error bar is one SD'
+);
+assert.equal(
+  analyzeAssayData({
+    spec: { analysis: 'summary', groupBy: 'row' },
+    observations: replicates,
+    options: groupOptions
+  }).rows.length,
+  3,
+  'an explicit groupBy still wins over the defined groups'
+);
+
 console.log('assay analysis self-check passed');

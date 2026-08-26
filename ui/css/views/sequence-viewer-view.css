@@ -163,6 +163,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   margin-left: 4px;
 }
 
+.sequence-viewer-home-sidebar-pinned > .sequence-viewer-rail-actions-section + .sequence-viewer-library-controls,
+.sequence-viewer-detail-sidebar-pinned > .sequence-viewer-rail-actions-section + .sequence-viewer-library-controls {
+  border-top: 0;
+}
 
 .sequence-viewer-library-card {
   margin: 0;
@@ -483,6 +487,12 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-cloning-design-toolbar {
+  /* The shared left-rail track is painted by `.workspace-shell::before`, an
+     absolutely positioned strip that covers the first 280px of the workspace.
+     A static toolbar paints under it, so the back button — the only thing in
+     that column — disappears. Same lift as the protein builder toolbar. */
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface);
   padding: 12px;
@@ -858,7 +868,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-feature-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   margin-top: 10px;
 }
@@ -891,6 +900,21 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-feature-head .small-note {
   margin: 2px 0 0;
+}
+
+#sequence-viewer-vector-builder-feature-replace-results .sequence-viewer-protein-builder-feature-item {
+  background: transparent;
+}
+
+.sequence-viewer-vector-builder-feature-use-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .sequence-viewer-protein-builder-feature-sequence {
@@ -1486,7 +1510,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-radius: 6px;
   height: 11px;
   background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
-  box-shadow: inset 2px 0 0 var(--sequence-viewer-feature-color);
   cursor: pointer;
   opacity: 1;
 }
@@ -1681,6 +1704,22 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 10px;
   align-items: start;
   margin-bottom: 22px;
+  /* A plasmid is hundreds of these, and laying out the ones nobody is looking
+     at is most of what opening a sequence costs. Letting the browser skip the
+     off-screen ones cuts an 8 kb record from 64 ms to 8 ms and stays linear out
+     to 100 kb. `auto` in the intrinsic size makes it remember each line's real
+     height once seen, so the scrollbar settles instead of drifting. */
+  content-visibility: auto;
+  /* Each line overrides this inline with the height it actually computed to,
+     so the fallback only covers markup rendered without those hints. */
+  contain-intrinsic-size: auto 62px;
+}
+
+/* Primer names and 3' arrows are drawn outside their own box on purpose, and
+   content-visibility brings paint containment with it, so the line has to be
+   told to let them through. */
+.sequence-viewer-dual-line {
+  overflow: visible;
 }
 
 .sequence-viewer-sequence-host > .sequence-viewer-dual-line:last-child {
@@ -2088,12 +2127,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 /* Keep the biological category color without filling every annotation lane
-   with a dark block. The soft tint leaves labels readable at a glance, while
-   the inset edge still makes neighboring feature types easy to distinguish. */
+   with a dark block. A uniform outline avoids making the feature's left edge
+   look heavier than its other boundaries. */
 .sequence-viewer-line-feature-bar {
   border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 58%, var(--theme-border));
   background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
-  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color);
   color: color-mix(in srgb, var(--sequence-viewer-feature-color) 68%, var(--theme-text-strong));
   opacity: 1;
 }
@@ -2234,7 +2272,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-line-feature-active {
   border-color: var(--sequence-viewer-active-blue);
-  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color), 0 0 0 1px var(--sequence-viewer-active-blue);
+  box-shadow: 0 0 0 1px var(--sequence-viewer-active-blue);
   color: inherit;
   opacity: 1;
 }
@@ -2396,6 +2434,32 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-primer-design-overlay[hidden],
 .sequence-viewer-sequence-edit-overlay[hidden] {
   display: none !important;
+}
+
+#sequence-viewer-vector-builder-feature-replace-overlay {
+  /* Top-aligned (from .app-dialog-overlay--top) so the dialog does not jump as
+     results load, but anchored to the workspace shell instead of the window:
+     the shell already starts below the top bar, whatever height that bar is at.
+     A window-fixed overlay put the dialog head under the bar, and the shared
+     76px offset does not cover the two-row bar of a narrow window. */
+  position: absolute;
+  padding: 18px;
+  overflow: hidden;
+}
+
+#sequence-viewer-vector-builder-feature-replace-form {
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#sequence-viewer-vector-builder-feature-replace-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .sequence-viewer-feature-editor,
@@ -2562,11 +2626,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     grid-template-columns: 1fr;
   }
 
-  .sequence-viewer-protein-builder-feature-controls {
-    grid-template-columns: 1fr;
-  }
-
-  
   .sequence-viewer-dual-line {
     grid-template-columns: 58px 1fr;
     gap: 8px;
@@ -2771,7 +2830,7 @@ body.theme-night .sequence-viewer-line-feature:not(.sequence-viewer-line-feature
 
 body.theme-night .sequence-viewer-line-feature-active {
   border-color: var(--sequence-viewer-night-feature-active-border);
-  box-shadow: inset 3px 0 0 var(--sequence-viewer-feature-color), 0 0 0 1px var(--sequence-viewer-night-feature-ring);
+  box-shadow: 0 0 0 1px var(--sequence-viewer-night-feature-ring);
   color: inherit;
 }
 
@@ -2957,6 +3016,8 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   gap: 10px;
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface-elevated);
 }
 
 .sequence-viewer-vector-builder-sequence-card {
@@ -2985,6 +3046,15 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
 .sequence-viewer-vector-builder-sequence {
   min-height: 0;
   overflow: auto;
+}
+
+#sequence-viewer-vector-builder-feature-replace-status:empty,
+#sequence-viewer-vector-builder-feature-replace-results:empty {
+  display: none;
+}
+
+.sequence-viewer-sequence-edit-note:empty {
+  display: none;
 }
 
 .vector-map__backbone {
@@ -3157,6 +3227,42 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   display: none !important;
 }
 
+.sequence-viewer-primer-order-dialog {
+  --app-dialog-width: 640px;
+}
+
+.sequence-viewer-primer-order-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sequence-viewer-primer-order-controls label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-primer-order-preview-label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+/* Tab-separated rows: a monospace box makes a mangled paste obvious. */
+.sequence-viewer-primer-order-preview {
+  width: 100%;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+}
+
+.sequence-viewer-primer-order-warning {
+  color: var(--theme-danger);
+}
+
 /* A primer readout carries a copy button, so it has to accept the pointer and
    wrap a full-length oligo instead of ellipsing it. */
 .vector-map__tooltip.is-interactive,
@@ -3218,4 +3324,131 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   align-self: center;
   min-width: 0;
   flex: 0 1 auto;
+}
+
+/* Feature picker: find the stored feature, choose which vector to amplify it
+   from, then look at that plasmid before confirming. The dialog needs the room
+   for three columns. */
+#sequence-viewer-vector-builder-feature-replace-form {
+  width: min(100%, 1040px);
+}
+
+.sequence-viewer-vector-builder-feature-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 12px;
+  /* The three columns are what has to give when the window is short: the dialog
+     head and the action row stay put. The 1fr row plus stretched columns is what
+     lets each column scroll inside instead of running past the dialog. */
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sequence-viewer-vector-builder-feature-picker-col {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sequence-viewer-vector-builder-feature-picker-col h5 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-protein-builder-feature-search-results,
+.sequence-viewer-feature-source-list {
+  margin-top: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.sequence-viewer-feature-source-item {
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  padding: 8px 10px;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.sequence-viewer-protein-builder-feature-item.is-selected,
+.sequence-viewer-feature-source-item.is-selected {
+  border-color: var(--theme-accent);
+  box-shadow: inset 0 0 0 1px var(--theme-accent);
+}
+
+.sequence-viewer-feature-source-preview {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+.sequence-viewer-feature-source-preview svg {
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+}
+
+@media (max-width: 900px) {
+  .sequence-viewer-vector-builder-feature-picker {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-content: start;
+    overflow-y: auto;
+  }
+
+  .sequence-viewer-vector-builder-feature-picker-col {
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  .sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-protein-builder-feature-search-results,
+  .sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-feature-source-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* In the Protein Builder the same picker lives in a narrow rail, so the three
+   panels stack instead of sitting side by side. */
+.sequence-viewer-feature-source {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.sequence-viewer-feature-source[hidden] {
+  display: none;
+}
+
+.sequence-viewer-feature-source h5 {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-feature-source .sequence-viewer-feature-source-list {
+  max-height: 180px;
+}
+
+.sequence-viewer-feature-source .sequence-viewer-feature-source-preview {
+  min-height: 160px;
 }

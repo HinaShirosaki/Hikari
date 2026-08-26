@@ -8,7 +8,7 @@ import {
 } from './assembly-payload.js';
 
 export function installProteinBuilderAssemblyActions(ctx) {
-  const { elements, state } = ctx;
+  const { state } = ctx;
 
   ctx.openAssemblyDialog = async function openAssemblyDialog() {
     if (!ctx.hasStoragePath()) {

@@ -129,8 +129,10 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   const renderActiveRecord = config?.renderActiveRecord || (() => {});
   const setStatus = config?.setStatus || (() => {});
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
 
   let featureEditorState = null;
+  let designedPrimers = [];
 
   function populateFeatureTypeOptions() {
     if (!elements.featureEditorTypeOptions) {
@@ -344,9 +346,15 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     }
 
     const primerPlan = designPcrPrimerPair(target.sequence, {
-      name: target.primerBaseName
+      name: target.primerBaseName,
+      // The selected fragment chooses the amplicon boundaries, but the whole
+      // record is the PCR template. A primer unique inside the selection can
+      // still bind another copy elsewhere on the plasmid.
+      specificitySequence: record.sequence,
+      specificityCircular: cleanText(record?.topology, 40).toLowerCase() === 'circular'
     });
     const primers = Array.isArray(primerPlan?.primers) ? primerPlan.primers : [];
+    designedPrimers = primers;
     const thresholdLabel = cleanText(primerPlan?.selectedThresholdLevel, 80) || 'none';
 
     if (elements.primerDesignTitle) {
@@ -654,6 +662,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   }
 
   return {
+    orderDesignedPrimers: () => onRequestPrimerOrder(designedPrimers),
     applyFeatureEditorChanges,
     buildSelectionDetailHtml,
     deleteFeatureFromContext,

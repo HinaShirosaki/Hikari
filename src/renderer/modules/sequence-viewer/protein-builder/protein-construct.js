@@ -65,7 +65,9 @@ export function buildConstruct(payload = {}) {
       sourceSequence: cleanText(row?.sourceSequence, 24000),
       sourceDnaSequence: normalizeSequenceText(row?.sourceDnaSequence || ''),
       sourceFeatureId: cleanText(row?.sourceFeatureId, 200),
-      sourceFeatureType: cleanText(row?.sourceFeatureType, 120)
+      sourceFeatureType: cleanText(row?.sourceFeatureType, 120),
+      sourceVectorName: cleanText(row?.sourceVectorName, 160),
+      sourceVectorSequence: normalizeSequenceText(row?.sourceVectorSequence || '')
     });
 
     (Array.isArray(row?.warnings) ? row.warnings : []).forEach((warning) => {

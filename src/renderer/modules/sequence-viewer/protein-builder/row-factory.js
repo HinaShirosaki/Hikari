@@ -42,18 +42,26 @@ export function createCustomRow(nextRowId) {
   };
 }
 
-export function createFeatureRow(nextRowId, feature) {
+export function createFeatureRow(nextRowId, feature, source = {}) {
   const derived = buildFeatureDerivedSequence(feature);
   const hostCount = Math.max(0, Number(feature?.hostCount) || 0);
+  // The vector the block was taken from is the plasmid it has to be amplified
+  // from later, so it is recorded on the row rather than just counted.
+  const sourceVectorName = cleanText(source?.host?.hostVectorName, 160);
   const noteParts = [
     feature?.type ? `Stored type: ${feature.type}` : '',
     derived.mode === 'translated'
       ? `Translated from ${Math.max(0, Number(feature?.sequenceLength) || String(derived.sourceSequence || '').length)} nt`
       : 'Stored as protein sequence',
-    hostCount ? `${hostCount} host vector${hostCount === 1 ? '' : 's'}` : ''
+    sourceVectorName
+      ? `From ${sourceVectorName}`
+      : (hostCount ? `${hostCount} host vector${hostCount === 1 ? '' : 's'}` : '')
   ].filter(Boolean);
 
   return {
+    sourceVectorId: cleanText(source?.host?.hostVectorId, 200),
+    sourceVectorName,
+    sourceVectorSequence: cleanText(source?.hostRecord?.sequence, 400000),
     id: `builder_row_${nextRowId}`,
     kind: 'feature',
     type: 'feature',

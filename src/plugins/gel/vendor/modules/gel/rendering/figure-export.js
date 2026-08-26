@@ -6,11 +6,24 @@ const MAX_LABEL_WIDTH_PX = 260;
 const MIN_ROW_HEIGHT_PX = 44;
 const MAX_ROW_HEIGHT_PX = 88;
 const MAX_FIGURE_DIMENSION_PX = 16000;
-const MAX_FIGURE_PIXELS = 24000000;
+const MAX_FIGURE_PIXELS = 48000000;
+const DEFAULT_RASTER_SCALE = 4;
 
 function positiveInteger(value, fallback = 1) {
   const numeric = Math.floor(Number(value));
   return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+}
+
+function resolveRasterScale(width, height, requestedScale = DEFAULT_RASTER_SCALE) {
+  const logicalWidth = positiveInteger(width);
+  const logicalHeight = positiveInteger(height);
+  const requested = clamp(positiveInteger(requestedScale, DEFAULT_RASTER_SCALE), 1, DEFAULT_RASTER_SCALE);
+  const byDimension = Math.floor(Math.min(
+    MAX_FIGURE_DIMENSION_PX / logicalWidth,
+    MAX_FIGURE_DIMENSION_PX / logicalHeight
+  ));
+  const byPixels = Math.floor(Math.sqrt(MAX_FIGURE_PIXELS / (logicalWidth * logicalHeight)));
+  return Math.max(1, Math.min(requested, byDimension, byPixels));
 }
 
 function resolveVerticalCrop(segmentation, imageHeight) {
@@ -146,7 +159,8 @@ export function createGelImageCanvas({
   imageHeight,
   manualOverrides,
   includeLadder = true,
-  ladderLane = null
+  ladderLane = null,
+  rasterScale = DEFAULT_RASTER_SCALE
 } = {}) {
   if (!documentObject?.createElement || !imageData) {
     throw new Error('The current gel image is unavailable for PowerPoint generation.');
@@ -164,15 +178,18 @@ export function createGelImageCanvas({
   sourceCanvas.height = positiveInteger(imageHeight);
   const sourceContext = sourceCanvas.getContext('2d');
   const gelCanvas = documentObject.createElement('canvas');
-  gelCanvas.width = plan.gelWidth;
-  gelCanvas.height = plan.sourceHeight;
+  const scale = resolveRasterScale(plan.gelWidth, plan.sourceHeight, rasterScale);
+  gelCanvas.width = plan.gelWidth * scale;
+  gelCanvas.height = plan.sourceHeight * scale;
   const gelContext = gelCanvas.getContext('2d');
   if (!sourceContext || !gelContext) {
     throw new Error('Canvas image generation is unavailable in this environment.');
   }
 
   sourceContext.putImageData(imageData, 0, 0);
-  gelContext.clearRect(0, 0, plan.gelWidth, plan.sourceHeight);
+  gelContext.imageSmoothingEnabled = true;
+  gelContext.imageSmoothingQuality = 'high';
+  gelContext.clearRect(0, 0, gelCanvas.width, gelCanvas.height);
   plan.slices.forEach((slice) => {
     gelContext.drawImage(
       sourceCanvas,
@@ -180,13 +197,13 @@ export function createGelImageCanvas({
       plan.sourceTop,
       slice.sourceWidth,
       plan.sourceHeight,
-      slice.outputX - plan.labelWidth,
+      (slice.outputX - plan.labelWidth) * scale,
       0,
-      slice.sourceWidth,
-      plan.sourceHeight
+      slice.sourceWidth * scale,
+      plan.sourceHeight * scale
     );
   });
-  return { canvas: gelCanvas, plan };
+  return { canvas: gelCanvas, plan, scale };
 }
 
 export function createGelFigureCanvas({
@@ -196,7 +213,8 @@ export function createGelFigureCanvas({
   imageHeight,
   manualOverrides,
   includeLadder = true,
-  ladderLane = null
+  ladderLane = null,
+  rasterScale = DEFAULT_RASTER_SCALE
 } = {}) {
   if (!documentObject?.createElement || !imageData) {
     throw new Error('The current gel image is unavailable for figure generation.');
@@ -214,15 +232,18 @@ export function createGelFigureCanvas({
   sourceCanvas.height = positiveInteger(imageHeight);
   const sourceContext = sourceCanvas.getContext('2d');
   const outputCanvas = documentObject.createElement('canvas');
-  outputCanvas.width = plan.canvasWidth;
-  outputCanvas.height = plan.canvasHeight;
+  const scale = resolveRasterScale(plan.canvasWidth, plan.canvasHeight, rasterScale);
+  outputCanvas.width = plan.canvasWidth * scale;
+  outputCanvas.height = plan.canvasHeight * scale;
   const outputContext = outputCanvas.getContext('2d');
   if (!sourceContext || !outputContext) {
     throw new Error('Canvas image generation is unavailable in this environment.');
   }
 
   sourceContext.putImageData(imageData, 0, 0);
-  outputContext.clearRect(0, 0, plan.canvasWidth, plan.canvasHeight);
+  outputContext.imageSmoothingEnabled = true;
+  outputContext.imageSmoothingQuality = 'high';
+  outputContext.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
   plan.slices.forEach((slice) => {
     outputContext.drawImage(
       sourceCanvas,
@@ -230,31 +251,36 @@ export function createGelFigureCanvas({
       plan.sourceTop,
       slice.sourceWidth,
       plan.sourceHeight,
-      slice.outputX,
-      plan.tableHeight,
-      slice.sourceWidth,
-      plan.sourceHeight
+      slice.outputX * scale,
+      plan.tableHeight * scale,
+      slice.sourceWidth * scale,
+      plan.sourceHeight * scale
     );
   });
 
   outputContext.save();
   outputContext.fillStyle = '#000000';
-  outputContext.font = `600 ${plan.fontSize}px Arial, Helvetica, sans-serif`;
+  outputContext.font = `600 ${plan.fontSize * scale}px Arial, Helvetica, sans-serif`;
   outputContext.textAlign = 'center';
   outputContext.textBaseline = 'middle';
   plan.rows.forEach((row, rowIndex) => {
-    const centerY = (rowIndex * plan.rowHeight) + (plan.rowHeight / 2);
+    const centerY = ((rowIndex * plan.rowHeight) + (plan.rowHeight / 2)) * scale;
     if (row.label) {
-      outputContext.fillText(row.label, plan.labelWidth / 2, centerY, plan.labelWidth - 16);
+      outputContext.fillText(row.label, (plan.labelWidth / 2) * scale, centerY, (plan.labelWidth - 16) * scale);
     }
     plan.slices.forEach((slice, visibleIndex) => {
       const value = row.values[visibleIndex];
       if (value) {
-        outputContext.fillText(value, slice.centerX, centerY, Math.max(1, slice.sourceWidth - 12));
+        outputContext.fillText(
+          value,
+          slice.centerX * scale,
+          centerY,
+          Math.max(1, slice.sourceWidth - 12) * scale
+        );
       }
     });
   });
   outputContext.restore();
 
-  return { canvas: outputCanvas, plan };
+  return { canvas: outputCanvas, plan, scale };
 }

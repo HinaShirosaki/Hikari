@@ -1,5 +1,4 @@
-import { buildStateSnapshot } from './state-snapshot.js';
-import { asArray, toConversation, trimText } from './shared.js';
+import { asArray, trimText } from './shared.js';
 import { buildMessagePayloadText } from './composer-attachments.js';
 
 export function createAgentPayloadBuilder({

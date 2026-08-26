@@ -77,15 +77,32 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
   safeFragments.forEach((fragment, index) => {
     const nextJunction = safeJunctions.find((junction) => junction.leftFragmentId === fragment.id && !junction.wrapAround)
       || safeJunctions.find((junction) => junction.leftFragmentId === fragment.id && junction.wrapAround);
+    const previousJunction = safeJunctions.find((junction) => junction.rightFragmentId === fragment.id && !junction.wrapAround)
+      || safeJunctions.find((junction) => junction.rightFragmentId === fragment.id && junction.wrapAround);
     const templateDesign = resolveFragmentPrimerTemplate(fragment);
-    const forwardTail = normalizeSequence(templateDesign.forwardAddedSequence);
+    // Each seam is split between the two primers that meet at it, so this
+    // fragment's forward primer carries the previous fragment's 3' end.
+    const previousOverlap = previousJunction && previousJunction.mode === 'primer-introduced'
+      ? normalizeSequence(previousJunction.rightForwardTail)
+      : '';
+    const templateForwardAddition = normalizeSequence(templateDesign.forwardAddedSequence);
+    const forwardTail = `${previousOverlap}${templateForwardAddition}`;
     const nextOverlap = nextJunction && nextJunction.mode === 'primer-introduced'
-      ? normalizeSequence(nextJunction.overlapSequence)
+      ? normalizeSequence(nextJunction.leftReverseTail)
       : '';
     const reverseTargetTail = `${normalizeSequence(templateDesign.reverseAddedSequence)}${nextOverlap}`;
     const reverseTail = reverseTargetTail ? reverseComplementDna(reverseTargetTail) : '';
-    const forwardBinding = selectBindingWindow(templateDesign.templateSequence, 'forward', thresholds, forwardTail.length, config);
-    const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, config);
+    // A fragment amplified from a donor plasmid carries its own specificity
+    // template; without one the window is only checked against itself.
+    const fragmentConfig = fragment?.metadata?.specificitySequence
+      ? {
+          ...config,
+          specificitySequence: fragment.metadata.specificitySequence,
+          specificityCircular: Boolean(fragment.metadata.specificityCircular)
+        }
+      : config;
+    const forwardBinding = selectBindingWindow(templateDesign.templateSequence, 'forward', thresholds, forwardTail.length, fragmentConfig);
+    const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, fragmentConfig);
 
     if (!forwardBinding || !reverseBinding) {
       const missing = forwardBinding ? 'reverse' : 'forward';
@@ -94,7 +111,7 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         missing,
         thresholds,
         (missing === 'forward' ? forwardTail : reverseTail).length,
-        config
+        fragmentConfig
       );
       warnings.push(`Unable to find compatible binding windows for ${fragment.name}.${reason ? ` ${reason}` : ''}`);
       return;
@@ -102,16 +119,19 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
 
     const forwardWarnings = [
       ...asArray(templateDesign.warnings),
-      forwardTail
-        ? `Adds ${forwardTail.length} nt at the 5' end from the primer tail.`
+      templateForwardAddition
+        ? `Adds ${templateForwardAddition.length} nt at the 5' end from the primer tail.`
+        : '',
+      previousOverlap
+        ? `Carries ${previousOverlap.length} nt of the ${previousJunction.overlapLength} nt overlap with ${previousJunction.leftFragmentName}.`
         : ''
     ].filter(Boolean);
     const reverseWarnings = [
       normalizeSequence(templateDesign.reverseAddedSequence)
         ? `Adds ${normalizeSequence(templateDesign.reverseAddedSequence).length} nt at the 3' end from the primer tail.`
         : '',
-      nextJunction?.mode === 'primer-introduced'
-        ? `Carries a ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`
+      nextOverlap
+        ? `Carries ${nextOverlap.length} nt of the ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`
         : ''
     ].filter(Boolean);
 

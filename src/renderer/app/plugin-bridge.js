@@ -676,6 +676,22 @@ const VERBS = {
     }
   },
 
+  // A plugin's own undo/redo depth, pushed up so the host's global history
+  // buttons can drive the frame that owns the edits. The host cannot see inside
+  // the frame, and keyboard events in a focused frame never reach it, so the
+  // plugin volunteers this the same way it volunteers app.setUnsaved.
+  'app.setHistory': {
+    permission: '',
+    handler: (params, { pluginHistory, frameWindow }) => {
+      const history = {
+        canUndo: params?.canUndo === true,
+        canRedo: params?.canRedo === true
+      };
+      pluginHistory?.(frameWindow, history);
+      return history;
+    }
+  },
+
   'migration.importLegacyGel': {
     permission: '',
     internal: true,
@@ -688,6 +704,7 @@ export function createPluginBridge({
   state,
   persist,
   onNotebookEntriesChanged,
+  onFrameHistoryChanged = null,
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
 } = {}) {
@@ -721,6 +738,35 @@ export function createPluginBridge({
   // close the same way a built-in editor's does.
   const unsavedPlugins = new Map();
   const saveWaiters = new Map();
+  // frameWindow -> { canUndo, canRedo } as last reported by that frame.
+  const frameHistory = new Map();
+
+  function pluginHistory(frameWindow, history) {
+    if (!frameWindow) {
+      return;
+    }
+    frameHistory.set(frameWindow, history);
+    onFrameHistoryChanged?.(history);
+  }
+
+  // The history a frame reported, or null when that frame is not registered.
+  function getFrameHistory(frameWindow) {
+    if (!frameWindow || !frames.has(frameWindow)) {
+      return null;
+    }
+    return frameHistory.get(frameWindow) || null;
+  }
+
+  // Host -> plugin history command. One frame, not a broadcast: undo belongs to
+  // whichever frame the user is editing in.
+  function sendFrameHistoryCommand(frameWindow, command) {
+    const event = command === 'redo' ? 'app.redo' : 'app.undo';
+    if (!frameWindow || !frames.has(frameWindow)) {
+      return false;
+    }
+    frameWindow.postMessage?.({ hikari: PROTOCOL_MARKER, event, payload: {} }, '*');
+    return true;
+  }
 
   function pluginUnsaved(plugin, unsaved) {
     const id = text(plugin?.id, 200);
@@ -767,7 +813,10 @@ export function createPluginBridge({
 
   function handleMessage(event) {
     const request = event?.data;
-    if (!request || typeof request !== 'object' || request.hikari !== PROTOCOL_MARKER) {
+    if (!request
+      || typeof request !== 'object'
+      || request.hikari !== PROTOCOL_MARKER
+      || request.call) {
       return;
     }
     const plugin = frames.get(event.source);
@@ -813,6 +862,8 @@ export function createPluginBridge({
         onNotebookEntriesChanged,
         api,
         pluginUnsaved,
+        pluginHistory,
+        frameWindow: event.source,
         windowObject
       });
       // Filesystem verbs are async; the rest stay synchronous so a reply still
@@ -831,7 +882,15 @@ export function createPluginBridge({
   }
 
   windowObject?.addEventListener?.('message', handleMessage);
-  return { register, handleMessage, broadcast, broadcastAppContext, getUnsavedSources };
+  return {
+    register,
+    handleMessage,
+    broadcast,
+    broadcastAppContext,
+    getFrameHistory,
+    getUnsavedSources,
+    sendFrameHistoryCommand
+  };
 }
 
 export const PLUGIN_BRIDGE_VERBS = Object.freeze(

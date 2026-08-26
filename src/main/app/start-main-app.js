@@ -78,10 +78,12 @@ function startMainApp() {
             return;
           }
           allowWindowClose = true;
+          // ponytail: destroy, not close — this path exists because the window
+          // stopped answering, so a beforeunload handler in it (or in a plugin
+          // frame) must not get another chance to veto the quit.
+          mainWindow?.destroy();
           if (appQuitPending) {
             app.quit();
-          } else {
-            mainWindow?.close();
           }
         }, 3000);
       },

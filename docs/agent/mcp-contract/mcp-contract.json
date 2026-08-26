@@ -1003,7 +1003,8 @@
                 "two-step-ligation",
                 "golden-gate",
                 "gibson",
-                "in-fusion"
+                "in-fusion",
+                "overlap-extension"
               ],
               "description": "design_cloning: cloning route."
             },

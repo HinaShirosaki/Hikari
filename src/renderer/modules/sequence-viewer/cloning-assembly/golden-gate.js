@@ -25,10 +25,11 @@ function pickEnzyme(insert) {
   return TYPE_IIS_ENZYMES.find((enzyme) => !sequenceContainsSite(insert, enzyme.site)) || null;
 }
 
-function buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang) {
+function buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, insertTemplateName = '') {
+  const insertTemplate = String(insertTemplateName || '').trim() || recordName;
   return [
     { title: 'Order insert and backbone primers', details: `The four ${enzyme.name} (${enzyme.site})-tailed primers generate the matched ${upstreamOverhang}/${downstreamOverhang} junction overhangs.` },
-    { title: 'Amplify both fragments', details: `PCR the insert and the linearized ${recordName} backbone separately, verify single products, and purify both amplicons.` },
+    { title: 'Amplify both fragments', details: `PCR the insert from ${insertTemplate} and the linearized ${recordName} backbone separately, verify single products, and purify both amplicons.` },
     { title: 'One-pot Golden Gate', details: `Combine the two amplicons with ${enzyme.name} + T4 DNA ligase and cycle digest-ligation (e.g. 37 C / 16 C).` },
     { title: 'Transform and screen', details: 'Transform the assembly, then confirm both junctions by colony PCR and sequencing.' }
   ];
@@ -48,6 +49,10 @@ export function buildGoldenGatePlan(payload = {}) {
   const config = { ...DEFAULT_CLONING_PREFERENCES, ...(payload?.preferences || {}) };
   const sequence = normalizeSequence(payload?.sequence || '');
   const recordName = String(payload?.recordName || '').trim() || 'the plasmid';
+  const topology = String(payload?.topology || '').toLowerCase() === 'linear' ? 'linear' : 'circular';
+  const donorSequence = normalizeSequence(payload?.donor?.sequence || '');
+  const donorName = String(payload?.donor?.name || '').trim();
+  const vectorTemplateSequence = normalizeSequence(payload?.vectorTemplateSequence || sequence);
   const start = Math.max(0, Math.min(sequence.length, Math.round(Number(payload?.range?.start) || 0)));
   const end = Math.max(start, Math.min(sequence.length, Math.round(Number(payload?.range?.end) || start)));
   const insert = sequence.slice(start, end);
@@ -94,8 +99,22 @@ export function buildGoldenGatePlan(payload = {}) {
 
   const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
   const design = designWithThresholdFallback((thresholds) => {
-    const insertConfig = { ...config, specificitySequence: insert };
-    const backboneConfig = { ...config, specificitySequence: backbone };
+    // Candidate windows come from the desired fragments, while uniqueness is
+    // checked against the DNA actually present in each PCR tube. The insert
+    // tube holds the donor when one is given, otherwise this record -- the
+    // pre-edit vector is the backbone's template, and never carries the insert.
+    const insertConfig = {
+      ...config,
+      specificitySequence: donorSequence || sequence,
+      specificityCircular: donorSequence
+        ? String(payload?.donor?.topology || 'circular').toLowerCase() !== 'linear'
+        : topology === 'circular'
+    };
+    const backboneConfig = {
+      ...config,
+      specificitySequence: vectorTemplateSequence,
+      specificityCircular: topology === 'circular'
+    };
     const insertForward = selectBindingWindow(insert, 'forward', thresholds, baseTail.length, insertConfig);
     const insertReverseTail = `${baseTail}${reverseComplementDna(downstreamOverhang)}`;
     const insertReverse = selectBindingWindow(insert, 'reverse', thresholds, insertReverseTail.length, insertConfig);
@@ -168,7 +187,7 @@ export function buildGoldenGatePlan(payload = {}) {
     recommendedAssemblyStrategy: 'golden-gate',
     primerOligoPlan: { primers: design.primers, selectedThresholdLevel: design.selectedThresholdLevel, warnings },
     restrictionEnzymeSelection: [{ name: enzyme.name, site: enzyme.site, cut: enzyme.cut }],
-    stepByStepProcedure: buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang),
+    stepByStepProcedure: buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, donorName),
     warnings
   };
 

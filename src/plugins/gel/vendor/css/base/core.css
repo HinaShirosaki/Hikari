@@ -272,6 +272,61 @@ div {
   min-width: 0;
 }
 
+/* Shared search-box shape: the field plus a magnifier on the right that runs
+   the search. search-field-lens.js wraps every `input[type="search"]`. */
+.search-field {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.search-field > input[type='search'] {
+  width: 100%;
+  min-width: 0;
+  padding-right: 38px;
+}
+
+.search-field > input[type='search']::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-field__lens {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+.search-field__lens svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.search-field__lens:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text-strong);
+}
+
+.search-field:has(> input[type='search']:disabled) .search-field__lens {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .topbar-search-suggestions {
   position: absolute;
   top: calc(100% + 6px);

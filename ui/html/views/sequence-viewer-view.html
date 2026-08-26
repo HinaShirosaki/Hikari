@@ -33,25 +33,24 @@
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                 </section>
+                <section class="sequence-viewer-library-controls left-rail-template__section">
+                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                    <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                    <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                  </div>
+                  <input
+                    id="sequence-viewer-library-search-input"
+                    class="sequence-viewer-library-search"
+                    type="search"
+                    placeholder="Search sequences"
+                    autocomplete="off"
+                    aria-label="Search sequence library"
+                  />
+                </section>
               </div>
 
               <div class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-library-card left-rail-template__section">
-              <div class="result-card-head sequence-viewer-library-head">
-                <h4>Sequence Library</h4>
-              </div>
-              <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
-              </div>
-              <input
-                id="sequence-viewer-library-search-input"
-                class="sequence-viewer-library-search"
-                type="search"
-                placeholder="Search sequences"
-                autocomplete="off"
-                aria-label="Search sequence library"
-              />
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
               </div>
@@ -138,13 +137,22 @@
                       placeholder="Search stored features"
                       autocomplete="off"
                     />
-                    <button id="sequence-viewer-protein-builder-feature-search-btn" type="button" class="ghost-btn">Search</button>
                   </div>
                   <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note">
                     Search stored features and convert them into protein blocks.
                   </span>
                   <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results">
                     <p class="small-note">Search by feature name or stored sequence.</p>
+                  </div>
+
+                  <div id="sequence-viewer-protein-builder-feature-source" class="sequence-viewer-feature-source" hidden>
+                    <h5>Source vector</h5>
+                    <div id="sequence-viewer-protein-builder-feature-hosts" class="sequence-viewer-feature-source-list"></div>
+                    <h5>Plasmid preview</h5>
+                    <div id="sequence-viewer-protein-builder-feature-preview" class="sequence-viewer-feature-source-preview"></div>
+                    <div class="form-actions">
+                      <button id="sequence-viewer-protein-builder-feature-add-btn" type="button" class="primary-btn" disabled>Add Block</button>
+                    </div>
                   </div>
                 </section>
                 </div>

@@ -1273,14 +1273,6 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   notebook.renderProjectOptions();
   notebook.renderProtocolOptions('pr1');
 
-  document.getElementById('biology-notebook-tool-mass-concentration').value = '10';
-  document.getElementById('biology-notebook-tool-mass-concentration-unit').value = 'mM';
-  document.getElementById('biology-notebook-tool-mass-mw').value = '58.44';
-  document.getElementById('biology-notebook-tool-mass-volume').value = '1';
-  document.getElementById('biology-notebook-tool-mass-volume-unit').value = 'L';
-  trigger(document.getElementById('biology-notebook-tool-mass-volume'), 'input');
-  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
-
   trigger(document.getElementById('biology-notebook-tool-fold-toggle'), 'click');
   assert.equal(document.getElementById('biology-notebook-tool-fold-toggle').getAttribute('aria-expanded'), 'true');
   trigger(document.getElementById('biology-notebook-tool-tab-buffer'), 'click');
@@ -1310,27 +1302,61 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   await flushAsync();
 
   assert.equal(state.notebookEntries.length, 1);
-  assert.equal(state.notebookEntries[0].toolCalculations.length, 3);
-  assert.match(state.notebookEntries[0].result, /Molarity - Mass: Mass needed: 584\.4 mg/i);
-  assert.match(state.notebookEntries[0].toolCalculations[1].result, /NaCl: 8766 mg/i);
-  assert.match(state.notebookEntries[0].toolCalculations[2].result, /Water: 90 uL/i);
-  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
-  assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'NaCl');
-  assert.match(state.notebookEntries[0].toolCalculations[1].table.rows[0][4], /8766 mg/i);
-  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[2].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume']);
-  assert.equal(state.notebookEntries[0].toolCalculations[2].table.rows[0][0], 'ATP');
-  assert.equal(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][0], 'Water');
-  assert.match(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][3], /90 uL/i);
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 2);
+  assert.match(state.notebookEntries[0].toolCalculations[0].result, /NaCl: 8766 mg/i);
+  assert.match(state.notebookEntries[0].toolCalculations[1].result, /Water: 90 uL/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[0].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
+  assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][0], 'NaCl');
+  assert.match(state.notebookEntries[0].toolCalculations[0].table.rows[0][4], /8766 mg/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note']);
+  assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'ATP');
+  assert.equal(state.notebookEntries[0].toolCalculations[1].table.footerRows[0][0], 'Water');
+  assert.match(state.notebookEntries[0].toolCalculations[1].table.footerRows[0][3], /90 uL/i);
 
   notebook.openEntry(state.notebookEntries[0].id);
-  const renderedCalculations = document.getElementById('biology-notebook-tool-calculations').innerHTML;
-  assert.match(renderedCalculations, /Molarity - Mass/);
+  const calculationsHost = document.getElementById('biology-notebook-tool-calculations');
+  const renderedCalculations = calculationsHost.innerHTML;
   assert.match(renderedCalculations, /Buffer Preparer/);
   assert.match(renderedCalculations, /Fixed Volume Reaction/);
   assert.match(renderedCalculations, /biology-notebook-tool-calculation-table/);
   assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 3 calculations/i);
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 2 calculations/i);
+
+  // A recorded reaction is a starting point: its cells are editable, and one
+  // edit runs the engine again for every derived volume and the fill.
+  assert.match(renderedCalculations, /data-tool-calculation-field="stockConcentration"/);
+  assert.match(renderedCalculations, /data-tool-calculation-field="totalVolumeValue"/);
+  assert.match(renderedCalculations, /data-tool-calculation-field="note"/);
+  const editCell = (field, value) => trigger(calculationsHost, 'change', {
+    target: {
+      value,
+      dataset: {
+        toolCalculationId: state.notebookEntries[0].toolCalculations[1].id,
+        toolCalculationRow: '0',
+        toolCalculationField: field
+      }
+    }
+  });
+
+  editCell('stockConcentration', '20 mM');
+  const editedCalculations = calculationsHost.innerHTML;
+  assert.match(editedCalculations, /value="20 mM"/);
+  assert.match(editedCalculations, /value="5 uL"/);
+  assert.match(editedCalculations, /95 uL/);
+
+  // The note column logs what actually went in the tube, and survives the
+  // recompute a later edit triggers.
+  editCell('note', '48 ng from tube A7');
+  editCell('finalConcentration', '2 mM');
+
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  const editedReaction = state.notebookEntries[0].toolCalculations[1];
+  assert.equal(editedReaction.table.rows[0][1], '20 mM');
+  assert.match(editedReaction.table.rows[0][3], /10 uL/);
+  assert.equal(editedReaction.table.rows[0][4], '48 ng from tube A7');
+  assert.match(editedReaction.table.footerRows[0][3], /90 uL/);
 });
 test('biology-notebook folded toolbox icon drags within the workspace without opening', () => {
   const document = createMockDocument([
@@ -1423,10 +1449,8 @@ test('biology-notebook toolbox starts without a sticky tool highlight and clears
     'biology-notebook-tool-fold-toggle',
     'biology-notebook-tool-collapse-btn',
     'biology-notebook-tool-workspace',
-    'biology-notebook-tool-tab-molarity',
     'biology-notebook-tool-tab-buffer',
     'biology-notebook-tool-tab-reaction',
-    'biology-notebook-tool-panel-molarity',
     'biology-notebook-tool-panel-buffer',
     'biology-notebook-tool-panel-reaction'
   ]);
@@ -1452,21 +1476,17 @@ test('biology-notebook toolbox starts without a sticky tool highlight and clears
     safeText: (value) => String(value ?? ''),
     createId: () => 'tool-record'
   });
-  const molarityTab = document.getElementById('biology-notebook-tool-tab-molarity');
   const bufferTab = document.getElementById('biology-notebook-tool-tab-buffer');
   const reactionTab = document.getElementById('biology-notebook-tool-tab-reaction');
 
-  assert.equal(molarityTab.classList.contains('is-active'), false);
   assert.equal(bufferTab.classList.contains('is-active'), false);
   assert.equal(reactionTab.classList.contains('is-active'), false);
 
   trigger(bufferTab, 'click');
-  assert.equal(molarityTab.classList.contains('is-active'), false);
   assert.equal(bufferTab.classList.contains('is-active'), true);
   assert.equal(bufferTab.getAttribute('aria-selected'), 'true');
 
   controller.clearSelection();
-  assert.equal(molarityTab.classList.contains('is-active'), false);
   assert.equal(bufferTab.classList.contains('is-active'), false);
   assert.equal(reactionTab.classList.contains('is-active'), false);
   assert.equal(bufferTab.getAttribute('aria-selected'), 'false');

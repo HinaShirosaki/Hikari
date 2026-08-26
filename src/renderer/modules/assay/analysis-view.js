@@ -38,6 +38,7 @@ export {
 } from './plotly/chart-style-model.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { asArray, cloneJson, ensureObject } from '../../lib/normalize.js';
+import { createSpreadsheetReferencePicker } from '../../lib/spreadsheet-reference-picker.js';
 
 function compactObject(value = {}) {
   return Object.entries(ensureObject(value)).reduce((out, [key, entryValue]) => {
@@ -153,8 +154,8 @@ export function createAssayAnalysisView({
     assayChartToolbarMount,
     assayChartFormatPanel,
     assayTransformSummary,
+    assayResultTable,
     assayDerivedPlatePanel,
-    assayDerivedPlateSteps,
     assayDerivedPlateTable
   } = elements;
   const hasPlotly = typeof window !== 'undefined' && Boolean(window.Plotly);
@@ -389,6 +390,39 @@ export function createAssayAnalysisView({
     return Number.isFinite(parsed) && parsed > 0 ? parsed - 1 : -1;
   }
 
+  function findTransformFormulaEditor() {
+    return assayDerivedPlateTable?.querySelector?.('.tabulator-cell input') || null;
+  }
+
+  function qualifiedAddressOfPlateCell(cellElement) {
+    const tableRoot = assayResultTable?.contains?.(cellElement)
+      ? assayResultTable
+      : (assayDerivedPlateTable?.contains?.(cellElement) ? assayDerivedPlateTable : null);
+    if (!tableRoot) {
+      return '';
+    }
+    const columnIndex = transformColumnIndex(cellElement.getAttribute?.('tabulator-field'));
+    // The row's own frozen label, not its position among the rendered rows: Tabulator
+    // renders vertically virtual, so a scrolled plate holds only the visible window and
+    // a DOM index would name the wrong well. The label is what wellIdFor would build.
+    const rowLabel = String(
+      cellElement.closest?.('.tabulator-row')?.querySelector?.('[tabulator-field="rowLabel"]')?.textContent || ''
+    ).trim().toUpperCase();
+    if (columnIndex < 0 || !/^[A-Z]+$/.test(rowLabel)) {
+      return '';
+    }
+    const tableName = tableRoot === assayResultTable ? 'Table1' : 'Table2';
+    return `${tableName}:${rowLabel}${columnIndex + 1}`;
+  }
+
+  // The same point-mode controller powers Notebook tables. Assay only supplies its
+  // plate-shaped Table1/Table2 address mapping.
+  createSpreadsheetReferencePicker({
+    roots: [assayResultTable, assayDerivedPlateTable],
+    findEditor: findTransformFormulaEditor,
+    addressOfCell: ({ cellElement }) => qualifiedAddressOfPlateCell(cellElement)
+  });
+
   function formatTransformCell(_cell, { well, mapped, value }) {
     if (!mapped) {
       return value || '—';
@@ -483,16 +517,12 @@ export function createAssayAnalysisView({
     });
     derivedPlate = result;
 
-    const errorNote = result.errorCount
-      ? ` ${result.errorCount} formula error(s); hover #ERROR for details.`
-      : '';
-    setTransformSummary(`Analysing the transformed plate: ${result.wellCount} computed well(s).${errorNote}`);
+    setTransformSummary(result.errorCount
+      ? `${result.errorCount} formula error(s); hover #ERROR for details.`
+      : '');
 
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
-    }
-    if (assayDerivedPlateSteps) {
-      assayDerivedPlateSteps.textContent = 'Edit any cell with a formula such as =A2 or =A2/MAX(A1:A8). All references read the original Plate Results table.';
     }
     ensureTransformGrid(getCurrentDefinition());
     return result;
@@ -864,7 +894,7 @@ export function createAssayAnalysisView({
     if (!Object.keys(transformFormulas).length) {
       Object.entries(runtime.currentResults || {}).forEach(([well, raw]) => {
         if (Number.isFinite(parseNumericResult(raw)) && isValidWellForDefinition(well, getCurrentDefinition())) {
-          transformFormulas[well] = `=${well}`;
+          transformFormulas[well] = `=Table1:${well}`;
         }
       });
     }

@@ -35,12 +35,6 @@
   min-width: 0;
 }
 
-.gel-secondary-panels {
-  display: grid;
-  gap: 28px;
-  align-content: start;
-  min-width: 0;
-}
 
 /* Keep the Gel workspace frame fixed on desktop. The viewer and tool rail own
  * their overflow so a large image or long tool list cannot scroll the module
@@ -63,7 +57,7 @@
   .gel-main-stack {
     height: 100%;
     min-height: 0;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
     overflow: hidden;
   }
 
@@ -82,9 +76,8 @@
 
   .gel-viewer-stage {
     min-height: 0;
-    overflow: auto;
+    overflow: hidden;
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
   }
 
   .gel-side-rail {
@@ -95,18 +88,10 @@
     scrollbar-gutter: stable;
   }
 
-  .gel-secondary-panels {
-    min-height: 0;
-    max-height: min(34vh, 300px);
-    overflow: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-  }
 }
 
 .gel-workspace > .panel,
-.gel-side-rail > .panel,
-.gel-secondary-panels > .panel {
+.gel-side-rail > .panel {
   margin-top: 0;
 }
 
@@ -116,6 +101,15 @@
 
 .gel-report-dialog.app-dialog-surface {
   --app-dialog-width: 1040px;
+  --app-dialog-max-height: calc(100% - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.gel-cell-table-dialog.app-dialog-surface {
+  --app-dialog-width: 900px;
   --app-dialog-max-height: calc(100% - 36px);
   --app-dialog-padding: 18px;
   --app-dialog-gap: 14px;
@@ -354,6 +348,7 @@
 }
 
 .gel-peak-editor-chart-shell {
+  display: grid;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -362,8 +357,8 @@
 .gel-peak-editor-chart {
   display: block;
   width: 100%;
-  height: min(52vh, 440px);
-  min-height: 300px;
+  height: 100%;
+  min-height: 0;
   cursor: crosshair;
 }
 
@@ -441,8 +436,10 @@
   pointer-events: none;
 }
 
+/* Capped so a long table cannot squeeze the chart out of the dialog. */
 .gel-peak-editor-table {
   min-height: 180px;
+  max-height: 34vh;
   overflow: auto;
 }
 
@@ -626,6 +623,31 @@
   cursor: grabbing;
 }
 
+/* Cropper's stock 5px edges/handles are hard to hit, and at the default full-image
+ * selection the top/left/right ones sit flush with the panel edge. Scaling grows the
+ * hit area around the same centre line, and shrinking the shell while cropping moves
+ * the whole cropper inside the stage so those handles are not against its border.
+ * Padding would not work: Cropper sizes its container from the shell's offsetHeight,
+ * which includes padding. */
+.gel-viewer-stage.is-fitted:has(#gel-cropper-image.is-active) .gel-canvas-shell {
+  height: calc(var(--gel-fit-height) - 2 * var(--gel-crop-handle-margin));
+  margin: var(--gel-crop-handle-margin);
+}
+
+.gel-viewer-stage .cropper-line.line-n,
+.gel-viewer-stage .cropper-line.line-s {
+  transform: scaleY(3.2);
+}
+
+.gel-viewer-stage .cropper-line.line-w,
+.gel-viewer-stage .cropper-line.line-e {
+  transform: scaleX(3.2);
+}
+
+.gel-viewer-stage .cropper-point {
+  transform: scale(2.4);
+}
+
 .gel-tool-panel {
   min-width: 0;
 }
@@ -721,6 +743,7 @@
 
 .gel-viewer-stage {
   --gel-lane-label-width: 118px;
+  --gel-crop-handle-margin: 12px;
   display: grid;
   gap: 12px;
   min-width: 0;
@@ -895,16 +918,16 @@
   min-height: 420px;
 }
 
+/* No min-height: crop-controller sizes this to the stage box, and a minimum
+ * would push the cropper container past the stage and bring back scrollbars. */
 #gel-cropper-image {
   display: none;
   width: 100%;
   height: auto;
-  min-height: 420px;
 }
 
 #gel-cropper-image.is-active {
   display: block;
-  min-height: 70vh;
 }
 
 body.theme-night .gel-canvas-shell {
@@ -1051,10 +1074,6 @@ body.theme-night .gel-lane-table-input:focus {
     align-items: stretch;
   }
 
-  .gel-secondary-panels {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-  }
 }
 
 /* Extracted from ui/css/overrides/cross-view-fixes.css */
@@ -1066,13 +1085,59 @@ body.theme-night .gel-lane-table-input:focus {
   width: 100%;
 }
 
+/* Fit the gel to the visible stage box (see fitViewerToStage in lane-table.js)
+ * so a slim crop is never scaled past the bottom edge. */
+.gel-viewer-stage.is-fitted .gel-image-row {
+  max-width: var(--gel-fit-width);
+}
+
+/* Only the label and table columns follow the gel width — a third filler track
+ * takes the rest so the toolbar, which spans every track, keeps the full stage.
+ * Capping the whole shell wrapped the toolbar onto extra rows, which ate the
+ * height the gel is fitted against, which narrowed the toolbar further. */
+.gel-viewer-stage.is-fitted .gel-lane-table-shell {
+  grid-template-columns:
+    var(--gel-lane-label-width)
+    minmax(0, calc(var(--gel-fit-width) - var(--gel-lane-label-width)))
+    minmax(0, 1fr);
+}
+
+.gel-viewer-stage.is-fitted .gel-canvas-shell {
+  height: var(--gel-fit-height);
+  min-height: 0;
+}
+
+.gel-viewer-stage.is-fitted #gel-canvas,
+.gel-viewer-stage.is-fitted #gel-cropper-image {
+  min-height: 0;
+  max-height: 100%;
+}
+
+#gel-form .gel-slider-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+}
+
 #gel-form .gel-slider-field input[type='range'] {
   width: 100%;
 }
 
 #gel-form .gel-slider-field .small-note {
-  display: block;
-  margin-top: 4px;
+  min-width: 34px;
+  text-align: right;
+}
+
+#gel-form .gel-slider-label {
+  grid-column: 1 / -1;
+}
+
+#gel-form .gel-compact-btn {
+  flex: 0 1 auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 @media (max-width: 960px) {
@@ -1151,13 +1216,6 @@ body.theme-night .gel-lane-table-input:focus {
   box-shadow: none;
 }
 
-.gel-cell-table-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
 .gel-cell-table-header {
   display: flex;
   align-items: center;
@@ -1177,7 +1235,8 @@ body.theme-night .gel-lane-table-input:focus {
 }
 
 .gel-cell-table-host {
-  overflow-x: auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .gel-cell-table {

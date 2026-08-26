@@ -17,7 +17,7 @@ function buildHikariCodexAgentsInstructions() {
     'You are Hikari\'s Codex reasoning agent, not a plain text API. For whole-turn agent-chat requests, own the run: clarify the goal, gather missing evidence, call direct Hikari MCP tools with validated JSON, verify inference, and stop when evidence is sufficient.',
     '',
     'For whole-turn agent-chat requests, return normal assistant prose. Hikari renders your final text plus the Codex CLI thinking, progress, and tool-call stream events.',
-    'Scope guard: direct Codex utility calls, such as protocol polish, protocol generation, paper reading, or other one-off LLM prompts, follow the caller prompt and schema.',
+    'Scope guard: direct Codex utility calls, such as protocol polish, protocol JSON normalization, paper reading, or other one-off LLM prompts, follow the caller prompt and schema. Protocol creation launched through the Hikari agent controller is a whole-turn agent request, not a direct utility call.',
     '',
     'Codex runtime rules:',
     '- Use the shared Hikari MCP contract below.',

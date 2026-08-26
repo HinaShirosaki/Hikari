@@ -1,0 +1,35 @@
+name: CI
+
+# Runs on every push so feature branches are covered -- this repo works on
+# branches like feat/* and does not always open a pull request.
+on:
+  push:
+  workflow_dispatch:
+
+# A newer push to the same ref makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      # Electron's postinstall pulls a ~176MB binary. Nothing in the test path
+      # launches Electron, but leaving the download in place keeps CI identical
+      # to a local install rather than trading correctness for a cached minute.
+      - run: npm ci
+
+      # `npm test` is the whole gate: it runs build:ui, then test:checks
+      # (lint + css-colors + dom-ids + source-layout + selfchecks), then the
+      # ~1360-test suite. Generated files are not committed, so the build must
+      # run before the checks that read index.html and styles.css.
+      - run: npm test

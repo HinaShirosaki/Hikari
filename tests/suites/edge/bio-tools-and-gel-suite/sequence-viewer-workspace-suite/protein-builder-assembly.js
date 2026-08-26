@@ -22,7 +22,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-protein-builder-assemble-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
-    'sequence-viewer-protein-builder-feature-search-btn',
     'sequence-viewer-protein-builder-feature-search-status',
     'sequence-viewer-protein-builder-feature-search-results',
     'sequence-viewer-protein-builder-meta',
@@ -186,7 +185,8 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.equal(Boolean(modePasteBtn.hidden), true);
   assert.equal(Boolean(modeFileBtn.hidden), true);
   assert.equal(textarea.value, '');
-  assert.equal(appState.notebookEntries.length, 1);
+  // The PCR page, plus the assembly reaction the route ends in.
+  assert.equal(appState.notebookEntries.length, 2);
   const notebookEntryId = appState.notebookEntries[0].id;
 
   trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
@@ -196,7 +196,8 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Construct confirmed.*cloning plan.*PCR program/i);
   assert.equal(persisted, true);
   assert.equal(notebookChangedCount >= 2, true);
-  assert.equal(appState.notebookEntries.length, 1);
+  // Re-confirming refreshes the same PCR page and its assembly page.
+  assert.equal(appState.notebookEntries.length, 2);
   assert.equal(appState.notebookEntries[0].id, notebookEntryId);
   assert.match(appState.notebookEntries[0].result, /Protein Builder cloning assembly design/i);
   assert.match(appState.notebookEntries[0].result, /PCR program/i);
@@ -340,7 +341,8 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
 
   assert.equal(persisted, true);
   assert.equal(changedCount, 1);
-  assert.equal(appState.notebookEntries.length, 1);
+  assert.equal(appState.notebookEntries.length, 2);
+  assert.equal(appState.notebookEntries[1].cloningReactionStep.stepId, 'gibson');
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.insertLength, editedInsert.length);
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.assembledLength, editedSequence.length);
   // Bench-style name: the terminal tag the primer adds, the insert, then F.

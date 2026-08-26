@@ -20,6 +20,7 @@
     "ui/css/views/workflow-shell-overrides.css",
     "ui/css/views/papers-shell-overrides.css",
     "ui/css/views/sequence-viewer-shell-overrides.css",
+    "ui/css/views/sequence-viewer-primer-snapgene.css",
     "ui/css/overrides/left-rail-template.css",
     "ui/css/overrides/folder-tree-template.css",
     "ui/css/overrides/universal-menus.css",

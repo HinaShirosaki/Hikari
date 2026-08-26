@@ -86,10 +86,11 @@ function describePlugin(plugin, { isRemote, isServed }) {
 }
 
 // Mounts a service plugin: a hidden, opaque-origin frame that runs the
-// plugin's code with no view, no navigation entry, and no rail. It exists only
-// to answer host->service calls (plugin-services.js). It must be in the
-// document to have a contentWindow, so it is appended hidden.
-function installServiceFrame({ documentObject, host, plugin, services }) {
+// plugin's code with no view, no navigation entry, and no rail. It answers
+// host->service calls (plugin-services.js) and may use only the host API
+// permissions declared in its manifest. It must be in the document to have a
+// contentWindow, so it is appended hidden before either registry sees it.
+function installServiceFrame({ documentObject, host, plugin, services, bridge }) {
   const frameId = `plugin-service-${plugin.id}`;
   if (documentObject.getElementById(frameId)) {
     return;
@@ -102,6 +103,9 @@ function installServiceFrame({ documentObject, host, plugin, services }) {
   frame.setAttribute('sandbox', LOCAL_SANDBOX);
   frame.src = plugin.entryUrl;
   host.append(frame);
+  if (bridge && frame.contentWindow) {
+    bridge.register(frame.contentWindow, plugin);
+  }
   services?.register?.(frame, plugin);
 }
 
@@ -119,7 +123,7 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       // A service has no view: it mounts a hidden frame and is done — no
       // section, no registry entry, no rail.
       if (plugin.service && plugin.entryUrl) {
-        installServiceFrame({ documentObject, host, plugin, services });
+        installServiceFrame({ documentObject, host, plugin, services, bridge });
         return;
       }
 

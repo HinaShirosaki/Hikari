@@ -184,8 +184,6 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
             },
             envOverrides: {
               HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-              HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-              HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
               HIKARI_CODEX_REQUEST_CONTEXT: requestContext
             }
           });

@@ -8,7 +8,7 @@ export function createInventoryService(registry) {
     registry.get('sampleRegistry').render?.();
   }
 
-  function openSampleSearch(query) {
+  function openSampleSearch(_query) {
     const showView = registry.get('showView');
     const views = registry.get('VIEWS');
     if (typeof showView === 'function' && views?.SAMPLE_REGISTRY) {

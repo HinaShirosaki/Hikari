@@ -60,7 +60,8 @@ script in; it draws nothing.
 
 Because it is opaque-origin, its scripts must be **classic, not ES modules**
 ([plugin-system.md §5.4](plugin-system.md#54-opaque-origins-cannot-load-es-modules)).
-The example loads its converter and worker as two `<script>` tags.
+The example loads the Hikari client, its Biopython request helper, and its
+worker as classic `<script>` tags.
 
 ## 3. The conversion protocol
 
@@ -78,18 +79,23 @@ The host calls the service — the reverse of the
 
 `bytes` is a `Uint8Array` of the raw file, cloned across the boundary. The
 `call` discriminator keeps this off the host-API channel (which carries a
-`verb`), so a page could do both without crosstalk. A service frame is **not**
-registered with the host-API bridge: a converter needs no Hikari data, only
-bytes in and text out.
+`verb`), so a page can do both without crosstalk. A service frame is also
+registered with the permission-gated host-API bridge. This lets a converter
+use a narrowly declared capability such as `python.run` without gaining any
+undeclared Hikari access.
 
 A service worker is a few lines — listen, convert, reply:
 
 ```js
-window.addEventListener('message', (event) => {
+window.addEventListener('message', async (event) => {
   const req = event.data;
   if (!req || req.hikari !== 1 || req.call !== 'convert') return;
   try {
-    const text = window.SnapGeneDna.convertDnaToGenBank(req.bytes, { name: req.filename });
+    const text = await window.SnapGeneBiopython.convertWithPython(
+      window.HikariPlugin.hikari,
+      req.bytes,
+      { filename: req.filename }
+    );
     window.parent.postMessage({ hikari: 1, call: 'convert:result', id: req.id, ok: true, text }, '*');
   } catch (error) {
     window.parent.postMessage({ hikari: 1, call: 'convert:result', id: req.id, ok: false, error: String(error.message) }, '*');
@@ -121,9 +127,10 @@ file's extension, and `convert({ extension, filename, bytes })` when one exists.
 A service is untrusted local code you installed, sandboxed like any local
 plugin. Two things specific to services:
 
-- **It receives file bytes, nothing else.** The host hands it the file the user
-  chose to open; it gets no access to Hikari data unless it also declares host
-  permissions (the example declares none).
+- **It receives file bytes, nothing else from the service registry.** Like any
+  local plugin, it may call only the host capabilities listed in its manifest.
+  The example declares `python`, which grants sandboxed computation but no
+  Hikari records or filesystem paths.
 - **It can still reach the network.** Like any plugin page it may `fetch()`, so
   a malicious converter could exfiltrate the file it was handed. Only install
   service folders you trust — the same rule as every plugin.
@@ -133,9 +140,9 @@ format another service already claimed.
 
 ## 6. Limits
 
-- **File conversion is the only capability.** There is no general "background
-  service" that runs arbitrary host-side work; a service answers convert
-  requests and nothing else.
+- **File conversion is the only host-to-service capability.** There is no
+  general background-task protocol; a service answers convert requests and
+  may use only its separately declared host API permissions.
 - **One hop, one file.** No chaining (`.dna → .gbk → …`), no multi-file
   bundles, no streaming — bytes in, text out, 15-second timeout.
 - **Classic scripts only** (§2).
@@ -154,5 +161,5 @@ format another service already claimed.
   goes through the real converter and the viewer's own GenBank parser reads the
   sequence and topology back.
 
-The converter also self-checks: `node
-examples/plugins/snapgene-dna/dna-to-genbank.js` prints `ok`.
+The focused plugin test runs the real Biopython program through Hikari's Python
+sandbox and parses its returned GenBank with the Sequence Viewer parser.

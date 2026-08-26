@@ -9,7 +9,6 @@ function createAgentControllerCore({
   observability,
   codexAgentRuntime,
   agentToolRuntime,
-  agentChatLogRuntime,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   lifecycleService

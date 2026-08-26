@@ -18,6 +18,7 @@ import {
   normalizeEnhancementSettings,
   preprocessWithJs
 } from './image-processing.js';
+import { computeProminence, findLocalMaxima } from './auto-lanes.js';
 
 function forEachRectifiedLaneSample({ lane, width, height, rowY }, callback) {
   const laneWidth = getLaneRectifiedWidth(lane);
@@ -184,6 +185,36 @@ function computeLaneBaseline({ signal, width, lane, height, bandThickness }) {
   const minimum = rollingMinimum(smoothed, Math.floor(clampedWindow / 2));
   const baseline = smoothFloat32(minimum, smoothingRadius);
   return { rowMeans, smoothed, baseline };
+}
+
+// Rows of the strongest baseline-corrected peaks in one lane, returned in top-to-bottom
+// order. Used to seed ladder MW annotations from a preset.
+export function detectLadderBandRows({ signal, width, height, lane, count }) {
+  if (!signal?.length || !lane || !(count > 0) || height < 3) {
+    return [];
+  }
+  const bandThickness = clamp(Math.round(height / 40), 4, 40);
+  const { smoothed, baseline } = computeLaneBaseline({ signal, width, lane, height, bandThickness });
+  const corrected = new Float32Array(height);
+  for (let y = 0; y < height; y += 1) {
+    corrected[y] = smoothed[y] - baseline[y];
+  }
+  // Two maxima closer than one band thickness are the same band (a plateau top or a
+  // shoulder), so take them strongest-first and drop the ones that crowd a kept peak.
+  const kept = [];
+  findLocalMaxima(corrected, 0, height - 1)
+    .map((row) => ({ row, prominence: computeProminence(corrected, row, 0, height - 1) }))
+    .filter((peak) => peak.prominence > 0)
+    .sort((a, b) => b.prominence - a.prominence)
+    .forEach((peak) => {
+      if (kept.length >= count) {
+        return;
+      }
+      if (kept.every((row) => Math.abs(row - peak.row) >= bandThickness)) {
+        kept.push(peak.row);
+      }
+    });
+  return kept.sort((a, b) => a - b);
 }
 
 function computeCellIntensity({

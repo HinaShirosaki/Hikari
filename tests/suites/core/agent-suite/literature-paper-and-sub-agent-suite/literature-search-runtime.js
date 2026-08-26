@@ -411,6 +411,34 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiterature
       assert.deepEqual(calls, ['crossref', 'pubmed', 'europe_pmc']);
       assert.deepEqual(result.sources, ['crossref', 'pubmed', 'europe_pmc', 'web']);
     });
+    test('literature search runtime applies a preferred source within an explicit source list', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => {
+          calls.push('pubmed');
+          return [];
+        },
+        searchCrossrefRecords: async () => {
+          calls.push('crossref');
+          return [];
+        },
+        searchEuropePmcRecords: async () => {
+          calls.push('europe_pmc');
+          return [];
+        }
+      });
+
+      const result = await runtime.execute({
+        query: 'antigen processing machinery',
+        sources: ['pubmed', 'crossref'],
+        preferred_literature_source: 'crossref',
+        allow_web_fallback: false
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, ['crossref', 'pubmed']);
+      assert.deepEqual(result.sources, ['crossref', 'pubmed']);
+    });
     test('literature search runtime prioritizes preferred web sources within returned web results', async () => {
       const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
         searchPubMedRecords: async () => [],

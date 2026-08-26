@@ -281,7 +281,7 @@ test('assay browser renders the Setup list and selectable Analyze list from the 
   assert.match(resultsList.innerHTML, /data-assay-delete="assay-2"/);
 });
 
-test('assay analysis grouping hides manual specs and renders visible drag-created groups', () => {
+test('assay analysis grouping keeps manual specs hidden without rendering summary chips', () => {
   const { createAssayResultsManager } = loadEsmStyleModule(path.join(
     __dirname,
     'src',
@@ -292,7 +292,6 @@ test('assay analysis grouping hides manual specs and renders visible drag-create
   ));
   const rowGroups = new MockElement('assay-analysis-row-groups');
   const columnGroups = new MockElement('assay-analysis-column-groups');
-  const groupVisualization = new MockElement('assay-analysis-group-visualization');
   rowGroups.value = 'Control: A,B';
   columnGroups.value = 'Early: 1,2';
 
@@ -301,7 +300,6 @@ test('assay analysis grouping hides manual specs and renders visible drag-create
     elements: {
       assayAnalysisRowGroupsInput: rowGroups,
       assayAnalysisColumnGroupsInput: columnGroups,
-      assayAnalysisGroupVisualization: groupVisualization,
       assayResultTable: { innerHTML: '' }
     },
     TabulatorLib: null,
@@ -318,18 +316,17 @@ test('assay analysis grouping hides manual specs and renders visible drag-create
     onResultsChanged: () => {}
   });
 
-  manager.refreshAnalysisGroupDisplay();
-  assert.match(groupVisualization.innerHTML, /Row groups/);
-  assert.match(groupVisualization.innerHTML, /Control/);
-  assert.match(groupVisualization.innerHTML, /A, B/);
-  assert.match(groupVisualization.innerHTML, /Column groups/);
-  assert.match(groupVisualization.innerHTML, /Early/);
-  assert.match(groupVisualization.innerHTML, /1, 2/);
+  const analysisGroups = manager.refreshAnalysisGroupDisplay();
+  assert.equal(analysisGroups.row.groups[0].label, 'Control');
+  assert.equal(analysisGroups.row.groups[0].members.join(','), 'A,B');
+  assert.equal(analysisGroups.column.groups[0].label, 'Early');
+  assert.equal(analysisGroups.column.groups[0].members.join(','), '1,2');
 
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'assay-view.html'), 'utf8');
   assert.match(viewSource, /id="assay-analysis-row-groups" type="hidden"/);
   assert.match(viewSource, /id="assay-analysis-column-groups" type="hidden"/);
   assert.doesNotMatch(viewSource, /<textarea[^>]+id="assay-analysis-(?:row|column)-groups"/);
+  assert.doesNotMatch(viewSource, /assay-analysis-group-visualization/);
 });
 
 test('assay agent TSV formatter preserves object-row cells', () => {

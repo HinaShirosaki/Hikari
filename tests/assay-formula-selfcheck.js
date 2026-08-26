@@ -80,6 +80,14 @@ badCases.forEach(([text, fragment]) => {
   );
 });
 assert.equal(compileFormula('=x +').error.position, 4, 'the error carries a position');
+const qualifiedCellAst = parseFormula('=Table1:A1');
+assert.equal(qualifiedCellAst.kind, 'ref', 'a qualified cell parses as one reference');
+assert.equal(qualifiedCellAst.table, 'Table1', 'a qualified cell keeps its source table');
+assert.equal(qualifiedCellAst.name, 'A1', 'a qualified cell keeps its plate address');
+const qualifiedRangeAst = parseFormula('=MAX(Table2:A1:A8)').args[0];
+assert.equal(qualifiedRangeAst.kind, 'range', 'a qualified range parses as one range');
+assert.equal(qualifiedRangeAst.table, 'Table2', 'a qualified range keeps its source table');
+assert.equal(`${qualifiedRangeAst.from}:${qualifiedRangeAst.to}`, 'A1:A8', 'a qualified range keeps both ends');
 
 // --- plate references, through the real transform ---
 function plate(values) {
@@ -140,28 +148,39 @@ const cellSource = plate({
 const cellTransforms = applyPlateCellFormulas({
   results: cellSource,
   formulas: {
-    A1: '=A2',
+    A1: '=Table1:A2',
     A2: '=A1',
-    A3: '=A2/MAX(A1:A8)',
-    A4: '=x * 2'
+    A3: '=Table2:A1/MAX(Table1:A1:A8)',
+    A4: '=x * 2',
+    A5: '=Table2:A4 + Table1:A1'
   },
   definition: CELL_DEF
 });
-assert.equal(cellTransforms.numericResults.A1, 20, 'a transformed cell can read one original cell');
-assert.equal(cellTransforms.numericResults.A2, 10, 'references never read another transformed value');
-assert.equal(cellTransforms.numericResults.A3, 0.25, 'a cell formula can aggregate an original range');
+assert.equal(cellTransforms.numericResults.A1, 20, 'Table1 reads one original cell');
+assert.equal(cellTransforms.numericResults.A2, 10, 'a bare reference stays compatible and reads Table1');
+assert.equal(cellTransforms.numericResults.A3, 0.25, 'Table2 and a Table1 range can be mixed');
 assert.equal(cellTransforms.numericResults.A4, 80, 'x remains the original value at the output address');
-assert.equal(cellTransforms.formulaCount, 4, 'the transformed plate reports its formula count');
+assert.equal(cellTransforms.numericResults.A5, 90, 'Table2 reads a computed transformed cell');
+assert.equal(cellTransforms.formulaCount, 5, 'the transformed plate reports its formula count');
 assert.equal(cellTransforms.errorCount, 0, 'valid cell formulas report no errors');
+
+const cellCycle = applyPlateCellFormulas({
+  results: cellSource,
+  formulas: { A1: '=Table2:A2', A2: '=Table2:A1' },
+  definition: CELL_DEF
+});
+assert.equal(cellCycle.errorCount, 2, 'circular Table2 references fail both cells');
+assert.match(cellCycle.cells.A1.error, /circular reference/, 'the cycle error names the cause');
 
 const cellError = applyPlateCellFormulas({
   results: cellSource,
-  formulas: { B1: '=A2/', B2: '=ZZ99' },
+  formulas: { B1: '=A2/', B2: '=ZZ99', B3: '=Table3:A1' },
   definition: CELL_DEF
 });
 assert.equal(cellError.wellCount, 0, 'invalid formulas do not create numeric transformed cells');
-assert.equal(cellError.errorCount, 2, 'formula failures stay attached to their individual cells');
+assert.equal(cellError.errorCount, 3, 'formula failures stay attached to their individual cells');
 assert.ok(cellError.cells.B1.error.includes('Formula error'), 'a syntax error is available to the grid formatter');
+assert.match(cellError.cells.B3.error, /Use Table1 or Table2/, 'unknown table names explain the available sources');
 
 // --- reference errors report once, not once per well ---
 const badRef = transform('=x - MEAN(ZZ9)');

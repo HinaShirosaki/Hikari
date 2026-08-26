@@ -167,7 +167,10 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (safeSession?.id) {
       state.query.sourceSessionId = String(safeSession.id).trim();
     }
-    onAlignmentStateChange();
+    // Picking a session is a navigation, so the viewport may move to it. The
+    // re-select that follows a sequence edit passes enableView: false and must
+    // leave the reader where they were.
+    onAlignmentStateChange({ preserveScroll: options?.enableView === false });
   }
 
   function clearAppliedAlignment() {
@@ -176,7 +179,8 @@ export function createSequenceViewerAlignmentController(config = {}) {
     viewerState.activeAlignmentResult = null;
     viewerState.activeAlignmentQueryRecord = null;
     viewerState.alignmentViewEnabled = false;
-    onAlignmentStateChange();
+    // Nothing is left to scroll to, so hold position.
+    onAlignmentStateChange({ preserveScroll: true });
   }
 
   function syncReferenceFromViewer(options = {}) {

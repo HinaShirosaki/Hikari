@@ -83,9 +83,12 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-add-custom-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
-    'sequence-viewer-protein-builder-feature-search-btn',
     'sequence-viewer-protein-builder-feature-search-status',
     'sequence-viewer-protein-builder-feature-search-results',
+    'sequence-viewer-protein-builder-feature-source',
+    'sequence-viewer-protein-builder-feature-hosts',
+    'sequence-viewer-protein-builder-feature-preview',
+    'sequence-viewer-protein-builder-feature-add-btn',
     'sequence-viewer-protein-builder-meta',
     'sequence-viewer-protein-builder-workflow',
     'sequence-viewer-protein-builder-sequence',
@@ -95,6 +98,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-save-btn'
   ];
   const searchCalls = [];
+  const getCalls = [];
   const document = createMockDocument(ids);
   const window = {
     hikariApi: {
@@ -110,9 +114,32 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
               sequence: 'ATGGCCGAA',
               sequenceLength: 9,
               hostCount: 2,
-              hosts: []
+              hosts: [
+                {
+                  hostVectorId: 'entry_tag_a',
+                  hostVectorName: 'pTagSource-A',
+                  topology: 'circular',
+                  sequenceLength: 40,
+                  locations: [{ startPos: 4, endPos: 13, strand: 1 }]
+                },
+                {
+                  hostVectorId: 'entry_tag_b',
+                  hostVectorName: 'pTagSource-B',
+                  topology: 'circular',
+                  sequenceLength: 60,
+                  locations: [{ startPos: 9, endPos: 18, strand: 1 }]
+                }
+              ]
             }
           ]
+        };
+      },
+      sequenceLibraryGet: async (payload) => {
+        getCalls.push(payload);
+        return {
+          ok: true,
+          entry: { id: payload?.id, name: payload?.id },
+          gbkText: `>${payload?.id}\n${'ATGGCCGAA'}${'GGCC'.repeat(8)}\n`
         };
       }
     }
@@ -139,7 +166,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
 
   const searchInput = document.getElementById('sequence-viewer-protein-builder-feature-search-input');
   searchInput.value = 'stored_affinity_tag';
-  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-btn'), 'click');
+  trigger(searchInput, 'keydown', { key: 'Enter', preventDefault() {} });
   await flushAsync();
   await flushAsync();
 
@@ -147,20 +174,66 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(searchCalls[0].query, 'stored_affinity_tag');
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-search-results').innerHTML.includes('stored_affinity_tag'), true);
 
-  const addFeatureTarget = {
+  // Picking the result lists the vectors that carry it and previews the first.
+  const selectFeatureTarget = {
     closest(selector) {
-      if (selector === '[data-protein-builder-feature-add-id]') {
-        return { dataset: { proteinBuilderFeatureAddId: 'feature_protein_tag' } };
+      if (selector === '[data-protein-builder-feature-select-id]') {
+        return { dataset: { proteinBuilderFeatureSelectId: 'feature_protein_tag' } };
       }
       return null;
     }
   };
-  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-results'), 'click', { target: addFeatureTarget });
+  let keyboardDefaultPrevented = false;
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-results'), 'keydown', {
+    key: ' ',
+    target: selectFeatureTarget,
+    preventDefault() {
+      keyboardDefaultPrevented = true;
+    }
+  });
+  assert.equal(keyboardDefaultPrevented, true);
+  // Search results carry feature metadata, not the source plasmid sequence.
+  // The block cannot be added until that plasmid has finished loading.
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, true);
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-add-btn'), 'click', { preventDefault() {} });
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML.includes('stored_affinity_tag'), false);
+  await flushAsync();
+  await flushAsync();
+
+  const sourcePanel = document.getElementById('sequence-viewer-protein-builder-feature-source');
+  const hostsHtml = document.getElementById('sequence-viewer-protein-builder-feature-hosts').innerHTML;
+  assert.equal(Boolean(sourcePanel.hidden), false);
+  assert.equal(hostsHtml.includes('pTagSource-A'), true);
+  assert.equal(hostsHtml.includes('pTagSource-B'), true);
+  assert.equal(getCalls.map((call) => call.id).join(','), 'entry_tag_a');
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-preview').innerHTML.includes('<svg'), true);
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, false);
+
+  // Choosing the other vector previews that one instead.
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-hosts'), 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-protein-builder-feature-host-id]') {
+          return { dataset: { proteinBuilderFeatureHostId: 'entry_tag_b' } };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+  assert.equal(getCalls.map((call) => call.id).join(','), 'entry_tag_a,entry_tag_b');
+
+  // Nothing joins the chain until Add Block.
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML.includes('stored_affinity_tag'), false);
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-add-btn'), 'click', { preventDefault() {} });
   await flushAsync();
 
   const workflowHtml = document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML;
   const sequenceHtml = document.getElementById('sequence-viewer-protein-builder-sequence').innerHTML;
   assert.equal(workflowHtml.includes('stored_affinity_tag'), true);
+  // The block records the vector it came from, not just how many carry it.
+  assert.equal(workflowHtml.includes('From pTagSource-B'), true);
   assert.equal(sequenceHtml.includes('MAE'), true);
 });
 test('[EDGE] sequence-viewer protein builder can build DNA from the active vector source', async () => {
@@ -183,7 +256,6 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-protein-builder-build-dna-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
-    'sequence-viewer-protein-builder-feature-search-btn',
     'sequence-viewer-protein-builder-feature-search-status',
     'sequence-viewer-protein-builder-feature-search-results',
     'sequence-viewer-protein-builder-meta',

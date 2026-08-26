@@ -69,7 +69,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
   function resolveLadderLane(layout = resolveLaneLayout(runtime)) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
-    const requested = Math.floor(Number(normalized.ladderLane || elements.gelLadderLaneInput?.value));
+    const requested = Math.floor(Number(normalized.ladderLane));
     return Number.isFinite(requested) && requested >= 1 && requested <= (layout?.laneCount || 0)
       ? requested
       : null;
@@ -108,7 +108,40 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     target.select?.();
   }
 
+  // ponytail: fit the gel to the stage box so a slim crop is not cut off at the
+  // bottom. The lane table shares the same max width so its columns stay aligned.
+  // Crop mode keeps the fitted box too: Cropper sizes its container from the shell,
+  // so a definite shell height is what leaves room around the crop handles.
+  function fitViewerToStage() {
+    const stage = elements.gelViewerStage;
+    const row = elements.gelImageRow;
+    const image = runtime.currentImage;
+    const stageHeight = stage?.clientHeight || 0;
+    if (!stage || !row) {
+      return;
+    }
+    const labelWidth = stage.classList.contains('has-lane-table') ? LABEL_COLUMN_WIDTH_PX : 0;
+    const usableWidth = (stage.clientWidth || 0) - labelWidth;
+    const rowTop = row.getBoundingClientRect?.()?.top;
+    const stageTop = stage.getBoundingClientRect?.()?.top;
+    const contentTop = Number.isFinite(rowTop) && Number.isFinite(stageTop) ? rowTop - stageTop : 0;
+    const usableHeight = stageHeight - contentTop;
+    if (!image?.width || !image?.height || usableWidth <= 0 || usableHeight <= 0) {
+      stage.classList.remove('is-fitted');
+      return;
+    }
+    const canvasWidth = Math.min(usableWidth, (usableHeight * image.width) / image.height);
+    stage.style.setProperty('--gel-fit-width', `${Math.floor(canvasWidth + labelWidth)}px`);
+    stage.style.setProperty('--gel-fit-height', `${Math.floor(usableHeight)}px`);
+    stage.classList.add('is-fitted');
+  }
+
   function render() {
+    renderLaneTableShell();
+    fitViewerToStage();
+  }
+
+  function renderLaneTableShell() {
     if (
       !elements.gelAddTableBtn
       || !elements.gelLaneTableShell
@@ -186,7 +219,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
     elements.gelLaneTableShell.innerHTML = `
       <div class="gel-lane-table-toolbar">
-        <p class="small-note">Lane columns stay aligned with the current gel borders and dividers.</p>
         <div class="gel-lane-table-actions">
           <label class="small-note gel-lane-table-ladder-choice">
             <input
@@ -289,13 +321,9 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           deps.setStatus?.('Image export canceled.');
           return downloadResult;
         }
-        const cropSummary = result.plan.croppedToBandLines
-          ? ` Cropped to rows ${result.plan.sourceTop}-${result.plan.sourceBottom}.`
-          : '';
-        const ladderSummary = !result.plan.includeLadder && result.plan.ladderLane
-          ? ` Ladder lane ${result.plan.ladderLane} excluded.`
-          : '';
-        deps.setStatus?.(`Generated ${downloadResult?.fileName || fileName}.${cropSummary}${ladderSummary}`);
+        // Cleared, not announced: the saved file is its own confirmation, but the
+        // previous status must not linger as if it described this export.
+        deps.setStatus?.('');
         return downloadResult;
       })
       .catch((error) => {
@@ -347,7 +375,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         });
         const title = String(elements.gelNameInput?.value || '').trim() || 'Gel figure';
         const createPowerPoint = deps.createGelPowerPoint || createGelPowerPoint;
-        const powerPoint = createPowerPoint({
+        const powerPoint = await createPowerPoint({
           plan: gelResult.plan,
           gelImageDataUrl: gelResult.canvas.toDataURL('image/png'),
           title
@@ -459,6 +487,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     onGeneratePowerPointClick,
     onShellClick,
     onShellInput,
-    render
+    render,
+    fitViewerToStage
   };
 }

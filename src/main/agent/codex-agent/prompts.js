@@ -153,7 +153,7 @@ function buildSavedSettingsBlock(input = {}, cleanText = defaultCleanText) {
       preferred_journals: preferredJournals
     }, null, 2),
     '',
-    'For literature-search requests, these saved preferred journals are already available to the Hikari MCP tools through the request context. Treat them as soft ranking preferences, including when the user says "from my preferred journals" or asks to use saved preferences. Do not call memory just to rediscover these saved settings. Do not pass a hard `journals` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.'
+    'For literature-search requests, these saved preferred journals are already available to the Hikari MCP tools through the request context. Treat them as soft ranking preferences, including when the user says "from my preferred journals" or asks to use saved preferences. When using native Codex web search for papers, prefer equally relevant results from these journals and their canonical publisher pages. Do not call memory just to rediscover these saved settings. Do not pass a hard `journals` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.'
   ].join('\n');
 }
 

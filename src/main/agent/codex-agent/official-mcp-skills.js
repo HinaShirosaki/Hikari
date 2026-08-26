@@ -282,7 +282,7 @@ Protocol JSON checklist:
 - \`protocol.name\`: concise protocol title suitable for the Protocols module.
 - \`protocol.purpose\`: short experimental goal, including the biological system or assay when known.
 - \`protocol.materials\`: array of reagents, samples, equipment, strains, plasmids, cell lines, buffers, and controls supported by the loaded evidence.
-- \`protocol.steps\`: ordered array of strings or step objects. Include timing, temperature, volumes, concentrations, incubation conditions, controls, and readouts inside the relevant step text. When a value should remain user-fillable, write a bracket placeholder directly in the step text, such as \`[volume]\`, \`[buffer]\`, \`[temperature]\`, or \`[time]\`.
+- \`protocol.steps\`: ordered array of strings or step objects. Include timing, temperature, volumes, concentrations, incubation conditions, controls, and readouts inside the relevant step text. When a genuinely user-specific value should remain user-fillable, write a bracket placeholder directly in the step text, such as \`[cell line]\`, \`[stock concentration]\`, or \`[detector channel]\`, and follow the placeholder rules below. Use square brackets for nothing else; write concentrations as \`Ca2+ concentration\`, not \`[Ca2+]\`.
 - \`protocol.troubleshooting\`: caveats, quality checks, expected outcomes, failure modes, safety notes, and paper-specific limitations when available.
 - \`result_summary\`: one sentence describing what was prepared.
 - \`save: true\`: include this when the user asks to add, save, import, persist, or queue the generated protocol for review.

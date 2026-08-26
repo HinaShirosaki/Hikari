@@ -1185,6 +1185,9 @@ export function calculateFixedReaction({
     name: cleanName(fillName, 'Fill solution'),
     volumeL: fillVolumeL,
     text: fillText,
+    // What the fill volume is, when a reagent volume is still unknown and the
+    // number cannot be worked out yet.
+    formula: fillFormula,
     resultText: fillResult,
     status: fillStatus
   };

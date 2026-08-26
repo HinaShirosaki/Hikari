@@ -564,10 +564,6 @@ function createNotebookDraftRuntime(deps = {}) {
   }
 
   async function requestNotebookDraftSelection({
-    provider,
-    endpoint,
-    apiKey,
-    model,
     message,
     conversation,
     parserPayload,

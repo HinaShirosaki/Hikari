@@ -28,6 +28,9 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
       overlapLength: natural.length,
       overlapTm: naturalTm,
       overlapGcContent: naturalGc,
+      // Already shared by both fragments; neither primer adds anything.
+      leftReverseTail: '',
+      rightForwardTail: '',
       warnings: []
     };
   }
@@ -48,6 +51,9 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
       overlapTm: engineered.tm,
       overlapGcContent: engineered.gcContent,
       leftBindingTm: engineered.leftBinding?.tm || 0,
+      // Half the seam goes on each flanking primer.
+      leftReverseTail: engineered.leftReverseTail,
+      rightForwardTail: engineered.rightForwardTail,
       warnings
     };
   }

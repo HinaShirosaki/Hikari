@@ -9,6 +9,7 @@ import {
   LINE_FEATURE_BAR_HEIGHT_PX,
   LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX,
   RESTRICTION_LABEL_GAP_PX,
+  STRAND_BLOCK_GAP_PX,
   STRAND_PAIR_ROW_GAP_PX
 } from './constants.js';
 import {
@@ -16,6 +17,12 @@ import {
   hashTypeToColor
 } from './feature-model.js';
 import { isPrimerBindingFeature } from './feature-types.js';
+import {
+  SNAPGENE_PRIMER_BAR_HEIGHT_PX,
+  SNAPGENE_PRIMER_STYLE,
+  buildSnapGenePrimerHtml,
+  withSnapGenePrimerGeometry
+} from './primer-snapgene.js';
 import { isOrfFeature } from './orf-analysis.js';
 import { getCdsProteinProperties } from './protein-properties.js';
 import {
@@ -499,7 +506,8 @@ function renderLineFeatureButtonsHtml(
   sequenceLength,
   selectedFeatureIndex,
   charAdvancePx,
-  lineFeatureOffsetPx = (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
+  lineFeatureOffsetPx = (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX),
+  templateSequence = ''
 ) {
   const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
   const safeOffset = Math.max(0, Number(lineFeatureOffsetPx) || 0);
@@ -520,7 +528,7 @@ function renderLineFeatureButtonsHtml(
           if (!geometry) {
             return null;
           }
-          return {
+          const fragment = {
             feature,
             index,
             title,
@@ -537,6 +545,11 @@ function renderLineFeatureButtonsHtml(
             widthPx: geometry.widthPx,
             rightPx: geometry.leftPx + geometry.widthPx
           };
+          return isPrimer
+            ? withSnapGenePrimerGeometry(fragment, {
+              segment, lineStart, lineEnd, templateSequence, charAdvancePx: safeAdvance
+            })
+            : fragment;
         })
         .filter(Boolean);
     })
@@ -547,27 +560,42 @@ function renderLineFeatureButtonsHtml(
       return right.widthPx - left.widthPx;
     });
 
+  const primerBarHeightPx = SNAPGENE_PRIMER_STYLE
+    ? SNAPGENE_PRIMER_BAR_HEIGHT_PX
+    : LINE_FEATURE_BAR_HEIGHT_PX;
+
   // Primers ride their own tracks on the side of the duplex they anneal to:
   // forward above the top strand, reverse below the bottom strand. Features
   // keep the shared track underneath, so a primer never steals a feature lane.
+  const forwardPrimers = buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === 1), {
+    lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, invertLanes: true, barHeightPx: primerBarHeightPx
+  });
+  const reversePrimers = buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === -1), {
+    lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, barHeightPx: primerBarHeightPx
+  });
+  const features = buildLineFeatureTrackHtml(fragments.filter((f) => !f.isPrimer), {
+    lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex
+  });
+
   return {
-    forwardPrimers: buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === 1), {
-      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, invertLanes: true
-    }),
-    reversePrimers: buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === -1), {
-      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex
-    }),
-    features: buildLineFeatureTrackHtml(fragments.filter((f) => !f.isPrimer), {
-      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex
-    })
+    forwardPrimers: forwardPrimers.html,
+    reversePrimers: reversePrimers.html,
+    features: features.html,
+    // The forward track and the feature track are siblings of the strand pair;
+    // the reverse track is a row inside it. They are gapped differently, so the
+    // caller needs them apart to work out how tall the line will be.
+    forwardHeightPx: forwardPrimers.heightPx,
+    reverseHeightPx: reversePrimers.heightPx,
+    featuresHeightPx: features.heightPx
   };
 }
 
 function buildLineFeatureTrackHtml(fragments, options) {
   if (!fragments.length) {
-    return '';
+    return { html: '', heightPx: 0 };
   }
   const { lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, invertLanes } = options;
+  const barHeightPx = Number(options.barHeightPx) || LINE_FEATURE_BAR_HEIGHT_PX;
 
   const laneRightEdges = [];
   fragments.forEach((fragment) => {
@@ -582,18 +610,21 @@ function buildLineFeatureTrackHtml(fragments, options) {
   });
 
   const laneCount = Math.max(1, laneRightEdges.length);
-  const trackHeightPx = (laneCount * LINE_FEATURE_BAR_HEIGHT_PX) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
+  const trackHeightPx = (laneCount * barHeightPx) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
   const bars = fragments
     .map((fragment) => {
       // Lane 0 always sits closest to the strand, so tracks above it stack upwards.
       const laneSlot = invertLanes ? (laneCount - 1 - fragment.lane) : fragment.lane;
-      const topPx = laneSlot * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
+      const topPx = laneSlot * (barHeightPx + LINE_FEATURE_BAR_GAP_PX);
       const isActive = fragment.index === selectedFeatureIndex;
       const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
       const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
       // A wrapped primer is named once, on the fragment carrying its 5' end.
       const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0))
         && (!fragment.isPrimer || fragment.hasFivePrime);
+      if (fragment.snapgene) {
+        return buildSnapGenePrimerHtml(fragment, { topPx, isActive, label, lineWidthPx });
+      }
       if (fragment.isPrimer) {
         const directionClass = fragment.direction === -1
           ? 'sequence-viewer-line-feature-primer-reverse'
@@ -633,7 +664,10 @@ function buildLineFeatureTrackHtml(fragments, options) {
     })
     .join('');
 
-  return `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`;
+  return {
+    html: `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`,
+    heightPx: trackHeightPx
+  };
 }
 
 function buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext, charAdvancePx) {
@@ -717,6 +751,42 @@ function renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, ch
   `;
 }
 
+// Both line tracks used to scan every feature in the record for every line,
+// which is quadratic: an 8 kb plasmid re-tested 267 features 134 times over.
+// Bucket the features by line once instead, so a line only ever sees what
+// actually touches it. Off-line features produced no geometry anyway, so the
+// markup is unchanged.
+function indexFeaturesByLine(indexedFeatures, lineLength, sequenceLength) {
+  const safeLineLength = Math.max(1, Math.floor(Number(lineLength) || 0));
+  const lineCount = Math.max(1, Math.ceil(sequenceLength / safeLineLength));
+  const buckets = Array.from({ length: lineCount }, () => []);
+
+  indexedFeatures.forEach((entry) => {
+    const segments = Array.isArray(entry?.feature?.segments) ? entry.feature.segments : [];
+    // A feature renders all of its segments at once, so it is listed once per
+    // line however many of its segments land there. An origin-wrapped feature
+    // has segments in descending order, so the lines are collected before the
+    // feature is filed rather than deduped as they are walked.
+    const touchedLines = new Set();
+    segments.forEach((segment) => {
+      const start = Math.max(0, Math.floor(Number(segment?.start) || 0));
+      const end = Math.min(sequenceLength, Math.floor(Number(segment?.end) || 0));
+      if (end <= start) {
+        return;
+      }
+      const lastLine = Math.floor((end - 1) / safeLineLength);
+      for (let line = Math.floor(start / safeLineLength); line <= lastLine; line += 1) {
+        touchedLines.add(line);
+      }
+    });
+    [...touchedLines].sort((left, right) => left - right).forEach((line) => {
+      buckets[line]?.push(entry);
+    });
+  });
+
+  return buckets;
+}
+
 export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
@@ -752,9 +822,11 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
   const alignmentCursorActive = Boolean(alignmentSequenceTrack?.cells?.length);
 
   const lines = [];
+  const featuresByLine = indexFeaturesByLine(indexedFeatures, lineLength, text.length);
 
   for (let lineStart = 0; lineStart < text.length; lineStart += lineLength) {
     const lineEnd = Math.min(text.length, lineStart + lineLength);
+    const lineFeatures = featuresByLine[Math.floor(lineStart / lineLength)] || [];
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
@@ -777,7 +849,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       : '';
     const aminoAcidRow = renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, charAdvancePx);
     const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
-      indexedFeatures,
+      lineFeatures,
       lineStart,
       lineEnd,
       text.length,
@@ -787,13 +859,14 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     );
     const restrictionTopPaddingPx = Math.max(0, Number(lineRestrictionAnnotations?.topPaddingPx) || 0);
     const lineFeatureButtons = renderLineFeatureButtonsHtml(
-      indexedFeatures,
+      lineFeatures,
       lineStart,
       lineEnd,
       text.length,
       selectedFeatureIndex,
       charAdvancePx,
-      lineFeatureOffsetPx
+      lineFeatureOffsetPx,
+      text
     );
     const cursorBlockOnLine = alignmentCursorActive
       && Number.isFinite(cursorBaseIndex)
@@ -818,8 +891,24 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       ? ` style="padding-top:${(restrictionTopPaddingPx + 2).toFixed(3)}px;"`
       : '';
 
+    // Off-screen lines are skipped by content-visibility, so each one has to
+    // declare how tall it would have been or the scrollbar is a guess. Every
+    // part of that is already known here: the strand rows, the restriction
+    // padding, the feature and primer tracks, and the translation row.
+    const pairExtraRows = (lineFeatureButtons.reverseHeightPx > 0 ? 1 : 0) + (aminoAcidRow ? 1 : 0);
+    const blockSiblings = (lineFeatureButtons.forwardHeightPx > 0 ? 1 : 0)
+      + (lineFeatureButtons.featuresHeightPx > 0 ? 1 : 0);
+    const intrinsicHeightPx = strandPairHeightPx
+      + restrictionTopPaddingPx
+      + lineFeatureButtons.forwardHeightPx
+      + lineFeatureButtons.reverseHeightPx
+      + lineFeatureButtons.featuresHeightPx
+      + (aminoAcidRow ? sequenceLineHeightPx : 0)
+      + (pairExtraRows * STRAND_PAIR_ROW_GAP_PX)
+      + (blockSiblings * STRAND_BLOCK_GAP_PX);
+
     lines.push(`
-      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
+      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}" style="contain-intrinsic-size:auto ${intrinsicHeightPx.toFixed(2)}px;">
         <span class="sequence-viewer-seq-coord"${coordStyle}>${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
           ${lineFeatureButtons.forwardPrimers}

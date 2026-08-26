@@ -118,7 +118,6 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
     gelIdInput: new MockElement('gel-id'),
     gelNameInput: new MockElement('gel-name'),
     gelTypeInput: new MockElement('gel-type'),
-    gelLadderLaneInput: new MockElement('gel-ladder-lane'),
     gelNormalizationInput: new MockElement('gel-normalization'),
     gelDenoiseStrengthInput: new MockElement('gel-denoise'),
     gelContrastStrengthInput: new MockElement('gel-contrast')
@@ -508,14 +507,18 @@ test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers
   assert.equal(calls.put.length, 1);
   assert.equal(calls.clear.length, 1, 'a cleared canvas keeps the table area transparent');
   assert.equal(calls.draw.length, 2);
+  assert.equal(result.scale, 4);
+  assert.equal(canvases[1].width, result.plan.canvasWidth * result.scale);
+  assert.equal(canvases[1].height, result.plan.canvasHeight * result.scale);
   assert.equal(calls.draw[0][2], 12, 'gel extraction starts at the settled top line');
   assert.equal(calls.draw[0][4], 41, 'gel extraction ends at the settled bottom line');
-  assert.equal(calls.draw[0][6], result.plan.tableHeight, 'gel pixels start below the transparent table');
+  assert.equal(calls.draw[0][6], result.plan.tableHeight * result.scale, 'gel pixels start below the transparent table');
   assert.equal(outputContext.textAlign, 'center');
   assert.equal(outputContext.textBaseline, 'middle');
   assert.equal(calls.text.length, 3);
   assert.equal(calls.text[0][0], 'Mutant');
-  assert.equal(calls.text[0][1], result.plan.labelWidth / 2);
+  assert.equal(calls.text[0][1], (result.plan.labelWidth / 2) * result.scale);
+  assert.match(outputContext.font, new RegExp(`${result.plan.fontSize * result.scale}px`));
 });
 
 test('[EDGE] gel-analysis generated figure uses the PNG save path and current ladder choice', async () => {
@@ -544,7 +547,6 @@ test('[EDGE] gel-analysis generated figure uses the PNG save path and current la
     gelViewerStage: new MockElement('gel-viewer-stage'),
     gelImageRow: new MockElement('gel-image-row'),
     gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
-    gelLadderLaneInput: Object.assign(new MockElement('gel-ladder-lane'), { value: '1' }),
     gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
   };
   const statuses = [];
@@ -582,8 +584,10 @@ test('[EDGE] gel-analysis generated figure uses the PNG save path and current la
   assert.equal(exported.length, 1);
   assert.equal(exported[0].fileName, 'My-gel.png');
   assert.equal(exported[0].dataUrl, 'data:image/png;base64,cG5n');
-  assert.match(statuses[statuses.length - 1], /rows 12-52/);
-  assert.match(statuses[statuses.length - 1], /Ladder lane 1 excluded/);
+  // The ladder choice is asserted where it is used, inside createGelFigureCanvas
+  // above. A finished export clears the status rather than captioning itself, so
+  // an earlier message cannot linger as if it described this export.
+  assert.equal(statuses[statuses.length - 1], '');
   assert.equal(button.textContent, 'Generate image');
   assert.equal(button.disabled, false);
 });
@@ -616,14 +620,44 @@ test('[EDGE] gel-analysis PNG downloader forwards canonical image bytes to the p
   assert.equal(result.saved, true);
 });
 
-test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent table and one gel image', () => {
+function loadPptxGenJsSandbox() {
+  const sandbox = {
+    console,
+    setTimeout,
+    clearTimeout,
+    setImmediate,
+    clearImmediate,
+    TextEncoder,
+    TextDecoder,
+    Blob,
+    Uint8Array,
+    ArrayBuffer,
+    DataView,
+    Promise,
+    atob,
+    btoa,
+    Buffer
+  };
+  sandbox.window = sandbox;
+  sandbox.self = sandbox;
+  sandbox.global = sandbox;
+  vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'pptxgenjs', 'pptxgen.bundle.js'), 'utf8'),
+    sandbox
+  );
+  return sandbox;
+}
+
+test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent table and one gel image', async () => {
+  const pptxgen = loadPptxGenJsSandbox();
   const powerPointModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'powerpoint-export.js'),
-    { TextEncoder, atob }
+    {}
   );
-  const result = powerPointModule.createGelPowerPoint({
+  const result = await powerPointModule.createGelPowerPoint({
     title: 'SENP1 & WT',
-    createdAt: new Date('2026-08-23T12:00:00.000Z'),
+    pptxgenConstructor: pptxgen.PptxGenJS,
+    zipConstructor: pptxgen.JSZip,
     gelImageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Av5PAAAAAElFTkSuQmCC',
     plan: {
       canvasWidth: 318,
@@ -640,23 +674,28 @@ test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent ta
       ]
     }
   });
-  const archiveText = new TextDecoder().decode(result.bytes);
+  const archive = await pptxgen.JSZip.loadAsync(Array.from(result.bytes));
+  const archiveEntries = Object.keys(archive.files);
+  const slideXml = await archive.file('ppt/slides/slide1.xml').async('string');
+  const masterXml = await archive.file('ppt/slideMasters/slideMaster1.xml').async('string');
 
   assert.equal(result.bytes[0], 0x50);
   assert.equal(result.bytes[1], 0x4B);
-  assert.match(archiveText, /ppt\/slides\/slide1\.xml/);
-  assert.match(archiveText, /ppt\/media\/image1\.png/);
-  assert.match(archiveText, /<a:tbl>/, 'lane metadata must be a native PowerPoint table');
-  assert.match(archiveText, /name="Editable lane table"/);
-  assert.match(archiveText, /name="Cropped gel image"/);
-  assert.match(archiveText, /<a:t xml:space="preserve">SENP1<\/a:t>/);
-  assert.match(archiveText, /<a:t xml:space="preserve">\+<\/a:t>/);
-  assert.match(archiveText, /<a:tcPr[^>]*anchor="ctr"/);
-  assert.match(archiveText, /<a:pPr algn="ctr"/);
-  assert.match(archiveText, /<a:alpha val="0"\/>/, 'table cells must have fully transparent fill');
-  assert.equal((archiveText.match(/<a:ln[LTRB][^>]*><a:noFill\/><\/a:ln[LTRB]>/g) || []).length, 24);
-  assert.equal((archiveText.match(/<a:tc>/g) || []).length, 6);
-  assert.doesNotMatch(archiveText, /Lane 1|Lane 2/, 'the exported table should not add a synthetic lane-header row');
+  assert.ok(archiveEntries.includes('ppt/slides/slide1.xml'));
+  assert.equal(archiveEntries.filter((entry) => /^ppt\/media\/image[^/]*\.png$/.test(entry)).length, 1);
+  assert.ok(archiveEntries.includes('ppt/notesMasters/notesMaster1.xml'), 'PowerPoint package must include its notes master');
+  assert.match(slideXml, /<a:tbl>/, 'lane metadata must be a native PowerPoint table');
+  assert.match(slideXml, /name="Editable lane table"/);
+  assert.match(slideXml, /name="Cropped gel image"/);
+  assert.match(slideXml, /<a:t>SENP1<\/a:t>/);
+  assert.match(slideXml, /<a:t>\+<\/a:t>/);
+  assert.match(slideXml, /<a:tcPr[^>]*anchor="ctr"/);
+  assert.match(slideXml, /<a:pPr algn="ctr"/);
+  assert.match(slideXml, /<a:alpha val="0"\/>/, 'table cells must have fully transparent fill');
+  assert.equal((slideXml.match(/<a:ln[LTRB][^>]*>\s*<a:noFill\/>\s*<\/a:ln[LTRB]>/g) || []).length, 24);
+  assert.equal((slideXml.match(/<a:tc>/g) || []).length, 6);
+  assert.match(masterXml, /<p:sldLayoutId id="2147483649"/, 'PowerPoint layout IDs must use the Office-valid range');
+  assert.doesNotMatch(slideXml, /Lane 1|Lane 2/, 'the exported table should not add a synthetic lane-header row');
   assert.ok(result.layout.gelLeft > result.layout.tableLeft);
 });
 
@@ -686,7 +725,6 @@ test('[EDGE] gel-analysis PowerPoint action exports PPTX bytes with the current 
     gelViewerStage: new MockElement('gel-viewer-stage'),
     gelImageRow: new MockElement('gel-image-row'),
     gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
-    gelLadderLaneInput: Object.assign(new MockElement('gel-ladder-lane'), { value: '1' }),
     gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
   };
   const statuses = [];
@@ -1103,6 +1141,80 @@ test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane
   assert.equal(operations.some((item) => item.type === 'arc'), false);
 });
 
+test('[EDGE] gel-analysis band intensity report opens as a dialog and closes when its data goes away', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const runtime = {
+    currentImage: { width: 8, height: 5, gray: new Float32Array(40), imageData: { tag: 'image-data' } },
+    cellTableDialogOpen: false,
+    reportDialogOpen: false,
+    currentReport: {
+      lanes: [
+        { laneIndex: 1, targetBand: { snr: 9, correctedIntensity: 120, bandSignalSum: 200, baselineSum: 80, saturationFraction: 0 } },
+        { laneIndex: 2, targetBand: { snr: 1, correctedIntensity: 12, bandSignalSum: 20, baselineSum: 8, saturationFraction: 0 } }
+      ]
+    },
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 7,
+        dividers: [4],
+        dividerDone: true,
+        bandTop: 1,
+        bandBottom: 3
+      }
+    })
+  };
+  const elements = {
+    gelCellTableOverlay: new MockElement('gel-cell-table-overlay'),
+    gelCellTableCloseBtn: new MockElement('gel-cell-table-close-btn'),
+    gelOpenCellTableBtn: new MockElement('gel-open-cell-table-btn'),
+    gelCellTableHost: new MockElement('gel-cell-table-host'),
+    gelCellTableSummary: new MockElement('gel-cell-table-summary'),
+    gelCellSnrThresholdInput: Object.assign(new MockElement('gel-cell-snr-threshold'), { value: '3' })
+  };
+  const statuses = [];
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value ?? ''),
+    deps: { setStatus: (message) => statuses.push(message) }
+  });
+
+  // Data exists, so the trigger unlocks — but the dialog stays shut until asked.
+  controller.renderCellTable();
+  assert.equal(elements.gelOpenCellTableBtn.disabled, false);
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+  assert.ok(elements.gelCellTableHost.innerHTML.includes('<table class="gel-cell-table">'));
+  assert.match(elements.gelCellTableSummary.textContent, /1\/2 cells classified as band/);
+
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, false);
+  assert.equal(elements.gelOpenCellTableBtn.getAttribute('aria-expanded'), 'true');
+
+  // Escape takes this dialog before the report dialog underneath it.
+  runtime.reportDialogOpen = true;
+  let prevented = false;
+  controller.onReportKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(runtime.cellTableDialogOpen, false);
+  assert.equal(runtime.reportDialogOpen, true, 'Escape closed both dialogs at once');
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+
+  // An open dialog must not survive losing the measurement it reports on.
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, false);
+  runtime.currentReport = { lanes: [] };
+  controller.renderCellTable();
+  assert.equal(runtime.cellTableDialogOpen, false);
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+  assert.equal(elements.gelOpenCellTableBtn.disabled, true);
+  assert.equal(elements.gelCellTableHost.innerHTML, '');
+
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, true, 'a disabled trigger still opened the dialog');
+  assert.match(statuses[statuses.length - 1], /Measure a target band/);
+});
+
 test('[EDGE] gel-analysis peak editor records curve baselines and vertical dividers lane by lane', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const gray = new Float32Array(8 * 5);
@@ -1179,7 +1291,8 @@ test('[EDGE] gel-analysis peak editor records curve baselines and vertical divid
 
   assert.equal(JSON.stringify(runtime.manualOverrides.peakIntegrations[0].dividers), JSON.stringify([2]));
   assert.equal(elements.gelPeakEditorTable.innerHTML.includes('<table class="gel-peak-table">'), true);
-  assert.equal(elements.gelPeakEditorSummary.textContent.includes('1 baseline'), true);
+  // The table carries the counts; the summary is left for guidance and warnings.
+  assert.equal(elements.gelPeakEditorSummary.textContent, '');
 });
 
 test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG width', () => {
@@ -1299,18 +1412,10 @@ test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks
   assert.equal(profile.values[42], 0);
 });
 
-test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', () => {
-  const promptCalls = [];
+test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the ladder step', () => {
   const manualModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'),
-    {
-      window: {
-        prompt(message, defaultValue) {
-          promptCalls.push({ message, defaultValue });
-          return '75';
-        }
-      }
-    }
+    { window: {} }
   );
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
@@ -1348,11 +1453,11 @@ test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', ()
     gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
     gelOverrideStatus: new MockElement('gel-override-status'),
     gelManualNextBtn: new MockElement('gel-manual-next-btn'),
+    gelToolLadderMwBtn: new MockElement('gel-tool-ladder-mw-btn'),
     gelLadderBandMwInput: new MockElement('gel-ladder-band-mw')
   };
-  elements.gelLadderBandMwInput.value = '50';
+  elements.gelLadderBandMwInput.value = '75';
   let analysisRuns = 0;
-  let canvasRenders = 0;
   const statuses = [];
   const controller = manualModule.createManualWorkflowController({
     runtime,
@@ -1361,36 +1466,46 @@ test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', ()
       onRunAnalysis: () => {
         analysisRuns += 1;
       },
-      renderCanvas: () => {
-        canvasRenders += 1;
-      },
+      renderCanvas() {},
       renderLaneTable() {},
       renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
 
+  // The guided flow is past the ladder, so the tool is the only way in.
   assert.equal(controller.getManualStep(), 'quantify');
-  let prevented = false;
-  controller.onCanvasContextMenu({
-    clientX: 25,
-    clientY: 30,
-    preventDefault() {
-      prevented = true;
-    }
-  });
+  controller.onViewerToolSelected('ladder-mw');
+  assert.equal(runtime.selectedViewerTool, 'ladder-mw');
 
-  assert.equal(prevented, true);
-  assert.equal(promptCalls.length, 1);
-  assert.match(promptCalls[0].message, /row=30/);
+  controller.onCanvasClick({ clientX: 25, clientY: 30, preventDefault() {} });
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
     { pixelY: 12, mw: 50 },
     { pixelY: 30, mw: 75 }
   ]));
-  assert.equal(elements.gelLadderBandMwInput.value, '75');
   assert.equal(analysisRuns, 1);
-  assert.equal(canvasRenders, 1);
   assert.match(statuses[statuses.length - 1], /MW=75/);
+
+  // Pressing on an existing band drags it instead of adding another one.
+  controller.onCanvasMouseDown({ clientX: 25, clientY: 31, preventDefault() {} });
+  assert.equal(runtime.ladderBandDrag.mw, 75);
+  controller.onCanvasMouseMove({ clientX: 25, clientY: 44, preventDefault() {} });
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 44, mw: 75 }
+  ]));
+  controller.onCanvasMouseUp({ clientX: 25, clientY: 60, preventDefault() {} });
+  assert.equal(runtime.ladderBandDrag, null);
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 60, mw: 75 }
+  ]));
+  assert.equal(analysisRuns, 2);
+
+  // The click that ends the drag must not drop a second band at the same row.
+  controller.onCanvasClick({ clientX: 25, clientY: 60, preventDefault() {} });
+  assert.equal(runtime.manualOverrides.ladderBands.length, 2);
+  assert.equal(analysisRuns, 2);
 });
 
 test('[EDGE] gel-analysis normalizes and scans tilted lane vertices', () => {
@@ -2200,8 +2315,6 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   const form = new MockElement('gel-form');
   const saveButton = new MockElement('gel-save-btn');
   saveButton.textContent = 'Save Analysis';
-  const exportJsonButton = new MockElement('gel-export-json-btn');
-  exportJsonButton.textContent = 'Export JSON';
   const exportCsvButton = new MockElement('gel-export-csv-btn');
   exportCsvButton.textContent = 'Export CSV';
   const canvas = new MockElement('gel-canvas');
@@ -2211,12 +2324,10 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   const elements = {
     gelForm: form,
     gelSaveBtn: saveButton,
-    gelExportJsonBtn: exportJsonButton,
     gelExportCsvBtn: exportCsvButton,
     gelIdInput: new MockElement('gel-id'),
     gelNameInput: new MockElement('gel-name'),
     gelTypeInput: new MockElement('gel-type'),
-    gelLadderLaneInput: new MockElement('gel-ladder-lane'),
     gelNormalizationInput: new MockElement('gel-normalization'),
     gelCanvas: canvas,
     gelSearchInput: new MockElement('gel-search'),
@@ -2225,7 +2336,6 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   };
   elements.gelNameInput.value = 'Concurrent save';
   elements.gelTypeInput.value = 'sds-page';
-  elements.gelLadderLaneInput.value = '1';
   elements.gelNormalizationInput.value = 'none';
 
   let persistCalls = 0;
@@ -2280,20 +2390,18 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   assert.match(statuses.at(-1), /Saved gel draft/);
 
   runtime.currentReport = { lanes: [] };
-  const firstExport = manager.onExportJson();
-  const secondExport = manager.onExportJson();
+  const firstExport = manager.onExportCsv();
+  const secondExport = manager.onExportCsv();
   assert.equal(firstExport, secondExport, 'repeated export clicks share one native dialog request');
-  assert.equal(exportJsonButton.disabled, true);
   assert.equal(exportCsvButton.disabled, true);
-  assert.equal(exportJsonButton.textContent, 'Exporting…');
+  assert.equal(exportCsvButton.textContent, 'Exporting…');
   await Promise.resolve();
   assert.equal(exportCalls, 1);
   releaseExport();
   await Promise.all([firstExport, secondExport]);
-  assert.equal(exportJsonButton.disabled, false);
   assert.equal(exportCsvButton.disabled, false);
-  assert.equal(exportJsonButton.textContent, 'Export JSON');
-  assert.equal(exportJsonButton.hasAttribute('aria-busy'), false);
+  assert.equal(exportCsvButton.textContent, 'Export CSV');
+  assert.equal(exportCsvButton.hasAttribute('aria-busy'), false);
   assert.match(statuses.at(-1), /Exported/);
 });
   }

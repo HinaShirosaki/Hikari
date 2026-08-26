@@ -4,9 +4,9 @@
 //
 // Cells whose text starts with "=" are evaluated by the shared formula language in
 // ./formula.js; everything else is plain text (numeric when it parses as a number).
-// References are A1-style: the column letter is the column's position in the table,
-// the number is the row's position, so inserting a column shifts references the way a
-// spreadsheet does. Nothing is stored but the text the user typed.
+// References are A1-style: bare A1 is local to the formula's table, and Table1:A1
+// selects an explicit sibling table. The column letter is the column's position and
+// the number is the row's position. Nothing is stored but the text the user typed.
 
 import {
   compileFormula,
@@ -15,7 +15,6 @@ import {
   parseFormula
 } from './formula.js';
 import {
-  normalizeNotebookResultTable,
   normalizeNotebookResultTables
 } from './notebook-result-tables.js';
 
@@ -105,30 +104,51 @@ export function formatNotebookTableNumber(value) {
   return String(Number(value.toPrecision(12)));
 }
 
-// ponytail: every cell is recomputed on each call — a notebook table is tens of cells,
-// so there is no dependency graph. Add incremental recalc if tables ever get large.
-export function computeNotebookResultTable(rawTable, { plateAddressing = false } = {}) {
-  const table = normalizeNotebookResultTable(rawTable);
-  const byRowId = {};
-  if (!table) {
-    return { table: null, byRowId };
-  }
-
-  const columnCount = table.columns.length;
-  const rowCount = table.rows.length;
-  const rawAt = (column, row) => (
-    column >= 0 && column < columnCount && row >= 0 && row < rowCount
-      ? String(table.rows[row][table.columns[column].field] ?? '').trim()
-      : null
-  );
-
+// ponytail: every cell is recomputed on each call — notebook tables are small, so a
+// shared recursive evaluator is simpler than maintaining an incremental dependency
+// graph. Bare A1 addresses stay local; Table1:A1 selects an explicit sibling table.
+export function computeNotebookResultTables(rawTables, { plateAddressing = false, legacyTable = null } = {}) {
+  const tables = normalizeNotebookResultTables(rawTables, legacyTable);
+  const outputs = tables.map((table) => ({ table, byRowId: {} }));
   const computed = new Map();
   const visiting = new Set();
 
-  // The number a cell contributes: empty is 0, plain text is NaN, a formula is
-  // evaluated and its own errors propagate to whoever referenced it.
-  function valueAt(column, row) {
-    const key = `${column}:${row}`;
+  function tableLabel(tableIndex) {
+    return `Table${tableIndex + 1}`;
+  }
+
+  function rawAt(tableIndex, column, row) {
+    const table = tables[tableIndex];
+    if (!table || column < 0 || column >= table.columns.length || row < 0 || row >= table.rows.length) {
+      return null;
+    }
+    return String(table.rows[row][table.columns[column].field] ?? '').trim();
+  }
+
+  function targetTableIndex(node, currentTableIndex) {
+    if (!node.table) {
+      return currentTableIndex;
+    }
+    const match = /^Table(\d+)$/i.exec(String(node.table));
+    const tableIndex = match ? Number(match[1]) - 1 : -1;
+    if (tableIndex < 0 || tableIndex >= tables.length) {
+      throw fail(`Unknown table "${node.table}". This notebook has ${tables.length} table(s).`);
+    }
+    return tableIndex;
+  }
+
+  function referenceLabel(node) {
+    const prefix = node.table ? `${node.table}:` : '';
+    return node.kind === 'range'
+      ? `${prefix}${String(node.from).toUpperCase()}:${String(node.to).toUpperCase()}`
+      : `${prefix}${String(node.name).toUpperCase()}`;
+  }
+
+  // The number a cell contributes: empty is 0, plain text is NaN, and formula errors
+  // propagate through local and cross-table dependencies.
+  function valueAt(tableIndex, column, row) {
+    const key = `${tableIndex}:${column}:${row}`;
+    const address = `${tableLabel(tableIndex)}:${formatCellAddress(column, row, plateAddressing)}`;
     const cached = computed.get(key);
     if (cached) {
       if (cached.error) {
@@ -137,12 +157,12 @@ export function computeNotebookResultTable(rawTable, { plateAddressing = false }
       return cached.value;
     }
     if (visiting.has(key)) {
-      throw fail(`"${formatCellAddress(column, row, plateAddressing)}" refers to itself.`, true);
+      throw fail(`"${address}" refers to itself or creates a circular reference.`, true);
     }
 
-    const raw = rawAt(column, row);
+    const raw = rawAt(tableIndex, column, row);
     if (raw === null) {
-      throw fail(`"${formatCellAddress(column, row, plateAddressing)}" is outside this table.`);
+      throw fail(`"${address}" is outside this table.`);
     }
     if (!raw) {
       return 0;
@@ -157,16 +177,17 @@ export function computeNotebookResultTable(rawTable, { plateAddressing = false }
       if (compiled.error) {
         throw fail(compiled.error.message);
       }
-      const value = compiled.evaluate({ value: NaN, resolveRef });
+      const value = compiled.evaluate({
+        value: NaN,
+        resolveRef: (node) => resolveRef(node, tableIndex)
+      });
       if (!Number.isFinite(value)) {
         throw fail('Formula result is not a finite number.', false, true);
       }
       computed.set(key, { value, error: null, cycle: false, numeric: false, pending: false });
       return value;
     } catch (error) {
-      const message = error instanceof FormulaError
-        ? error.message
-        : String(error?.message || error);
+      const message = error instanceof FormulaError ? error.message : String(error?.message || error);
       const cycle = Boolean(error?.cycle);
       const numeric = Boolean(error?.numeric);
       const pending = Boolean(error?.pending);
@@ -177,106 +198,106 @@ export function computeNotebookResultTable(rawTable, { plateAddressing = false }
     }
   }
 
-  function resolveRef(node) {
+  function resolveRef(node, currentTableIndex) {
+    const tableIndex = targetTableIndex(node, currentTableIndex);
+    const label = referenceLabel(node);
     if (node.kind === 'range') {
       const from = parseCellAddress(node.from, plateAddressing);
       const to = parseCellAddress(node.to, plateAddressing);
       if (!from || !to) {
-        throw fail(`"${node.from}:${node.to}" is not a range of cells.`);
+        throw fail(`"${label}" is not a range of cells.`);
       }
       const values = [];
       for (let column = Math.min(from.column, to.column); column <= Math.max(from.column, to.column); column += 1) {
         for (let row = Math.min(from.row, to.row); row <= Math.max(from.row, to.row); row += 1) {
-          // Cells outside the table and empty cells drop out of the range instead of
-          // counting as zero, so SUM(A1:A20) and MEAN(A1:A20) both work on a
-          // four-row table. Plain text contributes NaN and is filtered by aggregates;
-          // errors from formula cells propagate instead of silently changing a result.
-          const raw = rawAt(column, row);
+          // Out-of-bounds and empty range cells drop out. Filled formula failures still
+          // propagate so an aggregate cannot silently change its scientific result.
+          const raw = rawAt(tableIndex, column, row);
           if (raw === null || !raw) {
             continue;
           }
-          values.push(valueAt(column, row));
+          values.push(valueAt(tableIndex, column, row));
         }
       }
       if (!values.length) {
-        throw fail(`"${node.from}:${node.to}" covers no filled cells in this table.`);
+        throw fail(`"${label}" covers no filled cells in its table.`);
       }
       return values;
     }
 
     const address = parseCellAddress(node.name, plateAddressing);
     if (!address) {
-      throw fail(`"${node.name}" is not a cell reference.`);
+      throw fail(`"${label}" is not a cell reference.`);
     }
-    // An empty cell is not a zero -- it is a value nobody has recorded yet.
-    if (rawAt(address.column, address.row) === '') {
-      throw fail(`"${String(node.name).toUpperCase()}" is empty.`, false, false, true);
+    if (rawAt(tableIndex, address.column, address.row) === '') {
+      throw fail(`"${label}" is empty.`, false, false, true);
     }
-    const value = valueAt(address.column, address.row);
+    const value = valueAt(tableIndex, address.column, address.row);
     if (!Number.isFinite(value)) {
-      throw fail(`"${String(node.name).toUpperCase()}" is not a number.`);
+      throw fail(`"${label}" is not a number.`);
     }
     return [value];
   }
 
-  // Whether a reference has a value yet. Anything that is merely waiting on an empty
-  // cell comes back unknown; a genuine error still throws and is reported as one.
-  function resolveSymbol(node) {
-    const label = node.kind === 'range'
-      ? `${String(node.from).toUpperCase()}:${String(node.to).toUpperCase()}`
-      : String(node.name).toUpperCase();
-    try {
-      resolveRef(node);
-      return { known: true };
-    } catch (error) {
-      if (error?.pending) {
-        return { known: false, text: label };
+  function pendingExpressionFor(raw, tableIndex) {
+    const resolveSymbol = (node) => {
+      const label = referenceLabel(node);
+      try {
+        resolveRef(node, tableIndex);
+        return { known: true };
+      } catch (error) {
+        if (error?.pending) {
+          return { known: false, text: label };
+        }
+        throw error;
       }
-      throw error;
-    }
-  }
-
-  function pendingExpressionFor(raw) {
+    };
     try {
       return simplifyFormula(raw, {
         resolve: resolveSymbol,
-        numeric: { value: NaN, resolveRef }
+        numeric: { value: NaN, resolveRef: (node) => resolveRef(node, tableIndex) }
       }) || '';
     } catch (_error) {
-      // Anything the simplifier cannot express falls back to the normal error text.
       return '';
     }
   }
 
-  table.rows.forEach((row, rowIndex) => {
-    const cells = {};
-    table.columns.forEach((column, columnIndex) => {
-      const raw = String(row[column.field] ?? '');
-      if (!isNotebookTableFormula(raw)) {
-        cells[column.field] = { text: notebookTableCellText(raw), error: null, formula: false };
-        return;
-      }
-      try {
-        cells[column.field] = {
-          text: formatNotebookTableNumber(valueAt(columnIndex, rowIndex)),
-          error: null,
-          formula: true
-        };
-      } catch (error) {
-        const pendingText = error?.pending ? pendingExpressionFor(raw) : '';
-        cells[column.field] = pendingText
-          ? { text: pendingText, error: null, formula: true, pending: true }
-          : {
-            text: error?.numeric ? '#NUM!' : '#ERROR',
-            error: error instanceof FormulaError ? error.message : String(error?.message || error),
+  tables.forEach((table, tableIndex) => {
+    table.rows.forEach((row, rowIndex) => {
+      const cells = {};
+      table.columns.forEach((column, columnIndex) => {
+        const raw = String(row[column.field] ?? '');
+        if (!isNotebookTableFormula(raw)) {
+          cells[column.field] = { text: notebookTableCellText(raw), error: null, formula: false };
+          return;
+        }
+        try {
+          cells[column.field] = {
+            text: formatNotebookTableNumber(valueAt(tableIndex, columnIndex, rowIndex)),
+            error: null,
             formula: true
           };
-      }
+        } catch (error) {
+          const pendingText = error?.pending ? pendingExpressionFor(raw, tableIndex) : '';
+          cells[column.field] = pendingText
+            ? { text: pendingText, error: null, formula: true, pending: true }
+            : {
+              text: error?.numeric ? '#NUM!' : '#ERROR',
+              error: error instanceof FormulaError ? error.message : String(error?.message || error),
+              formula: true
+            };
+        }
+      });
+      outputs[tableIndex].byRowId[row.id] = cells;
     });
-    byRowId[row.id] = cells;
   });
 
-  return { table, byRowId };
+  return outputs;
+}
+
+export function computeNotebookResultTable(rawTable, options = {}) {
+  return computeNotebookResultTables(rawTable ? [rawTable] : [], options)[0]
+    || { table: null, byRowId: {} };
 }
 
 // The computed view of a table, for anything that renders cells as plain text
@@ -302,9 +323,18 @@ export function resolveNotebookResultTableValues(rawTable, options = {}) {
 // Drop-in replacement for normalizeNotebookResultTables wherever cells are rendered
 // as text rather than edited, so a printed page shows 12 and not "=SUM(A1:A4)".
 export function resolveNotebookResultTablesValues(rawTables, legacyTable = null) {
-  return normalizeNotebookResultTables(rawTables, legacyTable)
-    .map((table) => resolveNotebookResultTableValues(table))
-    .filter(Boolean);
+  return computeNotebookResultTables(rawTables, { legacyTable })
+    .map(({ table, byRowId }) => ({
+      columns: table.columns,
+      rows: table.rows.map((row) => {
+        const cells = byRowId[row.id] || {};
+        const resolved = { id: row.id };
+        table.columns.forEach((column) => {
+          resolved[column.field] = cells[column.field]?.text ?? String(row[column.field] ?? '');
+        });
+        return resolved;
+      })
+    }));
 }
 
 // Applies one "point mode" cell pick to the formula text being edited: the string
@@ -334,14 +364,29 @@ export function applyReferencePick({
   // Shift-click widens the reference into a range, the way dragging across cells does.
   // With no live pick, grow from a reference the user typed by hand.
   if (extendRange && !anchor) {
-    const typed = /[A-Za-z]+\d+$/.exec(value.slice(0, caretStart));
+    const typed = /(?:Table\d+:)?[A-Za-z]+\d+$/i.exec(value.slice(0, caretStart));
     if (typed) {
       anchor = typed[0];
       start = caretStart - typed[0].length;
     }
   }
 
-  const text = extendRange && anchor ? `${anchor}:${address}` : address;
+  let text = address;
+  let nextAnchor = address;
+  if (extendRange && anchor) {
+    const qualified = /^(Table\d+):([A-Za-z]+\d+)$/i;
+    const from = qualified.exec(anchor);
+    const to = qualified.exec(address);
+    if (from && to) {
+      if (from[1].toLowerCase() === to[1].toLowerCase()) {
+        text = `${from[1]}:${from[2]}:${to[2]}`;
+        nextAnchor = anchor;
+      }
+    } else if (!from && !to) {
+      text = `${anchor}:${address}`;
+      nextAnchor = anchor;
+    }
+  }
   const nextValue = value.slice(0, start) + text + value.slice(end);
   const caret = start + text.length;
   return {
@@ -351,7 +396,7 @@ export function applyReferencePick({
       start,
       end: caret,
       text,
-      anchor: extendRange && anchor ? anchor : address
+      anchor: nextAnchor
     }
   };
 }
@@ -368,13 +413,13 @@ export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0, 
   if (!isNotebookTableFormula(source) || (!columnDelta && !rowDelta)) {
     return source;
   }
-  return source.replace(/([A-Za-z]+)(\d+)/g, (match, letters, digits, offset) => {
+  return source.replace(/(?:(Table\d+):)?([A-Za-z]+)(\d+)/gi, (match, table, letters, digits, offset) => {
     // A name followed by "(" is a function call -- LOG10( must not be read as a cell.
     const rest = source.slice(offset + match.length);
     if (/^\s*\(/.test(rest)) {
       return match;
     }
-    const address = parseCellAddress(match, plateAddressing);
+    const address = parseCellAddress(`${letters}${digits}`, plateAddressing);
     if (!address) {
       return match;
     }
@@ -383,7 +428,7 @@ export function translateFormulaReferences(text, columnDelta = 0, rowDelta = 0, 
     if (column < 0 || row < 0) {
       return '#REF!';
     }
-    return formatCellAddress(column, row, plateAddressing);
+    return `${table ? `${table}:` : ''}${formatCellAddress(column, row, plateAddressing)}`;
   });
 }
 
@@ -486,8 +531,10 @@ function textPartOf(node, part, context) {
     return part;
   }
   if (node.kind === 'range') {
+    // A qualified range keeps its table, or the text would point at the local one.
+    const prefix = node.table ? `${node.table}:` : '';
     return {
-      text: `${String(node.from).toUpperCase()}:${String(node.to).toUpperCase()}`,
+      text: `${prefix}${String(node.from).toUpperCase()}:${String(node.to).toUpperCase()}`,
       precedence: ATOM_PRECEDENCE
     };
   }

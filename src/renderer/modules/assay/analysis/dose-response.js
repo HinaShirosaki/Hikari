@@ -57,7 +57,7 @@ export function analyzeNormalize(observations, grouping, xAxis, spec) {
         if (Number.isFinite(normalized)) {
           const point = { x: level.value, y: normalized };
           if (showErrorBars && level.stats.n > 1 && level.stats.sd > 0 && baselineMean) {
-            point.yVariance = (level.stats.sd / Math.abs(baselineMean)) * 200;
+            point.yVariance = (level.stats.sd / Math.abs(baselineMean)) * 100;
           }
           points.push(point);
         }

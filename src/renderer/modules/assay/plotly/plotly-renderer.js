@@ -34,6 +34,20 @@ function legendLayout(position, font) {
   return { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, yanchor: 'bottom', font }; // top
 }
 
+// Auto frame sizing. The plot area is what the data needs; the gutter is the y-axis
+// labels/title plus the right margin, which do not scale with the category count.
+const MIN_PLOT_WIDTH = 240;
+const MAX_PLOT_WIDTH = 900;
+const AXIS_GUTTER = 110;
+const HOST_PADDING = 24;
+const LABEL_GAP = 4;
+const MIN_FRAME_HEIGHT = 250;
+const MAX_FRAME_HEIGHT = 400;
+
+function clampNumber(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function formatValue(value) {
   return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : '';
 }
@@ -238,11 +252,27 @@ export function createAssayPlotlyRenderer() {
       }
     });
 
-    const longestSeries = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0);
-    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (isBar ? 70 : 60)));
+    // The frame follows the data: room per bar (or per point) plus the axis gutters, and a
+    // height tied to that width. A flat 420x280 floor left the axis running well past the
+    // last bar on a two-group summary, and a flat 280 height turned a 24-category plot
+    // into a letterbox.
+    const categoryCount = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0) || 1;
+    // Grouped bars share a category slot, so the slot grows with the series count -- but
+    // only up to a point, past which the bars thin out instead of the plot getting wider.
+    const slotWidth = isBar ? 34 + 30 * Math.min(chartModel.series.length, 4) : 44;
+    const plotWidth = clampNumber(categoryCount * slotWidth, MIN_PLOT_WIDTH, MAX_PLOT_WIDTH);
+    // Never wider than the panel it sits in: many categories thin the bars out rather
+    // than pushing the frame into a horizontal scrollbar. The host itself is sized by its
+    // content, so the constraint has to come from its parent.
+    const available = Math.floor((target.parentElement?.clientWidth || 0) - HOST_PADDING);
+    const widthCap = available > MIN_PLOT_WIDTH + AXIS_GUTTER
+      ? Math.min(MAX_PLOT_WIDTH + AXIS_GUTTER, available)
+      : MAX_PLOT_WIDTH + AXIS_GUTTER;
+    const autoWidth = Math.min(Math.round(plotWidth + AXIS_GUTTER), widthCap);
+    const autoHeight = clampNumber(Math.round(autoWidth * 0.62), MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
     const useCustomSize = st.sizeAuto === false;
     const width = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : autoWidth;
-    const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : 280;
+    const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : autoHeight;
 
     const tickMark = st.tickDir === 'none' ? '' : (st.tickDir || 'outside');
     const tickLen = Number.isFinite(st.tickLen) ? st.tickLen : 5;
@@ -263,9 +293,13 @@ export function createAssayPlotlyRenderer() {
     const yScaleCfg = scaleAxis(st.yScale);
 
     // Prism writes category labels horizontally; only tilt them when they would collide.
+    // Collision is label width against the slot each category actually gets, so 24 short
+    // labels tilt for the same reason two long ones do.
     const longestCategory = !isBar ? 0 : chartModel.series.reduce((max, series) => (series.data || [])
       .reduce((inner, point) => Math.max(inner, String(point.x ?? '').length), max), 0);
-    const categoryTickAngle = isBar && longestCategory > 10 ? -35 : 0;
+    const labelWidth = longestCategory * (tickFont.size || 12) * 0.62;
+    const categorySlot = (width - AXIS_GUTTER) / categoryCount;
+    const categoryTickAngle = isBar && labelWidth + LABEL_GAP > categorySlot ? -35 : 0;
 
     // An explicit axis title wins; otherwise the analysis names its own axes.
     const xaxis = {

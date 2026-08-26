@@ -249,10 +249,6 @@ function createProtocolMatchingRuntime(deps = {}) {
   }
 
   async function resolveProtocolWinner({
-    provider,
-    endpoint,
-    apiKey,
-    model,
     matches,
     message,
     conversation,

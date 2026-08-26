@@ -47,7 +47,6 @@ function appendLimitedText(currentValue = '', chunk = '', limit = DEFAULT_OUTPUT
 
 function buildSummary({
   status = '',
-  command = '',
   exitCode = null,
   timedOut = false,
   stdout = '',

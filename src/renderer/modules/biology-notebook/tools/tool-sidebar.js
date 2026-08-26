@@ -1,11 +1,11 @@
 import {
   calculateBufferRecipe,
   calculateFixedReaction,
-  calculateMolarity,
   resolveBufferCompound
 } from '../../../lib/bench-calculations.js';
 import { BUFFER_COMPOUNDS } from '../../../lib/chemistry/buffer-compounds.js';
 import {
+  buildFixedReactionCalculationTable,
   buildNotebookToolCalculationsHtml,
   normalizeNotebookToolCalculations
 } from '../../../lib/notebook-tool-calculations.js';
@@ -600,7 +600,7 @@ export function createNotebookToolSidebarController({
   }
 
   function syncToolSelection() {
-    ['molarity', 'buffer', 'reaction'].forEach((id) => {
+    ['buffer', 'reaction'].forEach((id) => {
       const tab = getElement(doc, `biology-notebook-tool-tab-${id}`);
       const panel = getElement(doc, `biology-notebook-tool-panel-${id}`);
       const isActive = id === activeTool;
@@ -623,79 +623,13 @@ export function createNotebookToolSidebarController({
   }
 
   function togglePanel(toolId) {
-    activeTool = ['molarity', 'buffer', 'reaction'].includes(toolId) ? toolId : 'molarity';
+    activeTool = ['buffer', 'reaction'].includes(toolId) ? toolId : 'buffer';
     if (activeTool !== 'buffer') {
       closeBufferSuggestions();
     }
     showToolWorkspace();
     syncToolSelection();
     renderCurrentTool();
-  }
-
-  function syncMolarityMode() {
-    const mode = inputValue(getElement(doc, 'biology-notebook-tool-molarity-mode')) || 'mass';
-    ['mass', 'volume', 'concentration', 'dilution'].forEach((id) => {
-      const block = getElement(doc, `biology-notebook-tool-molarity-${id}`);
-      if (block) {
-        block.hidden = id !== mode;
-      }
-    });
-  }
-
-  function collectMolarityInputs() {
-    const mode = inputValue(getElement(doc, 'biology-notebook-tool-molarity-mode')) || 'mass';
-    if (mode === 'volume') {
-      return {
-        mode,
-        inputs: {
-          massValue: inputValue(getElement(doc, 'biology-notebook-tool-volume-mass')),
-          massUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-mass-unit')) || 'mg',
-          molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-volume-mw')),
-          concentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-volume-concentration')),
-          concentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-concentration-unit')) || 'mM'
-        }
-      };
-    }
-    if (mode === 'concentration') {
-      return {
-        mode,
-        inputs: {
-          massValue: inputValue(getElement(doc, 'biology-notebook-tool-concentration-mass')),
-          massUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-mass-unit')) || 'mg',
-          molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-concentration-mw')),
-          volumeValue: inputValue(getElement(doc, 'biology-notebook-tool-concentration-volume')),
-          volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-volume-unit')) || 'mL'
-        }
-      };
-    }
-    if (mode === 'dilution') {
-      return {
-        mode,
-        inputs: {
-          stockConcentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-dilution-stock')),
-          stockConcentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-stock-unit')) || 'mM',
-          targetConcentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-dilution-target')),
-          targetConcentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-target-unit')) || 'mM',
-          finalVolumeValue: inputValue(getElement(doc, 'biology-notebook-tool-dilution-volume')),
-          finalVolumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-volume-unit')) || 'mL'
-        }
-      };
-    }
-    return {
-      mode: 'mass',
-      inputs: {
-        concentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-mass-concentration')),
-        concentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-concentration-unit')) || 'mM',
-        molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-mass-mw')),
-        volumeValue: inputValue(getElement(doc, 'biology-notebook-tool-mass-volume')),
-        volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-volume-unit')) || 'mL'
-      }
-    };
-  }
-
-  function calculateCurrentMolarity() {
-    const { mode, inputs } = collectMolarityInputs();
-    return calculateMolarity(mode, inputs);
   }
 
   function syncBufferCompound(index, { overwriteMw = false } = {}) {
@@ -765,13 +699,7 @@ export function createNotebookToolSidebarController({
   }
 
   function calculateActiveTool() {
-    if (activeTool === 'buffer') {
-      return calculateCurrentBuffer();
-    }
-    if (activeTool === 'reaction') {
-      return calculateCurrentReaction();
-    }
-    return calculateCurrentMolarity();
+    return activeTool === 'reaction' ? calculateCurrentReaction() : calculateCurrentBuffer();
   }
 
   function resultTextAfterName(text) {
@@ -816,14 +744,13 @@ export function createNotebookToolSidebarController({
   }
 
   function renderCurrentTool() {
-    syncMolarityMode();
     currentResult = calculateActiveTool();
-    if (activeTool === 'buffer') {
-      renderBufferTableResult(currentResult);
-    } else if (activeTool === 'reaction') {
+    if (activeTool === 'reaction') {
       renderReactionTableResult(currentResult);
+    } else {
+      renderBufferTableResult(currentResult);
     }
-    const hideSummaryOutput = activeTool === 'buffer';
+    const hideSummaryOutput = activeTool !== 'reaction';
     if (toolOutput) {
       toolOutput.hidden = hideSummaryOutput;
     }
@@ -906,35 +833,8 @@ export function createNotebookToolSidebarController({
   }
 
   function reactionCalculationTable(result) {
-    if (!result || result.type !== 'fixed-reaction' || result.mode !== 'reaction') {
-      return null;
-    }
-    const rows = (Array.isArray(result.details) ? result.details : []).map((detail) => {
-      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      return [
-        cleanCell(rowDetail?.name || detail.inputs?.name),
-        concentrationText(rowDetail?.stockConcentration, detail.inputs?.stockConcentration),
-        concentrationText(rowDetail?.finalConcentration, detail.inputs?.finalConcentration),
-        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText))
-      ];
-    }).filter((row) => row.some(Boolean));
-    if (!rows.length && !result.fill?.text) {
-      return null;
-    }
-    const totalVolume = cleanCell(result.inputs?.totalVolumeValue);
-    const totalUnit = cleanCell(result.inputs?.totalVolumeUnit);
-    return {
-      caption: 'Fixed Volume Reaction',
-      metaRows: [[
-        'Total volume',
-        totalVolume && /\D/u.test(totalVolume) ? totalVolume : [totalVolume, totalUnit].filter(Boolean).join(' '),
-        '',
-        ''
-      ]],
-      headers: ['Item', 'Stock Conc.', 'Final Conc.', 'Volume'],
-      rows,
-      footerRows: [[cleanCell(result.fill?.name || result.inputs?.fillName || 'Solvent'), '', '', cleanCell(result.fill?.text || resultTextAfterName(result.fill?.resultText || ''))]]
-    };
+    const table = buildFixedReactionCalculationTable(result);
+    return table && (table.rows.length || table.footerRows.some((row) => row.some(Boolean))) ? table : null;
   }
 
   function calculationTableForResult(result) {
@@ -961,6 +861,50 @@ export function createNotebookToolSidebarController({
       status: result.status || '',
       createdAt: new Date().toISOString()
     };
+  }
+
+  // Editing a cell rewrites that one input and runs the same engine again, so a
+  // changed stock concentration flows through to every derived volume and to
+  // the water that fills the tube.
+  function applyCalculationEdit({ calculationId, rowIndex, field, value }) {
+    const index = toolCalculations.findIndex((entry) => String(entry?.id || '') === String(calculationId || ''));
+    const calculation = index >= 0 ? toolCalculations[index] : null;
+    if (!calculation || calculation.type !== 'fixed-reaction' || calculation.mode !== 'reaction') {
+      return false;
+    }
+    const inputs = {
+      ...calculation.inputs,
+      reagents: (Array.isArray(calculation.inputs?.reagents) ? calculation.inputs.reagents : []).map((row) => ({ ...row }))
+    };
+    if (field === 'totalVolumeValue') {
+      inputs.totalVolumeValue = value;
+    } else {
+      const reagent = inputs.reagents[rowIndex];
+      if (!reagent) {
+        return false;
+      }
+      reagent[field] = value;
+      if (field === 'manualVolumeValue' && !String(value).trim()) {
+        // Clearing the volume hands the row back to its concentrations.
+        delete reagent.manualVolumeValue;
+      }
+    }
+    const result = calculateFixedReaction(inputs);
+    toolCalculations[index] = {
+      ...calculation,
+      inputs: result.inputs || inputs,
+      table: buildFixedReactionCalculationTable(result, {
+        // Notes such as "set up one reaction each" belong to the page that
+        // generated the table, not to the engine.
+        extraMetaRows: (calculation.table?.metaRows || []).slice(1)
+      }) || calculation.table,
+      result: result.resultText || '',
+      formula: result.formulaText || '',
+      summary: result.resultText || result.formulaText || calculation.summary,
+      status: result.status || ''
+    };
+    toolCalculations = normalizeNotebookToolCalculations(toolCalculations);
+    return true;
   }
 
   function recordCurrentCalculation() {
@@ -1117,10 +1061,9 @@ export function createNotebookToolSidebarController({
     renderCurrentTool();
   }
 
-  ['molarity', 'buffer', 'reaction'].forEach((id) => {
+  ['buffer', 'reaction'].forEach((id) => {
     addListener(getElement(doc, `biology-notebook-tool-tab-${id}`), 'click', () => togglePanel(id));
   });
-  addListener(getElement(doc, 'biology-notebook-tool-molarity-mode'), 'change', renderCurrentTool);
   addListener(getElement(doc, 'biology-notebook-tool-buffer-add-row'), 'click', () => {
     revealOrAddBufferRow();
   });
@@ -1153,28 +1096,6 @@ export function createNotebookToolSidebarController({
     focusTarget?.focus?.();
   });
   const interactiveIds = [
-    'biology-notebook-tool-molarity-mode',
-    'biology-notebook-tool-mass-concentration',
-    'biology-notebook-tool-mass-concentration-unit',
-    'biology-notebook-tool-mass-mw',
-    'biology-notebook-tool-mass-volume',
-    'biology-notebook-tool-mass-volume-unit',
-    'biology-notebook-tool-volume-mass',
-    'biology-notebook-tool-volume-mass-unit',
-    'biology-notebook-tool-volume-mw',
-    'biology-notebook-tool-volume-concentration',
-    'biology-notebook-tool-volume-concentration-unit',
-    'biology-notebook-tool-concentration-mass',
-    'biology-notebook-tool-concentration-mass-unit',
-    'biology-notebook-tool-concentration-mw',
-    'biology-notebook-tool-concentration-volume',
-    'biology-notebook-tool-concentration-volume-unit',
-    'biology-notebook-tool-dilution-stock',
-    'biology-notebook-tool-dilution-stock-unit',
-    'biology-notebook-tool-dilution-target',
-    'biology-notebook-tool-dilution-target-unit',
-    'biology-notebook-tool-dilution-volume',
-    'biology-notebook-tool-dilution-volume-unit',
     'biology-notebook-tool-buffer-volume',
     'biology-notebook-tool-buffer-ph',
     'biology-notebook-tool-reaction-total-volume',
@@ -1192,6 +1113,31 @@ export function createNotebookToolSidebarController({
     const element = getElement(doc, id);
     addListener(element, 'input', renderCurrentTool);
     addListener(element, 'change', renderCurrentTool);
+  });
+
+  // Cells are inputs, so a committed change is what triggers the recompute; the
+  // focused cell is restored because the whole table is re-rendered.
+  addListener(calculationsHost, 'change', (event) => {
+    const field = event?.target?.dataset?.toolCalculationField;
+    if (!field) {
+      return;
+    }
+    const changed = applyCalculationEdit({
+      calculationId: event.target.dataset.toolCalculationId,
+      rowIndex: Math.max(0, Number(event.target.dataset.toolCalculationRow) || 0),
+      field,
+      value: event.target.value
+    });
+    if (!changed) {
+      return;
+    }
+    const focusKey = `${event.target.dataset.toolCalculationRow}:${field}`;
+    renderSavedCalculations();
+    const next = typeof calculationsHost?.querySelector === 'function'
+      ? calculationsHost.querySelector(`[data-tool-calculation-row="${focusKey.split(':')[0]}"][data-tool-calculation-field="${field}"]`)
+      : null;
+    next?.focus?.();
+    setStatus('Reaction updated. Save the notebook page to keep it.');
   });
 
   addListener(doc, 'click', (event) => {
@@ -1213,7 +1159,6 @@ export function createNotebookToolSidebarController({
 
   mountToolWorkspace();
   setSidebarOpen(layout?.classList?.contains?.('is-tool-sidebar-open'));
-  syncMolarityMode();
   renderCurrentTool();
   renderSavedCalculations();
 

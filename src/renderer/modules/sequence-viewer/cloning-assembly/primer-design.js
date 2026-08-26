@@ -102,6 +102,11 @@ export function designPcrPrimerPair(sequence, options = {}) {
     ...DEFAULT_CLONING_PREFERENCES,
     ...(options?.preferences || {})
   };
+  const specificitySequence = normalizeSequence(options?.specificitySequence || '');
+  if (specificitySequence.length) {
+    config.specificitySequence = specificitySequence;
+    config.specificityCircular = Boolean(options?.specificityCircular);
+  }
   const baseName = String(options?.name || '').trim() || 'selection';
 
   if (!templateSequence.length) {

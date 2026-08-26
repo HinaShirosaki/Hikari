@@ -5,6 +5,9 @@ export function getViewerToolLabel(tool = '') {
   if (tool === 'ladder') {
     return 'Set ladder lane';
   }
+  if (tool === 'ladder-mw') {
+    return 'Set ladder MW';
+  }
   if (tool === 'lane-vertices') {
     return 'Adjust lane vertices';
   }
@@ -20,6 +23,7 @@ export function getViewerToolLabel(tool = '') {
 export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
   elements.gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
+  elements.gelToolLadderMwBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder-mw');
   elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');
   elements.gelToolBandTopBtn?.classList.toggle('is-active', selectedViewerTool === 'band-top');
   elements.gelToolBandBottomBtn?.classList.toggle('is-active', selectedViewerTool === 'band-bottom');

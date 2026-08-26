@@ -369,6 +369,16 @@ test('[EDGE] sequence-viewer primer features render as directional 5-prime to 3-
 
   assert.match(html, /sequence-viewer-line-feature-primer-forward/);
   assert.match(html, /sequence-viewer-line-feature-primer-reverse/);
+
+  // Which chrome carries the direction depends on SNAPGENE_PRIMER_STYLE, so the
+  // contract is checked against whichever drawing the viewer is built with.
+  if (/sequence-viewer-line-feature-primer-snapgene/.test(html)) {
+    assert.equal((html.match(/<polygon class="sequence-viewer-primer-outline"/g) || []).length, 2);
+    // 18 nt forward plus 20 nt reverse, each base drawn inside the outline.
+    assert.equal((html.match(/<text class="sequence-viewer-primer-nt/g) || []).length, 38);
+    return;
+  }
+
   assert.equal((html.match(/sequence-viewer-primer-end-five/g) || []).length, 2);
   assert.equal((html.match(/sequence-viewer-primer-end-three/g) || []).length, 2);
   assert.equal((html.match(/sequence-viewer-primer-arrow/g) || []).length, 2);

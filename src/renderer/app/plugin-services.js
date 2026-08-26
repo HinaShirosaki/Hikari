@@ -12,8 +12,9 @@
 //
 // The `call` discriminator keeps this off the plugin-bridge channel (which
 // only processes messages carrying a `verb`), so a page can host both without
-// crosstalk. A service frame is intentionally NOT registered with the bridge:
-// a converter needs no host API, only bytes in and text out.
+// crosstalk. Service frames are also registered with that permission bridge,
+// allowing a converter to use a narrowly declared host capability such as
+// `python` while remaining headless.
 
 const PROTOCOL_MARKER = 1;
 const CONVERT_TIMEOUT_MS = 15000;

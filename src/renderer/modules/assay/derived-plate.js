@@ -286,6 +286,17 @@ function collectReferenceNodes(node, found = []) {
   return found;
 }
 
+function referenceTable(node) {
+  return String(node?.table || 'Table1').trim().toLowerCase();
+}
+
+function referenceNodeLabel(node) {
+  const prefix = node?.table ? `${node.table}:` : '';
+  return node?.kind === 'range'
+    ? `${prefix}${node.from}:${node.to}`
+    : `${prefix}${node.name}`;
+}
+
 function describeFormulaError(error) {
   const at = Number.isInteger(error?.position) ? ` (position ${error.position + 1})` : '';
   return `Formula error: ${error?.message || 'could not be parsed.'}${at}`;
@@ -318,9 +329,12 @@ export function applyPlateFormula({
   const resolved = new Map();
   try {
     collectReferenceNodes(compiled.ast).forEach((node) => {
-      const key = node.kind === 'range' ? `${node.from}:${node.to}` : node.name;
+      const key = referenceNodeLabel(node);
       if (resolved.has(key)) {
         return;
+      }
+      if (referenceTable(node) !== 'table1') {
+        throw new FormulaError(`"${key}" is unavailable in a whole-plate formula.`, node.position);
       }
       const wells = node.kind === 'range'
         ? blockWells(node.from, node.to, def)
@@ -341,7 +355,7 @@ export function applyPlateFormula({
     return { ...empty, warnings: [describeFormulaError(error)], formulaError: error };
   }
 
-  const resolveRef = (node) => resolved.get(node.kind === 'range' ? `${node.from}:${node.to}` : node.name);
+  const resolveRef = (node) => resolved.get(referenceNodeLabel(node));
   const next = {};
   const warnings = [];
   let dropped = 0;
@@ -379,10 +393,10 @@ export function applyPlateFormula({
   };
 }
 
-// Evaluates the formula stored in each transformed cell. Every reference resolves
-// against the original result plate, never against another transformed cell. This
-// keeps formulas such as =A2 and =A2/MAX(A1:A8) deterministic even when formulas
-// point at cells that also have transformations of their own.
+// Evaluates the formula stored in each transformed cell. Bare references and Table1
+// read the original Plate Results; Table2 reads computed cells in the transformed
+// plate. The explicit names let point-mode clicks mix both tables in one formula while
+// keeping old formulas such as =A2 backward compatible.
 export function applyPlateCellFormulas({
   results = {},
   formulas = {},
@@ -401,45 +415,48 @@ export function applyPlateCellFormulas({
   const derived = {};
   const cells = {};
   const warnings = [];
+  const visiting = new Set();
 
-  Object.entries(normalizedFormulas).forEach(([well, formula]) => {
-    if (!isValidWellForDefinition(well, def)) {
-      return;
+  function wellsForNode(node) {
+    const wells = node.kind === 'range'
+      ? blockWells(node.from, node.to, def)
+      : (() => {
+        const hit = resolveReferenceWells(node.name, def, groupSpecs);
+        return hit.unresolved.length || !hit.wells.length ? null : hit.wells;
+      })();
+    if (!wells) {
+      throw new FormulaError(
+        `"${referenceNodeLabel(node)}" is not a well, row, block or group on this plate.`,
+        node.position
+      );
     }
+    return wells;
+  }
+
+  function transformedValueAt(well) {
+    if (Number.isFinite(next[well])) {
+      return next[well];
+    }
+    if (cells[well]?.error) {
+      throw new FormulaError(cells[well].error.replace(/^Formula error:\s*/, ''));
+    }
+    if (visiting.has(well)) {
+      throw new FormulaError(`"Table2:${well}" creates a circular reference.`);
+    }
+    const formula = normalizedFormulas[well];
+    if (!formula) {
+      throw new FormulaError(`"Table2:${well}" is empty.`);
+    }
+
     const compiled = compileFormula(formula);
     if (compiled.error) {
-      const error = describeFormulaError(compiled.error);
-      cells[well] = { formula, error };
-      warnings.push(`${well}: ${error}`);
-      return;
+      throw compiled.error;
     }
-
-    const resolved = new Map();
+    visiting.add(well);
     try {
-      collectReferenceNodes(compiled.ast).forEach((node) => {
-        const key = node.kind === 'range' ? `${node.from}:${node.to}` : node.name;
-        if (resolved.has(key)) {
-          return;
-        }
-        const wells = node.kind === 'range'
-          ? blockWells(node.from, node.to, def)
-          : (() => {
-            const hit = resolveReferenceWells(node.name, def, groupSpecs);
-            return hit.unresolved.length || !hit.wells.length ? null : hit.wells;
-          })();
-        if (!wells) {
-          throw new FormulaError(`"${key}" is not a well, row, block or group on this plate.`, node.position);
-        }
-        const values = wells.map((sourceWell) => numeric[sourceWell]).filter((value) => Number.isFinite(value));
-        if (!values.length) {
-          throw new FormulaError(`"${key}" has no numeric results.`, node.position);
-        }
-        resolved.set(key, values);
-      });
-
       const computed = compiled.evaluate({
         value: numeric[well],
-        resolveRef: (node) => resolved.get(node.kind === 'range' ? `${node.from}:${node.to}` : node.name)
+        resolveRef
       });
       if (!Number.isFinite(computed)) {
         throw new FormulaError('The formula result is not a finite number.');
@@ -447,6 +464,44 @@ export function applyPlateCellFormulas({
       next[well] = computed;
       derived[well] = formatValue(computed);
       cells[well] = { formula, value: computed, text: derived[well], error: '' };
+      return computed;
+    } finally {
+      visiting.delete(well);
+    }
+  }
+
+  function resolveRef(node) {
+    const key = referenceNodeLabel(node);
+    const table = referenceTable(node);
+    if (table !== 'table1' && table !== 'table2') {
+      throw new FormulaError(`Unknown table "${node.table}". Use Table1 or Table2.`, node.position);
+    }
+    const wells = wellsForNode(node);
+    const values = [];
+    wells.forEach((sourceWell) => {
+      if (table === 'table1') {
+        if (Number.isFinite(numeric[sourceWell])) {
+          values.push(numeric[sourceWell]);
+        }
+        return;
+      }
+      if (!normalizedFormulas[sourceWell]) {
+        return;
+      }
+      values.push(transformedValueAt(sourceWell));
+    });
+    if (!values.length) {
+      throw new FormulaError(`"${key}" has no numeric results.`, node.position);
+    }
+    return values;
+  }
+
+  Object.entries(normalizedFormulas).forEach(([well, formula]) => {
+    if (!isValidWellForDefinition(well, def) || cells[well]) {
+      return;
+    }
+    try {
+      transformedValueAt(well);
     } catch (error) {
       const message = describeFormulaError(error);
       cells[well] = { formula, error: message };
@@ -464,7 +519,7 @@ export function applyPlateCellFormulas({
     formulas: normalizedFormulas,
     cells,
     steps: formulaCount
-      ? [`Calculated ${Object.keys(next).length} of ${formulaCount} transformed cell(s) from the original Plate Results.`]
+      ? [`Calculated ${Object.keys(next).length} of ${formulaCount} transformed cell(s).`]
       : [],
     warnings,
     formulaCount,

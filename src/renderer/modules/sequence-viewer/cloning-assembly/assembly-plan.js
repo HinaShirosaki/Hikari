@@ -124,7 +124,8 @@ export function assembleCloningPlan(payload = {}) {
   });
   const stepByStepProcedure = buildProcedureSteps(
     recommendedStrategy?.name,
-    assembledVectorDesign
+    assembledVectorDesign,
+    orderedFragmentMap
   );
   const validationPlan = buildValidationPlan(
     recommendedStrategy?.name,

@@ -113,6 +113,7 @@ export function startHikariCore({
     state,
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
+    onFrameHistoryChanged: () => undoService?.syncButtons?.(),
     windowObject,
     api: windowObject.hikariApi || null
   });
@@ -201,11 +202,41 @@ export function startHikariCore({
     renderAll();
   }
 
+  // A focused plugin frame becomes documentElement.activeElement in the host, but
+  // clicking a history button moves focus onto the button — so remember the frame
+  // rather than reading activeElement at command time.
+  let lastFocusedPluginFrame = null;
+  function trackPluginFrameFocus() {
+    const active = documentObject?.activeElement;
+    if (active?.tagName === 'IFRAME') {
+      lastFocusedPluginFrame = active;
+      return;
+    }
+    if (!active?.closest?.('.topbar-history-controls')) {
+      lastFocusedPluginFrame = null;
+    }
+  }
+  documentObject?.addEventListener?.('focusin', () => {
+    trackPluginFrameFocus();
+    undoService?.syncButtons?.();
+  });
+  windowObject?.addEventListener?.('blur', () => {
+    trackPluginFrameFocus();
+    undoService?.syncButtons?.();
+  });
+
   undoService = createUndoService({
     state,
     persistState: persistStateNow,
     renderAll: renderRestoredState,
-    documentObject
+    documentObject,
+    delegate: {
+      claim: () => pluginBridge.getFrameHistory(lastFocusedPluginFrame?.contentWindow || null),
+      run: (command) => pluginBridge.sendFrameHistoryCommand(
+        lastFocusedPluginFrame?.contentWindow || null,
+        command
+      )
+    }
   });
 
   const moduleRegistry = createModuleRegistry({

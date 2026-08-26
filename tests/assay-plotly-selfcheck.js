@@ -77,6 +77,49 @@ assert.equal(model.series[0].data.length, 3, 'three points bucketed');
 assert.deepEqual(model.series[0].data.map((p) => p.x), [10, 100, 1000], 'points sorted by x');
 assert.deepEqual(model.series[0].data.map((p) => p.y), [90, 60, 20], 'y follows the chosen column');
 
+// --- overriding a column keeps the SD error bars the analysis asked for ---
+// The override path rebuilds the model from the rendered table, so it has to read the
+// table's own SD column; otherwise picking an X/Y/series column silently dropped every
+// error bar.
+const summaryTable = {
+  headers: ['Sample ID', 'Concentration', 'N', 'Mean', 'SD', 'Min', 'Max'],
+  rows: [
+    ['S1', '10', 3, '90.0000', '2.0000', '88.0000', '92.0000'],
+    ['S1', '100', 3, '60.0000', '3.0000', '57.0000', '63.0000']
+  ],
+  chartModel: { showErrorBars: true }
+};
+const overridden = buildAnalysisChartModel(
+  summaryTable,
+  'summary',
+  { xColumn: 'Concentration', yColumn: 'Mean', seriesColumn: 'Sample ID' }
+);
+assert.equal(overridden.showErrorBars, true, 'the override model still draws error bars');
+assert.equal(
+  overridden.series[0].data.map((p) => p.yVariance).join('|'),
+  '2|3',
+  'each bar carries its own row SD'
+);
+
+// A different Y column has no SD to speak of, so it gets no bar rather than the Mean's.
+assert.equal(
+  buildAnalysisChartModel(summaryTable, 'summary', { yColumn: 'Max' })
+    .series[0].data.some((p) => 'yVariance' in p),
+  false,
+  'SD is not reused for a Y column it does not describe'
+);
+
+// Turning error bars off in the analysis still wins over the override.
+assert.equal(
+  buildAnalysisChartModel(
+    { ...summaryTable, chartModel: { showErrorBars: false } },
+    'summary',
+    { yColumn: 'Mean' }
+  ).showErrorBars,
+  false,
+  'the error-bar checkbox survives a column override'
+);
+
 // --- style model: new control fields normalize cleanly (regression guard for clampFinite null bug) ---
 const def = createDefaultChartStyle();
 assert.equal(normalizeChartStyle(def).refLineValue, null, 'default refLineValue stays null (no spurious reference line at 0)');
@@ -182,12 +225,36 @@ const grouped = draw({
 });
 assert.equal(grouped.traces.length, 2, 'grouped bars render one trace per series, no dots');
 
-// Long category labels still tilt.
+// Category labels tilt on collision -- long labels in narrow slots, or many short ones.
 const longLabels = draw({
   ...barModel,
-  series: [{ label: 'Treated', data: [{ x: 'Vehicle control 0.1%', y: 1 }] }]
+  series: [{
+    label: 'Treated',
+    data: [{ x: 'Vehicle control 0.1%', y: 1 }, { x: 'Compound A 10 uM', y: 2 }]
+  }]
 });
 assert.equal(longLabels.layout.xaxis.tickangle, -35, 'long category labels tilt');
+const manyShort = draw({
+  ...barModel,
+  series: [{ label: 'Treated', data: Array.from({ length: 24 }, (_, i) => ({ x: `Group ${i + 1}`, y: i })) }]
+});
+assert.equal(manyShort.layout.xaxis.tickangle, -35, 'labels tilt once the slots get tight');
+const manyTiny = draw({
+  ...barModel,
+  series: [{ label: 'Treated', data: Array.from({ length: 24 }, (_, i) => ({ x: `G${i + 1}`, y: i })) }]
+});
+assert.equal(manyTiny.layout.xaxis.tickangle, 0, 'but short labels that still fit stay horizontal');
+assert.equal(bar.layout.xaxis.tickangle, 0, 'two roomy categories stay horizontal');
+
+// --- the auto frame follows the data instead of a fixed floor ---
+// A two-bar summary used to be padded out to 420x280, leaving the axis running well past
+// the last bar; a 24-bar summary used to stay 280 tall and turn into a letterbox.
+assert.equal(bar.layout.width < 420, true, 'a two-bar frame is no wider than its data needs');
+assert.equal(manyShort.layout.width > bar.layout.width, true, '24 bars get a wider frame');
+assert.equal(manyShort.layout.height > bar.layout.height, true, 'and a taller one, so it is not a letterbox');
+assert.equal(manyShort.layout.width / manyShort.layout.height < 3, true, 'the widest auto frame stays under 3:1');
+const sized = draw(barModel, { sizeAuto: false, frameWidth: 640, frameHeight: 480 });
+assert.equal(`${sized.layout.width}x${sized.layout.height}`, '640x480', 'an explicit frame size still wins');
 
 // A reference line coexists with the offset frame instead of replacing it.
 const withRefLine = draw(barModel, { refLineValue: 5 });

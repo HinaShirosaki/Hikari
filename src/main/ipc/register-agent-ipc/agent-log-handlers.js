@@ -10,24 +10,10 @@ function registerAgentLogHandlers({
   getAgentChatLogPath,
   getAgentChatSessionStoragePath,
   agentToolRuntime,
-  protocolGenerationRuntime,
+  runAgentController,
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
-
-  function normalizeProtocolGenerationEditorDraft(rawDraft) {
-    const source = rawDraft && typeof rawDraft === 'object'
-      ? rawDraft
-      : {};
-    return {
-      title: cleanText(source?.title || source?.name, 220),
-      purpose: cleanText(source?.purpose, 600),
-      method_text: cleanText(source?.methodText || source?.method_text, 12000),
-      materials: asArray(source?.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 80),
-      steps: asArray(source?.steps).map((item) => cleanText(item, 2000)).filter(Boolean).slice(0, 120),
-      troubleshooting: cleanText(source?.troubleshooting, 2400)
-    };
-  }
 
   function resolveExternalSkillsEnabled(normalizedPayload = {}, rawSnapshot = {}) {
     const agentSettings = rawSnapshot?.settings?.agent && typeof rawSnapshot.settings.agent === 'object'
@@ -182,68 +168,56 @@ function registerAgentLogHandlers({
   });
 
   ipcMain.handle(AGENT.GENERATE_PROTOCOL, async (_event, payload) => {
-    if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
+    if (typeof runAgentController !== 'function') {
       return {
         ok: false,
-        error: 'Protocol generation runtime is unavailable.'
+        error: 'Codex agent runtime is unavailable.'
       };
     }
 
     const normalizedPayload = normalizeJsonPayload(payload, {});
-    const editorDraft = normalizeProtocolGenerationEditorDraft(normalizedPayload?.editorDraft);
-    const requestMessage = cleanText(normalizedPayload?.message, 3000);
-    const protocolJson = cleanText(normalizedPayload?.protocolJson || normalizedPayload?.protocol_json, 200000);
-    const resultSummary = cleanText(
-      normalizedPayload?.resultSummary || normalizedPayload?.result_summary || requestMessage,
-      3000
-    );
-    const hasEditorContext = Boolean(
-      editorDraft.title
-      || editorDraft.purpose
-      || editorDraft.method_text
-      || editorDraft.materials.length
-      || editorDraft.steps.length
-      || editorDraft.troubleshooting
-    );
-    if (!protocolJson && !requestMessage && !hasEditorContext) {
+    const message = cleanText(normalizedPayload?.message, 24000);
+    if (!message) {
       return {
         ok: false,
-        error: 'Provide protocol JSON or editor protocol content before preparing a protocol.'
+        error: 'Provide a protocol request before starting the Codex agent.'
       };
     }
 
-    try {
-      const result = await protocolGenerationRuntime.generateProtocol({
-        ...(hasEditorContext ? {
-          protocol: {
-            name: editorDraft.title,
-            purpose: editorDraft.purpose,
-            materials: editorDraft.materials,
-            steps: editorDraft.steps,
-            troubleshooting: editorDraft.troubleshooting
-          }
-        } : {
-          protocol_json: protocolJson || requestMessage
-        }),
-        result_summary: resultSummary
-      });
+    const llm = {
+      ...normalizeJsonPayload(normalizedPayload?.llm, {}),
+      provider: 'codex',
+      apiEndpoint: '',
+      apiKey: ''
+    };
 
-      if (!result?.ok || !result.protocol) {
+    try {
+      const result = await runAgentController({
+        ...normalizedPayload,
+        message,
+        llm,
+        allowWriteTools: true
+      });
+      const protocolGeneration = normalizeJsonPayload(result?.protocol_generation, {});
+      const protocol = normalizeJsonPayload(protocolGeneration.protocol, null);
+
+      if (!result?.ok || !protocol) {
         return {
           ok: false,
-          error: cleanText(result?.error, 600) || 'Protocol generation failed.'
+          error: cleanText(result?.error || result?.codex_agent?.answer, 1200)
+            || 'The Codex agent completed without returning a protocol for review.'
         };
       }
 
       return {
-        ok: true,
-        protocol: result.protocol,
-        summary: cleanText(result?.summary, 320)
+        ...result,
+        protocol,
+        summary: cleanText(protocolGeneration.summary || result?.codex_agent?.answer, 500)
       };
     } catch (error) {
       return {
         ok: false,
-        error: cleanText(error?.message || error, 600) || 'Protocol generation failed.'
+        error: cleanText(error?.message || error, 1200) || 'Protocol generation failed.'
       };
     }
   });

@@ -717,6 +717,11 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         ''
       );
       const translation = normalizeProteinTranslation(entry.qualifiers.translation || '');
+      // A primer_bind written by this app carries the oligo it was designed as,
+      // which is not always what the template says at that position.
+      const primerSequence = String(entry.qualifiers.primer_sequence || '')
+        .toUpperCase()
+        .replace(/[^A-Z]/g, '');
 
       return {
         id: `gbk_feature_${index + 1}`,
@@ -725,6 +730,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         strand,
         description,
         ...(translation ? { translation } : {}),
+        ...(primerSequence ? { primerSequence } : {}),
         source: 'genbank',
         locationText: entry.location,
         segments

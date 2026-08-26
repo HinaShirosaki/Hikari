@@ -9,7 +9,7 @@
             <div class="gel-browser-body">
               <label>
                 Search Gels
-                <input id="gel-search" placeholder="Search saved gels" />
+                <input id="gel-search" type="search" placeholder="Search saved gels" />
               </label>
               <div id="gel-list" class="gel-browser-list"></div>
             </div>
@@ -34,8 +34,8 @@
               <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
             </label>
             <label>
-              Ladder Lane (1-based)
-              <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
+              Ladder Preset
+              <select id="gel-ladder-preset"></select>
             </label>
             <label>
               Normalization
@@ -44,13 +44,16 @@
                 <option value="total-lane">Total Lane Intensity</option>
               </select>
             </label>
+            <div class="form-actions gel-process-row">
+              <button type="button" id="gel-process-image-btn" class="ghost-btn gel-compact-btn">Process Image</button>
+            </div>
             <label class="gel-slider-field">
-              Denoise Strength
+              <span class="gel-slider-label">Denoise Strength</span>
               <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
               <span id="gel-denoise-strength-value" class="small-note">35%</span>
             </label>
             <label class="gel-slider-field">
-              Contrast Boost
+              <span class="gel-slider-label">Contrast Boost</span>
               <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
               <span id="gel-contrast-strength-value" class="small-note">100%</span>
             </label>
@@ -60,11 +63,9 @@
             </div>
             <div id="gel-status" class="small-note" role="status" aria-live="polite" aria-atomic="true"></div>
             <div class="form-actions">
-              <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
-              <button type="submit" id="gel-save-btn" class="primary-btn">Save Analysis</button>
-              <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
-              <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
-              <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>
+              <button type="submit" id="gel-save-btn" class="primary-btn gel-compact-btn">Save</button>
+              <button type="button" id="gel-cancel-btn" class="ghost-btn gel-compact-btn">Cancel</button>
+              <button type="button" id="gel-export-csv-btn" class="ghost-btn gel-compact-btn">Export CSV</button>
             </div>
           </form>
         </div>
@@ -91,7 +92,6 @@
                     </svg>
                   </button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-                  <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                 </div>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
@@ -138,11 +138,15 @@
                       <div class="gel-tool-actions">
                         <label class="small-note gel-tool-field">
                           Ladder MW
-                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="50 kDa" />
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="50 kDa" list="gel-ladder-band-mw-options" />
+                          <datalist id="gel-ladder-band-mw-options"></datalist>
                         </label>
+                        <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" title="Detect ladder bands and label them from the selected preset">Detect ladder</button>
+                        <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" title="Click a ladder band to label it with the MW above; drag a label to move it">Set MW</button>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
                         <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure</button>
                         <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
+                        <button type="button" id="gel-open-cell-table-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" title="Open per-cell band intensity" disabled>Band intensity</button>
                         <button type="button" id="gel-open-report-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-report-overlay" aria-expanded="false" title="Open analysis report" disabled>Report</button>
                       </div>
                     </details>
@@ -157,7 +161,6 @@
                   <div class="gel-lane-profile-head">
                     <div>
                       <h3>Lane Intensity</h3>
-                      <p id="gel-lane-profile-caption" class="small-note">Load a gel image to inspect a lane profile.</p>
                     </div>
                     <label class="gel-lane-profile-picker">
                       Lane
@@ -175,19 +178,23 @@
               </div>
             </div>
 
-            <div class="gel-secondary-panels">
-              <section id="gel-cell-table-panel" class="panel gel-cell-table-panel" hidden>
-                <header class="gel-cell-table-header">
-                  <h3>Per-Cell Band Intensity</h3>
-                  <label class="small-note gel-cell-snr-label">
-                    SNR threshold:
-                    <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
-                  </label>
-                </header>
-                <div id="gel-cell-table-summary" class="small-note"></div>
-                <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
-              </section>
-            </div>
+          </div>
+
+          <div id="gel-cell-table-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+            <section id="gel-cell-table-panel" class="gel-cell-table-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-cell-table-title">
+              <header class="app-dialog-head gel-cell-table-header">
+                <div>
+                  <h3 id="gel-cell-table-title">Per-Cell Band Intensity</h3>
+                  <div id="gel-cell-table-summary" class="small-note"></div>
+                </div>
+                <label class="small-note gel-cell-snr-label">
+                  SNR threshold:
+                  <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
+                </label>
+                <button type="button" id="gel-cell-table-close-btn" class="app-dialog-close-btn" aria-label="Close band intensity report" title="Close"><span aria-hidden="true">&times;</span></button>
+              </header>
+              <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+            </section>
           </div>
 
           <div id="gel-report-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>

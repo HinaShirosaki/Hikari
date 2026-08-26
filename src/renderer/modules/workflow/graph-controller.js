@@ -18,8 +18,6 @@ export function createWorkflowGraphController(config = {}) {
   const normalizeBlocks = config?.normalizeBlocks || ((blocks) => blocks || []);
   const normalizeLinks = config?.normalizeLinks || ((links) => links || []);
   const titleForBlock = config?.titleForBlock || (() => 'Block');
-  const labelForBlockType = config?.labelForBlockType || (() => 'Block');
-  const labelForAssignee = config?.labelForAssignee || (() => 'Unassigned');
   const displayLabelForBlock = config?.displayLabelForBlock || ((blockId) => blockId);
   const getBlockType = config?.getBlockType || (() => '');
   const renderBlockList = typeof config?.renderBlockList === 'function' ? config.renderBlockList : () => {};

@@ -7,6 +7,7 @@ import {
 import { createSequenceViewerSequenceEditingController } from '../detail-sequence-editing.js';
 import { getRenderableFeaturesForRecord } from '../feature-model.js';
 import { isPrimerBindingFeature, normalizeFeatureType } from '../feature-types.js';
+import { parseInputRecords } from '../parsing.js';
 import {
   normalizeHighlightSegments,
   renderDualStrandSequenceLinesHtml
@@ -189,6 +190,20 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
   let featureReplaceIndex = -1;
   let featureReplaceQuery = '';
   let featureReplaceResults = [];
+  // The same stored feature usually sits in several vectors, and which one is
+  // picked is the plasmid the fragment gets amplified from, so the choice is
+  // held until Confirm rather than applied on the first click.
+  let featureReplaceSelectedId = '';
+  let featureReplaceHostId = '';
+  // Hydrated host records, keyed by library entry id: the search result carries
+  // only the occurrence, and a map needs the whole plasmid.
+  const featureReplaceHostRecords = new Map();
+  // Every preview load owns a token, so a slow read for a vector the user has
+  // already clicked past cannot overwrite the current preview.
+  let featureReplaceHostRequestId = 0;
+  // Search responses can also finish out of order; only the newest query owns
+  // the result list and status text.
+  let featureReplaceSearchRequestId = 0;
 
   function getRecordedFeaturesInRange(record, range) {
     const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
@@ -204,6 +219,10 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   function hideFeatureReplaceDialog() {
     featureReplaceIndex = -1;
+    featureReplaceSelectedId = '';
+    featureReplaceHostId = '';
+    featureReplaceHostRequestId += 1;
+    featureReplaceSearchRequestId += 1;
     if (elements.vectorBuilderFeatureReplaceOverlay) {
       elements.vectorBuilderFeatureReplaceOverlay.hidden = true;
     }
@@ -236,7 +255,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       return;
     }
     if (!featureReplaceQuery) {
-      host.innerHTML = '<p class="small-note">Search by feature name or stored sequence.</p>';
+      host.innerHTML = '';
       return;
     }
     if (!featureReplaceResults.length) {
@@ -245,42 +264,207 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     }
     host.innerHTML = featureReplaceResults.map((feature) => {
       const length = Math.max(0, Number(feature?.sequenceLength) || normalizeSequenceText(feature?.sequence || '').length);
-      const hostCount = Math.max(0, Number(feature?.hostCount) || 0);
+      const featureId = cleanText(feature?.id, 200);
+      const hostCount = Math.max(0, Number(feature?.hostCount) || asArrayOf(feature?.hosts).length);
+      const featureName = feature?.name || 'feature';
+      const selected = featureId && featureId === featureReplaceSelectedId;
       return `
-        <article class="sequence-viewer-protein-builder-feature-item">
+        <article
+          class="sequence-viewer-protein-builder-feature-item${selected ? ' is-selected' : ''}"
+          role="button"
+          tabindex="0"
+          aria-pressed="${selected ? 'true' : 'false'}"
+          aria-label="Use ${escapeHtml(featureName)} feature"
+          data-vector-replace-feature-id="${escapeHtml(featureId)}"
+        >
           <div class="sequence-viewer-protein-builder-feature-head">
             <div>
-              <strong>${escapeHtml(feature?.name || 'feature')}</strong>
+              <strong>${escapeHtml(featureName)}</strong>
               <p class="small-note">${escapeHtml(feature?.type || 'feature')} | ${length.toLocaleString()} bp | in ${hostCount} vector${hostCount === 1 ? '' : 's'}</p>
             </div>
-            <button type="button" class="ghost-btn" data-vector-replace-feature-id="${escapeHtml(String(feature?.id || ''))}">Use This Feature</button>
           </div>
         </article>
       `;
     }).join('');
   }
 
+  function asArrayOf(value) {
+    return Array.isArray(value) ? value : [];
+  }
+
+  function getSelectedStoredFeature() {
+    return featureReplaceResults
+      .find((feature) => cleanText(feature?.id, 200) === featureReplaceSelectedId) || null;
+  }
+
+  function getStoredFeatureHosts(feature) {
+    return asArrayOf(feature?.hosts).filter((entry) => cleanText(entry?.hostVectorId, 200));
+  }
+
+  function getSelectedHost() {
+    const hosts = getStoredFeatureHosts(getSelectedStoredFeature());
+    return hosts.find((entry) => cleanText(entry?.hostVectorId, 200) === featureReplaceHostId) || null;
+  }
+
+  function renderFeatureReplaceHosts() {
+    const host = elements.vectorBuilderFeatureReplaceHosts;
+    if (!host) {
+      return;
+    }
+    const feature = getSelectedStoredFeature();
+    if (!feature) {
+      host.innerHTML = '<p class="small-note">Pick a stored feature to list the vectors that carry it.</p>';
+      return;
+    }
+    const hosts = getStoredFeatureHosts(feature);
+    if (!hosts.length) {
+      host.innerHTML = '<p class="small-note">No source vector is recorded for this feature.</p>';
+      return;
+    }
+    host.innerHTML = hosts.map((entry) => {
+      const hostId = cleanText(entry?.hostVectorId, 200);
+      const selected = hostId === featureReplaceHostId;
+      const length = Math.max(0, Number(entry?.sequenceLength) || 0);
+      const copies = asArrayOf(entry?.locations).length;
+      return `
+        <button
+          type="button"
+          class="sequence-viewer-feature-source-item${selected ? ' is-selected' : ''}"
+          aria-pressed="${selected ? 'true' : 'false'}"
+          data-vector-replace-host-id="${escapeHtml(hostId)}"
+        >
+          <strong>${escapeHtml(cleanText(entry?.hostVectorName, 160) || 'stored vector')}</strong>
+          <span class="small-note">${length.toLocaleString()} bp | ${escapeHtml(cleanText(entry?.topology, 40) || 'circular')} | ${copies} copy${copies === 1 ? '' : ' sites'}</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function renderFeatureReplacePreview(message = '') {
+    const host = elements.vectorBuilderFeatureReplacePreview;
+    if (!host) {
+      return;
+    }
+    const selectedHost = getSelectedHost();
+    const record = selectedHost
+      ? featureReplaceHostRecords.get(cleanText(selectedHost.hostVectorId, 200))
+      : null;
+    if (record?.sequence?.length) {
+      host.innerHTML = buildSequenceMapSvg(record, { features: asArrayOf(record.features) });
+      return;
+    }
+    host.innerHTML = `<p class="small-note">${escapeHtml(message
+      || (selectedHost ? 'Loading plasmid preview...' : 'Pick a source vector to preview it.'))}</p>`;
+  }
+
+  function syncFeatureReplaceConfirm() {
+    if (!elements.vectorBuilderFeatureReplaceConfirm) {
+      return;
+    }
+    elements.vectorBuilderFeatureReplaceConfirm.disabled = !getSelectedStoredFeature();
+  }
+
+  function clearFeatureReplaceSelection() {
+    featureReplaceResults = [];
+    featureReplaceSelectedId = '';
+    featureReplaceHostId = '';
+    featureReplaceHostRequestId += 1;
+    renderFeatureReplaceSelection();
+  }
+
+  function renderFeatureReplaceSelection() {
+    renderFeatureReplaceResults();
+    renderFeatureReplaceHosts();
+    renderFeatureReplacePreview();
+    syncFeatureReplaceConfirm();
+  }
+
+  async function loadFeatureReplacePreview() {
+    const selectedHost = getSelectedHost();
+    const hostId = cleanText(selectedHost?.hostVectorId, 200);
+    featureReplaceHostRequestId += 1;
+    const requestId = featureReplaceHostRequestId;
+    if (!hostId || featureReplaceHostRecords.has(hostId)) {
+      renderFeatureReplacePreview();
+      return;
+    }
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    if (!bridge?.sequenceLibraryGet || !storagePath) {
+      renderFeatureReplacePreview('Plasmid preview needs the sequence library storage folder.');
+      return;
+    }
+    renderFeatureReplacePreview();
+    try {
+      const response = await bridge.sequenceLibraryGet({ storagePath, id: hostId, includeGbk: true });
+      if (!response?.ok) {
+        throw new Error(response?.error || 'That vector could not be read.');
+      }
+      const parsed = parseInputRecords(String(response.gbkText || ''));
+      const record = (Array.isArray(parsed?.records) ? parsed.records : [])[0] || null;
+      if (requestId !== featureReplaceHostRequestId) {
+        return;
+      }
+      if (!record?.sequence?.length) {
+        renderFeatureReplacePreview('That vector has no sequence to preview.');
+        return;
+      }
+      featureReplaceHostRecords.set(hostId, record);
+      renderFeatureReplacePreview();
+    } catch (error) {
+      if (requestId !== featureReplaceHostRequestId) {
+        return;
+      }
+      renderFeatureReplacePreview(cleanText(error?.message || error, 200) || 'Plasmid preview unavailable.');
+    }
+  }
+
+  function selectFeatureReplaceResult(featureId) {
+    const safeId = cleanText(featureId, 200);
+    if (!safeId || safeId === featureReplaceSelectedId) {
+      return;
+    }
+    featureReplaceSelectedId = safeId;
+    // The first host is the most recently updated one, which is the vector most
+    // likely still on the bench.
+    featureReplaceHostId = cleanText(
+      getStoredFeatureHosts(getSelectedStoredFeature())[0]?.hostVectorId,
+      200
+    );
+    renderFeatureReplaceSelection();
+    void loadFeatureReplacePreview();
+  }
+
+  function selectFeatureReplaceHost(hostId) {
+    const safeId = cleanText(hostId, 200);
+    if (!safeId || safeId === featureReplaceHostId) {
+      return;
+    }
+    featureReplaceHostId = safeId;
+    renderFeatureReplaceSelection();
+    void loadFeatureReplacePreview();
+  }
+
   async function runFeatureReplaceSearch() {
     const query = cleanText(elements.vectorBuilderFeatureReplaceSearch?.value, 600);
+    featureReplaceSearchRequestId += 1;
+    const requestId = featureReplaceSearchRequestId;
     featureReplaceQuery = query;
     const storagePath = getStoragePath();
     const bridge = getBridge();
 
     if (!storagePath) {
-      featureReplaceResults = [];
-      renderFeatureReplaceResults();
+      clearFeatureReplaceSelection();
       setFeatureReplaceStatus('Set Storage Folder Path in Settings to search stored features.', true);
       return;
     }
     if (query.length < 2) {
-      featureReplaceResults = [];
-      renderFeatureReplaceResults();
+      clearFeatureReplaceSelection();
       setFeatureReplaceStatus('Enter at least 2 characters to search stored features.');
       return;
     }
     if (!bridge?.sequenceLibrarySearchFeatures) {
-      featureReplaceResults = [];
-      renderFeatureReplaceResults();
+      clearFeatureReplaceSelection();
       setFeatureReplaceStatus('Feature search API unavailable.', true);
       return;
     }
@@ -288,17 +472,24 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     setFeatureReplaceStatus(`Searching for "${query}"...`);
     try {
       const response = await bridge.sequenceLibrarySearchFeatures({ storagePath, query, limit: 24 });
+      if (requestId !== featureReplaceSearchRequestId) {
+        return;
+      }
       if (!response?.ok) {
         throw new Error(response?.error || 'Failed to search stored features.');
       }
       featureReplaceResults = (Array.isArray(response.results) ? response.results : [])
         .filter((feature) => normalizeSequenceText(feature?.sequence || '').length > 0)
         .filter((feature) => !isPrimerRelatedType(feature?.type));
-      renderFeatureReplaceResults();
-      setFeatureReplaceStatus(`Found ${featureReplaceResults.length} stored feature${featureReplaceResults.length === 1 ? '' : 's'}.`);
+      featureReplaceSelectedId = '';
+      featureReplaceHostId = '';
+      renderFeatureReplaceSelection();
+      setFeatureReplaceStatus('');
     } catch (error) {
-      featureReplaceResults = [];
-      renderFeatureReplaceResults();
+      if (requestId !== featureReplaceSearchRequestId) {
+        return;
+      }
+      clearFeatureReplaceSelection();
       setFeatureReplaceStatus(error?.message || 'Failed to search stored features.', true);
     }
   }
@@ -321,24 +512,18 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     const preferred = candidates.find((entry) => entry.feature === selected) || candidates[0];
     featureReplaceIndex = preferred.index;
     featureReplaceQuery = '';
-    featureReplaceResults = [];
+    clearFeatureReplaceSelection();
 
-    if (elements.vectorBuilderFeatureReplaceSelect) {
-      elements.vectorBuilderFeatureReplaceSelect.innerHTML = candidates
-        .map((entry) => `<option value="${entry.index}"${entry.index === featureReplaceIndex ? ' selected' : ''}>${escapeHtml(`${entry.feature.name || entry.feature.type || 'feature'} (${formatRangeLabel(entry.range)})`)}</option>`)
-        .join('');
-      elements.vectorBuilderFeatureReplaceSelect.value = String(featureReplaceIndex);
-    }
     if (elements.vectorBuilderFeatureReplaceSearch) {
       elements.vectorBuilderFeatureReplaceSearch.value = '';
     }
 
     describeFeatureReplaceTarget(record);
-    renderFeatureReplaceResults();
+    renderFeatureReplaceSelection();
     const hasStorage = Boolean(getStoragePath());
     setFeatureReplaceStatus(
       hasStorage
-        ? 'Search the stored feature database for a replacement.'
+        ? ''
         : 'Set Storage Folder Path in Settings to search stored features.',
       !hasStorage
     );
@@ -373,10 +558,20 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     const previousName = String(target.name || 'feature');
     const nextName = cleanText(stored.name, 140) || previousName;
 
+    const sourceHost = getSelectedHost();
+    const sourceVectorName = cleanText(sourceHost?.hostVectorName, 160);
     try {
       // Rewrite the bases through the shared edit action, which resizes the
-      // feature's own span and feeds the Cloning Design handoff.
-      await onApplySequenceEdit({ mode: 'replace', range, sequence: replacement });
+      // feature's own span and feeds the Cloning Design handoff. The chosen
+      // vector rides along as the donor, since that is the plasmid this
+      // fragment has to be amplified from.
+      await onApplySequenceEdit({
+        mode: 'replace',
+        range,
+        sequence: replacement,
+        donorEntryId: cleanText(sourceHost?.hostVectorId, 200),
+        donorName: sourceVectorName
+      });
     } catch (error) {
       setFeatureReplaceStatus(error?.message || 'Failed to replace the feature.', true);
       return;
@@ -392,7 +587,9 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
         strand,
         locationText: '',
         source: 'vector_builder',
-        description: `Replaced from the stored feature database (${storedSequence.length} bp).`,
+        description: sourceVectorName
+          ? `Replaced from ${sourceVectorName} (${storedSequence.length} bp).`
+          : `Replaced from the stored feature database (${storedSequence.length} bp).`,
         segments: [{ start: range.start, end: range.start + replacement.length }]
       };
       const records = [...state.records];
@@ -720,7 +917,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     mapZoom.reset();
     onNavigateVectorBuilder();
     render();
-    setStatus(`Vector Builder open for ${record.name || 'the active record'}.`);
+    setStatus('');
     return true;
   }
 
@@ -734,6 +931,21 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     clearSelection();
     hideContextMenu();
     render();
+  }
+
+  function eventTargetsElement(event, element) {
+    const target = event?.target || null;
+    return Boolean(target && element && (target === element || element.contains?.(target)));
+  }
+
+  function deselectFeature() {
+    if (!Number.isFinite(vb().selectedFeatureIndex) || vb().selectedFeatureIndex < 0) {
+      return false;
+    }
+    vb().selectedFeatureIndex = -1;
+    hideContextMenu();
+    render();
+    return true;
   }
 
   function beginRingSelection(event) {
@@ -913,6 +1125,26 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       onRequestProteinInsert(null);
     });
 
+    // Selection belongs to the feature glyph itself. Clicking any ordinary
+    // workspace background or control removes the active outline; menus and
+    // dialogs are exempt so their feature-dependent actions still work.
+    elements.vectorBuilderWorkspace?.addEventListener('mousedown', (event) => {
+      const button = Number(event?.button);
+      if ((Number.isFinite(button) && button !== 0)
+        || event.target?.closest?.('[data-feature-index]')) {
+        return;
+      }
+      const featureInteractionSurfaces = [
+        elements.vectorBuilderContextMenu,
+        elements.vectorBuilderFeatureReplaceOverlay,
+        elements.vectorBuilderSequenceEditOverlay
+      ];
+      if (featureInteractionSurfaces.some((element) => eventTargetsElement(event, element))) {
+        return;
+      }
+      deselectFeature();
+    });
+
     elements.vectorBuilderMap?.addEventListener('mousedown', (event) => {
       if (Number(event?.button) !== 0) {
         return;
@@ -1027,21 +1259,16 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       }
     });
 
-    elements.vectorBuilderFeatureReplaceSelect?.addEventListener('change', () => {
-      const nextIndex = Number(elements.vectorBuilderFeatureReplaceSelect.value);
-      if (!Number.isFinite(nextIndex)) {
-        return;
-      }
-      featureReplaceIndex = nextIndex;
-      describeFeatureReplaceTarget(getSelectedRecord());
-    });
-
-    // Enter in the search box searches; picking a result applies immediately.
+    // Enter in the search box searches; a result and a source vector are picked
+    // first, and Confirm is what rewrites the feature.
     elements.vectorBuilderFeatureReplaceForm?.addEventListener('submit', (event) => {
       event.preventDefault();
       void runFeatureReplaceSearch();
     });
-    elements.vectorBuilderFeatureReplaceSearchBtn?.addEventListener('click', (event) => {
+    elements.vectorBuilderFeatureReplaceSearch?.addEventListener('keydown', (event) => {
+      if (String(event?.key || '') !== 'Enter') {
+        return;
+      }
       event.preventDefault();
       void runFeatureReplaceSearch();
     });
@@ -1049,8 +1276,35 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       const featureId = event.target?.closest?.('[data-vector-replace-feature-id]')
         ?.dataset?.vectorReplaceFeatureId;
       if (featureId) {
-        void applyFeatureReplace(featureId);
+        selectFeatureReplaceResult(featureId);
       }
+    });
+    elements.vectorBuilderFeatureReplaceResults?.addEventListener('keydown', (event) => {
+      const key = String(event?.key || '');
+      if (key !== 'Enter' && key !== ' ' && key !== 'Spacebar') {
+        return;
+      }
+      const featureId = event.target?.closest?.('[data-vector-replace-feature-id]')
+        ?.dataset?.vectorReplaceFeatureId;
+      if (featureId) {
+        event.preventDefault?.();
+        selectFeatureReplaceResult(featureId);
+      }
+    });
+    elements.vectorBuilderFeatureReplaceHosts?.addEventListener('click', (event) => {
+      const hostId = event.target?.closest?.('[data-vector-replace-host-id]')
+        ?.dataset?.vectorReplaceHostId;
+      if (hostId) {
+        selectFeatureReplaceHost(hostId);
+      }
+    });
+    elements.vectorBuilderFeatureReplaceConfirm?.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (!getSelectedStoredFeature()) {
+        setFeatureReplaceStatus('Pick a stored feature before confirming.', true);
+        return;
+      }
+      void applyFeatureReplace(featureReplaceSelectedId);
     });
     elements.vectorBuilderFeatureReplaceClose?.addEventListener('click', hideFeatureReplaceDialog);
     elements.vectorBuilderFeatureReplaceCancel?.addEventListener('click', hideFeatureReplaceDialog);

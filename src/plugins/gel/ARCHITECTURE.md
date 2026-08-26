@@ -19,7 +19,9 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
 - `rendering/lane-table.js`: the editable lane/sample table beneath the viewer.
 - `rendering/index.js`: canvas drawing, the analysis report, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
-- `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, JSON/CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
+- Dialogs: the analysis report, the peak editor, and the per-cell band intensity report each live in an overlay opened from **Gel Tools -> Analysis**, so none of them takes permanent workspace height. Their triggers disable when the underlying data is missing, and closing follows the same open/close/overlay-click/Escape shape.
+- `history.js`: the frame's own undo/redo stack over `manualOverrides`. `commit()` runs after every render and is a no-op unless the overrides actually moved, so no call site has to decide whether an interaction was an edit. A changed `runtime.imageRevision` (load, crop, rotate) drops the stack rather than replaying coordinates onto different pixels.
+- `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
 
 ### Pure / support modules (no DOM)
 
@@ -38,7 +40,7 @@ The headline feature is a step-by-step manual override flow driven by `manual/ma
 
 1. **Set dividers** — lane boundaries, with the outermost dividers also defining
    the gel edges (confirmed via "Done Dividers").
-2. **Set ladder lane** — which lane is the MW ladder.
+2. **Set ladder lane** — which lane is the MW ladder (Gel Tools → Lane → Ladder lane).
 3. **Ladder MW** — assign known molecular weights to ladder bands (confirmed
    via "Done Ladder MW").
 4. **Band top** / 5. **Band bottom** — the quantification band window; supports
@@ -55,7 +57,7 @@ Additional viewer tools include **lane-vertices** (drag the four corners of a la
 3. Auto-detect lanes, or run the guided manual segmentation steps.
 4. Run analysis (`onRunAnalysis` → `analyzeGelImage`), which produces lanes, band groups, calibration, and confidence.
 5. Inspect the report, lane table, and per-lane intensity profiles.
-6. Save the normalized plugin-owned record and/or export JSON/CSV.
+6. Save the normalized plugin-owned record and/or export CSV.
 
 Code inside the plugin that needs gel calculations imports the specific pure
 module under `analysis/` or `shared.js` instead of routing through the view

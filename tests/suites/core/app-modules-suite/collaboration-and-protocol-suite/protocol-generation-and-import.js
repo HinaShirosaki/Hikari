@@ -153,6 +153,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     members: [],
     settings: {
       personalInfo: { hikariEmail: '' },
+      storagePath: '/tmp/hikari-storage',
       llm: {
         provider: 'openai',
         model: 'gpt-4.1',
@@ -163,8 +164,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     }
   };
 
-  let directLlmPayload = null;
-  let generatedPayload = null;
+  let agentPayload = null;
   let resolveGeneration = null;
 
   class MockFileReader {
@@ -188,28 +188,8 @@ test('protocol-management generates a protocol from the create editor overlay', 
     },
     window: {
       hikariApi: {
-        runDirectLlmPrompt: async (payload) => {
-          directLlmPayload = payload;
-          return {
-            ok: true,
-            payload: {
-              protocol: {
-                name: 'Generated Expression Protocol',
-                purpose: 'Express a recombinant protein in bacteria.',
-                materials: ['LB media', 'Antibiotic', 'Expression plasmid'],
-                steps: [
-                  'Transform the expression plasmid into competent cells.',
-                  'Grow an overnight starter culture with the correct antibiotic.',
-                  'Inoculate fresh media and induce expression at [temperature].'
-                ],
-                troubleshooting: 'Problem: low expression; Solution: reduce the induction temperature.'
-              },
-              result_summary: 'Generated protocol from the attached methods.'
-            }
-          };
-        },
         agentGenerateProtocol: async (payload) => {
-          generatedPayload = payload;
+          agentPayload = payload;
           return new Promise((resolve) => {
             resolveGeneration = resolve;
           });
@@ -255,13 +235,13 @@ test('protocol-management generates a protocol from the create editor overlay', 
   assert.equal(document.getElementById('protocol-generate-input-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-result-overlay').hidden, false);
   assert.match(document.getElementById('protocol-generate-result-preview').innerHTML, /protocol-polish-loading-dots/);
-  assert.equal(directLlmPayload.moduleId, 'protocol');
-  assert.equal(directLlmPayload.task, 'protocol-generation');
-  assert.match(directLlmPayload.prompt, /Generate a bacterial expression protocol from the attached methods\./);
-  assert.equal(directLlmPayload.attachments.length, 1);
-  assert.equal(directLlmPayload.attachments[0].name, 'methods.pdf');
-  assert.match(generatedPayload.protocolJson, /Generated Expression Protocol/);
-  assert.equal(generatedPayload.resultSummary, 'Generate a bacterial expression protocol from the attached methods.');
+  assert.equal(agentPayload.llm.provider, 'codex');
+  assert.equal(agentPayload.llm.model, '');
+  assert.equal(agentPayload.stateSnapshot.settings.storagePath, '/tmp/hikari-storage');
+  assert.match(agentPayload.message, /Research online and search papers/);
+  assert.match(agentPayload.message, /Generate a bacterial expression protocol from the attached methods\./);
+  assert.equal(agentPayload.attachments.length, 1);
+  assert.equal(agentPayload.attachments[0].name, 'methods.pdf');
 
   resolveGeneration({
     ok: true,
@@ -276,6 +256,10 @@ test('protocol-management generates a protocol from the create editor overlay', 
         'Inoculate fresh media and induce expression at [temperature].'
       ],
       troubleshooting: 'Problem: low expression; Solution: reduce the induction temperature.'
+    },
+    protocol_generation: {
+      status: 'awaiting_user_approval',
+      protocol: {}
     }
   });
   await flushAsync();

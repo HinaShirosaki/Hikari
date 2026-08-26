@@ -43,8 +43,6 @@ export function createAssayResultsManager({
 }) {
   const {
     assayAnalysisColumnGroupsInput,
-    assayAnalysisGroupVisualization,
-    assayAnalysisGroupNameInput,
     assayAnalysisRowGroupsInput,
     assayAnalysisSelectionStatus,
     assayResultTable,
@@ -56,7 +54,6 @@ export function createAssayResultsManager({
   const analysisGroupColorCount = 4;
   const analysisGroupColorClasses = Array.from({ length: analysisGroupColorCount }, (_item, index) => index + 1)
     .flatMap((colorIndex) => [
-      `assay-analysis-group-color-${colorIndex}`,
       `assay-analysis-row-group-color-${colorIndex}`,
       `assay-analysis-column-group-color-${colorIndex}`
     ]);
@@ -239,38 +236,8 @@ export function createAssayResultsManager({
     });
   }
 
-  function buildAnalysisGroupSection(label, groups) {
-    if (!groups.length) {
-      return '';
-    }
-    return `
-      <div class="assay-analysis-group-section">
-        <span class="assay-analysis-group-section-label">${escapeHtml(label)}</span>
-        <div class="assay-analysis-group-chips">
-          ${groups.map((group, groupIndex) => `
-            <span class="assay-analysis-group-chip assay-analysis-group-color-${getAnalysisGroupColorIndex(groupIndex)}">
-              <span class="assay-analysis-group-dot" aria-hidden="true"></span>
-              <strong>${escapeHtml(group.label)}</strong>
-              <span>${escapeHtml(group.members.join(', '))}</span>
-            </span>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
   function refreshAnalysisGroupDisplay() {
     const analysisGroups = getAnalysisGroups();
-    const rowGroups = analysisGroups.row.groups;
-    const columnGroups = analysisGroups.column.groups;
-    if (assayAnalysisGroupVisualization) {
-      assayAnalysisGroupVisualization.innerHTML = rowGroups.length || columnGroups.length
-        ? `
-          ${buildAnalysisGroupSection('Row groups', rowGroups)}
-          ${buildAnalysisGroupSection('Column groups', columnGroups)}
-        `
-        : '<p class="small-note">Drag across result-table cells, then add the selected rows or columns as a group.</p>';
-    }
     applyAnalysisGroupHighlights(analysisGroups);
     return analysisGroups;
   }
@@ -286,16 +253,8 @@ export function createAssayResultsManager({
     }
     setAnalysisSelectionStatus(parts.length
       ? `Selected: ${parts.join(' · ')}. Add the selection as a row or column group.`
-      : 'Drag across cells in the result table to select group members.');
+      : '');
     return selection;
-  }
-
-  function sanitizeGroupName(raw, fallbackName) {
-    const cleaned = String(raw || '')
-      .replace(/[:;\n\r]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return cleaned || fallbackName;
   }
 
   function nextGroupName(dimension) {
@@ -326,11 +285,10 @@ export function createAssayResultsManager({
     }
 
     const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
-    const fallbackName = nextGroupName(dimension);
-    const groupName = sanitizeGroupName(assayAnalysisGroupNameInput?.value, fallbackName);
+    const groupName = nextGroupName(dimension);
     appendGroupEntry(input, groupName, members);
     refreshAnalysisGroupDisplay();
-    setAnalysisSelectionStatus(`Added "${groupName}" with ${members.length} ${dimension === 'row' ? 'row(s)' : 'column(s)'}.`);
+    setAnalysisSelectionStatus('');
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
     }
@@ -350,9 +308,6 @@ export function createAssayResultsManager({
     }
     if (assayAnalysisColumnGroupsInput) {
       assayAnalysisColumnGroupsInput.value = '';
-    }
-    if (assayAnalysisGroupNameInput) {
-      assayAnalysisGroupNameInput.value = '';
     }
     refreshAnalysisGroupDisplay();
     setAnalysisSelectionStatus('Cleared row and column groups.');

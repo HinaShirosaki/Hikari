@@ -1,6 +1,4 @@
 export function renderAgentChat({
-  state,
-  dom,
   runtime,
   shell,
   sessionManager,

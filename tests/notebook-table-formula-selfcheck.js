@@ -9,14 +9,19 @@ const { loadEsmStyleModule } = require('./support/runtime.js');
 const root = path.resolve(__dirname, '..');
 const {
   applyReferencePick,
+  computeNotebookResultTables,
   fillCellContent,
   translateFormulaReferences,
   computeNotebookResultTable,
   notebookTableColumnLetter,
-  resolveNotebookResultTableValues
+  resolveNotebookResultTableValues,
+  resolveNotebookResultTablesValues
 } = loadEsmStyleModule(path.join(root, 'src/renderer/lib/notebook-table-formulas.js'));
 const { addNotebookResultTableColumn, createDefaultNotebookResultTable } = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/notebook-result-tables.js')
+);
+const { createSpreadsheetReferencePicker } = loadEsmStyleModule(
+  path.join(root, 'src/renderer/lib/spreadsheet-reference-picker.js')
 );
 
 // Builds a table from a grid of cell texts, with the field names the notebook uses.
@@ -72,6 +77,34 @@ assert.equal(text(refs, 1, 2), '12', 'formulas can reference other formulas');
 assert.equal(cellAt(refs, 1, 0).formula, true, 'a formula cell is flagged');
 assert.equal(text(tableOf([['0.1', '0.2', '=A1+B1']]), 2, 0), '0.3', 'float noise is trimmed');
 assert.equal(text(tableOf([['5', '=a1*2']]), 1, 0), '10', 'references are case-insensitive');
+
+// --- references across multiple result tables ---
+const siblingTables = [
+  tableOf([['2'], ['4']]),
+  tableOf([['=Table1:A1*2', '=A1+Table1:A2']])
+];
+const siblingComputed = computeNotebookResultTables(siblingTables);
+assert.equal(
+  siblingComputed[1].byRowId.row_1.column_1.text,
+  '4',
+  'Table1:A1 reads a cell in a sibling result table'
+);
+assert.equal(
+  siblingComputed[1].byRowId.row_1.column_2.text,
+  '8',
+  'a formula can mix its local table with an explicitly qualified table'
+);
+const crossTableCycle = computeNotebookResultTables([
+  tableOf([['=Table2:A1']]),
+  tableOf([['=Table1:A1']])
+]);
+assert.equal(crossTableCycle[0].byRowId.row_1.column_1.text, '#ERROR', 'cross-table cycles are rejected');
+assert.match(crossTableCycle[0].byRowId.row_1.column_1.error, /circular reference/, 'the cross-table cycle is explained');
+assert.equal(
+  resolveNotebookResultTablesValues(siblingTables)[1].rows[0].column_2,
+  '8',
+  'PDF and agent-context table resolution keeps cross-table values'
+);
 
 // --- ranges and aggregates ---
 const ranges = tableOf([
@@ -198,6 +231,16 @@ assert.equal(
   'shift-click widens the pick into a range'
 );
 assert.equal(
+  pickSeq('=MAX(', [{ address: 'Table1:A1' }, { address: 'Table1:A8', extendRange: true }]),
+  '=MAX(Table1:A1:A8',
+  'a qualified range keeps one source-table prefix'
+);
+assert.equal(
+  pickSeq('=', [{ address: 'Table1:A1' }, { address: 'Table2:A1', extendRange: true }]),
+  '=Table2:A1',
+  'shift-clicking another table selects that cell instead of creating a cross-table range'
+);
+assert.equal(
   pickSeq('=SUM(', [{ address: 'A1' }, { address: 'A3', extendRange: true }, { address: 'A5', extendRange: true }]),
   '=SUM(A1:A5',
   're-extending grows from the same anchor instead of chaining colons'
@@ -227,6 +270,48 @@ assert.equal(
   'shift-click grows from a hand-typed reference'
 );
 
+// The reusable DOM controller keeps an editor open while its host maps clicks to
+// feature-specific addresses. Notebook and Assay both use this exact event lifecycle.
+const pickerListeners = {};
+const pickerRoot = {
+  addEventListener(type, handler) { pickerListeners[type] = handler; },
+  removeEventListener(type, handler) {
+    if (pickerListeners[type] === handler) delete pickerListeners[type];
+  }
+};
+const pickerInput = {
+  value: '=',
+  selectionStart: 1,
+  selectionEnd: 1,
+  setSelectionRange(start, end) { this.selectionStart = start; this.selectionEnd = end; },
+  focus() { this.focused = true; }
+};
+const pickerCell = { contains: () => false };
+let pickerAddress = 'Table1:A1';
+const pickerController = createSpreadsheetReferencePicker({
+  roots: [pickerRoot],
+  findEditor: () => pickerInput,
+  addressOfCell: () => pickerAddress
+});
+function pickerEvent() {
+  return {
+    button: 0,
+    target: { closest: (selector) => (selector === '.tabulator-cell' ? pickerCell : null) },
+    preventDefault() { this.prevented = true; },
+    stopPropagation() { this.stopped = true; }
+  };
+}
+pickerListeners.mousedown(pickerEvent());
+assert.equal(pickerInput.value, '=Table1:A1', 'the shared picker inserts the mapped first-table address');
+pickerInput.value += '+';
+pickerInput.selectionStart = pickerInput.value.length;
+pickerInput.selectionEnd = pickerInput.value.length;
+pickerAddress = 'Table2:A1';
+pickerListeners.mousedown(pickerEvent());
+assert.equal(pickerInput.value, '=Table1:A1+Table2:A1', 'the shared picker can mix mapped table sources');
+pickerController.destroy();
+assert.equal(pickerListeners.mousedown, undefined, 'destroy removes the shared capture listeners');
+
 // --- drag to fill: relative references shift with the cell ---
 assert.equal(translateFormulaReferences('=A1*2', 0, 1), '=A2*2', 'filling down advances the row');
 assert.equal(translateFormulaReferences('=A1*2', 1, 0), '=B1*2', 'filling across advances the column');
@@ -238,6 +323,11 @@ assert.equal(translateFormulaReferences('=Z1+1', 1, 0), '=AA1+1', 'shifting past
 // LOG10 into LOG12 would silently compute the wrong thing.
 assert.equal(translateFormulaReferences('=LOG10(B2)', 0, 2), '=LOG10(B4)', 'LOG10 is a function, not a cell');
 assert.equal(translateFormulaReferences('=LOG10 (B2)', 0, 2), '=LOG10 (B4)', 'a space before "(" still marks a call');
+assert.equal(
+  translateFormulaReferences('=Table1:A1+MAX(Table2:B1:B3)', 1, 2),
+  '=Table1:B3+MAX(Table2:C3:C5)',
+  'table names stay fixed while their cell references shift'
+);
 
 // Off the top or left edge there is no cell to point at, so the fill reports it.
 assert.equal(translateFormulaReferences('=A1+B1', 0, -1), '=#REF!+#REF!', 'filling above row 1 is #REF!');

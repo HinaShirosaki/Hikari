@@ -154,7 +154,7 @@ export function createTopbarSearchController({
   apps = [],
   normalizeViewId: normalizeAppViewId = (viewId) => viewId,
   openItemHandlers = {},
-  windowObject = window
+  windowObject: _windowObject = window
 }) {
   const itemHandlers = openItemHandlers && typeof openItemHandlers === 'object'
     ? openItemHandlers

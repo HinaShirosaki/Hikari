@@ -27,7 +27,7 @@ export function buildOverlappingWindows(sequence, maxWindowLength, overlapLength
   return windows;
 }
 
-export function designTiledInsertionOligos(templateSequence, normalizedEdit, thresholds, config) {
+export function designTiledInsertionOligos(templateSequence, normalizedEdit, _thresholds, _config) {
   const insertedSequence = normalizeSequence(normalizedEdit.editedSequence || '');
   if (!insertedSequence.length) {
     return {

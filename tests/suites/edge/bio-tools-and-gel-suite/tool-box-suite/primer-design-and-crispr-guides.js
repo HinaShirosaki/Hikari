@@ -430,10 +430,18 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   assert.equal(persisted, true);
   assert.equal(changedCount, 1);
   assert.equal(state.projects.length, 1);
-  assert.equal(state.protocols.length, 1);
-  assert.equal(state.notebookEntries.length, 1);
+  // The PCR page, plus the Gibson tube this route ends in.
+  assert.deepEqual(
+    Array.from(state.protocols).map((protocol) => protocol.name),
+    ['PCR Thermocycle Program', 'Gibson Assembly']
+  );
+  assert.equal(state.notebookEntries.length, 2);
   assert.equal(state.notebookEntries[0].notebookState, 'planned');
   assert.equal(created.protocol.name, 'PCR Thermocycle Program');
+  const assembly = created.stepEntries[0];
+  assert.equal(assembly.experimentName, 'His6-TEV-POI Gibson Assembly');
+  assert.equal(assembly.toolCalculations[0].table.rows[0][0], '2x Gibson assembly master mix');
+  assert.equal(assembly.toolCalculations[0].table.metaRows[0][1], '20 uL');
   assert.match(created.protocol.steps[0].text, /Initial denaturation.*98 C.*30 s/i);
   assert.match(created.protocol.steps[1].text, /Repeat for 30 cycles.*Denaturation.*Annealing.*Extension/i);
   assert.doesNotMatch(created.protocol.steps.map((step) => step.text).join('\n'), /Transform|ligation|assembly reaction/i);
@@ -444,18 +452,21 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   assert.equal(state.notebookEntries[0].toolCalculations.length, 1);
   const reaction = state.notebookEntries[0].toolCalculations[0];
   assert.equal(reaction.title, 'Fixed Volume Reaction');
-  assert.deepEqual(Array.from(reaction.table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume']);
+  assert.deepEqual(Array.from(reaction.table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note']);
   assert.deepEqual(Array.from(reaction.table.rows).map((row) => row[0]), [
     'Forward primer',
     'Reverse primer',
     'dNTP mix',
     'High-fidelity DNA polymerase',
     '5x polymerase buffer',
-    'Template DNA'
+    'Template DNA (10 ng)'
   ]);
   assert.equal(reaction.table.metaRows[0][1], '50 uL');
   assert.equal(reaction.table.footerRows[0][0], 'Nuclease-free water');
-  assert.match(reaction.table.footerRows[0][3], /32\.5 uL/i);
+  // The template mass is a final concentration; its own stock is unknown until
+  // the miniprep is measured, so both it and the water stay as formulas.
+  assert.match(reaction.table.rows[5][3], /0\.2 ng\/uL x 50 uL \/ \[stock concentration\]/);
+  assert.match(reaction.table.footerRows[0][3], /50 uL - .*\[Template DNA \(10 ng\) volume\]/);
   assert.equal(created.plan.primerOligoPlan.feasible, true);
 });
 test('[EDGE] builder cloning notebook migration replaces only legacy assembly protocols', () => {

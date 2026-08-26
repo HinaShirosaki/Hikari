@@ -5,6 +5,10 @@ export const FALLBACK_CHAR_ADVANCE_PX = 8.8;
 export const FALLBACK_SEQUENCE_LINE_HEIGHT_PX = 16;
 export const RESTRICTION_LABEL_GAP_PX = 14;
 export const STRAND_PAIR_ROW_GAP_PX = 2;
+// Gap between the forward-primer track, the strand pair, and the feature track.
+// Mirrors .sequence-viewer-strand-block's own gap so a line can declare the
+// height it will take before the browser lays it out.
+export const STRAND_BLOCK_GAP_PX = 6;
 export const DEFAULT_STRAND_MARKER_COLUMN_PX = 28;
 export const DEFAULT_STRAND_COLUMN_GAP_PX = 6;
 export const LINE_FEATURE_BAR_HEIGHT_PX = 16;

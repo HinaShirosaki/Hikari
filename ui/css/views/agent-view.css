@@ -1047,6 +1047,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   position: relative;
 }
 
+.agent-chat-stage > .agent-conversation-shell {
+  grid-row: 2;
+}
+
 .agent-status-pill {
   margin: 0;
   padding: 7px 12px;

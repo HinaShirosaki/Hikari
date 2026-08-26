@@ -109,7 +109,7 @@ export function analyzeSummary(observations, grouping, spec) {
     const seriesLabel = hasSeriesKey ? String(bucket.values[0]) : grouping.keys[0].header;
     const point = { x: String(bucket.values[hasSeriesKey ? 1 : 0]), y: bucket.stats.mean };
     if (showErrorBars && bucket.stats.n > 1 && bucket.stats.sd > 0) {
-      point.yVariance = bucket.stats.sd * 2;
+      point.yVariance = bucket.stats.sd;
     }
     // Replicates for Prism's scatter-over-bar overlay. All of them or none: a truncated
     // dot cloud would misread as the whole group, so wide buckets just show the bar.

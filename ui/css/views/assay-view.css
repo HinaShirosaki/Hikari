@@ -168,6 +168,12 @@
   padding: 0 0 8px;
 }
 
+#assay-search,
+#assay-results-search {
+  height: var(--left-rail-item-min-height, 36px);
+  min-height: var(--left-rail-item-min-height, 36px);
+}
+
 .assay-browser-list {
   display: grid;
   gap: 2px;
@@ -277,6 +283,11 @@
   gap: 18px;
   align-content: start;
   min-height: 0;
+  /* This panel is a scroll container with a definite height, so `auto` rows are shrunk to
+     share it -- and `min-height: 0` on the stages lets them shrink past their content.
+     A tall plate then spilled out of its stage and painted over the chart below it.
+     Content-sized rows overflow into the panel's own scroll instead of overlapping. */
+  grid-auto-rows: max-content;
 }
 
 .assay-results-table-stage,
@@ -1059,76 +1070,6 @@
   margin: 6px 0 4px;
 }
 
-.assay-analysis-group-visualization {
-  display: grid;
-  gap: 10px;
-  padding: 10px 0 4px;
-}
-
-.assay-analysis-group-visualization > .small-note {
-  margin: 0;
-}
-
-.assay-analysis-group-section {
-  display: grid;
-  gap: 6px;
-}
-
-.assay-analysis-group-section-label {
-  color: var(--theme-text-muted);
-  font-size: 0.78rem;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.assay-analysis-group-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.assay-analysis-group-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 6px 9px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--assay-analysis-group-color) 10%, var(--theme-surface));
-  box-shadow: inset 3px 0 var(--assay-analysis-group-color);
-  color: var(--theme-text);
-  font-size: 0.82rem;
-}
-
-.assay-analysis-group-chip strong {
-  color: var(--theme-text-strong);
-}
-
-.assay-analysis-group-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: var(--assay-analysis-group-color);
-}
-
-.assay-analysis-group-color-1 {
-  --assay-analysis-group-color: var(--assay-plate-analysis-group-1);
-}
-
-.assay-analysis-group-color-2 {
-  --assay-analysis-group-color: var(--assay-plate-analysis-group-2);
-}
-
-.assay-analysis-group-color-3 {
-  --assay-analysis-group-color: var(--assay-plate-analysis-group-3);
-}
-
-.assay-analysis-group-color-4 {
-  --assay-analysis-group-color: var(--assay-plate-analysis-group-4);
-}
-
 .assay-analysis-row-group-color-1 {
   --assay-analysis-row-group-color: var(--assay-plate-analysis-group-1);
 }
@@ -1199,16 +1140,33 @@
   justify-content: flex-start;
 }
 
-.assay-transformed-plate-intro {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border-color: transparent;
+  background: transparent;
 }
 
-.assay-transformed-plate-intro .small-note {
-  margin: 0;
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn:hover,
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn:focus-visible {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  color: var(--theme-danger);
 }
 
 .assay-transform-cell {
@@ -1251,8 +1209,36 @@
 
 .assay-analysis-group-actions {
   justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn:hover,
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
 }
 
 .assay-analysis-selection-status {
@@ -1284,6 +1270,15 @@
   background: var(--theme-surface-elevated);
   font-family: Arial, sans-serif;
   padding: 10px;
+}
+
+/* The renderer sizes the figure to the data, so the frame hugs it and centres instead of
+   leaving dead space beside a small plot -- or overflowing the panel on a wide one. */
+.assay-analysis-chart[data-assay-analysis-chart] {
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  overflow-x: auto;
 }
 
 .assay-analysis-agent-chart {

@@ -30,8 +30,15 @@ globalThis.ImageData ??= class ImageData {
 
 const vendor = path.join(pluginDir, 'vendor/modules/gel');
 const { detectLanes } = await import(new URL(`file://${vendor}/analysis/auto-lanes.js`));
-const { analyzeGelImage } = await import(new URL(`file://${vendor}/analysis/analysis-core.js`));
+const {
+  analyzeGelImage,
+  buildLanesFromManualSegmentation,
+  detectLadderBandRows
+} = await import(new URL(`file://${vendor}/analysis/analysis-core.js`));
+const { buildQuantificationSignal } = await import(new URL(`file://${vendor}/analysis/image-processing.js`));
+const { createHistoryController } = await import(new URL(`file://${vendor}/history.js`));
 const { initPluginLeftRailResizer } = await import(new URL(`file://${pluginDir}/left-rail.js`));
+const ladderConstants = await import(new URL(`file://${vendor}/constants.js`));
 
 // Six evenly spaced dark lanes on a light background, each with one band.
 function syntheticGel({ width = 320, height = 200, laneCount = 6 } = {}) {
@@ -192,11 +199,19 @@ async function checkAdapterContract() {
   assert.match(exportSource, /hikariApi\?\.exportTextFile/, 'exports use the host save dialog API');
   assert.match(exportSource, /hikariApi\?\.exportBinaryFile/, 'generated PNGs use the host save dialog API');
   assert.match(mainSource, /async exportBinaryFile\(\{ dataBase64, fileName \}\)/, 'the Gel adapter forwards PNG bytes without text encoding');
-  assert.match(powerPointSource, /<a:tbl>/, 'PowerPoint exports keep lane metadata as a native table');
-  assert.match(powerPointSource, /createStoredZip/, 'PowerPoint exports are packaged inside the sandbox without a new dependency');
+  assert.match(powerPointSource, /slide\.addTable/, 'PowerPoint exports keep lane metadata as a native table');
+  assert.match(powerPointSource, /presentation\.write/, 'PowerPoint exports use the bundled compatibility writer');
   assert.match(htmlSource, /id="boot-retry"/, 'boot failures expose a retry action');
+  assert.match(
+    htmlSource,
+    /vendor\/pptxgenjs\/pptxgen\.bundle\.js/,
+    'the PowerPoint compatibility writer loads before Gel modules execute'
+  );
+  await fs.access(path.join(pluginDir, 'vendor/pptxgenjs/LICENSE'));
   assert.match(htmlSource, /<script src="\.\/hikari\.js"><\/script>/, 'the classic host client loads before the module adapter');
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');
+  assert.match(viewSource, /id="gel-ladder-preset"/, 'the ladder preset select is present for records-manager to read');
+  assert.match(viewSource, /id="gel-ladder-band-mw"[^>]+list="gel-ladder-band-mw-options"/, 'the ladder MW field offers the preset sizes');
   assert.match(viewSource, /id="gel-status"[^>]+aria-live="polite"/, 'workspace status updates are announced');
   assert.doesNotMatch(htmlSource, /universal-left-rail-lists\.css|universal-menus\.css/, 'unrelated shell styles are not loaded');
   assert.doesNotMatch(coreCss, /assets\/fonts/, 'the plugin CSS has no missing external font dependency');
@@ -250,8 +265,127 @@ function checkPipeline() {
   assert.equal(report.calibration.ok, false);
 }
 
+function checkLadderPresets() {
+  const { DEFAULT_LADDER_PRESET_ID, DEFAULT_LADDER_STANDARDS, LADDER_PRESETS, getLadderPresetBands } = ladderConstants;
+
+  const ids = LADDER_PRESETS.map((preset) => preset.id);
+  assert.equal(new Set(ids).size, ids.length, 'preset ids must be unique — the select stores one as the record parameter');
+  assert.ok(ids.includes(DEFAULT_LADDER_PRESET_ID), 'the default preset id must name a real preset');
+  assert.deepEqual(getLadderPresetBands(DEFAULT_LADDER_PRESET_ID), DEFAULT_LADDER_STANDARDS);
+
+  LADDER_PRESETS.forEach((preset) => {
+    assert.ok(preset.label && preset.group, `${preset.id} needs a label and a group`);
+    assert.ok(preset.bands.length >= 2, `${preset.id} needs at least two bands to calibrate against`);
+    // buildCalibration pairs ladder bands top-down with these, so a preset that
+    // is not strictly descending would silently mis-size every sample lane.
+    preset.bands.forEach((size, index) => {
+      assert.ok(Number.isFinite(size) && size > 0, `${preset.id} has a non-positive band size`);
+      assert.ok(index === 0 || size < preset.bands[index - 1], `${preset.id} bands are not strictly descending`);
+    });
+  });
+
+  // Unknown ids (an older record, a retired preset) must not blank the standards.
+  assert.deepEqual(getLadderPresetBands('not-a-preset'), DEFAULT_LADDER_STANDARDS);
+  const copy = getLadderPresetBands(DEFAULT_LADDER_PRESET_ID);
+  copy.push(0);
+  assert.deepEqual(getLadderPresetBands(DEFAULT_LADDER_PRESET_ID), DEFAULT_LADDER_STANDARDS, 'callers must not mutate the shared preset');
+}
+
+// Detect ladder bands: the Detect ladder button pairs these rows with the preset
+// top-down, so a row that lands on the wrong band mislabels every band below it.
+function checkLadderDetection() {
+  const width = 120;
+  const height = 240;
+  const bandRows = [30, 80, 140, 195];
+  const gray = new Float32Array(width * height).fill(0.9);
+  bandRows.forEach((row) => {
+    for (let y = row - 4; y <= row + 4; y += 1) {
+      for (let x = 40; x <= 80; x += 1) {
+        gray[(y * width) + x] = 0.15;
+      }
+    }
+  });
+
+  const overrides = { laneSegmentation: { gelLeft: 35, gelRight: 85, dividers: [] } };
+  const lane = (buildLanesFromManualSegmentation(overrides, width, height) || [])[0];
+  assert.ok(lane, 'one lane must be built from the synthetic divider layout');
+
+  const { signal } = buildQuantificationSignal(gray);
+  const rows = detectLadderBandRows({ signal, width, height, lane, count: bandRows.length });
+  assert.equal(rows.length, bandRows.length, `expected ${bandRows.length} ladder bands, got ${rows.length}`);
+  assert.deepEqual(rows, [...rows].sort((a, b) => a - b), 'rows must come back top-to-bottom for preset pairing');
+  rows.forEach((row, index) => {
+    assert.ok(
+      Math.abs(row - bandRows[index]) <= 4,
+      `ladder band ${index} detected at row ${row}, expected near ${bandRows[index]}`
+    );
+  });
+
+  // Fewer standards than bands must not over-read: only the strongest are returned.
+  assert.equal(detectLadderBandRows({ signal, width, height, lane, count: 2 }).length, 2);
+  assert.deepEqual(detectLadderBandRows({ signal, width, height, lane, count: 0 }), []);
+  assert.deepEqual(detectLadderBandRows({ signal, width, height, lane: null, count: 4 }), []);
+}
+
+// Undo/redo inside the frame. The host's global service snapshots the renderer's
+// state object, which never contains this frame's lane and band edits, so the
+// workspace keeps its own stack and reports its depth up through app.setHistory.
+function checkHistoryController() {
+  const runtime = { manualOverrides: { ladderLane: 1, ladderBands: [] }, imageRevision: 0 };
+  const renders = [];
+  const announced = [];
+  const history = createHistoryController({
+    runtime,
+    deps: {
+      onHistoryChanged: (historyState) => announced.push(historyState),
+      renderAll: () => renders.push(JSON.stringify(runtime.manualOverrides))
+    }
+  });
+
+  assert.deepEqual(history.getHistoryState(), { canUndo: false, canRedo: false });
+  assert.equal(history.commit(), false, 'an unchanged render must not push an entry');
+  assert.equal(history.undo(), false);
+
+  runtime.manualOverrides = { ladderLane: 1, ladderBands: [{ pixelY: 40, mw: 50 }] };
+  assert.equal(history.commit(), true);
+  runtime.manualOverrides = { ladderLane: 2, ladderBands: [{ pixelY: 40, mw: 50 }] };
+  assert.equal(history.commit(), true);
+  assert.deepEqual(history.getHistoryState(), { canUndo: true, canRedo: false });
+
+  assert.equal(history.undo(), true);
+  assert.equal(runtime.manualOverrides.ladderLane, 1);
+  assert.equal(runtime.manualOverrides.ladderBands.length, 1, 'undo went back two steps at once');
+  assert.equal(history.undo(), true);
+  assert.equal(runtime.manualOverrides.ladderBands.length, 0);
+  assert.equal(history.undo(), false, 'undo ran past the start of the stack');
+
+  assert.equal(history.redo(), true);
+  assert.equal(runtime.manualOverrides.ladderBands.length, 1);
+  assert.equal(history.redo(), true);
+  assert.equal(runtime.manualOverrides.ladderLane, 2);
+  assert.equal(history.redo(), false);
+  assert.equal(renders.length, 4, 'every applied snapshot must re-render the workspace');
+  assert.ok(announced.length > 0, 'the host is never told the buttons can light up');
+
+  // Re-rendering during an undo must not push the restored state back on.
+  history.undo();
+  assert.deepEqual(history.getHistoryState(), { canUndo: true, canRedo: true });
+
+  // A new image or an applied crop moves every coordinate: the stack is dropped,
+  // not replayed onto pixels that no longer exist.
+  runtime.imageRevision += 1;
+  runtime.manualOverrides = { ladderLane: 9, ladderBands: [] };
+  assert.equal(history.commit(), false);
+  assert.deepEqual(history.getHistoryState(), { canUndo: false, canRedo: false });
+  assert.equal(history.undo(), false);
+  assert.equal(runtime.manualOverrides.ladderLane, 9, 'a dropped stack still rolled the state back');
+}
+
 await checkFolderContract();
 await checkAdapterContract();
 await checkLeftRailContract();
 checkPipeline();
+checkLadderPresets();
+checkLadderDetection();
+checkHistoryController();
 console.log('gel-plugin-selfcheck: ok');

@@ -4,6 +4,9 @@ const MIN_ROTATION_DEGREES = -180;
 const MAX_ROTATION_DEGREES = 180;
 const ROTATION_DRAG_DEGREES_PER_PIXEL = 0.25;
 const CROP_BORDER_SELECTOR = '.cropper-line, .cropper-point';
+// Keep in sync with --gel-crop-handle-margin in gel-view.css: the shell shrinks by
+// this much while cropping, and minContainer* must not push the container back out.
+const CROP_HANDLE_MARGIN_PX = 12;
 
 function normalizeRotationDegrees(value) {
   const numeric = Number(value);
@@ -105,8 +108,8 @@ export function createCropController({ runtime, elements, deps }) {
       zoomable: true,
       scalable: false,
       rotatable: true,
-      minContainerWidth: runtime.cropDisplaySize?.width || 200,
-      minContainerHeight: runtime.cropDisplaySize?.height || 200
+      minContainerWidth: Math.max(1, (runtime.cropDisplaySize?.width || 200) - 2 * CROP_HANDLE_MARGIN_PX),
+      minContainerHeight: Math.max(1, (runtime.cropDisplaySize?.height || 200) - 2 * CROP_HANDLE_MARGIN_PX)
     });
     runtime.cropperActive = true;
     runtime.cropRotationDegrees = 0;
@@ -237,6 +240,10 @@ export function createCropController({ runtime, elements, deps }) {
     }
     const started = showCropperForCurrentImage();
     setCropUiState();
+    if (started) {
+      // Re-render so the viewer drops its fitted height and the cropper owns the box.
+      deps.renderCanvas();
+    }
     return started;
   }
 

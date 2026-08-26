@@ -1005,6 +1005,62 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "list_records",
+                "get_record",
+                "get_sequence",
+                "get_features",
+                "analyze",
+                "get_cloning_design"
+              ]
+            }
+          }
+        },
+        {
+          "required": [
+            "strategy"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "design_cloning"
+              ]
+            },
+            "strategy": {
+              "enum": [
+                "whole-plasmid",
+                "q5-kld",
+                "two-step-ligation"
+              ]
+            }
+          }
+        },
+        {
+          "required": [
+            "strategy",
+            "insertRange"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "design_cloning"
+              ]
+            },
+            "strategy": {
+              "enum": [
+                "golden-gate",
+                "gibson",
+                "in-fusion",
+                "overlap-extension"
+              ]
+            }
+          }
+        }
+      ],
       "required": [
         "action"
       ],
@@ -1080,7 +1136,8 @@
             "two-step-ligation",
             "golden-gate",
             "gibson",
-            "in-fusion"
+            "in-fusion",
+            "overlap-extension"
           ],
           "description": "design_cloning: cloning route."
         },
@@ -1114,7 +1171,11 @@
         "insertRange": {
           "type": "object",
           "additionalProperties": false,
-          "description": "design_cloning: insert coordinates for gibson/in-fusion/golden-gate.",
+          "required": [
+            "start",
+            "end"
+          ],
+          "description": "design_cloning: required insert coordinates for golden-gate/gibson/in-fusion/overlap-extension.",
           "properties": {
             "start": {
               "type": "integer",

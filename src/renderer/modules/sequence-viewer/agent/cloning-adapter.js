@@ -15,7 +15,8 @@ const CONTRACT_STRATEGIES = new Set([
   'two-step-ligation',
   'golden-gate',
   'gibson',
-  'in-fusion'
+  'in-fusion',
+  'overlap-extension'
 ]);
 
 function normalizePrimer(primer = {}) {

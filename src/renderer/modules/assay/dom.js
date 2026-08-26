@@ -56,8 +56,6 @@ export function getAssayElements(root = document) {
     assayAnalysisColumnGroupsInput: root.getElementById('assay-analysis-column-groups'),
     assayAnalysisErrorBarsInput: root.getElementById('assay-analysis-error-bars'),
     assayAnalysisErrorBarsField: root.getElementById('assay-analysis-error-bars-field'),
-    assayAnalysisGroupVisualization: root.getElementById('assay-analysis-group-visualization'),
-    assayAnalysisGroupNameInput: root.getElementById('assay-analysis-group-name'),
     assayAnalysisAddRowGroupBtn: root.getElementById('assay-analysis-add-row-group-btn'),
     assayAnalysisAddColumnGroupBtn: root.getElementById('assay-analysis-add-column-group-btn'),
     assayAnalysisClearGroupsBtn: root.getElementById('assay-analysis-clear-groups-btn'),
@@ -95,7 +93,6 @@ export function getAssayElements(root = document) {
     assayTransformClearBtn: root.getElementById('assay-transform-clear-btn'),
     assayTransformSummary: root.getElementById('assay-transform-summary'),
     assayDerivedPlatePanel: root.getElementById('assay-derived-plate-panel'),
-    assayDerivedPlateSteps: root.getElementById('assay-derived-plate-steps'),
     assayDerivedPlateTable: root.getElementById('assay-derived-plate-table'),
     assayResultsRailScroll: root.querySelector('#assay-view .assay-results-rail-scroll')
   };

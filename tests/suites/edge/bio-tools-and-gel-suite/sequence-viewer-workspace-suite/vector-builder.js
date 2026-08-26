@@ -22,9 +22,7 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-context-menu',
   'sequence-viewer-vector-builder-feature-replace-overlay',
   'sequence-viewer-vector-builder-feature-replace-form',
-  'sequence-viewer-vector-builder-feature-replace-select',
   'sequence-viewer-vector-builder-feature-replace-search',
-  'sequence-viewer-vector-builder-feature-replace-search-btn',
   'sequence-viewer-vector-builder-feature-replace-status',
   'sequence-viewer-vector-builder-feature-replace-results',
   'sequence-viewer-vector-builder-sequence-edit-overlay',
@@ -241,9 +239,7 @@ test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset c
   assert.match(document.getElementById('sequence-viewer-alignment-query-status').textContent, /\S/);
 });
 
-test('[EDGE] sequence-viewer status feedback uses a transient notice and Vector Builder note', () => {
-  // setStatus() is shared by Annotate, backbone recognition, and Vector Builder
-  // actions. The main workspace reports through the transient notice system.
+test('[EDGE] sequence-viewer opens Vector Builder without redundant success status', () => {
   const document = createMockDocument([...VECTOR_BUILDER_IDS, 'sequence-viewer-vector-builder-status-note']);
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
@@ -259,12 +255,13 @@ test('[EDGE] sequence-viewer status feedback uses a transient notice and Vector 
   });
 
   const vectorStatus = document.getElementById('sequence-viewer-vector-builder-status-note');
+  const importToast = document.querySelector('[data-hikari-transient-toast]');
+  const importToastText = importToast.textContent;
 
-  // Opening Vector Builder uses the shared notification system while the
-  // Vector Builder retains its local note.
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
-  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Vector Builder open for pVector/);
-  assert.match(vectorStatus.textContent, /Vector Builder open for pVector/);
+  assert.equal(document.querySelector('[data-hikari-transient-toast]'), importToast);
+  assert.equal(importToast.textContent, importToastText);
+  assert.equal(vectorStatus.textContent, '');
 });
 
 test('[EDGE] sequence-viewer home Vector Builder button opens the previewed library entry', async () => {
@@ -351,6 +348,12 @@ test('[EDGE] sequence-viewer vector builder renders an interactive circular map 
   // Selection now shows only on the feature itself -- there is no detail panel.
   assert.match(map.innerHTML, /vector-map__feature--active/);
   assert.match(map.innerHTML, /vector-map__label--active/);
+
+  trigger(workspace, 'mousedown', { button: 0, target: workspace });
+
+  // Empty workspace clicks return the map to its unselected state.
+  assert.equal(/vector-map__feature--active/.test(map.innerHTML), false);
+  assert.equal(/vector-map__label--active/.test(map.innerHTML), false);
 });
 
 test('[EDGE] sequence-viewer vector builder deletes a feature and its bases from the circular map', async () => {
@@ -446,7 +449,9 @@ test('[EDGE] sequence-viewer Vector Builder cloning design sends the shared ther
   trigger(document.getElementById('sequence-viewer-cloning-design-run-btn'), 'click', { preventDefault() {} });
 
   assert.equal(document.getElementById('sequence-viewer-cloning-design-workspace').hidden, false);
-  assert.equal(appState.notebookEntries.length, 1);
+  // The PCR page, plus the KLD tube the Q5/KLD route ends in.
+  assert.equal(appState.notebookEntries.length, 2);
+  assert.equal(appState.notebookEntries[1].protocolName, 'KLD Treatment');
   assert.equal(persistCalls, 1);
   assert.equal(notebookRefreshCalls, 1);
   const notebookEntry = appState.notebookEntries[0];
@@ -459,20 +464,48 @@ test('[EDGE] sequence-viewer Vector Builder cloning design sends the shared ther
 
 test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored database', async () => {
   const searchCalls = [];
+  const pendingSearches = [];
+  const getCalls = [];
+  const storedResults = [
+    {
+      id: 'feat_flag',
+      name: 'FLAG tag',
+      type: 'CDS',
+      sequence: 'GATTACAAAGAT',
+      sequenceLength: 12,
+      hostCount: 2,
+      hosts: [
+        {
+          hostVectorId: 'entry_a',
+          hostVectorName: 'pFLAG-A',
+          topology: 'circular',
+          sequenceLength: 40,
+          locations: [{ startPos: 4, endPos: 16, strand: 1 }]
+        },
+        {
+          hostVectorId: 'entry_b',
+          hostVectorName: 'pFLAG-B',
+          topology: 'circular',
+          sequenceLength: 60,
+          locations: [{ startPos: 8, endPos: 20, strand: 1 }]
+        }
+      ]
+    },
+    { id: 'feat_empty', name: 'No sequence', type: 'CDS', sequence: '', sequenceLength: 0, hostCount: 1 },
+    { id: 'feat_primer', name: 'M13 tag primer', type: 'primer_bind', sequence: 'GTAAAACGACGGCCAGT', sequenceLength: 17, hostCount: 4 }
+  ];
   const document = createMockDocument(VECTOR_BUILDER_IDS);
   const window = {
     hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [] }),
-      sequenceLibrarySearchFeatures: async (payload) => {
+      sequenceLibrarySearchFeatures: (payload) => {
         searchCalls.push(payload);
-        return {
-          ok: true,
-          results: [
-            { id: 'feat_flag', name: 'FLAG tag', type: 'CDS', sequence: 'GATTACAAAGAT', sequenceLength: 12, hostCount: 2 },
-            { id: 'feat_empty', name: 'No sequence', type: 'CDS', sequence: '', sequenceLength: 0, hostCount: 1 },
-            { id: 'feat_primer', name: 'M13 tag primer', type: 'primer_bind', sequence: 'GTAAAACGACGGCCAGT', sequenceLength: 17, hostCount: 4 }
-          ]
-        };
+        return new Promise((resolve) => pendingSearches.push({ payload, resolve }));
+      },
+      sequenceLibraryGet: async (payload) => {
+        getCalls.push(payload);
+        const sequence = payload?.id === 'entry_b' ? 'ACGT'.repeat(15) : 'GGCC'.repeat(10);
+        return { ok: true, entry: { id: payload?.id, name: payload?.id }, gbkText: `>${payload?.id}\n${sequence}\n` };
       }
     }
   };
@@ -516,22 +549,56 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
     document.getElementById('sequence-viewer-vector-builder-feature-replace-note').textContent,
     /Replacing His6 at 7-24 \(18 bp\)/
   );
+  assert.equal(results.innerHTML, '');
+  assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-status').textContent, '');
 
+  // Resolve the newer query first, then the old query: only the newer results
+  // may own the picker.
+  document.getElementById('sequence-viewer-vector-builder-feature-replace-search').value = 'older';
+  trigger(
+    document.getElementById('sequence-viewer-vector-builder-feature-replace-search'),
+    'keydown',
+    { key: 'Enter', preventDefault() {} }
+  );
   document.getElementById('sequence-viewer-vector-builder-feature-replace-search').value = 'flag';
-  trigger(document.getElementById('sequence-viewer-vector-builder-feature-replace-search-btn'), 'click', { preventDefault() {} });
+  trigger(
+    document.getElementById('sequence-viewer-vector-builder-feature-replace-search'),
+    'keydown',
+    { key: 'Enter', preventDefault() {} }
+  );
+  pendingSearches[1].resolve({ ok: true, results: storedResults });
   await flushAsync();
   await flushAsync();
 
-  assert.equal(searchCalls.length, 1);
-  assert.equal(searchCalls[0].query, 'flag');
+  assert.equal(searchCalls.length, 2);
+  assert.equal(searchCalls[0].query, 'older');
+  assert.equal(searchCalls[1].query, 'flag');
   assert.match(results.innerHTML, /FLAG tag/);
+  pendingSearches[0].resolve({
+    ok: true,
+    results: [{ id: 'feat_old', name: 'Older result', type: 'CDS', sequence: 'ATGC', hosts: [] }]
+  });
+  await flushAsync();
+  await flushAsync();
+  assert.match(results.innerHTML, /FLAG tag/);
+  assert.equal(/Older result/.test(results.innerHTML), false);
   assert.match(results.innerHTML, /in 2 vectors/);
+  // A result is picked, not applied: the vector it comes from is chosen next.
+  assert.match(results.innerHTML, /data-vector-replace-feature-id="feat_flag"/);
+  assert.equal(results.innerHTML.includes('feature-use-btn'), false);
+  assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm').disabled, true);
+  assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-status').textContent, '');
   // A stored feature with no sequence cannot be spliced, so it is filtered out.
   assert.equal(/No sequence/.test(results.innerHTML), false);
   // Primer binding sites are annealing marks, not construct parts to splice in.
   assert.equal(/M13 tag primer/.test(results.innerHTML), false);
 
-  trigger(results, 'click', {
+  let keyboardDefaultPrevented = false;
+  trigger(results, 'keydown', {
+    key: 'Enter',
+    preventDefault() {
+      keyboardDefaultPrevented = true;
+    },
     target: {
       closest(selector) {
         if (selector === '[data-vector-replace-feature-id]') {
@@ -541,6 +608,45 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
       }
     }
   });
+  assert.equal(keyboardDefaultPrevented, true);
+  await flushAsync();
+  await flushAsync();
+
+  // Both vectors carrying the feature are offered, the first is preselected,
+  // and its plasmid is drawn.
+  const hosts = document.getElementById('sequence-viewer-vector-builder-feature-replace-hosts');
+  const preview = document.getElementById('sequence-viewer-vector-builder-feature-replace-preview');
+  assert.match(hosts.innerHTML, /pFLAG-A/);
+  assert.match(hosts.innerHTML, /pFLAG-B/);
+  assert.match(hosts.innerHTML, /data-vector-replace-host-id="entry_a"[^>]*/);
+  assert.equal(getCalls.map((call) => call.id).join(','), 'entry_a');
+  assert.match(preview.innerHTML, /<svg/);
+  assert.equal(overlay.hidden, false);
+
+  // Choosing the other vector previews that one instead.
+  trigger(hosts, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-vector-replace-host-id]') {
+          return { dataset: { vectorReplaceHostId: 'entry_b' } };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+  assert.equal(getCalls.map((call) => call.id).join(','), 'entry_a,entry_b');
+
+  // Nothing is rewritten until Confirm.
+  assert.match(map.innerHTML, /His6/);
+  assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm').disabled, false);
+  trigger(
+    document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm'),
+    'click',
+    { preventDefault() {} }
+  );
+  await flushAsync();
   await flushAsync();
 
   assert.equal(overlay.hidden, true);

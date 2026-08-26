@@ -42,7 +42,6 @@ function formatPositionLabel(positions) {
 
 export function createSequenceViewerAminoAcidEditingController(config = {}) {
   const elements = config?.elements || {};
-  const getSelectedRecord = config?.getSelectedRecord || (() => null);
   const onApplyAminoAcidEdit = config?.onApplyAminoAcidEdit || (async () => {});
   const setStatus = config?.setStatus || (() => {});
   let activeContext = null;

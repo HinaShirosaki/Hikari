@@ -1,11 +1,22 @@
 import { asArray, normalizeSequence } from './sequence-utils.js';
 
-export function buildProcedureSteps(strategyName, assemblyDesign) {
+// "PCR-amplify all fragments" is not enough once a fragment comes off another
+// plasmid: the template to put in that tube is the one instruction that is not
+// obvious from the primer table.
+function donorTemplateNote(fragmentMap) {
+  const notes = asArray(fragmentMap?.fragments)
+    .filter((fragment) => String(fragment?.metadata?.templateName || '').trim())
+    .map((fragment) => `${String(fragment?.name || 'insert').trim()} off ${String(fragment.metadata.templateName).trim()}`);
+  return notes.length ? ` Amplify ${notes.join('; ')}.` : '';
+}
+
+export function buildProcedureSteps(strategyName, assemblyDesign, fragmentMap = null) {
   const downstreamAssemblyMethod = assemblyDesign?.downstreamAssemblyMethod || null;
+  const templateNote = donorTemplateNote(fragmentMap);
 
   if (strategyName === 'restriction-ligation') {
     return [
-      { step: 1, title: 'Amplify insert', details: 'PCR-amplify the insert with restriction-site tails from the primer plan.', inputs: ['insert template', 'restriction-tailed primers'], expectedOutput: 'clean insert amplicon' },
+      { step: 1, title: 'Amplify insert', details: `PCR-amplify the insert with restriction-site tails from the primer plan.${templateNote}`, inputs: ['insert template', 'restriction-tailed primers'], expectedOutput: 'clean insert amplicon' },
       { step: 2, title: 'Digest DNA', details: 'Digest backbone and insert with the selected enzyme pair, then purify both products.', inputs: ['backbone', 'insert amplicon'], expectedOutput: 'compatible digested fragments' },
       { step: 3, title: 'Ligate construct', details: 'Ligate digested insert into the prepared backbone.', inputs: ['digested backbone', 'digested insert'], expectedOutput: 'ligation mixture' },
       { step: 4, title: 'Transform and screen', details: 'Transform competent cells and screen colonies by colony PCR and sequencing.', inputs: ['ligation mixture'], expectedOutput: 'validated recombinant clones' }
@@ -14,7 +25,7 @@ export function buildProcedureSteps(strategyName, assemblyDesign) {
 
   if (strategyName === 'gibson') {
     return [
-      { step: 1, title: 'Amplify fragments', details: 'PCR-amplify all fragments using the overlap-bearing primer set.', inputs: ['fragment templates', 'assembly primers'], expectedOutput: 'purified assembly fragments' },
+      { step: 1, title: 'Amplify fragments', details: `PCR-amplify all fragments using the overlap-bearing primer set.${templateNote}`, inputs: ['fragment templates', 'assembly primers'], expectedOutput: 'purified assembly fragments' },
       { step: 2, title: 'Assemble reaction', details: 'Combine fragments in a Gibson-style assembly reaction using the planned overlap order.', inputs: ['purified fragments'], expectedOutput: 'assembled construct' },
       { step: 3, title: 'Transform and recover', details: 'Transform the assembly reaction into competent cells and recover colonies.', inputs: ['assembly reaction'], expectedOutput: 'candidate colonies' },
       { step: 4, title: 'Validate junctions', details: 'Screen every junction by colony PCR and sequence through the assembled insert.', inputs: ['candidate colonies'], expectedOutput: 'validated assembled plasmid' }

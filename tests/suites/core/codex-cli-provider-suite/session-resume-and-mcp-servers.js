@@ -1086,8 +1086,6 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir, {
           envOverrides: {
             HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-            HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-            HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
             HIKARI_CODEX_REQUEST_CONTEXT: requestContext
           }
         });

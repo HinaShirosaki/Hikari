@@ -1,4 +1,4 @@
-import { DEFAULT_LADDER_STANDARDS } from './constants.js';
+import { DEFAULT_LADDER_PRESET_ID, getLadderPresetBands } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
 import { normalizeEnhancementSettings } from './analysis/image-processing.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
@@ -258,16 +258,31 @@ export function createRecordsManager({ runtime, elements, deps }) {
     };
   }
 
+  // An unknown id (older record, retired preset) falls back to the default so
+  // the select never sits blank while readParams reports a preset.
+  function setLadderPreset(presetId) {
+    const select = elements.gelLadderPresetSelect;
+    if (!select) {
+      return;
+    }
+    select.value = String(presetId || DEFAULT_LADDER_PRESET_ID);
+    if (!select.value) {
+      select.value = DEFAULT_LADDER_PRESET_ID;
+    }
+  }
+
   function readParams() {
     const rawType = elements.gelTypeInput?.value;
     const analysisType = rawType === 'western' || rawType === 'agarose' ? rawType : 'sds-page';
     const enhancement = deps.readEnhancementSettingsFromUi();
+    const ladderPreset = elements.gelLadderPresetSelect?.value || DEFAULT_LADDER_PRESET_ID;
 
     return {
       analysisType,
       analysisMode: 'manual',
-      ladderStandards: DEFAULT_LADDER_STANDARDS.slice(),
-      ladderLane: clamp(Math.floor(Number(elements.gelLadderLaneInput?.value) || 1), 1, 999),
+      ladderPreset,
+      ladderStandards: getLadderPresetBands(ladderPreset),
+      ladderLane: clamp(Math.floor(Number(runtime.manualOverrides?.ladderLane) || 1), 1, 999),
       normalization: elements.gelNormalizationInput?.value === 'total-lane'
         ? elements.gelNormalizationInput.value
         : 'none',
@@ -352,8 +367,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (typeof runtime.onGelAnalysesChanged === 'function') {
       runtime.onGelAnalysesChanged();
     }
+    // Cleared, not announced: a completed save needs no caption, but the previous
+    // status must not linger as if it were the result of this save.
     deps.setStatus(record.report
-      ? `Saved gel analysis: ${record.name}.`
+      ? ''
       : `Saved gel draft: ${record.name}. You can finish the analysis later.`);
     runtime.markDraftSaved?.();
     return record;
@@ -404,7 +421,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     // #gel-form, so a save running concurrently snapshots them and restores its
     // own copy afterwards. Forcing false here loses that race and leaves both
     // export buttons dead until the plugin reloads.
-    const lockedExportButtons = [elements.gelExportJsonBtn, elements.gelExportCsvBtn]
+    const lockedExportButtons = [elements.gelExportCsvBtn]
       .filter(Boolean)
       .map((button) => ({ button, disabled: Boolean(button.disabled) }));
     lockedExportButtons.forEach(({ button }) => {
@@ -427,32 +444,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
         exportPromise = null;
       });
     return exportPromise;
-  }
-
-  function onExportJson() {
-    if (exportPromise) {
-      return exportPromise;
-    }
-    if (!runtime.currentReport) {
-      deps.setStatus('No analysis report to export.');
-      return Promise.resolve(null);
-    }
-
-    const fileName = `${safeFilePart(elements.gelNameInput?.value, 'gel-analysis')}.json`;
-    return runExclusiveExport(elements.gelExportJsonBtn, async () => {
-      try {
-        const result = await downloadTextFile({
-          content: `${JSON.stringify(runtime.currentReport, null, 2)}\n`,
-          fileName,
-          mimeType: 'application/json;charset=utf-8;'
-        });
-        deps.setStatus(result?.canceled ? 'Export canceled.' : `Exported ${result?.fileName || fileName}.`);
-        return result;
-      } catch (error) {
-        deps.setStatus(`Could not export JSON: ${error?.message || error}`);
-        return null;
-      }
-    });
   }
 
   function onExportCsv() {
@@ -494,7 +485,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     elements.gelIdInput.value = '';
     elements.gelForm.reset();
     elements.gelTypeInput.value = 'sds-page';
-    elements.gelLadderLaneInput.value = '1';
+    setLadderPreset(DEFAULT_LADDER_PRESET_ID);
     elements.gelNormalizationInput.value = 'none';
     if (elements.gelDenoiseStrengthInput) {
       elements.gelDenoiseStrengthInput.value = '35';
@@ -634,7 +625,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     elements.gelTypeInput.value = record.analysisType === 'western' || record.analysisType === 'agarose'
       ? record.analysisType
       : 'sds-page';
-    elements.gelLadderLaneInput.value = String(parameters.ladderLane || 1);
+    setLadderPreset(parameters.ladderPreset);
     elements.gelNormalizationInput.value = parameters.normalization || 'none';
     const enhancement = normalizeEnhancementSettings(parameters.enhancement || {});
     if (elements.gelDenoiseStrengthInput) {
@@ -839,7 +830,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
   return {
     ensureState,
     onExportCsv,
-    onExportJson,
     onListClick,
     onSaveAnalysis,
     readParams,

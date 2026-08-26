@@ -39,6 +39,13 @@ export function buildPrimerRecord({
   };
 }
 
+const TEMPLATE_SEED_LENGTH = 18;
+// A repeat-heavy pair can offer the same seed from dozens of places, and every
+// one of them would be extended.
+// ponytail: 4 hits per seed caps that; raise it if a real donor ever loses its
+// core to a repeat.
+const MAX_SEED_HITS = 4;
+
 export function findTemplateCoreInDesiredSequence(desiredSequence, templateSequence) {
   const desired = normalizeSequence(desiredSequence);
   const template = normalizeSequence(templateSequence);
@@ -55,25 +62,71 @@ export function findTemplateCoreInDesiredSequence(desiredSequence, templateSeque
     };
   }
 
-  const minimumUsefulLength = Math.min(18, desired.length, template.length);
-  for (let length = Math.min(desired.length, template.length); length >= minimumUsefulLength; length -= 1) {
-    for (let templateStart = 0; templateStart + length <= template.length; templateStart += 1) {
-      const candidate = template.slice(templateStart, templateStart + length);
-      const desiredStart = desired.indexOf(candidate);
-      if (desiredStart >= 0) {
-        return {
-          desiredStart,
-          templateStart,
-          length
-        };
-      }
+  // The donor case: the whole fragment sits somewhere inside a much larger
+  // plasmid. One native scan, rather than the seed walk below.
+  const donorIndex = template.indexOf(desired);
+  if (donorIndex >= 0) {
+    return {
+      desiredStart: 0,
+      templateStart: donorIndex,
+      length: desired.length
+    };
+  }
+
+  // Longest shared stretch, found by extending shared seeds. Re-scanning every
+  // candidate length instead cost ~20 s of frozen UI whenever nothing matched
+  // (1.5 kb insert against a 10 kb plasmid) -- and nothing matching is exactly
+  // the wrong-donor case the caller exists to warn about.
+  const seedLength = Math.min(TEMPLATE_SEED_LENGTH, desired.length, template.length);
+  const seeds = new Map();
+  for (let index = 0; index + seedLength <= desired.length; index += 1) {
+    const seed = desired.slice(index, index + seedLength);
+    const hits = seeds.get(seed);
+    if (!hits) {
+      seeds.set(seed, [index]);
+    } else if (hits.length < MAX_SEED_HITS) {
+      hits.push(index);
     }
   }
 
-  return null;
+  let best = null;
+  for (let templateStart = 0; templateStart + seedLength <= template.length; templateStart += 1) {
+    const hits = seeds.get(template.slice(templateStart, templateStart + seedLength));
+    if (!hits) {
+      continue;
+    }
+    hits.forEach((desiredStart) => {
+      let left = 0;
+      while (
+        desiredStart - left > 0
+        && templateStart - left > 0
+        && desired[desiredStart - left - 1] === template[templateStart - left - 1]
+      ) {
+        left += 1;
+      }
+      let right = seedLength;
+      while (
+        desiredStart + right < desired.length
+        && templateStart + right < template.length
+        && desired[desiredStart + right] === template[templateStart + right]
+      ) {
+        right += 1;
+      }
+      if (!best || left + right > best.length) {
+        best = {
+          desiredStart: desiredStart - left,
+          templateStart: templateStart - left,
+          length: left + right
+        };
+      }
+    });
+  }
+
+  return best;
 }
 
 export function resolveFragmentPrimerTemplate(fragment = {}) {
+  const templateName = String(fragment?.metadata?.templateName || '').trim();
   const desiredSequence = normalizeSequence(fragment?.sequence || '');
   const templateSequence = normalizeSequence(
     fragment?.templateSequence
@@ -109,7 +162,9 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
       templateSequence: desiredSequence,
       forwardAddedSequence: '',
       reverseAddedSequence: '',
-      warnings: ['Template sequence did not align to the desired fragment; primer binding falls back to the desired fragment sequence.']
+      warnings: [templateName
+        ? `${templateName} does not contain this insert, so it cannot be the PCR template; primer binding falls back to the insert sequence. Check the donor plasmid or the amplicon range.`
+        : 'Template sequence did not align to the desired fragment; primer binding falls back to the desired fragment sequence.']
     };
   }
 

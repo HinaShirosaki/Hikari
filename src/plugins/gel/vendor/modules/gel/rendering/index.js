@@ -649,7 +649,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     if (
       !elements.gelLaneProfilePanel
       || !elements.gelLaneProfileSelect
-      || !elements.gelLaneProfileCaption
       || !elements.gelLaneProfileChart
       || !elements.gelLaneProfileMeta
     ) {
@@ -662,7 +661,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      elements.gelLaneProfileCaption.textContent = 'Load a gel image to inspect a lane profile.';
       elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile appears here after you divide the gel into lanes.');
       return;
@@ -675,7 +673,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      elements.gelLaneProfileCaption.textContent = 'Finish lane division to plot the average row intensity for a lane.';
       elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Set the lane dividers first.');
       return;
@@ -695,7 +692,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       .join('');
     elements.gelLaneProfileSelect.value = String(selectedLane.laneIndex);
 
-    const { signal, polarity } = buildQuantificationSignal(runtime.currentImage.gray);
+    const { signal } = buildQuantificationSignal(runtime.currentImage.gray);
     const profile = signal ? computeLaneIntensityProfile({
       signal,
       width: runtime.currentImage.width,
@@ -704,20 +701,12 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }) : null;
 
     if (!profile) {
-      elements.gelLaneProfileCaption.textContent = 'Lane profile could not be calculated for this image.';
       elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile unavailable.');
       return;
     }
 
     const selectedBandWindow = getTargetBandWindowForLane(overrides.laneSegmentation, selectedLane.laneIndex);
-    const hasBandWindow = Boolean(selectedBandWindow);
-    const polarityNote = polarity === 'dark-on-light'
-      ? 'Dark-on-light gel: signal inverted so bands appear as peaks.'
-      : 'Bright-on-dark gel: bands appear as peaks.';
-    elements.gelLaneProfileCaption.textContent = hasBandWindow
-      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7${selectedBandWindow.perLane ? ' for this lane' : ''}. ${polarityNote}`
-      : `Row signal from grayscale image for lane ${selectedLane.laneIndex}. ${polarityNote}`;
     elements.gelLaneProfileMeta.innerHTML = [
       `x ${selectedLane.xStart}-${selectedLane.xEnd}`,
       `width ${profile.laneWidth}px`,
@@ -952,13 +941,9 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       );
     }
 
-    const rows = getAllPeakIntegrationRows();
-    renderPeakIntegrationTable(rows);
-    const completeBaselines = laneIntegrations.filter((integration) => integration.left && integration.right).length;
-    const draftBaselines = laneIntegrations.filter((integration) => integration.left && !integration.right).length;
-    setPeakEditorStatus(selectedLane
-      ? `Lane ${selectedLane.laneIndex}: ${completeBaselines} baseline(s), ${draftBaselines} draft, ${rows.length} peak area row(s).`
-      : 'Divide the gel into lanes before editing peak areas.');
+    renderPeakIntegrationTable(getAllPeakIntegrationRows());
+    // Only the guidance stays; the per-lane counts are already in the table below.
+    setPeakEditorStatus(selectedLane ? '' : 'Divide the gel into lanes before editing peak areas.');
   }
 
   function onPeakEditorOpen() {
@@ -1321,11 +1306,28 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     drawCanvas();
   }
 
+  // The report lives in its own dialog, so "has data" only gates the trigger
+  // button; whether it is on screen is the user's choice.
+  function setCellTableVisibility(hasCells) {
+    if (!hasCells) {
+      runtime.cellTableDialogOpen = false;
+    }
+    if (elements.gelOpenCellTableBtn) {
+      elements.gelOpenCellTableBtn.disabled = !hasCells;
+      elements.gelOpenCellTableBtn.setAttribute?.(
+        'aria-expanded',
+        String(hasCells && Boolean(runtime.cellTableDialogOpen))
+      );
+    }
+    if (elements.gelCellTableOverlay) {
+      elements.gelCellTableOverlay.hidden = !hasCells || !runtime.cellTableDialogOpen;
+    }
+  }
+
   function renderCellTable() {
-    const panel = elements.gelCellTablePanel;
     const host = elements.gelCellTableHost;
     const summary = elements.gelCellTableSummary;
-    if (!panel || !host) {
+    if (!host) {
       return;
     }
 
@@ -1338,7 +1340,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       .filter((entry) => entry.cell);
 
     if (!hasBandWindow || !cells.length) {
-      panel.hidden = true;
+      setCellTableVisibility(false);
       host.innerHTML = '';
       if (summary) {
         summary.textContent = '';
@@ -1346,7 +1348,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    panel.hidden = false;
+    setCellTableVisibility(true);
     const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
     const labelRow = (overrides.laneTable?.rows || []).find((row) => /label/i.test(row?.label || '')) || null;
 
@@ -1703,6 +1705,31 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     elements.gelOpenReportBtn?.focus?.();
   }
 
+  function onCellTableOpen() {
+    if (elements.gelOpenCellTableBtn?.disabled) {
+      deps.setStatus?.('Measure a target band before opening the band intensity report.');
+      return;
+    }
+    runtime.cellTableDialogOpen = true;
+    renderCellTable();
+    elements.gelCellTableCloseBtn?.focus?.();
+  }
+
+  function onCellTableClose() {
+    if (!runtime.cellTableDialogOpen) {
+      return;
+    }
+    runtime.cellTableDialogOpen = false;
+    renderCellTable();
+    elements.gelOpenCellTableBtn?.focus?.();
+  }
+
+  function onCellTableOverlayClick(event) {
+    if (event?.target === elements.gelCellTableOverlay) {
+      onCellTableClose();
+    }
+  }
+
   function onReportOverlayClick(event) {
     if (event?.target === elements.gelReportOverlay) {
       onReportClose();
@@ -1710,7 +1737,15 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   }
 
   function onReportKeyDown(event) {
-    if (event?.key !== 'Escape' || !runtime.reportDialogOpen) {
+    if (event?.key !== 'Escape') {
+      return;
+    }
+    if (runtime.cellTableDialogOpen) {
+      event.preventDefault?.();
+      onCellTableClose();
+      return;
+    }
+    if (!runtime.reportDialogOpen) {
       return;
     }
     event.preventDefault?.();
@@ -1719,6 +1754,9 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
   return {
     onCanvasHoverLeave,
+    onCellTableClose,
+    onCellTableOpen,
+    onCellTableOverlayClick,
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,
     onLaneProfileChartMouseMove,

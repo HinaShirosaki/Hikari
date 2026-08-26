@@ -250,7 +250,6 @@ function classifyFailureReasons({
   result,
   routing,
   validation,
-  error,
   lifecycleEvents
 } = {}) {
   const reasons = [];

@@ -1,0 +1,3276 @@
+/* sequence-viewer-view */
+
+body.sequence-viewer-fixed-scroll {
+  overflow: hidden;
+}
+
+body.sequence-viewer-fixed-scroll .app-shell {
+  height: 100vh;
+}
+
+body.sequence-viewer-fixed-scroll .workspace-shell,
+body.sequence-viewer-fixed-scroll .workspace-main,
+body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active,
+body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence-viewer-shell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Extracted from ui/css/base/core.css */
+.sequence-viewer-shell {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  height: 100%;
+}
+
+.sequence-viewer-home-workspace {
+  min-height: 0;
+  height: 100%;
+}
+
+.sequence-viewer-home-layout {
+  --left-rail-main-gap: 20px;
+  height: 100%;
+  min-height: 100%;
+}
+
+.sequence-viewer-home-sidebar,
+.sequence-viewer-home-main {
+  min-height: 0;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar.left-rail-template__rail--pinned,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar.left-rail-template__rail--pinned,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar > .sequence-viewer-home-sidebar-pinned.left-rail-template__pinned,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar > .sequence-viewer-protein-builder-sidebar-pinned.left-rail-template__pinned,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar > .sequence-viewer-detail-sidebar-pinned.left-rail-template__pinned {
+  display: grid;
+  align-content: start;
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar > .sequence-viewer-home-sidebar-scroll.left-rail-template__scroll,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar > .sequence-viewer-protein-builder-sidebar-scroll.left-rail-template__scroll,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar > .sequence-viewer-detail-sidebar-scroll.left-rail-template__scroll {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 8px var(--app-left-rail-padding-inline, 16px);
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-rail-nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 9px;
+  white-space: nowrap;
+}
+
+.sequence-viewer-icon-btn[hidden] {
+  display: none;
+}
+
+.sequence-viewer-icon-btn svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-button-caption {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:focus-visible,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-toolbar-menu-icon-btn {
+  width: auto;
+  padding-right: 19px;
+}
+
+.sequence-viewer-toolbar-menu-icon-btn::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 2.5px solid transparent;
+  border-right: 2.5px solid transparent;
+  border-top: 3.5px solid currentColor;
+  opacity: 0.7;
+  transform: translateY(-25%);
+}
+
+.sequence-viewer-inline-select {
+  display: inline-grid;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-inline-select select {
+  min-width: 180px;
+}
+
+.sequence-viewer-rail-nav-actions .small-note {
+  margin-left: 4px;
+}
+
+
+.sequence-viewer-library-card {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sequence-viewer-preview-card {
+  margin: 0;
+  /* No card chrome around the map: the boundary only boxed it in, and dropping
+     it lets the map use the full column. */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sequence-viewer-library-switch {
+  display: inline-flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--theme-surface);
+  width: fit-content;
+  gap: 2px;
+}
+
+.sequence-viewer-library-switch-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sequence-viewer-library-switch-btn-active {
+  color: var(--theme-text-on-accent);
+  background: var(--theme-accent);
+}
+
+.sequence-viewer-library-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.sequence-viewer-library-folder-group {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sequence-viewer-library-folder-row {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 7px 8px;
+  display: grid;
+  grid-template-columns: 10px 18px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  color: var(--theme-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sequence-viewer-library-folder-row:hover,
+.sequence-viewer-library-folder-row:focus-visible,
+.sequence-viewer-library-folder-row.is-sequence-drop-target {
+  background: var(--hikari-left-rail-list-hover);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.sequence-viewer-library-folder-row.is-sequence-drop-target {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 58%, transparent);
+}
+
+.sequence-viewer-library-folder-chevron {
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 140ms ease;
+  opacity: 0.7;
+}
+
+.sequence-viewer-library-folder-row.is-expanded .sequence-viewer-library-folder-chevron {
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.sequence-viewer-library-folder-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--theme-text-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-viewer-library-folder-count {
+  color: var(--theme-text-muted);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.sequence-viewer-library-folder-children {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sequence-viewer-library-folder-children .sequence-viewer-library-item {
+  padding-left: 42px;
+}
+
+.sequence-viewer-library-folder-empty {
+  margin: 0;
+  padding: 5px 8px 7px 42px;
+  color: var(--theme-text-muted);
+  font-size: 0.82rem;
+}
+
+.sequence-viewer-library-item {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 7px 8px;
+  display: block;
+  box-sizing: border-box;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.sequence-viewer-library-item[draggable="true"] {
+  user-select: none;
+}
+
+.sequence-viewer-library-item.is-dragging {
+  opacity: 0.58;
+}
+
+.sequence-viewer-library-item:hover {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+}
+
+.sequence-viewer-library-item-active {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-accent) 28%);
+  box-shadow: none;
+}
+
+.sequence-viewer-library-item-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 650;
+  color: var(--sequence-viewer-blue-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sequence-viewer-preview-host {
+  /* A definite height gives the map a viewport to fit into, so percentage
+     sizing works and zooming past 100% scrolls instead of stretching the card. */
+  height: calc(100vh - 150px);
+  min-height: 420px;
+  display: flex;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  overflow: auto;
+}
+
+.sequence-viewer-preview-host > .vector-map {
+  width: 100%;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane; margin:auto
+     centres it while it fits without clipping the top/left edge once it does
+     not. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.sequence-viewer-preview-host > .small-note {
+  margin: 0;
+  padding: 12px 0;
+}
+
+.sequence-viewer-library-search {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.sequence-viewer-protein-builder-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sequence-viewer-protein-builder-toolbar {
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) auto;
+  align-items: center;
+  row-gap: 10px;
+  column-gap: var(--left-rail-main-gap, 24px);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  padding-left: var(--app-left-rail-padding-inline, 16px);
+}
+
+.sequence-viewer-protein-builder-toolbar-copy {
+  grid-column: 2;
+  display: grid;
+  gap: 6px;
+  max-width: 980px;
+}
+
+.sequence-viewer-protein-builder-toolbar-copy h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-toolbar-actions {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-grid-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.sequence-viewer-protein-builder-grid {
+  height: 100%;
+  min-height: 0;
+  min-width: 980px;
+}
+
+.sequence-viewer-protein-builder-sidebar,
+.sequence-viewer-protein-builder-main {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-protein-builder-sidebar {
+  align-content: start;
+}
+
+.sequence-viewer-protein-builder-main {
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sequence-viewer-protein-builder-panel {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+}
+
+.sequence-viewer-cloning-design-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-cloning-design-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-cloning-design-toolbar {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  align-items: center;
+  row-gap: 10px;
+  column-gap: var(--left-rail-main-gap, 24px);
+}
+
+.sequence-viewer-cloning-design-toolbar-nav {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  padding-left: var(--app-left-rail-padding-inline, 16px);
+}
+
+.sequence-viewer-cloning-design-toolbar-main {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px 16px;
+  min-width: 0;
+}
+
+/* The toolbar shares the ghost-button surface (var(--theme-surface)), and in
+   some themes surface-subtle is nearly identical to it, so a default back
+   button blends in. Tint with the accent + an accent border so it always reads
+   as a button regardless of theme. */
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn:hover,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-cloning-design-toolbar-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-cloning-design-toolbar-copy h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-cloning-design-toolbar-actions {
+  flex: 0 0 auto;
+  justify-self: auto;
+}
+
+.sequence-viewer-cloning-design-grid {
+  min-height: 0;
+  align-items: start;
+}
+
+.sequence-viewer-cloning-design-sidebar,
+.sequence-viewer-cloning-design-main {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-cloning-design-sidebar {
+  align-content: start;
+}
+
+.sequence-viewer-cloning-design-main {
+  overflow-x: hidden;
+}
+
+.sequence-viewer-cloning-design-panel,
+.sequence-viewer-cloning-design-result-section {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+}
+
+.sequence-viewer-cloning-design-strategy-list {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn:hover {
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn-active {
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-cloning-design-edit-summary {
+  margin-top: 10px;
+}
+
+.sequence-viewer-cloning-design-edit-grid,
+.sequence-viewer-cloning-design-summary-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-cloning-design-edit-grid div,
+.sequence-viewer-cloning-design-summary-grid div {
+  display: grid;
+  gap: 3px;
+}
+
+.sequence-viewer-cloning-design-edit-grid strong,
+.sequence-viewer-cloning-design-summary-grid strong {
+  color: var(--theme-text-strong);
+  font-size: 0.75rem;
+}
+
+.sequence-viewer-cloning-design-edit-grid span,
+.sequence-viewer-cloning-design-summary-grid span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-seq,
+.sequence-viewer-cloning-design-primer-seq {
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.sequence-viewer-cloning-design-range-grid {
+  margin-top: 10px;
+}
+
+.sequence-viewer-cloning-design-result {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-cloning-design-result-section {
+  display: grid;
+  gap: 10px;
+}
+
+.sequence-viewer-cloning-design-plan-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-cloning-design-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sequence-viewer-cloning-design-summary-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-cloning-design-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--theme-border-soft);
+  padding-top: 6px;
+  font-size: 0.84rem;
+}
+
+.sequence-viewer-cloning-design-primer-table-wrap {
+  overflow-x: auto;
+}
+
+.sequence-viewer-cloning-design-primer-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sequence-viewer-cloning-design-primer-table th,
+.sequence-viewer-cloning-design-primer-table td {
+  border-bottom: 1px solid var(--theme-border-soft);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sequence-viewer-cloning-design-primer-table th {
+  color: var(--theme-text-strong);
+  font-weight: 700;
+}
+
+.sequence-viewer-primer-copy-cell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-cell-sequence {
+  width: 100%;
+}
+
+.sequence-viewer-primer-copy-value {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sequence-viewer-primer-copy-btn:hover,
+.sequence-viewer-primer-copy-btn:focus-visible {
+  border-color: var(--sequence-viewer-blue-border-strong);
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-primer-copy-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-cloning-design-procedure {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.sequence-viewer-cloning-design-procedure li {
+  padding-left: 4px;
+}
+
+.sequence-viewer-cloning-design-procedure strong {
+  color: var(--theme-text-strong);
+  display: block;
+}
+
+.sequence-viewer-cloning-design-procedure span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-enzyme-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.sequence-viewer-cloning-design-enzyme-list strong {
+  color: var(--theme-text-strong);
+  display: block;
+}
+
+.sequence-viewer-cloning-design-enzyme-list span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-warning {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-protein-builder-controls {
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-common-blocks {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-common-group {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-common-fold {
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  padding: 8px 10px 10px;
+}
+
+.sequence-viewer-protein-builder-common-fold summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-fold-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.sequence-viewer-protein-builder-common-fold .sequence-viewer-protein-builder-common-list {
+  margin-top: 10px;
+}
+
+.sequence-viewer-protein-builder-common-group h5 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--theme-primary);
+}
+
+.sequence-viewer-protein-builder-common-list {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-common-item {
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  padding: 8px 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.sequence-viewer-protein-builder-common-item:hover,
+.sequence-viewer-protein-builder-common-item:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 40%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent));
+}
+
+.sequence-viewer-protein-builder-common-item-name {
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-item-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-protein-builder-feature-controls {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-search-results {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  overflow: visible;
+}
+
+.sequence-viewer-protein-builder-feature-item {
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-feature-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-head strong {
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-feature-head .small-note {
+  margin: 2px 0 0;
+}
+
+.sequence-viewer-protein-builder-feature-sequence {
+  margin: 0;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.79rem;
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-workflow-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.sequence-viewer-protein-builder-workflow {
+  margin-top: 10px;
+  min-height: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 18px 2px 12px 0;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-protein-builder-link {
+  flex: 0 0 24px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 28px 2px 0;
+}
+
+.sequence-viewer-protein-builder-link span {
+  width: 100%;
+  min-width: 18px;
+  height: 2px;
+  background: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
+}
+
+.sequence-viewer-protein-builder-block {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  flex: 0 0 188px;
+  min-width: 188px;
+  background: transparent;
+}
+
+.sequence-viewer-protein-builder-block-shape {
+  min-height: 52px;
+  padding: 8px 34px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--builder-block-fill, var(--theme-accent));
+  color: var(--theme-text-on-accent);
+  clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 50%, calc(100% - 28px) 100%, 0 100%);
+}
+
+.sequence-viewer-protein-builder-block-label {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-protein-builder-block-tag {
+  --builder-block-fill: var(--sequence-viewer-builder-tag);
+}
+
+.sequence-viewer-protein-builder-block-linker {
+  --builder-block-fill: var(--sequence-viewer-builder-linker);
+}
+
+.sequence-viewer-protein-builder-block-cleavage {
+  --builder-block-fill: var(--sequence-viewer-builder-cleavage);
+}
+
+.sequence-viewer-protein-builder-block-feature {
+  --builder-block-fill: var(--sequence-viewer-builder-feature);
+}
+
+.sequence-viewer-protein-builder-block-custom {
+  --builder-block-fill: var(--sequence-viewer-builder-custom);
+}
+
+.sequence-viewer-protein-builder-block-poi {
+  --builder-block-fill: var(--sequence-viewer-builder-poi);
+}
+
+.sequence-viewer-protein-builder-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.sequence-viewer-protein-builder-icon-btn {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.92rem;
+  line-height: 1;
+}
+
+.sequence-viewer-protein-builder-icon-btn-remove {
+  font-size: 1rem;
+}
+
+.sequence-viewer-protein-builder-custom-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-sequence-panel .sequence-block {
+  min-height: 136px;
+  max-height: 220px;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-protein-builder-sequence-text {
+  display: block;
+  width: 100%;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-dna-notes {
+  margin-top: 10px;
+}
+
+.sequence-viewer-detail-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+#sequence-viewer-protein-builder-confirmation:not([hidden]) {
+  grid-row: 1;
+  margin-bottom: 12px;
+}
+
+#sequence-viewer-detail-view.view.is-active {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template {
+  --left-rail-main-gap: 20px;
+  grid-row: 2;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+.sequence-viewer-detail-sidebar,
+.sequence-viewer-detail-main {
+  min-height: 0;
+}
+
+.sequence-viewer-detail-sidebar {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.sequence-viewer-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-main.left-rail-template__main {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  padding-left: var(--left-rail-main-gap);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-sidebar.left-rail-template__rail {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.sequence-viewer-protein-builder-confirmation {
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 26%, var(--theme-border) 74%);
+  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-accent) 18%);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, auto) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.sequence-viewer-protein-builder-confirmation[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy,
+.sequence-viewer-protein-builder-confirmation-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy h4,
+.sequence-viewer-protein-builder-confirmation-copy p,
+.sequence-viewer-protein-builder-confirmation-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-protein-builder-confirmation-summary {
+  font-size: 0.83rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-builder-confirmation-actions {
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-backbone-dialog-overlay,
+.sequence-viewer-alignment-workspace {
+  position: fixed;
+  inset: 0;
+  z-index: 2540;
+  background: var(--sequence-viewer-overlay);
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
+  overflow: auto;
+}
+
+.sequence-viewer-backbone-dialog-overlay[hidden],
+.sequence-viewer-alignment-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-backbone-dialog {
+  width: min(1180px, 100%);
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.sequence-viewer-backbone-dialog-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-head h4,
+.sequence-viewer-backbone-dialog-head p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sequence-viewer-backbone-dialog-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.sequence-viewer-backbone-dialog-panel {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-candidates {
+  display: grid;
+  gap: 8px;
+  max-height: min(62vh, 720px);
+  overflow: auto;
+}
+
+.sequence-viewer-backbone-dialog-candidate {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  border-radius: 10px;
+  padding: 11px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.sequence-viewer-backbone-dialog-candidate-active {
+  border-color: var(--sequence-viewer-alert-border);
+  box-shadow: inset 0 0 0 1px var(--sequence-viewer-alert-ring);
+  background: var(--sequence-viewer-alert-surface);
+}
+
+.sequence-viewer-backbone-dialog-candidate-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-backbone-dialog-candidate-meta,
+.sequence-viewer-backbone-dialog-candidate-note {
+  font-size: 0.8rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-backbone-dialog-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-backbone-dialog-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview {
+  min-height: 560px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 12px;
+  background: var(--theme-surface-subtle);
+  overflow: hidden;
+}
+
+.sequence-viewer-backbone-dialog-preview > .vector-map {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+}
+
+.sequence-viewer-alignment-dialog {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-alignment-panel {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+
+
+
+
+
+
+.sequence-viewer-alignment-record-wrap {
+  display: grid;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-alignment-record-wrap[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-alignment-actions {
+  align-items: center;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.sequence-viewer-controls {
+  padding: 12px 0;
+}
+
+.sequence-viewer-hidden-control[hidden],
+.sequence-viewer-detail-input-switch[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--theme-surface);
+  width: fit-content;
+  gap: 2px;
+}
+
+.sequence-viewer-mode-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sequence-viewer-mode-btn-active {
+  color: var(--theme-text-on-accent);
+  background: var(--theme-accent);
+}
+
+.sequence-viewer-input-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-input-panel[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-inline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-ink);
+  user-select: none;
+}
+
+.sequence-viewer-inline-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--theme-accent);
+}
+
+.sequence-viewer-inline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-ink);
+}
+
+.sequence-viewer-inline-select select {
+  border-radius: 6px;
+  border: 1px solid var(--sequence-viewer-control-border);
+  background: var(--sequence-viewer-control-surface);
+  color: inherit;
+  font: inherit;
+  padding: 4px 10px;
+}
+
+.sequence-viewer-inline-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sequence-viewer-inline-toggle-group-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sequence-viewer-blue-muted);
+  letter-spacing: 0;
+}
+
+.sequence-viewer-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.sequence-viewer-context-menu.sequence-viewer-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  gap: 8px;
+}
+
+/* Inside dropdowns the toggles read as a list, one per row, not a wrapped grid. */
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle {
+  display: flex;
+  width: 100%;
+}
+
+.sequence-viewer-results {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sequence-viewer-stats {
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-message-box {
+  margin-top: 10px;
+}
+
+.sequence-viewer-feature-rail-host {
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 10px;
+}
+
+.sequence-viewer-feature-rail {
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid var(--sequence-viewer-track-border);
+  background:
+    linear-gradient(to right, var(--sequence-viewer-track-grid) 1px, transparent 1px),
+    var(--sequence-viewer-track-surface);
+  background-size: 12.5% 100%;
+}
+
+.sequence-viewer-feature-bar {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--sequence-viewer-feature-color) 58%, var(--theme-border));
+  border-radius: 6px;
+  height: 11px;
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
+  cursor: pointer;
+  opacity: 1;
+}
+
+.sequence-viewer-feature-bar-active {
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
+  opacity: 1;
+}
+
+.sequence-viewer-feature-primer-overview {
+  min-width: 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--sequence-viewer-primer-color);
+  overflow: visible;
+  opacity: 1;
+}
+
+.sequence-viewer-feature-primer-line {
+  position: absolute;
+  top: 5px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sequence-viewer-primer-color) 0 4px,
+    transparent 4px 6px
+  );
+}
+
+.sequence-viewer-feature-primer-cap {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-arrow {
+  position: absolute;
+  top: 2px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 0;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-line {
+  left: 1px;
+  right: 5px;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-cap {
+  left: 0;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-arrow {
+  right: 0;
+  border-left: 6px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-line {
+  left: 5px;
+  right: 1px;
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-cap {
+  right: 0;
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-arrow {
+  left: 0;
+  border-right: 6px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-overview:hover,
+.sequence-viewer-feature-primer-overview:focus-visible {
+  background: transparent;
+}
+
+.sequence-viewer-feature-axis {
+  position: relative;
+  min-height: 16px;
+  margin-top: 7px;
+}
+
+.sequence-viewer-feature-axis span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  color: var(--sequence-viewer-axis-muted);
+}
+
+.sequence-viewer-feature-axis span:first-child {
+  transform: translateX(0);
+}
+
+.sequence-viewer-feature-axis span:last-child {
+  transform: translateX(-100%);
+}
+
+.sequence-viewer-sequence-region {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sequence-viewer-feature-bottom {
+  display: none;
+  gap: 8px;
+}
+
+.sequence-viewer-feature-detail {
+  margin-top: 0;
+}
+
+.sequence-viewer-protein-details > summary {
+  cursor: pointer;
+}
+
+.sequence-viewer-protein-sequence {
+  margin: 4px 0 0;
+  font-family: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.sequence-viewer-sequence-host {
+  --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  --sequence-viewer-nt-gap: 1.5px;
+  --sequence-viewer-selection-highlight: var(--sequence-viewer-selection-highlight-light);
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  max-height: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-trace-plot-bg {
+  fill: transparent;
+}
+
+.sequence-viewer-trace-grid-line {
+  stroke: var(--theme-border-soft);
+  stroke-width: 1;
+}
+
+.sequence-viewer-trace-line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.sequence-viewer-trace-line-a {
+  stroke: var(--sequence-viewer-base-a-stroke);
+}
+
+.sequence-viewer-trace-line-c {
+  stroke: var(--sequence-viewer-base-c-stroke);
+}
+
+.sequence-viewer-trace-line-g {
+  stroke: var(--theme-text-strong);
+}
+
+.sequence-viewer-trace-line-t {
+  stroke: var(--sequence-viewer-base-t-stroke);
+}
+
+.sequence-viewer-dual-line {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 22px;
+  /* A plasmid is hundreds of these, and laying out the ones nobody is looking
+     at is most of what opening a sequence costs. Letting the browser skip the
+     off-screen ones cuts an 8 kb record from 64 ms to 8 ms and stays linear out
+     to 100 kb. `auto` in the intrinsic size makes it remember each line's real
+     height once seen, so the scrollbar settles instead of drifting. */
+  content-visibility: auto;
+  /* Each line overrides this inline with the height it actually computed to,
+     so the fallback only covers markup rendered without those hints. */
+  contain-intrinsic-size: auto 62px;
+}
+
+/* Primer names and 3' arrows are drawn outside their own box on purpose, and
+   content-visibility brings paint containment with it, so the line has to be
+   told to let them through. */
+.sequence-viewer-dual-line {
+  overflow: visible;
+}
+
+.sequence-viewer-sequence-host > .sequence-viewer-dual-line:last-child {
+  margin-bottom: 0;
+}
+
+.sequence-viewer-strand-pair {
+  position: relative;
+  display: grid;
+  gap: 2px;
+}
+
+.sequence-viewer-strand-block {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.sequence-viewer-strand-row {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  gap: 6px;
+  align-items: baseline;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  line-height: 1.42;
+}
+
+.sequence-viewer-strand-row-bottom {
+  opacity: 0.95;
+}
+
+.sequence-viewer-alignment-query-row {
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-alignment-comparison {
+  display: grid;
+  gap: 1px;
+}
+
+.sequence-viewer-alignment-reference-row {
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-alignment-query-row .sequence-viewer-seq-text-content {
+  user-select: none;
+}
+
+.sequence-viewer-alignment-reference-row .sequence-viewer-seq-text-content,
+.sequence-viewer-alignment-guide-row .sequence-viewer-seq-text-content {
+  user-select: none;
+}
+
+.sequence-viewer-alignment-row-label {
+  color: var(--theme-text-muted);
+  font-family: var(--font-app);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: left;
+}
+
+.sequence-viewer-alignment-query-end {
+  color: transparent;
+}
+
+.sequence-viewer-inline-trace-row {
+  align-items: stretch;
+}
+
+.sequence-viewer-inline-trace-cell {
+  display: block;
+  justify-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.sequence-viewer-inline-trace-svg {
+  display: block;
+  max-width: none;
+  height: 104px;
+}
+
+.sequence-viewer-alignment-query-base {
+  font-weight: 650;
+  border-radius: 3px;
+}
+
+.sequence-viewer-alignment-query-base-empty {
+  color: transparent;
+}
+
+.sequence-viewer-alignment-reference-base-empty,
+.sequence-viewer-alignment-guide-base-empty {
+  color: transparent;
+}
+
+.sequence-viewer-alignment-reference-base-mismatch,
+.sequence-viewer-alignment-reference-base-deletion {
+  background: color-mix(in srgb, var(--sequence-viewer-mismatch-bg) 64%, transparent);
+  color: var(--sequence-viewer-mismatch-ink);
+  box-shadow: inset 0 -1px 0 var(--sequence-viewer-mismatch-shadow);
+}
+
+.sequence-viewer-alignment-guide-row {
+  color: var(--theme-text-muted);
+  font-size: 0.7rem;
+  line-height: 0.82;
+}
+
+.sequence-viewer-alignment-guide-base-match {
+  color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-text-muted));
+}
+
+.sequence-viewer-alignment-guide-base-mismatch,
+.sequence-viewer-alignment-guide-base-deletion {
+  color: var(--theme-danger);
+  font-weight: 800;
+}
+
+.sequence-viewer-alignment-query-base-mismatch,
+.sequence-viewer-alignment-query-base-deletion {
+  background: var(--sequence-viewer-mismatch-bg);
+  color: var(--sequence-viewer-mismatch-ink);
+  box-shadow: inset 0 -1px 0 var(--sequence-viewer-mismatch-shadow);
+}
+
+.sequence-viewer-alignment-query-base-gap {
+  font-weight: 800;
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-seq-coord {
+  color: var(--theme-text-muted);
+  user-select: none;
+  text-align: right;
+  line-height: 1.35;
+  padding-top: 2px;
+}
+
+.sequence-viewer-strand-end {
+  color: var(--theme-text-muted);
+  user-select: none;
+  text-align: center;
+}
+
+.sequence-viewer-seq-text {
+  display: block;
+  width: 100%;
+  position: relative;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-stretch: 106%;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  line-height: 1.42;
+  letter-spacing: 0;
+  white-space: nowrap;
+  overflow: visible;
+  min-width: 0;
+}
+
+.sequence-viewer-seq-text-content {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
+  user-select: none;
+}
+
+.sequence-viewer-seq-run {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
+  border-radius: 3px;
+}
+
+.sequence-viewer-seq-base {
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1.28;
+}
+
+.sequence-viewer-line-cursor {
+  position: absolute;
+  top: 0;
+  width: 0;
+  border-left: 1px solid var(--sequence-viewer-cursor);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Alignment mode: highlight the whole nt column (reference + aligned base)
+   instead of a thin insertion line. Width is set inline (one char advance). */
+.sequence-viewer-line-cursor-block {
+  border-left: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--sequence-viewer-cursor) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sequence-viewer-cursor) 55%, transparent);
+}
+
+.sequence-viewer-seq-text-top {
+  padding-top: 0;
+}
+
+.sequence-viewer-seq-highlight {
+  background: var(--sequence-viewer-selection-highlight);
+}
+
+.sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  position: relative;
+  border-radius: 3px 3px 0 0;
+}
+
+.sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment)::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: calc(2px + 0.14em);
+  background: var(--sequence-viewer-selection-highlight);
+  pointer-events: none;
+}
+
+.sequence-viewer-strand-row-bottom .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  border-radius: 0 0 3px 3px;
+}
+
+.sequence-viewer-seq-highlight-alignment {
+  background: var(--sequence-viewer-mismatch-bg);
+  color: var(--sequence-viewer-mismatch-ink);
+  box-shadow: inset 0 -1px 0 var(--sequence-viewer-mismatch-shadow);
+}
+
+.sequence-viewer-aa-row {
+  pointer-events: none;
+  align-items: center;
+}
+
+.sequence-viewer-aa-text {
+  color: inherit;
+}
+
+.sequence-viewer-aa-track {
+  position: relative;
+  display: block;
+  min-height: 24px;
+}
+
+.sequence-viewer-aa-chip {
+  appearance: none;
+  position: absolute;
+  top: 0;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border-radius: 6px;
+  border: 1px solid var(--sequence-viewer-aa-chip-border, var(--sequence-viewer-aa-border));
+  background: var(--sequence-viewer-aa-chip-background, var(--sequence-viewer-aa-bg));
+  color: var(--sequence-viewer-aa-chip-color, var(--sequence-viewer-aa-ink));
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: center;
+  white-space: nowrap;
+  box-sizing: border-box;
+  cursor: context-menu;
+  pointer-events: auto;
+  font-family: inherit;
+}
+
+.sequence-viewer-aa-chip:hover,
+.sequence-viewer-aa-chip:focus-visible {
+  z-index: 1;
+  filter: brightness(0.96);
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 1px;
+}
+
+.sequence-viewer-aa-chip-stop {
+  font-size: 0.6rem;
+}
+
+
+.sequence-viewer-aa-label {
+  font-size: 0.64rem;
+  letter-spacing: 0;
+}
+
+.sequence-viewer-line-features {
+  position: relative;
+  overflow: visible;
+  min-height: 16px;
+}
+
+.sequence-viewer-line-restriction-track {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  max-width: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.sequence-viewer-restriction-annot {
+  position: absolute;
+  top: 0;
+  --sequence-viewer-restriction-stroke-width: 1px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  height: 100%;
+  min-width: 1px;
+  cursor: pointer;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.sequence-viewer-restriction-label {
+  position: absolute;
+  top: auto;
+  bottom: calc(100% + 3px + var(--sequence-viewer-restriction-label-stack-offset, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.67rem;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--sequence-viewer-aa-ink);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.sequence-viewer-restriction-box {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  border: var(--sequence-viewer-restriction-stroke-width, 1px) solid var(--sequence-viewer-restriction-border);
+  border-radius: 0;
+  background: var(--sequence-viewer-restriction-bg);
+  pointer-events: none;
+}
+
+.sequence-viewer-restriction-cut-svg {
+  position: absolute;
+  left: 0;
+  top: calc(-1 * var(--sequence-viewer-restriction-label-gap, 14px));
+  width: 100%;
+  height: calc(100% + var(--sequence-viewer-restriction-label-gap, 14px));
+  overflow: visible;
+  pointer-events: none;
+}
+
+.sequence-viewer-restriction-cut-svg polyline {
+  fill: none;
+  stroke: var(--sequence-viewer-restriction-line);
+  stroke-width: var(--sequence-viewer-restriction-stroke-width, 1px);
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.sequence-viewer-restriction-annot-active .sequence-viewer-restriction-box {
+  border-color: var(--sequence-viewer-active-blue);
+  background: var(--sequence-viewer-restriction-active-bg);
+}
+
+.sequence-viewer-restriction-annot-active .sequence-viewer-restriction-label {
+  color: var(--sequence-viewer-restriction-active-ink);
+}
+
+.sequence-viewer-restriction-annot-active .sequence-viewer-restriction-cut-svg polyline {
+  stroke: var(--sequence-viewer-restriction-active-line);
+}
+
+.sequence-viewer-line-feature {
+  position: absolute;
+  border: 1px solid var(--sequence-viewer-line-feature-border);
+  border-radius: 2px;
+  height: 16px;
+  padding: 0 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 0.64rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--sequence-viewer-line-feature-ink);
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0.95;
+}
+
+/* Keep the biological category color without filling every annotation lane
+   with a dark block. A uniform outline avoids making the feature's left edge
+   look heavier than its other boundaries. */
+.sequence-viewer-line-feature-bar {
+  border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 58%, var(--theme-border));
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 14%, var(--theme-surface-elevated));
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 68%, var(--theme-text-strong));
+  opacity: 1;
+}
+
+.sequence-viewer-line-feature-label {
+  display: block;
+  width: 100%;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-compact {
+  padding: 0;
+}
+
+.sequence-viewer-line-feature-primer {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0;
+  overflow: visible;
+  opacity: 1;
+}
+
+.sequence-viewer-primer-oligo-line {
+  position: absolute;
+  top: 11px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sequence-viewer-primer-color) 0 5px,
+    transparent 5px 7px
+  );
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward.sequence-viewer-line-feature-primer-has-five .sequence-viewer-primer-oligo-line {
+  left: 12px;
+}
+
+.sequence-viewer-line-feature-primer-forward.sequence-viewer-line-feature-primer-has-three .sequence-viewer-primer-oligo-line {
+  right: 9px;
+}
+
+.sequence-viewer-line-feature-primer-reverse.sequence-viewer-line-feature-primer-has-five .sequence-viewer-primer-oligo-line {
+  right: 12px;
+}
+
+.sequence-viewer-line-feature-primer-reverse.sequence-viewer-line-feature-primer-has-three .sequence-viewer-primer-oligo-line {
+  left: 9px;
+}
+
+.sequence-viewer-primer-end {
+  position: absolute;
+  top: -1px;
+  color: var(--sequence-viewer-primer-color);
+  font-size: 0.54rem;
+  font-weight: 750;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-end-five,
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end-three {
+  left: 0;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-end-three,
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end-five {
+  right: 0;
+}
+
+/* Barbed half-head, matching the vector map: the barb points at the strand the
+   oligo anneals to, so direction reads from the glyph alone. */
+.sequence-viewer-primer-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-arrow {
+  right: 0;
+  top: 12px;
+  border-top: 0;
+  border-bottom: 4px solid transparent;
+  border-left: 7px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-arrow {
+  left: 0;
+  top: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 0;
+  border-right: 7px solid var(--sequence-viewer-primer-color);
+}
+
+/* Reverse primers hang below the duplex, so their row mirrors vertically:
+   oligo line nearest the strand, label and end marks underneath it. */
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-oligo-line {
+  top: 3px;
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end {
+  top: 7px;
+}
+
+.sequence-viewer-primer-label {
+  position: absolute;
+  top: -2px;
+  left: 20px;
+  right: 20px;
+  width: auto;
+  color: var(--sequence-viewer-primer-color);
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-label {
+  top: 6px;
+}
+
+.sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
+  border: 0;
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
+}
+
+.sequence-viewer-line-feature-primer:hover,
+.sequence-viewer-line-feature-primer:focus-visible {
+  background: transparent;
+}
+
+.sequence-viewer-line-feature-active {
+  border-color: var(--sequence-viewer-active-blue);
+  box-shadow: 0 0 0 1px var(--sequence-viewer-active-blue);
+  color: inherit;
+  opacity: 1;
+}
+
+.sequence-viewer-line-feature-bar:hover,
+.sequence-viewer-line-feature-bar:focus-visible {
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 22%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-line-feature:hover,
+.sequence-viewer-line-feature:focus-visible,
+.sequence-viewer-restriction-annot:hover,
+.sequence-viewer-restriction-annot:focus-visible {
+  transform: none;
+}
+
+/* The annotation is a <button>, so the global button:hover background would
+   paint over the translucent restriction box and hide it. Keep it transparent. */
+.sequence-viewer-restriction-annot:hover,
+.sequence-viewer-restriction-annot:focus-visible {
+  background: transparent;
+}
+
+.sequence-viewer-feature-hover-tooltip {
+  position: fixed;
+  z-index: 2600;
+  min-width: 170px;
+  max-width: 260px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  box-shadow: var(--theme-shadow-small);
+  padding: 7px 9px;
+  font-size: 0.69rem;
+  line-height: 1.3;
+  color: var(--theme-text-strong);
+  pointer-events: none;
+}
+
+.sequence-viewer-feature-hover-tooltip p {
+  margin: 0;
+}
+
+.sequence-viewer-feature-hover-tooltip p + p {
+  margin-top: 2px;
+}
+
+.sequence-viewer-feature-hover-title {
+  font-weight: 700;
+}
+
+.sequence-viewer-context-menu {
+  position: fixed;
+  z-index: 2600;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  display: grid;
+  gap: 4px;
+}
+
+.sequence-viewer-context-menu[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-context-item {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  text-align: left;
+  padding: 7px 9px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.sequence-viewer-context-item:hover:not(:disabled),
+.sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-context-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sequence-viewer-aa-edit-context {
+  display: grid;
+  gap: 6px;
+  min-width: 270px;
+  padding: 3px;
+}
+
+.sequence-viewer-aa-edit-context p {
+  margin: 0;
+}
+
+.sequence-viewer-aa-edit-title {
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-aa-replacement-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.sequence-viewer-aa-replacement-option {
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  min-width: 0;
+  min-height: 42px;
+  padding: 4px 3px;
+  border-color: transparent;
+  background: var(--theme-surface);
+}
+
+.sequence-viewer-aa-replacement-option:hover,
+.sequence-viewer-aa-replacement-option:focus-visible {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-aa-replacement-code {
+  color: var(--theme-text-strong);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.sequence-viewer-aa-replacement-short {
+  color: var(--theme-text-muted);
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.sequence-viewer-context-item-danger {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-feature-editor-overlay,
+.sequence-viewer-primer-design-overlay,
+.sequence-viewer-sequence-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  background: var(--sequence-viewer-overlay-soft);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.sequence-viewer-feature-editor-overlay[hidden],
+.sequence-viewer-primer-design-overlay[hidden],
+.sequence-viewer-sequence-edit-overlay[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-feature-editor,
+.sequence-viewer-primer-design-dialog,
+.sequence-viewer-sequence-edit-dialog {
+  width: min(100%, 560px);
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-sequence-edit-dialog {
+  width: min(100%, 480px);
+}
+
+.sequence-viewer-primer-design-dialog {
+  width: min(100%, 760px);
+}
+
+.sequence-viewer-feature-editor-head,
+.sequence-viewer-primer-design-head,
+.sequence-viewer-sequence-edit-head {
+  align-items: center;
+}
+
+.sequence-viewer-feature-editor-head h4,
+.sequence-viewer-primer-design-head h4,
+.sequence-viewer-sequence-edit-head h4 {
+  margin: 0;
+}
+
+.sequence-viewer-primer-design-result {
+  display: grid;
+  gap: 10px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.sequence-viewer-primer-design-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-summary p,
+.sequence-viewer-primer-design-warnings p {
+  margin: 0;
+}
+
+.sequence-viewer-primer-design-warnings {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-warning {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-feature-editor-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sequence-viewer-feature-editor-grid label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-feature-editor-grid input,
+.sequence-viewer-feature-editor-grid select,
+.sequence-viewer-feature-editor-grid textarea {
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  font: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.sequence-viewer-feature-editor-field-wide {
+  grid-column: 1 / -1;
+}
+
+.sequence-viewer-sequence-edit-input-wrap {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-sequence-edit-input-wrap textarea {
+  min-height: 78px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  padding: 8px 10px;
+  resize: vertical;
+  text-transform: uppercase;
+}
+
+.sequence-viewer-sequence-edit-delete-message {
+  margin: 0;
+}
+
+@media (max-width: 1260px) {
+  .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-backbone-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .sequence-viewer-backbone-dialog-overlay,
+.sequence-viewer-alignment-workspace {
+    padding: max(56px, env(safe-area-inset-top, 0px)) 10px 10px;
+  }
+
+  .sequence-viewer-backbone-dialog {
+    width: 100%;
+    max-height: calc(100svh - 66px);
+    padding: 12px;
+  }
+
+  .sequence-viewer-alignment-dialog {
+    width: 100%;
+    max-height: calc(100svh - 66px);
+    padding: 12px;
+  }
+
+  
+  .sequence-viewer-rail-nav-actions .small-note {
+    margin-left: 0;
+  }
+
+  .sequence-viewer-protein-builder-confirmation {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-confirmation-actions {
+    justify-self: start;
+  }
+
+  .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-feature-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-dual-line {
+    grid-template-columns: 58px 1fr;
+    gap: 8px;
+  }
+
+  .sequence-viewer-strand-row {
+    grid-template-columns: 24px 1fr 24px;
+    font-size: 0.84rem;
+  }
+
+  .sequence-viewer-seq-text {
+    font-size: 0.84rem;
+  }
+
+  .sequence-viewer-protein-builder-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-cloning-design-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+.sequence-viewer-protein-builder-toolbar-nav,
+.sequence-viewer-protein-builder-toolbar-copy,
+.sequence-viewer-protein-builder-toolbar-actions,
+.sequence-viewer-cloning-design-toolbar-nav,
+.sequence-viewer-cloning-design-toolbar-main,
+.sequence-viewer-cloning-design-toolbar-copy,
+.sequence-viewer-cloning-design-toolbar-actions {
+    grid-column: 1;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-nav,
+.sequence-viewer-cloning-design-toolbar-nav {
+    padding-left: 0;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-actions,
+.sequence-viewer-cloning-design-toolbar-actions {
+    justify-self: start;
+  }
+
+  .sequence-viewer-cloning-design-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-protein-builder-block-actions {
+    justify-content: center;
+  }
+
+  .sequence-viewer-backbone-dialog-candidates {
+    max-height: none;
+  }
+
+  .sequence-viewer-backbone-dialog-preview {
+    min-height: 420px;
+  }
+}
+
+/* Extracted from ui/css/themes/modes.css */
+body.theme-night .sequence-viewer-protein-builder-toolbar,
+body.theme-night .sequence-viewer-cloning-design-toolbar,
+body.theme-night .sequence-viewer-protein-builder-panel,
+body.theme-night .sequence-viewer-cloning-design-panel,
+body.theme-night .sequence-viewer-cloning-design-result-section,
+body.theme-night .sequence-viewer-alignment-panel {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--theme-surface);
+}
+
+body.theme-night .sequence-viewer-library-switch {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-control);
+}
+
+body.theme-night .sequence-viewer-library-switch-btn {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-mode-switch {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-control);
+}
+
+body.theme-night .sequence-viewer-library-item {
+  background: transparent;
+}
+
+body.theme-night .sequence-viewer-library-item:hover,
+body.theme-night .sequence-viewer-library-item-active {
+  background: var(--sequence-viewer-night-hover);
+}
+
+body.theme-night .sequence-viewer-library-item-name {
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-protein-builder-common-item,
+body.theme-night .sequence-viewer-protein-builder-feature-item,
+body.theme-night .sequence-viewer-protein-builder-common-fold {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-panel);
+}
+
+body.theme-night .sequence-viewer-preview-host {
+  border-color: transparent;
+  background: transparent;
+}
+
+body.theme-night .sequence-viewer-mode-btn {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-toggle {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-select {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-select select {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-control-strong);
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-inline-toggle-group-label {
+  color: var(--sequence-viewer-night-muted);
+}
+
+
+
+body.theme-night .sequence-viewer-aa-chip {
+  box-shadow: inset 0 0 0 1px var(--sequence-viewer-night-inset);
+}
+
+body.theme-night .sequence-viewer-feature-rail-host,
+body.theme-night .sequence-viewer-feature-detail {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-panel);
+}
+
+body.theme-night .sequence-viewer-feature-rail {
+  border-color: var(--sequence-viewer-track-border);
+  background:
+    linear-gradient(to right, var(--sequence-viewer-track-grid) 1px, transparent 1px),
+    var(--sequence-viewer-track-surface);
+  background-size: 12.5% 100%;
+}
+
+body.theme-night .sequence-viewer-feature-bar,
+body.theme-night .sequence-viewer-line-feature-bar {
+  border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 66%, var(--theme-border));
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 20%, var(--theme-surface-elevated));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar {
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 34%, var(--theme-text-strong));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar:hover,
+body.theme-night .sequence-viewer-line-feature-bar:focus-visible {
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 28%, var(--theme-surface-elevated));
+}
+
+body.theme-night .sequence-viewer-feature-axis span,
+body.theme-night .sequence-viewer-seq-coord,
+body.theme-night .sequence-viewer-strand-end {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-seq-highlight {
+  --sequence-viewer-selection-highlight: var(--sequence-viewer-selection-highlight-strong);
+  background: var(--sequence-viewer-selection-highlight);
+}
+
+body.theme-night .sequence-viewer-restriction-label {
+  color: var(--sequence-viewer-night-strong);
+}
+
+body.theme-night .sequence-viewer-restriction-box {
+  border-color: var(--sequence-viewer-night-restriction-border);
+  background: var(--sequence-viewer-night-restriction-bg);
+}
+
+body.theme-night .sequence-viewer-restriction-cut-svg polyline {
+  stroke: var(--sequence-viewer-night-restriction-line);
+}
+
+body.theme-night .sequence-viewer-restriction-annot-active .sequence-viewer-restriction-box {
+  border-color: var(--sequence-viewer-night-active-border);
+  background: var(--sequence-viewer-night-active-bg);
+}
+
+body.theme-night .sequence-viewer-line-feature:not(.sequence-viewer-line-feature-bar) {
+  border-color: var(--sequence-viewer-night-feature-border);
+  color: inherit;
+}
+
+body.theme-night .sequence-viewer-line-feature-active {
+  border-color: var(--sequence-viewer-night-feature-active-border);
+  box-shadow: 0 0 0 1px var(--sequence-viewer-night-feature-ring);
+  color: inherit;
+}
+
+body.theme-night .sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
+}
+
+body.theme-night .sequence-viewer-feature-hover-tooltip {
+  border-color: color-mix(in srgb, var(--theme-border) 84%, var(--sequence-viewer-track-surface) 8%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--sequence-viewer-night-tooltip-base) 8%);
+  box-shadow: 0 2px 8px var(--sequence-viewer-night-shadow);
+  color: var(--theme-text-strong);
+}
+
+body.theme-night .sequence-viewer-context-menu {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+}
+
+body.theme-night .sequence-viewer-context-item {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-menu-item);
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-context-item:hover:not(:disabled),
+body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: var(--sequence-viewer-night-menu-hover);
+}
+
+body.theme-night .sequence-viewer-feature-editor-overlay,
+body.theme-night .sequence-viewer-primer-design-overlay,
+body.theme-night .sequence-viewer-sequence-edit-overlay {
+  background: var(--sequence-viewer-night-overlay);
+}
+
+body.theme-night .sequence-viewer-alignment-workspace {
+  background: var(--sequence-viewer-night-overlay-strong);
+}
+
+body.theme-night .sequence-viewer-feature-editor,
+body.theme-night .sequence-viewer-primer-design-dialog,
+body.theme-night .sequence-viewer-sequence-edit-dialog {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid label,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid input,
+body.theme-night .sequence-viewer-feature-editor-grid select,
+body.theme-night .sequence-viewer-feature-editor-grid textarea,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-input);
+  color: var(--sequence-viewer-night-text);
+}
+
+.sequence-viewer-library-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sequence-viewer-inline-toggle-group-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sequence-viewer-inline-toggle,
+.sequence-viewer-inline-toggle-group,
+.sequence-viewer-context-item {
+  border-radius: 6px;
+}
+
+@media (max-width: 980px) {
+  .sequence-viewer-home-layout,
+.sequence-viewer-protein-builder-grid,
+.sequence-viewer-cloning-design-grid {
+    min-width: 0;
+  }
+
+  .sequence-viewer-protein-builder-workspace,
+.sequence-viewer-protein-builder-grid-wrap,
+.sequence-viewer-protein-builder-main,
+.sequence-viewer-cloning-design-main {
+    overflow: visible;
+  }
+
+  .sequence-viewer-protein-builder-grid,
+.sequence-viewer-cloning-design-grid {
+    height: auto;
+  }
+
+  .sequence-viewer-protein-builder-main,
+.sequence-viewer-cloning-design-main {
+    grid-template-rows: auto auto;
+  }
+
+  #sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar.left-rail-template__rail--pinned,
+  #sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar.left-rail-template__rail--pinned,
+  #sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar.left-rail-template__rail--pinned {
+    min-height: 0;
+    max-height: min(42vh, 360px);
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+  }
+}
+
+/* ---------- Vector Builder ---------- */
+
+.sequence-viewer-vector-builder-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-vector-builder-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-vector-builder-toolbar {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav .ghost-btn {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-vector-builder-toolbar-nav .ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-vector-builder-toolbar-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.sequence-viewer-vector-builder-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sequence-viewer-vector-builder-map-card,
+.sequence-viewer-vector-builder-sequence-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  gap: 10px;
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface-elevated);
+}
+
+.sequence-viewer-vector-builder-sequence-card {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.sequence-viewer-vector-builder-map {
+  min-height: 0;
+  display: flex;
+  /* Zoom grows the map past the pane; native scrolling then pans it. */
+  overflow: auto;
+}
+
+.sequence-viewer-vector-builder-map .vector-map {
+  width: 100%;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane. margin:auto
+     centres it while it still fits, without clipping the top/left edge once it
+     overflows the way align-items:center would. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.sequence-viewer-vector-builder-sequence {
+  min-height: 0;
+  overflow: auto;
+}
+
+#sequence-viewer-vector-builder-feature-replace-status:empty,
+#sequence-viewer-vector-builder-feature-replace-results:empty {
+  display: none;
+}
+
+.sequence-viewer-sequence-edit-note:empty {
+  display: none;
+}
+
+.vector-map__backbone {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 4;
+}
+
+/* The linear track is a <line>, so it needs a thinner, squared stroke than the
+   circular backbone ring. */
+.vector-map--linear .vector-map__backbone {
+  stroke-width: 2;
+}
+
+.vector-map__primer-shaft {
+  stroke-width: 2;
+  stroke-linecap: butt;
+}
+
+.vector-map__primer {
+  cursor: pointer;
+}
+
+.vector-map__primer:hover .vector-map__primer-shaft,
+.vector-map__primer--active .vector-map__primer-shaft {
+  stroke-width: 3;
+}
+
+.vector-map__primer:focus,
+.vector-map__primer:focus-visible {
+  outline: none;
+}
+
+.vector-map__primer:focus-visible .vector-map__primer-shaft {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+.vector-map__intron {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.vector-map__label-text--on-bar {
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.vector-map__tick {
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__tick-label {
+  fill: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.vector-map__feature {
+  stroke: var(--theme-surface);
+  stroke-width: 0.75;
+  cursor: pointer;
+}
+
+.vector-map__feature:hover {
+  stroke: var(--theme-text-strong);
+  stroke-width: 1.5;
+}
+
+.vector-map__feature--active {
+  /* Feature fills come from a hash of the feature type, so an accent-coloured
+     outline can vanish on a blue feature. Outline in the text colour instead:
+     it contrasts against every generated fill. */
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+/* An `outline` on an SVG shape is drawn around its rectangular bounding box,
+   which reads as a box floating outside the feature. Suppress it and mark
+   focus on the shape itself instead. */
+.vector-map__feature:focus,
+.vector-map__label:focus,
+.vector-map__feature:focus-visible,
+.vector-map__label:focus-visible {
+  outline: none;
+}
+
+.vector-map__feature:focus-visible {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+.vector-map__label:focus-visible .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__selection {
+  fill: color-mix(in srgb, var(--theme-accent) 45%, transparent);
+  stroke: var(--theme-accent);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.vector-map--linear .vector-map__selection {
+  fill: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+}
+
+.vector-map__caret {
+  stroke: var(--theme-accent);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.vector-map__leader {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__label {
+  cursor: pointer;
+}
+
+.vector-map__label-text {
+  font-size: 13px;
+}
+
+.vector-map__label:hover .vector-map__label-text {
+  font-weight: 600;
+}
+
+.vector-map__label--active .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__title {
+  fill: var(--theme-text-strong);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.vector-map__subtitle {
+  fill: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.vector-map__tooltip {
+  position: fixed;
+  z-index: 2700;
+  max-width: 280px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  color: var(--theme-text);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Must never sit between the cursor and the feature it describes. */
+  pointer-events: none;
+}
+
+.vector-map__tooltip[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-primer-order-dialog {
+  --app-dialog-width: 640px;
+}
+
+.sequence-viewer-primer-order-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.sequence-viewer-primer-order-controls label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-primer-order-preview-label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+/* Tab-separated rows: a monospace box makes a mangled paste obvious. */
+.sequence-viewer-primer-order-preview {
+  width: 100%;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.74rem;
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+}
+
+.sequence-viewer-primer-order-warning {
+  color: var(--theme-danger);
+}
+
+/* A primer readout carries a copy button, so it has to accept the pointer and
+   wrap a full-length oligo instead of ellipsing it. */
+.vector-map__tooltip.is-interactive,
+.sequence-viewer-feature-hover-tooltip.is-interactive {
+  pointer-events: auto;
+  white-space: normal;
+  overflow: visible;
+  max-width: 340px;
+}
+
+.vector-map__tooltip-title {
+  display: block;
+  font-weight: 600;
+}
+
+.sequence-viewer-primer-hover {
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.sequence-viewer-primer-hover-seq {
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  word-break: break-all;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-primer-hover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sequence-viewer-primer-hover-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.68rem;
+}
+
+.sequence-viewer-context-divider {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  margin: 3px 0;
+}
+
+@media (max-width: 1100px) {
+  .sequence-viewer-vector-builder-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Sits between the action buttons and the toolbar menus. It must not grow, or an
+   empty status leaves a gap holding the menus against the far edge. */
+.sequence-viewer-status-note {
+  align-self: center;
+  min-width: 0;
+  flex: 0 1 auto;
+}

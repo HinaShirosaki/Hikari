@@ -9,6 +9,8 @@
     "check:css-colors": "node scripts/check-css-colors.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",
+    "lint": "eslint src scripts eslint.config.mjs",
+    "lint:tests": "eslint tests test.js",
     "check:sample-registry-csv": "node tests/sample-registry-csv-io-selfcheck.mjs",
     "check:window-guard": "node tests/window-guard-selfcheck.mjs",
     "check:pdf-export-template": "node tests/pdf-export-template-selfcheck.mjs",
@@ -16,7 +18,7 @@
     "extract:standard-features": "node scripts/extract-standard-features.mjs",
     "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
-    "test:checks": "fail=0; for c in check:css-colors check:dom-ids check:source-layout check:selfchecks; do npm run \"$c\" || fail=1; done; exit $fail",
+    "test:checks": "fail=0; for c in lint check:css-colors check:dom-ids check:source-layout check:selfchecks; do npm run \"$c\" || fail=1; done; exit $fail",
     "test:groups": "node test.js --list",
     "test:core": "node test.js '^core/'",
     "test:edge": "node test.js '^edge/'",
@@ -37,6 +39,7 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "electron": "^40.7.0",
+    "eslint": "^9.39.5",
     "onnxruntime-web": "^1.26.0"
   },
   "dependencies": {

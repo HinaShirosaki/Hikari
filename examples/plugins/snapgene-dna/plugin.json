@@ -1,8 +1,9 @@
 {
   "id": "snapgene-dna",
   "name": "SnapGene .dna importer",
-  "version": "1.0.0",
-  "description": "Lets the sequence viewer open SnapGene .dna files by converting them to GenBank.",
+  "version": "1.1.0",
+  "description": "Uses Biopython to convert SnapGene .dna files to GenBank so the Sequence Viewer can open them.",
+  "permissions": ["python"],
   "service": {
     "fileConversions": [
       { "from": "dna", "to": "gbk" }

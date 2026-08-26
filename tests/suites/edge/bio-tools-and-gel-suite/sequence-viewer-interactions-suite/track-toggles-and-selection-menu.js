@@ -183,6 +183,7 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
 });
 test('[EDGE] sequence-viewer bottom-track click updates selected feature detail strip', () => {
   const ids = [
+    'sequence-viewer-detail-workspace',
     'sequence-viewer-mode-paste',
     'sequence-viewer-mode-file',
     'sequence-viewer-paste-panel',
@@ -242,6 +243,11 @@ test('[EDGE] sequence-viewer bottom-track click updates selected feature detail 
 
   assert.match(detail.innerHTML, /Feature_A/);
   assert.match(detail.innerHTML, /promoter/);
+
+  const workspace = document.getElementById('sequence-viewer-detail-workspace');
+  trigger(workspace, 'mousedown', { button: 0, target: workspace });
+
+  assert.match(detail.innerHTML, /Select a feature/);
 });
 test('[EDGE] sequence-viewer drag selection context menu can add a feature', async () => {
   const ids = [

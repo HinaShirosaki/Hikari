@@ -15,6 +15,13 @@ export function createProteinBuilderContext(config = {}) {
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
+    // A stored feature usually sits in several vectors, and which one is picked
+    // is the plasmid that block gets amplified from.
+    featureSelectedId: '',
+    featureHostId: '',
+    // Hydrated host records keyed by library entry id, for the plasmid preview.
+    featureHostRecords: new Map(),
+    featureHostRequestId: 0,
     dnaConstruct: null,
     assemblyDialogOpen: false,
     isLoadingAssemblyBackbones: false,
@@ -118,9 +125,6 @@ export function createProteinBuilderContext(config = {}) {
     const disabled = !ctx.hasStoragePath() || Boolean(state.isSearchingFeatures);
     if (elements.proteinBuilderFeatureSearchInput) {
       elements.proteinBuilderFeatureSearchInput.disabled = disabled;
-    }
-    if (elements.proteinBuilderFeatureSearchBtn) {
-      elements.proteinBuilderFeatureSearchBtn.disabled = disabled;
     }
     if (elements.proteinBuilderAssembleBtn) {
       elements.proteinBuilderAssembleBtn.disabled = Boolean(state.isLoadingAssemblyBackbones || state.isPreparingAssembly);

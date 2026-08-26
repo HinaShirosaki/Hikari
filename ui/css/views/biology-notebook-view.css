@@ -620,20 +620,17 @@
 }
 
 .biology-notebook-tool-body,
-.biology-notebook-tool-panel,
-.biology-notebook-tool-mode {
+.biology-notebook-tool-panel {
   display: grid;
   gap: 10px;
 }
 
 .biology-notebook-tool-panel[hidden],
-.biology-notebook-tool-mode[hidden],
 .biology-notebook-tool-row[hidden] {
   display: none;
 }
 
-.biology-notebook-tool-panel label,
-.biology-notebook-tool-mode label {
+.biology-notebook-tool-panel label {
   min-width: 0;
 }
 
@@ -641,21 +638,6 @@
 .biology-notebook-tool-panel select {
   width: 100%;
   min-width: 0;
-}
-
-.biology-notebook-tool-mode {
-  grid-template-columns: minmax(0, 1fr) minmax(74px, auto);
-  align-items: end;
-}
-
-.biology-notebook-tool-mode label {
-  display: grid;
-  gap: 6px;
-}
-
-.biology-notebook-tool-mode label,
-.biology-notebook-tool-mode select:last-child {
-  grid-column: span 1;
 }
 
 .biology-notebook-tool-row {
@@ -2485,4 +2467,27 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+/* Reaction cells are editable in place, so they read as table text until they
+   are focused rather than as a grid of form fields. */
+.biology-notebook-tool-calculation-input {
+  width: 100%;
+  min-width: 0;
+  padding: 1px 2px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.biology-notebook-tool-calculation-input:hover {
+  border-color: color-mix(in srgb, var(--theme-border) 70%, transparent);
+}
+
+.biology-notebook-tool-calculation-input:focus {
+  outline: none;
+  border-color: var(--theme-accent);
+  background: var(--theme-surface);
 }

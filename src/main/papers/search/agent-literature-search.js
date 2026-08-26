@@ -317,10 +317,16 @@ function createLiteratureSearchRuntime(deps = {}) {
 
   function resolveLiteratureSources(input = {}) {
     const source = ensureObject(input);
+    const preferredSource = normalizeSource(
+      source.preferred_literature_source
+      || source.preferredLiteratureSource
+    );
     const explicitSources = uniqueStrings(asArray(source.sources).map((item) => normalizeSource(item)).filter(Boolean), 8)
       .filter((item) => item !== LITERATURE_SOURCES.AUTO);
     if (explicitSources.length) {
-      return explicitSources;
+      return preferredSource && explicitSources.includes(preferredSource)
+        ? prependPreferredValue(explicitSources, preferredSource)
+        : explicitSources;
     }
 
     const explicitSource = normalizeSource(source.source);
@@ -329,10 +335,6 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
 
     const query = buildLiteratureQuery(source);
-    const preferredSource = normalizeSource(
-      source.preferred_literature_source
-      || source.preferredLiteratureSource
-    );
     const defaults = [
       LITERATURE_SOURCES.PUBMED,
       LITERATURE_SOURCES.EUROPE_PMC,

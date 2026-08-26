@@ -410,17 +410,21 @@ test('[EDGE] sequence-viewer detail cloning design renders primers and sends a t
   trigger(runButton, 'click');
   assert.equal(resultHost.innerHTML.includes('sequence-viewer-cloning-design-primer-table'), true, resultHost.innerHTML);
   // Bench-style name: the record (no CDS here), what the edit does, then F.
-  assert.match(resultHost.innerHTML, /cloning_design_edit ins50 F/);
+  assert.match(resultHost.innerHTML, /cloning_design_edit .*ins50 F/);
   assert.equal(resultHost.innerHTML.includes('tile_outer_left'), false);
-  assert.equal(appState.notebookEntries.length, 1);
-  assert.equal(appState.protocols.length, 1);
+  // The PCR page, plus the KLD tube the Q5/KLD route ends in.
+  assert.equal(appState.notebookEntries.length, 2);
+  assert.deepEqual(
+    Array.from(appState.protocols).map((protocol) => protocol.name),
+    ['PCR Thermocycle Program', 'KLD Treatment']
+  );
   assert.equal(appState.projects.length, 1);
   assert.equal(persistCalls, 1);
   assert.equal(notebookRefreshCalls, 1);
   const notebookEntry = appState.notebookEntries[0];
   assert.equal(notebookEntry.projectName, 'Sequence Viewer');
   assert.equal(notebookEntry.protocolName, 'PCR Thermocycle Program');
-  assert.match(notebookEntry.experimentName, /cloning_design_edit cloning primer design/);
+  assert.match(notebookEntry.experimentName, /cloning_design_edit .*cloning primer design/);
   assert.match(notebookEntry.result, /PCR thermocycle programs/);
   assert.match(notebookEntry.result, /Ta: \d+ C/);
   assert.match(notebookEntry.result, /Extension time: \d+(?: s| min(?: \d+ s)?) at 72 C/);
@@ -508,6 +512,130 @@ test('[EDGE] sequence-viewer two-step cloning notebook keeps distinct PCR thermo
     created.entry.protocolSnapshot.steps.some((step) => /PCR 2: Repeat for 30 cycles:.*Annealing \(Ta\) - 63 C.*Extension - 72 C - 2 min 35 s/.test(step.text)),
     true
   );
+
+  // The program says how to run the PCR; the page also has to say what goes in
+  // the tube, as one fixed-volume reaction.
+  assert.equal(created.entry.toolCalculations.length, 1);
+  const reaction = created.entry.toolCalculations[0];
+  assert.equal(reaction.id, 'sequence-viewer-pcr-fixed-reaction');
+  assert.equal(reaction.title, 'Fixed Volume Reaction');
+  assert.deepEqual(Array.from(reaction.table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note']);
+  assert.deepEqual(Array.from(reaction.table.rows).map((row) => row[0]), [
+    'Forward primer',
+    'Reverse primer',
+    'dNTP mix',
+    'Q5 High-Fidelity DNA Polymerase (or validated equivalent)',
+    '5x polymerase buffer',
+    'Template DNA (10 ng)'
+  ]);
+  assert.equal(reaction.table.metaRows[0][1], '50 uL');
+  // Two PCRs on this route, so the table says it is set up once for each.
+  assert.equal(reaction.table.metaRows[1][1], 'PCR 1, PCR 2');
+  assert.equal(reaction.table.footerRows[0][0], 'Nuclease-free water');
+
+  // The template is a mass, given as a final concentration in the same two
+  // columns every other reagent uses. What the miniprep came out at is not
+  // known here, so the volume and the water stay as formulas rather than being
+  // guessed at.
+  const templateRow = Array.from(reaction.table.rows).find((row) => /Template DNA/.test(row[0]));
+  assert.equal(templateRow[1], '');
+  assert.equal(templateRow[2], '0.2 ng/uL');
+  assert.match(templateRow[3], /0\.2 ng\/uL x 50 uL \/ \[stock concentration\]/);
+  assert.match(reaction.table.footerRows[0][3], /50 uL - .*\[Template DNA \(10 ng\) volume\]/);
+
+  // A note logged against a row is the one part of the table a person wrote.
+  reaction.inputs.reagents[5].note = '12 ng from pKD13 miniprep';
+  reaction.table.rows[5][4] = '12 ng from pKD13 miniprep';
+
+  // Re-running the design replaces that table instead of stacking another, and
+  // carries the logged note onto the fresh one.
+  notebookModule.createSequenceViewerCloningDesignNotebookPage({
+    state,
+    source,
+    record: { name: source.recordName, sequence, topology: 'circular' },
+    displayPlan,
+    entryId: created.entry.id,
+    createId: () => `two_step_${++nextId}`
+  });
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 1);
+  assert.equal(
+    state.notebookEntries[0].toolCalculations[0].table.rows[5][4],
+    '12 ng from pKD13 miniprep'
+  );
+});
+test('[EDGE] cloning reaction pages preserve executed records and calculate molar inputs', () => {
+  const reactionModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-reaction-steps.js')
+  );
+  const pageModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-step-pages.js')
+  );
+  const steps = reactionModule.buildCloningReactionSteps({
+    strategy: 'overlap-extension',
+    displayPlan: {
+      plans: [{ plan: { restrictionEnzymeSelection: [{ name: 'EcoRI' }, { name: 'XhoI' }] } }]
+    },
+    pcrPrograms: [{ label: 'Vector flank PCR' }, { label: 'Insert PCR' }]
+  });
+  const fusion = steps.find((step) => step.id === 'overlap-fusion');
+  const ligation = steps.find((step) => step.id === 'ligation');
+  const forwardPrimer = fusion.reagents.find((row) => /Outer forward primer/.test(row.name));
+  const reversePrimer = fusion.reagents.find((row) => /Outer reverse primer/.test(row.name));
+  assert.equal(forwardPrimer.stockConcentration, '10 uM');
+  assert.equal(forwardPrimer.finalConcentration, '0.5 uM');
+  assert.equal(reversePrimer.finalConcentration, '0.5 uM');
+  assert.match(fusion.steps.join(' '), /two 2\.5 uL outer-primer aliquots/);
+  assert.match(fusion.steps.join(' '), /final volume of 50 uL/);
+
+  const insert = ligation.reagents.find((row) => /Digested insert/.test(row.name));
+  assert.equal(Object.hasOwn(insert, 'manualVolumeValue'), false);
+  assert.match(insert.volumeFormula, /3 x 50 ng x insert length bp/);
+  assert.equal(
+    fusion.reagents.filter((row) => /Purified .*amplicon/.test(row.name))
+      .every((row) => !row.manualVolumeValue && /Target pmol/.test(row.volumeFormula)),
+    true
+  );
+
+  const state = { protocols: [], notebookEntries: [] };
+  let nextId = 0;
+  const sync = (nextSteps, nowIso) => pageModule.syncCloningReactionStepPages({
+    state,
+    createId: () => `reaction_page_${++nextId}`,
+    nowIso,
+    project: { id: 'project_1', name: 'Cloning Project' },
+    source: 'sequence-viewer-cloning-design',
+    pageKey: 'design_1',
+    subjectName: 'Construct A',
+    strategy: 'overlap-extension',
+    steps: nextSteps
+  });
+  const firstPages = sync([ligation], '2026-08-26T10:00:00.000Z');
+  const executed = firstPages[0];
+  executed.notebookState = 'executed';
+  executed.executedAt = '2026-08-26T10:30:00.000Z';
+  executed.toolCalculations.push({ id: 'manual-yield', type: 'formula', title: 'Manual yield' });
+  const executedSnapshot = JSON.stringify(executed);
+
+  const refreshedLigation = {
+    ...ligation,
+    purpose: `${ligation.purpose} Refreshed design text.`
+  };
+  const secondPages = sync([refreshedLigation], '2026-08-26T11:00:00.000Z');
+  assert.equal(state.notebookEntries.length, 2);
+  assert.equal(JSON.stringify(executed), executedSnapshot);
+  assert.notEqual(secondPages[0].id, executed.id);
+  assert.equal(secondPages[0].notebookState, 'planned');
+  assert.equal(secondPages[0].toolCalculations.some((calculation) => calculation.id === 'manual-yield'), false);
+
+  secondPages[0].toolCalculations.push({ id: 'manual-note', type: 'formula', title: 'Bench note' });
+  const thirdPages = sync([refreshedLigation], '2026-08-26T12:00:00.000Z');
+  assert.equal(state.notebookEntries.length, 2);
+  assert.equal(thirdPages[0].toolCalculations.filter((calculation) => calculation.id === 'manual-note').length, 1);
+  const refreshedCalculation = thirdPages[0].toolCalculations
+    .find((calculation) => calculation.id === 'cloning-reaction-ligation-fixed-reaction');
+  const insertRow = refreshedCalculation.table.rows
+    .find((row) => /Digested insert/.test(row[0]));
+  assert.match(insertRow[3], /3 x 50 ng x insert length bp/);
 });
 test('[EDGE] sequence-viewer cloning notebook sizes each assembly PCR independently', () => {
   const notebookModule = loadEsmStyleModule(

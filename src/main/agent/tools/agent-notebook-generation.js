@@ -447,10 +447,6 @@ function createNotebookGenerationRuntime(deps = {}) {
   }
 
   async function requestNotebookPlaceholderFill({
-    provider,
-    endpoint,
-    apiKey,
-    model,
     message,
     conversation,
     parserPayload,

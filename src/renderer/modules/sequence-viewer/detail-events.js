@@ -1,6 +1,11 @@
 import { cleanText, clamp } from './shared.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 
+function eventTargetsElement(event, element) {
+  const target = event?.target || null;
+  return Boolean(target && element && (target === element || element.contains?.(target)));
+}
+
 export function bindSequenceViewerDetailEvents(config = {}) {
   const elements = config?.elements || {};
   const state = config?.state || {};
@@ -33,6 +38,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const applyAminoAcidReplacement = config?.applyAminoAcidReplacement || (async () => {});
   const openFeatureEditor = config?.openFeatureEditor || (() => {});
   const openPrimerDesignOverlay = config?.openPrimerDesignOverlay || (() => {});
+  const orderDesignedPrimers = config?.orderDesignedPrimers || (() => {});
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
@@ -184,6 +190,32 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     hideSequenceEditDialog();
     onReferenceRecordChanged();
     renderActiveRecord();
+  });
+
+  // A feature highlight is a transient inspection state. Keep it while the
+  // user acts on that feature, but clear it when they click elsewhere in the
+  // detail workspace (including empty sequence or rail space).
+  elements.detailWorkspace?.addEventListener('mousedown', (event) => {
+    const button = Number(event?.button);
+    if ((Number.isFinite(button) && button !== 0)
+      || !Number.isFinite(state.selectedFeatureIndex)
+      || state.selectedFeatureIndex < 0
+      || event.target?.closest?.('[data-feature-index]')) {
+      return;
+    }
+    const featureInteractionSurfaces = [
+      elements.featureContextMenu,
+      elements.featureEditorOverlay,
+      elements.primerDesignOverlay,
+      elements.primerOrderOverlay,
+      elements.sequenceEditOverlay
+    ];
+    if (featureInteractionSurfaces.some((element) => eventTargetsElement(event, element))) {
+      return;
+    }
+    state.selectedFeatureIndex = -1;
+    hideFeatureContextMenu();
+    renderActiveRecord({ preserveScroll: true });
   });
 
   elements.featureRailHost?.addEventListener('click', (event) => {
@@ -407,6 +439,11 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (event?.target === elements.featureEditorOverlay) {
       hideFeatureEditor();
     }
+  });
+
+  elements.primerDesignOrderBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    orderDesignedPrimers();
   });
 
   elements.primerDesignCloseBtn?.addEventListener('click', () => {

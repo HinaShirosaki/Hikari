@@ -355,6 +355,7 @@ test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence 
   const editOverlay = document.getElementById('sequence-viewer-sequence-edit-overlay');
   const editForm = document.getElementById('sequence-viewer-sequence-edit-form');
   const editTitle = document.getElementById('sequence-viewer-sequence-edit-title');
+  const editNote = document.getElementById('sequence-viewer-sequence-edit-note');
   const editTextarea = document.getElementById('sequence-viewer-sequence-edit-textarea');
   const statLength = document.getElementById('sequence-viewer-stat-length');
 
@@ -394,6 +395,7 @@ test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence 
 
   assert.equal(Boolean(editOverlay.hidden), false);
   assert.equal(editTitle.textContent, 'Replace Bases');
+  assert.equal(editNote.innerHTML, '');
   assert.equal(editTextarea.value, 'T');
 
   editTextarea.value = 'GG';

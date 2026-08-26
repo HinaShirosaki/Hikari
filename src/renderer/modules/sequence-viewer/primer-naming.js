@@ -60,7 +60,10 @@ export function renamePrimers(primers, context = {}) {
       const enzyme = role.includes('restriction') || role.includes('golden-gate')
         ? cleanText(context?.enzyme, 40)
         : '';
-      return { ...primer, name: uniqueName([enzyme, 'vector', direction].filter(Boolean).join(' '), used) };
+      // A route with two backbone amplicons (the overlap-extension flanks) keeps
+      // the side in the name, or "vector F" would label two different products.
+      const side = (base.match(/^(upstream|downstream)\b/i)?.[1] || '').toLowerCase();
+      return { ...primer, name: uniqueName([enzyme, side, 'vector', direction].filter(Boolean).join(' '), used) };
     }
 
     const isMutagenesis = role.includes('mutagenesis');

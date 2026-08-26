@@ -4,7 +4,9 @@ This is Hikari's Gel workspace. Its source lives under `src/plugins/gel` and
 ships with the application, but it loads as a plugin rather than a renderer
 module. It remains a full workspace: image/TIFF ingestion,
 crop and free rotation, enhancement, lane segmentation, ladder calibration,
-band quantification, peak editing, reports, saved records, and JSON/CSV export.
+band quantification, peak editing, reports, saved records, and CSV export.
+Generated PNG figures use up to 4× raster density for publication-scale text,
+and PowerPoint export keeps the lane table as an editable native table.
 
 ## Distribution and permissions
 
@@ -20,7 +22,7 @@ Its public permissions are intentionally small:
 | --- | --- |
 | `storage` | Compact versioned index of saved Gel records. |
 | `files` | Source/preview images, report JSON, and record metadata under the plugin's own folder. |
-| `downloads` | Native save dialog for JSON, CSV, generated PNG, and editable-table PowerPoint exports. |
+| `downloads` | Native save dialog for CSV, generated PNG, and editable-table PowerPoint exports. |
 
 Gel does not request notebook, project, sample, or protocol access, so the
 plugin cannot open or mutate those host features. Host-owned readers may still
@@ -38,14 +40,17 @@ the iframe another capability. Old action hooks such as Notebook "Add Gel" and
 | Plugin-owned `state.gelAnalyses` | Hydrated from a compact `storage` index plus JSON artifacts in `files`. |
 | `persist` | Awaited `storage.set`; a record is marked saved only after the host acknowledges it. |
 | disk artifact methods | `files.write` / `files.read`, namespaced below `Plugins/gel/`. |
-| JSON/CSV/PNG/PPTX export | `downloads.save`, which opens a user-controlled native save dialog. |
+| CSV/PNG/PPTX export | `downloads.save`, which opens a user-controlled native save dialog. |
 | theme and font size | Initial `app.info` snapshot plus `app.context` updates. |
 | shared left-rail width | `app.info.layout.leftRail` initializes the in-frame rail; `app.setLeftRailWidth` commits a settled drag and synchronizes normal modules. |
 | storage availability | Safe `storage.configured` boolean; the path itself is never exposed. |
+| undo and redo | The workspace keeps its own stack over `manualOverrides`; `app.setHistory` reports its depth so the host's global buttons light up, and the host sends `app.undo` / `app.redo` back to this frame. Cmd+Z inside the frame is handled here, because a focused frame's key events never reach the host document. |
 
 The iframe still provides its own DOM and loads the Gel workspace module from
 `vendor/modules/gel/`. Plugin-specific fixes belong there now; it is not a
-verbatim mirror of a renderer source tree.
+verbatim mirror of a renderer source tree. The PowerPoint compatibility writer
+is bundled under `vendor/pptxgenjs/` with its upstream license so export does
+not depend on Electron or Node module resolution inside the sandbox.
 
 ## Persistence shape
 

@@ -4,7 +4,6 @@ import { buildDilutionSeries, buildInterpolatedSeries } from '../concentration-u
 // Auto-fill of the concentration axis: serial-dilution (factor) and
 // interpolated (linear/log) range modes.
 export function createConcentrationFill({
-  runtime,
   assayFillModeInput,
   assayDilutionFactorInput,
   assayPlatePreview,

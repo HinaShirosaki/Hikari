@@ -110,8 +110,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
         { file: 'protocol-management-view.html', rail: 'protocol-list-panel', scroll: 'protocol-list-scroll', after: 'id="protocol-list"' },
         { file: 'papers-view.html', rail: 'papers-library-rail', scroll: 'papers-library-scroll', action: 'id="paper-upload-trigger"' },
         { file: 'workflow-management-view.html', rail: 'workflow-editor-sidebar', scroll: 'workflow-editor-sidebar-scroll', action: 'id="workflow-entry-view-btn"' },
-        { file: 'sequence-viewer-view.html', rail: 'sequence-viewer-home-sidebar', scroll: 'sequence-viewer-home-sidebar-scroll', action: 'id="sequence-viewer-home-paste-btn"' },
-        { file: 'sequence-viewer-detail-view.html', rail: 'sequence-viewer-detail-sidebar', scroll: 'sequence-viewer-detail-sidebar-scroll', action: 'id="sequence-viewer-detail-new-btn"' },
+        {
+          file: 'sequence-viewer-view.html',
+          rail: 'sequence-viewer-home-sidebar',
+          scroll: 'sequence-viewer-home-sidebar-scroll',
+          action: 'id="sequence-viewer-home-paste-btn"',
+          pinnedControls: [
+            'id="sequence-viewer-library-filter-saved"',
+            'id="sequence-viewer-library-filter-temporary"',
+            'id="sequence-viewer-library-search-input"'
+          ],
+          after: 'id="sequence-viewer-library-list"'
+        },
+        {
+          file: 'sequence-viewer-detail-view.html',
+          rail: 'sequence-viewer-detail-sidebar',
+          scroll: 'sequence-viewer-detail-sidebar-scroll',
+          action: 'id="sequence-viewer-detail-new-btn"',
+          pinnedControls: [
+            'id="sequence-viewer-detail-library-filter-saved"',
+            'id="sequence-viewer-detail-library-filter-temporary"'
+          ],
+          after: 'id="sequence-viewer-detail-library-list"'
+        },
         { file: 'assay-view.html', rail: 'assay-create-sidebar', scroll: 'assay-create-sidebar-scroll' }
       ];
 
@@ -124,12 +145,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
         }
       };
 
-      for (const { file, rail, scroll, action, after } of rails) {
+      for (const { file, rail, scroll, action, pinnedControls = [], after } of rails) {
         const html = readLocalSource('ui', 'html', 'views', file);
         const tokens = [
           `${rail} app-left-rail left-rail-template__rail left-rail-template__rail--pinned`,
           'left-rail-template__pinned',
           ...(action ? [action] : []),
+          ...pinnedControls,
           `${scroll} left-rail-template__scroll`,
           ...(after ? [after] : [])
         ];
@@ -221,11 +243,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
       assert.match(html, /id="biology-notebook-layout" class="[^"]*is-tool-sidebar-collapsed/);
       assert.match(html, /id="biology-notebook-tool-fold-toggle"[^>]*aria-label="Open bench toolbox"[^>]*aria-controls="biology-notebook-tool-content"[\s\S]*?<svg/);
-      assert.match(html, /class="biology-notebook-tool-toolbar"[\s\S]*?id="biology-notebook-tool-tab-molarity"[\s\S]*?id="biology-notebook-tool-tab-buffer"[\s\S]*?id="biology-notebook-tool-tab-reaction"[\s\S]*?id="biology-notebook-add-assay-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-samples-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-table-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-tool-collapse-btn"/);
-      assert.match(html, /id="biology-notebook-tool-tab-molarity"[^>]*data-hover-caption="Molarity calculator"/);
-      assert.match(html, /id="biology-notebook-tool-tab-molarity"[^>]*class="biology-notebook-tool-tab"[^>]*aria-selected="false"/);
-      assert.doesNotMatch(html, /id="biology-notebook-tool-tab-molarity"[^>]*class="[^"]*is-active/);
-      assert.match(html, /id="biology-notebook-tool-panel-molarity"[^>]*data-notebook-tool-panel="molarity"[^>]*hidden/);
+      assert.match(html, /class="biology-notebook-tool-toolbar"[\s\S]*?id="biology-notebook-tool-tab-buffer"[\s\S]*?id="biology-notebook-tool-tab-reaction"[\s\S]*?id="biology-notebook-add-assay-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-samples-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-add-table-btn"[^>]*class="ghost-btn biology-notebook-tool-icon-action"[\s\S]*?id="biology-notebook-tool-collapse-btn"/);
+      assert.doesNotMatch(html, /biology-notebook-tool-tab-molarity/);
+      assert.match(html, /id="biology-notebook-tool-tab-buffer"[^>]*class="biology-notebook-tool-tab"[^>]*aria-selected="false"/);
+      assert.doesNotMatch(html, /id="biology-notebook-tool-tab-buffer"[^>]*class="[^"]*is-active/);
+      assert.match(html, /id="biology-notebook-tool-panel-buffer"[^>]*data-notebook-tool-panel="buffer"[^>]*hidden/);
       assert.match(html, /id="biology-notebook-tool-tab-buffer"[^>]*data-hover-caption="Buffer preparer"/);
       assert.match(html, /id="biology-notebook-tool-tab-reaction"[^>]*data-hover-caption="Fixed volume reaction"/);
       assert.match(html, /id="biology-notebook-add-assay-btn"[^>]*data-hover-caption="Add assay"/);
@@ -366,8 +388,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('sequence viewer cloning design toolbar splits back and run actions', () => {
       const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const sequenceCss = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+      const toolbarRule = sequenceCss.match(/\.sequence-viewer-cloning-design-toolbar\s*\{([^}]*)\}/)?.[1] || '';
 
       assert.match(sequenceDetailHtml, /class="sequence-viewer-cloning-design-toolbar"[\s\S]*class="sequence-viewer-cloning-design-toolbar-nav"[\s\S]*id="sequence-viewer-cloning-design-back-btn"[\s\S]*class="sequence-viewer-cloning-design-toolbar-main"[\s\S]*id="sequence-viewer-cloning-design-run-btn"/);
+      assert.match(toolbarRule, /position:\s*relative/);
+      assert.match(toolbarRule, /z-index:\s*1/);
+    });
+
+    test('Vector Builder uses a compact Back button with its destination preserved for accessibility', () => {
+      const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+
+      assert.match(sequenceDetailHtml, /id="sequence-viewer-vector-builder-back-btn"[^>]*aria-label="Back to Sequence Viewer"[^>]*>&larr; Back<\/button>/);
+      assert.doesNotMatch(sequenceDetailHtml, /id="sequence-viewer-vector-builder-back-btn"[^>]*>Back to Sequence Viewer<\/button>/);
     });
 
     test('sequence viewer detail toolbar contains controls, not inline status text', () => {
@@ -483,6 +516,28 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
     });
 
+    test('Assay grouping actions use one compact accessible icon toolbar', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
+      const analysisView = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
+
+      assert.match(html, /class="form-actions assay-analysis-group-actions"[^>]*role="group"[^>]*aria-label="Grouping actions"/);
+      assert.match(html, /id="assay-analysis-add-row-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected rows as group"[^>]*data-icon-caption="Add selected rows as group"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-analysis-add-column-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected columns as group"[^>]*data-icon-caption="Add selected columns as group"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-analysis-clear-groups-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Clear groups"[^>]*data-icon-caption="Clear groups"[\s\S]*?<svg/);
+      assert.doesNotMatch(html, /id="assay-analysis-(?:add-row-group|add-column-group|clear-groups)-btn"[^>]*>\s*(?:Add Selected as (?:Row|Column) Group|Clear Groups)\s*<\//);
+      assert.match(css, /\.assay-analysis-group-actions\s*>\s*\.assay-analysis-group-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.doesNotMatch(html, /assay-analysis-group-name|Replicate Group Name/);
+      assert.doesNotMatch(html, /assay-analysis-group-visualization/);
+      assert.doesNotMatch(css, /assay-analysis-group-(?:visualization|section|chips|chip|dot|color-)/);
+      assert.doesNotMatch(dom, /assayAnalysisGroupNameInput|assayAnalysisGroupVisualization/);
+      assert.doesNotMatch(resultsManager, /assayAnalysisGroupNameInput|assayAnalysisGroupVisualization|buildAnalysisGroupSection|assay-analysis-group-chip|Drag across result-table cells|Added "\$\{groupName\}"/);
+      assert.match(resultsManager, /const groupName = nextGroupName\(dimension\);/);
+      assert.doesNotMatch(analysisView, /Analysing the transformed plate/);
+    });
+
     test('Assay Analyze uses the same searchable Existing Assays browser as Setup', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
@@ -496,6 +551,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="assay-results-assay-select" hidden/);
       assert.doesNotMatch(html, /assay-results-controls-pinned|left-rail-template__pinned"[^>]*data-assay-rail-page/);
       assert.match(css, /\.assay-results-controls-panel > \.assay-results-rail-scroll\.left-rail-template__scroll\s*\{[^}]*overflow-y:\s*auto !important;[^}]*scrollbar-gutter:\s*stable;/s);
+      assert.match(html, /<span class="sr-only">Search Assays<\/span>\s*<input id="assay-search"/);
+      assert.match(html, /<span class="sr-only">Search Assays<\/span>\s*<input id="assay-results-search"/);
+      assert.doesNotMatch(html, /<label>\s*Search Assays\s*<input id="assay-(?:results-)?search"/);
+      assert.match(css, /#assay-search,\s*#assay-results-search\s*\{[^}]*height:\s*var\(--left-rail-item-min-height,\s*36px\);[^}]*min-height:\s*var\(--left-rail-item-min-height,\s*36px\);/s);
       // All three headline sections are <details> the user can fold away.
       ['assay-results-browser-panel', 'assay-analysis-panel', 'assay-chart-format-panel'].forEach((id) => {
         assert.match(html, new RegExp(`<details id="${id}"[^>]*foldable-section`), `${id} should use the shared foldable section`);
@@ -512,7 +571,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const workflowIds = [
         'assay-results-list',
         'assay-result-file-input',
-        'assay-analysis-group-visualization',
+        'assay-analysis-add-row-group-btn',
         'assay-analysis-group-by',
         'assay-analysis-kind',
         'assay-chart-format-panel',
@@ -588,32 +647,44 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('Assay plate transform creates a formula grid with the result-table layout and is saved', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
       const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
       const analysis = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
       const derived = readLocalSource('src', 'renderer', 'modules', 'assay', 'derived-plate.js');
       const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
+      const spreadsheetTables = readLocalSource('src', 'renderer', 'lib', 'spreadsheet-tables.js');
+      const referencePicker = readLocalSource('src', 'renderer', 'lib', 'spreadsheet-reference-picker.js');
       const storage = readLocalSource('src', 'renderer', 'modules', 'assay', 'artifact-storage.js');
 
       // The action creates a second grid beneath Plate Results; there is no separate
       // global-formula or guided-steps dialog.
       assert.match(html, /id="assay-result-data-panel"[\s\S]*?id="assay-transform-open-btn"/);
       assert.match(html, /id="assay-result-table-panel"[\s\S]*?id="assay-derived-plate-panel"[^>]*hidden/);
-      assert.match(html, /id="assay-derived-plate-panel"[\s\S]*?>Transformed Plate<[\s\S]*?id="assay-derived-plate-table"/);
-      assert.match(html, /id="assay-transform-clear-btn"/);
+      assert.match(html, /id="assay-result-table-panel"[\s\S]*?>Plate Results \(Table1\)</);
+      assert.match(html, /id="assay-derived-plate-panel"[\s\S]*?>Transformed Plate \(Table2\)<[\s\S]*?id="assay-derived-plate-table"/);
+      assert.match(html, /<summary class="foldable-section__summary">\s*<span>Transformed Plate \(Table2\)<\/span>\s*<button[^>]*id="assay-transform-clear-btn"[\s\S]*?<\/button>\s*<\/summary>/);
+      assert.match(html, /id="assay-transform-clear-btn"[^>]*assay-transform-remove-icon-btn[^>]*row-action-icon-btn-danger[^>]*aria-label="Remove transformed plate"[^>]*title="Remove transformed plate"[\s\S]*?<svg/);
+      assert.match(css, /\.assay-result-table-panel\s*>\s*\.foldable-section__summary\s*>\s*\.assay-transform-remove-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.doesNotMatch(html, /assay-transformed-plate-intro/);
       assert.doesNotMatch(html, /assay-transform-overlay|assay-transform-mode|assay-transform-formula/);
       assert.match(dom, /assayDerivedPlatePanel:\s*root\.getElementById\('assay-derived-plate-panel'\)/);
       assert.match(bindings, /assayTransformOpenBtn\?\.addEventListener\('click',\s*analysisView\.createTransformPlate\)/);
       assert.match(bindings, /analysisView\.redrawTransformGrid\(\)/);
 
       // Both tables are built from the same column, data, signature, and height
-      // builders. Formula references are resolved only from the original result map.
+      // builders. Point-mode clicks qualify their table so formulas can mix sources.
       assert.match(resultsManager, /buildResultGridColumns,/);
       assert.match(analysis, /buildResultGridColumns\(def,\s*\{ formatter: formatTransformCell \}\)/);
       assert.match(analysis, /buildResultGridData\(def,\s*transformFormulas\)/);
-      assert.match(analysis, /transformFormulas\[well\]\s*=\s*`=\$\{well\}`/);
-      assert.match(derived, /Every reference resolves[\s\S]*original result plate/);
+      assert.match(analysis, /transformFormulas\[well\]\s*=\s*`=Table1:\$\{well\}`/);
+      assert.match(analysis, /tableName\s*=\s*tableRoot === assayResultTable \? 'Table1' : 'Table2'/);
+      assert.match(analysis, /createSpreadsheetReferencePicker\(\{/);
+      assert.match(spreadsheetTables, /createSpreadsheetReferencePicker\(\{/);
+      assert.match(spreadsheetTables, /computeNotebookResultTables\(draftTables\)/);
+      assert.match(referencePicker, /applyReferencePick\(\{/);
+      assert.match(derived, /Bare references and Table1[\s\S]*Table2 reads computed cells/);
       assert.match(derived, /applyPlateCellFormulas/);
 
       // Persisted with the assay, restored on load, and carried through a Setup save.
@@ -713,6 +784,9 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('universal agent chat rail is shell-scoped and registry gated', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      const agentViewHtml = readLocalSource('ui', 'html', 'views', 'agent-view.html');
+      const agentViewCss = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const agentShellControllerSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'shell-controller.js');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
       const rendererShellSource = readRendererShellSource();
@@ -723,6 +797,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="universal-agent-chat-rail"/);
       assert.match(html, /id="agent-chat-rail-toggle-btn"/);
       assert.match(html, /id="agent-rail-chat-history"/);
+      assert.match(html, /class="agent-conversation-shell universal-agent-chat-rail__conversation is-empty-chat"/);
+      assert.match(agentViewHtml, /class="agent-conversation-shell is-empty-chat"/);
+      assert.match(agentViewCss, /\.agent-chat-stage\s*>\s*\.agent-conversation-shell\s*\{[^}]*grid-row:\s*2;/s);
+      assert.match(agentShellControllerSource, /classList\?\.toggle\('is-empty-chat', !hasMessages\)/);
       assert.match(html, /id="agent-rail-quick-prompts"/);
       assert.match(html, /Ask Hikari about this workspace\./);
       assert.match(html, /Summarize context/);
@@ -816,6 +894,43 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(viewerSource.includes('featureTableBody'), false);
     });
 
+    test('sequence viewer feature bars keep a uniform outline without a bold leading edge', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+      const overviewBar = css.match(/\.sequence-viewer-feature-bar\s*\{([^}]*)\}/)?.[1] || '';
+      const lineBar = css.match(/\.sequence-viewer-line-feature-bar\s*\{([^}]*)\}/)?.[1] || '';
+      const activeBar = css.match(/\.sequence-viewer-line-feature-active\s*\{([^}]*)\}/)?.[1] || '';
+
+      assert.match(overviewBar, /border:\s*1px solid/);
+      assert.match(lineBar, /border-color:/);
+      assert.doesNotMatch(overviewBar, /box-shadow:\s*inset/);
+      assert.doesNotMatch(lineBar, /box-shadow:\s*inset/);
+      assert.doesNotMatch(activeBar, /box-shadow:\s*inset/);
+    });
+
+    test('Vector Builder map and sequence panes use clear elevated canvases', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+      const paneRule = css.match(/\.sequence-viewer-vector-builder-map-card,\s*\.sequence-viewer-vector-builder-sequence-card\s*\{([^}]*)\}/)?.[1] || '';
+
+      assert.match(paneRule, /border-color:\s*var\(--theme-border-soft\)/);
+      assert.match(paneRule, /background:\s*var\(--theme-surface-elevated\)/);
+      assert.doesNotMatch(paneRule, /background:\s*var\(--theme-surface-subtle\)/);
+    });
+
+    test('Vector Builder replacement dialog uses search results without redundant guidance or a target selector', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'dom.js');
+      const controller = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'vector-builder', 'controller.js');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+
+      assert.doesNotMatch(html, /sequence-viewer-vector-builder-feature-replace-select|Recorded Feature/);
+      assert.doesNotMatch(html, /Search the stored feature database for a replacement\.|Search by feature name or stored sequence\./);
+      assert.doesNotMatch(dom, /vectorBuilderFeatureReplaceSelect/);
+      assert.doesNotMatch(controller, /vectorBuilderFeatureReplaceSelect|Search the stored feature database for a replacement\.|Search by feature name or stored sequence\.|Found \$\{featureReplaceResults\.length\} stored feature/);
+      assert.match(css, /#sequence-viewer-vector-builder-feature-replace-status:empty,\s*#sequence-viewer-vector-builder-feature-replace-results:empty\s*\{[^}]*display:\s*none;/s);
+      assert.match(html, /id="sequence-viewer-vector-builder-feature-replace-search"/);
+      assert.match(html, /id="sequence-viewer-vector-builder-feature-replace-results"/);
+    });
+
     test('sequence viewer keeps forward and reverse strands closely paired', () => {
       const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
       const constants = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'constants.js');
@@ -858,7 +973,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
-      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-vector-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-vector-builder-btn"/);
       // The rail's third action stays "Vector Builder" across home and detail so the
       // slot does not appear to rename itself; Protein Builder moved to the toolbar.
       assert.match(homeBlock, /id="sequence-viewer-home-vector-builder-btn"/);
