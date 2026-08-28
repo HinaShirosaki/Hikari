@@ -1,5 +1,5 @@
 import { buildCloningReactionSteps } from './cloning-reaction-steps.js';
-import { syncCloningReactionStepPages } from './cloning-step-pages.js';
+import { isExecutedNotebookEntry, syncCloningReactionStepPages } from './cloning-step-pages.js';
 import { appendGeneratedPcrReaction, buildPcrFixedReactionCalculation } from './pcr-reaction-setup.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
 import { asArray } from '../../lib/normalize.js';
@@ -421,11 +421,16 @@ export function createSequenceViewerCloningDesignNotebookPage({
   const matchingEntry = state.notebookEntries.find((candidate) => (
     cleanText(candidate?.sequenceViewerCloningDesign?.source, 80) === CLONING_NOTEBOOK_SOURCE
     && cleanText(candidate?.sequenceViewerCloningDesign?.sourceKey, 80) === sourceKey
+    && !isExecutedNotebookEntry(candidate)
   ));
-  const entryId = cleanText(requestedEntryId || matchingEntry?.id, 160)
+  const requestedId = cleanText(requestedEntryId, 160);
+  const requestedEntry = requestedId
+    ? state.notebookEntries.find((candidate) => cleanText(candidate?.id, 160) === requestedId) || null
+    : null;
+  const existingEntry = (isExecutedNotebookEntry(requestedEntry) ? null : requestedEntry) || matchingEntry || null;
+  const entryId = cleanText(existingEntry?.id, 160)
     || createStableId(createId, 'sequence_viewer_cloning_entry');
-  const existingIndex = state.notebookEntries.findIndex((candidate) => cleanText(candidate?.id, 160) === entryId);
-  const existingEntry = existingIndex >= 0 ? state.notebookEntries[existingIndex] : null;
+  const existingIndex = existingEntry ? state.notebookEntries.indexOf(existingEntry) : -1;
   const recordName = cleanText(source?.recordName || record?.name, 160) || 'Edited sequence';
   const resultTable = buildPrimerResultTable(displayPlan?.primers);
   const entry = {

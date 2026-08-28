@@ -1,0 +1,528 @@
+.sequence-viewer-feature-editor-overlay,
+.sequence-viewer-primer-design-overlay,
+.sequence-viewer-sequence-edit-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  background: var(--sequence-viewer-overlay-soft);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.sequence-viewer-feature-editor-overlay[hidden],
+.sequence-viewer-primer-design-overlay[hidden],
+.sequence-viewer-sequence-edit-overlay[hidden] {
+  display: none !important;
+}
+
+#sequence-viewer-vector-builder-feature-replace-overlay {
+  /* Top-aligned (from .app-dialog-overlay--top) so the dialog does not jump as
+     results load, but anchored to the workspace shell instead of the window:
+     the shell already starts below the top bar, whatever height that bar is at.
+     A window-fixed overlay put the dialog head under the bar, and the shared
+     76px offset does not cover the two-row bar of a narrow window. */
+  position: absolute;
+  padding: 18px;
+  overflow: hidden;
+}
+
+#sequence-viewer-vector-builder-feature-replace-form {
+  max-height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#sequence-viewer-vector-builder-feature-replace-results {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-feature-editor,
+.sequence-viewer-primer-design-dialog,
+.sequence-viewer-sequence-edit-dialog {
+  width: min(100%, 560px);
+  border-radius: 8px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-sequence-edit-dialog {
+  width: min(100%, 480px);
+}
+
+.sequence-viewer-primer-design-dialog {
+  width: min(100%, 760px);
+}
+
+.sequence-viewer-feature-editor-head,
+.sequence-viewer-primer-design-head,
+.sequence-viewer-sequence-edit-head {
+  align-items: center;
+}
+
+.sequence-viewer-feature-editor-head h4,
+.sequence-viewer-primer-design-head h4,
+.sequence-viewer-sequence-edit-head h4 {
+  margin: 0;
+}
+
+.sequence-viewer-primer-design-result {
+  display: grid;
+  gap: 10px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.sequence-viewer-primer-design-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-summary p,
+.sequence-viewer-primer-design-warnings p {
+  margin: 0;
+}
+
+.sequence-viewer-primer-design-warnings {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-warning {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-feature-editor-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sequence-viewer-feature-editor-grid label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-feature-editor-grid input,
+.sequence-viewer-feature-editor-grid select,
+.sequence-viewer-feature-editor-grid textarea {
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  font: inherit;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.sequence-viewer-feature-editor-field-wide {
+  grid-column: 1 / -1;
+}
+
+.sequence-viewer-sequence-edit-input-wrap {
+  display: grid;
+  gap: 5px;
+  font-size: 0.84rem;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-sequence-edit-input-wrap textarea {
+  min-height: 78px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  letter-spacing: 0;
+  padding: 8px 10px;
+  resize: vertical;
+  text-transform: uppercase;
+}
+
+.sequence-viewer-sequence-edit-delete-message {
+  margin: 0;
+}
+
+@media (max-width: 1260px) {
+  .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-backbone-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .sequence-viewer-backbone-dialog-overlay,
+.sequence-viewer-alignment-workspace {
+    padding: max(56px, env(safe-area-inset-top, 0px)) 10px 10px;
+  }
+
+  .sequence-viewer-backbone-dialog {
+    width: 100%;
+    max-height: calc(100svh - 66px);
+    padding: 12px;
+  }
+
+  .sequence-viewer-alignment-dialog {
+    width: 100%;
+    max-height: calc(100svh - 66px);
+    padding: 12px;
+  }
+
+  
+  .sequence-viewer-rail-nav-actions .small-note {
+    margin-left: 0;
+  }
+
+  .sequence-viewer-protein-builder-confirmation {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-protein-builder-confirmation-actions {
+    justify-self: start;
+  }
+
+  .sequence-viewer-results {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-feature-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-dual-line {
+    grid-template-columns: 58px 1fr;
+    gap: 8px;
+  }
+
+  .sequence-viewer-strand-row {
+    grid-template-columns: 24px 1fr 24px;
+    font-size: 0.84rem;
+  }
+
+  .sequence-viewer-seq-text {
+    font-size: 0.84rem;
+  }
+
+  .sequence-viewer-protein-builder-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .sequence-viewer-cloning-design-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+.sequence-viewer-protein-builder-toolbar-nav,
+.sequence-viewer-protein-builder-toolbar-copy,
+.sequence-viewer-protein-builder-toolbar-actions,
+.sequence-viewer-cloning-design-toolbar-nav,
+.sequence-viewer-cloning-design-toolbar-main,
+.sequence-viewer-cloning-design-toolbar-copy,
+.sequence-viewer-cloning-design-toolbar-actions {
+    grid-column: 1;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-nav,
+.sequence-viewer-cloning-design-toolbar-nav {
+    padding-left: 0;
+  }
+
+  .sequence-viewer-protein-builder-toolbar-actions,
+.sequence-viewer-cloning-design-toolbar-actions {
+    justify-self: start;
+  }
+
+  .sequence-viewer-cloning-design-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .sequence-viewer-protein-builder-block-actions {
+    opacity: 1;
+  }
+
+  .sequence-viewer-backbone-dialog-candidates {
+    max-height: none;
+  }
+
+  .sequence-viewer-backbone-dialog-preview {
+    min-height: 420px;
+  }
+}
+
+/* Extracted from ui/css/themes/modes.css */
+body.theme-night .sequence-viewer-protein-builder-toolbar,
+body.theme-night .sequence-viewer-cloning-design-toolbar,
+body.theme-night .sequence-viewer-protein-builder-panel,
+body.theme-night .sequence-viewer-cloning-design-panel,
+body.theme-night .sequence-viewer-cloning-design-result-section,
+body.theme-night .sequence-viewer-alignment-panel {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--theme-surface);
+}
+
+body.theme-night .sequence-viewer-library-switch {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-control);
+}
+
+body.theme-night .sequence-viewer-library-switch-btn {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-mode-switch {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-control);
+}
+
+body.theme-night .sequence-viewer-library-item {
+  background: transparent;
+}
+
+body.theme-night .sequence-viewer-library-item:hover,
+body.theme-night .sequence-viewer-library-item-active {
+  background: var(--sequence-viewer-night-hover);
+}
+
+body.theme-night .sequence-viewer-library-item-name {
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-protein-builder-common-item,
+body.theme-night .sequence-viewer-protein-builder-feature-item,
+body.theme-night .sequence-viewer-protein-builder-common-fold {
+  background: transparent;
+}
+
+body.theme-night .sequence-viewer-preview-host {
+  border-color: transparent;
+  background: transparent;
+}
+
+body.theme-night .sequence-viewer-mode-btn {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-toggle {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-select {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-inline-select select {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-control-strong);
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-inline-toggle-group-label {
+  color: var(--sequence-viewer-night-muted);
+}
+
+
+
+body.theme-night .sequence-viewer-aa-chip {
+  box-shadow: inset 0 0 0 1px var(--sequence-viewer-night-inset);
+}
+
+body.theme-night .sequence-viewer-feature-rail-host,
+body.theme-night .sequence-viewer-feature-detail {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-panel);
+}
+
+body.theme-night .sequence-viewer-feature-rail {
+  border-color: var(--sequence-viewer-track-border);
+  background:
+    linear-gradient(to right, var(--sequence-viewer-track-grid) 1px, transparent 1px),
+    var(--sequence-viewer-track-surface);
+  background-size: 12.5% 100%;
+}
+
+body.theme-night .sequence-viewer-feature-bar,
+body.theme-night .sequence-viewer-line-feature-bar {
+  border-color: color-mix(in srgb, var(--sequence-viewer-feature-color) 66%, var(--theme-border));
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 20%, var(--theme-surface-elevated));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar {
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 34%, var(--theme-text-strong));
+}
+
+body.theme-night .sequence-viewer-line-feature-bar:hover,
+body.theme-night .sequence-viewer-line-feature-bar:focus-visible {
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 28%, var(--theme-surface-elevated));
+}
+
+body.theme-night .sequence-viewer-feature-axis span,
+body.theme-night .sequence-viewer-seq-coord,
+body.theme-night .sequence-viewer-strand-end {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-seq-highlight {
+  --sequence-viewer-selection-highlight: var(--sequence-viewer-selection-highlight-strong);
+  background: var(--sequence-viewer-selection-highlight);
+}
+
+body.theme-night .sequence-viewer-restriction-label {
+  color: var(--sequence-viewer-night-strong);
+}
+
+body.theme-night .sequence-viewer-restriction-box {
+  border-color: var(--sequence-viewer-night-restriction-border);
+  background: var(--sequence-viewer-night-restriction-bg);
+}
+
+body.theme-night .sequence-viewer-restriction-cut-svg polyline {
+  stroke: var(--sequence-viewer-night-restriction-line);
+}
+
+body.theme-night .sequence-viewer-restriction-annot-active .sequence-viewer-restriction-box {
+  border-color: var(--sequence-viewer-night-active-border);
+  background: var(--sequence-viewer-night-active-bg);
+}
+
+body.theme-night .sequence-viewer-line-feature:not(.sequence-viewer-line-feature-bar) {
+  border-color: var(--sequence-viewer-night-feature-border);
+  color: inherit;
+}
+
+body.theme-night .sequence-viewer-line-feature-active {
+  border-color: var(--sequence-viewer-night-feature-active-border);
+  box-shadow: 0 0 0 1px var(--sequence-viewer-night-feature-ring);
+  color: inherit;
+}
+
+body.theme-night .sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
+}
+
+body.theme-night .sequence-viewer-feature-hover-tooltip {
+  border-color: color-mix(in srgb, var(--theme-border) 84%, var(--sequence-viewer-track-surface) 8%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--sequence-viewer-night-tooltip-base) 8%);
+  box-shadow: 0 2px 8px var(--sequence-viewer-night-shadow);
+  color: var(--theme-text-strong);
+}
+
+body.theme-night .sequence-viewer-context-menu {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+}
+
+body.theme-night .sequence-viewer-context-item {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--sequence-viewer-night-menu-item);
+  color: var(--sequence-viewer-night-text);
+}
+
+body.theme-night .sequence-viewer-context-item:hover:not(:disabled),
+body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: var(--sequence-viewer-night-menu-hover);
+}
+
+body.theme-night .sequence-viewer-feature-editor-overlay,
+body.theme-night .sequence-viewer-primer-design-overlay,
+body.theme-night .sequence-viewer-sequence-edit-overlay {
+  background: var(--sequence-viewer-night-overlay);
+}
+
+body.theme-night .sequence-viewer-alignment-workspace {
+  background: var(--sequence-viewer-night-overlay-strong);
+}
+
+body.theme-night .sequence-viewer-feature-editor,
+body.theme-night .sequence-viewer-primer-design-dialog,
+body.theme-night .sequence-viewer-sequence-edit-dialog {
+  border-color: var(--sequence-viewer-night-border-strong);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid label,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap {
+  color: var(--sequence-viewer-night-muted);
+}
+
+body.theme-night .sequence-viewer-feature-editor-grid input,
+body.theme-night .sequence-viewer-feature-editor-grid select,
+body.theme-night .sequence-viewer-feature-editor-grid textarea,
+body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
+  border-color: var(--sequence-viewer-night-border);
+  background: var(--sequence-viewer-night-input);
+  color: var(--sequence-viewer-night-text);
+}
+
+.sequence-viewer-library-item {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sequence-viewer-inline-toggle-group-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sequence-viewer-inline-toggle,
+.sequence-viewer-inline-toggle-group,
+.sequence-viewer-context-item {
+  border-radius: 6px;
+}
+
+@media (max-width: 980px) {
+  .sequence-viewer-home-layout,
+.sequence-viewer-protein-builder-grid,
+.sequence-viewer-cloning-design-grid {
+    min-width: 0;
+  }
+
+  .sequence-viewer-protein-builder-workspace,
+.sequence-viewer-protein-builder-grid-wrap,
+.sequence-viewer-protein-builder-main,
+.sequence-viewer-cloning-design-main {
+    overflow: visible;
+  }
+
+  .sequence-viewer-protein-builder-grid,
+.sequence-viewer-cloning-design-grid {
+    height: auto;
+  }
+
+  .sequence-viewer-protein-builder-main,
+.sequence-viewer-cloning-design-main {
+    grid-template-rows: auto auto;
+  }
+
+  #sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar.left-rail-template__rail--pinned,
+  #sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar.left-rail-template__rail--pinned,
+  #sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar.left-rail-template__rail--pinned {
+    min-height: 0;
+    max-height: min(42vh, 360px);
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+  }
+}
+

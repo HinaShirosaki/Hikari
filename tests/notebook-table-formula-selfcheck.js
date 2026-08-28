@@ -17,7 +17,12 @@ const {
   resolveNotebookResultTableValues,
   resolveNotebookResultTablesValues
 } = loadEsmStyleModule(path.join(root, 'src/renderer/lib/notebook-table-formulas.js'));
-const { addNotebookResultTableColumn, createDefaultNotebookResultTable } = loadEsmStyleModule(
+const {
+  addNotebookResultTableColumn,
+  createDefaultNotebookResultTable,
+  createMolarityNotebookResultTable,
+  normalizeNotebookResultTable
+} = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/notebook-result-tables.js')
 );
 const { createSpreadsheetReferencePicker } = loadEsmStyleModule(
@@ -418,5 +423,43 @@ assert.equal(sized({ columnCount: 0, rowCount: 0 }), '3x3', 'zero falls back to 
 assert.equal(sized({ columnCount: 2.7, rowCount: 4.9 }), '2x4', 'fractions are truncated, not rounded up');
 // Every cell is a DOM node, so a stray digit must not build a grid that hangs the app.
 assert.equal(sized({ columnCount: 9999, rowCount: 99999 }), '50x500', 'an absurd size is clamped');
+
+// --- the molarity worksheet: any three columns determine the fourth ---
+// Entry | MW (g/mol) | Weight (mg) | Volume (mL) | Molarity (mM), one row per sample.
+const molarity = (typed) => {
+  const table = createMolarityNotebookResultTable(null, 1);
+  Object.entries(typed).forEach(([address, value]) => {
+    table.rows[0][table.columns['ABCDE'.indexOf(address)].field] = value;
+  });
+  const { byRowId } = computeNotebookResultTable(table);
+  const cells = byRowId[table.rows[0].id];
+  return Object.fromEntries(table.columns.map((column, index) => (
+    ['ABCDE'[index], cells[column.field]]
+  )));
+};
+
+const solvedVolume = molarity({ A: 'BSA', B: '100', C: '5', E: '50' });
+assert.equal(solvedVolume.D.text, '1', 'three filled columns compute the fourth');
+assert.equal(solvedVolume.D.pending, undefined, 'the computed column is a result, not a leftover');
+assert.equal(molarity({ B: '100', C: '5', D: '1' }).E.text, '50', '5 mg of MW 100 in 1 mL is 50 mM');
+assert.equal(molarity({ B: '100', D: '1', E: '50' }).C.text, '5', 'weight comes back from the other three');
+assert.equal(molarity({ C: '5', D: '1', E: '50' }).B.text, '100', 'MW comes back from the other three');
+
+// Two filled columns cannot give a number, so both unknowns show what is left of the
+// arithmetic -- the loop between them is "not determined yet", not a circular reference.
+const twoKnown = molarity({ B: '100', C: '5' });
+assert.equal(twoKnown.D.text, '5000/(100*E1)', 'the volume column states its own formula');
+assert.equal(twoKnown.E.text, '5000/(100*D1)', 'the molarity column states its own formula');
+assert.equal(twoKnown.D.pending, true, 'a column waiting on another is pending');
+assert.equal(twoKnown.D.error, null, 'waiting on the other unknown is not an error');
+assert.equal(twoKnown.B.text, '100', 'a typed column stays exactly as typed');
+
+// Outside a solve table the same mutual reference is still the mistake it always was.
+assert.equal(text(tableOf([['=B1+1', '=A1+1']]), 0, 0), '#ERROR', 'plain tables still reject cycles');
+assert.equal(
+  normalizeNotebookResultTable({ ...createMolarityNotebookResultTable(null) }).solve,
+  true,
+  'the solve flag survives normalization, so it survives being saved and reopened'
+);
 
 console.log('notebook table formula self-check passed');

@@ -32,27 +32,16 @@ export function installProteinBuilderBlockRendering(ctx) {
       </button>
     `).join('');
 
-    if (group.id === 'tag' || group.id === 'linker') {
-      return `
-        <details class="sequence-viewer-protein-builder-common-fold">
-          <summary>
-            <span>${escapeHtml(group.label)}</span>
-            <span class="sequence-viewer-protein-builder-common-fold-meta">${escapeHtml(formatCount(group.items.length, 'block'))}</span>
-          </summary>
-          <div class="sequence-viewer-protein-builder-common-list">
-            ${itemsMarkup}
-          </div>
-        </details>
-      `;
-    }
-
     return `
-      <section class="sequence-viewer-protein-builder-common-group">
-        <h5>${escapeHtml(group.label)}</h5>
+      <details class="sequence-viewer-protein-builder-common-fold">
+        <summary>
+          <span>${escapeHtml(group.label)}</span>
+          <span class="sequence-viewer-protein-builder-common-fold-meta">${escapeHtml(formatCount(group.items.length, 'block'))}</span>
+        </summary>
         <div class="sequence-viewer-protein-builder-common-list">
           ${itemsMarkup}
         </div>
-      </section>
+      </details>
     `;
   }
 
@@ -70,8 +59,10 @@ export function installProteinBuilderBlockRendering(ctx) {
 
     const query = cleanText(state.featureSearchQuery, 600);
     const results = Array.isArray(state.featureSearchResults) ? state.featureSearchResults : [];
-    if (!query) {
-      elements.proteinBuilderFeatureSearchResults.innerHTML = '<p class="small-note">Search by feature name or stored sequence.</p>';
+    // Below the 2-character minimum no search has run, so the panel stays quiet
+    // instead of claiming nothing matched.
+    if (query.length < 2) {
+      elements.proteinBuilderFeatureSearchResults.innerHTML = '';
       return;
     }
     if (!results.length) {

@@ -107,8 +107,16 @@ export function buildConstruct(payload = {}) {
     };
   });
 
-  const sequence = mappedParts.map((part) => part.sequence).join('');
+  const chainSequence = mappedParts.map((part) => part.sequence).join('');
+  // The chain gives the fusion; the initiator M, a stop, or a point mutation is
+  // typed onto the assembled sequence afterwards and wins from here on.
+  const override = sanitizeProteinAssemblySequence(payload?.sequenceOverride || '', true);
+  const isEdited = Boolean(override.length) && override !== chainSequence;
+  const sequence = isEdited ? override : chainSequence;
   const length = sequence.length;
+  if (isEdited) {
+    warnings.push('Assembled sequence was edited by hand, so it no longer matches the block chain.');
+  }
 
   if (sequence.includes('*')) {
     if (sequence.endsWith('*') && sequence.indexOf('*') === sequence.length - 1) {
@@ -131,6 +139,8 @@ export function buildConstruct(payload = {}) {
     sourceName,
     parts: mappedParts,
     sequence,
+    chainSequence,
+    isEdited,
     length,
     selfCleavingCount,
     productCount,

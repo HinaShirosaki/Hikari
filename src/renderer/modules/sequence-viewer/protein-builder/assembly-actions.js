@@ -31,9 +31,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
       state.storedBackbones = await ctx.loadStoredBackboneCandidates();
       state.selectedBackboneId = cleanText(state.storedBackbones[0]?.id, 400);
       ctx.renderAssemblyDialog();
-      if (state.storedBackbones.length) {
-        ctx.setBuilderStatus('Select a stored backbone to assemble the plasmid.');
-      } else {
+      if (!state.storedBackbones.length) {
         ctx.setBuilderStatus('No stored backbones found. Use Recognize Backbone/Insert on a vector and Apply Selection first.');
       }
     } catch (error) {

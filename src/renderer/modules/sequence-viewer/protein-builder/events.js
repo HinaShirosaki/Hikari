@@ -12,15 +12,27 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setBuilderStatus('Returned to Sequence Library.');
     });
 
-    elements.proteinBuilderResetBtn?.addEventListener('click', () => {
-      ctx.resetRows();
-      ctx.setBuilderStatus('Reset the chain to the default layout.');
+    // The assembled sequence is editable so an initiator M, a stop, or a point
+    // mutation can go on without inventing a block for it.
+    elements.proteinBuilderSequence?.addEventListener('change', () => {
+      const applied = ctx.setAssembledSequenceOverride(elements.proteinBuilderSequence.value);
+      // Write the accepted sequence back even while the field still has focus,
+      // so what is on screen is what the build will use.
+      elements.proteinBuilderSequence.value = applied.sequence;
       ctx.render();
+      if (applied.dropped.length) {
+        ctx.setBuilderStatus(
+          `Ignored ${applied.dropped.join(', ')}: the assembled sequence takes the 20 amino acids and *.`,
+          true
+        );
+      }
     });
 
-    elements.proteinBuilderAddCustomBtn?.addEventListener('click', () => {
-      ctx.addCustomRow();
-      ctx.setBuilderStatus('Added a custom block.');
+    elements.proteinBuilderSequenceResetBtn?.addEventListener('click', (event) => {
+      event.preventDefault?.();
+      ctx.setAssembledSequenceOverride('');
+      ctx.render();
+      ctx.setBuilderStatus('Assembled sequence reset to the block chain.');
     });
 
     elements.proteinBuilderForm?.addEventListener('input', (event) => {

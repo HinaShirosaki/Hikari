@@ -1,0 +1,496 @@
+/* Chart toolbar: the settings changed constantly, kept beside the figure. */
+.assay-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-chart-toolbar[hidden] {
+  display: none;
+}
+
+.assay-chart-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.assay-chart-toolbar-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-toolbar-seg {
+  display: flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--theme-surface-elevated);
+}
+
+.assay-chart-toolbar-seg button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 3px 9px;
+  min-height: 26px;
+  border: 0;
+  border-right: 1px solid var(--theme-border-soft);
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.assay-chart-toolbar-seg button:last-child {
+  border-right: 0;
+}
+
+.assay-chart-toolbar-seg button[aria-pressed="true"] {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  font-weight: 600;
+}
+
+.assay-chart-toolbar-seg button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.assay-chart-toolbar select {
+  min-height: 26px;
+  padding: 2px 6px;
+  font-size: 0.8rem;
+}
+
+.assay-chart-toolbar-btn {
+  min-height: 26px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+}
+
+.assay-chart-toolbar-btn[aria-pressed="true"] {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-toolbar-spacer {
+  flex: 1 1 auto;
+}
+
+/* Format panel. */
+.assay-chart-style {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-chart-style-presets {
+  display: grid;
+  gap: 6px;
+}
+
+.assay-chart-style-preset-actions {
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+/* Five tabs in a narrow rail. The rail has vertical room and no horizontal room, so
+   they wrap onto a second line rather than clipping or scrolling out of reach. */
+.assay-chart-style-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 2px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.assay-chart-style-tabs button {
+  font: inherit;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 5px 7px 6px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.assay-chart-style-tabs button:hover {
+  color: var(--theme-text-strong);
+}
+
+.assay-chart-style-tabs button[aria-selected="true"] {
+  color: var(--theme-text-strong);
+  border-bottom-color: var(--theme-accent);
+  font-weight: 650;
+}
+
+.assay-chart-style-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-chart-style-panel[hidden] {
+  display: none;
+}
+
+.assay-chart-style-panel label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--theme-text-strong);
+}
+
+.assay-chart-style-panel label[hidden] {
+  display: none;
+}
+
+.assay-chart-style-subsection {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.assay-chart-style-subsection[hidden] {
+  display: none;
+}
+
+.assay-chart-style-subhead {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-style-note {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--theme-text-muted);
+}
+
+/* X and Y side by side, so per-axis settings read as a pair. */
+.assay-chart-style-axis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3.6rem) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+/* The rail is narrow; let the paired controls shrink instead of clipping. */
+.assay-chart-style-axis-grid select,
+.assay-chart-style-axis-grid input[type="number"] {
+  min-width: 0;
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 3px 5px;
+}
+
+.assay-chart-style-axis-grid > [hidden] {
+  visibility: hidden;
+  display: revert;
+}
+
+.assay-chart-style-axis-head {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--theme-accent);
+  text-align: center;
+}
+
+.assay-chart-style-axis-label {
+  font-size: 0.75rem;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-style-axis-grid input[type="checkbox"] {
+  justify-self: center;
+  width: auto;
+}
+
+.assay-chart-style-checkbox {
+  flex-direction: row;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.assay-chart-style-checkbox[hidden] {
+  display: none !important;
+}
+
+.assay-chart-style-checkbox input[type="checkbox"] {
+  width: auto;
+}
+
+.assay-chart-style-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.assay-chart-style-panel input[type="color"] {
+  width: 100%;
+  min-height: 32px;
+  padding: 2px;
+}
+
+.assay-chart-style-series {
+  display: grid;
+  gap: 6px;
+}
+
+.assay-chart-style-series-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.assay-chart-style-series-shape {
+  max-width: 104px;
+}
+
+.assay-chart-style-series-row input[type="color"] {
+  width: 44px;
+  min-height: 28px;
+  padding: 2px;
+}
+
+.assay-chart-style-series-empty {
+  font-size: 0.78rem;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-style-actions {
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.assay-chart-picker-mount {
+  position: relative;
+  display: block;
+}
+
+.assay-chart-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.assay-chart-picker__trigger:hover {
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-picker.is-open .assay-chart-picker__trigger {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 1px var(--theme-accent);
+}
+
+.assay-chart-picker-mount.is-disabled .assay-chart-picker__trigger {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.assay-chart-picker__preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  color: var(--theme-text-strong);
+}
+
+.assay-chart-picker__preview svg {
+  display: block;
+}
+
+.assay-chart-picker__label {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  color: var(--theme-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assay-chart-picker__caret {
+  display: inline-flex;
+  align-items: center;
+  color: var(--theme-text-muted);
+}
+
+.assay-chart-picker__menu {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  box-shadow: var(--theme-shadow-medium);
+}
+
+.assay-chart-picker__option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  min-height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.assay-chart-picker__option:hover {
+  background: var(--theme-surface-hover, color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface)));
+}
+
+.assay-chart-picker__option.is-selected {
+  background: var(--theme-surface-active, color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface)));
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-picker__option-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  color: var(--theme-text-strong);
+}
+
+.assay-chart-picker__option-preview svg {
+  display: block;
+}
+
+.assay-chart-picker__option-label {
+  font-size: 0.85rem;
+  color: var(--theme-text-strong);
+  flex: 1 1 auto;
+}
+
+.assay-chart-text-bar {
+  display: grid;
+  gap: 6px;
+}
+
+.assay-chart-text-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.assay-chart-text-bar__font {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.assay-chart-text-bar__font-mount,
+.assay-chart-text-bar__size-mount {
+  display: block;
+}
+
+.assay-chart-text-bar__font-mount {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.assay-chart-text-bar__size-mount {
+  flex: 0 0 70px;
+}
+
+.assay-chart-text-bar__color {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 38px;
+}
+
+.assay-chart-text-bar__color input[type="color"] {
+  width: 38px;
+  min-height: 30px;
+  padding: 2px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface);
+  cursor: pointer;
+}
+
+.assay-chart-text-bar__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.assay-chart-text-bar__toggle:hover {
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-text-bar__toggle.is-active {
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
+}
+
+.assay-chart-text-bar__toggle svg {
+  display: block;
+}
+
+.assay-chart-text-bar__sep {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--theme-border-soft);
+  margin: 0 4px;
+}
+
+.assay-chart-text-font-option {
+  display: inline-block;
+  font-size: 0.95em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}

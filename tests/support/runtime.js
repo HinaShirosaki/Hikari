@@ -20,7 +20,10 @@ function createMemoryStorage() {
   };
 }
 
-function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = []) {
+// One graph load evaluates each module once, the way real ESM does. Without the
+// cache a diamond (two parts importing a shared helper) re-evaluates the whole
+// subtree per edge, which blows the heap on deeply split modules.
+function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [], graphCache = new Map()) {
   const source = fs.readFileSync(filePath, 'utf8');
   const exportNames = new Set();
   const declaredNames = new Set();
@@ -52,7 +55,10 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [])
     }
 
     const key = `__esmImport${importCounter += 1}`;
-    importGlobals[key] = loadEsmStyleModule(resolved, extraGlobals);
+    if (!graphCache.has(resolved)) {
+      graphCache.set(resolved, loadEsmStyleModule(resolved, extraGlobals, [], graphCache));
+    }
+    importGlobals[key] = graphCache.get(resolved);
     return key;
   };
 

@@ -45,6 +45,8 @@ export function createSequenceViewerHomeController(config = {}) {
   let previewedEntryId = '';
   let libraryContextType = '';
   let libraryContextId = '';
+  // { type, id, name, list } while a library row is being renamed in place.
+  let libraryRename = null;
   let draggedLibraryEntryId = '';
   let activeFolderDropTarget = null;
 
@@ -103,94 +105,89 @@ export function createSequenceViewerHomeController(config = {}) {
     menu.style.top = `${Math.max(8, Number(event?.clientY) || 0)}px`;
   }
 
-  async function renameLibraryEntryFromContextMenu() {
-    const entryId = libraryContextType === 'entry' ? cleanText(libraryContextId, 200) : '';
-    const entry = (Array.isArray(state.libraryEntries) ? state.libraryEntries : [])
-      .find((item) => cleanText(item?.id, 200) === entryId);
-    hideLibraryContextMenus();
-    if (!entry) {
-      return;
-    }
-    const promptFn = rootDocument?.defaultView?.prompt || globalThis?.prompt;
-    if (typeof promptFn !== 'function') {
-      setHomeStatus('Rename prompt unavailable.', true);
-      return;
-    }
-    const requestedName = promptFn('Rename sequence', String(entry.name || 'sequence'));
-    if (requestedName === null) {
-      return;
-    }
-    const nextName = normalizePromptName(requestedName);
-    if (!nextName) {
-      setHomeStatus('Enter a sequence name.', true);
-      return;
-    }
-    try {
-      await onRenameLibraryEntry(entryId, nextName);
-    } catch (error) {
-      setHomeStatus(error?.message || 'Failed to rename sequence entry.', true);
-    }
-  }
-
   function normalizePromptName(value) {
     return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 140);
   }
 
   function getPromptFunction() {
-    return rootDocument?.defaultView?.prompt || globalThis?.prompt;
+    const windowRef = rootDocument?.defaultView;
+    return windowRef?.prompt?.bind(windowRef) || globalThis.prompt?.bind(globalThis) || null;
   }
 
-  async function createLibraryFolderFromPrompt() {
+  function getLibraryRenameTarget(type, id) {
+    const collection = type === 'folder' ? state.libraryFolders : state.libraryEntries;
+    return (Array.isArray(collection) ? collection : [])
+      .find((item) => cleanText(item?.id, 200) === cleanText(id, 200)) || null;
+  }
+
+  function focusLibraryRenameInput() {
+    const input = libraryRename?.list?.querySelector?.('[data-sequence-library-rename-input]');
+    input?.focus?.();
+    input?.setSelectionRange?.(0, String(input?.value || '').length);
+  }
+
+  function beginLibraryRename(type, id, libraryList) {
+    const target = getLibraryRenameTarget(type, id);
     hideLibraryContextMenus();
-    const promptFn = getPromptFunction();
-    if (typeof promptFn !== 'function') {
-      setHomeStatus('Folder prompt unavailable.', true);
+    if (!target) {
       return;
     }
-    const requestedName = promptFn('New sequence folder', 'New Folder');
-    if (requestedName === null) {
+    libraryRename = {
+      type,
+      id: cleanText(target.id, 200),
+      name: String(target.name || (type === 'folder' ? 'Folder' : 'sequence')),
+      list: libraryList
+    };
+    renderLibraryList();
+    focusLibraryRenameInput();
+  }
+
+  // Folder names are unique in the store, so the placeholder has to be too.
+  function buildDefaultLibraryFolderName() {
+    const taken = new Set((Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
+      .map((folder) => normalizePromptName(folder?.name).toLowerCase()));
+    let suffix = 1;
+    while (taken.has((suffix === 1 ? 'new folder' : `new folder ${suffix}`))) {
+      suffix += 1;
+    }
+    return suffix === 1 ? 'New Folder' : `New Folder ${suffix}`;
+  }
+
+  async function commitLibraryRename() {
+    const { type, id } = libraryRename || {};
+    const nextName = normalizePromptName(libraryRename?.name);
+    if (!type || !id) {
       return;
     }
-    const nextName = normalizePromptName(requestedName);
     if (!nextName) {
-      setHomeStatus('Enter a folder name.', true);
+      setHomeStatus(`Enter a ${type === 'folder' ? 'folder' : 'sequence'} name.`, true);
+      focusLibraryRenameInput();
       return;
     }
+    try {
+      if (type === 'folder') {
+        const renamed = await onRenameLibraryFolder(id, nextName);
+        setHomeStatus(`Renamed folder to ${renamed?.name || nextName}.`);
+      } else {
+        await onRenameLibraryEntry(id, nextName);
+      }
+      libraryRename = null;
+      renderLibraryList();
+    } catch (error) {
+      setHomeStatus(error?.message || `Failed to rename sequence ${type}.`, true);
+      focusLibraryRenameInput();
+    }
+  }
+
+  async function createLibraryFolderFromContextMenu(libraryList) {
+    hideLibraryContextMenus();
+    const nextName = buildDefaultLibraryFolderName();
     try {
       const folder = await onCreateLibraryFolder(nextName);
       setHomeStatus(`Created folder: ${folder?.name || nextName}.`);
+      beginLibraryRename('folder', folder?.id, libraryList);
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to create sequence folder.', true);
-    }
-  }
-
-  async function renameLibraryFolderFromContextMenu() {
-    const folderId = libraryContextType === 'folder' ? cleanText(libraryContextId, 200) : '';
-    const folder = (Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
-      .find((item) => cleanText(item?.id, 200) === folderId);
-    hideLibraryContextMenus();
-    if (!folder) {
-      return;
-    }
-    const promptFn = getPromptFunction();
-    if (typeof promptFn !== 'function') {
-      setHomeStatus('Folder prompt unavailable.', true);
-      return;
-    }
-    const requestedName = promptFn('Rename sequence folder', String(folder.name || 'Folder'));
-    if (requestedName === null) {
-      return;
-    }
-    const nextName = normalizePromptName(requestedName);
-    if (!nextName) {
-      setHomeStatus('Enter a folder name.', true);
-      return;
-    }
-    try {
-      const renamed = await onRenameLibraryFolder(folderId, nextName);
-      setHomeStatus(`Renamed folder to ${renamed?.name || nextName}.`);
-    } catch (error) {
-      setHomeStatus(error?.message || 'Failed to rename sequence folder.', true);
     }
   }
 
@@ -417,13 +414,17 @@ export function createSequenceViewerHomeController(config = {}) {
 
     const query = cleanText(state.librarySearchQuery, 200).toLowerCase();
     const matchingEntries = query
-      ? entries.filter((entry) => String(entry?.name || '').toLowerCase().includes(query))
+      ? entries.filter((entry) => (
+        String(entry?.name || '').toLowerCase().includes(query)
+        || (libraryRename?.type === 'entry' && cleanText(entry?.id, 200) === libraryRename.id)
+      ))
       : entries;
     const matchingFolders = query
       ? folders.filter((folder) => {
         const folderMatches = String(folder?.name || '').toLowerCase().includes(query);
         const childMatches = matchingEntries.some((entry) => cleanText(entry?.folderId, 200) === cleanText(folder?.id, 200));
-        return folderMatches || childMatches;
+        const editingFolder = libraryRename?.type === 'folder' && cleanText(folder?.id, 200) === libraryRename.id;
+        return folderMatches || childMatches || editingFolder;
       })
       : folders;
     const folderIds = new Set(folders.map((folder) => cleanText(folder?.id, 200)).filter(Boolean));
@@ -438,8 +439,34 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
 
+    const renameEditorHtml = (id, type) => `
+      <div class="sequence-viewer-library-inline-editor${type === 'folder' ? ' sequence-viewer-library-folder-inline-editor' : ''}">
+        <input
+          type="text"
+          class="sequence-viewer-library-rename-input"
+          data-sequence-library-rename-input="${escapeHtml(id)}"
+          data-sequence-library-rename-type="${type}"
+          value="${escapeHtml(libraryRename?.name || '')}"
+          maxlength="140"
+          aria-label="Rename ${type === 'folder' ? 'folder' : 'sequence'}"
+        />
+        <button type="button" class="ghost-btn sequence-viewer-library-rename-btn" data-sequence-library-rename-save="${escapeHtml(id)}">Save</button>
+        <button type="button" class="ghost-btn sequence-viewer-library-rename-btn is-secondary" data-sequence-library-rename-cancel>Cancel</button>
+      </div>
+    `;
+
     const entryHtml = (entry) => {
       const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
+      if (libraryRename?.type === 'entry' && cleanText(entry.id, 200) === libraryRename.id) {
+        return `
+          <div
+            class="sequence-viewer-library-item sequence-viewer-library-item-editing${active ? ' sequence-viewer-library-item-active' : ''}"
+            data-sequence-entry-id="${escapeHtml(entry.id)}"
+          >
+            ${renameEditorHtml(entry.id, 'entry')}
+          </div>
+        `;
+      }
       return `
         <button
           type="button"
@@ -462,21 +489,34 @@ export function createSequenceViewerHomeController(config = {}) {
           ? matchingEntries.filter((entry) => cleanText(entry?.folderId, 200) === folderId)
           : folderEntries;
         const expanded = query ? true : isLibraryFolderExpanded(folderId);
+        const editing = libraryRename?.type === 'folder' && folderId === libraryRename.id;
         return `
           <div class="sequence-viewer-library-folder-group${expanded ? ' is-expanded' : ''}">
-            <button
-              type="button"
-              class="sequence-viewer-library-folder-row${expanded ? ' is-expanded' : ''}"
-              data-sequence-folder-id="${escapeHtml(folderId)}"
-              data-sequence-folder-drop="${escapeHtml(folderId)}"
-              aria-expanded="${expanded ? 'true' : 'false'}"
-              title="${escapeHtml(folder.name || 'Folder')}"
-            >
-              <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
-              <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
-              <span class="sequence-viewer-library-folder-name">${escapeHtml(folder.name || 'Folder')}</span>
-              <span class="sequence-viewer-library-folder-count">${folderEntries.length}</span>
-            </button>
+            ${editing ? `
+              <div
+                class="sequence-viewer-library-folder-row sequence-viewer-library-folder-row-editing${expanded ? ' is-expanded' : ''}"
+                data-sequence-folder-id="${escapeHtml(folderId)}"
+                data-sequence-folder-drop="${escapeHtml(folderId)}"
+              >
+                <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
+                <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
+                ${renameEditorHtml(folderId, 'folder')}
+              </div>
+            ` : `
+              <button
+                type="button"
+                class="sequence-viewer-library-folder-row${expanded ? ' is-expanded' : ''}"
+                data-sequence-folder-id="${escapeHtml(folderId)}"
+                data-sequence-folder-drop="${escapeHtml(folderId)}"
+                aria-expanded="${expanded ? 'true' : 'false'}"
+                title="${escapeHtml(folder.name || 'Folder')}"
+              >
+                <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
+                <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
+                <span class="sequence-viewer-library-folder-name">${escapeHtml(folder.name || 'Folder')}</span>
+                <span class="sequence-viewer-library-folder-count">${folderEntries.length}</span>
+              </button>
+            `}
             ${expanded ? `
               <div class="sequence-viewer-library-folder-children">
                 ${visibleFolderEntries.length
@@ -915,6 +955,18 @@ export function createSequenceViewerHomeController(config = {}) {
         return;
       }
       libraryList.addEventListener('click', (event) => {
+        if (event?.target?.closest?.('[data-sequence-library-rename-save]')) {
+          void commitLibraryRename();
+          return;
+        }
+        if (event?.target?.closest?.('[data-sequence-library-rename-cancel]')) {
+          libraryRename = null;
+          renderLibraryList();
+          return;
+        }
+        if (event?.target?.closest?.('[data-sequence-library-rename-input]')) {
+          return;
+        }
         const entryId = resolveLibraryEntryIdFromEvent(event);
         if (!entryId) {
           const folderId = resolveLibraryFolderIdFromEvent(event);
@@ -930,6 +982,30 @@ export function createSequenceViewerHomeController(config = {}) {
         previewLibraryEntryFromList(entryId, {
           navigateHome: options.navigateHome === true
         });
+      });
+
+      libraryList.addEventListener('input', (event) => {
+        const input = event?.target?.closest?.('[data-sequence-library-rename-input]');
+        if (input && libraryRename) {
+          libraryRename.name = String(input.value || '');
+        }
+      });
+
+      libraryList.addEventListener('keydown', (event) => {
+        const input = event?.target?.closest?.('[data-sequence-library-rename-input]');
+        if (!input) {
+          return;
+        }
+        if (String(event?.key || '') === 'Enter') {
+          event.preventDefault?.();
+          event.stopPropagation?.();
+          void commitLibraryRename();
+        } else if (String(event?.key || '') === 'Escape') {
+          event.preventDefault?.();
+          event.stopPropagation?.();
+          libraryRename = null;
+          renderLibraryList();
+        }
       });
 
       libraryList.addEventListener('dblclick', (event) => {
@@ -1022,12 +1098,15 @@ export function createSequenceViewerHomeController(config = {}) {
           event?.target?.closest?.('[data-sequence-library-action]')?.dataset?.sequenceLibraryAction,
           40
         );
+        const libraryList = menu === elements.detailLibraryContextMenu
+          ? elements.detailLibraryList
+          : elements.libraryList;
         if (action === 'rename') {
-          void renameLibraryEntryFromContextMenu();
+          beginLibraryRename('entry', libraryContextId, libraryList);
         } else if (action === 'new-folder') {
-          void createLibraryFolderFromPrompt();
+          void createLibraryFolderFromContextMenu(libraryList);
         } else if (action === 'rename-folder') {
-          void renameLibraryFolderFromContextMenu();
+          beginLibraryRename('folder', libraryContextId, libraryList);
         } else if (action === 'delete-folder') {
           void deleteLibraryFolderFromContextMenu();
         } else if (action === 'move-entry') {

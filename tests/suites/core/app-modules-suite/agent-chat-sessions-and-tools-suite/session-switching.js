@@ -326,7 +326,7 @@ test('agent-chat keeps running requests isolated to their own sessions', async (
   assert.equal(messageInput.disabled, false);
   assert.equal((sessionList.innerHTML.match(/is-agent-running/g) || []).length, 0);
 
-  const agentViewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'agent-view.css'), 'utf8');
+  const agentViewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'agent-view', 'chat-refresh-and-composer.css'), 'utf8');
   assert.doesNotMatch(agentViewCss, /\.agent-session-rail\.is-agent-running/);
   assert.match(agentViewCss, /\.agent-session-card\.is-agent-running::after/);
 });

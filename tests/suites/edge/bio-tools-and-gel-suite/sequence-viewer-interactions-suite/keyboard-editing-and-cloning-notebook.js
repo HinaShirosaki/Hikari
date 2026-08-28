@@ -637,6 +637,102 @@ test('[EDGE] cloning reaction pages preserve executed records and calculate mola
     .find((row) => /Digested insert/.test(row[0]));
   assert.match(insertRow[3], /3 x 50 ng x insert length bp/);
 });
+test('[EDGE] regenerating a design leaves executed cloning pages untouched', () => {
+  const designModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design-notebook.js')
+  );
+  const builderModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  );
+
+  // Mark every page of a saved design as run at the bench, with the hand-entered
+  // values and as-run snapshot a real record carries.
+  const markExecuted = (entries) => entries.map((entry) => {
+    entry.notebookState = 'executed';
+    entry.executedAt = '2026-08-26T10:30:00.000Z';
+    entry.values = { benchNote: 'used 43 ng backbone' };
+    entry.result = 'BENCH RESULT: 12 colonies';
+    entry.protocolSnapshot = { ...entry.protocolSnapshot, name: 'AS-RUN SNAPSHOT' };
+    return JSON.stringify(entry);
+  });
+
+  const state = { projects: [], protocols: [], notebookEntries: [] };
+  let nextId = 0;
+  const createId = () => `design_id_${nextId += 1}`;
+  const source = {
+    recordName: 'pTest',
+    editRequest: { type: 'insertion', start: 10, end: 20 },
+    originalSequence: 'A'.repeat(300)
+  };
+  const record = { name: 'pTest', sequence: 'A'.repeat(320), features: [] };
+  const displayPlan = {
+    feasible: true,
+    strategy: 'two-step-ligation',
+    primers: [
+      { name: 'F1', sequence: 'ATGCATGCATGCATGCATGC', role: 'forward', tm: 60 },
+      { name: 'R1', sequence: 'GCATGCATGCATGCATGCAT', role: 'reverse', tm: 60 }
+    ],
+    summary: { templateLength: 300, resultLength: 320 },
+    plans: []
+  };
+  const design = (entryId = '') => designModule.createSequenceViewerCloningDesignNotebookPage({
+    state, createId, entryId, source, record, displayPlan
+  });
+
+  const first = design();
+  // The design page plus the digest and ligation tubes it ends in.
+  assert.equal(state.notebookEntries.length, 3);
+  const snapshots = markExecuted(state.notebookEntries);
+
+  // Regenerating by stored id must not write over the executed record.
+  const second = design(first.entry.id);
+  assert.notEqual(second.entry.id, first.entry.id);
+  assert.equal(second.entry.notebookState, 'planned');
+  assert.equal(second.entry.executedAt, '');
+  assert.deepEqual(state.notebookEntries.slice(0, 3).map((entry) => JSON.stringify(entry)), snapshots);
+
+  // A third run reuses the planned pages instead of piling up new ones.
+  const before = state.notebookEntries.length;
+  const third = design(second.entry.id);
+  assert.equal(third.entry.id, second.entry.id);
+  assert.equal(state.notebookEntries.length, before);
+
+  const builderState = { projects: [], protocols: [], notebookEntries: [] };
+  let builderNextId = 0;
+  const backboneSequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
+    + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
+    + 'CTCAGAAACAGAACTCGGGTAATTTTGACAGGTCACGCAGAGGC';
+  const insertSequence = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
+  const build = (entryId = '') => builderModule.createProteinBuilderCloningNotebookPage({
+    state: builderState,
+    createId: () => `builder_id_${builderNextId += 1}`,
+    entryId,
+    constructName: 'His6-TEV-POI',
+    backbone: {
+      hostVectorName: 'Host Backbone', topology: 'circular', variantMode: 'gibson', backboneSequence
+    },
+    dnaConstruct: {
+      sequence: insertSequence,
+      length: insertSequence.length,
+      parts: [{ label: 'POI', dnaSequence: insertSequence }]
+    },
+    assembledRecord: {
+      name: 'His6-TEV-POI (Host Backbone)',
+      sequence: `${backboneSequence}${insertSequence}`
+    }
+  });
+
+  const builderFirst = build();
+  const builderSnapshots = markExecuted(builderState.notebookEntries);
+  const builderSecond = build(builderFirst.entry.id);
+  assert.notEqual(builderSecond.entry.id, builderFirst.entry.id);
+  assert.equal(builderSecond.entry.notebookState, 'planned');
+  assert.equal(builderSecond.entry.executedAt, '');
+  assert.deepEqual(
+    builderState.notebookEntries.slice(0, builderSnapshots.length).map((entry) => JSON.stringify(entry)),
+    builderSnapshots
+  );
+});
 test('[EDGE] sequence-viewer cloning notebook sizes each assembly PCR independently', () => {
   const notebookModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design-notebook.js')

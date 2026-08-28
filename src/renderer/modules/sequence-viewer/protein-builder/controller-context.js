@@ -3,9 +3,13 @@ import {
   buildProteinArchitectureName,
   buildProteinTargetLabel
 } from '../sequence-naming.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
+import { buildConstruct } from './protein-construct.js';
 import { DEFAULT_CHAIN } from './constants.js';
 import { resolvePoiSourceFromRecord } from './record-dna.js';
 import { cloneLibraryRow, createPoiRow } from './row-factory.js';
+
+const STANDARD_PROTEIN_RESIDUES = 'ACDEFGHIKLMNPQRSTVWY*';
 
 export function createProteinBuilderContext(config = {}) {
   const elements = config?.elements || {};
@@ -22,6 +26,10 @@ export function createProteinBuilderContext(config = {}) {
     // Hydrated host records keyed by library entry id, for the plasmid preview.
     featureHostRecords: new Map(),
     featureHostRequestId: 0,
+    // What the assembled sequence says once it has been typed into: the chain
+    // still builds the fusion, this carries the initiator M, the stop, or the
+    // point mutation put on top of it.
+    assembledSequenceOverride: '',
     dnaConstruct: null,
     assemblyDialogOpen: false,
     isLoadingAssemblyBackbones: false,
@@ -211,8 +219,24 @@ export function createProteinBuilderContext(config = {}) {
     return {
       constructName: ctx.resolveConstructName(),
       activeDnaSource: ctx.getCurrentDnaSource(),
-      rows: ctx.currentRows()
+      rows: ctx.currentRows(),
+      sequenceOverride: state.assembledSequenceOverride
     };
+  };
+
+  ctx.setAssembledSequenceOverride = function setAssembledSequenceOverride(sequence) {
+    const cleaned = sanitizeProteinAssemblySequence(sequence || '', true);
+    const chain = buildConstruct(ctx.getProteinBuilderPayload()).chainSequence;
+    // The 20 residues and a stop, plus whatever the chain itself already holds:
+    // a block translated through an ambiguous codon carries an X, and a hand
+    // edit must not silently drop it.
+    const allowed = new Set([...STANDARD_PROTEIN_RESIDUES, ...chain]);
+    const accepted = [...cleaned].filter((residue) => allowed.has(residue)).join('');
+    const dropped = [...new Set([...cleaned].filter((residue) => !allowed.has(residue)))];
+    // Typing the chain back in is the same as never having edited it.
+    state.assembledSequenceOverride = accepted && accepted !== chain ? accepted : '';
+    ctx.invalidateDnaConstruct();
+    return { sequence: accepted, dropped };
   };
 
   ctx.getDnaBuildContextKey = function getDnaBuildContextKey() {

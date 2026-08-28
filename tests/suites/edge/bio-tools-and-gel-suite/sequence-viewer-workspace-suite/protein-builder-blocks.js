@@ -79,8 +79,6 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-reset-btn',
-    'sequence-viewer-protein-builder-add-custom-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
     'sequence-viewer-protein-builder-feature-search-status',
@@ -164,6 +162,12 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
   assert.equal(Boolean(document.getElementById('sequence-viewer-protein-builder-workspace').hidden), false);
 
+  const commonBlocksMarkup = document.getElementById('sequence-viewer-protein-builder-common-blocks').innerHTML;
+  assert.equal((commonBlocksMarkup.match(/<details class="sequence-viewer-protein-builder-common-fold">/g) || []).length, 4);
+  assert.equal(commonBlocksMarkup.includes('<details class="sequence-viewer-protein-builder-common-fold" open'), false);
+  assert.equal(commonBlocksMarkup.includes('Protease sites'), true);
+  assert.equal(commonBlocksMarkup.includes('Self-cleaving 2A peptides'), true);
+
   const searchInput = document.getElementById('sequence-viewer-protein-builder-feature-search-input');
   searchInput.value = 'stored_affinity_tag';
   trigger(searchInput, 'keydown', { key: 'Enter', preventDefault() {} });
@@ -230,11 +234,11 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   await flushAsync();
 
   const workflowHtml = document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML;
-  const sequenceHtml = document.getElementById('sequence-viewer-protein-builder-sequence').innerHTML;
+  const assembledSequence = document.getElementById('sequence-viewer-protein-builder-sequence');
   assert.equal(workflowHtml.includes('stored_affinity_tag'), true);
   // The block records the vector it came from, not just how many carry it.
   assert.equal(workflowHtml.includes('From pTagSource-B'), true);
-  assert.equal(sequenceHtml.includes('MAE'), true);
+  assert.equal(assembledSequence.value.includes('MAE'), true);
 });
 test('[EDGE] sequence-viewer protein builder can build DNA from the active vector source', async () => {
   const ids = [
@@ -251,9 +255,10 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-reset-btn',
-    'sequence-viewer-protein-builder-add-custom-btn',
     'sequence-viewer-protein-builder-build-dna-btn',
+    'sequence-viewer-protein-builder-sequence',
+    'sequence-viewer-protein-builder-sequence-edited',
+    'sequence-viewer-protein-builder-sequence-reset-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
     'sequence-viewer-protein-builder-feature-search-status',
@@ -335,6 +340,57 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
   assert.match(dnaMeta.textContent, /nt/);
   assert.equal(dnaSequence.innerHTML.includes('ATGTTATTATTA'), true);
   assert.match(builderStatus.textContent, /Reused active DNA from current vector CDS PoiCds/i);
+
+  // The assembled sequence is editable: a stop typed onto the end is carried
+  // into the DNA build as a stop codon, and the vector's own codons upstream of
+  // it are left exactly as they were.
+  const assembled = document.getElementById('sequence-viewer-protein-builder-sequence');
+  const editedFlag = document.getElementById('sequence-viewer-protein-builder-sequence-edited');
+  const resetBtn = document.getElementById('sequence-viewer-protein-builder-sequence-reset-btn');
+  const chainProtein = assembled.value;
+  assert.match(chainProtein, /MLLL$/);
+  assert.equal(Boolean(editedFlag.hidden), true);
+
+  assembled.value = `${chainProtein}*`;
+  trigger(assembled, 'change');
+  await flushAsync();
+  assert.equal(Boolean(editedFlag.hidden), false);
+  assert.equal(Boolean(resetBtn.hidden), false);
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
+  await flushAsync();
+  const editedDna = document.getElementById('sequence-viewer-protein-builder-dna-sequence').innerHTML;
+  // The vector's own codons survive; only the stop is new.
+  assert.equal(editedDna.includes('ATGTTATTATTA'), true);
+  assert.match(editedDna, /ATGTTATTATTA(TAA|TAG|TGA)/);
+
+  // Only the 20 residues and a stop get through the field.
+  assembled.value = `${chainProtein}Z*`;
+  trigger(assembled, 'change');
+  await flushAsync();
+  assert.equal(assembled.value, `${chainProtein}*`);
+  assert.match(
+    document.getElementById('sequence-viewer-protein-builder-status').textContent,
+    /Ignored Z/
+  );
+
+  // Reset puts the chain's own sequence back.
+  trigger(resetBtn, 'click', { preventDefault() {} });
+  await flushAsync();
+  assert.equal(assembled.value, chainProtein);
+  assert.equal(Boolean(editedFlag.hidden), true);
+});
+test('[EDGE] sequence-viewer protein builder uses flat sections instead of nested panel boxes', () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view', 'shell-and-builders.css'),
+    'utf8'
+  );
+
+  assert.match(css, /\.sequence-viewer-protein-builder-workspace\s*\{[^}]*gap:\s*0;/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-toolbar\s*\{[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid var\(--theme-border-soft\);[^}]*background:\s*transparent;/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-panel\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*padding:\s*0;/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-common-fold\s*\{[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid var\(--theme-border-soft\);[^}]*background:\s*transparent;/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-sequence-panel \.sequence-block\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
 });
   }
 };

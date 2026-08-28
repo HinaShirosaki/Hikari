@@ -31,17 +31,6 @@ export function createPoiRow(nextRowId) {
   };
 }
 
-export function createCustomRow(nextRowId) {
-  return {
-    id: `builder_row_${nextRowId}`,
-    kind: 'custom',
-    type: 'custom',
-    label: 'Custom Block',
-    sequence: '',
-    note: 'Add a custom amino-acid block.'
-  };
-}
-
 export function createFeatureRow(nextRowId, feature, source = {}) {
   const derived = buildFeatureDerivedSequence(feature);
   const hostCount = Math.max(0, Number(feature?.hostCount) || 0);

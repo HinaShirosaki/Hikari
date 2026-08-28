@@ -3,7 +3,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
-    const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
+    const readLocalSource = (...parts) => {
+      const sourcePath = path.join(__dirname, ...parts);
+      if (path.extname(sourcePath) !== '.css') {
+        return fs.readFileSync(sourcePath, 'utf8');
+      }
+
+      const resolveCssImports = (cssPath, activePaths = new Set()) => {
+        if (activePaths.has(cssPath)) {
+          throw new Error(`Circular CSS import while reading ${cssPath}`);
+        }
+        const nextActivePaths = new Set(activePaths);
+        nextActivePaths.add(cssPath);
+        const css = fs.readFileSync(cssPath, 'utf8');
+        return css.replace(/@import\s+url\(["']([^"']+)["']\);\s*/g, (statement, specifier) => {
+          if (!specifier.startsWith('.')) {
+            return statement;
+          }
+          return resolveCssImports(path.resolve(path.dirname(cssPath), specifier), nextActivePaths);
+        });
+      };
+
+      return resolveCssImports(sourcePath);
+    };
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'main-services.js'),
@@ -516,6 +538,23 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
     });
 
+    test('Assay action status targets collapse only while empty', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      [
+        'assay-active-assay-info',
+        'assay-result-status',
+        'assay-transform-summary',
+        'assay-analysis-selection-status'
+      ].forEach((id) => assert.match(html, new RegExp(`id="${id}"[^>]*small-note`)));
+      assert.match(
+        css,
+        /#assay-active-assay-info:empty,\s*#assay-result-status:empty,\s*#assay-transform-summary:empty,\s*#assay-analysis-selection-status:empty\s*\{[^}]*display:\s*none;/s
+      );
+      assert.doesNotMatch(css, /#assay-(?:active-assay-info|result-status|transform-summary|analysis-selection-status)\s*\{[^}]*display:\s*none;/s);
+    });
+
     test('Assay grouping actions use one compact accessible icon toolbar', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
@@ -652,7 +691,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
       const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
       const analysis = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
-      const derived = readLocalSource('src', 'renderer', 'modules', 'assay', 'derived-plate.js');
+      const derived = readLocalSource('src', 'renderer', 'modules', 'assay', 'derived-plate', 'plate-formulas.js');
       const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
       const spreadsheetTables = readLocalSource('src', 'renderer', 'lib', 'spreadsheet-tables.js');
       const referencePicker = readLocalSource('src', 'renderer', 'lib', 'spreadsheet-reference-picker.js');
@@ -1053,12 +1092,12 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('sequence viewer input panels force-hide when hidden attribute is set', () => {
-      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
       assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
     });
 
     test('sequence viewer detail layout follows the app height and keeps the sequence host scrollable', () => {
-      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
       assert.match(css, /#sequence-viewer-detail-view\.view\.is-active\s*\{[^}]*display:\s*grid;[^}]*height:\s*100%;/s);
       assert.match(css, /\.sequence-viewer-detail-workspace\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*height:\s*100%;/s);
       assert.match(css, /#sequence-viewer-protein-builder-confirmation:not\(\[hidden\]\)\s*\{[^}]*grid-row:\s*1;[^}]*margin-bottom:\s*12px;/s);
@@ -1073,7 +1112,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('papers PDF text layer keeps native browser selection stable during drag', () => {
-      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
+      const css = readLocalSource('ui', 'css', 'views', 'papers-view.css');
       const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-records.js');
       const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-rendering.js');
       const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-selection-menu-controller.js');
@@ -1097,7 +1136,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('papers PDF first-load sizing stays inside the app shell', () => {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
-      const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
+      const papersCss = readLocalSource('ui', 'css', 'views', 'papers-view.css');
       const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-dom-controller.js');
       const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-navigation-controller.js');
       assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
@@ -1186,7 +1225,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(dataRegistrarSource, /function registerDataIpc\(deps = \{\}\)/);
       assert.match(agentRegistrarSource, /function registerAgentIpc\(deps = \{\}\)/);
       assert.match(systemRegistrarSource, /function registerSystemIpc\(deps = \{\}\)/);
-      assert.match(toolLoadingSource, /function normalizeToolInvocationArgs\(rawArgs\)/);
+      assert.match(
+        fs.readFileSync(agentPath('tools', 'tool-loading', 'json-args.js'), 'utf8'),
+        /function normalizeToolInvocationArgs\(rawArgs\)/
+      );
       assert.match(toolExecutionSource, /function createAgentToolCallRuntime\(deps = \{\}\)/);
       assert.match(runtimeSupportSource, /function createAgentRuntimeSupport\(deps = \{\}\)/);
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);

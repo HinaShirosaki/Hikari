@@ -2,6 +2,8 @@ const DEFAULT_NOTEBOOK_TABLE_COLUMNS = 3;
 const DEFAULT_NOTEBOOK_TABLE_ROWS = 3;
 export const MAX_NOTEBOOK_TABLE_COLUMNS = 50;
 export const MAX_NOTEBOOK_TABLE_ROWS = 500;
+const MOLARITY_COLUMN_TITLES = ['Entry', 'MW (g/mol)', 'Weight (mg)', 'Volume (mL)', 'Molarity (mM)'];
+const MOLARITY_ROW_COUNT = 4;
 
 function sanitizeFieldName(value, fallback) {
   const clean = String(value || '')
@@ -68,10 +70,9 @@ export function normalizeNotebookResultTable(rawTable) {
     })
     : [];
 
-  return {
-    columns,
-    rows
-  };
+  // `solve` marks a table whose columns define one another (the molarity table), so a
+  // loop between two empty ones means "not determined yet" rather than a mistake.
+  return source.solve ? { columns, rows, solve: true } : { columns, rows };
 }
 
 export function cloneNotebookResultTable(rawTable) {
@@ -139,6 +140,35 @@ export function createNotebookResultTableFromPlaceholder(createId, {
     columns: [variableColumn, valueColumn],
     rows: [row]
   };
+}
+
+// Molarity worksheet: one row is molarity = weight / (MW x volume), written out once
+// per column so any column can be the unknown. Fill three and the fourth computes;
+// fill two and the other two show the arithmetic that is left. Clearing a cell you
+// typed over drops that column's formula for good -- drag the fill handle from a
+// spare row to get it back.
+export function createMolarityNotebookResultTable(createId, rowCount = MOLARITY_ROW_COUNT) {
+  const columns = MOLARITY_COLUMN_TITLES.map((title, index) => ({
+    field: buildFieldId(createId, 'molarity', index),
+    title
+  }));
+  const rows = Array.from({ length: rowCount }, (_unused, index) => {
+    // mg and mL against g/mol give mol/L, so the 1000 is what turns the answer into mM.
+    const line = index + 1;
+    const cells = [
+      '',
+      `=1000*C${line}/(D${line}*E${line})`,
+      `=B${line}*D${line}*E${line}/1000`,
+      `=1000*C${line}/(B${line}*E${line})`,
+      `=1000*C${line}/(B${line}*D${line})`
+    ];
+    const row = { id: buildFieldId(createId, 'row', index) };
+    columns.forEach((column, columnIndex) => {
+      row[column.field] = cells[columnIndex];
+    });
+    return row;
+  });
+  return { columns, rows, solve: true };
 }
 
 export function addNotebookResultTableRow(rawTable, createId) {

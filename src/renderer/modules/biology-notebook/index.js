@@ -140,6 +140,7 @@ export function initLabNotebook({
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
   const notebookResultAttachments = document.getElementById('biology-notebook-result-attachments');
   const notebookAddTableBtn = document.getElementById('biology-notebook-add-table-btn');
+  const notebookAddMolarityBtn = document.getElementById('biology-notebook-add-molarity-btn');
   const notebookTableSizeOverlay = document.getElementById('biology-notebook-table-size-overlay');
   const notebookTableSizeForm = document.getElementById('biology-notebook-table-size-form');
   const notebookTableSizeColumns = document.getElementById('biology-notebook-table-size-columns');
@@ -2152,6 +2153,10 @@ export function initLabNotebook({
   notebookAddTableBtn?.addEventListener('click', () => {
     toolSidebarController.clearSelection();
     setTableSizeDialog(true);
+  });
+  notebookAddMolarityBtn?.addEventListener('click', () => {
+    toolSidebarController.clearSelection();
+    resultTableController.onAddMolarity();
   });
   notebookAddTableRowBtn?.addEventListener('click', resultTableController.onAddRow);
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);

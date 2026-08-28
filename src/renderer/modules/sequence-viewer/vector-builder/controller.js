@@ -254,7 +254,9 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     if (!host) {
       return;
     }
-    if (!featureReplaceQuery) {
+    // Below the 2-character minimum no search has run, so the panel stays quiet
+    // instead of claiming nothing matched.
+    if (featureReplaceQuery.length < 2) {
       host.innerHTML = '';
       return;
     }
@@ -460,7 +462,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     }
     if (query.length < 2) {
       clearFeatureReplaceSelection();
-      setFeatureReplaceStatus('Enter at least 2 characters to search stored features.');
+      setFeatureReplaceStatus('');
       return;
     }
     if (!bridge?.sequenceLibrarySearchFeatures) {

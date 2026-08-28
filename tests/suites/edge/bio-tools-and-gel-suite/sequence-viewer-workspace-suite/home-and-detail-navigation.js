@@ -289,8 +289,6 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-reset-btn',
-    'sequence-viewer-protein-builder-add-custom-btn',
     'sequence-viewer-protein-builder-build-dna-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',

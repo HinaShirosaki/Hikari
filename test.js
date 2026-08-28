@@ -376,7 +376,7 @@ test('plugin system: Gel has no active renderer-module integrations after the pl
   });
 
   const bridgeSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js'),
+    path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge', 'verbs.js'),
     'utf8'
   );
   assert.match(bridgeSource, /migration\.importLegacyGel/, 'legacy Gel data keeps an identity-locked migration path');

@@ -1,6 +1,18 @@
 module.exports = function registerAppPapersSuitePdfViewerHighlightsAndSearch(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
+  const readPapersCss = () => [
+    'layout-and-library.css',
+    'viewer-and-annotations.css',
+    'comments-and-responsive.css'
+  ].map((fileName) => scope.fs.readFileSync(scope.path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'papers-view',
+    fileName
+  ), 'utf8')).join('\n');
   with (scope) {
 test('paper storage treats literature-search collections like journal-club folders', () => {
   const storageModule = loadEsmStyleModule(path.join(
@@ -439,20 +451,14 @@ test('papers selection search popover omits result lists and keeps match arrows 
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js'),
     'utf8'
   );
-  const css = fs.readFileSync(
-    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
-    'utf8'
-  );
+  const css = readPapersCss();
 
   assert.equal(viewerSource.includes('papers-selection-search-result-list'), false);
   assert.equal(css.includes('papers-selection-search-result-list'), false);
   assert.match(css, /\.papers-selection-search-nav\s*\{[\s\S]*display:\s*inline-flex;/);
 });
 test('papers PDF pages keep square edges between stacked pages', () => {
-  const viewerCss = fs.readFileSync(
-    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
-    'utf8'
-  );
+  const viewerCss = readPapersCss();
   const shellCss = fs.readFileSync(
     path.join(__dirname, 'ui', 'css', 'views', 'papers-shell-overrides.css'),
     'utf8'
@@ -462,10 +468,7 @@ test('papers PDF pages keep square edges between stacked pages', () => {
   assert.match(shellCss, /#papers-view \.papers-viewer-canvas\s*\{[^}]*border-radius:\s*0;/s);
 });
 test('papers detail rail fold highlights cover their complete controls', () => {
-  const css = fs.readFileSync(
-    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
-    'utf8'
-  );
+  const css = readPapersCss();
 
   assert.match(css, /\.papers-section-toggle\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*32px;[^}]*padding:\s*5px 6px;/s);
   assert.match(css, /\.papers-section-toggle:hover,\s*\.papers-section-toggle:focus-visible\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--theme-accent-soft\) 70%, transparent\);/s);
@@ -502,6 +505,10 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
     path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'),
     'utf8'
   );
+  const storageFileHelpersSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'ipc', 'data-ipc', 'storage-files.js'),
+    'utf8'
+  );
   const appState = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js')
   );
@@ -512,8 +519,8 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
   assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.READ_FILE_BYTES/);
   assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.MOVE_STORED_FILE/);
   assert.match(dataRegistrarSource, /bytes\.buffer\.slice\(bytes\.byteOffset,\s*bytes\.byteOffset \+ bytes\.byteLength\)/);
-  assert.match(dataRegistrarSource, /normalizeImportedDataBytes/);
-  assert.match(dataRegistrarSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
+  assert.match(storageFileHelpersSource, /normalizeImportedDataBytes/);
+  assert.match(storageFileHelpersSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
   assert.match(actionsSource, /async function movePaperToFolder\(paperId, folderKey\)/);
   assert.match(actionsSource, /const pdfBytes = await fileToBytes\(file\)/);
   assert.match(actionsSource, /dataBytes:\s*pdfBytes\.buffer\.slice/);

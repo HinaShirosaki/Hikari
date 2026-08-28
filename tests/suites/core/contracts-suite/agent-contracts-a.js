@@ -165,7 +165,8 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
-      const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
+      const purchaseExtractionSource = fs.readFileSync(agentPath('tools', 'purchase-recommendation', 'product-extraction.js'), 'utf8');
+      const executorsSource = fs.readFileSync(agentPath('tools', 'tool-executors', 'research-executors.js'), 'utf8');
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
@@ -173,7 +174,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
       assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
       assert.match(purchaseSource, /createAgentLlmRuntimeHelpers/);
-      assert.match(purchaseSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
+      assert.match(purchaseExtractionSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
       assert.match(purchaseSource, /async function execute\(input = \{\}\)/);
       assert.match(mainAgentServicesSource, /createPurchaseRecommendationRuntime/);
       assert.match(mainAgentServicesSource, /const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime/);

@@ -1,0 +1,314 @@
+.papers-comment-sidebar {
+  background: transparent;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-height: 0;
+  position: static;
+}
+
+.papers-bookmark-section,
+.papers-summary-section {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.papers-bookmark-section.is-disabled,
+.papers-summary-section.is-disabled {
+  opacity: 0.84;
+}
+
+.papers-section-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.papers-section-toggle:hover,
+.papers-section-toggle:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
+  color: var(--theme-text);
+}
+
+.papers-section-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 34%, transparent);
+}
+
+.papers-section-toggle-icon {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 6px solid currentColor;
+  transform: rotate(90deg);
+  transition: transform 140ms ease;
+}
+
+.papers-section-toggle.is-collapsed .papers-section-toggle-icon {
+  transform: rotate(0deg);
+}
+
+.papers-bookmark-content[hidden],
+.papers-summary-content[hidden] {
+  display: none !important;
+}
+
+.papers-bookmark-list {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.papers-bookmark-empty {
+  margin: 0;
+  color: var(--theme-text-muted);
+  line-height: 1.45;
+}
+
+.papers-bookmark-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  text-align: left;
+}
+
+.papers-bookmark-item:hover,
+.papers-bookmark-item:focus-visible {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-accent) 12%);
+}
+
+.papers-bookmark-item:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.papers-bookmark-item:disabled:hover {
+  background: transparent;
+}
+
+.papers-bookmark-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.papers-bookmark-page {
+  color: var(--theme-text-muted);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.papers-summary-list {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.papers-summary-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.papers-summary-row dt,
+.papers-summary-row dd {
+  margin: 0;
+}
+
+.papers-summary-row dt {
+  color: var(--theme-text-muted);
+  text-align: right;
+}
+
+.papers-summary-value {
+  min-width: 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.papers-summary-value.is-empty::after {
+  content: ' ';
+}
+
+.papers-comment-panel {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 0;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+.papers-comment-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  min-width: 28px;
+  height: 32px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  position: sticky;
+  top: 18px;
+  align-self: start;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.papers-comment-toggle:hover,
+.papers-comment-toggle:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
+  color: var(--theme-text-strong);
+}
+
+.papers-comment-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 34%, transparent);
+}
+
+.papers-comment-toggle-icon {
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 8px solid currentColor;
+}
+
+.papers-layout.is-comments-collapsed .papers-comment-panel {
+  grid-template-columns: 28px;
+  gap: 0;
+}
+
+.papers-layout.is-comments-collapsed .papers-comment-toggle-icon {
+  transform: rotate(180deg);
+}
+
+.papers-layout.is-comments-collapsed .papers-comment-sidebar {
+  display: none;
+}
+
+.papers-comment-sidebar.is-disabled {
+  opacity: 0.84;
+}
+
+.papers-viewer-canvas {
+  display: block;
+  background: var(--theme-surface-elevated);
+  border-radius: inherit;
+}
+
+#paper-viewer-status.is-error {
+  color: var(--theme-danger);
+  font-weight: 600;
+}
+
+
+@media (max-width: 1280px) {
+  .papers-layout {
+    --papers-comments-width: clamp(248px, 30vw, 320px);
+    gap: 18px;
+  }
+
+  .papers-stage,
+.papers-layout.is-comments-collapsed .papers-stage {
+    gap: 18px;
+  }
+
+  .papers-right-column {
+    padding-right: 8px;
+  }
+
+  .papers-library-rail {
+    max-height: var(--shared-left-rail-layout-height);
+    overflow: auto;
+  }
+}
+
+@media (max-width: 860px) {
+  .papers-layout {
+    --papers-comments-width: clamp(220px, 34vw, 272px);
+    gap: 14px;
+  }
+
+  .papers-stage,
+.papers-layout.is-comments-collapsed .papers-stage {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 720px) {
+  #papers-view.view.is-active {
+    width: auto;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .papers-viewer-head {
+    flex-direction: column;
+  }
+
+  .papers-viewer-toolbar {
+    justify-content: flex-start;
+  }
+
+  .papers-viewer-stage {
+    padding: 12px 18px;
+  }
+
+  .papers-paper-row.is-active {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+#papers-view .panel,
+#papers-view .card,
+.papers-viewer-shell,
+.papers-comment-sidebar,
+.papers-context-menu {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.papers-context-menu {
+  background: var(--theme-surface-elevated);
+}

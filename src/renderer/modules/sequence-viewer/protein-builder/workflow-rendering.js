@@ -23,9 +23,18 @@ export function installProteinBuilderWorkflowRendering(ctx) {
       return;
     }
 
-    elements.proteinBuilderWorkflow.innerHTML = state.rows.map((row, index) => {
-      const label = row.type === 'poi' ? sourceName : row.label;
-      const sequence = row.type === 'poi' ? sourceSequence : sanitizeProteinAssemblySequence(row.sequence || '', true);
+    const parts = state.rows.map((row) => ({
+      row,
+      label: row.type === 'poi' ? sourceName : row.label,
+      sequence: row.type === 'poi' ? sourceSequence : sanitizeProteinAssemblySequence(row.sequence || '', true)
+    }));
+    const constructLength = parts.reduce((total, part) => total + part.sequence.length, 0);
+
+    const blocks = parts.map(({ row, label, sequence }, index) => {
+      // A block that is a few percent of the construct gets a narrower floor and
+      // drops its type line, so the ribbon can keep tags looking like tags next
+      // to a domain instead of padding everything out to the same slab.
+      const isSliver = constructLength > 0 && (sequence.length / constructLength) < 0.06;
       const note = row.type === 'poi'
         ? `${sourceNote} ${sequence.length ? `${sequence.length} aa.` : 'No coding sequence found.'}`
         : (row.note || 'No annotation.');
@@ -55,61 +64,56 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         `
         : '';
 
-      const connector = index > 0
-        ? '<div class="sequence-viewer-protein-builder-link" aria-hidden="true"><span></span></div>'
-        : '';
-      const canMoveLeft = index > 0;
-      const canMoveRight = index < state.rows.length - 1;
+      const moveButton = (direction) => `
+        <button
+          type="button"
+          class="sequence-viewer-protein-builder-icon-btn"
+          data-protein-builder-row-${direction === 'left' ? 'up' : 'down'}="${escapeAttribute(row.id)}"
+          aria-label="Move ${escapeAttribute(label || 'block')} ${direction}"
+          title="Move ${direction}"
+        >
+          <span aria-hidden="true">${direction === 'left' ? '&larr;' : '&rarr;'}</span>
+        </button>
+      `;
 
       return `
-        ${connector}
-        <article class="sequence-viewer-protein-builder-block sequence-viewer-protein-builder-block-${escapeAttribute(row.type)}" data-protein-builder-row-id="${escapeAttribute(row.id)}">
-          <div
-            class="sequence-viewer-protein-builder-block-shape"
-            title="${escapeAttribute(blockTitle)}"
-          >
+        <li
+          class="sequence-viewer-protein-builder-block sequence-viewer-protein-builder-block-${escapeAttribute(row.type)}${isSliver ? ' sequence-viewer-protein-builder-block-compact' : ''}"
+          data-protein-builder-row-id="${escapeAttribute(row.id)}"
+          style="--builder-block-aa: ${Math.max(1, sequence.length)}"
+        >
+          <div class="sequence-viewer-protein-builder-block-shape" title="${escapeAttribute(blockTitle)}">
+            <span class="sequence-viewer-protein-builder-block-type">${escapeHtml(getBlockTypeLabel(row.type))}</span>
             <span class="sequence-viewer-protein-builder-block-label">${escapeHtml(label || `Block ${index + 1}`)}</span>
+            <span class="sequence-viewer-protein-builder-block-size">${escapeHtml(`${sequence.length} aa`)}</span>
           </div>
-          <div class="form-actions sequence-viewer-protein-builder-block-actions">
-            ${canMoveLeft ? `
-              <button
-                type="button"
-                class="ghost-btn sequence-viewer-protein-builder-icon-btn"
-                data-protein-builder-row-up="${escapeAttribute(row.id)}"
-                aria-label="Move block left"
-                title="Move block left"
-              >
-                <span aria-hidden="true">&larr;</span>
-                <span class="sr-only">Move block left</span>
-              </button>
-            ` : ''}
-            ${canMoveRight ? `
-              <button
-                type="button"
-                class="ghost-btn sequence-viewer-protein-builder-icon-btn"
-                data-protein-builder-row-down="${escapeAttribute(row.id)}"
-                aria-label="Move block right"
-                title="Move block right"
-              >
-                <span aria-hidden="true">&rarr;</span>
-                <span class="sr-only">Move block right</span>
-              </button>
-            ` : ''}
+          <div class="sequence-viewer-protein-builder-block-actions">
+            ${index > 0 ? moveButton('left') : ''}
+            ${index < state.rows.length - 1 ? moveButton('right') : ''}
             <button
               type="button"
-              class="ghost-btn sequence-viewer-protein-builder-icon-btn sequence-viewer-protein-builder-icon-btn-remove"
+              class="sequence-viewer-protein-builder-icon-btn sequence-viewer-protein-builder-icon-btn-remove"
               data-protein-builder-row-remove="${escapeAttribute(row.id)}"
-              aria-label="Remove block"
+              aria-label="Remove ${escapeAttribute(label || 'block')}"
               title="Remove block"
             >
               <span aria-hidden="true">&times;</span>
-              <span class="sr-only">Remove block</span>
             </button>
           </div>
           ${customFields}
-        </article>
+        </li>
       `;
     }).join('');
+
+    // The chain reads N to C, and the termini say so: without them a row of
+    // arrows is just a row of arrows.
+    elements.proteinBuilderWorkflow.innerHTML = `
+      <div class="sequence-viewer-protein-builder-chain-rail">
+        <span class="sequence-viewer-protein-builder-terminus">N</span>
+        <ol class="sequence-viewer-protein-builder-chain">${blocks}</ol>
+        <span class="sequence-viewer-protein-builder-terminus">C</span>
+      </div>
+    `;
   };
 
   ctx.renderSummary = function renderSummary() {
@@ -126,9 +130,17 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     }
 
     if (elements.proteinBuilderSequence) {
-      elements.proteinBuilderSequence.innerHTML = construct.sequence
-        ? `<span class="sequence-viewer-protein-builder-sequence-text">${escapeHtml(construct.sequence)}</span>`
-        : '-';
+      // Typing into the field must not have the cursor yanked back to the end on
+      // every keystroke, so a focused field keeps whatever is in it.
+      if (elements.proteinBuilderSequence !== elements.proteinBuilderSequence.ownerDocument?.activeElement) {
+        elements.proteinBuilderSequence.value = construct.sequence || '';
+      }
+    }
+    if (elements.proteinBuilderSequenceEdited) {
+      elements.proteinBuilderSequenceEdited.hidden = !construct.isEdited;
+    }
+    if (elements.proteinBuilderSequenceResetBtn) {
+      elements.proteinBuilderSequenceResetBtn.hidden = !construct.isEdited;
     }
   };
 
@@ -144,9 +156,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     ctx.syncFeatureSearchControls();
     if (!state.featureSearchQuery) {
       ctx.setFeatureSearchStatus(
-        ctx.hasStoragePath()
-          ? 'Search stored features and convert them into protein blocks.'
-          : 'Set Storage Folder Path in Settings to search stored features.',
+        ctx.hasStoragePath() ? '' : 'Set Storage Folder Path in Settings to search stored features.',
         !ctx.hasStoragePath()
       );
     }

@@ -157,7 +157,11 @@ export function computeNotebookResultTables(rawTables, { plateAddressing = false
       return cached.value;
     }
     if (visiting.has(key)) {
-      throw fail(`"${address}" refers to itself or creates a circular reference.`, true);
+      // In a solve table every column is the same equation rearranged, so two unknowns
+      // necessarily reference each other. That loop is "not determined yet" -- both
+      // cells show the arithmetic that is left -- not the mistake it is anywhere else.
+      const solving = Boolean(tables[tableIndex]?.solve);
+      throw fail(`"${address}" refers to itself or creates a circular reference.`, !solving, false, solving);
     }
 
     const raw = rawAt(tableIndex, column, row);

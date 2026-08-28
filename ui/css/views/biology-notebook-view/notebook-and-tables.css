@@ -1,0 +1,647 @@
+.biology-notebook-viewer {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  align-content: stretch;
+}
+
+.biology-notebook-viewer-scroll {
+  display: grid;
+  gap: 14px;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 14px;
+  scrollbar-gutter: stable;
+}
+
+.biology-notebook-result-attachments {
+  display: grid;
+  gap: 8px;
+}
+
+.biology-notebook-result-attachments[hidden] {
+  display: none;
+}
+
+.biology-notebook-notes-field {
+  display: grid;
+  gap: 6px;
+}
+
+.biology-notebook-notes-composer {
+  position: relative;
+}
+
+.biology-notebook-notes-composer textarea {
+  min-height: 132px;
+  padding: 10px 12px 50px;
+  resize: vertical;
+}
+
+.biology-notebook-notes-clarify-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  min-height: 32px;
+  padding: 5px 10px;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-panel));
+}
+
+.biology-notebook-attachment-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-weight: 600;
+  color: var(--theme-text-strong);
+}
+
+.biology-notebook-attachment-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 320px));
+  align-items: start;
+  justify-content: start;
+  gap: 10px;
+}
+
+.biology-notebook-attachment {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border);
+  border-radius: 10px;
+  background: var(--theme-surface-subtle);
+}
+
+.biology-notebook-attachment-image {
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.biology-notebook-attachment-image img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 260px;
+  object-fit: contain;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.biology-notebook-attachment-image figcaption,
+.biology-notebook-attachment-file {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 10px;
+}
+
+.biology-notebook-attachment-image figcaption {
+  padding: 6px 2px 0;
+}
+
+.biology-notebook-attachment-file {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 48px;
+}
+
+.biology-notebook-attachment-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.biology-notebook-attachment-file-icon {
+  color: var(--theme-accent);
+  font-size: 1.1rem;
+}
+
+.biology-notebook-viewer-section {
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  padding-top: 10px;
+}
+
+.biology-notebook-viewer-section-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--theme-text-strong);
+}
+
+.biology-notebook-viewer-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.biology-notebook-viewer-section-chevron {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid currentColor;
+  transition: transform 140ms ease;
+}
+
+.biology-notebook-viewer-section[open] .biology-notebook-viewer-section-chevron {
+  transform: rotate(180deg);
+}
+
+.biology-notebook-viewer-section-body {
+  display: grid;
+  gap: 12px;
+  padding-top: 10px;
+}
+
+.biology-notebook-protocol-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--theme-border) 78%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
+}
+
+.biology-notebook-protocol-editor-note {
+  margin: 0;
+}
+
+#biology-notebook-page-protocol-steps {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.biology-notebook-viewer-section-static .biology-notebook-viewer-section-summary-static {
+  cursor: default;
+}
+
+.biology-notebook-linked-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.biology-notebook-linked-toolbar:not(:has(> button:not([hidden]))),
+.biology-notebook-linked-results:empty,
+.biology-notebook-tool-calculations:empty {
+  display: none;
+}
+
+.biology-notebook-linked-results {
+  display: grid;
+  gap: 12px;
+}
+
+.biology-notebook-result-table-wrap {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.biology-notebook-result-table-head p {
+  margin: 0;
+}
+
+.biology-notebook-result-table-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* No outer panel: the grid's own border is the only frame around a result table. */
+.spreadsheet-table-editor {
+  display: grid;
+  gap: 8px;
+}
+
+/* With the panel gone, the active table is marked on the grid border itself -- it is
+   the only thing left to mark, and it still only matters when there are several. */
+.spreadsheet-table-editor.is-active .spreadsheet-table {
+  border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
+}
+
+.spreadsheet-table-editor-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.biology-notebook-result-table-head .small-note:empty {
+  display: none;
+}
+
+/* Spreadsheet furniture: column letters in the header, row numbers in the gutter.
+   Both are muted so they frame the data instead of competing with it. */
+.spreadsheet-head {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.spreadsheet-head-address {
+  color: var(--theme-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.spreadsheet-head-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spreadsheet-table .tabulator-cell.spreadsheet-rownum {
+  color: var(--theme-text-muted);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 60%, var(--theme-surface-elevated));
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85em;
+}
+
+/* The fill handle sits inside the anchor cell, so it tracks the cell as the grid
+   scrolls. Cells clip their overflow, so it stays fully inside the corner. */
+/* Drag-to-fill lives on the cell borders: hovering the bottom or right edge raises a
+   run of chevrons pointing the way a fill would go, fading with distance. They are
+   decoration only -- pointer-events stay off so they never swallow a click for the
+   cell they overlap. The drag itself starts from the border strip under the pointer. */
+.spreadsheet-fill-arrows {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+  color: var(--theme-accent);
+}
+
+.spreadsheet-fill-arrows svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The chevrons are open strokes, not shapes. A CSS fill here would beat the markup's
+     fill="none" and close each V into a solid triangle. */
+  fill: none;
+}
+
+.spreadsheet-table .tabulator-cell.is-fill-edge {
+  cursor: crosshair;
+}
+
+.spreadsheet-table .tabulator-cell.is-fill-target {
+  background: color-mix(in srgb, var(--theme-focus) 18%, transparent);
+}
+
+.biology-notebook-result-table-head .small-note.is-error {
+  color: var(--theme-danger);
+}
+
+/* A computed cell keeps the normal text colour — the accent is decorative and reads
+   as low-contrast on the lighter palettes. Numbers just line up. */
+.spreadsheet-cell--formula {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A formula still waiting on an empty cell shows the arithmetic that is left, so it
+   reads as a note-to-self rather than as a finished result. */
+.spreadsheet-cell--pending {
+  color: var(--theme-text-muted);
+  font-style: italic;
+}
+
+.spreadsheet-cell--error {
+  color: var(--theme-danger);
+  font-weight: 600;
+}
+
+.spreadsheet-table-select {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+  padding: 0;
+  color: var(--theme-text-strong);
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.spreadsheet-table-select:focus-visible {
+  outline: none;
+  border-color: var(--theme-focus) !important;
+}
+
+.spreadsheet-table {
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--theme-surface-elevated);
+}
+
+.spreadsheet-table.tabulator {
+  border: 0;
+  background: transparent;
+  font-size: 0.92rem;
+}
+
+.spreadsheet-table.tabulator .tabulator-tableholder {
+  background: transparent;
+}
+
+/* Tabulator hard-codes background:#fff and color:#333 here, and its stylesheet loads
+   after ours — so this has to match its selector depth to win, not just be more
+   specific than the element. Inheriting picks up --theme-text in every palette. */
+.spreadsheet-table.tabulator .tabulator-tableholder .tabulator-table {
+  background: transparent;
+  color: inherit;
+}
+
+/* Vendor paints the header #e6e6e6 with #555 text at the same specificity, and loads
+   later, so this has to out-specify it the way the row rules do. */
+.spreadsheet-table.tabulator .tabulator-header {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
+  color: var(--theme-text);
+}
+
+.spreadsheet-table.tabulator .tabulator-header .tabulator-col {
+  background: transparent;
+  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+}
+
+.spreadsheet-table .tabulator-col,
+.spreadsheet-table .tabulator-cell {
+  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+}
+
+/* Tabulator ships its own zebra striping, grey hover and blue selection, and its
+   stylesheet loads after ours — so each of these has to out-specify the vendor rule
+   it replaces, not merely name the element. */
+.spreadsheet-table .tabulator-row,
+.spreadsheet-table .tabulator-row.tabulator-row-even,
+.spreadsheet-table .tabulator-row.tabulator-row-odd {
+  background: var(--theme-surface-elevated);
+}
+
+.spreadsheet-table .tabulator-row.tabulator-selectable:hover {
+  background: var(--theme-surface-hover);
+  cursor: cell;
+}
+
+.spreadsheet-table .tabulator-row.tabulator-selected,
+.spreadsheet-table .tabulator-row.tabulator-selected:hover {
+  background: var(--theme-surface-active);
+}
+
+/* An empty cell has no content to give the row height, which collapses a new table
+   into a sliver. Keep every row clickable at a sensible size. */
+.spreadsheet-table .tabulator-cell {
+  min-height: 30px;
+  line-height: 22px;
+}
+
+.spreadsheet-table .tabulator-row:not(:last-child) {
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 66%, transparent);
+}
+
+.spreadsheet-table .tabulator-cell:focus {
+  outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
+  outline-offset: -2px;
+}
+
+.biology-notebook-linked-preview {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
+}
+
+.biology-notebook-linked-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.biology-notebook-linked-preview-head h4,
+.biology-notebook-linked-preview-head p,
+.biology-notebook-linked-preview-caption {
+  margin: 0;
+}
+
+.biology-notebook-linked-preview-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.biology-notebook-linked-preview-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.82rem;
+}
+
+.biology-notebook-linked-preview-media {
+  display: grid;
+  gap: 12px;
+}
+
+.biology-notebook-linked-preview-figure {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.biology-notebook-linked-preview-figure img {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: var(--theme-surface-elevated);
+}
+
+.biology-notebook-linked-assay-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.biology-notebook-linked-assay-serial-dilution {
+  display: grid;
+  gap: 10px;
+}
+
+.biology-notebook-linked-assay-serial-dilution-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 12px;
+  align-items: baseline;
+}
+
+.biology-notebook-linked-assay-serial-dilution-head h5,
+.biology-notebook-linked-assay-serial-dilution-block > .small-note {
+  margin: 0;
+}
+
+.biology-notebook-linked-assay-serial-dilution-block {
+  display: grid;
+  gap: 6px;
+}
+
+.biology-notebook-linked-results .assay-serial-dilution-table-wrap {
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+}
+
+.biology-notebook-linked-results .assay-plate-table-wrap {
+  max-height: min(52vh, 520px);
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+}
+
+.biology-notebook-linked-results .assay-plate-table tr > *:nth-child(2) {
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-panel));
+}
+
+.biology-notebook-linked-results .assay-well {
+  cursor: default;
+}
+
+.biology-notebook-assay-axis-value,
+.biology-notebook-assay-well-primary,
+.biology-notebook-assay-well-secondary {
+  display: block;
+  line-height: 1.2;
+}
+
+.biology-notebook-assay-axis-value {
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.biology-notebook-assay-well-primary {
+  font-size: 0.7rem;
+  margin-bottom: 4px;
+}
+
+.biology-notebook-assay-well-secondary {
+  font-size: 0.66rem;
+  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
+}
+
+.biology-notebook-linked-empty {
+  margin: 0;
+  color: var(--theme-text-muted);
+}
+
+#biology-notebook-view .notebook-steps {
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#biology-notebook-view .notebook-step-line {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.inline-placeholder-wrap {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: baseline;
+  max-width: 100%;
+}
+
+.inline-placeholder-token {
+  display: inline-flex;
+  align-items: center;
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  cursor: text;
+}
+
+.inline-placeholder-token.is-empty {
+  color: var(--theme-text);
+}
+
+.inline-placeholder-editor {
+  width: auto;
+  min-width: 0;
+  max-width: min(360px, calc(100vw - 96px));
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+}
+
+#biology-notebook-view .inline-placeholder-token {
+  cursor: context-menu;
+}
+
+.biology-notebook-placeholder-table-action {
+  appearance: none;
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.biology-notebook-placeholder-table-action:hover,
+.biology-notebook-placeholder-table-action:focus-visible {
+  background: transparent;
+  outline: none;
+}
+
+#biology-notebook-view .inline-placeholder-token.is-linked-sample {
+  border-color: color-mix(in srgb, var(--theme-success) 46%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface-elevated));
+  color: var(--theme-success);
+  font-weight: 600;
+}
+
+.biology-notebook-sample-link-menu {
+  position: fixed;
+  z-index: 3000;
+  width: 132px;
+  overflow: hidden;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 8px 22px var(--theme-shadow-color);
+}
+
+.biology-notebook-sample-link-menu[hidden] {
+  display: none;
+}
+

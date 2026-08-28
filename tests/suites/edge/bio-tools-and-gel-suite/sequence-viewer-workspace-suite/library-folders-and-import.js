@@ -59,25 +59,27 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
     'sequence-viewer-library-filter-temporary',
     'sequence-viewer-library-list',
     'sequence-viewer-library-context-menu',
+    'sequence-viewer-detail-library-filter-saved',
+    'sequence-viewer-detail-library-filter-temporary',
+    'sequence-viewer-detail-library-list',
+    'sequence-viewer-detail-library-context-menu',
+    'sequence-viewer-detail-library-status',
     'sequence-viewer-preview-host'
   ];
   const folders = [];
   const entries = [{ id: 'entry_folder_move', name: 'Alpha Vector', status: 'saved', folderId: '' }];
   const moveCalls = [];
   const document = createMockDocument(ids);
-  document.defaultView = {
-    prompt(label, value) {
-      assert.equal(label, 'New sequence folder');
-      assert.equal(value, 'New Folder');
-      return 'Cloning';
-    }
-  };
   const window = {
     hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, folders: [...folders], entries: entries.map((entry) => ({ ...entry })) }),
       sequenceLibraryUpsertFolder: async (payload) => {
-        const folder = { id: 'folder_cloning', name: payload.name };
-        folders.push(folder);
+        const existing = folders.find((folder) => folder.id === payload.id);
+        const folder = existing || { id: 'folder_cloning', name: payload.name };
+        folder.name = payload.name;
+        if (!existing) {
+          folders.push(folder);
+        }
         return { ok: true, folder };
       },
       sequenceLibraryMoveEntry: async (payload) => {
@@ -99,8 +101,8 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
   moduleWithDom.initSequenceViewer();
   await flushAsync();
 
-  const libraryList = document.getElementById('sequence-viewer-library-list');
-  const contextMenu = document.getElementById('sequence-viewer-library-context-menu');
+  const libraryList = document.getElementById('sequence-viewer-detail-library-list');
+  const contextMenu = document.getElementById('sequence-viewer-detail-library-context-menu');
   trigger(libraryList, 'contextmenu', { target: libraryList, clientX: 44, clientY: 72 });
   assert.equal(contextMenu.hidden, false);
   const newFolderTarget = {
@@ -115,6 +117,26 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
   await flushAsync();
 
   assert.match(libraryList.innerHTML, /sequence-viewer-library-folder-row/);
+  assert.match(libraryList.innerHTML, /data-sequence-library-rename-input="folder_cloning"/);
+  assert.match(libraryList.innerHTML, /value="New Folder"/);
+
+  const folderRenameInput = {
+    value: 'Cloning',
+    dataset: {
+      sequenceLibraryRenameInput: 'folder_cloning',
+      sequenceLibraryRenameType: 'folder'
+    },
+    closest(selector) {
+      return selector === '[data-sequence-library-rename-input]' ? this : null;
+    },
+    focus() {},
+    setSelectionRange() {}
+  };
+  trigger(libraryList, 'input', { target: folderRenameInput });
+  trigger(libraryList, 'keydown', { target: folderRenameInput, key: 'Enter' });
+  await flushAsync();
+  await flushAsync();
+
   assert.match(libraryList.innerHTML, /Cloning/);
   assert.match(libraryList.innerHTML, /Alpha Vector/);
 
@@ -166,13 +188,6 @@ test('[EDGE] sequence-viewer renames a library entry from the right-click menu',
   let currentEntry = { ...originalEntry };
   let upsertPayload = null;
   const document = createMockDocument(ids);
-  document.defaultView = {
-    prompt(label, value) {
-      assert.equal(label, 'Rename sequence');
-      assert.equal(value, 'Original Name');
-      return 'Renamed Vector';
-    }
-  };
   const window = {
     hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [currentEntry] }),
@@ -231,6 +246,28 @@ ORIGIN
     }
   };
   trigger(contextMenu, 'click', { target: renameTarget });
+  assert.match(libraryList.innerHTML, /data-sequence-library-rename-input="entry_rename"/);
+  assert.match(libraryList.innerHTML, /value="Original Name"/);
+
+  const renameInput = {
+    value: 'Renamed Vector',
+    dataset: {
+      sequenceLibraryRenameInput: originalEntry.id,
+      sequenceLibraryRenameType: 'entry'
+    },
+    closest(selector) {
+      return selector === '[data-sequence-library-rename-input]' ? this : null;
+    },
+    focus() {},
+    setSelectionRange() {}
+  };
+  trigger(libraryList, 'input', { target: renameInput });
+  const renameSaveTarget = {
+    closest(selector) {
+      return selector === '[data-sequence-library-rename-save]' ? this : null;
+    }
+  };
+  trigger(libraryList, 'click', { target: renameSaveTarget });
   await flushAsync();
   await flushAsync();
 

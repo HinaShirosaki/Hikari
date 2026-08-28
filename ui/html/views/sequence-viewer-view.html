@@ -105,13 +105,8 @@
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <label>
                       Construct Name
-                      <input id="sequence-viewer-protein-builder-name" placeholder="Suggested from the N-to-C block order" aria-describedby="sequence-viewer-protein-builder-name-note" />
+                      <input id="sequence-viewer-protein-builder-name" placeholder="Suggested from the N-to-C block order" />
                     </label>
-                    <p id="sequence-viewer-protein-builder-name-note" class="small-note">Suggested automatically from the block chain; edit it when the construct needs a custom bench name.</p>
-                    <div class="form-actions">
-                      <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
-                      <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                    </div>
                   </form>
                 </section>
                 </div>
@@ -138,12 +133,8 @@
                       autocomplete="off"
                     />
                   </div>
-                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note">
-                    Search stored features and convert them into protein blocks.
-                  </span>
-                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results">
-                    <p class="small-note">Search by feature name or stored sequence.</p>
-                  </div>
+                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note"></span>
+                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results"></div>
 
                   <div id="sequence-viewer-protein-builder-feature-source" class="sequence-viewer-feature-source" hidden>
                     <h5>Source vector</h5>
@@ -172,8 +163,20 @@
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
                   <div class="result-card-head">
                     <h4>Assembled Sequence</h4>
+                    <div class="sequence-viewer-protein-builder-sequence-head-actions">
+                      <span id="sequence-viewer-protein-builder-sequence-edited" class="small-note" hidden>Hand-edited</span>
+                      <button id="sequence-viewer-protein-builder-sequence-reset-btn" type="button" class="ghost-btn" hidden>Reset to chain</button>
+                    </div>
                   </div>
-                  <div id="sequence-viewer-protein-builder-sequence" class="sequence-block">-</div>
+                  <textarea
+                    id="sequence-viewer-protein-builder-sequence"
+                    class="sequence-block sequence-viewer-protein-builder-sequence-input"
+                    rows="3"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-label="Assembled amino-acid sequence"
+                    placeholder="Add a block to start the chain"
+                  ></textarea>
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
@@ -193,10 +196,7 @@
           <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
             <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-protein-builder-assembly-title">
               <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
-                <div>
-                  <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
-                  <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
-                </div>
+                <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                 <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close stored backbone selector" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
 

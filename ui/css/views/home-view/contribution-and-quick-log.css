@@ -1,0 +1,287 @@
+#home-view .dashboard-field {
+  display: grid;
+  gap: 6px;
+  max-width: none;
+  color: var(--home-tile-text);
+}
+
+#home-view .home-contribution-display {
+  display: grid;
+  align-items: center;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#home-view .home-contribution-map {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  justify-items: start;
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px 0;
+}
+
+#home-view .home-contribution-months {
+  display: grid;
+  grid-template-columns: repeat(var(--contribution-week-count, 18), var(--contribution-cell-size));
+  column-gap: var(--contribution-cell-gap);
+  width: var(--contribution-grid-width);
+  min-width: 0;
+  margin-left: calc(var(--contribution-weekday-width) + var(--contribution-body-gap));
+  color: var(--home-tile-muted);
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+#home-view .home-contribution-month-label {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#home-view .home-contribution-body {
+  display: grid;
+  grid-template-columns: var(--contribution-weekday-width) var(--contribution-grid-width);
+  gap: var(--contribution-body-gap);
+  width: var(--contribution-map-width);
+  min-width: 0;
+  overflow: visible;
+  padding-bottom: 2px;
+}
+
+#home-view .home-contribution-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, var(--contribution-cell-size));
+  row-gap: var(--contribution-cell-gap);
+  color: var(--home-tile-muted);
+  font-size: 0.68rem;
+  line-height: var(--contribution-cell-size);
+}
+
+#home-view .home-contribution-weekdays span {
+  grid-row: auto / span 1;
+}
+
+#home-view .home-contribution-weekdays span:nth-child(1) {
+  grid-row-start: 2;
+}
+
+#home-view .home-contribution-weekdays span:nth-child(2) {
+  grid-row-start: 4;
+}
+
+#home-view .home-contribution-weekdays span:nth-child(3) {
+  grid-row-start: 6;
+}
+
+#home-view .home-contribution-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--contribution-day-count), var(--contribution-cell-size));
+  grid-auto-columns: var(--contribution-cell-size);
+  gap: var(--contribution-cell-gap);
+  min-width: 0;
+}
+
+#home-view .home-contribution-cell {
+  width: var(--contribution-cell-size);
+  height: var(--contribution-cell-size);
+  border: 1px solid var(--home-contribution-border);
+  border-radius: 3px;
+  background: var(--home-contribution-empty);
+}
+
+#home-view .home-contribution-cell {
+  padding: 0;
+  min-width: var(--contribution-cell-size);
+  min-height: var(--contribution-cell-size);
+}
+
+#home-view .home-contribution-cell:hover,
+#home-view .home-contribution-cell:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 42%, transparent);
+  outline-offset: 1px;
+}
+
+#home-view .home-contribution-cell[data-level="1"] {
+  background: var(--home-contribution-level-1);
+}
+
+#home-view .home-contribution-cell[data-level="2"] {
+  background: var(--home-contribution-level-2);
+}
+
+#home-view .home-contribution-cell[data-level="3"] {
+  background: var(--home-contribution-level-3);
+}
+
+#home-view .home-contribution-cell[data-level="4"] {
+  background: var(--home-contribution-level-4);
+}
+
+#home-view .home-quicklog-body {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-height: 0;
+}
+
+#home-view .home-tile .home-quicklog-input {
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  border-radius: 8px;
+  resize: none;
+  line-height: 1.45;
+  font-size: 0.86rem;
+}
+
+#home-view .home-quicklog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+#home-view .home-quicklog-status {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#home-view .home-tile .home-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--home-tile-line);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  cursor: pointer;
+}
+
+#home-view .home-tile .home-icon-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+#home-view .home-tile .home-icon-btn-send {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+}
+
+#home-view .home-tile .home-icon-btn:hover:not(:disabled),
+#home-view .home-tile .home-icon-btn:focus-visible {
+  filter: brightness(0.97);
+}
+
+#home-view .home-tile .home-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+#home-view .dashboard-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#home-view .home-tile input,
+#home-view .home-tile textarea,
+#home-view .home-tile select {
+  border-color: var(--home-tile-line);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  color: var(--home-tile-text);
+}
+
+#home-view .home-tile input::placeholder,
+#home-view .home-tile textarea::placeholder {
+  color: color-mix(in srgb, var(--home-tile-muted) 78%, transparent);
+}
+
+#home-view .home-tile button {
+  border-color: var(--home-tile-line);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated) 14%);
+  color: var(--home-tile-text);
+}
+
+#home-view .home-tile button:hover,
+#home-view .home-tile button:focus-visible {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 100%, var(--theme-surface-elevated) 0%);
+}
+
+#home-view .home-tile .primary-btn {
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-border));
+  background: var(--theme-accent);
+  color: var(--home-tile-text);
+}
+
+#home-view .home-tile .primary-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+}
+
+body.theme-night #home-view .home-tile input,
+body.theme-night #home-view .home-tile textarea,
+body.theme-night #home-view .home-tile select {
+  border-color: var(--home-tile-control-border);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
+}
+
+body.theme-night #home-view .home-tile input::placeholder,
+body.theme-night #home-view .home-tile textarea::placeholder {
+  color: color-mix(in srgb, var(--home-tile-muted) 82%, transparent);
+}
+
+body.theme-night #home-view .home-tile button {
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
+}
+
+body.theme-night #home-view .home-tile button:hover,
+body.theme-night #home-view .home-tile button:focus-visible {
+  background: var(--home-tile-control-bg-hover);
+}
+
+body.theme-night #home-view .home-contribution-cell {
+  border-color: color-mix(in srgb, var(--home-tile-line-soft) 88%, transparent);
+  background: var(--home-contribution-empty-bg);
+}
+
+body.theme-night #home-view .home-contribution-cell[data-level="1"] {
+  background: var(--home-contribution-level-1);
+}
+
+body.theme-night #home-view .home-contribution-cell[data-level="2"] {
+  background: var(--home-contribution-level-2);
+}
+
+body.theme-night #home-view .home-contribution-cell[data-level="3"] {
+  background: var(--home-contribution-level-3);
+}
+
+body.theme-night #home-view .home-contribution-cell[data-level="4"] {
+  background: var(--home-contribution-level-4);
+}
+
+body.theme-night #home-view .home-tile .primary-btn {
+  border-color: color-mix(in srgb, var(--theme-text-strong) 18%, transparent);
+  background: color-mix(in srgb, var(--theme-text-strong) 16%, transparent);
+  color: var(--home-tile-text);
+}
+
+body.theme-night #home-view .home-tile .primary-btn:hover {
+  background: color-mix(in srgb, var(--theme-text-strong) 24%, transparent);
+}
+
+

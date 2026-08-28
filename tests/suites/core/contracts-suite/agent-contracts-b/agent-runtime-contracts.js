@@ -17,7 +17,8 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     test('renderer consumes science payloads through normalized agent responses', () => {
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
-      assert.match(responseSource, /export function summarizeScienceResult/);
+      const responseSummariesSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response', 'result-summaries.js'), 'utf8');
+      assert.match(responseSummariesSource, /function summarizeScienceResult/);
       assert.match(responseSource, /export function normalizeAgentResponse/);
       assert.match(responseSource, /const scienceAnswerText = summarizeScienceResult\(generalScienceQuestion\)/);
       assert.match(rendererSource, /normalizeAgentResponse/);
@@ -76,13 +77,15 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     });
     test('assay table and Plotly graph helpers expose reusable runtime action contracts', () => {
       const assayTableSource = fs.readFileSync(agentPath('tools', 'agent-assay-table.js'), 'utf8');
+      const assayTableConstantsSource = fs.readFileSync(agentPath('tools', 'assay-table', 'constants.js'), 'utf8');
+      const assayTableOperationsSource = fs.readFileSync(agentPath('tools', 'assay-table', 'column-operations.js'), 'utf8');
       const plotlyGraphSource = fs.readFileSync(agentPath('tools', 'agent-plotly-graph.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
 
-      assert.match(assayTableSource, /const ASSAY_TABLE_ACTIONS = Object\.freeze/);
+      assert.match(assayTableConstantsSource, /const ASSAY_TABLE_ACTIONS = Object\.freeze/);
       assert.match(assayTableSource, /function createAgentAssayTableRuntime\(deps = \{\}\)/);
-      assert.match(assayTableSource, /function applyOperation\(operation = '', values = \[\]\)/);
+      assert.match(assayTableOperationsSource, /function applyOperation\(operation = '', values = \[\]\)/);
       assert.match(assayTableSource, /async function python\(input = \{\}\)/);
       assert.match(plotlyGraphSource, /const PLOTLY_GRAPH_ACTIONS = Object\.freeze/);
       assert.match(plotlyGraphSource, /function createAgentPlotlyGraphRuntime\(deps = \{\}\)/);
@@ -216,11 +219,12 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
+      const chatLogConstantsSource = fs.readFileSync(agentPath('context', 'chat-log', 'constants.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8');
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-      assert.match(helperSource, /const CHAT_LOG_FOLDER_NAME = 'chat_log';/);
-      assert.match(helperSource, /const CHAT_LOG_INDEX_FILE_NAME = 'index\.json';/);
-      assert.match(helperSource, /const CHAT_LOG_EVENT_TYPES = Object\.freeze/);
+      assert.match(chatLogConstantsSource, /const CHAT_LOG_FOLDER_NAME = 'chat_log';/);
+      assert.match(chatLogConstantsSource, /const CHAT_LOG_INDEX_FILE_NAME = 'index\.json';/);
+      assert.match(chatLogConstantsSource, /const CHAT_LOG_EVENT_TYPES = Object\.freeze/);
       assert.match(helperSource, /function createAgentChatLogRuntime\(deps = \{\}\)/);
       assert.match(helperSource, /async function createSession\(input = \{\}\)/);
       assert.match(helperSource, /async function listSessions\(input = \{\}\)/);
@@ -235,8 +239,13 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     test('literature, paper context, paper analysis, and protocol generation helpers expose reusable runtimes and registered tools', () => {
       const webSearchSource = fs.readFileSync(agentPath('tools', 'agent-web-search.js'), 'utf8');
       const literatureSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'), 'utf8');
+      const literatureConstantsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'search', 'literature-search', 'constants.js'), 'utf8');
+      const literatureQuerySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'search', 'literature-search', 'query-and-results.js'), 'utf8');
       const paperContextSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'), 'utf8');
+      const paperContextSchemasSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'paper-context', 'schemas.js'), 'utf8');
       const paperDownloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'), 'utf8');
+      const paperDownloadConstantsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'paper-download', 'constants.js'), 'utf8');
+      const paperDownloadTargetsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'paper-download', 'url-targets.js'), 'utf8');
       const paperSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'), 'utf8');
       const protocolSource = fs.readFileSync(agentPath('tools', 'agent-protocol-generation.js'), 'utf8');
       const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
@@ -249,20 +258,20 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
       assert.match(webSearchSource, /function createWebSearchRuntime\(deps = \{\}\)/);
       assert.match(webSearchSource, /async function searchWebResults\(input = \{\}\)/);
       assert.match(webSearchSource, /requestWebSearch/);
-      assert.match(literatureSource, /const LITERATURE_SOURCES = Object\.freeze/);
-      assert.match(literatureSource, /agent-search-source-preferences\.js/);
+      assert.match(literatureConstantsSource, /const LITERATURE_SOURCES = Object\.freeze/);
+      assert.match(literatureQuerySource, /agent-search-source-preferences\.js/);
       assert.match(literatureSource, /function createLiteratureSearchRuntime\(deps = \{\}\)/);
-      assert.match(literatureSource, /function buildLiteratureQuery\(input = \{\}\)/);
+      assert.match(literatureQuerySource, /function buildLiteratureQuery\(input = \{\}\)/);
       assert.match(literatureSource, /async function searchLiterature\(input = \{\}\)/);
-      assert.match(paperContextSource, /const PAPER_CONTEXT_SOURCE_ORDER = Object\.freeze/);
+      assert.match(paperContextSchemasSource, /const PAPER_CONTEXT_SOURCE_ORDER = Object\.freeze/);
       assert.match(paperContextSource, /function createPaperContextLoaderRuntime\(deps = \{\}\)/);
       assert.match(paperContextSource, /async function loadPaperContexts\(input = \{\}\)/);
       assert.equal(paperContextSource.includes('paper-download'), false);
       assert.equal(paperContextSource.includes('storage_path'), false);
       assert.equal(readSource('src/main/papers/search/agent-literature-search.js').includes("require('../../lib/llm/runtime-helpers.js')"), true);
-      assert.match(paperDownloadSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
+      assert.match(paperDownloadConstantsSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
       assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
-      assert.match(paperDownloadSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
+      assert.match(paperDownloadTargetsSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
       assert.match(paperDownloadSource, /async function downloadPaper\(input = \{\}\)/);
       assert.match(paperDownloadSource, /browser-assisted download session/i);
       assert.match(paperSource, /function createPaperAnalysisRuntime\(deps = \{\}\)/);
@@ -472,14 +481,16 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     });
     test('purchase recommendation helper exposes reusable runtime and tool contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
+      const purchaseQuerySource = fs.readFileSync(agentPath('tools', 'purchase-recommendation', 'search-queries.js'), 'utf8');
+      const purchaseExtractionSource = fs.readFileSync(agentPath('tools', 'purchase-recommendation', 'product-extraction.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
 
       assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
-      assert.match(purchaseSource, /function buildSearchQuery\(input = \{\}\)/);
-      assert.match(purchaseSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
-      assert.match(purchaseSource, /const completeJsonLdProduct =/);
-      assert.match(purchaseSource, /readMetaContent\(html, 'property', 'og:image'\)/);
+      assert.match(purchaseQuerySource, /function buildSearchQuery\(input = \{\}\)/);
+      assert.match(purchaseExtractionSource, /function extractProductFromHtml\(html = '', pageUrl = ''\)/);
+      assert.match(purchaseExtractionSource, /const completeJsonLdProduct =/);
+      assert.match(purchaseExtractionSource, /readMetaContent\(html, 'property', 'og:image'\)/);
       assert.match(purchaseSource, /follow_up_questions/);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
       assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);

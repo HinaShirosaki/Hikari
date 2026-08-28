@@ -443,7 +443,8 @@ test('biology-notebook attachment images resolve from portable records for rende
     'ui',
     'css',
     'views',
-    'biology-notebook-view.css'
+    'biology-notebook-view',
+    'notebook-and-tables.css'
   ), 'utf8');
   assert.match(notebookCss, /\.biology-notebook-attachment-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(180px,\s*320px\)\)/s);
   assert.match(notebookCss, /\.biology-notebook-attachment-image\s*\{[^}]*width:\s*fit-content[^}]*border:\s*0/s);
@@ -503,7 +504,8 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
     'ui',
     'css',
     'views',
-    'biology-notebook-view.css'
+    'biology-notebook-view',
+    'notebook-and-tables.css'
   ), 'utf8');
   assert.match(html, /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
   assert.match(html, /<label for="biology-notebook-result">Notes<\/label>/);
@@ -535,7 +537,8 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
     'ui',
     'css',
     'views',
-    'biology-notebook-view.css'
+    'biology-notebook-view',
+    'rail-and-projects.css'
   ), 'utf8');
   assert.match(source, /const INITIAL_BUFFER_ROW_COUNT = 6;/);
   assert.match(source, /function closeOtherBufferSuggestions\(activeIndex\)/);
@@ -553,7 +556,7 @@ test('biology-notebook buffer preparer starts blank, has one insert-and-record a
   const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'biology-notebook-view.html'), 'utf8');
   const toolSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'), 'utf8');
   const compounds = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'chemistry', 'buffer-compounds.js'), 'utf8');
-  const calculations = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'bench-calculations.js'), 'utf8');
+  const calculations = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'bench-calculations', 'buffer-concentration.js'), 'utf8');
   const bufferSection = html.slice(
     html.indexOf('id="biology-notebook-tool-panel-buffer"'),
     html.indexOf('id="biology-notebook-tool-panel-reaction"')

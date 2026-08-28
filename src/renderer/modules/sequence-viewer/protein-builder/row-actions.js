@@ -1,6 +1,6 @@
 import { parseInputRecords } from '../parsing.js';
 import { cleanText } from '../shared.js';
-import { cloneLibraryRow, createCustomRow, createFeatureRow } from './row-factory.js';
+import { cloneLibraryRow, createFeatureRow } from './row-factory.js';
 
 export function installProteinBuilderRowActions(ctx) {
   const { elements, state } = ctx;
@@ -23,12 +23,6 @@ export function installProteinBuilderRowActions(ctx) {
   ctx.removeRow = function removeRow(rowId) {
     state.rows = state.rows.filter((row) => row.id !== rowId);
     ctx.invalidateDnaConstruct();
-  };
-
-  ctx.addCustomRow = function addCustomRow() {
-    ctx.appendRow(createCustomRow(state.nextRowId++));
-    ctx.invalidateDnaConstruct();
-    ctx.render();
   };
 
   ctx.addLibraryRow = function addLibraryRow(type, libraryId) {
@@ -173,7 +167,7 @@ export function installProteinBuilderRowActions(ctx) {
       state.featureSearchResults = [];
       ctx.clearFeatureSelection();
       ctx.renderFeatureSearchResults();
-      ctx.setFeatureSearchStatus('Enter at least 2 characters to search stored features.');
+      ctx.setFeatureSearchStatus('');
       return;
     }
 
@@ -201,7 +195,7 @@ export function installProteinBuilderRowActions(ctx) {
         .filter((feature) => !/primer/i.test(String(feature?.type || '')));
       ctx.clearFeatureSelection();
       ctx.renderFeatureSearchResults();
-      ctx.setFeatureSearchStatus(`Found ${state.featureSearchResults.length} matching feature${state.featureSearchResults.length === 1 ? '' : 's'}.`);
+      ctx.setFeatureSearchStatus('');
     } catch (error) {
       state.featureSearchResults = [];
       ctx.clearFeatureSelection();

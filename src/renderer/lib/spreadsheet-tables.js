@@ -4,6 +4,7 @@ import {
   cloneNotebookResultTable,
   cloneNotebookResultTables,
   createDefaultNotebookResultTable,
+  createMolarityNotebookResultTable,
   createNotebookResultTableFromPlaceholder,
   normalizeNotebookResultTable,
   normalizeNotebookResultTables
@@ -584,7 +585,8 @@ export function createSpreadsheetTables({
 
       return normalizeNotebookResultTable({
         columns,
-        rows
+        rows,
+        solve: draftTable?.solve
       });
     }).filter(Boolean);
 
@@ -686,6 +688,12 @@ export function createSpreadsheetTables({
     renderEditor(tables, { activeIndex: tables.length - 1 });
   }
 
+  function onAddMolarity() {
+    const tables = syncDraftFromGrid();
+    tables.push(createMolarityNotebookResultTable(createId));
+    renderEditor(tables, { activeIndex: tables.length - 1 });
+  }
+
   function onAddFromPlaceholder({ name = '', value = '' } = {}) {
     const tables = syncDraftFromGrid();
     tables.push(createNotebookResultTableFromPlaceholder(createId, { name, value }));
@@ -758,6 +766,7 @@ export function createSpreadsheetTables({
     getCurrent,
     getCurrentTables,
     onAdd,
+    onAddMolarity,
     onAddFromPlaceholder,
     onAddRow,
     onAddColumn,

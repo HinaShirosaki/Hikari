@@ -1,0 +1,476 @@
+/* assay-view */
+
+/* Extracted from ui/css/base/core.css */
+.assay-results-actions {
+  margin-top: 8px;
+}
+
+.assay-results-actions > .ghost-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-results-actions > .ghost-btn:hover,
+.assay-results-actions > .ghost-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-results-actions > .primary-btn {
+  border-color: transparent;
+}
+
+.assay-results-actions > .assay-results-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-results-actions > .assay-results-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn {
+  border-color: transparent;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:hover,
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+}
+
+/* Status copy appears here after result and grouping actions. Empty targets should
+   not create grid rows (and gaps), but return to normal flow as soon as text is set. */
+#assay-active-assay-info:empty,
+#assay-result-status:empty,
+#assay-transform-summary:empty,
+#assay-analysis-selection-status:empty {
+  display: none;
+}
+
+.assay-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.assay-header-row h2 {
+  margin: 0;
+}
+
+.assay-create-sidebar {
+  align-self: stretch;
+}
+
+.left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.assay-create-sidebar > .assay-create-sidebar-pinned.left-rail-template__pinned {
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+  padding: 8px var(--app-left-rail-padding-inline, 16px) 16px;
+  scrollbar-gutter: stable;
+}
+
+.left-rail-template.assay-create-layout {
+  --left-rail-main-gap: 20px;
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
+}
+
+.assay-create-layout > * {
+  min-width: 0;
+}
+
+.left-rail-template.assay-results-layout {
+  --left-rail-main-gap: 20px;
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+  /* Bounded to the (height:100%) view so the workspace __main scrolls instead of
+     overflowing the clip; matches the sequence-viewer detail layout. */
+  min-height: 0;
+  height: 100%;
+}
+
+.assay-results-layout > * {
+  min-width: 0;
+}
+
+.assay-results-sheet-panel,
+.assay-results-analysis-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-browser-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.assay-browser-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 10px;
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.assay-browser-summary::-webkit-details-marker {
+  display: none;
+}
+
+.assay-browser-summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.assay-browser-panel[open] .assay-browser-summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.assay-browser-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 0 8px;
+}
+
+#assay-search,
+#assay-results-search {
+  height: var(--left-rail-item-min-height, 36px);
+  min-height: var(--left-rail-item-min-height, 36px);
+}
+
+.assay-browser-list {
+  display: grid;
+  gap: 2px;
+}
+
+.assay-browser-empty {
+  padding: 6px 0 2px;
+}
+
+.assay-browser-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 72px 12px 8px;
+}
+
+.assay-browser-item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+/* The row carries hover/selection; without the :hover copy, global button:hover
+   paints an opaque pill inside the row and the highlight reads as two layers. */
+.assay-browser-item-select,
+.assay-browser-item-select:hover {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assay-browser-item-title {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 0.88rem;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assay-results-browser-list .assay-browser-item {
+  padding-inline: 8px;
+  border-radius: 8px;
+}
+
+.assay-results-browser-list .assay-browser-item.is-active {
+  background: var(--theme-surface-subtle);
+  box-shadow: inset 3px 0 0 var(--theme-accent);
+}
+
+.assay-results-browser-list .assay-browser-item-select:hover .assay-browser-item-title,
+.assay-results-browser-list .assay-browser-item-select:focus-visible .assay-browser-item-title {
+  color: var(--theme-accent);
+}
+
+.assay-browser-item-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.assay-results-controls-panel {
+  gap: 0;
+}
+
+/* Analyze rail: a single scroller of foldable sections, nothing pinned. */
+.left-rail-template.assay-results-layout > .assay-results-controls-panel.app-left-rail {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+/* The scroller spans the rail's full width so its scrollbar rides the rail border
+   instead of floating in a padding gutter. */
+.assay-results-controls-panel > .assay-results-rail-scroll.left-rail-template__scroll {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-height: 0;
+  padding: 8px 6px 16px var(--app-left-rail-padding-inline, 16px);
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+}
+
+.assay-results-workspace {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-height: 0;
+  /* This panel is a scroll container with a definite height, so `auto` rows are shrunk to
+     share it -- and `min-height: 0` on the stages lets them shrink past their content.
+     A tall plate then spilled out of its stage and painted over the chart below it.
+     Content-sized rows overflow into the panel's own scroll instead of overlapping. */
+  grid-auto-rows: max-content;
+}
+
+.assay-results-table-stage,
+.assay-results-output-stage {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Folding the plate away hands its vertical space to the chart below it. */
+.assay-result-table-panel:not([open]) > .foldable-section__summary {
+  color: var(--theme-text-muted);
+}
+
+.assay-results-output-stage {
+  display: none;
+}
+
+.assay-results-output-stage:has(#assay-analysis-table:not(:empty)) {
+  display: grid;
+  padding-top: 14px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.assay-results-workspace #assay-result-table,
+.assay-results-workspace #assay-derived-plate-table,
+.assay-results-workspace #assay-analysis-table {
+  margin-top: 0;
+}
+
+.assay-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+}
+
+.assay-form-grid > * {
+  min-width: 0;
+}
+
+.assay-display-field {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.assay-display-label {
+  color: var(--theme-text-strong);
+  font-size: 0.94rem;
+  font-weight: 500;
+}
+
+.assay-conc-unit-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--theme-text-strong);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.assay-conc-unit-input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font-size: 0.9rem;
+}
+
+.assay-fill-mode-select {
+  padding: 6px 8px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font-size: 0.9rem;
+}
+
+.assay-display-value {
+  min-height: 41px;
+  display: flex;
+  align-items: center;
+  color: var(--theme-text-strong);
+  font-size: 1rem;
+  font-weight: 650;
+  padding: 9px 11px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+}
+
+.assay-form-note,
+.assay-form-actions {
+  grid-column: 1 / -1;
+}
+
+.assay-create-sidebar .assay-form-grid {
+  grid-template-columns: 1fr;
+}
+
+.assay-create-sidebar .assay-form-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.assay-form-actions > .assay-form-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-form-actions > .assay-form-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:hover,
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-form-actions > .assay-form-save-icon-btn.primary-btn {
+  width: auto;
+  min-width: 72px;
+  padding: 0 10px;
+  display: inline-flex;
+  gap: 6px;
+  border-color: transparent;
+}
+
+.assay-form-button-caption {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.assay-form-actions > .assay-plate-type-field {
+  display: block;
+  flex: 0 0 104px;
+  width: 104px;
+  margin: 0 0 0 4px;
+}
+
+.assay-form-actions > .assay-plate-type-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 26px 6px 9px;
+  font-size: 0.88rem;
+}
+
+.assay-create-preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.assay-create-preview-panel > .assay-plate-toolbar {
+  margin-bottom: 12px;
+}
+

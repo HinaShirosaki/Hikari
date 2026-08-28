@@ -1,6 +1,6 @@
 import { assembleCloningPlan } from './cloning-assembly.js';
 import { buildCloningReactionSteps } from './cloning-reaction-steps.js';
-import { syncCloningReactionStepPages } from './cloning-step-pages.js';
+import { isExecutedNotebookEntry, syncCloningReactionStepPages } from './cloning-step-pages.js';
 import { appendGeneratedPcrReaction, buildPcrFixedReactionCalculation } from './pcr-reaction-setup.js';
 import { PROTEIN_ASSEMBLY_TAGS } from './protein-builder/assembly-model.js';
 import { renamePrimers } from './primer-naming.js';
@@ -644,11 +644,13 @@ export function createProteinBuilderCloningNotebookPage({
   });
   const resultTable = buildProteinBuilderPrimerResultTable(cloningPlan);
   state.notebookEntries = asArray(state.notebookEntries);
-  const entryId = cleanText(requestedEntryId, 160) || createStableId(createId, 'protein_builder_cloning_entry');
-  const existingEntryIndex = state.notebookEntries.findIndex((candidate) => (
-    cleanText(candidate?.id, 160) === entryId
-  ));
-  const existingEntry = existingEntryIndex >= 0 ? state.notebookEntries[existingEntryIndex] : null;
+  const requestedId = cleanText(requestedEntryId, 160);
+  const requestedEntry = requestedId
+    ? state.notebookEntries.find((candidate) => cleanText(candidate?.id, 160) === requestedId) || null
+    : null;
+  const existingEntry = isExecutedNotebookEntry(requestedEntry) ? null : requestedEntry;
+  const entryId = cleanText(existingEntry?.id, 160) || createStableId(createId, 'protein_builder_cloning_entry');
+  const existingEntryIndex = existingEntry ? state.notebookEntries.indexOf(existingEntry) : -1;
   const entry = {
     id: entryId,
     notebookType: 'biology',
@@ -672,7 +674,7 @@ export function createProteinBuilderCloningNotebookPage({
     updatedAt: nowIso,
     createdAt: cleanText(existingEntry?.createdAt, 120) || nowIso,
     notebookState: cleanText(existingEntry?.notebookState, 80) || 'planned',
-    executedAt: '',
+    executedAt: cleanText(existingEntry?.executedAt, 120),
     agentDraftStatus: '',
     agentDraftMeta: {},
     selectionInsights: [],

@@ -1,0 +1,324 @@
+import { normalizeFeatureType } from '../feature-types.js';
+import { clamp, normalizeRecordName, normalizeSequenceText } from '../shared.js';
+
+function splitTopLevelArguments(raw) {
+  const input = String(raw || '');
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (ch === '(') {
+      depth += 1;
+      continue;
+    }
+    if (ch === ')') {
+      depth = Math.max(0, depth - 1);
+      continue;
+    }
+    if (ch === ',' && depth === 0) {
+      parts.push(input.slice(start, i));
+      start = i + 1;
+    }
+  }
+  parts.push(input.slice(start));
+  return parts.map((part) => part.trim()).filter(Boolean);
+}
+
+function normalizeFeatureRange(startRaw, endRaw, sequenceLength, strand) {
+  const len = Math.max(0, Number(sequenceLength) || 0);
+  if (!len) {
+    return [];
+  }
+
+  const start = clamp(Math.round(Number(startRaw) || 0), 1, len);
+  const end = clamp(Math.round(Number(endRaw) || 0), 1, len);
+
+  if (start <= end) {
+    return [{
+      start: start - 1,
+      end,
+      strand
+    }];
+  }
+
+  return [
+    {
+      start: start - 1,
+      end: len,
+      strand
+    },
+    {
+      start: 0,
+      end,
+      strand
+    }
+  ];
+}
+
+function parseSimpleLocationAtom(atom, sequenceLength, strand = 1) {
+  const raw = String(atom || '').trim();
+  if (!raw) {
+    return [];
+  }
+
+  const body = raw.includes(':') ? raw.slice(raw.lastIndexOf(':') + 1) : raw;
+  const numbers = body.match(/\d+/g)?.map((part) => Number(part)) || [];
+  if (!numbers.length) {
+    return [];
+  }
+
+  if (body.includes('..') || body.includes('^')) {
+    return normalizeFeatureRange(numbers[0], numbers[numbers.length - 1], sequenceLength, strand);
+  }
+
+  return normalizeFeatureRange(numbers[0], numbers[0], sequenceLength, strand);
+}
+
+function parseGenBankLocationSegments(rawExpression, sequenceLength, strand = 1) {
+  const expression = String(rawExpression || '').replace(/\s+/g, '');
+  if (!expression) {
+    return [];
+  }
+
+  const lower = expression.toLowerCase();
+
+  if (lower.startsWith('complement(') && expression.endsWith(')')) {
+    const inner = expression.slice('complement('.length, -1);
+    return parseGenBankLocationSegments(inner, sequenceLength, strand * -1);
+  }
+
+  if ((lower.startsWith('join(') || lower.startsWith('order(')) && expression.endsWith(')')) {
+    const fnLength = lower.startsWith('join(') ? 'join('.length : 'order('.length;
+    const inner = expression.slice(fnLength, -1);
+    return splitTopLevelArguments(inner).flatMap((part) => parseGenBankLocationSegments(part, sequenceLength, strand));
+  }
+
+  return parseSimpleLocationAtom(expression, sequenceLength, strand);
+}
+
+function parseFeatureQualifier(line) {
+  const token = String(line || '').trim().replace(/^\//, '');
+  if (!token) {
+    return null;
+  }
+
+  const equalIndex = token.indexOf('=');
+  if (equalIndex === -1) {
+    return { key: token.toLowerCase(), value: 'true', openQuote: false };
+  }
+
+  const key = token.slice(0, equalIndex).trim().toLowerCase();
+  let value = token.slice(equalIndex + 1).trim();
+
+  const quoted = value.startsWith('"');
+  if (quoted) {
+    value = value.slice(1);
+  }
+
+  let openQuote = false;
+  if (value.endsWith('"')) {
+    value = value.slice(0, -1);
+  } else if (quoted) {
+    openQuote = true;
+  }
+
+  return {
+    key,
+    value,
+    openQuote
+  };
+}
+
+function normalizeProteinTranslation(rawValue) {
+  return String(rawValue || '')
+    .toUpperCase()
+    .replace(/\s+/g, '')
+    .replace(/[^A-Z*]/g, '');
+}
+
+function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
+  const lines = String(featureBlock || '').replace(/\r\n?/g, '\n').split('\n');
+  const entries = [];
+
+  let current = null;
+
+  const flush = () => {
+    if (!current) {
+      return;
+    }
+    entries.push(current);
+    current = null;
+  };
+
+  lines.forEach((line) => {
+    const featureMatch = line.match(/^\s{5}(\S+)\s+(.+)$/);
+    if (featureMatch) {
+      flush();
+      current = {
+        type: featureMatch[1],
+        location: String(featureMatch[2] || '').trim(),
+        qualifiers: {},
+        pendingQualifierKey: ''
+      };
+      return;
+    }
+
+    if (!current) {
+      return;
+    }
+
+    const qualifierMatch = line.match(/^\s{21}\/(.+)$/);
+    if (qualifierMatch) {
+      const parsed = parseFeatureQualifier(qualifierMatch[1]);
+      if (!parsed) {
+        return;
+      }
+      current.qualifiers[parsed.key] = parsed.value;
+      current.pendingQualifierKey = parsed.openQuote ? parsed.key : '';
+      return;
+    }
+
+    const continuationMatch = line.match(/^\s{21}(.+)$/);
+    if (!continuationMatch) {
+      return;
+    }
+
+    const continuation = String(continuationMatch[1] || '').trim();
+    if (!continuation) {
+      return;
+    }
+
+    if (current.pendingQualifierKey) {
+      let text = continuation;
+      let closed = false;
+      if (text.endsWith('"')) {
+        text = text.slice(0, -1);
+        closed = true;
+      }
+      const merged = [current.qualifiers[current.pendingQualifierKey], text].filter(Boolean).join(' ');
+      current.qualifiers[current.pendingQualifierKey] = merged;
+      if (closed) {
+        current.pendingQualifierKey = '';
+      }
+      return;
+    }
+
+    current.location += continuation;
+  });
+
+  flush();
+
+  return entries
+    .map((entry, index) => {
+      const segmentsWithStrand = parseGenBankLocationSegments(entry.location, sequenceLength);
+      if (!segmentsWithStrand.length) {
+        return null;
+      }
+
+      const strand = segmentsWithStrand[0].strand === -1 ? -1 : 1;
+      const segments = segmentsWithStrand.map((segment) => ({
+        start: segment.start,
+        end: segment.end
+      }));
+      const name = normalizeRecordName(
+        entry.qualifiers.label
+          || entry.qualifiers.gene
+          || entry.qualifiers.locus_tag
+          || entry.qualifiers.product
+          || entry.type
+          || `feature_${index + 1}`,
+        `feature_${index + 1}`
+      );
+
+      const description = normalizeRecordName(
+        entry.qualifiers.note
+          || entry.qualifiers.product
+          || entry.qualifiers.function
+          || '',
+        ''
+      );
+      const translation = normalizeProteinTranslation(entry.qualifiers.translation || '');
+      // A primer_bind written by this app carries the oligo it was designed as,
+      // which is not always what the template says at that position.
+      const primerSequence = String(entry.qualifiers.primer_sequence || '')
+        .toUpperCase()
+        .replace(/[^A-Z]/g, '');
+
+      return {
+        id: `gbk_feature_${index + 1}`,
+        name,
+        type: normalizeFeatureType(entry.type || 'misc_feature'),
+        strand,
+        description,
+        ...(translation ? { translation } : {}),
+        ...(primerSequence ? { primerSequence } : {}),
+        source: 'genbank',
+        locationText: entry.location,
+        segments
+      };
+    })
+    .filter(Boolean);
+}
+
+function parseGenBankRecords(rawInput) {
+  const text = String(rawInput || '');
+  const blocks = text
+    .split(/^\s*\/\/\s*$/m)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const records = [];
+  const warnings = [];
+  const errors = [];
+
+  blocks.forEach((block, index) => {
+    const locusMatch = block.match(/^\s*LOCUS\s+(\S+)(.*)$/im);
+    const locusTail = String(locusMatch?.[2] || '');
+    const name = normalizeRecordName(locusMatch?.[1] || `record_${index + 1}`, `record_${index + 1}`);
+    const topology = /\bcircular\b/i.test(locusTail) ? 'circular' : 'linear';
+
+    const originMatch = block.match(/^\s*ORIGIN\b([\s\S]*)$/im);
+    if (!originMatch) {
+      warnings.push(`GenBank record ${name} skipped: ORIGIN section not found.`);
+      return;
+    }
+
+    const sequence = normalizeSequenceText(String(originMatch[1] || ''));
+    if (!sequence.length) {
+      warnings.push(`GenBank record ${name} skipped: ORIGIN section had no sequence.`);
+      return;
+    }
+
+    const featuresMatch = block.match(/^\s*FEATURES\b([\s\S]*?)(?=^\s*ORIGIN\b)/im);
+    const features = parseGenBankFeatureEntries(featuresMatch?.[1] || '', sequence.length);
+
+    records.push({
+      id: `genbank_${records.length + 1}`,
+      name,
+      description: '',
+      sourceFormat: 'genbank',
+      topology,
+      sequence,
+      quality: '',
+      features
+    });
+  });
+
+  if (!records.length && !errors.length) {
+    errors.push('No GenBank records were parsed.');
+  }
+
+  return {
+    format: 'genbank',
+    records,
+    warnings,
+    errors
+  };
+}
+
+export {
+  parseGenBankLocationSegments,
+  parseGenBankRecords
+};
