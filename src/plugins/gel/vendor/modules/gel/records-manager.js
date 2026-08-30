@@ -2,6 +2,9 @@ import { DEFAULT_LADDER_PRESET_ID, getLadderPresetBands } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
 import { normalizeEnhancementSettings } from './analysis/image-processing.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
+import { createGelRecordArtifacts } from './records/record-artifacts.js';
+import { createGelRecordImages } from './records/record-images.js';
+import { createGelRecordList } from './records/record-list.js';
 
 export function createRecordsManager({ runtime, elements, deps }) {
   let recordLoadRequest = 0;
@@ -16,247 +19,18 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
   }
 
-  function getStorageRoot() {
-    return String(runtime.state.settings?.storagePath || '').trim();
-  }
+  const {
+    getStorageRoot,
+    syncNotebookGelLinks,
+    persistNotebookPreviewImage,
+    persistGelRecordArtifacts
+  } = createGelRecordArtifacts({
+    runtime,
+    elements,
+    deps
+  });
 
-  function encodeDataUrlPayload(dataUrl) {
-    const source = String(dataUrl || '').trim();
-    const commaIndex = source.indexOf(',');
-    if (!source.startsWith('data:') || commaIndex < 0) {
-      return '';
-    }
-    const header = source.slice(0, commaIndex);
-    const payload = source.slice(commaIndex + 1);
-    if (/;base64/i.test(header)) {
-      return payload.trim();
-    }
-    try {
-      return btoa(unescape(encodeURIComponent(decodeURIComponent(payload))));
-    } catch {
-      try {
-        return btoa(unescape(encodeURIComponent(payload)));
-      } catch {
-        return '';
-      }
-    }
-  }
 
-  function buildGelArtifactFolder(record) {
-    const storageRoot = getStorageRoot();
-    if (!storageRoot || !record) {
-      return '';
-    }
-    // A record that already has a folder keeps it. Recomputing would move the
-    // artifacts whenever the name changed, and the v1 migration sanitizes the
-    // folder name differently from safeFilePart ("Old Gel" -> Old_Gel there,
-    // Old-Gel here) — so a migrated record would orphan its whole artifact
-    // tree on its first re-save.
-    const existingFolder = String(record.storageFolder || '').trim();
-    if (existingFolder) {
-      return existingFolder;
-    }
-    const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === record.notebookEntryId);
-    const folderName = `${safeFilePart(record.name || record.id, 'gel')}__${safeFilePart(record.id, 'gel')}`;
-    if (linkedEntry?.storageFolder) {
-      return `${String(linkedEntry.storageFolder).replace(/[\\/]+$/, '')}/gel/${folderName}`;
-    }
-    return `${storageRoot.replace(/[\\/]+$/, '')}/Gels/${folderName}`;
-  }
-
-  async function persistDataUrlArtifact({ targetFolder, fileName, dataUrl }) {
-    const storageRoot = getStorageRoot();
-    const dataBase64 = encodeDataUrlPayload(dataUrl);
-    if (!storageRoot || !targetFolder || !dataBase64 || !window.hikariApi?.storeImportedFile) {
-      return null;
-    }
-    const result = await window.hikariApi.storeImportedFile({
-      storagePath: storageRoot,
-      targetFolder,
-      fileName,
-      dataBase64
-    });
-    if (!result?.ok) {
-      throw new Error(result?.error || `Could not store ${fileName}.`);
-    }
-    return result;
-  }
-
-  function arraysEqual(left, right) {
-    if (left.length !== right.length) {
-      return false;
-    }
-    return left.every((value, index) => value === right[index]);
-  }
-
-  function syncNotebookGelLinks() {
-    if (!Array.isArray(runtime.state.notebookEntries)) {
-      return;
-    }
-
-    const linkedIdsByEntry = new Map();
-    (runtime.state.gelAnalyses || []).forEach((analysis) => {
-      const entryId = String(analysis?.notebookEntryId || '').trim();
-      const analysisId = String(analysis?.id || '').trim();
-      if (!entryId || !analysisId) {
-        return;
-      }
-      if (!linkedIdsByEntry.has(entryId)) {
-        linkedIdsByEntry.set(entryId, []);
-      }
-      linkedIdsByEntry.get(entryId).push(analysisId);
-    });
-
-    runtime.state.notebookEntries = runtime.state.notebookEntries.map((entry) => {
-      const nextIds = linkedIdsByEntry.get(String(entry?.id || '').trim()) || [];
-      const currentIds = Array.isArray(entry?.gelIds)
-        ? entry.gelIds.map((value) => String(value || '').trim()).filter(Boolean)
-        : [];
-      if (arraysEqual(currentIds, nextIds)) {
-        return entry;
-      }
-      return {
-        ...entry,
-        gelIds: nextIds
-      };
-    });
-  }
-
-  function captureNotebookPreviewImage(fallback = '') {
-    try {
-      if (elements.gelCanvas?.width && elements.gelCanvas?.height) {
-        return elements.gelCanvas.toDataURL('image/png');
-      }
-    } catch {}
-    if (runtime.currentImage?.imageData) {
-      return deps.imageDataToDataUrl(runtime.currentImage.imageData);
-    }
-    return String(fallback || '').trim();
-  }
-
-  async function persistNotebookPreviewImage(record, existingRecord = null) {
-    const existingPath = String(existingRecord?.previewImagePath || '').trim();
-    const existingRelativePath = String(existingRecord?.previewImageRelativePath || '').trim();
-    const targetFolder = buildGelArtifactFolder(record);
-    const existingDataUrl = String(existingRecord?.previewImageDataUrl || '').trim();
-    const previewDataUrl = targetFolder
-      ? captureNotebookPreviewImage(existingDataUrl)
-      : runtime.currentImage?.imageData
-        ? deps.imageDataToDataUrl(runtime.currentImage.imageData)
-        : existingDataUrl;
-    if (!previewDataUrl) {
-      return {
-        previewImagePath: existingPath,
-        previewImageRelativePath: existingRelativePath,
-        previewImageDataUrl: String(existingRecord?.previewImageDataUrl || '').trim(),
-        previewImageIsSource: Boolean(existingRecord?.previewImageIsSource)
-      };
-    }
-
-    if (targetFolder) {
-      try {
-        const stored = await persistDataUrlArtifact({
-          targetFolder,
-          fileName: 'preview.png',
-          dataUrl: previewDataUrl
-        });
-        if (stored?.filePath) {
-          return {
-            previewImagePath: stored.filePath,
-            previewImageRelativePath: stored.relativePath || '',
-            previewImageDataUrl: '',
-            previewImageIsSource: false
-          };
-        }
-      } catch (error) {
-        throw new Error(`Could not save the gel preview: ${error?.message || error}`);
-      }
-      throw new Error('Could not save the gel preview image.');
-    }
-
-    throw new Error('Choose a storage folder in Hikari Settings before saving gels.');
-  }
-
-  async function persistGelRecordArtifacts(record, existingRecord = null) {
-    const storageRoot = getStorageRoot();
-    const targetFolder = buildGelArtifactFolder(record);
-    if (!storageRoot || !targetFolder || !window.hikariApi?.writeJsonFile) {
-      throw new Error('Gel artifact storage is unavailable. Choose a storage folder in Hikari Settings.');
-    }
-
-    const sourceImageDataUrl = runtime.currentImage?.imageData
-      ? deps.imageDataToDataUrl(runtime.currentImage.imageData)
-      : String(existingRecord?.sourceImageDataUrl || '').trim();
-
-    let reportResult = null;
-    let metadataResult = null;
-    let sourceImageResult = null;
-    try {
-      [reportResult, metadataResult, sourceImageResult] = await Promise.all([
-        window.hikariApi.writeJsonFile({
-          storagePath: storageRoot,
-          targetFolder,
-          fileName: 'analysis-result.json',
-          data: record.report || {}
-        }),
-        window.hikariApi.writeJsonFile({
-          storagePath: storageRoot,
-          targetFolder,
-          fileName: 'gel-record.json',
-          data: {
-            id: record.id,
-            name: record.name,
-            projectId: record.projectId,
-            projectName: record.projectName,
-            notebookEntryId: record.notebookEntryId,
-            notebookEntryProtocolName: record.notebookEntryProtocolName,
-            notebookEntryType: record.notebookEntryType,
-            imageName: record.imageName,
-            analysisType: record.analysisType,
-            parameters: record.parameters || {},
-            manualOverrides: record.manualOverrides || {},
-            updatedAt: record.updatedAt
-          }
-        }),
-        sourceImageDataUrl
-          ? persistDataUrlArtifact({
-              targetFolder,
-              fileName: 'source.png',
-              dataUrl: sourceImageDataUrl
-            })
-          : Promise.resolve(null)
-      ]);
-    } catch (error) {
-      throw new Error(`Could not save gel artifacts: ${error?.message || error}`);
-    }
-
-    // A null here is a *failure*, not "nothing to do": persistDataUrlArtifact
-    // returns null when the payload encodes empty (an oversized canvas yields
-    // the literal "data:,"). Treating it as success dropped the source image
-    // while the save reported "Saved gel analysis".
-    if (sourceImageDataUrl && !sourceImageResult) {
-      throw new Error('Could not save gel artifacts: the source image could not be encoded.');
-    }
-    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null]
-      .find((result) => result && result.ok !== true);
-    if (failedResult) {
-      throw new Error(`Could not save gel artifacts: ${failedResult.error || 'the host did not confirm the write.'}`);
-    }
-    if (!reportResult?.filePath || !metadataResult?.filePath) {
-      throw new Error('Could not save gel artifacts: required report or metadata paths are missing.');
-    }
-
-    return {
-      storageFolder: targetFolder,
-      analysisResultPath: reportResult?.ok ? reportResult.filePath || '' : '',
-      analysisResultRelativePath: reportResult?.ok ? reportResult.relativePath || '' : '',
-      recordJsonPath: metadataResult?.ok ? metadataResult.filePath || '' : '',
-      recordJsonRelativePath: metadataResult?.ok ? metadataResult.relativePath || '' : '',
-      sourceImagePath: sourceImageResult?.filePath || '',
-      sourceImageRelativePath: sourceImageResult?.relativePath || '',
-      sourceImageDataUrl: ''
-    };
-  }
 
   // An unknown id (older record, retired preset) falls back to the default so
   // the select never sits blank while readParams reports a preset.
@@ -513,100 +287,14 @@ export function createRecordsManager({ runtime, elements, deps }) {
     runtime.markDraftSaved?.();
   }
 
-  function resolveStoredImagePath(pathValue, relativePathValue) {
-    const storedPath = String(pathValue || '').trim();
-    if (storedPath) {
-      return storedPath;
-    }
-    const relativePath = String(relativePathValue || '').trim();
-    const storageRoot = getStorageRoot();
-    if (!relativePath || !storageRoot) {
-      return '';
-    }
-    return `${storageRoot.replace(/[\\/]+$/, '')}/${relativePath.replace(/^[\\/]+/, '')}`;
-  }
+  const {
+    restoreRecordImage
+  } = createGelRecordImages({
+    deps,
+    getStorageRoot: () => getStorageRoot()
+  });
 
-  function inferImageMimeType(pathValue) {
-    const normalizedPath = String(pathValue || '').toLowerCase();
-    if (normalizedPath.endsWith('.jpg') || normalizedPath.endsWith('.jpeg')) {
-      return 'image/jpeg';
-    }
-    if (normalizedPath.endsWith('.webp')) {
-      return 'image/webp';
-    }
-    if (normalizedPath.endsWith('.gif')) {
-      return 'image/gif';
-    }
-    return 'image/png';
-  }
 
-  async function readStoredImageDataUrl(pathValue) {
-    const storedPath = String(pathValue || '').trim();
-    if (!storedPath || typeof window.hikariApi?.readFileBase64 !== 'function') {
-      return '';
-    }
-    const response = await window.hikariApi.readFileBase64(storedPath);
-    if (!response?.ok || !response.dataBase64) {
-      return '';
-    }
-    return `data:${inferImageMimeType(storedPath)};base64,${response.dataBase64}`;
-  }
-
-  async function restoreRecordImage(record) {
-    const sourcePath = resolveStoredImagePath(record.sourceImagePath, record.sourceImageRelativePath);
-    const previewPath = resolveStoredImagePath(record.previewImagePath, record.previewImageRelativePath);
-    const candidates = [
-      {
-        kind: 'source',
-        dataUrl: String(record.sourceImageDataUrl || '').trim(),
-        path: ''
-      },
-      {
-        kind: 'source',
-        dataUrl: '',
-        path: sourcePath
-      },
-      {
-        kind: record.previewImageIsSource ? 'source' : 'preview',
-        dataUrl: String(record.previewImageDataUrl || '').trim(),
-        path: ''
-      },
-      {
-        kind: record.previewImageIsSource ? 'source' : 'preview',
-        dataUrl: '',
-        path: previewPath
-      }
-    ].filter((candidate) => candidate.dataUrl || candidate.path);
-
-    let lastError = null;
-    for (const candidate of candidates) {
-      try {
-        const dataUrl = candidate.dataUrl || await readStoredImageDataUrl(candidate.path);
-        if (!dataUrl) {
-          continue;
-        }
-        const image = await deps.decodeImageSource(
-          dataUrl,
-          String(record.imageName || candidate.path || 'saved-gel.png')
-        );
-        return {
-          image,
-          kind: candidate.kind,
-          hadCandidate: true,
-          error: null
-        };
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    return {
-      image: null,
-      kind: '',
-      hadCandidate: candidates.length > 0,
-      error: lastError
-    };
-  }
 
   async function fillFromRecord(record) {
     const loadRequest = recordLoadRequest += 1;
@@ -742,68 +430,13 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
   }
 
-  function matchesSearch(record, term) {
-    if (!term) {
-      return true;
-    }
-    const haystack = [
-      record.name,
-      record.projectName,
-      record.notebookEntryProtocolName,
-      record.analysisType,
-      record.imageName,
-      record.updatedAt
-    ].join(' ').toLowerCase();
-    return haystack.includes(term);
-  }
+  const { renderList } = createGelRecordList({
+    runtime,
+    elements,
+    ensureState: (...args) => ensureState(...args)
+  });
 
-  function renderList() {
-    ensureState();
-    const term = String(elements.gelSearchInput?.value || '').trim().toLowerCase();
-    const records = (runtime.state.gelAnalyses || [])
-      .slice()
-      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
-    const rows = records.filter((record) => matchesSearch(record, term));
 
-    if (elements.gelBrowserCount) {
-      elements.gelBrowserCount.textContent = term ? `${rows.length}/${records.length}` : String(records.length);
-    }
-
-    if (!rows.length) {
-      elements.gelList.innerHTML = '<p class="small-note gel-browser-empty">No saved gels found.</p>';
-      return;
-    }
-
-    elements.gelList.innerHTML = rows.map((record) => {
-      const title = record.name || record.id || 'Untitled gel';
-      const safeTitle = runtime.safeText(title);
-      const safeId = runtime.safeText(record.id);
-      return `
-        <article class="gel-browser-item">
-          <div class="gel-browser-item-copy">
-            <p class="gel-browser-item-title">${safeTitle}</p>
-          </div>
-          <div class="card-actions gel-browser-item-actions">
-            <button type="button" class="row-action-icon-btn" data-gel-edit="${safeId}" aria-label="Edit ${safeTitle}" title="Edit">
-              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-            </button>
-            <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-gel-delete="${safeId}" aria-label="Delete ${safeTitle}" title="Delete">
-              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                <path d="M3 6h18" />
-                <path d="M8 6V4h8v2" />
-                <path d="M19 6l-1 14H6L5 6" />
-                <path d="M10 11v5" />
-                <path d="M14 11v5" />
-              </svg>
-            </button>
-          </div>
-        </article>
-      `;
-    }).join('');
-  }
 
   function startLinkedGel({ notebookEntryId = '', projectId = '', gelName = '' } = {}) {
     resetForm();

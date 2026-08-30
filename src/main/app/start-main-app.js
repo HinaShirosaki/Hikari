@@ -11,6 +11,15 @@ const { SYSTEM } = require('../../shared/ipc/channels');
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 function startMainApp() {
+  // Squirrel runs the app with --squirrel-install/-updated/-uninstall/-obsolete
+  // during a Windows install, update, or removal. Requiring this handles the
+  // shortcut work and calls app.quit() itself; without the early return we would
+  // build every service and flash a window open on each of those runs. No-op off
+  // win32.
+  if (require('electron-squirrel-startup')) {
+    return;
+  }
+
   let mainWindow = null;
   let allowWindowClose = false;
   let closeRequestPending = false;

@@ -523,7 +523,7 @@
 .well-editor-shell {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 61.8% 38.2%;
+  grid-template-columns: minmax(0, 61.8fr) minmax(0, 38.2fr);
   gap: 14px;
   align-items: start;
 }

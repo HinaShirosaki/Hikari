@@ -1,4 +1,6 @@
 import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
+import { createAppDock } from './navigation-shell/app-dock.js';
+import { createSearchSuggestions } from './navigation-shell/search-suggestions.js';
 
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 
@@ -71,9 +73,6 @@ export function createNavigationShell({
   const agentChatRailToggleBtn = documentObject.getElementById('agent-chat-rail-toggle-btn');
   const views = [...documentObject.querySelectorAll('.view')];
 
-  let appNavButtons = [];
-  let renderedDockApps = dockApps;
-  let renderedOverflowApps = moreApps;
   let lastViewPersistenceEnabled = false;
   let agentChatRailExpanded = false;
 
@@ -186,174 +185,47 @@ export function createNavigationShell({
     return syncAgentChatRailExpansion(enabled);
   }
 
-  function createInlineIcon(iconMarkup) {
-    const icon = documentObject.createElement('span');
-    icon.className = 'app-nav-icon';
-    icon.setAttribute('aria-hidden', 'true');
-    if (iconMarkup) {
-      const template = documentObject.createElement('template');
-      template.innerHTML = iconMarkup.trim();
-      const svg = template.content.firstElementChild;
-      if (svg) {
-        svg.setAttribute('aria-hidden', 'true');
-        svg.setAttribute('focusable', 'false');
-        icon.append(svg);
-      }
-    }
-    return icon;
-  }
 
-  function createNavButton(app, options = {}) {
-    const menu = options.menu === true;
-    const button = documentObject.createElement('button');
-    button.type = 'button';
-    button.className = menu ? 'app-nav-btn app-more-item' : 'app-nav-btn app-dock-btn';
-    button.dataset.view = app.viewId;
-    button.dataset.appId = app.id;
-    button.dataset.label = app.label;
-    button.title = app.label;
-    button.setAttribute('aria-label', app.label);
-    if (menu) {
-      button.setAttribute('role', 'menuitem');
-    }
+  const {
+    getRenderedDockApps,
+    getDockCapacity,
+    closeMoreMenu,
+    toggleMoreMenu,
+    renderAppNavigation,
+    syncNavigationState
+  } = createAppDock({
+    documentObject,
+    windowObject,
+    TITLES,
+    dockNav,
+    appDockDivider,
+    moreBtn,
+    moreMenu,
+    pageTitle,
+    pageSubtitle,
+    dockApps,
+    moreApps,
+    expandedDockApps,
+    normalize,
+    getActiveViewId,
+    getAppForView,
+    resolveNavigationViewId
+  });
 
-    const icon = createInlineIcon(app.iconMarkup);
-    button.append(icon);
-
-    const label = documentObject.createElement('span');
-    label.className = menu ? 'app-more-label' : 'sr-only';
-    label.textContent = app.label;
-    button.append(label);
-    return button;
-  }
-
-  function getDockCapacity() {
-    const viewportWidth = windowObject.innerWidth || documentObject.documentElement?.clientWidth || 0;
-    const topbar = documentObject.querySelector('.topbar');
-    const topbarBrand = documentObject.querySelector('.topbar-brand');
-    const topbarTools = documentObject.querySelector('.topbar-tools');
-    const dockViewportMargin = viewportWidth <= 960 ? 20 : 32;
-    const dockHostWidth = topbar?.clientWidth || viewportWidth;
-    const fallbackWidth = Math.min(
-      Math.max(240, Math.floor(viewportWidth <= 960 ? dockHostWidth - dockViewportMargin : viewportWidth * 0.56)),
-      Math.max(240, dockHostWidth - (viewportWidth <= 960 ? dockViewportMargin : 360)),
-      Math.max(240, viewportWidth - dockViewportMargin)
-    );
-    const topbarRect = topbar?.getBoundingClientRect?.();
-    const brandRect = topbarBrand?.getBoundingClientRect?.();
-    const toolsRect = topbarTools?.getBoundingClientRect?.();
-    const isSingleRowDesktop = viewportWidth > 1180;
-    const hasMeasuredClearance = isSingleRowDesktop
-      && topbarRect?.width > 0
-      && brandRect?.width > 0
-      && toolsRect?.width > 0;
-    const effectiveWidth = hasMeasuredClearance
-      ? Math.max(0, Math.floor(2 * Math.min(
-        (topbarRect.left + (topbarRect.width / 2)) - brandRect.right - 14,
-        toolsRect.left - (topbarRect.left + (topbarRect.width / 2)) - 14
-      )))
-      : fallbackWidth;
-    if (!effectiveWidth) {
-      return 1;
-    }
-    const dockHorizontalPadding = viewportWidth <= 720 ? 20 : 24;
-    const dividerWidth = 1;
-    const moreButtonWidth = viewportWidth <= 720 ? 34 : 36;
-    const dockButtonWidth = viewportWidth <= 720 ? 42 : 46;
-    const dockGap = 6;
-    const navGapCountFor = (count) => Math.max(0, count - 1);
-    const navWidthFor = (count) => (count * dockButtonWidth) + (navGapCountFor(count) * dockGap);
-    const fullWidthWithoutMore = navWidthFor(expandedDockApps.length) + dockHorizontalPadding;
-
-    if (fullWidthWithoutMore <= effectiveWidth) {
-      return expandedDockApps.length;
-    }
-
-    let count = expandedDockApps.length;
-    while (count > 1) {
-      const requiredWidth = navWidthFor(count) + dockHorizontalPadding + dividerWidth + moreButtonWidth + (dockGap * 2);
-      if (requiredWidth <= effectiveWidth) {
-        return count;
-      }
-      count -= 1;
-    }
-
-    return 1;
-  }
-
-  function getRenderedDockState() {
-    const capacity = getDockCapacity();
-    const activeViewId = getActiveViewId();
-    const activeApp = getAppForView(activeViewId);
-    let visibleApps = expandedDockApps.slice(0, capacity);
-    if (capacity < expandedDockApps.length && activeApp && expandedDockApps.some((app) => app.id === activeApp.id)) {
-      const alreadyVisible = visibleApps.some((app) => app.id === activeApp.id);
-      if (!alreadyVisible && visibleApps.length) {
-        visibleApps = [...visibleApps.slice(0, -1), activeApp]
-          .sort((left, right) => expandedDockApps.indexOf(left) - expandedDockApps.indexOf(right));
-      }
-    }
-    const visibleIds = new Set(visibleApps.map((app) => app.id));
-    const overflowApps = expandedDockApps.filter((app) => !visibleIds.has(app.id));
-    return { visibleApps, overflowApps };
-  }
-
-  function closeMoreMenu() {
-    if (!moreMenu || !moreBtn) {
-      return;
-    }
-    moreMenu.hidden = true;
-    moreBtn.setAttribute('aria-expanded', 'false');
-    moreBtn.classList.remove('is-open');
-  }
-
-  function toggleMoreMenu(forceOpen) {
-    if (!moreMenu || !moreBtn) {
-      return;
-    }
-    const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : moreMenu.hidden;
-    moreMenu.hidden = !shouldOpen;
-    moreBtn.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
-    moreBtn.classList.toggle('is-open', shouldOpen);
-  }
-
-  function renderAppNavigation() {
-    const { visibleApps, overflowApps } = getRenderedDockState();
-    renderedDockApps = visibleApps;
-    renderedOverflowApps = overflowApps;
-    dockNav?.replaceChildren(...visibleApps.map((app) => createNavButton(app)));
-    moreMenu?.replaceChildren(...overflowApps.map((app) => createNavButton(app, { menu: true })));
-    appNavButtons = [...documentObject.querySelectorAll('.app-nav-btn[data-view]')];
-    if (moreBtn) {
-      moreBtn.hidden = overflowApps.length === 0;
-    }
-    if (appDockDivider) {
-      appDockDivider.hidden = overflowApps.length === 0;
-    }
-    if (!overflowApps.length) {
-      closeMoreMenu();
-    }
-  }
-
-  function syncNavigationState(activeViewId) {
-    const activeNavView = resolveNavigationViewId(activeViewId);
-    const activeApp = getAppForView(activeNavView);
-    appNavButtons.forEach((button) => {
-      const buttonView = normalize(button.dataset.view);
-      button.classList.toggle('is-active', buttonView === activeNavView);
-    });
-    if (moreBtn) {
-      const isOverflowActive = Boolean(activeApp && renderedOverflowApps.some((app) => app.id === activeApp.id));
-      moreBtn.classList.toggle('is-active', isOverflowActive);
-    }
-    documentObject.body.dataset.activeView = activeNavView;
-    if (pageTitle) {
-      pageTitle.textContent = activeApp?.label || 'Home';
-    }
-    if (pageSubtitle) {
-      pageSubtitle.textContent = TITLES[activeNavView] || '';
-    }
-  }
+  const {
+    closeSearchSuggestions,
+    refreshSearchSuggestions,
+    moveSearchSuggestionFocus,
+    selectSearchSuggestion,
+    setSuggestionActiveIndex,
+    getSuggestionsState
+  } = createSearchSuggestions({
+    documentObject,
+    topbarSearchInput,
+    topbarSearchSuggestions,
+    getSearchSuggestions,
+    applySearchSuggestion
+  });
 
   function setSearchInputValue(inputId, value) {
     const input = documentObject.getElementById(inputId);
@@ -386,132 +258,7 @@ export function createNavigationShell({
     );
   }
 
-  let suggestionsState = {
-    items: [],
-    activeIndex: -1,
-    open: false
-  };
 
-  function escapeHtmlText(value) {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function renderSearchSuggestionList() {
-    if (!topbarSearchSuggestions) {
-      return;
-    }
-    const { items, activeIndex, open } = suggestionsState;
-    if (!open || items.length === 0) {
-      topbarSearchSuggestions.hidden = true;
-      topbarSearchSuggestions.replaceChildren();
-      topbarSearchInput?.setAttribute('aria-expanded', 'false');
-      topbarSearchInput?.removeAttribute('aria-activedescendant');
-      return;
-    }
-    topbarSearchSuggestions.hidden = false;
-    topbarSearchInput?.setAttribute('aria-expanded', 'true');
-
-    const fragment = documentObject.createDocumentFragment();
-    items.forEach((item, index) => {
-      const li = documentObject.createElement('li');
-      li.className = 'topbar-search-suggestion';
-      li.setAttribute('role', 'option');
-      li.id = `topbar-search-suggestion-${index}`;
-      li.dataset.index = String(index);
-      li.classList.toggle('is-active', index === activeIndex);
-      li.setAttribute('aria-selected', index === activeIndex ? 'true' : 'false');
-
-      const kindHtml = item.kind
-        ? `<span class="topbar-search-suggestion-kind">${escapeHtmlText(item.kind)}</span>`
-        : '';
-      const sublabelHtml = item.sublabel
-        ? `<span class="topbar-search-suggestion-sublabel">${escapeHtmlText(item.sublabel)}</span>`
-        : '';
-
-      li.innerHTML = `
-        <span class="topbar-search-suggestion-body">
-          <span class="topbar-search-suggestion-label">${escapeHtmlText(item.label)}</span>
-          ${sublabelHtml}
-        </span>
-        ${kindHtml}
-      `;
-      fragment.appendChild(li);
-    });
-    topbarSearchSuggestions.replaceChildren(fragment);
-
-    if (activeIndex >= 0 && activeIndex < items.length) {
-      topbarSearchInput?.setAttribute('aria-activedescendant', `topbar-search-suggestion-${activeIndex}`);
-    } else {
-      topbarSearchInput?.removeAttribute('aria-activedescendant');
-    }
-  }
-
-  function closeSearchSuggestions() {
-    if (!suggestionsState.open && suggestionsState.items.length === 0) {
-      return;
-    }
-    suggestionsState = { items: [], activeIndex: -1, open: false };
-    renderSearchSuggestionList();
-  }
-
-  function refreshSearchSuggestions() {
-    if (!topbarSearchSuggestions || !topbarSearchInput) {
-      return;
-    }
-    const rawQuery = topbarSearchInput.value || '';
-    if (!rawQuery.trim()) {
-      closeSearchSuggestions();
-      return;
-    }
-    const items = getSearchSuggestions(rawQuery, { limit: 8 }) || [];
-    if (!items.length) {
-      suggestionsState = { items: [], activeIndex: -1, open: false };
-      renderSearchSuggestionList();
-      return;
-    }
-    suggestionsState = {
-      items,
-      activeIndex: items.length ? 0 : -1,
-      open: true
-    };
-    renderSearchSuggestionList();
-  }
-
-  function moveSearchSuggestionFocus(delta) {
-    const { items } = suggestionsState;
-    if (!suggestionsState.open || items.length === 0) {
-      return;
-    }
-    const total = items.length;
-    const current = suggestionsState.activeIndex;
-    const next = current < 0
-      ? (delta > 0 ? 0 : total - 1)
-      : (current + delta + total) % total;
-    suggestionsState = { ...suggestionsState, activeIndex: next };
-    renderSearchSuggestionList();
-    const target = topbarSearchSuggestions?.querySelector(`[data-index="${next}"]`);
-    if (target && typeof target.scrollIntoView === 'function') {
-      target.scrollIntoView({ block: 'nearest' });
-    }
-  }
-
-  function selectSearchSuggestion(index) {
-    const item = suggestionsState.items[index];
-    if (!item) {
-      return false;
-    }
-    closeSearchSuggestions();
-    if (topbarSearchInput) {
-      topbarSearchInput.value = '';
-      topbarSearchInput.title = `Opened ${item.kind || item.target?.label || 'view'}: ${item.label}`;
-    }
-    return applySearchSuggestion(item);
-  }
 
   function showView(viewId) {
     const nextView = normalize(viewId);
@@ -535,7 +282,7 @@ export function createNavigationShell({
     const activeApp = getAppForView(activeNavView);
     const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
     const dockCapacity = getDockCapacity();
-    const activeVisibleInDock = Boolean(activeApp && renderedDockApps.some((app) => app.id === activeApp.id));
+    const activeVisibleInDock = Boolean(activeApp && getRenderedDockApps().some((app) => app.id === activeApp.id));
     if (activeApp && APP_DOCK_ORDER.includes(activeApp.id) && !activeVisibleInDock && dockCapacity < dockApps.length) {
       renderAppNavigation();
     }
@@ -608,7 +355,7 @@ export function createNavigationShell({
     });
     topbarSearchInput?.addEventListener('keydown', (event) => {
       if (event.key === 'ArrowDown') {
-        if (!suggestionsState.open) {
+        if (!getSuggestionsState().open) {
           refreshSearchSuggestions();
         } else {
           moveSearchSuggestionFocus(1);
@@ -617,7 +364,7 @@ export function createNavigationShell({
         return;
       }
       if (event.key === 'ArrowUp') {
-        if (suggestionsState.open) {
+        if (getSuggestionsState().open) {
           moveSearchSuggestionFocus(-1);
           event.preventDefault();
         }
@@ -625,8 +372,8 @@ export function createNavigationShell({
       }
       if (event.key === 'Enter') {
         event.preventDefault();
-        if (suggestionsState.open && suggestionsState.activeIndex >= 0) {
-          selectSearchSuggestion(suggestionsState.activeIndex);
+        if (getSuggestionsState().open && getSuggestionsState().activeIndex >= 0) {
+          selectSearchSuggestion(getSuggestionsState().activeIndex);
           return;
         }
         closeSearchSuggestions();
@@ -634,7 +381,7 @@ export function createNavigationShell({
         return;
       }
       if (event.key === 'Escape') {
-        if (suggestionsState.open) {
+        if (getSuggestionsState().open) {
           closeSearchSuggestions();
           event.preventDefault();
           return;
@@ -664,14 +411,13 @@ export function createNavigationShell({
         return;
       }
       const index = Number(item.dataset.index);
-      if (Number.isFinite(index) && index !== suggestionsState.activeIndex) {
-        suggestionsState = { ...suggestionsState, activeIndex: index };
-        renderSearchSuggestionList();
+      if (Number.isFinite(index) && index !== getSuggestionsState().activeIndex) {
+        setSuggestionActiveIndex(index);
       }
     });
     documentObject.addEventListener('click', (event) => {
       const target = event.target;
-      if (suggestionsState.open) {
+      if (getSuggestionsState().open) {
         const insideSuggestions = target instanceof Node
           && (topbarSearchSuggestions?.contains(target) || topbarSearchInput?.contains(target));
         if (!insideSuggestions) {

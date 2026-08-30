@@ -412,8 +412,19 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
 }
 
 @media (max-height: 860px) and (min-width: 901px) {
-  #home-view {
-    --contribution-cell-size: clamp(8px, 0.65vw, 10px);
+  #home-view .home-contribution-map {
+    --contribution-cell-size: clamp(
+      11px,
+      calc(
+        (
+          100cqw
+          - var(--contribution-weekday-width)
+          - var(--contribution-body-gap)
+          - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))
+        ) / var(--contribution-week-count)
+      ),
+      20px
+    );
   }
 
   #home-view .home-dialog-overlay {
@@ -422,8 +433,19 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
 }
 
 @media (max-height: 760px) and (min-width: 901px) {
-  #home-view {
-    --contribution-cell-size: clamp(7px, 0.58vw, 9px);
+  #home-view .home-contribution-map {
+    --contribution-cell-size: clamp(
+      10px,
+      calc(
+        (
+          100cqw
+          - var(--contribution-weekday-width)
+          - var(--contribution-body-gap)
+          - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))
+        ) / var(--contribution-week-count)
+      ),
+      17px
+    );
   }
 }
 
@@ -452,10 +474,22 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
 }
 
 @media (max-width: 900px) {
-  #home-view {
-    --contribution-cell-size: clamp(7px, 1.55vw, 12px);
-    --contribution-cell-gap: clamp(2px, 0.4vw, 3px);
-    --contribution-body-gap: clamp(7px, 1vw, 9px);
+  #home-view .home-contribution-map {
+    --contribution-cell-gap: clamp(2px, 0.7cqw, 5px);
+    --contribution-weekday-width: clamp(28px, 7cqw, 44px);
+    --contribution-body-gap: clamp(7px, 2cqw, 14px);
+    --contribution-cell-size: clamp(
+      7px,
+      calc(
+        (
+          100cqw
+          - var(--contribution-weekday-width)
+          - var(--contribution-body-gap)
+          - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))
+        ) / var(--contribution-week-count)
+      ),
+      32px
+    );
   }
 
   #home-view .home-layout {

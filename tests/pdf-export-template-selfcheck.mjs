@@ -141,12 +141,19 @@ const notebookOk = await exportNotebookEntryPdf({
     updatedAt: '2026-07-21T12:00:00Z'
   },
   protocol: { steps: [] },
+  linkedAssay: {
+    name: 'Export visibility assay',
+    plateType: '6',
+    wellLayout: [{ well: 'A1', sampleId: 'PDF Cell Sample', concentration: '3.5 uM' }]
+  },
   resultFileImages: [{ name: 'cells.png', dataUrl: 'data:image/png;base64,aW1hZ2U=' }]
 });
 assert.equal(notebookOk, true, 'notebook export should report success');
 assert.equal(calls.saved, 'notebook-Atlas-Microscope-capture.pdf');
 assert.equal(calls.images.length, 1, 'attached notebook images are embedded in PDF output');
 assert.ok(calls.text.some((item) => item.text.includes('cells.png')), 'attached image filename is rendered as a caption');
+assert.ok(calls.text.some((item) => item.text.includes('PDF Cell Sample')), 'linked plate cells retain their saved sample labels');
+assert.ok(calls.text.some((item) => item.text.includes('3.5 uM')), 'linked plate cells retain their saved concentration labels');
 
 calls.text.length = 0;
 calls.images.length = 0;
@@ -167,6 +174,13 @@ const projectNotebookOk = await exportProjectNotebookEntriesPdf({
     notebookState: 'executed',
     updatedAt: '2026-07-21T12:00:00Z'
   }],
+  linkedAssayByEntryId: new Map([
+    ['page-1', {
+      name: 'Export visibility assay',
+      plateType: '6',
+      wellLayout: [{ well: 'A1', sampleId: 'Project PDF Sample', concentration: '7 uM' }]
+    }]
+  ]),
   resultFileImagesByEntryId: new Map([
     ['page-1', [{ name: 'cells.png', dataUrl: 'data:image/png;base64,aW1hZ2U=' }]]
   ])
@@ -174,5 +188,7 @@ const projectNotebookOk = await exportProjectNotebookEntriesPdf({
 assert.equal(projectNotebookOk, true, 'project notebook export should report success');
 assert.equal(calls.saved, 'project-notebook-Atlas.pdf');
 assert.equal(calls.images.length, 1, 'attached images are embedded in whole-project notebook PDFs');
+assert.ok(calls.text.some((item) => item.text.includes('Project PDF Sample')), 'project notebook PDFs retain linked plate sample labels');
+assert.ok(calls.text.some((item) => item.text.includes('7 uM')), 'project notebook PDFs retain linked plate concentration labels');
 
 console.log('pdf-export template selfcheck passed');

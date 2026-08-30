@@ -805,13 +805,16 @@
   padding: 10px;
 }
 
-/* The renderer sizes the figure to the data, so the frame hugs it and centres instead of
-   leaving dead space beside a small plot -- or overflowing the panel on a wide one. */
+/* A fixed canvas the plot sits inside. Its size never follows the figure, so resizing
+   the plot moves it within the canvas instead of reflowing the whole results panel. */
 .assay-analysis-chart[data-assay-analysis-chart] {
-  width: max-content;
-  max-width: 100%;
+  --assay-chart-canvas-height: 520px;
+  width: 100%;
+  height: var(--assay-chart-canvas-height);
   margin-inline: auto;
-  overflow-x: auto;
+  overflow: auto;
+  display: grid;
+  place-items: center;
 }
 
 .assay-analysis-agent-chart {

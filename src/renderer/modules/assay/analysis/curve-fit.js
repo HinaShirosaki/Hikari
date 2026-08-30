@@ -89,6 +89,7 @@ export function analyzeCurveFit(observations, grouping, xAxis, spec) {
   const useLogX = spec.xTransform === 'log10';
   const seriesGroups = groupBy(observations, (item) => grouping.seriesOf(item));
   const rows = [];
+  const showErrorBars = spec.errorBars !== false;
   const chartSeries = [];
   let skipped = 0;
 
@@ -131,7 +132,10 @@ export function analyzeCurveFit(observations, grouping, xAxis, spec) {
       ]);
 
       const fittedLine = sampleFittedLine(points, fit.predict);
-      const markers = points.map((point) => ({ x: point.x, y: point.y }));
+      // The fitted line is a sampled model and has no spread; the observed markers do.
+      const markers = points.map((point) => (showErrorBars && point.n > 1 && point.sd > 0
+        ? { x: point.x, y: point.y, yVariance: point.sd }
+        : { x: point.x, y: point.y }));
       if (fittedLine.length >= 2 || markers.length) {
         chartSeries.push({ label, data: fittedLine, markers });
       }
@@ -162,6 +166,7 @@ export function analyzeCurveFit(observations, grouping, xAxis, spec) {
         chartType: 'line',
         xLabel: xAxis.label,
         yLabel: 'Response',
+        showErrorBars,
         series: chartSeries
       }
       : null

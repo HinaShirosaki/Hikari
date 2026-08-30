@@ -353,6 +353,8 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   trigger(wellBtn, 'click');
 
   assert.match(inventorySections.innerHTML, /data-well-sample-create="0"/);
+  assert.doesNotMatch(inventorySections.innerHTML, /9 x 9 grid box\. Click a cell to set samples on the right side\./);
+  assert.doesNotMatch(inventorySections.innerHTML, /No sample linked to this cell yet\./);
   assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
   assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
   const newStructurePasteBtn = inventorySections.querySelector('[data-inventory-sample-structure-paste]');

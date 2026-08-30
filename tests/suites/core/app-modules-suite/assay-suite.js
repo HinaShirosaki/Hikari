@@ -142,6 +142,90 @@ test('assay result paste notifies the agent rail context immediately', () => {
   assert.equal(refreshCount, 1);
 });
 
+test('assay preserves restored result values while the result grid is still initializing', () => {
+  const document = createMockDocument();
+  const { createAssayResultsManager } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'results-manager.js'
+  ), { document });
+  const resultTable = new MockElement('assay-result-table');
+  resultTable.append = () => {};
+
+  class InitializingTabulator {
+    static instance = null;
+
+    constructor(_host, options = {}) {
+      this.initialized = false;
+      this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
+      this.events = {};
+      InitializingTabulator.instance = this;
+    }
+
+    on(eventName, handler) {
+      this.events[eventName] = handler;
+    }
+
+    getRanges() {
+      return [];
+    }
+
+    getRows() {
+      if (!this.initialized) {
+        return [];
+      }
+      return this.data.map((row) => ({
+        getData: () => ({ ...row }),
+        getCells: () => []
+      }));
+    }
+
+    getColumns() {
+      return [];
+    }
+  }
+
+  const restoredResults = { A1: '0.11', A2: '0.22' };
+  const runtime = {
+    currentLayout: [
+      { well: 'A1', sampleId: 'A', concentration: '10000' },
+      { well: 'A2', sampleId: 'A', concentration: '9000' }
+    ],
+    currentResults: { ...restoredResults },
+    resultPasteAnchor: { rowIndex: 0, columnIndex: 0 }
+  };
+  const manager = createAssayResultsManager({
+    runtime,
+    elements: { assayResultTable: resultTable },
+    TabulatorLib: InitializingTabulator,
+    isMappedWell: (well) => well === 'A1' || well === 'A2',
+    getCurrentDefinition: () => ({ rows: 1, columns: 2 }),
+    getSampleAxis: () => 'row',
+    filterAndNormalizeResults: (results) => ({ ...results }),
+    setResultStatus: () => {},
+    clearAnalysisOutput: () => {},
+    onAnalysisConfigChange: () => {},
+    parseResultImportFile: null,
+    persistResultAttachment: null,
+    onResultImportApplied: null,
+    onResultsChanged: () => {}
+  });
+
+  manager.renderResultTable();
+  assert.equal(InitializingTabulator.instance.initialized, false);
+  assert.deepEqual(manager.syncCurrentResultsFromGrid(), restoredResults);
+  assert.deepEqual(runtime.currentResults, restoredResults);
+
+  InitializingTabulator.instance.initialized = true;
+  assert.deepEqual(manager.syncCurrentResultsFromGrid(), restoredResults);
+
+  InitializingTabulator.instance.data[0].c1 = '0.33';
+  assert.deepEqual(manager.syncCurrentResultsFromGrid(), { A1: '0.33', A2: '0.22' });
+});
+
 test('assay dilution fill commits generated concentrations before the layout re-reads the plate', () => {
   const concentrationUtils = loadEsmStyleModule(path.join(
     __dirname,
@@ -274,11 +358,13 @@ test('assay browser renders the Setup list and selectable Analyze list from the 
   assert.equal(resultsCount.textContent, '2');
   assert.match(setupList.innerHTML, /Current assay/);
   assert.match(setupList.innerHTML, /data-assay-edit="assay-2"/);
+  assert.match(setupList.innerHTML, /data-assay-edit="assay-2"[^>]*aria-label="Edit Current assay"[^>]*data-hover-caption="Edit"/);
   assert.match(resultsList.innerHTML, /data-assay-results-select="assay-2"/);
   assert.match(resultsList.innerHTML, /aria-label="Analyze Current assay"/);
   assert.match(resultsList.innerHTML, /class="assay-browser-item is-active"/);
   assert.match(resultsList.innerHTML, /aria-pressed="true"/);
   assert.match(resultsList.innerHTML, /data-assay-delete="assay-2"/);
+  assert.match(resultsList.innerHTML, /data-assay-delete="assay-2"[^>]*aria-label="Delete Current assay"[^>]*data-hover-caption="Delete"/);
 });
 
 test('assay analysis grouping keeps manual specs hidden without rendering summary chips', () => {
@@ -344,15 +430,187 @@ test('assay agent TSV formatter preserves object-row cells', () => {
   assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
 });
 
-test('assay treats loading a saved plate as a clean setup and results baseline', () => {
-  const source = fs.readFileSync(path.join(
+test('assay analysis split initializes chart collaborators before the extracted surface', () => {
+  const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
     __dirname,
     'src',
     'renderer',
     'modules',
     'assay',
-    'index.js'
-  ), 'utf8');
+    'analysis-view.js'
+  ));
+  const runtime = {};
+  const view = createAssayAnalysisView({
+    runtime,
+    elements: {},
+    safeText: (value) => String(value ?? ''),
+    TabulatorLib: null,
+    getCurrentDefinition: () => ({ rows: 1, columns: 1 }),
+    syncCurrentResultsFromGrid: () => ({}),
+    getResultValueCount: () => 0,
+    buildResultGridSignature: () => '',
+    buildResultGridColumns: () => [],
+    buildResultGridData: () => [],
+    getResultGridHeight: () => 200
+  });
+
+  assert.equal(typeof view.getChartStyle, 'function');
+  view.loadChartStyle({ title: 'Split-safe chart' });
+  assert.equal(runtime.chartStyle.title, 'Split-safe chart');
+  view.destroy();
+});
+
+test('assay analysis hides successful status copy while retaining saved analysis metadata', () => {
+  const document = createMockDocument();
+  const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'analysis-view.js'
+  ), { document });
+  const summary = new MockElement('assay-analysis-summary');
+  const table = new MockElement('assay-analysis-table');
+  const input = (value = '') => {
+    const element = new MockElement();
+    element.value = value;
+    return element;
+  };
+  const runtime = {
+    currentLayout: [
+      { well: 'A1', sampleId: 'Series', concentration: '1' },
+      { well: 'A2', sampleId: 'Series', concentration: '2' }
+    ],
+    currentResults: { A1: '2', A2: '4' }
+  };
+  let savedAnalysis = null;
+  const view = createAssayAnalysisView({
+    runtime,
+    elements: {
+      assayAnalysisAsymmetricInput: input(),
+      assayAnalysisColumnGroupsInput: input(),
+      assayAnalysisErrorBarsInput: input(),
+      assayAnalysisErrorBarsField: new MockElement(),
+      assayAnalysisGroupByInput: input('auto'),
+      assayAnalysisKindInput: input('linear'),
+      assayAnalysisPolyOrderField: new MockElement(),
+      assayAnalysisPolyOrderInput: input('2'),
+      assayAnalysisSubtotalsField: new MockElement(),
+      assayAnalysisSubtotalsInput: input(),
+      assayAnalysisSummary: summary,
+      assayAnalysisRowGroupsInput: input(),
+      assayAnalysisTable: table,
+      assayAnalysisXAxisField: new MockElement(),
+      assayAnalysisXAxisInput: input('concentration'),
+      assayAnalysisXTransformField: new MockElement(),
+      assayAnalysisXTransformInput: input('none')
+    },
+    safeText: (value) => String(value ?? ''),
+    TabulatorLib: null,
+    getCurrentDefinition: () => ({ rows: 1, columns: 2 }),
+    syncCurrentResultsFromGrid: () => runtime.currentResults,
+    getResultValueCount: () => Object.keys(runtime.currentResults).length,
+    buildResultGridSignature: () => '',
+    buildResultGridColumns: () => [],
+    buildResultGridData: () => [],
+    getResultGridHeight: () => 200,
+    onAnalysisRendered: (record) => {
+      savedAnalysis = record;
+    }
+  });
+
+  view.renderAnalysis();
+
+  assert.equal(summary.textContent, '', 'successful analysis does not add redundant rail status copy');
+  assert.match(table.innerHTML, /<td>Linear<\/td>/, 'the result table still identifies the fitted model');
+  assert.match(savedAnalysis.summary, /^Linear fitted for 1 series/, 'the saved analysis retains its full summary');
+  assert.doesNotMatch(savedAnalysis.summary, /Rows:/, 'the UI-only row count is not persisted');
+  view.destroy();
+});
+
+test('assay group selection stays silent but missing selections still explain the blocked action', () => {
+  const document = createMockDocument();
+  const { createAssayResultsManager } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'results-manager.js'
+  ), { document });
+  const selectionStatus = new MockElement('assay-analysis-selection-status');
+  const resultTable = new MockElement('assay-result-table');
+  resultTable.append = () => {};
+
+  class RangeTabulator {
+    static instance = null;
+
+    constructor() {
+      this.events = {};
+      this.ranges = [];
+      RangeTabulator.instance = this;
+    }
+
+    on(eventName, handler) {
+      this.events[eventName] = handler;
+    }
+
+    getRanges() {
+      return this.ranges;
+    }
+
+    getRows() {
+      return [];
+    }
+
+    getColumns() {
+      return [];
+    }
+
+    destroy() {}
+  }
+
+  const manager = createAssayResultsManager({
+    runtime: { currentLayout: [], currentResults: {}, resultPasteAnchor: { rowIndex: 0, columnIndex: 0 } },
+    elements: {
+      assayAnalysisSelectionStatus: selectionStatus,
+      assayAnalysisRowGroupsInput: new MockElement(),
+      assayAnalysisColumnGroupsInput: new MockElement(),
+      assayResultTable: resultTable
+    },
+    TabulatorLib: RangeTabulator,
+    isMappedWell: () => true,
+    getCurrentDefinition: () => ({ rows: 8, columns: 12 }),
+    getSampleAxis: () => 'row',
+    filterAndNormalizeResults: (results) => ({ ...results }),
+    setResultStatus: () => {},
+    clearAnalysisOutput: () => {},
+    onAnalysisConfigChange: () => {},
+    parseResultImportFile: null,
+    persistResultAttachment: null,
+    onResultImportApplied: null,
+    onResultsChanged: () => {}
+  });
+
+  manager.renderResultTable();
+  RangeTabulator.instance.ranges = [{
+    getRows: () => [{ getData: () => ({ rowLabel: 'B' }) }],
+    getColumns: () => []
+  }];
+  RangeTabulator.instance.events.rangeAdded();
+  assert.equal(selectionStatus.textContent, '', 'the selected-range hint remains hidden');
+
+  RangeTabulator.instance.ranges = [];
+  manager.onAddSelectedRowGroup();
+  assert.equal(selectionStatus.textContent, 'Select at least one row before adding a group.');
+});
+
+test('assay treats loading a saved plate as a clean setup and results baseline', () => {
+  const source = [
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'index.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'workspace', 'form-and-list.js'), 'utf8')
+  ].join('\n');
 
   assert.match(source, /function markLoadedAssayDraftsSaved\(\)\s*\{\s*markCreateDraftSaved\(\);\s*markResultsDraftSaved\(\);\s*\}/s);
   assert.match(source, /function loadAssayForResults\([\s\S]*?markLoadedAssayDraftsSaved\(\);[\s\S]*?notifyActiveAssayChanged\(\);\s*\}/);

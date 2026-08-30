@@ -28,12 +28,14 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     });
     test('sub-agent helper exports reusable runtime and action contract', () => {
       const source = fs.readFileSync(agentPath('tools', 'agent-sub-agent.js'), 'utf8');
+      const helpersSource = fs.readFileSync(agentPath('tools', 'sub-agent', 'helpers.js'), 'utf8');
+      const lifecycleSource = fs.readFileSync(agentPath('tools', 'sub-agent', 'lifecycle.js'), 'utf8');
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
-      assert.match(source, /const SUB_AGENT_ACTIONS = Object\.freeze/);
+      assert.match(helpersSource, /const SUB_AGENT_ACTIONS = Object\.freeze/);
       assert.match(source, /function createAgentSubAgentRuntime\(deps = \{\}\)/);
-      assert.match(source, /async function createSubAgent\(input = \{\}\)/);
-      assert.match(source, /async function sendSubAgentMessage\(input = \{\}\)/);
-      assert.match(source, /function deleteSubAgent\(input = \{\}\)/);
+      assert.match(lifecycleSource, /async function createSubAgent\(input = \{\}\)/);
+      assert.match(lifecycleSource, /async function sendSubAgentMessage\(input = \{\}\)/);
+      assert.match(lifecycleSource, /function deleteSubAgent\(input = \{\}\)/);
       assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
     });
     test('memory helper exports a reusable runtime with an action-based contract', () => {
@@ -220,7 +222,10 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
       const chatLogConstantsSource = fs.readFileSync(agentPath('context', 'chat-log', 'constants.js'), 'utf8');
-      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8');
+      const rendererSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-loading.js'), 'utf8')
+      ].join('\n');
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       assert.match(chatLogConstantsSource, /const CHAT_LOG_FOLDER_NAME = 'chat_log';/);
       assert.match(chatLogConstantsSource, /const CHAT_LOG_INDEX_FILE_NAME = 'index\.json';/);
@@ -273,7 +278,10 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
       assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
       assert.match(paperDownloadTargetsSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
       assert.match(paperDownloadSource, /async function downloadPaper\(input = \{\}\)/);
-      assert.match(paperDownloadSource, /browser-assisted download session/i);
+      assert.match(
+        fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'paper-download', 'transfer.js'), 'utf8'),
+        /browser-assisted download session/i
+      );
       assert.match(paperSource, /function createPaperAnalysisRuntime\(deps = \{\}\)/);
       assert.match(paperSource, /protocolGenerationRuntime/);
       assert.doesNotMatch(paperSource, /agent\/tools\/agent-protocol-generation/);

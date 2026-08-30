@@ -54,6 +54,16 @@ function variance(items) {
   return Number.isFinite(sd) && sd > 0 ? { yVariance: sd } : null;
 }
 
+// Which columns can carry the Y axis. Same test buildAnalysisChartModel applies below,
+// so the Y select can never offer a column that would make it return null.
+export function numericAnalysisHeaders(result) {
+  const headers = Array.isArray(result?.headers) ? result.headers : [];
+  const rows = Array.isArray(result?.rows) ? result.rows : [];
+  return headers
+    .filter((_, index) => rows.some((row) => Number.isFinite(parseAnalysisCellNumber(row[index]))))
+    .map(String);
+}
+
 export function buildAnalysisChartModel(result, method, style) {
   const headers = Array.isArray(result?.headers) ? result.headers : [];
   const rows = Array.isArray(result?.rows) ? result.rows : [];

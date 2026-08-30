@@ -3,8 +3,14 @@
         <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="workflow-editor-sidebar-pinned left-rail-template__pinned">
             <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-              <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
-              <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
+              <button type="button" id="workflow-entry-template-btn" class="ghost-btn workflow-entry-template-icon-btn" aria-label="Template editor" title="Template editor">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 3.75h8l4 4v12.5H6Z"></path>
+                  <path d="M14 3.75v4h4"></path>
+                  <path d="M9 12h6M9 15.5h6"></path>
+                </svg>
+                <span class="sr-only">Template editor</span>
+              </button>
               <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>&larr; Back to Home</button>
             </div>
           </div>
@@ -107,8 +113,18 @@
                 <h3 id="workflow-execution-title">Select a workflow template</h3>
               </div>
               <div class="workflow-execution-actions">
-                <button type="button" id="workflow-add-run-btn" class="primary-btn">Add Workflow</button>
-                <button type="button" id="workflow-delete-run-btn" class="danger-btn">Delete Workflow</button>
+                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="Add workflow" title="Add workflow">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M12 5v14M5 12h14"></path>
+                  </svg>
+                  <span class="sr-only">Add workflow</span>
+                </button>
+                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete workflow" title="Delete workflow">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M4.5 7h15M9 3.5h6l1 3.5H8zM7 7l.75 13.5h8.5L17 7M10 10.5v6M14 10.5v6"></path>
+                  </svg>
+                  <span class="sr-only">Delete workflow</span>
+                </button>
               </div>
             </div>
             <div id="workflow-execution-board" class="workflow-execution-board"></div>

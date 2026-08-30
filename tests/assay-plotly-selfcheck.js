@@ -168,13 +168,14 @@ assert.deepEqual(presets.listChartPresets(), [], 'corrupt storage reads as empty
 
 // --- renderer: the Prism defaults (offset frame, no grid, plain tick numbers) ---
 const plots = [];
+const calls = [];
 const { createAssayPlotlyRenderer } = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/plotly/plotly-renderer.js'),
   {
     window: {
       Plotly: {
-        newPlot: (_target, traces, layout) => { plots.push({ traces, layout }); },
-        purge: () => {}
+        react: (target, traces, layout) => { plots.push({ traces, layout }); calls.push(['react', target]); },
+        purge: (target) => { calls.push(['purge', target]); }
       }
     }
   }
@@ -312,5 +313,50 @@ assert.equal(subplot.layout.xaxis2.anchor, 'y2', 'secondary axis settings surviv
 const pie = applyPrismDefaults({ data: [{ type: 'pie', values: [1, 2] }], layout: {} }, prismStyle);
 assert.equal(pie.layout.shapes, undefined, 'a pie gets no floating axis arms');
 assert.equal(pie.layout.xaxis, undefined, 'a pie gets no cartesian axes');
+
+// --- renderer: a style redraw reuses the live host (purging it collapsed the
+// workspace scroll back to the top on every chart tweak) ---
+calls.length = 0;
+const scrollRenderer = createAssayPlotlyRenderer();
+const hostA = { parentElement: { clientWidth: 800 } };
+const hostB = { parentElement: { clientWidth: 800 } };
+const simpleModel = { chartType: 'bar', series: [{ label: 'A', data: [{ x: 'A', y: 1 }] }] };
+scrollRenderer.render(hostA, simpleModel, createDefaultChartStyle());
+scrollRenderer.render(hostA, simpleModel, { ...createDefaultChartStyle(), pointSize: 12 });
+assert.deepEqual(calls.map((call) => call[0]), ['react', 'react'], 'redraw on the same host never purges');
+scrollRenderer.render(hostB, simpleModel, createDefaultChartStyle());
+assert.deepEqual(calls[2], ['purge', hostA], 'a new host purges the old one');
+assert.deepEqual(calls[3], ['react', hostB], 'the new host is drawn');
+scrollRenderer.render(hostB, null, createDefaultChartStyle());
+assert.deepEqual(calls[4], ['purge', hostB], 'an empty model tears the chart down');
+
+// --- renderer: a fitted curve carries its spread on the observed markers, not on the
+// sampled line, and the axis titles only leave Plotly's own placement when moved ---
+const fittedModel = {
+  chartType: 'line',
+  xLabel: 'Dose',
+  yLabel: 'Response',
+  showErrorBars: true,
+  series: [{
+    label: 'S1',
+    data: [{ x: 1, y: 10 }, { x: 2, y: 20 }, { x: 3, y: 30 }],
+    markers: [{ x: 1, y: 10, yVariance: 1.5 }, { x: 3, y: 30, yVariance: 2 }]
+  }]
+};
+const fitted = draw(fittedModel, { pointShape: 'square' });
+assert.equal(fitted.traces[0].error_y, undefined, 'the sampled fitted line gets no error bars');
+assert.deepEqual(fitted.traces[1].error_y.array, [1.5, 2], 'observed markers carry the spread');
+assert.equal(fitted.traces[1].marker.symbol, 'square', 'observed markers follow the point shape');
+const fittedOff = draw({ ...fittedModel, showErrorBars: false }, {});
+assert.equal(fittedOff.traces[1].error_y, undefined, 'showErrorBars:false turns them off');
+
+const autoTitles = draw(fittedModel, { xTitle: 'Dose', yTitle: 'Signal' });
+assert.equal(autoTitles.layout.xaxis.title.text, 'Dose', 'an unmoved title stays a Plotly axis title');
+assert.equal(autoTitles.layout.annotations, undefined, 'an unmoved title needs no annotation');
+const movedTitles = draw(fittedModel, { xTitle: 'Dose', xTitlePos: 0.1, yTitle: 'Signal', yTitleOffset: 70 });
+assert.equal(movedTitles.layout.xaxis.title.text, '', 'a moved X title hands over to the annotation');
+assert.equal(movedTitles.layout.annotations[0].x, 0.1, 'the annotation sits where it was asked to');
+assert.equal(movedTitles.layout.yaxis.title.standoff, 70, 'a distance alone stays a native standoff');
+assert.ok(movedTitles.layout.margin.l >= 96, 'the margin grows so a pushed-out title is not clipped');
 
 console.log('assay Plotly self-check passed');

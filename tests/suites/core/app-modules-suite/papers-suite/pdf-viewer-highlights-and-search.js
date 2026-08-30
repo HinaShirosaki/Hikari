@@ -493,10 +493,11 @@ test('papers selection search popover dismisses on outside document pointer down
   assert.match(eventsSource, /doc\.addEventListener\('pointerdown', ctx\.handleDocumentPointerDown\)/);
 });
 test('papers PDF loading prefers stored bytes and compacts embedded PDF state', () => {
-  const actionsSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions.js'),
-    'utf8'
-  );
+  const actionsSource = [
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions-upload.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions-analysis.js'), 'utf8')
+  ].join('\n');
   const storageApiSource = fs.readFileSync(
     path.join(__dirname, 'src', 'main', 'preload', 'api', 'storage-api.js'),
     'utf8'

@@ -21,9 +21,13 @@ const {
   addNotebookResultTableColumn,
   createDefaultNotebookResultTable,
   createMolarityNotebookResultTable,
-  normalizeNotebookResultTable
+  normalizeNotebookResultTable,
+  setNotebookResultTableColumnUnit
 } = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/notebook-result-tables.js')
+);
+const { normalizeCellForColumn, parseUnit } = loadEsmStyleModule(
+  path.join(root, 'src/renderer/lib/table-units.js')
 );
 const { createSpreadsheetReferencePicker } = loadEsmStyleModule(
   path.join(root, 'src/renderer/lib/spreadsheet-reference-picker.js')
@@ -460,6 +464,45 @@ assert.equal(
   normalizeNotebookResultTable({ ...createMolarityNotebookResultTable(null) }).solve,
   true,
   'the solve flag survives normalization, so it survives being saved and reopened'
+);
+
+// --- units typed into a cell, and the unit a whole column is kept in ---
+assert.equal(parseUnit('uL').dimension, 'volume', 'uL is a volume');
+assert.equal(parseUnit('nm').unit, 'nM', 'lower case resolves to the molar unit, no length lives here');
+assert.equal(parseUnit('\u00b5L').unit, 'uL', 'the micro sign is the same unit as u');
+assert.equal(parseUnit('g/mol'), null, 'formula weight is not one of the three dimensions');
+
+const cell = (typed, title) => normalizeCellForColumn(typed, title);
+assert.equal(cell('5 uL', 'Volume (mL)'), '0.005', 'a typed unit is converted into the column unit');
+assert.equal(cell('5uL', 'Volume (mL)'), '0.005', 'the space is optional');
+assert.equal(cell('5 nM', 'Molarity (mM)'), '0.000005', '5 nM is 0.000005 mM');
+assert.equal(cell('5', 'Volume (mL)'), '5', 'a bare number already means the column unit');
+assert.equal(cell('5 mg', 'Volume (mL)'), '5 mg', 'a unit from another dimension is left alone');
+assert.equal(cell('=A1*2', 'Volume (mL)'), '=A1*2', 'formulas are never rewritten');
+assert.equal(cell('5 uL', 'Entry'), '5 uL', 'a column with no unit takes the text as typed');
+assert.equal(cell('5 uL', 'MW (g/mol)'), '5 uL', 'g/mol is not a unit this converts into');
+
+// Switching a column's unit converts what is in it and rebuilds the row formulas, so
+// the science is unchanged: 1 mL of 5 mg at MW 100 is 50 mM whichever unit is shown.
+const inMicrolitres = (() => {
+  const table = createMolarityNotebookResultTable(null, 1);
+  table.rows[0][table.columns[1].field] = '100';
+  table.rows[0][table.columns[2].field] = '5';
+  table.rows[0][table.columns[3].field] = '1';
+  const switched = setNotebookResultTableColumnUnit(table, 3, 'uL');
+  const { byRowId } = computeNotebookResultTable(switched);
+  return { table: switched, cells: byRowId[switched.rows[0].id] };
+})();
+assert.equal(inMicrolitres.table.columns[3].title, 'Volume (uL)', 'the header carries the new unit');
+assert.equal(
+  inMicrolitres.table.rows[0][inMicrolitres.table.columns[3].field],
+  '1000',
+  '1 mL is re-expressed as 1000 uL rather than reinterpreted'
+);
+assert.equal(
+  inMicrolitres.cells[inMicrolitres.table.columns[4].field].text,
+  '50',
+  'the molarity is still 50 mM once the volume column is kept in uL'
 );
 
 console.log('notebook table formula self-check passed');

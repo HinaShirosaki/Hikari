@@ -92,6 +92,7 @@ body.theme-night #home-view {
 #home-view .home-tile-contribution {
   grid-area: contribution;
   grid-template-rows: auto minmax(0, 1fr);
+  container-type: inline-size;
   overflow: hidden;
 }
 
@@ -487,6 +488,5 @@ body.theme-night #home-view {
 #home-view .home-tile .home-row-action.home-passage-action.is-extend:focus-visible {
   background: color-mix(in srgb, var(--home-warn) 14%, transparent);
 }
-
 
 

@@ -172,9 +172,16 @@ async function checkLeftRailContract() {
 
 async function checkAdapterContract() {
   const [mainSource, exportSource, recordSource, controllerSource, powerPointSource, htmlSource, viewSource, coreCss] = await Promise.all([
-    fs.readFile(path.join(pluginDir, 'main.js'), 'utf8'),
+    Promise.all([
+      fs.readFile(path.join(pluginDir, 'main.js'), 'utf8'),
+      fs.readFile(path.join(pluginDir, 'storage-records.js'), 'utf8')
+    ]).then((parts) => parts.join('\n')),
     fs.readFile(path.join(vendor, 'export.js'), 'utf8'),
-    fs.readFile(path.join(vendor, 'records-manager.js'), 'utf8'),
+    Promise.all([
+      fs.readFile(path.join(vendor, 'records-manager.js'), 'utf8'),
+      fs.readFile(path.join(vendor, 'records/record-artifacts.js'), 'utf8'),
+      fs.readFile(path.join(vendor, 'records/record-images.js'), 'utf8')
+    ]).then((parts) => parts.join('\n')),
     fs.readFile(path.join(vendor, 'index.js'), 'utf8'),
     fs.readFile(path.join(vendor, 'rendering/powerpoint-export.js'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'index.html'), 'utf8'),

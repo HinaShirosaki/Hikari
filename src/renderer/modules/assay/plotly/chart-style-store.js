@@ -8,6 +8,7 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
   // the controls can hide the settings that would do nothing for this figure.
   let context = {
     headers: [],
+    numericHeaders: [],
     seriesLabels: [],
     method: '',
     chartType: '',
@@ -42,6 +43,7 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
     },
     getContext: () => ({
       headers: context.headers.slice(),
+      numericHeaders: context.numericHeaders.slice(),
       seriesLabels: context.seriesLabels.slice(),
       method: context.method,
       chartType: context.chartType,
@@ -51,6 +53,7 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
     setContext(ctx) {
       context = {
         headers: Array.isArray(ctx?.headers) ? ctx.headers.map(String) : [],
+        numericHeaders: Array.isArray(ctx?.numericHeaders) ? ctx.numericHeaders.map(String) : [],
         seriesLabels: Array.isArray(ctx?.seriesLabels) ? ctx.seriesLabels.map(String) : [],
         method: ctx?.method || '',
         chartType: ctx?.chartType || '',

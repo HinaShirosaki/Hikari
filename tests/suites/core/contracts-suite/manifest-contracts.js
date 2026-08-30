@@ -4,6 +4,13 @@ module.exports = function registerManifestContracts(context = {}) {
 
   with (scope) {
     test('package manifest includes scripts and dependencies required for portable installs', () => {
+      assert.equal(packageManifest.main, 'src/main/main.js');
+      const mainEntrySource = fs.readFileSync(
+        path.join(__dirname, 'src', 'main', 'main.js'),
+        'utf8'
+      );
+      assert.match(mainEntrySource, /require\(['"]\.\/app\/start-main-app['"]\)/);
+      assert.match(mainEntrySource, /startMainApp\(\)/);
       assert.equal(packageManifest.scripts['build:ui'], 'node scripts/build-ui.mjs');
       assert.equal(packageManifest.scripts['check:css-colors'], 'node scripts/check-css-colors.mjs');
       assert.equal(packageManifest.scripts['check:dom-ids'], 'node scripts/check-dom-ids.mjs');

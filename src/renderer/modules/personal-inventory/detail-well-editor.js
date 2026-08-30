@@ -88,7 +88,6 @@ export function createWellEditorRenderer({
             <button type="button" class="primary-btn" data-well-sample-create="${index}">Add Sample</button>
           </div>
         </div>
-        <p class="small-note">No sample linked to this cell yet.</p>
         <label>
           Sample Code
           <input data-well-sample-new-code placeholder="e.g. S-001" />

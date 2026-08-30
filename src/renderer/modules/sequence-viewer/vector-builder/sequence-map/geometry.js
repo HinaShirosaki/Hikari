@@ -27,16 +27,6 @@ function polar(radius, base, sequenceLength) {
   };
 }
 
-function getFeatureOverallRange(feature, sequenceLength) {
-  const segments = Array.isArray(feature?.segments) ? feature.segments : [];
-  if (!segments.length) {
-    return null;
-  }
-  const start = Math.max(0, Math.min(...segments.map((segment) => Number(segment?.start) || 0)));
-  const end = Math.min(sequenceLength, Math.max(...segments.map((segment) => Number(segment?.end) || 0)));
-  return end > start ? { start, end } : null;
-}
-
 function normalizeSegments(feature, sequenceLength) {
   return (Array.isArray(feature?.segments) ? feature.segments : [])
     .map((segment) => ({
@@ -93,10 +83,29 @@ function primerAnchors(primer, minSpan) {
 
 // =============================== circular ====================================
 
+// Label anchor for a circular feature. A feature that crosses the origin comes
+// in as two segments (...end, 0...), so a plain min/max midpoint lands on the
+// far side of the ring: take the length-weighted circular mean instead.
+function featureLabelBase(feature, sequenceLength) {
+  const segments = normalizeSegments(feature, sequenceLength);
+  let x = 0;
+  let y = 0;
+  segments.forEach((segment) => {
+    const theta = (TAU * ((segment.start + segment.end) / 2)) / Math.max(1, sequenceLength);
+    const weight = segment.end - segment.start;
+    x += Math.cos(theta) * weight;
+    y += Math.sin(theta) * weight;
+  });
+  if (!x && !y) {
+    return null;
+  }
+  return (((Math.atan2(y, x) / TAU) * sequenceLength) + sequenceLength) % sequenceLength;
+}
+
 export {
   clampMapZoom,
+  featureLabelBase,
   fixed,
-  getFeatureOverallRange,
   getMapKind,
   partitionFeatures,
   polar,

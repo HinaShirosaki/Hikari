@@ -1,13 +1,12 @@
 import { asArray, trimText } from './shared.js';
 import {
   GENERAL_CHAT_FOLDER_ID,
-  buildCustomChatFolderId,
-  buildDefaultChatFolderName,
   getAgentChatFolders,
   getFolderById,
   resolveSessionFolderId
 } from './session-folders.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { createSessionFolderMenu } from './session-folder-menu.js';
+import { createSessionLoading } from './session-loading.js';
 
 const CHAT_SESSION_DRAG_MIME = 'application/x-hikari-agent-chat-session-id';
 
@@ -37,17 +36,7 @@ export function createAgentChatSessionManager(deps = {}) {
     onProjectScopeChanged = () => {}
   } = deps;
 
-  let sessionStoragePath = '';
-  let sessionsLoaded = false;
-  let sessionListPromise = null;
-  let sessionLoadPromise = null;
-  let activeSessionLoadId = '';
-  let queuedSessionLoadId = '';
-  let renamingFolderId = '';
-  let renamingFolderName = '';
-  let contextFolderId = '';
   let draggedSessionId = '';
-  let activeDropTarget = null;
   let newChatPromise = null;
 
   function readRunningSessionIds() {
@@ -178,11 +167,11 @@ export function createAgentChatSessionManager(deps = {}) {
       const isSelected = state.agentChat.selectedFolderId === folder.id;
       const folderClasses = `agent-session-folder${isSelected ? ' is-active' : ''}${isExpanded ? ' is-expanded' : ''}`;
       const folderLabel = folder.type === 'project' ? `${folder.name} project chats` : `${folder.name} chats`;
-      const folderHead = renamingFolderId === folder.id ? `
+      const folderHead = getRenamingFolderId() === folder.id ? `
         <div class="agent-session-folder-row agent-session-folder-row-editing" data-agent-folder-context="${safeText(folder.id)}">
           <span class="agent-session-folder-chevron" aria-hidden="true"></span>
           <span class="left-rail-folder-glyph agent-session-folder-glyph" aria-hidden="true"></span>
-          <input class="agent-session-folder-rename-input" data-agent-folder-rename-input="${safeText(folder.id)}" value="${safeText(renamingFolderName || folder.name)}" aria-label="Rename chat folder" />
+          <input class="agent-session-folder-rename-input" data-agent-folder-rename-input="${safeText(folder.id)}" value="${safeText(getRenamingFolderName() || folder.name)}" aria-label="Rename chat folder" />
           <button type="button" class="agent-session-folder-rename-btn" data-agent-folder-rename-save="${safeText(folder.id)}">Save</button>
           <button type="button" class="agent-session-folder-rename-btn is-secondary" data-agent-folder-rename-cancel="${safeText(folder.id)}">Cancel</button>
           <span class="agent-session-folder-count">${folderSessions.length}</span>
@@ -233,247 +222,31 @@ export function createAgentChatSessionManager(deps = {}) {
     }).join('');
   }
 
-  async function loadChatSession(sessionId, options = {}) {
-    ensureAgentState();
-    const targetSessionId = trimText(sessionId, 120);
-    const storagePath = getStoragePath();
-    if (!targetSessionId || !storagePath || !api?.agentChatLogGetSession) {
-      return;
-    }
-    if (sessionLoadPromise) {
-      if (targetSessionId !== activeSessionLoadId) {
-        queuedSessionLoadId = targetSessionId;
-      }
-      return sessionLoadPromise;
-    }
-    activeSessionLoadId = targetSessionId;
-    queuedSessionLoadId = '';
-    if (options.silent !== true) {
-      setStatus('Loading chat history...');
-    }
-    sessionLoadPromise = api.agentChatLogGetSession({
-      storagePath,
-      sessionId: targetSessionId
-    }).then((result) => {
-      if (!result?.ok) {
-        throw new Error(result?.error || 'Failed to load chat session.');
-      }
-      const preserveLocalMessages = options.preserveLocalMessages === true
-        && trimText(state.agentChat.currentSessionId, 120) === targetSessionId
-        && asArray(state.agentChat.messages).length > 0;
-      if (preserveLocalMessages) {
-        upsertSessionSummary(result.session);
-        renderSessionList();
-        setSessionStatus('');
-        if (options.silent !== true) {
-          setStatus('Ready.');
-        }
-        return;
-      }
-      state.agentChat.currentSessionId = targetSessionId;
-      state.agentChat.messages = asArray(result.messages);
-      upsertSessionSummary(result.session);
-      const sessionFolderId = resolveSessionFolderId(state, result.session);
-      const sessionFolder = selectFolder(sessionFolderId, { persistState: false });
-      state.agentChat.projectId = sessionFolder?.projectId
-        || trimText(result?.session?.project_id, 120);
-      persist();
-      renderProjectOptions();
-      renderContextSummary();
-      onProjectScopeChanged(state.agentChat.projectId);
-      onActiveSessionChanged(targetSessionId);
-      renderSessionList();
-      renderHistory({ forceScroll: true });
-      setSessionStatus('');
-      if (options.silent !== true) {
-        setStatus(readRunningSessionIds().has(targetSessionId) ? 'Working on this...' : 'Ready.');
-      }
-    }).catch((error) => {
-      setSessionStatus(`Chat load failed: ${String(error?.message || error)}`);
-      showTransientNotice(`Chat load failed: ${String(error?.message || error)}`, { type: 'error' });
-      if (options.silent !== true) {
-        setStatus('Error.');
-      }
-    }).finally(() => {
-      const nextSessionId = queuedSessionLoadId;
-      sessionLoadPromise = null;
-      activeSessionLoadId = '';
-      queuedSessionLoadId = '';
-      if (nextSessionId && nextSessionId !== targetSessionId) {
-        void loadChatSession(nextSessionId, options);
-      }
-    });
-    return sessionLoadPromise;
-  }
 
-  async function refreshPersistentSessions(options = {}) {
-    ensureAgentState();
-    const force = options.force === true;
-    const storagePath = getStoragePath();
-    if (storagePath !== sessionStoragePath) {
-      sessionStoragePath = storagePath;
-      sessionsLoaded = false;
-      state.agentChat.sessions = [];
-      if (!storagePath) {
-        state.agentChat.currentSessionId = '';
-      }
-    }
-    if (!storagePath) {
-      renderSessionList();
-      setSessionStatus('Set Storage Folder Path in Settings to save and browse agent chats.');
-      return [];
-    }
-    if (!api?.agentChatLogListSessions || !api?.agentChatLogGetSession) {
-      renderSessionList();
-      setSessionStatus('Persistent chat sessions are unavailable in this build.');
-      showTransientNotice('Persistent chat sessions are unavailable in this build.', { type: 'error' });
-      return [];
-    }
-    if (!force && sessionsLoaded) {
-      renderSessionList();
-      return asArray(state.agentChat.sessions);
-    }
-    if (sessionListPromise) {
-      return sessionListPromise;
-    }
-    setSessionStatus('Loading saved chats...');
-    sessionListPromise = api.agentChatLogListSessions({
-      storagePath,
-      limit: 200
-    }).then(async (result) => {
-      if (!result?.ok) {
-        throw new Error(result?.error || 'Failed to load saved chats.');
-      }
-      state.agentChat.sessions = asArray(result.items);
-      sessionsLoaded = true;
-      renderSessionList();
-      if (!state.agentChat.currentSessionId && state.agentChat.sessions.length) {
-        await loadChatSession(state.agentChat.sessions[0].id, { silent: true, preserveLocalMessages: true });
-      } else if (
-        state.agentChat.currentSessionId
-        && !state.agentChat.sessions.some((item) => trimText(item?.id, 120) === state.agentChat.currentSessionId)
-      ) {
-        state.agentChat.currentSessionId = '';
-        state.agentChat.messages = [];
-        onActiveSessionChanged('');
-        persist();
-        renderHistory({ forceScroll: true });
-      } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
-        await loadChatSession(state.agentChat.currentSessionId, { silent: true, preserveLocalMessages: true });
-      } else {
-        setSessionStatus(state.agentChat.sessions.length ? 'Saved chats ready.' : 'No saved chats yet.');
-      }
-      return state.agentChat.sessions;
-    }).catch((error) => {
-      state.agentChat.sessions = [];
-      renderSessionList();
-      setSessionStatus(`Chat list failed: ${String(error?.message || error)}`);
-      showTransientNotice(`Chat list failed: ${String(error?.message || error)}`, { type: 'error' });
-      return [];
-    }).finally(() => {
-      sessionListPromise = null;
-    });
-    return sessionListPromise;
-  }
-
-  async function ensureCurrentChatSession(messageText = '') {
-    ensureAgentState();
-    if (trimText(state.agentChat.currentSessionId, 120)) {
-      return state.agentChat.currentSessionId;
-    }
-    // First message with no session yet: if a project folder is selected, adopt its project
-    // scope now so this new session and the pending agent request use the folder's project
-    // rather than the previous/empty scope (the session is only moved into the folder after).
-    const selectedFolder = getFolderById(state, state.agentChat.selectedFolderId)
-      || getFolderById(state, GENERAL_CHAT_FOLDER_ID);
-    if (selectedFolder?.projectId && selectedFolder.projectId !== state.agentChat.projectId) {
-      state.agentChat.projectId = selectedFolder.projectId;
-      renderProjectOptions();
-      renderContextSummary();
-      onProjectScopeChanged(selectedFolder.projectId);
-    }
-    const storagePath = getStoragePath();
-    if (!storagePath || !api?.agentChatLogCreateSession) {
-      return '';
-    }
-    const projectId = state.agentChat.projectId || '';
-    const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
-    const result = await api.agentChatLogCreateSession({
-      storagePath,
-      projectId,
-      projectName,
-      title: messageText
-    });
-    if (!result?.ok || !result?.session?.id) {
-      throw new Error(result?.error || 'Failed to create chat session.');
-    }
-    state.agentChat.currentSessionId = trimText(result.session.id, 120);
-    upsertSessionSummary(result.session);
-    assignSessionToFolder(state.agentChat.currentSessionId, state.agentChat.selectedFolderId);
-    renderSessionList();
-    setSessionStatus('New chat session created.');
-    return state.agentChat.currentSessionId;
-  }
-
-  async function createNewChatSession() {
-    ensureAgentState();
-    const selectedFolder = getFolderById(state, state.agentChat.selectedFolderId)
-      || getFolderById(state, GENERAL_CHAT_FOLDER_ID);
-    const nextProjectId = selectedFolder?.projectId || state.agentChat.projectId || '';
-    const applySelectedProjectScope = () => {
-      if (!selectedFolder?.projectId || state.agentChat.projectId === selectedFolder.projectId) {
-        return;
-      }
-      state.agentChat.projectId = selectedFolder.projectId;
-      renderProjectOptions();
-      renderContextSummary();
-      onProjectScopeChanged(selectedFolder.projectId);
-    };
-    const storagePath = getStoragePath();
-    if (!storagePath || !api?.agentChatLogCreateSession) {
-      applySelectedProjectScope();
-      state.agentChat.messages = [];
-      state.agentChat.currentSessionId = '';
-      onActiveSessionChanged('');
-      persist();
-      renderSessionList();
-      renderHistory({ forceScroll: true });
-      setSessionStatus(storagePath
-        ? 'Persistent chat sessions are unavailable in this build.'
-        : 'Started a new local chat draft. Set Storage Folder Path to persist it.');
-      setStatus('New chat ready.');
-      return true;
-    }
-    try {
-      const projectName = asArray(state.projects).find((item) => item.id === nextProjectId)?.name || '';
-      const result = await api.agentChatLogCreateSession({
-        storagePath,
-        projectId: nextProjectId,
-        projectName,
-        title: 'New Chat'
-      });
-      if (!result?.ok || !result?.session?.id) {
-        throw new Error(result?.error || 'Failed to create chat session.');
-      }
-      // Do not discard the selected chat until the replacement session is durable.
-      applySelectedProjectScope();
-      state.agentChat.messages = [];
-      state.agentChat.currentSessionId = trimText(result.session.id, 120);
-      onActiveSessionChanged(state.agentChat.currentSessionId);
-      upsertSessionSummary(result.session);
-      assignSessionToFolder(state.agentChat.currentSessionId, selectedFolder?.id || GENERAL_CHAT_FOLDER_ID);
-      renderSessionList();
-      renderHistory({ forceScroll: true });
-      setSessionStatus('New chat session created.');
-      setStatus('New chat ready.');
-      return true;
-    } catch (error) {
-      setSessionStatus(`New chat failed: ${String(error?.message || error)}`);
-      showTransientNotice(`New chat failed: ${String(error?.message || error)}`, { type: 'error' });
-      setStatus('Error.');
-      return false;
-    }
-  }
+  const {
+    loadChatSession,
+    refreshPersistentSessions,
+    ensureCurrentChatSession,
+    createNewChatSession
+  } = createSessionLoading({
+    state,
+    api,
+    persist,
+    ensureAgentState,
+    getStoragePath,
+    setStatus,
+    setSessionStatus,
+    renderHistory,
+    renderContextSummary,
+    renderProjectOptions,
+    readRunningSessionIds,
+    renderSessionList: () => renderSessionList(),
+    selectFolder: (...args) => selectFolder(...args),
+    upsertSessionSummary,
+    assignSessionToFolder,
+    onProjectScopeChanged,
+    onActiveSessionChanged
+  });
 
   function startNewChatSession() {
     if (newChatPromise) {
@@ -487,153 +260,33 @@ export function createAgentChatSessionManager(deps = {}) {
     return newChatPromise;
   }
 
-  function hideContextMenu() {
-    if (sessionContextMenu) {
-      sessionContextMenu.hidden = true;
-    }
-    contextFolderId = '';
-  }
-
-  function findFolderTarget(target) {
-    return target?.closest?.('[data-agent-folder-context]')
-      || target?.closest?.('[data-agent-folder-id]')
-      || null;
-  }
-
-  function onRailContextMenu(event) {
-    if (!sessionContextMenu) {
-      return;
-    }
-    event?.preventDefault?.();
-    const folderTarget = findFolderTarget(event?.target);
-    const folderId = trimText(
-      folderTarget?.dataset?.agentFolderContext || folderTarget?.dataset?.agentFolderId,
-      180
-    );
-    const folder = getFolderById(state, folderId);
-    contextFolderId = folder?.id || '';
-    if (contextRenameFolderBtn) {
-      contextRenameFolderBtn.hidden = folder?.type !== 'custom';
-    }
-    if (contextDeleteFolderBtn) {
-      contextDeleteFolderBtn.hidden = folder?.type !== 'custom';
-    }
-    sessionContextMenu.style.left = `${Math.max(0, Number(event?.clientX) || 0)}px`;
-    sessionContextMenu.style.top = `${Math.max(0, Number(event?.clientY) || 0)}px`;
-    sessionContextMenu.hidden = false;
-  }
-
-  function focusRenameInput() {
-    const focus = () => {
-      const input = sessionList?.querySelector?.('[data-agent-folder-rename-input]');
-      input?.focus?.();
-      const value = String(input?.value || '');
-      input?.setSelectionRange?.(0, value.length);
-    };
-    const windowRef = sessionList?.ownerDocument?.defaultView;
-    if (typeof windowRef?.requestAnimationFrame === 'function') {
-      windowRef.requestAnimationFrame(focus);
-    } else {
-      focus();
-    }
-  }
-
-  function beginFolderRename(folderId) {
-    const folder = getFolderById(state, folderId);
-    if (folder?.type !== 'custom') {
-      return;
-    }
-    hideContextMenu();
-    selectFolder(folder.id, { persistState: false });
-    renamingFolderId = folder.id;
-    renamingFolderName = folder.name;
-    renderSessionList();
-    focusRenameInput();
-  }
-
-  function cancelFolderRename() {
-    renamingFolderId = '';
-    renamingFolderName = '';
-    renderSessionList();
-  }
-
-  function commitFolderRename(folderId = renamingFolderId) {
-    const folder = getFolderById(state, folderId);
-    const nextName = trimText(renamingFolderName, 220);
-    if (folder?.type !== 'custom' || !nextName) {
-      focusRenameInput();
-      return;
-    }
-    const duplicate = getAgentChatFolders(state).some((item) => (
-      item.id !== folder.id && item.name.toLowerCase() === nextName.toLowerCase()
-    ));
-    if (duplicate) {
-      showTransientNotice('A chat folder with this name already exists.', { type: 'error' });
-      focusRenameInput();
-      return;
-    }
-    const storedFolder = asArray(state.agentChat.folders)
-      .find((item) => trimText(item?.id, 120) === folder.sourceId);
-    if (storedFolder) {
-      storedFolder.name = nextName;
-    }
-    renamingFolderId = '';
-    renamingFolderName = '';
-    persist();
-    renderSessionList();
-  }
-
-  function createFolder() {
-    ensureAgentState();
-    const folder = {
-      id: trimText(typeof createId === 'function' ? createId() : `folder-${Date.now()}`, 120),
-      name: buildDefaultChatFolderName(state),
-      createdAt: new Date().toISOString()
-    };
-    state.agentChat.folders.push(folder);
-    const folderId = buildCustomChatFolderId(folder.id);
-    selectFolder(folderId, { persistState: false });
-    persist();
-    renamingFolderId = folderId;
-    renamingFolderName = folder.name;
-    hideContextMenu();
-    renderSessionList();
-    focusRenameInput();
-    return folder;
-  }
-
-  function deleteFolder(folderId) {
-    const folder = getFolderById(state, folderId);
-    if (folder?.type !== 'custom') {
-      return;
-    }
-    const windowRef = sessionList?.ownerDocument?.defaultView;
-    if (typeof windowRef?.confirm === 'function' && !windowRef.confirm(`Delete the "${folder.name}" chat folder? Chats will move to General.`)) {
-      return;
-    }
-    state.agentChat.folders = asArray(state.agentChat.folders)
-      .filter((item) => trimText(item?.id, 120) !== folder.sourceId);
-    Object.entries(state.agentChat.sessionFolderIds).forEach(([sessionId, assignedFolderId]) => {
-      if (assignedFolderId === folder.id) {
-        state.agentChat.sessionFolderIds[sessionId] = GENERAL_CHAT_FOLDER_ID;
-      }
-    });
-    if (state.agentChat.selectedFolderId === folder.id) {
-      state.agentChat.selectedFolderId = GENERAL_CHAT_FOLDER_ID;
-    }
-    hideContextMenu();
-    persist();
-    renderSessionList();
-  }
-
-  function clearDropTarget() {
-    activeDropTarget?.classList?.remove?.('is-chat-drop-target');
-    activeDropTarget = null;
-  }
-
-  function getDropTarget(event) {
-    return event?.target?.closest?.('[data-agent-folder-drop]') || null;
-  }
+  const {
+    getRenamingFolderId,
+    getContextFolderId,
+    setDropTarget,
+    getRenamingFolderName,
+    setRenamingFolderName,
+    hideContextMenu,
+    onRailContextMenu,
+    beginFolderRename,
+    cancelFolderRename,
+    commitFolderRename,
+    createFolder,
+    deleteFolder,
+    clearDropTarget,
+    getDropTarget
+  } = createSessionFolderMenu({
+    state,
+    persist,
+    createId,
+    ensureAgentState,
+    sessionList,
+    sessionContextMenu,
+    contextRenameFolderBtn,
+    contextDeleteFolderBtn,
+    renderSessionList: () => renderSessionList(),
+    selectFolder: (...args) => selectFolder(...args)
+  });
 
   function bindEvents() {
     sessionList?.addEventListener?.('click', (event) => {
@@ -663,7 +316,7 @@ export function createAgentChatSessionManager(deps = {}) {
     });
     sessionList?.addEventListener?.('input', (event) => {
       if (event?.target?.closest?.('[data-agent-folder-rename-input]')) {
-        renamingFolderName = String(event.target.value || '');
+        setRenamingFolderName(String(event.target.value || ''));
       }
     });
     sessionList?.addEventListener?.('keydown', (event) => {
@@ -706,11 +359,7 @@ export function createAgentChatSessionManager(deps = {}) {
       if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'move';
       }
-      if (activeDropTarget !== target) {
-        clearDropTarget();
-        activeDropTarget = target;
-        activeDropTarget.classList?.add?.('is-chat-drop-target');
-      }
+      setDropTarget(target);
     });
     sessionList?.addEventListener?.('drop', (event) => {
       const target = getDropTarget(event);
@@ -732,8 +381,8 @@ export function createAgentChatSessionManager(deps = {}) {
     sessionRail?.addEventListener?.('contextmenu', onRailContextMenu);
     sessionContextMenu?.addEventListener?.('click', (event) => event?.stopPropagation?.());
     contextNewFolderBtn?.addEventListener?.('click', createFolder);
-    contextRenameFolderBtn?.addEventListener?.('click', () => beginFolderRename(contextFolderId));
-    contextDeleteFolderBtn?.addEventListener?.('click', () => deleteFolder(contextFolderId));
+    contextRenameFolderBtn?.addEventListener?.('click', () => beginFolderRename(getContextFolderId()));
+    contextDeleteFolderBtn?.addEventListener?.('click', () => deleteFolder(getContextFolderId()));
     sessionList?.ownerDocument?.addEventListener?.('click', hideContextMenu);
     sessionList?.ownerDocument?.addEventListener?.('keydown', (event) => {
       if (event?.key === 'Escape') {

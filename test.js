@@ -729,12 +729,15 @@ test('plugin system: only non-host origins get allow-same-origin', async () => {
   const { isSameOriginSafeUrl } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
   );
-  for (const safe of ['https://ij.imjoy.io/', 'http://127.0.0.1:51234/', 'http://[::1]:8080/']) {
+  for (const safe of ['https://ij.imjoy.io/', 'http://127.0.0.1:51234/']) {
     assert.equal(isSameOriginSafeUrl(safe), true, `${safe} is a distinct origin from the file:// host`);
   }
   for (const hostile of [
     // Plaintext to a remote host, and anything that would inherit the host's
-    // own file:// origin.
+    // own file:// origin. IPv6 loopback is refused too: CSP host-source has no
+    // grammar for an address literal, so index.html's frame-src cannot admit it
+    // and the frame would be blocked no matter what this returns.
+    'http://[::1]:8080/',
     'http://ij.imjoy.io/',
     'http://evil.test/',
     'file:///Users/me/plugin/index.html',

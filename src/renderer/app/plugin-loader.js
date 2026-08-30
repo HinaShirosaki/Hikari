@@ -24,9 +24,12 @@ export function pluginViewId(pluginId) {
 // hand the frame the host document. See the sandbox comment in installPlugins().
 //
 // https  -> remote embeds.
-// http   -> only loopback, which is our own plugin server (plugin-server.js
-//           binds to 127.0.0.1). Non-loopback http is refused so a settings
-//           edit cannot point a same-origin frame at a plaintext remote host.
+// http   -> only 127.0.0.1, which is our own plugin server (plugin-server.js
+//           binds there and nowhere else). Non-loopback http is refused so a
+//           settings edit cannot point a same-origin frame at a plaintext
+//           remote host. `[::1]` is refused with it: index.html's frame-src
+//           cannot whitelist an IPv6 literal (CSP host-source has no grammar
+//           for one), so such a frame would be blocked by CSP regardless.
 export function isSameOriginSafeUrl(value) {
   let url;
   try {
@@ -37,7 +40,7 @@ export function isSameOriginSafeUrl(value) {
   if (url.protocol === 'https:') {
     return true;
   }
-  return url.protocol === 'http:' && (url.hostname === '127.0.0.1' || url.hostname === '[::1]');
+  return url.protocol === 'http:' && url.hostname === '127.0.0.1';
 }
 
 // Asks the main process for a loopback server on this plugin's folder, then

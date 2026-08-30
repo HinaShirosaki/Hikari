@@ -1,3 +1,10 @@
+import {
+  columnUnit,
+  columnUnitFactor,
+  rescaleCellValue,
+  retitleColumnUnit
+} from './table-units.js';
+
 const DEFAULT_NOTEBOOK_TABLE_COLUMNS = 3;
 const DEFAULT_NOTEBOOK_TABLE_ROWS = 3;
 export const MAX_NOTEBOOK_TABLE_COLUMNS = 50;
@@ -142,6 +149,31 @@ export function createNotebookResultTableFromPlaceholder(createId, {
   };
 }
 
+// The three unit factors of a molarity worksheet folded into the single constant its
+// row formulas carry: weight/(MW x volume) is in mol/L, and K puts it back into the
+// units the columns are actually kept in. For the default mg, mL and mM that is 1000.
+function molarityUnitConstant(columns) {
+  const weight = columnUnitFactor(columns?.[2]?.title, 1e-3);
+  const volume = columnUnitFactor(columns?.[3]?.title, 1e-3);
+  const molarity = columnUnitFactor(columns?.[4]?.title, 1e-3);
+  return weight / (volume * molarity);
+}
+
+// One row of the worksheet: the same equation rearranged once per column, so any
+// column can be the unknown. Exponents always carry their sign in JS ("1e+21"), which
+// is what keeps translateFormulaReferences from reading the mantissa as a cell.
+export function molarityRowFormulas(columns, rowIndex) {
+  const line = rowIndex + 1;
+  const k = String(Number(molarityUnitConstant(columns).toPrecision(12)));
+  return [
+    '',
+    `=${k}*C${line}/(D${line}*E${line})`,
+    `=B${line}*D${line}*E${line}/${k}`,
+    `=${k}*C${line}/(B${line}*E${line})`,
+    `=${k}*C${line}/(B${line}*D${line})`
+  ];
+}
+
 // Molarity worksheet: one row is molarity = weight / (MW x volume), written out once
 // per column so any column can be the unknown. Fill three and the fourth computes;
 // fill two and the other two show the arithmetic that is left. Clearing a cell you
@@ -153,15 +185,7 @@ export function createMolarityNotebookResultTable(createId, rowCount = MOLARITY_
     title
   }));
   const rows = Array.from({ length: rowCount }, (_unused, index) => {
-    // mg and mL against g/mol give mol/L, so the 1000 is what turns the answer into mM.
-    const line = index + 1;
-    const cells = [
-      '',
-      `=1000*C${line}/(D${line}*E${line})`,
-      `=B${line}*D${line}*E${line}/1000`,
-      `=1000*C${line}/(B${line}*E${line})`,
-      `=1000*C${line}/(B${line}*D${line})`
-    ];
+    const cells = molarityRowFormulas(columns, index);
     const row = { id: buildFieldId(createId, 'row', index) };
     columns.forEach((column, columnIndex) => {
       row[column.field] = cells[columnIndex];
@@ -169,6 +193,38 @@ export function createMolarityNotebookResultTable(createId, rowCount = MOLARITY_
     return row;
   });
   return { columns, rows, solve: true };
+}
+
+// Switching a column's unit re-expresses what is already in it rather than changing
+// what the numbers mean: typed values are converted, and a solve table's generated
+// formulas are rebuilt around the new constant. A formula the user wrote or edited by
+// hand no longer matches the generated one, so it is left exactly as they left it.
+export function setNotebookResultTableColumnUnit(rawTable, columnIndex, unit) {
+  const table = normalizeNotebookResultTable(rawTable);
+  const column = table?.columns?.[columnIndex];
+  const previous = columnUnit(column?.title);
+  const next = previous ? columnUnit(`(${unit})`) : null;
+  if (!next || next.dimension !== previous.dimension) {
+    return table;
+  }
+
+  const before = table.columns.map(({ title }) => ({ title }));
+  column.title = retitleColumnUnit(column.title, next.unit);
+  const ratio = previous.factor / next.factor;
+  table.rows.forEach((row, rowIndex) => {
+    row[column.field] = rescaleCellValue(row[column.field], ratio);
+    if (!table.solve) {
+      return;
+    }
+    const stale = molarityRowFormulas(before, rowIndex);
+    const fresh = molarityRowFormulas(table.columns, rowIndex);
+    table.columns.forEach((each, index) => {
+      if (stale[index] && String(row[each.field] ?? '') === stale[index]) {
+        row[each.field] = fresh[index];
+      }
+    });
+  });
+  return table;
 }
 
 export function addNotebookResultTableRow(rawTable, createId) {

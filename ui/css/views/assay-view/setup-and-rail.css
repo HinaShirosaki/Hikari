@@ -1,5 +1,65 @@
 /* assay-view */
 
+/* Match the Notebook's visible hover/focus captions while keeping each Assay
+   action's existing accessible name and compact geometry. */
+#assay-view button[data-hover-caption] {
+  position: relative;
+}
+
+#assay-view button[data-hover-caption]::after {
+  content: attr(data-hover-caption);
+  position: absolute;
+  z-index: 3200;
+  top: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 180px;
+  padding: 4px 7px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 6px 16px var(--theme-shadow-color);
+  color: var(--theme-text-strong);
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+#assay-view button[data-hover-caption]:hover::after,
+#assay-view button[data-hover-caption]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 180ms;
+}
+
+#assay-view .assay-form-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-results-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-analysis-group-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:first-of-type::after {
+  right: auto;
+  left: 0;
+  transform: none;
+}
+
+#assay-view .assay-form-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-results-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-analysis-group-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-browser-item-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-result-table-panel > .foldable-section__summary > button[data-hover-caption]::after,
+#assay-view .app-dialog-head > button[data-hover-caption]::after,
+#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:last-of-type::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
 /* Extracted from ui/css/base/core.css */
 .assay-results-actions {
   margin-top: 8px;
@@ -56,7 +116,8 @@
 #assay-active-assay-info:empty,
 #assay-result-status:empty,
 #assay-transform-summary:empty,
-#assay-analysis-selection-status:empty {
+#assay-analysis-selection-status:empty,
+#assay-analysis-summary:empty {
   display: none;
 }
 
@@ -473,4 +534,3 @@
 .assay-create-preview-panel > .assay-plate-toolbar {
   margin-bottom: 12px;
 }
-

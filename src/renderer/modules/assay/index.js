@@ -4,22 +4,18 @@ import { createAssayResultsManager } from './results-manager.js';
 import { createAssayAnalysisView } from './analysis-view.js';
 import { createAssayArtifactStorage } from './artifact-storage.js';
 import {
-  ensureAssayNumbers,
-  nextAssayNumber,
   previewNextAssayNumber
 } from './numbering.js';
 import {
   getPlateDefinition,
-  normalizeLayout,
-  normalizeManualWellOverrideMap,
   normalizeResults
 } from './plate-model.js';
-import { oppositeAxis } from './shared.js';
 import { createAssayAgentContext } from './agent/context.js';
 import { bindAssayEvents } from './ui/event-bindings.js';
 import { createAssayBrowserView } from './ui/browser-view.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { createAssayFormAndList } from './workspace/form-and-list.js';
+import { createAssayNotebookLinks } from './workspace/notebook-links.js';
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
   const TabulatorLib = window.Tabulator || null;
@@ -99,91 +95,24 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     return Boolean(savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot);
   }
 
-  function arraysEqual(left, right) {
-    if (left.length !== right.length) {
-      return false;
-    }
-    return left.every((value, index) => value === right[index]);
-  }
 
-  function syncNotebookAssayLinks() {
-    if (!Array.isArray(state.notebookEntries)) {
-      return;
-    }
-
-    const linkedIdsByEntry = new Map();
-    (state.assays || []).forEach((assay) => {
-      const entryId = String(assay?.notebookEntryId || '').trim();
-      const assayId = String(assay?.id || '').trim();
-      if (!entryId || !assayId) {
-        return;
-      }
-      if (!linkedIdsByEntry.has(entryId)) {
-        linkedIdsByEntry.set(entryId, []);
-      }
-      linkedIdsByEntry.get(entryId).push(assayId);
-    });
-
-    state.notebookEntries = state.notebookEntries.map((entry) => {
-      const nextIds = linkedIdsByEntry.get(String(entry?.id || '').trim()) || [];
-      const currentIds = Array.isArray(entry?.assayIds)
-        ? entry.assayIds.map((value) => String(value || '').trim()).filter(Boolean)
-        : [];
-      if (arraysEqual(currentIds, nextIds)) {
-        return entry;
-      }
-      return {
-        ...entry,
-        assayIds: nextIds
-      };
-    });
-  }
-
-  function assayDefinitionChanged(existing, nextRecord) {
-    if (!existing) {
-      return false;
-    }
-    const fieldsToCompare = [
-      'plateType',
-      'sampleAxis',
-      'projectId',
-      'notebookEntryId'
-    ];
-    if (fieldsToCompare.some((field) => String(existing?.[field] || '') !== String(nextRecord?.[field] || ''))) {
-      return true;
-    }
-    return JSON.stringify(existing?.sampleAxisValues || []) !== JSON.stringify(nextRecord?.sampleAxisValues || [])
-      || JSON.stringify(existing?.concentrationAxisValues || []) !== JSON.stringify(nextRecord?.concentrationAxisValues || [])
-      || JSON.stringify(existing?.manualWellOverrides || {}) !== JSON.stringify(nextRecord?.manualWellOverrides || {})
-      || JSON.stringify(existing?.suppressedWells || []) !== JSON.stringify(nextRecord?.suppressedWells || [])
-      || JSON.stringify(existing?.wellLayout || []) !== JSON.stringify(nextRecord?.wellLayout || [])
-      || JSON.stringify(existing?.resultValues || {}) !== JSON.stringify(nextRecord?.resultValues || {});
-  }
-
-  function saveAssayAnalysisPreview(preview) {
-    const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
-    if (!assayId) {
-      return;
-    }
-    const assay = getAssayById(assayId);
-    if (!assay) {
-      return;
-    }
-    assay.latestAnalysis = preview && typeof preview === 'object'
-      ? { ...preview }
-      : null;
-    assay.updatedAt = new Date().toISOString();
-    syncNotebookAssayLinks();
-    persist();
-    renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
-    renderList();
-    if (typeof onAssaysChanged === 'function') {
-      onAssaysChanged();
-    }
-    void artifactStorage.persistAssayArtifacts(assay.id);
-    notifyActiveAssayChanged();
-  }
+  const {
+    syncNotebookAssayLinks,
+    assayDefinitionChanged,
+    saveAssayAnalysisPreview
+  } = createAssayNotebookLinks({
+    state,
+    persist,
+    runtime,
+    elements,
+    renderList,
+    renderResultsAssayOptions,
+    clearActiveAssayInfo,
+    onAssaysChanged,
+    getAssayById,
+    artifactStorage: { persistAssayArtifacts: (id) => artifactStorage.persistAssayArtifacts(id) },
+    notifyActiveAssayChanged: () => notifyActiveAssayChanged()
+  });
 
   function setCsvStatus(message) {
     if (elements.assayCsvStatus) {
@@ -393,355 +322,48 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     notifyActiveAssayChanged();
   }
 
-  function setAssayMode(mode) {
-    runtime.assayMode = mode === 'results' ? 'results' : 'create';
-    const isCreate = runtime.assayMode === 'create';
-    if (elements.assayCreateLayout) {
-      elements.assayCreateLayout.hidden = !isCreate;
-    }
-    if (elements.assayResultsLayout) {
-      elements.assayResultsLayout.hidden = isCreate;
-    }
-    elements.assayModeCreateBtn?.classList.toggle('calendar-view-active', isCreate);
-    elements.assayModeResultsBtn?.classList.toggle('calendar-view-active', !isCreate);
-    if (elements.assayModeNote) {
-      elements.assayModeNote.textContent = '';
-    }
-    if (isCreate) {
-      layoutManager.renderPlateDefinition();
-      layoutManager.renderPlatePreview();
-      notifyActiveAssayChanged();
-      return;
-    }
 
-    if (!isCreate) {
-      renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
-      const selected = elements.assayResultsAssaySelect?.value || runtime.activeResultsAssayId;
-      if (selected) {
-        loadAssayForResults(selected);
-      } else {
-        clearActiveAssayInfo();
-      }
-    }
-    notifyActiveAssayChanged();
-  }
-
-  function onResultsAssaySelected() {
-    const assayId = elements.assayResultsAssaySelect?.value || '';
-    if (!assayId) {
-      runtime.activeResultsAssayId = '';
-      clearActiveAssayInfo();
-      setResultStatus('No assay plate selected.');
-      notifyActiveAssayChanged();
-      return;
-    }
-    loadAssayForResults(assayId);
-  }
-
-  function onSaveResults() {
-    ensureState();
-    const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
-    if (!assayId) {
-      setResultStatus('Select an assay plate first.');
-      return null;
-    }
-    const assay = getAssayById(assayId);
-    if (!assay) {
-      setResultStatus('Selected assay plate was not found.');
-      showTransientNotice('Selected assay plate was not found.', { type: 'error' });
-      return null;
-    }
-    const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
-    resultsManager.syncCurrentResultsFromGrid();
-    assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
-    assay.transformSpec = analysisView.getTransformSpec();
-    assay.latestAnalysis = null;
-    assay.updatedAt = new Date().toISOString();
-    syncNotebookAssayLinks();
-    persist();
-    renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
-    renderList();
-    if (typeof onAssaysChanged === 'function') {
-      onAssaysChanged();
-    }
-    setResultStatus(`Saved ${Object.keys(assay.resultValues || {}).length} result value(s) for ${assay.assayNumber || assay.id}.`);
-    void artifactStorage.persistAssayArtifacts(assay.id);
-    markResultsDraftSaved();
-    notifyActiveAssayChanged();
-    return assay;
-  }
-
-  function onSubmit(event) {
-    event.preventDefault();
-    ensureState();
-
-    const name = elements.assayNameInput?.value.trim() || '';
-    if (!name) {
-      return null;
-    }
-
-    const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value);
-    const sampleAxis = elements.assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const selectedConcentrationAxis = elements.assayConcentrationAxisInput?.value === 'row' ? 'row' : 'column';
-    const concentrationAxis = selectedConcentrationAxis === oppositeAxis(sampleAxis)
-      ? selectedConcentrationAxis
-      : oppositeAxis(sampleAxis);
-    const project = (state.projects || []).find((item) => item.id === elements.assayProjectInput?.value);
-    const notebookEntry = (state.notebookEntries || []).find((entry) => entry.id === elements.assayNotebookEntryInput?.value);
-    const editingId = elements.assayIdInput?.value || '';
-    const existing = (state.assays || []).find((item) => item.id === editingId);
-    const axisValues = layoutManager.getAxisTemplateValues();
-    layoutManager.syncAxisTemplateValues(axisValues);
-    layoutManager.setLayoutFromAxisAndOverrides();
-
-    const record = {
-      id: existing?.id || createId(),
-      assayNumber: existing?.assayNumber || nextAssayNumber(state),
-      name,
-      projectId: project?.id || '',
-      projectName: project?.name || '',
-      plateType: plateDef.value,
-      plateLabel: plateDef.label,
-      plateRows: plateDef.rows,
-      plateColumns: plateDef.columns,
-      wellCount: plateDef.rows * plateDef.columns,
-      sampleAxis,
-      concentrationAxis,
-      concentrationUnit: layoutManager.getConcentrationUnit(),
-      sampleAxisValues: axisValues.sampleValues,
-      concentrationAxisValues: axisValues.concentrationValues,
-      manualWellOverrides: normalizeManualWellOverrideMap(runtime.manualWellOverrides, plateDef),
-      suppressedWells: Array.from(runtime.suppressedWells),
-      notebookEntryId: elements.assayNotebookEntryInput?.value || '',
-      notebookEntryProtocolName: notebookEntry?.protocolName || '',
-      notebookEntryType: notebookEntry?.notebookType || '',
-      serialDilution: layoutManager.getSerialDilutionSnapshot(),
-      serialDilutionSummary: layoutManager.getSerialDilutionSummaryData(),
-      wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
-      resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
-      resultAttachments: Array.isArray(existing?.resultAttachments) ? existing.resultAttachments : [],
-      // Analysis-side settings live on the assay but are edited in the Analyze view, so
-      // a save from Setup has to carry them forward instead of rebuilding them away.
-      chartStyle: existing?.chartStyle || null,
-      transformSpec: existing?.transformSpec || null,
-      updatedAt: new Date().toISOString()
-    };
-    record.latestAnalysis = assayDefinitionChanged(existing, record)
-      ? null
-      : (existing?.latestAnalysis && typeof existing.latestAnalysis === 'object'
-          ? { ...existing.latestAnalysis }
-          : null);
-
-    const index = state.assays.findIndex((item) => item.id === record.id);
-    if (index >= 0) {
-      state.assays[index] = record;
-    } else {
-      state.assays.push(record);
-    }
-
-    syncNotebookAssayLinks();
-    persist();
-    renderResultsAssayOptions(record.id);
-    resetForm();
-    renderList();
-    if (typeof onAssaysChanged === 'function') {
-      onAssaysChanged();
-    }
-    void artifactStorage.persistAssayArtifacts(record.id);
-    return record;
-  }
-
-  function resetForm() {
-    elements.assayIdInput.value = '';
-    elements.assayForm?.reset();
-    runtime.activeResultsAssayId = '';
-    runtime.activeWellEditorId = '';
-    runtime.plateEditField = 'sampleId';
-    runtime.manualWellOverrides = {};
-    runtime.suppressedWells = new Set();
-    runtime.currentLayout = [];
-    runtime.currentResults = {};
-    runtime.resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
-    runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
-    layoutManager.setConcentrationUnit('');
-    layoutManager.resetSerialDilutionState();
-    if (elements.assayAnalysisKindInput) {
-      elements.assayAnalysisKindInput.value = 'summary';
-    }
-    if (elements.assayAnalysisGroupByInput) {
-      elements.assayAnalysisGroupByInput.value = 'auto';
-    }
-    if (elements.assayAnalysisXAxisInput) {
-      elements.assayAnalysisXAxisInput.value = 'auto';
-    }
-    if (elements.assayAnalysisXTransformInput) {
-      elements.assayAnalysisXTransformInput.value = 'none';
-    }
-    if (elements.assayAnalysisAsymmetricInput) {
-      elements.assayAnalysisAsymmetricInput.checked = false;
-    }
-    if (elements.assayAnalysisPolyOrderInput) {
-      elements.assayAnalysisPolyOrderInput.value = '2';
-    }
-    if (elements.assayAnalysisSubtotalsInput) {
-      elements.assayAnalysisSubtotalsInput.checked = false;
-    }
-    analysisView?.syncAnalysisControls();
-    analysisView?.clearTransform();
-    if (elements.assayAnalysisRowGroupsInput) {
-      elements.assayAnalysisRowGroupsInput.value = '';
-    }
-    if (elements.assayAnalysisColumnGroupsInput) {
-      elements.assayAnalysisColumnGroupsInput.value = '';
-    }
-    if (elements.assayAnalysisErrorBarsInput) {
-      elements.assayAnalysisErrorBarsInput.checked = true;
-    }
-    resultsManager.setAnalysisSelectionStatus('');
-    resultsManager.refreshAnalysisGroupDisplay();
-    setCsvStatus('');
-    setLayoutStatus('');
-    if (elements.assaySampleAxisInput) {
-      elements.assaySampleAxisInput.value = 'row';
-    }
-    if (elements.assayPlateTypeInput) {
-      elements.assayPlateTypeInput.value = '96';
-    }
-    renderProjectOptions();
-    renderNotebookOptions();
-    layoutManager.syncAxisDisplay();
-    layoutManager.renderPlateEditFieldButtons();
-    layoutManager.syncAxisTemplateValues();
-    layoutManager.renderPlateDefinition();
-    layoutManager.renderPlatePreview();
-    renderAssayNumberDisplay();
-    renderResultsAssayOptions();
-    clearActiveAssayInfo();
-    resultsManager.renderResultTable();
-    analysisView.clearOutput();
-    layoutManager.updateActiveWellPreviewState();
-    setAssayMode('create');
-    markCreateDraftSaved();
-    markResultsDraftSaved();
-    notifyActiveAssayChanged();
-  }
-
-  function startNewAssay() {
-    resetForm();
-    elements.assayNameInput?.focus();
-  }
-
-  function editAssay(assayId) {
-    const assay = getAssayById(assayId);
-    if (!assay) {
-      return;
-    }
-    elements.assayBrowserPanel?.setAttribute('open', '');
-    elements.assayIdInput.value = assay.id;
-    elements.assayNameInput.value = assay.name || '';
-    elements.assayProjectInput.value = assay.projectId || '';
-    renderProjectOptions();
-    elements.assayProjectInput.value = assay.projectId || '';
-    renderNotebookOptions();
-    elements.assayPlateTypeInput.value = String(assay.plateType || '96');
-    elements.assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
-    const def = layoutManager.getCurrentDefinition();
-    const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
-    layoutManager.restoreSerialDilutionSnapshot(assay.serialDilution || null);
-    runtime.activeResultsAssayId = assay.id;
-    layoutManager.syncAxisDisplay();
-    layoutManager.renderPlateDefinition();
-    layoutManager.renderPlatePreview(axisValues);
-    renderAssayNumberDisplay();
-    renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
-    resultsManager.renderResultTable();
-    elements.assayNotebookEntryInput.value = assay.notebookEntryId || '';
-    if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
-      const option = document.createElement('option');
-      option.value = assay.notebookEntryId;
-      option.textContent = `${assay.notebookEntryId} (missing notebook page)`;
-      elements.assayNotebookEntryInput.append(option);
-      elements.assayNotebookEntryInput.value = assay.notebookEntryId;
-    }
-    setCsvStatus('');
-    setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
-    setLayoutStatus('');
-    analysisView.clearOutput();
-    markLoadedAssayDraftsSaved();
-    notifyActiveAssayChanged();
-  }
-
-  function deleteAssay(assayId) {
-    state.assays = (state.assays || []).filter((item) => item.id !== assayId);
-    if (runtime.activeResultsAssayId === assayId) {
-      runtime.activeResultsAssayId = '';
-      runtime.currentResults = {};
-      runtime.currentLayout = [];
-      resultsManager.renderResultTable();
-      clearActiveAssayInfo();
-      analysisView.clearOutput();
-    }
-    syncNotebookAssayLinks();
-    persist();
-    renderResultsAssayOptions();
-    renderList();
-    if (typeof onAssaysChanged === 'function') {
-      onAssaysChanged();
-    }
-  }
-
-  function onListClick(event) {
-    const resultsSelectBtn = event.target.closest('[data-assay-results-select]');
-    if (resultsSelectBtn) {
-      const assayId = resultsSelectBtn.dataset.assayResultsSelect || '';
-      if (elements.assayResultsAssaySelect) {
-        elements.assayResultsAssaySelect.value = assayId;
-      }
-      loadAssayForResults(assayId);
-      return;
-    }
-
-    const editBtn = event.target.closest('[data-assay-edit]');
-    if (editBtn) {
-      setAssayMode('create');
-      editAssay(editBtn.dataset.assayEdit);
-      return;
-    }
-
-    const deleteBtn = event.target.closest('[data-assay-delete]');
-    if (deleteBtn) {
-      deleteAssay(deleteBtn.dataset.assayDelete);
-    }
-  }
-
-  function render() {
-    ensureState();
-    const addedNumbers = ensureAssayNumbers(state);
-    if (addedNumbers) {
-      persist();
-    }
-    renderProjectOptions();
-    renderNotebookOptions();
-    layoutManager.syncAxisDisplay();
-    layoutManager.renderPlateEditFieldButtons();
-    layoutManager.syncAxisTemplateValues();
-    layoutManager.renderPlateDefinition();
-    renderAssayNumberDisplay();
-    renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
-    clearActiveAssayInfo();
-    layoutManager.renderPlatePreview();
-    resultsManager.renderResultTable();
-    renderList();
-    setAssayMode(runtime.assayMode);
-    if (!savedCreateDraftSnapshot) {
-      markCreateDraftSaved();
-    }
-    if (!savedResultsDraftSnapshot) {
-      markResultsDraftSaved();
-    }
-  }
+  const {
+    setAssayMode,
+    onResultsAssaySelected,
+    onSaveResults,
+    onSubmit,
+    resetForm,
+    startNewAssay,
+    onListClick,
+    render
+  } = createAssayFormAndList({
+    state,
+    persist,
+    createId,
+    runtime,
+    elements,
+    layoutManager,
+    resultsManager,
+    analysisView,
+    artifactStorage,
+    ensureState,
+    getAssayById,
+    onAssaysChanged,
+    renderList,
+    renderProjectOptions,
+    renderNotebookOptions,
+    renderResultsAssayOptions,
+    clearActiveAssayInfo,
+    notifyActiveAssayChanged,
+    renderAssayNumberDisplay,
+    setCsvStatus,
+    setLayoutStatus,
+    setResultStatus,
+    syncNotebookAssayLinks,
+    assayDefinitionChanged,
+    loadAssayForResults,
+    markCreateDraftSaved,
+    markResultsDraftSaved,
+    markLoadedAssayDraftsSaved,
+    hasSavedCreateDraftSnapshot: () => Boolean(savedCreateDraftSnapshot),
+    hasSavedResultsDraftSnapshot: () => Boolean(savedResultsDraftSnapshot)
+  });
 
   function startLinkedAssay({ notebookEntryId = '', projectId = '' } = {}) {
     resetForm();

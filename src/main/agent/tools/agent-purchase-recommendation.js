@@ -27,7 +27,6 @@ const {
   buildSearchQuery,
   buildSearchQueries,
   usesCodexAgentPurchasePath,
-  buildFastCodexSearchQueries,
   extractCandidateProductLinks,
   deriveAdaptiveSearchQueries,
   createReasoningRound
@@ -40,16 +39,14 @@ const {
   summarizePurchaseRecommendation
 } = require('./purchase-recommendation/candidate-scoring.js');
 const {
-  PURCHASE_SEARCH_PLAN_SCHEMA,
-  PURCHASE_CANDIDATE_JUDGMENT_SCHEMA,
-  PURCHASE_SEARCH_PLANNER_SYSTEM_PROMPT,
-  PURCHASE_CANDIDATE_JUDGE_SYSTEM_PROMPT,
   buildPurchaseSearchPlannerPrompt,
   buildPurchaseCandidateJudgePrompt,
   normalizePurchaseSearchPlan,
   normalizePurchaseCandidateJudgment,
   mergePurchaseReasoning
 } = require('./purchase-recommendation/llm-judging.js');
+const { createPurchaseWebFetch } = require('./purchase-recommendation/web-fetch.js');
+const { createPurchaseLlmSteps } = require('./purchase-recommendation/llm-steps.js');
 
 function createPurchaseRecommendationRuntime(deps = {}) {
   const {
@@ -62,154 +59,19 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     : (typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null);
   const searchWebResultsOverride = typeof deps.searchWebResults === 'function' ? deps.searchWebResults : null;
 
-  async function readResponseText(response) {
-    if (typeof response?.text === 'function') {
-      return String(await response.text());
-    }
-    if (typeof response?.json === 'function') {
-      return JSON.stringify(await response.json());
-    }
-    return '';
-  }
 
-  async function fetchText(url) {
-    if (!fetchImpl) {
-      throw new Error('Purchase recommendation requires fetch support.');
-    }
-    const response = await fetchImpl(url, {
-      headers: {
-        'user-agent': 'Mozilla/5.0 Hikari Purchase Recommendation'
-      }
-    });
-    const failed = response?.ok === false || Number(response?.status) >= 400;
-    if (failed) {
-      const body = await readResponseText(response);
-      throw new Error(runtimeCleanText(body, 300) || `Failed to fetch ${url}.`);
-    }
-    return readResponseText(response);
-  }
 
-  async function searchWebResults(query, limit = 10, input = {}) {
-    if (searchWebResultsOverride) {
-      const normalized = asArray(await searchWebResultsOverride({ query, limit })).map((item) => normalizeSearchResult(item)).filter((item) => item.url);
-      return normalized.slice(0, limit);
-    }
-    if (requestWebSearch) {
-      const providerSearch = await requestWebSearch({
-        ...input,
-        stage: 'purchase_recommendation_web_search',
-        query,
-        maxResults: limit,
-        traceContext: input.traceContext || null
-      });
-      if (providerSearch?.ok) {
-        return asArray(providerSearch.results).map((item) => normalizeSearchResult(item)).filter((item) => item.url).slice(0, limit);
-      }
-      throw new Error(cleanText(providerSearch?.error) || 'Provider-layer web search is unavailable.');
-    }
-    throw new Error('Purchase recommendation requires provider-layer web search support.');
-  }
+  const { fetchText, searchWebResults } = createPurchaseWebFetch({
+    fetchImpl,
+    requestWebSearch,
+    searchWebResultsOverride,
+    runtimeCleanText
+  });
 
-  async function planSearchQueriesWithLlm(input = {}, filters = {}, priorRounds = []) {
-    const heuristicQueries = priorRounds.length
-      ? deriveAdaptiveSearchQueries({
-        query: deriveProductQuery(input),
-        filters,
-        priorRounds
-      })
-      : buildSearchQueries(input);
-    if (usesCodexAgentPurchasePath(input)) {
-      return {
-        planner: 'fast_codex_heuristic',
-        reasoning: 'Using fast Codex purchase planning to avoid extra CLI round-trips.',
-        queries: buildFastCodexSearchQueries(input, filters, priorRounds)
-      };
-    }
-    if (!requestStructuredJsonPayload) {
-      return {
-        planner: 'heuristic',
-        reasoning: 'Using heuristic search planning because no structured LLM helper is available.',
-        queries: heuristicQueries
-      };
-    }
-    try {
-      const llmResult = await requestStructuredJsonPayload({
-        ...input,
-        stage: `purchase_recommendation_search_plan_round_${asArray(priorRounds).length + 1}`,
-        systemPrompt: PURCHASE_SEARCH_PLANNER_SYSTEM_PROMPT,
-        userPrompt: buildPurchaseSearchPlannerPrompt({
-          query: deriveProductQuery(input),
-          filters,
-          priorRounds,
-          heuristicQueries
-        }),
-        schema: PURCHASE_SEARCH_PLAN_SCHEMA,
-        traceContext: input.traceContext || null,
-        defaultError: 'Purchase recommendation provider is not configured.'
-      });
-      if (!llmResult?.ok || !llmResult.payload) {
-        return {
-          planner: 'heuristic_fallback',
-          reasoning: cleanText(llmResult?.error) || 'Falling back to heuristic search planning.',
-          queries: heuristicQueries
-        };
-      }
-      const normalized = normalizePurchaseSearchPlan(llmResult.payload, heuristicQueries);
-      return {
-        planner: 'llm',
-        reasoning: normalized.reasoning || 'LLM planned search queries.',
-        queries: normalized.search_queries.length ? normalized.search_queries : heuristicQueries
-      };
-    } catch (error) {
-      return {
-        planner: 'heuristic_fallback',
-        reasoning: runtimeCleanText(error?.message || error, 320) || 'Falling back to heuristic search planning.',
-        queries: heuristicQueries
-      };
-    }
-  }
-
-  async function judgeCandidateWithLlm({
-    input = {},
-    filters = {},
-    searchResult = {},
-    normalizedProduct = {},
-    pageText = '',
-    heuristicReasoning = {},
-    candidateLinks = []
-  } = {}) {
-    if (!requestStructuredJsonPayload || usesCodexAgentPurchasePath(input)) {
-      return null;
-    }
-    try {
-      const llmResult = await requestStructuredJsonPayload({
-        ...input,
-        stage: 'purchase_recommendation_candidate_judge',
-        systemPrompt: PURCHASE_CANDIDATE_JUDGE_SYSTEM_PROMPT,
-        userPrompt: buildPurchaseCandidateJudgePrompt({
-          query: deriveProductQuery(input),
-          filters,
-          searchResult,
-          normalizedProduct,
-          pageText,
-          heuristicReasoning,
-          candidateLinks
-        }),
-        schema: PURCHASE_CANDIDATE_JUDGMENT_SCHEMA,
-        traceContext: input.traceContext || null,
-        defaultError: 'Purchase recommendation provider is not configured.'
-      });
-      if (!llmResult?.ok || !llmResult.payload) {
-        return null;
-      }
-      return normalizePurchaseCandidateJudgment(llmResult.payload, {
-        ...normalizedProduct,
-        page_url: cleanText(searchResult.url)
-      }, filters);
-    } catch {
-      return null;
-    }
-  }
+  const {
+    planSearchQueriesWithLlm,
+    judgeCandidateWithLlm
+  } = createPurchaseLlmSteps({ requestStructuredJsonPayload, runtimeCleanText });
 
   function aggregateDiagnostics(rounds = [], lastError = '') {
     return {

@@ -38,7 +38,6 @@ export function getWorkflowElements(rootDocument) {
     workflowSubmitBtn: rootDocument?.querySelector?.('#workflow-form button[type="submit"]'),
     workflowEntryPanel: rootDocument?.getElementById?.('workflow-entry-panel'),
     workflowEntryTemplateBtn: rootDocument?.getElementById?.('workflow-entry-template-btn'),
-    workflowEntryViewBtn: rootDocument?.getElementById?.('workflow-entry-view-btn'),
     workflowEntryBackBtn: rootDocument?.getElementById?.('workflow-entry-back-btn'),
     workflowSidebarEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-sidebar-editor-panel') || [])],
     workflowBlockComposerPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-block-composer-panel') || [])],

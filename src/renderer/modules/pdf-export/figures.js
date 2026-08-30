@@ -114,6 +114,14 @@ function wellIdFor(rowIndex, columnIndex) {
   return `${toRowLabel(rowIndex)}${columnIndex + 1}`;
 }
 
+function compactPlateCellLabel(value, maxCharacters) {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text || text.length <= maxCharacters) {
+    return text;
+  }
+  return `${text.slice(0, Math.max(1, maxCharacters - 3)).trimEnd()}...`;
+}
+
 function resolveAssayDefinition(assay) {
   const rows = Number(assay?.plateRows);
   const columns = Number(assay?.plateColumns);
@@ -149,8 +157,19 @@ function renderAssayPlot(ctx, assay, def) {
     if (!well) {
       return;
     }
-    map[well] = true;
+    map[well] = {
+      sampleId: String(item?.sampleId || '').trim(),
+      concentration: String(item?.concentration || '').trim()
+    };
   });
+
+  const cellLabelFontSize = Math.max(4.5, Math.min(6.5, cellSize * 0.18));
+  const cellLabelLineHeight = Math.max(5, Math.min(7, cellSize * 0.19));
+  const cellLabelMaxCharacters = Math.max(
+    3,
+    Math.floor((cellSize - 4) / (cellLabelFontSize * 0.54))
+  );
+  let mappedCount = 0;
 
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
   ctx.doc.setFontSize(8);
@@ -170,22 +189,42 @@ function renderAssayPlot(ctx, assay, def) {
   for (let row = 0; row < maxRows; row += 1) {
     for (let col = 0; col < maxColumns; col += 1) {
       const well = wellIdFor(row, col);
-      const mapped = Boolean(map[well]);
+      const layout = map[well];
+      const sampleId = String(layout?.sampleId || '').trim();
+      const concentration = String(layout?.concentration || '').trim();
+      const mapped = Boolean(sampleId || concentration);
       const x = startX + (col * cellSize);
       const y = startY + (row * cellSize);
       if (mapped) {
+        mappedCount += 1;
         ctx.doc.setFillColor(209, 227, 255);
       } else {
         ctx.doc.setFillColor(255, 255, 255);
       }
       ctx.doc.setDrawColor(170, 180, 190);
       ctx.doc.rect(x, y, cellSize, cellSize, 'FD');
+
+      const labels = [sampleId, concentration]
+        .filter(Boolean)
+        .map((value) => compactPlateCellLabel(value, cellLabelMaxCharacters));
+      if (labels.length) {
+        const labelBlockHeight = (labels.length - 1) * cellLabelLineHeight;
+        const labelStartY = y + (cellSize / 2) - (labelBlockHeight / 2) + (cellLabelFontSize * 0.34);
+        ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
+        ctx.doc.setFontSize(cellLabelFontSize);
+        ctx.doc.setTextColor(26, 52, 74);
+        labels.forEach((label, index) => {
+          ctx.doc.text(label, x + (cellSize / 2), labelStartY + (index * cellLabelLineHeight), { align: 'center' });
+        });
+      }
     }
   }
 
   ctx.y = startY + plotHeight + 14;
+  ctx.doc.setTextColor(0, 0, 0);
   ctx.doc.setFontSize(9);
-  writeParagraph(ctx, 'Legend: blue = mapped well, white = empty well');
+  const mappedLabel = `${mappedCount} mapped well${mappedCount === 1 ? '' : 's'}`;
+  writeParagraph(ctx, `Legend: blue cells show saved sample (top) and concentration (bottom); white = empty well. ${mappedLabel}.`);
 }
 
 export {

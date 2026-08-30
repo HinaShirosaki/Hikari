@@ -7,15 +7,14 @@
 // - present the annotated plate and count summary in a two-column workspace
 import { clampNumber } from './common.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
-import {
-  countColoniesWithModel
-} from './colony-counter-model.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { EMPTY_MASK, getCanvasPointerPosition } from './colony-counter/canvas-utils.js';
 import { createColonyViewport } from './colony-counter/viewport.js';
 import { createColonyPreviewRendering } from './colony-counter/preview-rendering.js';
 import { createColonyImageCropping } from './colony-counter/image-cropping.js';
 import { createColonyPointerInteractions } from './colony-counter/pointer-interactions.js';
+import { createMaskAndModelCount } from './colony-counter/mask-and-model.js';
+import { createColonyControlState } from './colony-counter/control-state.js';
 
 export function initColonyCounterTool() {
   // Core DOM nodes for image loading, crop controls, canvases, and summary output.
@@ -176,62 +175,26 @@ export function initColonyCounterTool() {
     drawMaskShapePath
   });
 
-  // Enable or disable buttons and cursors based on image availability, crop mode, and marker state.
-  function updateControlState() {
-    const hasImage = colonyState.hasImage;
-    const cropActive = isCropModeActive();
-    const busy = colonyState.isModelRunning;
-    const drawingMask = colonyState.isDrawingMask;
 
-    if (colonyCropMenuBtn) {
-      colonyCropMenuBtn.disabled = !hasImage || busy || drawingMask;
-      if (colonyCropMenuBtn.disabled) {
-        closeColonyCropMenu();
-      }
-    }
-
-    if (colonyStartCropBtn) {
-      colonyStartCropBtn.disabled = !hasImage || cropActive || busy || drawingMask;
-    }
-    if (colonyApplyCropBtn) {
-      colonyApplyCropBtn.disabled = !cropActive || busy || drawingMask;
-    }
-    if (colonyCancelCropBtn) {
-      colonyCancelCropBtn.disabled = !cropActive || busy || drawingMask;
-    }
-    if (colonyResetCropBtn) {
-      colonyResetCropBtn.disabled = !hasImage || cropActive || busy || drawingMask;
-    }
-    if (colonyAutoCountBtn) {
-      colonyAutoCountBtn.disabled = !hasImage || cropActive || busy || drawingMask;
-    }
-    if (colonyStartMaskBtn) {
-      colonyStartMaskBtn.disabled = !hasImage || cropActive || busy;
-      colonyStartMaskBtn.textContent = drawingMask ? 'Cancel Mask' : 'Draw Mask';
-    }
-    if (colonyClearMaskBtn) {
-      colonyClearMaskBtn.disabled = !hasImage || cropActive || busy || drawingMask || !hasActiveMask();
-    }
-    if (colonyClearMarkersBtn) {
-      colonyClearMarkersBtn.disabled = !hasImage || cropActive || busy || drawingMask || colonyState.markers.length === 0;
-    }
-    if (colonyRunBtn) {
-      colonyRunBtn.disabled = !hasImage || cropActive || busy || drawingMask;
-    }
-    if (colonyPreviewCanvas) {
-      if (!hasImage || cropActive) {
-        colonyPreviewCanvas.style.cursor = 'default';
-      } else if (drawingMask) {
-        colonyPreviewCanvas.style.cursor = 'crosshair';
-      } else if (colonyState.isPanning) {
-        colonyPreviewCanvas.style.cursor = 'grabbing';
-      } else if (colonyState.zoom > 1.001) {
-        colonyPreviewCanvas.style.cursor = 'grab';
-      } else {
-        colonyPreviewCanvas.style.cursor = 'crosshair';
-      }
-    }
-  }
+  const { updateControlState } = createColonyControlState({
+    state: colonyState,
+    elements: {
+      colonyRunBtn,
+      colonyAutoCountBtn,
+      colonyStartMaskBtn,
+      colonyClearMaskBtn,
+      colonyClearMarkersBtn,
+      colonyStartCropBtn,
+      colonyApplyCropBtn,
+      colonyCancelCropBtn,
+      colonyResetCropBtn,
+      colonyCropMenuBtn,
+      colonyPreviewCanvas
+    },
+    isCropModeActive: () => isCropModeActive(),
+    hasActiveMask,
+    closeColonyCropMenu: () => closeColonyCropMenu()
+  });
 
   const cropElements = {
     colonyImageInput,
@@ -303,108 +266,18 @@ export function initColonyCounterTool() {
     updateControlState: () => updateControlState()
   });
 
-  function startMaskDrawing() {
-    if (!colonyState.hasImage) {
-      setColonyStatus('Load an image before drawing a mask.', true);
-      return;
-    }
-    if (isCropModeActive()) {
-      setColonyStatus('Apply or cancel crop mode before drawing a mask.', true);
-      return;
-    }
-    if (colonyState.isDrawingMask) {
-      colonyState.isDrawingMask = false;
-      colonyState.maskDraft = null;
-      colonyState.maskStartPoint = null;
-      renderPreviewCanvas();
-      setColonyStatus('Mask drawing cancelled.');
-      updateControlState();
-      return;
-    }
-
-    colonyState.isDrawingMask = true;
-    colonyState.maskDraft = null;
-    colonyState.maskStartPoint = null;
-    setColonyStatus('Drag on the plate preview to draw the count mask.');
-    updateControlState();
-  }
-
-  function clearMask() {
-    if (!hasActiveMask() && !colonyState.maskDraft) {
-      return;
-    }
-    colonyState.mask = { ...EMPTY_MASK };
-    colonyState.maskDraft = null;
-    colonyState.isDrawingMask = false;
-    colonyState.maskStartPoint = null;
-    renderPreviewCanvas();
-    renderColonySummary();
-    setColonyStatus('Mask cleared. Auto Count will detect the plate automatically when no hand mask is drawn.');
-    updateControlState();
-  }
-
-  async function runModelCount() {
-    if (!colonyState.hasImage || !colonySourceCanvas) {
-      setColonyStatus('Load a plate image before running auto count.', true);
-      return;
-    }
-    if (isCropModeActive()) {
-      setColonyStatus('Apply or cancel crop mode before running auto count.', true);
-      return;
-    }
-    if (colonyState.isDrawingMask) {
-      setColonyStatus('Finish or cancel mask drawing before running auto count.', true);
-      return;
-    }
-
-    const settings = getModelSettings();
-    colonyState.isModelRunning = true;
-    updateControlState();
-    setColonyStatus('Loading colony model and counting...');
-
-    try {
-      const result = await countColoniesWithModel(colonySourceCanvas, {
-        ...settings,
-        mask: colonyState.mask
-      });
-
-      if (result.maskSource === 'plate-model' && result.detectedPlateMask) {
-        colonyState.mask = normalizeMask(result.detectedPlateMask);
-      }
-
-      colonyState.markers = result.colonies.map((colony) => ({
-        x: colony.x,
-        y: colony.y,
-        source: 'model',
-        score: colony.score
-      }));
-      colonyState.lastCountSource = 'model';
-      colonyState.lastModelStats = {
-        threshold: result.threshold,
-        minDistance: result.minDistance,
-        elapsedMs: result.elapsedMs,
-        totalPeaks: result.totalPeaks,
-        maskSource: result.maskSource,
-        plateThreshold: result.plateThreshold,
-        plateArea: result.plateArea
-      };
-
-      renderPreviewCanvas();
-      renderColonySummary();
-      const maskText = result.maskSource === 'plate-model'
-        ? ` inside detected plate (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})`
-        : (hasActiveMask() ? ` inside mask (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})` : '');
-      const fallbackText = result.maskSource === 'none' ? ' Plate was not detected; counted the full image.' : '';
-      const countText = `Auto count: ${colonyState.markers.length} colon${colonyState.markers.length === 1 ? 'y' : 'ies'}${maskText}.`;
-      setColonyStatus(`${countText}${fallbackText}`);
-    } catch (error) {
-      setColonyStatus(error?.message || 'Auto count failed.', true);
-      console.error('Colony auto count failed:', error);
-    } finally {
-      colonyState.isModelRunning = false;
-      updateControlState();
-    }
-  }
+  const { startMaskDrawing, clearMask, runModelCount } = createMaskAndModelCount({
+    state: colonyState,
+    colonySourceCanvas,
+    getModelSettings,
+    isCropModeActive: () => isCropModeActive(),
+    hasActiveMask,
+    normalizeMask,
+    renderPreviewCanvas: () => renderPreviewCanvas(),
+    renderColonySummary: () => renderColonySummary(),
+    setColonyStatus: (message, isError) => setColonyStatus(message, isError),
+    updateControlState: () => updateControlState()
+  });
 
   // Clamp the max-size display input so preview rendering stays within supported bounds.
   function syncDisplayInput() {

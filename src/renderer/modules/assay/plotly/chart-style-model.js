@@ -65,6 +65,12 @@ export function createDefaultChartStyle() {
     seriesColumn: 'auto',
     xTitle: '',
     yTitle: '',
+    // Axis-title placement. null = Plotly's own centred title with its automatic
+    // standoff; a number slides the title along its axis (0-1) or away from it (px).
+    xTitlePos: null,
+    yTitlePos: null,
+    xTitleOffset: null,
+    yTitleOffset: null,
     xScale: 'linear',
     yScale: 'linear',
     xRange: { auto: true, min: null, max: null },
@@ -114,6 +120,12 @@ function clampFinite(value) {
   if (value === null || value === undefined || value === '') return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+// Optional numeric field: blank stays blank (auto), a number is clamped.
+function clampOptional(value, min, max) {
+  const num = clampFinite(value);
+  return num === null ? null : Math.max(min, Math.min(max, num));
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -183,6 +195,10 @@ export function normalizeChartStyle(input) {
     seriesColumn: typeof input.seriesColumn === 'string' ? input.seriesColumn : base.seriesColumn,
     xTitle: typeof input.xTitle === 'string' ? input.xTitle.slice(0, 200) : base.xTitle,
     yTitle: typeof input.yTitle === 'string' ? input.yTitle.slice(0, 200) : base.yTitle,
+    xTitlePos: clampOptional(input.xTitlePos, 0, 1),
+    yTitlePos: clampOptional(input.yTitlePos, 0, 1),
+    xTitleOffset: clampOptional(input.xTitleOffset, 0, 200),
+    yTitleOffset: clampOptional(input.yTitleOffset, 0, 200),
     xScale: sanitizeEnum(migrateScale(input.xScale), SCALE_TYPES, base.xScale),
     yScale: sanitizeEnum(migrateScale(input.yScale), SCALE_TYPES, base.yScale),
     xRange: sanitizeRange(input.xRange),

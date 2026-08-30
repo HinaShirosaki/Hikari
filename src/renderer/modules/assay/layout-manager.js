@@ -4,32 +4,23 @@ import {
 } from './shared.js';
 import {
   applyAxisTemplate,
-  buildAllWells,
-  buildMappedWellSet,
-  filterResultsToMappedWells,
   getAssayAxisTemplateValues,
-  getAxisLength,
   getPlateDefinition,
-  isValidWellForDefinition,
-  layoutToMap,
   layoutsEqual,
-  mergeAxisTemplateValues,
   normalizeCurrentAxisTemplateValues,
   normalizeLayout,
   normalizeManualWellOverrideMap,
   normalizeResults,
   removeSuppressedWellsFromLayout
 } from './plate-model.js';
-import { createInventorySamplePicker } from './inventory-sample-picker.js';
-import { createPlatePreviewEvents } from './layout/preview-events.js';
 import { createLayoutCsv } from './layout/csv.js';
-import { createSerialDilutionController } from './serial-dilution.js';
 import { buildPlatePreviewHtml } from './plate-preview-renderer.js';
 import {
   isKnownUnit,
   splitConcentrationValue
 } from './concentration-utils.js';
-import { createConcentrationFill } from './layout/concentration-fill.js';
+import { createAxisValues } from './layout/axis-values.js';
+import { createPlateInteractions } from './layout/plate-interactions.js';
 
 export function createAssayLayoutManager({
   runtime,
@@ -91,223 +82,33 @@ export function createAssayLayoutManager({
     return assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
   }
 
-  function setAxisTemplateValues(values, def = getCurrentDefinition(), sampleAxis = getSampleAxis()) {
-    runtime.axisTemplateValues = normalizeCurrentAxisTemplateValues(values, def, sampleAxis);
-    return runtime.axisTemplateValues;
-  }
-
-  function readAxisValuesFromPlatePreview() {
-    if (!assayPlatePreview) {
-      return null;
-    }
-    const rowInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="row"]')];
-    const columnInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="column"]')];
-    if (!rowInputs.length && !columnInputs.length) {
-      return null;
-    }
-    const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const sampleLength = getAxisLength(sampleAxis, def);
-    const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
-    const sampleValues = new Array(sampleLength).fill('');
-    const concentrationValues = new Array(concentrationLength).fill('');
-    rowInputs.forEach((input) => {
-      const index = Number(input.dataset.axisIndex);
-      if (!Number.isFinite(index) || index < 0) {
-        return;
-      }
-      const text = String(input.value || '').trim();
-      if (sampleAxis === 'row') {
-        if (index < sampleValues.length) {
-          sampleValues[index] = text;
-        }
-      } else if (index < concentrationValues.length) {
-        concentrationValues[index] = text;
-      }
-    });
-    columnInputs.forEach((input) => {
-      const index = Number(input.dataset.axisIndex);
-      if (!Number.isFinite(index) || index < 0) {
-        return;
-      }
-      const text = String(input.value || '').trim();
-      if (sampleAxis === 'column') {
-        if (index < sampleValues.length) {
-          sampleValues[index] = text;
-        }
-      } else if (index < concentrationValues.length) {
-        concentrationValues[index] = text;
-      }
-    });
-    return {
-      sampleValues,
-      concentrationValues
-    };
-  }
-
-  function getAxisTemplateValues({ includePreview = true } = {}) {
-    return mergeAxisTemplateValues({
-      def: getCurrentDefinition(),
-      sampleAxis: getSampleAxis(),
-      sources: includePreview
-        ? [runtime.axisTemplateValues, readAxisValuesFromPlatePreview()]
-        : [runtime.axisTemplateValues]
-    });
-  }
-
-  function normalizeManualWellOverrides(def) {
-    runtime.manualWellOverrides = normalizeManualWellOverrideMap(runtime.manualWellOverrides, def);
-  }
-
-  function normalizeSuppressedWells(def) {
-    const validIds = new Set(buildAllWells(def).map((item) => item.well));
-    runtime.suppressedWells = new Set(
-      Array.from(runtime.suppressedWells || [])
-        .map((well) => String(well || '').trim().toUpperCase())
-        .filter((well) => validIds.has(well))
-    );
-  }
-
-  function getMappedWellSet() {
-    return buildMappedWellSet(runtime.currentLayout);
-  }
-
-  function isMappedWell(wellId) {
-    return getMappedWellSet().has(String(wellId || '').trim().toUpperCase());
-  }
-
-  function filterMappedResults(results) {
-    return filterResultsToMappedWells(results, runtime.currentLayout);
-  }
-
-  function setLayoutFromAxisAndOverrides({ preserveActiveWell = true, axisValues = null } = {}) {
-    const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const normalizedAxisValues = axisValues
-      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
-      : getAxisTemplateValues();
-    const { sampleValues, concentrationValues } = normalizedAxisValues;
-    setAxisTemplateValues(normalizedAxisValues, def, sampleAxis);
-    normalizeManualWellOverrides(def);
-    normalizeSuppressedWells(def);
-    const baseLayout = applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues,
-      concentrationValues
-    });
-    const map = layoutToMap(baseLayout);
-    Object.entries(runtime.manualWellOverrides).forEach(([well, value]) => {
-      const sampleId = String(value?.sampleId || '').trim();
-      const concentration = String(value?.concentration || '').trim();
-      if (!sampleId && !concentration) {
-        delete map[well];
-        return;
-      }
-      map[well] = { sampleId, concentration };
-    });
-    runtime.suppressedWells.forEach((well) => {
-      delete map[well];
-    });
-    runtime.currentLayout = normalizeLayout(Object.entries(map).map(([well, value]) => ({
-      well,
-      sampleId: value.sampleId,
-      concentration: value.concentration
-    })), def);
-    runtime.currentResults = filterMappedResults(runtime.currentResults);
-    if (preserveActiveWell && runtime.activeWellEditorId && !isValidWellForDefinition(runtime.activeWellEditorId, def)) {
-      runtime.activeWellEditorId = '';
-    }
-  }
-
-  function getEffectiveWellMapping(wellId) {
-    const normalizedWell = String(wellId || '').trim().toUpperCase();
-    if (!normalizedWell) {
-      return { sampleId: '', concentration: '' };
-    }
-    const currentMap = layoutToMap(runtime.currentLayout);
-    const current = currentMap[normalizedWell];
-    if (current) {
-      return {
-        sampleId: String(current.sampleId || '').trim(),
-        concentration: String(current.concentration || '').trim()
-      };
-    }
-    return { sampleId: '', concentration: '' };
-  }
-
-  function updateActiveWellPreviewState() {
-    if (!assayPlatePreview) {
-      return;
-    }
-    [...assayPlatePreview.querySelectorAll('[data-well]')].forEach((cell) => {
-      cell.classList.toggle('is-active', String(cell.dataset.well || '').trim().toUpperCase() === runtime.activeWellEditorId);
-    });
-  }
-
-  function setActiveWellSelection(wellId) {
-    runtime.activeWellEditorId = String(wellId || '').trim().toUpperCase();
-    updateActiveWellPreviewState();
-  }
-
-  function applyInventorySampleToWell(wellId, sampleValue) {
-    updateInlineWellOverride(wellId, 'sampleId', sampleValue);
-    renderPlatePreview();
-    renderResultTable();
-    setLayoutStatus(`Updated ${wellId} from inventory.`);
-    setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
-    requestAnimationFrame(() => {
-      assayPlatePreview
-        ?.querySelector(`[data-well="${wellId}"] [data-well-inline-field="sampleId"]`)
-        ?.focus();
-    });
-  }
-
-  const inventorySamplePicker = createInventorySamplePicker({
-    safeText,
-    getInventorySamples,
-    getEffectiveWellMapping,
-    setActiveWellSelection,
-    applyInventorySample: applyInventorySampleToWell
-  });
-
-  const serialDilution = createSerialDilutionController({
-    elements: {
-      overlay: assaySerialDilutionOverlay,
-      content: assaySerialDilutionContent,
-      summary: assaySerialDilutionSummary,
-      volumeInput: assaySerialDilutionVolumeInput
-    },
-    safeText,
-    getSampleAxis,
-    getCurrentLayout: () => runtime.currentLayout,
-    getConcentrationUnit,
-    findInventorySampleRecordBySampleId: inventorySamplePicker.findInventorySampleRecordBySampleId,
-    hideInventorySamplePicker: inventorySamplePicker.hide
-  });
 
   const {
-    getFillMode,
+    setAxisTemplateValues,
+    getAxisTemplateValues,
+    isMappedWell,
+    getMappedWellSet,
+    filterMappedResults,
+    setLayoutFromAxisAndOverrides,
+    getEffectiveWellMapping,
+    updateActiveWellPreviewState,
+    setActiveWellSelection
+  } = createAxisValues({
+    runtime,
+    assayPlatePreview,
+    getCurrentDefinition,
+    getSampleAxis
+  });
+
+  function syncAxisTemplateValues(values = null) {
+    setAxisTemplateValues(values || getAxisTemplateValues());
+  }
+
+  const {
+    inventorySamplePicker,
+    serialDilution,
     syncFillModeInputs,
     onFillConcentrations,
-    autoFillConcentrationRange
-  } = createConcentrationFill({
-    runtime,
-    assayFillModeInput,
-    assayDilutionFactorInput,
-    assayPlatePreview,
-    serialDilution,
-    getSampleAxis,
-    getConcentrationUnit,
-    getAxisTemplateValues,
-    syncAxisTemplateValues,
-    setLayoutFromAxisAndOverrides,
-    renderPlatePreview,
-    renderResultTable,
-    setLayoutStatus
-  });
-
-  const {
     onPlatePreviewInput,
     onPlatePreviewChange,
     onPlatePreviewFocusIn,
@@ -317,116 +118,33 @@ export function createAssayLayoutManager({
     onGlobalPointerDown,
     onGlobalKeyDown,
     onPlatePreviewScroll,
-    focusPlateWellInput
-  } = createPlatePreviewEvents({
+    focusPlateWellInput,
+    deriveManualWellOverridesFromLayout
+  } = createPlateInteractions({
     runtime,
+    safeText,
+    getInventorySamples,
+    setCsvStatus,
+    setLayoutStatus,
+    renderResultTable,
     assayPlatePreview,
-    inventorySamplePicker,
-    serialDilution,
+    assayFillModeInput,
+    assayDilutionFactorInput,
+    assaySerialDilutionOverlay,
+    assaySerialDilutionContent,
+    assaySerialDilutionSummary,
+    assaySerialDilutionVolumeInput,
     getCurrentDefinition,
     getSampleAxis,
-    getFillMode,
-    getAxisTemplateValues,
-    syncAxisTemplateValues,
-    setLayoutFromAxisAndOverrides,
-    updateInlineWellOverride,
+    getConcentrationUnit,
     recognizeConcentrationUnit,
-    autoFillConcentrationRange,
-    renderPlatePreview,
-    renderResultTable,
-    setLayoutStatus,
-    setCsvStatus,
-    setActiveWellSelection
+    getAxisTemplateValues,
+    getEffectiveWellMapping,
+    setActiveWellSelection,
+    setLayoutFromAxisAndOverrides,
+    syncAxisTemplateValues: (values) => syncAxisTemplateValues(values),
+    renderPlatePreview: (values) => renderPlatePreview(values)
   });
-
-  function updateInlineWellOverride(wellId, field, rawValue) {
-    const normalizedWell = String(wellId || '').trim().toUpperCase();
-    if (!normalizedWell) {
-      return;
-    }
-
-    const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const { sampleValues, concentrationValues } = getAxisTemplateValues();
-    const baseMap = layoutToMap(applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues,
-      concentrationValues
-    }));
-    const current = getEffectiveWellMapping(normalizedWell);
-    const base = baseMap[normalizedWell] || { sampleId: '', concentration: '' };
-    const next = {
-      sampleId: current.sampleId,
-      concentration: current.concentration
-    };
-
-    next[field === 'concentration' ? 'concentration' : 'sampleId'] = String(rawValue || '').trim();
-
-    const matchesBase = next.sampleId === String(base.sampleId || '').trim()
-      && next.concentration === String(base.concentration || '').trim();
-
-    if (!next.sampleId && !next.concentration) {
-      delete runtime.manualWellOverrides[normalizedWell];
-      if (base.sampleId || base.concentration) {
-        runtime.suppressedWells.add(normalizedWell);
-      } else {
-        runtime.suppressedWells.delete(normalizedWell);
-      }
-    } else if (matchesBase) {
-      delete runtime.manualWellOverrides[normalizedWell];
-      runtime.suppressedWells.delete(normalizedWell);
-    } else {
-      runtime.suppressedWells.delete(normalizedWell);
-      runtime.manualWellOverrides[normalizedWell] = next;
-    }
-
-    runtime.activeWellEditorId = normalizedWell;
-    setLayoutFromAxisAndOverrides();
-  }
-
-  function deriveManualWellOverridesFromLayout(layout, def, axisValues = null) {
-    const sampleAxis = getSampleAxis();
-    const resolvedAxisValues = axisValues
-      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
-      : getAxisTemplateValues();
-    const baseLayout = applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues: resolvedAxisValues.sampleValues,
-      concentrationValues: resolvedAxisValues.concentrationValues
-    });
-    const baseMap = layoutToMap(baseLayout);
-    const currentMap = layoutToMap(layout);
-    const keys = new Set([
-      ...Object.keys(baseMap),
-      ...Object.keys(currentMap)
-    ]);
-    const overrides = {};
-    keys.forEach((well) => {
-      if (!isValidWellForDefinition(well, def)) {
-        return;
-      }
-      const base = baseMap[well] || { sampleId: '', concentration: '' };
-      const current = currentMap[well] || { sampleId: '', concentration: '' };
-      if (!current.sampleId && !current.concentration) {
-        return;
-      }
-      if (String(base.sampleId || '').trim() === String(current.sampleId || '').trim()
-        && String(base.concentration || '').trim() === String(current.concentration || '').trim()) {
-        return;
-      }
-      overrides[well] = {
-        sampleId: String(current.sampleId || '').trim(),
-        concentration: String(current.concentration || '').trim()
-      };
-    });
-    runtime.manualWellOverrides = overrides;
-  }
-
-  function syncAxisTemplateValues(values = null) {
-    setAxisTemplateValues(values || getAxisTemplateValues());
-  }
 
   function renderAxisSwitchButtons() {
     const sampleAxis = getSampleAxis();

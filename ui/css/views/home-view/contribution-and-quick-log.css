@@ -13,10 +13,36 @@
 }
 
 #home-view .home-contribution-map {
+  /* Fill the card width while keeping all 18 weeks visible without scrolling. */
+  --contribution-cell-gap: clamp(3px, 0.72cqw, 5px);
+  --contribution-weekday-width: clamp(30px, 8cqw, 42px);
+  --contribution-body-gap: clamp(9px, 2.2cqw, 13px);
+  --contribution-cell-size: clamp(
+    11px,
+    calc(
+      (
+        100cqw
+        - var(--contribution-weekday-width)
+        - var(--contribution-body-gap)
+        - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))
+      ) / var(--contribution-week-count)
+    ),
+    24px
+  );
+  --contribution-grid-width: calc(
+    (var(--contribution-week-count) * var(--contribution-cell-size))
+    + ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))
+  );
+  --contribution-map-width: calc(
+    var(--contribution-weekday-width)
+    + var(--contribution-body-gap)
+    + var(--contribution-grid-width)
+  );
   display: grid;
   gap: 6px;
   align-content: center;
   justify-items: start;
+  width: 100%;
   min-width: 0;
   overflow: hidden;
   padding: 2px 0;
@@ -30,7 +56,7 @@
   min-width: 0;
   margin-left: calc(var(--contribution-weekday-width) + var(--contribution-body-gap));
   color: var(--home-tile-muted);
-  font-size: 0.72rem;
+  font-size: clamp(0.72rem, 3.4cqw, 0.95rem);
   line-height: 1.1;
 }
 
@@ -54,7 +80,7 @@
   grid-template-rows: repeat(7, var(--contribution-cell-size));
   row-gap: var(--contribution-cell-gap);
   color: var(--home-tile-muted);
-  font-size: 0.68rem;
+  font-size: clamp(0.68rem, 3.2cqw, 0.9rem);
   line-height: var(--contribution-cell-size);
 }
 
@@ -87,7 +113,7 @@
   width: var(--contribution-cell-size);
   height: var(--contribution-cell-size);
   border: 1px solid var(--home-contribution-border);
-  border-radius: 3px;
+  border-radius: clamp(3px, 0.7cqw, 5px);
   background: var(--home-contribution-empty);
 }
 
@@ -283,5 +309,3 @@ body.theme-night #home-view .home-tile .primary-btn {
 body.theme-night #home-view .home-tile .primary-btn:hover {
   background: color-mix(in srgb, var(--theme-text-strong) 24%, transparent);
 }
-
-

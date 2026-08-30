@@ -36,6 +36,26 @@
   justify-content: flex-start;
 }
 
+.workflow-entry-panel > .workflow-entry-template-icon-btn {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  justify-content: center;
+}
+
+.workflow-entry-panel > .workflow-entry-template-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .workflow-list {
   display: grid;
   gap: 14px;
@@ -384,6 +404,26 @@
   justify-content: flex-end;
 }
 
+.workflow-execution-actions > .workflow-execution-icon-btn {
+  display: inline-grid;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  place-items: center;
+}
+
+.workflow-execution-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .workflow-execution-board {
   margin-top: 14px;
   display: grid;
@@ -467,16 +507,22 @@
 }
 
 .workflow-entry-name-field {
-  display: grid;
-  gap: 6px;
-}
-
-.workflow-entry-name-field .small-note {
-  margin: 0;
+  display: block;
 }
 
 .workflow-entry-name-field input {
   width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--theme-text-strong);
+}
+
+.workflow-entry-name-field input:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
 }
 
 .workflow-progress-cell {
@@ -698,6 +744,14 @@
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
+}
+
+.workflow-step-popover:has(> .workflow-placeholder-table) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .workflow-step-inline.is-active {

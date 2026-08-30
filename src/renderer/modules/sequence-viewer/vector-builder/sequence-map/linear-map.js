@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../../lib/html.js';
 import { getContrastTextColor } from '../../feature-model.js';
-import { fixed, getFeatureOverallRange, partitionFeatures, primerAnchors } from './geometry.js';
+import { fixed, partitionFeatures, primerAnchors } from './geometry.js';
 import { LINEAR_ABOVE_BAR_CHAR_PX, LINEAR_ABOVE_BAR_ROWS, LINEAR_ABOVE_BAR_ROW_HEIGHT, LINEAR_AXIS_Y, LINEAR_BAND_HEIGHT, LINEAR_FIRST_BAND_GAP, LINEAR_LANE_GAP, LINEAR_MIN_SPAN_PX, LINEAR_ON_BAR_CHAR_PX, LINEAR_PRIMER_HEAD_PX, LINEAR_PRIMER_MIN_SPAN_PX, LINEAR_PRIMER_ROW_OFFSET, LINEAR_TOP_MARGIN, LINEAR_TRACK_X0, LINEAR_TRACK_X1, LINEAR_VIEWBOX_HEIGHT, LINEAR_VIEWBOX_WIDTH, TICK_COUNT } from './map-constants.js';
 
 // ================================ linear =====================================
@@ -152,13 +152,10 @@ function buildLinearMapSvg(record, options = {}) {
       `);
     });
 
-    const range = getFeatureOverallRange(feature, sequenceLength);
-    if (!range) {
-      return;
-    }
-    // An on-bar label has to sit on an actual segment: centring across a spliced
-    // feature's whole range drops the on-bar text into the intron gap, where it
-    // is invisible. Measure the widest single segment instead.
+    // A label has to sit on an actual segment: centring across a spliced
+    // feature's whole range drops the text into the intron gap, and an
+    // origin-crossing feature's range spans the whole record, which parks its
+    // label mid-map with no band under it. Measure the widest single segment.
     const widest = feature.segments.reduce((best, segment) => {
       const segmentX1 = linearX(segment.start, sequenceLength);
       const segmentX2 = linearX(segment.end, sequenceLength);
@@ -167,8 +164,10 @@ function buildLinearMapSvg(record, options = {}) {
         ? { width, centre: (segmentX1 + segmentX2) / 2 }
         : best;
     }, null);
-    const fitsOnBar = Boolean(widest)
-      && widest.width >= ((feature.name.length * LINEAR_ON_BAR_CHAR_PX) + 10)
+    if (!widest) {
+      return;
+    }
+    const fitsOnBar = widest.width >= ((feature.name.length * LINEAR_ON_BAR_CHAR_PX) + 10)
       && bandHeight >= 12;
 
     if (fitsOnBar) {
@@ -178,10 +177,7 @@ function buildLinearMapSvg(record, options = {}) {
     labelEntries.push({
       feature,
       onBar: false,
-      x: Math.min(
-        Math.max((linearX(range.start, sequenceLength) + linearX(range.end, sequenceLength)) / 2, LINEAR_TRACK_X0),
-        LINEAR_TRACK_X1
-      ),
+      x: Math.min(Math.max(widest.centre, LINEAR_TRACK_X0), LINEAR_TRACK_X1),
       top,
       halfWidth: ((feature.name.length * LINEAR_ABOVE_BAR_CHAR_PX) / 2) + 3
     });

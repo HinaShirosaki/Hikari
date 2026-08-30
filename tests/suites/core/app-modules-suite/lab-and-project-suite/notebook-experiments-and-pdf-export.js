@@ -490,7 +490,7 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
   assert.match(allText, /Table 2/);
   assert.match(allText, /Accepted/);
 });
-test('assay pdf export omits mapped well text section', () => {
+test('assay pdf export writes saved values inside mapped plate cells', () => {
   class MockJsPdf {
     static instances = [];
 
@@ -572,6 +572,8 @@ test('assay pdf export omits mapped well text section', () => {
   const allText = pdf.textCalls.join('\n');
 
   assert.match(allText, /WELL DEFINITION PLOT/);
+  assert.match(allText, /Clone 12/);
+  assert.match(allText, /1 uM/);
   assert.doesNotMatch(allText, /Mapped Wells/);
   assert.doesNotMatch(allText, /Mapped Well Definitions/);
   assert.match(pdf.savedFileName, /A-001/i);

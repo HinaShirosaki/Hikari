@@ -467,10 +467,15 @@ app's own Content-Security-Policy decides whether that is allowed at all. The
 [`ui/html/shell/start.html`](../../ui/html/shell/start.html) therefore reads:
 
 ```
-frame-src 'self' blob: http://127.0.0.1:* http://[::1]:*;
+frame-src 'self' blob: http://127.0.0.1:*;
 ```
 
-Without the loopback entries the browser blocks the frame outright and a served
+There is no IPv6 counterpart: CSP `host-source` has no grammar for an address
+literal, so `http://[::1]:*` is discarded as invalid (with a console warning at
+every boot). The plugin server binds `127.0.0.1` and nothing else, and
+`isSameOriginSafeUrl()` refuses `[::1]` to match.
+
+Without the loopback entry the browser blocks the frame outright and a served
 plugin renders as an **empty pane** — no console error, no failed host call,
 nothing that points at the cause. Permissions, sandbox flags, and the plugin
 server can all be correct while nothing runs. There is a contract test for this

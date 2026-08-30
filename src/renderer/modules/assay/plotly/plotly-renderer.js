@@ -70,6 +70,27 @@ function explicitRange(range) {
   return null;
 }
 
+// Axis title placement. Plotly's own axis title is centred on the axis and only
+// exposes `standoff` (distance from the axis), so sliding a title along its axis needs
+// a paper-anchored annotation instead -- paper 0..1 spans the plot area, so the title
+// tracks the plot as it resizes.
+const DEFAULT_TITLE_SHIFT = { x: 38, y: 52 };
+function axisTitle(text, font, pos, offset, isY) {
+  const title = { text, font };
+  if (Number.isFinite(offset)) {
+    title.standoff = offset;
+  }
+  if (!Number.isFinite(pos)) {
+    return { title, annotation: null };
+  }
+  const shift = Number.isFinite(offset) ? offset : (isY ? DEFAULT_TITLE_SHIFT.y : DEFAULT_TITLE_SHIFT.x);
+  const base = { text, font, xref: 'paper', yref: 'paper', showarrow: false };
+  const annotation = isY
+    ? { ...base, x: 0, y: pos, xanchor: 'right', yanchor: 'middle', xshift: -shift, textangle: -90 }
+    : { ...base, x: pos, y: 0, xanchor: 'center', yanchor: 'top', yshift: -shift };
+  return { title: { text: '', font }, annotation };
+}
+
 function serializeSvgToDataUrl(svgElement) {
   if (!svgElement || String(svgElement.tagName || '').toLowerCase() !== 'svg') {
     return '';
@@ -117,9 +138,15 @@ export function createAssayPlotlyRenderer() {
 
   function render(target, chartModel, style) {
     const Plotly = getPlotly();
-    unmount();
     if (!Plotly || !target || !chartModel || !Array.isArray(chartModel.series) || !chartModel.series.length) {
+      unmount();
       return { seriesLabels: [] };
+    }
+    // Only tear down when the host element itself changed. Purging the live host
+    // collapses it to zero height, and the layout read below flushes that collapse --
+    // which clamps the workspace's scrollTop, so every style tweak scrolled to the top.
+    if (chartHost && chartHost !== target) {
+      unmount();
     }
 
     const st = style || {};
@@ -147,27 +174,26 @@ export function createAssayPlotlyRenderer() {
       ? { color: bgColor, size: pointSize, symbol: sym, line: { color, width: Math.max(1, lineWidth * 0.6) } }
       : { color, size: pointSize, symbol: sym });
 
+    // Prism draws bar error bars in the axis colour and line error bars in the series
+    // colour. Whichever points carry the spread get the bars: a fitted curve's spread
+    // lives on its observed markers, not on the sampled line.
+    const errorBarsFor = (points, color) => {
+      if (!chartModel.showErrorBars) {
+        return undefined;
+      }
+      const array = points.map((p) => (Number.isFinite(p.yVariance) && p.yVariance > 0 ? p.yVariance : 0));
+      return array.some((v) => v > 0)
+        ? { type: 'data', array, color, thickness: errThickness, width: errCapWidth, visible: true }
+        : undefined;
+    };
+
     const traces = [];
     chartModel.series.forEach((series, index) => {
       const color = pickSeriesColor(st, series.label, index);
       const data = Array.isArray(series.data) ? series.data : [];
       const name = String(series.label || '');
       const sym = symbolFor(name);
-      let error_y;
-      if (chartModel.showErrorBars) {
-        const array = data.map((p) => (Number.isFinite(p.yVariance) && p.yVariance > 0 ? p.yVariance : 0));
-        if (array.some((v) => v > 0)) {
-          // Prism draws bar error bars in the axis colour and line error bars in the series colour.
-          error_y = {
-            type: 'data',
-            array,
-            color: isBar ? axisColor : color,
-            thickness: errThickness,
-            width: errCapWidth,
-            visible: true
-          };
-        }
-      }
+      const error_y = errorBarsFor(data, isBar ? axisColor : color);
 
       if (isBar) {
         // Prism outlines every bar in the axis colour.
@@ -247,7 +273,8 @@ export function createAssayPlotlyRenderer() {
           showlegend: false,
           x: series.markers.map((p) => p.x),
           y: series.markers.map((p) => p.y),
-          marker: markerSpec(color)
+          marker: markerSpec(color, sym),
+          error_y: errorBarsFor(series.markers, color)
         });
       }
     });
@@ -261,10 +288,9 @@ export function createAssayPlotlyRenderer() {
     // only up to a point, past which the bars thin out instead of the plot getting wider.
     const slotWidth = isBar ? 34 + 30 * Math.min(chartModel.series.length, 4) : 44;
     const plotWidth = clampNumber(categoryCount * slotWidth, MIN_PLOT_WIDTH, MAX_PLOT_WIDTH);
-    // Never wider than the panel it sits in: many categories thin the bars out rather
-    // than pushing the frame into a horizontal scrollbar. The host itself is sized by its
-    // content, so the constraint has to come from its parent.
-    const available = Math.floor((target.parentElement?.clientWidth || 0) - HOST_PADDING);
+    // Never wider than the fixed canvas it sits in: many categories thin the bars out
+    // rather than pushing the figure into a scrollbar.
+    const available = Math.floor((target.clientWidth || target.parentElement?.clientWidth || 0) - HOST_PADDING);
     const widthCap = available > MIN_PLOT_WIDTH + AXIS_GUTTER
       ? Math.min(MAX_PLOT_WIDTH + AXIS_GUTTER, available)
       : MAX_PLOT_WIDTH + AXIS_GUTTER;
@@ -302,16 +328,20 @@ export function createAssayPlotlyRenderer() {
     const categoryTickAngle = isBar && labelWidth + LABEL_GAP > categorySlot ? -35 : 0;
 
     // An explicit axis title wins; otherwise the analysis names its own axes.
+    const axisTitles = [
+      axisTitle(st.xTitle || chartModel.xLabel || '', font, st.xTitlePos, st.xTitleOffset, false),
+      axisTitle(st.yTitle || chartModel.yLabel || '', font, st.yTitlePos, st.yTitleOffset, true)
+    ];
     const xaxis = {
       ...axisBase,
-      title: { text: st.xTitle || chartModel.xLabel || '', font },
+      title: axisTitles[0].title,
       type: xScaleCfg.type,
       showgrid: st.showVerticalGrid === true,
       tickangle: categoryTickAngle
     };
     const yaxis = {
       ...axisBase,
-      title: { text: st.yTitle || chartModel.yLabel || '', font },
+      title: axisTitles[1].title,
       type: yScaleCfg.type,
       showgrid: st.showHorizontalGrid === true
     };
@@ -341,7 +371,12 @@ export function createAssayPlotlyRenderer() {
     const layout = {
       width,
       height,
-      margin: { l: 70, r: 24, t: st.title ? 44 : 24, b: categoryTickAngle ? 96 : 56 },
+      margin: {
+        l: Math.max(70, Number.isFinite(st.yTitleOffset) ? st.yTitleOffset + 26 : 0),
+        r: 24,
+        t: st.title ? 44 : 24,
+        b: Math.max(categoryTickAngle ? 96 : 56, Number.isFinite(st.xTitleOffset) ? st.xTitleOffset + 26 : 0)
+      },
       paper_bgcolor: bgColor,
       plot_bgcolor: bgColor,
       font,
@@ -354,6 +389,10 @@ export function createAssayPlotlyRenderer() {
       bargap: PRISM_BAR_GAP,
       bargroupgap: PRISM_BAR_GROUP_GAP
     };
+    const annotations = axisTitles.map((item) => item.annotation).filter(Boolean);
+    if (annotations.length) {
+      layout.annotations = annotations;
+    }
     const shapes = prismFrameShapes(st);
     if (st.title) {
       layout.title = { text: st.title, font, x: 0.5, xanchor: 'center' };
@@ -374,7 +413,8 @@ export function createAssayPlotlyRenderer() {
       layout.shapes = shapes;
     }
 
-    Plotly.newPlot(target, traces, layout, { displayModeBar: false, responsive: false });
+    // react() diffs against what is already drawn instead of rebuilding the node.
+    Plotly.react(target, traces, layout, { displayModeBar: false, responsive: false });
     chartHost = target;
     return {
       seriesLabels: chartModel.series.map((s) => String(s.label || '')),

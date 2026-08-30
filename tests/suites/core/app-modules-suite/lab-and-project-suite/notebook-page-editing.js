@@ -516,15 +516,14 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
   assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
 });
 test('biology-notebook buffer preparer floats one autocomplete menu and appends ingredients beyond its starter rows', () => {
-  const source = fs.readFileSync(path.join(
-    __dirname,
-    'src',
-    'renderer',
-    'modules',
-    'biology-notebook',
-    'tools',
-    'tool-sidebar.js'
-  ), 'utf8');
+  const toolsDir = path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools');
+  const source = [
+    fs.readFileSync(path.join(toolsDir, 'tool-sidebar.js'), 'utf8'),
+    fs.readFileSync(path.join(toolsDir, 'buffer-suggestions.js'), 'utf8'),
+    fs.readFileSync(path.join(toolsDir, 'toolbox-drag.js'), 'utf8'),
+    fs.readFileSync(path.join(toolsDir, 'calculation-records.js'), 'utf8'),
+    fs.readFileSync(path.join(toolsDir, 'tool-calculations.js'), 'utf8')
+  ].join('\n');
   const html = fs.readFileSync(path.join(
     __dirname,
     'ui',
@@ -554,7 +553,11 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
 });
 test('biology-notebook buffer preparer starts blank, has one insert-and-record action, and exposes compound pKa data', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'biology-notebook-view.html'), 'utf8');
-  const toolSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'), 'utf8');
+  const toolSource = [
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'buffer-suggestions.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'toolbox-drag.js'), 'utf8')
+  ].join('\n');
   const compounds = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'chemistry', 'buffer-compounds.js'), 'utf8');
   const calculations = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'bench-calculations', 'buffer-concentration.js'), 'utf8');
   const bufferSection = html.slice(

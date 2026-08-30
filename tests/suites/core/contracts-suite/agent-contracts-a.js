@@ -138,7 +138,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('main agent logs persist redacted llm traces and replay wiring', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
-      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
+      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'controller-utils', 'tracing.js'), 'utf8');
       const observabilitySource = fs.readFileSync(agentPath('shared', 'agent-observability.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /createAgentControllerUtils/);
@@ -153,7 +153,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
       const protocolMatchingSource = fs.readFileSync(agentPath('tools', 'agent-protocol-matching.js'), 'utf8');
-      const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'agent-notebook-generation.js'), 'utf8');
+      const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'notebook-generation', 'prompts.js'), 'utf8');
       assert.match(notebookGenerationSource, /Extract exact value spans from the latest user text/);
       assert.match(notebookGenerationSource, /latest user message is a direct answer/);
       assert.match(notebookGenerationSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);

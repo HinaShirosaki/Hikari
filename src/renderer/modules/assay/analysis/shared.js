@@ -324,7 +324,9 @@ export function collectCurvePoints(sampleItems, xAccessor, options = {}) {
   return Array.from(pointGroups.entries())
     .map(([x, values]) => {
       const stats = summarizeNumeric(values);
-      return stats ? { x: Number(x), y: stats.mean, n: stats.n } : null;
+      // sd travels with the point: the replicates at this X are already pooled here, so
+      // it is the only place a fitted curve can get an error bar from.
+      return stats ? { x: Number(x), y: stats.mean, n: stats.n, sd: stats.sd } : null;
     })
     .filter(Boolean)
     .sort((a, b) => a.x - b.x);

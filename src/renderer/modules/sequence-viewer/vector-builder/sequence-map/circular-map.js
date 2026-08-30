@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../../lib/html.js';
-import { fixed, getFeatureOverallRange, partitionFeatures, polar, primerAnchors } from './geometry.js';
+import { featureLabelBase, fixed, partitionFeatures, polar, primerAnchors } from './geometry.js';
 import { CIRCULAR_VIEWBOX_MIN, CIRCULAR_VIEWBOX_SIZE, LABEL_COLUMN_X, LABEL_LINE_HEIGHT, LABEL_PAD, MIN_ARC_FRACTION, PRIMER_HEAD_PX, PRIMER_MIN_SPAN_PX, PRIMER_RING_GAP, RADIUS, RING_GAP, RING_WIDTH, TAU, TICK_COUNT } from './map-constants.js';
 
 // Clockwise ring band, leading edge tapered into an arrowhead so strand
@@ -178,11 +178,11 @@ function buildCircularMapSvg(record, options = {}) {
       `);
     });
 
-    const range = getFeatureOverallRange(feature, sequenceLength);
-    if (!range) {
+    const labelBase = featureLabelBase(feature, sequenceLength);
+    if (labelBase === null) {
       return;
     }
-    const anchor = polar(outerRadius + 6, (range.start + range.end) / 2, sequenceLength);
+    const anchor = polar(outerRadius + 6, labelBase, sequenceLength);
     labelEntries.push({
       index: feature.index,
       color: feature.color,

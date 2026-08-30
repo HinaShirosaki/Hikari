@@ -243,6 +243,18 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.match(settingsSource, /onStoragePathSaved\(nextPath,\s*\{\s*resetWorkspace:\s*rootChanged,/);
       assert.equal(settingsSource.includes('state.settings.storagePath = nextPath;\n    persist();\n    if (!nextPath)'), false);
     });
+    test('settings split constructs extracted callbacks before startup binds them', () => {
+      const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');
+      const codexControllerIndex = settingsSource.indexOf('} = createCodexAccountSettings({');
+      const codexListenerIndex = settingsSource.indexOf("llmForm.addEventListener('submit', onSaveLlmSettings)");
+      const journalControllerIndex = settingsSource.indexOf('} = createPreferredJournalSettings({');
+      const journalListenerIndex = settingsSource.indexOf("preferredJournalForm?.addEventListener('submit', onSavePreferredJournal)");
+
+      assert.ok(codexControllerIndex >= 0);
+      assert.ok(codexListenerIndex > codexControllerIndex);
+      assert.ok(journalControllerIndex >= 0);
+      assert.ok(journalListenerIndex > journalControllerIndex);
+    });
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
@@ -250,7 +262,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       const mainSource = readMainProcessSource();
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
-      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
+      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'controller-utils', 'tracing.js'), 'utf8');
       assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
       assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);

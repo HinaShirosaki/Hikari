@@ -1,3 +1,18 @@
+// Manifest callbacks are module code, and the renderer runs all 14 modules
+// through the three loops below. Unguarded, one module throwing takes the whole
+// app down: a throw in init escapes startHikariCore entirely (no view is ever
+// shown, the dock renders zero buttons, and the loading cover still lifts on its
+// cap -- so a dead shell looks like a booted app). A missing module beats that,
+// so every manifest call is fenced and names itself in the log.
+function runManifestStep(manifest, phase, work) {
+  try {
+    return work();
+  } catch (error) {
+    console.error(`Module "${manifest?.key || 'unknown'}" failed to ${phase}:`, error);
+    return null;
+  }
+}
+
 export function initAndRegisterModule(moduleRegistry, key, initializer, options) {
   const module = initializer(options);
   moduleRegistry.register(key, module);
@@ -17,7 +32,11 @@ export function initializeModuleManifest(moduleRegistry, manifest, context) {
 export function initializeModuleManifests(moduleRegistry, manifests, context) {
   const initialized = {};
   manifests.forEach((manifest) => {
-    const module = initializeModuleManifest(moduleRegistry, manifest, context);
+    const module = runManifestStep(
+      manifest,
+      'initialize',
+      () => initializeModuleManifest(moduleRegistry, manifest, context)
+    );
     if (module) {
       initialized[manifest.key] = module;
       if (context?.modules && typeof context.modules === 'object') {
@@ -74,13 +93,19 @@ function resolveManifestNavigationAlias(alias, context) {
 
 export function createManifestRenderEntries(manifests, context) {
   return manifests
-    .flatMap((manifest) => {
+    .flatMap((manifest) => runManifestStep(manifest, 'resolve views for', () => {
       const viewIds = resolveManifestViewIds(manifest, context);
       if (!viewIds.length || typeof manifest.render !== 'function') {
         return [];
       }
-      return viewIds.map((viewId) => [viewId, () => manifest.render(context, { viewId })]);
-    })
+      // Guarded per view too: this closure runs on every navigation, and an
+      // unguarded throw here aborts showView() midway, leaving the rail and
+      // chrome sync below it unrun.
+      return viewIds.map((viewId) => [
+        viewId,
+        () => runManifestStep(manifest, 'render', () => manifest.render(context, { viewId }))
+      ]);
+    }) || [])
     .filter(([viewId]) => Boolean(viewId));
 }
 
@@ -89,9 +114,9 @@ export function createManifestNavigationAliases(manifests, context) {
     const aliases = Array.isArray(manifest.navigationAliases)
       ? manifest.navigationAliases
       : [];
-    return aliases
+    return runManifestStep(manifest, 'resolve navigation aliases for', () => aliases
       .map((alias) => resolveManifestNavigationAlias(alias, context))
-      .filter(Boolean);
+      .filter(Boolean)) || [];
   }));
 }
 
@@ -113,6 +138,6 @@ export function renderModuleManifests(manifests, context) {
       const render = typeof manifest.renderAll === 'function'
         ? manifest.renderAll
         : manifest.render;
-      render?.(context);
+      runManifestStep(manifest, 'render', () => render?.(context));
     });
 }

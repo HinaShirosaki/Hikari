@@ -49,8 +49,12 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
+      readLocalSource('src', 'renderer', 'app', 'navigation-shell', 'app-dock.js'),
+      readLocalSource('src', 'renderer', 'app', 'navigation-shell', 'search-suggestions.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-open-handlers.js'),
-      readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
+      readLocalSource('src', 'renderer', 'app', 'topbar-search.js'),
+      readLocalSource('src', 'renderer', 'app', 'topbar-search', 'candidates.js'),
+      readLocalSource('src', 'renderer', 'app', 'topbar-search', 'scoring.js')
     ].join('\n');
     const readRendererModuleRuntimeSource = () => [
       readLocalSource('src', 'renderer', 'core', 'module-runtime.js'),
@@ -108,7 +112,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const agentSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'session-manager.js');
       const papersSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'library.js');
       const notebookSource = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-list-renderer.js');
-      const sequenceSource = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'home-controller.js');
+      const sequenceSource = [
+        readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'home-controller.js'),
+        readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'home', 'library-rendering.js')
+      ].join('\n');
 
       assert.match(sharedCss, /\.left-rail-template__rail \.left-rail-folder-glyph\s*\{[\s\S]*-webkit-mask:\s*url\("\.\.\/\.\.\/\.\.\/assets\/icons\/folder-2-svgrepo-com\.svg"\)/);
       assert.match(agentSource, /class="left-rail-folder-glyph agent-session-folder-glyph"/);
@@ -131,7 +138,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
         { file: 'personal-inventory-view.html', rail: 'inventory-rail-panel', scroll: 'inventory-rail-scroll', action: 'id="inventory-add-container-btn"' },
         { file: 'protocol-management-view.html', rail: 'protocol-list-panel', scroll: 'protocol-list-scroll', after: 'id="protocol-list"' },
         { file: 'papers-view.html', rail: 'papers-library-rail', scroll: 'papers-library-scroll', action: 'id="paper-upload-trigger"' },
-        { file: 'workflow-management-view.html', rail: 'workflow-editor-sidebar', scroll: 'workflow-editor-sidebar-scroll', action: 'id="workflow-entry-view-btn"' },
+        { file: 'workflow-management-view.html', rail: 'workflow-editor-sidebar', scroll: 'workflow-editor-sidebar-scroll', action: 'id="workflow-entry-template-btn"' },
         {
           file: 'sequence-viewer-view.html',
           rail: 'sequence-viewer-home-sidebar',
@@ -259,8 +266,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('biology notebook bench tools live in a foldable floating icon toolbox', () => {
       const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
-      const source = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js');
-      const notebookSource = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'index.js');
+      const source = [
+        readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'),
+        readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'toolbox-drag.js'),
+        readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'buffer-suggestions.js'),
+        readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-calculations.js'),
+        readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'tools', 'calculation-records.js')
+      ].join('\n');
+      const notebookSource = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'notebook', 'event-bindings.js');
       const linkedToolbar = html.match(/<div class="biology-notebook-linked-toolbar">([\s\S]*?)<\/div>/)?.[1] || '';
 
       assert.match(html, /id="biology-notebook-layout" class="[^"]*is-tool-sidebar-collapsed/);
@@ -332,6 +345,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(sectionNavigation, /container\(s\) and .*linked sample\(s\)/);
     });
 
+    test('Samples side editor reserves its grid gap within the container width', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'personal-inventory-view.css');
+
+      assert.match(css, /\.well-editor-shell\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*61\.8fr\)\s+minmax\(0,\s*38\.2fr\);[^}]*gap:\s*14px;/s);
+      assert.doesNotMatch(css, /\.well-editor-shell\s*\{[^}]*grid-template-columns:\s*61\.8%\s+38\.2%/s);
+    });
+
     test('biology notebook New Experiment dialog owns project and protocol selection', () => {
       const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       assert.match(html, /id="biology-notebook-new-experiment-btn"[\s\S]*New Experiment/);
@@ -385,7 +405,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('protocol placeholder presets keep the selected bar visibly active', () => {
       const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
-      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+      const controller = [
+        readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js'),
+        readLocalSource('src', 'renderer', 'modules', 'protocol', 'editor-actions.js')
+      ].join('\n');
 
       assert.match(html, /data-protocol-placeholder-preset="plasmid" aria-pressed="false"/);
       assert.match(css, /\.protocol-placeholder-preset\.is-active,[\s\S]*\.protocol-placeholder-preset\[aria-pressed="true"\]\s*\{[^}]*background:\s*var\(--theme-accent\);/);
@@ -396,7 +419,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
       const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
-      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+      const controller = [
+        readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js'),
+        readLocalSource('src', 'renderer', 'modules', 'protocol', 'editor-actions.js')
+      ].join('\n');
       const manifest = readLocalSource('src', 'renderer', 'module-manifests', 'protocol.js');
       const sharingModulePath = path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'sharing.js');
 
@@ -481,8 +507,9 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
 
       assert.match(html, /id="workflow-entry-back-btn"[^>]*>&larr; Back to Home<\/button>/);
+      assert.match(html, /id="workflow-entry-template-btn"[^>]*workflow-entry-template-icon-btn[^>]*aria-label="Template editor"[^>]*>[\s\S]*?<svg[\s\S]*?<span class="sr-only">Template editor<\/span>/);
+      assert.doesNotMatch(html, /workflow-entry-view-btn|Workflow Board/);
       assert.match(renderer, /workflowEntryPanel\.hidden\s*=\s*false;/);
-      assert.match(renderer, /workflowEntryViewBtn\.hidden\s*=\s*!showHome;/);
       assert.match(renderer, /workflowEntryTemplateBtn\.hidden\s*=\s*!showHome;/);
       assert.match(renderer, /workflowEntryBackBtn\.hidden\s*=\s*showHome;/);
     });
@@ -495,7 +522,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('Workflow graph selection omits redundant group-drag status copy', () => {
-      const graphController = readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph-controller.js');
+      const graphController = [
+        readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph-controller.js'),
+        readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph', 'rendering.js'),
+        readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph', 'pointer-drag.js')
+      ].join('\n');
 
       assert.doesNotMatch(graphController, /block\(s\) selected\. Drag any selected block to move the group\./);
       assert.match(graphController, /Tip: Drag blocks\. Output dot -> input dot to connect\./);
@@ -503,13 +534,31 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('Workflow execution omits redundant template and workflow-count copy', () => {
       const html = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'workflow', 'dom.js');
-      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+      const renderer = [
+        readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js'),
+        readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer', 'workflow-table-markup.js')
+      ].join('\n');
 
       assert.doesNotMatch(html, /Template Workflows|workflow-execution-status/);
       assert.doesNotMatch(dom, /workflowExecutionStatus/);
       assert.doesNotMatch(renderer, /specific workflow.*created from this template/);
+      assert.doesNotMatch(renderer, /% complete/);
       assert.match(renderer, /Use Add Workflow to create one\./);
+      assert.match(renderer, /aria-label="Workflow name"[\s\S]*data-workflow-run-name=/);
+      assert.match(html, /id="workflow-add-run-btn"[^>]*workflow-execution-icon-btn[^>]*aria-label="Add workflow"[^>]*>[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add workflow<\/span>/);
+      assert.match(html, /id="workflow-delete-run-btn"[^>]*workflow-execution-icon-btn[^>]*aria-label="Delete workflow"[^>]*>[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete workflow<\/span>/);
+      assert.match(css, /\.workflow-execution-actions\s*>\s*\.workflow-execution-icon-btn\s*\{[^}]*width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*0;/s);
+      assert.match(css, /\.workflow-entry-name-field input\s*\{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s);
+      assert.match(css, /\.workflow-entry-name-field input:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--theme-focus\);/s);
+    });
+
+    test('Workflow placeholder popover uses the table as its only frame', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+
+      assert.match(css, /\.workflow-step-popover:has\(>\s*\.workflow-placeholder-table\)\s*\{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*box-shadow:\s*none;/s);
+      assert.match(css, /\.workflow-placeholder-table\s*\{[^}]*border:\s*1px solid var\(--theme-border\);/s);
     });
 
     test('Protein Builder uses the active DNA source instead of manual POI fields', () => {
@@ -530,12 +579,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('Assay result actions use accessible compact icons', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const chartTextControls = readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-text-controls.js');
 
-      assert.match(html, /id="assay-attach-result-file-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Attach result file"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-save-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Save results"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-clear-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Clear results"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-attach-result-file-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Attach result file"[^>]*data-hover-caption="Attach result file"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-save-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Save results"[^>]*data-hover-caption="Save results"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-transform-open-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Transform plate"[^>]*data-hover-caption="Transform plate"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-clear-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Clear results"[^>]*data-hover-caption="Clear results"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:attach-result-file|save-results|clear-results)-btn"[^>]*>\s*(?:Attach Result File|Save Results|Clear Results)\s*<\//);
       assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.match(css, /#assay-view button\[data-hover-caption\]::after\s*\{[^}]*content:\s*attr\(data-hover-caption\);[^}]*top:\s*calc\(100% \+ 7px\);[^}]*opacity:\s*0;[^}]*visibility:\s*hidden;/s);
+      assert.match(css, /#assay-view button\[data-hover-caption\]:hover::after,\s*#assay-view button\[data-hover-caption\]:focus-visible::after\s*\{[^}]*opacity:\s*1;[^}]*visibility:\s*visible;/s);
+      assert.match(chartTextControls, /btn\.setAttribute\('aria-label', tooltip\);\s*btn\.setAttribute\('data-hover-caption', tooltip\);/s);
+      assert.doesNotMatch(chartTextControls, /btn\.title\s*=\s*tooltip/);
     });
 
     test('Assay action status targets collapse only while empty', () => {
@@ -546,26 +601,30 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
         'assay-active-assay-info',
         'assay-result-status',
         'assay-transform-summary',
-        'assay-analysis-selection-status'
+        'assay-analysis-selection-status',
+        'assay-analysis-summary'
       ].forEach((id) => assert.match(html, new RegExp(`id="${id}"[^>]*small-note`)));
       assert.match(
         css,
-        /#assay-active-assay-info:empty,\s*#assay-result-status:empty,\s*#assay-transform-summary:empty,\s*#assay-analysis-selection-status:empty\s*\{[^}]*display:\s*none;/s
+        /#assay-active-assay-info:empty,\s*#assay-result-status:empty,\s*#assay-transform-summary:empty,\s*#assay-analysis-selection-status:empty,\s*#assay-analysis-summary:empty\s*\{[^}]*display:\s*none;/s
       );
-      assert.doesNotMatch(css, /#assay-(?:active-assay-info|result-status|transform-summary|analysis-selection-status)\s*\{[^}]*display:\s*none;/s);
+      assert.doesNotMatch(css, /#assay-(?:active-assay-info|result-status|transform-summary|analysis-selection-status|analysis-summary)\s*\{[^}]*display:\s*none;/s);
     });
 
     test('Assay grouping actions use one compact accessible icon toolbar', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
-      const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
+      const resultsManager = [
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'results', 'analysis-groups.js')
+      ].join('\n');
       const analysisView = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
 
       assert.match(html, /class="form-actions assay-analysis-group-actions"[^>]*role="group"[^>]*aria-label="Grouping actions"/);
-      assert.match(html, /id="assay-analysis-add-row-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected rows as group"[^>]*data-icon-caption="Add selected rows as group"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-analysis-add-column-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected columns as group"[^>]*data-icon-caption="Add selected columns as group"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-analysis-clear-groups-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Clear groups"[^>]*data-icon-caption="Clear groups"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-analysis-add-row-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected rows as group"[^>]*data-hover-caption="Add selected rows as group"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-analysis-add-column-group-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Add selected columns as group"[^>]*data-hover-caption="Add selected columns as group"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-analysis-clear-groups-btn"[^>]*assay-analysis-group-icon-btn[^>]*aria-label="Clear groups"[^>]*data-hover-caption="Clear groups"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-analysis-(?:add-row-group|add-column-group|clear-groups)-btn"[^>]*>\s*(?:Add Selected as (?:Row|Column) Group|Clear Groups)\s*<\//);
       assert.match(css, /\.assay-analysis-group-actions\s*>\s*\.assay-analysis-group-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
       assert.doesNotMatch(html, /assay-analysis-group-name|Replicate Group Name/);
@@ -643,7 +702,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
       const foldableCss = readLocalSource('ui', 'css', 'components', 'foldable-section.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
-      const controls = readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-controls.js');
+      const controls = [
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-controls.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-controls-markup.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-controls-form.js')
+      ].join('\n');
       const toolbar = readLocalSource('src', 'renderer', 'modules', 'assay', 'plotly', 'chart-toolbar.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
 
@@ -689,8 +752,15 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
-      const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
-      const analysis = readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js');
+      const assay = [
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'workspace', 'form-and-list.js')
+      ].join('\n');
+      const analysis = [
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view', 'derived-plate-grid.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'analysis-view', 'chart-surface.js')
+      ].join('\n');
       const derived = readLocalSource('src', 'renderer', 'modules', 'assay', 'derived-plate', 'plate-formulas.js');
       const resultsManager = readLocalSource('src', 'renderer', 'modules', 'assay', 'results-manager.js');
       const spreadsheetTables = readLocalSource('src', 'renderer', 'lib', 'spreadsheet-tables.js');
@@ -704,7 +774,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="assay-result-table-panel"[\s\S]*?>Plate Results \(Table1\)</);
       assert.match(html, /id="assay-derived-plate-panel"[\s\S]*?>Transformed Plate \(Table2\)<[\s\S]*?id="assay-derived-plate-table"/);
       assert.match(html, /<summary class="foldable-section__summary">\s*<span>Transformed Plate \(Table2\)<\/span>\s*<button[^>]*id="assay-transform-clear-btn"[\s\S]*?<\/button>\s*<\/summary>/);
-      assert.match(html, /id="assay-transform-clear-btn"[^>]*assay-transform-remove-icon-btn[^>]*row-action-icon-btn-danger[^>]*aria-label="Remove transformed plate"[^>]*title="Remove transformed plate"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-transform-clear-btn"[^>]*assay-transform-remove-icon-btn[^>]*row-action-icon-btn-danger[^>]*aria-label="Remove transformed plate"[^>]*data-hover-caption="Remove transformed plate"[\s\S]*?<svg/);
       assert.match(css, /\.assay-result-table-panel\s*>\s*\.foldable-section__summary\s*>\s*\.assay-transform-remove-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
       assert.doesNotMatch(html, /assay-transformed-plate-intro/);
       assert.doesNotMatch(html, /assay-transform-overlay|assay-transform-mode|assay-transform-formula/);
@@ -717,7 +787,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(resultsManager, /buildResultGridColumns,/);
       assert.match(analysis, /buildResultGridColumns\(def,\s*\{ formatter: formatTransformCell \}\)/);
       assert.match(analysis, /buildResultGridData\(def,\s*transformFormulas\)/);
-      assert.match(analysis, /transformFormulas\[well\]\s*=\s*`=Table1:\$\{well\}`/);
+      assert.match(analysis, /getTransformFormulas\(\)\[well\]\s*=\s*`=Table1:\$\{well\}`/);
       assert.match(analysis, /tableName\s*=\s*tableRoot === assayResultTable \? 'Table1' : 'Table2'/);
       assert.match(analysis, /createSpreadsheetReferencePicker\(\{/);
       assert.match(spreadsheetTables, /createSpreadsheetReferencePicker\(\{/);
@@ -739,14 +809,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
       const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
       const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
-      const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
+      const assay = [
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js'),
+        readLocalSource('src', 'renderer', 'modules', 'assay', 'workspace', 'form-and-list.js')
+      ].join('\n');
 
       assert.match(html, /id="assay-form"[^>]*>[\s\S]*?id="assay-id"[\s\S]*?class="form-actions assay-form-actions"[\s\S]*?class="assay-display-field"/);
-      assert.match(html, /id="assay-new-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Create new assay"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
-      assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-new-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Create new assay"[^>]*data-hover-caption="Create new assay"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[^>]*data-hover-caption="Export CSV template"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[^>]*data-hover-caption="Import CSV"[\s\S]*?<svg/);
       assert.match(html, /id="assay-save-btn"[^>]*type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg[\s\S]*?<span class="assay-form-button-caption">Save<\/span>/);
-      assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[^>]*data-hover-caption="Cancel edit"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
       assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
       assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-save-icon-btn\.primary-btn\s*\{[^}]*width:\s*auto;[^}]*min-width:\s*72px;/s);
@@ -1252,7 +1325,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const mainSource = readMainProcessSource();
       const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
-      const settingsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings', 'index.js'), 'utf8');
+      const settingsSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings', 'index.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings', 'codex-account.js'), 'utf8')
+      ].join('\n');
       const settingsHtml = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'setting-view.html'), 'utf8');
 
       assert.match(mainSource, /launchCodexCliLogin/);
