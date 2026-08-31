@@ -1,6 +1,7 @@
 import { escapeHtml } from '../../../lib/html.js';
 import { readStoragePathFromLocalState } from '../storage.js';
 import { clamp } from '../shared.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createSequenceViewerCoreActions({ options, elements, state }) {
   function getBridge() {
@@ -56,12 +57,18 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
     }
   }
 
+  // Transient feedback belongs in the app notification system. The Vector
+  // Builder retains its local note because it is a separate workspace.
   function setStatus(message, isError = false) {
-    if (!elements.statusNote) {
+    const text = String(message || '').trim();
+    if (text) {
+      showTransientNotice(text, { type: isError ? 'error' : 'success' });
+    }
+    if (!elements.vectorBuilderStatusNote) {
       return;
     }
-    elements.statusNote.textContent = message;
-    elements.statusNote.style.color = isError ? 'var(--theme-danger)' : '';
+    elements.vectorBuilderStatusNote.textContent = text;
+    elements.vectorBuilderStatusNote.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
   function updateMessages() {

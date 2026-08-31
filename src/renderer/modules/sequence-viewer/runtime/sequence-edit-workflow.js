@@ -1,7 +1,11 @@
 import {
+  cleanText,
   clamp,
   normalizeSequenceText
 } from '../shared.js';
+import { buildAminoAcidSubstitution } from '../amino-acid-substitution.js';
+import { buildEditedSequenceName } from '../sequence-naming.js';
+import { LIBRARY_STATUS_SAVED } from './config.js';
 import {
   adjustFeatureSegmentsForSequenceEdit,
   buildSequenceEditDesignSource,
@@ -38,12 +42,61 @@ export function createSequenceEditActions(ctx) {
       sequence: nextSequence,
       features: adjustFeatureSegmentsForSequenceEdit(current?.features, { start: edit.start, end: edit.end }, edit.replacement.length, nextSequence.length)
     };
-    updateEditState({ current, nextRecord, nextRecords, selectedIndex, nextSequence, edit });
+    updateEditState({
+      current,
+      nextRecord,
+      nextRecords,
+      selectedIndex,
+      nextSequence,
+      edit,
+      // Vector Builder passes the stored vector the replacement was taken from;
+      // the cloning design then templates that PCR off it.
+      donorEntryId: payload?.donorEntryId,
+      donorName: payload?.donorName
+    });
     renderAfterEdit();
     await actions.persistFeatureMutation(nextRecord, buildSequenceEditStatus(edit.mode, { start: edit.start, end: edit.end }, edit.replacement.length));
   }
 
+  async function applyAminoAcidEdit(payload = {}) {
+    const record = actions.getSelectedRecord();
+    if (!record?.sequence?.length) {
+      throw new Error('Load a record before changing an amino acid.');
+    }
+    const substitution = buildAminoAcidSubstitution(record.sequence, payload);
+    const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
+    const nextRecords = [...state.records];
+    const current = nextRecords[selectedIndex];
+    if (!current) {
+      throw new Error('The selected sequence record is no longer available.');
+    }
+    const sortedPositions = [...substitution.codonPositions].sort((left, right) => left - right);
+    const nextRecord = {
+      ...current,
+      sequence: substitution.nextSequence,
+      features: Array.isArray(current?.features) ? [...current.features] : []
+    };
+    updateEditState({
+      current,
+      nextRecord,
+      nextRecords,
+      selectedIndex,
+      nextSequence: substitution.nextSequence,
+      edit: {
+        sequence: normalizeSequenceText(record.sequence),
+        start: sortedPositions[0],
+        end: sortedPositions[sortedPositions.length - 1] + 1,
+        replacement: substitution.targetCodon
+      },
+      cursorBase: sortedPositions[sortedPositions.length - 1] + 1
+    });
+    renderAfterEdit({ preserveScroll: true });
+    await actions.persistFeatureMutation(nextRecord, buildAminoAcidEditStatus(substitution));
+    return substitution;
+  }
+
   return {
+    applyAminoAcidEdit,
     applySequenceEdit,
     hasCurrentCloningDesignSource
   };
@@ -64,20 +117,56 @@ export function createSequenceEditActions(ctx) {
     return { sequence, mode, start, end, replacement };
   }
 
-  function updateEditState({ current, nextRecord, nextRecords, selectedIndex, nextSequence, edit }) {
+  function updateEditState({
+    current,
+    nextRecord,
+    nextRecords,
+    selectedIndex,
+    nextSequence,
+    edit,
+    cursorBase,
+    donorEntryId = '',
+    donorName = ''
+  }) {
     // Keep the earliest original as the design baseline: if the prior design
     // source ended on exactly this edit's starting sequence, the edits chain, so
     // carry its original forward instead of resetting to the pre-edit sequence.
     const existing = state.sequenceEditDesignSource;
-    const baseline = existing
-      && normalizeSequenceText(existing.editedSequence || '') === normalizeSequenceText(edit.sequence)
-      ? existing.originalSequence
-      : edit.sequence;
-    state.sequenceEditDesignSource = buildSequenceEditDesignSource({
+    const isChainedEdit = existing
+      && normalizeSequenceText(existing.editedSequence || '') === normalizeSequenceText(edit.sequence);
+    const baseline = isChainedEdit ? existing.originalSequence : edit.sequence;
+    const baseName = isChainedEdit
+      ? (existing.baseName || existing.parentRecordName || existing.recordName)
+      : current?.name;
+    const parentEntryId = isChainedEdit ? existing.parentEntryId : state.activeEntryId;
+    const designSource = buildSequenceEditDesignSource({
       record: current,
       originalSequence: baseline,
-      nextSequence
+      nextSequence,
+      baseName,
+      parentEntryId
     });
+    const generatedName = buildEditedSequenceName({
+      record: current,
+      baseName,
+      originalSequence: baseline,
+      editedSequence: nextSequence,
+      editRequest: designSource.editRequest
+    });
+    nextRecord.name = generatedName;
+    state.sequenceEditDesignSource = {
+      ...designSource,
+      recordName: generatedName,
+      generatedName,
+      donorEntryId: cleanText(donorEntryId, 200),
+      donorName: cleanText(donorName, 160)
+    };
+    // Editing a saved library entry creates a local derived sequence. The Save
+    // action will allocate a new entry instead of overwriting the parent.
+    if (state.activeEntryStatus === LIBRARY_STATUS_SAVED) {
+      state.activeEntryId = '';
+      state.activeEntryStatus = '';
+    }
     state.cloningDesign = {};
     if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {
       nextRecord.quality = '';
@@ -89,21 +178,38 @@ export function createSequenceEditActions(ctx) {
     nextRecords[selectedIndex] = nextRecord;
     state.records = nextRecords;
     state.selectedFeatureIndex = -1;
-    state.sequenceCursorBase = clamp(edit.start + edit.replacement.length, 0, nextSequence.length);
+    state.sequenceCursorBase = clamp(
+      Number.isFinite(Number(cursorBase)) ? Number(cursorBase) : edit.start + edit.replacement.length,
+      0,
+      nextSequence.length
+    );
     actions.resetAlignmentState({ preserveSessions: true });
     if (state.proteinBuilderConfirmation) {
       state.proteinBuilderConfirmation = { ...state.proteinBuilderConfirmation, plasmidLength: nextSequence.length };
     }
   }
 
-  function renderAfterEdit() {
+  function renderAfterEdit(options = {}) {
     controllers.detail?.clearSequenceSelection({ preserveCursor: true });
     controllers.detail?.hideFeatureContextMenu();
     controllers.detail?.hideFeatureEditor();
     controllers.detail?.hidePrimerDesignOverlay?.();
     controllers.detail?.updateRecordSelect?.();
-    controllers.detail?.renderActiveRecord?.();
+    controllers.detail?.renderActiveRecord?.({ preserveScroll: Boolean(options?.preserveScroll) });
     controllers.cloningDesign?.render?.();
+    controllers.vectorBuilder?.render?.();
     controllers.alignment?.handleReferenceRecordChanged?.();
   }
+}
+
+function buildAminoAcidEditStatus(substitution = {}) {
+  const positions = [...(Array.isArray(substitution?.codonPositions) ? substitution.codonPositions : [])]
+    .map((position) => Math.max(0, Math.round(Number(position) || 0)))
+    .sort((left, right) => left - right);
+  const positionLabel = positions.length === 3
+    && positions[1] === positions[0] + 1
+    && positions[2] === positions[1] + 1
+    ? `${positions[0] + 1}-${positions[2] + 1}`
+    : positions.map((position) => position + 1).join(', ');
+  return `Changed amino acid ${substitution?.aminoAcid || 'X'} (${substitution?.codon || '---'}) to ${substitution?.targetAminoAcid || 'X'} (${substitution?.targetCodon || '---'}) at bases ${positionLabel}.`;
 }

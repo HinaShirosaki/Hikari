@@ -1,5 +1,16 @@
+import {
+  columnUnit,
+  columnUnitFactor,
+  rescaleCellValue,
+  retitleColumnUnit
+} from './table-units.js';
+
 const DEFAULT_NOTEBOOK_TABLE_COLUMNS = 3;
 const DEFAULT_NOTEBOOK_TABLE_ROWS = 3;
+export const MAX_NOTEBOOK_TABLE_COLUMNS = 50;
+export const MAX_NOTEBOOK_TABLE_ROWS = 500;
+const MOLARITY_COLUMN_TITLES = ['Entry', 'MW (g/mol)', 'Weight (mg)', 'Volume (mL)', 'Molarity (mM)'];
+const MOLARITY_ROW_COUNT = 4;
 
 function sanitizeFieldName(value, fallback) {
   const clean = String(value || '')
@@ -66,10 +77,9 @@ export function normalizeNotebookResultTable(rawTable) {
     })
     : [];
 
-  return {
-    columns,
-    rows
-  };
+  // `solve` marks a table whose columns define one another (the molarity table), so a
+  // loop between two empty ones means "not determined yet" rather than a mistake.
+  return source.solve ? { columns, rows, solve: true } : { columns, rows };
 }
 
 export function cloneNotebookResultTable(rawTable) {
@@ -97,8 +107,12 @@ export function createDefaultNotebookResultTable(createId, {
   columnCount = DEFAULT_NOTEBOOK_TABLE_COLUMNS,
   rowCount = DEFAULT_NOTEBOOK_TABLE_ROWS
 } = {}) {
-  const safeColumnCount = Math.max(1, Number(columnCount) || DEFAULT_NOTEBOOK_TABLE_COLUMNS);
-  const safeRowCount = Math.max(1, Number(rowCount) || DEFAULT_NOTEBOOK_TABLE_ROWS);
+  // Upper bounds because the size can be typed: every cell is a real DOM node, and a
+  // stray extra digit would otherwise build a grid big enough to hang the renderer.
+  const safeColumnCount = Math.min(MAX_NOTEBOOK_TABLE_COLUMNS,
+    Math.max(1, Math.trunc(Number(columnCount)) || DEFAULT_NOTEBOOK_TABLE_COLUMNS));
+  const safeRowCount = Math.min(MAX_NOTEBOOK_TABLE_ROWS,
+    Math.max(1, Math.trunc(Number(rowCount)) || DEFAULT_NOTEBOOK_TABLE_ROWS));
   const columns = Array.from({ length: safeColumnCount }, (_unused, index) => ({
     field: buildFieldId(createId, 'column', index),
     title: buildColumnTitle(index)
@@ -133,6 +147,84 @@ export function createNotebookResultTableFromPlaceholder(createId, {
     columns: [variableColumn, valueColumn],
     rows: [row]
   };
+}
+
+// The three unit factors of a molarity worksheet folded into the single constant its
+// row formulas carry: weight/(MW x volume) is in mol/L, and K puts it back into the
+// units the columns are actually kept in. For the default mg, mL and mM that is 1000.
+function molarityUnitConstant(columns) {
+  const weight = columnUnitFactor(columns?.[2]?.title, 1e-3);
+  const volume = columnUnitFactor(columns?.[3]?.title, 1e-3);
+  const molarity = columnUnitFactor(columns?.[4]?.title, 1e-3);
+  return weight / (volume * molarity);
+}
+
+// One row of the worksheet: the same equation rearranged once per column, so any
+// column can be the unknown. Exponents always carry their sign in JS ("1e+21"), which
+// is what keeps translateFormulaReferences from reading the mantissa as a cell.
+export function molarityRowFormulas(columns, rowIndex) {
+  const line = rowIndex + 1;
+  const k = String(Number(molarityUnitConstant(columns).toPrecision(12)));
+  return [
+    '',
+    `=${k}*C${line}/(D${line}*E${line})`,
+    `=B${line}*D${line}*E${line}/${k}`,
+    `=${k}*C${line}/(B${line}*E${line})`,
+    `=${k}*C${line}/(B${line}*D${line})`
+  ];
+}
+
+// Molarity worksheet: one row is molarity = weight / (MW x volume), written out once
+// per column so any column can be the unknown. Fill three and the fourth computes;
+// fill two and the other two show the arithmetic that is left. Clearing a cell you
+// typed over drops that column's formula for good -- drag the fill handle from a
+// spare row to get it back.
+export function createMolarityNotebookResultTable(createId, rowCount = MOLARITY_ROW_COUNT) {
+  const columns = MOLARITY_COLUMN_TITLES.map((title, index) => ({
+    field: buildFieldId(createId, 'molarity', index),
+    title
+  }));
+  const rows = Array.from({ length: rowCount }, (_unused, index) => {
+    const cells = molarityRowFormulas(columns, index);
+    const row = { id: buildFieldId(createId, 'row', index) };
+    columns.forEach((column, columnIndex) => {
+      row[column.field] = cells[columnIndex];
+    });
+    return row;
+  });
+  return { columns, rows, solve: true };
+}
+
+// Switching a column's unit re-expresses what is already in it rather than changing
+// what the numbers mean: typed values are converted, and a solve table's generated
+// formulas are rebuilt around the new constant. A formula the user wrote or edited by
+// hand no longer matches the generated one, so it is left exactly as they left it.
+export function setNotebookResultTableColumnUnit(rawTable, columnIndex, unit) {
+  const table = normalizeNotebookResultTable(rawTable);
+  const column = table?.columns?.[columnIndex];
+  const previous = columnUnit(column?.title);
+  const next = previous ? columnUnit(`(${unit})`) : null;
+  if (!next || next.dimension !== previous.dimension) {
+    return table;
+  }
+
+  const before = table.columns.map(({ title }) => ({ title }));
+  column.title = retitleColumnUnit(column.title, next.unit);
+  const ratio = previous.factor / next.factor;
+  table.rows.forEach((row, rowIndex) => {
+    row[column.field] = rescaleCellValue(row[column.field], ratio);
+    if (!table.solve) {
+      return;
+    }
+    const stale = molarityRowFormulas(before, rowIndex);
+    const fresh = molarityRowFormulas(table.columns, rowIndex);
+    table.columns.forEach((each, index) => {
+      if (stale[index] && String(row[each.field] ?? '') === stale[index]) {
+        row[each.field] = fresh[index];
+      }
+    });
+  });
+  return table;
 }
 
 export function addNotebookResultTableRow(rawTable, createId) {

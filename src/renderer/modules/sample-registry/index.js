@@ -8,6 +8,7 @@ import {
   renderLinkedContainerOptions
 } from './inventory-links.js';
 import { renderLocationFields } from './location-fields.js';
+import { appendPendingNotebookSampleCapture } from './notebook-capture.js';
 import { startNotebookSampleCapture } from './notebook-workflow.js';
 import { renderList } from './sample-list.js';
 import { onSubmit } from './sample-form.js';
@@ -63,7 +64,16 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     }
   }
 
+  function captureRecordedSample(record) {
+    const capturedNotebookEntry = appendPendingNotebookSampleCapture(ctx, record);
+    if (capturedNotebookEntry && typeof ctx.onNotebookSampleCaptured === 'function') {
+      ctx.onNotebookSampleCaptured(capturedNotebookEntry);
+    }
+    return capturedNotebookEntry;
+  }
+
   return {
+    captureRecordedSample,
     hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: () => renderList(ctx),

@@ -3,8 +3,9 @@
 // Responsibilities:
 // - normalize CRISPR target input from free text, FASTA, or named sequence lists
 // - scan sequences for PAM-compatible guide windows on both strands
-// - estimate simple on-target and off-target scoring heuristics
-// - rank and return the best candidate guides for the selected background genome
+// - estimate simple on-target scoring heuristics
+// - count near-matching guides among the submitted sequences (not a genome-wide off-target search)
+// - rank and return the best candidate guides
 import { clampNumber } from '../../../lib/numbers.js';
 import { nucleotideCounts, reverseComplementDna } from './sequence.js';
 
@@ -45,46 +46,6 @@ const IUPAC_COMPLEMENT_MAP = Object.freeze({
   V: 'B',
   N: 'N'
 });
-
-// Supported reference-genome presets used to scale simple off-target risk estimates.
-export const CRISPR_REFERENCE_GENOMES = Object.freeze([
-  {
-    id: 'human-hg38',
-    label: 'Human (GRCh38 / hg38)',
-    offTargetMultiplier: 1.35,
-    note: 'Large and repetitive genome. Off-target estimates are scaled conservatively.'
-  },
-  {
-    id: 'mouse-mm39',
-    label: 'Mouse (GRCm39 / mm39)',
-    offTargetMultiplier: 1.2,
-    note: 'Mammalian-scale genome with moderate repeat burden.'
-  },
-  {
-    id: 'zebrafish-gz11',
-    label: 'Zebrafish (GRCz11)',
-    offTargetMultiplier: 1.05,
-    note: 'Intermediate genome size with common duplicated regions.'
-  },
-  {
-    id: 'yeast-r64',
-    label: 'Yeast (S288C / R64)',
-    offTargetMultiplier: 0.72,
-    note: 'Compact genome. Off-target rates are typically lower.'
-  },
-  {
-    id: 'ecoli-k12',
-    label: 'E. coli (K-12 MG1655)',
-    offTargetMultiplier: 0.58,
-    note: 'Small bacterial genome with reduced off-target search space.'
-  },
-  {
-    id: 'custom',
-    label: 'Custom / User-supplied',
-    offTargetMultiplier: 1,
-    note: 'No organism-specific scaling. Only submitted targets are evaluated directly.'
-  }
-]);
 
 // Normalize arbitrary DNA/RNA-like text into uppercase DNA letters, optionally preserving unknown bases as N.
 function normalizeDnaInput(raw, preserveUnknown = false) {
@@ -220,13 +181,25 @@ function buildCrisprTargetEntry(name, sequenceText, index) {
   };
 }
 
-// Parse a single named target line in formats like "name: sequence" or "name | sequence".
-function parseCrisprLineTarget(line, index) {
+// Match a single named target line in formats like "name: sequence" or "name | sequence".
+function matchNamedTargetLine(line) {
   const namedMatch = String(line).match(/^([^:|]{1,80})\s*[:|]\s*([A-Za-z\-\s]+)$/);
   if (!namedMatch) {
     return null;
   }
-  return buildCrisprTargetEntry(namedMatch[1], namedMatch[2], index);
+  return { name: namedMatch[1], sequenceText: namedMatch[2] };
+}
+
+// Detect a single sequence wrapped across fixed-width lines, as opposed to a list of separate targets.
+// ponytail: requires 3+ lines because two lines carry no width evidence either way. When in doubt we
+// split, since fusing two targets invents guides that span a junction present in neither molecule.
+function isWrappedSequenceBlock(lines) {
+  if (lines.length < 3) {
+    return false;
+  }
+  const width = lines[0].length;
+  return lines.slice(0, -1).every((line) => line.length === width)
+    && lines[lines.length - 1].length <= width;
 }
 
 // Parse CRISPR targets from FASTA, named lines, multi-line sequence lists, or one raw sequence block.
@@ -274,20 +247,22 @@ export function parseCrisprTargetsInput(rawInput) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const namedTargets = lines
-    .map((line, index) => parseCrisprLineTarget(line, index))
-    .filter(Boolean);
-  if (namedTargets.length) {
-    return namedTargets.map((entry, index) => ({ ...entry, id: `target-${index + 1}` }));
-  }
-
-  const dnaLikeLines = lines.filter((line) => normalizeDnaInput(line, true).length >= 18);
-  if (dnaLikeLines.length >= 2 && dnaLikeLines.length === lines.length) {
-    dnaLikeLines.forEach((line) => pushTarget(`Target ${parsed.length + 1}`, line));
+  // Only treat this as a named list when every line is named; otherwise the unnamed lines would be dropped.
+  const namedLines = lines.map(matchNamedTargetLine);
+  if (namedLines.every(Boolean)) {
+    namedLines.forEach((named) => pushTarget(named.name, named.sequenceText));
     return parsed;
   }
 
-  pushTarget('Target 1', raw);
+  if (lines.length === 1 || isWrappedSequenceBlock(lines)) {
+    pushTarget('Target 1', lines.join(''));
+    return parsed;
+  }
+
+  lines.forEach((line) => {
+    const named = matchNamedTargetLine(line);
+    pushTarget(named?.name || `Target ${parsed.length + 1}`, named?.sequenceText || line);
+  });
   return parsed;
 }
 
@@ -336,15 +311,17 @@ export function collectCrisprPamSites(target, guideLength, pamPattern) {
 
 // Collect PAM-compatible candidate sites across a list of targets.
 function collectCrisprPamSitesFromTargets(targets, guideLength, pamPattern) {
+  // Appended one at a time: spreading blows the argument limit past ~130k sites (a >1.4 Mb target).
   const allSites = [];
   targets.forEach((target) => {
-    allSites.push(...collectCrisprPamSites(target, guideLength, pamPattern));
+    collectCrisprPamSites(target, guideLength, pamPattern).forEach((site) => allSites.push(site));
   });
   return allSites;
 }
 
-// Estimate off-target mismatch counts and derive a simple specificity score for one candidate guide.
-export function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMultiplier = 1) {
+// Count near-matches for one guide among the submitted sequences only. This is not a genome-wide
+// search: nothing here reads a reference genome, so a clean result means clean within what was pasted.
+export function computeCrisprOffTargetStats(candidate, backgroundSites) {
   const mismatchCounts = {
     exact: 0,
     mismatch1: 0,
@@ -378,7 +355,7 @@ export function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMu
     (mismatchCounts.mismatch1 * 0.46) +
     (mismatchCounts.mismatch2 * 0.16) +
     (mismatchCounts.mismatch3 * 0.05);
-  const offTargetRate = clampNumber(weightedRisk * 14.5 * genomeMultiplier, 0, 99.9, 0);
+  const offTargetRate = clampNumber(weightedRisk * 14.5, 0, 99.9, 0);
   const specificityScore = clampNumber(100 - offTargetRate, 0, 100, 100);
 
   return {
@@ -386,6 +363,35 @@ export function computeCrisprOffTargetStats(candidate, backgroundSites, genomeMu
     offTargetRate,
     specificityScore
   };
+}
+
+// Flatten ranked guides into tab-separated rows that paste directly into a spreadsheet or order form.
+export function buildCrisprGuideTsv(candidates) {
+  const header = [
+    'Rank', 'Target', 'Start', 'End', 'Strand', 'Guide', 'PAM', 'GC%',
+    'OnTarget', 'OffTargetRate', 'Score', 'Mismatches0/1/2/3', 'Notes'
+  ];
+  // Tabs and newlines are the only characters that could break the row/column split.
+  const cell = (value) => String(value ?? '').replace(/[\t\r\n]+/g, ' ');
+  const rows = (candidates || []).map((candidate, index) => {
+    const counts = candidate.mismatchCounts || {};
+    return [
+      index + 1,
+      cell(candidate.targetName),
+      candidate.start,
+      candidate.end,
+      candidate.strand,
+      candidate.guideSequence,
+      candidate.pamSequence,
+      candidate.gcPercent.toFixed(1),
+      candidate.onTargetScore.toFixed(1),
+      candidate.offTargetRate.toFixed(2),
+      candidate.totalScore.toFixed(1),
+      `${counts.exact}/${counts.mismatch1}/${counts.mismatch2}/${counts.mismatch3}`,
+      cell((candidate.notes || []).join('; '))
+    ].join('\t');
+  });
+  return [header.join('\t'), ...rows].join('\n');
 }
 
 // Main CRISPR guide-design entry point that filters, scores, and ranks candidate guides.
@@ -396,8 +402,7 @@ export function designCrisprGuides({
   pamPattern,
   minGc,
   maxGc,
-  topCount,
-  genomeMultiplier
+  topCount
 }) {
   const selectedSites = collectCrisprPamSitesFromTargets(selectedTargets, guideLength, pamPattern);
   const candidates = selectedSites
@@ -409,6 +414,10 @@ export function designCrisprGuides({
       }
       if (/(AAAAA|CCCCC|GGGGG|TTTTT)/.test(site.guideSequence)) {
         notes.push('homopolymer');
+      }
+      // scoreCrisprOnTarget already rewards a leading G; say why, since U6 transcription needs one.
+      if (!site.guideSequence.startsWith('G')) {
+        notes.push('prepend G for U6');
       }
 
       return {
@@ -450,7 +459,7 @@ export function designCrisprGuides({
   const scoredCandidates = candidates
     .slice(0, maxEvaluatedCandidates)
     .map((candidate) => {
-      const offTarget = computeCrisprOffTargetStats(candidate, scannedBackgroundSites, genomeMultiplier);
+      const offTarget = computeCrisprOffTargetStats(candidate, scannedBackgroundSites);
       const totalScore = (candidate.onTargetScore * 0.62) + (offTarget.specificityScore * 0.38);
       return {
         ...candidate,

@@ -6,34 +6,52 @@
               <div class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                   <div class="form-actions sequence-viewer-rail-nav-actions">
-                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open</button>
-                    <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                    <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M12 5v14"></path>
+                        <path d="M5 12h14"></path>
+                      </svg>
+                      <span class="sequence-viewer-button-caption">New</span>
+                    </button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
+                        <path d="M3.5 7.5V5h7l2 2.5"></path>
+                      </svg>
+                      <span class="sequence-viewer-button-caption">Open</span>
+                    </button>
+                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="7.5"></circle>
+                        <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
+                        <path d="m17.5 5.75 1 2.5-2.65.45"></path>
+                        <circle cx="7.25" cy="15.5" r="1"></circle>
+                      </svg>
+                      <span class="sequence-viewer-button-caption">Vector Builder</span>
+                    </button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                </section>
+                <section class="sequence-viewer-library-controls left-rail-template__section">
+                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                    <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                    <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                  </div>
+                  <input
+                    id="sequence-viewer-library-search-input"
+                    class="sequence-viewer-library-search"
+                    type="search"
+                    placeholder="Search sequences"
+                    autocomplete="off"
+                    aria-label="Search sequence library"
+                  />
                 </section>
               </div>
 
               <div class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-library-card left-rail-template__section">
-              <div class="result-card-head sequence-viewer-library-head">
-                <h4>Sequence Library</h4>
-                <button id="sequence-viewer-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
-              </div>
-              <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
-              </div>
-              <input
-                id="sequence-viewer-library-search-input"
-                class="sequence-viewer-library-search"
-                type="search"
-                placeholder="Search sequences"
-                autocomplete="off"
-                aria-label="Search sequence library"
-              />
-              <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
+              <div id="sequence-viewer-library-list" class="sequence-viewer-library-list folder-tree-template">
                 <p class="small-note">No sequence entries found.</p>
               </div>
               <div id="sequence-viewer-library-context-menu" class="sequence-viewer-context-menu" hidden>
@@ -51,7 +69,7 @@
               <div class="left-rail-template__stack">
                 <section class="result-card sequence-viewer-preview-card">
                   <div class="result-card-head">
-                    <h4>Circular Plasmid Preview</h4>
+                    <h4>Sequence Map Preview</h4>
                   </div>
                   <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
                     <p class="small-note">Select a sequence in the library to preview.</p>
@@ -70,10 +88,11 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and the active DNA coding sequence.</p>
-              <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
+              <span id="sequence-viewer-protein-builder-status" class="small-note" hidden></span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
+              <button id="sequence-viewer-protein-builder-cancel-vector-btn" type="button" class="ghost-btn" hidden>Cancel Vector Insert</button>
+              <button id="sequence-viewer-protein-builder-insert-vector-btn" type="button" class="primary-btn" hidden>Insert Into Vector <span aria-hidden="true">&rarr;</span></button>
               <button id="sequence-viewer-protein-builder-assemble-btn" type="button" class="primary-btn">Assemble Plasmid <span aria-hidden="true">&rarr;</span></button>
             </div>
           </div>
@@ -86,12 +105,8 @@
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
                     <label>
                       Construct Name
-                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
+                      <input id="sequence-viewer-protein-builder-name" placeholder="Suggested from the N-to-C block order" />
                     </label>
-                    <div class="form-actions">
-                      <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
-                      <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                    </div>
                   </form>
                 </section>
                 </div>
@@ -117,13 +132,18 @@
                       placeholder="Search stored features"
                       autocomplete="off"
                     />
-                    <button id="sequence-viewer-protein-builder-feature-search-btn" type="button" class="ghost-btn">Search</button>
                   </div>
-                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note">
-                    Search stored features and convert them into protein blocks.
-                  </span>
-                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results">
-                    <p class="small-note">Search by feature name or stored sequence.</p>
+                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note"></span>
+                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results"></div>
+
+                  <div id="sequence-viewer-protein-builder-feature-source" class="sequence-viewer-feature-source" hidden>
+                    <h5>Source vector</h5>
+                    <div id="sequence-viewer-protein-builder-feature-hosts" class="sequence-viewer-feature-source-list"></div>
+                    <h5>Plasmid preview</h5>
+                    <div id="sequence-viewer-protein-builder-feature-preview" class="sequence-viewer-feature-source-preview"></div>
+                    <div class="form-actions">
+                      <button id="sequence-viewer-protein-builder-feature-add-btn" type="button" class="primary-btn" disabled>Add Block</button>
+                    </div>
                   </div>
                 </section>
                 </div>
@@ -143,8 +163,20 @@
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
                   <div class="result-card-head">
                     <h4>Assembled Sequence</h4>
+                    <div class="sequence-viewer-protein-builder-sequence-head-actions">
+                      <span id="sequence-viewer-protein-builder-sequence-edited" class="small-note" hidden>Hand-edited</span>
+                      <button id="sequence-viewer-protein-builder-sequence-reset-btn" type="button" class="ghost-btn" hidden>Reset to chain</button>
+                    </div>
                   </div>
-                  <div id="sequence-viewer-protein-builder-sequence" class="sequence-block">-</div>
+                  <textarea
+                    id="sequence-viewer-protein-builder-sequence"
+                    class="sequence-block sequence-viewer-protein-builder-sequence-input"
+                    rows="3"
+                    spellcheck="false"
+                    autocomplete="off"
+                    aria-label="Assembled amino-acid sequence"
+                    placeholder="Add a block to start the chain"
+                  ></textarea>
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
@@ -164,10 +196,7 @@
           <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
             <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-protein-builder-assembly-title">
               <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
-                <div>
-                  <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
-                  <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
-                </div>
+                <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                 <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close stored backbone selector" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
 

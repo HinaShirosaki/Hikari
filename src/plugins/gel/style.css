@@ -1,0 +1,130 @@
+/* Only what the frame needs on top of the app's own stylesheets: the shell
+   used to own the page chrome and the active-view toggle, and neither exists
+   here. Everything else comes from vendor/css. */
+
+body.plugin-gel {
+  position: relative;
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* The shell gave views their box; inside the frame the view is the page. */
+#gel-host,
+#gel-view.is-active {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
+.plugin-gel__boot {
+  position: absolute;
+  z-index: 20;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  width: min(680px, calc(100% - 24px));
+  min-height: 42px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 9px;
+  align-items: center;
+  gap: 10px;
+  transform: translateX(-50%);
+  background: var(--theme-surface);
+  box-shadow: var(--theme-shadow-small);
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.plugin-gel__boot[hidden] { display: none; }
+.plugin-gel__boot-message { flex: 1; margin: 0; }
+.plugin-gel__boot-retry { flex: 0 0 auto; }
+.plugin-gel__boot--error {
+  border-color: var(--theme-danger);
+  color: var(--theme-danger);
+}
+.plugin-gel__boot--warning {
+  border-color: var(--theme-warning);
+  color: var(--theme-warning);
+}
+.plugin-gel__boot-indicator {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.plugin-gel__boot--loading .plugin-gel__boot-indicator {
+  border-right-color: transparent;
+  animation: plugin-gel-spin 700ms linear infinite;
+}
+.plugin-gel__boot--error .plugin-gel__boot-indicator,
+.plugin-gel__boot--warning .plugin-gel__boot-indicator {
+  background: currentColor;
+}
+
+@keyframes plugin-gel-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plugin-gel__boot--loading .plugin-gel__boot-indicator { animation: none; }
+}
+
+/* The workspace keeps its two panes in a narrow frame.
+   `left-rail-template` stacks to one column at <=980px, which as a built-in
+   view meant "the window is small". Inside a plugin frame it means "the window
+   is small OR the host rail is open", and the second is not a reason to throw
+   away the layout — the setup rail is where every control lives. This is the
+   app's own opt-out class, the same one the papers view uses. */
+.gel-workspace.left-rail-template {
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
+}
+
+@media (max-width: 980px) {
+  .gel-workspace.left-rail-template > .left-rail-template__rail.app-left-rail,
+  .gel-workspace.left-rail-template > .left-rail-template__rail {
+    border-right: 1px solid var(--app-left-rail-divider) !important;
+    border-bottom: 0 !important;
+    padding: 14px var(--app-left-rail-padding-inline, 16px) 16px !important;
+    background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+  }
+}
+
+@media (max-width: 720px) {
+  body.plugin-gel { overflow: auto; }
+
+  #gel-host,
+  #gel-view.is-active {
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
+  }
+
+  .gel-workspace.left-rail-template {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .gel-workspace.left-rail-template > .left-rail-template__rail.app-left-rail,
+  .gel-workspace.left-rail-template > .left-rail-template__rail {
+    height: auto;
+    min-height: 0;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--app-left-rail-divider) !important;
+  }
+
+  .gel-workspace.left-rail-template > .left-rail-template__main {
+    height: auto;
+    padding: 16px 12px 24px;
+    overflow: visible;
+  }
+
+  .plugin-gel__boot {
+    top: 8px;
+    width: calc(100% - 16px);
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}

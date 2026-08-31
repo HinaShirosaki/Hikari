@@ -2,6 +2,7 @@
 
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { StreamableHTTPClientTransport } = require('@modelcontextprotocol/sdk/client/streamableHttp.js');
+const { ensureObject } = require('../../lib/normalize.js');
 const {
   HIKARI_APP_MCP_ENDPOINT_PATH,
   HIKARI_APP_TOOL_CALL_TOOL_NAME
@@ -16,10 +17,6 @@ function cleanText(value, maxLength = 2000) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 const DEFAULT_REQUEST_TIMEOUT_MS = HIKARI_MCP_TOOL_TIMEOUT_MS;

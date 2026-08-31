@@ -27,24 +27,27 @@ export function onCompoundStructurePaste(ctx, event) {
   if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
     return;
   }
-  const candidates = getChemicalStructureCandidatesFromClipboardData(event.clipboardData);
+  const candidates = getChemicalStructureCandidatesFromClipboardData(event.clipboardData)
+    .filter((candidate) => candidate?.sourceFormat !== 'image');
   if (!candidates.length) {
     return;
   }
   event.preventDefault();
   setCompoundStatus(ctx, 'Reading pasted chemical structure...', false);
   applyCompoundStructurePasteCandidates(ctx, candidates, Array.from(event.clipboardData?.types || [])).catch(() => {
-    setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.', true);
+  setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES or MOL/SDF data.', true);
   });
 }
 
 export async function applyCompoundStructurePasteCandidates(ctx, candidates, formats = []) {
-  if (!Array.isArray(candidates) || !candidates.length) {
+  const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
+    .filter((candidate) => candidate?.sourceFormat !== 'image');
+  if (!supportedCandidates.length) {
     setCompoundStatus(ctx, buildCompoundClipboardNotFoundMessage(formats), true);
     return false;
   }
 
-  for (const candidate of candidates) {
+  for (const candidate of supportedCandidates) {
     const draft = toChemicalStructureDraftFromCandidate(candidate);
     if (draft) {
       ctx.compoundStructureDraft = toCompoundStructureDraft(draft);
@@ -54,14 +57,11 @@ export async function applyCompoundStructurePasteCandidates(ctx, candidates, for
     }
   }
 
-  setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.', true);
+    setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES or MOL/SDF data.', true);
   return false;
 }
 
 function buildCompoundPasteStatus(draft) {
-  if (draft.imageDataUrl && !draft.smiles && !draft.molfile) {
-    return 'Structure image pasted from clipboard. Save the sample to keep it.';
-  }
   if (draft.smiles) {
     return 'SMILES pasted from clipboard. Save the sample to keep it.';
   }

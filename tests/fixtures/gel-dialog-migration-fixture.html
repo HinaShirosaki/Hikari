@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gel Dialog Migration Fixture</title>
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/base/palette.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/base/core.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/themes/modes.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/views/gel-palette.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/views/gel-view.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/overrides/universal-dialogs.css?v=dialog-migration-1" />
+</head>
+<body class="plugin-gel">
+  <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay app-dialog-overlay app-dialog-overlay--center">
+    <section class="gel-peak-editor-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
+      <header class="gel-peak-editor-header app-dialog-head">
+        <div>
+          <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
+          <div class="small-note">Lane 2 · three integrated peaks</div>
+        </div>
+        <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close lane peak area dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+      </header>
+      <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+        <button type="button" class="ghost-btn is-active">Baseline</button>
+        <button type="button" class="ghost-btn">Divider</button>
+        <button type="button" class="ghost-btn">Clear lane</button>
+      </div>
+      <div class="gel-peak-editor-chart-shell">
+        <svg class="gel-peak-editor-chart" viewBox="0 0 920 440" role="img" aria-label="Peak area preview">
+          <rect class="peak-editor-frame" x="0.5" y="0.5" width="919" height="439" rx="10"></rect>
+          <path class="peak-editor-path" d="M 20 400 C 180 390 220 120 330 350 S 540 180 650 360 S 790 220 900 390"></path>
+        </svg>
+      </div>
+      <div class="small-note">Peak integration table</div>
+    </section>
+  </div>
+  <script>
+    document.getElementById('gel-peak-editor-close-btn').addEventListener('click', () => {
+      document.getElementById('gel-peak-editor-overlay').hidden = true;
+    });
+  </script>
+</body>
+</html>

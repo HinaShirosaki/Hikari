@@ -60,6 +60,7 @@ export function createContainerDetailRenderer({
     }
 
     const layout = getContainerLayout(container);
+    const helperText = String(layout.helperText || '').trim();
     const wells = Array.isArray(container.wells) ? container.wells : [];
     const rowLabels = layout.className === 'plate96'
       ? Array.from({ length: layout.rows }, (_item, index) => String.fromCharCode(65 + index))
@@ -103,7 +104,7 @@ export function createContainerDetailRenderer({
           <div class="container-detail-header">
             <div class="container-detail-title">
               <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
-              <p class="small-note">${safeText(layout.helperText)}</p>
+              ${helperText ? `<p class="small-note">${safeText(helperText)}</p>` : ''}
             </div>
             <div class="container-detail-toolbar">
               ${activeSample
@@ -145,8 +146,6 @@ export function createContainerDetailRenderer({
                     <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                     <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                     <div class="plate96-well-area">
-                      <span class="plate96-skirt-shape" aria-hidden="true"></span>
-                      <span class="plate96-skirt-edge" aria-hidden="true"></span>
                       <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
                     </div>
                   </div>

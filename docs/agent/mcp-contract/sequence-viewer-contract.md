@@ -67,7 +67,7 @@ action: enum [ list_records, get_record, get_sequence, get_features, analyze, de
 | `get_cloning_design` | `recordId?` | current in-app design source + last plan, if any |
 
 **`strategy` enum:** `whole-plasmid`, `q5-kld`, `two-step-ligation`, `golden-gate`,
-`gibson`, `in-fusion`.
+`gibson`, `in-fusion`, `overlap-extension`.
 
 `design_cloning` accepts an **optional hypothetical `edit`** so the agent can
 explore routes for a change without applying it — a pure function over the
@@ -206,6 +206,7 @@ A dedicated **adapter** (`cloning-strategy-adapter.js`, wrapping the same
 | `golden-gate` | golden-gate | `golden-gate` |
 | `gibson` | insert-assembly (Gibson) | `gibson` \| `overlap-pcr` |
 | `in-fusion` | insert-assembly + In-Fusion procedure | `gibson` |
+| `overlap-extension` | overlap-extension-ligation (SOE of vector flanks + insert) | `restriction-ligation` |
 
 Normalized return shape (stable field names, both vocabularies surfaced):
 ```

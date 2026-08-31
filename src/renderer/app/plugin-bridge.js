@@ -1,176 +1,14 @@
-// postMessage host API for sandboxed plugin iframes.
-//
-// Plugins run as an opaque origin with no DOM, storage, or preload access (see
-// plugin-loader.js), so the only way in is a message they post to the host.
-// This module owns that door: it maps each registered iframe's contentWindow
-// back to the installed plugin record, checks the verb's permission against
-// that record's manifest-declared permissions, and runs a handler.
-//
-// Wire protocol (both directions), always on window.postMessage:
-//   plugin -> host: { hikari: 1, id: <string>, verb: <string>, params: <object> }
-//   host -> plugin: { hikari: 1, id: <string>, ok: true,  result: <json> }
-//                   { hikari: 1, id: <string>, ok: false, error: <string> }
-//
-// Replies are posted to '*' because the plugin's opaque origin serializes to
-// "null" and cannot be targeted; the payload therefore must never carry
-// anything the plugin did not already ask for and hold permission to read.
-
-import { normalizeNotebookResultTable } from '../lib/notebook-result-tables.js';
-
-const PROTOCOL_MARKER = 1;
-const MAX_LIST_SIZE = 500;
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function text(value, maxLength = 4000) {
-  return String(value ?? '').trim().slice(0, maxLength);
-}
-
-// Every verb declares the permission it needs. A verb with an unlisted
-// permission is unreachable, so adding a handler is not enough to expose data.
-const VERBS = {
-  'app.info': {
-    permission: '',
-    handler: (_params, { plugin }) => ({
-      host: 'hikari',
-      pluginId: plugin.id,
-      permissions: asArray(plugin.permissions)
-    })
-  },
-
-  'protocols.list': {
-    permission: 'protocols:read',
-    handler: (_params, { state }) => asArray(state.protocols)
-      .slice(0, MAX_LIST_SIZE)
-      .map((protocol) => ({
-        id: text(protocol?.id, 200),
-        name: text(protocol?.name, 200),
-        purpose: text(protocol?.purpose, 400),
-        updatedAt: text(protocol?.updatedAt, 40)
-      }))
-  },
-
-  'protocols.get': {
-    permission: 'protocols:read',
-    handler: (params, { state }) => {
-      const id = text(params?.id, 200);
-      const protocol = asArray(state.protocols).find((item) => item?.id === id);
-      if (!protocol) {
-        throw new Error(`No protocol with id "${id}".`);
-      }
-      return {
-        id: protocol.id,
-        name: text(protocol.name, 200),
-        purpose: text(protocol.purpose, 4000),
-        materials: asArray(protocol.materials),
-        steps: asArray(protocol.steps),
-        troubleshooting: text(protocol.troubleshooting, 8000),
-        createdAt: text(protocol.createdAt, 40),
-        updatedAt: text(protocol.updatedAt, 40)
-      };
-    }
-  },
-
-  'projects.list': {
-    permission: 'projects:read',
-    handler: (_params, { state }) => asArray(state.projects)
-      .slice(0, MAX_LIST_SIZE)
-      .map((project) => ({
-        id: text(project?.id, 200),
-        name: text(project?.name, 200)
-      }))
-  },
-
-  'samples.list': {
-    permission: 'samples:read',
-    handler: (_params, { state }) => asArray(state.samples)
-      .slice(0, MAX_LIST_SIZE)
-      .map((sample) => ({
-        id: text(sample?.id, 200),
-        name: text(sample?.name, 200),
-        type: text(sample?.type, 80)
-      }))
-  },
-
-  'notebook.list': {
-    permission: 'notebook:read',
-    handler: (_params, { state }) => asArray(state.notebookEntries)
-      .slice(0, MAX_LIST_SIZE)
-      .map((entry) => ({
-        id: text(entry?.id, 200),
-        experimentName: text(entry?.experimentName, 200),
-        protocolId: text(entry?.protocolId, 200),
-        projectId: text(entry?.projectId, 200),
-        savedAt: text(entry?.savedAt, 40)
-      }))
-  },
-
-  'notebook.get': {
-    permission: 'notebook:read',
-    handler: (params, { state }) => {
-      const id = text(params?.id, 200);
-      const entry = asArray(state.notebookEntries).find((item) => item?.id === id);
-      if (!entry) {
-        throw new Error(`No notebook entry with id "${id}".`);
-      }
-      return {
-        id: entry.id,
-        experimentName: text(entry.experimentName, 200),
-        protocolId: text(entry.protocolId, 200),
-        projectId: text(entry.projectId, 200),
-        resultText: text(entry.resultText, 20000),
-        resultTables: asArray(entry.resultTables),
-        savedAt: text(entry.savedAt, 40)
-      };
-    }
-  },
-
-  // The one write verb. It appends to an existing entry rather than creating
-  // one, so a plugin can never manufacture notebook records the user did not
-  // start — it can only add results to an experiment they already opened.
-  'notebook.appendResult': {
-    permission: 'notebook:write',
-    handler: (params, { state, persist, onNotebookEntriesChanged }) => {
-      const entryId = text(params?.entryId, 200);
-      const entries = asArray(state.notebookEntries);
-      const index = entries.findIndex((item) => item?.id === entryId);
-      if (index < 0) {
-        throw new Error(`No notebook entry with id "${entryId}".`);
-      }
-
-      const note = text(params?.text, 20000);
-      const table = params?.table ? normalizeNotebookResultTable(params.table) : null;
-      if (!note && !table) {
-        throw new Error('notebook.appendResult needs a "text" string, a "table" object, or both.');
-      }
-
-      const entry = entries[index];
-      const previousText = text(entry.resultText, 20000);
-      entries[index] = {
-        ...entry,
-        resultText: note
-          ? [previousText, note].filter(Boolean).join('\n\n')
-          : previousText,
-        resultTables: table
-          ? [...asArray(entry.resultTables), table]
-          : asArray(entry.resultTables)
-      };
-
-      state.notebookEntries = entries;
-      persist?.();
-      onNotebookEntriesChanged?.();
-      return { id: entryId, appendedText: Boolean(note), appendedTable: Boolean(table) };
-    }
-  }
-};
+import { asArray } from '../lib/normalize.js';
+import { PLUGIN_SAVE_TIMEOUT_MS, PROTOCOL_MARKER, buildPluginAppContext, text } from './plugin-bridge/helpers.js';
+import { VERBS } from './plugin-bridge/verbs.js';
 
 export function createPluginBridge({
   state,
   persist,
   onNotebookEntriesChanged,
-  windowObject = globalThis.window
+  onFrameHistoryChanged = null,
+  windowObject = globalThis.window,
+  api = windowObject?.hikariApi || null
 } = {}) {
   // contentWindow -> installed plugin record. Identity comes from the window
   // the message actually arrived from, never from anything inside the payload,
@@ -183,9 +21,104 @@ export function createPluginBridge({
     }
   }
 
+  function broadcast(eventName, payload = {}) {
+    const event = text(eventName, 80);
+    if (!event) {
+      return;
+    }
+    frames.forEach((_plugin, frameWindow) => {
+      frameWindow?.postMessage?.({
+        hikari: PROTOCOL_MARKER,
+        event,
+        payload
+      }, '*');
+    });
+  }
+
+  // Plugins that have reported unsaved work: id -> label. The host's quit guard
+  // (unsavedChangesService) reads this so a frame's in-progress work blocks the
+  // close the same way a built-in editor's does.
+  const unsavedPlugins = new Map();
+  const saveWaiters = new Map();
+  // frameWindow -> { canUndo, canRedo } as last reported by that frame.
+  const frameHistory = new Map();
+
+  function pluginHistory(frameWindow, history) {
+    if (!frameWindow) {
+      return;
+    }
+    frameHistory.set(frameWindow, history);
+    onFrameHistoryChanged?.(history);
+  }
+
+  // The history a frame reported, or null when that frame is not registered.
+  function getFrameHistory(frameWindow) {
+    if (!frameWindow || !frames.has(frameWindow)) {
+      return null;
+    }
+    return frameHistory.get(frameWindow) || null;
+  }
+
+  // Host -> plugin history command. One frame, not a broadcast: undo belongs to
+  // whichever frame the user is editing in.
+  function sendFrameHistoryCommand(frameWindow, command) {
+    const event = command === 'redo' ? 'app.redo' : 'app.undo';
+    if (!frameWindow || !frames.has(frameWindow)) {
+      return false;
+    }
+    frameWindow.postMessage?.({ hikari: PROTOCOL_MARKER, event, payload: {} }, '*');
+    return true;
+  }
+
+  function pluginUnsaved(plugin, unsaved) {
+    const id = text(plugin?.id, 200);
+    if (!id) {
+      return;
+    }
+    if (unsaved) {
+      unsavedPlugins.set(id, text(plugin.name, 200) || id);
+      return;
+    }
+    unsavedPlugins.delete(id);
+    (saveWaiters.get(id) || []).forEach((resolve) => resolve(true));
+    saveWaiters.delete(id);
+  }
+
+  // Asking a frame to save is a broadcast plus a wait for its next
+  // app.setUnsaved push — there is no request/reply in the host->plugin
+  // direction. A frame that never answers resolves false and the guard reports
+  // it, rather than hanging the quit.
+  function requestPluginSave(id) {
+    return new Promise((resolve) => {
+      const waiters = saveWaiters.get(id) || [];
+      waiters.push(resolve);
+      saveWaiters.set(id, waiters);
+      broadcast('app.save', { pluginId: id });
+      windowObject?.setTimeout?.(() => resolve(!unsavedPlugins.has(id)), PLUGIN_SAVE_TIMEOUT_MS);
+    });
+  }
+
+  function getUnsavedSources() {
+    return Array.from(unsavedPlugins.entries()).map(([id, label]) => ({
+      key: `plugin:${id}`,
+      label,
+      moduleApi: {
+        hasUnsavedChanges: () => unsavedPlugins.has(id),
+        saveUnsavedChanges: () => requestPluginSave(id)
+      }
+    }));
+  }
+
+  function broadcastAppContext(changed = '') {
+    broadcast('app.context', buildPluginAppContext(state, changed, windowObject));
+  }
+
   function handleMessage(event) {
     const request = event?.data;
-    if (!request || typeof request !== 'object' || request.hikari !== PROTOCOL_MARKER) {
+    if (!request
+      || typeof request !== 'object'
+      || request.hikari !== PROTOCOL_MARKER
+      || request.call) {
       return;
     }
     const plugin = frames.get(event.source);
@@ -201,6 +134,13 @@ export function createPluginBridge({
       reply({ ok: false, error: `Unknown verb "${text(request.verb, 80)}".` });
       return;
     }
+    if (
+      verb.internal
+      && (plugin.bundled !== true || plugin.id !== verb.bundledPluginId || plugin.path !== `@bundled/${plugin.id}`)
+    ) {
+      reply({ ok: false, error: `Unknown verb "${text(request.verb, 80)}".` });
+      return;
+    }
     if (verb.permission && !asArray(plugin.permissions).includes(verb.permission)) {
       reply({
         ok: false,
@@ -210,17 +150,55 @@ export function createPluginBridge({
     }
 
     try {
-      const params = request.params && typeof request.params === 'object' ? request.params : {};
-      reply({ ok: true, result: verb.handler(params, { state, persist, plugin, onNotebookEntriesChanged }) });
+      if (
+        request.params !== undefined
+        && (!request.params || typeof request.params !== 'object' || Array.isArray(request.params))
+      ) {
+        throw new Error(`Plugin call "${text(request.verb, 80)}" needs an object for params.`);
+      }
+      const params = request.params || {};
+      const result = verb.handler(params, {
+        state,
+        persist,
+        plugin,
+        onNotebookEntriesChanged,
+        api,
+        pluginUnsaved,
+        pluginHistory,
+        frameWindow: event.source,
+        windowObject
+      });
+      // Filesystem verbs are async; the rest stay synchronous so a reply still
+      // lands in the same turn as the request.
+      if (result && typeof result.then === 'function') {
+        result.then(
+          (resolved) => reply({ ok: true, result: resolved }),
+          (error) => reply({ ok: false, error: String(error?.message || error) })
+        );
+      } else {
+        reply({ ok: true, result });
+      }
     } catch (error) {
       reply({ ok: false, error: String(error?.message || error) });
     }
   }
 
   windowObject?.addEventListener?.('message', handleMessage);
-  return { register, handleMessage };
+  return {
+    register,
+    handleMessage,
+    broadcast,
+    broadcastAppContext,
+    getFrameHistory,
+    getUnsavedSources,
+    sendFrameHistoryCommand
+  };
 }
 
 export const PLUGIN_BRIDGE_VERBS = Object.freeze(
-  Object.fromEntries(Object.entries(VERBS).map(([name, verb]) => [name, verb.permission]))
+  Object.fromEntries(
+    Object.entries(VERBS)
+      .filter(([, verb]) => !verb.internal)
+      .map(([name, verb]) => [name, verb.permission])
+  )
 );

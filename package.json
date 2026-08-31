@@ -9,13 +9,18 @@
     "check:css-colors": "node scripts/check-css-colors.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",
-    "check:sample-registry-csv": "node tests/sample-registry-csv-io-selfcheck.mjs",
-    "check:window-guard": "node tests/window-guard-selfcheck.mjs",
-    "check:pdf-export-template": "node tests/pdf-export-template-selfcheck.mjs",
+    "lint": "eslint src scripts eslint.config.mjs",
+    "lint:tests": "eslint tests test.js",
+    "check:selfchecks": "fail=0; for f in tests/*-selfcheck.js tests/*-selfcheck.mjs; do node \"$f\" || fail=1; done; exit $fail",
     "extract:standard-features": "node scripts/extract-standard-features.mjs",
     "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
-    "test": "npm run build:ui && npm run check:css-colors && npm run check:dom-ids && npm run check:source-layout && npm run check:sample-registry-csv && npm run check:window-guard && npm run check:pdf-export-template && node test.js",
+    "test:checks": "fail=0; for c in lint check:css-colors check:dom-ids check:source-layout check:selfchecks; do npm run \"$c\" || fail=1; done; exit $fail",
+    "test:groups": "node test.js --list",
+    "test:core": "node test.js '^core/'",
+    "test:edge": "node test.js '^edge/'",
+    "test:only": "node test.js",
+    "test": "npm run build:ui || exit 1; fail=0; npm run test:checks || fail=1; node test.js || fail=1; exit $fail",
     "dist": "npm run build:ui && electron-forge make",
     "package:app": "npm run build:ui && electron-forge package",
     "package": "npm run build:ui && electron-forge package",
@@ -31,12 +36,12 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "electron": "^40.7.0",
+    "eslint": "^9.39.5",
     "onnxruntime-web": "^1.26.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "electron-squirrel-startup": "^1.0.1",
-    "telegraf": "^4.16.3",
     "zod": "^3.25.0"
   }
 }

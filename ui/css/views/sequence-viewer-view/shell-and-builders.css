@@ -1,0 +1,1590 @@
+/* sequence-viewer-view */
+
+body.sequence-viewer-fixed-scroll {
+  overflow: hidden;
+}
+
+body.sequence-viewer-fixed-scroll .app-shell {
+  height: 100vh;
+}
+
+body.sequence-viewer-fixed-scroll .workspace-shell,
+body.sequence-viewer-fixed-scroll .workspace-main,
+body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active,
+body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence-viewer-shell {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Extracted from ui/css/base/core.css */
+.sequence-viewer-shell {
+  display: grid;
+  gap: 12px;
+  min-height: 100%;
+  height: 100%;
+}
+
+.sequence-viewer-home-workspace {
+  min-height: 0;
+  height: 100%;
+}
+
+.sequence-viewer-home-layout {
+  --left-rail-main-gap: 20px;
+  height: 100%;
+  min-height: 100%;
+}
+
+.sequence-viewer-home-sidebar,
+.sequence-viewer-home-main {
+  min-height: 0;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar.left-rail-template__rail--pinned,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar.left-rail-template__rail--pinned,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar > .sequence-viewer-home-sidebar-pinned.left-rail-template__pinned,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar > .sequence-viewer-protein-builder-sidebar-pinned.left-rail-template__pinned,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar > .sequence-viewer-detail-sidebar-pinned.left-rail-template__pinned {
+  display: grid;
+  align-content: start;
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar > .sequence-viewer-home-sidebar-pinned.left-rail-template__pinned {
+  gap: 8px;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar > .sequence-viewer-home-sidebar-scroll.left-rail-template__scroll,
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar > .sequence-viewer-protein-builder-sidebar-scroll.left-rail-template__scroll,
+#sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar > .sequence-viewer-detail-sidebar-scroll.left-rail-template__scroll {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 8px var(--app-left-rail-padding-inline, 16px);
+  scrollbar-gutter: stable;
+}
+
+#sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar > .sequence-viewer-protein-builder-sidebar-scroll.left-rail-template__scroll {
+  gap: 0;
+}
+
+.sequence-viewer-rail-nav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 9px;
+  white-space: nowrap;
+}
+
+.sequence-viewer-icon-btn[hidden] {
+  display: none;
+}
+
+.sequence-viewer-icon-btn svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-button-caption {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-rail-nav-actions > .ghost-btn.sequence-viewer-icon-btn:focus-visible,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:hover,
+.sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-toolbar-menu-icon-btn {
+  width: auto;
+  padding-right: 19px;
+}
+
+.sequence-viewer-toolbar-menu-icon-btn::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 2.5px solid transparent;
+  border-right: 2.5px solid transparent;
+  border-top: 3.5px solid currentColor;
+  opacity: 0.7;
+  transform: translateY(-25%);
+}
+
+.sequence-viewer-inline-select {
+  display: inline-grid;
+  gap: 4px;
+  font-size: 0.76rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-inline-select select {
+  min-width: 180px;
+}
+
+.sequence-viewer-rail-nav-actions .small-note {
+  margin-left: 4px;
+}
+
+.sequence-viewer-home-sidebar-pinned > .sequence-viewer-rail-actions-section + .sequence-viewer-library-controls,
+.sequence-viewer-detail-sidebar-pinned > .sequence-viewer-rail-actions-section + .sequence-viewer-library-controls {
+  border-top: 0;
+}
+
+.sequence-viewer-home-sidebar-pinned > .sequence-viewer-rail-actions-section + .sequence-viewer-library-controls {
+  padding-top: 0;
+}
+
+.sequence-viewer-home-sidebar-pinned > .sequence-viewer-library-controls.left-rail-template__section {
+  gap: 8px;
+}
+
+.sequence-viewer-home-sidebar-pinned .sequence-viewer-library-search {
+  margin-top: 0;
+}
+
+.sequence-viewer-library-card {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sequence-viewer-preview-card {
+  margin: 0;
+  /* No card chrome around the map: the boundary only boxed it in, and dropping
+     it lets the map use the full column. */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sequence-viewer-library-switch {
+  display: inline-flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--theme-surface);
+  width: fit-content;
+  gap: 2px;
+}
+
+.sequence-viewer-library-switch-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sequence-viewer-library-switch-btn-active {
+  color: var(--theme-text-on-accent);
+  background: var(--theme-accent);
+}
+
+.sequence-viewer-library-list {
+  margin-top: 10px;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+}
+
+.sequence-viewer-library-folder-group {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sequence-viewer-library-folder-row {
+  color: var(--theme-text);
+}
+
+.sequence-viewer-library-folder-row.is-sequence-drop-target {
+  background: var(--hikari-left-rail-list-hover);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.sequence-viewer-library-folder-row.is-sequence-drop-target {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 58%, transparent);
+}
+
+.sequence-viewer-library-folder-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--theme-text-strong);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-viewer-library-folder-count {
+  color: var(--theme-text-muted);
+  font-size: 0.76rem;
+  line-height: 1;
+}
+
+.sequence-viewer-library-folder-empty {
+  margin: 0;
+  padding: 5px 8px 7px 42px;
+  color: var(--theme-text-muted);
+  font-size: 0.82rem;
+}
+
+.sequence-viewer-library-item {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  padding: 7px 8px;
+  display: block;
+  box-sizing: border-box;
+  cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.sequence-viewer-library-item[draggable="true"] {
+  user-select: none;
+}
+
+.sequence-viewer-library-item.is-dragging {
+  opacity: 0.58;
+}
+
+.sequence-viewer-library-item:hover {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+}
+
+.sequence-viewer-library-item-active {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-accent) 28%);
+  box-shadow: none;
+}
+
+.sequence-viewer-library-item-name {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 650;
+  color: var(--sequence-viewer-blue-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sequence-viewer-preview-host {
+  /* A definite height gives the map a viewport to fit into, so percentage
+     sizing works and zooming past 100% scrolls instead of stretching the card. */
+  height: calc(100vh - 150px);
+  min-height: 420px;
+  display: flex;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  overflow: auto;
+}
+
+.sequence-viewer-preview-host > .vector-map {
+  width: 100%;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane; margin:auto
+     centres it while it fits without clipping the top/left edge once it does
+     not. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.sequence-viewer-preview-host > .small-note {
+  margin: 0;
+  padding: 12px 0;
+}
+
+.sequence-viewer-library-search {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.sequence-viewer-protein-builder-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.sequence-viewer-protein-builder-toolbar {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+  background: transparent;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) auto;
+  align-items: center;
+  row-gap: 10px;
+  column-gap: var(--left-rail-main-gap, 24px);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  padding-left: var(--app-left-rail-padding-inline, 16px);
+}
+
+.sequence-viewer-protein-builder-toolbar-copy {
+  grid-column: 2;
+  display: grid;
+  gap: 6px;
+  max-width: 980px;
+}
+
+.sequence-viewer-protein-builder-toolbar-copy h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-toolbar-actions {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Keep the Protein Builder call to action distinct without putting a dark
+   block at the edge of the otherwise light workspace. */
+#sequence-viewer-protein-builder-assemble-btn {
+  border-color: color-mix(in srgb, var(--theme-accent) 46%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  color: var(--theme-text-strong);
+}
+
+#sequence-viewer-protein-builder-assemble-btn:hover,
+#sequence-viewer-protein-builder-assemble-btn:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 24%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-protein-builder-grid-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+}
+
+.sequence-viewer-protein-builder-grid {
+  height: 100%;
+  min-height: 0;
+  min-width: 980px;
+}
+
+.sequence-viewer-protein-builder-sidebar,
+.sequence-viewer-protein-builder-main {
+  display: grid;
+  min-height: 0;
+}
+
+.sequence-viewer-protein-builder-sidebar {
+  align-content: start;
+}
+
+.sequence-viewer-protein-builder-main {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0;
+  padding-right: 12px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sequence-viewer-protein-builder-panel {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.sequence-viewer-protein-builder-sidebar-scroll > .sequence-viewer-protein-builder-panel + .sequence-viewer-protein-builder-panel {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.sequence-viewer-protein-builder-main > .sequence-viewer-protein-builder-panel {
+  padding: 16px 0;
+}
+
+.sequence-viewer-protein-builder-main > .sequence-viewer-protein-builder-panel:first-child {
+  padding-top: 12px;
+}
+
+.sequence-viewer-protein-builder-main > .sequence-viewer-protein-builder-panel + .sequence-viewer-protein-builder-panel {
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.sequence-viewer-cloning-design-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-cloning-design-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-cloning-design-toolbar {
+  /* The shared left-rail track is painted by `.workspace-shell::before`, an
+     absolutely positioned strip that covers the first 280px of the workspace.
+     A static toolbar paints under it, so the back button — the only thing in
+     that column — disappears. Same lift as the protein builder toolbar. */
+  position: relative;
+  z-index: 1;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  align-items: center;
+  row-gap: 10px;
+  column-gap: var(--left-rail-main-gap, 24px);
+}
+
+.sequence-viewer-cloning-design-toolbar-nav {
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  padding-left: var(--app-left-rail-padding-inline, 16px);
+}
+
+.sequence-viewer-cloning-design-toolbar-main {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px 16px;
+  min-width: 0;
+}
+
+/* The toolbar shares the ghost-button surface (var(--theme-surface)), and in
+   some themes surface-subtle is nearly identical to it, so a default back
+   button blends in. Tint with the accent + an accent border so it always reads
+   as a button regardless of theme. */
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn:hover,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-cloning-design-toolbar-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-cloning-design-toolbar-copy h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-cloning-design-toolbar-actions {
+  flex: 0 0 auto;
+  justify-self: auto;
+}
+
+.sequence-viewer-cloning-design-grid {
+  min-height: 0;
+  align-items: start;
+}
+
+.sequence-viewer-cloning-design-sidebar,
+.sequence-viewer-cloning-design-main {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-cloning-design-sidebar {
+  align-content: start;
+}
+
+.sequence-viewer-cloning-design-main {
+  overflow-x: hidden;
+}
+
+.sequence-viewer-cloning-design-panel,
+.sequence-viewer-cloning-design-result-section {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+}
+
+.sequence-viewer-cloning-design-strategy-list {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn {
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn:hover {
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn-active {
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-cloning-design-edit-summary {
+  margin-top: 10px;
+}
+
+.sequence-viewer-cloning-design-edit-grid,
+.sequence-viewer-cloning-design-summary-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-cloning-design-edit-grid div,
+.sequence-viewer-cloning-design-summary-grid div {
+  display: grid;
+  gap: 3px;
+}
+
+.sequence-viewer-cloning-design-edit-grid strong,
+.sequence-viewer-cloning-design-summary-grid strong {
+  color: var(--theme-text-strong);
+  font-size: 0.75rem;
+}
+
+.sequence-viewer-cloning-design-edit-grid span,
+.sequence-viewer-cloning-design-summary-grid span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-seq,
+.sequence-viewer-cloning-design-primer-seq {
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.sequence-viewer-cloning-design-range-grid {
+  margin-top: 10px;
+}
+
+.sequence-viewer-cloning-design-result {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-cloning-design-result-section {
+  display: grid;
+  gap: 10px;
+}
+
+.sequence-viewer-cloning-design-plan-summary {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-cloning-design-summary-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.sequence-viewer-cloning-design-summary-rows {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-cloning-design-summary-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--theme-border-soft);
+  padding-top: 6px;
+  font-size: 0.84rem;
+}
+
+.sequence-viewer-cloning-design-primer-table-wrap {
+  overflow-x: auto;
+}
+
+.sequence-viewer-cloning-design-primer-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.sequence-viewer-cloning-design-primer-table th,
+.sequence-viewer-cloning-design-primer-table td {
+  border-bottom: 1px solid var(--theme-border-soft);
+  padding: 7px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.sequence-viewer-cloning-design-primer-table th {
+  color: var(--theme-text-strong);
+  font-weight: 700;
+}
+
+.sequence-viewer-primer-copy-cell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-cell-sequence {
+  width: 100%;
+}
+
+.sequence-viewer-primer-copy-value {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sequence-viewer-primer-copy-btn:hover,
+.sequence-viewer-primer-copy-btn:focus-visible {
+  border-color: var(--sequence-viewer-blue-border-strong);
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-primer-copy-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-cloning-design-procedure {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.sequence-viewer-cloning-design-procedure li {
+  padding-left: 4px;
+}
+
+.sequence-viewer-cloning-design-procedure strong {
+  color: var(--theme-text-strong);
+  display: block;
+}
+
+.sequence-viewer-cloning-design-procedure span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-enzyme-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.sequence-viewer-cloning-design-enzyme-list strong {
+  color: var(--theme-text-strong);
+  display: block;
+}
+
+.sequence-viewer-cloning-design-enzyme-list span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-warning {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-protein-builder-controls {
+  gap: 12px;
+}
+
+.sequence-viewer-protein-builder-common-blocks {
+  display: grid;
+  gap: 0;
+}
+
+.sequence-viewer-protein-builder-common-group {
+  display: grid;
+  gap: 0;
+}
+
+.sequence-viewer-protein-builder-common-fold {
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+  background: transparent;
+  padding: 10px 0;
+}
+
+.sequence-viewer-protein-builder-common-fold:last-child {
+  border-bottom: 0;
+}
+
+.sequence-viewer-protein-builder-common-fold summary {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-fold-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.sequence-viewer-protein-builder-common-fold .sequence-viewer-protein-builder-common-list {
+  margin-top: 8px;
+}
+
+.sequence-viewer-protein-builder-common-group h5 {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--theme-primary);
+}
+
+.sequence-viewer-protein-builder-common-list {
+  display: grid;
+  gap: 2px;
+}
+
+.sequence-viewer-protein-builder-common-item {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 7px 6px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.sequence-viewer-protein-builder-common-item:hover,
+.sequence-viewer-protein-builder-common-item:focus-visible {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+}
+
+.sequence-viewer-protein-builder-common-item-name {
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-builder-common-item-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-protein-builder-feature-controls {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-search-results {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  overflow: visible;
+}
+
+#sequence-viewer-protein-builder-feature-search-status:empty,
+#sequence-viewer-protein-builder-feature-search-results:empty {
+  display: none;
+}
+
+.sequence-viewer-protein-builder-feature-item {
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+  background: transparent;
+  padding: 10px 0;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-feature-item:last-child {
+  border-bottom: 0;
+}
+
+.sequence-viewer-protein-builder-feature-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sequence-viewer-protein-builder-feature-head strong {
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-feature-head .small-note {
+  margin: 2px 0 0;
+}
+
+#sequence-viewer-vector-builder-feature-replace-results .sequence-viewer-protein-builder-feature-item {
+  background: transparent;
+}
+
+.sequence-viewer-vector-builder-feature-use-btn {
+  flex: 0 0 auto;
+  align-self: center;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sequence-viewer-protein-builder-feature-sequence {
+  margin: 0;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: 0.79rem;
+  letter-spacing: 0;
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-workflow-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.sequence-viewer-protein-builder-workflow {
+  --builder-notch: 15px;
+  margin-top: 10px;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 14px 2px 10px 0;
+  scrollbar-gutter: stable;
+}
+
+/* N to C, left to right: the termini label the direction the chain reads. */
+.sequence-viewer-protein-builder-chain-rail {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: min-content;
+}
+
+.sequence-viewer-protein-builder-terminus {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-builder-chain {
+  display: flex;
+  align-items: stretch;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* The ribbon spans the panel so the blocks inside it are to scale with each
+     other. Below the blocks' minimum widths it scrolls instead of squashing. */
+  flex: 1 1 auto;
+  min-width: min-content;
+}
+
+.sequence-viewer-protein-builder-block {
+  display: grid;
+  /* The shape takes the row height so a block whose name wraps does not leave a
+     step in the ribbon. */
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 6px;
+  /* Width tracks the block's length in residues, so the ribbon is a map of the
+     construct: a 232 aa protein reads as the bulk of it and a 6 aa tag as a
+     sliver. The minimum keeps that sliver labelled rather than exact. */
+  flex-grow: var(--builder-block-aa, 1);
+  flex-shrink: 1;
+  flex-basis: 0;
+  min-width: 104px;
+}
+
+/* Each block's tail notch takes the point of the one before it, so the chain
+   reads as one ribbon rather than a row of separate arrows. */
+.sequence-viewer-protein-builder-block + .sequence-viewer-protein-builder-block {
+  margin-left: calc(var(--builder-notch) * -1);
+}
+
+.sequence-viewer-protein-builder-block-shape {
+  min-height: 62px;
+  height: 100%;
+  padding: 8px calc(var(--builder-notch) + 10px) 8px 12px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 1px;
+  background: var(--builder-block-fill, var(--theme-accent));
+  color: var(--theme-text-on-accent);
+  clip-path: polygon(0 0, calc(100% - var(--builder-notch)) 0, 100% 50%, calc(100% - var(--builder-notch)) 100%, 0 100%);
+}
+
+.sequence-viewer-protein-builder-block + .sequence-viewer-protein-builder-block .sequence-viewer-protein-builder-block-shape {
+  padding-left: calc(var(--builder-notch) + 12px);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--builder-notch)) 0,
+    100% 50%,
+    calc(100% - var(--builder-notch)) 100%,
+    0 100%,
+    var(--builder-notch) 50%
+  );
+}
+
+/* Short blocks keep a label and a length, and give up the type line: at a few
+   percent of the construct there is no room for all three. */
+.sequence-viewer-protein-builder-block-compact {
+  min-width: 88px;
+}
+
+/* The notch clearance is a big share of a narrow block, so a sliver keeps only
+   as much of it as the shape needs. */
+.sequence-viewer-protein-builder-block-compact .sequence-viewer-protein-builder-block-shape {
+  padding-right: calc(var(--builder-notch) + 2px);
+}
+
+.sequence-viewer-protein-builder-block + .sequence-viewer-protein-builder-block-compact .sequence-viewer-protein-builder-block-shape {
+  padding-left: calc(var(--builder-notch) + 4px);
+}
+
+.sequence-viewer-protein-builder-block-compact .sequence-viewer-protein-builder-block-type {
+  display: none;
+}
+
+/* One line, trimmed: a sliver breaking "6xHis" across two lines reads worse
+   than an ellipsis, and the full name is in the tooltip either way. */
+.sequence-viewer-protein-builder-block-compact .sequence-viewer-protein-builder-block-label {
+  font-size: 0.72rem;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.sequence-viewer-protein-builder-block-type {
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.72;
+  /* A narrow block trims its type rather than wrapping it; the tooltip has the
+     whole of it. */
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sequence-viewer-protein-builder-block-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  /* Two lines is the ceiling: a long stored-feature name must not set the
+     height of the whole ribbon. The full name stays in the tooltip. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.sequence-viewer-protein-builder-block-size {
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.82;
+  white-space: nowrap;
+}
+
+.sequence-viewer-protein-builder-block-tag {
+  --builder-block-fill: var(--sequence-viewer-builder-tag);
+}
+
+.sequence-viewer-protein-builder-block-linker {
+  --builder-block-fill: var(--sequence-viewer-builder-linker);
+}
+
+.sequence-viewer-protein-builder-block-cleavage {
+  --builder-block-fill: var(--sequence-viewer-builder-cleavage);
+}
+
+.sequence-viewer-protein-builder-block-feature {
+  --builder-block-fill: var(--sequence-viewer-builder-feature);
+}
+
+.sequence-viewer-protein-builder-block-custom {
+  --builder-block-fill: var(--sequence-viewer-builder-custom);
+}
+
+.sequence-viewer-protein-builder-block-poi {
+  --builder-block-fill: var(--sequence-viewer-builder-poi);
+}
+
+/* The controls belong to the block being pointed at, so they stay out of the
+   ribbon until it is hovered or a button inside takes focus. */
+.sequence-viewer-protein-builder-block-actions {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  margin-left: calc(var(--builder-notch) * -1 / 2);
+  opacity: 0;
+  transition: opacity 120ms ease-in-out;
+}
+
+.sequence-viewer-protein-builder-block:hover .sequence-viewer-protein-builder-block-actions,
+.sequence-viewer-protein-builder-block:focus-within .sequence-viewer-protein-builder-block-actions {
+  opacity: 1;
+}
+
+.sequence-viewer-protein-builder-icon-btn {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sequence-viewer-protein-builder-icon-btn:hover,
+.sequence-viewer-protein-builder-icon-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-icon-btn-remove:hover,
+.sequence-viewer-protein-builder-icon-btn-remove:focus-visible {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-protein-builder-custom-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-sequence-panel .sequence-block {
+  min-height: 136px;
+  max-height: 220px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 10px 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-protein-builder-sequence-text {
+  display: block;
+  width: 100%;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.sequence-viewer-protein-builder-dna-notes {
+  margin-top: 10px;
+}
+
+.sequence-viewer-detail-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+
+#sequence-viewer-protein-builder-confirmation:not([hidden]) {
+  grid-row: 1;
+  margin-bottom: 12px;
+}
+
+#sequence-viewer-detail-view.view.is-active {
+  display: grid;
+  min-height: 0;
+  height: 100%;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template {
+  --left-rail-main-gap: 20px;
+  grid-row: 2;
+  align-items: stretch;
+  min-height: 0;
+  height: 100%;
+}
+
+.sequence-viewer-detail-sidebar,
+.sequence-viewer-detail-main {
+  min-height: 0;
+}
+
+.sequence-viewer-detail-sidebar {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.sequence-viewer-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-main.left-rail-template__main {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+  padding-left: var(--left-rail-main-gap);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-sidebar.left-rail-template__rail {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
+}
+
+.sequence-viewer-protein-builder-confirmation {
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 26%, var(--theme-border) 74%);
+  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-accent) 18%);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(260px, auto) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.sequence-viewer-protein-builder-confirmation[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy,
+.sequence-viewer-protein-builder-confirmation-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-protein-builder-confirmation-copy h4,
+.sequence-viewer-protein-builder-confirmation-copy p,
+.sequence-viewer-protein-builder-confirmation-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-protein-builder-confirmation-summary {
+  font-size: 0.83rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-builder-confirmation-actions {
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sequence-viewer-backbone-dialog-overlay,
+.sequence-viewer-alignment-workspace {
+  position: fixed;
+  inset: 0;
+  z-index: 2540;
+  background: var(--sequence-viewer-overlay);
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
+  overflow: auto;
+}
+
+.sequence-viewer-backbone-dialog-overlay[hidden],
+.sequence-viewer-alignment-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-backbone-dialog {
+  width: min(1180px, 100%);
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.sequence-viewer-backbone-dialog-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-head h4,
+.sequence-viewer-backbone-dialog-head p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-mode-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sequence-viewer-backbone-dialog-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  align-items: start;
+}
+
+.sequence-viewer-backbone-dialog-panel {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog-candidates {
+  display: grid;
+  gap: 8px;
+  max-height: min(62vh, 720px);
+  overflow: auto;
+}
+
+.sequence-viewer-backbone-dialog-candidate {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  border-radius: 10px;
+  padding: 11px 12px;
+  display: grid;
+  gap: 5px;
+}
+
+.sequence-viewer-backbone-dialog-candidate-active {
+  border-color: var(--sequence-viewer-alert-border);
+  box-shadow: inset 0 0 0 1px var(--sequence-viewer-alert-ring);
+  background: var(--sequence-viewer-alert-surface);
+}
+
+.sequence-viewer-backbone-dialog-candidate-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-backbone-dialog-candidate-meta,
+.sequence-viewer-backbone-dialog-candidate-note {
+  font-size: 0.8rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-backbone-dialog-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-backbone-dialog-summary p {
+  margin: 0;
+}
+
+.sequence-viewer-backbone-dialog-preview {
+  min-height: 560px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 12px;
+  background: var(--theme-surface-subtle);
+  overflow: hidden;
+}
+
+.sequence-viewer-backbone-dialog-preview > .vector-map {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+}
+
+.sequence-viewer-alignment-dialog {
+  position: relative;
+  width: min(760px, 100%);
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.sequence-viewer-alignment-panel {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.sequence-viewer-alignment-record-wrap {
+  display: grid;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-alignment-record-wrap[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-alignment-actions {
+  align-items: center;
+}
+
+.sequence-viewer-controls {
+  padding: 12px 0;
+}
+
+.sequence-viewer-hidden-control[hidden],
+.sequence-viewer-detail-input-switch[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-mode-switch {
+  display: inline-flex;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  padding: 3px;
+  background: var(--theme-surface);
+  width: fit-content;
+  gap: 2px;
+}
+
+.sequence-viewer-mode-btn {
+  border: 0;
+  border-radius: 6px;
+  padding: 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sequence-viewer-mode-btn-active {
+  color: var(--theme-text-on-accent);
+  background: var(--theme-accent);
+}
+
+.sequence-viewer-input-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-input-panel[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-inline-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-ink);
+  user-select: none;
+}
+
+.sequence-viewer-inline-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--theme-accent);
+}
+
+.sequence-viewer-inline-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--sequence-viewer-control-ink);
+}
+
+.sequence-viewer-inline-select select {
+  border-radius: 6px;
+  border: 1px solid var(--sequence-viewer-control-border);
+  background: var(--sequence-viewer-control-surface);
+  color: inherit;
+  font: inherit;
+  padding: 4px 10px;
+}
+
+.sequence-viewer-inline-toggle-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sequence-viewer-inline-toggle-group-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sequence-viewer-blue-muted);
+  letter-spacing: 0;
+}
+
+.sequence-viewer-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.sequence-viewer-context-menu.sequence-viewer-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  gap: 8px;
+}
+
+/* Inside dropdowns the toggles read as a list, one per row, not a wrapped grid. */
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle {
+  display: flex;
+  width: 100%;
+}

@@ -1,9 +1,9 @@
 import { ensureDashboardState, quickLogId } from './utils.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 // Quick-log + dashboard quick actions widget. Persists a free-text bench
-// note draft as the user types, lets them either save it locally or hand
-// it off to the assistant agent, and wires the four "open X view" quick
-// action buttons that live next to the log card.
+// note draft as the user types, lets users save it locally or hand it off
+// to the assistant, and wires the nearby "open X view" quick actions.
 export function initQuickLogWidget({
   state,
   persist,
@@ -21,8 +21,7 @@ export function initQuickLogWidget({
     quickLogStatus,
     quickLogSaveBtn,
     quickLogAgentBtn,
-    quickActionButtons,
-    quickLogChips = []
+    quickActionButtons
   } = elements;
 
   quickLogInput.addEventListener('input', onQuickLogInput);
@@ -32,28 +31,6 @@ export function initQuickLogWidget({
   quickActionButtons.forEach((button) => {
     button.addEventListener('click', onQuickActionClick);
   });
-  quickLogChips.forEach((chip) => {
-    chip.addEventListener('click', () => insertChipPrefix(chip.dataset.dashboardQuicklogChip));
-  });
-
-  function insertChipPrefix(label) {
-    const prefix = String(label || '').trim();
-    if (!prefix) {
-      return;
-    }
-    const current = String(quickLogInput.value || '');
-    const base = current.trim() ? `${current.replace(/\s+$/, '')}\n` : '';
-    quickLogInput.value = `${base}${prefix}: `;
-    ensureDashboardState(state);
-    state.settings.dashboard.quickLogDraft = quickLogInput.value;
-    persist();
-    quickLogInput.focus();
-    const caret = quickLogInput.value.length;
-    quickLogInput.setSelectionRange(caret, caret);
-    quickLogSaveBtn.disabled = false;
-    quickLogAgentBtn.disabled = false;
-    setQuickLogStatus('Draft saved locally.');
-  }
 
   function syncQuickLogInput() {
     const draft = String(state.settings.dashboard.quickLogDraft || '');
@@ -170,6 +147,7 @@ export function initQuickLogWidget({
     render();
     if (sent === false) {
       setQuickLogStatus('Logged locally. Assistant handoff unavailable.');
+      showTransientNotice('Logged locally. Assistant handoff unavailable.', { type: 'error' });
       return;
     }
     setQuickLogStatus('Logged and sent to Assistant.');

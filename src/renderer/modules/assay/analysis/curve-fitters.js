@@ -181,6 +181,8 @@ export function fitSigmoidCurve(points, { asymmetric = false } = {}) {
     modelLabel,
     equation,
     parameters,
+    // Raw fitted params so callers can derive EC50/IC50 from `mid` and the `hill` sign.
+    params: fitted,
     predict
   };
 }

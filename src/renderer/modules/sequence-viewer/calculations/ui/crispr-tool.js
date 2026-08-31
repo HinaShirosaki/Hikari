@@ -1,11 +1,13 @@
 import { escapeHtml } from '../../../../lib/html.js';
 import { clampNumber } from '../../../../lib/numbers.js';
+import { renderPrimerCopyButton, copyPrimerValueFromEvent } from '../../primer-copy.js';
 import {
-  CRISPR_REFERENCE_GENOMES,
   normalizeIupacPattern,
   parseCrisprTargetsInput,
-  designCrisprGuides
+  designCrisprGuides,
+  buildCrisprGuideTsv
 } from '../crispr.js';
+import { showTransientNotice } from '../../../../lib/notify.js';
 
 function formatPercent(value, digits = 1) {
   if (!Number.isFinite(value)) {
@@ -21,8 +23,6 @@ export function initCrisprTool(options = {}) {
   }
 
   const crisprForm = rootDocument.getElementById('crispr-form');
-  const crisprReferenceGenomeSelect = rootDocument.getElementById('crispr-reference-genome');
-  const crisprReferenceNote = rootDocument.getElementById('crispr-reference-note');
   const crisprPamPatternSelect = rootDocument.getElementById('crispr-pam-pattern');
   const crisprGuideLengthInput = rootDocument.getElementById('crispr-guide-length');
   const crisprTopCountInput = rootDocument.getElementById('crispr-top-count');
@@ -35,54 +35,33 @@ export function initCrisprTool(options = {}) {
   const crisprClearBtn = rootDocument.getElementById('crispr-clear-btn');
   const crisprResultSummary = rootDocument.getElementById('crispr-result-summary');
   const crisprTableBody = rootDocument.getElementById('crispr-table-body');
+  const crisprRunBtn = rootDocument.getElementById('crispr-run-btn');
+  const crisprCopyTsvBtn = rootDocument.getElementById('crispr-copy-tsv-btn');
 
   if (!crisprForm || !crisprTargetInput || !crisprTargetSelect || !crisprTableBody) {
     return;
   }
 
   const crisprState = {
-    targets: []
+    targets: [],
+    candidates: []
   };
+  let parseDebounceId = null;
+
+  function setCrisprCandidates(candidates = []) {
+    crisprState.candidates = candidates;
+    if (crisprCopyTsvBtn) {
+      crisprCopyTsvBtn.disabled = !candidates.length;
+    }
+  }
 
   function setCrisprTableMessage(message = 'No sgRNA candidates yet.') {
+    setCrisprCandidates([]);
     crisprTableBody.innerHTML = `
       <tr>
         <td colspan="12" class="small-note">${escapeHtml(message)}</td>
       </tr>
     `;
-  }
-
-  function getSelectedCrisprReferenceGenome() {
-    const fallback = CRISPR_REFERENCE_GENOMES[0];
-    const selectedId = crisprReferenceGenomeSelect?.value || fallback.id;
-    return CRISPR_REFERENCE_GENOMES.find((genome) => genome.id === selectedId) || fallback;
-  }
-
-  function updateCrisprReferenceNote() {
-    if (!crisprReferenceNote) {
-      return;
-    }
-    const genome = getSelectedCrisprReferenceGenome();
-    crisprReferenceNote.textContent = genome?.note || 'Reference genome profile not selected.';
-  }
-
-  function populateCrisprReferenceGenomeOptions() {
-    if (!crisprReferenceGenomeSelect || !CRISPR_REFERENCE_GENOMES.length) {
-      return;
-    }
-
-    const current = crisprReferenceGenomeSelect.value;
-    crisprReferenceGenomeSelect.innerHTML = CRISPR_REFERENCE_GENOMES
-      .map((genome) => `<option value="${genome.id}">${escapeHtml(genome.label)}</option>`)
-      .join('');
-
-    if (current && CRISPR_REFERENCE_GENOMES.some((genome) => genome.id === current)) {
-      crisprReferenceGenomeSelect.value = current;
-    } else {
-      crisprReferenceGenomeSelect.value = CRISPR_REFERENCE_GENOMES[0].id;
-    }
-
-    updateCrisprReferenceNote();
   }
 
   function getSelectedCrisprTargets() {
@@ -143,7 +122,7 @@ export function initCrisprTool(options = {}) {
   }
 
   function renderCrisprDesignResults(result, context) {
-    const { guideLength, pamPattern, referenceGenome } = context;
+    const { guideLength, pamPattern } = context;
     const warnings = [];
     if (result.truncatedCandidates) {
       warnings.push('Only the highest on-target guides were fully off-target scored for performance.');
@@ -158,7 +137,6 @@ export function initCrisprTool(options = {}) {
         : 'No PAM-matching guides were found for the selected targets.';
       if (crisprResultSummary) {
         crisprResultSummary.innerHTML = `
-          <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
           <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
           <p><strong>PAM-matching guides:</strong> ${result.totalPamMatches.toLocaleString()}</p>
           <p class="small-note">${escapeHtml(noCandidateMessage)}</p>
@@ -180,12 +158,12 @@ export function initCrisprTool(options = {}) {
           <td>${escapeHtml(candidate.targetName)}</td>
           <td>${candidate.start.toLocaleString()}-${candidate.end.toLocaleString()}</td>
           <td>${candidate.strand}</td>
-          <td><span class="crispr-guide-seq">${escapeHtml(candidate.guideSequence)}</span></td>
+          <td><span class="crispr-guide-seq">${escapeHtml(candidate.guideSequence)}</span>${renderPrimerCopyButton(candidate.guideSequence, 'sequence', 'guide sequence')}</td>
           <td><span class="crispr-guide-seq">${escapeHtml(candidate.pamSequence)}</span></td>
           <td>${candidate.gcPercent.toFixed(1)}%</td>
           <td>${candidate.onTargetScore.toFixed(1)}</td>
           <td><span class="crispr-risk-badge ${riskClass}">${formatPercent(offTargetRate, 2)}</span></td>
-          <td>${candidate.specificityScore.toFixed(1)}</td>
+          <td>${candidate.totalScore.toFixed(1)}</td>
           <td>${candidate.mismatchCounts.exact}/${candidate.mismatchCounts.mismatch1}/${candidate.mismatchCounts.mismatch2}/${candidate.mismatchCounts.mismatch3}</td>
           <td>${escapeHtml(notes)}</td>
         </tr>
@@ -193,10 +171,10 @@ export function initCrisprTool(options = {}) {
     }).join('');
 
     crisprTableBody.innerHTML = tableRows;
+    setCrisprCandidates(result.candidates);
 
     if (crisprResultSummary) {
       crisprResultSummary.innerHTML = `
-        <p><strong>Reference genome:</strong> ${escapeHtml(referenceGenome.label)}</p>
         <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
         <p><strong>Guides evaluated:</strong> ${result.evaluatedCandidateCount.toLocaleString()} / ${result.filteredCandidateCount.toLocaleString()} filtered candidates (${result.totalPamMatches.toLocaleString()} PAM-matching guides detected)</p>
         <p><strong>Background sites scanned:</strong> ${result.scannedBackgroundSiteCount.toLocaleString()} / ${result.backgroundSiteCount.toLocaleString()}</p>
@@ -205,7 +183,7 @@ export function initCrisprTool(options = {}) {
     }
   }
 
-  function runCrisprDesign() {
+  async function runCrisprDesign() {
     const selectedTargets = getSelectedCrisprTargets();
     if (!selectedTargets.length) {
       if (crisprResultSummary) {
@@ -215,7 +193,30 @@ export function initCrisprTool(options = {}) {
       return;
     }
 
-    const referenceGenome = getSelectedCrisprReferenceGenome();
+    if (crisprRunBtn) {
+      crisprRunBtn.disabled = true;
+      crisprRunBtn.textContent = 'Designing...';
+    }
+    // The scan is synchronous, so yield one tick to let the busy label paint before it blocks.
+    await new Promise((resolve) => { setTimeout(resolve, 0); });
+
+    try {
+      designAndRenderCrispr(selectedTargets);
+    } catch (error) {
+      const message = `Design failed: ${error?.message || 'unexpected error'}`;
+      if (crisprResultSummary) {
+        crisprResultSummary.textContent = message;
+      }
+      setCrisprTableMessage(message);
+    } finally {
+      if (crisprRunBtn) {
+        crisprRunBtn.disabled = false;
+        crisprRunBtn.textContent = 'Design sgRNAs';
+      }
+    }
+  }
+
+  function designAndRenderCrispr(selectedTargets) {
     const guideLength = Math.round(clampNumber(crisprGuideLengthInput?.value, 18, 24, 20));
     const topCount = Math.round(clampNumber(crisprTopCountInput?.value, 1, 100, 12));
     let minGc = clampNumber(crisprMinGcInput?.value, 0, 100, 35);
@@ -232,32 +233,52 @@ export function initCrisprTool(options = {}) {
       pamPattern,
       minGc,
       maxGc,
-      topCount,
-      genomeMultiplier: referenceGenome.offTargetMultiplier || 1
+      topCount
     });
 
     renderCrisprDesignResults(result, {
       guideLength,
-      pamPattern,
-      referenceGenome
+      pamPattern
     });
   }
 
-  populateCrisprReferenceGenomeOptions();
   refreshCrisprTargets(true);
   setCrisprTableMessage('No sgRNA candidates yet.');
 
-  crisprReferenceGenomeSelect?.addEventListener('change', () => {
-    updateCrisprReferenceNote();
+  // Debounced: re-parsing a large pasted FASTA on every keystroke makes typing lag.
+  crisprTargetInput.addEventListener('input', () => {
+    clearTimeout(parseDebounceId);
+    parseDebounceId = setTimeout(() => {
+      refreshCrisprTargets();
+      if (!crisprTargetInput.value.trim()) {
+        if (crisprResultSummary) {
+          crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+        }
+        setCrisprTableMessage('No sgRNA candidates yet.');
+      }
+    }, 200);
   });
 
-  crisprTargetInput.addEventListener('input', () => {
-    refreshCrisprTargets();
-    if (!crisprTargetInput.value.trim()) {
-      if (crisprResultSummary) {
-        crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
-      }
-      setCrisprTableMessage('No sgRNA candidates yet.');
+  crisprTableBody.addEventListener('click', (event) => {
+    copyPrimerValueFromEvent(event, { navigatorRef: options?.navigatorRef });
+  });
+
+  crisprCopyTsvBtn?.addEventListener('click', async () => {
+    if (!crisprState.candidates.length) {
+      return;
+    }
+    const clipboard = options?.navigatorRef?.clipboard || globalThis.navigator?.clipboard;
+    if (!clipboard?.writeText) {
+      return;
+    }
+    try {
+      await clipboard.writeText(buildCrisprGuideTsv(crisprState.candidates));
+      crisprCopyTsvBtn.textContent = 'Copied';
+      setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
+    } catch {
+      crisprCopyTsvBtn.textContent = 'Copy failed';
+      showTransientNotice('Could not copy the sgRNA table to the clipboard.', { type: 'error' });
+      setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
     }
   });
 

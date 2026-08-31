@@ -10,188 +10,10 @@ function registerAgentLogHandlers({
   getAgentChatLogPath,
   getAgentChatSessionStoragePath,
   agentToolRuntime,
-  agentToolSmokeTestRuntime,
-  codexAgentRuntime,
-  protocolGenerationRuntime,
-  controllerUtils,
+  runAgentController,
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
-
-  function normalizeProtocolGenerationEditorDraft(rawDraft) {
-    const source = rawDraft && typeof rawDraft === 'object'
-      ? rawDraft
-      : {};
-    return {
-      title: cleanText(source?.title || source?.name, 220),
-      purpose: cleanText(source?.purpose, 600),
-      method_text: cleanText(source?.methodText || source?.method_text, 12000),
-      materials: asArray(source?.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 80),
-      steps: asArray(source?.steps).map((item) => cleanText(item, 2000)).filter(Boolean).slice(0, 120),
-      troubleshooting: cleanText(source?.troubleshooting, 2400)
-    };
-  }
-
-  function summarizeAttachments(payloadAttachments = []) {
-    return asArray(payloadAttachments).map((attachment) => {
-      const source = attachment && typeof attachment === 'object' ? attachment : {};
-      return {
-        id: cleanText(source.id, 120),
-        name: cleanText(source.name, 240),
-        mime_type: cleanText(source.mimeType || source.mime_type, 160),
-        kind: cleanText(source.kind, 40),
-        size: Number.isFinite(Number(source.size)) ? Number(source.size) : 0
-      };
-    }).filter((attachment) => attachment.name);
-  }
-
-  function buildPromptConversation({ payload, message }) {
-    const conversation = typeof controllerUtils.extractConversation === 'function'
-      ? controllerUtils.extractConversation(payload?.conversation)
-      : asArray(payload?.conversation).map((entry) => ({
-        role: entry?.role === 'assistant' ? 'assistant' : 'user',
-        text: cleanText(entry?.text || entry?.content || entry?.message, 2500)
-      })).filter((entry) => entry.text);
-    const hasLatestUserInConversation = Boolean(
-      conversation.length > 0
-      && conversation[conversation.length - 1].role === 'user'
-      && conversation[conversation.length - 1].text === message
-    );
-    return hasLatestUserInConversation
-      ? conversation
-      : [...conversation, { role: 'user', text: message }];
-  }
-
-  function buildDeveloperContextPreview(normalizedPayload = {}) {
-    const rawSnapshot = normalizeJsonPayload(normalizedPayload?.stateSnapshot, {});
-    const snapshot = typeof agentToolRuntime.normalizeAgentSnapshot === 'function'
-      ? agentToolRuntime.normalizeAgentSnapshot(rawSnapshot)
-      : rawSnapshot;
-    const message = cleanText(normalizedPayload?.message, 3000);
-    const workspaceDir = process.cwd();
-    const skillRuntimeInput = {
-      workspaceDir,
-      settings: rawSnapshot?.settings || {},
-      snapshot: rawSnapshot,
-      agent: normalizedPayload?.agent && typeof normalizedPayload.agent === 'object'
-        ? normalizedPayload.agent
-        : {}
-    };
-    const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
-      ? agentToolRuntime.parseSkillInvocation(message, skillRuntimeInput)
-      : {
-        type: 'none',
-        active_skill_names: [],
-        cleaned_message: message
-      };
-    const effectiveMessage = cleanText(
-      skillInvocation?.type === 'skill_prompt'
-        ? skillInvocation.cleaned_message
-        : message,
-      3000
-    ) || message;
-    const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
-      ? agentToolRuntime.buildSkillsPromptPayload({
-        ...skillRuntimeInput,
-        workspaceDir,
-        activeSkillNames: asArray(skillInvocation?.active_skill_names)
-      })
-      : {
-        skills_catalog_prompt: '',
-        active_skills_prompt: ''
-      };
-    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
-      ? controllerUtils.resolveAgentLlmSource(normalizedPayload?.llm)
-      : {
-        provider: cleanText(normalizedPayload?.llm?.provider, 80),
-        endpoint: cleanText(normalizedPayload?.llm?.apiEndpoint || normalizedPayload?.llm?.endpoint, 2000),
-        apiKey: cleanText(normalizedPayload?.llm?.apiKey, 400),
-        model: cleanText(normalizedPayload?.llm?.model, 120)
-      };
-    const provider = cleanText(llmSource?.provider, 80);
-    const model = cleanText(llmSource?.model, 120);
-    const projectId = cleanText(normalizedPayload?.projectId || normalizedPayload?.project_id, 120);
-    const projectName = cleanText(normalizedPayload?.projectName || normalizedPayload?.project_name, 220);
-    const promptConversation = buildPromptConversation({
-      payload: normalizedPayload,
-      message: effectiveMessage
-    });
-    const attachments = summarizeAttachments(normalizedPayload?.attachments);
-    const agentFlags = {
-      developerMode: normalizedPayload?.agent?.developerMode === true
-    };
-    const llmSummary = typeof controllerUtils.summarizeLlmForAgentLog === 'function'
-      ? controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
-      : {
-        provider,
-        model,
-        endpoint: cleanText(llmSource?.endpoint, 2000),
-        hasApiKey: Boolean(cleanText(llmSource?.apiKey, 400))
-      };
-    const codexPrompt = codexAgentRuntime
-      && typeof codexAgentRuntime.buildPrompt === 'function'
-      ? codexAgentRuntime.buildPrompt({
-        provider,
-        model,
-        reasoningEffort: cleanText(normalizedPayload?.llm?.reasoningEffort, 40).toLowerCase(),
-        message: effectiveMessage,
-        conversation: promptConversation,
-        attachments: asArray(normalizedPayload?.attachments),
-        snapshot,
-        executionFlags: {
-          developerMode: agentFlags.developerMode
-        },
-        projectId,
-        projectName,
-        skillPromptPayload,
-        selectionInsight: normalizedPayload?.agent?.selectionInsight || normalizedPayload?.selectionInsight || null
-      })
-      : '';
-
-    return {
-      ok: true,
-      updated_at: new Date().toISOString(),
-      provider,
-      model,
-      project: {
-        id: projectId,
-        name: projectName
-      },
-      request: {
-        message: effectiveMessage,
-        original_message: message,
-        conversation: promptConversation,
-        attachments
-      },
-      prompt: {
-        kind: 'codex_agent_prompt',
-        system_prompt: codexPrompt,
-        skills_catalog_prompt: cleanText(skillPromptPayload.skills_catalog_prompt, 16000),
-        active_skills_prompt: cleanText(skillPromptPayload.active_skills_prompt, 24000)
-      },
-      skill_invocation: {
-        type: cleanText(skillInvocation?.type, 80),
-        active_skill_names: asArray(skillInvocation?.active_skill_names).map((item) => cleanText(item, 160)).filter(Boolean),
-        command_name: cleanText(skillInvocation?.command_name, 80),
-        skill_name: cleanText(skillInvocation?.skill?.name, 160)
-      },
-      mcp_context: {
-        provider: 'codex',
-        model,
-        cwd: workspaceDir,
-        message: cleanText(effectiveMessage, 3200),
-        conversation: promptConversation.slice(-12),
-        project: {
-          id: projectId,
-          name: projectName
-        },
-        dataFilePath: cleanText(snapshot?.data_file_path || snapshot?.dataFilePath, 2000)
-      },
-      llm: llmSummary,
-      agent: agentFlags,
-      state_snapshot: snapshot
-    };
-  }
 
   function resolveExternalSkillsEnabled(normalizedPayload = {}, rawSnapshot = {}) {
     const agentSettings = rawSnapshot?.settings?.agent && typeof rawSnapshot.settings.agent === 'object'
@@ -345,148 +167,57 @@ function registerAgentLogHandlers({
     }
   });
 
-  ipcMain.handle(AGENT.DEVELOPER_CONTEXT_PREVIEW, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    const executionFlags = controllerUtils.resolveAgentExecutionFlags(
-      normalizedPayload,
-      normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})
-    );
-    if (executionFlags.developerMode !== true) {
-      return {
-        ok: false,
-        status: 'error',
-        summary: 'Agent developer mode must be enabled to inspect agent-visible context.',
-        error: 'Agent developer mode must be enabled to inspect agent-visible context.'
-      };
-    }
-
-    try {
-      return buildDeveloperContextPreview(normalizedPayload);
-    } catch (error) {
-      const message = cleanText(error?.message || error, 600) || 'Failed to build agent-visible context preview.';
-      return {
-        ok: false,
-        status: 'error',
-        summary: message,
-        error: message
-      };
-    }
-  });
-
-  ipcMain.handle(AGENT.DEVELOPER_TEST_TOOLS, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    const executionFlags = controllerUtils.resolveAgentExecutionFlags(
-      normalizedPayload,
-      normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})
-    );
-    if (executionFlags.developerMode !== true) {
-      return {
-        ok: false,
-        status: 'error',
-        tool_count: 0,
-        passed_count: 0,
-        failed_count: 0,
-        items: [],
-        summary: 'Agent developer mode must be enabled to run manual tool smoke tests.',
-        error: 'Agent developer mode must be enabled to run manual tool smoke tests.'
-      };
-    }
-
-    try {
-      const toolName = cleanText(normalizedPayload?.toolName || normalizedPayload?.tool_name, 120);
-      const requestMessage = cleanText(normalizedPayload?.message, 3000);
-      if (toolName) {
-        return await agentToolSmokeTestRuntime.runTool({
-          toolName,
-          message: requestMessage,
-          stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
-          projectId: cleanText(normalizedPayload?.projectId, 80),
-          projectName: cleanText(normalizedPayload?.projectName, 180)
-        });
-      }
-      return await agentToolSmokeTestRuntime.runAllTools({
-        stateSnapshot: agentToolRuntime.normalizeAgentSnapshot(normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})),
-        projectId: cleanText(normalizedPayload?.projectId, 80),
-        projectName: cleanText(normalizedPayload?.projectName, 180)
-      });
-    } catch (error) {
-      const message = cleanText(error?.message || error, 600) || 'Manual tool smoke test failed.';
-      return {
-        ok: false,
-        status: 'error',
-        tool_count: 0,
-        passed_count: 0,
-        failed_count: 0,
-        items: [],
-        summary: message,
-        error: message
-      };
-    }
-  });
-
   ipcMain.handle(AGENT.GENERATE_PROTOCOL, async (_event, payload) => {
-    if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
+    if (typeof runAgentController !== 'function') {
       return {
         ok: false,
-        error: 'Protocol generation runtime is unavailable.'
+        error: 'Codex agent runtime is unavailable.'
       };
     }
 
     const normalizedPayload = normalizeJsonPayload(payload, {});
-    const editorDraft = normalizeProtocolGenerationEditorDraft(normalizedPayload?.editorDraft);
-    const requestMessage = cleanText(normalizedPayload?.message, 3000);
-    const protocolJson = cleanText(normalizedPayload?.protocolJson || normalizedPayload?.protocol_json, 200000);
-    const resultSummary = cleanText(
-      normalizedPayload?.resultSummary || normalizedPayload?.result_summary || requestMessage,
-      3000
-    );
-    const hasEditorContext = Boolean(
-      editorDraft.title
-      || editorDraft.purpose
-      || editorDraft.method_text
-      || editorDraft.materials.length
-      || editorDraft.steps.length
-      || editorDraft.troubleshooting
-    );
-    if (!protocolJson && !requestMessage && !hasEditorContext) {
+    const message = cleanText(normalizedPayload?.message, 24000);
+    if (!message) {
       return {
         ok: false,
-        error: 'Provide protocol JSON or editor protocol content before preparing a protocol.'
+        error: 'Provide a protocol request before starting the Codex agent.'
       };
     }
 
-    try {
-      const result = await protocolGenerationRuntime.generateProtocol({
-        ...(hasEditorContext ? {
-          protocol: {
-            name: editorDraft.title,
-            purpose: editorDraft.purpose,
-            materials: editorDraft.materials,
-            steps: editorDraft.steps,
-            troubleshooting: editorDraft.troubleshooting
-          }
-        } : {
-          protocol_json: protocolJson || requestMessage
-        }),
-        result_summary: resultSummary
-      });
+    const llm = {
+      ...normalizeJsonPayload(normalizedPayload?.llm, {}),
+      provider: 'codex',
+      apiEndpoint: '',
+      apiKey: ''
+    };
 
-      if (!result?.ok || !result.protocol) {
+    try {
+      const result = await runAgentController({
+        ...normalizedPayload,
+        message,
+        llm,
+        allowWriteTools: true
+      });
+      const protocolGeneration = normalizeJsonPayload(result?.protocol_generation, {});
+      const protocol = normalizeJsonPayload(protocolGeneration.protocol, null);
+
+      if (!result?.ok || !protocol) {
         return {
           ok: false,
-          error: cleanText(result?.error, 600) || 'Protocol generation failed.'
+          error: cleanText(result?.error || result?.codex_agent?.answer, 1200)
+            || 'The Codex agent completed without returning a protocol for review.'
         };
       }
 
       return {
-        ok: true,
-        protocol: result.protocol,
-        summary: cleanText(result?.summary, 320)
+        ...result,
+        protocol,
+        summary: cleanText(protocolGeneration.summary || result?.codex_agent?.answer, 500)
       };
     } catch (error) {
       return {
         ok: false,
-        error: cleanText(error?.message || error, 600) || 'Protocol generation failed.'
+        error: cleanText(error?.message || error, 1200) || 'Protocol generation failed.'
       };
     }
   });

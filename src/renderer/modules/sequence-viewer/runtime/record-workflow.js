@@ -5,6 +5,7 @@ import {
 import {
   LIBRARY_STATUS_TEMPORARY
 } from './config.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createRecordWorkflowActions(ctx) {
   const { state, elements, actions, controllers, dialogs } = ctx;
@@ -21,9 +22,6 @@ export function createRecordWorkflowActions(ctx) {
     dialogs.closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
-    if (elements.saveNameInput) {
-      elements.saveNameInput.value = state.records[0]?.name || '';
-    }
     actions.resetAlignmentState();
     resetDetailSurfaces();
     controllers.detail?.updateRecordSelect();
@@ -31,6 +29,11 @@ export function createRecordWorkflowActions(ctx) {
     controllers.proteinBuilder?.render();
     controllers.home?.syncHomeControlsState();
     actions.setStatus(state.records.length ? `${statusPrefix}: ${state.records.length} record(s).` : (state.errors[0] || 'No records loaded.'), !state.records.length);
+    // A partial parse reports success in the status line, so the parser errors
+    // would otherwise only exist in the message box.
+    if (state.records.length && state.errors.length) {
+      showTransientNotice(state.errors[0], { type: 'error' });
+    }
   }
 
   async function loadCurrentInput() {
@@ -71,6 +74,10 @@ export function createRecordWorkflowActions(ctx) {
       return entry;
     } catch (error) {
       console.warn('Failed to persist imported GenBank record to the library:', error);
+      showTransientNotice(
+        `Imported record was not saved to the library: ${String(error?.message || error || 'unknown error')}`,
+        { type: 'error' }
+      );
       return null;
     }
   }
@@ -96,7 +103,7 @@ export function createRecordWorkflowActions(ctx) {
     actions.setInputComposerVisible(true);
     resetDetailSurfaces();
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
-    actions.setStatus('Idle');
+    actions.setStatus('');
   }
 
   function loadFromExternal(payload, loadOptions = {}) {

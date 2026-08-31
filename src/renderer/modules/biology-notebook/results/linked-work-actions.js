@@ -2,42 +2,23 @@ import { exportNotebookEntryPdf, exportProjectNotebookEntriesPdf } from '../../p
 import { findLatestLinkedRecord } from '../../../services/notebook-linked-previews.js';
 import {
   matchesNotebookType,
-  resolveEntryExperimentName,
   resolveEntryProtocol
 } from '../entry/entry-helpers.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createLinkedWorkActions({
   notebookType,
-  experimentNameInput,
   ensureEntry,
   getNotebookEntries,
   getProtocols,
   getGelAnalyses,
   getAssays,
-  getSettings,
-  setSettings,
-  persist,
   previewImageLoader,
-  onCreateLinkedGel,
-  onCreateLinkedAssay,
-  onOpenSampleRecorder
+  resultFileAttachmentLoader,
+  onCreateLinkedAssay
 } = {}) {
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
-  }
-
-  async function onAddGelClick() {
-    const entry = await ensureEntry();
-    if (!entry || typeof onCreateLinkedGel !== 'function') {
-      return;
-    }
-    const gelName = String(experimentNameInput?.value || '').trim() || resolveEntryExperimentName(entry);
-    onCreateLinkedGel({
-      notebookEntryId: entry.id,
-      projectId: entry.projectId,
-      notebookType: entry.notebookType || notebookType,
-      gelName
-    });
   }
 
   async function onAddAssayClick() {
@@ -52,39 +33,6 @@ export function createLinkedWorkActions({
     });
   }
 
-  async function onAddSamplesClick() {
-    const entry = await ensureEntry();
-    if (!entry) {
-      return;
-    }
-    const requestedAt = new Date().toISOString();
-    const settings = getSettings() || {};
-    const nextSettings = settings && typeof settings === 'object' ? settings : {};
-    nextSettings.pendingNotebookSampleCapture = {
-      notebookEntryId: entry.id,
-      notebookType: entry.notebookType || notebookType,
-      projectId: entry.projectId,
-      projectName: entry.projectName,
-      protocolName: entry.protocolName,
-      experimentName: resolveEntryExperimentName(entry),
-      requestedAt
-    };
-    setSettings?.(nextSettings);
-    persist?.();
-
-    if (typeof onOpenSampleRecorder === 'function') {
-      onOpenSampleRecorder({
-        notebookEntryId: entry.id,
-        notebookType: entry.notebookType || notebookType,
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        protocolName: entry.protocolName,
-        experimentName: resolveEntryExperimentName(entry),
-        requestedAt
-      });
-    }
-  }
-
   async function exportEntryPdf(entryId) {
     const entries = getNotebookEntries() || [];
     const entry = entries.find((item) => item.id === entryId && matchesType(item));
@@ -94,9 +42,10 @@ export function createLinkedWorkActions({
     const protocol = resolveEntryProtocol(entry, getProtocols() || []);
     const linkedGel = findLatestLinkedRecord(getGelAnalyses() || [], entry.id);
     const linkedAssay = findLatestLinkedRecord(getAssays() || [], entry.id);
-    const [linkedGelPreviewImage, linkedAssayPlotImage] = await Promise.all([
+    const [linkedGelPreviewImage, linkedAssayPlotImage, resultFileImages] = await Promise.all([
       linkedGel ? previewImageLoader.resolveGelPreviewImage(linkedGel) : Promise.resolve(''),
-      linkedAssay ? previewImageLoader.resolveAssayPlotImage(linkedAssay) : Promise.resolve('')
+      linkedAssay ? previewImageLoader.resolveAssayPlotImage(linkedAssay) : Promise.resolve(''),
+      resultFileAttachmentLoader?.resolveEntryImages?.(entry) || Promise.resolve([])
     ]);
     await exportNotebookEntryPdf({
       entry,
@@ -104,7 +53,8 @@ export function createLinkedWorkActions({
       linkedGel,
       linkedGelPreviewImage,
       linkedAssay,
-      linkedAssayPlotImage
+      linkedAssayPlotImage,
+      resultFileImages
     });
   }
 
@@ -121,9 +71,7 @@ export function createLinkedWorkActions({
         return (Number.isFinite(left) ? left : 0) - (Number.isFinite(right) ? right : 0);
       });
     if (!projectEntries.length) {
-      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert('No notebook pages to export for this project.');
-      }
+      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
       return;
     }
 
@@ -136,6 +84,7 @@ export function createLinkedWorkActions({
     const linkedAssayByEntryId = new Map();
     const linkedGelPreviewImagesByEntryId = new Map();
     const linkedAssayPlotImagesByEntryId = new Map();
+    const resultFileImagesByEntryId = new Map();
 
     const imageTasks = [];
     projectEntries.forEach((entry) => {
@@ -158,6 +107,11 @@ export function createLinkedWorkActions({
           })
         );
       }
+      imageTasks.push(
+        Promise.resolve(resultFileAttachmentLoader?.resolveEntryImages?.(entry) || []).then((images) => {
+          resultFileImagesByEntryId.set(entry.id, Array.isArray(images) ? images : []);
+        })
+      );
     });
 
     await Promise.all(imageTasks);
@@ -169,14 +123,13 @@ export function createLinkedWorkActions({
       linkedGelByEntryId,
       linkedGelPreviewImagesByEntryId,
       linkedAssayByEntryId,
-      linkedAssayPlotImagesByEntryId
+      linkedAssayPlotImagesByEntryId,
+      resultFileImagesByEntryId
     });
   }
 
   return {
-    onAddGelClick,
     onAddAssayClick,
-    onAddSamplesClick,
     exportEntryPdf,
     exportProjectPagesPdf
   };

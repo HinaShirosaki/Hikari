@@ -7,9 +7,6 @@ export function createProjectService(registry) {
     registry.get('assay').renderProjectOptions?.();
     registry.get('assay').renderNotebookOptions?.();
     registry.get('assay').renderList?.();
-    registry.get('gel').renderProjectOptions?.();
-    registry.get('gel').renderNotebookOptions?.();
-    registry.get('gel').renderList?.();
     registry.get('papers').render?.();
     registry.get('agentChat').render?.();
   }

@@ -38,7 +38,7 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
     onError: (error) => actions.setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true)
   });
 
-  elements.loadBtn?.addEventListener('click', (event) => {
+  elements.form?.addEventListener('submit', (event) => {
     event.preventDefault();
     void actions.loadCurrentInput();
   });
@@ -63,7 +63,27 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
   controllers.detail.bindEvents();
   controllers.alignment?.bindEvents?.();
   controllers.cloningDesign?.bindEvents?.();
+  controllers.vectorBuilder?.bindEvents?.();
   controllers.proteinBuilder?.bindEvents?.();
+  controllers.primerOrder?.bindEvents?.();
+
+  elements.vectorBuilderOpenBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    controllers.vectorBuilder?.open?.();
+  });
+
+  // Home works off a library selection rather than a loaded record, so open the
+  // previewed entry first and then hand it to Vector Builder.
+  elements.homeVectorBuilderBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void (async () => {
+      const selectedEntryId = String(state.selectedLibraryEntryId || '').trim();
+      if (selectedEntryId) {
+        await controllers.home?.openLibraryEntryInDetail?.(selectedEntryId);
+      }
+      controllers.vectorBuilder?.open?.();
+    })();
+  });
   controllers.home.setLibraryFilter(LIBRARY_STATUS_SAVED);
   controllers.home.setLocalWorkspaceVisibility('home');
 }

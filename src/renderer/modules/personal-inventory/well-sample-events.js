@@ -377,6 +377,9 @@ export function bindWellSampleEvents(ctx) {
       state.samples.push(sample);
       uiState.editingSampleId = sample.id;
       uiState.wellEditorStatus = `Created sample ${sample.code}.`;
+      // Before persist: this mutates notebookEntries and clears
+      // pendingNotebookSampleCapture, and nothing else saves afterwards.
+      ctx.notifySampleRecorded(sample);
       persist();
       notifySamplesChanged();
       renderSections();

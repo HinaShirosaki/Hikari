@@ -6,6 +6,7 @@ import {
 import { initContributionWidget } from './home-dashboard/contribution.js';
 import { initIncubationWidget } from './home-dashboard/incubation.js';
 import { initNotebookWidget } from './home-dashboard/notebook.js';
+import { initPaperFindingWidget } from './home-dashboard/paper-finding.js';
 import { initPassageWidget } from './home-dashboard/passage.js';
 import { initQuickLogWidget } from './home-dashboard/quick-log.js';
 import { initTimerWidget } from './home-dashboard/timer.js';
@@ -26,12 +27,16 @@ export function initHomeDashboard({
   onOpenNotebook = () => {},
   onOpenWorkflow = () => {},
   onOpenAssistant = () => {},
-  onSendQuickLogToAgent = () => false
+  onSendQuickLogToAgent = () => false,
+  api = null
 }) {
   const passageElements = {
     summary: document.getElementById('dashboard-passage-summary'),
     list: document.getElementById('dashboard-passage-list'),
+    panelList: document.getElementById('dashboard-passage-panel-list'),
     addBtn: document.getElementById('dashboard-passage-add-btn'),
+    openBtn: document.getElementById('dashboard-passage-open-btn'),
+    closeBtn: document.getElementById('dashboard-passage-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-passage-dialog-overlay'),
     dialogForm: document.getElementById('dashboard-passage-dialog-form'),
     strainInput: document.getElementById('dashboard-passage-strain-input'),
@@ -42,8 +47,13 @@ export function initHomeDashboard({
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid'),
-    streak: document.getElementById('dashboard-contribution-streak'),
     summary: document.getElementById('dashboard-contribution-summary')
+  };
+
+  const paperFindingElements = {
+    summary: document.getElementById('dashboard-paper-finding-summary'),
+    list: document.getElementById('dashboard-paper-finding-list'),
+    openBtn: document.getElementById('dashboard-paper-finding-open-btn')
   };
 
   const notebookOpenBtn = document.getElementById('dashboard-notebook-open-btn');
@@ -54,7 +64,10 @@ export function initHomeDashboard({
   const incubationElements = {
     summary: document.getElementById('dashboard-incubation-summary'),
     list: document.getElementById('dashboard-incubation-list'),
+    panelList: document.getElementById('dashboard-incubation-panel-list'),
     addBtn: document.getElementById('dashboard-incubation-add-btn'),
+    openBtn: document.getElementById('dashboard-incubation-open-btn'),
+    closeBtn: document.getElementById('dashboard-incubation-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-incubation-dialog-overlay'),
     locationList: document.getElementById('dashboard-incubation-location-list'),
     locationForm: document.getElementById('dashboard-incubation-location-form'),
@@ -66,8 +79,7 @@ export function initHomeDashboard({
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
     quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')],
-    quickLogChips: [...document.querySelectorAll('[data-dashboard-quicklog-chip]')]
+    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
   };
 
   const notebookElements = {
@@ -75,6 +87,7 @@ export function initHomeDashboard({
     pageList: document.getElementById('dashboard-notebook-page-list'),
     noteDialogOverlay: document.getElementById('dashboard-notebook-note-dialog-overlay'),
     noteDialogForm: document.getElementById('dashboard-notebook-note-dialog-form'),
+    noteDialogCloseBtn: document.getElementById('dashboard-notebook-note-dialog-close-btn'),
     noteDialogPage: document.getElementById('dashboard-notebook-note-dialog-page'),
     noteInput: document.getElementById('dashboard-notebook-note-input'),
     noteClarifyBtn: document.getElementById('dashboard-notebook-note-clarify-btn')
@@ -130,6 +143,12 @@ export function initHomeDashboard({
       state,
       safeText,
       elements: contributionElements
+    }),
+    paperFinding: initPaperFindingWidget({
+      api,
+      safeText,
+      onOpenNotebook,
+      elements: paperFindingElements
     }),
     passage: initPassageWidget({
       state,

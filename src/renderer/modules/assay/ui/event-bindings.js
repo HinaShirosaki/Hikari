@@ -53,14 +53,27 @@ export function bindAssayEvents({
   elements.assaySerialDilutionOverlay?.addEventListener('click', layoutManager.onSerialDilutionOverlayClick);
   elements.assaySerialDilutionOverlay?.addEventListener('input', layoutManager.onSerialDilutionDialogInput);
   elements.assaySearchInput?.addEventListener('input', renderList);
+  elements.assayResultsSearchInput?.addEventListener('input', renderList);
   elements.assayExportTemplateBtn?.addEventListener('click', layoutManager.exportCsvTemplate);
   elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
   elements.assayImportFile?.addEventListener('change', layoutManager.onImportCsv);
   elements.assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);
-  elements.assayAnalysisMethodInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
+  elements.assayAnalysisKindInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
+  elements.assayAnalysisGroupByInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
+  elements.assayAnalysisXAxisInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
+  elements.assayAnalysisAsymmetricInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayAnalysisPolyOrderInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayAnalysisSubtotalsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisRowGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisColumnGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisErrorBarsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayTransformOpenBtn?.addEventListener('click', analysisView.createTransformPlate);
+  elements.assayTransformClearBtn?.addEventListener('click', analysisView.clearTransform);
+  elements.assayDerivedPlatePanel?.addEventListener('toggle', () => {
+    if (elements.assayDerivedPlatePanel.open) {
+      analysisView.redrawTransformGrid();
+    }
+  });
   elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
@@ -73,8 +86,12 @@ export function bindAssayEvents({
   elements.assayResultImportApplyBtn?.addEventListener('click', resultsManager.applySelectedResultImportCandidate);
   elements.assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   elements.assayClearResultsBtn?.addEventListener('click', resultsManager.onClearResults);
-  elements.assayAnalyzeResultsBtn?.addEventListener('click', analysisView.onAnalyzeResults);
   elements.assayResultTable?.addEventListener('paste', resultsManager.onResultTablePaste);
+  elements.assayResultTablePanel?.addEventListener('toggle', () => {
+    if (elements.assayResultTablePanel.open) {
+      resultsManager.redrawResultGrid();
+    }
+  });
   elements.assayPlatePreview?.addEventListener('input', layoutManager.onPlatePreviewInput);
   elements.assayPlatePreview?.addEventListener('change', layoutManager.onPlatePreviewChange);
   elements.assayPlatePreview?.addEventListener('focusin', layoutManager.onPlatePreviewFocusIn);
@@ -83,6 +100,7 @@ export function bindAssayEvents({
   elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
   elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
   elements.assayList?.addEventListener('click', onListClick);
+  elements.assayResultsList?.addEventListener('click', onListClick);
   globalThis.addEventListener?.('pointerdown', layoutManager.onGlobalPointerDown);
   globalThis.addEventListener?.('keydown', layoutManager.onGlobalKeyDown);
 }

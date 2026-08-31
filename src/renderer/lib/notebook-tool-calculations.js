@@ -100,23 +100,114 @@ export function summarizeNotebookToolCalculations(rawCalculations) {
   return `${calculations.length} calculation${calculations.length === 1 ? '' : 's'}${labels.length ? ` (${labels.join('; ')}${suffix})` : ''}`;
 }
 
+function cleanCell(value) {
+  return String(value ?? '').trim();
+}
+
+// "Template DNA volume = 0.2 ng/uL x 50 uL / [stock concentration]" reads as a
+// formula in a Volume column once its own name is stripped off the front.
+function formulaAfterName(text) {
+  const source = cleanCell(text);
+  const match = source.match(/^[^=]*=\s*(.+)$/s);
+  return match ? match[1].trim() : source;
+}
+
+function reactionRowCells(result) {
+  const reagents = Array.isArray(result?.inputs?.reagents) ? result.inputs.reagents : [];
+  const rowsByIndex = new Map(reagents.map((row, index) => [
+    Math.max(1, Number(row?.rowIndex) || index + 1),
+    row
+  ]));
+  return (Array.isArray(result?.details) ? result.details : []).map((detail, index) => {
+    const rowDetail = (Array.isArray(detail?.details) ? detail.details[0] : null) || {};
+    const rowInput = rowsByIndex.get(Math.max(1, Number(detail?.rowIndex) || index + 1)) || {};
+    return [
+      cleanCell(rowDetail.name || detail?.inputs?.name || rowInput.name),
+      cleanCell(rowInput.stockConcentration ?? detail?.inputs?.stockConcentration),
+      cleanCell(rowInput.finalConcentration ?? detail?.inputs?.finalConcentration),
+      // A row whose concentration is not known yet keeps its formula instead of
+      // an empty cell: the volume is still the thing to work out at the bench.
+      cleanCell(rowDetail.quantityText)
+        || cleanCell(rowInput.volumeFormula)
+        || formulaAfterName(detail?.formulaText),
+      // What actually went in the tube -- the ng of DNA used, the lot number,
+      // whichever miniprep it came from.
+      cleanCell(rowInput.note)
+    ];
+  }).filter((row) => row.some(Boolean));
+}
+
+export function buildFixedReactionCalculationTable(result, options = {}) {
+  if (!result || result.type !== 'fixed-reaction' || result.mode !== 'reaction') {
+    return null;
+  }
+  const totalVolume = cleanCell(options?.totalVolume || result?.inputs?.totalVolumeValue);
+  const totalUnit = cleanCell(result?.inputs?.totalVolumeUnit);
+  const extraMetaRows = (Array.isArray(options?.extraMetaRows) ? options.extraMetaRows : [])
+    .map((row) => (Array.isArray(row) ? row.map((cell) => cleanCell(cell)) : []))
+    .filter((row) => row.some(Boolean));
+  const fillVolume = cleanCell(result?.fill?.text) || formulaAfterName(result?.fill?.formula);
+  return {
+    caption: 'Fixed Volume Reaction',
+    metaRows: [
+      [
+        'Total volume',
+        totalVolume && /\D/u.test(totalVolume) ? totalVolume : [totalVolume, totalUnit].filter(Boolean).join(' '),
+        '',
+        '',
+        ''
+      ],
+      ...extraMetaRows
+    ],
+    headers: ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note'],
+    rows: reactionRowCells(result),
+    footerRows: [[cleanCell(result?.fill?.name || result?.inputs?.fillName || 'Solvent'), '', '', fillVolume, '']]
+  };
+}
+
 function padCells(cells, width) {
   const source = Array.isArray(cells) ? cells : [];
   return source.concat(Array.from({ length: Math.max(0, width - source.length) }, () => ''));
 }
 
-function renderTableRows(rows, width, escapeText, rowClass = '') {
-  return (Array.isArray(rows) ? rows : []).map((row) => {
+// Which stored input each editable cell writes back to. The Volume column maps
+// to the manual volume, so typing a number there overrides whatever the
+// concentrations worked out to.
+const REACTION_ROW_FIELDS = ['name', 'stockConcentration', 'finalConcentration', 'manualVolumeValue', 'note'];
+
+// The note column is the only empty one by design, so it says what it is for.
+const REACTION_FIELD_PLACEHOLDERS = { note: 'ng used, lot, source' };
+
+function editableCellHtml(cell, escapeText, { calculationId, row, field }) {
+  const placeholder = REACTION_FIELD_PLACEHOLDERS[field] || '';
+  return `<input
+    type="text"
+    class="biology-notebook-tool-calculation-input"
+    value="${escapeText(cell)}"
+    aria-label="${escapeText(field)}"
+    ${placeholder ? `placeholder="${escapeText(placeholder)}"` : ''}
+    data-tool-calculation-id="${escapeText(calculationId)}"
+    data-tool-calculation-row="${escapeText(String(row))}"
+    data-tool-calculation-field="${escapeText(field)}"
+  />`;
+}
+
+function renderTableRows(rows, width, escapeText, rowClass = '', edit = null) {
+  return (Array.isArray(rows) ? rows : []).map((row, rowIndex) => {
     const cells = padCells(row, width);
     return `<tr${rowClass ? ` class="${rowClass}"` : ''}>${cells.map((cell, index) => {
       const tag = index === 0 ? 'th' : 'td';
       const scope = index === 0 ? ' scope="row"' : '';
-      return `<${tag}${scope}>${escapeText(cell)}</${tag}>`;
+      const field = edit ? edit.fieldFor(rowIndex, index) : '';
+      const content = field
+        ? editableCellHtml(cell, escapeText, { calculationId: edit.calculationId, row: rowIndex, field })
+        : escapeText(cell);
+      return `<${tag}${scope}>${content}</${tag}>`;
     }).join('')}</tr>`;
   }).join('');
 }
 
-function buildCalculationTableHtml(table, escapeText) {
+function buildCalculationTableHtml(table, escapeText, edit = null) {
   const normalized = normalizeNotebookToolCalculationTable(table);
   if (!normalized) {
     return '';
@@ -132,8 +223,16 @@ function buildCalculationTableHtml(table, escapeText) {
     ? `<thead><tr>${padCells(normalized.headers, width).map((header) => `<th scope="col">${escapeText(header)}</th>`).join('')}</tr></thead>`
     : '';
   const body = [
-    renderTableRows(normalized.metaRows, width, escapeText, 'biology-notebook-tool-calculation-meta-row'),
-    renderTableRows(normalized.rows, width, escapeText),
+    renderTableRows(normalized.metaRows, width, escapeText, 'biology-notebook-tool-calculation-meta-row', edit ? {
+      calculationId: edit.calculationId,
+      // Only the first meta row is the total volume; the rest are notes.
+      fieldFor: (rowIndex, cellIndex) => (rowIndex === 0 && cellIndex === 1 ? 'totalVolumeValue' : '')
+    } : null),
+    renderTableRows(normalized.rows, width, escapeText, '', edit ? {
+      calculationId: edit.calculationId,
+      fieldFor: (rowIndex, cellIndex) => REACTION_ROW_FIELDS[cellIndex] || ''
+    } : null),
+    // The fill volume is whatever is left over, so it is never typed in.
     renderTableRows(normalized.footerRows, width, escapeText, 'biology-notebook-tool-calculation-footer-row')
   ].join('');
   return `
@@ -157,8 +256,13 @@ export function buildNotebookToolCalculationsHtml({
   }
 
   return normalized.map((calculation) => {
+    // A fixed-volume reaction is a starting point, not a verdict: its cells stay
+    // editable so the numbers can be matched to what is actually on the bench.
+    const edit = calculation.type === 'fixed-reaction' && calculation.mode === 'reaction'
+      ? { calculationId: calculation.id }
+      : null;
     const table = calculation.table
-      ? buildCalculationTableHtml(calculation.table, escapeText)
+      ? buildCalculationTableHtml(calculation.table, escapeText, edit)
       : '';
     const result = calculation.result && !table
       ? `<p>${escapeText(calculation.result)}</p>`

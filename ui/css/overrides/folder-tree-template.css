@@ -109,6 +109,11 @@
   cursor: pointer;
 }
 
+/* The row owns the hover fill; suppress the global button hover inside it. */
+.folder-tree-template__main:hover {
+  background: transparent;
+}
+
 .folder-tree-template__main:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: -2px;
@@ -154,6 +159,11 @@
   transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
 }
 
+.folder-tree-template__action-spacer {
+  width: 24px;
+  height: 24px;
+}
+
 .folder-tree-template__row:hover .folder-tree-template__action,
 .folder-tree-template__row:focus-within .folder-tree-template__action,
 .folder-tree-template__action:focus-visible {
@@ -165,6 +175,49 @@
   background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
   color: var(--theme-text-strong);
   outline: none;
+}
+
+/* Inline rename input swapped in for a row control (see startInlineRename). */
+.folder-tree-template__rename-input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 2px 6px;
+  border: 1px solid var(--theme-focus);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.folder-tree-template__rename-input:focus,
+.folder-tree-template__rename-input:focus-visible {
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  outline: none;
+}
+
+.folder-tree-template__leaf-control {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+  text-align: left;
+}
+
+.folder-tree-template__leaf-control:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
 }
 
 .folder-tree-template__children {
@@ -191,6 +244,13 @@
   width: 10px;
   height: 1px;
   background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
+}
+
+.folder-tree-template__children--full-width-leaves > .folder-tree-template__leaf > .folder-tree-template__leaf-control {
+  width: calc(100% + 25px);
+  max-width: calc(100% + 25px);
+  margin-left: -25px;
+  padding-left: 32px;
 }
 
 .folder-tree-template__children[hidden] {

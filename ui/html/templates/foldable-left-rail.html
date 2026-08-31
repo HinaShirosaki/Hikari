@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Foldable Left Rail</title>
+    <link rel="stylesheet" href="../../css/base/palette.css" />
+    <link rel="stylesheet" href="../../css/base/core.css" />
+    <link rel="stylesheet" href="../../css/components/foldable-section.css" />
+    <style>
+      html,
+      body {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        background: var(--theme-background);
+        color: var(--theme-text);
+        font-family: var(--font-app);
+      }
+
+      .foldable-left-rail-demo {
+        display: grid;
+        grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .foldable-left-rail-demo__rail {
+        min-width: 0;
+        padding: 22px 20px 28px;
+        border-right: 1px solid var(--theme-border-soft);
+        background: var(--theme-surface);
+        overflow-y: auto;
+      }
+
+      .foldable-left-rail-demo__heading {
+        margin: 0 0 4px;
+        color: var(--theme-text-strong);
+        font-size: 1.15rem;
+      }
+
+      .foldable-left-rail-demo__intro {
+        margin: 0 0 12px;
+        color: var(--theme-text-muted);
+        font-size: 0.85rem;
+        line-height: 1.45;
+      }
+
+      .foldable-left-rail-demo__rail label {
+        display: grid;
+        gap: 6px;
+        color: var(--theme-text-strong);
+        font-size: 0.85rem;
+        font-weight: 550;
+      }
+
+      .foldable-left-rail-demo__rail input,
+      .foldable-left-rail-demo__rail select {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .foldable-left-rail-demo__count {
+        color: var(--theme-text-muted);
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      .foldable-left-rail-demo__list {
+        display: grid;
+        gap: 2px;
+      }
+
+      .foldable-left-rail-demo__item {
+        appearance: none;
+        display: grid;
+        gap: 3px;
+        width: 100%;
+        padding: 9px 8px;
+        border: 0;
+        border-radius: 5px;
+        background: transparent;
+        color: var(--theme-text);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .foldable-left-rail-demo__item:hover,
+      .foldable-left-rail-demo__item:focus-visible {
+        outline: none;
+        background: var(--theme-surface-subtle);
+      }
+
+      .foldable-left-rail-demo__item strong {
+        color: var(--theme-text-strong);
+        font-size: 0.88rem;
+      }
+
+      .foldable-left-rail-demo__item span {
+        color: var(--theme-text-muted);
+        font-size: 0.78rem;
+      }
+
+      .foldable-left-rail-demo__checks {
+        display: grid;
+        gap: 9px;
+      }
+
+      .foldable-left-rail-demo__checks label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+      }
+
+      .foldable-left-rail-demo__checks input {
+        width: auto;
+      }
+
+      .foldable-left-rail-demo__workspace {
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        min-width: 0;
+        padding: 48px;
+        text-align: center;
+      }
+
+      .foldable-left-rail-demo__workspace-inner {
+        max-width: 620px;
+      }
+
+      .foldable-left-rail-demo__eyebrow {
+        margin: 0 0 10px;
+        color: var(--theme-accent);
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .foldable-left-rail-demo__workspace h2 {
+        margin: 0 0 12px;
+        color: var(--theme-text-strong);
+        font-size: clamp(1.7rem, 4vw, 3rem);
+      }
+
+      .foldable-left-rail-demo__workspace p:last-child {
+        margin: 0;
+        color: var(--theme-text-muted);
+        line-height: 1.65;
+      }
+
+      @media (max-width: 760px) {
+        .foldable-left-rail-demo {
+          grid-template-columns: 1fr;
+        }
+
+        .foldable-left-rail-demo__rail {
+          border-right: 0;
+          border-bottom: 1px solid var(--theme-border-soft);
+        }
+
+        .foldable-left-rail-demo__workspace {
+          padding: 40px 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="foldable-left-rail-demo">
+      <aside class="foldable-left-rail-demo__rail" aria-label="Assay controls">
+        <h1 class="foldable-left-rail-demo__heading">Assay</h1>
+        <p class="foldable-left-rail-demo__intro">
+          Each rail section uses the shared flat disclosure component.
+        </p>
+
+        <details class="foldable-section" open>
+          <summary class="foldable-section__summary">
+            <span>Existing Assays</span>
+            <span class="foldable-left-rail-demo__count" aria-label="3 assays">3</span>
+          </summary>
+          <div class="foldable-section__body">
+            <label>
+              Search Assays
+              <input type="search" placeholder="Search assays" />
+            </label>
+            <nav class="foldable-left-rail-demo__list" aria-label="Existing assays">
+              <button class="foldable-left-rail-demo__item" type="button">
+                <strong>Cell viability</strong>
+                <span>96 well · Updated today</span>
+              </button>
+              <button class="foldable-left-rail-demo__item" type="button">
+                <strong>Dose response</strong>
+                <span>384 well · Updated yesterday</span>
+              </button>
+              <button class="foldable-left-rail-demo__item" type="button">
+                <strong>Protein binding</strong>
+                <span>24 well · Updated Aug 10</span>
+              </button>
+            </nav>
+          </div>
+        </details>
+
+        <details class="foldable-section" open>
+          <summary class="foldable-section__summary">
+            <span>Data Analysis</span>
+          </summary>
+          <div class="foldable-section__body">
+            <label>
+              Group By
+              <select>
+                <option>Sample ID</option>
+                <option>Concentration</option>
+                <option>Plate row</option>
+              </select>
+            </label>
+            <label>
+              Analysis
+              <select>
+                <option>Summary statistics</option>
+                <option>Linear fit</option>
+                <option>Sigmoidal fit</option>
+              </select>
+            </label>
+            <div class="foldable-left-rail-demo__checks">
+              <label><input type="checkbox" checked /> Show SD error bars</label>
+              <label><input type="checkbox" /> Add subtotal rows</label>
+            </div>
+          </div>
+        </details>
+
+        <details class="foldable-section">
+          <summary class="foldable-section__summary">
+            <span>Chart Format</span>
+          </summary>
+          <div class="foldable-section__body">
+            <label>
+              Chart Type
+              <select>
+                <option>Bar</option>
+                <option>Line</option>
+                <option>Scatter</option>
+              </select>
+            </label>
+            <label>
+              Theme
+              <select>
+                <option>Automatic</option>
+                <option>Light</option>
+                <option>Dark</option>
+              </select>
+            </label>
+          </div>
+        </details>
+      </aside>
+
+      <main class="foldable-left-rail-demo__workspace">
+        <div class="foldable-left-rail-demo__workspace-inner">
+          <p class="foldable-left-rail-demo__eyebrow">Standalone HTML prototype</p>
+          <h2>Foldable left rail</h2>
+          <p>
+            The rail uses native details elements, flat divider hierarchy, and the shared
+            foldable-section implementation. Resize the window to see the rail stack above
+            the workspace at narrow widths.
+          </p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

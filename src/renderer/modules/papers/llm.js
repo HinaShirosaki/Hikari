@@ -1,5 +1,6 @@
 import { parseJsonFromText } from './normalizers.js';
 import { requestDirectLlmText } from '../../services/direct-llm.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 const LLM_PROMPTS_PATH = './src/renderer/modules/papers/paper-prompts.json';
 const DEFAULT_LLM_PROMPTS = {
@@ -61,6 +62,7 @@ export function getLlmPrompts() {
       return normalizePromptConfig(parsed);
     } catch (error) {
       console.warn('Failed to load LLM prompts; falling back to empty config:', error);
+      showTransientNotice('Paper prompt settings could not be loaded; using defaults.', { type: 'error' });
       return normalizePromptConfig({});
     }
   })();

@@ -1,24 +1,9 @@
 'use strict';
 
 const path = require('path');
+const { asArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
-
-function cleanText(value, _maxLength = 5000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -93,7 +78,7 @@ function buildRunId() {
 }
 
 function inferImageMimeType(filePath = '') {
-  const extension = path.extname(cleanText(filePath, 260)).toLowerCase();
+  const extension = path.extname(cleanText(filePath)).toLowerCase();
   if (extension === '.png') {
     return 'image/png';
   }
@@ -145,7 +130,7 @@ async function callLifecycleHook(fn, payload, warnings, label) {
   try {
     await fn(payload);
   } catch (error) {
-    asArray(warnings).push(`${label} hook failed: ${cleanText(error?.message || error, 240)}.`);
+    asArray(warnings).push(`${label} hook failed: ${cleanText(error?.message || error)}.`);
   }
 }
 

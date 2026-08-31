@@ -87,6 +87,11 @@ export const agentChatRailManifest = {
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);
+    },
+    onAppendNotebookEntry: async (proposal = {}) => {
+      showView(views.BIOLOGY_NOTEBOOK);
+      return modules.biologyNotebook?.appendAgentNotebookContent?.(proposal)
+        || { ok: false, error: 'Notebook is unavailable.' };
     }
   })
 };

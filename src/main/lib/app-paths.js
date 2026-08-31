@@ -1,6 +1,6 @@
 'use strict';
 
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -15,9 +15,9 @@ function createMainAppPaths(deps = {}) {
   const projectRoot = String(deps.projectRoot || processObject.cwd() || '').trim();
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const defaultDataFileName = String(deps.defaultDataFileName || 'hikari-data.json').trim() || 'hikari-data.json';
-  const telegramConfigFileName = String(deps.telegramConfigFileName || 'telegram-bot.json').trim() || 'telegram-bot.json';
   const scheduledTasksFileName = String(deps.scheduledTasksFileName || 'scheduled-tasks.json').trim()
     || 'scheduled-tasks.json';
+  const genomeLibraryFileName = String(deps.genomeLibraryFileName || 'genome-library.json').trim() || 'genome-library.json';
   const agentChatLogFileName = String(deps.agentChatLogFileName || 'agent-chat.log').trim() || 'agent-chat.log';
 
   function getUserDataPath() {
@@ -76,16 +76,23 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), defaultDataFileName);
   }
 
-  function getTelegramConfigPath() {
-    return path.join(getDefaultAppDataRoot(), 'Config', telegramConfigFileName);
-  }
-
   function getScheduledTasksPath() {
     const override = String(processObject.env.HIKARI_SCHEDULED_TASKS_PATH || '').trim();
     if (override) {
       return path.resolve(override);
     }
     return path.join(getDefaultAppDataRoot(), 'Config', scheduledTasksFileName);
+  }
+
+  function getGenomeLibraryPath() {
+    return path.join(getDefaultAppDataRoot(), 'Config', genomeLibraryFileName);
+  }
+
+  // The workspace root otherwise lives only in renderer localStorage, which the
+  // app cannot recover once it is cleared. Auto-save mirrors it here so startup
+  // can find the workspace again.
+  function getStorageRootPointerPath() {
+    return path.join(getDefaultAppDataRoot(), 'Config', 'last-storage-root.json');
   }
 
   function getAgentChatLogPath() {
@@ -128,8 +135,10 @@ function createMainAppPaths(deps = {}) {
     getCodexCliHomePath,
     getCodexCliWorkingDirectory,
     getDefaultDataFilePath,
-    getTelegramConfigPath,
+    getStorageRootPointerPath,
+    getUserDataPath,
     getScheduledTasksPath,
+    getGenomeLibraryPath,
     getAgentChatLogPath,
     getAgentPythonSandboxRoot,
     getAgentMemoryFilePath,

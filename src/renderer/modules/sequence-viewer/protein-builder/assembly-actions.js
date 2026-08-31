@@ -1,4 +1,5 @@
 import { createProteinBuilderCloningNotebookPage } from '../protein-builder-cloning-notebook.js';
+import { withPrimerBindFeatures } from '../primer-annotation.js';
 import { cleanText } from '../shared.js';
 import {
   buildAssembledPlasmidPayload,
@@ -7,7 +8,7 @@ import {
 } from './assembly-payload.js';
 
 export function installProteinBuilderAssemblyActions(ctx) {
-  const { elements, state } = ctx;
+  const { state } = ctx;
 
   ctx.openAssemblyDialog = async function openAssemblyDialog() {
     if (!ctx.hasStoragePath()) {
@@ -30,9 +31,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
       state.storedBackbones = await ctx.loadStoredBackboneCandidates();
       state.selectedBackboneId = cleanText(state.storedBackbones[0]?.id, 400);
       ctx.renderAssemblyDialog();
-      if (state.storedBackbones.length) {
-        ctx.setBuilderStatus('Select a stored backbone to assemble the plasmid.');
-      } else {
+      if (!state.storedBackbones.length) {
         ctx.setBuilderStatus('No stored backbones found. Use Recognize Backbone/Insert on a vector and Apply Selection first.');
       }
     } catch (error) {
@@ -65,7 +64,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
       ctx.syncFeatureSearchControls();
       ctx.setBuilderStatus(`Loading ${buildStoredBackboneDisplayName(selectedBackbone)}...`);
       const hydratedBackbone = await ctx.hydrateStoredBackbone(selectedBackbone);
-      const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
+      const constructName = ctx.resolveConstructName();
       const payload = buildAssembledPlasmidPayload(hydratedBackbone, state.dnaConstruct, { constructName });
       if (!payload?.sequence) {
         ctx.setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);
@@ -88,6 +87,13 @@ export function installProteinBuilderAssemblyActions(ctx) {
       } catch (error) {
         notebookWarning = error?.message || 'Failed to create the cloning notebook page.';
       }
+
+      // Annotate before the review payload is built, so the construct opens with
+      // its primers already on the map and carries them into the saved record.
+      payload.features = withPrimerBindFeatures(
+        payload,
+        cloningNotebookResult?.plan?.primerOligoPlan?.primers
+      ).features;
 
       const reviewConfirmation = buildProteinBuilderConfirmationPayload({
         assembledRecord: payload,

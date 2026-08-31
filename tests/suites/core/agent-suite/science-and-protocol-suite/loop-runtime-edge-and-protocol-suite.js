@@ -66,5 +66,91 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.match(prompt, /Do not call an LLM or web search/i);
       assert.match(prompt, /HEK293 Transfection/);
     });
+
+    test('protocol generation IPC routes create requests through the Codex agent controller', async () => {
+      const { AGENT } = require(path.join(
+        __dirname,
+        'src',
+        'shared',
+        'ipc',
+        'channels.js'
+      ));
+      const { registerAgentLogHandlers } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'ipc',
+        'register-agent-ipc',
+        'agent-log-handlers.js'
+      ));
+      const handlers = new Map();
+      let controllerPayload = null;
+      const cleanText = (value, maxLength = 2000) => String(value || '').trim().slice(0, maxLength);
+
+      registerAgentLogHandlers({
+        ipcMain: {
+          handle(channel, handler) {
+            handlers.set(channel, handler);
+          }
+        },
+        cleanText,
+        observability: {},
+        agentChatLogRuntime: {},
+        getAgentChatLogPath: () => '',
+        getAgentChatSessionStoragePath: () => '',
+        agentToolRuntime: {},
+        runAgentController: async (payload) => {
+          controllerPayload = payload;
+          return {
+            ok: true,
+            codex_session_id: 'codex-session-1',
+            codex_agent: {
+              status: 'completed',
+              answer: 'The protocol is ready for review.'
+            },
+            protocol_generation: {
+              status: 'awaiting_user_approval',
+              summary: 'Prepared an evidence-backed expression protocol.',
+              protocol: {
+                name: 'Evidence-backed expression protocol',
+                materials: ['Expression plasmid'],
+                steps: ['Transform cells.', 'Induce expression.']
+              }
+            }
+          };
+        },
+        lifecycleService: {
+          normalizeJsonPayload: (value, fallback = {}) => (
+            value && typeof value === 'object' && !Array.isArray(value) ? value : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await handlers.get(AGENT.GENERATE_PROTOCOL)({}, {
+        message: 'Create an expression protocol and search for supporting papers.',
+        attachments: [{ name: 'methods.pdf', dataUrl: 'data:application/pdf;base64,AAAA' }],
+        stateSnapshot: {
+          settings: {
+            storagePath: '/tmp/hikari-storage'
+          }
+        },
+        llm: {
+          provider: 'openai',
+          apiEndpoint: 'https://api.openai.com/v1/responses',
+          apiKey: 'legacy-key'
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.protocol.name, 'Evidence-backed expression protocol');
+      assert.equal(result.protocol_generation.status, 'awaiting_user_approval');
+      assert.equal(result.codex_session_id, 'codex-session-1');
+      assert.equal(controllerPayload.llm.provider, 'codex');
+      assert.equal(controllerPayload.llm.apiEndpoint, '');
+      assert.equal(controllerPayload.llm.apiKey, '');
+      assert.equal(controllerPayload.allowWriteTools, true);
+      assert.equal(controllerPayload.attachments[0].name, 'methods.pdf');
+    });
   }
 };

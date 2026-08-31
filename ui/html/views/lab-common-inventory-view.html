@@ -3,8 +3,25 @@
         <aside class="chemical-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="chemical-sidebar-stack">
             <section class="chemical-sidebar-section app-left-rail-section">
-              <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
-              <button type="button" id="chemical-import-btn" class="ghost-btn chemical-import-btn">Import Chemicals</button>
+              <div class="chemical-quick-actions" aria-label="Chemical actions">
+                <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-action-icon-btn chemical-add-btn" aria-label="Add chemical" title="Add chemical">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M9 3h6"></path>
+                    <path d="M10 3v5.5l-5 8.2A2.8 2.8 0 0 0 7.4 21h9.2a2.8 2.8 0 0 0 2.4-4.3l-5-8.2V3"></path>
+                    <path d="M12 12v5"></path>
+                    <path d="M9.5 14.5h5"></path>
+                  </svg>
+                  <span class="sr-only">Add chemical</span>
+                </button>
+                <button type="button" id="chemical-import-btn" class="ghost-btn chemical-action-icon-btn chemical-import-btn" aria-label="Import chemicals" title="Import chemicals">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M12 3v11"></path>
+                    <path d="m7.5 8 4.5-5 4.5 5"></path>
+                    <path d="M5 14v5h14v-5"></path>
+                  </svg>
+                  <span class="sr-only">Import chemicals</span>
+                </button>
+              </div>
               <input id="chemical-import-file" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <p id="chemical-import-status" class="small-note chemical-import-status" hidden></p>
               <label class="chemical-search-field">

@@ -42,7 +42,7 @@
 
 #papers-view .papers-viewer-canvas {
   border: 1px solid var(--theme-border-soft);
-  border-radius: 4px;
+  border-radius: 0;
   box-shadow: none;
 }
 

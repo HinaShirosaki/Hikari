@@ -1,8 +1,8 @@
 module.exports = function registerEdgeToolBoxSuite(context = {}) {
   const registerParts = [
-    require('./tool-box-suite/part-01.js'),
-    require('./tool-box-suite/part-02.js'),
-    require('./tool-box-suite/part-03.js')
+    require('./tool-box-suite/codon-optimization-and-cloning-evaluation.js'),
+    require('./tool-box-suite/primer-design-and-crispr-guides.js'),
+    require('./tool-box-suite/crispr-gc-filtering.js')
   ];
 
   registerParts.forEach((registerPart) => registerPart(context));

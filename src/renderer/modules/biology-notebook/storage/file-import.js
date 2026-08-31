@@ -69,6 +69,7 @@ async function persistImportedNotebookFiles({
       name: result.fileName || file.name,
       path: result.filePath || '',
       relativePath: result.relativePath || '',
+      mimeType: String(file.type || '').trim(),
       size: Number(file.size) || 0,
       importedAt
     });

@@ -2,7 +2,7 @@
 
 const { BASE_MASKS, REVERSE_COMPLEMENT_MAP } = require('./constants');
 
-function cleanText(value, _maxLength = 240) {
+function cleanText(value) {
   const text = String(value == null ? '' : value)
     .replace(/\s+/g, ' ');
   return text || '';

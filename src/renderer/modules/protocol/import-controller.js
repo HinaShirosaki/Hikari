@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function createProtocolImportController({
   state,
   persist,
@@ -7,8 +9,7 @@ export function createProtocolImportController({
   FileReaderClass,
   parseProtocolsFromJson,
   onProtocolsChanged,
-  renderList,
-  defaultProtocolJsonImportStatus
+  renderList
 }) {
   function buildUniqueImportedProtocolName(baseName) {
     const takenNames = new Set(
@@ -80,7 +81,9 @@ export function createProtocolImportController({
     if (!ui.protocolJsonImportStatus) {
       return;
     }
-    ui.protocolJsonImportStatus.textContent = String(message || '').trim() || defaultProtocolJsonImportStatus;
+    const text = String(message || '').trim();
+    ui.protocolJsonImportStatus.textContent = text;
+    ui.protocolJsonImportStatus.hidden = !text;
   }
 
   function resetProtocolJsonImportUi() {
@@ -90,7 +93,7 @@ export function createProtocolImportController({
     if (ui.protocolJsonImportFileInput) {
       ui.protocolJsonImportFileInput.value = '';
     }
-    setProtocolJsonImportStatus(defaultProtocolJsonImportStatus);
+    setProtocolJsonImportStatus('');
     closeProtocolJsonImportOverlay();
   }
 
@@ -151,17 +154,20 @@ export function createProtocolImportController({
       rawInput = await readProtocolJsonImportInput();
     } catch (error) {
       setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'));
+      showTransientNotice(String(error?.message || error || 'Failed to read JSON input.'), { type: 'error' });
       return;
     }
 
     if (!String(rawInput || '').trim()) {
       setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
+      showTransientNotice('Paste protocol JSON or choose a JSON file first.', { type: 'error' });
       return;
     }
 
     const result = importProtocolsFromJson(rawInput, { copySuffixLabel: 'Imported Copy' });
     if (!result.ok) {
       setProtocolJsonImportStatus(result.error || 'Failed to import protocol JSON.');
+      showTransientNotice(result.error || 'Failed to import protocol JSON.', { type: 'error' });
       return;
     }
 

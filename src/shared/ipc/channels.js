@@ -19,8 +19,6 @@ const AGENT = Object.freeze({
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
   CHAT_LOG_GET_SESSION: 'agent:chat-log:get-session',
-  DEVELOPER_TEST_TOOLS: 'agent:developer:test-tools',
-  DEVELOPER_CONTEXT_PREVIEW: 'agent:developer:context-preview',
   LOGS_LIST_REQUESTS: 'agent:logs:list-requests',
   LOGS_REPLAY: 'agent:logs:replay'
 });
@@ -35,6 +33,7 @@ const STORAGE = Object.freeze({
   PICK_DIRECTORY: 'storage:pick-directory',
   ENSURE_DIRECTORY: 'storage:ensure-directory',
   IMPORT_ROOT: 'storage:import-root',
+  LAST_ROOT: 'storage:last-root',
   STORE_IMPORTED_FILE: 'storage:store-imported-file',
   MOVE_STORED_FILE: 'storage:move-stored-file',
   WRITE_JSON_FILE: 'storage:write-json-file',
@@ -54,7 +53,20 @@ const SYSTEM = Object.freeze({
 
 const PLUGINS = Object.freeze({
   INSPECT_FOLDER: 'plugins:inspect-folder',
-  SERVE_FOLDER: 'plugins:serve-folder'
+  SERVE_FOLDER: 'plugins:serve-folder',
+  EXPORT_FILE: 'plugins:export-file'
+});
+
+const PYTHON = Object.freeze({
+  RUN: 'python:run'
+});
+
+const BIOINFORMATICS = Object.freeze({
+  BLAST_SUBMIT: 'bioinformatics:blast-submit',
+  BLAST_STATUS: 'bioinformatics:blast-status',
+  BLAST_RESULTS: 'bioinformatics:blast-results',
+  UNIPROT_SEARCH: 'bioinformatics:uniprot-search',
+  UNIPROT_GET: 'bioinformatics:uniprot-get'
 });
 
 const INVENTORY = Object.freeze({
@@ -86,13 +98,13 @@ const SEQUENCE_AGENT = Object.freeze({
   RESPONSE: 'sequence-agent:response'
 });
 
-const TELEGRAM = Object.freeze({
-  GET_CONFIG: 'telegram:get-config',
-  SET_TOKEN: 'telegram:set-token',
-  CLEAR_TOKEN: 'telegram:clear-token'
+const GENOME = Object.freeze({
+  LIST: 'genome:list',
+  GET: 'genome:get',
+  ADD: 'genome:add',
+  REMOVE: 'genome:remove',
+  READ_REGION: 'genome:read-region'
 });
-
-const TELEGRAM_COMMAND_EVENT = 'telegram-command';
 
 const SCHEDULED_TASK = Object.freeze({
   LIST: 'scheduled-task:list',
@@ -122,12 +134,13 @@ module.exports = {
   STORAGE,
   SYSTEM,
   PLUGINS,
+  PYTHON,
+  BIOINFORMATICS,
   INVENTORY,
   ASSAY,
   SEQUENCE_LIBRARY,
   SEQUENCE_AGENT,
-  TELEGRAM,
-  TELEGRAM_COMMAND_EVENT,
   SCHEDULED_TASK,
+  GENOME,
   LLM
 };

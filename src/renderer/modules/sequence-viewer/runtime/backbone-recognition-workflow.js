@@ -153,7 +153,7 @@ export function createBackboneRecognitionWorkflow(ctx) {
     }
     actions.setStatus('No backbone candidate was recognized from promoter alignment.');
   }
-  async function persistBackboneSelectionEffects({ match, current, displayMatch, dialogState, removedRecognitionFeatures }) {
+  async function persistBackboneSelectionEffects({ match, current, _displayMatch, dialogState, removedRecognitionFeatures }) {
     const result = { artifactStored: false, artifactError: '', sequenceCleanupSaved: false, sequenceCleanupError: '' };
     try {
       const artifactResult = await persistRecognizedBackboneArtifact(match, current, {

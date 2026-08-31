@@ -2,10 +2,11 @@
 
 A plugin is a folder of web files that Hikari boots as a first-class app: it
 gets a navigation entry, its own workspace view, and — if its manifest asks for
-it — read/write access to protocols, notebook entries, projects, and samples
-through a permission-gated host API.
+it — a narrow set of permission-gated host capabilities.
 
-Read this page for the folder contract and the lifecycle. Then:
+New plugin author? Start with the copyable
+[**quickstart.md**](quickstart.md), then use this page for the complete folder
+contract and lifecycle. Also see:
 
 - [**plugin-api.md**](plugin-api.md) — the host API reference (every verb,
   its permission, its exact request/response shape).
@@ -17,25 +18,30 @@ Read this page for the folder contract and the lifecycle. Then:
 
 ## 1. The folder contract
 
-Hikari **refuses to install** a folder that does not match one of the two
+Hikari **refuses to install** a folder that does not match one of the supported
 shapes below. The rules are strict on purpose: identity is declared, never
 inferred, so a plugin keeps its id (and therefore its stored settings) when its
 title changes.
 
-### 1.0 Three kinds of plugin
+### 1.0 Four kinds of plugin
 
-|  | **Local** | **Served** | **Remote** |
-| --- | --- | --- | --- |
-| Ships | `index.html` + assets | `index.html` + assets | nothing but `plugin.json` |
-| Manifest | neither flag | `serve: true` | `embed: "https://…"` |
-| Loaded from | `file://` | `http://127.0.0.1:<port>` | the remote URL |
-| Runs as | opaque origin (`null`) | its own loopback origin | the remote site's origin |
-| Sandbox | `allow-scripts allow-forms allow-modals allow-popups` | the same **+ `allow-same-origin`** | the same **+ `allow-same-origin`** |
-| `localStorage` / `IndexedDB` | **denied** (`SecurityError`) | works | works |
-| Host API | may hold permissions | may hold permissions | **never** — barred at install |
-| Left rail | host-drawn, mandatory | host-drawn, mandatory | host-drawn, mandatory |
-| Code you can audit | yes | yes | no |
-| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — |
+The first three are **view** plugins — they open a workspace. The fourth is a
+**service** — no view, it registers a capability instead. All four install and
+are managed identically in Settings; the kind is a manifest fact, not a
+different install flow.
+
+|  | **Local** | **Served** | **Remote** | **Service** |
+| --- | --- | --- | --- | --- |
+| Ships | `index.html` + assets | `index.html` + assets | nothing but `plugin.json` | `index.html` + assets |
+| Manifest | no flag | `serve: true` | `embed: "https://…"` | `service: {…}` |
+| Loaded from | `file://` | `http://127.0.0.1:<port>` | the remote URL | `file://` (hidden) |
+| Runs as | opaque origin (`null`) | its own loopback origin | the remote site's origin | opaque origin (`null`) |
+| Sandbox | `allow-scripts allow-forms allow-modals allow-popups` | the same **+ `allow-same-origin`** | the same **+ `allow-same-origin`** | same as local |
+| `localStorage` / `IndexedDB` | **denied** | works | works | **denied** |
+| Scripts | **classic only** (§5.4) | classic or module | (remote's own) | **classic only** (§5.4) |
+| Has a view | yes (whole pane) | yes | yes | **no** — headless |
+| Host API | may hold permissions | may hold permissions | **never** | may hold permissions |
+| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — | [`snapgene-dna`](../../examples/plugins/snapgene-dna/) |
 
 **Which to write:**
 
@@ -45,6 +51,9 @@ title changes.
   of it, so this is not a preference but a hard requirement (§5.1).
 - **Remote** only to embed an existing web app you cannot bundle. It buys
   nothing except someone else's hosting, and costs you the host API entirely.
+- **Service** to extend a built-in feature rather than add a workspace — today,
+  teaching a feature to open a file format via conversion. Full details in
+  [service-plugins.md](service-plugins.md).
 
 Served and remote plugins differ in one thing that matters more than the
 mechanics: with a served plugin the code is in the folder you installed and
@@ -67,9 +76,11 @@ notebook-results/       <- folder name MUST equal the manifest "id"
 ```
 
 Everything below the root is unconstrained. `index.html` is loaded like a
-normal webpage, so any relative reference (`./style.css`, `./main.js`, images,
-subfolders, ES module imports) resolves against the plugin folder. There is no
-build step and no framework requirement.
+normal webpage, so relative stylesheets, classic scripts, images, and
+subfolders resolve against the plugin folder. A **served** plugin can also use
+relative ES module imports. A local plugin has an opaque `file://` origin, so
+browsers refuse those module fetches; use classic scripts there (§5.4). There
+is no build step and no framework requirement.
 
 For a served plugin the whole folder is reachable over its loopback origin, so
 the folder is also the web root: `/ij153/ij.jar` means
@@ -93,11 +104,13 @@ imagej/
 | `name` present | `plugin.json is missing the required "name" field.` |
 | `version` present, `major.minor.patch` | `plugin.json needs a "version" like "1.0.0"…` |
 | `permissions`, if present, is an array of known capability names | `Unknown permission "X". Allowed: …` |
-| `index.html` at the folder root — **local and served** | `Plugin folder does not contain index.html.` |
+| `index.html` at the folder root — everything except **remote** (for a service it is a script host, not a page — §1.6) | `Plugin folder does not contain index.html.` |
 | `embed`, if present, is an absolute **https** URL | `plugin.json "embed" must use https…` |
 | `embed` and `permissions` are mutually exclusive | `A plugin with "embed" cannot request host permissions…` |
 | `serve`, if present, is a boolean | `plugin.json "serve" must be true or false.` |
 | `serve` and `embed` are mutually exclusive | `plugin.json cannot set both "serve" and "embed".` |
+| `service`, if present, declares a non-empty `fileConversions` array of bare lower-case `{ from, to }` extensions | `plugin.json "service" must declare a non-empty "fileConversions" array.` |
+| `service` excludes `embed` and `serve` | `plugin.json a "service" plugin cannot also use "embed" or "serve".` |
 
 Source of truth:
 [`src/main/lib/inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js).
@@ -123,6 +136,7 @@ Source of truth:
 | `permissions` | string[] | no | Host API capabilities. Defaults to `[]`. Rejected alongside `embed`. |
 | `serve` | boolean | no | Serve the folder over `http://127.0.0.1:<port>` instead of `file://`, giving the plugin a real origin with working storage. Rejected alongside `embed`. |
 | `embed` | string | no | Absolute **https** URL. Makes this a remote plugin: `index.html` is not required and host permissions are refused. |
+| `service` | object | no | Makes this a headless service. `{ "fileConversions": [{ "from": "dna", "to": "gbk" }] }`. No view is created. Rejected alongside `embed`/`serve`. See [service-plugins.md](service-plugins.md). |
 
 Unknown fields are ignored, so new optional fields can land later without
 breaking existing plugins.
@@ -140,9 +154,13 @@ full list on the plugin's row in Settings before enabling it.
 | `samples:read` | List sample ids, names, and types. |
 | `notebook:read` | List notebook entries and read one in full. |
 | `notebook:write` | Append result text and result tables to an **existing** notebook entry. |
+| `storage` | Read and replace the plugin's **own** persisted JSON blob (§3.1). Grants nothing outside that slice. |
+| `files` | Read and write files in the plugin's **own** folder under the storage root (§3.2). Grants nothing outside that folder. |
+| `downloads` | Open a native save dialog for plugin-generated bytes. The user chooses the destination; the plugin receives no path. |
+| `python` | Run Python in the host's sandbox — a throwaway directory per run, deleted when it ends ([plugin-api.md `python.run`](plugin-api.md#pythonrun--python)). This is the one permission that executes code outside the frame; grant it deliberately. |
 
 Declare the narrowest set that works. There is deliberately no permission for
-creating or deleting records, reading settings, or touching the filesystem —
+creating or deleting records, reading settings, or directly touching the filesystem —
 see [plugin-api.md §5](plugin-api.md#5-what-the-api-deliberately-does-not-do).
 
 **Remote plugins get none of these**, and a manifest that requests both `embed`
@@ -150,6 +168,24 @@ and `permissions` is rejected at install. A permission is a grant to code the
 user could read in the folder they installed; remote code can change after
 review, so it never receives one. The frame is also never registered with the
 bridge, so the API is absent rather than merely denied.
+
+### 1.6 A service has no UI
+
+A service plugin is headless. It has no view, no navigation entry, no rail, and
+it must not render anything:
+
+- **It ships no page.** Its `index.html` is a *script host*, not a UI: the
+  sandbox needs a document to run a script in, and that is all this file is. It
+  should contain nothing but `<script>` tags — no markup, no styles.
+- **Its code touches no DOM.** A service listens for host calls and answers
+  them. Reaching for `document` is the signal that what you are building is a
+  view plugin, not a service.
+- **The host enforces it.** The service frame is mounted `hidden` *and* pinned
+  to `display: none` by `.plugin-service-frame`, so a service cannot show UI
+  even if its document does contain markup.
+
+If your extension needs to show something, it is a view plugin (§1.0) — a
+plugin may be one or the other, not both.
 
 ---
 
@@ -159,12 +195,27 @@ bridge, so the API is absent rather than merely denied.
 2. **Add Plugin Folder**, pick the folder. It is validated against §1 on the
    spot; a rejected folder shows the exact reason in the status line.
 3. The plugin is saved as *enabled*. Click **Reload App** to boot it.
-4. After reload it appears in the "More" menu with a plug icon and takes part
-   in topbar search and startup-view logic like any built-in app.
+4. After reload it appears in the "More" menu with Hikari's generic plug icon
+   and takes part in topbar search and startup-view logic like any built-in app.
 
 Each row shows name, version, description, **declared host access**, and folder
 path, plus an On/Off toggle and a **Remove** button. Removing forgets the
 settings entry; the folder on disk is never touched.
+
+Hikari may also ship a plugin as **internal bundled source**. Its implementation
+lives in [`src/plugins/<id>/`](../../src/plugins/), so users never select or
+install its folder. It still uses the same manifest, iframe sandbox, bridge,
+public API, and navigation lifecycle as an installable plugin. Its private
+`@bundled/<id>` path token is resolved inside the application package, it is
+always restored during state normalization, it cannot be removed, and it can
+still be turned Off. Gel Analysis is the first internal plugin.
+
+Internal distribution is not extra trust: it does not permit imports from the
+renderer, direct DOM access, preload access, or unrestricted filesystem access.
+Hikari contributors should follow
+[`src/plugins/README.md`](../../src/plugins/README.md) for registration,
+packaging, and verification. Third-party developers should use the install flow
+above and the examples under [`examples/plugins/`](../../examples/plugins/).
 
 Add, toggle, and remove all take effect on the **next reload** — navigation and
 views are constructed once at boot (§4).
@@ -201,6 +252,43 @@ Installed plugins live in `state.settings.plugins`:
   widening its own access on a later launch. Changes to HTML/CSS/JS need no
   re-add; those files are read live from disk on every boot.
 
+### 3.1 Plugin storage
+
+A plugin holding the `storage` permission gets a persisted JSON blob of its own
+at `state.settings.pluginStorage[<plugin id>]`, read and written with
+`storage.get` / `storage.set` ([plugin-api.md §3](plugin-api.md#3-write-verbs)).
+
+- It is **capped per plugin** (`MAX_PLUGIN_STORAGE_CHARS` in
+  [`plugin-storage.js`](../../src/renderer/lib/plugin-storage.js), 1 000 000
+  characters). App state is one `localStorage` record for the whole app, so an
+  unbounded blob would break every later save, not just the plugin's — the cap
+  is enforced on write *and* again on load, where an imported or hand-edited
+  state gets an over-cap blob dropped rather than carried into storage.
+- It **outlives the plugin record.** Removing a plugin in Settings forgets the
+  install entry but keeps the blob, so re-adding the plugin finds its data.
+  Nothing in the UI clears it today; a user who wants it gone edits or re-imports
+  their state.
+- It travels with state export/import like any other setting.
+
+### 3.2 Plugin files
+
+A plugin holding the `files` permission also gets a folder at
+`<storage root>/Plugins/<plugin id>/`, addressed with `files.write` /
+`files.read` and relative paths only.
+
+- **Containment is enforced in the bridge**, not downstream: the host's own
+  `readFileBase64` reads any absolute path it is handed, and `storeImportedFile`
+  confines writes to the storage root but not below it. `resolvePluginFilePath()`
+  in [`plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js) is what keeps
+  a plugin out of the user's notebook files, and it is tested directly (§9).
+- **The storage root must be configured.** Without one the verbs refuse rather
+  than falling back to somewhere else.
+- **Files outlive the plugin record**, like the storage blob, and removing a
+  plugin never deletes them.
+- This is what makes a real workspace portable: the gel plugin writes the same
+  `source.png` / `analysis-result.json` / `gel-record.json` artifacts the
+  built-in module used to, just under its own folder.
+
 ---
 
 ## 4. How the app boots a plugin
@@ -216,34 +304,39 @@ sections and `APP_REGISTRY` at construction time.
 For each entry with `enabled !== false`,
 [`plugin-loader.js`](../../src/renderer/app/plugin-loader.js):
 
-1. **Creates a view section** appended to `.workspace-main`, wrapping the frame
-   in the shared left-rail template (§8.2):
+1. **Creates a view section** appended to `.workspace-main`, holding nothing
+   but the frame:
 
    ```html
    <section id="plugin-<id>-view" class="view plugin-view">
-     <div class="plugin-view__layout left-rail-template">
-       <aside class="plugin-rail app-left-rail left-rail-template__rail"
-              data-sync-left-rail>
-         <!-- host-drawn: plugin name, kind, description, host access -->
-       </aside>
-       <div class="plugin-view__main left-rail-template__main">
-         <iframe class="plugin-frame" src="<entryUrl>"
-                 sandbox="allow-scripts allow-forms allow-modals allow-popups">
-       </div>
+     <div class="plugin-view__main">
+       <iframe class="plugin-frame" src="<entryUrl>"
+               sandbox="allow-scripts allow-forms allow-modals allow-popups"
+               title="<name> — <kind>, host access: …">
      </div>
    </section>
    ```
 
-   **The left rail is mandatory and host-drawn.** Every plugin view gets it, so
-   a plugin reads as a real workspace rather than a bare iframe and lines up
-   with built-in views (shared draggable width, `body.has-shared-left-rail-view`
-   chrome). The sandboxed frame *cannot* draw into the host rail, and cannot
-   opt out of it — the rail is built in
-   [`plugin-loader.js`](../../src/renderer/app/plugin-loader.js)
-   (`buildPluginRail`) regardless of the plugin. It shows the plugin's identity
-   and, importantly, its host access, so the user always knows what they are
-   looking at. A plugin that wants its own navigation draws it inside its page,
-   in the main pane.
+   **The frame gets the whole pane, with no host chrome around it.** A plugin
+   lays out its own page exactly like a built-in view does — including its own
+   left rail, if it wants one.
+
+   This was not always true. The frame used to be wrapped in the shared
+   left-rail template with a host-drawn rail carrying the plugin's name, kind,
+   description, and host access, on the theory that a plugin should read as a
+   real workspace rather than a bare iframe. That was backwards for any plugin
+   that *is* a workspace: a ported view brings its own rail, so the host's sat
+   outside it holding five lines of static text, and the real rail — the one
+   with the controls — was pushed ~280px inward. Two rails, and the empty one
+   outermost.
+
+   Identity did not disappear with it. The plugin's name is the topbar title
+   and its entry in navigation and search; the kind, origin, and host access are
+   the frame's `title` and `aria-label` (`describePlugin()` in
+   [`plugin-loader.js`](../../src/renderer/app/plugin-loader.js)). And the
+   disclosure that actually gates trust was never the rail: it is the permission
+   list on the plugin's row in Settings, shown before the plugin is enabled
+   (§2).
 
 2. **Registers the frame with the bridge**, mapping its `contentWindow` to the
    installed record. This is how the host later knows which plugin a message
@@ -258,8 +351,10 @@ For each entry with `enabled !== false`,
    rather than breaking the boot.
 
 3. **Pushes an app entry into `APP_REGISTRY`** with `id: plugin-<id>`,
-   `viewId: plugin-<id>-view`, the name/description, a plug icon, and
-   `placement: 'more'`.
+   `viewId: plugin-<id>-view`, the name/description, and `placement: 'more'`.
+   Installable plugins receive the generic plug icon. An internal bundled
+   definition may provide trusted `iconMarkup`, such as Gel's electrophoresis
+   mark; manifest-provided host markup is never accepted.
 
 Because plugin apps are ordinary registry entries created before the shell
 boots, everything downstream works with zero plugin-specific code: dock/more
@@ -364,6 +459,37 @@ sandbox string at mount time and accepts only https or loopback http;
 settings file cannot walk a `file://` URL into a same-origin frame. All three
 layers are covered by tests (§9).
 
+### 5.5 The CSP has to admit the plugin's origin
+
+A served plugin's frame loads from `http://127.0.0.1:<random port>`, and the
+app's own Content-Security-Policy decides whether that is allowed at all. The
+`frame-src` directive in
+[`ui/html/shell/start.html`](../../ui/html/shell/start.html) therefore reads:
+
+```
+frame-src 'self' blob: http://127.0.0.1:*;
+```
+
+There is no IPv6 counterpart: CSP `host-source` has no grammar for an address
+literal, so `http://[::1]:*` is discarded as invalid (with a console warning at
+every boot). The plugin server binds `127.0.0.1` and nothing else, and
+`isSameOriginSafeUrl()` refuses `[::1]` to match.
+
+Without the loopback entry the browser blocks the frame outright and a served
+plugin renders as an **empty pane** — no console error, no failed host call,
+nothing that points at the cause. Permissions, sandbox flags, and the plugin
+server can all be correct while nothing runs. There is a contract test for this
+(§9).
+
+The wildcard port is unavoidable: `plugin-server.js` binds to an OS-assigned
+port. It widens nothing meaningful — the frame still gets only its own origin,
+and `isSameOriginSafeUrl()` re-checks the URL before the sandbox is chosen.
+
+**Remote (`embed`) plugins are not enabled by this.** They would need `https:`
+in `frame-src`, which permits framing any https origin, and that is a broader
+decision than serving a folder from loopback. A remote plugin installs and
+navigates today but its frame will not load until that entry is added.
+
 ### 5.2 The plugin server
 
 Served plugins are delivered by
@@ -401,26 +527,52 @@ with a workspace around it.
 Only install plugin folders you trust, and for remote plugins, only embed sites
 you trust.
 
+### 5.4 Opaque origins cannot load ES modules
+
+A side effect of the opaque-origin sandbox worth knowing when you write a
+**local** or **service** plugin: a `null`-origin document cannot fetch a
+relative ES module. `<script type="module" src="./main.js">` (or any inline
+module with a relative `import`) is silently CORS-blocked, so the script never
+runs and the plugin does nothing — no error in the host console.
+
+Use **classic scripts** in local and service plugins:
+
+```html
+<script src="./hikari.js"></script>       <!-- defines window.HikariPlugin -->
+<script src="./parse-results.js"></script><!-- defines a plugin-owned global -->
+<script src="./main.js"></script>         <!-- uses both globals -->
+```
+
+Served and remote plugins have a real origin and are unaffected — modules work
+there. The copyable `hikari.js` client itself is a classic script and works in
+both local and served plugins. This was verified directly: the same service
+page fails to run as a module in an opaque frame and succeeds as classic
+scripts.
+
 ---
 
 ## 6. Limitations
 
 - **Reload to apply.** Add/enable/disable/remove all require an app reload.
 - **Metadata is snapshotted** (§3), deliberately.
-- **Host API is read-mostly.** One write verb, `notebook.appendResult`, and it
-  can only append to entries the user already created.
-- **No custom icon.** Plugins always use the built-in plug icon and "More"
-  placement (`PLUGIN_ICON_MARKUP` in `plugin-loader.js`). Supporting a manifest
-  icon means reading and sanitizing an SVG in `inspectPluginFolder`.
-- **The left rail is fixed** (§4.1). It is host-drawn identity chrome; a plugin
-  cannot fill the whole width, restyle the rail, or put its own controls in it.
-  A plugin that wants navigation draws it inside its page, in the main pane. If
-  a plugin ever needs to contribute rail content, the path is a bridge verb the
-  host renders — not letting the frame reach into host DOM.
-- **No inter-plugin communication**, no background execution (a plugin only
-  runs while its view exists), no persistence of its own — the sandbox denies
-  `localStorage` to opaque origins, so keep state in memory or write it into
-  the notebook.
+- **Host API is read-mostly.** One verb writes to the user's records,
+  `notebook.appendResult`, and it can only append to entries they already
+  created. A plugin's own data goes in its storage blob (§3.1).
+- **No installable custom icon.** User-installed plugins always use the built-in
+  plug icon and "More" placement (`PLUGIN_ICON_MARKUP` in `plugin-loader.js`).
+  Source-owned internal definitions may provide audited icon markup; accepting
+  SVG from an installable manifest would require a separate sanitizer.
+- **No host chrome inside the view** (§4.1). The frame is the whole pane, so
+  a plugin draws its own rail, toolbar, and navigation. It can synchronize a
+  rail's width through the safe layout context, but gets no way to put anything
+  in the app's chrome. If a plugin ever needs to contribute to it, the path is
+  a bridge verb the host renders, not the frame reaching into host DOM.
+- **No inter-plugin communication**, and no background execution — a plugin
+  only runs while its view exists.
+- **Persistence is the host's, not the platform's.** The sandbox denies
+  `localStorage` to opaque origins, so a plugin that needs to remember anything
+  uses the `storage` verbs (§3.1) and lives within their cap. Larger artifacts
+  use the plugin-scoped `files` verbs (§3.2).
 
 ---
 
@@ -433,19 +585,28 @@ you trust.
 | `plugin.json needs a "version" like "1.0.0"` | Three numeric parts. `"1.0"` and `"v1.0.0"` are rejected. |
 | `Unknown permission "…"` | Typo, or a capability that does not exist. Allowed names are in §1.2. |
 | Plugin added but not in navigation | Reload the app (Settings → Plugins → Reload App). |
-| Blank plugin view | Open DevTools; the page failed like any webpage would (bad script path, JS error). Paths inside the plugin must be relative. |
+| Blank local plugin view using `type="module"` | Local frames have an opaque origin and cannot fetch relative ES modules. Load classic scripts in dependency order (§5.4), or opt into `serve: true` when modules are necessary. |
+| Blank plugin view | Open DevTools; the page failed like any webpage would (bad script path, JS error). Paths inside the plugin must be relative. Add an in-frame loading/error state so users see the failure too. |
 | `…did not declare the "X" permission in plugin.json` | Add it to `permissions`, then **remove and re-add** the plugin — grants are snapshotted. |
 | Host calls time out | The frame is not registered: the plugin is disabled, or the page is open outside Hikari (e.g. straight in a browser). |
 | `localStorage` throws | Expected; the sandbox denies storage to opaque origins. |
+| The UI says “saved,” but data is missing | Only show success after every awaited API call resolves. `storage.set` rejects a missing `value`, and `files.write` rejects invalid base64 or a downstream disk failure. |
 
 ---
 
 ## 8. Graduating a plugin into a built-in module
 
-Iframe plugins are deliberately bounded: fixed icon, "More" placement, no host
-UI, no agent integration, and only the API verbs in
-[plugin-api.md](plugin-api.md). When an extension needs a dock icon, the shared
-left-rail layout, agent MCP tools, or its own skill, it graduates from a plugin
+Iframe plugins are deliberately bounded: no host DOM, no agent integration,
+and only the API verbs in [plugin-api.md](plugin-api.md). Installable plugins
+use Hikari's generic plug icon because inserting manifest-provided SVG into the
+host document would be unsafe. Source-owned internal plugins may carry a
+trusted icon in their bundled definition. A plugin that draws its own left rail
+can synchronize its width through `app.info`, `app.context`, and
+`app.setLeftRailWidth`, but the rail and resize interaction still live inside
+the iframe.
+
+When an extension needs host-owned navigation order and chrome, direct module
+integration, agent MCP tools, or its own skill, it graduates from a plugin
 folder to a **first-class module** wired into the codebase. The general recipe
 is [docs/module-development/](../module-development/README.md); the four
 integration points specific to graduating are below.
@@ -499,7 +660,11 @@ Most built-in workspaces use the two-pane layout from
 Details and CSS-layer ordering:
 [module-development/02-html-and-css.md](../module-development/02-html-and-css.md).
 
-Plugin views get this shape for free and cannot opt out — see §4.1.
+Plugin views do not receive host DOM or this controller. A plugin that wants the
+shape copies the markup and CSS into its own page, reads
+`app.info.layout.leftRail`, and commits the settled drag width through
+`app.setLeftRailWidth`. The bundled Gel plugin is the complete internal
+reference. See §4.1 and [plugin-api.md §3](plugin-api.md#3-write-verbs).
 
 ### 8.3 Registering MCP tools
 
@@ -617,14 +782,31 @@ external skill folders only for user- or site-specific additions.
   the file next to the folder.
 - `bridge gates verbs on manifest permissions and frame identity` —
   unregistered frames get no reply, undeclared permissions are refused,
-  unknown verbs are refused, and a permitted write persists.
-- `every plugin view is built with the mandatory left rail` — drives
-  `installPlugins` against a minimal fake DOM and asserts each plugin view
-  contains one `left-rail-template` layout, one `[data-sync-left-rail]` rail,
-  the frame nested in the main pane, and rail text naming the plugin and its
-  host access.
+  unknown verbs are refused, and a permitted write persists. Storage is
+  covered here too: a plugin sees only its own slice, an over-cap or cyclic
+  write is refused without disturbing what was already stored, and `null`
+  clears.
+- `the app CSP admits the loopback origin served plugins run on` — asserts
+  `frame-src` in both the shell fragment and the generated `index.html`. A
+  served plugin whose frame the CSP blocks fails silently (§5.5), so this is
+  checked rather than assumed.
+- `files verbs stay inside the plugin folder` — writes and reads round-trip
+  under `Plugins/<id>/`, while `..`, absolute paths, drive letters, backslashes,
+  and null bytes are all refused without touching the filesystem.
+- `gel-plugin-selfcheck` ([`tests/`](../../tests/gel-plugin-selfcheck.mjs)) —
+  runs the internal Gel plugin's own analysis pipeline and checks its manifest,
+  bundled definition, and source-owned folder contract. The Gel UI suites in
+  `tests/suites/edge/bio-tools-and-gel-suite/` run against that same copy, since
+  it is the only implementation.
+- `a plugin view is its frame, with no host chrome around it` — drives
+  `installPlugins` against a minimal fake DOM and asserts each plugin view has
+  no host rail and no rail template, one frame filling one pane, and the
+  plugin's kind and host access on the frame's `title`/`aria-label`.
+- Service plugins have their own suite — see
+  [service-plugins.md §7](service-plugins.md#7-testing).
 
-All live in [`test.js`](../../test.js). For manual end-to-end checks, install
+The core contracts live in [`test.js`](../../test.js); copyable-client and Gel
+folder checks live in [`tests/`](../../tests/). For manual end-to-end checks, install
 [`examples/plugins/notebook-results/`](../../examples/plugins/notebook-results/)
 for the host API and [`examples/plugins/imagej/`](../../examples/plugins/imagej/)
 for a served plugin, then follow

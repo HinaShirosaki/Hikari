@@ -3,6 +3,7 @@ import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { buildOrfFeatures } from '../orf-analysis.js';
 import { buildSequenceEditDesignSource } from '../runtime/sequence-edit-helpers.js';
 import { designCloningRoute } from './cloning-adapter.js';
+import { asArray } from '../../../lib/normalize.js';
 
 // Pure core for the sequence_viewer / sequence_edit MCP contract. It never
 // mutates: reads are windowed, `design_cloning` is compute-only, and the
@@ -12,6 +13,7 @@ import { designCloningRoute } from './cloning-adapter.js';
 
 const MAX_SEQUENCE_WINDOW = 20000;
 const PREVIEW_FLANK = 20;
+const INSERT_RANGE_STRATEGIES = new Set(['golden-gate', 'gibson', 'in-fusion', 'overlap-extension']);
 
 const CODON_TABLE = {
   TTT: 'F', TTC: 'F', TTA: 'L', TTG: 'L', CTT: 'L', CTC: 'L', CTA: 'L', CTG: 'L',
@@ -23,10 +25,6 @@ const CODON_TABLE = {
   TGT: 'C', TGC: 'C', TGA: '*', TGG: 'W', CGT: 'R', CGC: 'R', CGA: 'R', CGG: 'R',
   AGT: 'S', AGC: 'S', AGA: 'R', AGG: 'R', GGT: 'G', GGC: 'G', GGA: 'G', GGG: 'G'
 };
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function fail(code, message) {
   return { error: { code, message } };
@@ -380,9 +378,19 @@ export function createSequenceViewerAgentApi(context = {}) {
       return fail('NO_EDIT_CONTEXT', 'design_cloning needs a hypothetical `edit` or an active edited record.');
     }
     const designRecord = input.edit ? { ...record, sequence: source.editedSequence } : record;
-    const range = input.insertRange && typeof input.insertRange === 'object'
-      ? { start: Math.round(Number(input.insertRange.start)) - 1, end: Math.round(Number(input.insertRange.end)) }
-      : undefined;
+    let range;
+    if (INSERT_RANGE_STRATEGIES.has(strategy)) {
+      if (!input.insertRange || typeof input.insertRange !== 'object') {
+        return fail('INSERT_RANGE_REQUIRED', `design_cloning strategy "${strategy}" requires insertRange.start and insertRange.end.`);
+      }
+      const start = Number(input.insertRange.start);
+      const end = Number(input.insertRange.end);
+      const sequenceLength = normalizeSequenceText(designRecord.sequence || '').length;
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end < start || end > sequenceLength) {
+        return fail('INVALID_INSERT_RANGE', `insertRange must be a 1-based inclusive range inside the ${sequenceLength}-base designed record.`);
+      }
+      range = { start: start - 1, end };
+    }
     return designCloningRoute({ strategy, source, record: designRecord, range });
   }
 

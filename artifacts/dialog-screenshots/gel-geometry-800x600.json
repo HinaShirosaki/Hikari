@@ -1,0 +1,44 @@
+[
+  {
+    "bottomVisible": true,
+    "closeTop": 296.0625,
+    "closeVisible": true,
+    "id": "gel-cell-table-overlay",
+    "overflowReachable": true,
+    "overlayScrollable": false,
+    "surfaceBottom": 369.9375,
+    "surfaceHeight": 92.875,
+    "surfaceScrollable": false,
+    "surfaceTop": 277.0625,
+    "topVisible": true,
+    "viewportHeight": 600
+  },
+  {
+    "bottomVisible": true,
+    "closeTop": 292.4921875,
+    "closeVisible": true,
+    "id": "gel-report-overlay",
+    "overflowReachable": true,
+    "overlayScrollable": false,
+    "surfaceBottom": 373.5078125,
+    "surfaceHeight": 100.015625,
+    "surfaceScrollable": false,
+    "surfaceTop": 273.4921875,
+    "topVisible": true,
+    "viewportHeight": 600
+  },
+  {
+    "bottomVisible": true,
+    "closeTop": 87.5,
+    "closeVisible": true,
+    "id": "gel-peak-editor-overlay",
+    "overflowReachable": true,
+    "overlayScrollable": false,
+    "surfaceBottom": 576.5,
+    "surfaceHeight": 506,
+    "surfaceScrollable": true,
+    "surfaceTop": 70.5,
+    "topVisible": true,
+    "viewportHeight": 600
+  }
+]

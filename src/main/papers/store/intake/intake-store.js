@@ -1,163 +1,10 @@
 'use strict';
 
-/**
- * Paper-intake summary knowledge base — storage layer.
- *
- * Holds the per-paper one-sentence summary and structured experiment list that the
- * `hikari-paper-intake` skill produces after a PDF is transferred into
- * `KnowledgeBase/papers.md/<paper_id>/paper.md`. This is a separate KB from the
- * existing LLM-wiki chunk store: the intake KB is *one record per paper*, schema
- * is fixed, and queries operate on whole summaries and experiment entries — not
- * on free-form chunks.
- *
- * All filesystem access is injected so live code can plug in workspace storage
- * helpers, and tests can plug in an in-memory map.
- */
-
 const path = require('node:path');
-const {
-  KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
-  PAPER_MARKDOWN_ROOT_FOLDER_NAME
-} = require('../../../storage/storage-paths.js');
-
-const INTAKE_SCHEMA_VERSION = 1;
-const INTAKE_FILE_NAME = 'intake.json';
-const PAPERS_ROOT_REL = path.posix.join(
-  KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
-  PAPER_MARKDOWN_ROOT_FOLDER_NAME
-);
-
-const DOC_TYPES = Object.freeze([
-  'research_paper',
-  'review',
-  'book',
-  'book_chapter',
-  'other'
-]);
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cleanText(value, maxLength = 2000) {
-  const text = String(value == null ? '' : value).trim();
-  if (!text) {
-    return '';
-  }
-  return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function uniqueStrings(values = [], max = 50) {
-  const seen = new Set();
-  const out = [];
-  asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 240);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || out.length >= max) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
-}
-
-function normalizeDocType(value) {
-  const text = cleanText(value, 40).toLowerCase().replace(/[\s-]+/gu, '_');
-  return DOC_TYPES.includes(text) ? text : 'other';
-}
-
-function normalizeExperiment(value, index = 0) {
-  const source = ensureObject(value);
-  const evidence = cleanText(source.evidence || source.source_content || source.sourceContent, 1600);
-  return {
-    id: cleanText(source.id, 80) || `e${index + 1}`,
-    title: cleanText(source.title, 240),
-    technique: cleanText(source.technique, 240),
-    variables: cleanText(source.variables, 400),
-    figure_ref: cleanText(source.figure_ref || source.figureRef, 80),
-    outcome: cleanText(source.outcome, 600),
-    ...(evidence ? { evidence } : {})
-  };
-}
-
-function normalizeOutlineEntry(value) {
-  const source = ensureObject(value);
-  return {
-    section: cleanText(source.section, 240),
-    summary: cleanText(source.summary, 600)
-  };
-}
-
-function normalizeClaim(value) {
-  const source = ensureObject(value);
-  return {
-    section: cleanText(source.section, 240),
-    claim: cleanText(source.claim, 600)
-  };
-}
-
-/**
- * Build a fully-normalized intake record from an unstructured input. Safe to
- * call on partial input — missing fields collapse to empty strings/arrays.
- */
-function normalizeIntakeRecord(input = {}) {
-  const source = ensureObject(input);
-  const docType = normalizeDocType(source.doc_type || source.docType);
-  return {
-    schema_version: INTAKE_SCHEMA_VERSION,
-    paper_id: cleanText(source.paper_id || source.paperId, 200),
-    doc_type: docType,
-    title: cleanText(source.title, 400),
-    doi: cleanText(source.doi, 200),
-    one_sentence_summary: cleanText(source.one_sentence_summary || source.summary, 800),
-    project_ids: uniqueStrings(source.project_ids || source.projectIds, 25),
-    experiments: docType === 'research_paper'
-      ? asArray(source.experiments).map(normalizeExperiment)
-      : [],
-    structure_outline: docType === 'research_paper'
-      ? []
-      : asArray(source.structure_outline || source.structureOutline).map(normalizeOutlineEntry),
-    notable_claims: docType === 'research_paper'
-      ? []
-      : asArray(source.notable_claims || source.notableClaims).map(normalizeClaim),
-    source_paths: {
-      paper_md: cleanText(source.source_paths?.paper_md, 400),
-      figures_dir: cleanText(source.source_paths?.figures_dir, 400),
-      pdf_path: cleanText(source.source_paths?.pdf_path, 400)
-    },
-    created_at: cleanText(source.created_at, 60),
-    updated_at: cleanText(source.updated_at, 60)
-  };
-}
-
-function intakeRelativePath(paperId = '') {
-  const id = cleanText(paperId, 200);
-  if (!id) {
-    return '';
-  }
-  return path.posix.join(PAPERS_ROOT_REL, id, INTAKE_FILE_NAME);
-}
-
-function defaultSourcePaths(paperId = '') {
-  const id = cleanText(paperId, 200);
-  if (!id) {
-    return { paper_md: '', figures_dir: '', pdf_path: '' };
-  }
-  const dir = path.posix.join(PAPERS_ROOT_REL, id);
-  return {
-    paper_md: path.posix.join(dir, 'paper.md'),
-    figures_dir: path.posix.join(dir, 'figures'),
-    pdf_path: ''
-  };
-}
+const { asArray, ensureObject } = require('../../../lib/normalize.js');
+const { defaultSourcePaths, intakeRelativePath } = require('./store/paths.js');
+const { DOC_TYPES, INTAKE_FILE_NAME, INTAKE_SCHEMA_VERSION, PAPERS_ROOT_REL, cleanText, normalizeIntakeRecord, uniqueStrings } = require('./store/record-normalizing.js');
+const { createPaperReads } = require('./store/paper-reads.js');
 
 /**
  * Create an intake store bound to a workspace root and an injected file-system.
@@ -172,8 +19,6 @@ function defaultSourcePaths(paperId = '') {
  *     record.project_ids stored inside intake.json. Wire this later to the
  *     project↔paper linkage table.
  *   - listKnownPaperIds(): Promise<string[]> — return all paper ids the workspace
- *     knows about. If omitted, the store falls back to listing immediate
- *     subdirectories of `KnowledgeBase/papers.md/`.
  */
 function createIntakeStore(deps = {}) {
   const workspacePath = cleanText(deps.workspacePath, 1024);
@@ -203,128 +48,15 @@ function createIntakeStore(deps = {}) {
     return null;
   }
 
-  function absoluteIntakePath(paperId) {
-    const rel = intakeRelativePath(paperId);
-    if (!rel) {
-      return '';
-    }
-    return path.join(workspacePath, rel);
-  }
 
-  function papersRootAbsolute() {
-    return path.join(workspacePath, PAPERS_ROOT_REL);
-  }
-
-  function paperFolderAbsolute(paperId) {
-    const id = cleanText(paperId, 200);
-    if (!id) {
-      return '';
-    }
-    return path.join(workspacePath, PAPERS_ROOT_REL, id);
-  }
-
-  /**
-   * Read the transferred `paper.md` for a paper. This is the primary source the
-   * intake pipeline classifies and summarizes. Returns `{ ok, status, markdown }`.
-   */
-  async function readPaperMarkdown(paperId) {
-    const guard = ensureReady();
-    if (guard) {
-      return guard;
-    }
-    const id = cleanText(paperId, 200);
-    if (!id) {
-      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
-    }
-    const absPath = path.join(paperFolderAbsolute(id), 'paper.md');
-    try {
-      const markdown = await fs.readFile(absPath, 'utf8');
-      return { ok: true, status: 'loaded', paper_id: id, markdown: String(markdown || '') };
-    } catch (error) {
-      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-        return { ok: false, status: 'not_found', paper_id: id };
-      }
-      return {
-        ok: false,
-        status: 'read_failed',
-        paper_id: id,
-        error: cleanText(error?.message || error, 600)
-      };
-    }
-  }
-
-  /**
-   * Read the page-delimited `extracted.txt` generated beside paper.md. Each
-   * page starts with `[[page:N]]`; the intake pipeline owns that cursor and
-   * only gives the model the current page content.
-   */
-  async function readPaperExtractedText(paperId) {
-    const guard = ensureReady();
-    if (guard) {
-      return guard;
-    }
-    const id = cleanText(paperId, 200);
-    if (!id) {
-      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
-    }
-    const absPath = path.join(paperFolderAbsolute(id), 'extracted.txt');
-    try {
-      const content = await fs.readFile(absPath, 'utf8');
-      return { ok: true, status: 'loaded', paper_id: id, content: String(content || '') };
-    } catch (error) {
-      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-        return { ok: false, status: 'not_found', paper_id: id };
-      }
-      return {
-        ok: false,
-        status: 'read_failed',
-        paper_id: id,
-        error: cleanText(error?.message || error, 600)
-      };
-    }
-  }
-
-  /**
-   * Read `meta.json` (title, authors, doi, pdf_path, page_count) for a paper.
-   * Missing or corrupt metadata collapses to an empty object rather than an error
-   * so the pipeline can still classify from the markdown alone.
-   */
-  async function readPaperMeta(paperId) {
-    const guard = ensureReady();
-    if (guard) {
-      return guard;
-    }
-    const id = cleanText(paperId, 200);
-    if (!id) {
-      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
-    }
-    const absPath = path.join(paperFolderAbsolute(id), 'meta.json');
-    let raw = '';
-    try {
-      raw = await fs.readFile(absPath, 'utf8');
-    } catch (error) {
-      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-        return { ok: true, status: 'not_found', paper_id: id, meta: {} };
-      }
-      return {
-        ok: false,
-        status: 'read_failed',
-        paper_id: id,
-        error: cleanText(error?.message || error, 600)
-      };
-    }
-    try {
-      const meta = JSON.parse(raw);
-      return {
-        ok: true,
-        status: 'loaded',
-        paper_id: id,
-        meta: meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {}
-      };
-    } catch {
-      return { ok: true, status: 'corrupt', paper_id: id, meta: {} };
-    }
-  }
+  const {
+    absoluteIntakePath,
+    papersRootAbsolute,
+    resolvePaperMarkdownPath,
+    readPaperMarkdown,
+    readPaperExtractedText,
+    readPaperMeta
+  } = createPaperReads({ workspacePath, fs, ensureReady });
 
   async function listPaperIds() {
     if (listKnownPaperIds) {
@@ -381,7 +113,16 @@ function createIntakeStore(deps = {}) {
     }
     const record = normalizeIntakeRecord({ ...parsed, paper_id: parsed?.paper_id || id });
     if (!record.source_paths.paper_md) {
-      record.source_paths = { ...defaultSourcePaths(id), ...record.source_paths };
+      const located = await resolvePaperMarkdownPath(id);
+      const defaults = defaultSourcePaths(id, {
+        paper_md: located?.paper_md,
+        title: record.title
+      });
+      record.source_paths = {
+        paper_md: defaults.paper_md,
+        figures_dir: record.source_paths.figures_dir || defaults.figures_dir,
+        pdf_path: record.source_paths.pdf_path || defaults.pdf_path
+      };
     }
     return { ok: true, status: 'loaded', paper_id: id, record };
   }
@@ -401,11 +142,26 @@ function createIntakeStore(deps = {}) {
     const now = new Date().toISOString();
     const previous = await readIntake(id);
     const previousRecord = previous.ok ? previous.record : {};
+    const nextRecord = ensureObject(record);
+    const defaults = defaultSourcePaths(id, { title: nextRecord.title || previousRecord.title });
+    const previousSourcePaths = ensureObject(previousRecord.source_paths);
+    const nextSourcePaths = ensureObject(nextRecord.source_paths);
+    const sourcePaths = {
+      paper_md: cleanText(nextSourcePaths.paper_md, 400)
+        || cleanText(previousSourcePaths.paper_md, 400)
+        || defaults.paper_md,
+      figures_dir: cleanText(nextSourcePaths.figures_dir, 400)
+        || cleanText(previousSourcePaths.figures_dir, 400)
+        || defaults.figures_dir,
+      pdf_path: cleanText(nextSourcePaths.pdf_path, 400)
+        || cleanText(previousSourcePaths.pdf_path, 400)
+        || defaults.pdf_path
+    };
     const merged = normalizeIntakeRecord({
-      ...defaultSourcePaths(id),
       ...previousRecord,
-      ...ensureObject(record),
+      ...nextRecord,
       paper_id: id,
+      source_paths: sourcePaths,
       created_at: previousRecord.created_at || now,
       updated_at: now
     });
@@ -436,6 +192,37 @@ function createIntakeStore(deps = {}) {
       const result = await readIntake(paperId);
       if (result.ok) {
         records.push(result.record);
+      } else if (result.status === 'not_found') {
+        // Older converted papers may predate intake.json. Keep their metadata
+        // title discoverable so the agent can route to full-paper analysis
+        // instead of incorrectly reporting that the local paper is absent.
+        // eslint-disable-next-line no-await-in-loop
+        const metaResult = await readPaperMeta(paperId);
+        const meta = ensureObject(metaResult?.meta);
+        // eslint-disable-next-line no-await-in-loop
+        const located = await resolvePaperMarkdownPath(paperId, meta);
+        const title = cleanText(meta.title || meta.paper_title, 400);
+        if (title && located?.ok) {
+          records.push({
+            schema_version: INTAKE_SCHEMA_VERSION,
+            paper_id: paperId,
+            doc_type: '',
+            intake_status: 'metadata_only',
+            title,
+            doi: cleanText(meta.doi, 200),
+            one_sentence_summary: '',
+            project_ids: [],
+            experiments: [],
+            structure_outline: [],
+            notable_claims: [],
+            source_paths: {
+              ...defaultSourcePaths(paperId, { paper_md: located.paper_md }),
+              pdf_path: cleanText(meta.pdf_path || meta.pdfPath || meta.source_pdf_path, 400)
+            },
+            created_at: '',
+            updated_at: cleanText(meta.updated_at, 60)
+          });
+        }
       } else if (result.status && result.status !== 'not_found') {
         errors.push({ paper_id: paperId, status: result.status, error: result.error });
       }
@@ -500,6 +287,7 @@ function createIntakeStore(deps = {}) {
     loadAll,
     listPaperIds,
     readPaperMarkdown,
+    resolvePaperMarkdownPath,
     readPaperExtractedText,
     readPaperMeta,
     effectiveProjectIds,

@@ -358,10 +358,11 @@ test('workflow execution renderer keeps the active step editor inside the workfl
   assert.doesNotMatch(board.innerHTML, /workflow-progress-connector/);
   assert.match(board.innerHTML, /data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
   assert.match(board.innerHTML, /data-workflow-step-popover="true"/);
-  assert.match(board.innerHTML, /workflow-placeholder-field-label">amount/);
-  assert.match(board.innerHTML, /workflow-placeholder-field[\s\S]*value="10 mL"[\s\S]*placeholder="Enter value"/);
+  assert.match(board.innerHTML, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>/);
+  assert.match(board.innerHTML, /workflow-placeholder-table[\s\S]*value="10 mL"[\s\S]*placeholder="Enter value"/);
+  assert.match(board.innerHTML, /aria-label="Workflow name"[\s\S]*data-workflow-run-name="workflow-1"/);
+  assert.doesNotMatch(board.innerHTML, /% complete/);
   assert.doesNotMatch(board.innerHTML, /workflow-placeholder-field-context|workflow-step-editor-header|workflow-step-status-picker/);
-  assert.doesNotMatch(board.innerHTML, /workflow-placeholder-table/);
   assert.doesNotMatch(board.innerHTML, /workflow-step-detail-panel/);
 });
 

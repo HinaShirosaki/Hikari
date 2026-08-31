@@ -2,18 +2,21 @@ import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
 } from '../../services/chemical-structure-clipboard.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function installStructureActions(ctx) {
   const { helpers, pendingStructureDrafts, persist } = ctx;
   const notifySamplesChanged = () => ctx.notifySamplesChanged();
 
 async function applyStructurePasteCandidates(candidates, formats = []) {
-  if (!Array.isArray(candidates) || !candidates.length) {
+  const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
+    .filter((candidate) => candidate?.sourceFormat !== 'image');
+  if (!supportedCandidates.length) {
     ctx.setStructureStatus(ctx.buildStructureClipboardNotFoundMessage(formats));
     return false;
   }
 
-  for (const candidate of candidates) {
+  for (const candidate of supportedCandidates) {
     const directDraft = toChemicalStructureDraftFromCandidate(candidate);
     if (directDraft) {
       const draft = ctx.toStructureDraft(directDraft);
@@ -22,7 +25,8 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
     }
   }
 
-  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.');
+  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.');
+  showTransientNotice('Cannot save that structure yet. Try SMILES or MOL/SDF data.', { type: 'error' });
   return false;
 }
 
@@ -73,6 +77,9 @@ function applyCapturedStructureDraft(draft) {
       persist();
       notifySamplesChanged();
     }
+    if (!normalized) {
+      showTransientNotice('No structure detected.', { type: 'error' });
+    }
     ctx.setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.');
     return;
   }
@@ -82,6 +89,7 @@ function applyCapturedStructureDraft(draft) {
     ctx.setStructureStatus('Structure ready. Click Add Sample to save it.');
   } else {
     pendingStructureDrafts.delete(context.pendingKey);
+    showTransientNotice('No structure detected.', { type: 'error' });
     ctx.setStructureStatus('No structure detected.');
   }
 }

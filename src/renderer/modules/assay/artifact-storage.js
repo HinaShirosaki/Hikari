@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 function sanitizeStorageName(value, fallback = 'item') {
   const cleaned = String(value || '')
     .trim()
@@ -102,6 +104,7 @@ export function createAssayArtifactStorage({
       wellLayout: assay.wellLayout,
       resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
       chartStyle: assay.chartStyle || null,
+      transformSpec: assay.transformSpec || null,
       updatedAt: assay.updatedAt
     };
     const latestAnalysis = assay.latestAnalysis && typeof assay.latestAnalysis === 'object'
@@ -145,6 +148,10 @@ export function createAssayArtifactStorage({
       ]);
     } catch (error) {
       console.warn('Failed to persist assay artifacts:', error);
+      showTransientNotice(
+        `Assay files were not written to the storage folder: ${String(error?.message || error || 'unknown error')}`,
+        { type: 'error' }
+      );
       return;
     }
 

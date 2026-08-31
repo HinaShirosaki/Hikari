@@ -1,5 +1,7 @@
 'use strict';
 
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
+
 const DEFAULT_MAX_COMMENTS_PER_PAPER = 16;
 const DEFAULT_MAX_RELATED_COMMENTS = 4;
 
@@ -16,18 +18,6 @@ function defaultCleanText(value, maxLength = 4000) {
     return text;
   }
   return text.length > maxLength ? text.slice(0, maxLength) : text;
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function createHelpers(helpers = {}) {

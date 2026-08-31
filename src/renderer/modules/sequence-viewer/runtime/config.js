@@ -39,6 +39,9 @@ export function createInitialSequenceViewerState() {
     orfStopCodons: normalizeOrfStopCodonSelection({ TAG: true, TAA: true, TGA: true }),
     orfFrameFilter: { '+1': true, '+2': true, '+3': true, '-1': true, '-2': true, '-3': true },
     restrictionVendorFilter: { ...DEFAULT_RESTRICTION_VENDOR_FILTER },
+    // Shared by the detail workspace and the Vector Builder so a primer is
+    // shown or hidden in both views at once.
+    showPrimers: true,
     inputComposerVisible: true,
     libraryFilter: LIBRARY_STATUS_SAVED,
     libraryEntries: [],
@@ -47,6 +50,7 @@ export function createInitialSequenceViewerState() {
     libraryFolderExpansionInitialized: false,
     libraryStoragePath: '',
     selectedLibraryEntryId: '',
+    previewZoom: 1,
     activeEntryId: '',
     activeEntryStatus: '',
     alignmentSessions: [],
@@ -57,6 +61,17 @@ export function createInitialSequenceViewerState() {
     alignmentViewEnabled: false,
     traceUseProcessed: true,
     proteinBuilderConfirmation: null,
+    vectorBuilder: {
+      selectedFeatureIndex: -1,
+      selectionAnchor: null,
+      selectionFocus: null,
+      cursorBase: null,
+      isSelecting: false,
+      showCutters: false,
+      insertTarget: null,
+      sequenceLayout: null,
+      zoom: 1
+    },
     sequenceEditDesignSource: null,
     cloningDesign: {},
     featureSearchQuery: '',

@@ -202,15 +202,18 @@
   min-width: 0;
 }
 
-#setting-view .settings-sample-inventory-location-row {
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
-  padding: 8px 0;
+#setting-view .settings-sample-inventory-location-row,
+#setting-view .settings-preferred-journal-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-height: 42px;
+  padding: 0;
   border: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 62%, transparent);
   background: transparent;
 }
 
-#setting-view .settings-sample-inventory-location-row input {
+#setting-view .settings-sample-inventory-location-row input,
+#setting-view .settings-preferred-journal-row input {
   width: 100%;
   padding: 4px 0;
   border: 0;
@@ -220,23 +223,26 @@
   color: var(--theme-text-strong);
 }
 
-#setting-view .settings-sample-inventory-location-row input:focus {
+#setting-view .settings-sample-inventory-location-row input:focus,
+#setting-view .settings-preferred-journal-row input:focus {
   outline: 0;
   background: color-mix(in srgb, var(--theme-surface-subtle) 72%, transparent);
   box-shadow: none;
 }
 
-#setting-view .settings-sample-inventory-location-row:first-child {
+#setting-view .settings-sample-inventory-location-row:first-child,
+#setting-view .settings-preferred-journal-row:first-child {
   padding-top: 0;
 }
 
-#setting-view .settings-sample-inventory-location-row:last-child {
+#setting-view .settings-sample-inventory-location-row:last-child,
+#setting-view .settings-preferred-journal-row:last-child {
   padding-bottom: 0;
   border-bottom: 0;
 }
 
 #setting-view .settings-preferred-journal-row {
-  grid-template-columns: minmax(180px, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 #setting-view .settings-sample-type-label-list {
@@ -248,8 +254,16 @@
 }
 
 #setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) {
+  display: grid;
   width: min(100%, 420px);
   grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+#setting-view #setting-sample-inventory-location-list {
+  width: min(100%, 420px);
+  gap: 0;
 }
 
 #setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) input {
@@ -296,10 +310,6 @@
 
 #setting-view .settings-inline-icon-danger:not(:disabled):hover {
   color: var(--theme-danger);
-}
-
-#setting-view .settings-sample-type-save {
-  color: var(--theme-accent);
 }
 
 #setting-view .settings-sample-type-label-row {

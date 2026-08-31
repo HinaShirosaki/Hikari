@@ -1,28 +1,15 @@
-import {
-  rowLabelToIndex,
-  wellIdFor
-} from './plate-model.js';
+import { wellIdFor } from './plate-model.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
-import { parseDimensionGroupSpec } from './analysis/shared.js';
 import { createResultImportController } from './results/result-import.js';
 import { createResultGridModel } from './results/grid-model.js';
+import { createAssayAnalysisGroups } from './results/analysis-groups.js';
+import { toResultField, resultFieldToColumnIndex } from './results/result-fields.js';
 
 export {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from './result-import-detector.js';
-
-function toResultField(columnIndex) {
-  return `c${columnIndex + 1}`;
-}
-
-function resultFieldToColumnIndex(field) {
-  const parsed = Number(String(field || '').replace(/^c/, ''));
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return -1;
-  }
-  return parsed - 1;
-}
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createAssayResultsManager({
   runtime,
@@ -41,24 +28,27 @@ export function createAssayResultsManager({
   onResultsChanged
 }) {
   const {
-    assayAnalysisColumnGroupsInput,
-    assayAnalysisGroupVisualization,
-    assayAnalysisGroupNameInput,
-    assayAnalysisRowGroupsInput,
-    assayAnalysisSelectionStatus,
     assayResultTable,
     assayResultFileInput
   } = elements;
 
   let resultGrid = null;
   let resultGridSignature = '';
-  const analysisGroupColorCount = 4;
-  const analysisGroupColorClasses = Array.from({ length: analysisGroupColorCount }, (_item, index) => index + 1)
-    .flatMap((colorIndex) => [
-      `assay-analysis-group-color-${colorIndex}`,
-      `assay-analysis-row-group-color-${colorIndex}`,
-      `assay-analysis-column-group-color-${colorIndex}`
-    ]);
+  const {
+    setAnalysisSelectionStatus,
+    getAnalysisGroups,
+    applyAnalysisGroupHighlights,
+    refreshAnalysisGroupDisplay,
+    updateResultRangeSelectionStatus,
+    onAddSelectedRowGroup,
+    onAddSelectedColumnGroup,
+    onClearAnalysisGroups
+  } = createAssayAnalysisGroups({
+    elements,
+    getCurrentDefinition,
+    onAnalysisConfigChange,
+    getResultGrid: () => resultGrid
+  });
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -100,265 +90,6 @@ export function createAssayResultsManager({
     }
   }
 
-  function setAnalysisSelectionStatus(message) {
-    if (!assayAnalysisSelectionStatus) {
-      return;
-    }
-    assayAnalysisSelectionStatus.textContent = message || '';
-  }
-
-  function summarizeSelectionLabels(labels, maxItems = 8) {
-    const normalized = Array.isArray(labels)
-      ? labels.map((item) => String(item || '').trim()).filter(Boolean)
-      : [];
-    if (normalized.length <= maxItems) {
-      return normalized.join(', ');
-    }
-    return `${normalized.slice(0, maxItems).join(', ')}, +${normalized.length - maxItems} more`;
-  }
-
-  function getCurrentResultRangeSelection() {
-    if (!resultGrid || typeof resultGrid.getRanges !== 'function') {
-      return { rowLabels: [], columnLabels: [] };
-    }
-    const ranges = resultGrid.getRanges();
-    if (!Array.isArray(ranges) || !ranges.length) {
-      return { rowLabels: [], columnLabels: [] };
-    }
-    const activeRange = ranges[ranges.length - 1];
-    if (!activeRange) {
-      return { rowLabels: [], columnLabels: [] };
-    }
-
-    const rowLabels = Array.isArray(activeRange.getRows?.())
-      ? activeRange.getRows()
-        .map((row) => String(row?.getData?.()?.rowLabel || '').trim().toUpperCase())
-        .filter((value) => /^[A-Z]+$/.test(value))
-      : [];
-    const columnLabels = Array.isArray(activeRange.getColumns?.())
-      ? activeRange.getColumns()
-        .map((column) => resultFieldToColumnIndex(column?.getField?.()))
-        .filter((columnIndex) => columnIndex >= 0)
-        .map((columnIndex) => String(columnIndex + 1))
-      : [];
-
-    return {
-      rowLabels: [...new Set(rowLabels)].sort((a, b) => rowLabelToIndex(a) - rowLabelToIndex(b)),
-      columnLabels: [...new Set(columnLabels)].sort((a, b) => Number(a) - Number(b))
-    };
-  }
-
-  function getAnalysisGroups() {
-    const plate = getCurrentDefinition();
-    return {
-      row: parseDimensionGroupSpec(
-        assayAnalysisRowGroupsInput?.value,
-        'row',
-        Number(plate?.rows)
-      ),
-      column: parseDimensionGroupSpec(
-        assayAnalysisColumnGroupsInput?.value,
-        'column',
-        Number(plate?.columns)
-      )
-    };
-  }
-
-  function getAnalysisGroupColorIndex(groupIndex) {
-    return (groupIndex % analysisGroupColorCount) + 1;
-  }
-
-  function clearAnalysisGroupClasses(element) {
-    if (!element?.classList) {
-      return;
-    }
-    element.classList.remove(
-      'assay-analysis-row-group-cell',
-      'assay-analysis-column-group-cell',
-      'assay-analysis-column-group-header',
-      ...analysisGroupColorClasses
-    );
-  }
-
-  function buildGroupMemberIndex(groups) {
-    const memberIndex = new Map();
-    groups.forEach((group, groupIndex) => {
-      group.members.forEach((member) => memberIndex.set(String(member), groupIndex));
-    });
-    return memberIndex;
-  }
-
-  function applyAnalysisGroupHighlights(analysisGroups) {
-    if (!resultGrid) {
-      return;
-    }
-    const rowGroups = analysisGroups?.row?.groups || [];
-    const columnGroups = analysisGroups?.column?.groups || [];
-    const rowMemberIndex = buildGroupMemberIndex(rowGroups);
-    const columnMemberIndex = buildGroupMemberIndex(columnGroups);
-    const rows = typeof resultGrid.getRows === 'function' ? resultGrid.getRows() : [];
-
-    rows.forEach((row) => {
-      const rowLabel = String(row?.getData?.()?.rowLabel || '').trim().toUpperCase();
-      const rowGroupIndex = rowMemberIndex.get(rowLabel);
-      const cells = typeof row?.getCells === 'function' ? row.getCells() : [];
-      cells.forEach((cell) => {
-        const element = cell?.getElement?.();
-        clearAnalysisGroupClasses(element);
-        if (Number.isInteger(rowGroupIndex)) {
-          element?.classList?.add(
-            'assay-analysis-row-group-cell',
-            `assay-analysis-row-group-color-${getAnalysisGroupColorIndex(rowGroupIndex)}`
-          );
-        }
-      });
-    });
-
-    const columns = typeof resultGrid.getColumns === 'function' ? resultGrid.getColumns() : [];
-    columns.forEach((column) => {
-      const columnIndex = resultFieldToColumnIndex(column?.getField?.());
-      const groupIndex = columnMemberIndex.get(String(columnIndex + 1));
-      const headerElement = column?.getElement?.();
-      clearAnalysisGroupClasses(headerElement);
-      if (!Number.isInteger(groupIndex)) {
-        return;
-      }
-      const colorIndex = getAnalysisGroupColorIndex(groupIndex);
-      headerElement?.classList?.add(
-        'assay-analysis-column-group-header',
-        `assay-analysis-column-group-color-${colorIndex}`
-      );
-      const cells = typeof column?.getCells === 'function' ? column.getCells() : [];
-      cells.forEach((cell) => {
-        cell?.getElement?.()?.classList?.add(
-          'assay-analysis-column-group-cell',
-          `assay-analysis-column-group-color-${colorIndex}`
-        );
-      });
-    });
-  }
-
-  function buildAnalysisGroupSection(label, groups) {
-    if (!groups.length) {
-      return '';
-    }
-    return `
-      <div class="assay-analysis-group-section">
-        <span class="assay-analysis-group-section-label">${escapeHtml(label)}</span>
-        <div class="assay-analysis-group-chips">
-          ${groups.map((group, groupIndex) => `
-            <span class="assay-analysis-group-chip assay-analysis-group-color-${getAnalysisGroupColorIndex(groupIndex)}">
-              <span class="assay-analysis-group-dot" aria-hidden="true"></span>
-              <strong>${escapeHtml(group.label)}</strong>
-              <span>${escapeHtml(group.members.join(', '))}</span>
-            </span>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  }
-
-  function refreshAnalysisGroupDisplay() {
-    const analysisGroups = getAnalysisGroups();
-    const rowGroups = analysisGroups.row.groups;
-    const columnGroups = analysisGroups.column.groups;
-    if (assayAnalysisGroupVisualization) {
-      assayAnalysisGroupVisualization.innerHTML = rowGroups.length || columnGroups.length
-        ? `
-          ${buildAnalysisGroupSection('Row groups', rowGroups)}
-          ${buildAnalysisGroupSection('Column groups', columnGroups)}
-        `
-        : '<p class="small-note">Drag across result-table cells, then add the selected rows or columns as a group.</p>';
-    }
-    applyAnalysisGroupHighlights(analysisGroups);
-    return analysisGroups;
-  }
-
-  function updateResultRangeSelectionStatus() {
-    const selection = getCurrentResultRangeSelection();
-    const parts = [];
-    if (selection.rowLabels.length) {
-      parts.push(`Rows ${summarizeSelectionLabels(selection.rowLabels)}`);
-    }
-    if (selection.columnLabels.length) {
-      parts.push(`Columns ${summarizeSelectionLabels(selection.columnLabels)}`);
-    }
-    setAnalysisSelectionStatus(parts.length
-      ? `Selected: ${parts.join(' · ')}. Add the selection as a row or column group.`
-      : 'Drag across cells in the result table to select group members.');
-    return selection;
-  }
-
-  function sanitizeGroupName(raw, fallbackName) {
-    const cleaned = String(raw || '')
-      .replace(/[:;\n\r]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return cleaned || fallbackName;
-  }
-
-  function nextGroupName(dimension) {
-    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
-    const prefix = dimension === 'row' ? 'Row Group' : 'Column Group';
-    const existing = String(input?.value || '')
-      .split(/[\n;]+/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-    return `${prefix} ${existing.length + 1}`;
-  }
-
-  function appendGroupEntry(input, groupName, members) {
-    if (!input) {
-      return;
-    }
-    const current = String(input.value || '').trim();
-    const entry = `${groupName}: ${members.join(',')}`;
-    input.value = current ? `${current}\n${entry}` : entry;
-  }
-
-  function addSelectedRangeGroup(dimension) {
-    const selection = updateResultRangeSelectionStatus();
-    const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
-    if (members.length < 2) {
-      setAnalysisSelectionStatus(`Select at least two ${dimension === 'row' ? 'rows' : 'columns'} before adding a group.`);
-      return;
-    }
-
-    const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
-    const fallbackName = nextGroupName(dimension);
-    const groupName = sanitizeGroupName(assayAnalysisGroupNameInput?.value, fallbackName);
-    appendGroupEntry(input, groupName, members);
-    refreshAnalysisGroupDisplay();
-    setAnalysisSelectionStatus(`Added "${groupName}" with ${members.length} ${dimension === 'row' ? 'row(s)' : 'column(s)'}.`);
-    if (typeof onAnalysisConfigChange === 'function') {
-      onAnalysisConfigChange();
-    }
-  }
-
-  function onAddSelectedRowGroup() {
-    addSelectedRangeGroup('row');
-  }
-
-  function onAddSelectedColumnGroup() {
-    addSelectedRangeGroup('column');
-  }
-
-  function onClearAnalysisGroups() {
-    if (assayAnalysisRowGroupsInput) {
-      assayAnalysisRowGroupsInput.value = '';
-    }
-    if (assayAnalysisColumnGroupsInput) {
-      assayAnalysisColumnGroupsInput.value = '';
-    }
-    if (assayAnalysisGroupNameInput) {
-      assayAnalysisGroupNameInput.value = '';
-    }
-    refreshAnalysisGroupDisplay();
-    setAnalysisSelectionStatus('Cleared row and column groups.');
-    if (typeof onAnalysisConfigChange === 'function') {
-      onAnalysisConfigChange();
-    }
-  }
 
   function clearResultGrid() {
     if (!resultGrid) {
@@ -411,6 +142,7 @@ export function createAssayResultsManager({
     }
     if (!TabulatorLib) {
       assayResultTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
+      showTransientNotice('Spreadsheet component failed to load (Tabulator).', { type: 'error' });
       return false;
     }
     const signature = buildResultGridSignature(def);
@@ -433,8 +165,6 @@ export function createAssayResultsManager({
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true,
-        cellEdited: onResultGridCellEdited,
-        cellClick: onResultGridCellClick
       };
       const gridHeight = getResultGridHeight(def);
       if (gridHeight) {
@@ -442,18 +172,27 @@ export function createAssayResultsManager({
       }
       resultGrid = new TabulatorLib(host, gridOptions);
       if (typeof resultGrid.on === 'function') {
+        // Tabulator 6 ignores callbacks passed in the options object, so these two have
+        // to be registered here like the rest -- cellEdited is what writes a typed
+        // value into the result model at all.
+        resultGrid.on('cellEdited', onResultGridCellEdited);
+        resultGrid.on('cellClick', onResultGridCellClick);
         resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
         resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
         resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);
-        resultGrid.on('tableBuilt', refreshAnalysisGroupDisplay);
+        // Both of these read the grid (getRanges, cell elements), so they have to
+        // wait for tableBuilt -- calling them right after the constructor warns
+        // and returns nothing.
+        resultGrid.on('tableBuilt', () => {
+          updateResultRangeSelectionStatus();
+          refreshAnalysisGroupDisplay();
+        });
         resultGrid.on('renderComplete', () => applyAnalysisGroupHighlights(getAnalysisGroups()));
       }
       host.addEventListener('focus', () => {
         setResultStatus('Table selected. Paste starts at A1 unless a result cell is selected.');
       });
       resultGridSignature = signature;
-      updateResultRangeSelectionStatus();
-      refreshAnalysisGroupDisplay();
       return true;
     }
     resultGrid.replaceData(buildResultGridData(def));
@@ -470,8 +209,20 @@ export function createAssayResultsManager({
     setResultStatus('');
   }
 
+  // Tabulator measures column widths on build, so a grid built (or resized) while its
+  // panel was folded away comes back with zero-width columns until it redraws.
+  function redrawResultGrid() {
+    if (typeof resultGrid?.redraw === 'function') {
+      resultGrid.redraw(true);
+    }
+  }
+
   function syncCurrentResultsFromGrid() {
-    if (!resultGrid) {
+    // Tabulator defers its initial build to the next task. During that window the
+    // instance exists, but getRows() is empty even when the saved assay supplied
+    // result data. Keep the restored model as the source of truth until the grid
+    // is ready so a clean-load snapshot cannot be recorded as an empty plate.
+    if (!resultGrid || resultGrid.initialized === false) {
       runtime.currentResults = filterAndNormalizeResults(runtime.currentResults);
       return runtime.currentResults;
     }
@@ -645,16 +396,21 @@ export function createAssayResultsManager({
       setResultStatus('Drop a CSV or Excel result file to attach it.');
     },
     onError: (error) => {
-      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'));
+      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'), true);
     }
   });
 
   refreshAnalysisGroupDisplay();
 
   return {
+    buildResultGridSignature,
+    buildResultGridColumns,
+    buildResultGridData,
+    getResultGridHeight,
     getResultValueCount,
     clearResultGrid,
     renderResultTable,
+    redrawResultGrid,
     syncCurrentResultsFromGrid,
     setAnalysisSelectionStatus,
     refreshAnalysisGroupDisplay,

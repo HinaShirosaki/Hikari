@@ -1,9 +1,10 @@
+import { showTransientNotice } from '../lib/notify.js';
+
 const EDITOR_SOURCES = Object.freeze([
   { key: 'sampleRegistry', label: 'Sample' },
   { key: 'protocol', label: 'Protocol' },
   { key: 'assay', label: 'Assay' },
-  { key: 'gel', label: 'Gel' },
-  { key: 'biologyNotebook', label: 'Biology Notebook' }
+  { key: 'biologyNotebook', label: 'Notebook' }
 ]);
 
 function safeHasUnsavedChanges(moduleApi) {
@@ -11,6 +12,7 @@ function safeHasUnsavedChanges(moduleApi) {
     return moduleApi?.hasUnsavedChanges?.() === true;
   } catch (error) {
     console.warn('Failed to inspect unsaved editor state:', error);
+    showTransientNotice('Could not check an editor for unsaved changes.', { type: 'error' });
     return false;
   }
 }
@@ -18,12 +20,17 @@ function safeHasUnsavedChanges(moduleApi) {
 export function createUnsavedChangesService({
   moduleRegistry,
   api,
+  // Sources that are not modules in this registry — today, plugin frames, which
+  // report their dirty state over the bridge because the host cannot reach into
+  // them. Same { key, label, moduleApi } shape as EDITOR_SOURCES.
+  externalSources = () => [],
   documentObject = globalThis?.document || null,
   windowObject = globalThis?.window || globalThis
 } = {}) {
   const overlay = documentObject?.getElementById?.('unsaved-changes-overlay') || null;
   const list = documentObject?.getElementById?.('unsaved-changes-list') || null;
   const status = documentObject?.getElementById?.('unsaved-changes-status') || null;
+  const closeButton = documentObject?.getElementById?.('unsaved-changes-close-btn') || null;
   const cancelButton = documentObject?.getElementById?.('unsaved-changes-cancel-btn') || null;
   const discardButton = documentObject?.getElementById?.('unsaved-changes-discard-btn') || null;
   const saveButton = documentObject?.getElementById?.('unsaved-changes-save-btn') || null;
@@ -31,12 +38,20 @@ export function createUnsavedChangesService({
   let saveInProgress = false;
 
   function getUnsavedSources() {
-    return EDITOR_SOURCES
-      .map((source) => ({
+    let external = [];
+    try {
+      external = externalSources() || [];
+    } catch (error) {
+      console.warn('Failed to collect external unsaved sources:', error);
+      showTransientNotice('Could not check plugin panels for unsaved changes.', { type: 'error' });
+    }
+    return [
+      ...EDITOR_SOURCES.map((source) => ({
         ...source,
         moduleApi: moduleRegistry?.get?.(source.key)
-      }))
-      .filter((source) => safeHasUnsavedChanges(source.moduleApi));
+      })),
+      ...external
+    ].filter((source) => safeHasUnsavedChanges(source.moduleApi));
   }
 
   function setStatus(message, isError = false) {
@@ -58,6 +73,9 @@ export function createUnsavedChangesService({
     }
     if (cancelButton) {
       cancelButton.disabled = saveInProgress;
+    }
+    if (closeButton) {
+      closeButton.disabled = saveInProgress;
     }
   }
 
@@ -156,6 +174,7 @@ export function createUnsavedChangesService({
     respondToClose('cancel');
   }
 
+  closeButton?.addEventListener('click', cancelClose);
   cancelButton?.addEventListener('click', cancelClose);
   discardButton?.addEventListener('click', discardAndQuit);
   saveButton?.addEventListener('click', () => {

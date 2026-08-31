@@ -1,16 +1,5 @@
 import { asArray, trimText } from './shared.js';
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
+import { cloneJson, ensureObject } from '../../lib/normalize.js';
 
 function compactObject(value = {}) {
   return Object.entries(ensureObject(value)).reduce((out, [key, entryValue]) => {

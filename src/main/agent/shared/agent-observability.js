@@ -2,15 +2,12 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { asArray } = require('../../lib/normalize.js');
 
 const DEFAULT_MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_MAX_ROTATIONS = 5;
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function cleanText(value, _maxLength = 2000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -22,7 +19,7 @@ function uniqueStrings(values) {
   const seen = new Set();
   const out = [];
   asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 120);
+    const normalized = cleanText(value);
     if (!normalized) {
       return;
     }
@@ -41,7 +38,7 @@ function sanitizeJsonValue(value, depth = 0) {
     return '[truncated-depth]';
   }
   if (typeof value === 'string') {
-    return cleanText(value, 280);
+    return cleanText(value);
   }
   if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
     return value;
@@ -56,7 +53,7 @@ function sanitizeJsonValue(value, depth = 0) {
     });
     return output;
   }
-  return cleanText(String(value || ''), 120);
+  return cleanText(String(value || ''));
 }
 
 function truncateToolOutput(toolOutput) {
@@ -68,23 +65,23 @@ function truncateToolOutput(toolOutput) {
   const citations = asArray(source.citations).length
     ? asArray(source.citations)
     : asArray(result.citations);
-  const summary = cleanText(source.summary || result.summary, 300);
+  const summary = cleanText(source.summary || result.summary);
   return {
     ok: source.ok !== false,
     summary,
     items: items.slice(0, 5).map((item) => sanitizeJsonValue(item)),
     citations: citations.slice(0, 5).map((row) => ({
-      source: cleanText(row?.source, 120),
-      pointer: cleanText(row?.pointer, 220),
-      reason: cleanText(row?.reason, 260)
+      source: cleanText(row?.source),
+      pointer: cleanText(row?.pointer),
+      reason: cleanText(row?.reason)
     })),
-    error: cleanText(source.error, 300)
+    error: cleanText(source.error)
   };
 }
 
 function createLifecycleRecorder({ requestId, onEvent = null } = {}) {
   return {
-    requestId: cleanText(requestId, 80),
+    requestId: cleanText(requestId),
     created_at: new Date().toISOString(),
     events: [],
     flushed_count: 0,
@@ -99,10 +96,10 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
   const event = rawEvent && typeof rawEvent === 'object' ? rawEvent : {};
   const normalized = {
     type: 'agent-lifecycle',
-    requestId: cleanText(event.requestId || recorder.requestId, 80),
-    stage: cleanText(event.stage, 40),
-    status: cleanText(event.status, 20) || 'ok',
-    message: cleanText(event.message, 360),
+    requestId: cleanText(event.requestId || recorder.requestId),
+    stage: cleanText(event.stage),
+    status: cleanText(event.status) || 'ok',
+    message: cleanText(event.message),
     timestamp: new Date().toISOString()
   };
   if (!normalized.stage) {
@@ -114,20 +111,18 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
     normalized.direction = 'app->llm';
   }
 
-  const toolName = cleanText(event.tool_name || event.toolName, 120);
+  const toolName = cleanText(event.tool_name || event.toolName);
   if (toolName) {
     normalized.tool_name = toolName;
   }
-  const responseType = cleanText(event.response_type || event.responseType, 80);
+  const responseType = cleanText(event.response_type || event.responseType);
   if (responseType) {
     normalized.response_type = responseType;
   }
   const routingIntent = cleanText(
     event.routing_intent
       || event.routingIntent
-      || event.routing?.intent,
-    80
-  );
+      || event.routing?.intent);
   if (routingIntent) {
     normalized.routing_intent = routingIntent;
   }
@@ -201,7 +196,7 @@ async function appendLogWithRotation({
   maxBytes = DEFAULT_MAX_LOG_SIZE_BYTES,
   maxRotations = DEFAULT_MAX_ROTATIONS
 } = {}) {
-  const targetPath = cleanText(logPath, 1600);
+  const targetPath = cleanText(logPath);
   if (!targetPath) {
     throw new Error('logPath is required.');
   }
@@ -213,7 +208,7 @@ async function appendLogWithRotation({
 }
 
 async function readLifecycleLogs({ logPath, requestId = '', limit = 1000 } = {}) {
-  const targetPath = cleanText(logPath, 1600);
+  const targetPath = cleanText(logPath);
   if (!targetPath) {
     return [];
   }
@@ -236,7 +231,7 @@ async function readLifecycleLogs({ logPath, requestId = '', limit = 1000 } = {})
       }
       try {
         const parsed = JSON.parse(trimmed);
-        if (!requestId || cleanText(parsed?.requestId, 80) === cleanText(requestId, 80)) {
+        if (!requestId || cleanText(parsed?.requestId) === cleanText(requestId)) {
           rows.push(parsed);
         }
       } catch {
@@ -255,7 +250,6 @@ function classifyFailureReasons({
   result,
   routing,
   validation,
-  error,
   lifecycleEvents
 } = {}) {
   const reasons = [];
@@ -275,16 +269,16 @@ function classifyFailureReasons({
     reasons.push('validation_failed');
   }
   if (plan.protocol_match?.needs_clarification === true) {
-    const ambiguity = cleanText(plan.protocol_match?.ambiguity_reason, 200).toLowerCase();
-    if (ambiguity.includes('no_protocol') || !cleanText(plan.protocol_match?.selected_protocol_id, 80)) {
+    const ambiguity = cleanText(plan.protocol_match?.ambiguity_reason).toLowerCase();
+    if (ambiguity.includes('no_protocol') || !cleanText(plan.protocol_match?.selected_protocol_id)) {
       reasons.push('no_protocol_candidates');
     }
     if (ambiguity.includes('top_two') || ambiguity.includes('close') || ambiguity.includes('ambiguous')) {
       reasons.push('multiple_close_matches');
     }
   }
-  if (cleanText(protocolNotebook.status, 40) === 'needs_more_info') {
-    if (!cleanText(protocolNotebook?.selected_protocol?.id, 120)) {
+  if (cleanText(protocolNotebook.status) === 'needs_more_info') {
+    if (!cleanText(protocolNotebook?.selected_protocol?.id)) {
       reasons.push('no_protocol_candidates');
     }
     if (asArray(protocolNotebook?.missing_placeholders).length > 0) {
@@ -299,8 +293,8 @@ function classifyFailureReasons({
     if (event?.stage !== 'tool_call_failed') {
       return;
     }
-    const toolName = cleanText(event?.tool_name, 120);
-    const message = cleanText(event?.message || event?.tool_output?.error, 320).toLowerCase();
+    const toolName = cleanText(event?.tool_name);
+    const message = cleanText(event?.message || event?.tool_output?.error).toLowerCase();
     if (message.includes('unknown tool') || message.includes('not found')) {
       reasons.push('tool_not_found');
       return;
@@ -316,7 +310,7 @@ function classifyFailureReasons({
 }
 
 async function replayRequestLifecycle({ requestId, logPath } = {}) {
-  const normalizedRequestId = cleanText(requestId, 80);
+  const normalizedRequestId = cleanText(requestId);
   if (!normalizedRequestId) {
     return {
       ok: false,
@@ -332,17 +326,17 @@ async function replayRequestLifecycle({ requestId, logPath } = {}) {
     requestId: normalizedRequestId,
     limit: 5000
   });
-  const events = rows.filter((row) => cleanText(row?.type, 40) === 'agent-lifecycle');
+  const events = rows.filter((row) => cleanText(row?.type) === 'agent-lifecycle');
   const traces = rows
-    .filter((row) => cleanText(row?.type, 40) === 'agent-llm-trace')
+    .filter((row) => cleanText(row?.type) === 'agent-llm-trace')
     .map((row) => ({
       type: 'agent-llm-trace',
-      requestId: cleanText(row?.requestId, 80),
-      stage: cleanText(row?.stage, 120),
-      provider: cleanText(row?.provider, 80),
-      model: cleanText(row?.model, 120),
-      summary: cleanText(row?.summary, 320),
-      timestamp: cleanText(row?.timestamp, 80),
+      requestId: cleanText(row?.requestId),
+      stage: cleanText(row?.stage),
+      provider: cleanText(row?.provider),
+      model: cleanText(row?.model),
+      summary: cleanText(row?.summary),
+      timestamp: cleanText(row?.timestamp),
       request_payload: row?.request_payload && typeof row.request_payload === 'object'
         ? sanitizeJsonValue(row.request_payload)
         : sanitizeJsonValue(row?.request_payload),
@@ -350,9 +344,9 @@ async function replayRequestLifecycle({ requestId, logPath } = {}) {
         ? sanitizeJsonValue(row.response_payload)
         : sanitizeJsonValue(row?.response_payload)
     }));
-  const request = rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-request') || null;
-  const result = rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-result')
-    || rows.find((row) => cleanText(row?.type, 80) === 'agent-chat-error')
+  const request = rows.find((row) => cleanText(row?.type) === 'agent-chat-request') || null;
+  const result = rows.find((row) => cleanText(row?.type) === 'agent-chat-result')
+    || rows.find((row) => cleanText(row?.type) === 'agent-chat-error')
     || null;
   const failureReasons = classifyFailureReasons({
     result,
@@ -373,12 +367,12 @@ async function replayRequestLifecycle({ requestId, logPath } = {}) {
       request_id: normalizedRequestId,
       event_count: events.length,
       trace_count: traces.length,
-      stages: uniqueStrings(events.map((event) => cleanText(event?.stage, 40))),
-      trace_stages: uniqueStrings(traces.map((trace) => cleanText(trace?.stage, 120))),
+      stages: uniqueStrings(events.map((event) => cleanText(event?.stage))),
+      trace_stages: uniqueStrings(traces.map((trace) => cleanText(trace?.stage))),
       trace_request_payload_count: traces.reduce((sum, trace) => sum + (trace?.request_payload ? 1 : 0), 0),
       trace_response_payload_count: traces.reduce((sum, trace) => sum + (trace?.response_payload ? 1 : 0), 0),
-      started_at: cleanText(rows[0]?.timestamp, 80),
-      ended_at: cleanText(rows[rows.length - 1]?.timestamp, 80),
+      started_at: cleanText(rows[0]?.timestamp),
+      ended_at: cleanText(rows[rows.length - 1]?.timestamp),
       failure_reasons: failureReasons
     }
   };

@@ -67,10 +67,12 @@ export function createTopbarOpenItemHandlers({
       return moduleRegistry.get('biologyNotebook')?.openEntry?.(itemId) !== undefined;
     },
     Protocol: (itemId) => rendererServices.protocol.openProtocol(itemId),
-    Sample: (itemId) => openItemViaDataAttr(views.SAMPLE_REGISTRY, 'data-sample-open', itemId),
+    Sample: (itemId) => {
+      showView(views.SAMPLE_REGISTRY);
+      return moduleRegistry.get('personalInventory')?.openSample?.(itemId) === true;
+    },
     Chemical: (itemId) => openItemViaDataAttr(views.LAB_COMMON_INVENTORY, 'data-chemical-open', itemId),
     Assay: (itemId) => openItemViaDataAttr(views.ASSAY, 'data-assay-open-results', itemId),
-    Gel: (itemId) => openItemViaDataAttr(views.GEL, 'data-gel-edit', itemId),
     Project: (itemId) => {
       if (!itemId) {
         return false;

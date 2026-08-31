@@ -1,15 +1,13 @@
 'use strict';
 
-function defaultCleanText(value, _maxLength = 500) {
+const { asArray } = require('../lib/normalize.js');
+
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function clamp(value, min, max) {

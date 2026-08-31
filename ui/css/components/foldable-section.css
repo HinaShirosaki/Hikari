@@ -1,0 +1,116 @@
+/*
+ * Shared disclosure section.
+ *
+ * This component deliberately provides structure without a card surface. The
+ * surrounding module owns the content and layout; native <details> owns the
+ * expanded state and keyboard interaction.
+ */
+.foldable-section {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--app-left-rail-divider, var(--theme-border-soft));
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.foldable-section:last-child {
+  border-bottom: 0;
+}
+
+.foldable-section__summary {
+  position: relative;
+  list-style: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.foldable-section__summary::marker,
+.foldable-section__summary::-webkit-details-marker {
+  display: none;
+}
+
+.foldable-section__summary::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: -8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--theme-accent);
+  opacity: 0;
+}
+
+.foldable-section__summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  margin-right: 3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.foldable-section[open] > .foldable-section__summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.foldable-section__summary:hover {
+  color: var(--theme-accent);
+}
+
+.foldable-section__summary:focus-visible {
+  outline: none;
+}
+
+.foldable-section__summary:focus-visible::before {
+  opacity: 1;
+}
+
+.foldable-section__body {
+  display: grid;
+  gap: 16px;
+  padding: 2px 0 16px;
+}
+
+.foldable-section--subsection {
+  border-top: 1px solid var(--theme-border-soft);
+  border-bottom: 0;
+}
+
+/* Subsections read as gel's tool groups: a quiet micro-label, not a second headline. */
+.foldable-section--subsection > .foldable-section__summary {
+  min-height: 34px;
+  padding-block: 8px;
+  color: var(--theme-text-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.foldable-section--subsection > .foldable-section__summary::after {
+  width: 8px;
+  height: 8px;
+}
+
+.foldable-section--subsection > .foldable-section__body {
+  padding-bottom: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foldable-section__summary::after {
+    transition: none;
+  }
+}

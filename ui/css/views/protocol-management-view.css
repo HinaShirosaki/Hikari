@@ -39,11 +39,30 @@
   gap: 8px;
 }
 
-#create-protocol-btn,
 #open-protocol-json-import-btn,
 #protocol-generate-btn,
 #protocol-polish-btn {
   min-height: 36px;
+}
+
+.protocol-create-icon-btn.primary-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.protocol-create-icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .protocol-sort-menu {
@@ -144,8 +163,15 @@
 }
 
 .left-rail-template.protocol-workspace > .protocol-list-panel > .protocol-list-scroll.left-rail-template__scroll {
+  --protocol-list-row-inline-padding: var(--app-left-rail-padding-inline, 16px);
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
+}
+
+.protocol-list-scroll > .list-table {
+  min-width: 0;
+  width: calc(100% + var(--protocol-list-row-inline-padding) + var(--protocol-list-row-inline-padding));
+  margin-inline: calc(-1 * var(--protocol-list-row-inline-padding));
 }
 
 .protocol-list-pinned > [hidden] {
@@ -153,9 +179,11 @@
 }
 
 .protocol-list-row {
+  box-sizing: border-box;
+  width: 100%;
   grid-template-columns: minmax(220px, 1fr) auto;
   gap: 12px;
-  padding: 14px 0;
+  padding: 14px var(--protocol-list-row-inline-padding);
   cursor: pointer;
   position: relative;
   border-bottom: 0;
@@ -170,6 +198,8 @@
 }
 
 .protocol-list-row-selected {
+  margin-inline: 0;
+  padding-inline: var(--protocol-list-row-inline-padding) !important;
   background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 82%);
 }
 
@@ -291,6 +321,46 @@
   margin-bottom: 16px;
 }
 
+.protocol-viewer-actions {
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.protocol-viewer-icon-btn.ghost-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  line-height: 1;
+}
+
+.protocol-viewer-icon-btn svg {
+  display: block;
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.protocol-viewer-icon-btn.ghost-btn:hover,
+.protocol-viewer-icon-btn.ghost-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
 .protocol-preview-block {
   border: 1px solid var(--theme-border);
   border-radius: 8px;
@@ -403,34 +473,11 @@
   margin-top: 12px;
 }
 
-.protocol-polish-overlay.app-dialog-overlay,
-.protocol-generate-overlay.app-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 220;
-  display: grid;
-  align-items: start;
-  justify-items: center;
-  overflow: hidden;
-  padding: max(86px, env(safe-area-inset-top, 0px)) clamp(16px, 3vw, 30px) clamp(16px, 3vw, 30px);
-  background: color-mix(in srgb, var(--theme-text-strong) 20%, transparent);
-  backdrop-filter: blur(10px);
-}
-
-.protocol-generate-overlay.app-dialog-overlay {
-  align-items: start;
-}
-
-.protocol-polish-overlay[hidden],
-.protocol-generate-overlay[hidden] {
-  display: none;
-}
-
 .protocol-polish-dialog-shell,
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
   width: min(1180px, 100%);
-  max-height: calc(100svh - 116px);
+  max-height: var(--app-dialog-available-height);
   min-height: 0;
   display: grid;
   gap: 16px;
@@ -438,13 +485,12 @@
 
 .protocol-polish-dialog-shell,
 .protocol-generate-result-shell {
-  height: min(760px, calc(100svh - 116px));
+  height: min(760px, var(--app-dialog-available-height));
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .protocol-generate-input-shell {
   width: min(900px, 100%);
-  max-height: calc(100svh - 116px);
 }
 
 .protocol-generate-result-shell {
@@ -721,15 +767,10 @@
     min-height: 240px;
   }
 
-  .protocol-polish-overlay.app-dialog-overlay,
-.protocol-generate-overlay.app-dialog-overlay {
-    padding: max(76px, env(safe-area-inset-top, 0px)) 12px 12px;
-  }
-
   .protocol-polish-dialog-shell,
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
-    max-height: calc(100svh - 88px);
+    max-height: var(--app-dialog-available-height);
   }
 
   .protocol-polish-dialog-stack {
@@ -740,7 +781,7 @@
 
   .protocol-polish-dialog-shell,
 .protocol-generate-result-shell {
-    height: calc(100svh - 88px);
+    height: var(--app-dialog-available-height);
   }
 
   .protocol-generate-input-shell,

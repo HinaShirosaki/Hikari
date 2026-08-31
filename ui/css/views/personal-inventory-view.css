@@ -34,29 +34,12 @@
   background: var(--app-left-rail-surface, var(--theme-surface)) !important;
 }
 
-.left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-pinned.left-rail-template__pinned {
-  display: grid;
-  align-content: start;
-  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
-  border-bottom: 1px solid var(--app-left-rail-divider);
-}
-
 .left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-scroll.left-rail-template__scroll {
   display: grid;
   gap: 12px;
   align-content: start;
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
-}
-
-.inventory-rail-create-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.inventory-rail-create-actions > button {
-  min-height: 36px;
 }
 
 .inventory-rail-stack {
@@ -82,6 +65,7 @@
 
 .inventory-location-btn {
   width: 100%;
+  min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -92,6 +76,20 @@
   background: transparent;
   color: inherit;
   text-align: left;
+}
+
+.inventory-location-row {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  gap: 4px;
+  align-items: center;
+}
+
+.inventory-location-add-container-btn.folder-tree-template__action,
+.inventory-folder-add-container-btn.folder-tree-template__action {
+  opacity: 1;
 }
 
 /* ponytail: border only on keyboard focus; .active/:hover drop it to kill the card-in-card seam line */
@@ -508,7 +506,7 @@
 .well-editor-shell {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: 61.8% 38.2%;
+  grid-template-columns: minmax(0, 61.8fr) minmax(0, 38.2fr);
   gap: 14px;
   align-items: start;
 }
@@ -533,36 +531,15 @@
 }
 
 .well-grid-panel-plate96 {
-  --plate-body: var(--assay-plate-body);
-  --plate-edge: var(--assay-plate-edge);
-  --plate-skirt: var(--assay-plate-skirt);
-  --well-rim: var(--assay-plate-rim);
-  --well-bowl: var(--assay-plate-bowl);
-  border-radius: 14px;
-  border: 1px solid var(--plate-edge);
-  background:
-    linear-gradient(180deg, var(--assay-plate-highlight-soft), var(--assay-plate-transparent) 22%),
-    linear-gradient(180deg, var(--plate-body), var(--assay-plate-body-mid) 70%, var(--assay-plate-body-edge) 100%);
-  box-shadow:
-    inset 0 1px 0 var(--assay-plate-highlight-strong),
-    inset 0 -1px 0 var(--assay-plate-shadow-soft),
-    inset 0 0 0 1px var(--assay-plate-highlight-soft),
-    0 14px 28px -16px var(--assay-plate-shadow-strong),
-    0 2px 6px var(--assay-plate-shadow-soft);
-  padding: 18px 20px 22px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  box-shadow: none;
+  padding: 16px;
   position: relative;
-}
-
-.well-grid-panel-plate96::before {
-  content: "";
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  border-radius: 10px;
-  border: 1px solid var(--assay-plate-highlight-soft);
-  pointer-events: none;
+  min-height: 0;
+  aspect-ratio: 127.76 / 85.48;
+  align-self: start;
 }
 
 .well-grid {
@@ -595,28 +572,22 @@
 }
 
 .well-plate96 {
-  border: 0;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 34% 30%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 52%),
-    radial-gradient(circle at 50% 60%, var(--well-bowl, var(--assay-plate-bowl)) 0%, var(--assay-plate-bowl-edge) 100%);
-  box-shadow:
-    inset 0 0 0 1px var(--well-rim, var(--assay-plate-rim)),
-    inset 0 2px 3px var(--assay-plate-shadow-strong),
-    inset 0 -1px 1px var(--assay-plate-highlight);
+  background: var(--theme-surface-subtle);
+  box-shadow: none;
   aspect-ratio: 1 / 1;
   align-self: center;
   justify-self: center;
-  width: 88%;
-  height: 88%;
+  width: 78%;
+  height: 78%;
   padding: 0;
-  transition: background 140ms ease, box-shadow 140ms ease;
+  transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .well-plate96:hover {
-  background:
-    radial-gradient(circle at 32% 28%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 55%),
-    radial-gradient(circle at 50% 50%, var(--assay-plate-pure-white) 0%, var(--assay-plate-bowl-hover-edge) 100%);
+  background: var(--theme-surface-elevated);
+  border-color: var(--theme-text-muted);
 }
 
 .well-plate96 .well-number {
@@ -633,24 +604,15 @@
 }
 
 .well-plate96 .well-sample-dot.has-sample {
-  background:
-    radial-gradient(circle at 38% 32%, var(--assay-plate-highlight-soft) 0%, var(--assay-plate-transparent) 60%),
-    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 92%, var(--assay-plate-pure-white)) 0%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 70%, var(--assay-plate-pure-black) 12%) 100%);
+  background: var(--well-sample-fill, var(--assay-plate-sample-fallback));
   border: 0;
-  box-shadow:
-    inset 0 1px 1px var(--assay-plate-highlight-soft),
-    inset 0 -2px 3px var(--assay-plate-shadow);
+  box-shadow: none;
 }
 
 .well-plate96.well-selected {
-  background:
-    radial-gradient(circle at 32% 28%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 55%),
-    radial-gradient(circle at 50% 50%, var(--assay-plate-selected-fill-start) 0%, var(--assay-plate-selected-fill-end) 100%);
-  box-shadow:
-    inset 0 0 0 1.5px var(--assay-plate-selected-border),
-    inset 0 2px 3px var(--assay-plate-selected-shadow),
-    inset 0 -1px 1px var(--assay-plate-highlight),
-    0 0 0 2px var(--assay-plate-selected-ring);
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface));
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 1px var(--theme-accent);
 }
 
 .well-grid-plate96 .well-sample-count {
@@ -761,11 +723,22 @@
   grid-template-rows: 16px minmax(0, 1fr);
   column-gap: 6px;
   row-gap: 4px;
+  height: 100%;
 }
 
 .plate96-corner {
   grid-column: 1;
   grid-row: 1;
+  display: grid;
+  place-items: center;
+}
+
+.plate96-corner::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--theme-text-muted);
 }
 
 .plate96-col-labels {
@@ -804,47 +777,6 @@
   grid-row: 2;
   position: relative;
   aspect-ratio: 12 / 8;
-  --plate-chamfer-x: 4.6%;
-  --plate-chamfer-y: 6.9%;
-}
-
-.plate96-skirt-shape {
-  position: absolute;
-  inset: 0;
-  border-radius: 5px;
-  background:
-    linear-gradient(180deg, var(--assay-plate-shadow-soft), var(--assay-plate-transparent) 28%),
-    linear-gradient(180deg, var(--plate-skirt, var(--assay-plate-skirt)) 0%, var(--assay-plate-skirt-edge) 100%);
-  box-shadow:
-    inset 0 1px 2px var(--assay-plate-shadow),
-    inset 0 -1px 0 var(--assay-plate-highlight-soft),
-    inset 0 0 0 1px var(--assay-plate-shadow-strong);
-  /* chamfered bottom-left corner — A1 orientation marker on real plates */
-  clip-path: polygon(
-    0 0,
-    100% 0,
-    100% 100%,
-    var(--plate-chamfer-x) 100%,
-    0 calc(100% - var(--plate-chamfer-y))
-  );
-  pointer-events: none;
-}
-
-/* a thin shadow strip following the chamfer diagonal so the bevel reads as cut, not painted */
-.plate96-skirt-edge {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: var(--plate-chamfer-x);
-  height: var(--plate-chamfer-y);
-  pointer-events: none;
-  background: linear-gradient(
-    to top right,
-    transparent calc(50% - 0.5px),
-    var(--assay-plate-shadow-strong) calc(50% - 0.5px),
-    var(--assay-plate-shadow-strong) calc(50% + 0.5px),
-    transparent calc(50% + 0.5px)
-  );
 }
 
 .well-number {

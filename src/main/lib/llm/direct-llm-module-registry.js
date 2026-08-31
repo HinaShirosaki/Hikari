@@ -1,5 +1,7 @@
 'use strict';
 
+const { asArray, ensureObject } = require('../normalize.js');
+
 const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   {
     id: 'papers',
@@ -25,10 +27,16 @@ const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   {
     id: 'notebook',
     label: 'Notebook',
-    description: 'Notebook naming and note cleanup before persistence.',
+    description: 'Notebook naming, note cleanup, and result-memory conclusions.',
     tasks: [
       { id: 'page-name', label: 'Page name', requestKind: 'text' },
-      { id: 'note-clarify', label: 'Clarify note', requestKind: 'text' }
+      { id: 'note-clarify', label: 'Clarify note', requestKind: 'text' },
+      {
+        id: 'result-memory-conclusion',
+        label: 'Result memory conclusion',
+        requestKind: 'text',
+        expectJson: true
+      }
     ]
   },
   {
@@ -49,20 +57,12 @@ const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   }
 ]);
 
-function defaultCleanText(value, _maxLength = 2000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function normalizeRegistryId(value) {
@@ -225,7 +225,6 @@ function createDirectLlmModuleRegistry(deps = {}) {
     }
 
     const llmSource = normalizeLlmSource(source.llm || source);
-    const codexProvider = normalizeRegistryId(LLM_PROVIDERS.CODEX || 'codex');
     if (!llmSource.provider) {
       return { ok: false, error: 'LLM provider is required.' };
     }

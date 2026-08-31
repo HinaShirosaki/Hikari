@@ -8,126 +8,15 @@ import {
   STROKE_WIDTH_OPTIONS
 } from './chart-style-pickers.js';
 import { createChartTextControls } from './chart-text-controls.js';
-
-// Assay-owned controls for the Plotly figure configuration.
-
-const PANEL_HTML = `
-  <details class="assay-chart-style">
-    <summary class="assay-chart-style-summary">Chart Style</summary>
-    <div class="assay-chart-style-body">
-      <fieldset class="assay-chart-style-group">
-        <legend>Figure</legend>
-        <label>Title<input type="text" data-cc="title" placeholder="(none)" /></label>
-        <label>Display<select data-cc="mode">
-          <option value="lines+markers">Line + points</option>
-          <option value="lines">Line only</option>
-          <option value="markers">Points only</option>
-        </select></label>
-        <label>Legend<select data-cc="legendPosition">
-          <option value="top">Top</option><option value="bottom">Bottom</option>
-          <option value="right">Right</option><option value="none">Hidden</option>
-        </select></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Scale &amp; range</legend>
-        <label>X scale<select data-cc="xScale">
-          <option value="linear">Linear</option><option value="log10">Log10</option>
-          <option value="log2">Log2</option><option value="ln">Ln</option>
-        </select></label>
-        <label>Y scale<select data-cc="yScale">
-          <option value="linear">Linear</option><option value="log10">Log10</option>
-          <option value="log2">Log2</option><option value="ln">Ln</option>
-        </select></label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="xRangeAuto" checked />X auto range</label>
-        <div class="assay-chart-style-row">
-          <label>X min<input type="number" step="any" data-cc="xMin" /></label>
-          <label>X max<input type="number" step="any" data-cc="xMax" /></label>
-        </div>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="yRangeAuto" checked />Y auto range</label>
-        <div class="assay-chart-style-row">
-          <label>Y min<input type="number" step="any" data-cc="yMin" /></label>
-          <label>Y max<input type="number" step="any" data-cc="yMax" /></label>
-        </div>
-        <div class="assay-chart-style-row">
-          <label>X tick interval<input type="number" step="any" min="0" data-cc="xTick" /></label>
-          <label>Y tick interval<input type="number" step="any" min="0" data-cc="yTick" /></label>
-        </div>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Ticks</legend>
-        <label>Marks<select data-cc="tickDir">
-          <option value="outside">Outside</option><option value="inside">Inside</option><option value="none">None</option>
-        </select></label>
-        <label>Length<input type="number" min="0" max="20" step="1" data-cc="tickLen" /></label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="minorTicks" />Minor ticks</label>
-        <label>Number format<select data-cc="tickFormat">
-          <option value="auto">Auto</option><option value="fixed1">0.0</option><option value="fixed2">0.00</option>
-          <option value="sci">1e3</option><option value="si">SI (k/M)</option><option value="power">10ⁿ</option>
-        </select></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Points</legend>
-        <label>Shape<div data-cc="pointShape" class="assay-chart-picker-mount"></div></label>
-        <label>Size<div data-cc="pointSize" class="assay-chart-picker-mount"></div></label>
-        <label>Fill<select data-cc="markerFill"><option value="filled">Filled</option><option value="open">Open</option></select></label>
-        <label>Opacity<input type="number" min="0.1" max="1" step="0.1" data-cc="opacity" /></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Lines</legend>
-        <label>Style<div data-cc="lineStyle" class="assay-chart-picker-mount"></div></label>
-        <label>Width (pt)<div data-cc="lineWidth" class="assay-chart-picker-mount"></div></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Error bars</legend>
-        <label>Cap width<input type="number" min="0" max="20" step="1" data-cc="errorCapWidth" /></label>
-        <label>Thickness<input type="number" min="0.5" max="6" step="0.5" data-cc="errorThickness" /></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Frame</legend>
-        <label>Style<div data-cc="frameStyle" class="assay-chart-picker-mount"></div></label>
-        <label>Stroke<input type="color" data-cc="frameStroke" /></label>
-        <label>Stroke width (pt)<div data-cc="frameStrokeWidth" class="assay-chart-picker-mount"></div></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Reference line</legend>
-        <label>Axis<select data-cc="refLineAxis">
-          <option value="y">Horizontal (Y)</option><option value="x">Vertical (X)</option>
-        </select></label>
-        <label>Value<input type="number" step="any" data-cc="refLineValue" placeholder="(off)" /></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Size</legend>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="sizeAuto" checked />Auto size</label>
-        <label>Width (px)<input type="number" min="320" max="2000" step="1" data-cc="frameWidth" /></label>
-        <label>Height (px)<input type="number" min="180" max="1200" step="1" data-cc="frameHeight" /></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Bars</legend>
-        <label>Mode<select data-cc="barMode"><option value="group">Grouped</option><option value="stack">Stacked</option></select></label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="barLabels" />Value labels</label>
-        <label>Corner radius<input type="number" min="0" max="30" step="1" data-cc="barCornerRadius" /></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Grid lines</legend>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridVertical" checked />Vertical lines</label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridHorizontal" checked />Horizontal lines</label>
-        <label>Color<input type="color" data-cc="gridColor" /></label>
-        <label>Width (px)<div data-cc="gridStrokeWidth" class="assay-chart-picker-mount"></div></label>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Text</legend>
-        <div data-cc="textBar"></div>
-      </fieldset>
-      <fieldset class="assay-chart-style-group">
-        <legend>Series colors &amp; shapes</legend>
-        <div data-cc="seriesColors" class="assay-chart-style-series"></div>
-      </fieldset>
-      <div class="form-actions assay-chart-style-actions">
-        <button type="button" data-cc="resetBtn" class="ghost-btn">Reset to defaults</button>
-      </div>
-    </div>
-  </details>
-`;
+import {
+  deleteChartPreset,
+  getChartPreset,
+  listChartPresets,
+  sanitizePresetName,
+  saveChartPreset
+} from './chart-presets.js';
+import { PANEL_HTML, TABS, TAB_KEYS } from './chart-controls-markup.js';
+import { createChartControlsForm } from './chart-controls-form.js';
 
 function defaultSafeText(value) {
   return String(value).replace(/[&<>"']/g, (c) => (
@@ -150,17 +39,25 @@ function nearestOption(value, options) {
   return best;
 }
 
-// Builds the full chart-style adjust panel into `container` and binds it to `store`.
+// Builds the tabbed chart format panel into `container` and binds it to `store`.
 // store: { getStyle, setStyle(patch), resetStyle, getContext } (see chart-style-store.js)
-export function mountChartControls(container, { store, safeText } = {}) {
+export function mountChartControls(container, {
+  store,
+  safeText,
+  promptForName
+} = {}) {
   if (!container || !store) {
     return { refresh() {}, destroy() {} };
   }
   const escape = typeof safeText === 'function' ? safeText : defaultSafeText;
+  const askName = typeof promptForName === 'function'
+    ? promptForName
+    : (message, initial) => globalThis.prompt?.(message, initial);
   container.innerHTML = PANEL_HTML;
   const q = (key) => container.querySelector(`[data-cc="${key}"]`);
 
   let suppressInputEvents = false;
+  let activeTab = TABS[0].id;
   const seriesColorListeners = [];
   const pickers = {};
   let textControls = null;
@@ -223,150 +120,104 @@ export function mountChartControls(container, { store, safeText } = {}) {
     picker.setValue(snapped);
   }
 
-  function syncFormFromStyle() {
-    const style = store.getStyle();
-    const ctx = store.getContext();
-
-    setValueIfPresent(q('xScale'), style.xScale);
-    setValueIfPresent(q('yScale'), style.yScale);
-    setValueIfPresent(q('xRangeAuto'), style.xRange.auto);
-    setValueIfPresent(q('xMin'), style.xRange.min);
-    setValueIfPresent(q('xMax'), style.xRange.max);
-    setValueIfPresent(q('yRangeAuto'), style.yRange.auto);
-    setValueIfPresent(q('yMin'), style.yRange.min);
-    setValueIfPresent(q('yMax'), style.yRange.max);
-    setValueIfPresent(q('xTick'), style.xTick);
-    setValueIfPresent(q('yTick'), style.yTick);
-
-    if (pickers.pointShape) pickers.pointShape.setValue(style.pointShape);
-    setPickerValue(pickers.pointSize, style.pointSize, POINT_SIZE_OPTIONS);
-    if (pickers.pointSize) pickers.pointSize.setShapeContext(style.pointShape);
-    if (pickers.lineStyle) pickers.lineStyle.setValue(style.lineStyle);
-    setPickerValue(pickers.lineWidth, style.lineWidth, LINE_WIDTH_OPTIONS);
-    if (pickers.frameStyle) pickers.frameStyle.setValue(style.frameStyle);
-    setValueIfPresent(q('frameStroke'), style.frameStroke);
-    setPickerValue(pickers.frameStrokeWidth, style.frameStrokeWidth, STROKE_WIDTH_OPTIONS);
-    setValueIfPresent(q('sizeAuto'), style.sizeAuto !== false);
-    setValueIfPresent(q('frameWidth'), Number.isFinite(style.frameWidth) ? style.frameWidth : '');
-    setValueIfPresent(q('frameHeight'), Number.isFinite(style.frameHeight) ? style.frameHeight : '');
-    setValueIfPresent(q('gridVertical'), style.showVerticalGrid !== false);
-    setValueIfPresent(q('gridHorizontal'), style.showHorizontalGrid !== false);
-    setValueIfPresent(q('gridColor'), style.gridColor);
-    setPickerValue(pickers.gridStrokeWidth, style.gridStrokeWidth, STROKE_WIDTH_OPTIONS);
-    setValueIfPresent(q('title'), style.title);
-    setValueIfPresent(q('mode'), style.mode);
-    setValueIfPresent(q('legendPosition'), style.legendPosition);
-    setValueIfPresent(q('tickDir'), style.tickDir);
-    setValueIfPresent(q('tickLen'), style.tickLen);
-    setValueIfPresent(q('minorTicks'), style.minorTicks);
-    setValueIfPresent(q('tickFormat'), style.tickFormat);
-    setValueIfPresent(q('markerFill'), style.markerFill);
-    setValueIfPresent(q('opacity'), style.opacity);
-    setValueIfPresent(q('errorCapWidth'), style.errorCapWidth);
-    setValueIfPresent(q('errorThickness'), style.errorThickness);
-    setValueIfPresent(q('refLineAxis'), style.refLineAxis);
-    setValueIfPresent(q('refLineValue'), style.refLineValue);
-    setValueIfPresent(q('barMode'), style.barMode);
-    setValueIfPresent(q('barLabels'), style.barLabels);
-    setValueIfPresent(q('barCornerRadius'), style.barCornerRadius);
-    if (textControls) textControls.setValue(style.text || {});
-
-    applyRangeDisabledState();
-    applySizeDisabledState();
-    renderSeriesColors(style, ctx.seriesLabels);
-  }
-
-  function applyRangeDisabledState() {
-    const xAuto = Boolean(q('xRangeAuto')?.checked);
-    const yAuto = Boolean(q('yRangeAuto')?.checked);
-    if (q('xMin')) q('xMin').disabled = xAuto;
-    if (q('xMax')) q('xMax').disabled = xAuto;
-    if (q('yMin')) q('yMin').disabled = yAuto;
-    if (q('yMax')) q('yMax').disabled = yAuto;
-  }
-
-  function applySizeDisabledState() {
-    const auto = Boolean(q('sizeAuto')?.checked);
-    if (q('frameWidth')) q('frameWidth').disabled = auto;
-    if (q('frameHeight')) q('frameHeight').disabled = auto;
-  }
-
-  function clampDim(value, min, max) {
-    if (value == null) return null;
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function clearSeriesColorListeners() {
-    while (seriesColorListeners.length) {
-      const { el, event, handler } = seriesColorListeners.pop();
-      el.removeEventListener(event, handler);
-    }
-  }
-
-  function renderSeriesColors(style, seriesLabels) {
-    const host = q('seriesColors');
-    if (!host) return;
-    clearSeriesColorListeners();
-    host.innerHTML = '';
-    if (!seriesLabels.length) {
-      const empty = document.createElement('p');
-      empty.className = 'assay-chart-style-series-empty';
-      empty.textContent = 'Run analysis to configure series colors & shapes.';
-      host.appendChild(empty);
-      return;
-    }
-    seriesLabels.forEach((label, index) => {
-      const row = document.createElement('div');
-      row.className = 'assay-chart-style-series-row';
-      const labelEl = document.createElement('span');
-      labelEl.textContent = label || `Series ${index + 1}`;
-
-      const shape = document.createElement('select');
-      shape.className = 'assay-chart-style-series-shape';
-      shape.innerHTML = `<option value="">Default</option>${SHAPE_OPTIONS
-        .map((opt) => `<option value="${opt.value}">${escape(opt.label)}</option>`)
-        .join('')}`;
-      shape.value = (style.seriesShapes || {})[label] || '';
-      const shapeHandler = () => {
-        const next = { ...style.seriesShapes };
-        if (shape.value) next[label] = shape.value;
-        else delete next[label];
-        applyPatch({ seriesShapes: next });
-      };
-      shape.addEventListener('change', shapeHandler);
-      seriesColorListeners.push({ el: shape, event: 'change', handler: shapeHandler });
-
-      const input = document.createElement('input');
-      input.type = 'color';
-      input.value = style.seriesColors[label] || style.palette[index % style.palette.length] || '#1f77b4';
-      const handler = () => applyPatch({ seriesColors: { ...style.seriesColors, [label]: input.value } });
-      input.addEventListener('input', handler);
-      seriesColorListeners.push({ el: input, event: 'input', handler });
-
-      row.appendChild(labelEl);
-      row.appendChild(shape);
-      row.appendChild(input);
-      host.appendChild(row);
+  function selectTab(tabId) {
+    activeTab = TABS.some((tab) => tab.id === tabId) ? tabId : TABS[0].id;
+    container.querySelectorAll('[data-cc-tab]').forEach((button) => {
+      button.setAttribute('aria-selected', button.getAttribute('data-cc-tab') === activeTab ? 'true' : 'false');
+    });
+    container.querySelectorAll('[data-cc-panel]').forEach((panel) => {
+      panel.hidden = panel.getAttribute('data-cc-panel') !== activeTab;
     });
   }
 
-  function parseRangeNumber(input) {
-    if (!input) return null;
-    const raw = input.value;
-    if (raw === '' || raw === null || raw === undefined) return null;
-    const num = Number(raw);
-    return Number.isFinite(num) ? num : null;
+  // Hide what this figure cannot use: bar-only settings on a line chart and vice
+  // versa, and error-bar geometry when nothing draws error bars.
+  function applyContextVisibility(context) {
+    const chartType = context.chartType || 'line';
+    container.querySelectorAll('[data-cc-when]').forEach((element) => {
+      element.hidden = element.getAttribute('data-cc-when') !== chartType;
+    });
+    container.querySelectorAll('[data-cc-needs="errorBars"]').forEach((element) => {
+      element.hidden = !context.hasErrorBars;
+    });
   }
 
-  function pickerNumberValue(picker, fallback) {
-    if (!picker) return fallback;
-    const v = Number(picker.value);
-    return Number.isFinite(v) ? v : fallback;
+  // Y can only carry a column that parses as a number; X and series can be either a
+  // category or a continuous column (a dose-response X is numeric), so they get all of
+  // them. On a fitted curve no override applies at all, so the selects are hidden.
+  function renderColumnOptions(context) {
+    const headers = context.headers;
+    const note = q('columnNote');
+    const fields = q('columnFields');
+    if (fields) {
+      fields.hidden = context.hasFittedCurve;
+    }
+    ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
+      const select = q(key);
+      if (!select) return;
+      const options = key === 'yColumn' ? context.numericHeaders : headers;
+      const current = store.getStyle()[key] || 'auto';
+      select.innerHTML = `<option value="auto">Auto</option>${options
+        .map((header) => `<option value="${escape(header)}">${escape(header)}</option>`)
+        .join('')}`;
+      select.value = options.includes(current) ? current : 'auto';
+      select.disabled = !options.length;
+    });
+    if (note) {
+      if (context.hasFittedCurve) {
+        note.textContent = 'This analysis draws its own fitted curve, so the plotted columns are fixed.';
+      } else {
+        note.textContent = headers.length
+          ? 'Auto picks the column the analysis intends. Override to plot a different metric.'
+          : 'Run an analysis to choose which columns are plotted.';
+      }
+    }
   }
+
+  function refreshPresetOptions(selected = '') {
+    const select = q('presetSelect');
+    if (!select) return;
+    const names = listChartPresets();
+    select.innerHTML = `<option value="">Custom</option>${names
+      .map((name) => `<option value="${escape(name)}">${escape(name)}</option>`)
+      .join('')}`;
+    select.value = names.includes(selected) ? selected : '';
+  }
+
+
+  const {
+    syncFormFromStyle,
+    applyRangeDisabledState,
+    applySizeDisabledState,
+    clearSeriesColorListeners,
+    clampDim,
+    parseRangeNumber,
+    pickerNumberValue,
+    selectValue
+  } = createChartControlsForm({
+    q,
+    store,
+    pickers,
+    textControls,
+    seriesColorListeners,
+    setValueIfPresent,
+    setPickerValue,
+    applyContextVisibility,
+    renderColumnOptions,
+    applyPatch: (patch) => applyPatch(patch)
+  });
 
   function readFormPatch() {
     const style = store.getStyle();
+    // Opacity has a control on both the line and bar panels; the visible one wins.
+    const barOpacity = q('opacityBar');
+    const opacityInput = barOpacity && !barOpacity.hidden && barOpacity.offsetParent !== null
+      ? barOpacity
+      : q('opacity');
     return {
+      xColumn: selectValue('xColumn', style.xColumn),
+      yColumn: selectValue('yColumn', style.yColumn),
+      seriesColumn: selectValue('seriesColumn', style.seriesColumn),
       xScale: q('xScale')?.value || 'linear',
       yScale: q('yScale')?.value || 'linear',
       xRange: { auto: Boolean(q('xRangeAuto')?.checked), min: parseRangeNumber(q('xMin')), max: parseRangeNumber(q('xMax')) },
@@ -380,6 +231,7 @@ export function mountChartControls(container, { store, safeText } = {}) {
       frameStyle: pickers.frameStyle ? pickers.frameStyle.value : style.frameStyle,
       frameStroke: q('frameStroke')?.value || style.frameStroke,
       frameStrokeWidth: pickerNumberValue(pickers.frameStrokeWidth, style.frameStrokeWidth),
+      backgroundColor: q('backgroundColor')?.value || style.backgroundColor,
       sizeAuto: q('sizeAuto') ? Boolean(q('sizeAuto').checked) : style.sizeAuto,
       frameWidth: clampDim(parseRangeNumber(q('frameWidth')), 320, 2000),
       frameHeight: clampDim(parseRangeNumber(q('frameHeight')), 180, 1200),
@@ -388,6 +240,12 @@ export function mountChartControls(container, { store, safeText } = {}) {
       gridColor: q('gridColor')?.value || style.gridColor,
       gridStrokeWidth: pickerNumberValue(pickers.gridStrokeWidth, style.gridStrokeWidth),
       title: q('title') ? q('title').value : style.title,
+      xTitle: q('xTitle') ? q('xTitle').value : style.xTitle,
+      yTitle: q('yTitle') ? q('yTitle').value : style.yTitle,
+      xTitlePos: parseRangeNumber(q('xTitlePos')),
+      yTitlePos: parseRangeNumber(q('yTitlePos')),
+      xTitleOffset: parseRangeNumber(q('xTitleOffset')),
+      yTitleOffset: parseRangeNumber(q('yTitleOffset')),
       mode: q('mode')?.value || 'lines+markers',
       legendPosition: q('legendPosition')?.value || 'top',
       tickDir: q('tickDir')?.value || 'outside',
@@ -395,7 +253,7 @@ export function mountChartControls(container, { store, safeText } = {}) {
       minorTicks: q('minorTicks') ? Boolean(q('minorTicks').checked) : style.minorTicks,
       tickFormat: q('tickFormat')?.value || 'auto',
       markerFill: q('markerFill')?.value || 'filled',
-      opacity: parseRangeNumber(q('opacity')),
+      opacity: parseRangeNumber(opacityInput),
       errorCapWidth: parseRangeNumber(q('errorCapWidth')),
       errorThickness: parseRangeNumber(q('errorThickness')),
       refLineAxis: q('refLineAxis')?.value || 'y',
@@ -417,52 +275,136 @@ export function mountChartControls(container, { store, safeText } = {}) {
     applyPatch(readFormPatch());
   }
 
-  function onResetClick() {
-    store.resetStyle();
+  function resync() {
     suppressInputEvents = true;
     syncFormFromStyle();
     suppressInputEvents = false;
   }
 
+  function onResetClick() {
+    store.resetStyle();
+    refreshPresetOptions();
+    resync();
+  }
+
+  // Reset only the fields the active tab owns, so tuning one section can't discard
+  // the title you typed on another.
+  function onResetTabClick() {
+    const defaults = store.getDefaultStyle();
+    const patch = {};
+    (TAB_KEYS[activeTab] || []).forEach((key) => {
+      patch[key] = defaults[key];
+    });
+    applyPatch(patch);
+    resync();
+  }
+
+  function onTabClick(event) {
+    const button = event.target.closest('[data-cc-tab]');
+    if (!button || !container.contains(button)) return;
+    selectTab(button.getAttribute('data-cc-tab'));
+  }
+
+  function onTabKeyDown(event) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const index = TABS.findIndex((tab) => tab.id === activeTab);
+    const next = event.key === 'ArrowRight'
+      ? TABS[(index + 1) % TABS.length]
+      : TABS[(index - 1 + TABS.length) % TABS.length];
+    event.preventDefault();
+    selectTab(next.id);
+    container.querySelector(`[data-cc-tab="${next.id}"]`)?.focus();
+  }
+
+  function onPresetChange() {
+    const name = q('presetSelect')?.value || '';
+    if (!name) return;
+    const preset = getChartPreset(name);
+    if (preset) {
+      applyPatch(preset);
+      resync();
+    }
+  }
+
+  function onPresetSave() {
+    const current = q('presetSelect')?.value || '';
+    const name = sanitizePresetName(askName('Save this chart style as:', current));
+    if (!name) return;
+    if (saveChartPreset(name, store.getStyle())) {
+      refreshPresetOptions(name);
+    }
+  }
+
+  function onPresetDelete() {
+    const name = q('presetSelect')?.value || '';
+    if (name && deleteChartPreset(name)) {
+      refreshPresetOptions();
+    }
+  }
+
   const nativeInputKeys = [
+    'xColumn', 'yColumn', 'seriesColumn',
     'xScale', 'yScale',
     'xRangeAuto', 'xMin', 'xMax', 'yRangeAuto', 'yMin', 'yMax',
     'xTick', 'yTick',
-    'frameStroke', 'sizeAuto', 'frameWidth', 'frameHeight',
+    'frameStroke', 'backgroundColor', 'sizeAuto', 'frameWidth', 'frameHeight',
     'gridVertical', 'gridHorizontal', 'gridColor',
-    'title', 'mode', 'legendPosition',
+    'title', 'xTitle', 'yTitle',
+    'xTitlePos', 'yTitlePos', 'xTitleOffset', 'yTitleOffset',
+    'mode', 'legendPosition',
     'tickDir', 'tickLen', 'minorTicks', 'tickFormat',
-    'markerFill', 'opacity', 'errorCapWidth', 'errorThickness',
+    'markerFill', 'opacity', 'opacityBar', 'errorCapWidth', 'errorThickness',
     'refLineAxis', 'refLineValue', 'barMode', 'barLabels', 'barCornerRadius'
   ];
+
+  function inputEventName(input) {
+    return input.tagName === 'SELECT' || input.type === 'checkbox' || input.type === 'color'
+      ? 'change'
+      : 'input';
+  }
 
   buildPickers();
   nativeInputKeys.forEach((key) => {
     const input = q(key);
     if (!input) return;
-    const event = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
-    input.addEventListener(event, onFormInput);
+    // Colour inputs still fire `input` while dragging; listening on both keeps the
+    // live preview without duplicating work (the store patches are idempotent).
+    input.addEventListener(inputEventName(input), onFormInput);
+    if (input.type === 'color') {
+      input.addEventListener('input', onFormInput);
+    }
   });
+  container.addEventListener('click', onTabClick);
+  container.querySelector('.assay-chart-style-tabs')?.addEventListener('keydown', onTabKeyDown);
   q('resetBtn')?.addEventListener('click', onResetClick);
+  q('resetTabBtn')?.addEventListener('click', onResetTabClick);
+  q('presetSelect')?.addEventListener('change', onPresetChange);
+  q('presetSaveBtn')?.addEventListener('click', onPresetSave);
+  q('presetDeleteBtn')?.addEventListener('click', onPresetDelete);
 
-  suppressInputEvents = true;
-  syncFormFromStyle();
-  suppressInputEvents = false;
+  refreshPresetOptions();
+  selectTab(activeTab);
+  resync();
 
   return {
-    refresh() {
-      suppressInputEvents = true;
-      syncFormFromStyle();
-      suppressInputEvents = false;
-    },
+    refresh: resync,
+    selectTab,
     destroy() {
       nativeInputKeys.forEach((key) => {
         const input = q(key);
         if (!input) return;
-        const event = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
-        input.removeEventListener(event, onFormInput);
+        input.removeEventListener(inputEventName(input), onFormInput);
+        if (input.type === 'color') {
+          input.removeEventListener('input', onFormInput);
+        }
       });
+      container.removeEventListener('click', onTabClick);
+      container.querySelector('.assay-chart-style-tabs')?.removeEventListener('keydown', onTabKeyDown);
       q('resetBtn')?.removeEventListener('click', onResetClick);
+      q('resetTabBtn')?.removeEventListener('click', onResetTabClick);
+      q('presetSelect')?.removeEventListener('change', onPresetChange);
+      q('presetSaveBtn')?.removeEventListener('click', onPresetSave);
+      q('presetDeleteBtn')?.removeEventListener('click', onPresetDelete);
       clearSeriesColorListeners();
       Object.values(pickers).forEach((picker) => picker && picker.destroy());
       if (textControls) textControls.destroy();

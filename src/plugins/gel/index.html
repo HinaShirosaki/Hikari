@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Gel Analysis</title>
+
+    <!-- The app's own stylesheets, in the order css-order.json builds them, so
+         the ported view looks like it did inside Hikari. -->
+    <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
+    <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
+    <link rel="stylesheet" href="./vendor/css/base/palette.css" />
+    <link rel="stylesheet" href="./vendor/css/base/core.css" />
+    <link rel="stylesheet" href="./vendor/css/themes/modes.css" />
+    <link rel="stylesheet" href="./vendor/css/views/gel-palette.css" />
+    <link rel="stylesheet" href="./vendor/css/views/gel-view.css" />
+    <link rel="stylesheet" href="./vendor/css/overrides/cross-view-fixes.css" />
+    <link rel="stylesheet" href="./vendor/css/overrides/left-rail-template.css" />
+    <link rel="stylesheet" href="./vendor/css/overrides/universal-dialogs.css" />
+    <link rel="stylesheet" href="./style.css" />
+
+    <!-- Vendor globals the gel module expects on window, exactly as the app
+         loads them: Cropper for crop/rotate, UTIF for TIFF, Tabulator for the
+         peak-integration table. Each is feature-detected in the module, so a
+         missing one degrades silently — which is why they are all here. -->
+    <script src="./vendor/cropperjs/cropper.min.js"></script>
+    <script src="./vendor/utif/UTIF.js"></script>
+    <script src="./vendor/tabulator/tabulator.min.js"></script>
+    <script src="./vendor/pptxgenjs/pptxgen.bundle.js"></script>
+  </head>
+  <body class="plugin-gel">
+    <section id="boot" class="plugin-gel__boot plugin-gel__boot--loading" role="status" aria-live="polite" aria-atomic="true">
+      <span class="plugin-gel__boot-indicator" aria-hidden="true"></span>
+      <p id="boot-message" class="plugin-gel__boot-message">Loading gel workspace&hellip;</p>
+      <button id="boot-retry" class="ghost-btn plugin-gel__boot-retry" type="button" hidden>Try again</button>
+    </section>
+    <div id="gel-host" aria-busy="true" hidden></div>
+    <script src="./hikari.js"></script>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

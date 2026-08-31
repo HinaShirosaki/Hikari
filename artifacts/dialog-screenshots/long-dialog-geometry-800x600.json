@@ -1,0 +1,13 @@
+{
+  "clientHeight": 388,
+  "closeClear": true,
+  "closeTop": 205.5,
+  "dockBottom": 179.265625,
+  "safeTop": "max(192px, calc(0px + 12px))",
+  "scrollHeight": 1684,
+  "scrollable": true,
+  "surfaceBottom": 576.5,
+  "surfaceTop": 186.5,
+  "topClear": true,
+  "viewportHeight": 600
+}

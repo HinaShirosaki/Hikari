@@ -1,4 +1,7 @@
 import { defaultState } from '../modules/app-state.js';
+import { showTransientNotice } from '../lib/notify.js';
+import { migrateProteinBuilderCloningNotebookState } from '../modules/sequence-viewer/protein-builder-cloning-notebook.js';
+import { asArray } from '../lib/normalize.js';
 
 const WORKSPACE_STATE_KEYS = [
   'members',
@@ -24,7 +27,11 @@ const WORKSPACE_STATE_KEYS = [
 const WORKSPACE_SETTINGS_KEYS = [
   'pendingNotebookSampleCapture',
   'storageImport',
-  'dashboard'
+  'dashboard',
+  // A plugin's blob indexes files under <root>/Plugins/<id>/, so it belongs to
+  // the root it was written against. Carrying it across a root switch leaves
+  // records whose every file read resolves into the new root and fails.
+  'pluginStorage'
 ];
 
 function cloneDefaultValue(value) {
@@ -32,10 +39,6 @@ function cloneDefaultValue(value) {
     return structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function mergeRecordsById(existingRecords, importedRecords, fallbackPrefix) {
@@ -290,6 +293,7 @@ export function createStorageImportController({
       : {};
     state.labInventory = mergeLabInventory(existingLabInventory, importedLabInventory);
     state.inventory = mergeInventoryMap(state.inventory, patch.inventory);
+    migrateProteinBuilderCloningNotebookState(state);
   }
 
   function updateStorageImportState(payload) {
@@ -297,6 +301,7 @@ export function createStorageImportController({
   }
 
   function updateStorageImportError(message) {
+    showTransientNotice(String(message || 'Storage import failed.'), { type: 'error' });
     const previous = state.settings.storageImport && typeof state.settings.storageImport === 'object'
       ? state.settings.storageImport
       : {};
@@ -407,9 +412,25 @@ export function createStorageImportController({
   }
 
   async function hydrateStateFromStorageRoot() {
-    const storagePath = String(state.settings?.storagePath || '').trim();
+    let storagePath = String(state.settings?.storagePath || '').trim();
     if (!storagePath) {
-      return;
+      // localStorage is the only place the renderer keeps the workspace root, and
+      // it can be cleared out from under us. The auto-saved data file still knows
+      // it, so recover from there instead of booting into an empty workspace.
+      let recovered = null;
+      try {
+        recovered = await windowObject.hikariApi?.getLastStorageRoot?.();
+      } catch {
+        recovered = null;
+      }
+      storagePath = String(recovered?.storagePath || '').trim();
+      if (!storagePath) {
+        return;
+      }
+      if (!state.settings || typeof state.settings !== 'object') {
+        state.settings = {};
+      }
+      state.settings.storagePath = storagePath;
     }
     return runStorageRootImport(storagePath, { persistMergedState: false, syncSidecars: true });
   }

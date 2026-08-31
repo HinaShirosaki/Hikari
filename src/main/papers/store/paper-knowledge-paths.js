@@ -40,13 +40,54 @@ function extractDoiFromText(value) {
 }
 
 function sanitizeStorageName(value, fallback = 'paper') {
-  const cleaned = String(value || '')
+  // Budget is bytes, not characters: a path component is capped at 255 bytes on
+  // APFS/ext4/NTFS, so a CJK title at 180 *characters* would be 540 bytes.
+  const cleaned = truncateUtf8(String(value || '')
     .trim()
     .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
     .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
+    .replace(/^_+|_+$/g, ''), 180);
   return cleaned || fallback;
+}
+
+function truncateUtf8(value, maxBytes = 180) {
+  const text = String(value || '');
+  const buffer = Buffer.from(text, 'utf8');
+  if (buffer.length <= maxBytes) {
+    return text;
+  }
+  // Back off to a UTF-8 lead byte so a multi-byte character is never split in
+  // half -- a lone surrogate encodes as U+FFFD on disk and stops matching the
+  // in-memory path string that gets stored in meta.json and SQLite.
+  let end = maxBytes;
+  while (end > 0 && (buffer[end] & 0xC0) === 0x80) {
+    end -= 1;
+  }
+  return buffer.subarray(0, end).toString('utf8').replace(/_+$/g, '');
+}
+
+// PDF producers routinely leave template or export artifacts in the title field.
+// These are useless as a paper name and, left unchecked, become the folder slug.
+const JUNK_PDF_TITLE_PATTERNS = [
+  /^untitled/i,
+  /^microsoft\s+word/i,
+  /^\s*(?:doc(?:ument)?|manuscript|paper|template|preprint|article|main)[\s_-]*\d*\s*$/i,
+  /\.(?:docx?|pdf|rtf|tex|indd|qxd|pages)\s*$/i,
+  /^[\d\s._-]+$/
+];
+
+function isLikelyJunkPdfTitle(value) {
+  const text = String(value || '').trim();
+  if (text.length < 8) {
+    return true;
+  }
+  return JUNK_PDF_TITLE_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function buildKnowledgeMarkdownFileName({ title = '' } = {}) {
+  const normalizedTitle = String(title || '').trim().replace(/\.(?:pdf|md)$/i, '');
+  const safeTitle = sanitizeStorageName(normalizedTitle, '');
+  return safeTitle ? `${safeTitle}.md` : 'paper.md';
 }
 
 function normalizeYear(value) {
@@ -108,6 +149,9 @@ function buildKnowledgeDatabasePaths({
   storagePath = '',
   doi = '',
   title = '',
+  // The folder is identity and must stay stable; the file name is a label and
+  // may follow a better title. Callers that have both pass them separately.
+  markdownTitle = '',
   pdfSha256 = '',
   rootFolderName = KNOWLEDGE_BASE_FOLDER_NAME,
   papersFolderName = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME
@@ -117,13 +161,16 @@ function buildKnowledgeDatabasePaths({
   const papersPath = path.join(rootPath, papersFolderName);
   const paperFolderName = buildKnowledgePaperSlug({ doi, title, pdfSha256 });
   const paperFolderPath = path.join(papersPath, paperFolderName);
+  const markdownFileName = buildKnowledgeMarkdownFileName({ title: markdownTitle || title });
   return {
     storage_path: resolvedStoragePath,
     root_path: rootPath,
     papers_path: papersPath,
     paper_folder_name: paperFolderName,
     paper_folder_path: paperFolderPath,
-    markdown_path: path.join(paperFolderPath, 'paper.md'),
+    markdown_file_name: markdownFileName,
+    markdown_path: path.join(paperFolderPath, markdownFileName),
+    legacy_markdown_path: path.join(paperFolderPath, 'paper.md'),
     extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
     meta_path: path.join(paperFolderPath, 'meta.json'),
     figures_path: path.join(paperFolderPath, 'figures'),
@@ -166,6 +213,8 @@ module.exports = {
   normalizeDoi,
   extractDoiFromText,
   sanitizeStorageName,
+  buildKnowledgeMarkdownFileName,
+  isLikelyJunkPdfTitle,
   normalizeYear,
   buildKnowledgePaperSlug,
   ensurePathWithinRoot,

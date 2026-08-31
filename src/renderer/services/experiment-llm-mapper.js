@@ -1,9 +1,8 @@
 // Converts Hikari experiment records into a compact JSON payload tailored for LLM context.
 // The mapper intentionally caps large arrays to keep prompts small and predictable.
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { getGelAnalyses } from '../lib/gel-records.js';
+import { asArray } from '../lib/normalize.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
@@ -226,7 +225,7 @@ export function mapExperimentDataToLlmJson(state, projectId = '') {
     .slice(0, 80)
     .map(mapAssayRun);
 
-  const gelRuns = asArray(state?.gelAnalyses)
+  const gelRuns = asArray(getGelAnalyses(state))
     .filter((analysis) => matchesProject(analysis))
     .sort((a, b) => Date.parse(b?.updatedAt || '') - Date.parse(a?.updatedAt || ''))
     .slice(0, 80)

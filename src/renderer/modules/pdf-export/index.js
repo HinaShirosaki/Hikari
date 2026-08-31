@@ -1,851 +1,42 @@
-import {
-  normalizeNotebookResultTable,
-  normalizeNotebookResultTables
-} from '../../lib/notebook-result-tables.js';
+import { resolveNotebookResultTablesValues } from '../../lib/notebook-table-formulas.js';
 import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
-
-const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
-
-const PAGE_MARGIN = 72;
-const TITLE_FONT_SIZE = 20;
-const HEADING_FONT_SIZE = 15;
-const BODY_FONT_SIZE = 11;
-const LINE_HEIGHT = 14;
-const TABLE_FONT_SIZE = 8.5;
-const TABLE_LINE_HEIGHT = 10.5;
-const TABLE_CELL_PADDING = 5;
-
-const ACCENT = [24, 95, 165];
-const ACCENT_TINT = [230, 241, 251];
-const ZEBRA_FILL = [247, 247, 245];
-const MUTED_TEXT = [110, 110, 105];
-const RULE_COLOR = [205, 205, 200];
-const FOOTER_BASELINE = 40;
-const LABEL_FONT_SIZE = 7.5;
-
-const PLATE_DEFINITIONS = {
-  '6': { rows: 2, columns: 3, label: '6 well' },
-  '12': { rows: 3, columns: 4, label: '12 well' },
-  '24': { rows: 4, columns: 6, label: '24 well' },
-  '48': { rows: 6, columns: 8, label: '48 well' },
-  '96': { rows: 8, columns: 12, label: '96 well' },
-  '384': { rows: 16, columns: 24, label: '384 well' },
-  '1536': { rows: 32, columns: 48, label: '1536 well' }
-};
-
-function getJsPdfCtor() {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  return window?.jspdf?.jsPDF || null;
-}
-
-function safeValue(value, fallback = '-') {
-  const text = String(value ?? '').trim();
-  return text || fallback;
-}
-
-function formatTimestamp(value) {
-  const parsed = Date.parse(String(value || '').trim());
-  if (!Number.isFinite(parsed)) {
-    return '-';
-  }
-  return new Date(parsed).toLocaleString();
-}
-
-function sanitizeFileName(value, fallback = 'export') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return cleaned || fallback;
-}
-
-function createContext({
-  title,
-  eyebrow = '',
-  badge = '',
-  meta = [],
-  footerLabel = '',
-  orientation = 'p',
-  format = 'letter',
-  margin = PAGE_MARGIN,
-  serif = false
-}) {
-  const JsPdf = getJsPdfCtor();
-  if (!JsPdf) {
-    window.alert('PDF generator is not loaded. Please restart the app and try again.');
-    return null;
-  }
-
-  const doc = new JsPdf({
-    orientation,
-    unit: 'pt',
-    format
-  });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  const ctx = {
-    doc,
-    pageWidth,
-    pageHeight,
-    maxWidth: pageWidth - (margin * 2),
-    margin,
-    orientation,
-    format,
-    y: margin,
-    serif,
-    footerLabel: String(footerLabel || title || ''),
-    sectionCount: 0
-  };
-
-  writeDocumentHeader(ctx, { title, eyebrow, badge, meta });
-  return ctx;
-}
-
-function font(ctx, style = 'normal') {
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', style);
-}
-
-function setTextColor(ctx, color) {
-  ctx.doc.setTextColor(color[0], color[1], color[2]);
-}
-
-function writeLabel(ctx, text, x, y) {
-  font(ctx, 'normal');
-  ctx.doc.setFontSize(LABEL_FONT_SIZE);
-  setTextColor(ctx, MUTED_TEXT);
-  ctx.doc.text(String(text || '').toUpperCase(), x, y);
-  setTextColor(ctx, [0, 0, 0]);
-}
-
-function drawBadge(ctx, text, rightEdge, baselineY) {
-  const label = String(text || '').trim();
-  if (!label) {
-    return;
-  }
-  font(ctx, 'normal');
-  ctx.doc.setFontSize(8);
-  const width = estimateTextWidth(ctx, label, 8) + 14;
-  const height = 15;
-  const x = rightEdge - width;
-  ctx.doc.setFillColor(ACCENT_TINT[0], ACCENT_TINT[1], ACCENT_TINT[2]);
-  ctx.doc.roundedRect(x, baselineY - 11, width, height, 3, 3, 'F');
-  setTextColor(ctx, ACCENT);
-  ctx.doc.text(label, x + 7, baselineY);
-  setTextColor(ctx, [0, 0, 0]);
-}
-
-// ponytail: metadata grid wraps at 4 cells per row, plenty for every current caller
-function writeMetaGrid(ctx, meta) {
-  const cells = (Array.isArray(meta) ? meta : []).filter((cell) => cell && cell.label);
-  if (!cells.length) {
-    return;
-  }
-  const perRow = Math.min(4, cells.length);
-  const cellWidth = ctx.maxWidth / perRow;
-  const rowHeight = 26;
-
-  for (let start = 0; start < cells.length; start += perRow) {
-    const row = cells.slice(start, start + perRow);
-    ensureSpace(ctx, rowHeight + 4);
-    ctx.doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
-    ctx.doc.setLineWidth(0.5);
-    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
-    row.forEach((cell, index) => {
-      const x = ctx.margin + (index * cellWidth);
-      writeLabel(ctx, cell.label, x, ctx.y + 10);
-      font(ctx, 'normal');
-      ctx.doc.setFontSize(9.5);
-      const value = ctx.doc.splitTextToSize(safeValue(cell.value), cellWidth - 8)[0] || '-';
-      ctx.doc.text(value, x, ctx.y + 21);
-    });
-    ctx.y += rowHeight;
-    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
-  }
-  ctx.y += 28;
-}
-
-function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
-  ctx.doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
-  ctx.doc.rect(0, 0, ctx.pageWidth, 5, 'F');
-
-  ctx.y = ctx.margin;
-  const eyebrowText = String(eyebrow || '').trim();
-  if (eyebrowText) {
-    font(ctx, 'bold');
-    ctx.doc.setFontSize(LABEL_FONT_SIZE + 0.5);
-    setTextColor(ctx, ACCENT);
-    ctx.doc.text(eyebrowText.toUpperCase(), ctx.margin, ctx.y);
-    setTextColor(ctx, [0, 0, 0]);
-    drawBadge(ctx, badge, ctx.margin + ctx.maxWidth, ctx.y);
-    ctx.y += 14;
-  }
-
-  font(ctx, 'bold');
-  ctx.doc.setFontSize(TITLE_FONT_SIZE);
-  ctx.y = writeWrappedLines(ctx.doc, String(title || 'Export'), ctx.margin, ctx.y + 8, ctx.maxWidth, TITLE_FONT_SIZE + 6);
-  ctx.y += 10;
-
-  writeMetaGrid(ctx, meta);
-}
-
-function writePageHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
-  addPage(ctx);
-  writeDocumentHeader(ctx, { title, eyebrow, badge, meta });
-  ctx.sectionCount = 0;
-}
-
-function writeFooters(ctx) {
-  const doc = ctx.doc;
-  if (typeof doc.setPage !== 'function' || typeof doc.internal?.getNumberOfPages !== 'function') {
-    return;
-  }
-  const total = doc.internal.getNumberOfPages();
-  for (let page = 1; page <= total; page += 1) {
-    doc.setPage(page);
-    const width = doc.internal.pageSize.getWidth();
-    const height = doc.internal.pageSize.getHeight();
-    const left = ctx.margin;
-    const right = width - ctx.margin;
-    doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
-    doc.setLineWidth(0.5);
-    doc.line(left, height - FOOTER_BASELINE - 10, right, height - FOOTER_BASELINE - 10);
-    font(ctx, 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(MUTED_TEXT[0], MUTED_TEXT[1], MUTED_TEXT[2]);
-    const label = doc.splitTextToSize(ctx.footerLabel, ctx.maxWidth - 90)[0] || '';
-    doc.text(label, left, height - FOOTER_BASELINE);
-    doc.text(`Page ${page} of ${total}`, right, height - FOOTER_BASELINE, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-  }
-}
-
-function refreshPageMetrics(ctx) {
-  ctx.pageWidth = ctx.doc.internal.pageSize.getWidth();
-  ctx.pageHeight = ctx.doc.internal.pageSize.getHeight();
-  ctx.maxWidth = ctx.pageWidth - (ctx.margin * 2);
-}
-
-function addPage(ctx, orientation = ctx.orientation) {
-  if (typeof ctx.doc.addPage === 'function') {
-    ctx.doc.addPage(ctx.format, orientation);
-  }
-  ctx.orientation = orientation || ctx.orientation;
-  refreshPageMetrics(ctx);
-  ctx.y = ctx.margin;
-}
-
-function contentBottom(ctx) {
-  return ctx.pageHeight - Math.max(ctx.margin, FOOTER_BASELINE + 24);
-}
-
-function ensureSpace(ctx, neededHeight) {
-  if (ctx.y + neededHeight <= contentBottom(ctx)) {
-    return;
-  }
-  addPage(ctx);
-}
-
-function writeWrappedLines(doc, text, x, y, maxWidth, lineHeight = LINE_HEIGHT) {
-  const lines = doc.splitTextToSize(String(text || ''), maxWidth);
-  doc.text(lines, x, y);
-  return y + (lines.length * lineHeight);
-}
-
-function splitWrappedLines(doc, text, maxWidth) {
-  const rawLines = String(text || '').split(/\r?\n/);
-  const lines = rawLines.flatMap((line) => {
-    const wrapped = doc.splitTextToSize(line || ' ', maxWidth);
-    return Array.isArray(wrapped) && wrapped.length ? wrapped : [''];
-  });
-  return lines.length ? lines : [''];
-}
-
-function writeWrappedBlock(ctx, text, x, maxWidth, lineHeight = LINE_HEIGHT) {
-  const lines = splitWrappedLines(ctx.doc, text, maxWidth);
-  lines.forEach((line) => {
-    ensureSpace(ctx, lineHeight);
-    ctx.doc.text(String(line || ''), x, ctx.y);
-    ctx.y += lineHeight;
-  });
-}
-
-function writeHeading(ctx, heading) {
-  const spacingBefore = ctx.sectionCount > 0 ? 14 : 0;
-  ensureSpace(ctx, spacingBefore + HEADING_FONT_SIZE + 16);
-  ctx.y += spacingBefore;
-  font(ctx, 'bold');
-  ctx.doc.setFontSize(HEADING_FONT_SIZE);
-  setTextColor(ctx, ACCENT);
-  ctx.doc.text(String(heading || '').toUpperCase(), ctx.margin, ctx.y);
-  setTextColor(ctx, [0, 0, 0]);
-  ctx.y += 6;
-  ctx.doc.setDrawColor(ACCENT[0], ACCENT[1], ACCENT[2]);
-  ctx.doc.setLineWidth(0.5);
-  ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
-  ctx.y += 14;
-  ctx.sectionCount += 1;
-}
-
-function writeParagraph(ctx, text) {
-  ensureSpace(ctx, LINE_HEIGHT + 2);
-  font(ctx, 'normal');
-  ctx.doc.setFontSize(BODY_FONT_SIZE);
-  writeWrappedBlock(ctx, text || '-', ctx.margin, ctx.maxWidth, LINE_HEIGHT);
-  ctx.y += 4;
-}
-
-// Numbered step: index sits in a hanging indent so wrapped lines align under the text.
-function writeNumberedItem(ctx, index, text) {
-  const gutter = 22;
-  const bodyWidth = ctx.maxWidth - gutter;
-  const lines = splitWrappedLines(ctx.doc, text, bodyWidth);
-  lines.forEach((line, lineIndex) => {
-    ensureSpace(ctx, LINE_HEIGHT);
-    if (lineIndex === 0) {
-      font(ctx, 'bold');
-      ctx.doc.setFontSize(BODY_FONT_SIZE - 1);
-      setTextColor(ctx, ACCENT);
-      ctx.doc.text(`${index}`, ctx.margin, ctx.y);
-      setTextColor(ctx, [0, 0, 0]);
-    }
-    font(ctx, 'normal');
-    ctx.doc.setFontSize(BODY_FONT_SIZE);
-    ctx.doc.text(String(line || ''), ctx.margin + gutter, ctx.y);
-    ctx.y += LINE_HEIGHT;
-  });
-  ctx.y += 4;
-}
-
-function writeKeyValue(ctx, key, value) {
-  ensureSpace(ctx, LINE_HEIGHT + 2);
-  const labelWidth = 96;
-  writeLabel(ctx, key, ctx.margin, ctx.y);
-  font(ctx, 'normal');
-  ctx.doc.setFontSize(BODY_FONT_SIZE);
-  const lines = splitWrappedLines(ctx.doc, safeValue(value), ctx.maxWidth - labelWidth);
-  lines.forEach((line, index) => {
-    if (index > 0) {
-      ensureSpace(ctx, LINE_HEIGHT);
-    }
-    ctx.doc.text(String(line || ''), ctx.margin + labelWidth, ctx.y);
-    ctx.y += LINE_HEIGHT;
-  });
-  ctx.y += 2;
-}
-
-function writeBulletLines(ctx, lines) {
-  const values = Array.isArray(lines) ? lines : [];
-  if (!values.length) {
-    writeParagraph(ctx, '-');
-    return;
-  }
-  values.forEach((line) => {
-    const gutter = 14;
-    const lines = splitWrappedLines(ctx.doc, String(line || '').trim(), ctx.maxWidth - gutter);
-    lines.forEach((part, index) => {
-      ensureSpace(ctx, LINE_HEIGHT);
-      font(ctx, 'normal');
-      ctx.doc.setFontSize(BODY_FONT_SIZE);
-      if (index === 0) {
-        setTextColor(ctx, ACCENT);
-        ctx.doc.text('•', ctx.margin + 3, ctx.y);
-        setTextColor(ctx, [0, 0, 0]);
-      }
-      ctx.doc.text(String(part || ''), ctx.margin + gutter, ctx.y);
-      ctx.y += LINE_HEIGHT;
-    });
-  });
-  ctx.y += 4;
-}
-
-function writeMinorHeading(ctx, heading) {
-  ensureSpace(ctx, BODY_FONT_SIZE + 12);
-  ctx.y += 6;
-  font(ctx, 'bold');
-  ctx.doc.setFontSize(BODY_FONT_SIZE);
-  writeWrappedBlock(ctx, heading, ctx.margin, ctx.maxWidth, BODY_FONT_SIZE + 4);
-  ctx.y += 3;
-}
-
-function estimateTextWidth(ctx, text, fontSize = TABLE_FONT_SIZE) {
-  if (typeof ctx.doc.getTextWidth === 'function') {
-    const measured = Number(ctx.doc.getTextWidth(String(text || '')));
-    if (Number.isFinite(measured)) {
-      return measured;
-    }
-  }
-  return String(text || '').length * fontSize * 0.52;
-}
-
-function splitLongToken(token, maxChars) {
-  const source = String(token || '');
-  if (source.length <= maxChars) {
-    return source;
-  }
-  const chunks = [];
-  for (let index = 0; index < source.length; index += maxChars) {
-    chunks.push(source.slice(index, index + maxChars));
-  }
-  return chunks.join(' ');
-}
-
-function prepareTableCellText(value, columnWidth, fallback = '') {
-  const text = safeValue(value, fallback);
-  const maxChars = Math.max(
-    6,
-    Math.floor((columnWidth - (TABLE_CELL_PADDING * 2)) / (TABLE_FONT_SIZE * 0.52))
-  );
-  return text
-    .split(/(\s+)/)
-    .map((part) => (/^\s+$/.test(part) ? part : splitLongToken(part, maxChars)))
-    .join('');
-}
-
-function resolveTableColumnWidths(ctx, headers, rows) {
-  const columnCount = headers.length;
-  if (!columnCount) {
-    return [];
-  }
-  const minWidth = Math.max(34, Math.min(62, ctx.maxWidth / Math.max(columnCount * 2.8, 1)));
-  const maxWidth = Math.max(minWidth, Math.min(190, ctx.maxWidth * 0.36));
-  const desiredWidths = headers.map((header, columnIndex) => {
-    const values = [
-      header,
-      ...rows.map((row) => (Array.isArray(row) ? row[columnIndex] : ''))
-    ];
-    const measured = values.reduce((max, value) => {
-      const text = String(value || '');
-      const naturalWidth = estimateTextWidth(ctx, text, TABLE_FONT_SIZE) + (TABLE_CELL_PADDING * 2);
-      return Math.max(max, Math.min(maxWidth, naturalWidth));
-    }, minWidth);
-    return Math.max(minWidth, measured);
-  });
-
-  const desiredTotal = desiredWidths.reduce((sum, width) => sum + width, 0);
-  if (desiredTotal <= 0) {
-    return Array.from({ length: columnCount }, () => ctx.maxWidth / columnCount);
-  }
-  if (desiredTotal >= ctx.maxWidth) {
-    const scale = ctx.maxWidth / desiredTotal;
-    return desiredWidths.map((width) => Math.max(minWidth * 0.8, width * scale));
-  }
-  const extra = ctx.maxWidth - desiredTotal;
-  return desiredWidths.map((width) => width + (extra * (width / desiredTotal)));
-}
-
-function splitTableCells(ctx, cells, widths, { fallback = '' } = {}) {
-  return cells.map((cell, index) => {
-    const width = Math.max(12, widths[index] - (TABLE_CELL_PADDING * 2));
-    return splitWrappedLines(ctx.doc, prepareTableCellText(cell, widths[index], fallback), width);
-  });
-}
-
-function getTableRowHeight(lineGroups) {
-  const maxLines = lineGroups.reduce((max, lines) => Math.max(max, Array.isArray(lines) ? lines.length : 1), 1);
-  return Math.max(18, (maxLines * TABLE_LINE_HEIGHT) + (TABLE_CELL_PADDING * 2));
-}
-
-// Zebra rows with horizontal rules only — vertical grid lines add noise at this density.
-function drawTableRow(ctx, lineGroups, widths, { header = false, zebra = false } = {}) {
-  const rowHeight = getTableRowHeight(lineGroups);
-  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
-
-  if (header) {
-    ctx.doc.setFillColor(ACCENT_TINT[0], ACCENT_TINT[1], ACCENT_TINT[2]);
-    ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
-  } else if (zebra) {
-    ctx.doc.setFillColor(ZEBRA_FILL[0], ZEBRA_FILL[1], ZEBRA_FILL[2]);
-    ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
-  }
-
-  font(ctx, header ? 'bold' : 'normal');
-  ctx.doc.setFontSize(TABLE_FONT_SIZE);
-  setTextColor(ctx, header ? ACCENT : [0, 0, 0]);
-
-  let x = ctx.margin;
-  lineGroups.forEach((lines, columnIndex) => {
-    const cellLines = Array.isArray(lines) && lines.length ? lines : [''];
-    let textY = ctx.y + TABLE_CELL_PADDING + TABLE_FONT_SIZE;
-    cellLines.forEach((line) => {
-      ctx.doc.text(String(line || ''), x + TABLE_CELL_PADDING, textY);
-      textY += TABLE_LINE_HEIGHT;
-    });
-    x += widths[columnIndex];
-  });
-  setTextColor(ctx, [0, 0, 0]);
-
-  ctx.y += rowHeight;
-  ctx.doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
-  ctx.doc.setLineWidth(0.5);
-  ctx.doc.line(ctx.margin, ctx.y, ctx.margin + totalWidth, ctx.y);
-}
-
-function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
-  const safeHeaders = Array.isArray(headers) ? headers.map((header) => safeValue(header)) : [];
-  const safeRows = Array.isArray(rows)
-    ? rows.map((cells) => (Array.isArray(cells) ? cells.map((cell) => String(cell ?? '').trim()) : []))
-    : [];
-
-  if (!safeRows.length) {
-    writeParagraph(ctx, emptyText);
-    return;
-  }
-
-  if (!safeHeaders.length) {
-    safeRows.forEach((cells) => writeParagraph(ctx, cells.join(' ')));
-    return;
-  }
-
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
-  ctx.doc.setFontSize(TABLE_FONT_SIZE);
-  const widths = resolveTableColumnWidths(ctx, safeHeaders, safeRows);
-  const headerLines = splitTableCells(ctx, safeHeaders, widths, { fallback: '-' });
-  const headerHeight = getTableRowHeight(headerLines);
-
-  function writeHeader() {
-    ensureSpace(ctx, headerHeight);
-    drawTableRow(ctx, headerLines, widths, { header: true });
-  }
-
-  writeHeader();
-  safeRows.forEach((cells, rowIndex) => {
-    const rowCells = safeHeaders.map((_header, index) => String(cells[index] ?? '').trim());
-    const rowLines = splitTableCells(ctx, rowCells, widths);
-    const rowHeight = getTableRowHeight(rowLines);
-    if (ctx.y + rowHeight > contentBottom(ctx)) {
-      addPage(ctx);
-      writeHeader();
-    }
-    drawTableRow(ctx, rowLines, widths, { zebra: rowIndex % 2 === 1 });
-  });
-  ctx.y += 10;
-}
-
-function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
-  writePdfTable(ctx, headers, rows, { emptyText });
-}
-
-function writeNotebookResultTable(ctx, table) {
-  const normalized = normalizeNotebookResultTable(table);
-  if (!normalized) {
-    writeParagraph(ctx, '-');
-    return;
-  }
-  const headers = normalized.columns.map((column) => column.title);
-  const rows = normalized.rows.map((row) => (
-    normalized.columns.map((column) => row[column.field] || '')
-  ));
-  writePdfTable(ctx, headers, rows);
-}
-
-function writeNotebookToolCalculationTable(ctx, table) {
-  const source = table && typeof table === 'object' ? table : null;
-  if (!source) {
-    writeParagraph(ctx, '-');
-    return;
-  }
-  const headers = Array.isArray(source.headers)
-    ? source.headers.map((header) => safeValue(header))
-    : [];
-  const rows = [
-    ...(Array.isArray(source.metaRows) ? source.metaRows : []),
-    ...(Array.isArray(source.rows) ? source.rows : []),
-    ...(Array.isArray(source.footerRows) ? source.footerRows : [])
-  ].map((row) => (Array.isArray(row) ? row.map((cell) => String(cell ?? '').trim()) : []))
-    .filter((row) => row.some(Boolean));
-  writePdfTable(ctx, headers, rows);
-}
-
-function isWideNotebookResultTable(table) {
-  const normalized = normalizeNotebookResultTable(table);
-  if (!normalized) {
-    return false;
-  }
-  const maxCellLength = normalized.rows.reduce((max, row) => (
-    normalized.columns.reduce((cellMax, column) => (
-      Math.max(cellMax, String(row[column.field] || '').trim().length)
-    ), max)
-  ), 0);
-  return normalized.columns.length > 4 || maxCellLength > 48;
-}
-
-function hasWideNotebookResultTable(tables) {
-  return normalizeNotebookResultTables(tables).some((table) => isWideNotebookResultTable(table));
-}
-
-function finishAndSave(ctx, fileNameBase) {
-  writeFooters(ctx);
-  ctx.doc.save(`${sanitizeFileName(fileNameBase, 'export')}.pdf`);
-}
-
-function notebookEntryMeta(entry) {
-  return [
-    { label: 'Project', value: entry.projectName },
-    { label: 'Protocol', value: entry.protocolName },
-    { label: String(entry.executedAt || '').trim() ? 'Executed' : 'Updated', value: formatTimestamp(entry.executedAt || entry.updatedAt) }
-  ];
-}
-
-function notebookStateLabel(entry) {
-  return String(entry?.notebookState || '').trim().toLowerCase() === 'planned' ? 'Planned' : 'Executed';
-}
-
-function formatGelAnalysisTypeLabel(type) {
-  if (type === 'western') {
-    return 'Western Blot';
-  }
-  if (type === 'agarose') {
-    return 'DNA/RNA Agarose';
-  }
-  return 'SDS-PAGE';
-}
-
-function formatAssayAnalysisMethodLabel(method) {
-  const source = String(method || '').trim();
-  if (!source) {
-    return 'Analysis plot';
-  }
-  return source
-    .split('_')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function hasSerialDilutionContent(summary) {
-  return Boolean(
-    summary
-    && (
-      (Array.isArray(summary.feedbackMessages) && summary.feedbackMessages.length)
-      || (Array.isArray(summary.initialDilutionRows) && summary.initialDilutionRows.length)
-      || (Array.isArray(summary.followingDilutionRows) && summary.followingDilutionRows.length)
-      || summary.hasValidPlans
-    )
-  );
-}
-
-function inferPdfImageFormat(dataUrl) {
-  const source = String(dataUrl || '').trim().toLowerCase();
-  if (source.startsWith('data:image/jpeg') || source.startsWith('data:image/jpg')) {
-    return 'JPEG';
-  }
-  return 'PNG';
-}
-
-async function preparePdfImageAsset(dataUrl) {
-  const source = String(dataUrl || '').trim();
-  if (!source.startsWith('data:image/')) {
-    return null;
-  }
-
-  if (
-    typeof Image !== 'function'
-    || typeof document === 'undefined'
-    || typeof document.createElement !== 'function'
-  ) {
-    return {
-      dataUrl: source,
-      format: inferPdfImageFormat(source),
-      width: 1200,
-      height: 800
-    };
-  }
-
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.onload = () => {
-      const width = Math.max(1, Math.ceil(image.naturalWidth || image.width || 1));
-      const height = Math.max(1, Math.ceil(image.naturalHeight || image.height || 1));
-      const canvas = document.createElement('canvas');
-      if (!canvas || typeof canvas.getContext !== 'function' || typeof canvas.toDataURL !== 'function') {
-        resolve({
-          dataUrl: source,
-          format: inferPdfImageFormat(source),
-          width,
-          height
-        });
-        return;
-      }
-
-      canvas.width = width;
-      canvas.height = height;
-      const context2d = canvas.getContext('2d');
-      if (!context2d) {
-        resolve({
-          dataUrl: source,
-          format: inferPdfImageFormat(source),
-          width,
-          height
-        });
-        return;
-      }
-
-      context2d.fillStyle = '#ffffff';
-      context2d.fillRect(0, 0, width, height);
-      context2d.drawImage(image, 0, 0, width, height);
-      resolve({
-        dataUrl: canvas.toDataURL('image/png'),
-        format: 'PNG',
-        width,
-        height
-      });
-    };
-    image.onerror = () => resolve(null);
-    image.src = source;
-  });
-}
-
-async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } = {}) {
-  const asset = await preparePdfImageAsset(dataUrl);
-  if (!asset) {
-    if (caption) {
-      writeParagraph(ctx, caption);
-    }
-    return false;
-  }
-
-  const availableHeight = Math.max(80, ctx.pageHeight - (ctx.margin * 2) - 20);
-  const targetMaxHeight = Math.min(maxHeight, availableHeight);
-  const widthScale = ctx.maxWidth / asset.width;
-  const heightScale = targetMaxHeight / asset.height;
-  const scale = Math.min(widthScale, heightScale, 1);
-  const drawWidth = Math.max(1, asset.width * scale);
-  const drawHeight = Math.max(1, asset.height * scale);
-
-  ensureSpace(ctx, drawHeight + (caption ? LINE_HEIGHT + 8 : 8));
-  ctx.doc.addImage(asset.dataUrl, asset.format, ctx.margin, ctx.y, drawWidth, drawHeight);
-  ctx.y += drawHeight + 6;
-  if (caption) {
-    writeParagraph(ctx, caption);
-  }
-  return true;
-}
-
-function renderStepText(step, values = null) {
-  const source = String(step?.text || '');
-  const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
-  const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
-
-  if (!matches.length) {
-    if (!placeholders.length) {
-      return source.trim();
-    }
-    const trailing = placeholders.map((placeholder) => {
-      const key = `${step.id}:${placeholder.id}`;
-      const rawValue = values ? String(values[key] || '').trim() : '';
-      return rawValue || `[${String(placeholder?.name || 'value').trim()}]`;
-    }).join(' ');
-    return `${source} ${trailing}`.trim();
-  }
-
-  let cursor = 0;
-  let text = '';
-  matches.forEach((match) => {
-    const startIndex = Number(match.index || 0);
-    const placeholderId = String(match[1] || '');
-    const placeholder = placeholders.find((item) => String(item?.id || '') === placeholderId);
-    const key = `${step.id}:${placeholderId}`;
-    const rawValue = values ? String(values[key] || '').trim() : '';
-    text += source.slice(cursor, startIndex);
-    text += rawValue || `[${String(placeholder?.name || 'value').trim()}]`;
-    cursor = startIndex + match[0].length;
-  });
-  text += source.slice(cursor);
-  return text.trim();
-}
-
-function toRowLabel(rowIndex) {
-  let value = Number(rowIndex) + 1;
-  let label = '';
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
-}
-
-function wellIdFor(rowIndex, columnIndex) {
-  return `${toRowLabel(rowIndex)}${columnIndex + 1}`;
-}
-
-function resolveAssayDefinition(assay) {
-  const rows = Number(assay?.plateRows);
-  const columns = Number(assay?.plateColumns);
-  if (Number.isFinite(rows) && Number.isFinite(columns) && rows > 0 && columns > 0) {
-    return {
-      rows,
-      columns,
-      label: String(assay?.plateLabel || `${rows * columns} well`)
-    };
-  }
-  const fromType = PLATE_DEFINITIONS[String(assay?.plateType || '')] || PLATE_DEFINITIONS['96'];
-  return { ...fromType };
-}
-
-function renderAssayPlot(ctx, assay, def) {
-  const totalWells = def.rows * def.columns;
-  const maxRows = totalWells > 384 ? Math.min(16, def.rows) : def.rows;
-  const maxColumns = totalWells > 384 ? Math.min(24, def.columns) : def.columns;
-  const rowHeaderWidth = 20;
-  const colHeaderHeight = 16;
-  const maxPlotWidth = ctx.maxWidth - rowHeaderWidth;
-  const cellSize = Math.max(8, Math.floor(maxPlotWidth / maxColumns));
-  const plotHeight = cellSize * maxRows;
-  const neededHeight = plotHeight + colHeaderHeight + 24;
-  const startX = ctx.margin + rowHeaderWidth;
-
-  ensureSpace(ctx, neededHeight);
-  const startY = ctx.y + colHeaderHeight;
-
-  const map = {};
-  (Array.isArray(assay?.wellLayout) ? assay.wellLayout : []).forEach((item) => {
-    const well = String(item?.well || '').trim().toUpperCase();
-    if (!well) {
-      return;
-    }
-    map[well] = true;
-  });
-
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
-  ctx.doc.setFontSize(8);
-
-  for (let col = 0; col < maxColumns; col += 1) {
-    const label = String(col + 1);
-    const x = startX + (col * cellSize) + (cellSize / 2);
-    ctx.doc.text(label, x, ctx.y + 11, { align: 'center' });
-  }
-
-  for (let row = 0; row < maxRows; row += 1) {
-    const rowLabel = toRowLabel(row);
-    const y = startY + (row * cellSize) + (cellSize / 2) + 3;
-    ctx.doc.text(rowLabel, ctx.margin + 10, y, { align: 'center' });
-  }
-
-  for (let row = 0; row < maxRows; row += 1) {
-    for (let col = 0; col < maxColumns; col += 1) {
-      const well = wellIdFor(row, col);
-      const mapped = Boolean(map[well]);
-      const x = startX + (col * cellSize);
-      const y = startY + (row * cellSize);
-      if (mapped) {
-        ctx.doc.setFillColor(209, 227, 255);
-      } else {
-        ctx.doc.setFillColor(255, 255, 255);
-      }
-      ctx.doc.setDrawColor(170, 180, 190);
-      ctx.doc.rect(x, y, cellSize, cellSize, 'FD');
-    }
-  }
-
-  ctx.y = startY + plotHeight + 14;
-  ctx.doc.setFontSize(9);
-  writeParagraph(ctx, 'Legend: blue = mapped well, white = empty well');
-}
+import { showTransientNotice } from '../../lib/notify.js';
+import {
+  safeValue,
+  formatTimestamp
+} from './doc-context.js';
+import {
+  createContext,
+  writePageHeader,
+  finishAndSave
+} from './page-chrome.js';
+import {
+  writeHeading,
+  writeParagraph,
+  writeNumberedItem,
+  writeKeyValue,
+  writeBulletLines,
+  writeMinorHeading
+} from './text-blocks.js';
+import {
+  writeSimpleTable,
+  writeNotebookResultTable,
+  writeNotebookToolCalculationTable,
+  hasWideNotebookResultTable
+} from './tables.js';
+import {
+  notebookEntryMeta,
+  notebookStateLabel,
+  formatGelAnalysisTypeLabel,
+  formatAssayAnalysisMethodLabel,
+  hasSerialDilutionContent,
+  renderStepText
+} from './labels.js';
+import {
+  writeImageFigure,
+  resolveAssayDefinition,
+  renderAssayPlot
+} from './figures.js';
 
 export function exportProtocolPdf(protocol) {
   if (!protocol) {
@@ -900,9 +91,10 @@ async function writeNotebookEntryBody(ctx, {
   linkedGel = null,
   linkedGelPreviewImage = '',
   linkedAssay = null,
-  linkedAssayPlotImage = ''
+  linkedAssayPlotImage = '',
+  resultFileImages = []
 }) {
-  const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+  const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
 
   writeHeading(ctx, 'Protocol steps');
   const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
@@ -1032,9 +224,23 @@ async function writeNotebookEntryBody(ctx, {
       writeNotebookResultTable(ctx, table);
     });
   }
-  if (Array.isArray(entry.resultFiles) && entry.resultFiles.length) {
+  const resultFileNames = Array.isArray(entry.resultFiles) ? entry.resultFiles : [];
+  const attachedImages = Array.isArray(resultFileImages) ? resultFileImages : [];
+  if (resultFileNames.length || attachedImages.length) {
     writeMinorHeading(ctx, 'Result Files');
-    writeBulletLines(ctx, entry.resultFiles);
+  }
+  if (resultFileNames.length) {
+    writeBulletLines(ctx, resultFileNames);
+  }
+  for (const image of attachedImages) {
+    if (!String(image?.dataUrl || '').trim()) {
+      continue;
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await writeImageFigure(ctx, image.dataUrl, {
+      caption: safeValue(image.name, 'Attached image'),
+      maxHeight: 320
+    });
   }
 }
 
@@ -1046,7 +252,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     }
 
     const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
-    const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+    const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
     const useWideLayout = hasWideNotebookResultTable(resultTables);
     const ctx = createContext({
       title,
@@ -1068,9 +274,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     return true;
   } catch (error) {
     console.error('Failed to export notebook PDF:', error);
-    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(String(error?.message || error || 'Failed to export notebook PDF.'));
-    }
+    showTransientNotice(String(error?.message || error || 'Failed to export notebook PDF.'), { type: 'error' });
     return false;
   }
 };
@@ -1082,7 +286,8 @@ export const exportProjectNotebookEntriesPdf = async ({
   linkedGelByEntryId = new Map(),
   linkedGelPreviewImagesByEntryId = new Map(),
   linkedAssayByEntryId = new Map(),
-  linkedAssayPlotImagesByEntryId = new Map()
+  linkedAssayPlotImagesByEntryId = new Map(),
+  resultFileImagesByEntryId = new Map()
 } = {}) => {
   try {
     if (!project) {
@@ -1090,9 +295,7 @@ export const exportProjectNotebookEntriesPdf = async ({
     }
     const pages = Array.isArray(entries) ? entries.filter(Boolean) : [];
     if (!pages.length) {
-      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert('No notebook pages to export for this project.');
-      }
+      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
       return false;
     }
 
@@ -1146,7 +349,8 @@ export const exportProjectNotebookEntriesPdf = async ({
         linkedGel: linkedGelByEntryId.get(entry.id) || null,
         linkedGelPreviewImage: linkedGelPreviewImagesByEntryId.get(entry.id) || '',
         linkedAssay: linkedAssayByEntryId.get(entry.id) || null,
-        linkedAssayPlotImage: linkedAssayPlotImagesByEntryId.get(entry.id) || ''
+        linkedAssayPlotImage: linkedAssayPlotImagesByEntryId.get(entry.id) || '',
+        resultFileImages: resultFileImagesByEntryId.get(entry.id) || []
       });
     }
 
@@ -1154,9 +358,7 @@ export const exportProjectNotebookEntriesPdf = async ({
     return true;
   } catch (error) {
     console.error('Failed to export project notebook PDF:', error);
-    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(String(error?.message || error || 'Failed to export project notebook PDF.'));
-    }
+    showTransientNotice(String(error?.message || error || 'Failed to export project notebook PDF.'), { type: 'error' });
     return false;
   }
 };

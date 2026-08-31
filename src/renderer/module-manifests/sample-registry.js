@@ -18,6 +18,5 @@ export const sampleRegistryManifest = {
   }),
   render: ({ modules }) => {
     modules.personalInventory.renderSections();
-    modules.sampleRegistry.render();
   }
 };

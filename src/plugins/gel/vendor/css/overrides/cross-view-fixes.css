@@ -1,0 +1,195 @@
+/* Spacing and overlap fixes by view */
+
+:root {
+  --app-left-rail-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-background) 4%);
+  --app-left-rail-divider: color-mix(in srgb, var(--theme-border-soft) 88%, var(--theme-text-strong) 12%);
+}
+.app-left-rail {
+  --app-left-rail-padding-inline: 16px;
+  position: relative;
+  align-self: stretch;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  min-height: 100%;
+  max-height: var(--shared-left-rail-layout-height);
+  margin-top: 0 !important;
+  padding: 14px var(--app-left-rail-padding-inline) 16px var(--app-left-rail-padding-inline) !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 0 !important;
+  border-radius: 0 !important;
+  border-top: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.app-left-rail::before {
+  content: none !important;
+}
+
+
+
+.app-left-rail > * {
+  min-width: 0;
+}
+
+.app-file-drop-target {
+  transition:
+    outline-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.app-file-drop-target.is-file-drop-active {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 78%, var(--theme-surface-elevated) 22%);
+  outline-offset: 4px;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-accent) 14%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 24%, transparent);
+}
+
+.app-left-rail-section {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.app-left-rail-section + .app-left-rail-section {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--theme-border-soft) 92%, transparent);
+}
+
+.app-left-rail-list {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+
+.app-left-rail-handle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: 0;
+  left: var(--shared-left-rail-width);
+  bottom: 0;
+  width: 12px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 5;
+  transform: translateX(-50%);
+}
+
+.app-left-rail-handle:hover,
+.app-left-rail-handle:focus,
+.app-left-rail-handle:focus-visible,
+.app-left-rail-handle:active {
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.app-left-rail-fold-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: 14px;
+  left: var(--shared-left-rail-width);
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid var(--app-left-rail-divider);
+  border-radius: 7px;
+  background: var(--app-left-rail-surface, var(--theme-surface));
+  color: var(--theme-text-muted);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-shadow-color) 72%, transparent);
+  cursor: pointer;
+  transform: translateX(-50%);
+  transition:
+    left 140ms ease,
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+  z-index: 6;
+}
+
+.app-left-rail-fold-toggle:hover,
+.app-left-rail-fold-toggle:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 38%, var(--app-left-rail-divider));
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.app-left-rail-fold-toggle:focus-visible {
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--theme-accent) 22%, transparent),
+    0 2px 8px color-mix(in srgb, var(--theme-shadow-color) 72%, transparent);
+}
+
+.app-left-rail-fold-toggle__icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-left-rail-fold-toggle__chevron {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 140ms ease;
+}
+
+.app-left-rail-fold-toggle.is-folded {
+  left: var(--shared-left-rail-folded-width);
+  transform: translateX(-50%);
+}
+
+.app-left-rail-fold-toggle.is-folded .app-left-rail-fold-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+body.shared-left-rail-resizing,
+body.shared-left-rail-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+@media (max-width: 980px) {
+  .app-left-rail {
+    min-height: auto;
+    max-height: none;
+    padding: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+    scrollbar-gutter: auto;
+  }
+
+  
+  .app-left-rail-handle {
+    display: none;
+  }
+
+  .app-left-rail-fold-toggle {
+    display: none;
+  }
+}

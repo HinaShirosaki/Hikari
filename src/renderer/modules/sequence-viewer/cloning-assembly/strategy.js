@@ -50,9 +50,11 @@ export function designWithThresholdFallback(designCallback) {
   ];
   const attempts = [];
   let lastTmViolation = null;
+  let lastResult = null;
 
   for (const [levelName, thresholds] of levels) {
     const result = designCallback(thresholds, levelName);
+    lastResult = result;
     const tmViolation = result?.feasible ? findTmDifferenceViolation(result, thresholds) : null;
     const levelFeasible = Boolean(result?.feasible) && !tmViolation;
     attempts.push({
@@ -69,20 +71,26 @@ export function designWithThresholdFallback(designCallback) {
         ...result,
         feasible: true,
         selectedThresholdLevel: levelName,
-        attempts
+        attempts,
+        warnings: [...new Set([
+          ...asArray(result?.warnings),
+          ...asArray(result?.qualityWarnings)
+        ].filter(Boolean))]
       };
     }
   }
 
   return {
+    ...lastResult,
     feasible: false,
     selectedThresholdLevel: null,
     attempts,
-    warnings: [
+    warnings: [...new Set([
+      ...asArray(lastResult?.warnings),
       lastTmViolation
         ? `Designed oligos exceeded the ${lastTmViolation.level} ${lastTmViolation.kind} Tm-difference cap (${lastTmViolation.spread.toFixed(1)} °C vs ${lastTmViolation.cap} °C limit) and no looser threshold level produced a balanced set. Consider redesigning fragment boundaries, Gibson assembly, overlap PCR, or synthesis.`
         : 'Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.'
-    ]
+    ].filter(Boolean))]
   };
 }
 

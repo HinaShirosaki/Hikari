@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 const {
   defaultAsArray,
   defaultCleanText
@@ -13,18 +14,6 @@ const MEMORY_ACTIONS = Object.freeze({
   FORGET: 'forget',
   LIST: 'list'
 });
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 function createMemoryId() {
   return `memory-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;

@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../lib/notify.js';
+
 const DEFAULT_MAX_DEPTH = 80;
 const DEFAULT_MAX_BYTES = 24 * 1024 * 1024;
 const DEFAULT_COALESCE_MS = 700;
@@ -26,6 +28,7 @@ function serializeHistoryState(state) {
     return JSON.stringify(state);
   } catch (error) {
     console.warn('Unable to serialize undo history snapshot:', error);
+    showTransientNotice('Undo history could not be saved.', { type: 'error' });
     return null;
   }
 }
@@ -36,6 +39,7 @@ function parseHistorySnapshot(serialized) {
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
   } catch (error) {
     console.warn('Unable to restore undo history snapshot:', error);
+    showTransientNotice('Undo history could not be restored.', { type: 'error' });
     return null;
   }
 }
@@ -104,10 +108,15 @@ function getKeyboardCommand(event) {
   return event.shiftKey ? 'redo' : 'undo';
 }
 
+// A plugin frame owns the edits the user is making inside it, and its keyboard
+// events never reach the host document. `delegate` lets such a frame claim the
+// global history controls: `claim()` returns its {canUndo, canRedo} while it is
+// the focused frame, and `run(command)` forwards the command into it.
 export function createUndoService({
   state,
   persistState,
   renderAll,
+  delegate = null,
   documentObject = globalThis?.document || null,
   undoButtonId = 'global-undo-btn',
   redoButtonId = 'global-redo-btn',
@@ -147,13 +156,40 @@ export function createUndoService({
     }
   }
 
+  function getDelegateClaim() {
+    if (typeof delegate?.claim !== 'function') {
+      return null;
+    }
+    const claim = delegate.claim();
+    return claim && typeof claim === 'object' ? claim : null;
+  }
+
   function getHistoryState() {
+    const claim = getDelegateClaim();
+    if (claim) {
+      return {
+        canUndo: claim.canUndo === true,
+        canRedo: claim.canRedo === true,
+        undoDepth: claim.canUndo === true ? 1 : 0,
+        redoDepth: claim.canRedo === true ? 1 : 0
+      };
+    }
     return {
       canUndo: undoStack.length > 0,
       canRedo: redoStack.length > 0,
       undoDepth: undoStack.length,
       redoDepth: redoStack.length
     };
+  }
+
+  // Returns true when a claiming frame took the command.
+  function runOnDelegate(command) {
+    if (!getDelegateClaim() || typeof delegate?.run !== 'function') {
+      return false;
+    }
+    const handled = delegate.run(command) === true;
+    syncButtons();
+    return handled;
   }
 
   function syncButtons() {
@@ -249,6 +285,9 @@ export function createUndoService({
   }
 
   function undo() {
+    if (runOnDelegate('undo')) {
+      return true;
+    }
     const targetSnapshot = undoStack.pop();
     if (!targetSnapshot) {
       syncButtons();
@@ -263,6 +302,9 @@ export function createUndoService({
   }
 
   function redo() {
+    if (runOnDelegate('redo')) {
+      return true;
+    }
     const targetSnapshot = redoStack.pop();
     if (!targetSnapshot) {
       syncButtons();
@@ -310,6 +352,7 @@ export function createUndoService({
     persist,
     redo,
     reset,
+    syncButtons,
     undo
   };
 }

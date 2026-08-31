@@ -96,16 +96,14 @@ export function getContainerLayout(containerOrType) {
     return {
       rows,
       cols,
-      className: 'box81',
-      helperText: `${rows} x ${cols} custom grid box. Click a cell to set samples on the right side.`
+      className: 'box81'
     };
   }
   const gridBox = GRID_BOX_LAYOUTS[type] || GRID_BOX_LAYOUTS.box81;
   return {
     rows: gridBox.rows,
     cols: gridBox.cols,
-    className: 'box81',
-    helperText: `${gridBox.rows} x ${gridBox.cols} grid box. Click a cell to set samples on the right side.`
+    className: 'box81'
   };
 }
 

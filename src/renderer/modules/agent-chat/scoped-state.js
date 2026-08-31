@@ -16,7 +16,7 @@ function buildPaperAgentSessionPrompt(context = {}) {
   }
   const lines = [
     'You are in a Papers right-rail chat session. Treat the active PDF as the default subject when the user says "this paper".',
-    'Use the transformed markdown paper.md when it is available; it is the LLM-facing markdown extracted from the PDF.',
+    'Use the transformed title-named Markdown file when it is available; it is the LLM-facing content extracted from the PDF. Legacy records may still use paper.md.',
     'For paper-specific claims, methods, results, figures, or citations, read the transformed markdown before answering when a markdown path is provided.',
     'If the transformed markdown is unavailable or cannot be read, say so and fall back to the stored summary, highlights, comments, and visible paper metadata.',
     'Do not claim that you read the PDF or transformed markdown unless you actually used the available paper content.'
@@ -43,7 +43,10 @@ function buildNotebookAgentSessionPrompt(context = {}) {
   }
   const lines = [
     'You are in a Biology Notebook right-rail chat session. Treat the active notebook page as the default subject when the user says "this page", "this notebook page", or "my current experiment".',
-    'Use the hidden notebook page context supplied with each user question as the current page content. It may include unsaved placeholder values, notes, tables, and linked result summaries.',
+    'Read the complete hidden notebook-page context before answering or using lookup tools. It is the current page content and may include unsaved placeholder values, notes, tables, calculations, result files, linked samples, and linked result summaries.',
+    'When asked to enrich the page, search only for information that is directly useful to this experiment. Prefer inventory_lookup for linked samples or proteins, chemical_lookup for local reagents, and literature_search only when external evidence is needed.',
+    'For a named buffer without a formulation, such as PBS, provide a clearly labeled recipe with its assumed final volume, concentration, and pH. For a linked sample or protein, use its exact sample id or code to retrieve recorded concentration, lot, storage, notes, or other available fields; never invent missing values.',
+    'Use notebook_append to propose the final evidence-backed text for explicit review. Do not create a new page, replace existing notes, or claim the append was saved before Hikari confirms it.',
     'Do not claim that saved notebook data contains unsaved edits unless those edits were supplied in the hidden page context.'
   ];
   if (pageTitle) {
@@ -101,7 +104,7 @@ function ensurePaperAgentChatSessions(rootState) {
 function normalizeHiddenContext(context = {}) {
   const source = context && typeof context === 'object' ? context : {};
   const kind = trimText(source.kind || 'selection', 80);
-  const textLimit = kind === 'assay-page' || kind === 'assay' || trimText(source.assayId, 220)
+  const textLimit = kind === 'assay-page' || kind === 'assay' || kind === 'notebook-page' || trimText(source.assayId, 220)
     ? 40000
     : 4000;
   const text = trimText(source.text, textLimit);
@@ -118,6 +121,7 @@ function normalizeHiddenContext(context = {}) {
       ? Math.max(1, Math.round(Number(source.pageNumber)))
       : 0,
     notebookEntryId: trimText(source.notebookEntryId, 220),
+    notebookUpdatedAt: trimText(source.notebookUpdatedAt, 80),
     projectName: trimText(source.projectName, 220),
     protocolName: trimText(source.protocolName, 220),
     assayId: trimText(source.assayId, 220),
@@ -127,6 +131,7 @@ function normalizeHiddenContext(context = {}) {
 
 function normalizeNotebookAgentContext(context = {}) {
   const notebookEntryId = trimText(context.notebookEntryId, 220);
+  const notebookUpdatedAt = trimText(context.notebookUpdatedAt, 80);
   const projectName = trimText(context.projectName, 220);
   const protocolName = trimText(context.protocolName, 220);
   const pageTitle = trimText(context.pageTitle, 320);
@@ -140,6 +145,7 @@ function normalizeNotebookAgentContext(context = {}) {
   return {
     scopeType: 'notebook',
     notebookEntryId,
+    notebookUpdatedAt,
     pageTitle,
     projectId: trimText(context.projectId, 120),
     projectName,

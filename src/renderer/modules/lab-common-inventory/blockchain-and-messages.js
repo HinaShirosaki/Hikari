@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function installBlockchainAndMessages(ctx) {
   const { createId, state } = ctx;
   const { chemicalImportStatus } = ctx.elements;
@@ -52,6 +54,9 @@ function broadcastInventoryUpdate(chemical) {
 }
 
 function setChemicalImportStatus(message, tone = 'idle') {
+  if (tone === 'error' && message) {
+    showTransientNotice(message, { type: 'error' });
+  }
   if (!chemicalImportStatus) {
     return;
   }

@@ -1,10 +1,7 @@
 'use strict';
 
 const { SCHEDULED_TASK } = require('../../shared/ipc/channels');
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
+const { ensureObject } = require('../lib/normalize.js');
 
 function registerScheduledTaskIpc({ ipcMain, scheduledTaskService, cleanText } = {}) {
   const clean = typeof cleanText === 'function'

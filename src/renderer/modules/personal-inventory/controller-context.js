@@ -8,6 +8,7 @@ export function createPersonalInventoryContext({
   createId,
   safeText,
   onSamplesChanged,
+  onSampleRecorded,
   onInventoryChanged
 }) {
   const elements = {
@@ -15,8 +16,6 @@ export function createPersonalInventoryContext({
     inventoryLocationNav: document.getElementById('inventory-location-nav'),
     containerContextMenu: document.getElementById('inventory-container-context-menu'),
     inventorySummaryCard: document.getElementById('inventory-summary-card'),
-    addContainerBtn: document.getElementById('inventory-add-container-btn'),
-    addFolderBtn: document.getElementById('inventory-add-folder-btn'),
     addContainerOverlay: document.getElementById('inventory-add-container-overlay'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
     addContainerTitle: document.getElementById('inventory-add-container-title'),
@@ -45,6 +44,7 @@ export function createPersonalInventoryContext({
     shouldAutoOpenContainer: true,
     contextContainer: null,
     contextFolder: null,
+    contextLocation: null,
     cloningSampleId: null
   };
   const pendingStructureDrafts = new Map();
@@ -64,6 +64,11 @@ export function createPersonalInventoryContext({
     notifySamplesChanged() {
       if (typeof onSamplesChanged === 'function') {
         onSamplesChanged();
+      }
+    },
+    notifySampleRecorded(sample) {
+      if (typeof onSampleRecorded === 'function') {
+        onSampleRecorded(sample);
       }
     },
     notifyInventoryChanged() {

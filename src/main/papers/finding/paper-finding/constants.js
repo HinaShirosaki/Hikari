@@ -1,0 +1,27 @@
+'use strict';
+
+const PAPER_FINDING_TASK_TYPE = 'paper_finding';
+const PAPER_FINDING_RESULT_TYPE = 'paper_finding_result';
+const DEFAULT_FREQUENCY_VALUE = 1;
+const DEFAULT_FREQUENCY_UNIT = 'week';
+const DEFAULT_MAX_RESULTS = 12;
+const MAX_INTERVAL_MINUTES = 525_600;
+
+const FREQUENCY_UNIT_MINUTES = Object.freeze({
+  minute: 1,
+  hour: 60,
+  day: 1_440,
+  week: 10_080,
+  month: 43_200,
+  year: 525_600
+});
+
+module.exports = {
+  DEFAULT_FREQUENCY_UNIT,
+  DEFAULT_FREQUENCY_VALUE,
+  DEFAULT_MAX_RESULTS,
+  FREQUENCY_UNIT_MINUTES,
+  MAX_INTERVAL_MINUTES,
+  PAPER_FINDING_RESULT_TYPE,
+  PAPER_FINDING_TASK_TYPE
+};

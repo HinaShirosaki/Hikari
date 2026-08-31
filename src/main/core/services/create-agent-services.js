@@ -13,7 +13,6 @@ const { buildInventorySearchTerms } = require('../../agent/shared/agent-inventor
 const observability = require('../../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../../agent/shared/agent-controller-utils');
 const { createAgentRuntimeRegistry } = require('../../agent/shared/agent-runtime-registry.js');
-const { createAgentToolSmokeTestRuntime } = require('../../agent/tools/agent-tool-smoke-test');
 const { createAgentChatLogRuntime } = require('../../agent/context/agent-chat-log.js');
 const { createAgentSkillRuntime } = require('../../agent/skills/agent-skill-runtime.js');
 const { normalizeToolInvocationArgs } = require('../../agent/tools/agent-tool-loading.js');
@@ -90,9 +89,6 @@ function createMainAgentServices(deps = {}) {
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
-  const appendAgentChatLogEntry = typeof deps.appendAgentChatLogEntry === 'function'
-    ? deps.appendAgentChatLogEntry
-    : (async () => {});
   const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
     ? deps.getDefaultDataFilePath
     : (() => '');
@@ -151,7 +147,6 @@ function createMainAgentServices(deps = {}) {
     defaultAgentModelForProvider,
     asArray,
     cleanText,
-    appendAgentChatLogEntry,
     llmProviderBridge
   });
   llmTraceRecorderRef.current = controllerUtils.recordAgentLlmTrace;
@@ -166,6 +161,13 @@ function createMainAgentServices(deps = {}) {
   const agentLlmRuntimeHelpers = createAgentLlmRuntimeHelpers({
     ...sharedAgentLlmDeps
   });
+  const paperIntakeProvider = DEFAULT_LLM_PROVIDER || LLM_PROVIDERS.CODEX;
+  const requestPaperIntakeStructuredJson = (options = {}) => (
+    agentLlmRuntimeHelpers.requestStructuredJsonPayload({
+      ...options,
+      provider: cleanText(options.provider, 80) || paperIntakeProvider
+    })
+  );
   const directLlmRegistry = registerDefaultDirectLlmModules(createDirectLlmModuleRegistry({
     cleanText,
     LLM_PROVIDERS,
@@ -346,6 +348,7 @@ function createMainAgentServices(deps = {}) {
   const paperWikiSearchRuntime = createPaperWikiSearchRuntime();
   const paperKnowledgeDatabaseRuntime = createPaperKnowledgeDatabaseRuntime({
     ...sharedAgentLlmDeps,
+    requestStructuredJsonPayload: requestPaperIntakeStructuredJson,
     pdfTextExtractionRuntime,
     paperWikiChunkerRuntime
   });
@@ -418,10 +421,6 @@ function createMainAgentServices(deps = {}) {
     getDefaultDataFilePath
   });
 
-  const agentToolSmokeTestRuntime = createAgentToolSmokeTestRuntime({
-    runPythonSandbox,
-    pythonSandboxRoot: getAgentPythonSandboxRoot()
-  });
   const agentChatLogRuntime = createAgentChatLogRuntime({
     requestAssistantText: agentLlmRuntimeHelpers.requestAssistantText
   });
@@ -433,12 +432,12 @@ function createMainAgentServices(deps = {}) {
     subAgentRuntime,
     agentSkillRuntime,
     agentChatLogRuntime,
-    agentToolSmokeTestRuntime,
     protocolGenerationRuntime,
     inventoryLookupRuntime,
     notebookLookupRuntime,
     agentAppApi,
     webSearchRuntime,
+    paperKnowledgeDatabaseRuntime,
     paperDownloadRuntime,
     literatureSearchWorkflowRuntime,
     directLlmRegistry

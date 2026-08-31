@@ -1,5 +1,5 @@
 <section id="agent-view" class="view">
-      <div class="agent-chat-layout left-rail-template">
+      <div class="agent-chat-layout left-rail-template" data-left-rail-foldable="true">
         <aside id="agent-session-rail" class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
@@ -13,7 +13,7 @@
               <span>New Chat</span>
             </button>
           </div>
-          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
+          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll folder-tree-template" aria-live="polite"></div>
           <div id="agent-session-context-menu" class="agent-session-context-menu" hidden>
             <button type="button" id="agent-context-new-folder" class="agent-session-context-item">New Folder</button>
             <button type="button" id="agent-context-rename-folder" class="agent-session-context-item" hidden>Rename Folder</button>
@@ -24,56 +24,13 @@
         <div class="panel agent-chat-panel left-rail-template__main">
           <div class="agent-chat-stage">
             <p id="agent-status" class="small-note agent-status-pill" hidden>Ready.</p>
-            <div id="agent-developer-tools" class="agent-developer-tools" hidden>
-              <div class="agent-developer-tools-actions">
-                <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
-                <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
-              </div>
-              <div class="agent-developer-tool-grid">
-                <label>
-                  Tool
-                  <select id="agent-dev-tool-select"></select>
-                </label>
-                <label class="agent-developer-tool-message">
-                  Manual Test Message
-                  <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
-                </label>
-                <div class="form-actions">
-                  <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
-                  <span id="agent-dev-tool-hint" class="small-note"></span>
-                </div>
-              </div>
-            </div>
-            <div id="agent-dev-response-simulator" class="agent-dev-response-simulator" hidden>
-              <div class="agent-dev-response-header">
-                <div>
-                  <strong>LLM Response Simulator</strong>
-                  <span id="agent-dev-response-summary" class="small-note">Developer mode</span>
-                </div>
-                <button type="button" id="agent-dev-response-fold-btn" class="ghost-btn" aria-expanded="true">Fold</button>
-              </div>
-              <div id="agent-dev-response-body" class="agent-dev-response-body">
-                <label class="agent-dev-context-field">
-                  Agent Visible Context
-                  <textarea id="agent-dev-visible-context" rows="10" readonly></textarea>
-                </label>
-                <label class="agent-dev-context-field">
-                  Typed LLM Response
-                  <textarea id="agent-dev-mock-response" rows="6" placeholder="Type the exact assistant response to inject."></textarea>
-                </label>
-                <div class="agent-dev-response-actions">
-                  <button type="button" id="agent-dev-refresh-context-btn" class="ghost-btn">Refresh Context</button>
-                  <button type="button" id="agent-dev-use-mock-response-btn" class="primary-btn">Use As Response</button>
-                  <span id="agent-dev-response-hint" class="small-note"></span>
-                </div>
-              </div>
-            </div>
-            <div class="agent-conversation-shell">
+            <div class="agent-conversation-shell is-empty-chat">
               <div class="agent-history-viewport">
                 <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
                 <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Jump to Latest</button>
               </div>
               <div class="agent-composer-shell">
+                <div id="agent-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
                 <div class="stack-form agent-composer-card">
                   <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
@@ -92,7 +49,13 @@
                       </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
-                      <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+                      <button type="button" id="agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                        <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M12 19V5"></path>
+                          <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+                        </svg>
+                        <span class="sr-only">Send message</span>
+                      </button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
                     </div>
                   </div>
@@ -100,8 +63,8 @@
               </div>
             </div>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
-              <section class="agent-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
-                <header class="agent-review-dialog-header">
+              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+                <header class="agent-review-dialog-header app-dialog-head">
                   <div>
                     <h3 id="agent-review-title">Review Generated Drafts</h3>
                     <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>

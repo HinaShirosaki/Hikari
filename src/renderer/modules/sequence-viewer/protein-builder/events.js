@@ -5,35 +5,40 @@ export function installProteinBuilderEvents(ctx) {
   const { elements, state } = ctx;
 
   ctx.bindEvents = function bindEvents() {
-    elements.homeProteinBuilderBtn?.addEventListener('click', () => {
-      ctx.onNavigateBuilder();
-      ctx.setStatus('Opened Protein Builder.');
-      ctx.setBuilderStatus('Protein Builder is ready.');
-    });
-
-    elements.detailProteinBuilderBtn?.addEventListener('click', () => {
-      ctx.onNavigateBuilder();
-      ctx.setStatus('Opened Protein Builder.');
-      ctx.setBuilderStatus('Protein Builder is ready.');
-    });
-
+    // Protein Builder is reached only through Vector Builder now: its toolbar for
+    // the standalone stored-backbone path, its map menu for targeted inserts.
     elements.proteinBuilderBackBtn?.addEventListener('click', () => {
       ctx.onNavigateHome();
       ctx.setBuilderStatus('Returned to Sequence Library.');
     });
 
-    elements.proteinBuilderResetBtn?.addEventListener('click', () => {
-      ctx.resetRows();
-      ctx.setBuilderStatus('Reset the chain to the default layout.');
+    // The assembled sequence is editable so an initiator M, a stop, or a point
+    // mutation can go on without inventing a block for it.
+    elements.proteinBuilderSequence?.addEventListener('change', () => {
+      const applied = ctx.setAssembledSequenceOverride(elements.proteinBuilderSequence.value);
+      // Write the accepted sequence back even while the field still has focus,
+      // so what is on screen is what the build will use.
+      elements.proteinBuilderSequence.value = applied.sequence;
       ctx.render();
+      if (applied.dropped.length) {
+        ctx.setBuilderStatus(
+          `Ignored ${applied.dropped.join(', ')}: the assembled sequence takes the 20 amino acids and *.`,
+          true
+        );
+      }
     });
 
-    elements.proteinBuilderAddCustomBtn?.addEventListener('click', () => {
-      ctx.addCustomRow();
-      ctx.setBuilderStatus('Added a custom block.');
+    elements.proteinBuilderSequenceResetBtn?.addEventListener('click', (event) => {
+      event.preventDefault?.();
+      ctx.setAssembledSequenceOverride('');
+      ctx.render();
+      ctx.setBuilderStatus('Assembled sequence reset to the block chain.');
     });
 
-    elements.proteinBuilderForm?.addEventListener('input', () => {
+    elements.proteinBuilderForm?.addEventListener('input', (event) => {
+      if (event?.target === elements.proteinBuilderNameInput) {
+        state.constructNameEdited = Boolean(cleanText(elements.proteinBuilderNameInput?.value, 140).trim());
+      }
       ctx.render();
     });
 
@@ -43,6 +48,15 @@ export function installProteinBuilderEvents(ctx) {
 
     elements.proteinBuilderAssembleBtn?.addEventListener('click', () => {
       void ctx.openAssemblyDialog();
+    });
+
+    elements.proteinBuilderInsertVectorBtn?.addEventListener('click', () => {
+      void ctx.insertConstructIntoVector();
+    });
+
+    elements.proteinBuilderCancelVectorBtn?.addEventListener('click', () => {
+      ctx.onCancelVectorInsert();
+      ctx.setBuilderStatus('Cancelled the vector insertion target.');
     });
 
     elements.proteinBuilderCommonBlocks?.addEventListener('click', (event) => {
@@ -56,10 +70,6 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setBuilderStatus(`Added ${libraryId} to the chain.`);
     });
 
-    elements.proteinBuilderFeatureSearchBtn?.addEventListener('click', () => {
-      void ctx.runFeatureSearch();
-    });
-
     elements.proteinBuilderFeatureSearchInput?.addEventListener('keydown', (event) => {
       if (String(event?.key || '') !== 'Enter') {
         return;
@@ -68,13 +78,47 @@ export function installProteinBuilderEvents(ctx) {
       void ctx.runFeatureSearch();
     });
 
+    // A result is picked, not added: which vector it comes from is chosen next,
+    // and Add Block is what puts it in the chain.
     elements.proteinBuilderFeatureSearchResults?.addEventListener('click', (event) => {
-      const trigger = event?.target?.closest?.('[data-protein-builder-feature-add-id]');
-      const featureId = cleanText(trigger?.dataset?.proteinBuilderFeatureAddId, 200);
-      if (!featureId) {
+      const trigger = event?.target?.closest?.('[data-protein-builder-feature-select-id]');
+      const featureId = cleanText(trigger?.dataset?.proteinBuilderFeatureSelectId, 200);
+      if (featureId) {
+        ctx.selectSearchFeature(featureId);
+      }
+    });
+    elements.proteinBuilderFeatureSearchResults?.addEventListener('keydown', (event) => {
+      const key = String(event?.key || '');
+      if (key !== 'Enter' && key !== ' ' && key !== 'Spacebar') {
         return;
       }
-      ctx.addFeatureRowById(featureId);
+      const trigger = event?.target?.closest?.('[data-protein-builder-feature-select-id]');
+      const featureId = cleanText(trigger?.dataset?.proteinBuilderFeatureSelectId, 200);
+      if (featureId) {
+        event.preventDefault?.();
+        ctx.selectSearchFeature(featureId);
+      }
+    });
+
+    elements.proteinBuilderFeatureHosts?.addEventListener('click', (event) => {
+      const trigger = event?.target?.closest?.('[data-protein-builder-feature-host-id]');
+      const hostId = cleanText(trigger?.dataset?.proteinBuilderFeatureHostId, 200);
+      if (hostId) {
+        ctx.selectSearchFeatureHost(hostId);
+      }
+    });
+
+    elements.proteinBuilderFeatureAddBtn?.addEventListener('click', (event) => {
+      event.preventDefault?.();
+      if (!ctx.addSelectedFeatureRow()) {
+        ctx.setFeatureSearchStatus(
+          ctx.getSelectedSearchFeature()
+            ? 'Wait for the selected source vector to finish loading before adding this block.'
+            : 'Pick a stored feature before adding a block.',
+          true
+        );
+        return;
+      }
       ctx.setBuilderStatus('Added feature-derived block to the chain.');
     });
 

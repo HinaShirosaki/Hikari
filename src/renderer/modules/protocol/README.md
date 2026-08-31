@@ -9,4 +9,4 @@
 - list/preview rendering: `list.js`, `preview.js`
 - shared view wiring: `dom.js`, `constants.js`
 
-Cross-feature print/PDF helpers stay under `renderer/modules/print/` and `pdf-export/`; provider calls go through `renderer/services/direct-llm.js`.
+Cross-feature print/PDF helpers stay under `renderer/modules/print/` and `pdf-export/`. Protocol creation runs through the shared Codex agent IPC/runtime so it can use web and literature tools; protocol polish remains a focused direct-LLM utility.

@@ -16,11 +16,25 @@ class El {
     this.listeners = [];
   }
   addEventListener(type, handler) { this.listeners.push([type, handler]); }
-  fire(type) { this.listeners.filter(([t]) => t === type).forEach(([, h]) => h()); }
+  fire(type, event = {}) { this.listeners.filter(([t]) => t === type).forEach(([, h]) => h(event)); }
   getAttribute(name) { return this.attrs[name] ?? null; }
   setAttribute(name, value) { this.attrs[name] = value; }
-  appendChild(child) { this.children.push(child); doc.register(child); }
-  querySelectorAll() { return this.children.filter((c) => c.id.startsWith('buffer-')); }
+  appendChild(child) {
+    child.parentElement = this;
+    this.children.push(child);
+    doc.register(child);
+  }
+  insertBefore(child, reference) {
+    child.parentElement = this;
+    const index = this.children.indexOf(reference);
+    if (index < 0) {
+      this.children.push(child);
+    } else {
+      this.children.splice(index, 0, child);
+    }
+    doc.register(child);
+  }
+  querySelectorAll() { return this.children.filter((child) => child.id); }
   cloneNode() {
     const copy = new El(this.id);
     copy.attrs = { ...this.attrs };
@@ -51,7 +65,8 @@ doc.getElementById('buffer-name-1').setAttribute('aria-controls', 'buffer-sugges
 doc.getElementById('buffer-name-1').setAttribute('aria-label', 'Ingredient 1 chemical');
 doc.getElementById('buffer-name-1').dataset.bufferChemicalIndex = '1';
 doc.getElementById('buffer-suggestions-1').hidden = true;
-doc.getElementById('buffer-rows');
+const bufferRows = doc.getElementById('buffer-rows');
+bufferRows.appendChild(doc.getElementById('buffer-adjustment-row'));
 doc.getElementById('buffer-volume-ml');
 doc.getElementById('buffer-total-result');
 const addBtn = doc.getElementById('add-buffer-chemical-btn');
@@ -66,7 +81,11 @@ assert.equal(doc.getElementById('buffer-row-6').hidden, false);
 click(); // must create row 7, not silently no-op
 const row7 = doc.getElementById('buffer-row-7');
 assert.equal(row7.hidden, false);
-assert.equal(doc.getElementById('buffer-rows').children.length, 1);
+assert.deepEqual(
+  bufferRows.children.map((child) => child.id),
+  ['buffer-row-7', 'buffer-adjustment-row'],
+  'new ingredients stay above the solvent and pH adjustment row'
+);
 assert.equal(doc.getElementById('buffer-name-7').getAttribute('aria-controls'), 'buffer-suggestions-7');
 assert.equal(doc.getElementById('buffer-name-7').getAttribute('aria-label'), 'Ingredient 7 chemical');
 assert.equal(doc.getElementById('buffer-name-7').dataset.bufferChemicalIndex, '7');
@@ -79,5 +98,16 @@ doc.getElementById('buffer-mw-7').value = '58.44';
 doc.getElementById('buffer-final-7').value = '150 mM';
 doc.getElementById('buffer-final-7').fire('input');
 assert.match(doc.getElementById('buffer-output-7').textContent, /\d/);
+
+const bufferRemoveTarget = {
+  closest(selector) {
+    if (selector === '[data-buffer-row-remove]') return this;
+    if (selector === '.tool-box-buffer-row') return row7;
+    return null;
+  }
+};
+bufferRows.fire('click', { target: bufferRemoveTarget });
+assert.equal(row7.hidden, true, 'removing an ingredient hides its row');
+assert.equal(doc.getElementById('buffer-name-7').value, '');
 
 console.log('buffer-rows selfcheck OK');

@@ -18,7 +18,7 @@ The important thing is that `defaultState` is broad. It is not only UI preferenc
   - `members` and `instruments` are retained for back-compat; their dedicated workspaces are no longer surfaced in navigation, but the state branches still load and normalize
 - workflows and workflow templates
 - notebook entries
-- assays and gel analyses
+- assays, plus legacy gel analyses retained read-only for plugin migration
 - papers and paper links
 - samples, inventory containers, and common-chemicals inventory
 - agent-chat session/message state
@@ -54,7 +54,7 @@ The second one is the important runtime callback. Feature modules receive `persi
 
 ## Relationships between records
 
-Cross-feature relationships are stored as stable IDs on the owning records and resolved where they are displayed or searched. For example, Biology Notebook owns project creation and dashboards under `modules/biology-notebook/project/`, while workflows, assays, gels, papers, and Agent Chat resolve their `projectId` links from `state.projects`.
+Cross-feature relationships are stored as stable IDs on the owning records and resolved where they are displayed or searched. For example, Biology Notebook owns project creation and dashboards under `modules/biology-notebook/project/`, while workflows, assays, papers, and Agent Chat resolve their `projectId` links from `state.projects`. Legacy Gel records retain their old links for read-only display and migration; new plugin-owned Gel records do not enter renderer state.
 
 There is no persisted `objectGraph` mirror. Keep one source of truth for each record and update the relevant reader, search mapper, and service fan-out when a new link type is added.
 
@@ -67,7 +67,7 @@ There is no persisted `objectGraph` mirror. Keep one source of truth for each re
 
 What makes it useful is the mix of things stored inside it:
 
-- feature-module APIs such as `assay`, `gel`, `biologyNotebook`, or `sequenceViewer`
+- feature-module APIs such as `assay`, `biologyNotebook`, or `sequenceViewer`
 - shell helpers such as `showView`
 - constants such as `VIEWS`
 - small utilities like `setSearchInputValue`
@@ -81,10 +81,10 @@ That gives the renderer a light dependency-injection layer without requiring dir
 | Service | Main job |
 | --- | --- |
 | `protocolService.js` | protocol imports, external saved-protocol merges, share/import refreshes, and paper-to-protocol draft creation |
-| `notebookService.js` | rerender notebooks, workflows, assay links, and gel links when notebook pages change |
+| `notebookService.js` | rerender notebooks, workflows, and assay links when notebook pages change |
 | `projectService.js` | rerender all project-bound views when projects change |
 | `inventoryService.js` | rerender sample registry and route dashboard sample-search handoffs |
-| `analysisService.js` | update project notebook rollups after assay/gel changes |
+| `analysisService.js` | update project notebook rollups after assay changes |
 | `modules/sequence-viewer/service.js` | hand off external payloads into the sequence viewer and open the detail view |
 
 The key design choice is that services do not own separate stores. They usually translate "feature X changed" into "which other views need to refresh?", and when they do mutate state, such as the protocol service merging an externally saved protocol, they use the shared renderer state plus `persist()` callback injected by the core.
@@ -97,7 +97,6 @@ It supports three progressively broader modes:
 
 1. Scoped commands
    - `assay: egfr`
-   - `gel ladder`
    - `samples colony-7`
 2. View aliases
    - `papers`
@@ -111,18 +110,8 @@ The search system is powered by:
 - app aliases from `APP_REGISTRY`
 - optional per-app `searchInputId`
 - generated scope maps such as "which search box belongs to `chemicals`?"
-- candidate builders over protocols, projects, papers, chemicals, samples, assays, gels, notebooks, and inventory containers
+- candidate builders over protocols, projects, papers, chemicals, samples, assays, notebooks, and inventory containers
 
 When a target feature has its own search input, the shell sets that DOM value and dispatches an `input` event instead of trying to search the feature data directly.
 
-## Telegram command routing
-
-The search system also doubles as an automation target.
-
-`handleTelegramCommand(payload)` can:
-
-- open a view directly
-- route searches into chemical, sample, assay, or gel views
-- trigger the same global-search path used by the topbar
-
-That is why the alias maps and target maps live in the renderer core instead of inside any single feature module.
+The alias maps and target maps live in the renderer core instead of inside any single feature module, so every entry point resolves the same way.

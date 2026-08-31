@@ -26,8 +26,12 @@ export function sanitizeFolderName(value) {
 }
 
 export function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
+  const normalizedType = String(linkedType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
   const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
-  if (linkedType === 'journal-club') {
+  if (normalizedType === 'journal-club' || normalizedType === 'literature-search') {
     return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
   }
   return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;

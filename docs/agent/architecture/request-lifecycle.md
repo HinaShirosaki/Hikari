@@ -61,4 +61,4 @@ The session's `messages` projection is UI-facing. Its `rows` preserve request, r
 
 ## Related endpoints
 
-The registrar also exposes chat-session create/list/get endpoints, developer tool smoke tests, context preview, lifecycle request listing, and lifecycle replay. Their channel names are centralized in `src/shared/ipc/channels.js`.
+The registrar also exposes chat-session create/list/get endpoints, lifecycle request listing, and lifecycle replay. Their channel names are centralized in `src/shared/ipc/channels.js`.

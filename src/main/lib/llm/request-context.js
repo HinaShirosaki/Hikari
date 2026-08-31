@@ -5,7 +5,7 @@ const { AsyncLocalStorage } = require('node:async_hooks');
 const REQUEST_ABORTED_CODE = 'AGENT_REQUEST_ABORTED';
 const requestContextStorage = new AsyncLocalStorage();
 
-function cleanText(value, _maxLength = 400) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -14,7 +14,7 @@ function cleanText(value, _maxLength = 400) {
 }
 
 function createAgentRequestAbortError(message = 'Agent request stopped.') {
-  const error = new Error(cleanText(message, 600) || 'Agent request stopped.');
+  const error = new Error(cleanText(message) || 'Agent request stopped.');
   error.name = 'AbortError';
   error.code = REQUEST_ABORTED_CODE;
   return error;

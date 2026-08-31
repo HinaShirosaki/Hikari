@@ -53,7 +53,7 @@ The pre-seeded keys (passed in by the renderer core as `uiBridge`):
 | `setSearchInputValue` | `(inputId, value) => boolean`, used to drive in-view search inputs |
 | `VIEWS` | the `VIEWS` constants map |
 
-After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `gel`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
+After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
 
 When **inside** a feature module, prefer the injected callback over `registry.get(...)`. The registry exists so service files can fan out without each module knowing about the others.
 
@@ -67,7 +67,7 @@ The service layer is the glue you should reach for whenever a change in one modu
 | `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()` |
 | `projectService` | `handleProjectsChanged()` |
 | `inventoryService` | `handleSamplesChanged()`, `openSampleSearch(query)` |
-| `analysisService` | `handleAssaysChanged()`, `handleGelAnalysesChanged()`, `openAssayForNotebook(...)`, `openGelForNotebook(...)` |
+| `analysisService` | `handleAssaysChanged()`, `openAssayForNotebook(...)` |
 | `sequenceService` | `openFromToolBox(seq)` |
 
 Each service is a closure over the registry. A typical implementation:
@@ -81,8 +81,6 @@ export function createProtocolService(registry) {
     registry.get('workflowManagement').render?.();
     registry.get('assay').renderNotebookOptions?.();
     registry.get('assay').renderList?.();
-    registry.get('gel').renderNotebookOptions?.();
-    registry.get('gel').renderList?.();
   }
   return { handleProtocolsChanged, ... };
 }
@@ -176,9 +174,9 @@ Three custom events broadcast from the renderer app shell:
 
 If your module needs to listen, attach to `window` and remember to remove the listener if you ever support hot-reload.
 
-## Telegram / external command bridge
+## Topbar search routing
 
-The topbar search command bar is wired to a Telegram bot bridge (see [src/renderer/app/topbar-search.js](../../src/renderer/app/topbar-search.js)) so the same query strings can come from chat. If your view has a useful search/filter input, expose its DOM id via `searchInputId` in `app-registry.json` and the topbar will route queries to it through `setSearchInputValue(inputId, value)`. No code in your module is required.
+The topbar search command bar (see [src/renderer/app/topbar-search.js](../../src/renderer/app/topbar-search.js)) routes queries to feature views. If your view has a useful search/filter input, expose its DOM id via `searchInputId` in `app-registry.json` and the topbar will route queries to it through `setSearchInputValue(inputId, value)`. No code in your module is required.
 
 ## Anti-patterns
 

@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../../lib/notify.js';
+
 export function createNotebookProjectController({
   state,
   persist,
@@ -77,9 +79,11 @@ export function createNotebookProjectController({
       const result = await windowRef.hikariApi.ensureStorageDirectory(projectFolder);
       if (result?.ok !== true) {
         console.warn('Failed to create project directory:', result?.error || projectFolder);
+        showTransientNotice(`Could not create the project folder: ${result?.error || projectFolder}`, { type: 'error' });
       }
     } catch (error) {
       console.warn('Failed to create project directory:', error);
+      showTransientNotice(String(error?.message || error || 'Could not create the project folder.'), { type: 'error' });
     }
   }
 

@@ -17,7 +17,6 @@
 <a href="#quick-start">Quick Start</a> ·
 <a href="#app-surface">Features</a> ·
 <a href="#ai-and-agent-setup">AI Setup</a> ·
-<a href="#telegram-bot">Telegram</a> ·
 <a href="#data-and-storage">Data</a> ·
 <a href="#development">Development</a> ·
 <a href="#troubleshooting">Troubleshooting</a>
@@ -28,16 +27,16 @@
 
 <sub>Home dashboard shown with fictional biology demo data. No private project records are included.</sub>
 
-Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
+Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
 ## Highlights
 
 - Local desktop app built with Electron — your data stays on your machine.
-- One workspace for `Home`, `Protocols`, `Workflows`, `Biology Notebook` (including projects), `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
+- One workspace for `Home`, `Protocols`, `Workflows`, `Biology Notebook` (including projects), `Sample & Inventory`, `Chemicals`, `Assay`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
-- Optional Telegram bot for simple remote commands and lookups.
+- Sandboxed plugins for extra workspaces — `Gel` ships as an internal bundled plugin ([src/plugins/gel](src/plugins/gel/)).
 
 ## App Surface
 
@@ -57,7 +56,6 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 | <img src="assets/icons/sample-inventory.svg" width="16"/> `Sample & Inventory` | Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, primers, and storage locations. |
 | <img src="assets/icons/chemicals.svg" width="16"/> `Chemicals` | Shared reagent inventory with searchable records, locations, lots, and activity history. |
 | <img src="assets/icons/assay.svg" width="16"/> `Assay` | Plate design, CSV mapping flow, result capture, and analysis views. |
-| <img src="assets/icons/gel.svg" width="16"/> `Gel` | Manual gel analysis with lane/band annotation and CSV/JSON export. |
 
 ### Research and bench support
 
@@ -72,7 +70,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 | Module | What it does |
 | --- | --- |
 | <img src="assets/icons/agent.svg" width="16"/> `Agent` | Evidence-grounded assistant over app state, papers, workflows, and linked records. |
-| <img src="assets/icons/settings.svg" width="16"/> `Settings` | Personal profile, appearance, startup behavior, storage path, Codex model setup, Telegram token, and data file controls. |
+| <img src="assets/icons/settings.svg" width="16"/> `Settings` | Personal profile, appearance, startup behavior, storage path, Codex model setup, and data file controls. |
 
 ## Quick Start
 
@@ -95,7 +93,6 @@ npm run start
 3. Use `Data File` controls to save an initial `.json` or `.ena` file.
 4. Choose startup behavior if you want a default module or "remember last opened module".
 5. Sign in to the Codex CLI for `Agent`.
-6. Optionally add a Telegram bot token.
 
 ## AI and Agent Setup
 
@@ -113,40 +110,6 @@ The model catalog is [`config/codex-models.json`](./config/codex-models.json). A
 2. Run `codex login`.
 3. In `Settings > Codex Model & Access`, optionally choose a model and reasoning effort.
 
-## Telegram Bot
-
-You can configure the Telegram bot in either of these places:
-
-- `Settings > Telegram Bot`
-- environment variable `TELEGRAM_BOT_TOKEN`
-
-Saved token location:
-
-- `<userData>/telegram-bot.json`
-
-Common commands:
-
-- `/help`
-- `/modules`
-- `/open <module>`
-- `/search <scope> <query>`
-- `/inventory <query>`
-- `/samples <query>`
-- `/assay <query>`
-- `/gel <query>`
-- `/status`
-
-<details>
-<summary><strong>More commands</strong></summary>
-
-- quick logging: `/log`, `/note`, `/use`
-- protocol-run control: `/start_protocol`, `/next`, `/done`, `/timer`
-- draft generation: `/draft_notebook`, `/draft_summary`, `/draft_assay`
-- inventory queries: `/expiring`, `/lowstock`
-
-</details>
-
-The canonical command, search-scope, and alias maps live in [`src/main/lib/telegram-bot/config.js`](./src/main/lib/telegram-bot/config.js).
 
 ## Data and Storage
 
@@ -199,11 +162,11 @@ Packaging notes:
 
 ## Project Layout
 
-- `src/main/main.js`: Electron main process, window lifecycle, IPC wiring, LLM integration, and Telegram lifecycle.
+- `src/main/app/start-main-app.js`: Electron main process, window lifecycle, IPC wiring, and LLM integration.
 - `src/main/storage/`: storage-bundle import/export, persistence, and sequence-library summary logic.
 - `src/main/data/`: primary snapshot and data-helper utilities.
 - `src/main/agent/`: Codex integration, MCP contracts, tool adapters, context, and agent runtime support.
-- `src/main/lib/`: process-level integrations and shared utilities (Telegram bot, Codex agent launcher, LLM runtime, app-paths).
+- `src/main/lib/`: process-level integrations and shared utilities (Codex agent launcher, LLM runtime, app-paths).
 - `src/renderer/`: renderer shell, feature modules, shared state, and service layer.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/`: source-of-truth ordering and app-registry config for generated UI assets.

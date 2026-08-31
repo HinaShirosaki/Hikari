@@ -1,3 +1,5 @@
+// Gel is an internal plugin (src/plugins/gel); these suites follow that source,
+// which is the only copy of its implementation.
 module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -52,8 +54,209 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
+test('[EDGE] gel-analysis edit restores saved source images and legacy inline previews', async () => {
+  const readPaths = [];
+  const decodedSources = [];
+  const recordsModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
+    {
+      window: {
+        hikariApi: {
+          async readFileBase64(filePath) {
+            readPaths.push(filePath);
+            return {
+              ok: true,
+              dataBase64: 'c2F2ZWQtZ2Vs'
+            };
+          }
+        }
+      }
+    }
+  );
+  const sourceRecord = {
+    id: 'gel-source',
+    name: 'Stored source gel',
+    analysisType: 'sds-page',
+    imageName: 'source.png',
+    sourceImagePath: '/workspace/Gels/gel-source/source.png',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const previewRecord = {
+    id: 'gel-preview',
+    name: 'Legacy preview gel',
+    analysisType: 'western',
+    imageName: 'legacy.png',
+    previewImageDataUrl: 'data:image/png;base64,bGVnYWN5LXByZXZpZXc=',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const reportOnlyRecord = {
+    id: 'gel-report-only',
+    name: 'Report-only gel',
+    analysisType: 'agarose',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const runtime = {
+    state: {
+      settings: { storagePath: '/workspace' },
+      gelAnalyses: [sourceRecord, previewRecord, reportOnlyRecord],
+      notebookEntries: []
+    },
+    currentImage: null,
+    currentReport: null,
+    imageRevision: 0,
+    manualOverrides: {},
+    persist() {},
+    safeText: (value) => String(value)
+  };
+  const elements = {
+    gelIdInput: new MockElement('gel-id'),
+    gelNameInput: new MockElement('gel-name'),
+    gelTypeInput: new MockElement('gel-type'),
+    gelNormalizationInput: new MockElement('gel-normalization'),
+    gelDenoiseStrengthInput: new MockElement('gel-denoise'),
+    gelContrastStrengthInput: new MockElement('gel-contrast')
+  };
+  const statuses = [];
+  let renderedCanvases = 0;
+  const controller = recordsModule.createRecordsManager({
+    runtime,
+    elements,
+    deps: {
+      copyNormalizedImage(image) {
+        return { ...image, copied: true };
+      },
+      async decodeImageSource(dataUrl, name) {
+        decodedSources.push({ dataUrl, name });
+        return {
+          name,
+          width: 8,
+          height: 6,
+          imageData: { width: 8, height: 6 },
+          gray: new Float32Array(48)
+        };
+      },
+      leaveCropMode() {},
+      renderCanvas() {
+        renderedCanvases += 1;
+      },
+      renderEnhancementValues() {},
+      renderManualProgress() {},
+      renderOverrideStatus() {},
+      renderReport() {},
+      setCurrentImage(image) {
+        runtime.currentImage = image;
+        runtime.imageRevision += 1;
+      },
+      setStatus(message) {
+        statuses.push(message);
+      }
+    }
+  });
+
+  const editEvent = (recordId) => ({
+    target: {
+      closest(selector) {
+        return selector === '[data-gel-edit]'
+          ? { dataset: { gelEdit: recordId } }
+          : null;
+      }
+    }
+  });
+
+  await controller.onListClick(editEvent(sourceRecord.id));
+  assert.deepEqual(readPaths, [sourceRecord.sourceImagePath]);
+  assert.equal(decodedSources[0].dataUrl, 'data:image/png;base64,c2F2ZWQtZ2Vs');
+  assert.equal(runtime.currentImage.name, sourceRecord.imageName);
+  assert.equal(runtime.originalImage.copied, true);
+  assert.equal(runtime.currentReport, sourceRecord.report);
+  assert.equal(elements.gelNameInput.value, sourceRecord.name);
+  assert.equal(statuses.at(-1), `Loaded saved gel: ${sourceRecord.name}.`);
+
+  await controller.onListClick(editEvent(previewRecord.id));
+  assert.equal(decodedSources[1].dataUrl, previewRecord.previewImageDataUrl);
+  assert.equal(runtime.currentImage.name, previewRecord.imageName);
+  assert.equal(runtime.currentReport, previewRecord.report);
+  assert.equal(elements.gelTypeInput.value, 'western');
+  assert.match(statuses.at(-1), /Loaded saved gel preview/);
+  assert.ok(renderedCanvases >= 4);
+
+  await controller.onListClick(editEvent(reportOnlyRecord.id));
+  assert.equal(runtime.currentImage, null);
+  assert.equal(runtime.currentReport, reportOnlyRecord.report);
+  assert.equal(elements.gelTypeInput.value, 'agarose');
+  assert.match(statuses.at(-1), /older record has no stored image/);
+});
+
+test('[EDGE] gel-analysis report opens in an overlapping window only when report data exists', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const runtime = {
+    currentReport: null,
+    reportDialogOpen: false
+  };
+  const elements = {
+    gelOpenReportBtn: new MockElement('gel-open-report-btn'),
+    gelReportOverlay: new MockElement('gel-report-overlay'),
+    gelReportCloseBtn: new MockElement('gel-report-close-btn'),
+    gelReportSummary: new MockElement('gel-report-summary')
+  };
+  let closeFocused = 0;
+  let openerFocused = 0;
+  elements.gelReportCloseBtn.focus = () => {
+    closeFocused += 1;
+  };
+  elements.gelOpenReportBtn.focus = () => {
+    openerFocused += 1;
+  };
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.renderReport();
+  assert.equal(elements.gelOpenReportBtn.disabled, true);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+
+  runtime.currentReport = {
+    analysisType: 'sds-page',
+    lanes: [],
+    bandGroups: [],
+    warnings: [],
+    preprocessing: {},
+    confidence: {}
+  };
+  controller.renderReport();
+  assert.equal(elements.gelOpenReportBtn.disabled, false);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+
+  controller.onReportOpen();
+  assert.equal(elements.gelReportOverlay.hidden, false);
+  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'true');
+  assert.equal(closeFocused, 1);
+  assert.match(elements.gelReportSummary.innerHTML, /SDS-PAGE/);
+
+  let escapePrevented = false;
+  controller.onReportKeyDown({
+    key: 'Escape',
+    preventDefault() {
+      escapePrevented = true;
+    }
+  });
+  assert.equal(escapePrevented, true);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'false');
+  assert.equal(openerFocused, 1);
+});
+
 test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
-  const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'images', 'crop-controller.js'));
+  const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'images', 'crop-controller.js'));
   const rotationCalls = [];
   const statuses = [];
   const runtime = {
@@ -211,10 +414,401 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-include-ladder/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-image>Generate image/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-pptx>Generate PowerPoint/);
+});
+
+test('[EDGE] gel-analysis figure plan crops between band lines and removes the ladder from table and gel', () => {
+  const manualOverrides = {
+    laneSegmentation: {
+      gelLeft: 10,
+      gelRight: 110,
+      dividers: [35, 65, 90],
+      dividerDone: true,
+      bandTop: 20,
+      bandBottom: 80
+    },
+    ladderLane: 2,
+    laneTable: {
+      rows: [
+        { label: 'SENP1', values: ['+', '-', '+', '-'] },
+        { label: 'WT', values: ['-', '+', '-', '+'] }
+      ]
+    }
+  };
+
+  const plan = gelLaneTableInternals.buildGelFigurePlan({
+    imageWidth: 120,
+    imageHeight: 100,
+    manualOverrides,
+    includeLadder: false,
+    ladderLane: 2
+  });
+
+  assert.equal(plan.croppedToBandLines, true);
+  assert.equal(plan.sourceTop, 20);
+  assert.equal(plan.sourceBottom, 80);
+  assert.equal(plan.sourceHeight, 61);
+  assert.equal(plan.includeLadder, false);
+  assert.equal(JSON.stringify(plan.slices.map((slice) => slice.laneIndex)), JSON.stringify([1, 3, 4]));
+  assert.equal(JSON.stringify(plan.slices.map((slice) => slice.sourceWidth)), JSON.stringify([25, 25, 20]));
+  assert.equal(JSON.stringify(plan.rows[0].values), JSON.stringify(['+', '+', '-']));
+  assert.equal(plan.canvasWidth, plan.labelWidth + 70);
+  assert.equal(plan.canvasHeight, plan.tableHeight + 61);
+});
+
+test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers its text', () => {
+  const calls = { clear: [], draw: [], text: [], put: [] };
+  const sourceContext = {
+    putImageData: (...args) => calls.put.push(args)
+  };
+  const outputContext = {
+    clearRect: (...args) => calls.clear.push(args),
+    drawImage: (...args) => calls.draw.push(args),
+    fillText: (...args) => calls.text.push(args),
+    save() {},
+    restore() {}
+  };
+  const canvases = [];
+  const documentObject = {
+    createElement(tagName) {
+      assert.equal(tagName, 'canvas');
+      const canvasIndex = canvases.length;
+      const canvas = {
+        width: 0,
+        height: 0,
+        getContext: () => (canvasIndex === 0 ? sourceContext : outputContext)
+      };
+      canvases.push(canvas);
+      return canvas;
+    }
+  };
+  const result = gelLaneTableInternals.createGelFigureCanvas({
+    documentObject,
+    imageData: { tag: 'source-image-data' },
+    imageWidth: 100,
+    imageHeight: 80,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      laneTable: {
+        rows: [{ label: 'Mutant', values: ['-', '+'] }]
+      }
+    }
+  });
+
+  assert.equal(calls.put.length, 1);
+  assert.equal(calls.clear.length, 1, 'a cleared canvas keeps the table area transparent');
+  assert.equal(calls.draw.length, 2);
+  assert.equal(result.scale, 4);
+  assert.equal(canvases[1].width, result.plan.canvasWidth * result.scale);
+  assert.equal(canvases[1].height, result.plan.canvasHeight * result.scale);
+  assert.equal(calls.draw[0][2], 12, 'gel extraction starts at the settled top line');
+  assert.equal(calls.draw[0][4], 41, 'gel extraction ends at the settled bottom line');
+  assert.equal(calls.draw[0][6], result.plan.tableHeight * result.scale, 'gel pixels start below the transparent table');
+  assert.equal(outputContext.textAlign, 'center');
+  assert.equal(outputContext.textBaseline, 'middle');
+  assert.equal(calls.text.length, 3);
+  assert.equal(calls.text[0][0], 'Mutant');
+  assert.equal(calls.text[0][1], (result.plan.labelWidth / 2) * result.scale);
+  assert.match(outputContext.font, new RegExp(`${result.plan.fontSize * result.scale}px`));
+});
+
+test('[EDGE] gel-analysis generated figure uses the PNG save path and current ladder choice', async () => {
+  const runtime = {
+    currentImage: { width: 100, height: 80, imageData: { tag: 'source' } },
+    cropperActive: false,
+    figureExportIncludeLadder: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      ladderLane: 1,
+      laneTable: {
+        rows: [{ label: 'WT', values: ['M', 'Sample'] }]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
+  };
+  const statuses = [];
+  const exported = [];
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {
+      createGelFigureCanvas: (options) => {
+        assert.equal(options.includeLadder, false);
+        assert.equal(options.ladderLane, 1);
+        return {
+          canvas: { toDataURL: () => 'data:image/png;base64,cG5n' },
+          plan: {
+            croppedToBandLines: true,
+            sourceTop: 12,
+            sourceBottom: 52,
+            includeLadder: false,
+            ladderLane: 1
+          }
+        };
+      },
+      downloadDataUrlFile: async (payload) => {
+        exported.push(payload);
+        return { saved: true, fileName: payload.fileName };
+      },
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+  const button = Object.assign(new MockElement('generate-image'), { textContent: 'Generate image' });
+
+  await controller.onGenerateFigureClick(button);
+
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].fileName, 'My-gel.png');
+  assert.equal(exported[0].dataUrl, 'data:image/png;base64,cG5n');
+  // The ladder choice is asserted where it is used, inside createGelFigureCanvas
+  // above. A finished export clears the status rather than captioning itself, so
+  // an earlier message cannot linger as if it described this export.
+  assert.equal(statuses[statuses.length - 1], '');
+  assert.equal(button.textContent, 'Generate image');
+  assert.equal(button.disabled, false);
+});
+
+test('[EDGE] gel-analysis PNG downloader forwards canonical image bytes to the plugin bridge', async () => {
+  const calls = [];
+  const exportModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'export.js'),
+    {
+      window: {
+        hikariApi: {
+          exportBinaryFile: async (payload) => {
+            calls.push(payload);
+            return { saved: true, fileName: payload.fileName };
+          }
+        }
+      }
+    }
+  );
+
+  const result = await exportModule.downloadDataUrlFile({
+    dataUrl: 'data:image/png;base64,cG5nLWJ5dGVz',
+    fileName: 'gel-figure.png'
+  });
+
+  assert.equal(
+    JSON.stringify(calls),
+    JSON.stringify([{ dataBase64: 'cG5nLWJ5dGVz', fileName: 'gel-figure.png' }])
+  );
+  assert.equal(result.saved, true);
+});
+
+function loadPptxGenJsSandbox() {
+  const sandbox = {
+    console,
+    setTimeout,
+    clearTimeout,
+    setImmediate,
+    clearImmediate,
+    TextEncoder,
+    TextDecoder,
+    Blob,
+    Uint8Array,
+    ArrayBuffer,
+    DataView,
+    Promise,
+    atob,
+    btoa,
+    Buffer
+  };
+  sandbox.window = sandbox;
+  sandbox.self = sandbox;
+  sandbox.global = sandbox;
+  vm.runInNewContext(
+    fs.readFileSync(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'pptxgenjs', 'pptxgen.bundle.js'), 'utf8'),
+    sandbox
+  );
+  return sandbox;
+}
+
+test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent table and one gel image', async () => {
+  const pptxgen = loadPptxGenJsSandbox();
+  const powerPointModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'powerpoint-export.js'),
+    {}
+  );
+  const result = await powerPointModule.createGelPowerPoint({
+    title: 'SENP1 & WT',
+    pptxgenConstructor: pptxgen.PptxGenJS,
+    zipConstructor: pptxgen.JSZip,
+    gelImageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Av5PAAAAAElFTkSuQmCC',
+    plan: {
+      canvasWidth: 318,
+      gelWidth: 200,
+      labelWidth: 118,
+      sourceHeight: 80,
+      slices: [
+        { laneIndex: 1, sourceWidth: 100 },
+        { laneIndex: 2, sourceWidth: 100 }
+      ],
+      rows: [
+        { label: 'SENP1', values: ['+', '+'] },
+        { label: 'WT', values: ['-', '+'] }
+      ]
+    }
+  });
+  const archive = await pptxgen.JSZip.loadAsync(Array.from(result.bytes));
+  const archiveEntries = Object.keys(archive.files);
+  const slideXml = await archive.file('ppt/slides/slide1.xml').async('string');
+  const masterXml = await archive.file('ppt/slideMasters/slideMaster1.xml').async('string');
+
+  assert.equal(result.bytes[0], 0x50);
+  assert.equal(result.bytes[1], 0x4B);
+  assert.ok(archiveEntries.includes('ppt/slides/slide1.xml'));
+  assert.equal(archiveEntries.filter((entry) => /^ppt\/media\/image[^/]*\.png$/.test(entry)).length, 1);
+  assert.ok(archiveEntries.includes('ppt/notesMasters/notesMaster1.xml'), 'PowerPoint package must include its notes master');
+  assert.match(slideXml, /<a:tbl>/, 'lane metadata must be a native PowerPoint table');
+  assert.match(slideXml, /name="Editable lane table"/);
+  assert.match(slideXml, /name="Cropped gel image"/);
+  assert.match(slideXml, /<a:t>SENP1<\/a:t>/);
+  assert.match(slideXml, /<a:t>\+<\/a:t>/);
+  assert.match(slideXml, /<a:tcPr[^>]*anchor="ctr"/);
+  assert.match(slideXml, /<a:pPr algn="ctr"/);
+  assert.match(slideXml, /<a:alpha val="0"\/>/, 'table cells must have fully transparent fill');
+  assert.equal((slideXml.match(/<a:ln[LTRB][^>]*>\s*<a:noFill\/>\s*<\/a:ln[LTRB]>/g) || []).length, 24);
+  assert.equal((slideXml.match(/<a:tc>/g) || []).length, 6);
+  assert.match(masterXml, /<p:sldLayoutId id="2147483649"/, 'PowerPoint layout IDs must use the Office-valid range');
+  assert.doesNotMatch(slideXml, /Lane 1|Lane 2/, 'the exported table should not add a synthetic lane-header row');
+  assert.ok(result.layout.gelLeft > result.layout.tableLeft);
+});
+
+test('[EDGE] gel-analysis PowerPoint action exports PPTX bytes with the current ladder choice', async () => {
+  const runtime = {
+    currentImage: { width: 100, height: 80, imageData: { tag: 'source' } },
+    cropperActive: false,
+    figureExportIncludeLadder: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 10,
+        gelRight: 90,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 12,
+        bandBottom: 52
+      },
+      ladderLane: 1,
+      laneTable: {
+        rows: [{ label: 'WT', values: ['M', 'Sample'] }]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelNameInput: Object.assign(new MockElement('gel-name'), { value: 'My gel' })
+  };
+  const statuses = [];
+  const exported = [];
+  const plan = {
+    croppedToBandLines: true,
+    sourceTop: 12,
+    sourceBottom: 52,
+    includeLadder: false,
+    ladderLane: 1,
+    slices: [{ laneIndex: 2, sourceWidth: 40 }],
+    rows: [{ label: 'WT', values: ['Sample'] }]
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {
+      createGelImageCanvas: (options) => {
+        assert.equal(options.includeLadder, false);
+        assert.equal(options.ladderLane, 1);
+        return {
+          canvas: { toDataURL: () => 'data:image/png;base64,cG5n' },
+          plan
+        };
+      },
+      createGelPowerPoint: (options) => {
+        assert.equal(options.plan, plan);
+        assert.equal(options.title, 'My gel');
+        return { bytes: new Uint8Array([1, 2, 3]) };
+      },
+      downloadBinaryFile: async (payload) => {
+        exported.push(payload);
+        return { saved: true, fileName: payload.fileName };
+      },
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+  const button = Object.assign(new MockElement('generate-pptx'), { textContent: 'Generate PowerPoint' });
+
+  await controller.onGeneratePowerPointClick(button);
+
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].fileName, 'My-gel.pptx');
+  assert.equal(exported[0].mimeType, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+  assert.equal(JSON.stringify(Array.from(exported[0].bytes)), JSON.stringify([1, 2, 3]));
+  assert.match(statuses[statuses.length - 1], /editable table/);
+  assert.match(statuses[statuses.length - 1], /rows 12-52/);
+  assert.match(statuses[statuses.length - 1], /Ladder lane 1 excluded/);
+  assert.equal(button.textContent, 'Generate PowerPoint');
+  assert.equal(button.disabled, false);
+});
+
+test('[EDGE] gel-analysis binary downloader forwards PPTX bytes through the native save bridge', async () => {
+  const calls = [];
+  const exportModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'export.js'),
+    {
+      btoa,
+      window: {
+        hikariApi: {
+          exportBinaryFile: async (payload) => {
+            calls.push(payload);
+            return { saved: true, fileName: payload.fileName };
+          }
+        }
+      }
+    }
+  );
+
+  await exportModule.downloadBinaryFile({
+    bytes: new Uint8Array([1, 2, 3]),
+    fileName: 'gel-figure.pptx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+  });
+
+  assert.equal(
+    JSON.stringify(calls),
+    JSON.stringify([{ dataBase64: 'AQID', fileName: 'gel-figure.pptx' }])
+  );
 });
 
 test('[EDGE] gel-analysis outermost lane dividers define gel edges without separate border tools', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -261,12 +855,14 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   controller.onCanvasClick({ clientX: 20, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 60);
-  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, []);
+  // Array.from: the overrides come from a vm-loaded module, so a bare deepEqual
+  // would compare prototypes across realms and fail on identical contents.
+  assert.deepEqual(Array.from(runtime.manualOverrides.laneSegmentation.dividers), []);
 
   controller.onCanvasClick({ clientX: 80, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 80);
-  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, [60]);
+  assert.deepEqual(Array.from(runtime.manualOverrides.laneSegmentation.dividers), [60]);
 
   controller.onManualNextStep();
   assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);
@@ -276,7 +872,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
 });
 
 test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -371,7 +967,7 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
 });
 
 test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual step', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -441,7 +1037,7 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
 });
 
 test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane-by-lane band mode', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const operations = [];
   let strokeStyle = '';
   const context = {
@@ -545,8 +1141,82 @@ test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane
   assert.equal(operations.some((item) => item.type === 'arc'), false);
 });
 
+test('[EDGE] gel-analysis band intensity report opens as a dialog and closes when its data goes away', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
+  const runtime = {
+    currentImage: { width: 8, height: 5, gray: new Float32Array(40), imageData: { tag: 'image-data' } },
+    cellTableDialogOpen: false,
+    reportDialogOpen: false,
+    currentReport: {
+      lanes: [
+        { laneIndex: 1, targetBand: { snr: 9, correctedIntensity: 120, bandSignalSum: 200, baselineSum: 80, saturationFraction: 0 } },
+        { laneIndex: 2, targetBand: { snr: 1, correctedIntensity: 12, bandSignalSum: 20, baselineSum: 8, saturationFraction: 0 } }
+      ]
+    },
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 7,
+        dividers: [4],
+        dividerDone: true,
+        bandTop: 1,
+        bandBottom: 3
+      }
+    })
+  };
+  const elements = {
+    gelCellTableOverlay: new MockElement('gel-cell-table-overlay'),
+    gelCellTableCloseBtn: new MockElement('gel-cell-table-close-btn'),
+    gelOpenCellTableBtn: new MockElement('gel-open-cell-table-btn'),
+    gelCellTableHost: new MockElement('gel-cell-table-host'),
+    gelCellTableSummary: new MockElement('gel-cell-table-summary'),
+    gelCellSnrThresholdInput: Object.assign(new MockElement('gel-cell-snr-threshold'), { value: '3' })
+  };
+  const statuses = [];
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value ?? ''),
+    deps: { setStatus: (message) => statuses.push(message) }
+  });
+
+  // Data exists, so the trigger unlocks — but the dialog stays shut until asked.
+  controller.renderCellTable();
+  assert.equal(elements.gelOpenCellTableBtn.disabled, false);
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+  assert.ok(elements.gelCellTableHost.innerHTML.includes('<table class="gel-cell-table">'));
+  assert.match(elements.gelCellTableSummary.textContent, /1\/2 cells classified as band/);
+
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, false);
+  assert.equal(elements.gelOpenCellTableBtn.getAttribute('aria-expanded'), 'true');
+
+  // Escape takes this dialog before the report dialog underneath it.
+  runtime.reportDialogOpen = true;
+  let prevented = false;
+  controller.onReportKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
+  assert.equal(runtime.cellTableDialogOpen, false);
+  assert.equal(runtime.reportDialogOpen, true, 'Escape closed both dialogs at once');
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+
+  // An open dialog must not survive losing the measurement it reports on.
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, false);
+  runtime.currentReport = { lanes: [] };
+  controller.renderCellTable();
+  assert.equal(runtime.cellTableDialogOpen, false);
+  assert.equal(elements.gelCellTableOverlay.hidden, true);
+  assert.equal(elements.gelOpenCellTableBtn.disabled, true);
+  assert.equal(elements.gelCellTableHost.innerHTML, '');
+
+  controller.onCellTableOpen();
+  assert.equal(elements.gelCellTableOverlay.hidden, true, 'a disabled trigger still opened the dialog');
+  assert.match(statuses[statuses.length - 1], /Measure a target band/);
+});
+
 test('[EDGE] gel-analysis peak editor records curve baselines and vertical dividers lane by lane', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const gray = new Float32Array(8 * 5);
   [0.05, 0.2, 0.6, 0.3, 0.1].forEach((value, row) => {
     for (let x = 0; x < 8; x += 1) {
@@ -621,11 +1291,12 @@ test('[EDGE] gel-analysis peak editor records curve baselines and vertical divid
 
   assert.equal(JSON.stringify(runtime.manualOverrides.peakIntegrations[0].dividers), JSON.stringify([2]));
   assert.equal(elements.gelPeakEditorTable.innerHTML.includes('<table class="gel-peak-table">'), true);
-  assert.equal(elements.gelPeakEditorSummary.textContent.includes('1 baseline'), true);
+  // The table carries the counts; the summary is left for guidance and warnings.
+  assert.equal(elements.gelPeakEditorSummary.textContent, '');
 });
 
 test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG width', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const width = 8;
   const height = 101;
   const gray = new Float32Array(width * height);
@@ -716,7 +1387,7 @@ test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG
 
 test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks', () => {
   const renderingModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'),
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'),
     {},
     ['computeLaneIntensityProfile']
   );
@@ -741,18 +1412,10 @@ test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks
   assert.equal(profile.values[42], 0);
 });
 
-test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', () => {
-  const promptCalls = [];
+test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the ladder step', () => {
   const manualModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'),
-    {
-      window: {
-        prompt(message, defaultValue) {
-          promptCalls.push({ message, defaultValue });
-          return '75';
-        }
-      }
-    }
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'),
+    { window: {} }
   );
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
@@ -790,11 +1453,11 @@ test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', ()
     gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
     gelOverrideStatus: new MockElement('gel-override-status'),
     gelManualNextBtn: new MockElement('gel-manual-next-btn'),
+    gelToolLadderMwBtn: new MockElement('gel-tool-ladder-mw-btn'),
     gelLadderBandMwInput: new MockElement('gel-ladder-band-mw')
   };
-  elements.gelLadderBandMwInput.value = '50';
+  elements.gelLadderBandMwInput.value = '75';
   let analysisRuns = 0;
-  let canvasRenders = 0;
   const statuses = [];
   const controller = manualModule.createManualWorkflowController({
     runtime,
@@ -803,36 +1466,46 @@ test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', ()
       onRunAnalysis: () => {
         analysisRuns += 1;
       },
-      renderCanvas: () => {
-        canvasRenders += 1;
-      },
+      renderCanvas() {},
       renderLaneTable() {},
       renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
 
+  // The guided flow is past the ladder, so the tool is the only way in.
   assert.equal(controller.getManualStep(), 'quantify');
-  let prevented = false;
-  controller.onCanvasContextMenu({
-    clientX: 25,
-    clientY: 30,
-    preventDefault() {
-      prevented = true;
-    }
-  });
+  controller.onViewerToolSelected('ladder-mw');
+  assert.equal(runtime.selectedViewerTool, 'ladder-mw');
 
-  assert.equal(prevented, true);
-  assert.equal(promptCalls.length, 1);
-  assert.match(promptCalls[0].message, /row=30/);
+  controller.onCanvasClick({ clientX: 25, clientY: 30, preventDefault() {} });
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
     { pixelY: 12, mw: 50 },
     { pixelY: 30, mw: 75 }
   ]));
-  assert.equal(elements.gelLadderBandMwInput.value, '75');
   assert.equal(analysisRuns, 1);
-  assert.equal(canvasRenders, 1);
   assert.match(statuses[statuses.length - 1], /MW=75/);
+
+  // Pressing on an existing band drags it instead of adding another one.
+  controller.onCanvasMouseDown({ clientX: 25, clientY: 31, preventDefault() {} });
+  assert.equal(runtime.ladderBandDrag.mw, 75);
+  controller.onCanvasMouseMove({ clientX: 25, clientY: 44, preventDefault() {} });
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 44, mw: 75 }
+  ]));
+  controller.onCanvasMouseUp({ clientX: 25, clientY: 60, preventDefault() {} });
+  assert.equal(runtime.ladderBandDrag, null);
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 60, mw: 75 }
+  ]));
+  assert.equal(analysisRuns, 2);
+
+  // The click that ends the drag must not drop a second band at the same row.
+  controller.onCanvasClick({ clientX: 25, clientY: 60, preventDefault() {} });
+  assert.equal(runtime.manualOverrides.ladderBands.length, 2);
+  assert.equal(analysisRuns, 2);
 });
 
 test('[EDGE] gel-analysis normalizes and scans tilted lane vertices', () => {
@@ -953,7 +1626,7 @@ test('[EDGE] gel-analysis tilted lane vertices define target-band area in report
 });
 
 test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -1032,7 +1705,7 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
 });
 
 test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () => {
-  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'manual', 'manual-workflow.js'));
   const gelCanvas = new MockElement('gel-canvas');
   gelCanvas.getBoundingClientRect = () => ({
     left: 0,
@@ -1252,7 +1925,7 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
 });
 
 test('[EDGE] gel-analysis peak integration area uses baseline and vertical dividers', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'));
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
   const rows = renderingModule.calculatePeakIntegrationRows({
     values: [1, 2, 5, 4, 3],
     minValue: 1,
@@ -1609,6 +2282,127 @@ test('[EDGE] gel-analysis computeLaneConfidence handles empty and populated lane
     assert.equal(Array.isArray(result.warnings), true);
     assert.equal(result.warnings.length > 0, scenario.expectWarning);
   });
+});
+
+test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores busy UI', async () => {
+  const writes = [];
+  let exportCalls = 0;
+  let releaseExport;
+  const exportGate = new Promise((resolve) => {
+    releaseExport = resolve;
+  });
+  const windowObject = {
+    hikariApi: {
+      async storeImportedFile({ targetFolder, fileName }) {
+        writes.push(`${targetFolder}/${fileName}`);
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      },
+      async writeJsonFile({ targetFolder, fileName }) {
+        writes.push(`${targetFolder}/${fileName}`);
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      },
+      async exportTextFile({ fileName }) {
+        exportCalls += 1;
+        await exportGate;
+        return { saved: true, fileName };
+      }
+    }
+  };
+  const { createRecordsManager } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records-manager.js'),
+    { window: windowObject }
+  );
+  const form = new MockElement('gel-form');
+  const saveButton = new MockElement('gel-save-btn');
+  saveButton.textContent = 'Save Analysis';
+  const exportCsvButton = new MockElement('gel-export-csv-btn');
+  exportCsvButton.textContent = 'Export CSV';
+  const canvas = new MockElement('gel-canvas');
+  canvas.width = 100;
+  canvas.height = 80;
+  canvas.toDataURL = () => 'data:image/png;base64,cG5n';
+  const elements = {
+    gelForm: form,
+    gelSaveBtn: saveButton,
+    gelExportCsvBtn: exportCsvButton,
+    gelIdInput: new MockElement('gel-id'),
+    gelNameInput: new MockElement('gel-name'),
+    gelTypeInput: new MockElement('gel-type'),
+    gelNormalizationInput: new MockElement('gel-normalization'),
+    gelCanvas: canvas,
+    gelSearchInput: new MockElement('gel-search'),
+    gelBrowserCount: new MockElement('gel-browser-count'),
+    gelList: new MockElement('gel-list')
+  };
+  elements.gelNameInput.value = 'Concurrent save';
+  elements.gelTypeInput.value = 'sds-page';
+  elements.gelNormalizationInput.value = 'none';
+
+  let persistCalls = 0;
+  let releasePersist;
+  const persistGate = new Promise((resolve) => {
+    releasePersist = resolve;
+  });
+  const runtime = {
+    createId: () => 'gel-1',
+    currentImage: { name: 'gel.png', imageData: { width: 100, height: 80 } },
+    currentReport: null,
+    manualOverrides: {},
+    state: { settings: { storagePath: '.' }, notebookEntries: [], projects: [], gelAnalyses: [] },
+    persist() {
+      persistCalls += 1;
+      return persistGate;
+    },
+    safeText: (value) => String(value || ''),
+    markDraftSaved() {}
+  };
+  const statuses = [];
+  const manager = createRecordsManager({
+    runtime,
+    elements,
+    deps: {
+      imageDataToDataUrl: () => 'data:image/png;base64,cG5n',
+      readEnhancementSettingsFromUi: () => ({}),
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  const first = manager.onSaveAnalysis({ preventDefault() {} });
+  const second = manager.onSaveAnalysis({ preventDefault() {} });
+  assert.equal(first, second, 'both submits share one in-flight save');
+  assert.equal(saveButton.disabled, true);
+  assert.equal(saveButton.textContent, 'Saving…');
+  assert.equal(form.getAttribute('aria-busy'), 'true');
+  manager.resetForm();
+  assert.equal(elements.gelNameInput.value, 'Concurrent save', 'cancel cannot clear a form during persistence');
+  assert.match(statuses.at(-1), /Wait for the current save/);
+
+  releasePersist();
+  const [firstResult, secondResult] = await Promise.all([first, second]);
+  assert.equal(firstResult.id, 'gel-1');
+  assert.equal(secondResult.id, 'gel-1');
+  assert.equal(persistCalls, 1);
+  assert.equal(runtime.state.gelAnalyses.length, 1);
+  assert.equal(writes.length, 4);
+  assert.equal(saveButton.disabled, false);
+  assert.equal(saveButton.textContent, 'Save Analysis');
+  assert.equal(form.getAttribute('aria-busy'), 'false');
+  assert.match(statuses.at(-1), /Saved gel draft/);
+
+  runtime.currentReport = { lanes: [] };
+  const firstExport = manager.onExportCsv();
+  const secondExport = manager.onExportCsv();
+  assert.equal(firstExport, secondExport, 'repeated export clicks share one native dialog request');
+  assert.equal(exportCsvButton.disabled, true);
+  assert.equal(exportCsvButton.textContent, 'Exporting…');
+  await Promise.resolve();
+  assert.equal(exportCalls, 1);
+  releaseExport();
+  await Promise.all([firstExport, secondExport]);
+  assert.equal(exportCsvButton.disabled, false);
+  assert.equal(exportCsvButton.textContent, 'Export CSV');
+  assert.equal(exportCsvButton.hasAttribute('aria-busy'), false);
+  assert.match(statuses.at(-1), /Exported/);
 });
   }
 };

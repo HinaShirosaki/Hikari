@@ -1,7 +1,16 @@
+import { showTransientNotice } from '../../../lib/notify.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
+import {
+  buildProteinArchitectureName,
+  buildProteinTargetLabel
+} from '../sequence-naming.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
+import { buildConstruct } from './protein-construct.js';
 import { DEFAULT_CHAIN } from './constants.js';
 import { resolvePoiSourceFromRecord } from './record-dna.js';
 import { cloneLibraryRow, createPoiRow } from './row-factory.js';
+
+const STANDARD_PROTEIN_RESIDUES = 'ACDEFGHIKLMNPQRSTVWY*';
 
 export function createProteinBuilderContext(config = {}) {
   const elements = config?.elements || {};
@@ -11,13 +20,26 @@ export function createProteinBuilderContext(config = {}) {
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
+    // A stored feature usually sits in several vectors, and which one is picked
+    // is the plasmid that block gets amplified from.
+    featureSelectedId: '',
+    featureHostId: '',
+    // Hydrated host records keyed by library entry id, for the plasmid preview.
+    featureHostRecords: new Map(),
+    featureHostRequestId: 0,
+    // What the assembled sequence says once it has been typed into: the chain
+    // still builds the fusion, this carries the initiator M, the stop, or the
+    // point mutation put on top of it.
+    assembledSequenceOverride: '',
     dnaConstruct: null,
     assemblyDialogOpen: false,
     isLoadingAssemblyBackbones: false,
     isPreparingAssembly: false,
     storedBackbones: [],
     selectedBackboneId: '',
-    statusMessage: 'Linear chain: each block accepts one upstream and one downstream connection.',
+    suggestedConstructName: '',
+    constructNameEdited: false,
+    statusMessage: '',
     statusError: false
   };
 
@@ -33,6 +55,9 @@ export function createProteinBuilderContext(config = {}) {
     onNavigateHome: typeof config?.onNavigateHome === 'function' ? config.onNavigateHome : (() => {}),
     onNavigateBuilder: typeof config?.onNavigateBuilder === 'function' ? config.onNavigateBuilder : (() => {}),
     loadExternalRecord: typeof config?.loadExternalRecord === 'function' ? config.loadExternalRecord : (() => {}),
+    getVectorInsertTarget: typeof config?.getVectorInsertTarget === 'function' ? config.getVectorInsertTarget : (() => null),
+    onInsertIntoVector: typeof config?.onInsertIntoVector === 'function' ? config.onInsertIntoVector : (async () => false),
+    onCancelVectorInsert: typeof config?.onCancelVectorInsert === 'function' ? config.onCancelVectorInsert : (() => {}),
     appState: config?.state && typeof config.state === 'object' ? config.state : null,
     persist: typeof config?.persist === 'function' ? config.persist : null,
     createId: typeof config?.createId === 'function' ? config.createId : null,
@@ -41,17 +66,28 @@ export function createProteinBuilderContext(config = {}) {
       : null
   };
 
-  ctx.setBuilderStatus = function setBuilderStatus(message, isError = false) {
-    state.statusMessage = String(message || '');
-    state.statusError = isError === true;
+  // Painting the stored status is separate from setting it: render() re-asserts
+  // the current status on every pass, and only the set path may raise a notice —
+  // otherwise a re-render would re-toast the same failure once the flag faded.
+  ctx.applyBuilderStatus = function applyBuilderStatus() {
     if (!elements.proteinBuilderStatus) {
       return;
     }
     elements.proteinBuilderStatus.textContent = state.statusMessage;
+    elements.proteinBuilderStatus.hidden = !state.statusMessage;
     elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--theme-danger)' : '';
   };
 
-  ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
+  ctx.setBuilderStatus = function setBuilderStatus(message, isError = false) {
+    state.statusMessage = String(message || '');
+    state.statusError = isError === true;
+    if (state.statusError && state.statusMessage) {
+      showTransientNotice(state.statusMessage, { type: 'error' });
+    }
+    ctx.applyBuilderStatus();
+  };
+
+  ctx.applyFeatureSearchStatus = function applyFeatureSearchStatus(message, isError = false) {
     if (!elements.proteinBuilderFeatureSearchStatus) {
       return;
     }
@@ -59,13 +95,62 @@ export function createProteinBuilderContext(config = {}) {
     elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
   };
 
+  ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
+    ctx.applyFeatureSearchStatus(message, isError);
+  };
+
+  // When the Vector Builder sent us here with a target site, the primary action
+  // becomes "splice into the open vector" instead of the stored-backbone
+  // assembly, which stays available as the standalone entry point.
+  ctx.syncVectorInsertControls = function syncVectorInsertControls() {
+    const target = ctx.getVectorInsertTarget();
+    const active = Boolean(target);
+    if (elements.proteinBuilderInsertVectorBtn) {
+      elements.proteinBuilderInsertVectorBtn.hidden = !active;
+      elements.proteinBuilderInsertVectorBtn.disabled = Boolean(state.isPreparingAssembly);
+    }
+    if (elements.proteinBuilderCancelVectorBtn) {
+      elements.proteinBuilderCancelVectorBtn.hidden = !active;
+    }
+    if (elements.proteinBuilderAssembleBtn) {
+      elements.proteinBuilderAssembleBtn.hidden = active;
+    }
+  };
+
+  ctx.insertConstructIntoVector = async function insertConstructIntoVector() {
+    if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
+      ctx.buildCurrentDnaSequence();
+      if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
+        ctx.setBuilderStatus('Resolve the construct errors before inserting it into the vector.', true);
+        return;
+      }
+    }
+
+    state.isPreparingAssembly = true;
+    ctx.syncVectorInsertControls();
+    try {
+      const applied = await ctx.onInsertIntoVector({
+        constructName: ctx.resolveConstructName(),
+        dnaConstruct: state.dnaConstruct
+      });
+      if (applied) {
+        ctx.setBuilderStatus('Inserted the construct into the open vector.');
+      }
+    } catch (error) {
+      ctx.setBuilderStatus(error?.message || 'Failed to insert the construct into the vector.', true);
+    } finally {
+      state.isPreparingAssembly = false;
+      ctx.syncVectorInsertControls();
+    }
+  };
+
   ctx.syncFeatureSearchControls = function syncFeatureSearchControls() {
     const disabled = !ctx.hasStoragePath() || Boolean(state.isSearchingFeatures);
     if (elements.proteinBuilderFeatureSearchInput) {
       elements.proteinBuilderFeatureSearchInput.disabled = disabled;
-    }
-    if (elements.proteinBuilderFeatureSearchBtn) {
-      elements.proteinBuilderFeatureSearchBtn.disabled = disabled;
     }
     if (elements.proteinBuilderAssembleBtn) {
       elements.proteinBuilderAssembleBtn.disabled = Boolean(state.isLoadingAssemblyBackbones || state.isPreparingAssembly);
@@ -91,6 +176,11 @@ export function createProteinBuilderContext(config = {}) {
 
   ctx.resetRows = function resetRows() {
     state.rows = [];
+    state.suggestedConstructName = '';
+    state.constructNameEdited = false;
+    if (elements.proteinBuilderNameInput) {
+      elements.proteinBuilderNameInput.value = '';
+    }
     ctx.invalidateDnaConstruct();
     DEFAULT_CHAIN.forEach((entry) => {
       if (entry.kind === 'library') {
@@ -110,12 +200,61 @@ export function createProteinBuilderContext(config = {}) {
     return resolvePoiSourceFromRecord(ctx.getSelectedRecord(), ctx.getSelectedFeature());
   };
 
+  ctx.getSuggestedConstructName = function getSuggestedConstructName() {
+    const sourceName = buildProteinTargetLabel({
+      recordName: ctx.getSelectedRecord()?.name,
+      targetName: cleanText(ctx.getCurrentDnaSource()?.label, 140) || 'Current DNA'
+    });
+    return buildProteinArchitectureName({
+      parts: state.rows.map((row) => ({
+        label: row.type === 'poi' ? sourceName : row.label,
+        type: row.type
+      }))
+    });
+  };
+
+  ctx.syncSuggestedConstructName = function syncSuggestedConstructName() {
+    const suggested = ctx.getSuggestedConstructName();
+    const current = cleanText(elements.proteinBuilderNameInput?.value, 140).trim();
+    if (elements.proteinBuilderNameInput && (
+      !state.constructNameEdited
+      || !current
+      || current === state.suggestedConstructName
+    )) {
+      elements.proteinBuilderNameInput.value = suggested;
+    }
+    state.suggestedConstructName = suggested;
+    return suggested;
+  };
+
+  ctx.resolveConstructName = function resolveConstructName() {
+    return cleanText(elements.proteinBuilderNameInput?.value, 140).trim()
+      || state.suggestedConstructName
+      || ctx.getSuggestedConstructName();
+  };
+
   ctx.getProteinBuilderPayload = function getProteinBuilderPayload() {
     return {
-      constructName: elements.proteinBuilderNameInput?.value,
+      constructName: ctx.resolveConstructName(),
       activeDnaSource: ctx.getCurrentDnaSource(),
-      rows: ctx.currentRows()
+      rows: ctx.currentRows(),
+      sequenceOverride: state.assembledSequenceOverride
     };
+  };
+
+  ctx.setAssembledSequenceOverride = function setAssembledSequenceOverride(sequence) {
+    const cleaned = sanitizeProteinAssemblySequence(sequence || '', true);
+    const chain = buildConstruct(ctx.getProteinBuilderPayload()).chainSequence;
+    // The 20 residues and a stop, plus whatever the chain itself already holds:
+    // a block translated through an ambiguous codon carries an X, and a hand
+    // edit must not silently drop it.
+    const allowed = new Set([...STANDARD_PROTEIN_RESIDUES, ...chain]);
+    const accepted = [...cleaned].filter((residue) => allowed.has(residue)).join('');
+    const dropped = [...new Set([...cleaned].filter((residue) => !allowed.has(residue)))];
+    // Typing the chain back in is the same as never having edited it.
+    state.assembledSequenceOverride = accepted && accepted !== chain ? accepted : '';
+    ctx.invalidateDnaConstruct();
+    return { sequence: accepted, dropped };
   };
 
   ctx.getDnaBuildContextKey = function getDnaBuildContextKey() {

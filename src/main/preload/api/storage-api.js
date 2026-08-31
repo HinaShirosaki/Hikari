@@ -9,6 +9,7 @@ function createStorageApi(ipcRenderer) {
     pickStorageDirectory: (currentPath) => ipcRenderer.invoke(STORAGE.PICK_DIRECTORY, { currentPath }),
     ensureStorageDirectory: (path) => ipcRenderer.invoke(STORAGE.ENSURE_DIRECTORY, { path }),
     importStorageRoot: (storagePath) => ipcRenderer.invoke(STORAGE.IMPORT_ROOT, { storagePath }),
+    getLastStorageRoot: () => ipcRenderer.invoke(STORAGE.LAST_ROOT),
     storeImportedFile: (payload) => ipcRenderer.invoke(STORAGE.STORE_IMPORTED_FILE, payload),
     moveStoredFile: (payload) => ipcRenderer.invoke(STORAGE.MOVE_STORED_FILE, payload),
     writeJsonFile: (payload) => ipcRenderer.invoke(STORAGE.WRITE_JSON_FILE, payload),

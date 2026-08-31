@@ -1,38 +1,17 @@
-import { BLOCK_TYPES } from './constants.js';
 import {
   createEmptyDraft,
   createEmptyWorkflowEntry,
-  getBlockType,
-  normalizePlainTextBlock,
-  suggestedBlockPosition,
   uniqueStrings
 } from './model.js';
 import {
   cloneWorkflowDraft,
-  ensureWorkflowStateShape,
-  resolveDefaultAssigneeId
+  ensureWorkflowStateShape
 } from './state.js';
-import {
-  buildWorkflowExecutionLayout,
-  computeEntryProgress,
-  isWorkflowStepOpenable
-} from './execution.js';
 import { createWorkflowArtifactStorage } from './artifact-storage.js';
-
-function createEmptyStepState() {
-  return {
-    status: 'not_done',
-    values: {},
-    result: '',
-    resultFiles: [],
-    resultFileRecords: [],
-    notebookEntryId: '',
-    assayIds: [],
-    gelAnalysisIds: [],
-    completedAt: '',
-    updatedAt: ''
-  };
-}
+import { createWorkflowStepState } from './actions/step-state.js';
+import { createWorkflowTemplateEditor } from './actions/template-editor.js';
+import { createWorkflowExecutionBoard } from './actions/execution-board.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createWorkflowActions(config = {}) {
   const state = config?.state || {};
@@ -57,9 +36,6 @@ export function createWorkflowActions(config = {}) {
     : () => {};
   const onCreateLinkedAssay = typeof config?.onCreateLinkedAssay === 'function'
     ? config.onCreateLinkedAssay
-    : () => {};
-  const onCreateLinkedGel = typeof config?.onCreateLinkedGel === 'function'
-    ? config.onCreateLinkedGel
     : () => {};
 
   function ensureStateShape() {
@@ -272,711 +248,86 @@ export function createWorkflowActions(config = {}) {
     renderWorkflowViews();
   }
 
-  function getBlockComposerType() {
-    const selected = String(elements.workflowBlockTypeInput?.value || '').trim().toLowerCase();
-    return selected === BLOCK_TYPES.TEXT ? BLOCK_TYPES.TEXT : BLOCK_TYPES.PROTOCOL;
-  }
+  const {
+    onStartCreateWorkflowTemplate,
+    onBackToWorkflowEntry,
+    onCancelWorkflowEdit,
+    onProjectChange,
+    onWorkflowSubmit,
+    onAddBlock,
+    onBlockListClick,
+    onBlockListChange,
+    onWorkflowListClick,
+    onSaveTemplate,
+    onCreateFromTemplate,
+    onTemplateListClick
+  } = createWorkflowTemplateEditor({
+    state,
+    runtime,
+    elements,
+    renderer,
+    graphController,
+    createId,
+    normalizeWorkflow,
+    normalizeTemplate,
+    ensureStateShape: (...args) => ensureStateShape(...args),
+    renderWorkflowViews: (...args) => renderWorkflowViews(...args),
+    persistWorkflowChanges: (...args) => persistWorkflowChanges(...args),
+    getTemplateById: (...args) => getTemplateById(...args),
+    createWorkflowEntryRecord: (...args) => createWorkflowEntryRecord(...args),
+    selectTemplate: (...args) => selectTemplate(...args),
+    cloneWorkflowIntoDraft: (...args) => cloneWorkflowIntoDraft(...args),
+    resetDraftToEmpty: (...args) => resetDraftToEmpty(...args),
+    createWorkflowFromTemplateRecord: (...args) => createWorkflowFromTemplateRecord(...args)
+  });
 
-  function onStartCreateWorkflowTemplate() {
-    resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('template');
-  }
 
-  function onStartViewEditWorkflow() {
-    renderer.setWorkflowEntryMode?.('list');
-    renderWorkflowViews();
-  }
 
-  function onBackToWorkflowEntry() {
-    resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('list');
-    renderWorkflowViews();
-  }
+  const {
+    getWorkflowEntry,
+    getPrimaryWorkflowEntry,
+    getPreferredWorkflowBlockId,
+    ensureEntryStepState,
+    touchEntry,
+    touchWorkflow,
+    upsertNotebookEntryForStep
+  } = createWorkflowStepState({
+    state,
+    renderer,
+    createId,
+    getWorkflowById: (...args) => getWorkflowById(...args),
+    buildWorkflowStepNotebookFolderPath
+  });
 
-  function onCancelWorkflowEdit() {
-    resetDraftToEmpty();
-    renderer.setWorkflowEntryMode?.('list');
-    renderWorkflowViews();
-  }
 
-  function onProjectChange() {
-    runtime.draft.projectId = elements.workflowProjectInput?.value || '';
-    runtime.draft.notebookEntryIds = [];
-    renderer.renderNotebookOptions?.();
-  }
+  const {
+    onExecutionSearchInput,
+    onAddWorkflow,
+    onDeleteWorkflow,
+    onExecutionBoardClick,
+    onExecutionBoardChange
+  } = createWorkflowExecutionBoard({
+    runtime,
+    elements,
+    onOpenNotebookEntry,
+    onCreateLinkedAssay,
+    renderWorkflowViews: (...args) => renderWorkflowViews(...args),
+    persistWorkflowChanges: (...args) => persistWorkflowChanges(...args),
+    getWorkflowById: (...args) => getWorkflowById(...args),
+    getTemplateById: (...args) => getTemplateById(...args),
+    deleteWorkflow: (...args) => deleteWorkflow(...args),
+    createWorkflowFromTemplateRecord: (...args) => createWorkflowFromTemplateRecord(...args),
+    onWorkflowFileInputChange: (...args) => onWorkflowFileInputChange(...args),
+    getWorkflowEntry: (...args) => getWorkflowEntry(...args),
+    getPrimaryWorkflowEntry: (...args) => getPrimaryWorkflowEntry(...args),
+    getPreferredWorkflowBlockId: (...args) => getPreferredWorkflowBlockId(...args),
+    ensureEntryStepState: (...args) => ensureEntryStepState(...args),
+    touchEntry: (...args) => touchEntry(...args),
+    touchWorkflow: (...args) => touchWorkflow(...args),
+    upsertNotebookEntryForStep: (...args) => upsertNotebookEntryForStep(...args)
+  });
 
-  function onWorkflowSubmit(event) {
-    event.preventDefault();
-    ensureStateShape();
 
-    const name = String(elements.workflowNameInput?.value || '').trim();
-    if (!name || !(runtime.draft.blocks || []).length) {
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const isTemplateMode = runtime.workflowEntryMode === 'template';
-    const notebookEntryIds = isTemplateMode
-      ? []
-      : uniqueStrings(renderer.getSelectedValues?.(elements.workflowNotebookPagesInput));
-    const projectId = isTemplateMode ? '' : (elements.workflowProjectInput?.value || '');
-    const existing = (state.workflows || []).find(
-      (workflow) => workflow.id === (elements.workflowIdInput?.value || '')
-    );
-    const draftEntries = Array.isArray(runtime.draft.entries) ? runtime.draft.entries : [];
-    const entries = draftEntries.length
-      ? draftEntries
-      : (existing?.entries?.length ? existing.entries : [createWorkflowEntryRecord(runtime.draft)]);
-
-    const workflowRecord = normalizeWorkflow({
-      ...runtime.draft,
-      id: elements.workflowIdInput?.value || runtime.draft.id || createId(),
-      templateId: runtime.draft.templateId || existing?.templateId || '',
-      name,
-      description: String(elements.workflowDescriptionInput?.value || '').trim(),
-      projectId,
-      notebookEntryIds,
-      entries,
-      createdAt: existing?.createdAt || runtime.draft.createdAt || now,
-      updatedAt: now
-    });
-
-    const index = state.workflows.findIndex((workflow) => workflow.id === workflowRecord.id);
-    if (index >= 0) {
-      state.workflows[index] = workflowRecord;
-    } else {
-      state.workflows.push(workflowRecord);
-    }
-
-    persistWorkflowChanges();
-    cloneWorkflowIntoDraft(workflowRecord);
-    runtime.activeTemplateId = String(workflowRecord.templateId || '').trim() || runtime.activeTemplateId;
-    runtime.activeWorkflowId = workflowRecord.id;
-    runtime.activeEntryId = workflowRecord.entries?.[0]?.id || '';
-    runtime.activeBlockId = workflowRecord.blocks?.[0]?.id || '';
-    renderer.setWorkflowEntryMode?.('list');
-    renderWorkflowViews();
-  }
-
-  function onAddBlock() {
-    const blockType = getBlockComposerType();
-    const position = suggestedBlockPosition((runtime.draft?.blocks || []).length);
-
-    if (blockType === BLOCK_TYPES.TEXT) {
-      const textContent = normalizePlainTextBlock(elements.workflowBlockTextInput?.value || '');
-      if (!textContent) {
-        return;
-      }
-
-      graphController.hideContextMenu?.();
-      runtime.draft.blocks.push({
-        id: createId(),
-        type: BLOCK_TYPES.TEXT,
-        protocolId: '',
-        text: textContent,
-        assigneeId: resolveDefaultAssigneeId(state),
-        x: position.x,
-        y: position.y
-      });
-      if (elements.workflowBlockTextInput) {
-        elements.workflowBlockTextInput.value = '';
-      }
-      renderer.renderBlockEditor?.();
-      return;
-    }
-
-    const protocolId = String(elements.workflowBlockProtocolInput?.value || '').trim();
-    if (!protocolId) {
-      return;
-    }
-
-    graphController.hideContextMenu?.();
-    runtime.draft.blocks.push({
-      id: createId(),
-      type: BLOCK_TYPES.PROTOCOL,
-      protocolId,
-      text: '',
-      assigneeId: resolveDefaultAssigneeId(state),
-      x: position.x,
-      y: position.y
-    });
-    renderer.renderBlockEditor?.();
-  }
-
-  function onBlockListClick(event) {
-    const removeBtn = event.target.closest('[data-workflow-block-remove]');
-    if (!removeBtn) {
-      return;
-    }
-    graphController.removeBlocks?.([removeBtn.dataset.workflowBlockRemove]);
-  }
-
-  function onBlockListChange(event) {
-    const textInput = event.target.closest('[data-workflow-block-text]');
-    if (textInput) {
-      const blockId = textInput.dataset.workflowBlockText;
-      const block = runtime.draft.blocks.find((item) => item.id === blockId);
-      if (!block || getBlockType(block) !== BLOCK_TYPES.TEXT) {
-        return;
-      }
-
-      const nextText = normalizePlainTextBlock(textInput.value || '');
-      if (!nextText) {
-        textInput.value = block.text || '';
-        return;
-      }
-
-      block.type = BLOCK_TYPES.TEXT;
-      block.protocolId = '';
-      block.text = nextText;
-      renderer.renderBlockList?.();
-      graphController.renderGraphEditor?.();
-      return;
-    }
-
-    const assigneeSelect = event.target.closest('[data-workflow-block-assignee]');
-    if (!assigneeSelect) {
-      return;
-    }
-
-    const blockId = assigneeSelect.dataset.workflowBlockAssignee;
-    const block = runtime.draft.blocks.find((item) => item.id === blockId);
-    if (!block) {
-      return;
-    }
-
-    block.assigneeId = String(assigneeSelect.value || '').trim();
-    renderer.renderBlockList?.();
-    graphController.renderGraphEditor?.();
-  }
-
-  function onWorkflowListClick(event) {
-    const templateOpenBtn = event.target.closest('[data-workflow-template-open]');
-    if (templateOpenBtn) {
-      selectTemplate(String(templateOpenBtn.dataset.workflowTemplateOpen || '').trim());
-      return;
-    }
-  }
-
-  function onSaveTemplate() {
-    const templateName = String(elements.workflowTemplateNameInput?.value || '').trim();
-    if (!templateName || !(runtime.draft.blocks || []).length) {
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const template = normalizeTemplate({
-      id: createId(),
-      name: templateName,
-      description: String(
-        elements.workflowTemplateDescriptionInput?.value
-        || elements.workflowDescriptionInput?.value
-        || ''
-      ).trim() || runtime.draft.description,
-      projectId: String(elements.workflowProjectInput?.value || runtime.draft.projectId || '').trim(),
-      blocks: runtime.draft.blocks.map((block) => ({ ...block })),
-      links: runtime.draft.links.map((link) => ({ ...link })),
-      createdAt: now,
-      updatedAt: now
-    });
-
-    state.workflowTemplates.push(template);
-    runtime.activeTemplateId = template.id;
-    if (elements.workflowTemplateNameInput) {
-      elements.workflowTemplateNameInput.value = '';
-    }
-    persistWorkflowChanges();
-    renderWorkflowViews();
-  }
-
-  function onCreateFromTemplate() {
-    const templateId = String(elements.workflowTemplateSourceInput?.value || runtime.activeTemplateId || '').trim();
-    const workflowName = String(elements.workflowTemplateCreateNameInput?.value || '').trim();
-    if (!templateId) {
-      return;
-    }
-
-    const template = getTemplateById(templateId);
-    if (!template) {
-      return;
-    }
-
-    createWorkflowFromTemplateRecord(template, {
-      workflowName,
-      projectId: String(elements.workflowTemplateCreateProjectInput?.value || '').trim()
-    });
-  }
-
-  function onTemplateListClick(event) {
-    const useBtn = event.target.closest('[data-workflow-template-use]');
-    if (useBtn) {
-      const templateId = useBtn.dataset.workflowTemplateUse;
-      selectTemplate(templateId);
-      renderer.setWorkflowEntryMode?.('list');
-      renderWorkflowViews();
-      return;
-    }
-
-    const deleteBtn = event.target.closest('[data-workflow-template-delete]');
-    if (!deleteBtn) {
-      return;
-    }
-
-    const templateId = deleteBtn.dataset.workflowTemplateDelete;
-    state.workflowTemplates = (state.workflowTemplates || []).filter(
-      (template) => template.id !== templateId
-    );
-    if (runtime.activeTemplateId === templateId) {
-      runtime.activeTemplateId = '';
-      runtime.activeWorkflowId = '';
-      runtime.activeEntryId = '';
-      runtime.activeBlockId = '';
-    }
-
-    persistWorkflowChanges();
-    renderWorkflowViews();
-  }
-
-  function getWorkflowEntry(workflowId, entryId) {
-    const workflow = getWorkflowById(workflowId);
-    if (!workflow) {
-      return { workflow: null, entry: null };
-    }
-    const entry = (workflow.entries || []).find((item) => item.id === entryId) || null;
-    return { workflow, entry };
-  }
-
-  function getPrimaryWorkflowEntry(workflow) {
-    return Array.isArray(workflow?.entries) ? workflow.entries[0] || null : null;
-  }
-
-  function getPreferredWorkflowBlockId(workflow, entry, fallbackBlockId = '') {
-    const layout = buildWorkflowExecutionLayout(workflow);
-    const progress = entry ? computeEntryProgress(entry, layout) : null;
-    return (
-      progress?.nextBlockId
-      || String(fallbackBlockId || '').trim()
-      || progress?.orderedIds?.[0]
-      || workflow?.blocks?.[0]?.id
-      || ''
-    );
-  }
-
-  function ensureEntryStepState(entry, blockId) {
-    if (!entry.stepStates || typeof entry.stepStates !== 'object' || Array.isArray(entry.stepStates)) {
-      entry.stepStates = {};
-    }
-    if (!entry.stepStates[blockId]) {
-      entry.stepStates[blockId] = createEmptyStepState();
-    }
-    const stepState = entry.stepStates[blockId];
-    if (!stepState.values || typeof stepState.values !== 'object' || Array.isArray(stepState.values)) {
-      stepState.values = {};
-    }
-    if (!Array.isArray(stepState.resultFiles)) {
-      stepState.resultFiles = [];
-    }
-    if (!Array.isArray(stepState.resultFileRecords)) {
-      stepState.resultFileRecords = [];
-    }
-    if (!Array.isArray(stepState.assayIds)) {
-      stepState.assayIds = [];
-    }
-    if (!Array.isArray(stepState.gelAnalysisIds)) {
-      stepState.gelAnalysisIds = [];
-    }
-    return stepState;
-  }
-
-  function touchEntry(entry) {
-    entry.updatedAt = new Date().toISOString();
-  }
-
-  function touchWorkflow(workflow) {
-    workflow.updatedAt = new Date().toISOString();
-  }
-
-  function cloneProtocolSnapshot(protocol) {
-    if (!protocol || typeof protocol !== 'object') {
-      return null;
-    }
-    const protocolId = String(protocol.id || '').trim();
-    return {
-      id: protocolId,
-      name: String(protocol.name || '').trim() || 'Untitled Protocol',
-      category: String(protocol.category || '').trim(),
-      purpose: String(protocol.purpose || '').trim(),
-      steps: Array.isArray(protocol.steps)
-        ? protocol.steps.map((step, index) => {
-          const stepId = String(step?.id || '').trim() || `${protocolId || 'protocol'}_step_${index + 1}`;
-          return {
-            id: stepId,
-            text: String(step?.text || '').trim(),
-            placeholders: Array.isArray(step?.placeholders)
-              ? step.placeholders.map((placeholder, placeholderIndex) => ({
-                id: String(placeholder?.id || '').trim() || `${stepId}_placeholder_${placeholderIndex + 1}`,
-                name: String(placeholder?.name || '').trim() || `Value ${placeholderIndex + 1}`
-              }))
-              : []
-          };
-        })
-        : []
-    };
-  }
-
-  function upsertNotebookEntryForStep(workflow, entry, block, options = {}) {
-    const stepState = ensureEntryStepState(entry, block.id);
-    const now = new Date().toISOString();
-    const project = (state.projects || []).find((item) => item.id === workflow.projectId) || null;
-    const protocol = (state.protocols || []).find((item) => item.id === block.protocolId) || null;
-    const existing = stepState.notebookEntryId
-      ? (state.notebookEntries || []).find((item) => item.id === stepState.notebookEntryId) || null
-      : null;
-    const notebookState = options.executed === true
-      ? 'executed'
-      : (options.executed === false ? 'planned' : (stepState.status === 'completed' ? 'executed' : 'planned'));
-    const createdAt = String(existing?.createdAt || '').trim() || now;
-    const notebookId = existing?.id || createId();
-    const storageFolder = buildWorkflowStepNotebookFolderPath(workflow, entry, notebookId)
-      || String(existing?.storageFolder || '').trim();
-    const linkedAssayIds = (state.assays || [])
-      .filter((item) => item.notebookEntryId === notebookId)
-      .map((item) => item.id);
-    const linkedGelIds = (state.gelAnalyses || [])
-      .filter((item) => item.notebookEntryId === notebookId)
-      .map((item) => item.id);
-    const notebookEntry = {
-      ...(existing || {}),
-      id: notebookId,
-      notebookType: 'biology',
-      projectId: project?.id || workflow.projectId || '',
-      projectName: project?.name || String(existing?.projectName || '').trim(),
-      protocolId: protocol?.id || '',
-      protocolName: protocol?.name || renderer.titleForBlock?.(block) || 'Workflow Step',
-      protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(existing?.protocolSnapshot),
-      values: { ...stepState.values },
-      result: String(stepState.result || '').trim(),
-      resultFiles: [...stepState.resultFiles],
-      resultFileRecords: stepState.resultFileRecords.map((record) => ({ ...record })),
-      storageFolder,
-      createdAt,
-      updatedAt: now,
-      notebookState,
-      executedAt: notebookState === 'executed'
-        ? (String(stepState.completedAt || '').trim() || now)
-        : '',
-      workflowContext: {
-        workflowId: workflow.id,
-        workflowName: workflow.name,
-        workflowEntryId: entry.id,
-        workflowEntryName: entry.name,
-        workflowBlockId: block.id,
-        workflowBlockTitle: renderer.titleForBlock?.(block) || block.id
-      },
-      assayIds: linkedAssayIds,
-      gelAnalysisIds: linkedGelIds
-    };
-
-    const index = state.notebookEntries.findIndex((item) => item.id === notebookEntry.id);
-    if (index >= 0) {
-      state.notebookEntries[index] = notebookEntry;
-    } else {
-      state.notebookEntries.push(notebookEntry);
-    }
-
-    stepState.notebookEntryId = notebookEntry.id;
-    stepState.assayIds = uniqueStrings(linkedAssayIds);
-    stepState.gelAnalysisIds = uniqueStrings(linkedGelIds);
-    workflow.notebookEntryIds = uniqueStrings([...(workflow.notebookEntryIds || []), notebookEntry.id]);
-    return notebookEntry;
-  }
-
-  function onExecutionSearchInput() {
-    runtime.workflowSearchTerm = String(elements.workflowSearchInput?.value || '').trim().toLowerCase();
-    renderWorkflowViews();
-  }
-
-  function onAddWorkflow() {
-    const template = getTemplateById(runtime.activeTemplateId);
-    if (!template) {
-      return;
-    }
-    createWorkflowFromTemplateRecord(template);
-  }
-
-  function onDeleteWorkflow() {
-    deleteWorkflow(runtime.activeWorkflowId);
-  }
-
-  function onExecutionBoardClick(event) {
-    const statusBtn = event.target.closest('[data-workflow-step-status]');
-    if (statusBtn) {
-      const workflowId = String(statusBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(statusBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(statusBtn.dataset.workflowBlockId || '').trim();
-      const requestedStatus = String(statusBtn.dataset.workflowStepStatus || '').trim().toLowerCase();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-
-      const nextStatus = requestedStatus === 'completed'
-        ? 'completed'
-        : (requestedStatus === 'failed'
-          ? 'failed'
-          : (requestedStatus === 'pending' ? 'pending' : 'not_done'));
-      const stepState = ensureEntryStepState(entry, blockId);
-      const now = new Date().toISOString();
-      stepState.status = nextStatus;
-      stepState.completedAt = nextStatus === 'completed' ? now : '';
-      stepState.updatedAt = now;
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      upsertNotebookEntryForStep(workflow, entry, block, { executed: nextStatus === 'completed' });
-      runtime.activeWorkflowId = workflow.id;
-      runtime.activeEntryId = entry.id;
-      runtime.activeBlockId = blockId;
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const stepOpen = event.target.closest('[data-workflow-step-open]');
-    if (stepOpen) {
-      const workflowId = String(stepOpen.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(stepOpen.dataset.workflowEntryId || '').trim();
-      const blockId = String(stepOpen.dataset.workflowStepOpen || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const layout = workflow ? buildWorkflowExecutionLayout(workflow) : null;
-      if (!workflow || !entry || !isWorkflowStepOpenable(entry, layout, blockId)) {
-        return;
-      }
-      runtime.activeWorkflowId = workflowId;
-      runtime.activeEntryId = entryId;
-      runtime.activeBlockId = blockId;
-      renderWorkflowViews();
-      return;
-    }
-
-    const toggleBtn = event.target.closest('[data-workflow-step-toggle]');
-    if (toggleBtn) {
-      const workflowId = String(toggleBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(toggleBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(toggleBtn.dataset.workflowStepToggle || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      if (!workflow || !entry || !blockId) {
-        return;
-      }
-      const block = (workflow.blocks || []).find((item) => item.id === blockId);
-      if (!block) {
-        return;
-      }
-      const stepState = ensureEntryStepState(entry, blockId);
-      const now = new Date().toISOString();
-      const completed = stepState.status !== 'completed';
-      stepState.status = completed ? 'completed' : 'not_done';
-      stepState.completedAt = completed ? now : '';
-      stepState.updatedAt = now;
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      upsertNotebookEntryForStep(workflow, entry, block, { executed: completed });
-      runtime.activeWorkflowId = workflow.id;
-      runtime.activeEntryId = entry.id;
-      runtime.activeBlockId = completed
-        ? getPreferredWorkflowBlockId(workflow, entry, blockId)
-        : blockId;
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const branchToggleBtn = event.target.closest('[data-workflow-branch-toggle]');
-    if (branchToggleBtn) {
-      const workflowId = String(branchToggleBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(branchToggleBtn.dataset.workflowEntryId || '').trim();
-      const branchRootId = String(branchToggleBtn.dataset.workflowBranchToggle || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      if (!workflow || !entry || !branchRootId) {
-        return;
-      }
-      const active = new Set(Array.isArray(entry.activeBranchRootIds) ? entry.activeBranchRootIds : []);
-      if (active.has(branchRootId)) {
-        active.delete(branchRootId);
-      } else {
-        active.add(branchRootId);
-      }
-      entry.activeBranchRootIds = [...active];
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const openNotebookBtn = event.target.closest('[data-workflow-step-open-notebook]');
-    if (openNotebookBtn) {
-      const workflowId = String(openNotebookBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(openNotebookBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(openNotebookBtn.dataset.workflowStepOpenNotebook || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, {});
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      onOpenNotebookEntry(notebookEntry.id);
-      renderWorkflowViews();
-      return;
-    }
-
-    const assayBtn = event.target.closest('[data-workflow-step-create-assay]');
-    if (assayBtn) {
-      const workflowId = String(assayBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(assayBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(assayBtn.dataset.workflowStepCreateAssay || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      onCreateLinkedAssay({
-        notebookEntryId: notebookEntry.id,
-        projectId: notebookEntry.projectId,
-        notebookType: notebookEntry.notebookType || 'biology'
-      });
-      renderWorkflowViews();
-      return;
-    }
-
-    const gelBtn = event.target.closest('[data-workflow-step-create-gel]');
-    if (gelBtn) {
-      const workflowId = String(gelBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(gelBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(gelBtn.dataset.workflowStepCreateGel || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      onCreateLinkedGel({
-        notebookEntryId: notebookEntry.id,
-        projectId: notebookEntry.projectId,
-        notebookType: notebookEntry.notebookType || 'biology'
-      });
-      renderWorkflowViews();
-      return;
-    }
-
-    if (event.target.closest('.workflow-step-inline') || event.target.closest('input, textarea, select')) {
-      return;
-    }
-
-    const runOpenBtn = event.target.closest('[data-workflow-run-open]');
-    if (runOpenBtn) {
-      const workflowId = String(runOpenBtn.dataset.workflowRunOpen || '').trim();
-      const workflow = getWorkflowById(workflowId);
-      const entry = getPrimaryWorkflowEntry(workflow);
-      runtime.activeWorkflowId = workflowId;
-      runtime.activeEntryId = entry?.id || '';
-      runtime.activeBlockId = '';
-      renderWorkflowViews();
-      return;
-    }
-
-    if (runtime.activeBlockId) {
-      runtime.activeBlockId = '';
-      renderWorkflowViews();
-    }
-  }
-
-  function onExecutionBoardChange(event) {
-    const workflowNameInput = event.target.closest('[data-workflow-run-name]');
-    if (workflowNameInput) {
-      const workflowId = String(workflowNameInput.dataset.workflowRunName || '').trim();
-      const workflow = getWorkflowById(workflowId);
-      if (!workflow) {
-        return;
-      }
-      workflow.name = String(workflowNameInput.value || '').trim() || 'Untitled workflow';
-      if (workflow.entries[0]) {
-        workflow.entries[0].name = workflow.name;
-        touchEntry(workflow.entries[0]);
-      }
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const stepValueInput = event.target.closest('[data-workflow-step-value]');
-    if (stepValueInput) {
-      const workflowId = String(stepValueInput.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(stepValueInput.dataset.workflowEntryId || '').trim();
-      const blockId = String(stepValueInput.dataset.workflowBlockId || '').trim();
-      const valueKey = String(stepValueInput.dataset.workflowStepValue || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block || !valueKey) {
-        return;
-      }
-      const stepState = ensureEntryStepState(entry, blockId);
-      const cleanValue = String(stepValueInput.value || '').trim();
-      if (cleanValue) {
-        stepState.values[valueKey] = cleanValue;
-      } else {
-        delete stepState.values[valueKey];
-      }
-      stepState.updatedAt = new Date().toISOString();
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      if (stepState.notebookEntryId) {
-        upsertNotebookEntryForStep(workflow, entry, block, {});
-      }
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const resultField = event.target.closest('[data-workflow-step-result-field]');
-    if (resultField) {
-      const workflowId = String(resultField.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(resultField.dataset.workflowEntryId || '').trim();
-      const blockId = String(resultField.dataset.workflowStepResultField || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const stepState = ensureEntryStepState(entry, blockId);
-      stepState.result = String(resultField.value || '').trim();
-      stepState.updatedAt = new Date().toISOString();
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      if (stepState.notebookEntryId) {
-        upsertNotebookEntryForStep(workflow, entry, block, {});
-      }
-      persistWorkflowChanges();
-      renderWorkflowViews();
-      return;
-    }
-
-    const fileInput = event.target.closest('[data-workflow-step-files]');
-    if (fileInput) {
-      void onWorkflowFileInputChange(fileInput);
-    }
-  }
 
   async function onWorkflowFileInputChange(fileInput) {
     const workflowId = String(fileInput.dataset.workflowWorkflowId || '').trim();
@@ -1015,7 +366,7 @@ export function createWorkflowActions(config = {}) {
       persistWorkflowChanges();
       renderWorkflowViews();
     } catch (error) {
-      window.alert(String(error?.message || error || 'Failed to store workflow files.'));
+      showTransientNotice(String(error?.message || error || 'Failed to store workflow files.'), { type: 'error' });
     } finally {
       fileInput.value = '';
     }
@@ -1036,7 +387,6 @@ export function createWorkflowActions(config = {}) {
     elements.workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);
     elements.workflowTemplateList?.addEventListener('click', onTemplateListClick);
     elements.workflowEntryTemplateBtn?.addEventListener('click', onStartCreateWorkflowTemplate);
-    elements.workflowEntryViewBtn?.addEventListener('click', onStartViewEditWorkflow);
     elements.workflowEntryBackBtn?.addEventListener('click', onBackToWorkflowEntry);
     elements.workflowSearchInput?.addEventListener('input', onExecutionSearchInput);
     elements.workflowAddRunBtn?.addEventListener('click', onAddWorkflow);

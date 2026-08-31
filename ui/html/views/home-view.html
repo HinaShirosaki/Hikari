@@ -32,21 +32,14 @@
           <div class="home-tile-head">
             <div class="home-tile-titles">
               <h2 id="dashboard-quicklog-heading">Add Experiments</h2>
-              <p class="small-note">Bench note &rarr; notebook</p>
             </div>
           </div>
           <div class="home-quicklog-body">
-            <div class="home-quicklog-chips" aria-label="Add Experiments shortcuts">
-              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Passage">&#xFF0B; Passage</button>
-              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Western blot">&#xFF0B; Western blot</button>
-              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Order reagent">&#xFF0B; Order reagent</button>
-              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Observation">&#xFF0B; Observation</button>
-            </div>
             <textarea
               id="dashboard-quick-log-input"
               class="home-quicklog-input"
-              rows="3"
-              placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+              rows="2"
+              placeholder="Log a notebook entry or experiment note."
             ></textarea>
             <div class="home-quicklog-actions">
               <span id="dashboard-quick-log-status" class="small-note home-quicklog-status"></span>
@@ -81,15 +74,6 @@
               <h2 id="dashboard-contribution-heading">Contribution heatmap</h2>
               <p id="dashboard-contribution-summary" class="small-note"></p>
             </div>
-            <div class="home-contribution-legend" aria-hidden="true">
-              <span>Less</span>
-              <span class="home-contribution-legend-cell" data-level="0"></span>
-              <span class="home-contribution-legend-cell" data-level="1"></span>
-              <span class="home-contribution-legend-cell" data-level="2"></span>
-              <span class="home-contribution-legend-cell" data-level="3"></span>
-              <span class="home-contribution-legend-cell" data-level="4"></span>
-              <span>More</span>
-            </div>
           </div>
           <div class="home-contribution-display">
             <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
@@ -103,10 +87,19 @@
                 <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
               </div>
             </div>
-            <div class="home-contribution-streak" role="group" aria-label="Logging streak">
-              <span id="dashboard-contribution-streak" class="home-contribution-streak-num">0</span>
-              <span class="home-contribution-streak-label">day logging streak</span>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
+          <div class="home-tile-head">
+            <div class="home-tile-titles">
+              <h2 id="dashboard-paper-finding-heading">Scheduled paper finding</h2>
+              <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
             </div>
+            <button type="button" id="dashboard-paper-finding-open-btn" class="home-link-btn">Manage →</button>
+          </div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-paper-finding-list" class="dashboard-list"></div>
           </div>
         </section>
 
@@ -116,12 +109,15 @@
               <h2 id="dashboard-passage-heading">Cell passage</h2>
               <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
             </div>
-            <button
-              type="button"
-              id="dashboard-passage-add-btn"
-              class="home-add-btn"
-              aria-label="Add cell to passage reminder"
-            >+</button>
+            <div class="home-tile-head-actions">
+              <button type="button" id="dashboard-passage-open-btn" class="home-link-btn">View all →</button>
+              <button
+                type="button"
+                id="dashboard-passage-add-btn"
+                class="home-add-btn"
+                aria-label="Add cell to passage reminder"
+              >+</button>
+            </div>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
@@ -134,12 +130,15 @@
               <h2 id="dashboard-incubation-heading">Overnight incubation</h2>
               <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
             </div>
-            <button
-              type="button"
-              id="dashboard-incubation-add-btn"
-              class="home-add-btn"
-              aria-label="Manage incubation locations"
-            >+</button>
+            <div class="home-tile-head-actions">
+              <button type="button" id="dashboard-incubation-open-btn" class="home-link-btn">View all →</button>
+              <button
+                type="button"
+                id="dashboard-incubation-add-btn"
+                class="home-add-btn"
+                aria-label="Manage incubation locations"
+              >+</button>
+            </div>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
@@ -154,42 +153,55 @@
           aria-modal="true"
           aria-labelledby="dashboard-passage-dialog-title"
         >
-          <form id="dashboard-passage-dialog-form" class="home-dialog-form">
-            <h3 id="dashboard-passage-dialog-title">Add cell to passage</h3>
-            <label class="dashboard-field">
-              Cell Strain
-              <input
-                id="dashboard-passage-strain-input"
-                type="text"
-                maxlength="80"
-                placeholder="e.g. HEK293"
-                required
-              />
-            </label>
-            <label class="dashboard-field">
-              Interval Time
-              <input
-                id="dashboard-passage-interval-input"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="e.g. 3"
-                required
-              />
-            </label>
-            <label class="dashboard-field">
-              Passage Number
-              <input
-                id="dashboard-passage-number-input"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="e.g. 5"
-                required
-              />
-            </label>
-            <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
-          </form>
+          <div class="home-dialog-form">
+            <div class="app-dialog-head">
+              <h3 id="dashboard-passage-dialog-title">Cell passage</h3>
+              <button
+                type="button"
+                id="dashboard-passage-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close cell passage panel"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div id="dashboard-passage-panel-list" class="dashboard-list dashboard-passage-list home-dialog-list"></div>
+            <form id="dashboard-passage-dialog-form" class="home-dialog-form">
+              <h4>Add cell to passage</h4>
+              <label class="dashboard-field">
+                Cell Strain
+                <input
+                  id="dashboard-passage-strain-input"
+                  type="text"
+                  maxlength="80"
+                  placeholder="e.g. HEK293"
+                  required
+                />
+              </label>
+              <label class="dashboard-field">
+                Interval Time
+                <input
+                  id="dashboard-passage-interval-input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 3"
+                  required
+                />
+              </label>
+              <label class="dashboard-field">
+                Passage Number
+                <input
+                  id="dashboard-passage-number-input"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="e.g. 5"
+                  required
+                />
+              </label>
+              <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -244,7 +256,16 @@
           aria-labelledby="dashboard-notebook-note-dialog-title"
         >
           <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
-            <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+            <div class="app-dialog-head">
+              <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+              <button
+                type="button"
+                id="dashboard-notebook-note-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close add note dialog"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
             <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
             <label class="dashboard-field">
               Note
@@ -272,7 +293,18 @@
           aria-labelledby="dashboard-incubation-dialog-title"
         >
           <div class="home-dialog-form">
-            <h3 id="dashboard-incubation-dialog-title">Incubation Location</h3>
+            <div class="app-dialog-head">
+              <h3 id="dashboard-incubation-dialog-title">Overnight incubation</h3>
+              <button
+                type="button"
+                id="dashboard-incubation-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close overnight incubation panel"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div id="dashboard-incubation-panel-list" class="dashboard-list home-dialog-list"></div>
+            <h4>Incubation locations</h4>
             <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
             <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
               <input

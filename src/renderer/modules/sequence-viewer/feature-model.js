@@ -1,6 +1,6 @@
 import { getOrfFeaturesForRecord } from './orf-analysis.js';
 import { getCommercialRestrictionFeaturesForRecord } from './restriction-analysis.js';
-import { getFeatureTypeColor } from './feature-types.js';
+import { getFeatureTypeColor, isPrimerBindingFeature } from './feature-types.js';
 import { clamp } from './shared.js';
 
 export function buildFeatureLocationText(feature, sequenceLength) {
@@ -115,7 +115,10 @@ export function assignFeatureLanes(features) {
 }
 
 export function getRenderableFeaturesForRecord(record, options = {}) {
-  const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
+  const allParsedFeatures = Array.isArray(record?.features) ? record.features : [];
+  const parsedFeatures = options?.includePrimers === false
+    ? allParsedFeatures.filter((feature) => !isPrimerBindingFeature(feature?.type))
+    : allParsedFeatures;
   const includeOrf = Boolean(options?.includeOrf);
   const orfFrameFilter = options?.orfFrameFilter;
   const orfFeatures = includeOrf

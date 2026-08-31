@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Host Dialog Screenshot Harness</title>
+  <link rel="stylesheet" href="../../styles.css?v=dialog-screenshot-1" />
+  <link rel="stylesheet" href="../../ui/css/overrides/universal-dialogs.css?v=dialog-screenshot-1" />
+</head>
+<body>
+  <p id="harness-status" role="status">Loading dialog…</p>
+  <script type="module">
+    import { installDialogLayout } from '../../src/renderer/app/dialog-layout.js';
+
+    const params = new URLSearchParams(window.location.search);
+    const dialogId = params.get('dialog') || 'unsaved-changes-overlay';
+    const response = await fetch(`../../index.html?v=dialog-screenshot-1`);
+    const source = new DOMParser().parseFromString(await response.text(), 'text/html');
+    const appShell = source.querySelector('.app-shell');
+    const unsavedOverlay = source.getElementById('unsaved-changes-overlay');
+
+    document.body.replaceChildren(appShell);
+    if (unsavedOverlay) {
+      document.body.append(unsavedOverlay);
+    }
+
+    const dockNav = document.getElementById('app-dock-nav');
+    if (dockNav) {
+      dockNav.innerHTML = ['Home', 'Notebook', 'Samples', 'Assays', 'Papers', 'Sequence', 'Agent']
+        .map((label, index) => `
+          <button class="app-dock-btn${index === 0 ? ' is-active' : ''}" type="button" data-label="${label}" aria-label="${label}">
+            <span aria-hidden="true">${label.slice(0, 1)}</span>
+          </button>
+        `)
+        .join('');
+    }
+    document.getElementById('page-title').textContent = 'Dialog QA';
+    document.getElementById('page-subtitle').textContent = 'Production popup window screenshot';
+
+    document.querySelectorAll('.view').forEach((view) => {
+      view.classList.remove('is-active');
+      view.hidden = true;
+    });
+    document.querySelectorAll('.app-dialog-overlay').forEach((overlay) => {
+      overlay.hidden = true;
+    });
+
+    const target = document.getElementById(dialogId);
+    if (!target) {
+      throw new Error(`Unknown dialog: ${dialogId}`);
+    }
+    target.hidden = false;
+    let ancestor = target.parentElement;
+    while (ancestor) {
+      ancestor.hidden = false;
+      if (ancestor.classList.contains('view')) {
+        ancestor.classList.add('is-active');
+      }
+      ancestor = ancestor.parentElement;
+    }
+
+    installDialogLayout();
+    document.documentElement.dataset.dialogQaReady = 'true';
+    document.documentElement.dataset.dialogQaId = dialogId;
+  </script>
+</body>
+</html>

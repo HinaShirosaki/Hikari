@@ -10,6 +10,8 @@ import {
 } from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
+import { normalizePluginStorage } from '../../lib/plugin-storage.js';
+import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 import {
   normalizeDashboardActiveTimers,
@@ -21,6 +23,7 @@ import {
 } from './dashboard-normalizers.js';
 import { normalizePaperRecord } from './paper-normalizers.js';
 import { normalizeSampleRecord } from './sample-normalizers.js';
+import { migrateProteinBuilderCloningNotebookState } from '../sequence-viewer/protein-builder-cloning-notebook.js';
 
 export { defaultState };
 
@@ -101,6 +104,7 @@ function normalizePluginEntries(rawPlugins) {
         // server, so `serve` only survives alongside one.
         serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
         service,
+        bundled: raw.bundled === true,
         enabled: raw.enabled !== false
       };
     })
@@ -179,7 +183,6 @@ function normalizeSettings(source) {
     agent: {
       ...defaultState.settings.agent,
       ...rawAgent,
-      developerMode: rawAgent.developerMode === true,
       externalSkillsEnabled: rawAgent.externalSkillsEnabled !== false
         && rawAgent.external_skills_enabled !== false,
       disabledExternalSkillNames: rawDisabledExternalSkillNames
@@ -194,7 +197,8 @@ function normalizeSettings(source) {
     sampleTypeHidden: normalizeSampleTypeHidden(rawSettings.sampleTypeHidden),
     preferredJournals,
     preferredJournal: preferredJournals.join('; '),
-    plugins: normalizePluginEntries(rawSettings.plugins)
+    plugins: mergeBundledPluginEntries(normalizePluginEntries(rawSettings.plugins)),
+    pluginStorage: normalizePluginStorage(rawSettings.pluginStorage)
   };
 }
 
@@ -220,7 +224,7 @@ export function normalizeState(parsed) {
   const source = { ...asObject(parsed) };
   delete source.objectGraph;
   delete source.synthesisChemistryDrafts;
-  return {
+  const normalizedState = {
     ...structuredClone(defaultState),
     ...source,
     members: Array.isArray(source.members) ? source.members : [],
@@ -243,7 +247,9 @@ export function normalizeState(parsed) {
         ? source.agentChat.sessionFolderIds
         : {},
       selectedFolderId: String(source.agentChat?.selectedFolderId || 'general'),
-      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : []
+      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : [],
+      folderExpansionInitialized: source.agentChat?.folderExpansionInitialized === true
+        || (Array.isArray(source.agentChat?.expandedFolderIds) && source.agentChat.expandedFolderIds.length > 0)
     },
     paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
@@ -266,4 +272,6 @@ export function normalizeState(parsed) {
       ...asObject(source.inventoryFolders)
     }
   };
+  migrateProteinBuilderCloningNotebookState(normalizedState);
+  return normalizedState;
 }

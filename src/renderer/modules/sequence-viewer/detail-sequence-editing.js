@@ -139,10 +139,14 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
         : (mode === 'replace' ? 'Replace Bases' : 'Insert Bases');
     }
     if (elements.sequenceEditNote) {
-      const note = mode === 'insert'
-        ? `Insert at ${formatInsertionPointLabel(range.start, record.sequence.length)}.`
-        : `${mode === 'delete' ? 'Delete' : 'Replace'} ${formatBaseRangeLabel(range)}.`;
-      elements.sequenceEditNote.innerHTML = `${escapeHtml(note)}${mode === 'delete' ? '' : ' Type the bases to apply.'}`;
+      if (mode === 'replace') {
+        elements.sequenceEditNote.innerHTML = '';
+      } else {
+        const note = mode === 'insert'
+          ? `Insert at ${formatInsertionPointLabel(range.start, record.sequence.length)}.`
+          : `Delete ${formatBaseRangeLabel(range)}.`;
+        elements.sequenceEditNote.innerHTML = `${escapeHtml(note)}${mode === 'insert' ? ' Type the bases to apply.' : ''}`;
+      }
     }
     if (elements.sequenceEditDeleteMessage) {
       elements.sequenceEditDeleteMessage.innerHTML = `

@@ -12,6 +12,7 @@
  */
 
 const { normalizeLineRanges } = require('./paper-line-ranges.js');
+const { ensureObject } = require('../../lib/normalize.js');
 const {
   attachRelatedCommentsToContextBlocks,
   normalizeRelatedComments
@@ -24,12 +25,8 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   return String(value || '');
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function toPositiveInteger(value, fallback = 0) {

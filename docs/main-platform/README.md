@@ -11,7 +11,7 @@ If `docs/agent/` explains the agent subsystem, this folder explains the rest of 
 - provider-neutral agent implementations (`src/main/agent/`); composition lives in `src/main/core/services/create-agent-services.js`
 - MCP/Codex service implementation and initialization (`src/main/core/services/`)
 - PDF→Markdown, paper import, and chemical-import parsing
-- IPC registration (in `src/main/ipc/`) plus small system integrations such as Codex CLI and Telegram bot configuration
+- IPC registration (in `src/main/ipc/`) plus small system integrations such as Codex CLI configuration
 
 ## Recommended reading order
 
@@ -35,7 +35,7 @@ The IPC registrars that expose these helpers to the renderer now live in `src/ma
 
 ## Where it sits in boot
 
-`src/main/main.js` is a 5-line entry. `src/main/core/main-services.js` constructs every main-process service in dependency order and registers all IPC. It:
+`src/main/core/main-services.js` constructs every main-process service in dependency order and registers all IPC. It:
 
 - creates the data helpers (`createMainDataHelpers(...)`) and app paths (`createMainAppPaths(...)`)
 - imports the `storage/` API and the feature-owned Sequence Viewer library API

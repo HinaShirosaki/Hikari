@@ -53,6 +53,18 @@ export function initFixedReactionTool(options = {}) {
     return rowTotal;
   }
 
+  function insertReactionRowBeforeSolvent(row) {
+    const solventRow = getElement(rootDocument, 'fixed-reaction-solvent-row');
+    if (
+      solventRow?.parentElement === rowsHost
+      && typeof rowsHost.insertBefore === 'function'
+    ) {
+      rowsHost.insertBefore(row, solventRow);
+      return;
+    }
+    rowsHost.appendChild(row);
+  }
+
   function bindRowInputs(index) {
     [
       `fixed-reaction-name-${index}`,
@@ -85,7 +97,7 @@ export function initFixedReactionTool(options = {}) {
         element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
       }
     });
-    rowsHost.appendChild(row);
+    insertReactionRowBeforeSolvent(row);
     rowTotal = index;
     bindRowInputs(index);
   }
@@ -99,6 +111,26 @@ export function initFixedReactionTool(options = {}) {
       }
     }
     appendReactionRow();
+  }
+
+  function removeReactionRow(index) {
+    const row = getElement(rootDocument, `fixed-reaction-row-${index}`);
+    if (!row || row.hidden) {
+      return;
+    }
+    [
+      `fixed-reaction-name-${index}`,
+      `fixed-reaction-stock-${index}`,
+      `fixed-reaction-final-${index}`,
+      `fixed-reaction-volume-${index}`
+    ].forEach((id) => {
+      const input = getElement(rootDocument, id);
+      if (input) {
+        input.value = '';
+      }
+    });
+    setText(getElement(rootDocument, `fixed-reaction-output-${index}`), '');
+    row.hidden = true;
   }
 
   function collectReactionRows() {
@@ -146,6 +178,17 @@ export function initFixedReactionTool(options = {}) {
 
   addRowBtn.addEventListener('click', () => {
     revealOrAddRow();
+    renderReaction();
+  });
+
+  addListener(rowsHost, 'click', (event) => {
+    const removeButton = event?.target?.closest?.('[data-fixed-reaction-row-remove]');
+    const row = removeButton?.closest?.('.tool-box-reaction-row');
+    const rowIndex = Number(String(row?.id || '').match(/^fixed-reaction-row-(\d+)$/)?.[1]);
+    if (!rowIndex) {
+      return;
+    }
+    removeReactionRow(rowIndex);
     renderReaction();
   });
 

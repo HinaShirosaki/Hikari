@@ -18,7 +18,7 @@ renderer ─┘
 
 ## Useful entry points
 
-- Main boot: `main/main.js` → `main/app/start-main-app.js` → `main/core/main-services.js`
+- Main boot: `main/app/start-main-app.js` → `main/core/main-services.js`
 - Renderer boot: `renderer/renderer.js` → `renderer/core/start-hikari-core.js`
 - Renderer feature wiring: `renderer/module-manifests/index.js`
 - Renderer state: `renderer/modules/app-state.js` → `renderer/modules/app-state/`

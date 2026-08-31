@@ -1,0 +1,1243 @@
+/* gel-view */
+
+#gel-view {
+  min-height: 0;
+}
+
+.left-rail-template.gel-workspace {
+  --left-rail-main-gap: 24px;
+  min-height: 0;
+  height: 100%;
+}
+
+.gel-main {
+  min-height: 0;
+}
+
+.gel-main-grid {
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+  align-items: start;
+}
+
+.gel-main-stack {
+  display: grid;
+  gap: 28px;
+  align-content: start;
+  min-width: 0;
+}
+
+.gel-side-rail {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+  min-width: 0;
+}
+
+
+/* Keep the Gel workspace frame fixed on desktop. The viewer and tool rail own
+ * their overflow so a large image or long tool list cannot scroll the module
+ * itself. */
+@media (min-width: 981px) {
+  #gel-view {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .left-rail-template.gel-workspace {
+    overflow: hidden;
+  }
+
+  .left-rail-template.gel-workspace > .gel-main.left-rail-template__main {
+    overflow: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  .gel-main-stack {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .gel-main-grid {
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .gel-viewer-panel {
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .gel-viewer-stage {
+    min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .gel-side-rail {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+}
+
+.gel-workspace > .panel,
+.gel-side-rail > .panel {
+  margin-top: 0;
+}
+
+#gel-report-overlay.app-dialog-overlay {
+  position: absolute;
+}
+
+.gel-report-dialog.app-dialog-surface {
+  --app-dialog-width: 1040px;
+  --app-dialog-max-height: calc(100% - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.gel-cell-table-dialog.app-dialog-surface {
+  --app-dialog-width: 900px;
+  --app-dialog-max-height: calc(100% - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.gel-report-dialog-head {
+  align-items: center;
+}
+
+.gel-report-dialog-head p {
+  margin-top: 4px;
+}
+
+.gel-report-dialog-body {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.gel-report-dialog-body .cards {
+  margin: 0;
+}
+
+.gel-setup-panel,
+.gel-viewer-panel {
+  padding: 0;
+}
+
+.gel-setup-panel,
+.gel-viewer-panel,
+.gel-manual-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.gel-lane-profile-panel {
+  min-width: 0;
+}
+
+.gel-lane-profile-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gel-lane-profile-head h3,
+.gel-lane-profile-head p {
+  margin: 0;
+}
+
+.gel-lane-profile-head p {
+  margin-top: 4px;
+}
+
+.gel-lane-profile-picker {
+  min-width: 118px;
+  display: grid;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--gel-label);
+}
+
+.gel-lane-profile-picker select {
+  width: 100%;
+}
+
+.gel-lane-profile-chart-shell {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.gel-lane-profile-chart {
+  display: block;
+  width: 100%;
+  height: 190px;
+  overflow: visible;
+  cursor: crosshair;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-line {
+  stroke: var(--gel-marker);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-dot {
+  fill: var(--gel-marker-solid);
+  stroke: var(--gel-point-border);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-label {
+  fill: var(--gel-marker-label);
+  font-size: 10px;
+  font-family: var(--font-app);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.gel-lane-profile-chart .lane-profile-frame {
+  fill: var(--gel-chart-surface);
+  stroke: var(--gel-chart-border);
+}
+
+.gel-lane-profile-chart .lane-profile-window {
+  fill: var(--gel-chart-selection);
+}
+
+.gel-lane-profile-chart .lane-profile-grid {
+  stroke: var(--gel-chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.gel-lane-profile-chart .lane-profile-path-shadow {
+  fill: none;
+  stroke: var(--gel-path-glow);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-lane-profile-chart .lane-profile-path {
+  fill: none;
+  stroke: var(--gel-path);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-lane-profile-chart .lane-profile-peak {
+  fill: var(--gel-path);
+  stroke: var(--gel-point-border);
+  stroke-width: 2;
+}
+
+.gel-lane-profile-chart .lane-profile-axis-label,
+.gel-lane-profile-chart .lane-profile-empty {
+  fill: var(--gel-label);
+  font-size: 10px;
+  font-family: var(--font-app);
+}
+
+
+.gel-lane-profile-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: var(--gel-label);
+}
+
+.gel-lane-profile-meta span {
+  white-space: nowrap;
+}
+
+.gel-peak-editor-dialog.app-dialog-surface {
+  --app-dialog-width: 1180px;
+  --app-dialog-max-height: 920px;
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
+  grid-template-rows: auto auto minmax(260px, 1fr) auto;
+  overflow: hidden;
+}
+
+.gel-peak-editor-header,
+.gel-peak-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gel-peak-editor-header h3 {
+  margin: 0 0 4px;
+}
+
+.gel-peak-editor-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.gel-peak-editor-lane-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gel-peak-editor-lane-picker select {
+  min-width: 112px;
+}
+
+.gel-peak-editor-modes {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.gel-peak-editor-toolbar .ghost-btn {
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+.gel-peak-editor-toolbar .ghost-btn.is-active {
+  border-color: var(--gel-active-border);
+  background: var(--gel-active-background);
+  color: var(--gel-active-text);
+}
+
+.gel-peak-editor-chart-shell {
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gel-peak-editor-chart {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  cursor: crosshair;
+}
+
+.gel-peak-editor-chart .peak-editor-frame {
+  fill: var(--gel-chart-surface);
+  stroke: var(--gel-chart-border);
+}
+
+.gel-peak-editor-chart .peak-editor-grid {
+  stroke: var(--gel-chart-grid);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+
+.gel-peak-editor-chart .peak-editor-path-shadow {
+  fill: none;
+  stroke: var(--gel-path-glow);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-peak-editor-chart .peak-editor-path {
+  fill: none;
+  stroke: var(--gel-path);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-peak-editor-chart .peak-editor-area {
+  fill: var(--gel-chart-selection);
+  stroke: none;
+}
+
+.gel-peak-editor-chart .peak-editor-baseline {
+  stroke: var(--gel-marker);
+  stroke-width: 2.2;
+}
+
+.gel-peak-editor-chart .peak-editor-baseline-dot,
+.gel-peak-editor-chart .peak-editor-apex,
+.gel-peak-editor-chart .peak-editor-hover-dot {
+  fill: var(--gel-marker-solid);
+  stroke: var(--gel-point-border);
+  stroke-width: 2;
+}
+
+.gel-peak-editor-chart .peak-editor-hover-dot {
+  fill: var(--gel-point-border);
+  stroke: var(--gel-marker);
+  stroke-width: 3;
+  pointer-events: none;
+}
+
+.gel-peak-editor-chart .peak-editor-apex {
+  fill: var(--gel-path);
+}
+
+.gel-peak-editor-chart .peak-editor-divider {
+  stroke: var(--gel-divider);
+  stroke-width: 1.7;
+  stroke-dasharray: 5 4;
+}
+
+.gel-peak-editor-chart .peak-editor-axis-label,
+.gel-peak-editor-chart .peak-editor-baseline-label,
+.gel-peak-editor-chart .peak-editor-divider-label,
+.gel-peak-editor-chart .peak-editor-hover-label,
+.gel-peak-editor-chart .peak-editor-empty {
+  fill: var(--gel-label);
+  font-size: 12px;
+  font-family: var(--font-app);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Capped so a long table cannot squeeze the chart out of the dialog. */
+.gel-peak-editor-table {
+  min-height: 180px;
+  max-height: 34vh;
+  overflow: auto;
+}
+
+.gel-peak-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-peak-table th,
+.gel-peak-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--gel-table-divider);
+  text-align: left;
+}
+
+.gel-peak-table th {
+  color: var(--theme-text-strong);
+}
+
+.gel-peak-table th.num,
+.gel-peak-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gel-setup-panel > p,
+.gel-viewer-panel > p {
+  margin: 0;
+}
+
+.gel-setup-panel #gel-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.gel-browser-panel {
+  margin: 0;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.gel-browser-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 10px;
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.gel-browser-summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-browser-summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-browser-panel[open] .gel-browser-summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-browser-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 0 8px;
+}
+
+.gel-browser-list {
+  display: grid;
+  gap: 0;
+}
+
+.gel-browser-empty {
+  padding: 6px 0 2px;
+}
+
+.gel-browser-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.gel-browser-item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.gel-browser-item-title {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 0.94rem;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gel-browser-item-actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.gel-viewer-panel {
+  min-width: 0;
+}
+
+.gel-viewer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.gel-viewer-toolbar .ghost-btn {
+  border: 1px solid var(--gel-chart-border);
+  background: var(--gel-chart-surface);
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.gel-viewer-toolbar .ghost-btn.is-active,
+.gel-tool-actions .ghost-btn.is-active {
+  border-color: var(--gel-active-border);
+  background: var(--gel-active-background);
+  color: var(--gel-active-text);
+}
+
+.gel-viewer-toolbar .gel-viewer-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.gel-viewer-button-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-crop-mode-icon--cancel,
+.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--start {
+  display: none;
+}
+
+.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--cancel {
+  display: block;
+}
+
+.gel-viewer-stage .cropper-face,
+.gel-viewer-stage .cropper-drag-box {
+  cursor: grab;
+}
+
+.gel-viewer-stage .cropper-container.is-gel-rotating .cropper-face,
+.gel-viewer-stage .cropper-container.is-gel-rotating .cropper-drag-box {
+  cursor: grabbing;
+}
+
+/* Cropper's stock 5px edges/handles are hard to hit, and at the default full-image
+ * selection the top/left/right ones sit flush with the panel edge. Scaling grows the
+ * hit area around the same centre line, and shrinking the shell while cropping moves
+ * the whole cropper inside the stage so those handles are not against its border.
+ * Padding would not work: Cropper sizes its container from the shell's offsetHeight,
+ * which includes padding. */
+.gel-viewer-stage.is-fitted:has(#gel-cropper-image.is-active) .gel-canvas-shell {
+  height: calc(var(--gel-fit-height) - 2 * var(--gel-crop-handle-margin));
+  margin: var(--gel-crop-handle-margin);
+}
+
+.gel-viewer-stage .cropper-line.line-n,
+.gel-viewer-stage .cropper-line.line-s {
+  transform: scaleY(3.2);
+}
+
+.gel-viewer-stage .cropper-line.line-w,
+.gel-viewer-stage .cropper-line.line-e {
+  transform: scaleX(3.2);
+}
+
+.gel-viewer-stage .cropper-point {
+  transform: scale(2.4);
+}
+
+.gel-tool-panel {
+  min-width: 0;
+}
+
+.gel-tool-panel h3 {
+  margin: 0;
+}
+
+.gel-tool-groups {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.gel-tool-group {
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.gel-tool-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 32px;
+  padding: 8px 0;
+  color: var(--gel-label);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  list-style: none;
+}
+
+.gel-tool-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-tool-group summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-tool-group[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 34px;
+  gap: 8px;
+  padding: 0 0 12px;
+}
+
+.gel-tool-actions .ghost-btn,
+.gel-tool-footer .ghost-btn {
+  width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--gel-chart-border);
+  background: var(--gel-chart-surface);
+  font-size: 0.8rem;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.gel-tool-field {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.gel-tool-field input {
+  flex: 0 0 88px;
+  min-width: 0;
+}
+
+.gel-tool-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 34px;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.gel-viewer-stage {
+  --gel-lane-label-width: 118px;
+  --gel-crop-handle-margin: 12px;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.gel-image-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  align-items: start;
+}
+
+.gel-viewer-stage.has-lane-table .gel-image-row {
+  grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
+}
+
+.gel-lane-table-label-spacer {
+  width: var(--gel-lane-label-width);
+  min-width: var(--gel-lane-label-width);
+}
+
+.gel-lane-table-shell {
+  display: grid;
+  grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
+  column-gap: 0;
+  row-gap: 10px;
+  min-width: 0;
+}
+
+.gel-lane-table-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gel-lane-table-toolbar p {
+  margin: 0;
+}
+
+.gel-lane-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gel-lane-table-ladder-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.gel-lane-table-ladder-choice input {
+  margin: 0;
+}
+
+.gel-lane-table-wrap {
+  overflow-x: auto;
+}
+
+.gel-lane-table-labels {
+  display: grid;
+  grid-auto-rows: 40px;
+  min-width: 0;
+}
+
+.gel-lane-table-label-head,
+.gel-lane-table-label-cell {
+  border: 1px solid var(--gel-chart-border);
+  padding: 0;
+  text-align: center;
+  background: var(--gel-table-background);
+}
+
+.gel-lane-table-label-head {
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gel-table-header-text);
+  background: var(--gel-table-header-background);
+}
+
+.gel-lane-table-label-cell {
+  background: var(--gel-table-muted-background);
+}
+
+.gel-lane-table-grid-shell,
+.gel-lane-table-grid-offsets {
+  min-width: 0;
+}
+
+.gel-lane-table-grid-offsets {
+  box-sizing: border-box;
+}
+
+.gel-lane-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.gel-lane-table th,
+.gel-lane-table td {
+  border: 1px solid var(--gel-chart-border);
+  padding: 0;
+  height: 40px;
+  text-align: center;
+  vertical-align: middle;
+  background: var(--gel-table-background);
+}
+
+.gel-lane-table thead th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gel-table-header-text);
+  background: var(--gel-table-header-background);
+}
+
+.gel-lane-table tbody th {
+  font-weight: 500;
+  background: var(--gel-table-muted-background);
+}
+
+.gel-lane-table-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  color: var(--theme-text);
+  text-align: center;
+}
+
+.gel-lane-table-input::placeholder {
+  color: var(--gel-table-placeholder);
+}
+
+.gel-lane-table-input:focus {
+  outline: none;
+  background: var(--gel-point-border);
+}
+
+/* Extracted from ui/css/themes/modes.css */
+.gel-canvas-shell {
+  border: 1px solid var(--gel-chart-border);
+  border-radius: 10px;
+  background: var(--gel-table-background);
+  overflow: visible;
+  min-height: 0;
+  max-height: none;
+  height: auto;
+}
+
+#gel-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: 420px;
+}
+
+/* No min-height: crop-controller sizes this to the stage box, and a minimum
+ * would push the cropper container past the stage and bring back scrollbars. */
+#gel-cropper-image {
+  display: none;
+  width: 100%;
+  height: auto;
+}
+
+#gel-cropper-image.is-active {
+  display: block;
+}
+
+body.theme-night .gel-canvas-shell {
+  border-color: var(--gel-table-border);
+  background: var(--gel-table-background);
+}
+
+body.theme-night .gel-lane-profile-picker {
+  color: var(--gel-label);
+}
+
+body.theme-night .gel-lane-profile-chart-shell {
+  border: 0;
+  background: transparent;
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-frame {
+  fill: var(--gel-chart-surface);
+  stroke: var(--gel-chart-border);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-grid {
+  stroke: var(--gel-chart-grid);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-window {
+  fill: var(--gel-chart-selection);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-path-shadow {
+  stroke: var(--gel-path-glow);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-path {
+  stroke: var(--gel-path);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-peak {
+  fill: var(--gel-path);
+  stroke: var(--gel-point-border);
+}
+
+body.theme-night .gel-lane-profile-chart .lane-profile-axis-label,
+body.theme-night .gel-lane-profile-chart .lane-profile-empty,
+body.theme-night .gel-lane-profile-meta {
+  fill: var(--gel-label);
+  color: var(--gel-label);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-frame {
+  fill: var(--gel-chart-surface);
+  stroke: var(--gel-chart-border);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-grid {
+  stroke: var(--gel-chart-grid);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-path-shadow {
+  stroke: var(--gel-path-glow);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-path,
+body.theme-night .gel-peak-editor-chart .peak-editor-apex {
+  stroke: var(--gel-path);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-axis-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-baseline-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-divider-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-hover-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-empty {
+  fill: var(--gel-label);
+}
+
+body.theme-night .gel-peak-table th,
+body.theme-night .gel-peak-table td {
+  border-color: var(--gel-table-border);
+}
+
+body.theme-night .gel-tool-groups,
+body.theme-night .gel-tool-group {
+  border-color: var(--gel-chart-border);
+}
+
+body.theme-night .gel-viewer-toolbar .ghost-btn,
+body.theme-night .gel-tool-actions .ghost-btn,
+body.theme-night .gel-tool-footer .ghost-btn {
+  border-color: var(--gel-chart-border);
+  background: var(--gel-table-background);
+}
+
+body.theme-night .gel-viewer-toolbar .ghost-btn.is-active,
+body.theme-night .gel-tool-actions .ghost-btn.is-active {
+  border-color: var(--gel-active-border);
+  background: var(--gel-active-background);
+  color: var(--gel-active-text);
+}
+
+body.theme-night .gel-lane-table th,
+body.theme-night .gel-lane-table td {
+  border-color: var(--gel-table-border);
+  background: var(--gel-table-background);
+}
+
+body.theme-night .gel-lane-table thead th {
+  color: var(--gel-table-header-text);
+  background: var(--gel-table-header-background);
+}
+
+body.theme-night .gel-lane-table-label-head {
+  color: var(--gel-table-header-text);
+  background: var(--gel-table-header-background);
+}
+
+body.theme-night .gel-lane-table-label-cell {
+  background: var(--gel-table-muted-background);
+}
+
+body.theme-night .gel-lane-table-input {
+  color: var(--gel-table-text);
+}
+
+body.theme-night .gel-lane-table-input::placeholder {
+  color: var(--gel-table-placeholder);
+}
+
+body.theme-night .gel-lane-table-input:focus {
+  background: var(--gel-table-focus-background);
+}
+
+@media (min-width: 1100px) {
+  .gel-main-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
+    align-items: stretch;
+  }
+
+}
+
+/* Extracted from ui/css/overrides/cross-view-fixes.css */
+#gel-form label {
+  min-width: 0;
+}
+
+#gel-form #gel-image-file {
+  width: 100%;
+}
+
+/* Fit the gel to the visible stage box (see fitViewerToStage in lane-table.js)
+ * so a slim crop is never scaled past the bottom edge. */
+.gel-viewer-stage.is-fitted .gel-image-row {
+  max-width: var(--gel-fit-width);
+}
+
+/* Only the label and table columns follow the gel width — a third filler track
+ * takes the rest so the toolbar, which spans every track, keeps the full stage.
+ * Capping the whole shell wrapped the toolbar onto extra rows, which ate the
+ * height the gel is fitted against, which narrowed the toolbar further. */
+.gel-viewer-stage.is-fitted .gel-lane-table-shell {
+  grid-template-columns:
+    var(--gel-lane-label-width)
+    minmax(0, calc(var(--gel-fit-width) - var(--gel-lane-label-width)))
+    minmax(0, 1fr);
+}
+
+.gel-viewer-stage.is-fitted .gel-canvas-shell {
+  height: var(--gel-fit-height);
+  min-height: 0;
+}
+
+.gel-viewer-stage.is-fitted #gel-canvas,
+.gel-viewer-stage.is-fitted #gel-cropper-image {
+  min-height: 0;
+  max-height: 100%;
+}
+
+#gel-form .gel-slider-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+}
+
+#gel-form .gel-slider-field input[type='range'] {
+  width: 100%;
+}
+
+#gel-form .gel-slider-field .small-note {
+  min-width: 34px;
+  text-align: right;
+}
+
+#gel-form .gel-slider-label {
+  grid-column: 1 / -1;
+}
+
+#gel-form .gel-compact-btn {
+  flex: 0 1 auto;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (max-width: 960px) {
+  #gel-form {
+    grid-template-columns: 1fr;
+  }
+
+  #gel-form .form-actions {
+    width: 100%;
+  }
+}
+
+@media (max-width: 720px) {
+  .gel-report-dialog.app-dialog-surface {
+    --app-dialog-max-height: calc(100% - 24px);
+    --app-dialog-padding: 14px;
+  }
+
+  .gel-lane-profile-head {
+    flex-direction: column;
+  }
+
+  .gel-lane-profile-picker {
+    min-width: 0;
+  }
+
+  .gel-peak-editor-dialog.app-dialog-surface {
+    --app-dialog-padding: 12px;
+  }
+
+  .gel-peak-editor-header {
+    align-items: flex-start;
+  }
+
+  .gel-peak-editor-chart {
+    height: 340px;
+  }
+
+  .gel-lane-table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gel-lane-table-actions {
+    justify-content: flex-start;
+  }
+
+  .gel-lane-table-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-lane-table-labels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-viewer-stage.has-lane-table .gel-image-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gel-lane-table-label-spacer {
+    display: none;
+  }
+}
+
+#gel-view .panel,
+#gel-view .card,
+.gel-canvas-shell {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.gel-cell-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gel-cell-snr-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gel-cell-snr-label input {
+  width: 64px;
+}
+
+.gel-cell-table-host {
+  min-height: 0;
+  overflow: auto;
+}
+
+.gel-cell-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-cell-table th,
+.gel-cell-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--gel-table-divider);
+  text-align: left;
+}
+
+.gel-cell-table th.num,
+.gel-cell-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gel-cell-table tbody tr.is-has-band td.gel-cell-intensity {
+  color: var(--gel-band-positive);
+  font-weight: 600;
+}
+
+.gel-cell-table tbody tr.is-empty td {
+  color: var(--gel-empty-text);
+}
+
+.gel-cell-table tbody tr.is-has-band td.gel-cell-hasband {
+  color: var(--gel-band-positive);
+  font-weight: 600;
+}
+
+.gel-cell-table tbody tr.is-empty td.gel-cell-hasband {
+  color: var(--gel-empty-text);
+}

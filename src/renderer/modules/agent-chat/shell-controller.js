@@ -44,6 +44,10 @@ const QUICK_PROMPT_PRESETS = {
     placeholder: 'Ask Hikari about this notebook page.',
     prompts: [
       {
+        label: 'Research & append',
+        prompt: 'Read the complete hidden context for this active notebook page before doing anything. Identify only information that would make this specific experiment more executable or traceable. Search Hikari local data first: use inventory_lookup with exact linked sample or protein ids/codes for recorded concentration, lot, storage, notes, molecular weight, or other available fields; use chemical_lookup for local reagent stock. Use literature_search only when trustworthy external evidence is needed. For any named buffer without a formulation, such as PBS, prepare a clearly labeled recipe and state the assumed final volume, concentration, and pH. Never invent missing measurements or records. Then call notebook_append once with the active entry id (or “unsaved draft”), page title, project, protocol, current Updated at timestamp when present, a concise section title, evidence-backed markdown, rationale, and exact source records or URLs. Propose an append for my approval; do not create a new page, replace existing notes, or merely summarize.'
+      },
+      {
         label: 'Summarize page',
         prompt: 'Summarize this notebook page and flag any missing experimental details.'
       },
@@ -191,12 +195,18 @@ export function createAgentChatShellController({
     const shouldStickToBottom = options.forceScroll === true
       || dom.historyNode.childElementCount === 0
       || isHistoryNearBottom();
+    if (dom.questionDock) {
+      const questionHtml = renderingModule.renderActiveUserQuestion(visibleMessages, safeText);
+      dom.questionDock.innerHTML = questionHtml;
+      dom.questionDock.hidden = !questionHtml;
+    }
     renderingModule.renderHistory({
       historyNode: dom.historyNode,
       messages: visibleMessages,
       state,
       safeText,
-      notebookDraftAdapter
+      notebookDraftAdapter,
+      showUserQuestions: !dom.questionDock
     });
     if (shouldStickToBottom) {
       scrollHistoryToBottom(options.smoothScroll === true);
@@ -288,30 +298,27 @@ export function createAgentChatShellController({
   }
 
   function applyInFlightControls() {
+    const sendPending = runtime.sendPending === true;
+    const sessionTransitionPending = runtime.sessionTransitionPending === true;
+    const composerBusy = runtime.inFlight || sendPending || sessionTransitionPending;
+    const localRequestInFlight = runtime.inFlight
+      && !trimText(state.agentChat?.currentSessionId, 120);
     if (dom.newChatBtn) {
-      dom.newChatBtn.disabled = false;
+      // Saved chats can be switched while their request runs. An unpersisted local
+      // draft has no separate history to return to, so keep it selected until its
+      // request settles instead of letting a second draft inherit the empty ID.
+      dom.newChatBtn.disabled = sendPending || sessionTransitionPending || localRequestInFlight;
     }
-    dom.sendBtn.disabled = runtime.inFlight;
+    dom.sendBtn.disabled = composerBusy;
     if (dom.stopBtn) {
       dom.stopBtn.hidden = !runtime.inFlight;
       dom.stopBtn.disabled = !runtime.inFlight || runtime.stopInProgress;
       dom.stopBtn.textContent = runtime.stopInProgress ? 'Stopping...' : 'Stop';
     }
-    [
-      dom.developerTestToolsBtn,
-      dom.developerRunToolBtn,
-      dom.developerToolSelect,
-      dom.developerToolMessageInput,
-      dom.developerRefreshContextBtn,
-      dom.developerUseMockResponseBtn,
-      dom.developerMockResponseInput
-    ].filter(Boolean).forEach((node) => {
-      node.disabled = runtime.inFlight;
-    });
     if (dom.projectSelect) {
-      dom.projectSelect.disabled = runtime.inFlight;
+      dom.projectSelect.disabled = composerBusy;
     }
-    dom.input.disabled = runtime.inFlight;
+    dom.input.disabled = composerBusy;
     sessionManager?.renderSessionList();
   }
 

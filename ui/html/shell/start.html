@@ -8,6 +8,17 @@
     'wasm-unsafe-eval' is for the onnxruntime colony-counter model; 'unsafe-inline'
     on style-src covers the <style> blocks the print and sequence-preview documents
     build at runtime. blob: covers generated PDFs (print iframe + viewer popup).
+
+    frame-src also carries loopback http for served plugins, which run on
+    http://127.0.0.1:<random port> from the app's own plugin server. Without it
+    a served plugin's frame is blocked outright and its view renders empty. The
+    port is OS-assigned, hence the wildcard. IPv6 is deliberately absent: CSP
+    host-source has no grammar for an address literal, so `http://[::1]:*` is
+    dropped as invalid, and the plugin server binds 127.0.0.1 anyway. The frame
+    still gets nothing but its own origin, and plugin-loader.js re-checks the URL with
+    isSameOriginSafeUrl() before it decides the sandbox. Remote (`embed`)
+    plugins would additionally need `https:` here, and deliberately do not have
+    it — see docs/plugins/plugin-system.md §5.5.
   -->
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
@@ -16,7 +27,7 @@
     img-src 'self' data: blob:;
     font-src 'self' data:;
     connect-src 'self' data: blob:;
-    frame-src 'self' blob:;
+    frame-src 'self' blob: http://127.0.0.1:*;
     object-src 'none';
     base-uri 'none';
     form-action 'none';

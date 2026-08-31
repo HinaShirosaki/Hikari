@@ -8,7 +8,6 @@ import { labCommonInventoryManifest } from './lab-common-inventory.js';
 import { personalInventoryManifest } from './personal-inventory.js';
 import { sampleRegistryManifest } from './sample-registry.js';
 import { assayManifest } from './assay.js';
-import { gelManifest } from './gel.js';
 import { sequenceViewerManifest } from './sequence-viewer.js';
 import { toolBoxManifest } from './tool-box.js';
 import { settingsManifest } from './settings.js';
@@ -33,8 +32,7 @@ export const inventoryModuleManifests = [
 ];
 
 export const analysisModuleManifests = [
-  assayManifest,
-  gelManifest
+  assayManifest
 ];
 
 export const sequenceModuleManifests = [

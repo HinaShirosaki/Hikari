@@ -1,0 +1,59 @@
+/* Gel image, lane-profile, peak-editor, and quantification colors. */
+
+:root {
+  --gel-label: #5b6f89;
+  --gel-marker: rgba(250, 204, 21, 0.95);
+  --gel-marker-solid: #facc15;
+  --gel-marker-label: rgba(90, 60, 0, 0.95);
+  --gel-chart-surface: rgba(255, 255, 255, 0.5);
+  --gel-chart-border: rgba(53, 99, 153, 0.2);
+  --gel-chart-border-strong: rgba(53, 99, 153, 0.24);
+  --gel-chart-selection: rgba(56, 189, 248, 0.12);
+  --gel-chart-grid: rgba(91, 111, 137, 0.18);
+  --gel-path: #0f766e;
+  --gel-path-glow: rgba(34, 197, 94, 0.18);
+  --gel-point-border: rgba(255, 255, 255, 0.9);
+  --gel-divider: rgba(244, 63, 94, 0.88);
+  --gel-overlay: rgba(15, 23, 42, 0.38);
+  --gel-dialog-background: var(--theme-surface);
+  --gel-dialog-shadow: rgba(15, 23, 42, 0.18);
+  --gel-active-border: rgba(22, 163, 74, 0.42);
+  --gel-active-background: rgba(187, 247, 208, 0.48);
+  --gel-active-text: #14532d;
+  --gel-table-border: rgba(53, 99, 153, 0.2);
+  --gel-table-background: rgba(255, 255, 255, 0.7);
+  --gel-table-header-background: rgba(232, 240, 250, 0.94);
+  --gel-table-muted-background: rgba(245, 248, 252, 0.94);
+  --gel-table-header-text: #46556c;
+  --gel-table-text: var(--theme-text);
+  --gel-table-placeholder: #90a0b5;
+  --gel-table-focus-background: rgba(255, 255, 255, 0.9);
+  --gel-table-divider: rgba(148, 163, 184, 0.25);
+  --gel-band-positive: rgb(34, 139, 70);
+  --gel-empty-text: rgba(100, 116, 139, 0.85);
+}
+
+body.theme-night {
+  --gel-label: #9db2d5;
+  --gel-chart-surface: rgba(11, 19, 35, 0.4);
+  --gel-chart-border: rgba(145, 174, 214, 0.2);
+  --gel-chart-border-strong: rgba(145, 174, 214, 0.3);
+  --gel-chart-selection: rgba(56, 189, 248, 0.14);
+  --gel-chart-grid: rgba(157, 178, 213, 0.2);
+  --gel-path: #5eead4;
+  --gel-path-glow: rgba(45, 212, 191, 0.18);
+  --gel-point-border: rgba(15, 23, 42, 0.88);
+  --gel-overlay: rgba(2, 6, 23, 0.72);
+  --gel-dialog-background: rgba(15, 23, 42, 0.98);
+  --gel-active-border: rgba(74, 222, 128, 0.42);
+  --gel-active-background: rgba(20, 83, 45, 0.46);
+  --gel-active-text: #bbf7d0;
+  --gel-table-border: rgba(145, 174, 214, 0.32);
+  --gel-table-background: rgba(20, 33, 57, 0.68);
+  --gel-table-header-background: rgba(34, 51, 80, 0.96);
+  --gel-table-muted-background: rgba(25, 40, 66, 0.96);
+  --gel-table-header-text: #d9e5f7;
+  --gel-table-text: #f6f8fc;
+  --gel-table-placeholder: #8da6ca;
+  --gel-table-focus-background: rgba(34, 51, 80, 0.92);
+}

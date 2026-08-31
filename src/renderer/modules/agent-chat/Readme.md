@@ -11,16 +11,12 @@ The rest of the folder is split by responsibility:
 - `shell-controller.js`: shared UI state, render calls, scroll behavior, status text, and in-flight locking.
 - `event-bindings.js`: DOM event listeners that connect controls to controllers.
 - `composer-attachments.js`: file/image attachment state, rendering, and request text summaries.
-- `payload-builder.js`: request envelopes for agent IPC and developer context previews.
+- `payload-builder.js`: request envelopes for agent IPC.
 - `state-sync.js`: pre-request data autosave and state snapshot creation.
 - `agent-request-controller.js`: normal send, stop, live-progress persistence, and assistant response persistence.
 - `live-progress-text.js` and `live-progress-state.js`: live agent progress labels, row updates, and trace row cloning.
 - `assistant-questions.js`: Codex clarification question state and next-turn answer submission.
 - `history-actions.js` and `history-notebook-actions.js`: click handlers for rendered chat actions and notebook draft actions.
-- `developer-context.js`: developer context preview rendering and backend refresh.
-- `developer-mock-response.js`: developer-mode mock response injection.
-- `developer-tool-tests.js`: developer-mode manual tool smoke tests.
-- `developer-tools.js`: pure helpers for developer previews and tool-test message rendering.
 - `rendering.js`: public `renderHistory(...)` entry point for chat history rendering.
 - `rendering-attachments.js`: user attachment pill rendering.
 - `rendering-empty-state.js`: empty chat prompt rendering.

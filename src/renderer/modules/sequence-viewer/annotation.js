@@ -208,6 +208,11 @@ function buildStatusSummary(dnaCount, proteinCount) {
   return `Annotated ${parts[0]} and ${parts[1]}.`;
 }
 
+function buildAlreadyPresentStatus(matchCount) {
+  const safeCount = Math.max(0, Math.round(Number(matchCount) || 0));
+  return `All ${safeCount.toLocaleString()} SQL-backed annotation match${safeCount === 1 ? '' : 'es'} ${safeCount === 1 ? 'is' : 'are'} already present on this sequence.`;
+}
+
 export function createSequenceViewerAnnotationController(config = {}) {
   const state = config?.state || {};
   const getSelectedRecord = config?.getSelectedRecord || (() => null);
@@ -248,8 +253,7 @@ export function createSequenceViewerAnnotationController(config = {}) {
       const response = await bridge.sequenceLibraryAnnotate({
         storagePath,
         sequence: record.sequence,
-        topology: normalizeTopology(record.topology || 'linear'),
-        excludeEntryId: cleanText(state.activeEntryId, 200)
+        topology: normalizeTopology(record.topology || 'linear')
       });
       if (!response?.ok) {
         throw new Error(response?.error || 'Sequence annotation failed.');
@@ -266,7 +270,8 @@ export function createSequenceViewerAnnotationController(config = {}) {
       const retainedFeatures = removeSqlAnnotationFeatures(previousFeatures);
       const nextDnaFeatures = buildDnaAnnotationFeatures(response?.dnaMatches, current.sequence.length);
       const nextProteinFeatures = buildProteinAnnotationFeatures(response?.proteinMatches, current.sequence.length);
-      const nextAutoFeatures = [...nextDnaFeatures, ...nextProteinFeatures]
+      const matchedFeatures = [...nextDnaFeatures, ...nextProteinFeatures];
+      const nextAutoFeatures = matchedFeatures
         .filter((feature) => !retainedFeatures.some((existingFeature) => (
           areFeaturesEquivalent(existingFeature, feature, current.sequence.length)
         )));
@@ -282,9 +287,11 @@ export function createSequenceViewerAnnotationController(config = {}) {
         state.selectedFeatureIndex = -1;
         detailController?.renderActiveRecord?.();
         if (hadPreviousSqlFeatures && state.activeEntryId) {
-          await persistFeatureMutation(current, 'Cleared SQL-derived annotations.');
+          await persistFeatureMutation(current, 'Cleared SQL-derived annotations.', { silentSuccess: true });
         }
-        setStatus('No SQL-backed annotations matched this sequence.');
+        setStatus(matchedFeatures.length
+          ? buildAlreadyPresentStatus(matchedFeatures.length)
+          : 'No SQL-backed annotations matched this sequence.');
         return;
       }
 
@@ -298,10 +305,13 @@ export function createSequenceViewerAnnotationController(config = {}) {
 
       const dnaCount = nextAutoFeatures.filter((feature) => feature.source === FEATURE_SOURCE_SQL_ANNOTATION_DNA).length;
       const proteinCount = nextAutoFeatures.filter((feature) => feature.source === FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN).length;
-      const summary = buildStatusSummary(dnaCount, proteinCount);
+      const duplicateCount = Math.max(0, matchedFeatures.length - nextAutoFeatures.length);
+      const summary = `${buildStatusSummary(dnaCount, proteinCount)}${duplicateCount
+        ? ` ${duplicateCount.toLocaleString()} other match${duplicateCount === 1 ? '' : 'es'} ${duplicateCount === 1 ? 'was' : 'were'} already present.`
+        : ''}`;
 
       if (state.activeEntryId) {
-        await persistFeatureMutation(current, summary);
+        await persistFeatureMutation(current, summary, { silentSuccess: true });
       } else {
         setStatus(`${summary} Save the record to persist changes.`);
       }

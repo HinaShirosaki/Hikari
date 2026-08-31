@@ -11,7 +11,7 @@ export const DEFAULT_CHART_PALETTE = Object.freeze([
 
 const POINT_SHAPES = Object.freeze(['circle', 'square', 'triangle', 'diamond', 'cross']);
 const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
-const FRAME_STYLES = Object.freeze(['box', 'l-shape', 'none']);
+const FRAME_STYLES = Object.freeze(['offset', 'box', 'l-shape', 'none']);
 const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
 const SCALE_TYPES = Object.freeze(['linear', 'log10', 'log2', 'ln']);
 const TEXT_BASELINES = Object.freeze(['baseline', 'super', 'sub']);
@@ -23,6 +23,7 @@ const TICK_FORMATS = Object.freeze(['auto', 'fixed1', 'fixed2', 'sci', 'si', 'po
 const MARKER_FILLS = Object.freeze(['filled', 'open']);
 const BAR_MODES = Object.freeze(['group', 'stack']);
 const REF_AXES = Object.freeze(['y', 'x']);
+const CHART_TYPES = Object.freeze(['auto', 'line', 'bar']);
 
 export const CHART_FONT_FAMILY = 'Arial, sans-serif';
 
@@ -58,9 +59,18 @@ function sanitizeChartTextStyle(input) {
 
 export function createDefaultChartStyle() {
   return {
+    chartType: 'auto',
     xColumn: 'auto',
     yColumn: 'auto',
     seriesColumn: 'auto',
+    xTitle: '',
+    yTitle: '',
+    // Axis-title placement. null = Plotly's own centred title with its automatic
+    // standoff; a number slides the title along its axis (0-1) or away from it (px).
+    xTitlePos: null,
+    yTitlePos: null,
+    xTitleOffset: null,
+    yTitleOffset: null,
     xScale: 'linear',
     yScale: 'linear',
     xRange: { auto: true, min: null, max: null },
@@ -75,7 +85,7 @@ export function createDefaultChartStyle() {
     lineStyle: 'solid',
     lineWidth: 2.5,
     curve: 'curveMonotoneX',
-    frameStyle: 'l-shape',
+    frameStyle: 'offset',
     frameStroke: '#000000',
     frameStrokeWidth: 2,
     backgroundColor: '#ffffff',
@@ -110,6 +120,12 @@ function clampFinite(value) {
   if (value === null || value === undefined || value === '') return null;
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+// Optional numeric field: blank stays blank (auto), a number is clamped.
+function clampOptional(value, min, max) {
+  const num = clampFinite(value);
+  return num === null ? null : Math.max(min, Math.min(max, num));
 }
 
 function clampNumber(value, min, max, fallback) {
@@ -173,9 +189,16 @@ export function normalizeChartStyle(input) {
     });
   }
   return {
+    chartType: sanitizeEnum(input.chartType, CHART_TYPES, base.chartType),
     xColumn: typeof input.xColumn === 'string' ? input.xColumn : base.xColumn,
     yColumn: typeof input.yColumn === 'string' ? input.yColumn : base.yColumn,
     seriesColumn: typeof input.seriesColumn === 'string' ? input.seriesColumn : base.seriesColumn,
+    xTitle: typeof input.xTitle === 'string' ? input.xTitle.slice(0, 200) : base.xTitle,
+    yTitle: typeof input.yTitle === 'string' ? input.yTitle.slice(0, 200) : base.yTitle,
+    xTitlePos: clampOptional(input.xTitlePos, 0, 1),
+    yTitlePos: clampOptional(input.yTitlePos, 0, 1),
+    xTitleOffset: clampOptional(input.xTitleOffset, 0, 200),
+    yTitleOffset: clampOptional(input.yTitleOffset, 0, 200),
     xScale: sanitizeEnum(migrateScale(input.xScale), SCALE_TYPES, base.xScale),
     yScale: sanitizeEnum(migrateScale(input.yScale), SCALE_TYPES, base.yScale),
     xRange: sanitizeRange(input.xRange),
@@ -197,8 +220,8 @@ export function normalizeChartStyle(input) {
     sizeAuto: input.sizeAuto !== false,
     frameWidth: clampNumber(input.frameWidth, 320, 2000, base.frameWidth),
     frameHeight: clampNumber(input.frameHeight, 180, 1200, base.frameHeight),
-    showVerticalGrid: input.showVerticalGrid !== false,
-    showHorizontalGrid: input.showHorizontalGrid !== false,
+    showVerticalGrid: input.showVerticalGrid === true,
+    showHorizontalGrid: input.showHorizontalGrid === true,
     gridColor: sanitizeColor(input.gridColor, base.gridColor),
     gridStrokeWidth: clampNumber(input.gridStrokeWidth, 0, 6, base.gridStrokeWidth),
     title: typeof input.title === 'string' ? input.title.slice(0, 200) : base.title,
@@ -222,6 +245,7 @@ export function normalizeChartStyle(input) {
 }
 
 export const CHART_STYLE_OPTIONS = Object.freeze({
+  chartTypes: CHART_TYPES,
   pointShapes: POINT_SHAPES,
   lineStyles: LINE_STYLES,
   frameStyles: FRAME_STYLES,

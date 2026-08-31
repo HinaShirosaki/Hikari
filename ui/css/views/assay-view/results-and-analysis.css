@@ -1,0 +1,1006 @@
+/* Extracted from ui/css/themes/modes.css */
+.assay-plate-preview {
+  display: grid;
+  gap: 8px;
+  min-height: 0;
+}
+
+.assay-create-preview-panel .assay-plate-preview {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.assay-mode-switch {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.assay-axis-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.assay-axis-switch {
+  display: grid;
+  gap: 6px;
+  align-content: stretch;
+}
+
+.assay-axis-switch .assay-mode-switch {
+  justify-self: stretch;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 10px;
+}
+
+.assay-axis-switch .assay-mode-switch > button {
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border-radius: 7px;
+}
+
+.assay-sample-picker {
+  position: fixed;
+  z-index: 2600;
+  width: min(320px, calc(100vw - 24px));
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--assay-plate-line);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-surface-subtle) 8%);
+  box-shadow: 0 18px 40px var(--assay-plate-shadow);
+}
+
+.assay-sample-picker[hidden] {
+  display: none !important;
+}
+
+.assay-sample-picker-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--theme-text-strong);
+  font-size: 0.78rem;
+}
+
+.assay-sample-picker-head strong {
+  font-size: 0.92rem;
+}
+
+.assay-sample-picker-search-input {
+  width: 100%;
+  min-width: 0;
+}
+
+.assay-sample-picker-list {
+  display: grid;
+  gap: 6px;
+  max-height: min(46vh, 360px);
+  overflow: auto;
+}
+
+.assay-sample-picker-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--assay-plate-line-soft);
+  background: var(--assay-plate-surface);
+  color: var(--theme-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.assay-sample-picker-item:hover,
+.assay-sample-picker-item:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-elevated));
+  border-color: var(--assay-plate-line);
+}
+
+.assay-sample-picker-item.is-current {
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
+}
+
+.assay-sample-picker-item-title {
+  font-weight: 650;
+  font-size: 0.86rem;
+}
+
+.assay-sample-picker-item-meta {
+  color: var(--theme-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.assay-sample-picker-clear .assay-sample-picker-item-title {
+  color: var(--assay-plate-danger);
+}
+
+.assay-sample-picker-empty {
+  margin: 0;
+}
+
+.assay-serial-dilution-overlay,
+.assay-result-import-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  background: var(--assay-plate-overlay);
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  overflow: auto;
+  padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
+}
+
+.assay-serial-dilution-overlay[hidden],
+.assay-result-import-overlay[hidden] {
+  display: none !important;
+}
+
+.assay-serial-dilution-dialog,
+.assay-result-import-dialog {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100svh - 90px);
+  overflow: auto;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--assay-plate-line);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  box-shadow: 0 18px 40px var(--assay-plate-shadow);
+}
+
+.assay-serial-dilution-head,
+.assay-result-import-head {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.assay-serial-dilution-head h3,
+.assay-result-import-head h3 {
+  margin: 0;
+}
+
+.assay-serial-dilution-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.assay-serial-dilution-controls label {
+  display: grid;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.assay-serial-dilution-content {
+  display: grid;
+  gap: 12px;
+}
+
+.assay-result-import-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.assay-result-import-candidates {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.assay-result-import-choice {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--assay-plate-line);
+  background: var(--assay-plate-surface-soft);
+  color: var(--theme-text);
+  text-align: left;
+}
+
+.assay-result-import-choice:hover,
+.assay-result-import-choice:focus-visible,
+.assay-result-import-choice.is-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 42%, var(--theme-surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
+}
+
+.assay-result-import-choice strong,
+.assay-result-import-choice span {
+  display: block;
+}
+
+.assay-result-import-preview {
+  min-width: 0;
+  overflow: auto;
+}
+
+.assay-result-import-preview .assay-tabulator .tabulator-cell {
+  cursor: default;
+}
+
+.assay-result-import-actions {
+  justify-content: flex-end;
+}
+
+.assay-serial-dilution-stock-table-wrap,
+.assay-serial-dilution-table-wrap {
+  overflow: auto;
+}
+
+.assay-serial-dilution-stock-table,
+.assay-serial-dilution-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.assay-serial-dilution-stock-table {
+  min-width: 320px;
+}
+
+.assay-serial-dilution-sample {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--assay-plate-line);
+  background: var(--assay-plate-surface-soft);
+}
+
+.assay-serial-dilution-sample-head {
+  display: block;
+}
+
+.assay-serial-dilution-sample-head h4 {
+  margin: 0;
+}
+
+.assay-serial-dilution-stock-table input {
+  width: 100%;
+  min-width: 140px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.assay-serial-dilution-stock-table input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.assay-serial-dilution-stock-table input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.assay-serial-dilution-stock-table th,
+.assay-serial-dilution-stock-table td,
+.assay-serial-dilution-table th,
+.assay-serial-dilution-table td {
+  padding: 8px 10px;
+  border: 1px solid var(--assay-plate-line-soft);
+  text-align: left;
+  font-size: 0.78rem;
+  vertical-align: top;
+}
+
+.assay-serial-dilution-table {
+  min-width: 720px;
+}
+
+.assay-serial-dilution-table-compact {
+  min-width: 420px;
+}
+
+.assay-serial-dilution-stock-table th,
+.assay-serial-dilution-table th {
+  background: var(--assay-plate-header-soft);
+  font-weight: 700;
+}
+
+.assay-serial-dilution-error {
+  color: var(--assay-plate-danger);
+}
+
+.assay-serial-dilution-note {
+  margin: 0;
+}
+
+.assay-plate-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  justify-self: stretch;
+  max-height: min(70vh, 820px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.assay-create-preview-panel .assay-plate-table-wrap {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+}
+
+.assay-plate-table {
+  --assay-row-header-width: 96px;
+  --assay-axis-column-width: 86px;
+  --assay-header-row-height: 38px;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.assay-plate-table th,
+.assay-plate-table td {
+  border: 0;
+  border-right: 1px solid var(--assay-plate-line-soft);
+  border-bottom: 1px solid var(--assay-plate-line-soft);
+  padding: 4px 5px;
+  text-align: center;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.assay-plate-table thead tr:first-child > * {
+  border-top: 1px solid var(--assay-plate-line-soft);
+}
+
+.assay-plate-table tr > *:first-child {
+  border-left: 1px solid var(--assay-plate-line-soft);
+}
+
+.assay-plate-table thead th,
+.assay-plate-table thead td {
+  position: sticky;
+  background: var(--assay-plate-header);
+}
+
+.assay-plate-table thead tr:first-child th,
+.assay-plate-table thead tr:first-child td {
+  top: 0;
+  z-index: 3;
+  height: var(--assay-header-row-height);
+}
+
+.assay-plate-table thead tr.assay-plate-editor-row th,
+.assay-plate-table thead tr.assay-plate-editor-row td {
+  top: var(--assay-header-row-height);
+  z-index: 2;
+}
+
+.assay-plate-table tr > *:first-child {
+  width: var(--assay-row-header-width);
+  min-width: var(--assay-row-header-width);
+}
+
+.assay-plate-table tr > *:nth-child(2) {
+  width: var(--assay-axis-column-width);
+  min-width: var(--assay-axis-column-width);
+  position: sticky;
+  left: var(--assay-row-header-width);
+  background: var(--theme-surface-elevated);
+}
+
+.assay-plate-table tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--assay-plate-header);
+}
+
+.assay-plate-table thead th:first-child,
+.assay-plate-table thead tr.assay-plate-editor-row th:first-child {
+  left: 0;
+  z-index: 4;
+}
+
+.assay-plate-table thead tr:first-child > *:first-child {
+  z-index: 8;
+  background: var(--assay-plate-header-solid);
+}
+
+.assay-plate-table thead tr.assay-plate-editor-row > *:first-child {
+  z-index: 7;
+  background: var(--assay-plate-header-solid);
+}
+
+.assay-plate-table thead tr:first-child > *:nth-child(2) {
+  z-index: 6;
+  background: var(--assay-plate-header-solid);
+}
+
+.assay-plate-table thead tr.assay-plate-editor-row > *:nth-child(2) {
+  z-index: 6;
+  background: var(--assay-plate-header-solid);
+}
+
+.assay-plate-table tbody > tr > *:nth-child(2) {
+  z-index: 3;
+}
+
+.assay-well {
+  width: 64px;
+  min-width: 64px;
+  height: 78px;
+  padding: 3px 4px;
+  vertical-align: top;
+  background: var(--assay-plate-surface);
+  cursor: pointer;
+}
+
+.assay-well-id {
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.assay-well-inline-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.assay-well-meta {
+  font-size: 0.68rem;
+  line-height: 1.15;
+  color: var(--assay-plate-meta);
+  margin-top: 4px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.assay-plate-editor-row th {
+  background: var(--assay-plate-header);
+}
+
+.assay-axis-cell,
+.assay-plate-editor-row td {
+  white-space: normal;
+  padding: 0;
+  width: 64px;
+  min-width: 64px;
+}
+
+.assay-axis-input,
+.assay-plate-editor-row input[data-axis-dimension] {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  font-size: 0.72rem;
+}
+
+
+
+
+.assay-well.is-filled {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface-elevated));
+}
+
+.assay-well.is-active {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-elevated));
+  outline-offset: -2px;
+}
+
+
+
+
+.assay-result-disabled {
+  background: var(--assay-plate-disabled-bg);
+  color: var(--theme-text-muted);
+}
+
+.assay-result-paste-target:focus {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 40%, var(--theme-surface-elevated));
+  outline-offset: 0;
+}
+
+.assay-tabulator {
+  border: 1px solid var(--assay-plate-line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--assay-plate-surface);
+}
+
+.assay-tabulator.tabulator {
+  border: 0;
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.assay-tabulator.tabulator .tabulator-tableholder {
+  background: transparent;
+}
+
+/* Same as the notebook grid: Tabulator hard-codes background/color here and its
+   stylesheet loads after ours, so the override must match its selector depth. */
+.assay-tabulator.tabulator .tabulator-tableholder .tabulator-table {
+  background: transparent;
+  color: inherit;
+}
+
+.assay-tabulator .tabulator-cell {
+  text-align: center;
+  border-bottom: 1px solid var(--assay-plate-line);
+  background: var(--assay-plate-surface);
+}
+
+.assay-tabulator .tabulator-col {
+  text-align: center;
+}
+
+.assay-tabulator .tabulator-col.tabulator-frozen-left,
+.assay-tabulator .tabulator-cell.tabulator-frozen-left {
+  border-right-width: 1px;
+}
+
+.assay-tabulator .tabulator-cell.tabulator-frozen-left {
+  background: var(--assay-plate-surface-strong);
+}
+
+.assay-tabulator .tabulator-col[tabulator-field="rowMeta"] .tabulator-col-title,
+.assay-tabulator .tabulator-cell[tabulator-field="rowMeta"] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assay-result-col-head {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  line-height: 1.15;
+}
+
+.assay-result-col-index {
+  font-weight: 700;
+}
+
+.assay-result-col-meta {
+  font-size: 0.72rem;
+  color: var(--theme-text-muted);
+  max-width: 72px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assay-analysis-controls {
+  display: grid;
+  gap: 8px;
+  margin: 6px 0 4px;
+}
+
+.assay-analysis-row-group-color-1 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-1);
+}
+
+.assay-analysis-row-group-color-2 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-2);
+}
+
+.assay-analysis-row-group-color-3 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-3);
+}
+
+.assay-analysis-row-group-color-4 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-4);
+}
+
+.assay-analysis-column-group-color-1 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-1);
+}
+
+.assay-analysis-column-group-color-2 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-2);
+}
+
+.assay-analysis-column-group-color-3 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-3);
+}
+
+.assay-analysis-column-group-color-4 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-4);
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--assay-analysis-row-group-color) 10%, transparent),
+    color-mix(in srgb, var(--assay-analysis-row-group-color) 10%, transparent)
+  );
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell[tabulator-field="rowLabel"] {
+  box-shadow: inset 4px 0 var(--assay-analysis-row-group-color);
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-column-group-cell {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--assay-analysis-column-group-color) 10%, transparent),
+    color-mix(in srgb, var(--assay-analysis-column-group-color) 10%, transparent)
+  );
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell.assay-analysis-column-group-cell {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--assay-analysis-row-group-color) 8%, transparent),
+      color-mix(in srgb, var(--assay-analysis-row-group-color) 8%, transparent)
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--assay-analysis-column-group-color) 8%, transparent),
+      color-mix(in srgb, var(--assay-analysis-column-group-color) 8%, transparent)
+    );
+}
+
+.assay-tabulator .tabulator-col.assay-analysis-column-group-header {
+  box-shadow: inset 0 -4px var(--assay-analysis-column-group-color);
+}
+
+.assay-analysis-format-actions {
+  justify-content: flex-start;
+}
+
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn:hover,
+.assay-result-table-panel > .foldable-section__summary > .assay-transform-remove-icon-btn:focus-visible {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  color: var(--theme-danger);
+}
+
+.assay-transform-cell {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.assay-transform-cell--formula {
+  color: var(--theme-text-strong);
+}
+
+.assay-transform-cell--error {
+  color: var(--assay-plate-danger);
+  font-weight: 650;
+}
+
+.assay-analysis-modifiers {
+  display: grid;
+  gap: 8px;
+  border-left: 2px solid var(--theme-accent);
+  padding-left: 10px;
+}
+
+.assay-analysis-modifiers:not(:has(> label:not([hidden]))) {
+  display: none;
+}
+
+.assay-analysis-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.assay-analysis-checkbox input[type="checkbox"] {
+  width: auto;
+}
+
+.assay-analysis-group-actions {
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn {
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn:hover,
+.assay-analysis-group-actions > .assay-analysis-group-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-analysis-selection-status {
+  min-height: 1.1rem;
+}
+
+.assay-analysis-results {
+  display: grid;
+  gap: 10px;
+}
+
+.assay-analysis-agent-results {
+  gap: 8px;
+}
+
+.assay-analysis-agent-note {
+  color: var(--theme-text-muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.assay-analysis-agent-note span {
+  margin-left: 8px;
+}
+
+.assay-analysis-chart {
+  border: 1px solid var(--assay-plate-line);
+  border-radius: 10px;
+  background: var(--theme-surface-elevated);
+  font-family: Arial, sans-serif;
+  padding: 10px;
+}
+
+/* A fixed canvas the plot sits inside. Its size never follows the figure, so resizing
+   the plot moves it within the canvas instead of reflowing the whole results panel. */
+.assay-analysis-chart[data-assay-analysis-chart] {
+  --assay-chart-canvas-height: 520px;
+  width: 100%;
+  height: var(--assay-chart-canvas-height);
+  margin-inline: auto;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+}
+
+.assay-analysis-agent-chart {
+  min-height: 320px;
+}
+
+@media (max-width: 1100px) {
+  .assay-create-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .assay-results-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .assay-create-layout .app-left-rail,
+.assay-results-layout .app-left-rail {
+    min-height: auto;
+    max-height: none;
+    padding-right: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+    scrollbar-gutter: auto;
+  }
+
+  .left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
+    grid-template-rows: auto auto;
+    align-self: start;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  .left-rail-template.assay-results-layout > .assay-results-controls-panel {
+    grid-template-rows: auto;
+    align-self: start;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  .assay-results-controls-panel > .assay-results-rail-scroll.left-rail-template__scroll {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+    max-height: min(360px, 42vh);
+  }
+
+  .assay-serial-dilution-sample-head {
+    grid-template-columns: 1fr;
+  }
+
+  .assay-result-import-body {
+    grid-template-columns: 1fr;
+  }
+
+  .assay-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .assay-header-row {
+    align-items: stretch;
+  }
+
+  .assay-axis-config-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .assay-create-sidebar .assay-form-grid,
+.assay-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.theme-night .assay-plate-table-wrap {
+  background: transparent;
+}
+
+body.theme-night .assay-plate-table th,
+body.theme-night .assay-plate-table td {
+  border-color: color-mix(in srgb, var(--theme-border) 84%, transparent);
+}
+
+body.theme-night .assay-plate-table thead th,
+body.theme-night .assay-plate-table thead td,
+body.theme-night .assay-plate-table tbody th {
+  background: var(--theme-surface-subtle);
+}
+
+body.theme-night .assay-plate-table tr > *:nth-child(2) {
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-subtle) 12%);
+}
+
+body.theme-night .assay-sample-picker {
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+}
+
+body.theme-night .assay-sample-picker-item {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
+  color: var(--theme-text);
+}
+
+body.theme-night .assay-sample-picker-item:hover,
+body.theme-night .assay-sample-picker-item:focus-visible,
+body.theme-night .assay-sample-picker-item.is-current {
+  background: var(--theme-control-background-hover);
+}
+
+body.theme-night .assay-sample-picker-item-meta {
+  color: var(--theme-text-muted);
+}
+
+body.theme-night .assay-serial-dilution-overlay,
+body.theme-night .assay-result-import-overlay {
+  background: var(--theme-overlay);
+}
+
+body.theme-night .assay-serial-dilution-dialog,
+body.theme-night .assay-result-import-dialog {
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+}
+
+body.theme-night .assay-result-import-choice {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
+}
+
+body.theme-night .assay-result-import-choice:hover,
+body.theme-night .assay-result-import-choice:focus-visible,
+body.theme-night .assay-result-import-choice.is-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 56%, var(--theme-border));
+  background: var(--theme-control-background-hover);
+}
+
+body.theme-night .assay-serial-dilution-sample {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
+}
+
+body.theme-night .assay-serial-dilution-stock-table th,
+body.theme-night .assay-serial-dilution-stock-table td,
+body.theme-night .assay-serial-dilution-table th,
+body.theme-night .assay-serial-dilution-table td {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+}
+
+body.theme-night .assay-serial-dilution-stock-table th,
+body.theme-night .assay-serial-dilution-table th {
+  background: var(--theme-surface-subtle);
+}
+
+body.theme-night .assay-serial-dilution-error {
+  color: var(--assay-plate-danger);
+}
+
+body.theme-night .assay-well {
+  background: var(--theme-surface-elevated);
+}
+
+body.theme-night .assay-tabulator {
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface) 86%, transparent);
+}
+
+body.theme-night .assay-analysis-chart {
+  border-color: var(--assay-plate-line);
+  background: var(--theme-surface-elevated);
+}
+
+#assay-view .panel,
+#assay-view .card,
+.assay-tabulator {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+

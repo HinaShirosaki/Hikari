@@ -17,7 +17,7 @@ This doc set describes the production Agent path under `src/main/agent`. The liv
 
 - the Codex turn adapter, prompt construction, stream projection, and artifact normalization;
 - the Hikari MCP server, direct-tool definitions, and callback host;
-- Codex-backed tool runtimes used by MCP and developer smoke tests;
+- Codex-backed tool runtimes used by MCP;
 - chat-session logs, sparse Agent memory, skills, and lifecycle observability.
 
 Paper search, retrieval, parsing, download, analysis, and intake storage are owned by `src/main/papers`. Main-process composition lives in `src/main/core/services/`, and Agent IPC handlers live in `src/main/ipc/register-agent-ipc/`.

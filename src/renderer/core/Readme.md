@@ -4,7 +4,7 @@
 
 The core owns application boot, shared state persistence, service registry creation, module runtime creation, storage hydration, navigation, topbar search routing, and the final `hikari:app-ready` event.
 
-Feature modules should keep domain behavior in `src/renderer/modules/`. The core should wire modules and services together, but it should not own protocol, notebook, inventory, assay, gel, paper, sequence, or agent business logic.
+Feature modules should keep domain behavior in `src/renderer/modules/`. The core should wire modules and services together, but it should not own protocol, notebook, inventory, assay, paper, sequence, or agent business logic. Plugin-owned features, such as Gel, stay outside `src/renderer/modules/` entirely.
 
 Domain-specific external events should be delegated at the boundary. For example, the core subscribes to `onProtocolRecordSaved`, while `services/protocolService.js` normalizes and merges the protocol record.
 

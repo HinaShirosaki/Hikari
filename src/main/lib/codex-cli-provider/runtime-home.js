@@ -37,18 +37,29 @@ function normalizeCodexCliModelsCache(rawValue = '') {
     }
     let changed = false;
     const models = parsed.models.map((entry) => {
-      if (!entry || typeof entry !== 'object' || !Array.isArray(entry.supported_reasoning_levels)) {
+      if (!entry || typeof entry !== 'object') {
         return entry;
+      }
+      let nextEntry = entry;
+      if (!Object.prototype.hasOwnProperty.call(entry, 'supports_reasoning_summaries')) {
+        nextEntry = {
+          ...nextEntry,
+          supports_reasoning_summaries: Boolean(String(entry.default_reasoning_summary || '').trim())
+        };
+        changed = true;
+      }
+      if (!Array.isArray(entry.supported_reasoning_levels)) {
+        return nextEntry;
       }
       const supportedReasoningLevels = entry.supported_reasoning_levels.filter((level) => (
         SUPPORTED_CODEX_CLI_REASONING_EFFORTS.has(String(level?.effort || '').trim().toLowerCase())
       ));
       if (supportedReasoningLevels.length === entry.supported_reasoning_levels.length) {
-        return entry;
+        return nextEntry;
       }
       changed = true;
-      const nextEntry = {
-        ...entry,
+      nextEntry = {
+        ...nextEntry,
         supported_reasoning_levels: supportedReasoningLevels
       };
       const defaultReasoningEffort = String(entry.default_reasoning_level || '').trim().toLowerCase();

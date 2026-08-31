@@ -1,146 +1,12 @@
-export function normalizeSearchToken(value) {
-  return String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, '-')
-    .replace(/[^a-z0-9-]/g, '');
-}
-
-export function buildViewAliasMap({ apps = [], normalizeViewId }) {
-  const map = new Map();
-  apps.forEach((app) => {
-    if (app?.hiddenFromNavigation === true) {
-      return;
-    }
-    [
-      app.id,
-      app.label,
-      ...(Array.isArray(app.aliases) ? app.aliases : [])
-    ].forEach((token) => {
-      const normalized = normalizeSearchToken(token);
-      if (!normalized || map.has(normalized)) {
-        return;
-      }
-      map.set(normalized, normalizeViewId(app.viewId));
-    });
-  });
-  return map;
-}
-
-export function buildSearchScopeMap({ apps = [], normalizeViewId }) {
-  const map = new Map();
-  apps.forEach((app) => {
-    if (app?.hiddenFromNavigation === true) {
-      return;
-    }
-    const target = {
-      viewId: normalizeViewId(app.viewId),
-      inputId: String(app.searchInputId || '').trim(),
-      label: app.label
-    };
-    [
-      app.id,
-      app.label,
-      ...(Array.isArray(app.aliases) ? app.aliases : [])
-    ].forEach((token) => {
-      const normalized = normalizeSearchToken(token);
-      if (!normalized || map.has(normalized)) {
-        return;
-      }
-      map.set(normalized, target);
-    });
-  });
-  return map;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function tokenizeSearchQuery(value) {
-  return String(value || '')
-    .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2)
-    .slice(0, 12);
-}
-
-function scoreTextByTokens(text, queryTokens, queryLower) {
-  const haystack = String(text || '').toLowerCase();
-  if (!haystack) {
-    return 0;
-  }
-
-  if (!queryTokens.length) {
-    return queryLower && haystack.includes(queryLower) ? 1 : 0;
-  }
-
-  let score = 0;
-  queryTokens.forEach((token) => {
-    if (haystack.includes(token)) {
-      score += 1;
-    }
-  });
-  if (queryLower && queryLower.length >= 3 && haystack.includes(queryLower)) {
-    score += 2;
-  }
-  return score;
-}
-
-function protocolSearchText(protocol) {
-  const stepsText = asArray(protocol?.steps)
-    .map((step) => (typeof step === 'string' ? step : step?.text || step?.instruction || step?.title || ''))
-    .join(' ');
-  return [
-    protocol?.name,
-    protocol?.purpose,
-    asArray(protocol?.materials).join(' '),
-    stepsText,
-    protocol?.troubleshooting
-  ].join(' ');
-}
-
-function joinSublabel(parts) {
-  return parts
-    .map((part) => (part == null ? '' : String(part).trim()))
-    .filter((part) => part.length > 0)
-    .join(' · ');
-}
-
-function scoreSuggestion(candidate, queryLower, queryTokens) {
-  const labelLower = String(candidate.label || '').toLowerCase();
-  const textLower = String(candidate.text || '').toLowerCase();
-  let score = 0;
-
-  if (labelLower) {
-    if (labelLower === queryLower) {
-      score += 16;
-    } else if (labelLower.startsWith(queryLower)) {
-      score += 10;
-    } else if (labelLower.includes(queryLower)) {
-      score += 5;
-    }
-    queryTokens.forEach((token) => {
-      if (labelLower.includes(token)) {
-        score += 2;
-      }
-    });
-  }
-
-  if (textLower && textLower !== labelLower) {
-    if (textLower.includes(queryLower)) {
-      score += 1.5;
-    }
-    queryTokens.forEach((token) => {
-      if (textLower.includes(token)) {
-        score += 0.6;
-      }
-    });
-  }
-
-  return score;
-}
+import { showTransientNotice } from '../lib/notify.js';
+import { asArray } from '../lib/normalize.js';
+import { createSearchCandidates } from './topbar-search/candidates.js';
+import {
+  normalizeSearchToken,
+  scoreSuggestion,
+  scoreTextByTokens,
+  tokenizeSearchQuery
+} from './topbar-search/scoring.js';
 
 export function createTopbarSearchController({
   state,
@@ -155,7 +21,7 @@ export function createTopbarSearchController({
   apps = [],
   normalizeViewId: normalizeAppViewId = (viewId) => viewId,
   openItemHandlers = {},
-  windowObject = window
+  windowObject: _windowObject = window
 }) {
   const itemHandlers = openItemHandlers && typeof openItemHandlers === 'object'
     ? openItemHandlers
@@ -254,252 +120,11 @@ export function createTopbarSearchController({
     return fallback;
   }
 
-  function buildGlobalSearchCandidates() {
-    const candidates = [];
-    let nextCandidateId = 0;
-    const addCandidate = (target, text, displayInfo = {}) => {
-      if (!target || !target.viewId) {
-        return;
-      }
-      const searchText = String(text || '').trim();
-      if (!searchText) {
-        return;
-      }
-      const label = String(displayInfo.label || '').trim() || searchText;
-      const sublabel = String(displayInfo.sublabel || '').trim();
-      const kind = String(displayInfo.kind || target.label || '').trim();
-      const applyQueryRaw = displayInfo.applyQuery == null ? label : displayInfo.applyQuery;
-      const applyQuery = String(applyQueryRaw || '').trim();
-      const itemId = String(displayInfo.itemId || '').trim();
-      candidates.push({
-        id: `c${nextCandidateId++}`,
-        target,
-        text: searchText,
-        label,
-        sublabel,
-        kind,
-        applyQuery,
-        itemId
-      });
-    };
 
-    const chemicalTarget = getScopeTarget('chemicals');
-    asArray(state.labInventory?.chemicals).forEach((chemical) => {
-      const label = chemical?.name || chemical?.casNumber || chemical?.catalogNumber;
-      addCandidate(chemicalTarget, [
-        chemical?.name,
-        chemical?.casNumber,
-        chemical?.vendor,
-        chemical?.catalogNumber,
-        chemical?.location,
-        chemical?.unitSize,
-        chemical?.amountInStock
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([chemical?.casNumber, chemical?.vendor, chemical?.location]),
-        kind: 'Chemical',
-        applyQuery: label,
-        itemId: chemical?.id
-      });
-    });
-
-    const sampleTarget = getScopeTarget('samples');
-    asArray(state.samples).forEach((sample) => {
-      const label = sample?.name || sample?.code;
-      addCandidate(sampleTarget, [
-        sample?.code,
-        sample?.name,
-        sample?.type,
-        sample?.lot,
-        sample?.concentration,
-        sample?.notes
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([sample?.code, sample?.type, sample?.concentration]),
-        kind: 'Sample',
-        applyQuery: sample?.code || label,
-        itemId: sample?.id
-      });
-    });
-
-    const assayTarget = getScopeTarget('assay');
-    asArray(state.assays).forEach((assayItem) => {
-      const label = assayItem?.name || assayItem?.assayNumber;
-      addCandidate(assayTarget, [
-        assayItem?.assayNumber,
-        assayItem?.name,
-        assayItem?.projectName,
-        assayItem?.plateLabel,
-        assayItem?.notebookEntryProtocolName,
-        assayItem?.notes,
-        asArray(assayItem?.sampleAxisValues).join(' '),
-        asArray(assayItem?.concentrationAxisValues).join(' ')
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([assayItem?.assayNumber, assayItem?.projectName, assayItem?.plateLabel]),
-        kind: 'Assay',
-        applyQuery: assayItem?.assayNumber || label,
-        itemId: assayItem?.id
-      });
-    });
-
-    const gelTarget = getScopeTarget('gel');
-    asArray(state.gelAnalyses).forEach((record) => {
-      const label = record?.name || record?.imageName;
-      addCandidate(gelTarget, [
-        record?.name,
-        record?.projectName,
-        record?.notebookEntryProtocolName,
-        record?.analysisType,
-        record?.imageName,
-        record?.report?.confidence?.label,
-        asArray(record?.report?.warnings).join(' ')
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([record?.analysisType, record?.projectName, record?.notebookEntryProtocolName]),
-        kind: 'Gel',
-        applyQuery: label,
-        itemId: record?.id
-      });
-    });
-
-    const projectTarget = getScopeTarget('projects');
-    asArray(state.projects).forEach((project) => {
-      const label = project?.name;
-      addCandidate(projectTarget, [project?.name, project?.description].join(' '), {
-        label,
-        sublabel: project?.description,
-        kind: 'Project',
-        applyQuery: label,
-        itemId: project?.id
-      });
-    });
-
-    const protocolTarget = getScopeTarget('protocols');
-    asArray(state.protocols).forEach((protocolItem) => {
-      const label = protocolItem?.name;
-      addCandidate(protocolTarget, protocolSearchText(protocolItem), {
-        label,
-        sublabel: protocolItem?.purpose,
-        kind: 'Protocol',
-        applyQuery: label,
-        itemId: protocolItem?.id
-      });
-    });
-
-    const paperTarget = getScopeTarget('papers');
-    asArray(state.papers).forEach((paper) => {
-      const label = paper?.title || paper?.fileName;
-      addCandidate(paperTarget, [
-        paper?.title,
-        paper?.linkedName,
-        paper?.summary,
-        paper?.fileName
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([paper?.linkedName, paper?.fileName]),
-        kind: 'Paper',
-        applyQuery: label,
-        itemId: paper?.id
-      });
-    });
-
-    const memberTarget = getScopeTarget('members');
-    asArray(state.members).forEach((member) => {
-      const label = member?.name;
-      addCandidate(memberTarget, [
-        member?.name,
-        member?.position,
-        member?.institutionEmail,
-        member?.hikariEmail
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([member?.position, member?.institutionEmail || member?.hikariEmail]),
-        kind: 'Member',
-        applyQuery: label
-      });
-    });
-
-    const workflowTarget = {
-      viewId: VIEWS.WORKFLOW_MANAGEMENT,
-      inputId: '',
-      label: 'Workflows'
-    };
-    asArray(state.workflows).forEach((workflow) => {
-      const label = workflow?.name;
-      addCandidate(workflowTarget, [workflow?.name, workflow?.description].join(' '), {
-        label,
-        sublabel: workflow?.description,
-        kind: 'Workflow',
-        applyQuery: '',
-        itemId: workflow?.id
-      });
-    });
-
-    const biologyNotebookTarget = {
-      viewId: VIEWS.BIOLOGY_NOTEBOOK,
-      inputId: '',
-      label: 'Biology Notebook'
-    };
-    asArray(state.notebookEntries).forEach((entry) => {
-      if (entry?.notebookType !== 'biology') {
-        return;
-      }
-      const label = entry?.protocolName || entry?.projectName;
-      addCandidate(biologyNotebookTarget, [
-        entry?.projectName,
-        entry?.protocolName,
-        entry?.result,
-        asArray(entry?.resultFiles).join(' '),
-        entry?.updatedAt
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([entry?.projectName, entry?.updatedAt]),
-        kind: 'Notebook',
-        applyQuery: '',
-        itemId: entry?.id
-      });
-    });
-
-    const personalInventoryTarget = {
-      viewId: VIEWS.SAMPLE_REGISTRY,
-      inputId: '',
-      label: 'Sample & Inventory'
-    };
-    Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
-      asArray(containers).forEach((container) => {
-        const label = container?.name;
-        addCandidate(personalInventoryTarget, [
-          zone,
-          container?.name,
-          container?.type,
-          container?.singleContent,
-          asArray(container?.wells)
-            .map((well) => (typeof well === 'string' ? well : `${well?.name || ''} ${well?.content || ''}`))
-            .join(' ')
-        ].join(' '), {
-          label,
-          sublabel: joinSublabel([container?.type, zone]),
-          kind: 'Container',
-          applyQuery: ''
-        });
-      });
-    });
-
-    return candidates;
-  }
-
-  function buildAppSuggestionCandidates() {
-    return appSuggestionEntries.map((entry, index) => ({
-      id: `app-${index}`,
-      target: entry.target,
-      text: entry.aliasText,
-      label: entry.app?.label || '',
-      sublabel: TITLES[entry.viewId] || '',
-      kind: 'Module',
-      applyQuery: ''
-    }));
-  }
+  const {
+    buildGlobalSearchCandidates,
+    buildAppSuggestionCandidates
+  } = createSearchCandidates({ state, VIEWS, TITLES, appSuggestionEntries, getScopeTarget });
 
   function getSearchSuggestions(rawQuery, options = {}) {
     const limit = Number.isFinite(options.limit) && options.limit > 0
@@ -576,7 +201,11 @@ export function createTopbarSearchController({
         console.error('Failed to open suggestion item:', error);
       }
     }
-    return applySearchTarget(suggestion.target, suggestion.applyQuery || '');
+    const opened = applySearchTarget(suggestion.target, suggestion.applyQuery || '');
+    if (!opened) {
+      showTransientNotice('Could not open that search result.', { type: 'error' });
+    }
+    return opened;
   }
 
   function executeTopbarSearch(rawQuery) {
@@ -672,75 +301,15 @@ export function createTopbarSearchController({
     return false;
   }
 
-  function handleTelegramCommand(payload) {
-    if (!payload || typeof payload !== 'object') {
-      return;
-    }
-
-    const type = String(payload.type || '');
-    if (type === 'open-view') {
-      const viewId = String(payload.viewId || '').trim();
-      if (viewId) {
-        showView(viewId);
-      }
-      return;
-    }
-
-    if (type === 'search-chemicals') {
-      showView(VIEWS.LAB_COMMON_INVENTORY);
-      setSearchInputValue('chemical-search', payload.query);
-      return;
-    }
-
-    if (type === 'search-samples') {
-      showView(VIEWS.SAMPLE_REGISTRY);
-      setSearchInputValue('sample-search', payload.query);
-      return;
-    }
-
-    if (type === 'search-assays') {
-      showView(VIEWS.ASSAY);
-      setSearchInputValue('assay-search', payload.query);
-      return;
-    }
-
-    if (type === 'search-gels') {
-      showView(VIEWS.GEL);
-      setSearchInputValue('gel-search', payload.query);
-      return;
-    }
-
-    if (type === 'global-search') {
-      const scope = String(payload.scope || '').trim();
-      const query = String(payload.query || '').trim();
-      const searchText = scope && query
-        ? `${scope}: ${query}`
-        : query || scope;
-      if (!searchText) {
-        return;
-      }
-      if (topbarSearchInput) {
-        topbarSearchInput.value = searchText;
-      }
-      executeTopbarSearch(searchText);
-    }
-  }
-
-  function initTelegramCommandBridge() {
-    if (!windowObject.hikariApi?.onTelegramCommand) {
-      return;
-    }
-
-    windowObject.hikariApi.onTelegramCommand((payload) => {
-      handleTelegramCommand(payload);
-    });
-  }
-
   return {
     executeTopbarSearch,
     getSearchSuggestions,
-    applySuggestion,
-    handleTelegramCommand,
-    initTelegramCommandBridge
+    applySuggestion
   };
 }
+
+export {
+  normalizeSearchToken,
+  buildViewAliasMap,
+  buildSearchScopeMap
+} from './topbar-search/scoring.js';

@@ -16,6 +16,7 @@ import {
   buildAssistantErrorMessage,
   buildAssistantResponseMessage
 } from './assistant-message-meta.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createAgentRequestController(deps) {
   const {
@@ -132,7 +133,7 @@ export function createAgentRequestController(deps) {
   }
 
   async function sendMessage() {
-    if (runtime.inFlight) {
+    if (runtime.inFlight || runtime.sendPending === true) {
       return;
     }
     const { rawMessageText, attachments, messageText, hiddenContexts } = payloadBuilder.getDraftRequest();
@@ -147,43 +148,61 @@ export function createAgentRequestController(deps) {
     ensureAgentState();
     runtime.stopRequested = false;
     runtime.stopInProgress = false;
+    runtime.sendPending = true;
+    syncRequestUiState();
 
     // Ensure the session first: on the first message from a selected project folder it
     // syncs the active project scope from that folder, so the project details captured
     // below (and sent with this request) reflect the folder, not the previous/empty scope.
-    const currentSessionId = await sessionManager.ensureCurrentChatSession(messageText);
-    const requestSessionId = trimText(currentSessionId || state.agentChat.currentSessionId, 120);
-    if (requestSessionId && !trimText(state.agentChat.currentSessionId, 120)) {
-      state.agentChat.currentSessionId = requestSessionId;
-    }
-    const { projectId, projectName } = payloadBuilder.getCurrentProjectDetails();
-    state.agentChat.messages.push({
-      id: createId(),
-      role: 'user',
-      text: rawMessageText || buildAttachmentSummary(attachments),
-      attachments,
-      createdAt: new Date().toISOString()
-    });
-    state.agentChat.messages = state.agentChat.messages.slice(-40);
-    const conversation = toConversation(state.agentChat.messages);
-    persist();
-    input.value = '';
-    attachmentsController.reset();
-    payloadBuilder.consumeHiddenContexts?.();
-    syncComposerHeight();
-    renderHistoryView({ forceScroll: true });
+    let currentSessionId = '';
+    let requestSessionId = '';
+    let projectId = '';
+    let projectName = '';
+    let conversation = [];
+    let clientRequestId = '';
+    let request = null;
+    try {
+      currentSessionId = await sessionManager.ensureCurrentChatSession(messageText);
+      requestSessionId = trimText(currentSessionId || state.agentChat.currentSessionId, 120);
+      if (requestSessionId && !trimText(state.agentChat.currentSessionId, 120)) {
+        state.agentChat.currentSessionId = requestSessionId;
+      }
+      ({ projectId, projectName } = payloadBuilder.getCurrentProjectDetails());
+      state.agentChat.messages.push({
+        id: createId(),
+        role: 'user',
+        text: rawMessageText || buildAttachmentSummary(attachments),
+        attachments,
+        createdAt: new Date().toISOString()
+      });
+      state.agentChat.messages = state.agentChat.messages.slice(-40);
+      conversation = toConversation(state.agentChat.messages);
+      persist();
+      input.value = '';
+      attachmentsController.reset();
+      payloadBuilder.consumeHiddenContexts?.();
+      syncComposerHeight();
+      renderHistoryView({ forceScroll: true });
 
-    const clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
-    getCanceledRequestIds().delete(clientRequestId);
-    const request = {
-      clientRequestId,
-      sessionId: requestSessionId,
-      requestText: messageText,
-      liveAssistantMessage: buildLiveAssistantPlaceholder(clientRequestId, messageText, createId),
-      stopRequested: false,
-      stopInProgress: false
-    };
-    getActiveRequests().set(clientRequestId, request);
+      clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
+      getCanceledRequestIds().delete(clientRequestId);
+      request = {
+        clientRequestId,
+        sessionId: requestSessionId,
+        requestText: messageText,
+        liveAssistantMessage: buildLiveAssistantPlaceholder(clientRequestId, messageText, createId),
+        stopRequested: false,
+        stopInProgress: false
+      };
+      getActiveRequests().set(clientRequestId, request);
+    } catch (error) {
+      runtime.sendPending = false;
+      syncRequestUiState();
+      setStatus('Error.');
+      showTransientNotice(String(error?.message || error || 'Failed to create chat session.'), { type: 'error' });
+      return;
+    }
+    runtime.sendPending = false;
     syncRequestUiState();
     renderHistoryView({ forceScroll: true });
     setStatus('Working on this...');
@@ -253,7 +272,9 @@ export function createAgentRequestController(deps) {
       clearLiveAssistantState(request);
       persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
       setRequestStatus(request, 'Error.');
+      showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
     } finally {
+      runtime.sendPending = false;
       getCanceledRequestIds().delete(clientRequestId);
       getActiveRequests().delete(clientRequestId);
       syncRequestUiState();

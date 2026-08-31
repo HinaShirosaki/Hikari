@@ -1,12 +1,13 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuite(context = {}) {
   const registerParts = [
-    require('./sequence-viewer-workspace-suite/part-01.js'),
-    require('./sequence-viewer-workspace-suite/part-02.js'),
-    require('./sequence-viewer-workspace-suite/part-03.js'),
-    require('./sequence-viewer-workspace-suite/part-04.js'),
-    require('./sequence-viewer-workspace-suite/part-05.js'),
-    require('./sequence-viewer-workspace-suite/part-06.js'),
-    require('./sequence-viewer-workspace-suite/part-07.js')
+    require('./sequence-viewer-workspace-suite/home-and-detail-navigation.js'),
+    require('./sequence-viewer-workspace-suite/library-folders-and-import.js'),
+    require('./sequence-viewer-workspace-suite/protein-builder-blocks.js'),
+    require('./sequence-viewer-workspace-suite/protein-builder-assembly.js'),
+    require('./sequence-viewer-workspace-suite/protein-builder-backbone-selection.js'),
+    require('./sequence-viewer-workspace-suite/annotation-and-alignment-workspace.js'),
+    require('./sequence-viewer-workspace-suite/sequencing-alignment-persistence.js'),
+    require('./sequence-viewer-workspace-suite/vector-builder.js')
   ];
 
   registerParts.forEach((registerPart) => registerPart(context));

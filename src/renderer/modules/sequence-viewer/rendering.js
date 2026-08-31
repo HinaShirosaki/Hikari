@@ -1,640 +1,52 @@
 import { escapeHtml } from '../../lib/html.js';
-import {
-  DEFAULT_SEQUENCE_LINE_LENGTH,
-  DEFAULT_STRAND_COLUMN_GAP_PX,
-  DEFAULT_STRAND_MARKER_COLUMN_PX,
-  FALLBACK_CHAR_ADVANCE_PX,
-  FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
-  LINE_FEATURE_BAR_GAP_PX,
-  LINE_FEATURE_BAR_HEIGHT_PX,
-  LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX,
-  RESTRICTION_LABEL_GAP_PX,
-  STRAND_PAIR_ROW_GAP_PX
-} from './constants.js';
-import {
-  buildFeatureLocationText,
-  getContrastTextColor,
-  hashTypeToColor
-} from './feature-model.js';
+import { DEFAULT_SEQUENCE_LINE_LENGTH, DEFAULT_STRAND_COLUMN_GAP_PX, DEFAULT_STRAND_MARKER_COLUMN_PX, FALLBACK_CHAR_ADVANCE_PX, FALLBACK_SEQUENCE_LINE_HEIGHT_PX, STRAND_BLOCK_GAP_PX, STRAND_PAIR_ROW_GAP_PX } from './constants.js';
+import { buildFeatureLocationText } from './feature-model.js';
 import { isOrfFeature } from './orf-analysis.js';
 import { getCdsProteinProperties } from './protein-properties.js';
-import {
-  buildRestrictionCutPolylinePoints,
-  computeRestrictionAnnotationGeometry,
-  formatRestrictionCutSummary,
-  resolveRestrictionCutBaseIndices,
-  resolveRestrictionCutLocalPx
-} from './restriction-analysis.js';
-import {
-  getAminoAcidVisualStyle,
-  getOrfTranslationRowLabel
-} from './translation-style.js';
-import {
-  clamp,
-  complementSequence,
-  normalizeSequenceText
-} from './shared.js';
+import { formatRestrictionCutSummary } from './restriction-analysis.js';
+import { clamp, complementSequence, normalizeSequenceText } from './shared.js';
+import { normalizeAlignmentSequenceTrack, renderAlignmentComparisonRowsHtml } from './rendering/alignment-rows.js';
+import { renderOrfAminoAcidRowHtml } from './rendering/amino-acid-rows.js';
+import { renderLineFeatureButtonsHtml } from './rendering/feature-tracks.js';
+import { normalizeHighlightSegments } from './rendering/highlight-segments.js';
+import { formatProteinPropertySummary } from './rendering/protein-summary.js';
+import { renderLineRestrictionAnnotationsHtml } from './rendering/restriction-lanes.js';
+import { buildHighlightedLineMarkup } from './rendering/sequence-cells.js';
 
-const RESTRICTION_STACK_LANE_STEP_PX = 16;
-const RESTRICTION_LABEL_COLLISION_GAP_PX = 6;
-const RESTRICTION_LABEL_HORIZONTAL_PADDING_PX = 8;
+// Both line tracks used to scan every feature in the record for every line,
+// which is quadratic: an 8 kb plasmid re-tested 267 features 134 times over.
+// Bucket the features by line once instead, so a line only ever sees what
+// actually touches it. Off-line features produced no geometry anyway, so the
+// markup is unchanged.
+function indexFeaturesByLine(indexedFeatures, lineLength, sequenceLength) {
+  const safeLineLength = Math.max(1, Math.floor(Number(lineLength) || 0));
+  const lineCount = Math.max(1, Math.ceil(sequenceLength / safeLineLength));
+  const buckets = Array.from({ length: lineCount }, () => []);
 
-function formatDaltons(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return 'n/a';
-  }
-  if (number >= 1000) {
-    return `${(number / 1000).toFixed(3)} kDa (${number.toFixed(2)} Da)`;
-  }
-  return `${number.toFixed(2)} Da`;
-}
-
-function formatProteinPropertySummary(properties) {
-  if (!properties) {
-    return '';
-  }
-
-  const parts = [
-    `${Math.max(0, Number(properties.length) || 0).toLocaleString()} aa`,
-    `Monoisotopic MW ${formatDaltons(properties.monoisotopicMass)}`,
-    `pI ${Number.isFinite(Number(properties.pI)) ? Number(properties.pI).toFixed(2) : 'n/a'}`
-  ];
-  const source = String(properties.source || '') === 'derived'
-    ? 'derived from CDS DNA'
-    : 'from translation';
-  const invalidResidues = Array.isArray(properties.invalidResidues) ? properties.invalidResidues : [];
-
-  return [
-    `<p><strong>Protein:</strong> ${escapeHtml(parts.join(' · '))} <span class="small-note">(${escapeHtml(source)})</span></p>`,
-    invalidResidues.length
-      ? `<p class="small-note">Protein properties require known residues only; unknown residue(s) ${escapeHtml(invalidResidues.join(', '))} prevent exact MW/pI calculation.</p>`
-      : ''
-  ].join('');
-}
-
-function getSequenceRunClass(kind) {
-  const normalizedKind = String(kind || '').toLowerCase();
-  if (normalizedKind === 'alignment') {
-    return 'sequence-viewer-seq-run sequence-viewer-seq-highlight sequence-viewer-seq-highlight-alignment';
-  }
-  if (normalizedKind) {
-    return 'sequence-viewer-seq-run sequence-viewer-seq-highlight';
-  }
-  return 'sequence-viewer-seq-run';
-}
-
-function buildSequenceBaseCells(sourceText, start, end) {
-  const cells = [];
-  for (let baseIndex = start; baseIndex < end; baseIndex += 1) {
-    cells.push(`<span class="sequence-viewer-seq-base">${escapeHtml(sourceText[baseIndex] || '')}</span>`);
-  }
-  return cells.join('');
-}
-
-function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
-  if (!lineHighlights.length) {
-    return `<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, lineStart, lineEnd)}</span>`;
-  }
-
-  let cursor = lineStart;
-  const runs = [];
-  lineHighlights.forEach((segment) => {
-    if (segment.start > cursor) {
-      runs.push(`<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, cursor, segment.start)}</span>`);
-    }
-    const kind = String(segment?.kind || '').toLowerCase() === 'alignment' ? 'alignment' : 'highlight';
-    runs.push(`<span class="${getSequenceRunClass(kind)}">${buildSequenceBaseCells(sourceText, segment.start, segment.end)}</span>`);
-    cursor = segment.end;
-  });
-
-  if (cursor < lineEnd) {
-    runs.push(`<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, cursor, lineEnd)}</span>`);
-  }
-
-  return runs.join('');
-}
-
-function normalizeAlignmentSequenceTrack(track, sequenceLength) {
-  const safeLength = Math.max(0, Math.floor(Number(sequenceLength) || 0));
-  const sourceCells = Array.isArray(track?.cells) ? track.cells : [];
-  if (!safeLength || !sourceCells.length) {
-    return null;
-  }
-
-  let hasCells = false;
-  const cells = Array.from({ length: safeLength }, (_item, index) => {
-    const sourceCell = sourceCells[index];
-    const rawBase = String(sourceCell?.base || '').trim().toUpperCase();
-    if (!rawBase) {
-      return null;
-    }
-
-    hasCells = true;
-    const kind = String(sourceCell?.kind || '').toLowerCase();
-    return {
-      base: rawBase === '-' ? '-' : rawBase.slice(0, 1),
-      kind: kind === 'mismatch' || kind === 'deletion' ? kind : 'match'
-    };
-  });
-
-  const traceLines = track?.traceLines && typeof track.traceLines === 'object'
-    ? track.traceLines
-    : {};
-  return hasCells ? { cells, traceLines } : null;
-}
-
-function renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack) {
-  if (!alignmentSequenceTrack?.cells?.length) {
-    return '';
-  }
-
-  let hasAlignedBases = false;
-  const body = [];
-  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
-    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
-    if (!cell) {
-      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-query-base sequence-viewer-alignment-query-base-empty">&nbsp;</span>');
-      continue;
-    }
-
-    hasAlignedBases = true;
-    const kindClass = cell.kind === 'mismatch' || cell.kind === 'deletion'
-      ? ` sequence-viewer-alignment-query-base-${cell.kind}`
-      : '';
-    const gapClass = cell.base === '-' ? ' sequence-viewer-alignment-query-base-gap' : '';
-    body.push(
-      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-query-base${kindClass}${gapClass}">${escapeHtml(cell.base)}</span>`
-    );
-  }
-
-  if (!hasAlignedBases) {
-    return '';
-  }
-
-  return `
-    <div class="sequence-viewer-strand-row sequence-viewer-alignment-query-row">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Aligned sequencing read">READ</span>
-      <span class="sequence-viewer-seq-text sequence-viewer-alignment-query-text">
-        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
-      </span>
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
-    </div>
-  `;
-}
-
-function renderAlignmentReferenceRowHtml(lineStart, lineEnd, referenceSequence, alignmentSequenceTrack) {
-  if (!alignmentSequenceTrack?.cells?.length) {
-    return '';
-  }
-
-  let hasAlignedBases = false;
-  const body = [];
-  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
-    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
-    if (!cell) {
-      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-reference-base sequence-viewer-alignment-reference-base-empty">&nbsp;</span>');
-      continue;
-    }
-
-    hasAlignedBases = true;
-    const differenceClass = cell.kind === 'mismatch' || cell.kind === 'deletion'
-      ? ` sequence-viewer-alignment-reference-base-${cell.kind}`
-      : '';
-    body.push(
-      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-reference-base${differenceClass}">${escapeHtml(referenceSequence[baseIndex] || '')}</span>`
-    );
-  }
-
-  if (!hasAlignedBases) {
-    return '';
-  }
-
-  return `
-    <div class="sequence-viewer-strand-row sequence-viewer-alignment-reference-row">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Reference sequence">REF</span>
-      <span class="sequence-viewer-seq-text sequence-viewer-alignment-reference-text">
-        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
-      </span>
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
-    </div>
-  `;
-}
-
-function renderAlignmentGuideRowHtml(lineStart, lineEnd, alignmentSequenceTrack) {
-  if (!alignmentSequenceTrack?.cells?.length) {
-    return '';
-  }
-
-  let hasAlignedBases = false;
-  const body = [];
-  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
-    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
-    if (!cell) {
-      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-guide-base sequence-viewer-alignment-guide-base-empty">&nbsp;</span>');
-      continue;
-    }
-
-    hasAlignedBases = true;
-    const kind = cell.kind === 'mismatch' || cell.kind === 'deletion' ? cell.kind : 'match';
-    const marker = kind === 'match' ? '|' : (kind === 'mismatch' ? '×' : '−');
-    body.push(
-      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-guide-base sequence-viewer-alignment-guide-base-${kind}">${marker}</span>`
-    );
-  }
-
-  if (!hasAlignedBases) {
-    return '';
-  }
-
-  return `
-    <div class="sequence-viewer-strand-row sequence-viewer-alignment-guide-row" aria-label="Alignment guide: vertical bar means a match, multiplication sign means a mismatch, and minus means a deletion">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Alignment guide">&nbsp;</span>
-      <span class="sequence-viewer-seq-text sequence-viewer-alignment-guide-text">
-        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
-      </span>
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
-    </div>
-  `;
-}
-
-function renderAlignmentComparisonRowsHtml(lineStart, lineEnd, referenceSequence, alignmentSequenceTrack) {
-  const referenceRow = renderAlignmentReferenceRowHtml(
-    lineStart,
-    lineEnd,
-    referenceSequence,
-    alignmentSequenceTrack
-  );
-  const queryRow = renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack);
-  if (!referenceRow || !queryRow) {
-    return '';
-  }
-
-  return `
-    <div class="sequence-viewer-alignment-comparison">
-      ${referenceRow}
-      ${renderAlignmentGuideRowHtml(lineStart, lineEnd, alignmentSequenceTrack)}
-      ${queryRow}
-    </div>
-  `;
-}
-
-export function normalizeHighlightSegments(segments, sequenceLength = null) {
-  const maxLength = Number.isFinite(Number(sequenceLength))
-    ? Math.max(0, Number(sequenceLength))
-    : Number.POSITIVE_INFINITY;
-  const normalized = (Array.isArray(segments) ? segments : [])
-    .map((segment) => ({
-      start: clamp(Math.round(Number(segment?.start) || 0), 0, maxLength),
-      end: clamp(Math.round(Number(segment?.end) || 0), 0, maxLength),
-      kind: String(segment?.kind || '').toLowerCase() === 'alignment' ? 'alignment' : ''
-    }))
-    .filter((segment) => segment.end > segment.start)
-    .sort((left, right) => {
-      if (left.start !== right.start) {
-        return left.start - right.start;
+  indexedFeatures.forEach((entry) => {
+    const segments = Array.isArray(entry?.feature?.segments) ? entry.feature.segments : [];
+    // A feature renders all of its segments at once, so it is listed once per
+    // line however many of its segments land there. An origin-wrapped feature
+    // has segments in descending order, so the lines are collected before the
+    // feature is filed rather than deduped as they are walked.
+    const touchedLines = new Set();
+    segments.forEach((segment) => {
+      const start = Math.max(0, Math.floor(Number(segment?.start) || 0));
+      const end = Math.min(sequenceLength, Math.floor(Number(segment?.end) || 0));
+      if (end <= start) {
+        return;
       }
-      if (left.kind !== right.kind) {
-        return left.kind.localeCompare(right.kind);
+      const lastLine = Math.floor((end - 1) / safeLineLength);
+      for (let line = Math.floor(start / safeLineLength); line <= lastLine; line += 1) {
+        touchedLines.add(line);
       }
-      return left.end - right.end;
     });
-
-  if (!normalized.length) {
-    return [];
-  }
-
-  const merged = [normalized[0]];
-  for (let i = 1; i < normalized.length; i += 1) {
-    const previous = merged[merged.length - 1];
-    const current = normalized[i];
-    if (current.kind === previous.kind && current.start <= previous.end) {
-      previous.end = Math.max(previous.end, current.end);
-    } else {
-      merged.push(current);
-    }
-  }
-  return merged;
-}
-
-function estimateRestrictionLabelWidthPx(label, charAdvancePx) {
-  const safeLabel = String(label || '');
-  const labelAdvancePx = Math.max(5, charAdvancePx * 0.68);
-  return Math.max(28, (safeLabel.length * labelAdvancePx) + RESTRICTION_LABEL_HORIZONTAL_PADDING_PX);
-}
-
-function assignRestrictionAnnotationLanes(fragments) {
-  const sorted = [...fragments].sort((left, right) => {
-    if (left.collisionLeftPx !== right.collisionLeftPx) {
-      return left.collisionLeftPx - right.collisionLeftPx;
-    }
-    if (left.leftPx !== right.leftPx) {
-      return left.leftPx - right.leftPx;
-    }
-    return right.widthPx - left.widthPx;
-  });
-  const laneRightEdges = [];
-
-  sorted.forEach((fragment) => {
-    let laneIndex = laneRightEdges.findIndex(
-      (rightEdge) => fragment.collisionLeftPx >= (rightEdge + RESTRICTION_LABEL_COLLISION_GAP_PX)
-    );
-    if (laneIndex < 0) {
-      laneIndex = laneRightEdges.length;
-      laneRightEdges.push(fragment.collisionRightPx);
-    } else {
-      laneRightEdges[laneIndex] = fragment.collisionRightPx;
-    }
-    fragment.lane = laneIndex;
-  });
-
-  return {
-    fragments: sorted,
-    laneCount: Math.max(1, laneRightEdges.length)
-  };
-}
-
-function renderLineRestrictionAnnotationsHtml(
-  indexedFeatures,
-  lineStart,
-  lineEnd,
-  sequenceLength,
-  selectedFeatureIndex,
-  charAdvancePx,
-  sequenceLineHeightPx
-) {
-  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
-  const safeLineHeight = Math.max(8, Number(sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
-  const pairBoxHeightPx = Math.max(safeLineHeight + 8, (safeLineHeight * 2) + STRAND_PAIR_ROW_GAP_PX);
-  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
-  const fragments = indexedFeatures
-    .filter(({ feature }) => String(feature?.type || '').toLowerCase() === 'restriction_site')
-    .flatMap(({ feature, index }) => {
-      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
-      const cutBaseIndices = resolveRestrictionCutBaseIndices(feature);
-      return segments
-        .map((segment) => {
-          const segmentStart = Number(segment?.start) || 0;
-          const segmentEnd = Number(segment?.end) || 0;
-          const geometry = computeRestrictionAnnotationGeometry(
-            segment,
-            lineStart,
-            lineEnd,
-            safeAdvance,
-            Number(cutBaseIndices?.top)
-          );
-          if (!geometry) {
-            return null;
-          }
-
-          const topCutLocalPx = resolveRestrictionCutLocalPx(
-            Number(cutBaseIndices?.top),
-            geometry,
-            lineStart,
-            safeAdvance,
-            segmentStart,
-            segmentEnd
-          );
-          const bottomCutLocalPx = resolveRestrictionCutLocalPx(
-            Number(cutBaseIndices?.bottom),
-            geometry,
-            lineStart,
-            safeAdvance,
-            segmentStart,
-            segmentEnd
-          );
-          const strandGapPx = Math.max(2, pairBoxHeightPx - (safeLineHeight * 2));
-          const cutPoints = (Number.isFinite(topCutLocalPx) || Number.isFinite(bottomCutLocalPx))
-            ? buildRestrictionCutPolylinePoints(
-              geometry.widthPx,
-              topCutLocalPx,
-              bottomCutLocalPx,
-              pairBoxHeightPx,
-              safeLineHeight,
-              strandGapPx,
-              RESTRICTION_LABEL_GAP_PX
-            )
-            : '';
-          const svgWidth = Math.max(1, geometry.widthPx);
-          const svgHeight = RESTRICTION_LABEL_GAP_PX + pairBoxHeightPx;
-          const location = buildFeatureLocationText(feature, sequenceLength);
-          const isActive = index === selectedFeatureIndex;
-          const label = String(feature.name || `site_${index + 1}`);
-          const title = `${label || '-'} (${location})`;
-          const labelWidthPx = estimateRestrictionLabelWidthPx(label, safeAdvance);
-          const labelCenterPx = geometry.leftPx + (geometry.widthPx / 2);
-          const collisionLeftPx = Math.min(geometry.leftPx, labelCenterPx - (labelWidthPx / 2));
-          const collisionRightPx = Math.max(geometry.leftPx + geometry.widthPx, labelCenterPx + (labelWidthPx / 2));
-
-          return {
-            index,
-            isActive,
-            label,
-            title,
-            leftPx: geometry.leftPx,
-            widthPx: geometry.widthPx,
-            collisionLeftPx,
-            collisionRightPx,
-            cutPoints,
-            svgWidth,
-            svgHeight
-          };
-        })
-        .filter(Boolean);
+    [...touchedLines].sort((left, right) => left - right).forEach((line) => {
+      buckets[line]?.push(entry);
     });
-
-  if (!fragments.length) {
-    return { html: '', topPaddingPx: 0 };
-  }
-
-  const { fragments: stackedFragments, laneCount } = assignRestrictionAnnotationLanes(fragments);
-  const topPaddingPx = RESTRICTION_LABEL_GAP_PX + 5 + ((laneCount - 1) * RESTRICTION_STACK_LANE_STEP_PX);
-  const annotations = stackedFragments
-    .map((fragment) => {
-      const labelStackOffsetPx = fragment.lane * RESTRICTION_STACK_LANE_STEP_PX;
-      return `
-            <button
-              type="button"
-              class="sequence-viewer-restriction-annot${fragment.isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
-              data-feature-index="${fragment.index}"
-              style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;z-index:${fragment.lane + 1};--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;--sequence-viewer-restriction-label-stack-offset:${labelStackOffsetPx.toFixed(3)}px;"
-              title="${escapeHtml(fragment.title)}"
-            >
-              <span class="sequence-viewer-restriction-label">${escapeHtml(fragment.label)}</span>
-              <span class="sequence-viewer-restriction-box"></span>
-              ${fragment.cutPoints
-    ? `<svg class="sequence-viewer-restriction-cut-svg" viewBox="0 0 ${fragment.svgWidth.toFixed(2)} ${fragment.svgHeight.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="${fragment.cutPoints}"></polyline>
-              </svg>`
-    : ''}
-            </button>
-          `;
-    })
-    .join('');
-
-  return {
-    html: `<div class="sequence-viewer-line-restriction-track" style="width:${lineWidthPx.toFixed(3)}px;height:${pairBoxHeightPx.toFixed(3)}px;--sequence-viewer-restriction-lanes:${laneCount};">${annotations}</div>`,
-    topPaddingPx
-  };
-}
-
-function renderLineFeatureButtonsHtml(
-  indexedFeatures,
-  lineStart,
-  lineEnd,
-  sequenceLength,
-  selectedFeatureIndex,
-  charAdvancePx,
-  lineFeatureOffsetPx = (DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX)
-) {
-  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
-  const safeOffset = Math.max(0, Number(lineFeatureOffsetPx) || 0);
-  const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
-
-  const fragments = indexedFeatures
-    .filter(({ feature }) => String(feature?.type || '').toLowerCase() !== 'restriction_site')
-    .flatMap(({ feature, index }) => {
-      const segments = Array.isArray(feature?.segments) ? feature.segments : [];
-      const location = buildFeatureLocationText(feature, sequenceLength);
-      const title = `${feature.name || '-'} (${location})`;
-      const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
-      const textColor = getContrastTextColor(color);
-      return segments
-        .map((segment) => {
-          const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
-          if (!geometry) {
-            return null;
-          }
-          return {
-            feature,
-            index,
-            title,
-            color,
-            textColor,
-            leftPx: geometry.leftPx,
-            widthPx: geometry.widthPx,
-            rightPx: geometry.leftPx + geometry.widthPx
-          };
-        })
-        .filter(Boolean);
-    })
-    .sort((left, right) => {
-      if (left.leftPx !== right.leftPx) {
-        return left.leftPx - right.leftPx;
-      }
-      return right.widthPx - left.widthPx;
-    });
-
-  if (!fragments.length) {
-    return '';
-  }
-
-  const laneRightEdges = [];
-  fragments.forEach((fragment) => {
-    let laneIndex = laneRightEdges.findIndex((rightEdge) => fragment.leftPx >= rightEdge);
-    if (laneIndex < 0) {
-      laneIndex = laneRightEdges.length;
-      laneRightEdges.push(fragment.rightPx);
-    } else {
-      laneRightEdges[laneIndex] = fragment.rightPx;
-    }
-    fragment.lane = laneIndex;
   });
 
-  const laneCount = Math.max(1, laneRightEdges.length);
-  const trackHeightPx = (laneCount * LINE_FEATURE_BAR_HEIGHT_PX) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
-  const bars = fragments
-    .map((fragment) => {
-      const topPx = fragment.lane * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
-      const isActive = fragment.index === selectedFeatureIndex;
-      const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
-      const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
-      const showLabel = fragment.widthPx >= labelWidthPx;
-      return `
-        <button
-          type="button"
-          class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
-          data-feature-index="${fragment.index}"
-          style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;background:${fragment.color};color:${fragment.textColor};"
-          title="${escapeHtml(fragment.title)}"
-        >${showLabel ? `<span class="sequence-viewer-line-feature-label">${escapeHtml(label)}</span>` : ''}</button>
-      `;
-    })
-    .join('');
-
-  return `<div class="sequence-viewer-line-features" style="width:${lineWidthPx.toFixed(3)}px;height:${trackHeightPx.toFixed(3)}px;margin-left:${safeOffset.toFixed(3)}px;">${bars}</div>`;
-}
-
-function buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext, charAdvancePx) {
-  const lineSpan = Math.max(0, lineEnd - lineStart);
-  if (!lineSpan || !orfTranslationContext || !Array.isArray(orfTranslationContext.anchors)) {
-    return '';
-  }
-
-  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
-  const lineWidthPx = lineSpan * safeAdvance;
-  const cells = [];
-
-  orfTranslationContext.anchors.forEach((anchor) => {
-    const baseIndex = Number(anchor?.baseIndex);
-    const displayText = String(anchor?.displayText || anchor?.aa || '').trim();
-    if (!Number.isFinite(baseIndex) || !displayText) {
-      return;
-    }
-    if (baseIndex < lineStart || baseIndex >= lineEnd) {
-      return;
-    }
-    const style = getAminoAcidVisualStyle(anchor?.colorKey || displayText);
-    const leftPx = (baseIndex - lineStart) * safeAdvance;
-    const remainingBases = Math.max(1, lineEnd - baseIndex);
-    const widthPx = Math.max(
-      safeAdvance * 1.8,
-      Math.min(remainingBases * safeAdvance, safeAdvance * 3)
-    );
-    const title = String(anchor?.title || displayText);
-    cells.push(`
-      <span
-        class="sequence-viewer-aa-chip${anchor?.isStop ? ' sequence-viewer-aa-chip-stop' : ''}"
-        data-aa="${escapeHtml(anchor?.aa || '')}"
-        data-aa-display="${escapeHtml(displayText)}"
-        data-aa-color-key="${escapeHtml(anchor?.colorKey || '')}"
-        style="left:${leftPx.toFixed(3)}px;width:${widthPx.toFixed(3)}px;--sequence-viewer-aa-chip-color:${style.color};--sequence-viewer-aa-chip-background:${style.background};--sequence-viewer-aa-chip-border:${style.border};"
-        title="${escapeHtml(title)}"
-      >${escapeHtml(displayText)}</span>
-    `);
-  });
-
-  if (!cells.length) {
-    return '';
-  }
-
-  return `
-    <span class="sequence-viewer-aa-track" style="width:${lineWidthPx.toFixed(3)}px;">
-      ${cells.join('')}
-    </span>
-  `;
-}
-
-function renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, charAdvancePx) {
-  const body = buildAminoAcidLineMarkup(lineStart, lineEnd, orfTranslationContext, charAdvancePx);
-  if (!body) {
-    return '';
-  }
-
-  const strandClass = orfTranslationContext?.strand === -1
-    ? 'sequence-viewer-aa-row-minus'
-    : 'sequence-viewer-aa-row-plus';
-  const label = getOrfTranslationRowLabel(orfTranslationContext?.strand);
-
-  return `
-    <div class="sequence-viewer-strand-row sequence-viewer-aa-row ${strandClass}">
-      <span class="sequence-viewer-strand-end sequence-viewer-aa-label">${escapeHtml(label)}</span>
-      <span class="sequence-viewer-seq-text sequence-viewer-aa-text">
-        ${body}
-      </span>
-      <span class="sequence-viewer-strand-end sequence-viewer-aa-label"></span>
-    </div>
-  `;
+  return buckets;
 }
 
 export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
@@ -672,9 +84,11 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
   const alignmentCursorActive = Boolean(alignmentSequenceTrack?.cells?.length);
 
   const lines = [];
+  const featuresByLine = indexFeaturesByLine(indexedFeatures, lineLength, text.length);
 
   for (let lineStart = 0; lineStart < text.length; lineStart += lineLength) {
     const lineEnd = Math.min(text.length, lineStart + lineLength);
+    const lineFeatures = featuresByLine[Math.floor(lineStart / lineLength)] || [];
     const lineHighlights = sortedHighlights
       .map((segment) => ({
         start: Math.max(lineStart, segment.start),
@@ -697,7 +111,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       : '';
     const aminoAcidRow = renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, charAdvancePx);
     const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
-      indexedFeatures,
+      lineFeatures,
       lineStart,
       lineEnd,
       text.length,
@@ -707,13 +121,14 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     );
     const restrictionTopPaddingPx = Math.max(0, Number(lineRestrictionAnnotations?.topPaddingPx) || 0);
     const lineFeatureButtons = renderLineFeatureButtonsHtml(
-      indexedFeatures,
+      lineFeatures,
       lineStart,
       lineEnd,
       text.length,
       selectedFeatureIndex,
       charAdvancePx,
-      lineFeatureOffsetPx
+      lineFeatureOffsetPx,
+      text
     );
     const cursorBlockOnLine = alignmentCursorActive
       && Number.isFinite(cursorBaseIndex)
@@ -738,10 +153,27 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       ? ` style="padding-top:${(restrictionTopPaddingPx + 2).toFixed(3)}px;"`
       : '';
 
+    // Off-screen lines are skipped by content-visibility, so each one has to
+    // declare how tall it would have been or the scrollbar is a guess. Every
+    // part of that is already known here: the strand rows, the restriction
+    // padding, the feature and primer tracks, and the translation row.
+    const pairExtraRows = (lineFeatureButtons.reverseHeightPx > 0 ? 1 : 0) + (aminoAcidRow ? 1 : 0);
+    const blockSiblings = (lineFeatureButtons.forwardHeightPx > 0 ? 1 : 0)
+      + (lineFeatureButtons.featuresHeightPx > 0 ? 1 : 0);
+    const intrinsicHeightPx = strandPairHeightPx
+      + restrictionTopPaddingPx
+      + lineFeatureButtons.forwardHeightPx
+      + lineFeatureButtons.reverseHeightPx
+      + lineFeatureButtons.featuresHeightPx
+      + (aminoAcidRow ? sequenceLineHeightPx : 0)
+      + (pairExtraRows * STRAND_PAIR_ROW_GAP_PX)
+      + (blockSiblings * STRAND_BLOCK_GAP_PX);
+
     lines.push(`
-      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
+      <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}" style="contain-intrinsic-size:auto ${intrinsicHeightPx.toFixed(2)}px;">
         <span class="sequence-viewer-seq-coord"${coordStyle}>${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
+          ${lineFeatureButtons.forwardPrimers}
           <div class="sequence-viewer-strand-pair"${strandPairStyle}>
             ${cursorBlockOnLine
     ? `<span class="sequence-viewer-line-cursor sequence-viewer-line-cursor-block" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;width:${charAdvancePx.toFixed(3)}px;" aria-hidden="true"></span>`
@@ -763,9 +195,10 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
               <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>
               <span class="sequence-viewer-strand-end">5'</span>
             </div>
+            ${lineFeatureButtons.reversePrimers}
             ${aminoAcidRow}
           </div>
-          ${lineFeatureButtons}
+          ${lineFeatureButtons.features}
         </div>
       </div>
     `);
@@ -831,3 +264,5 @@ export function formatSelectedFeatureDetailHtml(feature, sequenceLength, options
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
   `;
 }
+
+export { normalizeHighlightSegments } from './rendering/highlight-segments.js';

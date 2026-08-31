@@ -1,9 +1,8 @@
 import { escapeHtml } from '../../../lib/html.js';
-import { buildCircularPreviewHtmlDocument } from '../storage.js';
+import { buildSequenceMapSvg } from '../vector-builder/sequence-map.js';
 import {
   cleanText,
-  clamp,
-  normalizeRecordName
+  clamp
 } from '../shared.js';
 import {
   buildBackboneRecognitionFeatures
@@ -14,7 +13,7 @@ import {
 } from './backbone-recognition-model.js';
 
 export function createBackboneDialogRenderer(ctx) {
-  const { elements, rootDocument, state } = ctx;
+  const { elements, state } = ctx;
 
   function renderBackboneRecognitionDialog() {
     const dialogState = state.backboneRecognitionDialog || {};
@@ -125,23 +124,15 @@ export function createBackboneDialogRenderer(ctx) {
       return;
     }
     if (!record?.sequence?.length) {
-      elements.backboneDialogPreview.innerHTML = '<p class="small-note">Circular plasmid preview unavailable.</p>';
+      elements.backboneDialogPreview.innerHTML = '<p class="small-note">Plasmid preview unavailable.</p>';
       return;
     }
-    const htmlText = buildCircularPreviewHtmlDocument({ ...record, topology: 'circular' });
-    const title = normalizeRecordName(record?.name || 'Backbone preview', 'Backbone preview');
-    if (typeof rootDocument?.createElement === 'function' && typeof elements.backboneDialogPreview?.replaceChildren === 'function') {
-      const frame = rootDocument.createElement('iframe');
-      frame.className = 'sequence-viewer-preview-frame';
-      frame.loading = 'lazy';
-      frame.title = title;
-      frame.setAttribute('scrolling', 'no');
-      frame.srcdoc = String(htmlText || '');
-      elements.backboneDialogPreview.replaceChildren(frame);
-      return;
-    }
-    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText || ''))}`;
-    elements.backboneDialogPreview.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" scrolling="no" title="${escapeHtml(title)}"></iframe>`;
+    // Backbone/insert recognition is a plasmid workflow, so the candidate is
+    // previewed as a ring even when the source record is stored linear.
+    elements.backboneDialogPreview.innerHTML = buildSequenceMapSvg(
+      { ...record, topology: 'circular' },
+      { features: Array.isArray(record?.features) ? record.features : [] }
+    );
   }
 }
 

@@ -12,19 +12,12 @@ const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
 const { buildHikariAgentMcpInstructions } = require('./instructions.js');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 
 const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
 const MAX_MODEL_PAPERS = 12;
 const MAX_MODEL_CONTEXT_BLOCKS = 8;
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -229,7 +222,7 @@ function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
       loaded_context_blocks: Math.max(0, loadedContextBlocks.length - MAX_MODEL_CONTEXT_BLOCKS)
     },
     full_result_available_in_structured_content: true,
-    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth. In line-backed context blocks, source_lines are verbatim application-extracted paper.md lines selected by line_ranges; do not attribute text that is absent from source_lines. Treat related_comments as local user comments, not paper text.'
+    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth. In line-backed context blocks, source_lines are verbatim application-extracted paper Markdown lines selected by line_ranges; do not attribute text that is absent from source_lines. Treat related_comments as local user comments, not paper text. When citing a local source_path, use paper_title as the visible link label instead of the raw Markdown filename.'
   };
 }
 

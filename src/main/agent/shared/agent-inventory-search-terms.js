@@ -4,7 +4,7 @@
 // (Codex and skills). This module stays dependency-free so every caller uses the
 // same term normalization without importing a provider-specific runtime.
 
-function cleanText(value, _maxLength = 500) {
+function cleanText(value) {
   return String(value || '').trim();
 }
 
@@ -32,7 +32,7 @@ function buildInventorySearchTerms({
   maxTerms = 10
 }) {
   const candidateTerms = uniqueStrings(inventorySearch?.candidate_terms, maxTerms);
-  const baseFallback = cleanText(fallbackQuery, 220);
+  const baseFallback = cleanText(fallbackQuery);
 
   return uniqueStrings([
     ...candidateTerms,

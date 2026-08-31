@@ -89,7 +89,8 @@ function findExistingChemicalForImport(record) {
 
 function mergeImportedChemicalRecord(imported, existing = null) {
   const sameLocation = normalizeLocationKey(imported.location) === normalizeLocationKey(existing?.location);
-  const locationCode = assignLocationCode(imported.location, sameLocation ? existing?.locationCode || '' : '');
+  const casNumber = cleanImportCell(imported.casNumber) || cleanImportCell(existing?.casNumber);
+  const locationCode = assignLocationCode(imported.location, sameLocation ? existing?.locationCode || '' : '', casNumber);
   const parsedLocationCode = parseLocationCode(locationCode);
   const locationNumber = Number(parsedLocationCode?.number || existing?.locationNumber || 0);
   state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, locationNumber);
@@ -103,7 +104,7 @@ function mergeImportedChemicalRecord(imported, existing = null) {
     ...(existing || {}),
     id: existing?.id || createId(),
     name: cleanImportCell(imported.name) || cleanImportCell(existing?.name),
-    casNumber: valueOrExisting('casNumber'),
+    casNumber,
     location: cleanImportCell(imported.location) || cleanImportCell(existing?.location) || 'Imported',
     locationCode,
     locationNumber,

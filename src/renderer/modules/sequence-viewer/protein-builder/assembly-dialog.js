@@ -13,13 +13,7 @@ export function installProteinBuilderAssemblyDialog(ctx) {
 
     const selectedBackbone = ctx.getSelectedStoredBackbone();
     const canAdvanceToReview = Boolean(selectedBackbone && state.dnaConstruct?.ok && state.dnaConstruct?.sequence);
-    const constructName = cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert';
-    if (elements.proteinBuilderAssemblySubtitle) {
-      elements.proteinBuilderAssemblySubtitle.textContent = state.dnaConstruct?.ok && state.dnaConstruct?.sequence
-        ? `Select a stored backbone to combine with the current ${state.dnaConstruct.length} nt DNA build.`
-        : 'Select a stored backbone to combine with the current DNA build.';
-    }
-
+    const constructName = ctx.resolveConstructName();
     if (elements.proteinBuilderAssemblyList) {
       if (state.isLoadingAssemblyBackbones) {
         elements.proteinBuilderAssemblyList.innerHTML = '<p class="small-note">Loading stored backbones...</p>';

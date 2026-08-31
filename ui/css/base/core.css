@@ -20,6 +20,7 @@
   --font-app: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
+  --shared-left-rail-folded-width: 28px;
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
@@ -287,6 +288,61 @@ div {
   min-width: 0;
 }
 
+/* Shared search-box shape: the field plus a magnifier on the right that runs
+   the search. search-field-lens.js wraps every `input[type="search"]`. */
+.search-field {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+}
+
+.search-field > input[type='search'] {
+  width: 100%;
+  min-width: 0;
+  padding-right: 38px;
+}
+
+.search-field > input[type='search']::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-field__lens {
+  position: absolute;
+  inset-inline-end: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+.search-field__lens svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.search-field__lens:hover {
+  background: var(--theme-surface-hover);
+  color: var(--theme-text-strong);
+}
+
+.search-field:has(> input[type='search']:disabled) .search-field__lens {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 .topbar-search-suggestions {
   position: absolute;
   top: calc(100% + 6px);
@@ -412,6 +468,11 @@ body.has-shared-left-rail-view .workspace-shell::before {
   z-index: 0;
 }
 
+body.has-shared-left-rail-view.has-folded-shared-left-rail .workspace-shell::before {
+  width: var(--shared-left-rail-folded-width);
+  box-shadow: inset -1px 0 0 var(--app-left-rail-divider);
+}
+
 .workspace-main {
   min-width: 0;
   min-height: 0;
@@ -452,8 +513,18 @@ body.has-shared-left-rail-view .workspace-main {
   border-radius: 8px;
   color: var(--theme-text-strong);
   background: transparent;
-  font: 700 1.1rem/1 var(--font-app);
   cursor: pointer;
+}
+
+.universal-agent-chat-rail__toggle-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .universal-agent-chat-rail__toggle:hover,
@@ -550,6 +621,25 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   gap: 10px;
   padding: 10px;
   border-radius: 14px;
+}
+
+.universal-agent-chat-rail .agent-question-dock {
+  width: 100%;
+  max-height: min(42vh, 360px);
+  border-radius: 14px;
+}
+
+.universal-agent-chat-rail .agent-user-question-card {
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.universal-agent-chat-rail .agent-send-icon-btn {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
 }
 
 .universal-agent-chat-rail .agent-composer-card textarea {
@@ -835,19 +925,25 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   height: 100%;
 }
 
-/* Plugin views use the shared left-rail template (rail drawn by the host in
-   plugin-loader.js). The section fills its workspace exactly like any other
-   rail view via body.has-shared-left-rail-view; the template handles the grid. */
-.plugin-view__layout {
+/* A plugin view is its frame and nothing else — no host rail, no gutter, no
+   host scroll. The plugin page lays out and scrolls itself, and if it wants a
+   left rail it draws one, the same way a built-in view does.
+
+   The full-height rule is spelled out here rather than inherited from
+   `body.has-shared-left-rail-view`, which only flips when the active view
+   contains a host-drawn rail. A plugin view has none, and without this the
+   section falls back to the iframe's intrinsic 150px. */
+.workspace-main > .plugin-view.is-active {
+  display: flex;
   height: 100%;
-  min-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* The frame owns the whole main pane: drop the template's reading gutter and
-   host scroll, since the plugin page lays out and scrolls itself. */
-.plugin-view__main.left-rail-template__main {
+.plugin-view__main {
   display: flex;
-  padding-left: 0;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -859,25 +955,11 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   background: transparent;
 }
 
-.plugin-rail__title {
-  margin: 0 0 2px;
-  font-size: 15px;
-  line-height: 1.3;
-}
-
-.plugin-rail__kind {
-  display: inline-block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.6;
-}
-
-.plugin-rail__description,
-.plugin-rail__access,
-.plugin-rail__origin {
-  margin: 12px 0 0;
-  word-break: break-word;
+/* Service plugins are headless. The frame exists only to run their script, so
+   it never renders — enforced here as well as by the `hidden` attribute, so a
+   service cannot show UI even if its document contains markup. */
+.plugin-service-frame {
+  display: none !important;
 }
 
 #protocol-management-view > .panel:first-child > h2,
@@ -885,7 +967,6 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
 #lab-common-inventory-view > .panel:first-child > h2,
 #sample-registry-view > .panel:first-child > h2,
 #assay-view > .panel:first-child > h2,
-#gel-view > .panel:first-child > h2,
 #setting-view > .panel:first-child > h2,
 #workflow-management-view > .panel:first-child > h2,
 #agent-view > .panel:first-child > h2,

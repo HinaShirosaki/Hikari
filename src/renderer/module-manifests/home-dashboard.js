@@ -13,7 +13,8 @@ export const homeDashboardManifest = {
     rendererServices,
     showView,
     views,
-    rootDocument
+    rootDocument,
+    apiBridge
   }) => ({
     state,
     persist,
@@ -24,6 +25,7 @@ export const homeDashboardManifest = {
     onOpenNotebook: () => showView(views.BIOLOGY_NOTEBOOK),
     onOpenWorkflow: () => showView(views.WORKFLOW_MANAGEMENT),
     onOpenAssistant: () => showView(views.AGENT),
+    api: apiBridge,
     onSendQuickLogToAgent: (message) => {
       const draft = String(message || '').trim();
       if (!draft) {

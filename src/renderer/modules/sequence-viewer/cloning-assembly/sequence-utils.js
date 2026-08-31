@@ -1,8 +1,5 @@
 import { cleanNucleotideSequence } from '../calculations/sequence.js';
-
-export function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+import { asArray } from '../../../lib/normalize.js';
 
 export function normalizeSequence(raw) {
   return cleanNucleotideSequence(raw, 'DNA');
@@ -103,3 +100,5 @@ export function circularSlice(sequence, start, length) {
 export function buildStableFragmentId(prefix, index) {
   return `${prefix}_${index + 1}`;
 }
+
+export { asArray };

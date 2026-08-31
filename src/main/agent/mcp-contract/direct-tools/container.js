@@ -16,7 +16,7 @@ const {
 
 const CONTAINER_MCP_TOOL = Object.freeze({
   name: 'container',
-  description: 'Store, name, read, update, and position-edit temporary string or number containers. Returns short runtime IDs such as 1, 2, or 3.',
+  description: 'Store, name, list, read, update, and position-edit temporary string or number containers, with optional source provenance. Returns short runtime IDs such as 1, 2, or 3.',
   annotations: buildWriteToolAnnotations('Container'),
   inputSchema: cloneJson(AGENT_TOOL_CALL_CATALOG.container?.input_schema, {
     type: 'object',

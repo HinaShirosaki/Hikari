@@ -1,0 +1,13 @@
+/* Shared mode hooks and compatibility flags */
+
+body.ui-neutral-compact {
+  color-scheme: light;
+}
+
+body.ui-neutral-compact.theme-night {
+  color-scheme: dark;
+}
+
+body.ui-neutral-compact.theme-miku {
+  color-scheme: light;
+}

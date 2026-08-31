@@ -93,14 +93,10 @@ export function buildSerialDilutionGroups({
 
 export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText, concentrationUnit = '' }) {
   const notes = [];
-  const trailingZeroEntries = group.trailingEntries.filter((entry) => entry.magnitude === 0);
   const trailingOtherEntries = group.trailingEntries.filter((entry) => entry.magnitude !== 0);
 
   if (group.hasConflict) {
     notes.push('Multiple mapped wells for one concentration position had different concentration labels. Using the first one.');
-  }
-  if (trailingZeroEntries.length) {
-    notes.push(`Skipped trailing 0 concentration well${trailingZeroEntries.length === 1 ? '' : 's'}: ${trailingZeroEntries.map((entry) => entry.wellLabel).join('; ')}.`);
   }
   if (trailingOtherEntries.length) {
     notes.push(`Ignored trailing wells without a positive concentration: ${trailingOtherEntries.map((entry) => entry.wellLabel).join('; ')}.`);

@@ -3,6 +3,7 @@
 const { openDatabase, readRows } = require('./database');
 const { ensureLibraryDirectories, resolveLibraryPaths } = require('./paths');
 const { buildFeatureSearchResult } = require('./feature-search');
+const { syncMissingFeatureOccurrences } = require('./feature-index-sync');
 const {
   buildDnaAnnotationMatches,
   buildProteinAnnotationMatches
@@ -31,6 +32,7 @@ async function annotateSequenceRecord({ storagePath, sequence = '', topology = '
     }
 
     const normalizedTopology = normalizeTopologyValue(topology);
+    await syncMissingFeatureOccurrences({ db, paths });
     const dnaMatches = buildDnaAnnotationMatches(db, normalizedQuery, normalizedTopology, excludeEntryId);
     const proteinMatches = buildProteinAnnotationMatches(db, normalizedQuery, normalizedTopology, excludeEntryId);
     return {
@@ -57,6 +59,7 @@ async function searchSequenceFeatures({ storagePath, query = '', limit = 30 }) {
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
   try {
+    await syncMissingFeatureOccurrences({ db, paths });
     const safeLimit = clamp(Math.round(Number(limit) || 30), 1, 100);
     const namePattern = normalizedNameQuery ? `%${normalizedNameQuery}%` : '';
     const sequencePattern = normalizedSequenceQuery ? `%${normalizedSequenceQuery}%` : '';

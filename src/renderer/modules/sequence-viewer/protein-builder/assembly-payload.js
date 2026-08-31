@@ -1,4 +1,8 @@
 import { cleanText, clamp, normalizeSequenceText } from '../shared.js';
+import {
+  buildProteinArchitectureName,
+  buildVectorSequenceName
+} from '../sequence-naming.js';
 import { buildBackboneCoverageSegments, shiftFeatureForInsertion } from './backbone-projection.js';
 
 export function buildStoredBackboneDisplayName(backbone = {}) {
@@ -32,9 +36,10 @@ export function buildAssembledPlasmidPayload(backbone = {}, dnaConstruct = {}, o
     return null;
   }
 
-  const constructName = cleanText(options?.constructName, 140) || 'Protein Builder Insert';
+  const constructName = cleanText(options?.constructName, 140)
+    || buildProteinArchitectureName({ parts: dnaConstruct?.parts });
   const backboneName = buildStoredBackboneDisplayName(backbone);
-  const assembledName = `${constructName} (${backboneName})`;
+  const assembledName = buildVectorSequenceName({ backboneName, payloadName: constructName });
   const explicitInsertionOffset = Number(backbone?.insertionOffset);
   const insertionOffset = clamp(
     Number.isFinite(explicitInsertionOffset) ? Math.round(explicitInsertionOffset) : backboneSequence.length,

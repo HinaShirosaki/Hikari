@@ -4,6 +4,7 @@ import {
   DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
   DEFAULT_SAMPLE_TYPE_LABELS
 } from '../../lib/inventory-settings.js';
+import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 
 export const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
@@ -12,7 +13,6 @@ export const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.LAB_COMMON_INVENTORY,
   VIEWS.SAMPLE_REGISTRY,
   VIEWS.ASSAY,
-  VIEWS.GEL,
   VIEWS.WORKFLOW_MANAGEMENT,
   VIEWS.PAPERS,
   VIEWS.AGENT,
@@ -41,7 +41,8 @@ export const defaultState = {
     folders: [],
     sessionFolderIds: {},
     selectedFolderId: 'general',
-    expandedFolderIds: []
+    expandedFolderIds: [],
+    folderExpansionInitialized: false
   },
   messages: [],
   growthMetrics: {
@@ -102,7 +103,6 @@ export const defaultState = {
       reasoningEffort: ''
     },
     agent: {
-      developerMode: false,
       externalSkillsEnabled: true,
       disabledExternalSkillNames: []
     },
@@ -127,7 +127,8 @@ export const defaultState = {
       defaultViewId: VIEWS.HOME,
       rememberLastView: false
     },
-    plugins: []
+    plugins: mergeBundledPluginEntries(),
+    pluginStorage: {}
   },
   inventory: {
     'Room Temp': [],

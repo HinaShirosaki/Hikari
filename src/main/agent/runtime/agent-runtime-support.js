@@ -219,6 +219,15 @@ function createAgentRuntimeSupport(deps = {}) {
       snapshot.preferred_journal
     ]);
     const preferredJournal = preferredJournals.join('; ');
+    const rawScheduledTask = snapshot.scheduled_task || snapshot.scheduledTask;
+    const scheduledTaskSource = rawScheduledTask && typeof rawScheduledTask === 'object' && !Array.isArray(rawScheduledTask)
+      ? {
+        id: cleanText(rawScheduledTask.id, 160),
+        task_type: cleanText(rawScheduledTask.task_type || rawScheduledTask.taskType, 80),
+        deny_paper_download: rawScheduledTask.deny_paper_download === true
+          || rawScheduledTask.denyPaperDownload === true
+      }
+      : null;
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),
@@ -272,6 +281,9 @@ function createAgentRuntimeSupport(deps = {}) {
         preferredJournals,
         preferredJournal
       },
+      // Scheduled-task policy has to survive normalization: the paper-download
+      // executor reads deny_paper_download off the normalized snapshot.
+      ...(scheduledTaskSource ? { scheduled_task: scheduledTaskSource } : {}),
       data_file_path: cleanText(snapshot.data_file_path || snapshot.dataFilePath, 1600),
       timestamp: cleanText(snapshot.timestamp, 80)
     };

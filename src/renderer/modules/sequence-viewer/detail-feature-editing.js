@@ -1,120 +1,16 @@
 import { escapeHtml } from '../../lib/html.js';
-import { designPcrPrimerPair } from './cloning-assembly.js';
+import { COMMON_SEQUENCE_FEATURE_TYPES } from './feature-types.js';
+import { clamp, cleanText, normalizeRecordName } from './shared.js';
+import { createPrimerDesignOverlay } from './detail-feature-editing/primer-design.js';
 import {
-  COMMON_SEQUENCE_FEATURE_TYPES,
-  normalizeFeatureType
-} from './feature-types.js';
-import { cleanText, clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
-import { isOrfFeature } from './orf-analysis.js';
-import { renderPrimerCopyButton } from './primer-copy.js';
-
-function sanitizeFeatureType(type) {
-  return normalizeFeatureType(type, 'misc_feature');
-}
-
-function buildManualFeatureId(type) {
-  const prefix = sanitizeFeatureType(type).slice(0, 24) || 'feature';
-  const stamp = Date.now().toString(36);
-  const randomPart = Math.random().toString(36).slice(2, 8) || 'feature';
-  return `manual_${prefix}_${stamp}_${randomPart}`;
-}
-
-function formatBaseRangeLabel(range) {
-  const start = Math.max(0, Number(range?.start) || 0);
-  const end = Math.max(start, Number(range?.end) || start);
-  const length = Math.max(0, end - start);
-  if (!length) {
-    return '-';
-  }
-  return `${(start + 1).toLocaleString()}..${end.toLocaleString()} (${length.toLocaleString()} bp)`;
-}
-
-function formatNumber(value, digits = 1) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return '-';
-  }
-  return number.toFixed(digits);
-}
-
-function formatPrimerRole(role) {
-  return String(role || '')
-    .trim()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
-}
-
-function getFeatureOverallRange(feature, sequenceLength) {
-  const safeLength = Math.max(0, Number(sequenceLength) || 0);
-  const segments = (Array.isArray(feature?.segments) ? feature.segments : [])
-    .map((segment) => ({
-      start: clamp(Math.round(Number(segment?.start) || 0), 0, safeLength),
-      end: clamp(Math.round(Number(segment?.end) || 0), 0, safeLength)
-    }))
-    .filter((segment) => segment.end > segment.start);
-  if (!segments.length) {
-    return null;
-  }
-  return {
-    start: Math.min(...segments.map((segment) => segment.start)),
-    end: Math.max(...segments.map((segment) => segment.end))
-  };
-}
-
-function doesFeatureOverlapRange(feature, range) {
-  if (!feature || !range) {
-    return false;
-  }
-  return (Array.isArray(feature?.segments) ? feature.segments : []).some((segment) => (
-    (Number(segment?.start) || 0) < range.end
-    && range.start < (Number(segment?.end) || 0)
-  ));
-}
-
-function isFeatureEditable(feature) {
-  if (!feature || typeof feature !== 'object') {
-    return false;
-  }
-  if (String(feature?.type || '').toLowerCase() === 'restriction_site') {
-    return false;
-  }
-  return !isOrfFeature(feature);
-}
-
-function positionFloatingUi(element, clientX, clientY) {
-  if (!element?.style) {
-    return;
-  }
-
-  const rawX = Number(clientX);
-  const rawY = Number(clientY);
-  const fallbackX = Number.isFinite(rawX) ? rawX : 16;
-  const fallbackY = Number.isFinite(rawY) ? rawY : 16;
-  element.style.left = `${Math.max(8, fallbackX)}px`;
-  element.style.top = `${Math.max(8, fallbackY)}px`;
-
-  if (typeof element.getBoundingClientRect !== 'function') {
-    return;
-  }
-
-  const rect = element.getBoundingClientRect();
-  const viewportWidth = Number(globalThis?.innerWidth) || 0;
-  const viewportHeight = Number(globalThis?.innerHeight) || 0;
-  if (!viewportWidth && !viewportHeight) {
-    return;
-  }
-
-  const left = viewportWidth > 0
-    ? Math.max(8, Math.min(fallbackX, viewportWidth - rect.width - 8))
-    : Math.max(8, fallbackX);
-  const top = viewportHeight > 0
-    ? Math.max(8, Math.min(fallbackY, viewportHeight - rect.height - 8))
-    : Math.max(8, fallbackY);
-
-  element.style.left = `${left}px`;
-  element.style.top = `${top}px`;
-}
+  buildManualFeatureId,
+  doesFeatureOverlapRange,
+  formatBaseRangeLabel,
+  getFeatureOverallRange,
+  isFeatureEditable,
+  positionFloatingUi,
+  sanitizeFeatureType
+} from './detail-feature-editing/feature-ranges.js';
 
 export function createSequenceViewerFeatureEditingController(config = {}) {
   const elements = config?.elements || {};
@@ -128,6 +24,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   const renderActiveRecord = config?.renderActiveRecord || (() => {});
   const setStatus = config?.setStatus || (() => {});
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
 
   let featureEditorState = null;
 
@@ -228,145 +125,16 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     `;
   }
 
-  function renderPrimerDesignTable(primers = []) {
-    if (!primers.length) {
-      return '<p class="small-note">No primer pair was generated for this sequence.</p>';
-    }
 
-    return `
-      <div class="sequence-viewer-cloning-design-primer-table-wrap">
-        <table class="sequence-viewer-cloning-design-primer-table">
-          <thead>
-            <tr>
-              <th>Primer</th>
-              <th>Role</th>
-              <th>Sequence</th>
-              <th>Length</th>
-              <th>Tm</th>
-              <th>GC</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${primers.map((primer, index) => {
-              const sequence = normalizeSequenceText(primer?.sequence || '');
-              const primerName = cleanText(primer?.name, 160) || `Primer ${index + 1}`;
-              return `
-                <tr>
-                  <td>
-                    <div class="sequence-viewer-primer-copy-cell">
-                      <span class="sequence-viewer-primer-copy-value">${escapeHtml(primerName)}</span>
-                      ${renderPrimerCopyButton(primerName, 'name', 'primer name')}
-                    </div>
-                  </td>
-                  <td>${escapeHtml(formatPrimerRole(primer?.role))}</td>
-                  <td class="sequence-viewer-cloning-design-primer-seq">
-                    <div class="sequence-viewer-primer-copy-cell sequence-viewer-primer-copy-cell-sequence">
-                      <span class="sequence-viewer-primer-copy-value">${escapeHtml(sequence || '-')}</span>
-                      ${renderPrimerCopyButton(sequence, 'sequence', 'primer sequence')}
-                    </div>
-                  </td>
-                  <td>${Math.max(0, Number(primer?.length) || sequence.length).toLocaleString()} nt</td>
-                  <td>${escapeHtml(formatNumber(primer?.tm, 1))} C</td>
-                  <td>${escapeHtml(formatNumber(primer?.gcContent, 1))}%</td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  function renderPrimerDesignWarnings(warnings = []) {
-    const safeWarnings = (Array.isArray(warnings) ? warnings : [])
-      .map((warning) => cleanText(warning, 500))
-      .filter(Boolean);
-    if (!safeWarnings.length) {
-      return '';
-    }
-    return `
-      <div class="sequence-viewer-primer-design-warnings">
-        ${safeWarnings.map((warning) => `<p class="small-note sequence-viewer-primer-design-warning">${escapeHtml(warning)}</p>`).join('')}
-      </div>
-    `;
-  }
-
-  function resolvePrimerDesignTarget(record, context = {}) {
-    const sequence = normalizeSequenceText(record?.sequence || '');
-    if (!sequence.length) {
-      return null;
-    }
-
-    const sequenceLength = sequence.length;
-    const feature = context?.featureContext?.feature || null;
-    const selectionRange = context?.selectionRange || null;
-    const featureRange = getFeatureOverallRange(feature, sequenceLength);
-    const sourceRange = selectionRange || featureRange;
-    if (!sourceRange) {
-      return null;
-    }
-
-    const start = clamp(Math.round(Number(sourceRange.start) || 0), 0, sequenceLength);
-    const end = clamp(Math.round(Number(sourceRange.end) || start), start, sequenceLength);
-    if (end <= start) {
-      return null;
-    }
-
-    const featureName = cleanText(feature?.name, 160);
-    const rangeLabel = formatBaseRangeLabel({ start, end });
-    return {
-      start,
-      end,
-      rangeLabel,
-      label: featureName ? `${featureName} - ${rangeLabel}` : `Selection - ${rangeLabel}`,
-      primerBaseName: normalizeRecordName(featureName || `selection_${start + 1}_${end}`, 'selection'),
-      sequence: sequence.slice(start, end)
-    };
-  }
-
-  function openPrimerDesignOverlay(context = {}) {
-    const record = getSelectedRecord();
-    if (!record?.sequence?.length) {
-      setStatus('Load a record before designing primers.', true);
-      return;
-    }
-
-    const target = resolvePrimerDesignTarget(record, context);
-    if (!target) {
-      setStatus('Select a sequence range or feature before designing primers.', true);
-      return;
-    }
-
-    const primerPlan = designPcrPrimerPair(target.sequence, {
-      name: target.primerBaseName
-    });
-    const primers = Array.isArray(primerPlan?.primers) ? primerPlan.primers : [];
-    const thresholdLabel = cleanText(primerPlan?.selectedThresholdLevel, 80) || 'none';
-
-    if (elements.primerDesignTitle) {
-      elements.primerDesignTitle.textContent = 'Designed Primers';
-    }
-    if (elements.primerDesignNote) {
-      elements.primerDesignNote.textContent = `PCR primer pair for ${target.label}.`;
-    }
-    if (elements.primerDesignResult) {
-      elements.primerDesignResult.innerHTML = `
-        <div class="sequence-viewer-primer-design-summary">
-          <p><strong>Template:</strong> ${escapeHtml(target.label)}</p>
-          <p><strong>Selected sequence:</strong> ${target.sequence.length.toLocaleString()} bp</p>
-          <p><strong>Threshold profile:</strong> ${escapeHtml(thresholdLabel)}</p>
-        </div>
-        ${renderPrimerDesignTable(primers)}
-        ${renderPrimerDesignWarnings(primerPlan?.warnings)}
-      `;
-    }
-
-    hideFeatureContextMenu();
-    if (elements.primerDesignOverlay) {
-      elements.primerDesignOverlay.hidden = false;
-    }
-    elements.primerDesignCloseBtn?.focus?.();
-  }
+  const { openPrimerDesignOverlay, getDesignedPrimers } = createPrimerDesignOverlay({
+    state,
+    elements,
+    getSelectedRecord,
+    setStatus,
+    renderActiveRecord,
+    persistFeatureMutation,
+    hideFeatureContextMenu
+  });
 
   function renderFeatureContextMenu(context, event) {
     if (!elements.featureContextMenu) {
@@ -634,6 +402,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   }
 
   return {
+    orderDesignedPrimers: () => onRequestPrimerOrder(getDesignedPrimers()),
     applyFeatureEditorChanges,
     buildSelectionDetailHtml,
     deleteFeatureFromContext,

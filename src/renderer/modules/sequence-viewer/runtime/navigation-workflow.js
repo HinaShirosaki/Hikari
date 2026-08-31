@@ -14,6 +14,22 @@ export function createNavigationActions(ctx) {
     onNavigateDetail?.();
   }
 
+  function showVectorBuilderWorkspace() {
+    hideDetailOverlays();
+    controllers.home?.setLocalWorkspaceVisibility('vector');
+    onNavigateDetail?.();
+  }
+
+  function returnToSequenceDetailFromVectorBuilder() {
+    controllers.vectorBuilder?.hideOverlays?.();
+    // Reachable from the vector map now, so it must not follow the user back.
+    controllers.detail?.hidePrimerDesignOverlay?.();
+    controllers.home?.setLocalWorkspaceVisibility('detail');
+    onNavigateDetail?.();
+    controllers.detail?.renderActiveRecord?.();
+    actions.setStatus('Returned to Sequence Viewer.');
+  }
+
   function returnToSequenceDetailFromCloningDesign() {
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
@@ -34,7 +50,7 @@ export function createNavigationActions(ctx) {
       return;
     }
     if (nextViewId === homeViewId) {
-      if (workspaceMode === 'detail' || workspaceMode === 'alignment' || workspaceMode === 'cloning') {
+      if (workspaceMode === 'detail' || workspaceMode === 'alignment' || workspaceMode === 'cloning' || workspaceMode === 'vector') {
         controllers.home?.setLocalWorkspaceVisibility('home');
       }
       return;
@@ -50,6 +66,7 @@ export function createNavigationActions(ctx) {
     controllers.detail.renderActiveRecord();
     controllers.alignment?.render?.();
     controllers.cloningDesign?.render?.();
+    controllers.vectorBuilder?.render?.();
     controllers.proteinBuilder?.render();
     controllers.home.syncHomeControlsState();
     void controllers.home.refreshLibraryEntries({ silent: true });
@@ -72,15 +89,18 @@ export function createNavigationActions(ctx) {
     controllers.detail?.hideFeatureEditor();
     controllers.detail?.hidePrimerDesignOverlay?.();
     controllers.detail?.hideSequenceEditDialog?.();
+    controllers.vectorBuilder?.hideOverlays?.();
   }
 
   return {
     openDroppedSequenceFile,
     render,
     returnToSequenceDetailFromCloningDesign,
+    returnToSequenceDetailFromVectorBuilder,
     returnToProteinBuilder,
     showCloningDesignWorkspace,
     showProteinBuilderWorkspace,
+    showVectorBuilderWorkspace,
     syncShellWorkspace
   };
 }

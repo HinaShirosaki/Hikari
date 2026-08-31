@@ -29,7 +29,7 @@ This folder splits those responsibilities into smaller modules so each part is e
 - `agent-lifecycle-service.js`
   - Centralizes lifecycle helpers such as payload normalization, progress events, tool-call lifecycle tracing, and lifecycle log flushing.
 - `agent-log-handlers.js`
-  - Registers the non-chat IPC endpoints for chat-log access, developer smoke tests, lifecycle request listing, and lifecycle replay.
+  - Registers the non-chat IPC endpoints for chat-log access, lifecycle request listing, and lifecycle replay.
 
 ## Design notes
 

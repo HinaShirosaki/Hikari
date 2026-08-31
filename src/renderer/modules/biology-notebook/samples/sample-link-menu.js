@@ -1,48 +1,6 @@
-import {
-  formatSampleRecordLabel,
-  formatSampleStorageLabel,
-  getSampleTypeLabel,
-  normalizeSampleLookupText,
-  normalizeSampleType
-} from './sample-helpers.js';
-
-function getSampleLinkSearchResults({ samples, inventory, placeholderType, query }) {
-  const normalizedType = normalizeSampleType(placeholderType);
-  const normalizedQuery = normalizeSampleLookupText(query);
-  const sourceSamples = Array.isArray(samples) ? samples : [];
-  return sourceSamples
-    .filter((sample) => normalizeSampleType(sample?.type) === normalizedType)
-    .filter((sample) => {
-      if (!normalizedQuery) {
-        return true;
-      }
-      const haystack = normalizeSampleLookupText([
-        sample?.code,
-        sample?.name,
-        sample?.type,
-        sample?.lot,
-        sample?.concentration,
-        formatSampleStorageLabel(sample, inventory),
-        sample?.notes
-      ].join(' '));
-      return haystack.includes(normalizedQuery);
-    })
-    .sort((left, right) => {
-      const leftUpdated = new Date(left?.updatedAt || 0).getTime();
-      const rightUpdated = new Date(right?.updatedAt || 0).getTime();
-      return rightUpdated - leftUpdated;
-    })
-    .slice(0, 30);
-}
-
 export function createSampleLinkMenuController({
   doc = (typeof document !== 'undefined' ? document : null),
   win = (typeof window !== 'undefined' ? window : null),
-  getSamples,
-  getInventory,
-  getSettings,
-  safeText,
-  onSelect,
   onAddTable
 } = {}) {
   let menu = null;
@@ -73,62 +31,14 @@ export function createSampleLinkMenuController({
     if (!menu) {
       return;
     }
-    const menuWidth = 320;
-    const menuHeight = 360;
+    const menuWidth = 132;
+    const menuHeight = 40;
     const viewportWidth = win?.innerWidth || doc?.documentElement?.clientWidth || menuWidth;
     const viewportHeight = win?.innerHeight || doc?.documentElement?.clientHeight || menuHeight;
-    const left = Math.max(12, Math.min(Number(x) || 12, viewportWidth - menuWidth - 12));
-    const top = Math.max(12, Math.min(Number(y) || 12, viewportHeight - menuHeight - 12));
+    const left = Math.max(8, Math.min(Number(x) || 8, viewportWidth - menuWidth - 8));
+    const top = Math.max(8, Math.min(Number(y) || 8, viewportHeight - menuHeight - 8));
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
-  }
-
-  function renderResults() {
-    if (!menu || !menuState) {
-      return;
-    }
-    const resultsHost = menu.querySelector('[data-sample-link-results]');
-    if (!resultsHost) {
-      return;
-    }
-    const samples = getSampleLinkSearchResults({
-      samples: typeof getSamples === 'function' ? getSamples() : [],
-      inventory: typeof getInventory === 'function' ? getInventory() : {},
-      placeholderType: menuState.placeholderType,
-      query: menuState.query
-    });
-    const settings = typeof getSettings === 'function' ? getSettings() : {};
-    if (!samples.length) {
-      resultsHost.innerHTML = `
-        <p class="small-note biology-notebook-sample-link-empty">
-          No ${safeText(getSampleTypeLabel(menuState.placeholderType, settings))} samples found.
-        </p>
-      `;
-      return;
-    }
-    const inventory = typeof getInventory === 'function' ? getInventory() : {};
-    resultsHost.innerHTML = samples.map((sample) => {
-      const storageLabel = formatSampleStorageLabel(sample, inventory);
-      return `
-        <button type="button" class="biology-notebook-sample-link-option" data-sample-link-select="${safeText(sample.id)}">
-          <span class="biology-notebook-sample-link-option-main">${safeText(formatSampleRecordLabel(sample))}</span>
-          <span class="biology-notebook-sample-link-option-meta">${safeText(`${getSampleTypeLabel(sample.type, settings)} - ${storageLabel}`)}</span>
-        </button>
-      `;
-    }).join('');
-  }
-
-  function onResultsClick(event) {
-    const option = event.target.closest('[data-sample-link-select]');
-    if (!option || !menuState || typeof onSelect !== 'function') {
-      return;
-    }
-    const samples = typeof getSamples === 'function' ? getSamples() : [];
-    const sample = samples.find((item) => item.id === option.dataset.sampleLinkSelect);
-    if (!sample) {
-      return;
-    }
-    onSelect(sample, menuState);
   }
 
   function onMenuClick(event) {
@@ -144,7 +54,6 @@ export function createSampleLinkMenuController({
   function open({ wrap, token, x, y }) {
     const key = String(token?.dataset?.nbKeyRef || '').trim();
     const placeholderName = String(wrap?.dataset?.placeholderName || '').trim();
-    const placeholderType = String(wrap?.dataset?.samplePlaceholderType || '').trim();
     const hiddenValue = wrap?.querySelector?.('[data-nb-key]');
     if (!key) {
       return;
@@ -157,44 +66,16 @@ export function createSampleLinkMenuController({
       wrap,
       key,
       placeholderName,
-      placeholderType,
-      value: String(hiddenValue?.value || '').trim(),
-      query: ''
+      value: String(hiddenValue?.value || '').trim()
     };
     menuEl.innerHTML = `
-      <div class="biology-notebook-sample-link-menu-head">
-        <strong>Placeholder variable</strong>
-        <span class="small-note">${safeText(placeholderName || 'Placeholder')}</span>
-      </div>
-      <button type="button" class="ghost-btn biology-notebook-placeholder-table-action" data-placeholder-add-table>
-        Add table from this variable
+      <button type="button" class="biology-notebook-placeholder-table-action" role="menuitem" data-placeholder-add-table>
+        Add Table
       </button>
-      ${placeholderType ? `
-      <input
-        type="search"
-        class="biology-notebook-sample-link-search"
-        data-sample-link-search
-        placeholder="Search samples..."
-        aria-label="Search samples"
-      />
-      <div class="biology-notebook-sample-link-results" data-sample-link-results></div>
-      ` : ''}
     `;
-    const searchInput = menuEl.querySelector('[data-sample-link-search]');
-    searchInput?.addEventListener('input', () => {
-      if (!menuState) {
-        return;
-      }
-      menuState.query = searchInput.value || '';
-      renderResults();
-    });
-    menuEl.querySelector('[data-sample-link-results]')?.addEventListener('click', onResultsClick);
-    if (placeholderType) {
-      renderResults();
-    }
     position(x, y);
     menuEl.hidden = false;
-    searchInput?.focus();
+    menuEl.querySelector('[data-placeholder-add-table]')?.focus?.();
   }
 
   function isOpenAt(target) {

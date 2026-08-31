@@ -8,7 +8,7 @@ const DEFAULT_TIMEOUT_MS = 15000;
 const MAX_TIMEOUT_MS = 120000;
 const DEFAULT_OUTPUT_LIMIT = 12000;
 
-function defaultCleanText(value, _maxLength = 4000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -47,14 +47,13 @@ function appendLimitedText(currentValue = '', chunk = '', limit = DEFAULT_OUTPUT
 
 function buildSummary({
   status = '',
-  command = '',
   exitCode = null,
   timedOut = false,
   stdout = '',
   stderr = '',
   cwd = ''
 } = {}) {
-  const preview = defaultCleanText(stdout || stderr, 240);
+  const preview = defaultCleanText(stdout || stderr);
   if (timedOut) {
     return `Command timed out while running in ${cwd || 'the workspace'}.`;
   }

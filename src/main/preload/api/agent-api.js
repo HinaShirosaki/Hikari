@@ -11,8 +11,6 @@ function createAgentApi(ipcRenderer) {
     agentChatLogCreateSession: (payload) => ipcRenderer.invoke(AGENT.CHAT_LOG_CREATE_SESSION, payload),
     agentChatLogListSessions: (payload) => ipcRenderer.invoke(AGENT.CHAT_LOG_LIST_SESSIONS, payload),
     agentChatLogGetSession: (payload) => ipcRenderer.invoke(AGENT.CHAT_LOG_GET_SESSION, payload),
-    agentDeveloperTestTools: (payload) => ipcRenderer.invoke(AGENT.DEVELOPER_TEST_TOOLS, payload),
-    agentDeveloperContextPreview: (payload) => ipcRenderer.invoke(AGENT.DEVELOPER_CONTEXT_PREVIEW, payload),
     agentLogsListRequests: () => ipcRenderer.invoke(AGENT.LOGS_LIST_REQUESTS),
     agentLogsReplay: (payload) => ipcRenderer.invoke(AGENT.LOGS_REPLAY, payload),
     onAgentProgress: (handler) => {

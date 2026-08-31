@@ -1,6 +1,6 @@
 'use strict';
 
-function defaultCleanText(value, _maxLength = 2000) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -86,7 +86,8 @@ function createCodexAgentLlmProvider(deps = {}) {
         reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
-        attachments
+        attachments,
+        outputSchema: input.expectJson === true ? input.schema : null
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
@@ -162,7 +163,8 @@ function createCodexAgentLlmProvider(deps = {}) {
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         fileName: normalizedFileName,
-        pdfDataUrl: normalizedFileData
+        pdfDataUrl: normalizedFileData,
+        outputSchema: input.expectJson === true ? input.schema : null
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,
@@ -298,7 +300,8 @@ function createCodexAgentLlmProvider(deps = {}) {
         reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
-        imageDataUrl: normalizedImageData
+        imageDataUrl: normalizedImageData,
+        outputSchema: input.expectJson === true ? input.schema : null
       });
       await recordTrace(input.traceContext, {
         stage: normalizedStage,

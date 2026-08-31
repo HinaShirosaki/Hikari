@@ -3,6 +3,7 @@ import {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from '../result-import-detector.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 // Owns the "attach result file" flow: parsing, the candidate-picker overlay,
 // preview grid, and applying a detected matrix back into the result table.
@@ -34,7 +35,10 @@ export function createResultImportController({
   let resultImportState = null;
   let resultImportPreviewGrid = null;
 
-  function setResultImportStatus(message) {
+  function setResultImportStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     if (assayResultImportStatus) {
       assayResultImportStatus.textContent = message || '';
     }
@@ -236,11 +240,11 @@ export function createResultImportController({
 
   async function applyResultImportCandidate(candidate) {
     if (!candidate || !resultImportState) {
-      setResultStatus('Select a result matrix before importing.');
+      setResultStatus('Select a result matrix before importing.', true);
       return;
     }
     if (typeof persistResultAttachment !== 'function') {
-      setResultStatus('Result file attachment storage is unavailable.');
+      setResultStatus('Result file attachment storage is unavailable.', true);
       return;
     }
 
@@ -279,7 +283,7 @@ export function createResultImportController({
       setResultStatus(`Imported ${counts.pastedCount} result value(s) from ${importedFileName}. Skipped ${counts.skippedCount} unmapped cell(s). Attached file saved beside the plate.`);
     } catch (error) {
       const message = String(error?.message || error || 'Unable to import result file.');
-      setResultImportStatus(message);
+      setResultImportStatus(message, true);
       setResultStatus(message);
       if (assayResultImportApplyBtn) {
         assayResultImportApplyBtn.disabled = false;
@@ -293,11 +297,11 @@ export function createResultImportController({
     }
     const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!selectedAssayId) {
-      setResultStatus('Select an assay plate before attaching a result file.');
+      setResultStatus('Select an assay plate before attaching a result file.', true);
       return;
     }
     if (typeof parseResultImportFile !== 'function') {
-      setResultStatus('Result file parser is unavailable.');
+      setResultStatus('Result file parser is unavailable.', true);
       return;
     }
 
@@ -312,7 +316,7 @@ export function createResultImportController({
       const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], importTarget);
       if (!candidates.length) {
         const areaLabel = importTarget.source === 'mapped' ? 'mapped-area ' : '';
-        setResultStatus(`No ${importTarget.rows} x ${importTarget.columns} ${areaLabel}result matrix was detected in ${file.name}.`);
+        setResultStatus(`No ${importTarget.rows} x ${importTarget.columns} ${areaLabel}result matrix was detected in ${file.name}.`, true);
         return;
       }
       if (candidates.length === 1) {
@@ -334,7 +338,7 @@ export function createResultImportController({
       });
     } catch (error) {
       const message = String(error?.message || error || 'Unable to read result file.');
-      setResultStatus(message);
+      setResultStatus(message, true);
       setResultImportStatus(message);
     }
   }
@@ -349,12 +353,12 @@ export function createResultImportController({
 
   function onAttachResultFileClick() {
     if (!assayAttachResultFileBtn || !assayResultFileInput) {
-      setResultStatus('Result file attachment control is unavailable.');
+      setResultStatus('Result file attachment control is unavailable.', true);
       return;
     }
     const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!selectedAssayId) {
-      setResultStatus('Select an assay plate before attaching a result file.');
+      setResultStatus('Select an assay plate before attaching a result file.', true);
       return;
     }
     assayResultFileInput.click();

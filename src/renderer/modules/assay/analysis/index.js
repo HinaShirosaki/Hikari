@@ -1,19 +1,25 @@
 import {
-  analyzeDimensionSummary,
-  analyzeGroupedSummary,
-  analyzeNestedSummary
-} from './grouped-summary.js';
-import { analyzeLinearRegression } from './regression.js';
-import {
-  analyzeEc50Like,
-  analyzeSurvival
-} from './dose-response.js';
-import {
-  analyzeStandardCurve,
-  isStandardCurveMethod
-} from './standard-curve.js';
+  normalizeAnalysisSpec,
+  resolveGrouping,
+  resolveXAxis,
+  specFromLegacyMethod
+} from './grouping.js';
+import { analyzeSummary } from './grouped-summary.js';
+import { analyzeCurveFit } from './curve-fit.js';
+import { analyzeNormalize } from './dose-response.js';
 
-export function analyzeAssayData({ method, observations, options = {} }) {
+export {
+  ANALYSIS_LABELS,
+  ANALYSIS_VALUES,
+  GROUP_BY_VALUES,
+  X_AXIS_VALUES,
+  describeAnalysisSpec,
+  normalizeAnalysisSpec,
+  specFromLegacyMethod
+} from './grouping.js';
+
+// `method` is the legacy flat identifier kept for saved analyses; it maps onto a spec.
+export function analyzeAssayData({ spec, method, observations, options = {} }) {
   if (!Array.isArray(observations) || !observations.length) {
     return {
       summary: 'No result values to analyze.',
@@ -22,29 +28,24 @@ export function analyzeAssayData({ method, observations, options = {} }) {
     };
   }
 
-  if (method === 'nested_summary') {
-    return analyzeNestedSummary(observations);
+  const normalized = spec ? normalizeAnalysisSpec(spec) : specFromLegacyMethod(method);
+  if (normalized.analysis === 'summary') {
+    const grouping = resolveGrouping(observations, normalized, options, null);
+    return analyzeSummary(observations, grouping, normalized);
   }
-  if (method === 'row_summary') {
-    return analyzeDimensionSummary(observations, 'row', options.rowSummary || {});
+
+  const xAxis = resolveXAxis(observations, normalized);
+  if (!xAxis) {
+    return {
+      summary: `This analysis needs numeric ${normalized.xAxis === 'auto' ? 'concentration or sample ID' : normalized.xAxis} values on the X axis.`,
+      headers: ['X axis'],
+      rows: []
+    };
   }
-  if (method === 'column_summary') {
-    return analyzeDimensionSummary(observations, 'column', options.columnSummary || {});
+
+  const grouping = resolveGrouping(observations, normalized, options, xAxis);
+  if (normalized.analysis === 'normalize') {
+    return analyzeNormalize(observations, grouping, xAxis, normalized);
   }
-  if (method === 'linear_regression') {
-    return analyzeLinearRegression(observations);
-  }
-  if (method === 'ec50') {
-    return analyzeEc50Like(observations, 'ec50');
-  }
-  if (method === 'ic50') {
-    return analyzeEc50Like(observations, 'ic50');
-  }
-  if (method === 'survival') {
-    return analyzeSurvival(observations);
-  }
-  if (isStandardCurveMethod(method)) {
-    return analyzeStandardCurve(observations, method);
-  }
-  return analyzeGroupedSummary(observations);
+  return analyzeCurveFit(observations, grouping, xAxis, normalized);
 }

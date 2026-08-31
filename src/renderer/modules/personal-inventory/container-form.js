@@ -3,8 +3,6 @@ import { createDefaultWells, isSupportedContainerType, normalizeCustomGridDimens
 export function installContainerForm(ctx) {
   const { createId, helpers, persist, safeText, state, uiState } = ctx;
   const {
-    addContainerBtn,
-    addFolderBtn,
     addContainerOverlay,
     addContainerForm,
     addContainerTitle,
@@ -103,9 +101,6 @@ export function installContainerForm(ctx) {
     if (addContainerOverlay) {
       addContainerOverlay.hidden = !uiState.isAddContainerFormOpen;
     }
-    [addContainerBtn, addFolderBtn].forEach((button) => {
-      button?.setAttribute('aria-expanded', uiState.isAddContainerFormOpen ? 'true' : 'false');
-    });
     if (uiState.isAddContainerFormOpen) {
       renderAddContainerDialogMode();
     }

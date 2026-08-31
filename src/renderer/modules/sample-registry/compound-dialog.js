@@ -3,8 +3,12 @@ import {
   formatCompoundStructureSummary,
   isChemicalStructureSampleType
 } from './compound-model.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function setCompoundStatus(ctx, message, isError) {
+  if (isError && message) {
+    showTransientNotice(message, { type: 'error' });
+  }
   const { sampleCompoundStatus } = ctx.dom;
   if (!sampleCompoundStatus) {
     return;
@@ -52,6 +56,6 @@ export function onSampleTypeChange(ctx) {
     renderCompoundFields(ctx);
     return;
   }
-  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste SMILES, MOL/SDF, or a copied structure image.', false);
+  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste SMILES or MOL/SDF structure data.', false);
   renderCompoundFields(ctx);
 }

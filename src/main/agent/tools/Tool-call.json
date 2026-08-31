@@ -329,6 +329,20 @@
         "inventory_search": {
           "$ref": "#/$defs/inventory_search"
         },
+        "kinds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "chemical",
+              "personal_container",
+              "personal_sample"
+            ]
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
         }
@@ -760,7 +774,7 @@
     }
   },
   "container": {
-    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name and an exact copied value when possible; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
+    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name, an exact copied value when possible, and optional `source` provenance; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, optional `limit` to bound a list, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -803,6 +817,15 @@
               "type": "number"
             }
           ]
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
         },
         "start": {
           "type": "integer",
@@ -927,7 +950,7 @@
     }
   },
   "plotly-graph": {
-    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces) and `layout`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
+    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces), `layout`, and optional `config`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -967,6 +990,10 @@
           "type": "object",
           "additionalProperties": true
         },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "replace": {
           "type": "boolean"
         }
@@ -978,6 +1005,62 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
+      "anyOf": [
+        {
+          "properties": {
+            "action": {
+              "enum": [
+                "list_records",
+                "get_record",
+                "get_sequence",
+                "get_features",
+                "analyze",
+                "get_cloning_design"
+              ]
+            }
+          }
+        },
+        {
+          "required": [
+            "strategy"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "design_cloning"
+              ]
+            },
+            "strategy": {
+              "enum": [
+                "whole-plasmid",
+                "q5-kld",
+                "two-step-ligation"
+              ]
+            }
+          }
+        },
+        {
+          "required": [
+            "strategy",
+            "insertRange"
+          ],
+          "properties": {
+            "action": {
+              "enum": [
+                "design_cloning"
+              ]
+            },
+            "strategy": {
+              "enum": [
+                "golden-gate",
+                "gibson",
+                "in-fusion",
+                "overlap-extension"
+              ]
+            }
+          }
+        }
+      ],
       "required": [
         "action"
       ],
@@ -1053,7 +1136,8 @@
             "two-step-ligation",
             "golden-gate",
             "gibson",
-            "in-fusion"
+            "in-fusion",
+            "overlap-extension"
           ],
           "description": "design_cloning: cloning route."
         },
@@ -1087,7 +1171,11 @@
         "insertRange": {
           "type": "object",
           "additionalProperties": false,
-          "description": "design_cloning: insert coordinates for gibson/in-fusion/golden-gate.",
+          "required": [
+            "start",
+            "end"
+          ],
+          "description": "design_cloning: required insert coordinates for golden-gate/gibson/in-fusion/overlap-extension.",
           "properties": {
             "start": {
               "type": "integer",
@@ -1248,7 +1336,7 @@
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search. Use `journals` to scope the search to named journals; a scope that matches nothing widens to an unfiltered search automatically, so set `allow_unfiltered_fallback` to false only when the user wants those journals or no results at all.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -1270,6 +1358,9 @@
             "type": "string",
             "maxLength": 180
           }
+        },
+        "allow_unfiltered_fallback": {
+          "type": "boolean"
         },
         "prefer_recent": {
           "type": "boolean"
@@ -1314,7 +1405,7 @@
     }
   },
   "paper-download": {
-    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename and `collection_name` for the non-project destination folder; papers from one literature search should share its original query as `collection_name`. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -1329,15 +1420,27 @@
           },
           "maxItems": 24
         },
+        "paper_title": {
+          "type": "string",
+          "maxLength": 320,
+          "description": "Paper title used to derive the downloaded PDF filename."
+        },
+        "collection_name": {
+          "type": "string",
+          "maxLength": 220,
+          "description": "Destination collection for a non-project download, normally the original literature-search query."
+        },
         "linked_name": {
           "type": "string",
-          "maxLength": 220
+          "maxLength": 220,
+          "description": "Deprecated compatibility alias for collection_name.",
+          "deprecated": true
         }
       }
     }
   },
   "paper-analysis": {
-    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. For a locally-ingested paper reference, Hikari runs one Codex CLI paper-context sub-agent command, hydrates the returned physical `paper.md` line ranges, and returns exact `source_lines` with matching local `related_comments`. Only pass paper text fields when the paper is not in the local KnowledgeBase. Answer from `loaded_context_blocks`; to turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. For a locally-ingested paper reference, Hikari runs one Codex CLI paper-context sub-agent command, hydrates the returned physical line ranges from the paper's title-named Markdown file (or legacy `paper.md`), and returns exact `source_lines` with matching local `related_comments`. Only pass paper text fields when the paper is not in the local KnowledgeBase. Answer from `loaded_context_blocks`; to turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

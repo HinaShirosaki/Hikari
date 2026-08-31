@@ -1,5 +1,4 @@
 module.exports = function registerBioToolsAndGelSuite(context = {}) {
-  const registerEdgeToolBoxExposureSuite = require('./bio-tools-and-gel-suite/tool-box-exposure-suite.js');
   const registerEdgeSequenceViewerFoundationsSuite = require('./bio-tools-and-gel-suite/sequence-viewer-foundations-suite.js');
   const registerEdgeSequenceViewerWorkspaceSuite = require('./bio-tools-and-gel-suite/sequence-viewer-workspace-suite.js');
   const registerEdgeSequenceViewerInteractionsSuite = require('./bio-tools-and-gel-suite/sequence-viewer-interactions-suite.js');
@@ -7,7 +6,6 @@ module.exports = function registerBioToolsAndGelSuite(context = {}) {
   const registerEdgeGelAnalysisSuite = require('./bio-tools-and-gel-suite/gel-analysis-suite.js');
   const registerEdgeCloningAssemblySuite = require('./bio-tools-and-gel-suite/cloning-assembly-suite.js');
 
-  registerEdgeToolBoxExposureSuite(context);
   registerEdgeSequenceViewerFoundationsSuite(context);
   registerEdgeSequenceViewerWorkspaceSuite(context);
   registerEdgeSequenceViewerInteractionsSuite(context);

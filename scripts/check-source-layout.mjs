@@ -292,6 +292,52 @@ const allowedCssFiles = new Set([
     .filter((entry) => entry?.includeStyle !== false)
     .map((entry) => `ui/css/views/${String(entry.viewId || '').trim()}.css`)
 ]);
+const cssImportPattern = /@import\s+(?:url\(\s*)?["']([^"']+)["']\s*\)?[^;]*;/g;
+const cssImportsInProgress = new Set();
+const cssImportsVisited = new Set();
+
+function includeLocalCssImports(filePath) {
+  const relativeFilePath = relative(filePath);
+  if (cssImportsInProgress.has(relativeFilePath)) {
+    failures.push(`${relativeFilePath} is part of a local CSS import cycle`);
+    return;
+  }
+  if (cssImportsVisited.has(relativeFilePath)) {
+    return;
+  }
+
+  cssImportsInProgress.add(relativeFilePath);
+  const source = fs.readFileSync(filePath, 'utf8');
+  let match;
+  while ((match = cssImportPattern.exec(source))) {
+    const specifier = match[1];
+    if (!specifier.startsWith('.')) {
+      continue;
+    }
+    const targetPath = path.resolve(path.dirname(filePath), specifier);
+    if (!fs.existsSync(targetPath) || !fs.statSync(targetPath).isFile()) {
+      failures.push(`${relativeFilePath} has an unresolved local CSS import: ${specifier}`);
+      continue;
+    }
+    const target = relative(targetPath);
+    if (!target.startsWith('ui/css/')) {
+      failures.push(`${relativeFilePath} imports CSS outside ui/css: ${specifier}`);
+      continue;
+    }
+    allowedCssFiles.add(target);
+    includeLocalCssImports(targetPath);
+  }
+  cssImportsInProgress.delete(relativeFilePath);
+  cssImportsVisited.add(relativeFilePath);
+}
+
+[...allowedCssFiles].forEach((filePath) => {
+  const absolutePath = path.join(repoRoot, filePath);
+  if (fs.existsSync(absolutePath) && fs.statSync(absolutePath).isFile()) {
+    includeLocalCssImports(absolutePath);
+  }
+});
+
 listFiles(path.join(uiRoot, 'css'))
   .filter((filePath) => filePath.endsWith('.css'))
   .map(relative)

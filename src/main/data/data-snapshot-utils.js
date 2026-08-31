@@ -1,10 +1,8 @@
 'use strict';
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray } = require('../lib/normalize.js');
 
-function cleanText(value, _maxLength = 2000) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -17,14 +15,14 @@ function normalizeChemicalStorePayload(payload) {
   const locationCodeMap = source.locationCodeMap && typeof source.locationCodeMap === 'object'
     ? Object.fromEntries(
       Object.entries(source.locationCodeMap)
-        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), cleanText(value, 32).toUpperCase()])
+        .map(([key, value]) => [cleanText(key).toLowerCase(), cleanText(value).toUpperCase()])
         .filter(([key, value]) => key && value)
     )
     : {};
   const locationCodeNextByLocation = source.locationCodeNextByLocation && typeof source.locationCodeNextByLocation === 'object'
     ? Object.fromEntries(
       Object.entries(source.locationCodeNextByLocation)
-        .map(([key, value]) => [cleanText(key, 240).toLowerCase(), Number(value) || 0])
+        .map(([key, value]) => [cleanText(key).toLowerCase(), Number(value) || 0])
         .filter(([key, value]) => key && value > 0)
     )
     : {};

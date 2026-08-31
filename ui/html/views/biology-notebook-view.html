@@ -1,5 +1,5 @@
 <section id="biology-notebook-view" class="view">
-      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
+      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template is-tool-sidebar-collapsed">
         <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
             <button id="biology-notebook-new-experiment-btn" class="ghost-btn biology-notebook-new-experiment-btn" type="button">
@@ -7,14 +7,13 @@
               <span>New Experiment</span>
             </button>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll folder-tree-template"></div>
           <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
             <button id="biology-notebook-add-project-btn" class="biology-notebook-context-item" type="button">Add a project</button>
           </div>
         </aside>
 
-        <div class="biology-notebook-viewer-column left-rail-template__main">
-          <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
+        <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
           <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
             <span id="biology-notebook-page-starter-project"></span>
           </div>
@@ -33,13 +32,60 @@
                 <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
-              <div class="biology-notebook-viewer-actions">
-                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn" type="button" hidden>Edit Page Copy</button>
-                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn" type="button" hidden>Apply Page Edit</button>
-                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
-                <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
-                <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
-                <button id="biology-notebook-print-btn" class="ghost-btn" type="button" hidden>Print</button>
+              <div class="biology-notebook-viewer-actions" aria-label="Notebook page actions">
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" data-hover-caption="Edit page copy" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
+                    <path d="m13.75 7 3.25 3.25"></path>
+                  </svg>
+                  <span class="sr-only">Edit page copy</span>
+                </button>
+                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Apply page edit" data-hover-caption="Apply page edit" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m5 12.5 4.5 4.5L19 7.5"></path>
+                  </svg>
+                  <span class="sr-only">Apply page edit</span>
+                </button>
+                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Cancel page edit" data-hover-caption="Cancel page edit" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m6.5 6.5 11 11"></path>
+                    <path d="m17.5 6.5-11 11"></path>
+                  </svg>
+                  <span class="sr-only">Cancel page edit</span>
+                </button>
+                <button id="biology-notebook-mark-executed-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Executed" data-hover-caption="Executed" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="8.25"></circle>
+                    <path d="m8.25 12.25 2.4 2.4 5.1-5.1"></path>
+                  </svg>
+                  <span class="sr-only">Executed</span>
+                </button>
+                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" data-hover-caption="Export PDF" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
+                    <path d="M14 3.75v4h4"></path>
+                    <path d="M12 10v6"></path>
+                    <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
+                  </svg>
+                  <span class="sr-only">Export PDF</span>
+                </button>
+                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" data-hover-caption="Print" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 8V4.75h10V8"></path>
+                    <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                    <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                    <path d="M8.25 16.5h7.5"></path>
+                  </svg>
+                  <span class="sr-only">Print</span>
+                </button>
+                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" data-hover-caption="Save notebook page">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5 3.75h12.25L20 6.5v13.75H5V3.75Z"></path>
+                    <path d="M8 3.75v6h8v-6"></path>
+                    <rect x="8" y="13" width="8" height="7.25" rx="1"></rect>
+                  </svg>
+                  <span class="sr-only">Save notebook page</span>
+                </button>
               </div>
             </div>
 
@@ -72,18 +118,12 @@
                 </div>
                 <div class="biology-notebook-viewer-section-body">
                   <div class="biology-notebook-linked-toolbar">
-                    <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
-                    <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
-                    <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
-                    <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
                     <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
                     <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
                     <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
                   </div>
-                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
-                  </div>
-                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
-                  </div>
+                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
+                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
                   <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
                   <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                     <div class="biology-notebook-result-table-head">
@@ -91,17 +131,19 @@
                     </div>
                     <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                   </div>
-                  <label>
-                    Experiment Results File / Notes
-                    <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                  </label>
+                  <div class="biology-notebook-notes-field">
+                    <label for="biology-notebook-result">Notes</label>
+                    <div class="biology-notebook-notes-composer">
+                      <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
+                    </div>
+                  </div>
                   <label>
                     Experiment Result Files
                     <input id="biology-notebook-result-file" type="file" multiple />
                   </label>
+                  <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
-                    <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
-                    <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
                     <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                   </div>
                 </div>
@@ -111,95 +153,73 @@
         </div>
 
         <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
-          <div class="biology-notebook-tool-content">
-            <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
-              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true" aria-label="Open molarity calculator" title="Molarity calculator">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
-              </button>
-              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" title="Buffer preparer">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
-              </button>
-              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" title="Fixed volume reaction">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-label="Open bench toolbox" data-hover-caption="Bench toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <path d="M8.5 7V5.75A1.75 1.75 0 0 1 10.25 4h3.5a1.75 1.75 0 0 1 1.75 1.75V7"></path>
+              <rect x="3.5" y="7" width="17" height="12.5" rx="2"></rect>
+              <path d="M3.5 12h17M10 12v2h4v-2"></path>
+            </svg>
+            <span class="sr-only">Open bench toolbox</span>
+          </button>
+          <div id="biology-notebook-tool-content" class="biology-notebook-tool-content">
+            <div class="biology-notebook-tool-toolbar">
+              <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
+                <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" data-hover-caption="Buffer preparer">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
+                </button>
+                <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" data-hover-caption="Fixed volume reaction">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+                </button>
+              </div>
+              <div class="biology-notebook-tool-icon-actions" aria-label="Notebook insert tools">
+                <button id="biology-notebook-add-assay-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add assay" data-hover-caption="Add assay">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5" width="16" height="14" rx="2"></rect>
+                    <circle cx="8" cy="9" r="1"></circle><circle cx="12" cy="9" r="1"></circle><circle cx="16" cy="9" r="1"></circle>
+                    <circle cx="8" cy="13" r="1"></circle><circle cx="12" cy="13" r="1"></circle><circle cx="16" cy="13" r="1"></circle>
+                  </svg>
+                  <span class="sr-only">Add assay</span>
+                </button>
+                <button id="biology-notebook-add-samples-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add samples" data-hover-caption="Add samples">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 4h4M8 4v5l-2.5 6.5A3 3 0 0 0 8.3 20h1.4a3 3 0 0 0 2.8-4.5L10 9V4"></path>
+                    <path d="M14 6h3M15 6v4l-1.8 5.2A2.4 2.4 0 0 0 15.5 19h.9a2.4 2.4 0 0 0 2.3-3.8L17 10V6"></path>
+                  </svg>
+                  <span class="sr-only">Add samples</span>
+                </button>
+                <button id="biology-notebook-add-molarity-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add molarity table" data-hover-caption="Molarity calculator">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 3h12M9 3v5l-4 8.5A3 3 0 0 0 7.7 21h8.6a3 3 0 0 0 2.7-4.5L15 8V3"></path>
+                    <path d="M6.5 15h11"></path>
+                  </svg>
+                  <span class="sr-only">Add molarity table</span>
+                </button>
+                <button id="biology-notebook-add-table-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add table" data-hover-caption="Add table">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5" width="16" height="14" rx="1.5"></rect>
+                    <path d="M4 10h16M10 5v14M15 5v14"></path>
+                  </svg>
+                  <span class="sr-only">Add table</span>
+                </button>
+              </div>
+              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn biology-notebook-tool-collapse-btn" type="button" aria-label="Fold bench toolbox" data-hover-caption="Fold toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="m10 7 5 5-5 5"></path>
+                </svg>
+                <span class="sr-only">Fold bench toolbox</span>
               </button>
             </div>
 
             <div class="biology-notebook-tool-body">
-              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity">
-              <label>
-                Calculation
-                <select id="biology-notebook-tool-molarity-mode">
-                  <option value="mass" selected>Mass from concentration</option>
-                  <option value="volume">Volume from mass</option>
-                  <option value="concentration">Concentration from mass</option>
-                  <option value="dilution">Dilute stock</option>
-                </select>
-              </label>
-
-              <div id="biology-notebook-tool-molarity-mass" class="biology-notebook-tool-mode">
-                <label>Concentration <input id="biology-notebook-tool-mass-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-mass-concentration-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-mass-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Volume <input id="biology-notebook-tool-mass-volume" type="number" min="0" step="0.000001" placeholder="100" /></label>
-                <select id="biology-notebook-tool-mass-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-volume" class="biology-notebook-tool-mode" hidden>
-                <label>Mass <input id="biology-notebook-tool-volume-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
-                <select id="biology-notebook-tool-volume-mass-unit">
-                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-volume-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Concentration <input id="biology-notebook-tool-volume-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-volume-concentration-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-concentration" class="biology-notebook-tool-mode" hidden>
-                <label>Mass <input id="biology-notebook-tool-concentration-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
-                <select id="biology-notebook-tool-concentration-mass-unit">
-                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
-                </select>
-                <label>Formula Weight <input id="biology-notebook-tool-concentration-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
-                <label>Volume <input id="biology-notebook-tool-concentration-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
-                <select id="biology-notebook-tool-concentration-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-
-              <div id="biology-notebook-tool-molarity-dilution" class="biology-notebook-tool-mode" hidden>
-                <label>Stock Conc <input id="biology-notebook-tool-dilution-stock" type="number" min="0" step="0.000001" placeholder="100" /></label>
-                <select id="biology-notebook-tool-dilution-stock-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Desired Conc <input id="biology-notebook-tool-dilution-target" type="number" min="0" step="0.000001" placeholder="10" /></label>
-                <select id="biology-notebook-tool-dilution-target-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
-                </select>
-                <label>Final Volume <input id="biology-notebook-tool-dilution-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
-                <select id="biology-notebook-tool-dilution-volume-unit">
-                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-              </div>
-            </section>
-
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
-              <div class="form-actions">
-                <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
-              </div>
               <div class="biology-notebook-buffer-sheet-wrap">
                 <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">
-                  <tbody>
+                  <tbody id="biology-notebook-tool-buffer-rows">
                     <tr class="biology-notebook-buffer-meta-row">
                       <th scope="row">Volume</th>
-                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" aria-label="Buffer volume in mL" /></td>
+                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" aria-label="Buffer volume in mL" /></td>
                       <th scope="row">pH</th>
-                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
+                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH" /></td>
                       <td></td>
                     </tr>
                     <tr class="biology-notebook-buffer-header-row">
@@ -212,76 +232,79 @@
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" />
+                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-1" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-1" placeholder="50 mM" aria-label="Ingredient 1 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-1" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" />
+                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-2" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-2" placeholder="150 mM" aria-label="Ingredient 2 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-2" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" />
+                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-3" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-3" placeholder="0.1% v/v" aria-label="Ingredient 3 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-3" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" />
+                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-4" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-4" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" />
+                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-5" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-5" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" />
+                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-6" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
                     </tr>
-                    <tr class="biology-notebook-buffer-adjustment-row">
+                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-buffer-add-row">
+                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-buffer-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
+                    </tr>
+                    <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
                       <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
                       <td></td>
                       <th scope="row">6 M NaOH <output id="biology-notebook-tool-buffer-naoh-output" aria-live="polite"></output></th>
@@ -368,9 +391,7 @@
               <p id="biology-notebook-tool-formula" class="small-note"></p>
             </div>
             <div class="form-actions biology-notebook-tool-actions">
-              <button id="biology-notebook-tool-insert-notes-btn" class="ghost-btn" type="button">Insert into Notes</button>
-              <button id="biology-notebook-tool-use-placeholder-btn" class="ghost-btn" type="button">Use for Placeholder</button>
-              <button id="biology-notebook-tool-record-btn" class="primary-btn" type="button">Record</button>
+              <button id="biology-notebook-tool-insert-notes-btn" class="primary-btn" type="button">Insert &amp; Record</button>
             </div>
               <p id="biology-notebook-tool-status" class="small-note"></p>
             </div>
@@ -378,6 +399,33 @@
         </aside>
       </div>
 
+      <div id="biology-notebook-table-size-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-table-size-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-table-size-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-table-size-title">Add Table</h3>
+              <p class="small-note">Rows and columns can be added later.</p>
+            </div>
+            <button id="biology-notebook-table-size-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add table dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-table-size-form" class="stack-form biology-notebook-table-size-form">
+            <div class="biology-notebook-table-size-fields">
+              <label>
+                Columns
+                <input id="biology-notebook-table-size-columns" type="number" min="1" max="50" step="1" value="3" />
+              </label>
+              <label>
+                Rows
+                <input id="biology-notebook-table-size-rows" type="number" min="1" max="500" step="1" value="3" />
+              </label>
+            </div>
+            <div class="form-actions">
+              <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit">Add Table</button>
+              <button id="biology-notebook-table-size-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
       <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">
           <div class="app-dialog-head">
@@ -406,6 +454,76 @@
             <div class="form-actions">
               <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>
               <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit">Start Experiment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div id="biology-notebook-quick-sample-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-quick-sample-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-quick-sample-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-quick-sample-title">Quick Add Sample</h3>
+              <p class="small-note">Place and record a sample without leaving the notebook.</p>
+            </div>
+            <button id="biology-notebook-quick-sample-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close quick add sample" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-quick-sample-form" class="biology-notebook-quick-sample-form">
+            <div class="biology-notebook-quick-sample-layout">
+              <section class="biology-notebook-quick-sample-storage" aria-label="Sample storage and position">
+                <div class="biology-notebook-quick-sample-location-panel">
+                  <span class="biology-notebook-quick-sample-location-label">Location</span>
+                  <div id="biology-notebook-quick-sample-location-list" class="biology-notebook-quick-sample-location-list" role="listbox" aria-label="Storage locations"></div>
+                  <label class="biology-notebook-quick-sample-container-field">
+                    Container
+                    <select id="biology-notebook-quick-sample-container">
+                      <option value="">No container</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-grid-panel">
+                  <div class="biology-notebook-quick-sample-grid-head">
+                    <strong>Grid box</strong>
+                    <span id="biology-notebook-quick-sample-grid-label" class="small-note">Grid box</span>
+                  </div>
+                  <div id="biology-notebook-quick-sample-grid" class="biology-notebook-quick-sample-grid is-empty" aria-label="Container positions">
+                    <p class="small-note">Choose a container.</p>
+                  </div>
+                </div>
+              </section>
+              <section class="biology-notebook-quick-sample-fields" aria-label="Sample details">
+                <label>
+                  Sample Name
+                  <input id="biology-notebook-quick-sample-name" required autocomplete="off" placeholder="Required" />
+                </label>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    Sample Code
+                    <input id="biology-notebook-quick-sample-code" autocomplete="off" placeholder="Auto" />
+                  </label>
+                  <label>
+                    Type
+                    <select id="biology-notebook-quick-sample-type"></select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    Lot / Batch
+                    <input id="biology-notebook-quick-sample-lot" autocomplete="off" />
+                  </label>
+                  <label>
+                    Concentration
+                    <input id="biology-notebook-quick-sample-concentration" autocomplete="off" placeholder="e.g. 2 mg/mL" />
+                  </label>
+                </div>
+              </section>
+            </div>
+            <div class="biology-notebook-quick-sample-footer">
+              <p id="biology-notebook-quick-sample-status" class="small-note" aria-live="polite"></p>
+              <div class="form-actions">
+                <button id="biology-notebook-quick-sample-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn" type="submit">Add Sample</button>
+              </div>
             </div>
           </form>
         </div>

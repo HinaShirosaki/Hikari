@@ -1,8 +1,8 @@
 import {
   buildClarifiedNotebookNote,
-  clarifyNotebookNote,
-  showTransientNotice
+  clarifyNotebookNote
 } from '../../services/notebook-note-tools.js';
+import { showTransientNotice } from '../../lib/notify.js';
 import { notebookPageLabel } from './utils.js';
 
 // Recent notebook pages widget — surfaces the six most-recently-updated
@@ -20,6 +20,7 @@ export function initNotebookWidget({
     pageList,
     noteDialogOverlay,
     noteDialogForm,
+    noteDialogCloseBtn,
     noteDialogPage,
     noteInput,
     noteClarifyBtn
@@ -30,6 +31,7 @@ export function initNotebookWidget({
   pageList.addEventListener('click', onNotebookPageListClick);
   noteDialogOverlay.addEventListener('click', onNotebookNoteDialogOverlayClick);
   noteDialogForm.addEventListener('submit', onNotebookNoteDialogSubmit);
+  noteDialogCloseBtn.addEventListener('click', closeNotebookNoteDialog);
   noteClarifyBtn.addEventListener('click', onNotebookNoteClarifyAndSave);
 
   function openNotebookNoteDialog(entry, initialNote = '') {

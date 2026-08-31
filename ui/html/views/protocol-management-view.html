@@ -4,7 +4,15 @@
           <div class="protocol-list-pinned left-rail-template__pinned">
             <div class="protocol-list-head">
               <div class="inline-row protocol-sort-controls">
-                <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+                <button type="button" id="create-protocol-btn" class="primary-btn protocol-create-icon-btn" aria-label="Create protocol" title="Create protocol">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 3h7l4 4v14H7z"></path>
+                    <path d="M14 3v5h5"></path>
+                    <path d="M12.5 11v6"></path>
+                    <path d="M9.5 14h6"></path>
+                  </svg>
+                  <span class="sr-only">Create protocol</span>
+                </button>
                 <div class="protocol-sort-menu">
                   <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
                     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -101,9 +109,32 @@
                 <span class="protocol-detail-mode">Viewer</span>
                 <h3 id="protocol-view-title">Protocol</h3>
               </div>
-              <div class="form-actions">
-                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
-                <button type="button" id="protocol-print-btn" class="ghost-btn">Print</button>
+              <div class="form-actions protocol-viewer-actions" aria-label="Protocol actions">
+                <button type="button" id="protocol-view-edit-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Edit protocol" title="Edit protocol">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
+                    <path d="m13.75 7 3.25 3.25"></path>
+                  </svg>
+                  <span class="sr-only">Edit protocol</span>
+                </button>
+                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Export PDF" title="Export PDF">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
+                    <path d="M14 3.75v4h4"></path>
+                    <path d="M12 10v6"></path>
+                    <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
+                  </svg>
+                  <span class="sr-only">Export PDF</span>
+                </button>
+                <button type="button" id="protocol-print-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Print" title="Print">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M7 8V4.75h10V8"></path>
+                    <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                    <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                    <path d="M8.25 16.5h7.5"></path>
+                  </svg>
+                  <span class="sr-only">Print</span>
+                </button>
                 <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
               </div>
             </div>
@@ -128,7 +159,7 @@
                   Or Paste JSON
                   <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
                 </label>
-                <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+                <p id="protocol-json-import-status" class="small-note" hidden></p>
                 <div class="form-actions">
                   <button type="button" id="import-protocol-json-btn" class="primary-btn">Import Protocol JSON</button>
                 </div>

@@ -1,4 +1,4 @@
-import { requestDirectLlmText } from '../../services/direct-llm.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
@@ -40,64 +40,62 @@ function buildProtocolGenerationSourceText(draft, { normalizeMaterials, stepToEd
 
   return [
     'Name:',
-    String(draft?.name || '').trim() || '[none provided]',
+    String(draft?.name || '').trim() || '(none provided)',
     '',
     'Purpose:',
-    String(draft?.purpose || '').trim() || '[none provided]',
+    String(draft?.purpose || '').trim() || '(none provided)',
     '',
     'Materials:',
-    materials.length ? materials.map((item) => `- ${item}`).join('\n') : '[none provided]',
+    materials.length ? materials.map((item) => `- ${item}`).join('\n') : '(none provided)',
     '',
     'Steps:',
-    steps.length ? steps.map((step, index) => `${index + 1}. ${step}`).join('\n') : '[none provided]',
+    steps.length ? steps.map((step, index) => `${index + 1}. ${step}`).join('\n') : '(none provided)',
     '',
     'Troubleshooting:',
-    troubleshooting || '[none provided]'
+    troubleshooting || '(none provided)'
   ].join('\n');
 }
 
-function buildProtocolGenerationPrompt({
+function buildProtocolAgentMessage({
   prompt,
   editorDraft,
   hasEditorContext,
-  attachments,
   normalizeMaterials,
   stepToEditableLine
 }) {
-  const attachmentList = Array.isArray(attachments) && attachments.length
-    ? attachments
-      .map((attachment, index) => {
-        const name = sanitizeAttachmentName(attachment?.name, `attachment-${index + 1}`);
-        const kind = trimText(attachment?.kind || attachment?.mimeType, 80) || 'file';
-        return `${index + 1}. ${name} (${kind})`;
-      })
-      .join('\n')
-    : '[none provided]';
-
   return [
-    'Generate a lab protocol from the user request, current draft context, and attached evidence.',
-    'Return JSON only with this exact shape:',
-    '{"protocol":{"name":"","purpose":"","materials":[""],"steps":[""],"troubleshooting":""},"result_summary":""}',
+    'Create a lab protocol in Hikari from the user request, current draft context, and attached evidence.',
+    'Research online and search papers when useful before authoring the protocol.',
     '',
-    'Rules:',
-    '- Create a complete, import-ready lab protocol.',
-    '- Use concise scientific language and operational step wording.',
+    'Protocol requirements:',
+    '- Create a complete, executable, import-ready protocol, not a questionnaire.',
+    '- Fill routine parameters such as replicate count, dilution factor, wash count and wash buffer, incubation time and temperature, and working volumes with a scientifically conventional starting value, and identify it in troubleshooting as a recommended starting condition rather than a source-reported fact.',
+    '- Reserve placeholders for sample or clone identity, reagent identity, stock concentration or solvent, and instrument-specific settings that cannot be reliably inferred. Aim for 0-3 placeholders and never more than 5.',
+    '- Write placeholders as [name] and use square brackets for nothing else; write concentrations as "Ca2+ concentration", not "[Ca2+]".',
     '- Preserve useful details from the current draft when provided.',
-    '- Use attached evidence when available, but do not invent unsupported exact measurements, times, temperatures, or reagent identities.',
-    '- Use bracket placeholders such as [temperature], [time], or [volume] when a value is necessary but missing.',
-    '- Materials must be short item strings. Steps must be ordered instruction strings.',
+    '- Use attached evidence when available; do not invent exact measurements, times, temperatures, or reagent identities it does not support, beyond the labeled starting defaults above.',
+    '- Use concise scientific language and operational step wording.',
+    '- Materials must be short item strings. Steps must be ordered instruction strings. Troubleshooting is one plain-text block.',
     '',
     'User request:',
-    trimText(prompt, 3000) || '[none provided]',
+    trimText(prompt, 3000) || '(none provided)',
     '',
     'Current draft context:',
     hasEditorContext
-      ? buildProtocolGenerationSourceText(editorDraft, { normalizeMaterials, stepToEditableLine })
-      : '[none provided]',
-    '',
-    'Attachments:',
-    attachmentList
+      ? trimText(buildProtocolGenerationSourceText(editorDraft, { normalizeMaterials, stepToEditableLine }), 6000)
+      : '(none provided)'
   ].join('\n');
+}
+
+function buildProtocolAgentLlmPayload(llm = {}) {
+  const configuredProvider = trimText(llm?.provider, 80).toLowerCase();
+  return {
+    provider: 'codex',
+    model: configuredProvider === 'codex' ? trimText(llm?.model, 120) : '',
+    reasoningEffort: trimText(llm?.reasoningEffort, 40).toLowerCase(),
+    apiEndpoint: '',
+    apiKey: ''
+  };
 }
 
 export function createProtocolGenerationController({
@@ -157,6 +155,9 @@ export function createProtocolGenerationController({
   }
 
   function setProtocolGenerateInputStatus(message = '', options = {}) {
+    if (options.state === 'error' && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!ui.protocolGenerateInputStatus) {
       return;
     }
@@ -174,6 +175,9 @@ export function createProtocolGenerationController({
   }
 
   function setProtocolGenerateStatus(message = '', options = {}) {
+    if (options.state === 'error' && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!ui.protocolGenerateStatus) {
       return;
     }
@@ -356,31 +360,29 @@ export function createProtocolGenerationController({
     }
     renderProtocolPolishLoadingState(ui.protocolGenerateResultPreview, {
       ariaLabel: 'Generating protocol',
-      message: 'Generating a structured protocol from your prompt, current draft, and attached files.'
+      message: 'The agent is researching and building a structured protocol from your prompt, current draft, and attached files.'
     });
-    setProtocolGenerateStatus('Generating protocol from the provided evidence.');
+    setProtocolGenerateStatus('Agent is researching online and in the literature when useful.');
     setProtocolGeneratePendingState(true);
 
     try {
-      const generatedProtocolJson = await requestDirectLlmText({
-        llm: state.settings?.llm,
-        moduleId: 'protocol',
-        task: 'protocol-generation',
-        prompt: buildProtocolGenerationPrompt({
+      const result = await api.agentGenerateProtocol({
+        message: buildProtocolAgentMessage({
           prompt,
           editorDraft,
           hasEditorContext,
-          attachments,
           normalizeMaterials,
           stepToEditableLine
         }),
         attachments,
-        expectJson: true
-      });
-
-      const result = await api.agentGenerateProtocol({
-        protocolJson: generatedProtocolJson,
-        resultSummary: prompt
+        stateSnapshot: {
+          settings: {
+            storagePath: trimText(state.settings?.storagePath, 1200),
+            preferredJournals: state.settings?.preferredJournals,
+            preferredJournal: state.settings?.preferredJournal
+          }
+        },
+        llm: buildProtocolAgentLlmPayload(state.settings?.llm)
       });
 
       if (requestToken !== localState.protocolGenerationRequestToken || ui.protocolGenerateResultOverlay?.hidden) {

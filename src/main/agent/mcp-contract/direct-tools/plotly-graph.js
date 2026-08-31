@@ -16,7 +16,7 @@ const {
 
 const PLOTLY_GRAPH_MCP_TOOL = Object.freeze({
   name: 'plotly_graph',
-  description: 'Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments.',
+  description: 'Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments.',
   annotations: buildWriteToolAnnotations('Plotly graph'),
   inputSchema: cloneJson(AGENT_TOOL_CALL_CATALOG['plotly-graph']?.input_schema, {
     type: 'object',

@@ -21,6 +21,10 @@ const {
   callNotebookDraft
 } = require('./notebook-draft.js');
 const {
+  NOTEBOOK_APPEND_MCP_TOOL,
+  callNotebookAppend
+} = require('./notebook-append.js');
+const {
   NOTEBOOK_LOOKUP_MCP_TOOL,
   callNotebookLookup
 } = require('./notebook-lookup.js');
@@ -92,6 +96,10 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: NOTEBOOK_DRAFT_MCP_TOOL,
     handler: callNotebookDraft
+  },
+  {
+    definition: NOTEBOOK_APPEND_MCP_TOOL,
+    handler: callNotebookAppend
   },
   {
     definition: LITERATURE_SEARCH_MCP_TOOL,

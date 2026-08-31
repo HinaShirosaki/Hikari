@@ -22,6 +22,7 @@ export {
 
 export {
   getFeatureTypeGenbankKey,
+  isPrimerBindingFeature,
   normalizeFeatureType
 } from './feature-types.js';
 
@@ -37,13 +38,34 @@ export {
 } from './orf-analysis.js';
 
 export {
+  STANDARD_AMINO_ACIDS,
+  buildAminoAcidSubstitution,
+  chooseClosestAminoAcidCodon,
+  resolveAminoAcidCodonContext
+} from './amino-acid-substitution.js';
+
+export {
+  buildEditedSequenceName,
+  buildProteinArchitectureName,
+  buildProteinTargetLabel,
+  buildVectorSequenceName,
+  describeSequenceChanges,
+  resolveVectorBackboneName
+} from './sequence-naming.js';
+
+export {
   formatSelectedFeatureDetailHtml,
   renderDualStrandSequenceLinesHtml
 } from './rendering.js';
 
 export { alignSequenceToReference } from './alignment.js';
 export { buildAlignmentSequenceTrack } from './detail-alignment.js';
-export { buildCircularPreviewHtmlDocument } from './storage.js';
+export {
+  buildSequenceMapSvg,
+  clampMapZoom,
+  getMapKind,
+  resolveBaseFromPoint
+} from './vector-builder/sequence-map.js';
 export {
   assembleCloningPlan,
   designCloningPrimers,

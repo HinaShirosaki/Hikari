@@ -112,3 +112,50 @@ export function computeSequenceLayoutMetrics(rootDocument, sequenceHost) {
     lineFeatureOffsetPx
   };
 }
+
+// Map a pointer event over a rendered dual-strand sequence onto a base
+// boundary. Shared by the detail workspace and the Vector Builder so both
+// resolve clicks against the same geometry.
+export function resolveSequenceBoundaryFromEvent(event, record, charAdvancePx) {
+  const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+  if (!sequenceLength) {
+    return null;
+  }
+
+  const lineElement = event?.target?.closest?.('.sequence-viewer-dual-line') || null;
+  if (!lineElement) {
+    return null;
+  }
+
+  const lineStart = Number(lineElement?.dataset?.lineStart);
+  const lineEnd = Number(lineElement?.dataset?.lineEnd);
+  if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
+    return null;
+  }
+
+  const lineSpan = lineEnd - lineStart;
+  const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
+  const rawX = Number(event?.clientX);
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+
+  let relativeX = null;
+  if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
+    const rect = seqTextElement.getBoundingClientRect();
+    if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
+      relativeX = clamp(rawX - rect.left, 0, rect.width);
+    }
+  }
+
+  if (!Number.isFinite(relativeX)) {
+    const fallbackOffsetX = Number(event?.offsetX);
+    if (Number.isFinite(fallbackOffsetX)) {
+      relativeX = Math.max(0, fallbackOffsetX);
+    }
+  }
+  if (!Number.isFinite(relativeX)) {
+    return null;
+  }
+
+  const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
+  return clamp(lineStart + localBoundary, 0, sequenceLength);
+}

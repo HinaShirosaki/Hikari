@@ -1,0 +1,17 @@
+'use strict';
+
+const WORKFLOW_ROOT_FOLDER_NAME = 'Workflow';
+const WORKFLOW_STATUS_SQLITE_FILE_NAME = 'workflow-status.sqlite';
+const TEMPLATE_METADATA_FILE_NAME = 'template.json';
+const WORKFLOW_METADATA_FILE_NAME = 'workflow.json';
+const RELATED_PAPERS_FILE_NAME = 'related-papers.json';
+const NOTEBOOK_PAGE_FILE_NAME = 'page.json';
+
+module.exports = {
+  NOTEBOOK_PAGE_FILE_NAME,
+  RELATED_PAPERS_FILE_NAME,
+  TEMPLATE_METADATA_FILE_NAME,
+  WORKFLOW_METADATA_FILE_NAME,
+  WORKFLOW_ROOT_FOLDER_NAME,
+  WORKFLOW_STATUS_SQLITE_FILE_NAME
+};

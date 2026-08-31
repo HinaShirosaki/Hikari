@@ -1,7 +1,4 @@
-import {
-  buildCircularPreviewHtmlDocument,
-  buildRecordGenbankText
-} from '../storage.js';
+import { buildRecordGenbankText } from '../storage.js';
 import { parseInputRecords } from '../parsing.js';
 import {
   buildSequenceSignature,
@@ -53,7 +50,6 @@ export function createLibraryPersistenceActions(ctx) {
       sequence: safeRecord.sequence,
       features: Array.isArray(safeRecord.features) ? safeRecord.features : [],
       gbkText,
-      htmlText: buildCircularPreviewHtmlDocument(safeRecord),
       alignmentSessions: Array.isArray(persistOptions?.alignmentSessions) ? persistOptions.alignmentSessions : undefined
     });
     if (!response?.ok || !response?.entry) {
@@ -71,7 +67,7 @@ export function createLibraryPersistenceActions(ctx) {
     };
   }
 
-  async function persistFeatureMutation(record, actionLabel) {
+  async function persistFeatureMutation(record, actionLabel, mutationOptions = {}) {
     if (!state.activeEntryId) {
       actions.setStatus(`${actionLabel} Save the record to persist changes.`);
       return;
@@ -83,9 +79,29 @@ export function createLibraryPersistenceActions(ctx) {
         name: record.name || 'sequence'
       });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
-      actions.setStatus(`${actionLabel} Saved to ${entry.name}.`);
+      actions.setStatus(mutationOptions?.silentSuccess ? '' : `${actionLabel} Saved to ${entry.name}.`);
     } catch (error) {
       actions.setStatus(`${actionLabel} Changes remain local: ${error?.message || 'Failed to save.'}`, true);
+    }
+  }
+
+  async function saveCurrentRecordToLibrary() {
+    const record = actions.getSelectedRecord();
+    if (!record?.sequence?.length) {
+      actions.setStatus('Load a sequence before saving.', true);
+      return;
+    }
+    try {
+      const entry = await persistRecordToLibrary(record, {
+        id: state.activeEntryId,
+        status: LIBRARY_STATUS_SAVED,
+        name: record.name || 'sequence'
+      });
+      await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: LIBRARY_STATUS_SAVED, silent: true });
+      controllers.detail?.syncActionButtonsState?.();
+      actions.setStatus(`Saved ${entry.name} to the library.`);
+    } catch (error) {
+      actions.setStatus(`Failed to save: ${error?.message || 'Unknown error.'}`, true);
     }
   }
 
@@ -128,7 +144,6 @@ export function createLibraryPersistenceActions(ctx) {
       sequence: record.sequence,
       features: Array.isArray(record.features) ? record.features : [],
       gbkText: buildRecordGenbankText(record),
-      htmlText: buildCircularPreviewHtmlDocument(record),
       alignmentSessions: Array.isArray(current.alignments) ? current.alignments : []
     });
     if (!response?.ok || !response?.entry) {
@@ -283,6 +298,7 @@ export function createLibraryPersistenceActions(ctx) {
     persistFeatureMutation,
     persistRecordToLibrary,
     renameLibraryEntry,
+    saveCurrentRecordToLibrary,
     upsertLibraryFolder
   };
 }

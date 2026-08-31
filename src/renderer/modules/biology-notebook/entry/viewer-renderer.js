@@ -12,7 +12,6 @@ import {
   resolveSampleTypeForPlaceholder
 } from '../samples/sample-helpers.js';
 import { renderStepSentence } from '../protocol/step-renderer.js';
-import { summarizeNotebookResultTables } from '../../../lib/notebook-result-tables.js';
 import { summarizeNotebookToolCalculations } from '../../../lib/notebook-tool-calculations.js';
 
 export function buildViewerMeta({
@@ -30,13 +29,6 @@ export function buildViewerMeta({
     const executedAt = resolveEntryExecutedAt(entry)
       ? ` Executed at ${formatEntryTimestamp(resolveEntryExecutedAt(entry))}.`
       : '';
-    const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
-      ? ` Result files: ${entry.resultFiles.join(', ')}.`
-      : '';
-    const resultTableSummary = summarizeNotebookResultTables(entry?.resultTables, entry?.resultTable);
-    const resultTable = resultTableSummary
-      ? ` Result table: ${resultTableSummary}.`
-      : '';
     const toolCalculationSummary = summarizeNotebookToolCalculations(entry?.toolCalculations);
     const toolCalculations = toolCalculationSummary
       ? ` Tool calculations: ${toolCalculationSummary}.`
@@ -45,7 +37,7 @@ export function buildViewerMeta({
     const sampleLinks = sampleLinkCount
       ? ` Linked samples: ${sampleLinkCount}.`
       : '';
-    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}${toolCalculations}${sampleLinks}`;
+    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${toolCalculations}${sampleLinks}`;
   }
   if (isSavedEntry) {
     return `${contextLabel} notebook page.`;

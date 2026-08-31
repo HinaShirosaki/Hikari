@@ -9,10 +9,6 @@ const AGENT_SUB_APP_API_CATALOG = Object.freeze({
     description: 'Agent-facing assay records and summaries.',
     methods: Object.freeze(['listAgentRecords', 'listAgentRuns'])
   }),
-  gel: Object.freeze({
-    description: 'Agent-facing gel analysis records and summaries.',
-    methods: Object.freeze(['listAgentRecords', 'listAgentAnalyses'])
-  }),
   papers: Object.freeze({
     description: 'Agent-facing paper records and summaries.',
     methods: Object.freeze(['listAgentRecords', 'listAgentPapers'])
@@ -37,7 +33,7 @@ function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function defaultCleanText(value, _maxLength = 500) {
+function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
@@ -235,42 +231,6 @@ function createAgentSubAppApi(deps = {}) {
           payload.notebook_entry_protocol_name
         ]),
         assay: payload
-      };
-    });
-
-    return filterRows(rows, { query, limit, projectId, projectName });
-  }
-
-  function listGelRecords({
-    snapshot = {},
-    query = '',
-    limit = 80,
-    projectId = '',
-    projectName = ''
-  } = {}) {
-    const rows = asArray(snapshot?.gelAnalyses).map((analysis) => {
-      const payload = ensureObject(analysis);
-      const project = resolveProjectRef(payload);
-      return {
-        record_type: 'gel',
-        record_id: cleanText(payload.id, 120),
-        title: cleanText(payload.name || payload.id, 220),
-        project_id: project.id,
-        project_name: project.name,
-        summary: cleanText(payload.analysis_type || payload.notebook_entry_protocol_name || payload.name, 500),
-        linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
-        linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
-        updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
-        search_text: buildSearchText([
-          payload.id,
-          payload.name,
-          payload.analysis_type,
-          project.id,
-          project.name,
-          payload.notebook_entry_protocol_name,
-          asArray(payload.warnings).join(' ')
-        ]),
-        analysis: payload
       };
     });
 
@@ -490,14 +450,6 @@ function createAgentSubAppApi(deps = {}) {
       listAgentRuns(options = {}) {
         return listAssayRecords(options)
           .map((row) => row?.assay)
-          .filter(Boolean);
-      }
-    },
-    gel: {
-      listAgentRecords: listGelRecords,
-      listAgentAnalyses(options = {}) {
-        return listGelRecords(options)
-          .map((row) => row?.analysis)
           .filter(Boolean);
       }
     },

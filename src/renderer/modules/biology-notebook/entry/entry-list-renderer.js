@@ -5,6 +5,11 @@ import {
   resolveEntryCollectionName,
   resolveEntryExperimentName
 } from './entry-helpers.js';
+import {
+  createFolderTreeState,
+  renderFolderTreeLeaf,
+  renderFolderTreeNode
+} from '../../../lib/folder-tree.js';
 
 export function createEntryListRenderer({
   listEl,
@@ -15,28 +20,28 @@ export function createEntryListRenderer({
   getEditingEntryId,
   getActiveProjectDashboardId = () => ''
 } = {}) {
-  const collapsedFolderKeys = new Set();
+  const folderTree = createFolderTreeState({ defaultExpanded: true });
 
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
   }
 
   function buildEntryButtonHtml(entry) {
-    const isActive = entry.id === getEditingEntryId() ? ' is-active' : '';
+    const isActive = entry.id === getEditingEntryId();
     const stateLabel = notebookStateLabel(entry);
     const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned'
       ? ' is-planned'
       : ' is-executed';
-    return `
-          <button
-            type="button"
-            class="biology-notebook-page-row${isActive}${stateClass}"
-            data-notebook-entry-id="${safeText(entry.id)}"
-          >
-            <span class="biology-notebook-page-name">${safeText(resolveEntryExperimentName(entry))}</span>
-            <span class="biology-notebook-page-badge">${safeText(stateLabel)}</span>
-          </button>
-        `;
+    return renderFolderTreeLeaf({
+      active: isActive,
+      wrapperClass: 'biology-notebook-page-leaf',
+      controlClass: `biology-notebook-page-row folder-tree-template__rail-leaf${stateClass}`,
+      controlAttributes: { 'data-notebook-entry-id': entry.id },
+      contentHtml: `
+        <span class="biology-notebook-page-name folder-tree-template__leaf-label">${safeText(resolveEntryExperimentName(entry))}</span>
+        <span class="biology-notebook-page-badge folder-tree-template__leaf-meta">${safeText(stateLabel)}</span>
+      `
+    });
   }
 
   function groupEntries(entries) {
@@ -116,34 +121,34 @@ export function createEntryListRenderer({
       const entryButtons = group.entries.length
         ? group.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
         : '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>';
-      const projectDataAttrs = group.projectId
-        ? ` data-notebook-project-id="${safeText(group.projectId)}" data-notebook-project-name="${safeText(group.groupName)}"`
-        : '';
       const isActiveProject = group.projectId && group.projectId === activeProjectDashboardId;
-      const isCollapsed = collapsedFolderKeys.has(group.groupKey);
-      const folderNameTag = group.projectId ? 'button' : 'span';
-      const folderNameAttrs = group.projectId
-        ? ` type="button" class="biology-notebook-folder-name biology-notebook-folder-name-btn"${projectDataAttrs}`
-        : ' class="biology-notebook-folder-name"';
-      return `
-        <div class="biology-notebook-folder ${group.groupClass}${isActiveProject ? ' is-active' : ''}${isCollapsed ? ' is-collapsed' : ''}">
-          <div class="biology-notebook-folder-item ${group.itemClass}">
-            <button
-              type="button"
-              class="biology-notebook-folder-toggle"
-              data-notebook-folder-toggle="${safeText(group.groupKey)}"
-              aria-expanded="${isCollapsed ? 'false' : 'true'}"
-              aria-label="Toggle ${safeText(group.groupName)}"
-            >
-              <span class="left-rail-folder-glyph biology-notebook-folder-glyph" aria-hidden="true"></span>
-            </button>
-            <${folderNameTag}${folderNameAttrs}>${safeText(group.groupName)}</${folderNameTag}>
-          </div>
-          <div class="biology-notebook-folder-children biology-notebook-folder-children--pages"${isCollapsed ? ' hidden' : ''}>
-            ${entryButtons}
-          </div>
+      const isExpanded = folderTree.isExpanded(group.groupKey, true);
+      const mainHtml = group.projectId ? '' : `
+        <div class="biology-notebook-folder-static folder-tree-template__main">
+          <span class="biology-notebook-folder-glyph left-rail-folder-glyph" aria-hidden="true"></span>
+          <span class="biology-notebook-folder-name folder-tree-template__label">${safeText(group.groupName)}</span>
         </div>
       `;
+      return renderFolderTreeNode({
+        key: group.groupKey,
+        expanded: isExpanded,
+        active: Boolean(isActiveProject),
+        label: group.groupName,
+        childrenHtml: entryButtons,
+        nodeClass: `biology-notebook-folder ${group.groupClass}${isExpanded ? '' : ' is-collapsed'}`,
+        rowClass: `biology-notebook-folder-item ${group.itemClass}`,
+        disclosureClass: 'biology-notebook-folder-toggle',
+        mainClass: 'biology-notebook-folder-name-btn',
+        labelClass: 'biology-notebook-folder-name',
+        glyphClass: 'biology-notebook-folder-glyph',
+        childrenClass: 'biology-notebook-folder-children biology-notebook-folder-children--pages folder-tree-template__children--full-width-leaves',
+        disclosureAttributes: { 'data-notebook-folder-toggle': group.groupKey },
+        mainAttributes: group.projectId ? {
+          'data-notebook-project-id': group.projectId,
+          'data-notebook-project-name': group.groupName
+        } : {},
+        mainHtml
+      });
     }).join('');
   }
 
@@ -152,11 +157,7 @@ export function createEntryListRenderer({
     if (!key) {
       return;
     }
-    if (collapsedFolderKeys.has(key)) {
-      collapsedFolderKeys.delete(key);
-    } else {
-      collapsedFolderKeys.add(key);
-    }
+    folderTree.toggle(key, true);
     renderEntries();
   }
 

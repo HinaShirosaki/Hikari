@@ -9,8 +9,6 @@ function createAgentControllerCore({
   observability,
   codexAgentRuntime,
   agentToolRuntime,
-  agentChatLogRuntime,
-  getAgentChatLogPath,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   lifecycleService
@@ -335,11 +333,8 @@ function createAgentControllerCore({
       setCodexCliModel(model);
       setCodexCliReasoningEffort(reasoningEffort);
     }
-    const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const traceContext = controllerUtils.createAgentLlmTraceContext({
-      enabled: executionFlags.developerMode === true,
       requestId: cleanText(runtime?.requestId, 80),
-      logPath: getAgentChatLogPath(),
       provider,
       model
     });
@@ -371,12 +366,13 @@ function createAgentControllerCore({
         model,
         reasoningEffort,
         message: effectiveMessage,
-        conversation: [],
+        // A resumed Codex session owns its own history, so Hikari's copy travels
+        // under a name that says it is only there to rebuild a lost session.
+        recoveryConversation: controllerUtils.extractConversation(payload?.conversation),
         attachments,
         snapshot,
         ...(snapshotDataFilePath ? { dataFilePath: snapshotDataFilePath } : {}),
         ...(snapshotFallbackDataFilePath ? { fallbackDataFilePath: snapshotFallbackDataFilePath } : {}),
-        executionFlags,
         traceContext,
         projectId,
         projectName,
@@ -389,9 +385,6 @@ function createAgentControllerCore({
         emitAgentProgress: runtime?.emitAgentProgress
       });
       throwIfAgentRequestAborted('Agent request stopped after Codex agent runtime.');
-      if (executionFlags.developerMode === true && codexResult && typeof codexResult === 'object') {
-        codexResult.developer_trace = asArray(traceContext?.rows);
-      }
       return codexResult;
     }
 

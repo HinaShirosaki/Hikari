@@ -1,0 +1,899 @@
+{
+  "schema_name": "hikari_storage_manifest",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-08-28T22:40:09.662Z",
+  "root_path": "/Users/shiyifan/Projects/Enana/tests",
+  "discovered_files": [
+    {
+      "relative_path": "assay-analysis-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 11411,
+      "modified_at": "2026-08-26T03:36:54.971Z"
+    },
+    {
+      "relative_path": "assay-concentration-unit-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6226,
+      "modified_at": "2026-06-21T00:36:12.841Z"
+    },
+    {
+      "relative_path": "assay-derived-plate-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 11551,
+      "modified_at": "2026-08-23T21:03:12.105Z"
+    },
+    {
+      "relative_path": "assay-formula-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 10645,
+      "modified_at": "2026-08-26T03:36:54.972Z"
+    },
+    {
+      "relative_path": "assay-plotly-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 16748,
+      "modified_at": "2026-08-26T03:36:54.972Z"
+    },
+    {
+      "relative_path": "bioinformatics-service-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 10379,
+      "modified_at": "2026-08-13T02:00:55.832Z"
+    },
+    {
+      "relative_path": "buffer-rows-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4357,
+      "modified_at": "2026-07-25T03:42:23.587Z"
+    },
+    {
+      "relative_path": "chemical-cas-code-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2145,
+      "modified_at": "2026-07-24T00:39:49.840Z"
+    },
+    {
+      "relative_path": "cloning-design-confirm-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 11212,
+      "modified_at": "2026-08-25T05:05:32.363Z"
+    },
+    {
+      "relative_path": "codon-optimizer-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4818,
+      "modified_at": "2026-08-18T17:45:49.651Z"
+    },
+    {
+      "relative_path": "fixed-reaction-rows-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4050,
+      "modified_at": "2026-07-25T03:42:38.891Z"
+    },
+    {
+      "relative_path": "fixtures",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T15:13:49.316Z"
+    },
+    {
+      "relative_path": "gel-plugin-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 19345,
+      "modified_at": "2026-08-28T20:38:00.430Z"
+    },
+    {
+      "relative_path": "genbank-primer-sequence-roundtrip-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3653,
+      "modified_at": "2026-08-25T05:14:43.947Z"
+    },
+    {
+      "relative_path": "genbank-primer-splice-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4811,
+      "modified_at": "2026-08-25T17:46:05.466Z"
+    },
+    {
+      "relative_path": "genome-service-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 12741,
+      "modified_at": "2026-07-29T23:01:18.924Z"
+    },
+    {
+      "relative_path": "home-paper-finding-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5219,
+      "modified_at": "2026-08-23T21:03:12.106Z"
+    },
+    {
+      "relative_path": "icon-button-captions-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3273,
+      "modified_at": "2026-08-14T02:27:46.278Z"
+    },
+    {
+      "relative_path": "KnowledgeBase",
+      "type": "directory",
+      "role": "knowledge_base_root",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T22:40:09.657Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md",
+      "type": "directory",
+      "role": "paper_markdown_root",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T22:40:09.657Z"
+    },
+    {
+      "relative_path": "map-label-anchor-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 1978,
+      "modified_at": "2026-08-28T15:44:18.865Z"
+    },
+    {
+      "relative_path": "notebook-quick-sample-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5405,
+      "modified_at": "2026-08-14T16:35:43.576Z"
+    },
+    {
+      "relative_path": "notebook-table-formula-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 24928,
+      "modified_at": "2026-08-28T20:25:36.406Z"
+    },
+    {
+      "relative_path": "oligo-fold-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5123,
+      "modified_at": "2026-08-16T18:09:00.102Z"
+    },
+    {
+      "relative_path": "paper-dedup-identity-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 32090,
+      "modified_at": "2026-08-24T01:58:41.187Z"
+    },
+    {
+      "relative_path": "papers-zoom-wheel-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2930,
+      "modified_at": "2026-07-14T18:40:20.968Z"
+    },
+    {
+      "relative_path": "pdf-export-template-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5514,
+      "modified_at": "2026-07-25T03:22:32.510Z"
+    },
+    {
+      "relative_path": "plugin-client-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4099,
+      "modified_at": "2026-08-10T04:21:32.304Z"
+    },
+    {
+      "relative_path": "primer-snapgene-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 9318,
+      "modified_at": "2026-08-25T20:27:36.127Z"
+    },
+    {
+      "relative_path": "project-research-memory-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 20421,
+      "modified_at": "2026-08-16T02:15:28.115Z"
+    },
+    {
+      "relative_path": "python-ipc-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3523,
+      "modified_at": "2026-08-12T16:48:33.485Z"
+    },
+    {
+      "relative_path": "README.md",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2388,
+      "modified_at": "2026-08-23T21:55:25.055Z"
+    },
+    {
+      "relative_path": "sample-registry-csv-io-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2827,
+      "modified_at": "2026-07-14T18:15:02.690Z"
+    },
+    {
+      "relative_path": "search-field-lens-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4542,
+      "modified_at": "2026-08-24T20:17:13.436Z"
+    },
+    {
+      "relative_path": "sequence-host-reflow-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3111,
+      "modified_at": "2026-08-22T01:53:26.055Z"
+    },
+    {
+      "relative_path": "sequence-line-render-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5041,
+      "modified_at": "2026-08-25T21:29:47.189Z"
+    },
+    {
+      "relative_path": "sequence-scroll-anchor-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3279,
+      "modified_at": "2026-08-25T04:26:51.613Z"
+    },
+    {
+      "relative_path": "sequence-viewer-save-button-selfcheck.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3155,
+      "modified_at": "2026-08-22T02:17:04.194Z"
+    },
+    {
+      "relative_path": "sqlite-bundle-shape-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 4753,
+      "modified_at": "2026-08-18T17:46:29.511Z"
+    },
+    {
+      "relative_path": "suites",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-07-09T16:29:40.381Z"
+    },
+    {
+      "relative_path": "suites/core",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-07-14T21:16:39.237Z"
+    },
+    {
+      "relative_path": "suites/core-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 625,
+      "modified_at": "2026-07-09T16:29:40.381Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-07-14T21:16:39.238Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 871,
+      "modified_at": "2026-07-14T21:16:39.237Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/context-memory-and-runtime-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T23:00:19.144Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/context-memory-and-runtime-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 743,
+      "modified_at": "2026-08-23T21:39:10.593Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/intent-and-notebook-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T23:00:19.145Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/intent-and-notebook-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 537,
+      "modified_at": "2026-08-23T21:39:10.656Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/literature-paper-and-sub-agent-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.973Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/literature-paper-and-sub-agent-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 705,
+      "modified_at": "2026-08-23T21:39:10.728Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/retrieval-and-tool-call-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T23:00:19.146Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/retrieval-and-tool-call-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 494,
+      "modified_at": "2026-08-23T21:39:10.776Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/science-and-protocol-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.973Z"
+    },
+    {
+      "relative_path": "suites/core/agent-suite/science-and-protocol-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 67,
+      "modified_at": "2026-04-12T15:22:20.864Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.406Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 1048,
+      "modified_at": "2026-07-15T15:47:27.563Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/agent-chat-core-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T21:39:10.850Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/agent-chat-core-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 518,
+      "modified_at": "2026-08-23T21:39:10.852Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/agent-chat-sessions-and-tools-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T21:39:10.876Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/agent-chat-sessions-and-tools-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 340,
+      "modified_at": "2026-08-23T21:39:10.877Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/assay-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 17263,
+      "modified_at": "2026-08-28T21:52:53.288Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/collaboration-and-protocol-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.974Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/collaboration-and-protocol-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 429,
+      "modified_at": "2026-08-23T21:39:10.911Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/lab-and-project-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.406Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/lab-and-project-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 452,
+      "modified_at": "2026-08-23T21:39:10.956Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/papers-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.407Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/papers-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 288,
+      "modified_at": "2026-08-23T21:39:10.978Z"
+    },
+    {
+      "relative_path": "suites/core/app-modules-suite/workflow-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 16939,
+      "modified_at": "2026-07-30T21:11:34.310Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.975Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 740,
+      "modified_at": "2026-08-23T21:39:11.070Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/agent-runtime-prompts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 30552,
+      "modified_at": "2026-08-26T03:36:54.975Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/auth-and-session-transcripts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 19970,
+      "modified_at": "2026-08-23T21:39:11.038Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/auth-clearing.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6285,
+      "modified_at": "2026-08-23T23:00:19.147Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/exec-streaming.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 37416,
+      "modified_at": "2026-08-26T03:36:54.975Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/mcp-gateway-tool-surface.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 33675,
+      "modified_at": "2026-08-23T23:00:19.147Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/model-selection-and-exec-args.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 24645,
+      "modified_at": "2026-08-23T23:00:19.148Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/scheduled-tasks-and-paper-finding.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 40189,
+      "modified_at": "2026-08-23T21:39:11.059Z"
+    },
+    {
+      "relative_path": "suites/core/codex-cli-provider-suite/session-resume-and-mcp-servers.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 51634,
+      "modified_at": "2026-08-26T03:36:54.975Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.407Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 56,
+      "modified_at": "2026-04-12T15:04:01.399Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/agent-contracts-a.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 23724,
+      "modified_at": "2026-08-28T20:25:36.407Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/agent-contracts-b",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.407Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/agent-contracts-b.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 297,
+      "modified_at": "2026-08-23T21:39:11.093Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/agent-sequence-library-contracts",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T21:39:11.114Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/agent-sequence-library-contracts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 334,
+      "modified_at": "2026-08-23T21:39:11.116Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/index.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 794,
+      "modified_at": "2026-08-10T04:21:32.305Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/manifest-contracts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 5442,
+      "modified_at": "2026-08-28T21:22:10.797Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/Readme.md",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 993,
+      "modified_at": "2026-08-10T04:21:32.304Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/storage-and-import-contracts",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-28T20:25:36.407Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/storage-and-import-contracts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 331,
+      "modified_at": "2026-08-23T21:39:11.138Z"
+    },
+    {
+      "relative_path": "suites/core/contracts-suite/ui-and-layout-contracts.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 107627,
+      "modified_at": "2026-08-28T20:29:35.305Z"
+    },
+    {
+      "relative_path": "suites/core/module-services-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 18187,
+      "modified_at": "2026-08-03T19:13:03.359Z"
+    },
+    {
+      "relative_path": "suites/edge",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-06-20T23:01:22.435Z"
+    },
+    {
+      "relative_path": "suites/edge-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 332,
+      "modified_at": "2026-03-23T16:43:22.584Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.977Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 1193,
+      "modified_at": "2026-06-20T23:01:22.435Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/cloning-assembly-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 77510,
+      "modified_at": "2026-08-26T16:02:56.952Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/gel-analysis-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 84274,
+      "modified_at": "2026-08-26T03:36:54.977Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-foundations-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.977Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-foundations-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 446,
+      "modified_at": "2026-08-23T21:39:11.172Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-interactions-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-27T14:49:15.083Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-interactions-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 459,
+      "modified_at": "2026-08-23T21:39:11.204Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-workspace-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-27T14:49:15.084Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/sequence-viewer-workspace-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 827,
+      "modified_at": "2026-08-23T21:39:11.290Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/tool-box-exposure-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 765,
+      "modified_at": "2026-08-23T23:00:19.151Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/tool-box-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-26T03:36:54.980Z"
+    },
+    {
+      "relative_path": "suites/edge/bio-tools-and-gel-suite/tool-box-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 369,
+      "modified_at": "2026-08-23T21:39:11.323Z"
+    },
+    {
+      "relative_path": "suites/edge/platform-and-regression-suite",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-23T23:00:19.151Z"
+    },
+    {
+      "relative_path": "suites/edge/platform-and-regression-suite.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 402,
+      "modified_at": "2026-08-23T21:39:11.356Z"
+    },
+    {
+      "relative_path": "suites/edge/platform-and-regression-suite/data-file-path-normalization.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 1904,
+      "modified_at": "2026-08-23T23:00:19.151Z"
+    },
+    {
+      "relative_path": "suites/edge/platform-and-regression-suite/module-boundary-guards.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 11371,
+      "modified_at": "2026-08-23T23:00:19.151Z"
+    },
+    {
+      "relative_path": "suites/edge/platform-and-regression-suite/state-normalization.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 17813,
+      "modified_at": "2026-08-23T23:00:19.152Z"
+    },
+    {
+      "relative_path": "support",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-27T14:49:15.084Z"
+    },
+    {
+      "relative_path": "support/Readme.md",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 462,
+      "modified_at": "2026-07-15T15:22:25.758Z"
+    },
+    {
+      "relative_path": "support/runtime.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 12489,
+      "modified_at": "2026-08-27T14:49:15.084Z"
+    },
+    {
+      "relative_path": "tmp",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-08-20T00:46:41.958Z"
+    },
+    {
+      "relative_path": "tmp/electron-native-pdf-qa.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2064,
+      "modified_at": "2026-08-20T00:50:40.320Z"
+    },
+    {
+      "relative_path": "tmp/packaged-paper-vendor-qa.js",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2129,
+      "modified_at": "2026-08-20T00:45:47.899Z"
+    },
+    {
+      "relative_path": "undo-service-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6132,
+      "modified_at": "2026-08-26T03:36:54.981Z"
+    },
+    {
+      "relative_path": "window-guard-selfcheck.mjs",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 3857,
+      "modified_at": "2026-07-19T21:23:55.511Z"
+    }
+  ],
+  "bundles": [],
+  "protocol_storage": {
+    "relative_root_path": "Protocol",
+    "relative_index_sqlite_path": "Protocol/protocol.index.sqlite",
+    "protocols": 0
+  },
+  "workflow_storage": {
+    "relative_root_path": "Workflow",
+    "relative_status_sqlite_path": "Workflow/workflow-status.sqlite",
+    "workflow_templates": 0,
+    "workflows": 0,
+    "papers": 0
+  },
+  "sample_storage": {
+    "relative_root_path": "Samples",
+    "relative_samples_json_path": "Samples/samples.json",
+    "samples": 0
+  },
+  "paper_markdown_storage": {
+    "relative_root_path": "KnowledgeBase/papers.md",
+    "transformed": 0,
+    "skipped": 0,
+    "failed": 0
+  },
+  "sequence_library": {
+    "relative_path": "SequenceViewer/sequence-library.sqlite",
+    "exists": false,
+    "entry_count": 0,
+    "status_counts": {
+      "saved": 0,
+      "temporary": 0
+    }
+  },
+  "summary": {
+    "bundles": 0,
+    "protocols": 0,
+    "notebookEntries": 0,
+    "samples": 0,
+    "workflowTemplates": 0,
+    "workflows": 0,
+    "papers": 0,
+    "assays": 0,
+    "gelAnalyses": 0,
+    "chemicals": 0,
+    "personalInventoryContainers": 0,
+    "sequenceEntries": 0,
+    "paperMarkdownTransformed": 0,
+    "paperMarkdownSkipped": 0,
+    "paperMarkdownFailed": 0
+  },
+  "warnings": []
+}

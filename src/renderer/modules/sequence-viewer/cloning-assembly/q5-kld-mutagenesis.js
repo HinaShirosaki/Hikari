@@ -1,14 +1,16 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
-import { selectBindingWindow } from './overlap-windows.js';
+import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designWithThresholdFallback } from './strategy.js';
 
 // Q5 / KLD site-directed mutagenesis (NEBaseChanger style). Two *non-overlapping*
-// back-to-back (divergent) primers amplify the whole plasmid exponentially; only
-// the forward primer carries the edit (as a 5' tail). The linear product is then
-// circularised with KLD (Kinase-Ligase-DpnI). This differs from the QuikChange
+// back-to-back (divergent) primers amplify the whole plasmid exponentially. A
+// short edit rides on the forward 5' tail; a longer edit can be distributed
+// across both 5' tails. The linear product is then circularised with KLD
+// (Kinase-Ligase-DpnI). This differs from the QuikChange
 // whole-plasmid route, which uses overlapping complementary primers + DpnI only.
 
 const EDIT_LABELS = {
@@ -27,9 +29,11 @@ function flankWindows(sequence, startIndex, endIndex, circular) {
   return { downstream, upstream: upstreamFull.slice(-60) };
 }
 
-function buildProcedure(recordName, editLabel, changeTail) {
+function buildProcedure(recordName, editLabel, changeTail, splitTail = false) {
   const forwardNote = changeTail
-    ? `the forward primer carries the ${editLabel} (${changeTail}) at its 5' end`
+    ? (splitTail
+        ? `the two 5' tails reconstruct the ${editLabel} after circularisation`
+        : `the forward primer carries the ${editLabel} (${changeTail}) at its 5' end`)
     : `the primers anneal back-to-back across the ${editLabel} junction`;
   return [
     { title: 'Prepare divergent primers', details: `Order the non-overlapping primer pair; ${forwardNote}. 5'-phosphorylate them, or rely on the kinase in the KLD mix.` },
@@ -48,55 +52,104 @@ export function buildQ5KldPlan(payload = {}) {
   const normalizedEdit = normalizeEditRequest(payload?.editRequest, originalSequence);
 
   const summary = { templateLength: originalSequence.length, resultLength: editedSequence.length };
-  const infeasible = (warning) => ({
-    feasible: false,
-    plans: [{ label: 'Q5/KLD site-directed mutagenesis', plan: { feasible: false, recommendedAssemblyStrategy: 'site-directed-mutagenesis', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings: [warning] } }],
-    primers: [],
-    warnings: [warning],
-    summary
-  });
+  // Accepts one warning or a list, so a route can say what blocked it as well
+  // as that it was blocked.
+  const infeasible = (warning) => {
+    const warnings = [warning].flat().filter(Boolean);
+    return {
+      feasible: false,
+      plans: [{ label: 'Q5/KLD site-directed mutagenesis', plan: { feasible: false, recommendedAssemblyStrategy: 'site-directed-mutagenesis', primerOligoPlan: null, restrictionEnzymeSelection: null, stepByStepProcedure: [], warnings } }],
+      primers: [],
+      warnings,
+      summary
+    };
+  };
 
   if (!originalSequence.length || !normalizedEdit) {
     return infeasible('Edit the sequence before designing a Q5/KLD route.');
+  }
+  if (!circular) {
+    return infeasible('Q5/KLD whole-plasmid mutagenesis requires a circular plasmid template. Use overlap PCR or an assembly route for a linear template.');
   }
 
   const editLabel = EDIT_LABELS[normalizedEdit.type] || 'edit';
   const changeTail = normalizedEdit.type === 'deletion' ? '' : normalizeSequence(normalizedEdit.editedSequence || '');
   const { downstream, upstream } = flankWindows(originalSequence, normalizedEdit.startIndex, normalizedEdit.endIndex, circular);
-  const topologyWarnings = circular ? [] : ['Q5/KLD circularisation assumes a circular plasmid template.'];
+  const topologyWarnings = [];
+  let selectedSplitTail = false;
 
   const design = designWithThresholdFallback((thresholds) => {
-    // ponytail: whole edit rides on the forward 5' tail; a very long insertion can
-    // overrun maxPrimerLength and fail here. Split the tail across both primers if
-    // large synthetic insertions become common.
-    const forwardBinding = selectBindingWindow(downstream, 'forward', thresholds, changeTail.length, config);
-    const reverseBinding = selectBindingWindow(upstream, 'reverse', thresholds, 0, config);
-    if (!forwardBinding || !reverseBinding) {
-      return { feasible: false, warnings: [`No back-to-back primer pair matched the current threshold band${changeTail.length ? ' (the edit may be too long for a single 5\' tail)' : ''}.`] };
+    const specificityConfig = {
+      ...config,
+      specificitySequence: originalSequence,
+      specificityCircular: circular
+    };
+    const splits = [0];
+    for (let split = 1; split < changeTail.length; split += 1) {
+      splits.push(split);
     }
+    let best = null;
+    splits.forEach((split) => {
+      const upstreamAddedSequence = changeTail.slice(0, split);
+      const downstreamAddedSequence = changeTail.slice(split);
+      const forwardTail = downstreamAddedSequence;
+      const reverseTail = reverseComplementDna(upstreamAddedSequence);
+      const forwardBinding = selectBindingWindow(downstream, 'forward', thresholds, forwardTail.length, specificityConfig);
+      const reverseBinding = selectBindingWindow(upstream, 'reverse', thresholds, reverseTail.length, specificityConfig);
+      if (!forwardBinding || !reverseBinding) {
+        return;
+      }
+      const totalForwardLength = forwardTail.length + forwardBinding.length;
+      const totalReverseLength = reverseTail.length + reverseBinding.length;
+      const score = Math.abs(totalForwardLength - totalReverseLength)
+        + Math.max(totalForwardLength, totalReverseLength) * 0.05
+        + Math.abs(forwardBinding.tm - reverseBinding.tm)
+        + (split > 0 ? 1000 : 0);
+      if (!best || score < best.score) {
+        best = { split, forwardTail, reverseTail, forwardBinding, reverseBinding, score };
+      }
+    });
+    if (!best) {
+      // Probe with no tail: the most room a binding window can get here.
+      const reason = describeBindingWindowFailure(downstream, 'forward', thresholds, 0, specificityConfig)
+        || describeBindingWindowFailure(upstream, 'reverse', thresholds, 0, specificityConfig);
+      return {
+        feasible: false,
+        warnings: [
+          `No unique back-to-back primer pair matched the current threshold band${changeTail.length ? ' after distributing the edit across the available 5\' tail capacity' : ''}.`,
+          reason
+        ].filter(Boolean)
+      };
+    }
+    selectedSplitTail = best.split > 0;
 
     const primers = [
       buildPrimerRecord({
         name: 'q5_F',
         role: 'mutagenesis-forward',
-        sequence: `${changeTail}${forwardBinding.bindingSequence}`,
-        tailSequence: changeTail,
-        bindingSequence: forwardBinding.bindingSequence,
-        warnings: [changeTail ? `Carries the ${editLabel} (${changeTail}) at the 5' end.` : `Anneals immediately 3' of the ${editLabel}.`]
+        sequence: `${best.forwardTail}${best.forwardBinding.bindingSequence}`,
+        tailSequence: best.forwardTail,
+        bindingSequence: best.forwardBinding.bindingSequence,
+        warnings: [changeTail
+          ? (selectedSplitTail ? `Carries the downstream ${best.forwardTail.length} nt of the ${editLabel}.` : `Carries the ${editLabel} (${changeTail}) at the 5' end.`)
+          : `Anneals immediately 3' of the ${editLabel}.`]
       }),
       buildPrimerRecord({
         name: 'q5_R',
         role: 'mutagenesis-reverse',
-        sequence: reverseBinding.bindingSequence,
-        bindingSequence: reverseBinding.bindingSequence,
-        warnings: ["Anneals back-to-back with the forward primer (5' ends abut for KLD ligation)."]
+        sequence: `${best.reverseTail}${best.reverseBinding.bindingSequence}`,
+        tailSequence: best.reverseTail,
+        bindingSequence: best.reverseBinding.bindingSequence,
+        warnings: [selectedSplitTail
+          ? `Carries the reverse complement of the upstream ${best.split} nt of the ${editLabel}; KLD ligation reconstructs the full edit.`
+          : "Anneals back-to-back with the forward primer (5' ends abut for KLD ligation)."]
       })
     ];
     return { feasible: true, primers, warnings: [], ...summarizePrimerPlan(primers) };
   });
 
   if (!design.feasible) {
-    return infeasible(asArray(design.warnings)[0] || 'Unable to design the Q5/KLD primer pair.');
+    return infeasible(asArray(design.warnings).filter(Boolean).length ? asArray(design.warnings) : 'Unable to design the Q5/KLD primer pair.');
   }
 
   const plan = {
@@ -108,7 +161,7 @@ export function buildQ5KldPlan(payload = {}) {
       warnings: topologyWarnings
     },
     restrictionEnzymeSelection: null,
-    stepByStepProcedure: buildProcedure(recordName, editLabel, changeTail),
+    stepByStepProcedure: buildProcedure(recordName, editLabel, changeTail, selectedSplitTail),
     warnings: topologyWarnings
   };
 

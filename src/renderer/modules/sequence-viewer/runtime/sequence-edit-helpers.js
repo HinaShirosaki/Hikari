@@ -85,7 +85,15 @@ export function diffChangedRegion(originalSequence, editedSequence) {
   };
 }
 
-export function buildSequenceEditDesignSource({ record, originalSequence, nextSequence } = {}) {
+export function buildSequenceEditDesignSource({
+  record,
+  originalSequence,
+  nextSequence,
+  baseName,
+  generatedName,
+  parentEntryId,
+  sourceKind = 'sequence_edit'
+} = {}) {
   const { original, edited, prefix, originalEnd, originalChanged, editedChanged } =
     diffChangedRegion(originalSequence, nextSequence);
   const type = editedChanged.length === 0
@@ -96,7 +104,11 @@ export function buildSequenceEditDesignSource({ record, originalSequence, nextSe
   const oneBasedStart = prefix + 1;
   const oneBasedEnd = type === 'insertion' ? oneBasedStart : Math.max(oneBasedStart, originalEnd);
   return {
-    recordName: cleanText(record?.name, 160) || 'sequence',
+    recordName: cleanText(generatedName || record?.name, 160) || 'sequence',
+    baseName: cleanText(baseName || record?.name, 160) || 'sequence',
+    parentRecordName: cleanText(record?.name, 160) || 'sequence',
+    parentEntryId: cleanText(parentEntryId, 200),
+    sourceKind: cleanText(sourceKind, 80) || 'sequence_edit',
     originalSequence: original,
     editedSequence: edited,
     originalRange: { start: prefix, end: originalEnd },

@@ -13,7 +13,10 @@ import {
   createUndoService,
   createUnsavedChangesService
 } from '../services/index.js';
-import { initSharedLeftRailResizers } from '../app/shared-left-rail.js';
+import {
+  initSharedLeftRailResizers,
+  SHARED_LEFT_RAIL_CHANGED_EVENT
+} from '../app/shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
 import {
   applyAppearanceSnapshot,
@@ -30,6 +33,7 @@ import {
   createTopbarSearchController
 } from '../app/topbar-search.js';
 import { createTopbarOpenItemHandlers } from '../app/topbar-open-handlers.js';
+import { showTransientNotice } from '../lib/notify.js';
 
 const APP_READY_EVENT = 'hikari:app-ready';
 
@@ -109,7 +113,9 @@ export function startHikariCore({
     state,
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
-    windowObject
+    onFrameHistoryChanged: () => undoService?.syncButtons?.(),
+    windowObject,
+    api: windowObject.hikariApi || null
   });
   // Service plugins register their converters here; the sequence viewer (and
   // any future consumer) reaches them through the module runtime below.
@@ -121,6 +127,15 @@ export function startHikariCore({
     bridge: pluginBridge,
     services: pluginServices,
     api: windowObject.hikariApi || null
+  });
+  windowObject.addEventListener?.('hikari:appearance-changed', () => {
+    pluginBridge.broadcastAppContext('appearance');
+  });
+  windowObject.addEventListener?.('hikari:storage-changed', () => {
+    pluginBridge.broadcastAppContext('storage');
+  });
+  windowObject.addEventListener?.(SHARED_LEFT_RAIL_CHANGED_EVENT, () => {
+    pluginBridge.broadcastAppContext('layout');
   });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
@@ -187,11 +202,41 @@ export function startHikariCore({
     renderAll();
   }
 
+  // A focused plugin frame becomes documentElement.activeElement in the host, but
+  // clicking a history button moves focus onto the button — so remember the frame
+  // rather than reading activeElement at command time.
+  let lastFocusedPluginFrame = null;
+  function trackPluginFrameFocus() {
+    const active = documentObject?.activeElement;
+    if (active?.tagName === 'IFRAME') {
+      lastFocusedPluginFrame = active;
+      return;
+    }
+    if (!active?.closest?.('.topbar-history-controls')) {
+      lastFocusedPluginFrame = null;
+    }
+  }
+  documentObject?.addEventListener?.('focusin', () => {
+    trackPluginFrameFocus();
+    undoService?.syncButtons?.();
+  });
+  windowObject?.addEventListener?.('blur', () => {
+    trackPluginFrameFocus();
+    undoService?.syncButtons?.();
+  });
+
   undoService = createUndoService({
     state,
     persistState: persistStateNow,
     renderAll: renderRestoredState,
-    documentObject
+    documentObject,
+    delegate: {
+      claim: () => pluginBridge.getFrameHistory(lastFocusedPluginFrame?.contentWindow || null),
+      run: (command) => pluginBridge.sendFrameHistoryCommand(
+        lastFocusedPluginFrame?.contentWindow || null,
+        command
+      )
+    }
   });
 
   const moduleRegistry = createModuleRegistry({
@@ -243,6 +288,7 @@ export function startHikariCore({
   createUnsavedChangesService({
     moduleRegistry,
     api: windowObject.hikariApi || null,
+    externalSources: () => pluginBridge.getUnsavedSources(),
     documentObject,
     windowObject
   });
@@ -310,13 +356,13 @@ export function startHikariCore({
         rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
       } catch (error) {
         console.error('Failed to apply queued protocol record:', error);
+        showTransientNotice('A protocol saved outside the app could not be applied.', { type: 'error' });
       }
     }
     undoService.reset();
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
-    topbarSearchController.initTelegramCommandBridge();
     renderAll();
     navigationShell.enableLastViewPersistence();
     navigationShell.showView(navigationShell.resolveStartupViewId(state));

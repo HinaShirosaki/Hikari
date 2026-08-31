@@ -9,7 +9,7 @@ The production Agent no longer has an in-process intent router or science-reason
 - Codex CLI request helpers for deterministic sub-tools;
 - snapshot normalization and storage-aware lookup support;
 - the registered internal tool executor;
-- chat log, memory, skills, observability, and developer smoke-test runtimes;
+- chat log, memory, skills, and observability runtimes;
 - paper-owned search, download, analysis, and intake adapters injected from `src/main/papers`.
 
 `create-mcp-service.js` places the direct MCP contract over those tools. `create-codex-service.js` supplies workspace preparation and Codex CLI execution.
@@ -26,7 +26,7 @@ It does not select an intent or run a second conversational agent.
 
 ## `runtime/agent-sub-app-api.js`
 
-This adapter exposes narrow Agent-facing methods for assay, gel, papers, protocol, and notebook data. It also resolves protocol-matching and notebook-generation factories from the runtime registry.
+This adapter exposes narrow Agent-facing methods for assay, papers, protocol, and notebook data. It also resolves protocol-matching and notebook-generation factories from the runtime registry.
 
 The adapter stays below the MCP/tool layer: callers receive normalized records or invoke a registered tool rather than reaching renderer controllers directly.
 

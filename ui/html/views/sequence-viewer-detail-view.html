@@ -19,24 +19,42 @@
             <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
-                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
-                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open</button>
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M12 5v14"></path>
+                      <path d="M5 12h14"></path>
+                    </svg>
+                    <span class="sequence-viewer-button-caption">New</span>
+                  </button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
+                      <path d="M3.5 7.5V5h7l2 2.5"></path>
+                    </svg>
+                    <span class="sequence-viewer-button-caption">Open</span>
+                  </button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <circle cx="12" cy="12" r="7.5"></circle>
+                      <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
+                      <path d="m17.5 5.75 1 2.5-2.65.45"></path>
+                      <circle cx="7.25" cy="15.5" r="1"></circle>
+                    </svg>
+                    <span class="sequence-viewer-button-caption">Vector Builder</span>
+                  </button>
+                </div>
+              </section>
+              <section class="sequence-viewer-library-controls left-rail-template__section">
+                <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                  <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                  <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
                 </div>
               </section>
             </div>
             <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
-                <div class="result-card-head sequence-viewer-library-head">
-                  <h4>Sequence Library</h4>
-                  <button id="sequence-viewer-detail-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
-                </div>
-                <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                  <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                  <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
-                </div>
-                <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list">
+                <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list folder-tree-template">
                   <p class="small-note">No sequence entries found.</p>
                 </div>
                 <div id="sequence-viewer-detail-library-context-menu" class="sequence-viewer-context-menu" hidden>
@@ -73,13 +91,42 @@
             </div>
           </div>
 
-          <div class="form-actions">
+          <div class="form-actions sequence-viewer-detail-toolbar">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
-            <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
-            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
-            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
+            <button id="sequence-viewer-load-btn" type="submit" class="primary-btn">Load</button>
+            <button id="sequence-viewer-save-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Save sequence to library" title="Save to library" hidden>
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
+                <path d="M8.5 5.5h7v4h-7Z"></path>
+                <path d="M8 12.5h8v6h-8Z"></path>
+              </svg>
+              <span class="sequence-viewer-button-caption">Save</span>
+            </button>
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Annotate sequence" title="Annotate sequence">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
+                <circle cx="8.5" cy="9" r="1"></circle>
+              </svg>
+              <span class="sequence-viewer-button-caption">Annotate</span>
+            </button>
+            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Recognize backbone and insert" title="Recognize backbone and insert">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <circle cx="10.5" cy="10.5" r="5.5"></circle>
+                <path d="m14.5 14.5 5 5"></path>
+                <path d="M8.5 8.5h4v4h-4Z"></path>
+              </svg>
+              <span class="sequence-viewer-button-caption">Recognize</span>
+            </button>
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Alignment ▾</button>
+              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 7h14"></path>
+                  <path d="M7 12h12"></path>
+                  <path d="M5 17h14"></path>
+                  <path d="M9 5v4M15 10v4M11 15v4"></path>
+                </svg>
+                <span class="sequence-viewer-button-caption">Alignment</span>
+              </button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
                 <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
@@ -97,7 +144,13 @@
             </div>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">ORF View ▾</button>
+              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="ORF View options" title="ORF View" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 6h14v12H5Z"></path>
+                  <path d="m10 9 5 3-5 3Z"></path>
+                </svg>
+                <span class="sequence-viewer-button-caption">ORF</span>
+              </button>
               <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
                   <input id="sequence-viewer-orf-toggle" type="checkbox" />
@@ -149,7 +202,15 @@
             </div>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Cutter ▾</button>
+              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Restriction cutter options" title="Restriction cutters" aria-haspopup="true" aria-expanded="false">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <circle cx="6.5" cy="7" r="2.5"></circle>
+                  <circle cx="6.5" cy="17" r="2.5"></circle>
+                  <path d="m8.5 8.5 11 8.5"></path>
+                  <path d="m8.5 15.5 11-8.5"></path>
+                </svg>
+                <span class="sequence-viewer-button-caption">Cutters</span>
+              </button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
                   <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
@@ -163,6 +224,11 @@
                 </div>
               </div>
             </div>
+
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
+              <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
+              <span>Primers</span>
+            </label>
 
           </div>
 
@@ -257,27 +323,13 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-          <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
-            <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
-              <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-              <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
-            </div>
-            <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
-            <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
-            <div class="form-actions">
-              <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
-            </div>
-          </section>
-        </div>
-
         <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
               <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
-            <p id="sequence-viewer-sequence-edit-note" class="small-note">Type the bases to apply.</p>
+            <p id="sequence-viewer-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
 
             <label id="sequence-viewer-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
               Sequence
@@ -340,6 +392,157 @@
         </div>
       </div>
 
+      <!-- Sibling of the workspaces, not inside one: the Sequence Viewer and the
+           Vector Builder map both open it, and a hidden workspace hides its children. -->
+      <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
+          <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
+            <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
+            <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
+          <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
+          <div class="form-actions">
+            <button id="sequence-viewer-primer-design-order" type="button" class="ghost-btn">Order Primers</button>
+            <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="sequence-viewer-primer-order-overlay" class="sequence-viewer-primer-order-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <section class="sequence-viewer-primer-order-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-order-title">
+          <div class="result-card-head app-dialog-head">
+            <h4 id="sequence-viewer-primer-order-title">Order Primers</h4>
+            <button id="sequence-viewer-primer-order-close" type="button" class="app-dialog-close-btn" aria-label="Close order primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <p class="small-note">Paste the block into IDT Bulk Input, or paste the CSV into a Sigma, Thermo, or Eurofins order template.</p>
+          <div class="sequence-viewer-primer-order-controls">
+            <label>
+              Scale
+              <select id="sequence-viewer-primer-order-scale"></select>
+            </label>
+            <label>
+              Purification
+              <select id="sequence-viewer-primer-order-purification"></select>
+            </label>
+          </div>
+          <div id="sequence-viewer-primer-order-warnings" class="sequence-viewer-primer-order-warnings"></div>
+          <label class="sequence-viewer-primer-order-preview-label">
+            Order block
+            <textarea id="sequence-viewer-primer-order-preview" class="sequence-viewer-primer-order-preview" rows="8" readonly spellcheck="false"></textarea>
+          </label>
+          <div class="form-actions sequence-viewer-primer-order-actions">
+            <button id="sequence-viewer-primer-order-copy-idt" type="button" class="primary-btn">Copy IDT Block</button>
+            <button id="sequence-viewer-primer-order-copy-csv" type="button" class="ghost-btn">Copy CSV</button>
+            <button id="sequence-viewer-primer-order-open-idt" type="button" class="ghost-btn">Open IDT Bulk Input</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
+        <div class="sequence-viewer-vector-builder-toolbar">
+          <div class="sequence-viewer-vector-builder-toolbar-nav">
+            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn" aria-label="Back to Sequence Viewer">&larr; Back</button>
+            <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
+            <span id="sequence-viewer-vector-builder-status-note" class="small-note sequence-viewer-status-note"></span>
+          </div>
+          <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
+            <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
+              <input id="sequence-viewer-vector-builder-cutters-toggle" type="checkbox" />
+              <span>Cutters</span>
+            </label>
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on their own map track.">
+              <input id="sequence-viewer-vector-builder-primers-toggle" type="checkbox" checked />
+              <span>Primers</span>
+            </label>
+            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+            <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn">Cloning Design</button>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-vector-builder-layout">
+          <section class="result-card sequence-viewer-vector-builder-map-card">
+            <div id="sequence-viewer-vector-builder-map" class="sequence-viewer-vector-builder-map">
+              <p class="small-note">Open a sequence record to build a vector.</p>
+            </div>
+          </section>
+
+          <section class="result-card sequence-viewer-vector-builder-sequence-card">
+            <div class="result-card-head">
+              <h4>Bases</h4>
+            </div>
+            <div id="sequence-viewer-vector-builder-sequence" class="sequence-viewer-vector-builder-sequence sequence-viewer-sequence-host">
+              <p class="small-note">No sequence loaded.</p>
+            </div>
+          </section>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-context-menu" class="sequence-viewer-context-menu" hidden></div>
+
+        <div id="sequence-viewer-vector-builder-feature-replace-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+          <form id="sequence-viewer-vector-builder-feature-replace-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
+              <h4>Replace Feature</h4>
+              <button id="sequence-viewer-vector-builder-feature-replace-close" type="button" class="app-dialog-close-btn" aria-label="Close replace feature dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-feature-replace-note" class="small-note">Choose a recorded feature to replace.</p>
+
+            <div class="sequence-viewer-vector-builder-feature-picker">
+              <section class="sequence-viewer-vector-builder-feature-picker-col">
+                <h5>Stored feature</h5>
+                <div class="sequence-viewer-protein-builder-feature-controls">
+                  <input
+                    id="sequence-viewer-vector-builder-feature-replace-search"
+                    type="search"
+                    placeholder="Search stored features"
+                    autocomplete="off"
+                    aria-label="Search stored features"
+                  />
+                </div>
+                <span id="sequence-viewer-vector-builder-feature-replace-status" class="small-note"></span>
+                <div id="sequence-viewer-vector-builder-feature-replace-results" class="sequence-viewer-protein-builder-feature-search-results"></div>
+              </section>
+
+              <section class="sequence-viewer-vector-builder-feature-picker-col">
+                <h5>Source vector</h5>
+                <div id="sequence-viewer-vector-builder-feature-replace-hosts" class="sequence-viewer-feature-source-list"></div>
+              </section>
+
+              <section class="sequence-viewer-vector-builder-feature-picker-col">
+                <h5>Plasmid preview</h5>
+                <div id="sequence-viewer-vector-builder-feature-replace-preview" class="sequence-viewer-feature-source-preview"></div>
+              </section>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-feature-replace-confirm" type="button" class="primary-btn" disabled>Confirm</button>
+              <button id="sequence-viewer-vector-builder-feature-replace-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-vector-builder-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
+              <h4 id="sequence-viewer-vector-builder-sequence-edit-title">Edit Bases</h4>
+              <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
+
+            <label id="sequence-viewer-vector-builder-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
+              Sequence
+              <textarea id="sequence-viewer-vector-builder-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
+            </label>
+            <div id="sequence-viewer-vector-builder-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message calc-output" hidden></div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
+              <button id="sequence-viewer-vector-builder-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
         <div class="sequence-viewer-cloning-design-toolbar">
           <div class="sequence-viewer-cloning-design-toolbar-nav">
@@ -351,7 +554,8 @@
               <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
             </div>
             <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
-              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="ghost-btn">Design Primers</button>
+              <button id="sequence-viewer-cloning-design-confirm-btn" type="button" class="primary-btn" disabled>Confirm Design</button>
             </div>
           </div>
         </div>
@@ -372,6 +576,17 @@
               <div id="sequence-viewer-cloning-design-edit-summary" class="sequence-viewer-cloning-design-edit-summary calc-output">
                 <p class="small-note">Edit summary will appear here.</p>
               </div>
+            </section>
+
+            <section id="sequence-viewer-cloning-design-donor-panel" class="sequence-viewer-cloning-design-panel" hidden>
+              <div class="result-card-head">
+                <h4>Amplification Template</h4>
+              </div>
+              <label class="sequence-viewer-cloning-design-donor-field">
+                PCR template
+                <select id="sequence-viewer-cloning-design-donor-select"></select>
+              </label>
+              <p id="sequence-viewer-cloning-design-donor-note" class="small-note">The insert is amplified from this record.</p>
             </section>
 
             <section id="sequence-viewer-cloning-design-range-panel" class="sequence-viewer-cloning-design-panel" hidden>
@@ -422,6 +637,7 @@
               />
               <div class="inline-row">
                 <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
+                <span id="sequence-viewer-alignment-query-file-name" class="small-note">No query file selected</span>
               </div>
             </div>
 
@@ -429,10 +645,15 @@
               Query Record
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
+
+            <span id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</span>
+            <span id="sequence-viewer-alignment-query-status" class="small-note"></span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
+            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset</button>
+            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note"></span>
           </div>
 
         </div>

@@ -55,7 +55,7 @@ export function createLayoutCsv({
         .map((line) => line.trim())
         .filter(Boolean);
       if (!lines.length) {
-        setCsvStatus('Import failed: CSV file is empty.');
+        setCsvStatus('Import failed: CSV file is empty.', true);
         return;
       }
 
@@ -66,7 +66,7 @@ export function createLayoutCsv({
       const indexSample = header.indexOf('sample_id');
       const indexConcentration = header.indexOf('concentration');
       if (indexWell < 0 && (indexRow < 0 || indexColumn < 0)) {
-        setCsvStatus('Import failed: CSV needs "well" or both "row" and "column" columns.');
+        setCsvStatus('Import failed: CSV needs "well" or both "row" and "column" columns.', true);
         return;
       }
 
@@ -98,7 +98,7 @@ export function createLayoutCsv({
       renderResultTable();
       setCsvStatus(`Imported ${runtime.currentLayout.length} mapped wells from ${file.name}.`);
     } catch {
-      setCsvStatus('Import failed: could not parse CSV file.');
+      setCsvStatus('Import failed: could not parse CSV file.', true);
     } finally {
       if (assayImportFile) {
         assayImportFile.value = '';

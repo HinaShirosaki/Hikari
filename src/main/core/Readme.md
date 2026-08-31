@@ -16,11 +16,10 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 2. storage plus sequence APIs
 3. agent chat logging / chat-log transform monitor
 4. npm update checks
-5. Telegram
-6. provider-neutral agent foundation (`core/services/create-agent-services.js`)
-7. provider-neutral MCP host
-8. Codex runtime and workspace initializer
-9. data, agent, and system IPC registration
+5. provider-neutral agent foundation (`core/services/create-agent-services.js`)
+6. provider-neutral MCP host
+7. Codex runtime and workspace initializer
+8. data, agent, and system IPC registration
 
 Every `start()` step is best-effort: a failed integration is logged with `console.warn` and must not prevent the main window from working. `shutdown()` stops services in reverse order, logging failures without blocking the rest.
 

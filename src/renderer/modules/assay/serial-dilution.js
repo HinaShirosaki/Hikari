@@ -180,7 +180,6 @@ export function createSerialDilutionController({
           </tbody>
         </table>
       </div>
-      <p class="small-note">Stock concentration is loaded from inventory when available. You can edit any value in the table above.</p>
     `;
 
     const feedbackLines = feedbackMessages.map((item) => `

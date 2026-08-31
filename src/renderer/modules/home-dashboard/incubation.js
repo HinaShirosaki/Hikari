@@ -19,23 +19,32 @@ export function initIncubationWidget({
   const {
     summary,
     list,
+    panelList,
     addBtn,
+    openBtn,
+    closeBtn,
     dialogOverlay,
     locationList,
     locationForm,
     locationInput
   } = elements;
 
-  addBtn.addEventListener('click', openIncubationDialog);
+  addBtn.addEventListener('click', () => openIncubationDialog(true));
+  openBtn.addEventListener('click', () => openIncubationDialog(false));
+  closeBtn.addEventListener('click', closeIncubationDialog);
   list.addEventListener('click', onIncubationListClick);
+  panelList.addEventListener('click', onIncubationListClick);
   dialogOverlay.addEventListener('click', onIncubationDialogOverlayClick);
   locationForm.addEventListener('submit', onIncubationLocationSubmit);
   locationList.addEventListener('click', onIncubationLocationListClick);
 
-  function openIncubationDialog() {
+  function openIncubationDialog(focusForm) {
     renderIncubationLocationRows();
     locationForm.reset();
     dialogOverlay.hidden = false;
+    if (!focusForm) {
+      return;
+    }
     window.requestAnimationFrame(() => {
       locationInput.focus();
     });
@@ -187,6 +196,7 @@ export function initIncubationWidget({
     if (!locations.length) {
       summary.textContent = 'No incubation locations yet.';
       list.innerHTML = '<p class="small-note">Add an incubation location to track overnight setups here.</p>';
+      panelList.innerHTML = list.innerHTML;
       return;
     }
     const dueCount = locations.filter((location) => location.isDue).length;
@@ -212,6 +222,7 @@ export function initIncubationWidget({
         </div>
       </article>
     `).join('');
+    panelList.innerHTML = list.innerHTML;
   }
 
   function renderWidget() {

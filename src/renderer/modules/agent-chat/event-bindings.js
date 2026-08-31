@@ -13,14 +13,10 @@ export function bindAgentChatEvents({
   shell,
   attachmentsController,
   payloadBuilder,
-  developerContextController,
   requestController,
-  developerMockController,
-  developerToolTestController,
   historyController,
   captureImageAttachment,
-  onPlotlyGraphArtifact = () => {},
-  renderDeveloperToolHint
+  onPlotlyGraphArtifact = () => {}
 }) {
   function applySuggestedPrompt(event) {
     const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
@@ -42,7 +38,6 @@ export function bindAgentChatEvents({
   dom.projectSelect?.addEventListener('change', () => {
     shell.ensureAgentState();
     state.agentChat.projectId = dom.projectSelect.value || '';
-    developerContextController.invalidate();
     persist();
     render();
   });
@@ -55,41 +50,41 @@ export function bindAgentChatEvents({
     void requestController.stopMessage();
   });
 
-  dom.developerTestToolsBtn?.addEventListener('click', () => {
-    void developerToolTestController.runDeveloperToolSmokeTest();
-  });
-
-  dom.developerRunToolBtn?.addEventListener('click', () => {
-    void developerToolTestController.runDeveloperSingleToolTest();
-  });
-
-  dom.developerToolSelect?.addEventListener('change', () => {
-    renderDeveloperToolHint();
-  });
-
-  dom.developerResponseFoldBtn?.addEventListener('click', () => {
-    runtime.developerResponseSimulatorFolded = !runtime.developerResponseSimulatorFolded;
-    developerContextController.render();
-  });
-
-  dom.developerRefreshContextBtn?.addEventListener('click', () => {
-    void developerContextController.refresh();
-  });
-
-  dom.developerUseMockResponseBtn?.addEventListener('click', () => {
-    void developerMockController.useDeveloperMockResponse();
-  });
-
-  dom.newChatBtn?.addEventListener('click', () => {
+  dom.newChatBtn?.addEventListener('click', async () => {
+    const didStart = await sessionManager.startNewChatSession();
+    if (!didStart) {
+      return;
+    }
     dom.input.value = '';
     attachmentsController.reset();
     payloadBuilder.consumeHiddenContexts?.();
     shell.syncComposerHeight();
-    void sessionManager.startNewChatSession();
   });
 
   dom.historyNode.addEventListener('click', (event) => {
     void historyController.onHistoryClick(event);
+  });
+
+  dom.questionDock?.addEventListener('click', (event) => {
+    void historyController.onHistoryClick(event);
+  });
+
+  dom.questionDock?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey) {
+      return;
+    }
+    const answerInput = event?.target?.closest?.('[data-agent-question-custom-input]')
+      || (event?.target?.dataset?.agentQuestionCustomInput ? event.target : null);
+    if (!answerInput) {
+      return;
+    }
+    const card = answerInput.closest?.('[data-agent-user-question-card]');
+    const submitButton = card?.querySelector?.('[data-agent-question-submit]');
+    if (!submitButton) {
+      return;
+    }
+    event.preventDefault();
+    void historyController.onHistoryClick({ target: submitButton });
   });
 
   dom.quickPrompts?.addEventListener('click', (event) => {
@@ -114,8 +109,6 @@ export function bindAgentChatEvents({
 
   dom.input.addEventListener('input', () => {
     shell.syncComposerHeight();
-    developerContextController.invalidate();
-    developerContextController.render();
   });
 
   dom.attachBtn?.addEventListener('click', () => {
@@ -176,8 +169,6 @@ export function bindAgentChatEvents({
       || (event?.target?.dataset?.agentRemoveHiddenContext !== undefined ? event.target : null);
     if (removeButton) {
       payloadBuilder.consumeHiddenContexts?.();
-      developerContextController.invalidate();
-      developerContextController.render();
     }
   });
 

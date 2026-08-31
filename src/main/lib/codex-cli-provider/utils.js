@@ -1,6 +1,6 @@
 'use strict';
 
-function cleanText(value, _maxLength = 1200) {
+function cleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';

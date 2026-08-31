@@ -1,23 +1,19 @@
 import { escapeHtml } from '../../lib/html.js';
 import {
-  FALLBACK_CHAR_ADVANCE_PX,
+  FALLBACK_CHAR_ADVANCE_PX
 } from './constants.js';
-import {
-  getRenderableFeaturesForRecord,
-} from './feature-model.js';
 import { isOrfFeature } from './orf-analysis.js';
-import * as detailAlignment from './detail-alignment.js';
 import { bindSequenceViewerDetailEvents } from './detail-events.js';
+import { createSequenceViewerAminoAcidEditingController } from './detail-amino-acid-editing.js';
 import { createSequenceViewerFeatureEditingController } from './detail-feature-editing.js';
 import { createSequenceHoverTooltipController } from './detail-hover.js';
+import { resolveSequenceBoundaryFromEvent as resolveSequenceBoundaryFromEventShared } from './detail-layout.js';
 import { createSequenceViewerDetailRenderingController } from './detail-rendering.js';
 import { createSequenceViewerSequenceEditingController } from './detail-sequence-editing.js';
 import { normalizeRestrictionVendorFilter } from './restriction-analysis.js';
-import {
-  cleanText,
-  clamp,
-} from './shared.js';
 import { normalizeOrfStopCodonSelection } from './translation-style.js';
+import { createDetailControlSync } from './detail-control-sync.js';
+import { createDetailFeatureIndex } from './detail-feature-index.js';
 
 // ORF reading frames paired with their toolbar toggle element keys.
 const ORF_FRAME_TOGGLES = [
@@ -48,6 +44,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const hasStoragePath = config?.hasStoragePath || (() => false);
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
+  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
@@ -57,122 +54,49 @@ export function createSequenceViewerDetailController(config = {}) {
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
+  const onApplyAminoAcidEdit = config?.onApplyAminoAcidEdit || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
+  const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
   const showSequenceHoverTooltip = (event, feature, sequenceLength) => {
-    hoverController.show(event, feature, sequenceLength);
+    hoverController.show(event, feature, sequenceLength, getSelectedRecord()?.sequence || '');
   };
+  let aminoAcidEditingController = null;
   let featureEditingController = null;
   let sequenceEditingController = null;
   let activeFeatureActionContext = null;
 
-  function getVisibleFeaturesForRecord(record) {
-    // The alignment overlay is for comparing sequences; cutters just clutter it.
-    const alignmentActive = Boolean(state.alignmentViewEnabled && state.activeAlignmentResult);
-    return getRenderableFeaturesForRecord(record, {
-      includeOrf: state.orfViewEnabled,
-      orfStopCodons: state.orfStopCodons,
-      orfFrameFilter: state.orfFrameFilter,
-      restrictionVendorFilter: state.restrictionVendorFilter,
-      includeRestriction: !alignmentActive
-    });
-  }
+  const {
+    getVisibleFeaturesForRecord,
+    getFeatureByIndexForRecord,
+    findFeatureIndexByIdentity,
+    findUpdatedOrfIndex,
+    clearSequenceSelection,
+    getSequenceSelectionSegments
+  } = createDetailFeatureIndex({ state });
 
-  function getFeatureByIndexForRecord(record, index) {
-    if (!record || !Number.isFinite(index) || index < 0) {
-      return null;
-    }
-    const features = getVisibleFeaturesForRecord(record);
-    return features[index] || null;
-  }
+  const {
+    syncActionButtonsState,
+    syncAlignmentControlsState,
+    syncOrfToggleState,
+    readOrfStopCodonsFromControls,
+    readOrfFrameFilterFromControls,
+    getAlignmentHighlightSegments,
+    syncPrimersToggleState,
+    syncRestrictionVendorToggleState,
+    renderProteinBuilderConfirmation
+  } = createDetailControlSync({
+    elements,
+    state,
+    ORF_FRAME_TOGGLES,
+    normalizeOrfFrameFilter,
+    getSelectedRecord,
+    hasStoragePath,
+    hasCloningDesignSource
+  });
 
-  function findFeatureIndexByIdentity(features, feature) {
-    if (!Array.isArray(features) || !features.length || !feature) {
-      return -1;
-    }
-
-    const featureId = cleanText(feature.id, 240);
-    if (featureId) {
-      const byId = features.findIndex((item) => cleanText(item?.id, 240) === featureId);
-      if (byId >= 0) {
-        return byId;
-      }
-    }
-
-    const source = cleanText(feature.source, 120);
-    const name = cleanText(feature.name, 240);
-    const type = cleanText(feature.type, 120);
-    const strand = feature?.strand === -1 ? -1 : 1;
-    const segmentKey = (Array.isArray(feature?.segments) ? feature.segments : [])
-      .map((segment) => `${Math.round(Number(segment?.start) || 0)}-${Math.round(Number(segment?.end) || 0)}`)
-      .join(',');
-
-    return features.findIndex((item) => {
-      if (!item) {
-        return false;
-      }
-      const itemSegmentKey = (Array.isArray(item?.segments) ? item.segments : [])
-        .map((segment) => `${Math.round(Number(segment?.start) || 0)}-${Math.round(Number(segment?.end) || 0)}`)
-        .join(',');
-      return cleanText(item.source, 120) === source
-        && cleanText(item.name, 240) === name
-        && cleanText(item.type, 120) === type
-        && (item?.strand === -1 ? -1 : 1) === strand
-        && itemSegmentKey === segmentKey;
-    });
-  }
-
-  function findUpdatedOrfIndex(features, feature) {
-    if (!Array.isArray(features) || !features.length || !isOrfFeature(feature)) {
-      return -1;
-    }
-    const strand = feature?.strand === -1 ? -1 : 1;
-    const frame = cleanText(feature?.orfFrame, 12);
-    const firstStart = Array.isArray(feature?.segments)
-      ? Math.round(Number(feature.segments[0]?.start) || 0)
-      : 0;
-    return features.findIndex((item) => {
-      const itemStart = Array.isArray(item?.segments)
-        ? Math.round(Number(item.segments[0]?.start) || 0)
-        : 0;
-      return isOrfFeature(item)
-        && (item?.strand === -1 ? -1 : 1) === strand
-        && cleanText(item?.orfFrame, 12) === frame
-        && itemStart === firstStart;
-    });
-  }
-
-  function clearSequenceSelection(options = {}) {
-    const preserveCursor = Boolean(options?.preserveCursor);
-    state.sequenceSelectionAnchor = null;
-    state.sequenceSelectionFocus = null;
-    state.isSelectingSequence = false;
-    if (!preserveCursor) {
-      state.sequenceCursorBase = null;
-    }
-  }
-
-  function getSequenceSelectionSegments(record) {
-    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
-    if (!sequenceLength) {
-      return [];
-    }
-
-    const anchor = Number(state.sequenceSelectionAnchor);
-    const focus = Number(state.sequenceSelectionFocus);
-    if (!Number.isFinite(anchor) || !Number.isFinite(focus)) {
-      return [];
-    }
-
-    const start = clamp(Math.min(anchor, focus), 0, sequenceLength);
-    const end = clamp(Math.max(anchor, focus), 0, sequenceLength);
-    if (end <= start) {
-      return [];
-    }
-    return [{ start, end }];
-  }
 
   function getSequenceSelectionRange(record) {
     return getSequenceSelectionSegments(record)[0] || null;
@@ -180,6 +104,7 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function hideFeatureContextMenu() {
     activeFeatureActionContext = null;
+    aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.hideFeatureContextMenu();
   }
 
@@ -189,6 +114,10 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function hidePrimerDesignOverlay() {
     featureEditingController?.hidePrimerDesignOverlay();
+  }
+
+  function openPrimerDesignOverlay(context) {
+    return featureEditingController?.openPrimerDesignOverlay(context);
   }
 
   function hideSequenceEditDialog() {
@@ -202,11 +131,26 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function renderFeatureContextMenu(context, event) {
     activeFeatureActionContext = context;
+    aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.renderFeatureContextMenu(context, event);
   }
 
   function resolveFeatureActionContext(record, event) {
     return featureEditingController?.resolveFeatureActionContext(record, event) || null;
+  }
+
+  function resolveAminoAcidActionContext(record, event) {
+    return aminoAcidEditingController?.resolveContext(record, event) || null;
+  }
+
+  function renderAminoAcidContextMenu(context, event) {
+    activeFeatureActionContext = null;
+    featureEditingController?.hideFeatureContextMenu();
+    aminoAcidEditingController?.renderContextMenu(context, event);
+  }
+
+  async function applyAminoAcidReplacement(targetAminoAcid) {
+    await aminoAcidEditingController?.applyReplacement(targetAminoAcid);
   }
 
   function openFeatureEditor(mode, context = {}) {
@@ -245,192 +189,13 @@ export function createSequenceViewerDetailController(config = {}) {
   });
 
   function resolveSequenceBoundaryFromEvent(event, record) {
-    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
-    if (!sequenceLength) {
-      return null;
-    }
-
-    const target = event?.target;
-    const lineElement = target?.closest?.('.sequence-viewer-dual-line') || null;
-    if (!lineElement) {
-      return null;
-    }
-
-    const lineStart = Number(lineElement?.dataset?.lineStart);
-    const lineEnd = Number(lineElement?.dataset?.lineEnd);
-    if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
-      return null;
-    }
-
-    const lineSpan = lineEnd - lineStart;
-    const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
-    const rawX = Number(event?.clientX);
-    const safeAdvance = Math.max(1, Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
-
-    let relativeX = null;
-    if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
-      const rect = seqTextElement.getBoundingClientRect();
-      if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
-        relativeX = clamp(rawX - rect.left, 0, rect.width);
-      }
-    }
-
-    if (!Number.isFinite(relativeX)) {
-      const fallbackOffsetX = Number(event?.offsetX);
-      if (Number.isFinite(fallbackOffsetX)) {
-        relativeX = Math.max(0, fallbackOffsetX);
-      }
-    }
-    if (!Number.isFinite(relativeX)) {
-      return null;
-    }
-
-    const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
-    return clamp(lineStart + localBoundary, 0, sequenceLength);
+    return resolveSequenceBoundaryFromEventShared(
+      event,
+      record,
+      Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX
+    );
   }
 
-  function syncActionButtonsState() {
-    const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
-    if (elements.annotateBtn) {
-      elements.annotateBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isAnnotating);
-    }
-    if (elements.recognizeBackboneBtn) {
-      elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
-    }
-    if (elements.alignmentOpenBtn) {
-      elements.alignmentOpenBtn.disabled = !hasRecord;
-    }
-    if (elements.alignmentMenuBtn) {
-      elements.alignmentMenuBtn.disabled = !hasRecord;
-    }
-    if (elements.orfMenuBtn) {
-      elements.orfMenuBtn.disabled = !hasRecord;
-    }
-    if (elements.cutterMenuBtn) {
-      elements.cutterMenuBtn.disabled = !hasRecord;
-    }
-    if (elements.cloningDesignBtn) {
-      const canOpenCloningDesign = hasRecord && Boolean(hasCloningDesignSource());
-      elements.cloningDesignBtn.hidden = !canOpenCloningDesign;
-      elements.cloningDesignBtn.disabled = !canOpenCloningDesign;
-    }
-  }
-
-  function syncAlignmentControlsState() {
-    detailAlignment.syncAlignmentControlsState({
-      elements,
-      state,
-      record: getSelectedRecord()
-    });
-  }
-
-  function syncOrfToggleState() {
-    const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
-    const stopCodons = normalizeOrfStopCodonSelection(state.orfStopCodons);
-    if (elements.orfToggle) {
-      elements.orfToggle.checked = Boolean(state.orfViewEnabled);
-      elements.orfToggle.disabled = !hasRecord;
-    }
-    if (elements.orfStopTagToggle) {
-      elements.orfStopTagToggle.checked = Boolean(stopCodons.TAG);
-      elements.orfStopTagToggle.disabled = !hasRecord;
-    }
-    if (elements.orfStopTaaToggle) {
-      elements.orfStopTaaToggle.checked = Boolean(stopCodons.TAA);
-      elements.orfStopTaaToggle.disabled = !hasRecord;
-    }
-    if (elements.orfStopTgaToggle) {
-      elements.orfStopTgaToggle.checked = Boolean(stopCodons.TGA);
-      elements.orfStopTgaToggle.disabled = !hasRecord;
-    }
-    const frameFilter = normalizeOrfFrameFilter(state.orfFrameFilter);
-    for (const [frame, key] of ORF_FRAME_TOGGLES) {
-      const toggle = elements[key];
-      if (toggle) {
-        toggle.checked = frameFilter[frame];
-        toggle.disabled = !hasRecord;
-      }
-    }
-  }
-
-  function readOrfStopCodonsFromControls() {
-    return normalizeOrfStopCodonSelection({
-      TAG: Boolean(elements.orfStopTagToggle?.checked),
-      TAA: Boolean(elements.orfStopTaaToggle?.checked),
-      TGA: Boolean(elements.orfStopTgaToggle?.checked)
-    });
-  }
-
-  function readOrfFrameFilterFromControls() {
-    const result = {};
-    for (const [frame, key] of ORF_FRAME_TOGGLES) {
-      result[frame] = Boolean(elements[key]?.checked);
-    }
-    return result;
-  }
-
-  function getAlignmentHighlightSegments(record) {
-    return detailAlignment.getAlignmentHighlightSegments(state, record);
-  }
-
-  function syncRestrictionVendorToggleState() {
-    if (elements.restrictionNebToggle) {
-      elements.restrictionNebToggle.checked = Boolean(state.restrictionVendorFilter?.neb);
-    }
-    if (elements.restrictionThermoToggle) {
-      elements.restrictionThermoToggle.checked = Boolean(state.restrictionVendorFilter?.thermo);
-    }
-  }
-
-  function renderProteinBuilderConfirmation(record) {
-    const confirmation = state.proteinBuilderConfirmation && typeof state.proteinBuilderConfirmation === 'object'
-      ? state.proteinBuilderConfirmation
-      : null;
-    const isVisible = Boolean(confirmation && record?.sequence?.length);
-
-    if (elements.proteinBuilderConfirmation) {
-      elements.proteinBuilderConfirmation.hidden = !isVisible;
-    }
-    if (!elements.proteinBuilderConfirmationSummary) {
-      return;
-    }
-    if (!isVisible) {
-      elements.proteinBuilderConfirmationSummary.innerHTML = '<p class="small-note">Protein Builder review details will appear here.</p>';
-      return;
-    }
-
-    const summaryParts = [
-      cleanText(confirmation?.recordName, 160)
-        ? `<p><strong>Reviewing:</strong> ${escapeHtml(cleanText(confirmation.recordName, 160))}</p>`
-        : '',
-      cleanText(confirmation?.constructName, 160)
-        ? `<p><strong>Insert:</strong> ${escapeHtml(cleanText(confirmation.constructName, 160))}</p>`
-        : '',
-      cleanText(confirmation?.backboneName, 160)
-        ? `<p><strong>Backbone:</strong> ${escapeHtml(cleanText(confirmation.backboneName, 160))}</p>`
-        : '',
-      Number.isFinite(Number(confirmation?.plasmidLength))
-        ? `<p><strong>Total Length:</strong> ${Math.max(0, Number(confirmation.plasmidLength)).toLocaleString()} bp</p>`
-        : '',
-      Number.isFinite(Number(confirmation?.insertLength))
-        ? `<p><strong>Insert DNA:</strong> ${Math.max(0, Number(confirmation.insertLength)).toLocaleString()} bp</p>`
-        : '',
-      cleanText(confirmation?.sourceLabel, 160)
-        ? `<p><strong>Backbone Source:</strong> ${escapeHtml(cleanText(confirmation.sourceLabel, 160))}</p>`
-        : '',
-      cleanText(confirmation?.assemblyStrategy, 120)
-        ? `<p><strong>Assembly Route:</strong> ${escapeHtml(cleanText(confirmation.assemblyStrategy, 120).replace(/[-_]+/g, ' '))}</p>`
-        : '',
-      Number.isFinite(Number(confirmation?.primerCount)) && Number(confirmation.primerCount) > 0
-        ? `<p><strong>Primer Plan:</strong> ${Math.max(0, Number(confirmation.primerCount)).toLocaleString()} primer${Number(confirmation.primerCount) === 1 ? '' : 's'} designed.</p>`
-        : '',
-      cleanText(confirmation?.notebookTitle, 220)
-        ? `<p><strong>Notebook Page:</strong> ${escapeHtml(cleanText(confirmation.notebookTitle, 220))}</p>`
-        : '',
-      '<p class="small-note">Review the sequence and annotations before confirming this Protein Builder construct.</p>'
-    ].filter(Boolean);
-    elements.proteinBuilderConfirmationSummary.innerHTML = summaryParts.join('');
-  }
 
   function updateRecordSelect() {
     if (!elements.recordSelect) {
@@ -483,6 +248,7 @@ export function createSequenceViewerDetailController(config = {}) {
     syncAlignmentControlsState();
     syncOrfToggleState();
     syncRestrictionVendorToggleState();
+    syncPrimersToggleState();
     updateMessages();
   }
 
@@ -506,10 +272,12 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
-  function setRestrictionVendorFilter(nextFilter) {
+  // Changing what is visible renumbers the feature list, so the selection has to
+  // be re-found by identity rather than kept by index.
+  function withFeatureVisibilityChange(applyChange) {
     const record = getSelectedRecord();
     const previousFeatures = getVisibleFeaturesForRecord(record);
     const selectedFeature = (
@@ -518,7 +286,7 @@ export function createSequenceViewerDetailController(config = {}) {
       && state.selectedFeatureIndex < previousFeatures.length
     ) ? previousFeatures[state.selectedFeatureIndex] : null;
 
-    state.restrictionVendorFilter = normalizeRestrictionVendorFilter(nextFilter);
+    applyChange();
 
     if (selectedFeature) {
       const nextFeatures = getVisibleFeaturesForRecord(record);
@@ -527,7 +295,20 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
+  }
+
+  function setRestrictionVendorFilter(nextFilter) {
+    withFeatureVisibilityChange(() => {
+      state.restrictionVendorFilter = normalizeRestrictionVendorFilter(nextFilter);
+    });
+  }
+
+  function setShowPrimers(nextShowPrimers) {
+    withFeatureVisibilityChange(() => {
+      state.showPrimers = Boolean(nextShowPrimers);
+    });
+    syncPrimersToggleState();
   }
 
   function setOrfStopCodons(nextStopCodons) {
@@ -551,7 +332,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   function setOrfFrameFilter(nextFilter) {
@@ -572,7 +353,7 @@ export function createSequenceViewerDetailController(config = {}) {
       state.selectedFeatureIndex = -1;
     }
 
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   }
 
   featureEditingController = createSequenceViewerFeatureEditingController({
@@ -586,7 +367,8 @@ export function createSequenceViewerDetailController(config = {}) {
     clearSequenceSelection,
     renderActiveRecord,
     setStatus,
-    persistFeatureMutation
+    persistFeatureMutation,
+    onRequestPrimerOrder
   });
 
   sequenceEditingController = createSequenceViewerSequenceEditingController({
@@ -602,6 +384,23 @@ export function createSequenceViewerDetailController(config = {}) {
     renderSelectedFeatureDetail,
     setStatus,
     onApplySequenceEdit
+  });
+
+  aminoAcidEditingController = createSequenceViewerAminoAcidEditingController({
+    elements,
+    getSelectedRecord,
+    setStatus,
+    onApplyAminoAcidEdit: async (payload) => {
+      const record = getSelectedRecord();
+      const selectedFeature = getFeatureByIndexForRecord(record, state.selectedFeatureIndex);
+      const result = await onApplyAminoAcidEdit(payload);
+      if (isOrfFeature(selectedFeature)) {
+        const nextFeatures = getVisibleFeaturesForRecord(getSelectedRecord());
+        state.selectedFeatureIndex = findUpdatedOrfIndex(nextFeatures, selectedFeature);
+        renderActiveRecord({ preserveScroll: true });
+      }
+      return result;
+    }
   });
 
   function bindEvents() {
@@ -627,17 +426,23 @@ export function createSequenceViewerDetailController(config = {}) {
       readOrfFrameFilterFromControls,
       setOrfFrameFilter,
       setRestrictionVendorFilter,
+      setShowPrimers,
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,
       renderFeatureContextMenu,
+      resolveAminoAcidActionContext,
+      renderAminoAcidContextMenu,
+      applyAminoAcidReplacement,
       openFeatureEditor,
       openPrimerDesignOverlay,
+      orderDesignedPrimers: () => featureEditingController?.orderDesignedPrimers?.(),
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
       openSequenceEditFromKeyboardEvent,
       applySequenceEditDialog,
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
+      onRequestSave,
       onRequestAnnotate,
       onRequestRecognizeBackbone,
       onRequestAlignment,
@@ -658,15 +463,18 @@ export function createSequenceViewerDetailController(config = {}) {
     hideFeatureEditor,
     hidePrimerDesignOverlay,
     hideSequenceEditDialog,
+    openPrimerDesignOverlay,
     renderActiveRecord,
     renderSelectedFeatureDetail,
     renderSequence,
     setOrfViewEnabled,
     setRestrictionVendorFilter,
+    setShowPrimers,
     syncActionButtonsState,
     syncAlignmentControlsState,
     syncOrfToggleState,
     syncRestrictionVendorToggleState,
+    syncPrimersToggleState,
     updateRecordSelect
   };
 }

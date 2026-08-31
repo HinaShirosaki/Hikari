@@ -118,4 +118,61 @@ function makeHarness() {
   assert.equal(state.storedPath, '/new/location.pdf', 'barrier state was rolled back');
 }
 
+// --- a claiming plugin frame owns the global history controls ----------------
+// The frame's edits are invisible to this service, so while it claims history the
+// buttons must report its depth and the commands must go to it, not to a stale
+// host stack underneath.
+{
+  const state = { value: 0 };
+  const buttons = {
+    'global-undo-btn': { disabled: false, setAttribute() {}, addEventListener() {} },
+    'global-redo-btn': { disabled: false, setAttribute() {}, addEventListener() {} }
+  };
+  const documentObject = {
+    activeElement: null,
+    getElementById: (id) => buttons[id] || null,
+    addEventListener: () => {}
+  };
+  let claim = null;
+  const commands = [];
+  const service = createUndoService({
+    state,
+    persistState: () => {},
+    renderAll: () => {},
+    documentObject,
+    delegate: {
+      claim: () => claim,
+      run: (command) => {
+        commands.push(command);
+        return true;
+      }
+    }
+  });
+
+  // Host history exists underneath, so a wrong delegation is visible in state.
+  state.value = 1;
+  service.persist();
+  assert.equal(buttons['global-undo-btn'].disabled, false, 'host undo should be available');
+
+  claim = { canUndo: true, canRedo: false };
+  service.syncButtons();
+  assert.equal(buttons['global-undo-btn'].disabled, false);
+  assert.equal(buttons['global-redo-btn'].disabled, true, 'redo must follow the frame, not the host stack');
+
+  assert.equal(service.undo(), true);
+  assert.deepEqual(commands, ['undo'], 'undo went to the host stack instead of the frame');
+  assert.equal(state.value, 1, 'the host state was rolled back behind the frame');
+
+  assert.equal(service.redo(), true);
+  assert.deepEqual(commands, ['undo', 'redo']);
+  assert.equal(state.value, 1);
+
+  // Focus leaves the frame: the host's own stack takes over again, intact.
+  claim = null;
+  service.syncButtons();
+  assert.equal(service.undo(), true);
+  assert.equal(state.value, 0, 'the host stack did not survive the delegation');
+  assert.deepEqual(commands, ['undo', 'redo'], 'the frame was sent a command it did not claim');
+}
+
 console.log('undo-service-selfcheck: ok');

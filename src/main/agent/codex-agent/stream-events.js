@@ -4,6 +4,7 @@ const {
   extractAskUserPayloadFromToolEvent
 } = require('./payloads.js');
 const {
+  extractNotebookAppendArtifactFromToolEvent,
   extractNotebookDraftArtifactFromToolEvent,
   extractProtocolGenerationArtifactFromToolEvent,
   extractSequenceEditProposalFromToolEvent
@@ -26,6 +27,7 @@ function createCodexStreamProgressHandler({
   let streamedFinalAnswerText = '';
   let streamedAskUserPayload = null;
   let streamedNotebookDraftPayload = null;
+  let streamedNotebookAppendPayload = null;
   const streamedProtocolGenerationPayloads = [];
   const streamedSequenceEditProposals = [];
 
@@ -46,6 +48,10 @@ function createCodexStreamProgressHandler({
       const notebookDraftArtifact = extractNotebookDraftArtifactFromToolEvent(streamEvent);
       if (notebookDraftArtifact?.notebook) {
         streamedNotebookDraftPayload = notebookDraftArtifact;
+      }
+      const notebookAppendArtifact = extractNotebookAppendArtifactFromToolEvent(streamEvent);
+      if (notebookAppendArtifact?.proposal?.content_markdown) {
+        streamedNotebookAppendPayload = notebookAppendArtifact;
       }
       const protocolGenerationArtifact = extractProtocolGenerationArtifactFromToolEvent(streamEvent);
       if (protocolGenerationArtifact?.protocol) {
@@ -186,6 +192,7 @@ function createCodexStreamProgressHandler({
       streamedFinalAnswerText,
       streamedAskUserPayload,
       streamedNotebookDraftPayload,
+      streamedNotebookAppendPayload,
       streamedProtocolGenerationPayloads,
       streamedSequenceEditProposals
     };

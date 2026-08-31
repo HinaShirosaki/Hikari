@@ -5,7 +5,6 @@ const {
   parseAssayResultImportFile,
   parseChemicalImportFile
 } = require('../lib/chemical-import-parser');
-const { transformPaperPdfToMarkdown } = require('../papers/parse/paper-markdown-import.js');
 const {
   STORAGE,
   ASSAY,
@@ -21,7 +20,38 @@ const {
 // Loopback servers for `serve: true` plugins. Process-lifetime: they are torn
 // down with the app, and reused across renderer reloads so a reload does not
 // leak listeners.
+const { createStorageFileHelpers } = require('./data-ipc/storage-files.js');
+
 const pluginServers = createPluginServerRegistry();
+const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
+const BUNDLED_PLUGIN_TOKEN_PATTERN = /^@bundled\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+
+function resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath }) {
+  if (!String(requestedPath || '').startsWith('@bundled/')) {
+    return requestedPath;
+  }
+  const match = BUNDLED_PLUGIN_TOKEN_PATTERN.exec(String(requestedPath || ''));
+  if (!match || match[1] !== pluginId) {
+    throw new Error(`Invalid bundled plugin path for "${pluginId}".`);
+  }
+  const resolvedPath = getBundledPluginPath(pluginId);
+  if (!resolvedPath) {
+    throw new Error(`Unknown bundled plugin "${pluginId}".`);
+  }
+  return resolvedPath;
+}
+
+function isCanonicalBase64(value) {
+  const encoded = String(value || '');
+  if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+    return false;
+  }
+  try {
+    return Buffer.from(encoded, 'base64').toString('base64') === encoded;
+  } catch {
+    return false;
+  }
+}
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -38,8 +68,26 @@ function registerDataIpc(deps = {}) {
       return text;
     });
   const mainDataHelpers = deps.mainDataHelpers;
+  const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
+    ? deps.getDefaultDataFilePath
+    : (() => '');
+  const getStorageRootPointerPath = typeof deps.getStorageRootPointerPath === 'function'
+    ? deps.getStorageRootPointerPath
+    : (() => '');
+  const getUserDataPath = typeof deps.getUserDataPath === 'function' ? deps.getUserDataPath : (() => '');
+  const getBundledPluginPath = typeof deps.getBundledPluginPath === 'function'
+    ? deps.getBundledPluginPath
+    : (() => '');
+  const legacyUserDataFilePath = () => {
+    const userDataPath = cleanText(getUserDataPath(), 2400);
+    return userDataPath ? path.join(userDataPath, 'enana-data.json') : '';
+  };
   const importStorageRoot = deps.importStorageRoot;
   const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
+  const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
+    && typeof deps.paperKnowledgeDatabaseRuntime.ingestPaperPdf === 'function'
+    ? deps.paperKnowledgeDatabaseRuntime
+    : null;
   const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
   const listSequenceEntries = deps.listSequenceEntries;
   const getSequenceEntry = deps.getSequenceEntry;
@@ -55,310 +103,22 @@ function registerDataIpc(deps = {}) {
   const upsertRecognizedBackbone = deps.upsertRecognizedBackbone;
   const recognizeSequenceBackbone = deps.recognizeSequenceBackbone;
 
-  function safeParseJson(value, fallback = null) {
-    try {
-      const parsed = JSON.parse(String(value || ''));
-      return parsed && typeof parsed === 'object' ? parsed : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-
-  function normalizeJsonPayload(payload, fallback = {}) {
-    if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
-      return payload;
-    }
-    if (typeof payload === 'string') {
-      const parsed = safeParseJson(payload, null);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-    return fallback;
-  }
-
-  function sanitizeStorageName(value, fallback = 'item') {
-    const cleaned = String(value || '')
-      .trim()
-      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 180);
-    return cleaned || fallback;
-  }
-
-  function sanitizeImportedFileName(fileName) {
-    const rawName = String(fileName || '').trim();
-    const ext = path.extname(rawName).replace(/[^.\w-]+/g, '').slice(0, 24);
-    const base = rawName.slice(0, Math.max(0, rawName.length - ext.length));
-    const safeBase = sanitizeStorageName(base, 'imported-file');
-    return `${safeBase}${ext}`;
-  }
-
-  function asArray(value) {
-    return Array.isArray(value) ? value : [];
-  }
-
-  function ensurePathWithinRoot(rootPath, targetPath) {
-    const resolvedRoot = path.resolve(rootPath);
-    const resolvedTarget = path.resolve(targetPath);
-    if (resolvedTarget === resolvedRoot) {
-      return resolvedTarget;
-    }
-    const rootWithSep = resolvedRoot.endsWith(path.sep)
-      ? resolvedRoot
-      : `${resolvedRoot}${path.sep}`;
-    if (!resolvedTarget.startsWith(rootWithSep)) {
-      throw new Error('Target path must be inside the configured storage path.');
-    }
-    return resolvedTarget;
-  }
-
-  async function pathExists(targetPath) {
-    try {
-      await fs.access(targetPath);
-      return true;
-    } catch (error) {
-      if (error?.code === 'ENOENT') {
-        return false;
-      }
-      throw error;
-    }
-  }
-
-  async function getUniqueFilePath(folderPath, fileName) {
-    const parsed = path.parse(fileName);
-    const safeNameBase = sanitizeStorageName(parsed.name, 'imported-file');
-    const safeExt = String(parsed.ext || '').replace(/[^.\w-]+/g, '').slice(0, 24);
-    let attempt = 0;
-    while (attempt < 5000) {
-      const suffix = attempt === 0 ? '' : `_${attempt + 1}`;
-      const candidateName = `${safeNameBase}${suffix}${safeExt}`;
-      const candidatePath = path.join(folderPath, candidateName);
-      if (!(await pathExists(candidatePath))) {
-        return candidatePath;
-      }
-      attempt += 1;
-    }
-    throw new Error('Unable to find a unique file name for imported file.');
-  }
-
-  function normalizeImportedDataBytes(value) {
-    if (!value) {
-      return null;
-    }
-    if (Buffer.isBuffer(value)) {
-      return value;
-    }
-    if (value instanceof ArrayBuffer) {
-      return Buffer.from(value);
-    }
-    if (ArrayBuffer.isView(value)) {
-      return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-    }
-    if (Array.isArray(value?.data)) {
-      return Buffer.from(value.data);
-    }
-    return null;
-  }
-
-  async function storeImportedFile(payload) {
-    const storagePath = String(payload?.storagePath || '').trim();
-    const targetFolderInput = String(payload?.targetFolder || '').trim();
-    const fileName = sanitizeImportedFileName(payload?.fileName);
-    const dataBase64 = String(payload?.dataBase64 || '').trim();
-    const dataBytes = normalizeImportedDataBytes(payload?.dataBytes);
-
-    if (!storagePath) {
-      throw new Error('Missing storage path.');
-    }
-    if (!targetFolderInput) {
-      throw new Error('Missing target folder.');
-    }
-    if (!dataBase64 && !dataBytes?.byteLength) {
-      throw new Error('Missing imported file data.');
-    }
-
-    const resolvedStoragePath = path.resolve(storagePath);
-    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
-    const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
-    const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
-    await fs.writeFile(targetFilePath, binary);
-    let paperMarkdown = null;
-    if (payload?.transformPdfToMarkdown === true && /\.pdf$/i.test(targetFilePath)) {
-      paperMarkdown = await transformPaperPdfToMarkdown({
-        storagePath: resolvedStoragePath,
-        filePath: targetFilePath,
-        paper: {
-          title: payload?.paperTitle || payload?.title || fileName.replace(/\.pdf$/i, ''),
-          fileName: path.basename(targetFilePath),
-          storedRelativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
-          linkedType: payload?.linkedType,
-          linkedName: payload?.linkedName,
-          doi: payload?.doi
-        },
-        skipExistingMarkdown: false,
-        source: 'manual-import'
-      }).catch((error) => ({
-        ok: false,
-        status: 'error',
-        error: String(error?.message || error)
-      }));
-    }
-
-    return {
-      filePath: targetFilePath,
-      fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
-      knowledgeDatabase: paperMarkdown || null,
-      knowledgeMarkdownRelativePath: cleanText(paperMarkdown?.markdown_relative_path, 2400),
-      knowledgeExtractedTextRelativePath: cleanText(paperMarkdown?.extracted_text_relative_path, 2400),
-      knowledgeMetaRelativePath: cleanText(paperMarkdown?.meta_relative_path, 2400),
-      knowledgeStatus: cleanText(paperMarkdown?.status, 80),
-      knowledgeError: cleanText(paperMarkdown?.error, 1200)
-    };
-  }
-
-  function resolveStorageFilePath(storagePath, sourcePath = '', sourceRelativePath = '') {
-    const resolvedStoragePath = path.resolve(storagePath);
-    const directPath = String(sourcePath || '').trim();
-    const relativePath = String(sourceRelativePath || '').trim();
-    const candidate = directPath
-      ? (path.isAbsolute(directPath) ? path.resolve(directPath) : path.resolve(resolvedStoragePath, directPath))
-      : path.resolve(resolvedStoragePath, relativePath);
-    return ensurePathWithinRoot(resolvedStoragePath, candidate);
-  }
-
-  async function moveStoredFile(payload) {
-    const storagePath = String(payload?.storagePath || '').trim();
-    const targetFolderInput = String(payload?.targetFolder || '').trim();
-
-    if (!storagePath) {
-      throw new Error('Missing storage path.');
-    }
-    if (!targetFolderInput) {
-      throw new Error('Missing target folder.');
-    }
-
-    const resolvedStoragePath = path.resolve(storagePath);
-    const sourceFilePath = resolveStorageFilePath(
-      resolvedStoragePath,
-      payload?.sourcePath,
-      payload?.sourceRelativePath
-    );
-    const sourceStat = await fs.stat(sourceFilePath);
-    if (!sourceStat.isFile()) {
-      throw new Error('Source path is not a file.');
-    }
-
-    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
-    const targetFileName = sanitizeImportedFileName(payload?.fileName || path.basename(sourceFilePath));
-    const directTargetPath = path.join(resolvedTargetFolder, targetFileName);
-    if (path.resolve(directTargetPath) === sourceFilePath) {
-      return {
-        moved: false,
-        filePath: sourceFilePath,
-        fileName: path.basename(sourceFilePath),
-        relativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/'),
-        previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
-      };
-    }
-
-    const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, targetFileName);
-    try {
-      await fs.rename(sourceFilePath, targetFilePath);
-    } catch (error) {
-      if (error?.code !== 'EXDEV') {
-        throw error;
-      }
-      await fs.copyFile(sourceFilePath, targetFilePath);
-      await fs.unlink(sourceFilePath);
-    }
-
-    return {
-      moved: true,
-      filePath: targetFilePath,
-      fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
-      previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
-    };
-  }
-
-  async function appendNotebookPageLog(payload) {
-    const storagePath = String(payload?.storagePath || '').trim();
-    const targetFolderInput = String(payload?.storageFolder || '').trim();
-    const action = cleanText(payload?.action, 80);
-    const entryId = cleanText(payload?.entryId, 200);
-
-    if (!storagePath) {
-      throw new Error('Missing storage path.');
-    }
-    if (!targetFolderInput) {
-      throw new Error('Missing notebook page storage folder.');
-    }
-    if (!action) {
-      throw new Error('Missing log action.');
-    }
-
-    const resolvedStoragePath = path.resolve(storagePath);
-    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
-    const timestamp = typeof payload?.timestamp === 'string' && payload.timestamp.trim()
-      ? payload.timestamp.trim()
-      : new Date().toISOString();
-    const summary = cleanText(payload?.summary, 600);
-    const details = payload?.details && typeof payload.details === 'object' && !Array.isArray(payload.details)
-      ? payload.details
-      : {};
-
-    const record = {
-      ts: timestamp,
-      action,
-      entryId,
-      summary,
-      details
-    };
-    const line = `${JSON.stringify(record)}\n`;
-    const logFilePath = path.join(resolvedTargetFolder, 'page.log');
-    await fs.appendFile(logFilePath, line, 'utf8');
-
-    return {
-      filePath: logFilePath,
-      relativePath: path.relative(resolvedStoragePath, logFilePath).split(path.sep).join('/')
-    };
-  }
-
-  async function writeJsonStorageFile(payload) {
-    const storagePath = String(payload?.storagePath || '').trim();
-    const targetFolderInput = String(payload?.targetFolder || '').trim();
-    const fileName = sanitizeImportedFileName(payload?.fileName || 'data.json');
-    const data = payload?.data;
-
-    if (!storagePath) {
-      throw new Error('Missing storage path.');
-    }
-    if (!targetFolderInput) {
-      throw new Error('Missing target folder.');
-    }
-
-    const resolvedStoragePath = path.resolve(storagePath);
-    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
-    const targetFilePath = path.join(resolvedTargetFolder, fileName);
-    await fs.writeFile(targetFilePath, JSON.stringify(data ?? null, null, 2), 'utf8');
-
-    return {
-      filePath: targetFilePath,
-      fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
-    };
-  }
+  const {
+    normalizeJsonPayload,
+    sanitizeImportedFileName,
+    asArray,
+    storeImportedFile,
+    moveStoredFile,
+    appendNotebookPageLog,
+    writeJsonStorageFile,
+    mirrorStorageRoot,
+    readStorageRootFrom
+  } = createStorageFileHelpers({
+    fs,
+    cleanText,
+    getStorageRootPointerPath,
+    paperKnowledgeDatabaseRuntime
+  });
 
   ipcMain.handle(STORAGE.AUTO_SAVE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
@@ -366,7 +126,23 @@ function registerDataIpc(deps = {}) {
     if (!data) {
       return { ok: false, error: 'Missing data payload.' };
     }
-    return mainDataHelpers.autoSaveDataFile({ data, filePath });
+    const result = await mainDataHelpers.autoSaveDataFile({ data, filePath });
+    if (result?.ok) {
+      await mirrorStorageRoot(data?.settings?.storagePath);
+    }
+    return result;
+  });
+
+  ipcMain.handle(STORAGE.LAST_ROOT, async () => {
+    const pointerRoot = await readStorageRootFrom(getStorageRootPointerPath(), 'pointer');
+    if (pointerRoot) {
+      return { ok: true, storagePath: pointerRoot };
+    }
+    // ponytail: pre-pointer installs only recorded the root inside a saved
+    // snapshot, so fall back to those. Drop once no one is upgrading from them.
+    const snapshotRoot = await readStorageRootFrom(getDefaultDataFilePath(), 'snapshot')
+      || await readStorageRootFrom(legacyUserDataFilePath(), 'snapshot');
+    return { ok: Boolean(snapshotRoot), storagePath: snapshotRoot };
   });
 
   ipcMain.handle(STORAGE.SYNC_SQLITE_BUNDLE, async (_event, payload) => {
@@ -425,7 +201,47 @@ function registerDataIpc(deps = {}) {
   ipcMain.handle(PLUGINS.SERVE_FOLDER, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     try {
-      return await pluginServers.serve(normalizedPayload?.id, normalizedPayload?.path);
+      const pluginId = cleanText(normalizedPayload?.id, 80);
+      const requestedPath = cleanText(normalizedPayload?.path, 2400);
+      const resolvedPath = resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath });
+      return await pluginServers.serve(pluginId, resolvedPath);
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  // Exports are mediated by a native save dialog instead of granting every
+  // plugin iframe the broad `allow-downloads` sandbox token. The plugin picks
+  // the suggested name; the user picks the actual destination.
+  ipcMain.handle(PLUGINS.EXPORT_FILE, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const dataBase64 = String(normalizedPayload?.dataBase64 || '');
+    if (!dataBase64) {
+      return { ok: false, error: 'Missing export data.' };
+    }
+    if (dataBase64.length > MAX_PLUGIN_EXPORT_BASE64_CHARS) {
+      return { ok: false, error: 'Plugin export is too large.' };
+    }
+    if (!isCanonicalBase64(dataBase64)) {
+      return { ok: false, error: 'Plugin export data is not valid base64.' };
+    }
+    const suggestedName = sanitizeImportedFileName(
+      path.basename(String(normalizedPayload?.fileName || 'plugin-export.dat'))
+    );
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Export Plugin File',
+        defaultPath: suggestedName
+      });
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true };
+      }
+      await fs.writeFile(result.filePath, Buffer.from(dataBase64, 'base64'));
+      return {
+        ok: true,
+        saved: true,
+        fileName: path.basename(result.filePath)
+      };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }
@@ -661,5 +477,6 @@ function registerDataIpc(deps = {}) {
 
 module.exports = {
   registerDataIpc,
-  pluginServers
+  pluginServers,
+  resolvePluginServePath
 };

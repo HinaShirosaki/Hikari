@@ -3,6 +3,7 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { isMarkdownTableLine } = require('./pdf-text-layout.js');
+const { asArray, ensureObject } = require('../../lib/normalize.js');
 
 const PDF_TO_MD_FORMAT = 'hikari-pdf-to-md-v1';
 const DEFAULT_MAX_SECTION_CHARS = 0;
@@ -18,14 +19,6 @@ function cleanText(value, maxLength = 4000) {
     return text;
   }
   return text.length > numericMax ? text.slice(0, numericMax) : text;
-}
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function normalizeDoi(value) {

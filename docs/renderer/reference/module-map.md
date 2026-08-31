@@ -31,7 +31,7 @@ Most user-facing features are **folder modules** (`modules/<feature>/index.js`) 
 | `services/notebookService.js` | Cross-cutting | notebook-driven rerender fan-out |
 | `services/projectService.js` | Cross-cutting | project-driven rerender fan-out |
 | `services/inventoryService.js` | Cross-cutting | sample-registry refresh and sample-search handoff |
-| `services/analysisService.js` | Cross-cutting | assay/gel updates back into project summaries |
+| `services/analysisService.js` | Cross-cutting | assay updates back into project summaries |
 | `modules/sequence-viewer/service.js` | Cross-cutting | toolbox-to-sequence-viewer handoff, owned by the destination feature |
 
 ## Feature modules (manifest-registered)
@@ -50,13 +50,12 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 | `personalInventory` | `PERSONAL_INVENTORY` | `modules/personal-inventory/index.js` | container-centric storage workspace |
 | `sampleRegistry` | `SAMPLE_REGISTRY` | `modules/sample-registry/index.js` | sample-centric registry workspace |
 | `assay` | `ASSAY` | `modules/assay/index.js` | plate layout, result grid, charts, analysis math |
-| `gel` | `GEL` | `modules/gel/index.js` | image pipeline, manual segmentation, analysis, export |
 | `sequenceViewer` | `SEQUENCE_VIEWER` | `modules/sequence-viewer/index.js` | import, library, detail, alignment, annotation, analysis |
 | `toolBox` | `TOOL_BOX` | `modules/tool-box.js` | `modules/tool-box/` — calculator and analysis mini-tools |
 | `settings` | `SETTING` | `modules/settings/index.js` | renderer-config UI and storage/LLM settings |
 | `homeDashboard` | `HOME` | `modules/home-dashboard.js` (wrapper) | `modules/home-dashboard/` — dashboard widgets and timer |
 
-See [heavyweight-subsystems.md](../features/heavyweight-subsystems.md) for the internal structure of the largest folder modules (`agent-chat/`, `assay/`, `gel/`, `papers/`, `sequence-viewer/`, `workflow/`, `tool-box/`).
+See [heavyweight-subsystems.md](../features/heavyweight-subsystems.md) for the internal structure of the largest folder modules (`agent-chat/`, `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, `tool-box/`).
 
 ## Public API and composition files
 
@@ -65,7 +64,6 @@ These files expose a deliberate secondary API or compose features that do not us
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/agent-chat/public-api.js` | Support | explicit response and state-snapshot surface used outside Agent Chat |
-| `modules/gel/public-api.js` | Support | explicit pure gel-analysis API used by contracts and non-view consumers |
 | `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
 | `modules/tool-box.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
 | `modules/home-dashboard.js` | Support | orchestrator that wires the `home-dashboard/` widgets (the folder has no `index.js`) |
@@ -78,14 +76,14 @@ These files expose a deliberate secondary API or compose features that do not us
 | `modules/app-state.js` | Cross-cutting | small public facade over the normalization modules in `modules/app-state/` |
 | `modules/utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
 | `modules/app-state/storage-path-normalizer.js` | Cross-cutting | normalizes persisted record paths during state hydration |
-| `lib/file-drop.js` | Cross-cutting | reusable drag-and-drop file-target binding (used by gel, papers, sequence import, etc.) |
+| `lib/file-drop.js` | Cross-cutting | reusable drag-and-drop file-target binding (used by papers, sequence import, etc.) |
 | `lib/unsaved-draft.js` | Cross-cutting | stable form snapshots for unsaved-change detection |
 | `lib/notebook-result-tables.js` | Cross-cutting | notebook result-table normalization/cloning helpers |
 | `lib/notebook-tool-calculations.js` | Cross-cutting | notebook calculation normalization and rendering model |
 | `lib/inventory-settings.js` | Cross-cutting | inventory location and sample-type settings normalization |
 | `services/direct-llm.js` | Cross-cutting | direct (non-agent) LLM request helper and provider settings builder |
 | `services/chemical-structure-clipboard.js` | Cross-cutting | reads chemical-structure candidates from clipboard paste |
-| `services/notebook-linked-previews.js` | Cross-cutting | linked assay/gel/record preview models for notebook entries |
+| `services/notebook-linked-previews.js` | Cross-cutting | linked assay/gel/record preview models for notebook entries (gel records are read-only now that Gel ships as a plugin) |
 | `services/notebook-note-tools.js` | Cross-cutting | transient notices and LLM note-clarification helpers |
 | `services/experiment-llm-mapper.js` | Support | compresses notebook, assay, and gel data into LLM-friendly JSON |
 

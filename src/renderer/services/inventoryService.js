@@ -8,15 +8,11 @@ export function createInventoryService(registry) {
     registry.get('sampleRegistry').render?.();
   }
 
-  function openSampleSearch(query) {
+  function openSampleSearch(_query) {
     const showView = registry.get('showView');
-    const setSearchInputValue = registry.get('setSearchInputValue');
     const views = registry.get('VIEWS');
     if (typeof showView === 'function' && views?.SAMPLE_REGISTRY) {
       showView(views.SAMPLE_REGISTRY);
-    }
-    if (typeof setSearchInputValue === 'function') {
-      setSearchInputValue('sample-search', query);
     }
   }
 

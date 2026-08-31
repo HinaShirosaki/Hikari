@@ -82,7 +82,6 @@ export async function requestInsightAnswer(ctx, context, selectionContext, actio
         : cleanText(ctx.state?.settings?.llm?.apiKey, 4000)
     },
     agent: {
-      developerMode: ctx.state?.settings?.agent?.developerMode === true,
       externalSkillsEnabled: ctx.state?.settings?.agent?.externalSkillsEnabled !== false,
       disabledExternalSkillNames: Array.isArray(ctx.state?.settings?.agent?.disabledExternalSkillNames)
         ? ctx.state.settings.agent.disabledExternalSkillNames.map((item) => cleanText(item, 160)).filter(Boolean)

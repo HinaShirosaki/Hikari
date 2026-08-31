@@ -118,8 +118,6 @@ export function createProtocolService(registry, deps = {}) {
     registry.get('workflowManagement').render?.();
     registry.get('assay').renderNotebookOptions?.();
     registry.get('assay').renderList?.();
-    registry.get('gel').renderNotebookOptions?.();
-    registry.get('gel').renderList?.();
   }
 
   function handleProtocolsImported() {

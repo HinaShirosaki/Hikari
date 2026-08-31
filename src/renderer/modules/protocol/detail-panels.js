@@ -1,0 +1,272 @@
+import { exportProtocolPdf } from '../pdf-export/index.js';
+import { printElement } from '../print/index.js';
+
+// Switching the protocol detail column between empty / editor / view, plus the
+// create, edit, view, export, print, and delete actions those panels drive.
+function createProtocolDetailPanels({
+  ui,
+  documentRef,
+  localState,
+  draftHelpers,
+  previewHelpers,
+  getSelectedProtocol,
+  setSelectedProtocol,
+  markDraftSaved,
+  setDraftRequiresSave,
+  getListController,
+  getImportController,
+  getPolishController,
+  getGenerationController,
+  state,
+  persist,
+  safeText,
+  onProtocolsChanged,
+  selectionInsightsController
+} = {}) {
+  function applyDetailMode(nextMode) {
+    localState.protocolDetailMode = nextMode;
+    if (ui.protocolDetailPanel) {
+      ui.protocolDetailPanel.dataset.mode = nextMode;
+    }
+    if (ui.protocolEmptyPanel) {
+      ui.protocolEmptyPanel.hidden = nextMode !== 'empty';
+    }
+    if (ui.protocolEditorPanel) {
+      ui.protocolEditorPanel.hidden = nextMode !== 'edit';
+    }
+    if (ui.protocolViewPanel) {
+      ui.protocolViewPanel.hidden = nextMode !== 'view';
+    }
+  }
+
+  function resetEditorDraft() {
+    getPolishController()?.closeProtocolPolishOverlay();
+    getGenerationController()?.closeAllProtocolGenerationOverlays({ resetComposer: true });
+    localState.currentProtocolDraft = draftHelpers.createEmptyDraft();
+    ui.protocolForm?.reset();
+    getImportController()?.resetProtocolJsonImportUi();
+  }
+
+  function showEmptyPanel({ resetEditor = false } = {}) {
+    if (resetEditor) {
+      resetEditorDraft();
+    }
+    applyDetailMode('empty');
+  }
+
+  function showEditorPanel() {
+    applyDetailMode('edit');
+    getImportController()?.syncProtocolImportPanelVisibility();
+  }
+
+  function showViewPanel() {
+    applyDetailMode('view');
+  }
+
+  function renderProtocolView(protocol) {
+    if (!ui.protocolViewTitle || !ui.protocolViewContent) {
+      return;
+    }
+    ui.protocolViewTitle.textContent = protocol.name || 'Protocol';
+    ui.protocolViewContent.innerHTML = previewHelpers.buildProtocolPreviewMarkup(protocol);
+    selectionInsightsController?.refreshHost?.('protocol-view');
+  }
+
+  function syncSelectionAfterMutation() {
+    if (localState.protocolDetailMode === 'edit' && !localState.currentProtocolDraft.id) {
+      return;
+    }
+
+    const selectedProtocol = getSelectedProtocol();
+    if (selectedProtocol) {
+      if (localState.protocolDetailMode === 'view') {
+        renderProtocolView(selectedProtocol);
+      }
+      return;
+    }
+
+    if (!state.protocols.length) {
+      setSelectedProtocol('');
+      showEmptyPanel({ resetEditor: localState.protocolDetailMode === 'edit' });
+      return;
+    }
+
+    setSelectedProtocol('');
+    showEmptyPanel({ resetEditor: localState.protocolDetailMode === 'edit' });
+  }
+
+  function onCancelEditor() {
+    const selectedProtocol = getSelectedProtocol();
+    if (selectedProtocol) {
+      renderProtocolView(selectedProtocol);
+      showViewPanel();
+      return;
+    }
+    showEmptyPanel({ resetEditor: true });
+  }
+
+  function openEditorWithDraft(protocol, headingText, options = {}) {
+    localState.isCreateEditorMode = options.isCreateMode !== false;
+    localState.currentProtocolDraft = draftHelpers.cloneDraftFromProtocol(protocol);
+
+    if (localState.isCreateEditorMode) {
+      getImportController()?.resetProtocolJsonImportUi();
+    }
+    if (ui.protocolEditorHeading) {
+      ui.protocolEditorHeading.textContent = headingText;
+    }
+
+    previewHelpers.populateEditorFormFromDraft(ui, localState.currentProtocolDraft);
+    getGenerationController()?.syncProtocolGenerateButtonVisibility();
+    showEditorPanel();
+    markDraftSaved();
+    setDraftRequiresSave(options.requiresSave === true);
+    ui.protocolNameInput?.focus();
+  }
+
+  function onCreateProtocol() {
+    setSelectedProtocol('');
+    openEditorWithDraft(draftHelpers.createEmptyDraft(), 'Create Protocol', { isCreateMode: true });
+  }
+
+  function editProtocol(protocolId) {
+    const protocol = state.protocols.find((item) => item.id === protocolId);
+    if (!protocol) {
+      return;
+    }
+    setSelectedProtocol(protocol.id);
+    getListController()?.renderList?.();
+    openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
+  }
+
+  function viewProtocol(protocolId) {
+    const protocol = state.protocols.find((item) => item.id === protocolId);
+    if (!protocol) {
+      return;
+    }
+    setSelectedProtocol(protocol.id);
+    getListController()?.renderList?.();
+    renderProtocolView(protocol);
+    showViewPanel();
+  }
+
+  function onExportProtocol(protocolId) {
+    const protocol = state.protocols.find((item) => item.id === protocolId);
+    if (protocol) {
+      exportProtocolPdf(protocol);
+    }
+  }
+
+  function onExportViewedProtocolPdf() {
+    const protocol = getSelectedProtocol();
+    if (protocol) {
+      exportProtocolPdf(protocol);
+    }
+  }
+
+  function onEditViewedProtocol() {
+    const protocol = getSelectedProtocol();
+    if (protocol) {
+      editProtocol(protocol.id);
+    }
+  }
+
+  function onPrintViewedProtocol() {
+    const protocol = getSelectedProtocol();
+    if (!protocol || !ui.protocolViewContent) {
+      return;
+    }
+    const name = String(protocol.name || 'Protocol').trim() || 'Protocol';
+    const header = `<h1>${safeText(name)}</h1>`;
+    const body = `${header}${ui.protocolViewContent.innerHTML}`;
+    printElement(
+      (() => {
+        const wrapper = documentRef.createElement('div');
+        wrapper.innerHTML = body;
+        return wrapper;
+      })(),
+      { title: `Protocol - ${name}` }
+    );
+  }
+
+  function deleteProtocol(protocolId) {
+    const now = new Date().toISOString();
+    const deletedEntryIds = new Set(
+      state.notebookEntries
+        .filter((entry) => entry.protocolId === protocolId)
+        .map((entry) => entry.id)
+    );
+
+    state.protocols = state.protocols.filter((item) => item.id !== protocolId);
+    state.notebookEntries = state.notebookEntries.filter((entry) => entry.protocolId !== protocolId);
+    state.workflows = (state.workflows || []).map((workflow) => {
+      const blocks = (workflow.blocks || []).filter((block) => block.protocolId !== protocolId);
+      if (blocks.length === (workflow.blocks || []).length) {
+        return workflow;
+      }
+      const validBlockIds = new Set(blocks.map((block) => block.id));
+      const links = (workflow.links || []).filter((link) => (
+        validBlockIds.has(link.fromBlockId)
+        && validBlockIds.has(link.toBlockId)
+        && link.fromBlockId !== link.toBlockId
+      ));
+      return { ...workflow, blocks, links, updatedAt: now };
+    });
+    state.workflowTemplates = (state.workflowTemplates || []).map((template) => {
+      const blocks = (template.blocks || []).filter((block) => block.protocolId !== protocolId);
+      if (blocks.length === (template.blocks || []).length) {
+        return template;
+      }
+      const validBlockIds = new Set(blocks.map((block) => block.id));
+      const links = (template.links || []).filter((link) => (
+        validBlockIds.has(link.fromBlockId)
+        && validBlockIds.has(link.toBlockId)
+        && link.fromBlockId !== link.toBlockId
+      ));
+      return { ...template, blocks, links, updatedAt: now };
+    });
+
+    if (deletedEntryIds.size) {
+      state.assays = (state.assays || []).map((assay) => (
+        deletedEntryIds.has(assay.notebookEntryId)
+          ? { ...assay, notebookEntryId: '', notebookEntryProtocolName: '', notebookEntryType: '', updatedAt: new Date().toISOString() }
+          : assay
+      ));
+      state.gelAnalyses = (state.gelAnalyses || []).map((analysis) => (
+        deletedEntryIds.has(analysis.notebookEntryId)
+          ? { ...analysis, notebookEntryId: '', notebookEntryProtocolName: '', notebookEntryType: '', updatedAt: new Date().toISOString() }
+          : analysis
+      ));
+    }
+
+    persist();
+    getListController().renderList();
+    if (localState.activeProtocolId === protocolId) {
+      setSelectedProtocol('');
+    }
+    syncSelectionAfterMutation();
+    onProtocolsChanged?.();
+  }
+
+  return {
+    applyDetailMode,
+    resetEditorDraft,
+    showEmptyPanel,
+    showEditorPanel,
+    showViewPanel,
+    renderProtocolView,
+    syncSelectionAfterMutation,
+    onCancelEditor,
+    openEditorWithDraft,
+    onCreateProtocol,
+    editProtocol,
+    viewProtocol,
+    onExportProtocol,
+    onExportViewedProtocolPdf,
+    onEditViewedProtocol,
+    onPrintViewedProtocol,
+    deleteProtocol
+  };
+}
+
+export { createProtocolDetailPanels };
