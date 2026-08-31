@@ -34,29 +34,12 @@
   background: var(--app-left-rail-surface, var(--theme-surface)) !important;
 }
 
-.left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-pinned.left-rail-template__pinned {
-  display: grid;
-  align-content: start;
-  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
-  border-bottom: 1px solid var(--app-left-rail-divider);
-}
-
 .left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-scroll.left-rail-template__scroll {
   display: grid;
   gap: 12px;
   align-content: start;
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
-}
-
-.inventory-rail-create-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.inventory-rail-create-actions > button {
-  min-height: 36px;
 }
 
 .inventory-rail-stack {

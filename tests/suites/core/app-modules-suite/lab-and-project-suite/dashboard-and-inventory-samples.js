@@ -163,7 +163,6 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   const document = createMockDocument([
     'inventory-sections',
     'container-detail',
-    'inventory-add-container-btn',
     'inventory-add-container-form',
     'inventory-add-container-name',
     'inventory-add-container-location',
@@ -294,7 +293,6 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   const document = createMockDocument([
     'inventory-sections',
     'container-detail',
-    'inventory-add-container-btn',
     'inventory-add-container-form',
     'inventory-add-container-name',
     'inventory-add-container-location',
@@ -394,7 +392,6 @@ test('personal-inventory keeps folders nestable while physical containers remain
     'inventory-location-nav',
     'inventory-container-context-menu',
     'container-detail',
-    'inventory-add-container-btn',
     'inventory-add-container-overlay',
     'inventory-add-container-form',
     'inventory-add-container-title',
@@ -560,7 +557,7 @@ test('personal-inventory keeps folders nestable while physical containers remain
     .find((button) => button.dataset.inventoryFolderToggle === 'folder-root');
   folderToggle.dataset.section = '-20 Degree';
   assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-toggle="folder-root"[\s\S]*?aria-expanded="false"/);
-  assert.match(inventoryLocationNav.innerHTML, /class="inventory-folder-children folder-tree-template__children" hidden/);
+  assert.match(inventoryLocationNav.innerHTML, /class="inventory-folder-children folder-tree-template__children"[^>]*hidden/);
   trigger(folderToggle, 'click');
 
   const parentBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')
@@ -582,7 +579,8 @@ test('personal-inventory keeps folders nestable while physical containers remain
     .find((button) => button.dataset.inventorySection === 'Room Temp');
   trigger(emptyLocationBtn, 'contextmenu', { clientX: 80, clientY: 120 });
   trigger(containerContextMenu.querySelector('[data-location-context-rename]'), 'click');
-  const locationRenameInput = containerContextMenu.querySelector('[data-personal-inventory-context-rename-input]');
+  const locationRenameInput = inventoryLocationNav.querySelector('[data-folder-tree-rename-input]');
+  assert.equal(locationRenameInput.value, 'Room Temp');
   locationRenameInput.value = 'Ambient Storage';
   trigger(locationRenameInput, 'keydown', { key: 'Enter' });
   assert.ok(state.settings.sampleInventoryLocations.includes('Ambient Storage'));
@@ -600,7 +598,6 @@ test('personal-inventory ignores copied images while preserving chemical sample 
   const document = createMockDocument([
     'inventory-sections',
     'container-detail',
-    'inventory-add-container-btn',
     'inventory-add-container-form',
     'inventory-add-container-name',
     'inventory-add-container-location',

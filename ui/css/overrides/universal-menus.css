@@ -112,19 +112,6 @@ body.theme-night {
   opacity: 0.52;
 }
 
-.personal-inventory-context-rename-input {
-  width: 100%;
-  min-width: 168px;
-  box-sizing: border-box;
-  padding: 9px 10px;
-  border: 1px solid var(--hikari-menu-border);
-  border-radius: var(--hikari-menu-item-radius);
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text-strong);
-  font: inherit;
-  font-size: 0.94rem;
-}
-
 .papers-context-item-danger,
 .personal-inventory-context-item-danger,
 .protocol-action-item-danger {
@@ -140,11 +127,6 @@ body.theme-night {
   color: var(--theme-danger);
   background: color-mix(in srgb, var(--theme-danger) 11%, var(--hikari-menu-surface)) !important;
 }
-
-
-
-
-
 
 .assay-sample-picker {
   width: min(380px, calc(100vw - 24px));

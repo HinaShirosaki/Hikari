@@ -2,12 +2,12 @@
 
 This folder holds the large core contract tests split by concern.
 
-- `ui-and-layout-contracts.js`: renderer, HTML, navigation, and UI wiring contracts.
+- `shell-and-packaging-contracts.js`: view/registry wiring, window CSP and sandbox flags, and packaging config.
 - `storage-and-import-contracts.js`: bundle hydration, storage import, sqlite, and workflow storage contracts.
-- `agent-contracts-a.js`: agent registrar, controller, logging, research, and tool wiring contracts.
-- `agent-contracts-b.js`: reusable helper/runtime exports and runtime registry contracts.
+- `agent-contracts-a.js`: agent tool catalog contracts and the generic tool executor rule.
+- `agent-contracts-b.js`: agent runtime behavior, MCP skill metadata, and tool action contracts.
 - `agent-sequence-library-contracts.js`: sequence library storage, search, promotion, and backbone recognition contracts.
-- `manifest-contracts.js`: package manifest and DOM id coverage checks.
+- `manifest-contracts.js`: the npm test gate wiring (DOM id coverage lives in `scripts/check-dom-ids.mjs`).
 - `index.js`: thin entry point used by the core suite loader.
 
 Maintenance notes:

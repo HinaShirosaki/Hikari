@@ -36,9 +36,7 @@ export function initPapersManagement({
   };
   const libraryState = {
     selectedFolderKey: '',
-    expandedFolderKeys: new Set(),
-    renamingFolderKey: '',
-    renamingFolderName: ''
+    expandedFolderKeys: new Set()
   };
   const libraryContextState = {
     folderKey: '',

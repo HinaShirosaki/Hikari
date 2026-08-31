@@ -16,7 +16,6 @@ export function createPersonalInventoryContext({
     inventoryLocationNav: document.getElementById('inventory-location-nav'),
     containerContextMenu: document.getElementById('inventory-container-context-menu'),
     inventorySummaryCard: document.getElementById('inventory-summary-card'),
-    addContainerBtn: document.getElementById('inventory-add-container-btn'),
     addContainerOverlay: document.getElementById('inventory-add-container-overlay'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
     addContainerTitle: document.getElementById('inventory-add-container-title'),

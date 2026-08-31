@@ -324,10 +324,10 @@ test('papers module folds and unfolds folder children from the library tree', ()
   trigger(journalClubList, 'click', {
     target: {
       closest(selector) {
-        if (selector === '[data-folder-select]') {
+        if (selector === '[data-folder-tree-toggle]') {
           return {
             dataset: {
-              folderSelect: 'project:p1'
+              folderTreeToggle: 'project:p1'
             }
           };
         }
@@ -336,15 +336,17 @@ test('papers module folds and unfolds folder children from the library tree', ()
     }
   });
 
-  assert.equal(/Atlas Uploaded Paper/.test(journalClubList.innerHTML), false);
+  assert.match(journalClubList.innerHTML, /data-folder-tree-toggle="project:p1"[^>]*aria-expanded="false"/);
+  assert.match(journalClubList.innerHTML, /papers-folder-children[^>]*hidden/);
+  assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
 
   trigger(journalClubList, 'click', {
     target: {
       closest(selector) {
-        if (selector === '[data-folder-select]') {
+        if (selector === '[data-folder-tree-toggle]') {
           return {
             dataset: {
-              folderSelect: 'project:p1'
+              folderTreeToggle: 'project:p1'
             }
           };
         }
@@ -353,6 +355,7 @@ test('papers module folds and unfolds folder children from the library tree', ()
     }
   });
 
+  assert.match(journalClubList.innerHTML, /data-folder-tree-toggle="project:p1"[^>]*aria-expanded="true"/);
   assert.match(journalClubList.innerHTML, /Atlas Uploaded Paper/);
 });
 test('papers module renames a journal club folder from the library context menu', () => {
@@ -386,44 +389,15 @@ test('papers module renames a journal club folder from the library context menu'
 
   assert.equal(renameFolderBtn.hidden, false);
   trigger(renameFolderBtn, 'click');
-  assert.match(journalClubList.innerHTML, /data-folder-rename-input/);
 
-  trigger(journalClubList, 'input', {
-    target: {
-      value: 'Weekly Biochem JC',
-      closest(selector) {
-        if (selector === '[data-folder-rename-input]') {
-          return {
-            dataset: {
-              folderRenameInput: newFolderKey
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
-
-  trigger(journalClubList, 'keydown', {
-    key: 'Enter',
-    target: {
-      value: 'Weekly Biochem JC',
-      closest(selector) {
-        if (selector === '[data-folder-rename-input]') {
-          return {
-            dataset: {
-              folderRenameInput: newFolderKey
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
+  const renameInput = journalClubList.querySelector('[data-folder-tree-rename-input]');
+  assert.equal(renameInput.value, 'New Folder');
+  renameInput.value = 'Weekly Biochem JC';
+  trigger(renameInput, 'keydown', { key: 'Enter' });
 
   assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
   assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
-  assert.equal(/data-folder-rename-input/.test(journalClubList.innerHTML), false);
+  assert.equal(journalClubList.querySelector('[data-folder-tree-rename-input]'), null);
 });
 test('papers viewer imports and opens a PDF dropped on the viewer workspace', async () => {
   const harness = buildPapersManagementHarness();

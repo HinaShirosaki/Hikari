@@ -256,7 +256,16 @@
           aria-labelledby="dashboard-notebook-note-dialog-title"
         >
           <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
-            <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+            <div class="app-dialog-head">
+              <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+              <button
+                type="button"
+                id="dashboard-notebook-note-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close add note dialog"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
             <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
             <label class="dashboard-field">
               Note

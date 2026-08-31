@@ -30,6 +30,7 @@ export function createUnsavedChangesService({
   const overlay = documentObject?.getElementById?.('unsaved-changes-overlay') || null;
   const list = documentObject?.getElementById?.('unsaved-changes-list') || null;
   const status = documentObject?.getElementById?.('unsaved-changes-status') || null;
+  const closeButton = documentObject?.getElementById?.('unsaved-changes-close-btn') || null;
   const cancelButton = documentObject?.getElementById?.('unsaved-changes-cancel-btn') || null;
   const discardButton = documentObject?.getElementById?.('unsaved-changes-discard-btn') || null;
   const saveButton = documentObject?.getElementById?.('unsaved-changes-save-btn') || null;
@@ -72,6 +73,9 @@ export function createUnsavedChangesService({
     }
     if (cancelButton) {
       cancelButton.disabled = saveInProgress;
+    }
+    if (closeButton) {
+      closeButton.disabled = saveInProgress;
     }
   }
 
@@ -170,6 +174,7 @@ export function createUnsavedChangesService({
     respondToClose('cancel');
   }
 
+  closeButton?.addEventListener('click', cancelClose);
   cancelButton?.addEventListener('click', cancelClose);
   discardButton?.addEventListener('click', discardAndQuit);
   saveButton?.addEventListener('click', () => {

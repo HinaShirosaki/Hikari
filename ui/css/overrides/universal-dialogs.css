@@ -1,19 +1,25 @@
 /* Shared overlapping-window chrome. View files keep only content-specific layout. */
+:root {
+  --app-dialog-safe-top: max(76px, calc(env(safe-area-inset-top, 0px) + 12px));
+}
+
 .app-dialog-overlay {
+  --app-dialog-viewport-gap: 18px;
+  --app-dialog-available-height: calc(100svh - var(--app-dialog-safe-top) - var(--app-dialog-viewport-gap));
   position: fixed;
   inset: 0;
   z-index: 2550;
+  box-sizing: border-box;
   display: grid;
   justify-items: center;
   align-items: center;
   overflow: auto;
-  padding: 18px;
+  padding: var(--app-dialog-safe-top) var(--app-dialog-viewport-gap) var(--app-dialog-viewport-gap);
   background: var(--theme-overlay);
 }
 
 .app-dialog-overlay--top {
   align-items: start;
-  padding: max(76px, env(safe-area-inset-top, 0px)) 18px 18px;
 }
 
 .app-dialog-overlay--center {
@@ -30,8 +36,10 @@
   --app-dialog-padding: 18px;
   --app-dialog-gap: 16px;
   width: min(var(--app-dialog-width), calc(100vw - 32px));
-  max-height: var(--app-dialog-max-height);
+  max-height: min(var(--app-dialog-max-height), var(--app-dialog-available-height));
   min-height: 0;
+  position: relative;
+  box-sizing: border-box;
   overflow: auto;
   display: grid;
   gap: var(--app-dialog-gap);
@@ -43,11 +51,14 @@
 }
 
 .app-dialog-head {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
+  min-block-size: 32px;
+  padding-inline-end: 46px;
 }
 
 .app-dialog-head h3,
@@ -84,8 +95,11 @@ button.app-dialog-close-btn {
   cursor: pointer;
 }
 
-.app-dialog-head button.app-dialog-close-btn {
-  margin-left: auto;
+.app-dialog-head > button.app-dialog-close-btn {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  margin: 0;
 }
 
 button.app-dialog-close-btn:hover,
@@ -113,9 +127,10 @@ button.app-dialog-close-btn--floating {
 }
 
 #home-view .app-dialog-overlay.app-dialog-overlay--contained {
+  --app-dialog-safe-top: 84px;
   position: absolute;
   z-index: 20;
-  padding: 84px 24px 24px;
+  --app-dialog-viewport-gap: 24px;
   background: var(--theme-overlay);
 }
 
@@ -223,15 +238,12 @@ body.theme-night #home-view .home-dialog.app-dialog-surface {
 
 @media (max-width: 720px) {
   .app-dialog-overlay {
-    padding: 12px;
-  }
-
-  .app-dialog-overlay--top {
-    padding-top: 68px;
+    --app-dialog-viewport-gap: 12px;
   }
 
   #home-view .app-dialog-overlay.app-dialog-overlay--contained {
-    padding: 72px 14px 14px;
+    --app-dialog-safe-top: 72px;
+    --app-dialog-viewport-gap: 14px;
   }
 
   .app-dialog-surface {

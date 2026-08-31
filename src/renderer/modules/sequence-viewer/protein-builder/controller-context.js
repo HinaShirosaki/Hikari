@@ -1,3 +1,4 @@
+import { showTransientNotice } from '../../../lib/notify.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import {
   buildProteinArchitectureName,
@@ -65,9 +66,10 @@ export function createProteinBuilderContext(config = {}) {
       : null
   };
 
-  ctx.setBuilderStatus = function setBuilderStatus(message, isError = false) {
-    state.statusMessage = String(message || '');
-    state.statusError = isError === true;
+  // Painting the stored status is separate from setting it: render() re-asserts
+  // the current status on every pass, and only the set path may raise a notice —
+  // otherwise a re-render would re-toast the same failure once the flag faded.
+  ctx.applyBuilderStatus = function applyBuilderStatus() {
     if (!elements.proteinBuilderStatus) {
       return;
     }
@@ -76,12 +78,28 @@ export function createProteinBuilderContext(config = {}) {
     elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--theme-danger)' : '';
   };
 
-  ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
+  ctx.setBuilderStatus = function setBuilderStatus(message, isError = false) {
+    state.statusMessage = String(message || '');
+    state.statusError = isError === true;
+    if (state.statusError && state.statusMessage) {
+      showTransientNotice(state.statusMessage, { type: 'error' });
+    }
+    ctx.applyBuilderStatus();
+  };
+
+  ctx.applyFeatureSearchStatus = function applyFeatureSearchStatus(message, isError = false) {
     if (!elements.proteinBuilderFeatureSearchStatus) {
       return;
     }
     elements.proteinBuilderFeatureSearchStatus.textContent = String(message || '');
     elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
+  };
+
+  ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
+    ctx.applyFeatureSearchStatus(message, isError);
   };
 
   // When the Vector Builder sent us here with a target site, the primary action

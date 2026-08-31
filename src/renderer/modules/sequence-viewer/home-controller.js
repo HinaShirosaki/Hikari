@@ -44,7 +44,6 @@ export function createSequenceViewerHomeController(config = {}) {
   const libraryPreviewDelayMs = 320;
   let libraryPreviewTimer = null;
   let previewedEntryId = '';
-  // { type, id, name, list } while a library row is being renamed in place.
   let draggedLibraryEntryId = '';
   let activeFolderDropTarget = null;
 
@@ -57,14 +56,11 @@ export function createSequenceViewerHomeController(config = {}) {
     hideLibraryContextMenus,
     showLibraryContextMenu,
     beginLibraryRename,
-    commitLibraryRename,
     createLibraryFolderFromContextMenu,
     deleteLibraryFolderFromContextMenu,
     moveLibraryEntryFromContextMenu,
     moveLibraryEntry,
-    getLibraryContextId,
-    getLibraryRename,
-    setLibraryRename
+    getLibraryContextId
   } = createLibraryMenus({
     rootDocument,
     elements,
@@ -159,8 +155,7 @@ export function createSequenceViewerHomeController(config = {}) {
     libraryStatusSaved,
     previewZoom,
     setPreviewedRecord: (next) => { previewedRecord = next; },
-    getLibraryListElements,
-    getLibraryRename
+    getLibraryListElements
   });
 
   const {
@@ -292,18 +287,6 @@ export function createSequenceViewerHomeController(config = {}) {
         return;
       }
       libraryList.addEventListener('click', (event) => {
-        if (event?.target?.closest?.('[data-sequence-library-rename-save]')) {
-          void commitLibraryRename();
-          return;
-        }
-        if (event?.target?.closest?.('[data-sequence-library-rename-cancel]')) {
-          setLibraryRename(null);
-          renderLibraryList();
-          return;
-        }
-        if (event?.target?.closest?.('[data-sequence-library-rename-input]')) {
-          return;
-        }
         const entryId = resolveLibraryEntryIdFromEvent(event);
         if (!entryId) {
           const folderId = resolveLibraryFolderIdFromEvent(event);
@@ -321,36 +304,19 @@ export function createSequenceViewerHomeController(config = {}) {
         });
       });
 
-      libraryList.addEventListener('input', (event) => {
-        const input = event?.target?.closest?.('[data-sequence-library-rename-input]');
-        if (input && getLibraryRename()) {
-          getLibraryRename().name = String(input.value || '');
-        }
-      });
-
-      libraryList.addEventListener('keydown', (event) => {
-        const input = event?.target?.closest?.('[data-sequence-library-rename-input]');
-        if (!input) {
-          return;
-        }
-        if (String(event?.key || '') === 'Enter') {
-          event.preventDefault?.();
-          event.stopPropagation?.();
-          void commitLibraryRename();
-        } else if (String(event?.key || '') === 'Escape') {
-          event.preventDefault?.();
-          event.stopPropagation?.();
-          setLibraryRename(null);
-          renderLibraryList();
-        }
-      });
-
+      // Entries keep double-click to open; folders have nothing else to do with
+      // it, so it starts the rename there.
       libraryList.addEventListener('dblclick', (event) => {
         const entryId = resolveLibraryEntryIdFromEvent(event);
-        if (!entryId) {
+        if (entryId) {
+          openLibraryEntryFromList(entryId);
           return;
         }
-        openLibraryEntryFromList(entryId);
+        const folderId = resolveLibraryFolderIdFromEvent(event);
+        if (folderId) {
+          event.preventDefault?.();
+          beginLibraryRename('folder', folderId, libraryList);
+        }
       });
 
       libraryList.addEventListener('contextmenu', (event) => {

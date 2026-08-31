@@ -20,6 +20,7 @@ export function initNotebookWidget({
     pageList,
     noteDialogOverlay,
     noteDialogForm,
+    noteDialogCloseBtn,
     noteDialogPage,
     noteInput,
     noteClarifyBtn
@@ -30,6 +31,7 @@ export function initNotebookWidget({
   pageList.addEventListener('click', onNotebookPageListClick);
   noteDialogOverlay.addEventListener('click', onNotebookNoteDialogOverlayClick);
   noteDialogForm.addEventListener('submit', onNotebookNoteDialogSubmit);
+  noteDialogCloseBtn.addEventListener('click', closeNotebookNoteDialog);
   noteClarifyBtn.addEventListener('click', onNotebookNoteClarifyAndSave);
 
   function openNotebookNoteDialog(entry, initialNote = '') {

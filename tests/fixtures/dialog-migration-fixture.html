@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dialog Migration Fixture</title>
+  <link rel="stylesheet" href="../../styles.css" />
+  <link rel="stylesheet" href="../../ui/css/overrides/universal-dialogs.css?v=dialog-migration-1" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="topbar-context">
+          <div class="topbar-heading-row">
+            <p class="topbar-page-title">Dialog migration</p>
+          </div>
+          <p class="small-note">Shared window chrome verification</p>
+        </div>
+      </div>
+      <nav class="app-dock" aria-label="Primary navigation">
+        <div class="app-dock-nav">
+          <button class="app-dock-btn" type="button" data-label="Home" aria-label="Home">H</button>
+          <button class="app-dock-btn is-active" type="button" data-label="Notebook" aria-label="Notebook">N</button>
+          <button class="app-dock-btn" type="button" data-label="Sequence" aria-label="Sequence">S</button>
+          <button class="app-dock-btn" type="button" data-label="Agent" aria-label="Agent">A</button>
+        </div>
+        <div class="app-dock-divider" aria-hidden="true"></div>
+        <button class="app-dock-btn app-dock-btn-more" type="button" data-label="More" aria-label="More apps">+</button>
+      </nav>
+      <div class="topbar-tools">
+        <div class="topbar-search-shell">
+          <input type="search" placeholder="Search" aria-label="Search" />
+        </div>
+      </div>
+    </header>
+    <div class="workspace-shell">
+      <section class="workspace-main">
+        <div id="dialog-fixture-overlay" class="app-dialog-overlay app-dialog-overlay--center">
+          <section id="dialog-fixture-surface" class="unsaved-changes-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="dialog-fixture-title">
+            <header id="dialog-fixture-head" class="app-dialog-head">
+              <div>
+                <h3 id="dialog-fixture-title">Shared popup window</h3>
+                <p class="small-note">The surface starts below the live dock height.</p>
+              </div>
+              <button id="dialog-fixture-close" type="button" class="app-dialog-close-btn" aria-label="Close shared popup window" title="Close"><span aria-hidden="true">&times;</span></button>
+            </header>
+            <p>This fixture uses the production topbar, dock, dialog stylesheet, and layout measurement.</p>
+            <div class="form-actions unsaved-changes-actions">
+              <button type="button" class="ghost-btn">Cancel</button>
+              <button type="button" class="primary-btn">Continue</button>
+            </div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module">
+    import { installDialogLayout } from '../../src/renderer/app/dialog-layout.js';
+    if (new URLSearchParams(window.location.search).get('kind') === 'agent') {
+      document.getElementById('dialog-fixture-surface').className = 'agent-review-dialog app-dialog-surface';
+      document.getElementById('dialog-fixture-head').className = 'agent-review-dialog-header app-dialog-head';
+      document.getElementById('dialog-fixture-title').textContent = 'Review Generated Drafts';
+    }
+    installDialogLayout();
+    document.getElementById('dialog-fixture-close').addEventListener('click', () => {
+      document.getElementById('dialog-fixture-overlay').hidden = true;
+    });
+  </script>
+</body>
+</html>

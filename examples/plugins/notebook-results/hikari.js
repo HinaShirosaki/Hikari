@@ -19,9 +19,19 @@
   // on bulk file I/O, or on a subprocess legitimately take longer, and there is
   // no cancel message — so a short budget makes the client report failure for
   // work the host goes on to finish. They get a budget measured in minutes
-  // instead. `python.run` alone can sit for the runner's full 15s ceiling.
+  // instead. `python.run` alone can sit for the runner's full 15s ceiling, and
+  // `files.*` carry up to 24 000 000 base64 characters (~18 MB) per call, which
+  // a slow disk or a storage folder on a network share will not move in ten
+  // seconds — and a timed-out write still lands, leaving the plugin reporting
+  // failure for a file that is on disk.
   const SLOW_CALL_TIMEOUT_MS = 600000;
-  const SLOW_VERBS = ['downloads.save', 'migration.importLegacyGel', 'python.run'];
+  const SLOW_VERBS = [
+    'downloads.save',
+    'files.read',
+    'files.write',
+    'migration.importLegacyGel',
+    'python.run'
+  ];
   const parentWindow = root.parent;
   const pending = new Map();
   const eventListeners = new Map();

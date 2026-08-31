@@ -206,7 +206,6 @@ export function createAssayAgentContext({
         groupBy: elements.assayAnalysisGroupByInput?.value,
         xAxis: elements.assayAnalysisXAxisInput?.value,
         analysis: elements.assayAnalysisKindInput?.value,
-        xTransform: elements.assayAnalysisXTransformInput?.value,
         polyOrder: Number(elements.assayAnalysisPolyOrderInput?.value),
         asymmetric: Boolean(elements.assayAnalysisAsymmetricInput?.checked)
       }) || latestAnalysis?.methodLabel || latestAnalysis?.method || '',

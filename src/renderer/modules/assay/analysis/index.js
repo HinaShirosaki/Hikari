@@ -13,7 +13,6 @@ export {
   ANALYSIS_VALUES,
   GROUP_BY_VALUES,
   X_AXIS_VALUES,
-  X_TRANSFORM_VALUES,
   describeAnalysisSpec,
   normalizeAnalysisSpec,
   specFromLegacyMethod

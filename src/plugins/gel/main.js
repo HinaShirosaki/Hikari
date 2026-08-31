@@ -32,6 +32,11 @@ let retryAction = null;
 let unsubscribeContext = null;
 let leftRailController = null;
 let hostLayout = null;
+let pendingStorageRefresh = false;
+// What the last load reported. Held here rather than passed in, so a bare
+// showReadyState() from a theme or layout change keeps showing it instead of
+// silently clearing a warning the user has not acted on yet.
+let loadWarnings = { artifactWarnings: 0, migrationError: '' };
 
 function errorMessage(error, fallback = 'Unexpected plugin error.') {
   return String(error?.message || error || fallback).trim();
@@ -72,12 +77,18 @@ function hideBanner() {
   setHostBusy(false);
 }
 
-function showReadyState({ artifactWarnings = 0 } = {}) {
+function showReadyState() {
+  const { artifactWarnings, migrationError } = loadWarnings;
   setHostBusy(false);
   if (!state.settings.storagePath) {
     showBanner('Choose a storage folder in Hikari Settings before saving gels.', { kind: 'warning' });
   } else if (persistFailure) {
     showBanner(`Could not save gels: ${persistFailure}`, { kind: 'error' });
+  } else if (migrationError) {
+    showBanner(`Could not import legacy gels: ${migrationError}`, {
+      kind: 'warning',
+      retry: () => refreshHostData({ announce: true })
+    });
   } else if (artifactWarnings) {
     showBanner(
       `${artifactWarnings} saved gel artifact${artifactWarnings === 1 ? '' : 's'} could not be restored. The record list is still available.`,
@@ -113,7 +124,7 @@ async function persist() {
   }
 }
 
-function applyHostContext(context = {}) {
+function applyHostContext(context = {}, { snapshot = false } = {}) {
   const storageWasConfigured = Boolean(state.settings.storagePath);
   const mode = context.appearance?.mode === 'night' || context.appearance?.mode === 'miku'
     ? context.appearance.mode
@@ -131,13 +142,20 @@ function applyHostContext(context = {}) {
     leftRailController?.applyContext?.(hostLayout);
   }
 
+  const shouldRefreshStorage = Boolean(state.settings.storagePath)
+    && (context.changed === 'storage' || (!storageWasConfigured && !migrationChecked));
+
   if (!workspaceReady) {
+    // A storage change that lands mid-boot has to be remembered: this early
+    // return drops it and nothing re-reads the context once the workspace is
+    // up, so the user would sit on an empty record list until some unrelated
+    // context event happened to arrive. The app.info snapshot is excluded
+    // because the boot's own load already runs against it.
+    pendingStorageRefresh = pendingStorageRefresh || (!snapshot && shouldRefreshStorage);
     return;
   }
   showReadyState();
-  const shouldRefreshStorage = context.changed === 'storage'
-    || (!storageWasConfigured && state.settings.storagePath && !migrationChecked);
-  if (state.settings.storagePath && shouldRefreshStorage) {
+  if (shouldRefreshStorage) {
     void refreshHostData({ announce: true });
   }
 }
@@ -201,23 +219,35 @@ async function loadHostData() {
   // the host long after first run, and gating on "have I ever migrated" would
   // strand them with no way back. Passing the ids we hold makes a repeat call
   // return only what is genuinely new.
+  //
+  // Reported, not thrown: one unreadable legacy artifact or a full disk used to
+  // fail the whole boot, taking down a workspace whose already-stored records
+  // are perfectly usable. `migrationChecked` stays false so the next refresh
+  // tries again.
+  let migrationError = '';
   if (state.settings.storagePath) {
-    const migration = await hikari.call('migration.importLegacyGel', {
-      skipIds: records.map((record) => record?.id).filter(Boolean)
-    });
-    const imported = Array.isArray(migration?.records) ? migration.records : [];
-    if (imported.length) {
-      const previousRecords = state.gelAnalyses;
-      records = [...records, ...imported];
-      state.gelAnalyses = records;
-      try {
-        await persist();
-      } catch (error) {
-        state.gelAnalyses = previousRecords;
-        throw error;
+    const storedRecords = records;
+    try {
+      const migration = await hikari.call('migration.importLegacyGel', {
+        skipIds: records.map((record) => record?.id).filter(Boolean)
+      });
+      const imported = Array.isArray(migration?.records) ? migration.records : [];
+      if (imported.length) {
+        const previousRecords = state.gelAnalyses;
+        records = [...records, ...imported];
+        state.gelAnalyses = records;
+        try {
+          await persist();
+        } catch (error) {
+          state.gelAnalyses = previousRecords;
+          throw error;
+        }
       }
+      migrationChecked = true;
+    } catch (error) {
+      migrationError = errorMessage(error, 'Could not import legacy gels.');
+      records = storedRecords;
     }
-    migrationChecked = true;
   } else if (stored.value !== null) {
     migrationChecked = true;
   }
@@ -225,7 +255,8 @@ async function loadHostData() {
   const hydrated = await Promise.all(records.map(hydrateStoredRecord));
   return {
     records: hydrated.map((entry) => entry.record),
-    artifactWarnings: hydrated.reduce((sum, entry) => sum + entry.warnings, 0)
+    artifactWarnings: hydrated.reduce((sum, entry) => sum + entry.warnings, 0),
+    migrationError
   };
 }
 
@@ -241,8 +272,9 @@ async function refreshHostData({ announce = false } = {}) {
     }
     state.gelAnalyses = loaded.records;
     persistFailure = '';
+    loadWarnings = { artifactWarnings: loaded.artifactWarnings, migrationError: loaded.migrationError };
     gelController?.renderList?.();
-    showReadyState({ artifactWarnings: loaded.artifactWarnings });
+    showReadyState();
   } catch (error) {
     if (request !== refreshRequest) {
       return;
@@ -303,13 +335,14 @@ async function start() {
     showBanner('Loading gel workspace…', { kind: 'loading', busy: true });
 
     const appInfo = await hikari.call('app.info');
-    applyHostContext(appInfo);
+    applyHostContext(appInfo, { snapshot: true });
     if (!unsubscribeContext) {
       unsubscribeContext = hikari.on('app.context', applyHostContext);
     }
 
     const [loaded, markup] = await Promise.all([loadHostData(), fetchWorkspaceMarkup()]);
     state.gelAnalyses = loaded.records;
+    loadWarnings = { artifactWarnings: loaded.artifactWarnings, migrationError: loaded.migrationError };
     gelController?.destroy?.();
     leftRailController?.destroy?.();
     host.innerHTML = markup;
@@ -344,7 +377,13 @@ async function start() {
         retry: start
       });
     } else {
-      showReadyState({ artifactWarnings: loaded.artifactWarnings });
+      showReadyState();
+    }
+
+    // A storage change that arrived while the workspace was still booting.
+    if (pendingStorageRefresh) {
+      pendingStorageRefresh = false;
+      void refreshHostData({ announce: true });
     }
   })()
     .catch((error) => {

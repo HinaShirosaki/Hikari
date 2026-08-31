@@ -274,32 +274,12 @@
   white-space: nowrap;
 }
 
-.gel-peak-editor-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: grid;
-  align-items: center;
-  justify-items: center;
-  padding: 22px;
-  background: var(--gel-overlay);
-}
-
-.gel-peak-editor-overlay[hidden] {
-  display: none;
-}
-
-.gel-peak-editor-dialog {
-  display: grid;
+.gel-peak-editor-dialog.app-dialog-surface {
+  --app-dialog-width: 1180px;
+  --app-dialog-max-height: 920px;
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
   grid-template-rows: auto auto minmax(260px, 1fr) auto;
-  gap: 12px;
-  width: min(1180px, 100%);
-  max-height: min(920px, calc(100vh - 44px));
-  padding: 16px;
-  border: 1px solid var(--gel-chart-border-strong);
-  border-radius: 8px;
-  background: var(--theme-surface);
-  box-shadow: 0 18px 44px var(--gel-dialog-shadow);
   overflow: hidden;
 }
 
@@ -977,15 +957,6 @@ body.theme-night .gel-lane-profile-meta {
   color: var(--gel-label);
 }
 
-body.theme-night .gel-peak-editor-overlay {
-  background: var(--gel-overlay);
-}
-
-body.theme-night .gel-peak-editor-dialog {
-  border-color: var(--gel-chart-border-strong);
-  background: var(--gel-dialog-background);
-}
-
 body.theme-night .gel-peak-editor-chart .peak-editor-frame {
   fill: var(--gel-chart-surface);
   stroke: var(--gel-chart-border);
@@ -1164,13 +1135,8 @@ body.theme-night .gel-lane-table-input:focus {
     min-width: 0;
   }
 
-  .gel-peak-editor-overlay {
-    padding: 10px;
-  }
-
-  .gel-peak-editor-dialog {
-    max-height: calc(100vh - 20px);
-    padding: 12px;
+  .gel-peak-editor-dialog.app-dialog-surface {
+    --app-dialog-padding: 12px;
   }
 
   .gel-peak-editor-header {

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hikari Agent Question UI Demo</title>
+  <link rel="stylesheet" href="/styles.css?v=agent-question-dock-4" />
+  <link rel="stylesheet" href="/ui/css/views/agent-view/layout-and-messages.css?v=agent-question-dock-4" />
+  <link rel="stylesheet" href="/ui/css/views/agent-view/chat-refresh-and-composer.css?v=agent-question-dock-4" />
+  <link rel="stylesheet" href="/ui/css/views/agent-view/review-and-responsive.css?v=agent-question-dock-4" />
+  <style>
+    body {
+      min-width: 0;
+      overflow: auto;
+      background: var(--theme-background);
+    }
+
+    .agent-question-demo {
+      width: min(100%, 1080px);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 42px 28px;
+      display: grid;
+      align-content: center;
+      gap: 18px;
+    }
+
+    .agent-question-demo__header {
+      width: min(100%, 920px);
+      margin: 0 auto;
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .agent-question-demo__header h1,
+    .agent-question-demo__header p,
+    .agent-question-demo__status {
+      margin: 0;
+    }
+
+    .agent-question-demo__header h1 {
+      font-size: 1.22rem;
+      color: var(--theme-text-strong);
+    }
+
+    .agent-question-demo__header p,
+    .agent-question-demo__status {
+      color: var(--theme-text-muted);
+    }
+
+    .agent-question-demo .agent-composer-shell {
+      padding: 0;
+    }
+
+    .agent-question-demo__status {
+      width: min(100%, 920px);
+      min-height: 1.4em;
+      margin: 0 auto;
+      font-size: 0.84rem;
+    }
+
+    @media (max-width: 720px) {
+      .agent-question-demo {
+        padding: 24px 12px;
+      }
+
+      .agent-question-demo__header {
+        align-items: start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body class="ui-neutral-compact">
+  <main class="agent-question-demo">
+    <header class="agent-question-demo__header">
+      <div>
+        <h1>Agent clarification question</h1>
+        <p>Interactive production-markup preview</p>
+      </div>
+      <button id="agent-question-demo-reset" type="button" class="ghost-btn">Reset demo</button>
+    </header>
+
+    <section class="agent-composer-shell" aria-label="Agent question and message composer">
+      <div id="agent-question-demo-dock" class="agent-question-dock" aria-live="polite"></div>
+      <div class="stack-form agent-composer-card">
+        <label class="agent-composer-label">
+          <span>Message</span>
+          <textarea rows="3" placeholder="Ask Hikari about this workspace."></textarea>
+        </label>
+        <div class="agent-composer-toolbar">
+          <div class="agent-composer-toolbar-start">
+            <button type="button" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+          </div>
+          <div class="form-actions agent-composer-actions">
+            <button type="button" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+              <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M12 19V5"></path>
+                <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+              </svg>
+              <span class="sr-only">Send message</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p id="agent-question-demo-status" class="agent-question-demo__status" role="status" aria-live="polite">Choose an option or type another answer.</p>
+  </main>
+
+  <script type="module">
+    import { renderUserQuestionCard } from '/src/renderer/modules/agent-chat/rendering-question-card.js?v=agent-question-dock-4';
+
+    const dock = document.getElementById('agent-question-demo-dock');
+    const status = document.getElementById('agent-question-demo-status');
+    const resetButton = document.getElementById('agent-question-demo-reset');
+    const questionMeta = {
+      codex_agent: { status: 'needs_more_info' },
+      user_question: {
+        question: 'Which project scope should I use for this analysis?',
+        context: 'Choose one answer so Hikari can continue with the correct records.',
+        options: [
+          { label: 'Atlas project', value: 'Use Atlas.', description: 'Limit the analysis to the Atlas workspace.' },
+          { label: 'Current notebook', value: 'Use the current notebook.', description: 'Use only the notebook page already in context.' },
+          { label: 'All projects', value: 'Search all projects.', description: 'Search every project available in Hikari.' },
+          { label: 'Continue without project data', value: 'Continue without project data.' }
+        ],
+        allow_custom: true,
+        placeholder: 'Type another scope',
+        submit_label: 'Send answer'
+      }
+    };
+    const safeText = (value) => String(value || '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+
+    function renderDemo() {
+      dock.innerHTML = renderUserQuestionCard(questionMeta, 'demo-question', safeText);
+      status.textContent = 'Choose an option or type another answer.';
+    }
+
+    dock.addEventListener('click', (event) => {
+      const option = event.target.closest('[data-agent-question-option]');
+      const submit = event.target.closest('[data-agent-question-submit]');
+      if (option) {
+        status.textContent = `Demo answer: ${option.dataset.agentQuestionAnswer}`;
+        return;
+      }
+      if (submit) {
+        const input = dock.querySelector('[data-agent-question-custom-input]');
+        status.textContent = input.value.trim()
+          ? `Demo answer: ${input.value.trim()}`
+          : 'Type an answer before sending.';
+      }
+    });
+
+    dock.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' || !event.target.matches('[data-agent-question-custom-input]')) {
+        return;
+      }
+      event.preventDefault();
+      dock.querySelector('[data-agent-question-submit]')?.click();
+    });
+
+    resetButton.addEventListener('click', renderDemo);
+    renderDemo();
+  </script>
+</body>
+</html>

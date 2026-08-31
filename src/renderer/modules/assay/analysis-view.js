@@ -61,8 +61,6 @@ export function createAssayAnalysisView({
     assayAnalysisTable,
     assayAnalysisXAxisField,
     assayAnalysisXAxisInput,
-    assayAnalysisXTransformField,
-    assayAnalysisXTransformInput,
     assayChartStyleMount,
     assayChartToolbarMount,
     assayChartFormatPanel,
@@ -125,7 +123,14 @@ export function createAssayAnalysisView({
     runtime.chartStyle = normalizeChartStyle(runtime.chartStyle);
   }
 
-  const plotlyRenderer = createAssayPlotlyRenderer();
+  // Dragging or renaming a title on the figure is the same edit as typing in the Text
+  // tab's boxes, so it lands in the same style fields and the two stay in sync.
+  const plotlyRenderer = createAssayPlotlyRenderer({
+    onTitleEdit: (patch) => {
+      chartStyleStore.setStyle(patch);
+      refreshChartControls();
+    }
+  });
   const chartStyleStore = createChartStyleStore({
     initialStyle: runtime.chartStyle,
     onChange: (style, previous) => {
@@ -203,7 +208,6 @@ export function createAssayAnalysisView({
       groupBy: assayAnalysisGroupByInput?.value,
       xAxis: assayAnalysisXAxisInput?.value,
       analysis: assayAnalysisKindInput?.value,
-      xTransform: assayAnalysisXTransformInput?.value,
       polyOrder: Number(assayAnalysisPolyOrderInput?.value),
       asymmetric: Boolean(assayAnalysisAsymmetricInput?.checked),
       subtotals: Boolean(assayAnalysisSubtotalsInput?.checked),
@@ -222,7 +226,6 @@ export function createAssayAnalysisView({
       }
     };
     toggle(assayAnalysisXAxisField, !isSummary);
-    toggle(assayAnalysisXTransformField, !isSummary);
     toggle(assayAnalysisSubtotalsField, isSummary);
     toggle(assayAnalysisPolyOrderField, analysis === 'polynomial');
     // Every analysis pools replicates before plotting, so every one of them can show

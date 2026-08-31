@@ -6,7 +6,6 @@ import {
   normalizeResults
 } from '../plate-model.js';
 import { oppositeAxis } from '../shared.js';
-import { showTransientNotice } from '../../../lib/notify.js';
 
 // The create/edit form and the saved-assay list: switching between create and
 // results mode, submitting a definition, and the list's edit/delete actions.
@@ -80,7 +79,7 @@ function createAssayFormAndList({
     if (!assayId) {
       runtime.activeResultsAssayId = '';
       clearActiveAssayInfo();
-      setResultStatus('No assay plate selected.');
+      setResultStatus('No assay plate selected.', true);
       notifyActiveAssayChanged();
       return;
     }
@@ -91,13 +90,12 @@ function createAssayFormAndList({
     ensureState();
     const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!assayId) {
-      setResultStatus('Select an assay plate first.');
+      setResultStatus('Select an assay plate first.', true);
       return null;
     }
     const assay = getAssayById(assayId);
     if (!assay) {
-      setResultStatus('Selected assay plate was not found.');
-      showTransientNotice('Selected assay plate was not found.', { type: 'error' });
+      setResultStatus('Selected assay plate was not found.', true);
       return null;
     }
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
@@ -223,9 +221,6 @@ function createAssayFormAndList({
     }
     if (elements.assayAnalysisXAxisInput) {
       elements.assayAnalysisXAxisInput.value = 'auto';
-    }
-    if (elements.assayAnalysisXTransformInput) {
-      elements.assayAnalysisXTransformInput.value = 'none';
     }
     if (elements.assayAnalysisAsymmetricInput) {
       elements.assayAnalysisAsymmetricInput.checked = false;

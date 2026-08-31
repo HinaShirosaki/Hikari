@@ -473,34 +473,11 @@
   margin-top: 12px;
 }
 
-.protocol-polish-overlay.app-dialog-overlay,
-.protocol-generate-overlay.app-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 220;
-  display: grid;
-  align-items: start;
-  justify-items: center;
-  overflow: hidden;
-  padding: max(86px, env(safe-area-inset-top, 0px)) clamp(16px, 3vw, 30px) clamp(16px, 3vw, 30px);
-  background: color-mix(in srgb, var(--theme-text-strong) 20%, transparent);
-  backdrop-filter: blur(10px);
-}
-
-.protocol-generate-overlay.app-dialog-overlay {
-  align-items: start;
-}
-
-.protocol-polish-overlay[hidden],
-.protocol-generate-overlay[hidden] {
-  display: none;
-}
-
 .protocol-polish-dialog-shell,
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
   width: min(1180px, 100%);
-  max-height: calc(100svh - 116px);
+  max-height: var(--app-dialog-available-height);
   min-height: 0;
   display: grid;
   gap: 16px;
@@ -508,13 +485,12 @@
 
 .protocol-polish-dialog-shell,
 .protocol-generate-result-shell {
-  height: min(760px, calc(100svh - 116px));
+  height: min(760px, var(--app-dialog-available-height));
   grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .protocol-generate-input-shell {
   width: min(900px, 100%);
-  max-height: calc(100svh - 116px);
 }
 
 .protocol-generate-result-shell {
@@ -791,15 +767,10 @@
     min-height: 240px;
   }
 
-  .protocol-polish-overlay.app-dialog-overlay,
-.protocol-generate-overlay.app-dialog-overlay {
-    padding: max(76px, env(safe-area-inset-top, 0px)) 12px 12px;
-  }
-
   .protocol-polish-dialog-shell,
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
-    max-height: calc(100svh - 88px);
+    max-height: var(--app-dialog-available-height);
   }
 
   .protocol-polish-dialog-stack {
@@ -810,7 +781,7 @@
 
   .protocol-polish-dialog-shell,
 .protocol-generate-result-shell {
-    height: calc(100svh - 88px);
+    height: var(--app-dialog-available-height);
   }
 
   .protocol-generate-input-shell,

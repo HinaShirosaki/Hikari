@@ -247,7 +247,9 @@ export function normalizeState(parsed) {
         ? source.agentChat.sessionFolderIds
         : {},
       selectedFolderId: String(source.agentChat?.selectedFolderId || 'general'),
-      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : []
+      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : [],
+      folderExpansionInitialized: source.agentChat?.folderExpansionInitialized === true
+        || (Array.isArray(source.agentChat?.expandedFolderIds) && source.agentChat.expandedFolderIds.length > 0)
     },
     paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],

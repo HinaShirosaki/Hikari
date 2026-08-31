@@ -14,7 +14,6 @@ export const X_AXIS_VALUES = Object.freeze(['auto', 'concentration', 'sample', '
 export const ANALYSIS_VALUES = Object.freeze([
   'summary', 'linear', 'sigmoidal', 'hyperbola', 'polynomial', 'pade11', 'normalize'
 ]);
-export const X_TRANSFORM_VALUES = Object.freeze(['none', 'log10']);
 
 export const ANALYSIS_LABELS = Object.freeze({
   summary: 'Summary statistics',
@@ -37,7 +36,6 @@ export function normalizeAnalysisSpec(input) {
     groupBy: pick(source.groupBy, GROUP_BY_VALUES, 'auto'),
     xAxis: pick(source.xAxis, X_AXIS_VALUES, 'auto'),
     analysis: pick(source.analysis, ANALYSIS_VALUES, 'summary'),
-    xTransform: pick(source.xTransform, X_TRANSFORM_VALUES, 'none'),
     polyOrder: Number.isInteger(order) && order >= 2 && order <= 4 ? order : 2,
     asymmetric: Boolean(source.asymmetric),
     subtotals: Boolean(source.subtotals),
@@ -53,16 +51,14 @@ const LEGACY_METHODS = Object.freeze({
   row_summary: { analysis: 'summary', groupBy: 'row' },
   column_summary: { analysis: 'summary', groupBy: 'column' },
   linear_regression: { analysis: 'linear' },
-  ec50: { analysis: 'sigmoidal', xAxis: 'concentration', xTransform: 'log10' },
-  ic50: { analysis: 'sigmoidal', xAxis: 'concentration', xTransform: 'log10' },
+  ec50: { analysis: 'sigmoidal', xAxis: 'concentration' },
+  ic50: { analysis: 'sigmoidal', xAxis: 'concentration' },
   survival: { analysis: 'normalize' },
   standard_curve_line: { analysis: 'linear', xAxis: 'concentration' },
-  standard_curve_semilog_line: { analysis: 'linear', xAxis: 'concentration', xTransform: 'log10' },
-  standard_curve_4pl_log_concentration: { analysis: 'sigmoidal', xAxis: 'concentration', xTransform: 'log10' },
+  standard_curve_semilog_line: { analysis: 'linear', xAxis: 'concentration' },
+  standard_curve_4pl_log_concentration: { analysis: 'sigmoidal', xAxis: 'concentration' },
   standard_curve_4pl_concentration: { analysis: 'sigmoidal', xAxis: 'concentration' },
-  standard_curve_5pl_log_concentration: {
-    analysis: 'sigmoidal', xAxis: 'concentration', xTransform: 'log10', asymmetric: true
-  },
+  standard_curve_5pl_log_concentration: { analysis: 'sigmoidal', xAxis: 'concentration', asymmetric: true },
   standard_curve_5pl_concentration: { analysis: 'sigmoidal', xAxis: 'concentration', asymmetric: true },
   standard_curve_hyperbola: { analysis: 'hyperbola', xAxis: 'concentration' },
   standard_curve_quadratic: { analysis: 'polynomial', xAxis: 'concentration', polyOrder: 2 },
@@ -85,8 +81,7 @@ export function describeAnalysisSpec(spec) {
   }
   parts.push(`grouped by ${normalized.groupBy}`);
   if (normalized.analysis !== 'summary') {
-    const transform = normalized.xTransform === 'log10' ? 'log10 ' : '';
-    parts.push(`X = ${transform}${normalized.xAxis}`);
+    parts.push(`X = ${normalized.xAxis}`);
   }
   return parts.join(' · ');
 }
@@ -210,7 +205,7 @@ export function resolveXAxis(observations, spec) {
   }
   return {
     ...descriptor,
-    label: spec.xTransform === 'log10' ? `log10(${descriptor.header})` : descriptor.header
+    label: descriptor.header
   };
 }
 

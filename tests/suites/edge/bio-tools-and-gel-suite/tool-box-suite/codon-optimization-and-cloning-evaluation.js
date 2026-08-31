@@ -31,8 +31,8 @@ module.exports = function registerEdgeToolBoxSuiteCodonOptimizationAndCloningEva
   ['mM', 1e-3],
   ['M', 1]
 ].forEach(([unit, factor]) => {
-  [-3, -1, 0, 0.25, 2, 10].forEach((value, idx) => {
-    test(`[EDGE] tool-box concentration roundtrip ${unit} value case ${idx + 1}`, () => {
+  test(`[EDGE] tool-box concentration roundtrip ${unit}`, () => {
+    [-3, -1, 0, 0.25, 2, 10].forEach((value) => {
       const inM = toolBox.concentrationToM(value, unit);
       assertClose(inM, value * factor, 1e-12);
       const back = toolBox.concentrationFromM(inM, unit);
@@ -46,8 +46,8 @@ module.exports = function registerEdgeToolBoxSuiteCodonOptimizationAndCloningEva
   ['mL', 1e-3],
   ['L', 1]
 ].forEach(([unit, factor]) => {
-  [-2, -1, 0, 0.5, 2, 100].forEach((value, idx) => {
-    test(`[EDGE] tool-box volume roundtrip ${unit} value case ${idx + 1}`, () => {
+  test(`[EDGE] tool-box volume roundtrip ${unit}`, () => {
+    [-2, -1, 0, 0.5, 2, 100].forEach((value) => {
       const inL = toolBox.volumeToL(value, unit);
       assertClose(inL, value * factor, 1e-12);
       const back = toolBox.volumeFromL(inL, unit);
@@ -61,8 +61,8 @@ module.exports = function registerEdgeToolBoxSuiteCodonOptimizationAndCloningEva
   ['g', 1],
   ['kg', 1e3]
 ].forEach(([unit, factor]) => {
-  [-1, 0, 0.1, 1, 12.5].forEach((value, idx) => {
-    test(`[EDGE] tool-box mass roundtrip ${unit} value case ${idx + 1}`, () => {
+  test(`[EDGE] tool-box mass roundtrip ${unit}`, () => {
+    [-1, 0, 0.1, 1, 12.5].forEach((value) => {
       const inG = toolBox.massToG(value, unit);
       assertClose(inG, value * factor, 1e-9);
       const back = toolBox.massFromG(inG, unit);

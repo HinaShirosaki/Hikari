@@ -7,6 +7,11 @@ import {
 } from './session-folders.js';
 import { createSessionFolderMenu } from './session-folder-menu.js';
 import { createSessionLoading } from './session-loading.js';
+import {
+  createFolderTreeState,
+  renderFolderTreeLeaf,
+  renderFolderTreeNode
+} from '../../lib/folder-tree.js';
 
 const CHAT_SESSION_DRAG_MIME = 'application/x-hikari-agent-chat-session-id';
 
@@ -38,6 +43,14 @@ export function createAgentChatSessionManager(deps = {}) {
 
   let draggedSessionId = '';
   let newChatPromise = null;
+  const folderTree = createFolderTreeState({
+    defaultExpanded: false,
+    getExpandedKeys: () => asArray(state.agentChat?.expandedFolderIds),
+    setExpandedKeys: (keys) => {
+      ensureAgentState();
+      state.agentChat.expandedFolderIds = keys;
+    }
+  });
 
   function readRunningSessionIds() {
     const value = getRunningSessionIds();
@@ -46,11 +59,7 @@ export function createAgentChatSessionManager(deps = {}) {
 
   function getExpandedFolderIds() {
     ensureAgentState();
-    return new Set(asArray(state.agentChat.expandedFolderIds));
-  }
-
-  function setExpandedFolderIds(folderIds) {
-    state.agentChat.expandedFolderIds = [...folderIds];
+    return new Set(folderTree.getState().expandedKeys);
   }
 
   function syncSelectedFolder() {
@@ -60,16 +69,11 @@ export function createAgentChatSessionManager(deps = {}) {
     if (!validFolderIds.has(state.agentChat.selectedFolderId)) {
       state.agentChat.selectedFolderId = GENERAL_CHAT_FOLDER_ID;
     }
-    const expanded = getExpandedFolderIds();
-    [...expanded].forEach((folderId) => {
-      if (!validFolderIds.has(folderId)) {
-        expanded.delete(folderId);
-      }
-    });
-    if (!expanded.size) {
-      folders.forEach((folder) => expanded.add(folder.id));
+    folderTree.prune(validFolderIds);
+    if (state.agentChat.folderExpansionInitialized !== true) {
+      folderTree.reveal(validFolderIds);
+      state.agentChat.folderExpansionInitialized = true;
     }
-    setExpandedFolderIds(expanded);
     return folders;
   }
 
@@ -80,16 +84,26 @@ export function createAgentChatSessionManager(deps = {}) {
     }
     const alreadySelected = state.agentChat.selectedFolderId === folder.id;
     state.agentChat.selectedFolderId = folder.id;
-    const expanded = getExpandedFolderIds();
-    if (toggle && alreadySelected && expanded.has(folder.id)) {
-      expanded.delete(folder.id);
+    if (toggle && alreadySelected && folderTree.isExpanded(folder.id, true)) {
+      folderTree.setExpanded(folder.id, false);
     } else {
-      expanded.add(folder.id);
+      folderTree.setExpanded(folder.id, true);
     }
-    setExpandedFolderIds(expanded);
+    state.agentChat.folderExpansionInitialized = true;
     if (persistState) {
       persist();
     }
+    return folder;
+  }
+
+  function toggleFolder(folderId) {
+    const folder = getFolderById(state, folderId);
+    if (!folder) {
+      return null;
+    }
+    folderTree.toggle(folder.id, true);
+    state.agentChat.folderExpansionInitialized = true;
+    persist();
     return folder;
   }
 
@@ -167,58 +181,52 @@ export function createAgentChatSessionManager(deps = {}) {
       const isSelected = state.agentChat.selectedFolderId === folder.id;
       const folderClasses = `agent-session-folder${isSelected ? ' is-active' : ''}${isExpanded ? ' is-expanded' : ''}`;
       const folderLabel = folder.type === 'project' ? `${folder.name} project chats` : `${folder.name} chats`;
-      const folderHead = getRenamingFolderId() === folder.id ? `
-        <div class="agent-session-folder-row agent-session-folder-row-editing" data-agent-folder-context="${safeText(folder.id)}">
-          <span class="agent-session-folder-chevron" aria-hidden="true"></span>
-          <span class="left-rail-folder-glyph agent-session-folder-glyph" aria-hidden="true"></span>
-          <input class="agent-session-folder-rename-input" data-agent-folder-rename-input="${safeText(folder.id)}" value="${safeText(getRenamingFolderName() || folder.name)}" aria-label="Rename chat folder" />
-          <button type="button" class="agent-session-folder-rename-btn" data-agent-folder-rename-save="${safeText(folder.id)}">Save</button>
-          <button type="button" class="agent-session-folder-rename-btn is-secondary" data-agent-folder-rename-cancel="${safeText(folder.id)}">Cancel</button>
-          <span class="agent-session-folder-count">${folderSessions.length}</span>
-        </div>
-      ` : `
-        <button
-          type="button"
-          class="agent-session-folder-row${isSelected ? ' is-active' : ''}${isExpanded ? ' is-expanded' : ''}"
-          data-agent-folder-id="${safeText(folder.id)}"
-          data-agent-folder-context="${safeText(folder.id)}"
-          data-agent-folder-drop="${safeText(folder.id)}"
-          aria-expanded="${isExpanded ? 'true' : 'false'}"
-          aria-label="${safeText(folderLabel)}"
-        >
-          <span class="agent-session-folder-chevron" aria-hidden="true"></span>
-          <span class="left-rail-folder-glyph agent-session-folder-glyph" aria-hidden="true"></span>
-          <span class="agent-session-folder-name">${safeText(folder.name)}</span>
-          <span class="agent-session-folder-count">${folderSessions.length}</span>
-        </button>
-      `;
       const children = folderSessions.length
         ? folderSessions.map((session) => {
           const sessionId = trimText(session?.id, 120);
           const isActive = activeSessionId && sessionId === activeSessionId;
           const isRunning = runningSessionIds.has(sessionId);
           const title = trimText(session?.title, 160) || 'New Chat';
-          return `
-            <button
-              type="button"
-              class="agent-session-card${isActive ? ' is-active' : ''}${isRunning ? ' is-agent-running' : ''}"
-              data-session-id="${safeText(sessionId)}"
-              data-agent-session-drag="${safeText(sessionId)}"
-              draggable="true"
-              title="${safeText(title)}"
-              ${isRunning ? 'aria-busy="true"' : ''}
-            >
-              <strong>${safeText(title)}</strong>
-            </button>
-          `;
+          return renderFolderTreeLeaf({
+            active: Boolean(isActive),
+            wrapperClass: 'agent-session-leaf',
+            controlClass: `agent-session-card folder-tree-template__rail-leaf${isRunning ? ' is-agent-running' : ''}`,
+            controlAttributes: {
+              'data-session-id': sessionId,
+              'data-agent-session-drag': sessionId,
+              draggable: 'true',
+              title,
+              'aria-busy': isRunning ? 'true' : false
+            },
+            contentHtml: `<strong class="folder-tree-template__leaf-label">${safeText(title)}</strong>`
+          });
         }).join('')
         : '<p class="agent-session-folder-empty">No chats yet.</p>';
-      return `
-        <div class="${folderClasses}">
-          ${folderHead}
-          ${isExpanded ? `<div class="agent-session-folder-children">${children}</div>` : ''}
-        </div>
-      `;
+      return renderFolderTreeNode({
+        key: folder.id,
+        expanded: isExpanded,
+        active: isSelected,
+        label: folder.name,
+        meta: String(folderSessions.length),
+        childrenHtml: children,
+        nodeClass: folderClasses,
+        rowClass: 'agent-session-folder-row',
+        disclosureClass: 'agent-session-folder-toggle',
+        mainClass: 'agent-session-folder-main',
+        labelClass: 'agent-session-folder-name',
+        metaClass: 'agent-session-folder-count',
+        glyphClass: 'agent-session-folder-glyph',
+        childrenClass: 'agent-session-folder-children folder-tree-template__children--full-width-leaves',
+        rowAttributes: {
+          'data-agent-folder-context': folder.id,
+          'data-agent-folder-drop': folder.id
+        },
+        mainAttributes: {
+          'data-agent-folder-id': folder.id,
+          'data-agent-folder-context': folder.id,
+          'aria-label': folderLabel
+        }
+      });
     }).join('');
   }
 
@@ -261,16 +269,11 @@ export function createAgentChatSessionManager(deps = {}) {
   }
 
   const {
-    getRenamingFolderId,
     getContextFolderId,
     setDropTarget,
-    getRenamingFolderName,
-    setRenamingFolderName,
     hideContextMenu,
     onRailContextMenu,
     beginFolderRename,
-    cancelFolderRename,
-    commitFolderRename,
     createFolder,
     deleteFolder,
     clearDropTarget,
@@ -290,21 +293,15 @@ export function createAgentChatSessionManager(deps = {}) {
 
   function bindEvents() {
     sessionList?.addEventListener?.('click', (event) => {
-      const saveButton = event?.target?.closest?.('[data-agent-folder-rename-save]');
-      if (saveButton) {
-        commitFolderRename(saveButton.dataset.agentFolderRenameSave);
-        return;
-      }
-      if (event?.target?.closest?.('[data-agent-folder-rename-cancel]')) {
-        cancelFolderRename();
-        return;
-      }
-      if (event?.target?.closest?.('[data-agent-folder-rename-input]')) {
+      const folderToggle = event?.target?.closest?.('[data-folder-tree-toggle]');
+      if (folderToggle) {
+        toggleFolder(folderToggle.dataset.folderTreeToggle);
+        renderSessionList();
         return;
       }
       const folderButton = event?.target?.closest?.('[data-agent-folder-id]');
       if (folderButton) {
-        selectFolder(folderButton.dataset.agentFolderId, { toggle: true });
+        selectFolder(folderButton.dataset.agentFolderId);
         renderSessionList();
         return;
       }
@@ -314,21 +311,11 @@ export function createAgentChatSessionManager(deps = {}) {
         void loadChatSession(sessionId);
       }
     });
-    sessionList?.addEventListener?.('input', (event) => {
-      if (event?.target?.closest?.('[data-agent-folder-rename-input]')) {
-        setRenamingFolderName(String(event.target.value || ''));
-      }
-    });
-    sessionList?.addEventListener?.('keydown', (event) => {
-      if (!event?.target?.closest?.('[data-agent-folder-rename-input]')) {
-        return;
-      }
-      if (event.key === 'Enter') {
+    sessionList?.addEventListener?.('dblclick', (event) => {
+      const folderButton = event?.target?.closest?.('[data-agent-folder-id]');
+      if (folderButton) {
         event.preventDefault?.();
-        commitFolderRename(event.target.dataset.agentFolderRenameInput);
-      } else if (event.key === 'Escape') {
-        event.preventDefault?.();
-        cancelFolderRename();
+        beginFolderRename(folderButton.dataset.agentFolderId);
       }
     });
     sessionList?.addEventListener?.('dragstart', (event) => {
@@ -387,7 +374,6 @@ export function createAgentChatSessionManager(deps = {}) {
     sessionList?.ownerDocument?.addEventListener?.('keydown', (event) => {
       if (event?.key === 'Escape') {
         hideContextMenu();
-        cancelFolderRename();
       }
     });
   }

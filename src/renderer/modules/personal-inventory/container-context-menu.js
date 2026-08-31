@@ -2,6 +2,7 @@ import { deleteContainer } from './container-delete-events.js';
 import { renameContainer } from './container-rename-events.js';
 import { deleteInventoryFolder, renameInventoryFolder } from './folder-actions.js';
 import { getSampleInventoryLocationNames, normalizeSampleInventoryLocations } from '../../lib/inventory-settings.js';
+import { startInlineRename } from '../../lib/folder-tree.js';
 
 export function installContainerContextMenu(ctx) {
   const { containerContextMenu } = ctx.elements;
@@ -120,8 +121,31 @@ export function installContainerContextMenu(ctx) {
     });
   }
 
+  // The rename input replaces the row in the tree itself, so the row has to be
+  // looked up by the attribute that only its clickable control carries.
+  function findRenameRow(target, targetType) {
+    const { inventoryLocationNav } = ctx.elements;
+    const attribute = targetType === 'folder'
+      ? 'data-inventory-folder-context'
+      : targetType === 'location'
+        ? 'data-inventory-section'
+        : 'data-container-open';
+    const key = targetType === 'folder'
+      ? 'inventoryFolderContext'
+      : targetType === 'location'
+        ? 'inventorySection'
+        : 'containerOpen';
+    const wanted = targetType === 'folder'
+      ? target.folderId
+      : targetType === 'location'
+        ? target.section
+        : target.containerId;
+    return Array.from(inventoryLocationNav?.querySelectorAll?.(`[${attribute}]`) || [])
+      .find((item) => String(item?.dataset?.[key] || '') === String(wanted || '')) || null;
+  }
+
   function enterRenameMode(target, targetType) {
-    if (!containerContextMenu || !target) {
+    if (!target) {
       return;
     }
     const item = targetType === 'folder'
@@ -129,42 +153,25 @@ export function installContainerContextMenu(ctx) {
       : targetType === 'location'
         ? { name: target.section }
         : ctx.helpers?.getContainer?.(target.section, target.containerId);
-    containerContextMenu.innerHTML = '<input type="text" class="personal-inventory-context-rename-input" data-personal-inventory-context-rename-input maxlength="120" />';
-    const input = containerContextMenu.querySelector('[data-personal-inventory-context-rename-input]');
-    if (!input) {
-      return;
-    }
-    input.value = item?.name || '';
-    input.focus();
-    input.select?.();
-
-    let settled = false;
-    const commit = () => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      const nextName = input.value;
-      hideContainerContextMenu();
-      if (targetType === 'folder') {
-        renameInventoryFolder(ctx, target.section, target.folderId, nextName);
-      } else if (targetType === 'location') {
-        renameInventoryLocation(target.section, nextName);
-      } else {
-        renameContainer(ctx, target.section, target.containerId, nextName);
-      }
-    };
-    input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        commit();
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        settled = true;
-        hideContainerContextMenu();
+    const row = findRenameRow(target, targetType);
+    hideContainerContextMenu();
+    startInlineRename(row, {
+      value: item?.name || '',
+      maxLength: 120,
+      label: `Rename ${targetType}`,
+      onCommit: (nextName) => {
+        if (String(nextName || '') === String(item?.name || '')) {
+          return;
+        }
+        if (targetType === 'folder') {
+          renameInventoryFolder(ctx, target.section, target.folderId, nextName);
+        } else if (targetType === 'location') {
+          renameInventoryLocation(target.section, nextName);
+        } else {
+          renameContainer(ctx, target.section, target.containerId, nextName);
+        }
       }
     });
-    input.addEventListener('blur', commit);
   }
 
   function getLocationNames() {
@@ -302,6 +309,7 @@ export function installContainerContextMenu(ctx) {
   windowRef?.addEventListener?.('scroll', hideContainerContextMenu, true);
 
   Object.assign(ctx, {
+    beginInventoryRename: enterRenameMode,
     hideContainerContextMenu,
     openContainerContextMenu,
     openFolderContextMenu,

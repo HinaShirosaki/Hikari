@@ -45,8 +45,15 @@ disabled plugin, or from the page opened directly in a browser, would hang
 forever. The client rejects immediately for an empty verb, non-object params,
 an unavailable parent frame, or a value that `postMessage` cannot clone.
 
-`hikari.on(event, listener)` subscribes to the small set of host context events
-in §2.1. It returns an unsubscribe function.
+The 10 s budget is for "nobody is listening", which is answered in
+milliseconds or never. Verbs that wait on a person, on megabytes of disk I/O,
+or on a subprocess get 10 minutes instead — `downloads.save`, `files.write`,
+`files.read`, and `python.run`. There is no cancel message, so a client that
+gave up early would report failure for work the host goes on to finish.
+
+`hikari.on(event, listener)` subscribes to the host's events: the context
+snapshot in §2.1, and the `app.save` / `app.undo` / `app.redo` commands in §3.1
+and §3.2. It returns an unsubscribe function.
 
 ### 1.1 The raw protocol
 
@@ -215,6 +222,78 @@ content, but it does write the host's `--shared-left-rail-width` variable and th
 host's stored layout preference (which survives a restart), and the resulting
 `app.context` broadcast reaches every other registered plugin frame — so it is
 gated on the `layout` permission rather than being free.
+
+### `app.setUnsaved` — *no permission required*
+
+Reports that the frame is holding unsaved work, so a plugin can block the
+window close the same way a built-in editor does.
+
+```js
+await hikari.call('app.setUnsaved', { unsaved: true });
+// { unsaved: true }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `unsaved` | boolean | Anything other than `true` clears the flag. |
+
+**Do not reach for `beforeunload` instead.** A subframe that cancels it vetoes
+the whole window close in Electron, with no dialog and no error — the red X
+simply stops working. Push the flag up and let the host ask.
+
+With the flag set, the host names the plugin (by its manifest `name`) in the
+unsaved-changes dialog at quit time and offers to save it.
+
+### 3.1 `app.save` event — *no permission required*
+
+```js
+hikari.on('app.save', ({ pluginId }) => {
+  save().finally(pushUnsavedState);   // push app.setUnsaved either way
+});
+```
+
+Sent when the user chooses to save at quit time. The protocol has no host->plugin
+request, so this is a broadcast and every registered frame receives it — read
+`pluginId` if you ship more than one.
+
+There is no reply: the host watches for your next `app.setUnsaved` and treats a
+clearing push as "saved". If nothing arrives within 15 s it stops waiting and
+reports the plugin as still blocking the quit — so push after a *failed* save
+too, rather than staying silent for the full timeout.
+
+### `app.setHistory` — *no permission required*
+
+Reports the frame's own undo/redo depth so the host's global history buttons can
+drive it. Nothing here is inferred: the host cannot see inside the frame, so the
+plugin volunteers this the same way it volunteers `app.setUnsaved`.
+
+```js
+await hikari.call('app.setHistory', { canUndo: true, canRedo: false });
+// { canUndo: true, canRedo: false }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `canUndo` | boolean | Anything other than `true` is `false`. |
+| `canRedo` | boolean | Same. |
+
+The buttons follow focus. The host remembers the last focused plugin frame and
+reads the depth *that* frame reported, so a frame the user is not editing in
+does not light them up.
+
+### 3.2 `app.undo` / `app.redo` events — *no permission required*
+
+```js
+hikari.on('app.undo', () => controller.undo());
+hikari.on('app.redo', () => controller.redo());
+```
+
+Sent to one frame — the focused one — rather than broadcast. The payload is
+empty; the command is the event name.
+
+**You still need your own keyboard handler.** Key events inside a focused frame
+never reach the host document, so Cmd/Ctrl+Z is yours to bind. These events only
+cover the host's toolbar buttons.
 
 ### `storage.set` — `storage`
 
@@ -446,8 +525,9 @@ rather than a plugin.
   any webpage; the host will not proxy it. `python.run` is compute, not a
   network door — but note it runs on the host with whatever the host's
   interpreter can reach, which is why it is a permission of its own.
-- **No data subscriptions.** The host only pushes the safe `app.context`
-  snapshot. Protocol, notebook, project, and sample data remain request/response.
+- **No data subscriptions.** All the host pushes is the safe `app.context`
+  snapshot and the parameterless `app.save` / `app.undo` / `app.redo` commands.
+  Protocol, notebook, project, and sample data remain request/response.
 - **No cross-plugin calls.**
 
 ---

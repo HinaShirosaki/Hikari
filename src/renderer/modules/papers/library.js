@@ -8,6 +8,11 @@ import {
 import { getPaperDisplayTitle } from './pdf-metadata.js';
 import { createLibraryFolderMenu } from './library-folder-menu.js';
 import { createLibraryEvents } from './library-events.js';
+import {
+  createFolderTreeState,
+  renderFolderTreeLeaf,
+  renderFolderTreeNode
+} from '../../lib/folder-tree.js';
 
 const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 
@@ -28,50 +33,26 @@ export function createPapersLibraryController(context) {
     paperId: '',
     activeDropTarget: null
   };
-
-  function getExpandedFolderKeys() {
-    if (!(libraryState.expandedFolderKeys instanceof Set)) {
-      const normalized = Array.isArray(libraryState.expandedFolderKeys)
-        ? libraryState.expandedFolderKeys
-        : [];
-      libraryState.expandedFolderKeys = new Set(
-        normalized
-          .map((item) => String(item || '').trim())
-          .filter(Boolean)
-      );
+  const folderTree = createFolderTreeState({
+    defaultExpanded: false,
+    getExpandedKeys: () => libraryState.expandedFolderKeys instanceof Set
+      ? [...libraryState.expandedFolderKeys]
+      : libraryState.expandedFolderKeys,
+    setExpandedKeys: (keys) => {
+      libraryState.expandedFolderKeys = new Set(keys);
     }
-    return libraryState.expandedFolderKeys;
-  }
+  });
 
   function pruneExpandedFolderKeys(folders = []) {
-    const validKeys = new Set(
-      (Array.isArray(folders) ? folders : [])
-        .map((folder) => String(folder?.key || '').trim())
-        .filter(Boolean)
-    );
-    const expandedFolderKeys = getExpandedFolderKeys();
-    [...expandedFolderKeys].forEach((key) => {
-      if (!validKeys.has(key)) {
-        expandedFolderKeys.delete(key);
-      }
-    });
+    folderTree.prune((Array.isArray(folders) ? folders : []).map((folder) => folder?.key));
   }
 
   function isFolderExpanded(folderKey = '') {
-    return getExpandedFolderKeys().has(String(folderKey || '').trim());
+    return folderTree.isExpanded(folderKey, true);
   }
 
   function setFolderExpanded(folderKey = '', expanded = false) {
-    const normalizedKey = String(folderKey || '').trim();
-    if (!normalizedKey) {
-      return;
-    }
-    const expandedFolderKeys = getExpandedFolderKeys();
-    if (expanded) {
-      expandedFolderKeys.add(normalizedKey);
-      return;
-    }
-    expandedFolderKeys.delete(normalizedKey);
+    folderTree.setExpanded(folderKey, expanded);
   }
 
   function getCurrentLinkOptions() {
@@ -219,18 +200,20 @@ export function createPapersLibraryController(context) {
     }
 
     const activePaperId = paperViewer.getActivePaperId();
-    return visiblePapers.map((paper) => `
-      <button
-        type="button"
-        class="papers-paper-row${activePaperId === paper.id ? ' is-active' : ''}"
-        data-paper-view="${paper.id}"
-        data-paper-drag="${paper.id}"
-        draggable="true"
-      >
-        <span class="papers-paper-title">${safeText(getPaperDisplayTitle(paper))}</span>
-        <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
-      </button>
-    `).join('');
+    return visiblePapers.map((paper) => renderFolderTreeLeaf({
+      active: activePaperId === paper.id,
+      wrapperClass: 'papers-paper-leaf',
+      controlClass: 'papers-paper-row folder-tree-template__rail-leaf',
+      controlAttributes: {
+        'data-paper-view': paper.id,
+        'data-paper-drag': paper.id,
+        draggable: 'true'
+      },
+      contentHtml: `
+        <span class="papers-paper-title folder-tree-template__leaf-label">${safeText(getPaperDisplayTitle(paper))}</span>
+        <span class="papers-paper-time folder-tree-template__leaf-meta">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
+      `
+    })).join('');
   }
 
   function renderFolderList(selectedFolder = getSelectedFolder()) {
@@ -253,58 +236,35 @@ export function createPapersLibraryController(context) {
       return;
     }
 
-    elements.journalClubList.innerHTML = folders.map((folder) => `
-      <div class="papers-folder-group${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}">
-        ${libraryState.renamingFolderKey === folder.key ? `
-          <div
-            class="papers-folder-item papers-folder-item-editing${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
-            data-folder-context="${safeText(folder.key)}"
-          >
-            <span class="papers-folder-chevron" aria-hidden="true"></span>
-            <span class="left-rail-folder-glyph papers-folder-glyph" aria-hidden="true"></span>
-            <div class="papers-folder-rename-wrap">
-              <input
-                type="text"
-                class="papers-folder-rename-input"
-                data-folder-rename-input="${safeText(folder.key)}"
-                value="${safeText(libraryState.renamingFolderName || folder.name)}"
-                aria-label="Rename folder"
-              />
-              <button
-                type="button"
-                class="papers-folder-rename-btn"
-                data-folder-rename-save="${safeText(folder.key)}"
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                class="papers-folder-rename-btn is-secondary"
-                data-folder-rename-cancel="${safeText(folder.key)}"
-              >
-                Cancel
-              </button>
-            </div>
-            <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
-          </div>
-        ` : `
-          <button
-            type="button"
-            class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
-            data-folder-select="${safeText(folder.key)}"
-            data-folder-context="${safeText(folder.key)}"
-            data-folder-drop="${safeText(folder.key)}"
-            aria-expanded="${isFolderExpanded(folder.key) ? 'true' : 'false'}"
-          >
-            <span class="papers-folder-chevron" aria-hidden="true"></span>
-            <span class="left-rail-folder-glyph papers-folder-glyph" aria-hidden="true"></span>
-            <span class="papers-folder-name">${safeText(folder.name)}</span>
-            <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
-          </button>
-        `}
-        ${isFolderExpanded(folder.key) ? `<div class="papers-folder-children">${buildPaperTreeListHtml(folder)}</div>` : ''}
-      </div>
-    `).join('');
+    elements.journalClubList.innerHTML = folders.map((folder) => {
+      const expanded = isFolderExpanded(folder.key);
+      const active = folder.key === selectedFolder?.key;
+      return renderFolderTreeNode({
+        key: folder.key,
+        expanded,
+        active,
+        label: folder.name,
+        meta: String(getFolderPaperCount(state, folder)),
+        childrenHtml: buildPaperTreeListHtml(folder),
+        nodeClass: 'papers-folder-group',
+        rowClass: 'papers-folder-item',
+        disclosureClass: 'papers-folder-toggle',
+        mainClass: 'papers-folder-main',
+        labelClass: 'papers-folder-name',
+        metaClass: 'papers-folder-count',
+        glyphClass: 'papers-folder-glyph',
+        childrenClass: 'papers-folder-children folder-tree-template__children--full-width-leaves',
+        rowAttributes: {
+          'data-folder-context': folder.key,
+          'data-folder-drop': folder.key
+        },
+        mainAttributes: {
+          'data-folder-select': folder.key,
+          'data-folder-context': folder.key,
+          'data-folder-drop': folder.key
+        }
+      });
+    }).join('');
   }
 
   function renderUploadTargetSummary(selectedFolder = getSelectedFolder()) {

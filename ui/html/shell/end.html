@@ -18,6 +18,7 @@
               <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Latest</button>
             </div>
             <div class="agent-composer-shell universal-agent-chat-rail__composer">
+              <div id="agent-rail-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
               <div class="stack-form agent-composer-card">
                 <input id="agent-rail-attachment-input" type="file" multiple hidden />
                 <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts">
@@ -54,7 +55,13 @@
                     <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
                   </div>
                   <div class="form-actions agent-composer-actions">
-                    <button type="button" id="agent-rail-send-btn" class="primary-btn">Send</button>
+                    <button type="button" id="agent-rail-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                      <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M12 19V5"></path>
+                        <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+                      </svg>
+                      <span class="sr-only">Send message</span>
+                    </button>
                     <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>
                   </div>
                 </div>
@@ -73,6 +80,7 @@
           <h3 id="unsaved-changes-title">Save changes before quitting?</h3>
           <p id="unsaved-changes-description" class="small-note">The following work has not been saved.</p>
         </div>
+        <button type="button" id="unsaved-changes-close-btn" class="app-dialog-close-btn" aria-label="Close save changes dialog" title="Close"><span aria-hidden="true">&times;</span></button>
       </div>
       <ul id="unsaved-changes-list" class="unsaved-changes-list"></ul>
       <p id="unsaved-changes-status" class="small-note" role="status" aria-live="polite"></p>

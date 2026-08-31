@@ -3,6 +3,7 @@ import { renderUserAttachments } from './rendering-attachments.js';
 import { renderEmptyHistory } from './rendering-empty-state.js';
 import { renderAssistantMeta } from './rendering-meta.js';
 import { renderAssistantGeneratedTrace } from './rendering-trace.js';
+import { renderUserQuestionCard } from './rendering-question-card.js';
 import { formatTime } from './rendering-time.js';
 import { asArray, trimText } from './shared.js';
 
@@ -46,7 +47,32 @@ function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false
   return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`;
 }
 
-export function renderHistory({ historyNode, messages, state, safeText, notebookDraftAdapter }) {
+export function renderActiveUserQuestion(messages, safeText) {
+  const safeMessages = asArray(messages);
+  for (let index = safeMessages.length - 1; index >= 0; index -= 1) {
+    const message = safeMessages[index];
+    if (message?.role === 'user') {
+      return '';
+    }
+    if (message?.role !== 'assistant') {
+      continue;
+    }
+    const card = renderUserQuestionCard(message.meta, message.id, safeText);
+    if (card) {
+      return card;
+    }
+  }
+  return '';
+}
+
+export function renderHistory({
+  historyNode,
+  messages,
+  state,
+  safeText,
+  notebookDraftAdapter,
+  showUserQuestions = true
+}) {
   const safeMessages = asArray(messages);
   if (!safeMessages.length) {
     renderEmptyHistory({ historyNode, state, safeText });
@@ -67,7 +93,8 @@ export function renderHistory({ historyNode, messages, state, safeText, notebook
       ? renderAssistantMeta(message.meta, message.id, {
         safeText,
         notebookDraftAdapter,
-        canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user')
+        canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user'),
+        showUserQuestion: showUserQuestions
       })
       : '';
     const messageBody = role === 'assistant'

@@ -1546,6 +1546,29 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.equal(runs.length, 1, 'oversized input never reaches the host runner');
 });
 
+test('plugin system: every public verb and host event is documented', async () => {
+  const { PLUGIN_BRIDGE_VERBS } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const api = fs.readFileSync(path.join(__dirname, 'docs', 'plugins', 'plugin-api.md'), 'utf8');
+  // A verb a plugin author cannot find is a verb nobody calls. Internal verbs
+  // are already filtered out of PLUGIN_BRIDGE_VERBS, so everything left is
+  // public surface and owes the reference an entry.
+  // Heading lines only, so a passing mention in prose does not count as an
+  // entry. One heading may cover two verbs (`files.write` / `files.read`).
+  const headings = api.split('\n').filter((line) => line.startsWith('### '));
+  Object.keys(PLUGIN_BRIDGE_VERBS).forEach((verb) => {
+    assert.ok(
+      headings.some((line) => line.includes(`\`${verb}\``)),
+      `plugin-api.md does not document the "${verb}" verb`
+    );
+  });
+  // Events have no table to enumerate them, so they are listed here.
+  ['app.context', 'app.save', 'app.undo', 'app.redo'].forEach((event) => {
+    assert.ok(api.includes(`\`${event}\``), `plugin-api.md does not document the "${event}" event`);
+  });
+});
+
 test('plugin system: a frame with unsaved work reaches the host quit guard', async () => {
   const { createPluginBridge } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href

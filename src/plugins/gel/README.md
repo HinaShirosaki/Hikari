@@ -23,6 +23,7 @@ Its public permissions are intentionally small:
 | `storage` | Compact versioned index of saved Gel records. |
 | `files` | Source/preview images, report JSON, and record metadata under the plugin's own folder. |
 | `downloads` | Native save dialog for CSV, generated PNG, and editable-table PowerPoint exports. |
+| `layout` | Commits the in-frame left rail's settled width to Hikari's shared layout preference. |
 
 Gel does not request notebook, project, sample, or protocol access, so the
 plugin cannot open or mutate those host features. Host-owned readers may still

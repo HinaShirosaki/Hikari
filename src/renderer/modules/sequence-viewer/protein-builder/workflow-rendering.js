@@ -155,11 +155,11 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     ctx.syncVectorInsertControls();
     ctx.syncFeatureSearchControls();
     if (!state.featureSearchQuery) {
-      ctx.setFeatureSearchStatus(
+      ctx.applyFeatureSearchStatus(
         ctx.hasStoragePath() ? '' : 'Set Storage Folder Path in Settings to search stored features.',
         !ctx.hasStoragePath()
       );
     }
-    ctx.setBuilderStatus(state.statusMessage, state.statusError);
+    ctx.applyBuilderStatus();
   };
 }

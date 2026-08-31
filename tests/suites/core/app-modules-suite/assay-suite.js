@@ -67,22 +67,24 @@ test('assay-analysis standard curve methods produce fitted rows and line chart m
   });
 });
 
-test('assay-analysis log-concentration methods skip non-positive concentration points', () => {
+test('assay-analysis fits the concentration axis as measured, non-positive values included', () => {
+  // The log10 X transform is gone, so nothing filters out zero or negative
+  // concentrations any more -- they are ordinary points on the axis as measured.
   const observations = buildStandardCurveObservations({
-    concentrations: [-5, -1, 0],
+    concentrations: [-5, -1, 0, 2, 6, 10],
     replicates: 2
   });
-  const methods = [
-    'standard_curve_4pl_log_concentration',
-    'standard_curve_5pl_log_concentration',
-    'standard_curve_semilog_line'
-  ];
+  const fitted = assayAnalysis.analyzeAssayData({ method: 'standard_curve_semilog_line', observations });
+  assert.equal(fitted.rows.length, 1, 'a linear fit keeps every concentration point');
+  assert.doesNotMatch(fitted.summary, /skipped/i);
 
-  methods.forEach((method) => {
-    const result = assayAnalysis.analyzeAssayData({ method, observations });
-    assert.equal(result.rows.length, 0, `expected no fitted rows for ${method}`);
-    assert.match(result.summary, /skipped/i);
+  // Too few distinct X values is still a real reason to skip a series.
+  const sparse = assayAnalysis.analyzeAssayData({
+    method: 'standard_curve_4pl_concentration',
+    observations: buildStandardCurveObservations({ concentrations: [1, 2], replicates: 2 })
   });
+  assert.equal(sparse.rows.length, 0, 'a 4PL still needs at least four points');
+  assert.match(sparse.summary, /skipped/i);
 });
 
 test('assay result paste notifies the agent rail context immediately', () => {

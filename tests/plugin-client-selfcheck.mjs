@@ -41,9 +41,13 @@ function createRuntime({ standalone = false, throwOnPost = false } = {}) {
       requests.push({ payload, origin });
     }
   };
+  const delays = [];
   const root = {
     parent,
-    setTimeout,
+    setTimeout(handler, delay) {
+      delays.push(delay);
+      return setTimeout(handler, delay);
+    },
     clearTimeout,
     addEventListener(type, listener) {
       listeners.set(type, listener);
@@ -53,7 +57,7 @@ function createRuntime({ standalone = false, throwOnPost = false } = {}) {
     root.parent = root;
   }
   vm.runInNewContext(source, { window: root, console, Error, Map, Object, Promise, String, Array });
-  return { root, parent: root.parent, listeners, requests };
+  return { root, parent: root.parent, listeners, requests, delays };
 }
 
 const runtime = createRuntime();
@@ -72,6 +76,21 @@ runtime.listeners.get('message')({
   }
 });
 assert.equal((await call).host, 'hikari');
+
+// The short budget exists to catch "no host is listening", which is answered in
+// milliseconds or never. A files.* call can legitimately carry ~18 MB, so it has
+// to get the slow one: a client timeout there reports failure for a write the
+// host goes on to finish, leaving a record marked unsaved with its bytes on disk.
+assert.equal(runtime.delays[0], 10000, 'ordinary verbs keep the short budget');
+for (const verb of ['files.write', 'files.read']) {
+  const slowCall = hikari.call(verb, { path: 'gel.png' });
+  assert.equal(runtime.delays.at(-1), 600000, `${verb} must not time out at 10 s`);
+  runtime.listeners.get('message')({
+    source: runtime.parent,
+    data: { hikari: 1, id: runtime.requests.at(-1).payload.id, ok: true, result: {} }
+  });
+  await slowCall;
+}
 
 let contextPayload = null;
 const unsubscribe = hikari.on('app.context', (payload) => {

@@ -87,6 +87,7 @@ export function initHomeDashboard({
     pageList: document.getElementById('dashboard-notebook-page-list'),
     noteDialogOverlay: document.getElementById('dashboard-notebook-note-dialog-overlay'),
     noteDialogForm: document.getElementById('dashboard-notebook-note-dialog-form'),
+    noteDialogCloseBtn: document.getElementById('dashboard-notebook-note-dialog-close-btn'),
     noteDialogPage: document.getElementById('dashboard-notebook-note-dialog-page'),
     noteInput: document.getElementById('dashboard-notebook-note-input'),
     noteClarifyBtn: document.getElementById('dashboard-notebook-note-clarify-btn')

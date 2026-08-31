@@ -1,6 +1,8 @@
 // Settings > Plugins panel: add, enable/disable, and remove plugin folders.
 // Entries live in state.settings.plugins and are booted by
 // src/renderer/app/plugin-loader.js on the next app reload.
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function createPluginsController({
   state,
   persist,
@@ -25,9 +27,16 @@ export function createPluginsController({
     render();
   }
 
+  // A failed add leaves the panel list unchanged, so the inline line is the only
+  // thing that moves — raise the app notice too.
+  function setErrorStatus(message) {
+    showTransientNotice(String(message), { type: 'error' });
+    setStatus(message);
+  }
+
   async function onAddPlugin() {
     if (!api?.pickStorageDirectory || !api?.inspectPluginFolder) {
-      setStatus('Plugin management is unavailable in this environment.');
+      setErrorStatus('Plugin management is unavailable in this environment.');
       return;
     }
     const picked = await api.pickStorageDirectory('');
@@ -36,12 +45,12 @@ export function createPluginsController({
     }
     const inspected = await api.inspectPluginFolder(picked.path);
     if (!inspected?.ok) {
-      setStatus(inspected?.error || 'Selected folder is not a valid plugin.');
+      setErrorStatus(inspected?.error || 'Selected folder is not a valid plugin.');
       return;
     }
     const plugins = getPlugins();
     if (plugins.some((plugin) => plugin.id === inspected.id)) {
-      setStatus(`A plugin named "${inspected.name}" is already installed.`);
+      setErrorStatus(`A plugin named "${inspected.name}" is already installed.`);
       return;
     }
     plugins.push({

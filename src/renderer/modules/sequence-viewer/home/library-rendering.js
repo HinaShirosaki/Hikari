@@ -1,4 +1,9 @@
 import { escapeHtml } from '../../../lib/html.js';
+import {
+  createFolderTreeState,
+  renderFolderTreeLeaf,
+  renderFolderTreeNode
+} from '../../../lib/folder-tree.js';
 import { cleanText } from '../shared.js';
 import { buildSequenceMapSvg } from '../vector-builder/sequence-map.js';
 
@@ -10,9 +15,15 @@ function createLibraryRendering({
   libraryStatusSaved,
   previewZoom,
   setPreviewedRecord,
-  getLibraryListElements,
-  getLibraryRename
+  getLibraryListElements
 } = {}) {
+  const folderTree = createFolderTreeState({
+    defaultExpanded: false,
+    getExpandedKeys: () => state.expandedLibraryFolderIds,
+    setExpandedKeys: (keys) => {
+      state.expandedLibraryFolderIds = keys;
+    }
+  });
   // The preview is drawn straight from the entry's stored GenBank text as inline
   // SVG. No iframe, so it inherits the app theme and needs no height syncing,
   // and no preview document has to be generated or kept on disk.
@@ -50,18 +61,13 @@ function createLibraryRendering({
 
     const query = cleanText(state.librarySearchQuery, 200).toLowerCase();
     const matchingEntries = query
-      ? entries.filter((entry) => (
-        String(entry?.name || '').toLowerCase().includes(query)
-        || (getLibraryRename()?.type === 'entry' && cleanText(entry?.id, 200) === getLibraryRename().id)
-      ))
+      ? entries.filter((entry) => String(entry?.name || '').toLowerCase().includes(query))
       : entries;
     const matchingFolders = query
-      ? folders.filter((folder) => {
-        const folderMatches = String(folder?.name || '').toLowerCase().includes(query);
-        const childMatches = matchingEntries.some((entry) => cleanText(entry?.folderId, 200) === cleanText(folder?.id, 200));
-        const editingFolder = getLibraryRename()?.type === 'folder' && cleanText(folder?.id, 200) === getLibraryRename().id;
-        return folderMatches || childMatches || editingFolder;
-      })
+      ? folders.filter((folder) => (
+        String(folder?.name || '').toLowerCase().includes(query)
+        || matchingEntries.some((entry) => cleanText(entry?.folderId, 200) === cleanText(folder?.id, 200))
+      ))
       : folders;
     const folderIds = new Set(folders.map((folder) => cleanText(folder?.id, 200)).filter(Boolean));
     const unfiledEntries = matchingEntries.filter((entry) => {
@@ -75,45 +81,19 @@ function createLibraryRendering({
       return;
     }
 
-    const renameEditorHtml = (id, type) => `
-      <div class="sequence-viewer-library-inline-editor${type === 'folder' ? ' sequence-viewer-library-folder-inline-editor' : ''}">
-        <input
-          type="text"
-          class="sequence-viewer-library-rename-input"
-          data-sequence-library-rename-input="${escapeHtml(id)}"
-          data-sequence-library-rename-type="${type}"
-          value="${escapeHtml(getLibraryRename()?.name || '')}"
-          maxlength="140"
-          aria-label="Rename ${type === 'folder' ? 'folder' : 'sequence'}"
-        />
-        <button type="button" class="ghost-btn sequence-viewer-library-rename-btn" data-sequence-library-rename-save="${escapeHtml(id)}">Save</button>
-        <button type="button" class="ghost-btn sequence-viewer-library-rename-btn is-secondary" data-sequence-library-rename-cancel>Cancel</button>
-      </div>
-    `;
-
     const entryHtml = (entry) => {
       const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
-      if (getLibraryRename()?.type === 'entry' && cleanText(entry.id, 200) === getLibraryRename().id) {
-        return `
-          <div
-            class="sequence-viewer-library-item sequence-viewer-library-item-editing${active ? ' sequence-viewer-library-item-active' : ''}"
-            data-sequence-entry-id="${escapeHtml(entry.id)}"
-          >
-            ${renameEditorHtml(entry.id, 'entry')}
-          </div>
-        `;
-      }
-      return `
-        <button
-          type="button"
-          class="sequence-viewer-library-item${active ? ' sequence-viewer-library-item-active' : ''}"
-          data-sequence-entry-id="${escapeHtml(entry.id)}"
-          draggable="true"
-          title="${escapeHtml(entry.name || 'sequence')}"
-        >
-          <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
-        </button>
-      `;
+      return renderFolderTreeLeaf({
+        active,
+        wrapperClass: 'sequence-viewer-library-leaf',
+        controlClass: `sequence-viewer-library-item folder-tree-template__rail-leaf${active ? ' sequence-viewer-library-item-active' : ''}`,
+        controlAttributes: {
+          'data-sequence-entry-id': entry.id,
+          draggable: 'true',
+          title: entry.name || 'sequence'
+        },
+        contentHtml: `<span class="sequence-viewer-library-item-name folder-tree-template__leaf-label">${escapeHtml(entry.name || 'sequence')}</span>`
+      });
     };
     const html = [
       unfiledEntries.map(entryHtml).join(''),
@@ -125,43 +105,33 @@ function createLibraryRendering({
           ? matchingEntries.filter((entry) => cleanText(entry?.folderId, 200) === folderId)
           : folderEntries;
         const expanded = query ? true : isLibraryFolderExpanded(folderId);
-        const editing = getLibraryRename()?.type === 'folder' && folderId === getLibraryRename().id;
-        return `
-          <div class="sequence-viewer-library-folder-group${expanded ? ' is-expanded' : ''}">
-            ${editing ? `
-              <div
-                class="sequence-viewer-library-folder-row sequence-viewer-library-folder-row-editing${expanded ? ' is-expanded' : ''}"
-                data-sequence-folder-id="${escapeHtml(folderId)}"
-                data-sequence-folder-drop="${escapeHtml(folderId)}"
-              >
-                <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
-                <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
-                ${renameEditorHtml(folderId, 'folder')}
-              </div>
-            ` : `
-              <button
-                type="button"
-                class="sequence-viewer-library-folder-row${expanded ? ' is-expanded' : ''}"
-                data-sequence-folder-id="${escapeHtml(folderId)}"
-                data-sequence-folder-drop="${escapeHtml(folderId)}"
-                aria-expanded="${expanded ? 'true' : 'false'}"
-                title="${escapeHtml(folder.name || 'Folder')}"
-              >
-                <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
-                <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
-                <span class="sequence-viewer-library-folder-name">${escapeHtml(folder.name || 'Folder')}</span>
-                <span class="sequence-viewer-library-folder-count">${folderEntries.length}</span>
-              </button>
-            `}
-            ${expanded ? `
-              <div class="sequence-viewer-library-folder-children">
-                ${visibleFolderEntries.length
-                  ? visibleFolderEntries.map(entryHtml).join('')
-                  : '<p class="sequence-viewer-library-folder-empty">No sequences.</p>'}
-              </div>
-            ` : ''}
-          </div>
-        `;
+        return renderFolderTreeNode({
+          key: folderId,
+          expanded,
+          label: folder.name || 'Folder',
+          meta: String(folderEntries.length),
+          childrenHtml: visibleFolderEntries.length
+            ? visibleFolderEntries.map(entryHtml).join('')
+            : '<p class="sequence-viewer-library-folder-empty">No sequences.</p>',
+          nodeClass: 'sequence-viewer-library-folder-group',
+          rowClass: 'sequence-viewer-library-folder-row',
+          disclosureClass: 'sequence-viewer-library-folder-toggle',
+          mainClass: 'sequence-viewer-library-folder-main',
+          labelClass: 'sequence-viewer-library-folder-name',
+          metaClass: 'sequence-viewer-library-folder-count',
+          glyphClass: 'sequence-viewer-library-folder-glyph',
+          childrenClass: 'sequence-viewer-library-folder-children folder-tree-template__children--full-width-leaves',
+          rowAttributes: {
+            'data-sequence-folder-id': folderId,
+            'data-sequence-folder-drop': folderId
+          },
+          disclosureAttributes: { 'data-sequence-folder-id': folderId },
+          mainAttributes: {
+            'data-sequence-folder-id': folderId,
+            'data-sequence-folder-main': folderId,
+            title: folder.name || 'Folder'
+          }
+        });
       }).join('')
     ].join('');
     libraryLists.forEach((libraryList) => {
@@ -170,8 +140,7 @@ function createLibraryRendering({
   }
 
   function isLibraryFolderExpanded(folderId) {
-    return (Array.isArray(state.expandedLibraryFolderIds) ? state.expandedLibraryFolderIds : [])
-      .some((id) => cleanText(id, 200) === cleanText(folderId, 200));
+    return folderTree.isExpanded(cleanText(folderId, 200), true);
   }
 
   function toggleLibraryFolder(folderId) {
@@ -179,13 +148,7 @@ function createLibraryRendering({
     if (!safeFolderId) {
       return;
     }
-    const expanded = new Set(Array.isArray(state.expandedLibraryFolderIds) ? state.expandedLibraryFolderIds : []);
-    if (expanded.has(safeFolderId)) {
-      expanded.delete(safeFolderId);
-    } else {
-      expanded.add(safeFolderId);
-    }
-    state.expandedLibraryFolderIds = [...expanded];
+    folderTree.toggle(safeFolderId, true);
     renderLibraryList();
   }
 

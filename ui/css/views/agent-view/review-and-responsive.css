@@ -1,42 +1,24 @@
 .agent-review-overlay.app-dialog-overlay {
+  --app-dialog-safe-top: 18px;
   position: absolute;
-  inset: 0;
   z-index: 18;
-  display: grid;
-  align-items: start;
-  justify-items: center;
-  overflow: hidden;
-  padding: 10px 24px 24px;
-  background: color-mix(in srgb, var(--theme-surface) 70%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 .agent-review-overlay[hidden] {
   display: none;
 }
 
-.agent-review-dialog {
-  width: min(1120px, 100%);
-  height: min(760px, calc(100svh - 132px));
-  max-height: calc(100svh - 132px);
-  min-height: min(520px, calc(100svh - 132px));
-  display: grid;
+.agent-review-dialog.app-dialog-surface {
+  --app-dialog-width: 1120px;
+  --app-dialog-max-height: 760px;
+  height: min(760px, var(--app-dialog-available-height));
+  min-height: min(520px, var(--app-dialog-available-height));
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
 }
 
 .agent-review-dialog-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 0 10px 8px;
-  border-bottom: 0;
+  padding-block-end: 8px;
 }
 
 .agent-review-dialog-header > div {
@@ -328,20 +310,18 @@
   }
 
   .agent-review-overlay.app-dialog-overlay {
-    padding: 14px 12px;
+    --app-dialog-safe-top: 12px;
   }
 
-  .agent-review-dialog {
-    width: 100%;
-    height: calc(100svh - 28px);
-    max-height: calc(100svh - 28px);
+  .agent-review-dialog.app-dialog-surface {
+    height: var(--app-dialog-available-height);
     min-height: 0;
   }
 
   .agent-review-dialog-header {
     align-items: stretch;
     flex-direction: column;
-    padding: 16px;
+    padding-block-end: 8px;
   }
 
   .agent-review-track {

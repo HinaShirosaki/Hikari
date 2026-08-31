@@ -77,6 +77,9 @@ function applyCapturedStructureDraft(draft) {
       persist();
       notifySamplesChanged();
     }
+    if (!normalized) {
+      showTransientNotice('No structure detected.', { type: 'error' });
+    }
     ctx.setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.');
     return;
   }
@@ -86,6 +89,7 @@ function applyCapturedStructureDraft(draft) {
     ctx.setStructureStatus('Structure ready. Click Add Sample to save it.');
   } else {
     pendingStructureDrafts.delete(context.pendingKey);
+    showTransientNotice('No structure detected.', { type: 'error' });
     ctx.setStructureStatus('No structure detected.');
   }
 }

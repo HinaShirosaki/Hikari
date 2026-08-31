@@ -13,7 +13,7 @@
               <span>New Chat</span>
             </button>
           </div>
-          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
+          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll folder-tree-template" aria-live="polite"></div>
           <div id="agent-session-context-menu" class="agent-session-context-menu" hidden>
             <button type="button" id="agent-context-new-folder" class="agent-session-context-item">New Folder</button>
             <button type="button" id="agent-context-rename-folder" class="agent-session-context-item" hidden>Rename Folder</button>
@@ -30,6 +30,7 @@
                 <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Jump to Latest</button>
               </div>
               <div class="agent-composer-shell">
+                <div id="agent-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
                 <div class="stack-form agent-composer-card">
                   <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
@@ -48,7 +49,13 @@
                       </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
-                      <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
+                      <button type="button" id="agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                        <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M12 19V5"></path>
+                          <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+                        </svg>
+                        <span class="sr-only">Send message</span>
+                      </button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
                     </div>
                   </div>
@@ -56,8 +63,8 @@
               </div>
             </div>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
-              <section class="agent-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
-                <header class="agent-review-dialog-header">
+              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+                <header class="agent-review-dialog-header app-dialog-head">
                   <div>
                     <h3 id="agent-review-title">Review Generated Drafts</h3>
                     <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>

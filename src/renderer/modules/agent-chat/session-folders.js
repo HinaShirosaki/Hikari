@@ -30,6 +30,8 @@ export function ensureAgentChatFolderState(agentChat = {}) {
   target.expandedFolderIds = asArray(target.expandedFolderIds)
     .map((folderId) => trimText(folderId, 180))
     .filter(Boolean);
+  target.folderExpansionInitialized = target.folderExpansionInitialized === true
+    || target.expandedFolderIds.length > 0;
   return target;
 }
 

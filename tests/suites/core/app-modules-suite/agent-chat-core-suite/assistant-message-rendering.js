@@ -82,6 +82,14 @@ test('agent-chat clarification cards disappear after one answer or any later use
     questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
     /agent-user-question-card/
   );
+  assert.match(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    /agent-user-question-custom-field[\s\S]*<span>Other<\/span>[\s\S]*type="text"/
+  );
+  assert.match(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    /agent-send-icon-btn[\s\S]*aria-label="Send answer"[\s\S]*agent-send-icon/
+  );
   assert.equal(
     questionRenderer.renderUserQuestionCard({
       ...questionMeta,
@@ -387,6 +395,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
     'agent-status'
   ]);
   const history = document.getElementById('agent-chat-history');
+  const questionDock = document.getElementById('agent-question-dock');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
   const payloads = [];
@@ -479,11 +488,13 @@ test('agent-chat renders Codex user questions and returns option answers', async
 
   assert.equal(payloads.length, 1);
   assert.equal(document.getElementById('agent-status').textContent, 'Waiting for your answer.');
-  assert.match(history.innerHTML, /agent-user-question-card/);
-  assert.match(history.innerHTML, /data-agent-question-answer="Use Atlas\."/);
-  const optionButton = history.querySelector('[data-agent-question-option]');
+  assert.doesNotMatch(history.innerHTML, /agent-user-question-card/);
+  assert.equal(questionDock.hidden, false);
+  assert.match(questionDock.innerHTML, /agent-user-question-card/);
+  assert.match(questionDock.innerHTML, /data-agent-question-answer="Use Atlas\."/);
+  const optionButton = questionDock.querySelector('[data-agent-question-option]');
   assert.equal(optionButton.dataset.agentQuestionOption, state.agentChat.messages[1].id);
-  trigger(history, 'click', {
+  trigger(questionDock, 'click', {
     target: {
       dataset: {
         agentQuestionOption: optionButton.dataset.agentQuestionOption,
@@ -503,6 +514,8 @@ test('agent-chat renders Codex user questions and returns option answers', async
   assert.equal(state.agentChat.messages[2].text, 'Use Atlas.');
   assert.equal(state.agentChat.messages[3].text, 'Using Atlas.');
   assert.doesNotMatch(history.innerHTML, /agent-user-question-card/);
+  assert.equal(questionDock.hidden, true);
+  assert.equal(questionDock.innerHTML, '');
   assert.equal(document.getElementById('agent-status').textContent, 'Complete.');
 });
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {

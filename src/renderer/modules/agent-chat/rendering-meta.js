@@ -10,7 +10,8 @@ import { asArray, trimText } from './shared.js';
 export function renderAssistantMeta(meta, messageId = '', {
   safeText,
   notebookDraftAdapter,
-  canAnswerQuestion = true
+  canAnswerQuestion = true,
+  showUserQuestion = true
 }) {
   if (!meta || typeof meta !== 'object') {
     return '';
@@ -69,9 +70,11 @@ export function renderAssistantMeta(meta, messageId = '', {
     ? 'Open Planned Page'
     : 'Open Notebook Page';
   const hasPurchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object';
-  const userQuestionCard = renderUserQuestionCard(meta, messageId, safeText, {
-    disabled: canAnswerQuestion !== true
-  });
+  const userQuestionCard = showUserQuestion
+    ? renderUserQuestionCard(meta, messageId, safeText, {
+      disabled: canAnswerQuestion !== true
+    })
+    : '';
   const sections = [
     userQuestionCard,
     hasPurchaseRecommendation ? renderPurchaseRecommendationCards(meta.purchase_recommendation, safeText) : '',

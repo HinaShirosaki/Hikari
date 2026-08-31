@@ -1,32 +1,17 @@
 export function bindPersonalInventoryEvents(ctx) {
   const {
-    addContainerBtn,
     addContainerOverlay,
-    addContainerNameInput,
     addContainerTypeSelect,
     addContainerForm,
     addContainerCloseBtn,
     addContainerCancelBtn
   } = ctx.elements;
   const rootDocument = addContainerForm?.ownerDocument || globalThis.document || null;
-  const windowRef = rootDocument?.defaultView || globalThis.window || globalThis;
 
   function closeAddContainerDialog() {
     ctx.resetAddContainerForm();
     ctx.setAddContainerFormOpen(false);
-    addContainerBtn?.focus();
   }
-
-  addContainerBtn?.addEventListener('click', () => {
-    if (ctx.uiState.isAddContainerFormOpen) {
-      closeAddContainerDialog();
-      return;
-    }
-    ctx.beginAddContainer();
-    windowRef.requestAnimationFrame?.(() => {
-      addContainerNameInput?.focus();
-    }) || addContainerNameInput?.focus();
-  });
   addContainerOverlay?.addEventListener('click', (event) => {
     if (event.target === addContainerOverlay) {
       closeAddContainerDialog();

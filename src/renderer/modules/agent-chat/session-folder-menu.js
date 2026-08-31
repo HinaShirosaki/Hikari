@@ -7,6 +7,7 @@ import {
   getFolderById
 } from './session-folders.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { startInlineRename } from '../../lib/folder-tree.js';
 
 // Right-click menu and inline rename for the agent chat session folders, plus
 // the drop-target bookkeeping shared with the drag handlers.
@@ -22,8 +23,6 @@ function createSessionFolderMenu({
   renderSessionList,
   selectFolder
 } = {}) {
-  let renamingFolderId = '';
-  let renamingFolderName = '';
   let contextFolderId = '';
   let activeDropTarget = null;
 
@@ -63,19 +62,11 @@ function createSessionFolderMenu({
     sessionContextMenu.hidden = false;
   }
 
-  function focusRenameInput() {
-    const focus = () => {
-      const input = sessionList?.querySelector?.('[data-agent-folder-rename-input]');
-      input?.focus?.();
-      const value = String(input?.value || '');
-      input?.setSelectionRange?.(0, value.length);
-    };
-    const windowRef = sessionList?.ownerDocument?.defaultView;
-    if (typeof windowRef?.requestAnimationFrame === 'function') {
-      windowRef.requestAnimationFrame(focus);
-    } else {
-      focus();
-    }
+  // The list re-renders before the input goes in, so the row has to be looked
+  // up again rather than reusing the element the event came from.
+  function findFolderMain(folderId) {
+    return Array.from(sessionList?.querySelectorAll?.('[data-agent-folder-id]') || [])
+      .find((item) => item?.dataset?.agentFolderId === folderId) || null;
   }
 
   function beginFolderRename(folderId) {
@@ -85,23 +76,18 @@ function createSessionFolderMenu({
     }
     hideContextMenu();
     selectFolder(folder.id, { persistState: false });
-    renamingFolderId = folder.id;
-    renamingFolderName = folder.name;
     renderSessionList();
-    focusRenameInput();
+    startInlineRename(findFolderMain(folder.id), {
+      value: folder.name,
+      label: 'Rename chat folder',
+      onCommit: (nextName) => commitFolderRename(folder.id, nextName)
+    });
   }
 
-  function cancelFolderRename() {
-    renamingFolderId = '';
-    renamingFolderName = '';
-    renderSessionList();
-  }
-
-  function commitFolderRename(folderId = renamingFolderId) {
+  function commitFolderRename(folderId, rawName) {
     const folder = getFolderById(state, folderId);
-    const nextName = trimText(renamingFolderName, 220);
-    if (folder?.type !== 'custom' || !nextName) {
-      focusRenameInput();
+    const nextName = trimText(rawName, 220);
+    if (folder?.type !== 'custom' || !nextName || nextName === folder.name) {
       return;
     }
     const duplicate = getAgentChatFolders(state).some((item) => (
@@ -109,7 +95,6 @@ function createSessionFolderMenu({
     ));
     if (duplicate) {
       showTransientNotice('A chat folder with this name already exists.', { type: 'error' });
-      focusRenameInput();
       return;
     }
     const storedFolder = asArray(state.agentChat.folders)
@@ -117,8 +102,6 @@ function createSessionFolderMenu({
     if (storedFolder) {
       storedFolder.name = nextName;
     }
-    renamingFolderId = '';
-    renamingFolderName = '';
     persist();
     renderSessionList();
   }
@@ -134,11 +117,7 @@ function createSessionFolderMenu({
     const folderId = buildCustomChatFolderId(folder.id);
     selectFolder(folderId, { persistState: false });
     persist();
-    renamingFolderId = folderId;
-    renamingFolderName = folder.name;
-    hideContextMenu();
-    renderSessionList();
-    focusRenameInput();
+    beginFolderRename(folderId);
     return folder;
   }
 
@@ -177,7 +156,6 @@ function createSessionFolderMenu({
 
 
   return {
-    getRenamingFolderId: () => renamingFolderId,
     getContextFolderId: () => contextFolderId,
     setDropTarget(target) {
       if (activeDropTarget === target) {
@@ -187,11 +165,6 @@ function createSessionFolderMenu({
       activeDropTarget = target;
       activeDropTarget?.classList?.add?.('is-chat-drop-target');
     },
-    getRenamingFolderName: () => renamingFolderName,
-    setRenamingFolderName(next) {
-      renamingFolderName = next;
-      return renamingFolderName;
-    },
     getActiveDropTarget: () => activeDropTarget,
     setActiveDropTarget(next) {
       activeDropTarget = next;
@@ -200,10 +173,7 @@ function createSessionFolderMenu({
     hideContextMenu,
     findFolderTarget,
     onRailContextMenu,
-    focusRenameInput,
     beginFolderRename,
-    cancelFolderRename,
-    commitFolderRename,
     createFolder,
     deleteFolder,
     clearDropTarget,

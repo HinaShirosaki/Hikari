@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Long Dialog Stress Fixture</title>
+  <link rel="stylesheet" href="../../styles.css?v=dialog-screenshot-1" />
+  <link rel="stylesheet" href="../../ui/css/overrides/universal-dialogs.css?v=dialog-screenshot-1" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <div class="topbar-context">
+          <p class="topbar-page-title">Long dialog test</p>
+          <p class="small-note">Dock truncation stress case</p>
+        </div>
+      </div>
+      <nav class="app-dock" aria-label="Primary navigation">
+        <div class="app-dock-nav">
+          <button class="app-dock-btn is-active" type="button" aria-label="Home">H</button>
+          <button class="app-dock-btn" type="button" aria-label="Notebook">N</button>
+          <button class="app-dock-btn" type="button" aria-label="Samples">S</button>
+          <button class="app-dock-btn" type="button" aria-label="Assays">A</button>
+          <button class="app-dock-btn" type="button" aria-label="Papers">P</button>
+          <button class="app-dock-btn" type="button" aria-label="Sequence">Q</button>
+        </div>
+      </nav>
+      <div class="topbar-tools">
+        <div class="topbar-search-shell"><input type="search" aria-label="Search" placeholder="Search" /></div>
+      </div>
+    </header>
+    <div class="workspace-shell">
+      <section class="workspace-main">
+        <div id="long-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center">
+          <section class="app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="long-dialog-title">
+            <header class="app-dialog-head">
+              <div>
+                <h3 id="long-dialog-title">Deliberately long popup window</h3>
+                <p class="small-note">Forty rows force the shared surface to scroll.</p>
+              </div>
+              <button type="button" class="app-dialog-close-btn" aria-label="Close long popup window" title="Close"><span aria-hidden="true">&times;</span></button>
+            </header>
+            <div id="long-dialog-rows"></div>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module">
+    import { installDialogLayout } from '../../src/renderer/app/dialog-layout.js';
+    const rows = document.getElementById('long-dialog-rows');
+    rows.replaceChildren(...Array.from({ length: 40 }, (_, index) => {
+      const row = document.createElement('p');
+      row.textContent = `Long dialog row ${index + 1}: content remains reachable without moving under the dock.`;
+      return row;
+    }));
+    installDialogLayout();
+    document.documentElement.dataset.dialogQaReady = 'true';
+  </script>
+</body>
+</html>

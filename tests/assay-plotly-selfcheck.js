@@ -169,7 +169,7 @@ assert.deepEqual(presets.listChartPresets(), [], 'corrupt storage reads as empty
 // --- renderer: the Prism defaults (offset frame, no grid, plain tick numbers) ---
 const plots = [];
 const calls = [];
-const { createAssayPlotlyRenderer } = loadEsmStyleModule(
+const { createAssayPlotlyRenderer, titleEditPatch } = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/plotly/plotly-renderer.js'),
   {
     window: {
@@ -255,7 +255,12 @@ assert.equal(manyShort.layout.width > bar.layout.width, true, '24 bars get a wid
 assert.equal(manyShort.layout.height > bar.layout.height, true, 'and a taller one, so it is not a letterbox');
 assert.equal(manyShort.layout.width / manyShort.layout.height < 3, true, 'the widest auto frame stays under 3:1');
 const sized = draw(barModel, { sizeAuto: false, frameWidth: 640, frameHeight: 480 });
-assert.equal(`${sized.layout.width}x${sized.layout.height}`, '640x480', 'an explicit frame size still wins');
+const sizedArea = {
+  w: sized.layout.width - sized.layout.margin.l - sized.layout.margin.r,
+  h: sized.layout.height - sized.layout.margin.t - sized.layout.margin.b
+};
+assert.deepEqual(sizedArea, { w: 640, h: 480 }, 'an explicit size is the plot area and still wins');
+assert.ok(sized.layout.width > 640 && sized.layout.height > 480, 'the figure carries the margins on top');
 
 // A reference line coexists with the offset frame instead of replacing it.
 const withRefLine = draw(barModel, { refLineValue: 5 });
@@ -350,13 +355,62 @@ assert.equal(fitted.traces[1].marker.symbol, 'square', 'observed markers follow 
 const fittedOff = draw({ ...fittedModel, showErrorBars: false }, {});
 assert.equal(fittedOff.traces[1].error_y, undefined, 'showErrorBars:false turns them off');
 
+// Axis titles are draggable annotations, never Plotly axis titles: annotations[0] is X
+// and annotations[1] is Y, which is the order a drag reports them back in.
 const autoTitles = draw(fittedModel, { xTitle: 'Dose', yTitle: 'Signal' });
-assert.equal(autoTitles.layout.xaxis.title.text, 'Dose', 'an unmoved title stays a Plotly axis title');
-assert.equal(autoTitles.layout.annotations, undefined, 'an unmoved title needs no annotation');
+assert.equal(autoTitles.layout.xaxis.title.text, '', 'the axis itself carries no title');
+assert.equal(autoTitles.layout.annotations[0].text, 'Dose', 'the X title is the first annotation');
+assert.equal(autoTitles.layout.annotations[1].text, 'Signal', 'the Y title is the second');
+assert.equal(autoTitles.layout.annotations[0].x, 0.5, 'an unmoved title centres on its axis');
+assert.equal(autoTitles.layout.annotations[1].textangle, -90, 'the Y title reads up the axis');
+
 const movedTitles = draw(fittedModel, { xTitle: 'Dose', xTitlePos: 0.1, yTitle: 'Signal', yTitleOffset: 70 });
-assert.equal(movedTitles.layout.xaxis.title.text, '', 'a moved X title hands over to the annotation');
-assert.equal(movedTitles.layout.annotations[0].x, 0.1, 'the annotation sits where it was asked to');
-assert.equal(movedTitles.layout.yaxis.title.standoff, 70, 'a distance alone stays a native standoff');
+assert.equal(movedTitles.layout.annotations[0].x, 0.1, 'the X title sits where it was asked to');
 assert.ok(movedTitles.layout.margin.l >= 96, 'the margin grows so a pushed-out title is not clipped');
+const movedArea = plotArea(movedTitles.layout);
+const unmovedArea = plotArea(autoTitles.layout);
+assert.deepEqual(movedArea, unmovedArea, 'pushing a title out grows the figure, never the plot');
+
+// A drag round-trips: the paper coordinates Plotly reports back become the same numbers
+// the Text tab's boxes hold.
+const dragged = titleEditPatch({
+  'annotations[0].x': 0.25,
+  'annotations[0].y': -0.2,
+  'annotations[1].x': -0.1,
+  'annotations[1].y': 0.75,
+  'annotations[1].text': 'Renamed'
+}, { plotWidth: 400, plotHeight: 300 });
+// JSON, not deepEqual: the loader evaluates the module in its own realm, so the patch
+// object's prototype is not this file's Object.prototype.
+assert.equal(JSON.stringify(dragged), JSON.stringify({
+  xTitlePos: 0.25,
+  xTitleOffset: 60,
+  yTitlePos: 0.75,
+  yTitleOffset: 40,
+  yTitle: 'Renamed'
+}), 'a dropped title reads back as position, distance and name');
+assert.equal(
+  Object.keys(titleEditPatch({ 'xaxis.range[0]': 2 }, { plotWidth: 400, plotHeight: 300 })).length,
+  0,
+  'an unrelated relayout (zoom, pan) is not a title edit'
+);
+
+// --- renderer: a custom size is the plot area, so equal numbers give a square plot
+// (Plotly's own width/height include the margins, which are asymmetric) ---
+function plotArea(layout) {
+  return {
+    w: layout.width - layout.margin.l - layout.margin.r,
+    h: layout.height - layout.margin.t - layout.margin.b
+  };
+}
+const squared = draw(barModel, { sizeAuto: false, frameWidth: 500, frameHeight: 500 });
+assert.deepEqual(plotArea(squared.layout), { w: 500, h: 500 }, 'equal width/height give a square plot area');
+assert.equal(squared.layout.xaxis.automargin, false, 'an exact size owns its margins');
+const titledSize = draw(barModel, {
+  sizeAuto: false, frameWidth: 500, frameHeight: 500, title: 'T', yTitleOffset: 120
+});
+assert.deepEqual(plotArea(titledSize.layout), { w: 500, h: 500 }, 'titles grow the figure, never the plot area');
+const autoSized = draw(barModel, {});
+assert.equal(autoSized.layout.xaxis.automargin, true, 'auto sizing keeps automargin on');
 
 console.log('assay Plotly self-check passed');

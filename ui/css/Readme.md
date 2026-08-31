@@ -49,9 +49,12 @@ part of the standard verification path.
 - `.folder-tree-template__node` and `.folder-tree-template__children` may nest to any depth; `.folder-tree-template__leaf` connects a non-folder item to the same branch.
 - `.folder-tree-template__row` contains the disclosure control, main folder button, and optional action.
 - `.folder-tree-template__disclosure` wraps the CSS-drawn chevron; do not use text `>` characters.
+- `.folder-tree-template__rename-input` styles the input `startInlineRename` swaps in for a row control while it is being renamed.
 
-Modules keep ownership of their data, labels, and commands. They can reuse
-`src/renderer/lib/folder-tree.js` for consistent expanded/collapsed state.
-The Personal Inventory module is the reference for keeping folder nodes separate
-from domain objects: folders use the shared row, while physical containers keep
-their module-owned box, plate, or tube leaf treatment.
+Modules keep ownership of their data, labels, and commands. Folder-based rails
+use `src/renderer/lib/folder-tree.js` for consistent node/leaf markup and
+expanded/collapsed state. The shared renderer deliberately accepts module-owned
+attributes and content so Papers, Biology Notebook, Sequence Viewer, Agent Chat,
+and Personal Inventory can keep their selection, rename, drag/drop, and domain
+actions without forking the tree structure. Physical Inventory containers retain
+their module-owned box, plate, or tube leaf treatment inside the shared branch.

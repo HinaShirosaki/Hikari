@@ -23,6 +23,7 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     reviewPrevBtn: byId(id('review-prev-btn')),
     reviewNextBtn: byId(id('review-next-btn')),
     reviewPageLabel: byId(id('review-page-label')),
+    questionDock: byId(id('question-dock')),
     input: byId(id('message-input')),
     quickPrompts: byId(id('quick-prompts')),
     attachmentInput: byId(id('attachment-input')),

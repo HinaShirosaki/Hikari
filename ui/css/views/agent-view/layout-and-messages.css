@@ -124,24 +124,9 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-session-folder-row {
-  appearance: none;
-  width: 100%;
-  min-height: var(--left-rail-item-min-height, 36px);
-  margin: 0;
-  border: 0;
-  background: transparent;
-  padding: 7px 8px;
-  display: grid;
-  grid-template-columns: 12px 18px minmax(0, 1fr) auto;
-  gap: 6px;
-  align-items: center;
-  text-align: left;
   color: var(--theme-text);
-  cursor: pointer;
 }
 
-.agent-session-folder-row:hover,
-.agent-session-folder-row:focus-visible,
 .agent-session-folder-row.is-chat-drop-target {
   background: var(--hikari-left-rail-list-hover);
   color: var(--theme-text-strong);
@@ -150,21 +135,6 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-session-folder-row.is-chat-drop-target {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 58%, transparent);
-}
-
-.agent-session-folder-chevron {
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 140ms ease;
-  opacity: 0.7;
-}
-
-.agent-session-folder-row.is-expanded .agent-session-folder-chevron,
-.agent-session-folder.is-expanded > .agent-session-folder-row .agent-session-folder-chevron {
-  transform: rotate(45deg) translate(-1px, -1px);
 }
 
 .agent-session-folder-name {
@@ -181,20 +151,6 @@ body.agent-view-fixed-scroll .workspace-main {
   line-height: 1;
 }
 
-.agent-session-folder-children {
-  display: grid;
-  gap: 2px;
-  padding: 0 0 2px 18px;
-}
-
-.agent-session-folder-children > .agent-session-card {
-  margin-left: -18px;
-  width: calc(100% + 18px);
-  max-width: calc(100% + 18px);
-  padding-left: 34px !important;
-  padding-right: 8px !important;
-}
-
 .agent-session-folder-empty {
   margin: 0;
   padding: 5px 8px 7px 34px;
@@ -208,31 +164,6 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-session-card.is-dragging {
   opacity: 0.58;
-}
-
-.agent-session-folder-row-editing {
-  grid-template-columns: 12px 18px minmax(0, 1fr) auto auto auto;
-  cursor: default;
-}
-
-.agent-session-folder-rename-input {
-  min-width: 0;
-  width: 100%;
-  height: 28px;
-  padding: 3px 6px;
-}
-
-.agent-session-folder-rename-btn {
-  border: 0;
-  background: transparent;
-  color: var(--theme-accent);
-  padding: 3px;
-  cursor: pointer;
-  font-size: 0.75rem;
-}
-
-.agent-session-folder-rename-btn.is-secondary {
-  color: var(--theme-text-muted);
 }
 
 .agent-session-context-menu {
@@ -683,11 +614,35 @@ body.agent-view-fixed-scroll .workspace-main {
   gap: 16px;
 }
 
+.agent-question-dock {
+  width: min(100%, 920px);
+  max-height: min(60vh, 560px);
+  margin: 0 auto;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.agent-question-dock[hidden] {
+  display: none;
+}
+
 .agent-user-question-card {
   display: grid;
-  gap: 12px;
-  padding: 14px 0 0 16px;
-  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 42%, var(--theme-border));
+  gap: 14px;
+  width: 100%;
+  padding: 18px 20px 20px;
+  border: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+}
+
+.agent-question-dock > .agent-user-question-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .agent-user-question-kicker {
@@ -714,19 +669,19 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-user-question-options {
   display: grid;
-  gap: 8px;
+  gap: 2px;
 }
 
 .agent-user-question-option {
   width: 100%;
-  min-height: 44px;
+  min-height: 40px;
   display: grid;
   gap: 3px;
   justify-items: start;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
   color: var(--theme-text-strong);
   text-align: left;
   font: inherit;
@@ -745,7 +700,6 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-user-question-option:hover,
 .agent-user-question-option:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-accent) 46%, var(--theme-border));
   background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
 }
 
@@ -755,7 +709,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-user-question-option:disabled,
-.agent-user-question-custom textarea:disabled,
+.agent-user-question-custom input:disabled,
 .agent-user-question-custom button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -765,26 +719,41 @@ body.agent-view-fixed-scroll .workspace-main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: end;
+  align-items: center;
+  padding-top: 4px;
 }
 
-.agent-user-question-custom textarea {
+.agent-user-question-custom-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.agent-user-question-custom input {
   width: 100%;
-  min-height: 44px;
-  max-height: 110px;
-  resize: vertical;
+  min-width: 0;
+  min-height: 42px;
   border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 10px;
+  padding: 9px 12px;
   background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
   color: var(--theme-text-strong);
   font: inherit;
   line-height: 1.45;
 }
 
-.agent-user-question-custom textarea:focus {
+.agent-user-question-custom input:focus {
   outline: none;
   border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+}
+
+.agent-user-question-custom .agent-send-icon-btn {
+  justify-self: end;
 }
 
 .agent-thinking-trace {
@@ -965,4 +934,3 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-meta-grid summary {
   color: var(--theme-text-strong);
 }
-

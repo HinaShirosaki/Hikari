@@ -188,6 +188,7 @@ const PANEL_HTML = `
           <label>Width (px)<input type="number" min="320" max="2000" step="1" data-cc="frameWidth" /></label>
           <label>Height (px)<input type="number" min="180" max="1200" step="1" data-cc="frameHeight" /></label>
         </div>
+        <p class="assay-chart-style-note">The framed plot area, not the whole figure &mdash; equal values give a square plot. Axis labels and titles sit outside it.</p>
       </div>
     </div>
 

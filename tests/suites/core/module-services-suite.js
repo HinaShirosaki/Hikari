@@ -390,6 +390,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         'unsaved-changes-overlay',
         'unsaved-changes-list',
         'unsaved-changes-status',
+        'unsaved-changes-close-btn',
         'unsaved-changes-cancel-btn',
         'unsaved-changes-discard-btn',
         'unsaved-changes-save-btn'
@@ -439,10 +440,17 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         ['Sample', 'Protocol']
       );
 
+      elements.get('unsaved-changes-close-btn').click();
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
+      assert.deepEqual(responses, ['cancel']);
+
+      service.handleCloseRequested();
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
+
       await service.saveAndQuit();
 
       assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
-      assert.deepEqual(responses, ['quit']);
+      assert.deepEqual(responses, ['cancel', 'quit']);
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
     });
   }

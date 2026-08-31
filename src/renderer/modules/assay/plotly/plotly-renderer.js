@@ -38,11 +38,10 @@ function legendLayout(position, font) {
 // labels/title plus the right margin, which do not scale with the category count.
 const MIN_PLOT_WIDTH = 240;
 const MAX_PLOT_WIDTH = 900;
-const AXIS_GUTTER = 110;
 const HOST_PADDING = 24;
 const LABEL_GAP = 4;
-const MIN_FRAME_HEIGHT = 250;
-const MAX_FRAME_HEIGHT = 400;
+const MIN_PLOT_HEIGHT = 180;
+const MAX_PLOT_HEIGHT = 320;
 
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -70,25 +69,65 @@ function explicitRange(range) {
   return null;
 }
 
-// Axis title placement. Plotly's own axis title is centred on the axis and only
-// exposes `standoff` (distance from the axis), so sliding a title along its axis needs
-// a paper-anchored annotation instead -- paper 0..1 spans the plot area, so the title
-// tracks the plot as it resizes.
-const DEFAULT_TITLE_SHIFT = { x: 38, y: 52 };
-function axisTitle(text, font, pos, offset, isY) {
-  const title = { text, font };
-  if (Number.isFinite(offset)) {
-    title.standoff = offset;
+// Axis titles are annotations, not Plotly axis titles. Plotly's own axis title is
+// locked to the centre of its axis and only exposes `standoff`, so it can be neither
+// slid along the axis nor dragged. An annotation can be both -- and with
+// `edits.annotationPosition` it is a text box the user drags on the figure.
+//
+// Position is held entirely in paper coordinates (0..1 spans the plot area) so a drag
+// round-trips: Plotly reports the dropped x/y, and titleEditPatch turns them straight
+// back into the same `pos` / `offset` the text boxes hold.
+const DEFAULT_TITLE_SHIFT = { x: 34, y: 46 };
+function titleShift(offset, isY) {
+  return Number.isFinite(offset) ? offset : (isY ? DEFAULT_TITLE_SHIFT.y : DEFAULT_TITLE_SHIFT.x);
+}
+
+function axisTitleAnnotation(text, font, pos, offset, isY, plotWidth, plotHeight) {
+  const along = Number.isFinite(pos) ? pos : 0.5;
+  const shift = titleShift(offset, isY);
+  const base = {
+    text,
+    font,
+    xref: 'paper',
+    yref: 'paper',
+    xanchor: 'center',
+    yanchor: 'middle',
+    showarrow: false
+  };
+  return isY
+    ? { ...base, x: -(shift / Math.max(1, plotWidth)), y: along, textangle: -90 }
+    : { ...base, x: along, y: -(shift / Math.max(1, plotHeight)) };
+}
+
+// Turns a Plotly relayout payload from a dragged/renamed title back into a style patch.
+// annotations[0] is the X title and annotations[1] the Y title -- the order render()
+// builds them in.
+export function titleEditPatch(event, geometry) {
+  const patch = {};
+  if (!event || !geometry) {
+    return patch;
   }
-  if (!Number.isFinite(pos)) {
-    return { title, annotation: null };
-  }
-  const shift = Number.isFinite(offset) ? offset : (isY ? DEFAULT_TITLE_SHIFT.y : DEFAULT_TITLE_SHIFT.x);
-  const base = { text, font, xref: 'paper', yref: 'paper', showarrow: false };
-  const annotation = isY
-    ? { ...base, x: 0, y: pos, xanchor: 'right', yanchor: 'middle', xshift: -shift, textangle: -90 }
-    : { ...base, x: pos, y: 0, xanchor: 'center', yanchor: 'top', yshift: -shift };
-  return { title: { text: '', font }, annotation };
+  const { plotWidth, plotHeight } = geometry;
+  const read = (key) => {
+    const value = event[key];
+    return Number.isFinite(value) ? value : null;
+  };
+  const clamp01 = (value) => Math.round(Math.max(0, Math.min(1, value)) * 100) / 100;
+  const distance = (value, span) => Math.max(0, Math.round(-value * span));
+
+  const xAlong = read('annotations[0].x');
+  if (xAlong !== null) patch.xTitlePos = clamp01(xAlong);
+  const xAway = read('annotations[0].y');
+  if (xAway !== null) patch.xTitleOffset = distance(xAway, plotHeight);
+  if (typeof event['annotations[0].text'] === 'string') patch.xTitle = event['annotations[0].text'];
+
+  const yAlong = read('annotations[1].y');
+  if (yAlong !== null) patch.yTitlePos = clamp01(yAlong);
+  const yAway = read('annotations[1].x');
+  if (yAway !== null) patch.yTitleOffset = distance(yAway, plotWidth);
+  if (typeof event['annotations[1].text'] === 'string') patch.yTitle = event['annotations[1].text'];
+
+  return patch;
 }
 
 function serializeSvgToDataUrl(svgElement) {
@@ -117,8 +156,15 @@ function serializeSvgToDataUrl(svgElement) {
 // chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?,points?}], markers? }] }
 // data[].points = the group's raw replicates, dotted over a single-series bar (Prism style).
 // Plotly is loaded as a window global by index.html.
-export function createAssayPlotlyRenderer() {
+export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
   let chartHost = null;
+  // A dragged title reports paper coordinates, which only mean pixels against the plot
+  // area it was dropped on.
+  let titleGeometry = null;
+  let editBoundHost = null;
+  // The host is a fixed-size canvas, so its box is not the figure's -- exports have to
+  // use the size the figure was actually drawn at.
+  let chartSize = null;
 
   const getPlotly = () => (typeof window !== 'undefined' ? window.Plotly : null);
 
@@ -128,6 +174,9 @@ export function createAssayPlotlyRenderer() {
       Plotly.purge(chartHost);
     }
     chartHost = null;
+    chartSize = null;
+    titleGeometry = null;
+    editBoundHost = null;
   }
 
   // ponytail: best-effort sync thumbnail from the rendered SVG. For full-fidelity
@@ -279,26 +328,35 @@ export function createAssayPlotlyRenderer() {
       }
     });
 
-    // The frame follows the data: room per bar (or per point) plus the axis gutters, and a
-    // height tied to that width. A flat 420x280 floor left the axis running well past the
-    // last bar on a two-group summary, and a flat 280 height turned a 24-category plot
-    // into a letterbox.
+    // Everything below is sized in plot-area terms, and the margins are added back on
+    // top at the end. Plotly's width/height are the whole figure, so sizing the figure
+    // instead would let a pushed-out axis title eat the plot rather than grow the frame.
+    // The plot area follows the data: room per bar (or per point), and a height tied to
+    // that width. A flat 420x280 floor left the axis running well past the last bar on a
+    // two-group summary, and a flat 280 height turned a 24-category plot into a letterbox.
+    const marginLeft = Math.max(70, titleShift(st.yTitleOffset, true) + 26);
+    const marginRight = 24;
+    const marginTop = st.title ? 44 : 24;
     const categoryCount = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0) || 1;
     // Grouped bars share a category slot, so the slot grows with the series count -- but
     // only up to a point, past which the bars thin out instead of the plot getting wider.
     const slotWidth = isBar ? 34 + 30 * Math.min(chartModel.series.length, 4) : 44;
-    const plotWidth = clampNumber(categoryCount * slotWidth, MIN_PLOT_WIDTH, MAX_PLOT_WIDTH);
     // Never wider than the fixed canvas it sits in: many categories thin the bars out
     // rather than pushing the figure into a scrollbar.
     const available = Math.floor((target.clientWidth || target.parentElement?.clientWidth || 0) - HOST_PADDING);
-    const widthCap = available > MIN_PLOT_WIDTH + AXIS_GUTTER
-      ? Math.min(MAX_PLOT_WIDTH + AXIS_GUTTER, available)
-      : MAX_PLOT_WIDTH + AXIS_GUTTER;
-    const autoWidth = Math.min(Math.round(plotWidth + AXIS_GUTTER), widthCap);
-    const autoHeight = clampNumber(Math.round(autoWidth * 0.62), MIN_FRAME_HEIGHT, MAX_FRAME_HEIGHT);
+    const widthCap = available > MIN_PLOT_WIDTH + marginLeft + marginRight
+      ? Math.min(MAX_PLOT_WIDTH, available - marginLeft - marginRight)
+      : MAX_PLOT_WIDTH;
+    const autoWidth = Math.min(clampNumber(categoryCount * slotWidth, MIN_PLOT_WIDTH, MAX_PLOT_WIDTH), widthCap);
+    // The control promises a plot size, so a custom value is the plot area: equal
+    // numbers give an actually square plot.
     const useCustomSize = st.sizeAuto === false;
-    const width = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : autoWidth;
-    const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : autoHeight;
+    const customPlotWidth = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : null;
+    const customPlotHeight = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : null;
+    const exactSize = customPlotWidth !== null || customPlotHeight !== null;
+    const plotAreaWidth = customPlotWidth ?? autoWidth;
+    const autoHeight = clampNumber(Math.round(plotAreaWidth * 0.62), MIN_PLOT_HEIGHT, MAX_PLOT_HEIGHT);
+    const plotAreaHeight = customPlotHeight ?? autoHeight;
 
     const tickMark = st.tickDir === 'none' ? '' : (st.tickDir || 'outside');
     const tickLen = Number.isFinite(st.tickLen) ? st.tickLen : 5;
@@ -324,24 +382,31 @@ export function createAssayPlotlyRenderer() {
     const longestCategory = !isBar ? 0 : chartModel.series.reduce((max, series) => (series.data || [])
       .reduce((inner, point) => Math.max(inner, String(point.x ?? '').length), max), 0);
     const labelWidth = longestCategory * (tickFont.size || 12) * 0.62;
-    const categorySlot = (width - AXIS_GUTTER) / categoryCount;
+    const categorySlot = plotAreaWidth / categoryCount;
     const categoryTickAngle = isBar && labelWidth + LABEL_GAP > categorySlot ? -35 : 0;
 
-    // An explicit axis title wins; otherwise the analysis names its own axes.
+    // An explicit axis title wins; otherwise the analysis names its own axes. Both are
+    // drawn as annotations (see axisTitleAnnotation), so the axes themselves stay untitled.
     const axisTitles = [
-      axisTitle(st.xTitle || chartModel.xLabel || '', font, st.xTitlePos, st.xTitleOffset, false),
-      axisTitle(st.yTitle || chartModel.yLabel || '', font, st.yTitlePos, st.yTitleOffset, true)
+      axisTitleAnnotation(st.xTitle || chartModel.xLabel || '', font,
+        st.xTitlePos, st.xTitleOffset, false, plotAreaWidth, plotAreaHeight),
+      axisTitleAnnotation(st.yTitle || chartModel.yLabel || '', font,
+        st.yTitlePos, st.yTitleOffset, true, plotAreaWidth, plotAreaHeight)
     ];
     const xaxis = {
       ...axisBase,
-      title: axisTitles[0].title,
+      // automargin grows the margin into the plot area, which would shrink the exact
+      // size that was asked for. In auto mode it still guards against clipped labels.
+      automargin: !exactSize,
+      title: { text: '', font },
       type: xScaleCfg.type,
       showgrid: st.showVerticalGrid === true,
       tickangle: categoryTickAngle
     };
     const yaxis = {
       ...axisBase,
-      title: axisTitles[1].title,
+      automargin: !exactSize,
+      title: { text: '', font },
       type: yScaleCfg.type,
       showgrid: st.showHorizontalGrid === true
     };
@@ -368,15 +433,21 @@ export function createAssayPlotlyRenderer() {
     if (yMinor) yaxis.minor = yMinor;
 
     const showlegend = st.legendPosition !== 'none' && chartModel.series.length > 1;
+    const margin = {
+      l: marginLeft,
+      r: marginRight,
+      t: marginTop,
+      // Only known once the tick angle is: tilted category labels need the deeper gutter.
+      b: Math.max(categoryTickAngle ? 96 : 56, titleShift(st.xTitleOffset, false) + 26)
+    };
+    // The figure carries the margins on top of the plot, so pushing a title further out
+    // grows the frame instead of squeezing the plot.
+    const width = plotAreaWidth + margin.l + margin.r;
+    const height = plotAreaHeight + margin.t + margin.b;
     const layout = {
       width,
       height,
-      margin: {
-        l: Math.max(70, Number.isFinite(st.yTitleOffset) ? st.yTitleOffset + 26 : 0),
-        r: 24,
-        t: st.title ? 44 : 24,
-        b: Math.max(categoryTickAngle ? 96 : 56, Number.isFinite(st.xTitleOffset) ? st.xTitleOffset + 26 : 0)
-      },
+      margin,
       paper_bgcolor: bgColor,
       plot_bgcolor: bgColor,
       font,
@@ -389,10 +460,7 @@ export function createAssayPlotlyRenderer() {
       bargap: PRISM_BAR_GAP,
       bargroupgap: PRISM_BAR_GROUP_GAP
     };
-    const annotations = axisTitles.map((item) => item.annotation).filter(Boolean);
-    if (annotations.length) {
-      layout.annotations = annotations;
-    }
+    layout.annotations = axisTitles;
     const shapes = prismFrameShapes(st);
     if (st.title) {
       layout.title = { text: st.title, font, x: 0.5, xanchor: 'center' };
@@ -414,8 +482,26 @@ export function createAssayPlotlyRenderer() {
     }
 
     // react() diffs against what is already drawn instead of rebuilding the node.
-    Plotly.react(target, traces, layout, { displayModeBar: false, responsive: false });
+    Plotly.react(target, traces, layout, {
+      displayModeBar: false,
+      responsive: false,
+      // The axis titles are the only annotations, so this makes exactly them draggable
+      // and renameable in place -- the text-box handling of the title.
+      edits: { annotationPosition: true, annotationText: true }
+    });
     chartHost = target;
+    chartSize = { width, height };
+    titleGeometry = { plotWidth: plotAreaWidth, plotHeight: plotAreaHeight };
+    // Plotly re-emits on every redraw, so bind once per host or a drag stacks handlers.
+    if (typeof onTitleEdit === 'function' && editBoundHost !== target && typeof target.on === 'function') {
+      editBoundHost = target;
+      target.on('plotly_relayout', (event) => {
+        const patch = titleEditPatch(event, titleGeometry);
+        if (Object.keys(patch).length) {
+          onTitleEdit(patch);
+        }
+      });
+    }
     return {
       seriesLabels: chartModel.series.map((s) => String(s.label || '')),
       chartType: isBar ? 'bar' : 'line',
@@ -430,11 +516,10 @@ export function createAssayPlotlyRenderer() {
     if (!chartHost || typeof Plotly?.toImage !== 'function') {
       return Promise.resolve('');
     }
-    const rect = chartHost.getBoundingClientRect?.() || { width: 900, height: 500 };
     return Plotly.toImage(chartHost, {
       format: format === 'svg' ? 'svg' : 'png',
-      width: Math.max(320, Math.round(rect.width) || 900),
-      height: Math.max(180, Math.round(rect.height) || 500),
+      width: Math.max(320, Math.round(chartSize?.width) || 900),
+      height: Math.max(180, Math.round(chartSize?.height) || 500),
       scale: format === 'svg' ? 1 : 2
     });
   }

@@ -1,4 +1,5 @@
 import { cleanText } from '../shared.js';
+import { startInlineRename } from '../../../lib/folder-tree.js';
 
 // Right-click menu, inline rename, and folder create/delete/move for the
 // sequence library list on the home page.
@@ -16,7 +17,6 @@ function createLibraryMenus({
 } = {}) {
   let libraryContextType = '';
   let libraryContextId = '';
-  let libraryRename = null;
 
   function compactElementList(...items) {
     const seen = new Set();
@@ -88,10 +88,20 @@ function createLibraryMenus({
       .find((item) => cleanText(item?.id, 200) === cleanText(id, 200)) || null;
   }
 
-  function focusLibraryRenameInput() {
-    const input = libraryRename?.list?.querySelector?.('[data-sequence-library-rename-input]');
-    input?.focus?.();
-    input?.setSelectionRange?.(0, String(input?.value || '').length);
+  // The list re-renders before the input goes in, so the row has to be looked
+  // up again rather than reusing the element the event came from.
+  function findLibraryRow(type, id, libraryList) {
+    const attribute = type === 'folder' ? 'data-sequence-folder-main' : 'data-sequence-entry-id';
+    const key = type === 'folder' ? 'sequenceFolderMain' : 'sequenceEntryId';
+    const lists = libraryList ? [libraryList] : getLibraryListElements();
+    for (const list of lists) {
+      const row = Array.from(list?.querySelectorAll?.(`[${attribute}]`) || [])
+        .find((item) => cleanText(item?.dataset?.[key], 200) === cleanText(id, 200));
+      if (row) {
+        return row;
+      }
+    }
+    return null;
   }
 
   function beginLibraryRename(type, id, libraryList) {
@@ -100,14 +110,15 @@ function createLibraryMenus({
     if (!target) {
       return;
     }
-    libraryRename = {
-      type,
-      id: cleanText(target.id, 200),
-      name: String(target.name || (type === 'folder' ? 'Folder' : 'sequence')),
-      list: libraryList
-    };
     renderLibraryList();
-    focusLibraryRenameInput();
+    startInlineRename(findLibraryRow(type, target.id, libraryList), {
+      value: String(target.name || (type === 'folder' ? 'Folder' : 'sequence')),
+      maxLength: 140,
+      label: `Rename ${type === 'folder' ? 'folder' : 'sequence'}`,
+      onCommit: (nextName) => {
+        void commitLibraryRename(type, cleanText(target.id, 200), nextName);
+      }
+    });
   }
 
   // Folder names are unique in the store, so the placeholder has to be too.
@@ -121,15 +132,14 @@ function createLibraryMenus({
     return suffix === 1 ? 'New Folder' : `New Folder ${suffix}`;
   }
 
-  async function commitLibraryRename() {
-    const { type, id } = libraryRename || {};
-    const nextName = normalizePromptName(libraryRename?.name);
-    if (!type || !id) {
+  async function commitLibraryRename(type, id, rawName) {
+    const nextName = normalizePromptName(rawName);
+    const target = getLibraryRenameTarget(type, id);
+    if (!type || !id || nextName === String(target?.name || '')) {
       return;
     }
     if (!nextName) {
       setHomeStatus(`Enter a ${type === 'folder' ? 'folder' : 'sequence'} name.`, true);
-      focusLibraryRenameInput();
       return;
     }
     try {
@@ -139,11 +149,9 @@ function createLibraryMenus({
       } else {
         await onRenameLibraryEntry(id, nextName);
       }
-      libraryRename = null;
       renderLibraryList();
     } catch (error) {
       setHomeStatus(error?.message || `Failed to rename sequence ${type}.`, true);
-      focusLibraryRenameInput();
     }
   }
 
@@ -218,12 +226,8 @@ function createLibraryMenus({
 
   async function moveLibraryEntry(entryId, folderId) {
     try {
-      const moved = await onMoveLibraryEntry(entryId, folderId);
-      const folder = (Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
-        .find((item) => cleanText(item?.id, 200) === cleanText(folderId, 200));
-      setHomeStatus(folder
-        ? `Moved ${moved?.name || 'sequence'} to ${folder.name}.`
-        : `Moved ${moved?.name || 'sequence'} out of its folder.`);
+      await onMoveLibraryEntry(entryId, folderId);
+      setHomeStatus('');
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to move sequence entry.', true);
     }
@@ -244,12 +248,7 @@ function createLibraryMenus({
     deleteLibraryFolderFromContextMenu,
     moveLibraryEntryFromContextMenu,
     moveLibraryEntry,
-    getLibraryContextId: () => libraryContextId,
-    getLibraryRename: () => libraryRename,
-    setLibraryRename(next) {
-      libraryRename = next;
-      return libraryRename;
-    }
+    getLibraryContextId: () => libraryContextId
   };
 }
 

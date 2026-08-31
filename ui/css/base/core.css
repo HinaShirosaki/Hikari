@@ -623,6 +623,25 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   border-radius: 14px;
 }
 
+.universal-agent-chat-rail .agent-question-dock {
+  width: 100%;
+  max-height: min(42vh, 360px);
+  border-radius: 14px;
+}
+
+.universal-agent-chat-rail .agent-user-question-card {
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.universal-agent-chat-rail .agent-send-icon-btn {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+
 .universal-agent-chat-rail .agent-composer-card textarea {
   --agent-composer-min-height: 54px;
   --agent-composer-max-height: 150px;

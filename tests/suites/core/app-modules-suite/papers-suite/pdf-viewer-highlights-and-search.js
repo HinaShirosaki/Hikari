@@ -472,8 +472,12 @@ test('papers detail rail fold highlights cover their complete controls', () => {
 
   assert.match(css, /\.papers-section-toggle\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*32px;[^}]*padding:\s*5px 6px;/s);
   assert.match(css, /\.papers-section-toggle:hover,\s*\.papers-section-toggle:focus-visible\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--theme-accent-soft\) 70%, transparent\);/s);
-  assert.match(css, /\.papers-comment-panel\s*\{[^}]*grid-template-columns:\s*28px minmax\(0, 1fr\);[^}]*gap:\s*0;/s);
-  assert.match(css, /\.papers-comment-toggle\s*\{[^}]*width:\s*28px;[^}]*height:\s*32px;[^}]*top:\s*18px;/s);
+  assert.match(css, /\.papers-stage\s*\{[^}]*grid-template-columns:[^;}]+;[^}]*gap:\s*8px;/s);
+  assert.match(css, /\.papers-comment-panel\s*\{[^}]*grid-template-areas:\s*'sidebar toggle';[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 28px;[^}]*grid-template-rows:\s*minmax\(0, 1fr\);[^}]*gap:\s*0;[^}]*height:\s*100%;/s);
+  assert.match(css, /\.papers-comment-toggle\s*\{[^}]*width:\s*28px;[^}]*height:\s*32px;[^}]*top:\s*18px;[^}]*grid-area:\s*toggle;/s);
+  assert.match(css, /\.papers-layout\.is-comments-collapsed \.papers-comment-panel\s*\{[^}]*grid-template-areas:\s*'toggle';[^}]*grid-template-columns:\s*28px;/s);
+  assert.match(css, /\.papers-comment-sidebar\s*\{[^}]*grid-area:\s*sidebar;[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s);
+  assert.match(css, /\.papers-right-column\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\);[^}]*align-content:\s*stretch;[^}]*overflow:\s*hidden;[^}]*scrollbar-gutter:\s*auto;[^}]*padding-right:\s*0;/s);
   assert.match(css, /\.papers-comment-toggle:hover,\s*\.papers-comment-toggle:focus-visible\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--theme-accent-soft\) 70%, transparent\);/s);
 });
 test('papers selection search popover dismisses on outside document pointer down', () => {

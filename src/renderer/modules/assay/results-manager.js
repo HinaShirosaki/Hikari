@@ -396,8 +396,7 @@ export function createAssayResultsManager({
       setResultStatus('Drop a CSV or Excel result file to attach it.');
     },
     onError: (error) => {
-      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'));
-      showTransientNotice(String(error?.message || error || 'Unable to import the dropped result file.'), { type: 'error' });
+      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'), true);
     }
   });
 

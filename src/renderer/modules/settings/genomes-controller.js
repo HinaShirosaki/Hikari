@@ -3,6 +3,8 @@
 // The registry itself lives in the main process (src/main/core/services/create-genome-service.js).
 // Nothing here ever handles a filesystem path: addGenome opens the native picker in main, and the
 // renderer only ever holds genome ids.
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function createGenomesController({
   api,
   statusElement,
@@ -13,7 +15,10 @@ export function createGenomesController({
   let statusMessage = '';
   let busy = false;
 
-  function setStatus(message) {
+  function setStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     statusMessage = String(message || '');
     render();
   }
@@ -35,7 +40,7 @@ export function createGenomesController({
   async function refresh() {
     if (!api?.listGenomes) {
       genomes = [];
-      setStatus('Genome connections are unavailable in this environment.');
+      setStatus('Genome connections are unavailable in this environment.', true);
       return;
     }
     const response = await api.listGenomes();
@@ -45,7 +50,7 @@ export function createGenomesController({
 
   async function onAddGenome() {
     if (!api?.addGenome) {
-      setStatus('Genome connections are unavailable in this environment.');
+      setStatus('Genome connections are unavailable in this environment.', true);
       return;
     }
     if (busy) {
@@ -61,7 +66,7 @@ export function createGenomesController({
         return;
       }
       if (response?.ok !== true) {
-        setStatus(response?.error || 'Failed to connect that genome file.');
+        setStatus(response?.error || 'Failed to connect that genome file.', true);
         return;
       }
       await refresh();
@@ -77,7 +82,7 @@ export function createGenomesController({
     }
     const response = await api.removeGenome(id);
     if (response?.ok !== true) {
-      setStatus(response?.error || 'Failed to disconnect that genome.');
+      setStatus(response?.error || 'Failed to disconnect that genome.', true);
       return;
     }
     await refresh();

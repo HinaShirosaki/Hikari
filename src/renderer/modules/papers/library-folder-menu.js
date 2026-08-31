@@ -1,5 +1,6 @@
 import { buildFolderKey, getLibraryFolders } from './model.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { startInlineRename } from '../../lib/folder-tree.js';
 
 // The journal-club folder rail's context menu and drag-and-drop: create,
 // rename, delete a folder, and validate a paper drop onto one.
@@ -17,11 +18,6 @@ function createLibraryFolderMenu({
   setFolderExpanded,
   renderLibrarySidebar
 } = {}) {
-  function clearFolderRenameState() {
-    libraryState.renamingFolderKey = '';
-    libraryState.renamingFolderName = '';
-  }
-
   function getRenameableFolder(folderKey = '') {
     const normalizedKey = String(folderKey || '').trim();
     if (!normalizedKey) {
@@ -94,10 +90,6 @@ function createLibraryFolderMenu({
 
   function onGlobalKeydown(event) {
     if (event?.key === 'Escape') {
-      if (libraryState.renamingFolderKey) {
-        cancelFolderRename();
-        return;
-      }
       hideLibraryContextMenu();
     }
   }
@@ -186,16 +178,11 @@ function createLibraryFolderMenu({
     createJournalClubFolder({ name: buildDefaultFolderName() });
   }
 
-  function focusRenameInput() {
-    if (typeof windowRef?.requestAnimationFrame !== 'function') {
-      return;
-    }
-    windowRef.requestAnimationFrame(() => {
-      const renameInput = elements.journalClubList?.querySelector?.('[data-folder-rename-input]');
-      renameInput?.focus?.();
-      const value = String(renameInput?.value || '');
-      renameInput?.setSelectionRange?.(0, value.length);
-    });
+  // The rail re-renders before the input goes in, so the row has to be looked
+  // up again rather than reusing the element the event came from.
+  function findFolderMain(folderKey) {
+    return Array.from(elements.journalClubList?.querySelectorAll?.('[data-folder-select]') || [])
+      .find((item) => item?.dataset?.folderSelect === folderKey) || null;
   }
 
   function beginFolderRename(folderKey = '') {
@@ -207,10 +194,12 @@ function createLibraryFolderMenu({
     hideLibraryContextMenu();
     libraryState.selectedFolderKey = folder.key;
     setFolderExpanded(folder.key, true);
-    libraryState.renamingFolderKey = folder.key;
-    libraryState.renamingFolderName = folder.name;
     renderLibrarySidebar(folder.key);
-    focusRenameInput();
+    startInlineRename(findFolderMain(folder.key), {
+      value: folder.name,
+      label: 'Rename folder',
+      onCommit: (nextName) => commitFolderRename(folder.key, nextName)
+    });
   }
 
   function validateRenamedFolderName(nextName = '', currentFolderId = '') {
@@ -237,40 +226,26 @@ function createLibraryFolderMenu({
     };
   }
 
-  function commitFolderRename(folderKey = '') {
-    const folder = getRenameableFolder(folderKey || libraryState.renamingFolderKey);
-    if (!folder) {
-      clearFolderRenameState();
-      renderLibrarySidebar(libraryState.selectedFolderKey);
+  function commitFolderRename(folderKey = '', rawName = '') {
+    const folder = getRenameableFolder(folderKey);
+    if (!folder || String(rawName || '').trim() === folder.name) {
       return;
     }
 
-    const validation = validateRenamedFolderName(libraryState.renamingFolderName, folder.id);
+    const validation = validateRenamedFolderName(rawName, folder.id);
     if (!validation.ok) {
       showTransientNotice(validation.error, { type: 'error' });
-      focusRenameInput();
       return;
     }
 
     const journalClub = (state.journalClubs || []).find((club) => String(club?.id || '').trim() === String(folder.id || '').trim()) || null;
     if (!journalClub) {
-      clearFolderRenameState();
-      renderLibrarySidebar(libraryState.selectedFolderKey);
       return;
     }
 
     journalClub.name = validation.name;
-    clearFolderRenameState();
     persist();
     renderLibrarySidebar(folder.key);
-  }
-
-  function cancelFolderRename() {
-    if (!libraryState.renamingFolderKey) {
-      return;
-    }
-    clearFolderRenameState();
-    renderLibrarySidebar(libraryState.selectedFolderKey);
   }
 
   function onRenameJournalClubFromMenu() {
@@ -313,7 +288,6 @@ function createLibraryFolderMenu({
   }
 
   return {
-    clearFolderRenameState,
     getRenameableFolder,
     findFolderTarget,
     hideLibraryContextMenu,
@@ -328,11 +302,8 @@ function createLibraryFolderMenu({
     buildDefaultFolderName,
     createJournalClubFolder,
     onCreateJournalClubFromMenu,
-    focusRenameInput,
     beginFolderRename,
     validateRenamedFolderName,
-    commitFolderRename,
-    cancelFolderRename,
     onRenameJournalClubFromMenu,
     onDeleteJournalClubFromMenu,
     onCreateJournalClubFromMenuClick,

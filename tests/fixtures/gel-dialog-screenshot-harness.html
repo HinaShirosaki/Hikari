@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gel Dialog Screenshot Harness</title>
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/base/palette.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/base/core.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/themes/modes.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/views/gel-palette.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/views/gel-view.css?v=dialog-screenshot-1" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/overrides/cross-view-fixes.css" />
+  <link rel="stylesheet" href="../../src/plugins/gel/vendor/css/overrides/universal-dialogs.css?v=dialog-screenshot-1" />
+</head>
+<body class="plugin-gel">
+  <p id="harness-status" role="status">Loading dialog…</p>
+  <script type="module">
+    const params = new URLSearchParams(window.location.search);
+    const dialogId = params.get('dialog') || 'gel-report-overlay';
+    const response = await fetch(`../../src/plugins/gel/vendor/gel-view.html?v=dialog-screenshot-1`);
+    const template = document.createElement('template');
+    template.innerHTML = await response.text();
+    document.body.replaceChildren(template.content.cloneNode(true));
+
+    document.querySelectorAll('.app-dialog-overlay').forEach((overlay) => {
+      overlay.hidden = true;
+    });
+    const target = document.getElementById(dialogId);
+    if (!target) {
+      throw new Error(`Unknown Gel dialog: ${dialogId}`);
+    }
+    target.hidden = false;
+    let ancestor = target.parentElement;
+    while (ancestor) {
+      ancestor.hidden = false;
+      if (ancestor.classList.contains('view')) {
+        ancestor.classList.add('is-active');
+      }
+      ancestor = ancestor.parentElement;
+    }
+
+    document.documentElement.dataset.dialogQaReady = 'true';
+    document.documentElement.dataset.dialogQaId = dialogId;
+  </script>
+</body>
+</html>

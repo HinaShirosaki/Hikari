@@ -195,12 +195,18 @@ export function createAgentChatShellController({
     const shouldStickToBottom = options.forceScroll === true
       || dom.historyNode.childElementCount === 0
       || isHistoryNearBottom();
+    if (dom.questionDock) {
+      const questionHtml = renderingModule.renderActiveUserQuestion(visibleMessages, safeText);
+      dom.questionDock.innerHTML = questionHtml;
+      dom.questionDock.hidden = !questionHtml;
+    }
     renderingModule.renderHistory({
       historyNode: dom.historyNode,
       messages: visibleMessages,
       state,
       safeText,
-      notebookDraftAdapter
+      notebookDraftAdapter,
+      showUserQuestions: !dom.questionDock
     });
     if (shouldStickToBottom) {
       scrollHistoryToBottom(options.smoothScroll === true);

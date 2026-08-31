@@ -59,19 +59,28 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
       ` : ''}
       ${question.allow_custom ? `
         <div class="agent-user-question-custom">
-          <textarea
-            rows="2"
-            data-agent-question-custom-input="${safeText(messageKey)}"
-            placeholder="${safeText(question.placeholder)}"
-            ${disabledAttr}
-          ></textarea>
+          <label class="agent-user-question-custom-field">
+            <span>Other</span>
+            <input
+              type="text"
+              data-agent-question-custom-input="${safeText(messageKey)}"
+              placeholder="${safeText(question.placeholder)}"
+              ${disabledAttr}
+            />
+          </label>
           <button
             type="button"
-            class="primary-btn"
+            class="primary-btn agent-send-icon-btn"
             data-agent-question-submit="${safeText(messageKey)}"
+            aria-label="${safeText(question.submit_label)}"
+            title="${safeText(question.submit_label)}"
             ${disabledAttr}
           >
-            ${safeText(question.submit_label)}
+            <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <path d="M12 19V5"></path>
+              <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+            </svg>
+            <span class="sr-only">${safeText(question.submit_label)}</span>
           </button>
         </div>
       ` : ''}

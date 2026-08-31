@@ -50,7 +50,8 @@ LEGACY.forEach((method) => {
   assert.ok(spec.analysis, `${method} migrates to an analysis`);
 });
 assert.equal(specFromLegacyMethod('ec50').analysis, 'sigmoidal', 'ec50 -> sigmoidal');
-assert.equal(specFromLegacyMethod('ec50').xTransform, 'log10', 'ec50 keeps its log dose axis');
+assert.equal(specFromLegacyMethod('ec50').xAxis, 'concentration', 'ec50 keeps its dose axis');
+assert.ok(!('xTransform' in specFromLegacyMethod('ec50')), 'the X transform is gone from the spec');
 assert.equal(
   JSON.stringify(specFromLegacyMethod('ec50')),
   JSON.stringify(specFromLegacyMethod('ic50')),
@@ -125,8 +126,7 @@ const sigmoid = analyzeAssayData({
   spec: {
     analysis: 'sigmoidal',
     groupBy: 'sample_concentration',
-    xAxis: 'concentration',
-    xTransform: 'log10'
+    xAxis: 'concentration'
   },
   observations: doseCurve
 });

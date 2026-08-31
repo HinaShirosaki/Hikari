@@ -1,4 +1,8 @@
 import { getContainerTypeLabel } from './constants.js';
+import {
+  renderFolderTreeLeaf,
+  renderFolderTreeNode
+} from '../../lib/folder-tree.js';
 
 export function installSectionNavigation(ctx) {
   const { helpers, safeText, state, uiState } = ctx;
@@ -46,24 +50,25 @@ export function installSectionNavigation(ctx) {
       && uiState.selectedContainer.containerId === container.id;
     const sampleCount = helpers.getContainerSampleCount(section, container.id);
     const glyphType = getContainerGlyphType(container);
-    return `
-      <div class="inventory-container-tree-node folder-tree-template__leaf" data-container-node="${safeText(container.id)}">
-        <button
-          type="button"
-          class="inventory-container-btn${isActive ? ' active' : ''}"
-          data-container-open="${safeText(container.id)}"
-          data-section="${safeText(section)}"
-          title="${safeText(getContainerTypeLabel(container))}"
-        >
+    return renderFolderTreeLeaf({
+      active: Boolean(isActive),
+      wrapperClass: 'inventory-container-tree-node',
+      wrapperAttributes: { 'data-container-node': container.id },
+      controlClass: `inventory-container-btn${isActive ? ' active' : ''}`,
+      controlAttributes: {
+        'data-container-open': container.id,
+        'data-section': section,
+        title: getContainerTypeLabel(container)
+      },
+      contentHtml: `
           <span class="inventory-container-glyph inventory-container-glyph-${safeText(glyphType)}" aria-hidden="true"></span>
           <span class="inventory-container-copy">
             <span class="inventory-container-name">${safeText(container.name)}</span>
             <span class="inventory-container-type">${safeText(getContainerTypeLabel(container))}</span>
           </span>
           <span class="inventory-container-count">${safeText(String(sampleCount))}</span>
-        </button>
-      </div>
-    `;
+      `
+    });
   }
 
   function renderFolderNode(section, folder, renderedFolderIds) {
@@ -81,45 +86,43 @@ export function installSectionNavigation(ctx) {
       ...childFolders.map((child) => renderFolderNode(section, child, renderedFolderIds)),
       ...childContainers.map((container) => renderContainerLeaf(section, container))
     ].filter(Boolean).join('');
-    return `
-      <div class="inventory-folder-tree-node folder-tree-template__node" data-inventory-folder-node="${safeText(folder.id)}">
-        <div class="inventory-folder-item folder-tree-template__row">
-          ${hasChildren ? `
-            <button
-              type="button"
-              class="inventory-folder-toggle folder-tree-template__disclosure"
-              data-inventory-folder-toggle="${safeText(folder.id)}"
-              data-section="${safeText(section)}"
-              aria-expanded="${isExpanded ? 'true' : 'false'}"
-              aria-label="${isExpanded ? 'Collapse' : 'Expand'} ${safeText(folder.name)}"
-            >
-              <span class="folder-tree-template__chevron" aria-hidden="true"></span>
-            </button>
-          ` : '<span class="folder-tree-template__disclosure-spacer" aria-hidden="true"></span>'}
-          <button
-            type="button"
-            class="inventory-folder-btn folder-tree-template__main"
-            data-inventory-folder-toggle="${safeText(folder.id)}"
-            data-inventory-folder-context="${safeText(folder.id)}"
-            data-section="${safeText(section)}"
-            aria-expanded="${isExpanded ? 'true' : 'false'}"
-          >
-            <span class="left-rail-folder-glyph" aria-hidden="true"></span>
-            <span class="inventory-folder-name folder-tree-template__label">${safeText(folder.name)}</span>
-            <span class="inventory-folder-count folder-tree-template__meta">${safeText(String(childContainers.length))}</span>
-          </button>
-          <button
-            type="button"
-            class="inventory-folder-add-container-btn folder-tree-template__action"
-            data-folder-add-container="${safeText(folder.id)}"
-            data-section="${safeText(section)}"
-            aria-label="Add a physical container to ${safeText(folder.name)}"
-            title="Add container here"
-          ><span aria-hidden="true">+</span></button>
-        </div>
-        ${childMarkup ? `<div class="inventory-folder-children folder-tree-template__children"${isExpanded ? '' : ' hidden'}>${childMarkup}</div>` : ''}
-      </div>
-    `;
+    return renderFolderTreeNode({
+      key: treeKey,
+      expanded: isExpanded,
+      expandable: hasChildren,
+      label: folder.name,
+      meta: String(childContainers.length),
+      childrenHtml: childMarkup,
+      nodeClass: 'inventory-folder-tree-node',
+      rowClass: 'inventory-folder-item',
+      disclosureClass: 'inventory-folder-toggle',
+      mainClass: 'inventory-folder-btn',
+      labelClass: 'inventory-folder-name',
+      metaClass: 'inventory-folder-count',
+      childrenClass: 'inventory-folder-children',
+      nodeAttributes: { 'data-inventory-folder-node': folder.id },
+      disclosureAttributes: {
+        'data-inventory-folder-toggle': folder.id,
+        'data-section': section
+      },
+      mainAttributes: {
+        'data-folder-tree-toggle': treeKey,
+        'data-inventory-folder-toggle': folder.id,
+        'data-inventory-folder-context': folder.id,
+        'data-section': section,
+        'aria-expanded': String(isExpanded)
+      },
+      actionHtml: `
+        <button
+          type="button"
+          class="inventory-folder-add-container-btn folder-tree-template__action"
+          data-folder-add-container="${safeText(folder.id)}"
+          data-section="${safeText(section)}"
+          aria-label="Add a physical container to ${safeText(folder.name)}"
+          title="Add container here"
+        ><span aria-hidden="true">+</span></button>
+      `
+    });
   }
 
   function renderSectionNavigation(activeSection) {
@@ -197,6 +200,10 @@ export function installSectionNavigation(ctx) {
       button.addEventListener('contextmenu', (event) => {
         ctx.openLocationContextMenu?.(event, button.dataset.inventorySection);
       });
+      button.addEventListener('dblclick', (event) => {
+        event.preventDefault?.();
+        ctx.beginInventoryRename?.({ section: button.dataset.inventorySection }, 'location');
+      });
     });
 
     inventoryLocationNav.querySelectorAll('[data-container-open]').forEach((button) => {
@@ -205,6 +212,13 @@ export function installSectionNavigation(ctx) {
       });
       button.addEventListener('contextmenu', (event) => {
         ctx.openContainerContextMenu?.(event, button.dataset.section, button.dataset.containerOpen);
+      });
+      button.addEventListener('dblclick', (event) => {
+        event.preventDefault?.();
+        ctx.beginInventoryRename?.({
+          section: button.dataset.section,
+          containerId: button.dataset.containerOpen
+        }, 'container');
       });
     });
 
@@ -222,6 +236,13 @@ export function installSectionNavigation(ctx) {
       if (button.dataset.inventoryFolderContext) {
         button.addEventListener('contextmenu', (event) => {
           ctx.openFolderContextMenu?.(event, button.dataset.section, button.dataset.inventoryFolderContext);
+        });
+        button.addEventListener('dblclick', (event) => {
+          event.preventDefault?.();
+          ctx.beginInventoryRename?.({
+            section: button.dataset.section,
+            folderId: button.dataset.inventoryFolderContext
+          }, 'folder');
         });
       }
     });

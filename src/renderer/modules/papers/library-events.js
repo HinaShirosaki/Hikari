@@ -26,8 +26,7 @@ function createLibraryEvents({
     clearPaperDropTarget,
     setPaperDropTarget,
     hideLibraryContextMenu,
-    commitFolderRename,
-    cancelFolderRename,
+    beginFolderRename,
     onGlobalKeydown,
     onLibraryContextMenu,
     onLibraryContextMenuClick,
@@ -62,19 +61,13 @@ function createLibraryEvents({
   }
 
   function onFolderListClick(event) {
-    const renameSaveBtn = event.target?.closest?.('[data-folder-rename-save]');
-    if (renameSaveBtn) {
-      commitFolderRename(renameSaveBtn.dataset.folderRenameSave);
-      return;
-    }
-
-    const renameCancelBtn = event.target?.closest?.('[data-folder-rename-cancel]');
-    if (renameCancelBtn) {
-      cancelFolderRename();
-      return;
-    }
-
-    if (event.target?.closest?.('[data-folder-rename-input]')) {
+    const toggleBtn = event.target?.closest?.('[data-folder-tree-toggle]');
+    if (toggleBtn) {
+      const folderKey = String(toggleBtn.dataset.folderTreeToggle || '').trim();
+      if (folderKey) {
+        setFolderExpanded(folderKey, !isFolderExpanded(folderKey));
+        renderLibrarySidebar(libraryState.selectedFolderKey);
+      }
       return;
     }
 
@@ -84,10 +77,9 @@ function createLibraryEvents({
     }
     hideLibraryContextMenu();
     const folderKey = String(selectBtn.dataset.folderSelect || '').trim();
-    const alreadySelected = folderKey && folderKey === libraryState.selectedFolderKey;
     libraryState.selectedFolderKey = folderKey;
     if (folderKey) {
-      setFolderExpanded(folderKey, alreadySelected ? !isFolderExpanded(folderKey) : true);
+      setFolderExpanded(folderKey, true);
     }
     renderLibrarySidebar(libraryState.selectedFolderKey);
   }
@@ -152,32 +144,13 @@ function createLibraryEvents({
     void context.actions?.movePaperToFolder?.(paperId, folderKey);
   }
 
-  function onFolderListInput(event) {
-    const renameInput = event.target?.closest?.('[data-folder-rename-input]');
-    if (!renameInput) {
+  function onFolderListDoubleClick(event) {
+    const selectBtn = event.target?.closest?.('[data-folder-select]');
+    if (!selectBtn) {
       return;
     }
-    libraryState.renamingFolderName = String(event.target?.value || '');
-  }
-
-  function onFolderListKeydown(event) {
-    const renameInput = event.target?.closest?.('[data-folder-rename-input]');
-    if (!renameInput) {
-      return;
-    }
-
-    if (event?.key === 'Enter') {
-      event.preventDefault?.();
-      event.stopPropagation?.();
-      commitFolderRename(renameInput.dataset.folderRenameInput);
-      return;
-    }
-
-    if (event?.key === 'Escape') {
-      event.preventDefault?.();
-      event.stopPropagation?.();
-      cancelFolderRename();
-    }
+    event.preventDefault?.();
+    beginFolderRename(String(selectBtn.dataset.folderSelect || '').trim());
   }
 
   function onPaperListClick(event) {
@@ -248,8 +221,7 @@ function createLibraryEvents({
     elements.paperUploadTrigger?.addEventListener('click', onUploadTriggerClick);
     elements.paperPdfInput?.addEventListener('change', onPaperFileChange);
     elements.journalClubList?.addEventListener('click', onFolderListClick);
-    elements.journalClubList?.addEventListener('input', onFolderListInput);
-    elements.journalClubList?.addEventListener('keydown', onFolderListKeydown);
+    elements.journalClubList?.addEventListener('dblclick', onFolderListDoubleClick);
     elements.journalClubList?.addEventListener('dragstart', onPaperDragStart);
     elements.journalClubList?.addEventListener('dragend', onPaperDragEnd);
     elements.journalClubList?.addEventListener('dragover', onPaperDragOver);

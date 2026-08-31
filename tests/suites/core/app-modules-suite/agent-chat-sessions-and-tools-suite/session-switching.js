@@ -407,6 +407,18 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   assert.match(sessionList.innerHTML, /data-agent-folder-id="project:p1"/);
   assert.match(sessionList.innerHTML, />Atlas</);
 
+  const folderToggleTarget = (folderId) => ({
+    dataset: { folderTreeToggle: folderId },
+    closest(selector) {
+      return selector === '[data-folder-tree-toggle]' ? this : null;
+    }
+  });
+  trigger(sessionList, 'click', { target: folderToggleTarget('general') });
+  trigger(sessionList, 'click', { target: folderToggleTarget('project:p1') });
+  assert.deepEqual([...state.agentChat.expandedFolderIds], []);
+  agent.render();
+  assert.deepEqual([...state.agentChat.expandedFolderIds], []);
+
   const projectFolder = sessionList.querySelectorAll('[data-agent-folder-id]')
     .find((item) => item.dataset.agentFolderId === 'project:p1');
   projectFolder.closest = (selector) => selector === '[data-agent-folder-id]' ? projectFolder : null;
@@ -422,7 +434,12 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   trigger(document.getElementById('agent-context-new-folder'), 'click');
   assert.equal(state.agentChat.folders.length, 1);
   assert.equal(state.agentChat.folders[0].name, 'New Folder');
-  assert.match(sessionList.innerHTML, /data-agent-folder-rename-input="custom:folder-1"/);
+  const folderRenameInput = sessionList.querySelector('[data-folder-tree-rename-input]');
+  assert.equal(folderRenameInput.value, 'New Folder');
+  folderRenameInput.value = 'Vector Work';
+  trigger(folderRenameInput, 'keydown', { key: 'Enter' });
+  assert.equal(state.agentChat.folders[0].name, 'Vector Work');
+  assert.equal(sessionList.querySelector('[data-folder-tree-rename-input]'), null);
 
   state.projects.push({ id: 'p2', name: 'Second Study' });
   agent.render();

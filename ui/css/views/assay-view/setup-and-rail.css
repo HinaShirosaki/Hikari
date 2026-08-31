@@ -371,6 +371,12 @@
   color: var(--theme-text-muted);
 }
 
+/* The last visible plate table flows directly into the output stage. Keep a divider
+   between Table1 and a shown Table2, but do not stack one above the graph. */
+.assay-results-table-stage > .assay-result-table-panel:not(:has(~ .assay-result-table-panel:not([hidden]))) {
+  border-bottom: 0;
+}
+
 .assay-results-output-stage {
   display: none;
 }
@@ -378,13 +384,17 @@
 .assay-results-output-stage:has(#assay-analysis-table:not(:empty)) {
   display: grid;
   padding-top: 14px;
-  border-top: 1px solid var(--theme-border-soft);
+  border-top: 0;
 }
 
 .assay-results-workspace #assay-result-table,
 .assay-results-workspace #assay-derived-plate-table,
 .assay-results-workspace #assay-analysis-table {
   margin-top: 0;
+}
+
+.assay-results-workspace #assay-analysis-table {
+  border-top: 0;
 }
 
 .assay-form-grid {

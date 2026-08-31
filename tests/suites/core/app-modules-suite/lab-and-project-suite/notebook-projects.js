@@ -374,7 +374,7 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /0\.5 mM/);
   assert.equal(document.getElementById('biology-notebook-mark-executed-btn').hidden, false);
   assert.doesNotMatch(document.getElementById('biology-notebook-entry-list').innerHTML, /Untitled Project/);
-  assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name">Clone 12</g) || []).length, 1);
+  assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name[^>]*>Clone 12</g) || []).length, 1);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
 });
 test('biology-notebook project folder click renders the project dashboard in place', async () => {
@@ -481,7 +481,7 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.equal(iconClickPrevented, false);
   assert.equal(dashboard.hidden, true);
   assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project is-collapsed/);
-  assert.match(entryList.innerHTML, /biology-notebook-folder-children biology-notebook-folder-children--pages" hidden/);
+  assert.match(entryList.innerHTML, /biology-notebook-folder-children biology-notebook-folder-children--pages[^>]*folder-tree-template__children[^>]*hidden/);
 
   let nameClickPrevented = false;
   trigger(entryList, 'click', {
@@ -502,7 +502,7 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.doesNotMatch(dashboard.innerHTML, /data-project-edit/);
   assert.equal(document.getElementById('biology-notebook-project-select').value, 'p1');
   assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
-  assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project is-active/);
+  assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project[^"']*is-active/);
 
   const descriptionInput = dashboard.querySelector('[data-project-description]');
   descriptionInput.value = 'Updated project context from overview.';

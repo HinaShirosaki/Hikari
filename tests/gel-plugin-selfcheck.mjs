@@ -63,6 +63,16 @@ async function checkFolderContract() {
   // `layout` covers app.setLeftRailWidth, which the in-frame rail commits on pointer-up.
   assert.deepEqual(result.permissions, ['storage', 'files', 'downloads', 'layout']);
 
+  // A permission the README does not explain is one nobody reviews.
+  const readme = await fs.readFile(path.join(pluginDir, 'README.md'), 'utf8');
+  result.permissions.forEach((permission) => {
+    assert.match(
+      readme,
+      new RegExp(`\\|\\s*\`${permission}\`\\s*\\|`),
+      `README.md must document the "${permission}" permission`
+    );
+  });
+
   const bundled = BUNDLED_PLUGINS.find((entry) => entry.id === result.id);
   assert.ok(bundled, 'Gel must remain registered as an internal bundled plugin');
   assert.equal(bundled.path, '@bundled/gel', 'renderer state must keep a private token, not a source path');
@@ -194,6 +204,9 @@ async function checkAdapterContract() {
   assert.match(mainSource, /initPluginLeftRailResizer/, 'Gel initializes its plugin-owned resize controller');
   assert.match(mainSource, /!Number\.isInteger\(version\)/, 'stored schema versions are validated before hydration');
   assert.match(mainSource, /gelAnalyses: state\.gelAnalyses\.map\(toStoredRecord\)/, 'plugin storage keeps a compact record index');
+  assert.match(mainSource, /migrationError = errorMessage\(error/, 'a failed legacy import is reported, not allowed to fail the boot');
+  assert.match(mainSource, /Could not import legacy gels: \$\{migrationError\}/, 'the legacy import failure stays visible to the user');
+  assert.match(mainSource, /pendingStorageRefresh/, 'a storage change arriving during boot is queued instead of dropped');
   assert.match(recordSource, /await runtime\.persist\(\)/, 'the Gel save waits for persistence');
   assert.match(recordSource, /let savePromise = null/, 'the Gel UI deduplicates concurrent saves');
   assert.match(recordSource, /let exportPromise = null/, 'the Gel UI deduplicates native export dialogs');

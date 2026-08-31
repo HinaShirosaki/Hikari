@@ -160,6 +160,7 @@ export function createProtocolImportController({
 
     if (!String(rawInput || '').trim()) {
       setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
+      showTransientNotice('Paste protocol JSON or choose a JSON file first.', { type: 'error' });
       return;
     }
 

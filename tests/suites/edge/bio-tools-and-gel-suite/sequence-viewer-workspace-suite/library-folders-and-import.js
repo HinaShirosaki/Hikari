@@ -117,23 +117,10 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
   await flushAsync();
 
   assert.match(libraryList.innerHTML, /sequence-viewer-library-folder-row/);
-  assert.match(libraryList.innerHTML, /data-sequence-library-rename-input="folder_cloning"/);
-  assert.match(libraryList.innerHTML, /value="New Folder"/);
-
-  const folderRenameInput = {
-    value: 'Cloning',
-    dataset: {
-      sequenceLibraryRenameInput: 'folder_cloning',
-      sequenceLibraryRenameType: 'folder'
-    },
-    closest(selector) {
-      return selector === '[data-sequence-library-rename-input]' ? this : null;
-    },
-    focus() {},
-    setSelectionRange() {}
-  };
-  trigger(libraryList, 'input', { target: folderRenameInput });
-  trigger(libraryList, 'keydown', { target: folderRenameInput, key: 'Enter' });
+  const folderRenameInput = libraryList.querySelector('[data-folder-tree-rename-input]');
+  assert.equal(folderRenameInput.value, 'New Folder');
+  folderRenameInput.value = 'Cloning';
+  trigger(folderRenameInput, 'keydown', { key: 'Enter' });
   await flushAsync();
   await flushAsync();
 
@@ -246,28 +233,10 @@ ORIGIN
     }
   };
   trigger(contextMenu, 'click', { target: renameTarget });
-  assert.match(libraryList.innerHTML, /data-sequence-library-rename-input="entry_rename"/);
-  assert.match(libraryList.innerHTML, /value="Original Name"/);
-
-  const renameInput = {
-    value: 'Renamed Vector',
-    dataset: {
-      sequenceLibraryRenameInput: originalEntry.id,
-      sequenceLibraryRenameType: 'entry'
-    },
-    closest(selector) {
-      return selector === '[data-sequence-library-rename-input]' ? this : null;
-    },
-    focus() {},
-    setSelectionRange() {}
-  };
-  trigger(libraryList, 'input', { target: renameInput });
-  const renameSaveTarget = {
-    closest(selector) {
-      return selector === '[data-sequence-library-rename-save]' ? this : null;
-    }
-  };
-  trigger(libraryList, 'click', { target: renameSaveTarget });
+  const renameInput = libraryList.querySelector('[data-folder-tree-rename-input]');
+  assert.equal(renameInput.value, 'Original Name');
+  renameInput.value = 'Renamed Vector';
+  trigger(renameInput, 'blur');
   await flushAsync();
   await flushAsync();
 

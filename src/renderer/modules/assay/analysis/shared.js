@@ -293,11 +293,7 @@ export function summarizeModelFit(points, predictFn) {
 }
 
 export function collectCurvePoints(sampleItems, xAccessor, options = {}) {
-  const requirePositiveX = Boolean(options.requirePositiveX);
   const requireNonNegativeX = Boolean(options.requireNonNegativeX);
-  const transformX = typeof options.transformX === 'function'
-    ? options.transformX
-    : (value) => value;
   const pointGroups = new Map();
 
   sampleItems.forEach((item) => {
@@ -305,20 +301,13 @@ export function collectCurvePoints(sampleItems, xAccessor, options = {}) {
     if (!Number.isFinite(rawX)) {
       return;
     }
-    if (requirePositiveX && rawX <= 0) {
-      return;
-    }
     if (requireNonNegativeX && rawX < 0) {
       return;
     }
-    const xValue = transformX(rawX);
-    if (!Number.isFinite(xValue)) {
-      return;
+    if (!pointGroups.has(rawX)) {
+      pointGroups.set(rawX, []);
     }
-    if (!pointGroups.has(xValue)) {
-      pointGroups.set(xValue, []);
-    }
-    pointGroups.get(xValue).push(item.response);
+    pointGroups.get(rawX).push(item.response);
   });
 
   return Array.from(pointGroups.entries())

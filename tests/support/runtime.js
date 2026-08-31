@@ -235,8 +235,11 @@ class MockElement {
     this.classList = new MockClassList();
     this.listeners = {};
     this.attributes = new Map();
+    this.ownerDocument = null;
+    this.parentNode = null;
     this._innerHTML = '';
     this._queryCache = new Map();
+    this._inserted = [];
     this._submitButton = null;
   }
 
@@ -289,6 +292,31 @@ class MockElement {
 
   focus() {}
 
+  select() {}
+
+  // Enough of the live tree for helpers that swap a node in and out (see
+  // startInlineRename); regex-scraped innerHTML covers everything else.
+  insertBefore(node) {
+    node.parentNode = this;
+    node.ownerDocument = node.ownerDocument || this.ownerDocument;
+    this._inserted.push(node);
+    return node;
+  }
+
+  appendChild(node) {
+    return this.insertBefore(node);
+  }
+
+  removeChild(node) {
+    this._inserted = this._inserted.filter((item) => item !== node);
+    node.parentNode = null;
+    return node;
+  }
+
+  remove() {
+    this.parentNode?.removeChild(this);
+  }
+
   reset() {}
 
   setAttribute(name, value) {
@@ -324,7 +352,11 @@ class MockElement {
     if (!this._queryCache.has(key)) {
       this._queryCache.set(key, this._buildDataMatches(key));
     }
-    return this._queryCache.get(key);
+    const attrMatch = key.match(/\[([a-z0-9-]+)(?:=[^\]]+)?\]/i);
+    const inserted = attrMatch
+      ? this._inserted.filter((node) => node.hasAttribute?.(attrMatch[1]))
+      : [];
+    return [...inserted, ...this._queryCache.get(key)];
   }
 
   _buildDataMatches(selector) {
@@ -342,6 +374,8 @@ class MockElement {
     let match;
     while ((match = pattern.exec(this._innerHTML))) {
       const element = new MockElement(`${this.id}:${attributeName}:${results.length}`);
+      element.ownerDocument = this.ownerDocument;
+      element.parentNode = this;
       element.dataset[datasetKey] = String(match[1] || '');
       const tagStart = this._innerHTML.lastIndexOf('<', match.index);
       const tagEnd = this._innerHTML.indexOf('>', match.index);
@@ -361,12 +395,9 @@ class MockElement {
 
 function createMockDocument(ids = []) {
   const elements = new Map();
-  ids.forEach((id) => {
-    elements.set(id, new MockElement(id));
-  });
   const appended = [];
 
-  return {
+  const documentRef = {
     body: {
       appendChild(node) {
         appended.push(node);
@@ -374,7 +405,9 @@ function createMockDocument(ids = []) {
       }
     },
     createElement(tagName) {
-      return new MockElement(String(tagName || ''));
+      const element = new MockElement(String(tagName || ''));
+      element.ownerDocument = documentRef;
+      return element;
     },
     // ponytail: attribute selectors over appended nodes only — enough for the
     // shared transient notice. Widen it when a test needs a real selector.
@@ -388,11 +421,16 @@ function createMockDocument(ids = []) {
     getElementById(id) {
       const key = String(id || '');
       if (!elements.has(key)) {
-        elements.set(key, new MockElement(key));
+        const element = new MockElement(key);
+        element.ownerDocument = documentRef;
+        elements.set(key, element);
       }
       return elements.get(key);
     }
   };
+
+  ids.forEach((id) => documentRef.getElementById(id));
+  return documentRef;
 }
 
 function wireFormReset(formElement, inputElements) {

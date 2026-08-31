@@ -45,8 +45,6 @@ export function getAssayElements(root = document) {
     assayAnalysisKindInput: root.getElementById('assay-analysis-kind'),
     assayAnalysisXAxisInput: root.getElementById('assay-analysis-x-axis'),
     assayAnalysisXAxisField: root.getElementById('assay-analysis-x-axis-field'),
-    assayAnalysisXTransformInput: root.getElementById('assay-analysis-x-transform'),
-    assayAnalysisXTransformField: root.getElementById('assay-analysis-x-transform-field'),
     assayAnalysisAsymmetricInput: root.getElementById('assay-analysis-asymmetric'),
     assayAnalysisPolyOrderInput: root.getElementById('assay-analysis-poly-order'),
     assayAnalysisPolyOrderField: root.getElementById('assay-analysis-poly-order-field'),

@@ -1,3 +1,4 @@
+import { showTransientNotice } from '../../../lib/notify.js';
 import {
   getContainerLayout,
   getWellName,
@@ -79,6 +80,9 @@ export function createNotebookQuickSampleController({
   let selectedWellIndex = null;
 
   function setStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     if (!status) {
       return;
     }

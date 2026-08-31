@@ -1,3 +1,4 @@
+import { showTransientNotice } from '../../lib/notify.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';
@@ -114,19 +115,30 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     notifyActiveAssayChanged: () => notifyActiveAssayChanged()
   });
 
-  function setCsvStatus(message) {
+  // These three lines double as running context ("Mapped wells: 24."), so only
+  // the failures are raised as app notices — the rest would be constant noise.
+  function setCsvStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     if (elements.assayCsvStatus) {
       elements.assayCsvStatus.textContent = message || '';
     }
   }
 
-  function setLayoutStatus(message) {
+  function setLayoutStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     if (elements.assayLayoutStatus) {
       elements.assayLayoutStatus.textContent = message || '';
     }
   }
 
-  function setResultStatus(message) {
+  function setResultStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
     if (elements.assayResultStatus) {
       elements.assayResultStatus.textContent = message || '';
     }

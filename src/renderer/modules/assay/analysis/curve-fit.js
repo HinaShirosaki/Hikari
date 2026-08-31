@@ -39,8 +39,7 @@ function resolveModel(spec) {
           return ['-', '-'];
         }
         const potency = params.hill >= 0 ? 'EC50' : 'IC50';
-        const value = spec.xTransform === 'log10' ? 10 ** params.mid : params.mid;
-        return [potency, formatNumber(value, 6)];
+        return [potency, formatNumber(params.mid, 6)];
       }
     };
   }
@@ -86,7 +85,6 @@ function sampleFittedLine(points, predict) {
 
 export function analyzeCurveFit(observations, grouping, xAxis, spec) {
   const model = resolveModel(spec);
-  const useLogX = spec.xTransform === 'log10';
   const seriesGroups = groupBy(observations, (item) => grouping.seriesOf(item));
   const rows = [];
   const showErrorBars = spec.errorBars !== false;
@@ -97,9 +95,7 @@ export function analyzeCurveFit(observations, grouping, xAxis, spec) {
     .sort(([a], [b]) => String(a).localeCompare(String(b)))
     .forEach(([seriesLabel, items]) => {
       const points = collectCurvePoints(items, xAxis.valueOf, {
-        requirePositiveX: useLogX,
-        requireNonNegativeX: model.requireNonNegativeX,
-        transformX: useLogX ? (value) => Math.log10(value) : undefined
+        requireNonNegativeX: model.requireNonNegativeX
       });
       if (points.length < model.minPoints) {
         skipped += 1;

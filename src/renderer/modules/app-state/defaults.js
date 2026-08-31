@@ -41,7 +41,8 @@ export const defaultState = {
     folders: [],
     sessionFolderIds: {},
     selectedFolderId: 'general',
-    expandedFolderIds: []
+    expandedFolderIds: [],
+    folderExpansionInitialized: false
   },
   messages: [],
   growthMetrics: {
