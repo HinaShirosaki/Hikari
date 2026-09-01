@@ -327,15 +327,6 @@ body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
   padding-right: 4px;
 }
 
-#home-view .home-dialog-form h4 {
-  margin: 0;
-  color: var(--home-tile-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 body.theme-night #home-view .home-dialog {
   background: var(--home-tile-bg-strong);
   color: var(--home-tile-text);

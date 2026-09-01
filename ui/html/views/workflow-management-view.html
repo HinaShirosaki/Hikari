@@ -11,7 +11,12 @@
                 </svg>
                 <span class="sr-only">Template editor</span>
               </button>
-              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>&larr; Back to Home</button>
+              <button type="button" id="workflow-entry-back-btn" class="workflow-entry-back-icon-btn" aria-label="Back to Home" title="Back to Home" hidden>
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M19 12H5M11 6l-6 6 6 6"></path>
+                </svg>
+                <span class="sr-only">Back to Home</span>
+              </button>
             </div>
           </div>
 
@@ -26,7 +31,6 @@
           </div>
 
           <div class="workflow-template-editor-panel app-left-rail-section" hidden>
-            <h3>Template Details</h3>
             <label>
               Template Name
               <input id="workflow-template-name" placeholder="e.g. Clone screening template" />
@@ -35,9 +39,20 @@
               Description
               <textarea id="workflow-template-description" rows="3" placeholder="Optional notes about this template"></textarea>
             </label>
-            <div class="form-actions">
-              <button type="button" id="workflow-save-template-btn" class="primary-btn">Save Current Graph</button>
-              <button type="button" id="workflow-template-cancel-btn" class="ghost-btn">Cancel</button>
+            <div class="form-actions workflow-template-actions">
+              <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" title="Save Current Graph">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 4h12l2 2v14H5Z"></path>
+                  <path d="M8 4v6h8V4M8 16h8"></path>
+                </svg>
+                <span class="sr-only">Save Current Graph</span>
+              </button>
+              <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" title="Cancel">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12M18 6 6 18"></path>
+                </svg>
+                <span class="sr-only">Cancel</span>
+              </button>
             </div>
           </div>
 
@@ -47,15 +62,20 @@
           </div>
 
           <div class="workflow-block-composer-panel app-left-rail-section" hidden>
-            <h3>Add Blocks</h3>
             <div class="form-grid workflow-grid workflow-block-grid">
-              <label>
-                Block Type
-                <select id="workflow-block-type">
-                  <option value="protocol">Protocol</option>
-                  <option value="text">Plain Text</option>
-                </select>
-              </label>
+              <fieldset id="workflow-block-type" class="workflow-block-type-switch">
+                <legend>Block Type</legend>
+                <div class="workflow-block-type-options">
+                  <label class="workflow-block-type-option">
+                    <input type="radio" name="workflow-block-type-option" value="protocol" checked />
+                    <span>Protocol</span>
+                  </label>
+                  <label class="workflow-block-type-option">
+                    <input type="radio" name="workflow-block-type-option" value="text" />
+                    <span>Plain Text</span>
+                  </label>
+                </div>
+              </fieldset>
               <label id="workflow-block-protocol-search-field">
                 Search Protocol
                 <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
@@ -138,7 +158,7 @@
                 <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
               </div>
             </div>
-            <p id="workflow-graph-status" class="small-note">Graph is empty. Add a block to start.</p>
+            <p id="workflow-graph-status" class="small-note"></p>
             <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
           </div>
         </div>

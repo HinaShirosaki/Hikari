@@ -23,14 +23,19 @@ export function createContainerDetailRenderer({
     const fillLabel = primarySample ? `${getSampleTypeLabel(primarySample.type)} sample fill` : 'Empty tube';
     return `
       <div class="falcon-preview-shell">
-        <div class="falcon-preview" aria-label="${safeText(fillLabel)}">
-          <div class="falcon-cap"></div>
+        <div class="falcon-preview" role="img" aria-label="${safeText(fillLabel)}">
+          <div class="falcon-cap" aria-hidden="true">
+            <span class="falcon-cap-ridges"></span>
+          </div>
           <div class="falcon-body">
             <div class="falcon-liquid${primarySample ? ' has-sample' : ''}"${fillColor ? ` style="--falcon-fill:${fillColor};"` : ''}></div>
             <div class="falcon-mark falcon-mark-1"></div>
             <div class="falcon-mark falcon-mark-2"></div>
             <div class="falcon-mark falcon-mark-3"></div>
             <div class="falcon-mark falcon-mark-4"></div>
+            <span class="falcon-volume falcon-volume-50">50</span>
+            <span class="falcon-volume falcon-volume-25">25</span>
+            <span class="falcon-volume falcon-volume-10">10</span>
             <div class="falcon-highlight"></div>
           </div>
         </div>
@@ -46,8 +51,13 @@ export function createContainerDetailRenderer({
       const linkedSamples = getLinkedSamples(section, container.id, null);
       return `
         <div class="container-inline-detail">
-          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
-          <p class="small-note">50 mL Falcon tube. Linked samples fill about one-third of the visible volume.</p>
+          <div class="container-detail-sticky">
+            <div class="container-detail-header">
+              <div class="container-detail-title">
+                <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
+              </div>
+            </div>
+          </div>
           <div class="well-editor-shell well-editor-shell-single">
             <div class="well-grid-panel falcon-grid-panel">
               ${renderSingleContainerPreview(section, container)}

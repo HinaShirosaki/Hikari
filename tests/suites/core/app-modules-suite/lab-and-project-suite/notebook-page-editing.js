@@ -161,6 +161,16 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, true);
   assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, false);
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Renamed transformation page');
+
+  const notebookShellCss = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'biology-notebook-view',
+    'rail-and-projects.css'
+  ), 'utf8');
+  assert.match(notebookShellCss, /\.biology-notebook-title-editor\s*\{[^}]*width:\s*min\(100%,\s*28rem\);[^}]*min-height:\s*34px;[^}]*padding:\s*4px 8px;[^}]*font-size:\s*1rem;/s);
 });
 test('biology-notebook page naming uses a small model once and skips generated or user-renamed names', async () => {
   const document = createMockDocument([
@@ -515,6 +525,41 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
   assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*10px\s+12px\s+50px;/s);
   assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
 });
+test('biology-notebook quick sample submit is a compact accessible icon', () => {
+  const html = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'html',
+    'views',
+    'biology-notebook-view.html'
+  ), 'utf8');
+  const css = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'biology-notebook-view',
+    'quick-sample.css'
+  ), 'utf8');
+  const controllerSource = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'samples',
+    'quick-sample-controller.js'
+  ), 'utf8');
+  const submitStart = html.indexOf('<button id="biology-notebook-quick-sample-submit-btn"');
+  const submitButton = html.slice(submitStart, html.indexOf('</button>', submitStart) + 9);
+
+  assert.match(submitButton, /class="primary-btn biology-notebook-quick-sample-submit-btn"[^>]*type="submit"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"/);
+  assert.match(submitButton, /<svg[^>]*aria-hidden="true"[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.doesNotMatch(submitButton, />\s*Add Sample\s*<\/button>/);
+  assert.match(css, /\.biology-notebook-quick-sample-submit-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
+  assert.match(controllerSource, /function setBusy\(isBusy\)[\s\S]*?setAttribute\?\.\('aria-label', label\)[\s\S]*?querySelector\?\.\('\.sr-only'\)/);
+  assert.doesNotMatch(controllerSource, /submitBtn\.textContent\s*=/);
+});
 test('biology-notebook buffer preparer floats one autocomplete menu and appends ingredients beyond its starter rows', () => {
   const toolsDir = path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools');
   const source = [
@@ -549,6 +594,11 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
   assert.match(html, /<tbody id="biology-notebook-tool-buffer-rows">/);
   assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[\s\S]*?>\+<\/button>/);
   assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
+  const molarityButtonStart = html.indexOf('<button id="biology-notebook-add-molarity-btn"');
+  const molarityButton = html.slice(molarityButtonStart, html.indexOf('</button>', molarityButtonStart) + 9);
+  assert.match(molarityButton, /aria-label="Add molarity table"[\s\S]*?<span class="biology-notebook-molarity-icon" aria-hidden="true">Mw<\/span>[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
+  assert.doesNotMatch(molarityButton, /<svg/);
+  assert.match(css, /\.biology-notebook-molarity-icon\s*\{[^}]*width:\s*21px;[^}]*height:\s*21px;[^}]*font-style:\s*italic;[^}]*font-weight:\s*700;/s);
   assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
 });
 test('biology-notebook buffer preparer starts blank, has one insert-and-record action, and exposes compound pKa data', () => {

@@ -25,6 +25,7 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'files',
   'downloads',
   'python',
+  'notifications',
   'layout'
 ]);
 
@@ -155,9 +156,11 @@ async function inspectPluginFolder({ fs, folderPath }) {
   if (serviceError) {
     return { ok: false, error: `${PLUGIN_MANIFEST_FILE} ${serviceError}` };
   }
-  // A service is local, opaque-origin code you audited in the folder. Remote
-  // code cannot be a trusted service, and a converter needs no storage, so a
-  // service is neither remote nor served.
+  // A service is local code you audited in the folder. Remote code cannot be a
+  // trusted service, and service delivery is host-controlled, so its manifest
+  // may opt into neither a remote embed nor `serve: true`. The renderer still
+  // delivers the hidden service through its private loopback server because
+  // packaged Electron blocks scripts in external file: frames.
   if (service && (embedUrl || serve)) {
     return { ok: false, error: `${PLUGIN_MANIFEST_FILE} a "service" plugin cannot also use "embed" or "serve".` };
   }

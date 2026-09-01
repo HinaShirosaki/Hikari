@@ -471,5 +471,81 @@ test('workflow execution renderer places branch protocols on a bottom lane ancho
   assert.match(board.innerHTML, /style="grid-column: 3; grid-row: 2; --workflow-branch-row-offset: 1;"[\s\S]*data-workflow-step-open="block-e"[\s\S]*disabled aria-disabled="true"/);
 });
 
+test('workflow template navigation and graph actions use compact accessible icons', () => {
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'workflow-management-view.html'), 'utf8');
+  const viewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'workflow-management-view.css'), 'utf8');
+
+  assert.match(viewSource, /id="workflow-entry-back-btn"[^>]*class="workflow-entry-back-icon-btn"[^>]*aria-label="Back to Home"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Back to Home<\/span>/);
+  assert.match(viewSource, /id="workflow-save-template-btn"[^>]*class="primary-btn workflow-template-action-icon-btn"[^>]*aria-label="Save Current Graph"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Save Current Graph<\/span>/);
+  assert.match(viewSource, /id="workflow-template-cancel-btn"[^>]*class="ghost-btn workflow-template-action-icon-btn"[^>]*aria-label="Cancel"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Cancel<\/span>/);
+  assert.match(viewCss, /\.workflow-entry-panel > \.workflow-entry-back-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
+  assert.match(viewCss, /\.workflow-template-actions > \.workflow-template-action-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/);
+  assert.match(viewCss, /\.workflow-editor-sidebar-pinned\.left-rail-template__pinned \{[\s\S]*?border-bottom: 0;/);
+  assert.match(viewCss, /\.workflow-editor-sidebar-scroll > \.workflow-template-editor-panel,[\s\S]*?\.workflow-editor-sidebar-scroll > \.workflow-block-composer-panel \{[\s\S]*?border-top: 0;/);
+});
+
+test('workflow template editor omits redundant headings while retaining its controls', () => {
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'workflow-management-view.html'), 'utf8');
+
+  assert.doesNotMatch(viewSource, /<h3>(?:Template Details|Add Blocks)<\/h3>/);
+  assert.match(viewSource, /id="workflow-template-name"/);
+  assert.match(viewSource, /id="workflow-template-description"/);
+  assert.match(viewSource, /id="workflow-save-template-btn"/);
+  assert.match(viewSource, /id="workflow-template-cancel-btn"/);
+  assert.match(viewSource, /<fieldset id="workflow-block-type" class="workflow-block-type-switch">/);
+  assert.match(viewSource, /name="workflow-block-type-option" value="protocol" checked/);
+  assert.match(viewSource, /name="workflow-block-type-option" value="text"/);
+  assert.doesNotMatch(viewSource, /<select id="workflow-block-type">/);
+  assert.match(viewSource, /id="workflow-block-add-btn"/);
+
+  const actionsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'actions.js'), 'utf8');
+  assert.match(actionsSource, /addEventListener\('keydown', onBlockTypeKeydown\)/);
+  assert.match(actionsSource, /event\.key === 'ArrowRight'[\s\S]*event\.key === 'ArrowLeft'/);
+});
+
+test('workflow block type switch synchronizes protocol and plain-text composer fields', () => {
+  const rendererModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js')
+  );
+  const { createWorkflowRenderer } = rendererModule;
+  const options = [
+    { value: 'protocol', checked: true },
+    { value: 'text', checked: false }
+  ];
+  const blockTypeControl = {
+    querySelector() {
+      return options.find((option) => option.checked) || null;
+    },
+    querySelectorAll() {
+      return options;
+    }
+  };
+  const elements = {
+    workflowBlockTypeControl: blockTypeControl,
+    workflowBlockProtocolSearchField: { hidden: false },
+    workflowBlockProtocolField: { hidden: false },
+    workflowBlockTextField: { hidden: true },
+    workflowBlockProtocolInput: { disabled: false },
+    workflowBlockTextInput: { disabled: true },
+    workflowBlockAddBtn: { textContent: '' }
+  };
+  const renderer = createWorkflowRenderer({ elements });
+
+  renderer.syncBlockComposerFields();
+  assert.equal(elements.workflowBlockProtocolSearchField.hidden, false);
+  assert.equal(elements.workflowBlockTextField.hidden, true);
+  assert.equal(elements.workflowBlockAddBtn.textContent, 'Add Protocol Block');
+
+  options[0].checked = false;
+  options[1].checked = true;
+  renderer.syncBlockComposerFields();
+  assert.equal(elements.workflowBlockProtocolSearchField.hidden, true);
+  assert.equal(elements.workflowBlockProtocolField.hidden, true);
+  assert.equal(elements.workflowBlockTextField.hidden, false);
+  assert.equal(elements.workflowBlockProtocolInput.disabled, true);
+  assert.equal(elements.workflowBlockTextInput.disabled, false);
+  assert.equal(elements.workflowBlockAddBtn.textContent, 'Add Text Block');
+});
+
   }
 };

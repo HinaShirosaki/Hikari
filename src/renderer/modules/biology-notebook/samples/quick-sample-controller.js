@@ -93,7 +93,18 @@ export function createNotebookQuickSampleController({
   function setBusy(isBusy) {
     if (submitBtn) {
       submitBtn.disabled = Boolean(isBusy);
-      submitBtn.textContent = isBusy ? 'Adding…' : 'Add Sample';
+      const label = isBusy ? 'Adding sample' : 'Add Sample';
+      submitBtn.setAttribute?.('aria-label', label);
+      submitBtn.setAttribute?.('title', label);
+      if (isBusy) {
+        submitBtn.setAttribute?.('aria-busy', 'true');
+      } else {
+        submitBtn.removeAttribute?.('aria-busy');
+      }
+      const screenReaderLabel = submitBtn.querySelector?.('.sr-only');
+      if (screenReaderLabel) {
+        screenReaderLabel.textContent = label;
+      }
     }
   }
 

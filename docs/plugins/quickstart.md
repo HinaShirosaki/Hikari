@@ -16,9 +16,10 @@ Use a **local plugin** unless you know you need something else.
 | Embed an existing HTTPS application | Remote | `"embed": "https://…"` |
 | Add a headless file converter | Service | `"service": {…}` |
 
-Local and service plugins run with an opaque origin. Their scripts must be
-classic scripts—do not use `type="module"` or relative `import` statements.
-Served plugins have their own loopback origin and may use modules.
+Local view plugins run with an opaque origin, so their scripts must be classic
+scripts—do not use `type="module"` or relative `import` statements. Served view
+plugins and headless services have their own loopback origins and may use
+modules; the service host is still hidden and has no UI.
 
 ## 2. Start with four files
 
@@ -156,6 +157,9 @@ Important contracts:
   to “saved” before the promise resolves.
 - Listen for `app.context` to react when appearance or storage availability
   changes.
+- To use Hikari's transient toast, declare `notifications` and call
+  `notifications.show`. Use it for a completed success or recoverable error,
+  not repeated progress; Hikari attributes every toast to the installed plugin.
 - If the plugin draws a left rail, initialize it from
   `app.info.layout.leftRail`, resize locally during pointer movement, and call
   `app.setLeftRailWidth` once when the drag settles. This keeps it aligned with

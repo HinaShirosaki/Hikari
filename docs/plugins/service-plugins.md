@@ -37,9 +37,9 @@ what it produces. A manifest with `service` may not also set `embed` or `serve`
 
 ## 2. How it runs — and why it has no UI
 
-A service is a **local, opaque-origin** plugin (§1.0 in
-[plugin-system.md](plugin-system.md)): the same sandbox as `hello-world`, minus
-the view. At boot,
+A service is local plugin code delivered through Hikari's private per-plugin
+loopback server (§1.0 in [plugin-system.md](plugin-system.md)). This is automatic;
+the manifest remains a `service` and must not set `serve: true`. At boot,
 [`plugin-loader.js`](../../src/renderer/app/plugin-loader.js) mounts its
 `index.html` in a **hidden** iframe — no view section, no navigation entry, no
 rail — and registers its declared conversions with the service registry
@@ -58,10 +58,17 @@ The one thing a service must ship that looks UI-shaped is that single
 `index.html`. It exists because a sandboxed frame needs a document to execute a
 script in; it draws nothing.
 
-Because it is opaque-origin, its scripts must be **classic, not ES modules**
-([plugin-system.md §5.4](plugin-system.md#54-opaque-origins-cannot-load-es-modules)).
-The example loads the Hikari client, its Biopython request helper, and its
-worker as classic `<script>` tags.
+A service may separately declare the `notifications` permission and call
+[`notifications.show`](plugin-api.md#notificationsshow--notifications). The
+toast is host-owned and attributed to the plugin; it does not unhide the frame
+or create a plugin view. Reserve it for a completion or recoverable error, not
+for per-file progress. The reference `snapgene-dna` service requests only
+`python` and does not show notifications.
+
+The loopback origin lets packaged Electron load the script host and its sibling
+files; an external `file:` frame is blocked from doing so. Classic and module
+scripts both work. The example keeps three small classic scripts so their load
+order is explicit.
 
 ## 3. The conversion protocol
 
@@ -75,6 +82,8 @@ The host calls the service — the reverse of the
 // service -> host
 { hikari: 1, call: 'convert:result', id, ok: true,  text: '<GenBank>' }
 { hikari: 1, call: 'convert:result', id, ok: false, error: '<message>' }
+// service -> host, once at startup after the listener is installed
+{ hikari: 1, call: 'service:ready' }
 ```
 
 `bytes` is a `Uint8Array` of the raw file, cloned across the boundary. The
@@ -83,6 +92,11 @@ The host calls the service — the reverse of the
 registered with the permission-gated host-API bridge. This lets a converter
 use a narrowly declared capability such as `python.run` without gaining any
 undeclared Hikari access.
+
+The registry accepts a conversion declaration at boot so the file picker can
+offer `.dna` immediately, but it does not post bytes until `service:ready`
+arrives. A startup failure is therefore reported as a service-start error,
+instead of waiting for a misleading per-file conversion timeout.
 
 A service worker is a few lines — listen, convert, reply:
 
@@ -101,6 +115,7 @@ window.addEventListener('message', async (event) => {
     window.parent.postMessage({ hikari: 1, call: 'convert:result', id: req.id, ok: false, error: String(error.message) }, '*');
   }
 });
+window.parent.postMessage({ hikari: 1, call: 'service:ready' }, '*');
 ```
 
 ## 4. What consumes it
@@ -145,7 +160,8 @@ format another service already claimed.
   may use only its separately declared host API permissions.
 - **One hop, one file.** No chaining (`.dna → .gbk → …`), no multi-file
   bundles, no streaming — bytes in, text out, 15-second timeout.
-- **Classic scripts only** (§2).
+- **Hidden but loopback-served.** The service gets its own origin so installed
+  script files load in packaged Electron, while the host remains cross-origin.
 
 ## 7. Testing
 
@@ -156,7 +172,7 @@ format another service already claimed.
 - `plugin service registry routes a conversion to the owning frame` — the
   registry posts to the right frame and resolves/rejects on its reply.
 - `a service plugin mounts a hidden frame and no view` — `installPlugins`
-  creates a hidden, opaque-sandbox frame and no navigation entry.
+  creates a hidden loopback-served frame and no navigation entry.
 - `.dna converts to GenBank the sequence viewer can parse` — a fixture `.dna`
   goes through the real converter and the viewer's own GenBank parser reads the
   sequence and topology back.

@@ -278,6 +278,29 @@
   margin: 0;
 }
 
+.biology-notebook-quick-sample-submit-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.biology-notebook-quick-sample-submit-btn svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .biology-notebook-quick-sample-status.is-error {
   color: var(--theme-danger);
 }
@@ -298,4 +321,3 @@
     max-height: 220px;
   }
 }
-

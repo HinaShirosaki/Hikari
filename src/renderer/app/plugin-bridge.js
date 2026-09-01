@@ -7,6 +7,7 @@ export function createPluginBridge({
   persist,
   onNotebookEntriesChanged,
   onFrameHistoryChanged = null,
+  notify = null,
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
 } = {}) {
@@ -165,6 +166,7 @@ export function createPluginBridge({
         api,
         pluginUnsaved,
         pluginHistory,
+        notify,
         frameWindow: event.source,
         windowObject
       });

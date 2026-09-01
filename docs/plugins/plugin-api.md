@@ -223,6 +223,42 @@ host's stored layout preference (which survives a restart), and the resulting
 `app.context` broadcast reaches every other registered plugin frame — so it is
 gated on the `layout` permission rather than being free.
 
+### `notifications.show` — `notifications`
+
+Asks Hikari to show a transient host toast. Use it for a user-relevant success
+or recoverable error after an operation finishes, not as a progress log.
+
+```js
+await hikari.call('notifications.show', {
+  message: 'Export complete.',
+  type: 'success',
+  durationMs: 5000
+});
+// { shown: true, type: 'success', durationMs: 5000 }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `message` | string | Required, non-empty after trimming, at most 1,000 characters. Rendered as text; HTML is never accepted or interpreted. |
+| `type` | string | Optional: `success` (default) or `error`. These are the two states supported by Hikari's shared notification system. |
+| `durationMs` | integer | Optional. Defaults to 5,000; allowed range is 1,000–15,000 ms. |
+
+The host prefixes the installed plugin name (for example,
+`Plugin My Plugin: Export complete.`), so plugin-generated notices remain visibly
+attributed and cannot masquerade as an unlabeled Hikari message. The plugin
+cannot choose markup, position, colors, actions, or stacking behavior.
+
+Hikari keeps one shared toast: a newer message replaces the current one. An
+identical message repeated while visible does not restart its timer. The toast
+uses the host's `role="status"` / `aria-live="polite"` surface and disappears;
+it is not stored in history and cannot be used for a confirmation that requires
+an answer. Keep durable state in the plugin UI or notebook instead.
+
+A headless service may call this verb if it declares `notifications`; Hikari,
+not the hidden service frame, renders the toast. This does not give the service
+a view. The reference `snapgene-dna` converter deliberately does not request
+the permission and emits no conversion-progress notification.
+
 ### `app.setUnsaved` — *no permission required*
 
 Reports that the frame is holding unsaved work, so a plugin can block the
@@ -544,7 +580,8 @@ In [`plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js), add to the
 }
 ```
 
-The handler receives `(params, { state, persist, plugin, onNotebookEntriesChanged })`.
+The handler receives
+`(params, { state, persist, plugin, onNotebookEntriesChanged, api, notify, windowObject })`.
 Rules:
 
 - **Copy and clamp what you return.** Handlers build fresh objects with `text()`

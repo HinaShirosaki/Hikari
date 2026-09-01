@@ -43,12 +43,24 @@ const {
 
 const execFileAsync = promisify(execFile);
 
+function platformPythonCandidates(platform = process.platform) {
+  if (platform === 'darwin') {
+    // Finder-launched apps inherit a minimal PATH that normally resolves
+    // `python3` to Apple's/Xcode's interpreter. User packages installed with
+    // python.org or Homebrew live under these stable paths instead, so prefer
+    // them before falling back to the system command.
+    return ['/opt/homebrew/bin/python3', '/usr/local/bin/python3'];
+  }
+  return [];
+}
+
 async function resolvePythonExecutable(explicit = '', preferred = '') {
   const candidates = [
     cleanText(explicit, 240),
     cleanText(preferred, 240),
     cleanText(process.env.HIKARI_AGENT_PYTHON_EXECUTABLE, 240),
     cleanText(process.env.HIKARI_AGENT_PYTHON_BIN, 240),
+    ...platformPythonCandidates(),
     'python3',
     'python'
   ].filter(Boolean);
@@ -437,6 +449,7 @@ async function runPythonSandbox(input, options = {}) {
 }
 
 module.exports = {
+  platformPythonCandidates,
   resolvePythonExecutable,
   runPythonSandbox
 };

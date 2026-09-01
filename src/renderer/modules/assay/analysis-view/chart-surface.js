@@ -34,8 +34,8 @@ function createChartSurface({
     chartControls?.refresh();
   }
 
-  // Every rail section is a fold now, so the toolbar's Format button just reveals the
-  // Chart Format panel rather than swapping the rail out from under you.
+  // Keep a programmatic entry point for callers that need to reveal the existing
+  // Chart Format rail section without replacing the rail.
   function openChartFormat() {
     if (!assayChartFormatPanel) {
       return;

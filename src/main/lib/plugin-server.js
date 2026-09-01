@@ -1,7 +1,7 @@
 'use strict';
 
-// Serves a plugin folder over http://127.0.0.1:<port> so the plugin frame gets
-// a real origin.
+// Serves a plugin folder over http://127.0.0.1:<port> so a view or headless
+// service plugin frame gets a real origin.
 //
 // Why this exists: a sandboxed frame without `allow-same-origin` is an opaque
 // origin, and an opaque origin has no localStorage and no IndexedDB. Anything

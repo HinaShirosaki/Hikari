@@ -151,7 +151,7 @@ function createGraphRendering({
       return;
     }
     if (!(runtime.draft?.blocks || []).length) {
-      elements.workflowGraphStatus.textContent = 'Graph is empty. Add a block to start.';
+      elements.workflowGraphStatus.textContent = '';
       return;
     }
     if (runtime.activeLinkFromBlockId) {

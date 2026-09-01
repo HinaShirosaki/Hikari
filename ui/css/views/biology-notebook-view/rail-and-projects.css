@@ -316,10 +316,14 @@
 }
 
 .biology-notebook-title-editor {
-  width: min(100%, 680px);
-  font-size: clamp(1.35rem, 2vw, 1.9rem);
-  font-weight: 700;
-  line-height: 1.18;
+  box-sizing: border-box;
+  width: min(100%, 28rem);
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .biology-notebook-tool-sidebar {
@@ -544,6 +548,18 @@
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.biology-notebook-molarity-icon {
+  display: inline-grid;
+  width: 21px;
+  height: 21px;
+  place-items: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 0.95rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .biology-notebook-tool-tab.is-active {

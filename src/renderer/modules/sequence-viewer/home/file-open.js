@@ -33,7 +33,6 @@ function createHomeFileOpen({
     if (typeof readFileAsArrayBuffer !== 'function') {
       throw new Error(`Cannot read .${converter.from} files in this environment.`);
     }
-    setHomeStatus(`Converting ${file.name} with the ${converter.pluginId} service...`);
     const buffer = await readFileAsArrayBuffer(file);
     const { text } = await pluginServices.convert({
       extension: converter.from,

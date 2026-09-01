@@ -177,7 +177,7 @@ export function initTimerWidget({
       ? state.settings.dashboard.timerTemplates
       : [];
     if (!templates.length) {
-      timerTemplateList.innerHTML = '<p class="small-note">Add a named timer to start it from this card.</p>';
+      timerTemplateList.innerHTML = '';
       return;
     }
     timerTemplateList.innerHTML = templates.map((template, index) => `

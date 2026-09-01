@@ -58,11 +58,15 @@ Remove. The difference is entirely at runtime: no workspace opens for it.
 
 There is no HTML, CSS, or DOM code here beyond the script host: a service is
 headless, and the host mounts its frame hidden and pinned to `display: none`.
+Hikari delivers that hidden frame from a private `127.0.0.1` origin so packaged
+Electron can load the installed folder's scripts; it never becomes a workspace.
 
 The host calls the service over `postMessage` (host → service, the reverse of
 the [host API](../../../docs/plugins/plugin-api.md)); the service receives only
 the selected file's raw bytes. Its separate host call can invoke only the
-manifest-declared Python capability. See
+manifest-declared Python capability. The worker posts `service:ready` after its
+listener is installed, so an early file-open request waits instead of being
+lost during startup. See
 [docs/plugins/service-plugins.md](../../../docs/plugins/service-plugins.md).
 
 ## Scope

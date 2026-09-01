@@ -29,7 +29,12 @@ function createWorkflowTemplateEditor({
   createWorkflowFromTemplateRecord
 } = {}) {
   function getBlockComposerType() {
-    const selected = String(elements.workflowBlockTypeInput?.value || '').trim().toLowerCase();
+    const selected = String(
+      elements.workflowBlockTypeControl
+        ?.querySelector?.('input[name="workflow-block-type-option"]:checked')
+        ?.value
+      || ''
+    ).trim().toLowerCase();
     return selected === BLOCK_TYPES.TEXT ? BLOCK_TYPES.TEXT : BLOCK_TYPES.PROTOCOL;
   }
 

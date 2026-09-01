@@ -372,11 +372,37 @@ export function createWorkflowActions(config = {}) {
     }
   }
 
+  function onBlockTypeKeydown(event) {
+    const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+      ? 1
+      : (event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0);
+    if (!direction) {
+      return;
+    }
+
+    const options = Array.from(
+      elements.workflowBlockTypeControl
+        ?.querySelectorAll?.('input[name="workflow-block-type-option"]')
+      || []
+    );
+    const currentIndex = options.findIndex((option) => option === event.target || option.checked);
+    if (currentIndex < 0 || options.length < 2) {
+      return;
+    }
+
+    event.preventDefault();
+    const nextOption = options[(currentIndex + direction + options.length) % options.length];
+    nextOption.checked = true;
+    nextOption.focus?.();
+    renderer.syncBlockComposerFields?.();
+  }
+
   function bindEvents() {
     elements.workflowForm?.addEventListener('submit', onWorkflowSubmit);
     elements.workflowCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
     elements.workflowProjectInput?.addEventListener('change', onProjectChange);
-    elements.workflowBlockTypeInput?.addEventListener('change', renderer.syncBlockComposerFields);
+    elements.workflowBlockTypeControl?.addEventListener('change', renderer.syncBlockComposerFields);
+    elements.workflowBlockTypeControl?.addEventListener('keydown', onBlockTypeKeydown);
     elements.workflowBlockProtocolSearchInput?.addEventListener('input', renderer.renderProtocolOptions);
     elements.workflowBlockAddBtn?.addEventListener('click', onAddBlock);
     elements.workflowBlockList?.addEventListener('click', onBlockListClick);
