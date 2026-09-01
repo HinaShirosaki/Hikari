@@ -114,6 +114,7 @@ export function startHikariCore({
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
     onFrameHistoryChanged: () => undoService?.syncButtons?.(),
+    notify: showTransientNotice,
     windowObject,
     api: windowObject.hikariApi || null
   });

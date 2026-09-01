@@ -1,6 +1,6 @@
 // Chart toolbar: the handful of settings people change constantly, kept in the same
 // eyeline as the figure instead of four sections down the left rail. Everything else
-// lives behind Format.
+// lives in the Chart Format rail section.
 
 const TOOLBAR_HTML = `
   <div class="assay-chart-toolbar-group" data-tb="chartTypeGroup">
@@ -34,7 +34,6 @@ const TOOLBAR_HTML = `
   <span class="assay-chart-toolbar-label">Export</span>
   <button type="button" class="ghost-btn assay-chart-toolbar-btn" data-tb="exportPng">PNG</button>
   <button type="button" class="ghost-btn assay-chart-toolbar-btn" data-tb="exportSvg">SVG</button>
-  <button type="button" class="primary-btn assay-chart-toolbar-btn" data-tb="format">Format&hellip;</button>
 `;
 
 // container: the toolbar host. store: the chart style store.
@@ -43,7 +42,6 @@ const TOOLBAR_HTML = `
 export function mountChartToolbar(container, {
   store,
   errorBars,
-  onFormat,
   onExport
 } = {}) {
   if (!container || !store) {
@@ -106,8 +104,6 @@ export function mountChartToolbar(container, {
     if (action === 'errorBars') {
       errorBars?.toggle?.();
       refresh();
-    } else if (action === 'format') {
-      onFormat?.();
     } else if (action === 'exportPng') {
       onExport?.('png');
     } else if (action === 'exportSvg') {

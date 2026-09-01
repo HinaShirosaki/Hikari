@@ -49,7 +49,7 @@ export function initQuickLogWidget({
       : [];
     const last = entries[entries.length - 1];
     if (!last) {
-      return 'No notes yet';
+      return '';
     }
     const stamp = new Date(String(last.createdAt || last.updatedAt || ''));
     const time = Number.isNaN(stamp.getTime())

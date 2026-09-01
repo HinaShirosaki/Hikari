@@ -85,7 +85,13 @@ export function createWellEditorRenderer({
             <strong>Set Samples</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="primary-btn" data-well-sample-create="${index}">Add Sample</button>
+            <button type="button" class="primary-btn inventory-add-sample-icon-btn" data-well-sample-create="${index}" aria-label="Add Sample" title="Add Sample">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4"></path>
+                <path d="M14 14.5h6M17 11.5v6"></path>
+              </svg>
+              <span class="sr-only">Add Sample</span>
+            </button>
           </div>
         </div>
         <label>

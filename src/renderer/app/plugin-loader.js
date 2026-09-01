@@ -46,22 +46,29 @@ export function isSameOriginSafeUrl(value) {
 // Asks the main process for a loopback server on this plugin's folder, then
 // points the frame at it. Failures are shown in the frame rather than thrown:
 // one broken plugin must not take down the rest of the boot.
-async function startServedFrame({ frame, plugin, api }) {
+async function startServedFrame({ frame, plugin, api, showError = true, beforeNavigate = null }) {
   const serve = api?.servePluginFolder;
   if (typeof serve !== 'function') {
-    frame.srcdoc = '<p style="font:13px system-ui;padding:16px">Plugin serving is unavailable in this environment.</p>';
-    return;
+    const error = 'Plugin serving is unavailable in this environment.';
+    if (showError) {
+      frame.srcdoc = `<p style="font:13px system-ui;padding:16px">${error}</p>`;
+    }
+    return { ok: false, error };
   }
   try {
     const result = await serve(plugin.id, plugin.path);
     if (!result?.ok || !isSameOriginSafeUrl(result.baseUrl)) {
       throw new Error(result?.error || 'Plugin server returned an unusable address.');
     }
+    beforeNavigate?.(result.baseUrl);
     frame.src = result.baseUrl;
+    return { ok: true, baseUrl: result.baseUrl };
   } catch (error) {
-    frame.srcdoc = `<p style="font:13px system-ui;padding:16px">Could not start this plugin: ${
-      String(error?.message || error).replace(/[<&]/g, '')
-    }</p>`;
+    const message = String(error?.message || error).replace(/[<&]/g, '');
+    if (showError) {
+      frame.srcdoc = `<p style="font:13px system-ui;padding:16px">Could not start this plugin: ${message}</p>`;
+    }
+    return { ok: false, error: message };
   }
 }
 
@@ -88,12 +95,14 @@ function describePlugin(plugin, { isRemote, isServed }) {
   ].filter(Boolean).join(', ');
 }
 
-// Mounts a service plugin: a hidden, opaque-origin frame that runs the
-// plugin's code with no view, no navigation entry, and no rail. It answers
-// host->service calls (plugin-services.js) and may use only the host API
-// permissions declared in its manifest. It must be in the document to have a
+// Mounts a service plugin: a hidden loopback-served frame that runs the plugin's
+// code with no view, no navigation entry, and no rail. A direct file: frame
+// cannot load sibling scripts from an installed folder in packaged Electron,
+// so the existing per-plugin loopback server supplies its private origin. The
+// frame remains cross-origin from the file: host and may use only manifest-
+// declared bridge permissions. It must be in the document to have a
 // contentWindow, so it is appended hidden before either registry sees it.
-function installServiceFrame({ documentObject, host, plugin, services, bridge }) {
+function installServiceFrame({ documentObject, host, plugin, services, bridge, api }) {
   const frameId = `plugin-service-${plugin.id}`;
   if (documentObject.getElementById(frameId)) {
     return;
@@ -103,13 +112,32 @@ function installServiceFrame({ documentObject, host, plugin, services, bridge })
   frame.className = 'plugin-service-frame';
   frame.hidden = true;
   frame.setAttribute('aria-hidden', 'true');
-  frame.setAttribute('sandbox', LOCAL_SANDBOX);
-  frame.src = plugin.entryUrl;
+  frame.setAttribute('sandbox', REMOTE_SANDBOX);
   host.append(frame);
   if (bridge && frame.contentWindow) {
     bridge.register(frame.contentWindow, plugin);
   }
-  services?.register?.(frame, plugin);
+  const registration = services?.register?.(frame, plugin);
+  let serviceNavigationStarted = false;
+  frame.addEventListener?.('load', () => {
+    // Compatibility for service workers written before `service:ready` was
+    // added to the protocol. A document load finishes after classic scripts
+    // execute, so its listener is installed by this point.
+    if (serviceNavigationStarted) {
+      registration?.ready?.();
+    }
+  });
+  void startServedFrame({
+    frame,
+    plugin,
+    api,
+    showError: false,
+    beforeNavigate: () => { serviceNavigationStarted = true; }
+  }).then((result) => {
+    if (!result.ok) {
+      registration?.fail?.(result.error);
+    }
+  });
 }
 
 export function installPlugins({ state, documentObject, appRegistry, bridge = null, api = null, services = null }) {
@@ -126,7 +154,7 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       // A service has no view: it mounts a hidden frame and is done — no
       // section, no registry entry, no rail.
       if (plugin.service && plugin.entryUrl) {
-        installServiceFrame({ documentObject, host, plugin, services, bridge });
+        installServiceFrame({ documentObject, host, plugin, services, bridge, api });
         return;
       }
 

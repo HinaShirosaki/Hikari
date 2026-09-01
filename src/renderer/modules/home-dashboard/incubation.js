@@ -195,8 +195,8 @@ export function initIncubationWidget({
   function renderIncubationWidget(locations) {
     if (!locations.length) {
       summary.textContent = 'No incubation locations yet.';
-      list.innerHTML = '<p class="small-note">Add an incubation location to track overnight setups here.</p>';
-      panelList.innerHTML = list.innerHTML;
+      list.innerHTML = '';
+      panelList.innerHTML = '';
       return;
     }
     const dueCount = locations.filter((location) => location.isDue).length;

@@ -386,6 +386,104 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.equal(recordedSamples.length, 1);
   assert.equal(recordedSamples[0], state.samples[0]);
 });
+test('personal-inventory single container uses the same labeled set-samples form as a grid cell', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
+    document
+  });
+  const state = {
+    samples: [],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'tube-1',
+          name: 'Plasmid Tube',
+          type: 'single',
+          wells: []
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {},
+    createId: () => 'unused-container-id',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /well-editor-shell-single/);
+  assert.match(inventorySections.innerHTML, /Plasmid Tube \(Single position\)/);
+  assert.match(inventorySections.innerHTML, /Sample Code[\s\S]*data-single-sample-new-code/);
+  assert.match(inventorySections.innerHTML, /Sample Name[\s\S]*data-single-sample-new-name/);
+  assert.match(inventorySections.innerHTML, /Lot \/ Batch[\s\S]*data-single-sample-new-lot/);
+  assert.match(inventorySections.innerHTML, /falcon-cap-ridges/);
+  assert.match(inventorySections.innerHTML, /falcon-volume-50/);
+  assert.doesNotMatch(inventorySections.innerHTML, /No sample linked to this tube yet\./);
+
+  inventorySections.querySelector('[data-single-sample-new-code]').value = 'TUBE-001';
+  inventorySections.querySelector('[data-single-sample-new-name]').value = 'Tube Sample';
+  inventorySections.querySelector('[data-single-sample-new-type]').value = 'plasmid';
+  inventorySections.querySelector('[data-single-sample-new-lot]').value = 'LOT-TUBE';
+  inventorySections.querySelector('[data-single-sample-new-concentration]').value = '1 mg/mL';
+  inventorySections.querySelector('[data-single-sample-new-notes]').value = 'single-container sample';
+  trigger(inventorySections.querySelector('[data-single-sample-create]'), 'click');
+
+  assert.equal(state.samples.length, 1);
+  assert.equal(state.samples[0].code, 'TUBE-001');
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'tube-1');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, null);
+});
+test('personal-inventory Add Sample actions are compact accessible icons', () => {
+  const singleEditorSource = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'personal-inventory',
+    'detail-single-editor.js'
+  ), 'utf8');
+  const wellEditorSource = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'personal-inventory',
+    'detail-well-editor.js'
+  ), 'utf8');
+  const css = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'personal-inventory-view.css'
+  ), 'utf8');
+
+  assert.match(singleEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.match(wellEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.doesNotMatch(singleEditorSource, /data-single-sample-create="true">Add Sample<\/button>/);
+  assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
+  assert.match(css, /\.inventory-add-sample-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
+});
 test('personal-inventory keeps folders nestable while physical containers remain distinct leaves', () => {
   const document = createMockDocument([
     'inventory-sections',

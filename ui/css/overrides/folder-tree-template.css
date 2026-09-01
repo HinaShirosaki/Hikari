@@ -14,14 +14,6 @@
   gap: 2px;
 }
 
-.folder-tree-template__node {
-  position: relative;
-}
-
-.folder-tree-template__leaf {
-  position: relative;
-}
-
 .folder-tree-template__row {
   width: 100%;
   min-width: 0;
@@ -221,29 +213,8 @@
 }
 
 .folder-tree-template__children {
-  position: relative;
   margin-left: 11px;
   padding-left: 14px;
-}
-
-.folder-tree-template__children::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 15px;
-  left: 0;
-  width: 1px;
-  background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
-}
-
-.folder-tree-template__children > :is(.folder-tree-template__node, .folder-tree-template__leaf)::before {
-  content: '';
-  position: absolute;
-  top: 17px;
-  left: -14px;
-  width: 10px;
-  height: 1px;
-  background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
 }
 
 .folder-tree-template__children--full-width-leaves > .folder-tree-template__leaf > .folder-tree-template__leaf-control {

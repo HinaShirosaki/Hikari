@@ -17,9 +17,9 @@ const {
   registerSequenceLibraryIpc
 } = require('./register-data-ipc/register-sequence-library-ipc');
 
-// Loopback servers for `serve: true` plugins. Process-lifetime: they are torn
-// down with the app, and reused across renderer reloads so a reload does not
-// leak listeners.
+// Loopback servers for `serve: true` views and headless service plugins.
+// Process-lifetime: they are torn down with the app, and reused across renderer
+// reloads so a reload does not leak listeners.
 const { createStorageFileHelpers } = require('./data-ipc/storage-files.js');
 
 const pluginServers = createPluginServerRegistry();

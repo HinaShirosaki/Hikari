@@ -370,13 +370,15 @@ export function initPassageWidget({
 
   function renderPassageWidget(passageRows) {
     if (!passageRows.rows.length) {
-      summary.textContent = 'No cell line reminders yet.';
-      list.innerHTML = '<p class="small-note">No cell line reminders yet.</p>';
-      panelList.innerHTML = list.innerHTML;
+      summary.textContent = '';
+      summary.hidden = true;
+      list.innerHTML = '';
+      panelList.innerHTML = '';
       return;
     }
     const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
     summary.textContent = `${dueCount} due · ${passageRows.rows.length} line${passageRows.rows.length === 1 ? '' : 's'}`;
+    summary.hidden = false;
     list.innerHTML = passageRows.rows.map((row) => {
       const tag = passageTag(row);
       return `

@@ -18,6 +18,7 @@
 
 const PROTOCOL_MARKER = 1;
 const CONVERT_TIMEOUT_MS = 15000;
+const SERVICE_READY_TIMEOUT_MS = 10000;
 
 function normalizeExtension(value) {
   return String(value || '').toLowerCase().trim().replace(/^\./, '');
@@ -27,10 +28,58 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
   // extension -> { pluginId, from, to, frame }. First registration wins, so a
   // later plugin cannot hijack an extension another service already claimed.
   const converters = new Map();
+  // contentWindow -> shared runtime state for every conversion declared by one
+  // service frame. The worker announces readiness only after its listener is
+  // installed, so an early file-open request cannot disappear during startup.
+  const runtimes = new Map();
   const pending = new Map();
   let nextCallId = 0;
 
+  function settleRuntime(runtime, error = '') {
+    if (!runtime || runtime.ready || runtime.error) {
+      return;
+    }
+    runtime.ready = !error;
+    runtime.error = String(error || '');
+    for (const waiter of runtime.waiters) {
+      clearTimeout(waiter.timer);
+      if (runtime.ready) {
+        waiter.resolve();
+      } else {
+        waiter.reject(new Error(runtime.error));
+      }
+    }
+    runtime.waiters.clear();
+  }
+
+  function waitUntilReady(runtime) {
+    if (runtime?.ready) {
+      return Promise.resolve();
+    }
+    if (runtime?.error) {
+      return Promise.reject(new Error(runtime.error));
+    }
+    return new Promise((resolve, reject) => {
+      const waiter = { resolve, reject, timer: null };
+      waiter.timer = setTimeout(() => {
+        runtime?.waiters?.delete?.(waiter);
+        reject(new Error(`The "${runtime?.pluginId || 'plugin'}" service did not start.`));
+      }, SERVICE_READY_TIMEOUT_MS);
+      runtime.waiters.add(waiter);
+    });
+  }
+
   function register(frame, plugin) {
+    const runtime = {
+      pluginId: String(plugin?.id || 'plugin'),
+      frame,
+      ready: false,
+      error: '',
+      waiters: new Set()
+    };
+    if (frame?.contentWindow) {
+      runtimes.set(frame.contentWindow, runtime);
+    }
     const conversions = Array.isArray(plugin?.service?.fileConversions)
       ? plugin.service.fileConversions
       : [];
@@ -38,9 +87,17 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
       const from = normalizeExtension(conversion?.from);
       const to = normalizeExtension(conversion?.to);
       if (from && to && !converters.has(from)) {
-        converters.set(from, { pluginId: plugin.id, from, to, frame });
+        converters.set(from, { pluginId: plugin.id, from, to, frame, runtime });
       }
     }
+    return {
+      ready() {
+        settleRuntime(runtime);
+      },
+      fail(error) {
+        settleRuntime(runtime, `The "${runtime.pluginId}" service could not start: ${String(error || 'unknown error')}`);
+      }
+    };
   }
 
   function getConverter(extension) {
@@ -57,11 +114,7 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
   // converted text. `bytes` should be a Uint8Array; it is cloned across the
   // postMessage boundary. Rejects on unknown extension, dead frame, timeout, or
   // a service-reported error — the caller decides how to surface it.
-  function convert({ extension, filename, bytes }) {
-    const converter = getConverter(extension);
-    if (!converter) {
-      return Promise.reject(new Error(`No installed service converts .${normalizeExtension(extension)} files.`));
-    }
+  function postConversion({ converter, filename, bytes }) {
     const target = converter.frame?.contentWindow;
     if (!target) {
       return Promise.reject(new Error(`The "${converter.pluginId}" service is not running.`));
@@ -72,7 +125,7 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
         pending.delete(id);
         reject(new Error(`Conversion of ${filename || 'the file'} timed out.`));
       }, CONVERT_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer, to: converter.to });
+      pending.set(id, { resolve, reject, timer, to: converter.to, source: target });
       target.postMessage({
         hikari: PROTOCOL_MARKER,
         call: 'convert',
@@ -85,17 +138,33 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
     });
   }
 
+  function convert({ extension, filename, bytes }) {
+    const converter = getConverter(extension);
+    if (!converter) {
+      return Promise.reject(new Error(`No installed service converts .${normalizeExtension(extension)} files.`));
+    }
+    if (!converter.runtime.ready) {
+      return waitUntilReady(converter.runtime).then(() => postConversion({ converter, filename, bytes }));
+    }
+    return postConversion({ converter, filename, bytes });
+  }
+
   function handleMessage(event) {
     const reply = event?.data;
-    if (!reply || typeof reply !== 'object' || reply.hikari !== PROTOCOL_MARKER || reply.call !== 'convert:result') {
+    if (!reply || typeof reply !== 'object' || reply.hikari !== PROTOCOL_MARKER) {
+      return;
+    }
+    if (reply.call === 'service:ready') {
+      settleRuntime(runtimes.get(event.source));
+      return;
+    }
+    if (reply.call !== 'convert:result') {
       return;
     }
     const settle = pending.get(reply.id);
-    if (!settle) {
+    if (!settle || event.source !== settle.source) {
       return;
     }
-    // Only the frame we posted to can answer this id: the service frame we
-    // targeted is the one whose contentWindow re-posts here.
     pending.delete(reply.id);
     clearTimeout(settle.timer);
     if (reply.ok && typeof reply.text === 'string') {

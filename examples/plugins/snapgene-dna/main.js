@@ -43,4 +43,8 @@
       }
     );
   });
+
+  // Announce readiness only after the conversion listener is installed. The
+  // host queues an early file-open request until this message arrives.
+  window.parent.postMessage({ hikari: PROTOCOL_MARKER, call: 'service:ready' }, '*');
 }());

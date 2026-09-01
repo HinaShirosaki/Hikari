@@ -311,9 +311,9 @@ test('plugin system: inspect-plugin-folder enforces the required folder shape', 
   assert.ok(result.entryUrl.startsWith('file://'));
   assert.ok(result.entryUrl.endsWith('/index.html'));
 
-  await writeManifest({ ...valid, permissions: ['notebook:read', 'notebook:write'] });
+  await writeManifest({ ...valid, permissions: ['notebook:read', 'notebook:write', 'notifications'] });
   const permitted = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
-  assert.deepEqual(permitted.permissions, ['notebook:read', 'notebook:write']);
+  assert.deepEqual(permitted.permissions, ['notebook:read', 'notebook:write', 'notifications']);
 
   for (const [label, manifest] of [
     ['unparseable manifest', '{not json'],
@@ -505,20 +505,32 @@ test('plugin service registry routes a conversion to the owning frame', async ()
 
   const bytes = new Uint8Array([1, 2, 3]);
   const resultPromise = registry.convert({ extension: 'dna', filename: 'p.dna', bytes });
-  assert.equal(posted.length, 1, 'the owning frame was posted to');
+  assert.equal(posted.length, 0, 'an early conversion waits for the service listener');
+  messageHandler({
+    source: frame.contentWindow,
+    data: { hikari: 1, call: 'service:ready' }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(posted.length, 1, 'the ready owning frame was posted to');
   assert.equal(posted[0].call, 'convert');
   assert.equal(posted[0].bytes, bytes);
   const callId = posted[0].id;
 
   // The frame answers on the shared message channel.
-  messageHandler({ data: { hikari: 1, call: 'convert:result', id: callId, ok: true, text: 'LOCUS ...' } });
+  messageHandler({
+    source: frame.contentWindow,
+    data: { hikari: 1, call: 'convert:result', id: callId, ok: true, text: 'LOCUS ...' }
+  });
   const result = await resultPromise;
   assert.equal(result.text, 'LOCUS ...');
 
   // A service-reported failure rejects.
   const failing = registry.convert({ extension: 'dna', filename: 'bad.dna', bytes });
   const failId = posted[posted.length - 1].id;
-  messageHandler({ data: { hikari: 1, call: 'convert:result', id: failId, ok: false, error: 'boom' } });
+  messageHandler({
+    source: frame.contentWindow,
+    data: { hikari: 1, call: 'convert:result', id: failId, ok: false, error: 'boom' }
+  });
   await assert.rejects(failing, /boom/);
 
   await assert.rejects(registry.convert({ extension: 'ab1', bytes }), /No installed service converts/);
@@ -589,9 +601,11 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   function makeNode(tag) {
     const node = {
       tagName: String(tag).toUpperCase(), id: '', className: '', hidden: false, src: '',
-      children: [], attributes: new Map(),
+      children: [], attributes: new Map(), listeners: new Map(),
       setAttribute(n, v) { this.attributes.set(n, String(v)); },
       getAttribute(n) { return this.attributes.has(n) ? this.attributes.get(n) : null; },
+      addEventListener(n, fn) { this.listeners.set(n, fn); },
+      dispatchEvent(event) { this.listeners.get(event?.type)?.(event); },
       append(...kids) { this.children.push(...kids); }
     };
     if (node.tagName === 'IFRAME') {
@@ -618,14 +632,28 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   };
   const registered = [];
   const bridged = [];
-  const services = { register: (frame, plugin) => registered.push({ frame, plugin }) };
+  const readyFrames = [];
+  const services = {
+    register: (frame, plugin) => {
+      registered.push({ frame, plugin });
+      return { ready: () => readyFrames.push(frame) };
+    }
+  };
   const bridge = { register: (frameWindow, plugin) => bridged.push({ frameWindow, plugin }) };
   const appRegistry = [];
+  const serveCalls = [];
+  const api = {
+    servePluginFolder: async (id, pluginPath) => {
+      serveCalls.push({ id, pluginPath });
+      return { ok: true, baseUrl: 'http://127.0.0.1:43210/' };
+    }
+  };
 
   const state = { settings: { plugins: [
     { id: 'snapgene-dna', name: 'Svc', entryUrl: 'file:///tmp/snapgene-dna/index.html', path: '/tmp/snapgene-dna', permissions: ['python'], service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
   ] } };
-  installPlugins({ state, documentObject, appRegistry, services, bridge });
+  installPlugins({ state, documentObject, appRegistry, services, bridge, api });
+  await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(documentObject.getElementById('plugin-snapgene-dna-view'), null, 'a service has no view section');
   assert.equal(appRegistry.length, 0, 'a service adds no navigation entry');
@@ -636,7 +664,19 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
     String(frame.className).split(/\s+/).includes('plugin-service-frame'),
     'the frame carries the class that pins it to display:none'
   );
-  assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-forms allow-modals allow-popups', 'opaque-origin sandbox, no allow-same-origin');
+  assert.equal(
+    frame.getAttribute('sandbox'),
+    'allow-scripts allow-forms allow-modals allow-popups allow-same-origin',
+    'the hidden service gets its own loopback origin, separate from the file host'
+  );
+  assert.deepEqual(
+    serveCalls,
+    [{ id: 'snapgene-dna', pluginPath: '/tmp/snapgene-dna' }],
+    'the service folder is loaded through the packaged-safe plugin server'
+  );
+  assert.equal(frame.src, 'http://127.0.0.1:43210/');
+  frame.dispatchEvent({ type: 'load' });
+  assert.deepEqual(readyFrames, [frame], 'load marks older service workers ready as a compatibility fallback');
   assert.equal(registered.length, 1, 'the frame is registered with the service registry');
   assert.equal(registered[0].plugin.id, 'snapgene-dna');
   assert.equal(bridged.length, 1, 'the frame is registered with the permission bridge');
@@ -664,6 +704,7 @@ test('plugin service: the example service ships no UI', () => {
   // The service worker must not touch the DOM.
   const worker = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
   assert.equal(/\bdocument\./.test(worker), false, 'the service worker touches no DOM');
+  assert.match(worker, /call:\s*'service:ready'/, 'the worker announces when its listener is installed');
   const converter = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'biopython-converter.js'));
   assert.match(converter, /hikari\.call\('python\.run'/, 'the service delegates conversion to the Python API');
   assert.match(converter, /from Bio import SeqIO/, 'the Python program uses Biopython');
@@ -701,6 +742,10 @@ test('plugin service: the headless worker routes conversion through python.run a
     addEventListener: (_type, listener) => { messageHandler = listener; }
   };
   vm.runInNewContext(workerSource, { window: windowObject, console });
+
+  assert.equal(replies.length, 1, 'the worker announces readiness at startup');
+  assert.equal(replies[0].call, 'service:ready');
+  replies.length = 0;
 
   messageHandler({
     data: {
@@ -1153,6 +1198,71 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   assert.equal('keeper' in state.settings.pluginStorage, false, 'setting null clears the slice');
 });
 
+test('plugin system: notifications are permission gated, attributed, and bounded', async () => {
+  const { createPluginBridge, PLUGIN_BRIDGE_VERBS } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const { PLUGIN_PERMISSIONS } = require(path.join(__dirname, 'src', 'main', 'lib', 'inspect-plugin-folder.js'));
+  assert.equal(PLUGIN_BRIDGE_VERBS['notifications.show'], 'notifications');
+  assert.ok(PLUGIN_PERMISSIONS.includes('notifications'));
+
+  const notices = [];
+  const bridge = createPluginBridge({
+    state: { settings: {} },
+    notify: (message, options) => notices.push({ message, options }),
+    windowObject: { addEventListener() {} }
+  });
+  const makeFrame = () => {
+    const replies = [];
+    return { replies, postMessage: (payload) => replies.push(payload) };
+  };
+  const notifier = makeFrame();
+  const reader = makeFrame();
+  bridge.register(notifier, { id: 'notifier', name: 'Trusted Notifier', permissions: ['notifications'] });
+  bridge.register(reader, { id: 'reader', name: 'Reader', permissions: ['notebook:read'] });
+
+  const send = (source, params) => {
+    bridge.handleMessage({
+      source,
+      data: { hikari: 1, id: `notice-${source.replies.length}`, verb: 'notifications.show', params }
+    });
+    return source.replies.at(-1);
+  };
+
+  const denied = send(reader, { message: 'Pretend this came from Hikari.' });
+  assert.equal(denied.ok, false);
+  assert.match(denied.error, /notifications/);
+  assert.equal(notices.length, 0, 'a plugin without permission cannot reach host UI');
+
+  const shown = send(notifier, { message: 'Export complete.' });
+  assert.deepEqual(shown.result, { shown: true, type: 'success', durationMs: 5000 });
+  assert.deepEqual(notices[0], {
+    message: 'Plugin Trusted Notifier: Export complete.',
+    options: { type: 'success', durationMs: 5000 }
+  });
+
+  const error = send(notifier, { message: 'Export failed.', type: 'error', durationMs: 12000 });
+  assert.deepEqual(error.result, { shown: true, type: 'error', durationMs: 12000 });
+  assert.deepEqual(notices[1], {
+    message: 'Plugin Trusted Notifier: Export failed.',
+    options: { type: 'error', durationMs: 12000 }
+  });
+
+  for (const params of [
+    {},
+    { message: '   ' },
+    { message: { text: 'not a string' } },
+    { message: 'x'.repeat(1001) },
+    { message: 'Wrong type', type: 'warning' },
+    { message: 'Too short', durationMs: 999 },
+    { message: 'Too long', durationMs: 15001 },
+    { message: 'Not an integer', durationMs: 1250.5 }
+  ]) {
+    assert.equal(send(notifier, params).ok, false, `invalid notification was accepted: ${JSON.stringify(params)}`);
+  }
+  assert.equal(notices.length, 2, 'invalid requests never reach the notification helper');
+});
+
 test('plugin system: files verbs stay inside the plugin folder', async () => {
   const { createPluginBridge } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
@@ -1544,6 +1654,51 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.equal(runner.replies.at(-1).ok, false);
   assert.match(runner.replies.at(-1).error, /exceeds the 4000000-character limit/);
   assert.equal(runs.length, 1, 'oversized input never reaches the host runner');
+});
+
+test('python sandbox: Finder launches prefer standard user Python installs on macOS', async () => {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+  const {
+    platformPythonCandidates,
+    resolvePythonExecutable
+  } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js'));
+  const available = [];
+  for (const candidate of platformPythonCandidates('darwin')) {
+    try {
+      await fsPromises.access(candidate);
+      available.push(candidate);
+    } catch {
+      // This standard installation is absent on the current Mac.
+    }
+  }
+  if (!available.length) {
+    return;
+  }
+
+  const saved = {
+    path: process.env.PATH,
+    executable: process.env.HIKARI_AGENT_PYTHON_EXECUTABLE,
+    bin: process.env.HIKARI_AGENT_PYTHON_BIN
+  };
+  try {
+    process.env.PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
+    delete process.env.HIKARI_AGENT_PYTHON_EXECUTABLE;
+    delete process.env.HIKARI_AGENT_PYTHON_BIN;
+    assert.equal(
+      await resolvePythonExecutable(),
+      available[0],
+      'a packaged-style PATH should not silently select Apple/Xcode Python first'
+    );
+  } finally {
+    if (saved.path === undefined) delete process.env.PATH;
+    else process.env.PATH = saved.path;
+    if (saved.executable === undefined) delete process.env.HIKARI_AGENT_PYTHON_EXECUTABLE;
+    else process.env.HIKARI_AGENT_PYTHON_EXECUTABLE = saved.executable;
+    if (saved.bin === undefined) delete process.env.HIKARI_AGENT_PYTHON_BIN;
+    else process.env.HIKARI_AGENT_PYTHON_BIN = saved.bin;
+  }
 });
 
 test('plugin system: every public verb and host event is documented', async () => {

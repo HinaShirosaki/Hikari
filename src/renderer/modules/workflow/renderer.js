@@ -188,13 +188,20 @@ export function createWorkflowRenderer(config = {}) {
   }
 
   function syncBlockComposerFields() {
-    const selected = String(elements.workflowBlockTypeInput?.value || '').trim().toLowerCase();
+    const selected = String(
+      elements.workflowBlockTypeControl
+        ?.querySelector?.('input[name="workflow-block-type-option"]:checked')
+        ?.value
+      || ''
+    ).trim().toLowerCase();
     const blockType = selected === BLOCK_TYPES.TEXT ? BLOCK_TYPES.TEXT : BLOCK_TYPES.PROTOCOL;
     const isProtocol = blockType === BLOCK_TYPES.PROTOCOL;
 
-    if (elements.workflowBlockTypeInput) {
-      elements.workflowBlockTypeInput.value = blockType;
-    }
+    elements.workflowBlockTypeControl
+      ?.querySelectorAll?.('input[name="workflow-block-type-option"]')
+      ?.forEach((input) => {
+        input.checked = input.value === blockType;
+      });
     if (elements.workflowBlockProtocolSearchField) {
       elements.workflowBlockProtocolSearchField.hidden = !isProtocol;
     }

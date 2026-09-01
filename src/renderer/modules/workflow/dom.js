@@ -9,7 +9,7 @@ export function getWorkflowElements(rootDocument) {
     workflowProjectField: rootDocument?.getElementById?.('workflow-project-field'),
     workflowNotebookPagesField: rootDocument?.getElementById?.('workflow-notebook-pages-field'),
     workflowCancelBtn: rootDocument?.getElementById?.('workflow-cancel-btn'),
-    workflowBlockTypeInput: rootDocument?.getElementById?.('workflow-block-type'),
+    workflowBlockTypeControl: rootDocument?.getElementById?.('workflow-block-type'),
     workflowBlockProtocolSearchField: rootDocument?.getElementById?.('workflow-block-protocol-search-field'),
     workflowBlockProtocolField: rootDocument?.getElementById?.('workflow-block-protocol-field'),
     workflowBlockProtocolSearchInput: rootDocument?.getElementById?.('workflow-block-protocol-search'),

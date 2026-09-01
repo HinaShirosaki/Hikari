@@ -4,6 +4,12 @@ import { setSharedLeftRailWidth } from '../shared-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
 import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, PLUGIN_FILES_FOLDER, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
 
+const MAX_NOTIFICATION_MESSAGE_CHARS = 1000;
+const DEFAULT_NOTIFICATION_DURATION_MS = 5000;
+const MIN_NOTIFICATION_DURATION_MS = 1000;
+const MAX_NOTIFICATION_DURATION_MS = 15000;
+const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
+
 // Every verb declares the permission it needs. A verb with an unlisted
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
@@ -32,6 +38,54 @@ const VERBS = {
           windowObject
         })
       };
+    }
+  },
+
+  // Host-owned UI with explicit attribution. A plugin cannot pass its own
+  // label, HTML, placement, or stacking rules, so the notice cannot masquerade
+  // as an unattributed Hikari message or create a parallel notification UI.
+  'notifications.show': {
+    permission: 'notifications',
+    handler: (params, { plugin, notify }) => {
+      if (typeof params?.message !== 'string') {
+        throw new Error('notifications.show requires a string "message".');
+      }
+      const message = params.message.trim();
+      if (!message) {
+        throw new Error('notifications.show requires a non-empty "message".');
+      }
+      if (message.length > MAX_NOTIFICATION_MESSAGE_CHARS) {
+        throw new Error(
+          `notifications.show rejected: ${message.length} characters exceeds the ${MAX_NOTIFICATION_MESSAGE_CHARS}-character limit.`
+        );
+      }
+
+      const type = params.type === undefined ? 'success' : params.type;
+      if (!NOTIFICATION_TYPES.includes(type)) {
+        throw new Error('notifications.show "type" must be "success" or "error".');
+      }
+
+      const durationMs = params.durationMs === undefined
+        ? DEFAULT_NOTIFICATION_DURATION_MS
+        : params.durationMs;
+      if (!Number.isInteger(durationMs)
+        || durationMs < MIN_NOTIFICATION_DURATION_MS
+        || durationMs > MAX_NOTIFICATION_DURATION_MS) {
+        throw new Error(
+          `notifications.show "durationMs" must be an integer from ${MIN_NOTIFICATION_DURATION_MS} to ${MAX_NOTIFICATION_DURATION_MS}.`
+        );
+      }
+      if (typeof notify !== 'function') {
+        throw new Error('Notifications are unavailable in this environment.');
+      }
+
+      const pluginLabel = (
+        text(plugin?.name, 200)
+        || text(plugin?.id, 200)
+        || 'unknown'
+      ).replace(/\s+/g, ' ');
+      notify(`Plugin ${pluginLabel}: ${message}`, { type, durationMs });
+      return { shown: true, type, durationMs };
     }
   },
 

@@ -164,10 +164,8 @@ export function createAssayAnalysisView({
           onAnalysisConfigChange();
         }
       },
-      // The toolbar and extracted chart surface refer to each other. Keep these
-      // callbacks late-bound so constructing either side cannot read a const that
-      // is still in its temporal dead zone.
-      onFormat: () => chartSurface?.openChartFormat(),
+      // Keep this late-bound so constructing the toolbar cannot read chartSurface
+      // while it is still in its temporal dead zone.
       onExport: (format) => chartSurface?.exportChartImage(format)
     })
     : null;

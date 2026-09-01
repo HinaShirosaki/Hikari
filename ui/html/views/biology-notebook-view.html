@@ -188,10 +188,7 @@
                   <span class="sr-only">Add samples</span>
                 </button>
                 <button id="biology-notebook-add-molarity-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add molarity table" data-hover-caption="Molarity calculator">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M6 3h12M9 3v5l-4 8.5A3 3 0 0 0 7.7 21h8.6a3 3 0 0 0 2.7-4.5L15 8V3"></path>
-                    <path d="M6.5 15h11"></path>
-                  </svg>
+                  <span class="biology-notebook-molarity-icon" aria-hidden="true">Mw</span>
                   <span class="sr-only">Add molarity table</span>
                 </button>
                 <button id="biology-notebook-add-table-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add table" data-hover-caption="Add table">
@@ -522,7 +519,13 @@
               <p id="biology-notebook-quick-sample-status" class="small-note" aria-live="polite"></p>
               <div class="form-actions">
                 <button id="biology-notebook-quick-sample-cancel-btn" class="ghost-btn" type="button">Cancel</button>
-                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn" type="submit">Add Sample</button>
+                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn biology-notebook-quick-sample-submit-btn" type="submit" aria-label="Add Sample" title="Add Sample">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4"></path>
+                    <path d="M14 14.5h6M17 11.5v6"></path>
+                  </svg>
+                  <span class="sr-only">Add Sample</span>
+                </button>
               </div>
             </div>
           </form>
