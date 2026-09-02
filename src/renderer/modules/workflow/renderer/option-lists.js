@@ -120,6 +120,34 @@ function createWorkflowOptionLists({
     }
   }
 
+  function renderProtocolResults() {
+    if (!elements.workflowBlockProtocolResults) {
+      return;
+    }
+
+    const searchTerm = String(elements.workflowBlockProtocolSearchInput?.value || '').trim().toLowerCase();
+    const selectedProtocolId = String(elements.workflowBlockProtocolInput?.value || '');
+    const matches = (state.protocols || [])
+      .filter((protocol) => String(protocol?.name || '').toLowerCase().includes(searchTerm))
+      .slice(0, 60);
+
+    if (!matches.length) {
+      elements.workflowBlockProtocolResults.innerHTML = '<p class="workflow-block-protocol-search-empty">No matching protocols.</p>';
+      return;
+    }
+
+    elements.workflowBlockProtocolResults.innerHTML = matches.map((protocol) => {
+      const id = String(protocol?.id || '').trim();
+      const selected = id === selectedProtocolId ? ' is-selected' : '';
+      return `<button type="button" class="workflow-block-protocol-search-result${selected}" data-workflow-block-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${safeText(protocol?.name || 'Untitled protocol')}</button>`;
+    }).join('');
+  }
+
+  function renderProtocolPicker() {
+    renderProtocolOptions();
+    renderProtocolResults();
+  }
+
   function renderBlockList() {
     if (!elements.workflowBlockList) {
       return;
@@ -249,6 +277,8 @@ function createWorkflowOptionLists({
     renderTemplateCreateProjectOptions,
     renderNotebookOptions,
     renderProtocolOptions,
+    renderProtocolResults,
+    renderProtocolPicker,
     renderBlockList,
     renderTemplateSourceOptions,
     renderTemplateList,

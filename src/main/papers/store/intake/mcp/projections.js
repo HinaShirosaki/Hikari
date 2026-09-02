@@ -127,6 +127,7 @@ function configurationError(mcpToolName) {
     ok: false,
     status: 'executor_unavailable',
     mcp_tool: mcpToolName,
+    app_tool: mcpToolName,
     error: 'Paper intake store is not connected to the workspace yet.'
   };
 }
@@ -144,6 +145,7 @@ function ensureStore(deps, mcpToolName) {
           ok: false,
           status: 'executor_unavailable',
           mcp_tool: mcpToolName,
+          app_tool: mcpToolName,
           error: cleanText(error?.message || error, 600)
             || 'Failed to construct paper intake store.'
         }

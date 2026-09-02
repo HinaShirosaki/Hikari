@@ -1,4 +1,5 @@
 import { eventTargetsElement } from './shared.js';
+import { isOrfFeature } from '../orf-analysis.js';
 
 // Pointer work inside the sequence workspace: selection drags, hover tooltips,
 // feature rail clicks, and the context menu.
@@ -24,9 +25,9 @@ function bindSequenceHostEvents(context = {}) {
   } = context;
 
 
-  // A feature highlight is a transient inspection state. Keep it while the
-  // user acts on that feature, but clear it when they click elsewhere in the
-  // detail workspace (including empty sequence or rail space).
+  // Most feature highlights are transient inspection state. An expanded ORF
+  // translation is different: keep it open through unrelated workspace clicks
+  // and let a subsequent ORF click control whether it stays expanded.
   elements.detailWorkspace?.addEventListener('mousedown', (event) => {
     const button = Number(event?.button);
     if ((Number.isFinite(button) && button !== 0)
@@ -45,10 +46,24 @@ function bindSequenceHostEvents(context = {}) {
     if (featureInteractionSurfaces.some((element) => eventTargetsElement(event, element))) {
       return;
     }
+    const selectedFeature = getVisibleFeaturesForRecord(getSelectedRecord())[state.selectedFeatureIndex] || null;
+    if (isOrfFeature(selectedFeature)) {
+      hideFeatureContextMenu();
+      return;
+    }
     state.selectedFeatureIndex = -1;
     hideFeatureContextMenu();
     renderActiveRecord({ preserveScroll: true });
   });
+
+  function selectFeature(index, options = {}) {
+    const selectedFeature = getVisibleFeaturesForRecord(getSelectedRecord())[index] || null;
+    const togglingExpandedOrf = index === state.selectedFeatureIndex && isOrfFeature(selectedFeature);
+    state.selectedFeatureIndex = togglingExpandedOrf ? -1 : index;
+    clearSequenceSelection(options);
+    hideFeatureContextMenu();
+    renderActiveRecord({ preserveScroll: true });
+  }
 
   elements.featureRailHost?.addEventListener('click', (event) => {
     const trigger = event.target?.closest?.('[data-feature-index]') || null;
@@ -59,10 +74,7 @@ function bindSequenceHostEvents(context = {}) {
     if (!Number.isFinite(index)) {
       return;
     }
-    state.selectedFeatureIndex = index;
-    clearSequenceSelection();
-    hideFeatureContextMenu();
-    renderActiveRecord({ preserveScroll: true });
+    selectFeature(index);
   });
 
   elements.sequenceHost?.addEventListener('mousedown', (event) => {
@@ -174,7 +186,6 @@ function bindSequenceHostEvents(context = {}) {
   });
 
   elements.sequenceHost?.addEventListener('click', (event) => {
-    hideFeatureContextMenu();
     const trigger = event.target?.closest?.('[data-feature-index]') || null;
     if (!trigger) {
       return;
@@ -183,9 +194,7 @@ function bindSequenceHostEvents(context = {}) {
     if (!Number.isFinite(index)) {
       return;
     }
-    state.selectedFeatureIndex = index;
-    clearSequenceSelection({ preserveCursor: true });
-    renderActiveRecord({ preserveScroll: true });
+    selectFeature(index, { preserveCursor: true });
   });
 
   elements.sequenceHost?.addEventListener('mouseup', () => {

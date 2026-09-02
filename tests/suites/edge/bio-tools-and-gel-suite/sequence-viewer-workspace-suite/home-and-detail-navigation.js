@@ -190,18 +190,25 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
   const detailOpenBtn = document.getElementById('sequence-viewer-detail-open-btn');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
   const pastePanel = document.getElementById('sequence-viewer-paste-panel');
+  const newSequenceOverlay = document.getElementById('sequence-viewer-new-overlay');
 
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
   assert.equal(Boolean(detailNewBtn.hidden), false);
   assert.equal(Boolean(detailOpenBtn.hidden), false);
   assert.equal(Boolean(loadBtn.hidden), true);
+  assert.equal(Boolean(newSequenceOverlay.hidden), true);
 
   trigger(detailNewBtn, 'click');
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
-  assert.equal(Boolean(loadBtn.hidden), false);
-  assert.equal(Boolean(pastePanel.hidden), false);
+  assert.equal(Boolean(newSequenceOverlay.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), true);
+  assert.equal(Boolean(pastePanel.hidden), true);
+
+  trigger(document.getElementById('sequence-viewer-new-cancel-btn'), 'click');
+  assert.equal(Boolean(newSequenceOverlay.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
 });
 test('[EDGE] sequence-viewer render sync returns to the home workspace when the home shell is reopened from detail', () => {
   const ids = [
@@ -367,7 +374,7 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
   assert.equal(Boolean(builderWorkspace.hidden), false);
   assert.equal(Boolean(detailWorkspace.hidden), true);
 });
-test('[EDGE] sequence-viewer home paste button opens detail workspace even with empty text', () => {
+test('[EDGE] sequence-viewer New opens an overlay and loads pasted DNA only after submit', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
@@ -417,15 +424,35 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
     { document }
   );
   moduleWithDom.initSequenceViewer();
+  const newSequenceOverlay = document.getElementById('sequence-viewer-new-overlay');
+  const newSequenceForm = document.getElementById('sequence-viewer-new-form');
+  const newSequenceTextarea = document.getElementById('sequence-viewer-new-textarea');
+  const newSequenceStatus = document.getElementById('sequence-viewer-new-status');
+
+  assert.equal(Boolean(newSequenceOverlay.hidden), true);
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
 
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
   const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  assert.equal(Boolean(newSequenceOverlay.hidden), false);
+  assert.equal(Boolean(homeWorkspace.hidden), false);
+  assert.equal(Boolean(detailWorkspace.hidden), true);
+
+  trigger(newSequenceForm, 'submit');
+  assert.equal(Boolean(newSequenceOverlay.hidden), false);
+  assert.equal(Boolean(newSequenceStatus.hidden), false);
+  assert.match(newSequenceStatus.textContent, /Paste a DNA sequence/i);
+
+  newSequenceTextarea.value = '>new_sequence\nACGTACGTACGT\n';
+  trigger(newSequenceForm, 'submit');
+  await flushAsync();
+
+  assert.equal(Boolean(newSequenceOverlay.hidden), true);
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
-  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Paste sequence text/i);
+  assert.equal(document.getElementById('sequence-viewer-textarea').value, '>new_sequence\nACGTACGTACGT\n');
 });
-test('[EDGE] sequence-viewer New action uses navigation callback', () => {
+test('[EDGE] sequence-viewer New action navigates after pasted DNA is submitted', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
@@ -443,6 +470,11 @@ test('[EDGE] sequence-viewer New action uses navigation callback', () => {
   });
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
+  assert.deepEqual(transitions, []);
+
+  document.getElementById('sequence-viewer-new-textarea').value = 'ACGTACGT';
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
+  await flushAsync();
   assert.deepEqual(transitions, ['detail']);
 });
 test('[EDGE] sequence-viewer library native dblclick opens detail while single click only previews', async () => {

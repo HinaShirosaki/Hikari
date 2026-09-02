@@ -11,8 +11,20 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
+
+const PLOTLY_GRAPH_SUCCESS_STATUSES = Object.freeze([
+  'completed',
+  'created',
+  'read',
+  'listed',
+  'updated',
+  'inspected',
+  'deleted',
+  'cleared'
+]);
 
 const PLOTLY_GRAPH_MCP_TOOL = Object.freeze({
   name: 'plotly_graph',
@@ -70,11 +82,15 @@ async function callPlotlyGraph(input = {}, context = {}, deps = {}) {
     context
   });
   const payload = resolvePlotlyGraphPayload(result);
-  const status = cleanText(payload.status || result?.status, 80) || (result?.ok === false ? 'failed' : 'completed');
+  const status = cleanText(payload.status || result?.status, 80)
+    || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 4000);
-  const ok = result?.ok !== false
-    && payload.ok !== false
-    && !['error', 'failed', 'invalid_action', 'invalid_figure', 'not_found'].includes(status);
+  const ok = resolveDirectToolOk({
+    result,
+    payload,
+    status,
+    successStatuses: PLOTLY_GRAPH_SUCCESS_STATUSES
+  });
 
   return compactObject({
     ok,

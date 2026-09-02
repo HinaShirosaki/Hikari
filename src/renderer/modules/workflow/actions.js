@@ -397,13 +397,32 @@ export function createWorkflowActions(config = {}) {
     renderer.syncBlockComposerFields?.();
   }
 
+  function onBlockProtocolSearchInput() {
+    if (elements.workflowBlockProtocolInput) {
+      elements.workflowBlockProtocolInput.value = '';
+    }
+    renderer.renderProtocolPicker?.();
+  }
+
+  function onBlockProtocolResultClick(event) {
+    const option = event?.target?.closest?.('[data-workflow-block-protocol-id]')
+      || (event?.target?.dataset?.workflowBlockProtocolId ? event.target : null);
+    const protocolId = String(option?.dataset?.workflowBlockProtocolId || '').trim();
+    if (!protocolId || !(state.protocols || []).some((protocol) => protocol.id === protocolId)) {
+      return;
+    }
+    elements.workflowBlockProtocolInput.value = protocolId;
+    renderer.renderProtocolPicker?.();
+  }
+
   function bindEvents() {
     elements.workflowForm?.addEventListener('submit', onWorkflowSubmit);
     elements.workflowCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
     elements.workflowProjectInput?.addEventListener('change', onProjectChange);
     elements.workflowBlockTypeControl?.addEventListener('change', renderer.syncBlockComposerFields);
     elements.workflowBlockTypeControl?.addEventListener('keydown', onBlockTypeKeydown);
-    elements.workflowBlockProtocolSearchInput?.addEventListener('input', renderer.renderProtocolOptions);
+    elements.workflowBlockProtocolSearchInput?.addEventListener('input', onBlockProtocolSearchInput);
+    elements.workflowBlockProtocolResults?.addEventListener('click', onBlockProtocolResultClick);
     elements.workflowBlockAddBtn?.addEventListener('click', onAddBlock);
     elements.workflowBlockList?.addEventListener('click', onBlockListClick);
     elements.workflowBlockList?.addEventListener('change', onBlockListChange);

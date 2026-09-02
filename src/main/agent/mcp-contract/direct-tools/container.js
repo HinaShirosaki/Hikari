@@ -11,8 +11,21 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
+
+const CONTAINER_SUCCESS_STATUSES = Object.freeze([
+  'completed',
+  'created',
+  'read',
+  'listed',
+  'updated',
+  'replaced',
+  'renamed',
+  'deleted',
+  'cleared'
+]);
 
 const CONTAINER_MCP_TOOL = Object.freeze({
   name: 'container',
@@ -70,11 +83,15 @@ async function callContainer(input = {}, context = {}, deps = {}) {
     context
   });
   const payload = resolveContainerPayload(result);
-  const status = cleanText(payload.status || result?.status, 80) || (result?.ok === false ? 'failed' : 'completed');
+  const status = cleanText(payload.status || result?.status, 80)
+    || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 1200);
-  const ok = result?.ok !== false
-    && payload.ok !== false
-    && !['error', 'failed', 'invalid_action', 'invalid_value', 'not_found', 'range_out_of_bounds'].includes(status);
+  const ok = resolveDirectToolOk({
+    result,
+    payload,
+    status,
+    successStatuses: CONTAINER_SUCCESS_STATUSES
+  });
 
   return compactObject({
     ok,

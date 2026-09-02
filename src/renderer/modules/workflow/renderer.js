@@ -227,6 +227,8 @@ export function createWorkflowRenderer(config = {}) {
     renderTemplateCreateProjectOptions,
     renderNotebookOptions,
     renderProtocolOptions,
+    renderProtocolResults,
+    renderProtocolPicker,
     renderBlockList,
     renderTemplateSourceOptions,
     renderTemplateList,
@@ -350,7 +352,7 @@ export function createWorkflowRenderer(config = {}) {
   }
 
   function renderBlockEditor() {
-    renderProtocolOptions();
+    renderProtocolPicker();
     syncBlockComposerFields();
     renderBlockList();
     const graphRenderer = getRenderGraphEditor();
@@ -451,7 +453,9 @@ export function createWorkflowRenderer(config = {}) {
     renderBlockList,
     renderNotebookOptions,
     renderProjectOptions,
+    renderProtocolPicker,
     renderProtocolOptions,
+    renderProtocolResults,
     renderTemplateCreateProjectOptions,
     renderTemplateList,
     renderTemplateSourceOptions,

@@ -397,6 +397,11 @@
   line-height: 1.6;
 }
 
+.protocol-steps-field {
+  display: grid;
+  gap: 6px;
+}
+
 .protocol-steps-toolbar {
   display: grid;
   gap: 8px;

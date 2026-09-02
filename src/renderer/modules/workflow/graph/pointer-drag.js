@@ -13,7 +13,6 @@ function createGraphPointerDrag({
     toggleSelected,
     updateSelectionOverlay,
     drawGraphLinks,
-    setGraphStatus,
     hideContextMenu,
     renderGraphEditor
   } = rendering;
@@ -86,7 +85,6 @@ function createGraphPointerDrag({
       toggleSelected(blockId);
       renderGraphEditor();
       renderBlockList();
-      setGraphStatus();
       event.preventDefault();
       return;
     }

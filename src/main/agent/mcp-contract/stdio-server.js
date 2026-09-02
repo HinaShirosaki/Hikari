@@ -18,6 +18,12 @@ const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
 const MAX_MODEL_PAPERS = 12;
 const MAX_MODEL_CONTEXT_BLOCKS = 8;
+// Ceiling for the text block the model actually reads. literature_search shrinks
+// itself above; every other tool forwards its app result verbatim, so an oversized
+// paper_analysis or paper_download result would otherwise land whole in context.
+const MAX_MODEL_TEXT_CHARS = 60000;
+const MODEL_TEXT_PREVIEW_CHARS = 40000;
+const PAPER_ANALYSIS_MODEL_TARGET_CHARS = MAX_MODEL_TEXT_CHARS - 4000;
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -132,6 +138,46 @@ function compactRelatedComment(comment = {}) {
   });
 }
 
+function compactPaperAnalysisProtocol(protocol = {}) {
+  const source = ensureObject(protocol);
+  if (!Object.keys(source).length) {
+    return undefined;
+  }
+  const steps = asArray(source.steps).slice(0, 20).map((step, index) => {
+    if (typeof step === 'string') {
+      return cleanText(step, 600);
+    }
+    const row = ensureObject(step);
+    return compactObject({
+      id: cleanText(row.id, 120) || `step-${index + 1}`,
+      text: cleanText(row.text || row.instruction || row.action, 600)
+    });
+  }).filter((step) => (typeof step === 'string' ? step : step.text));
+  return compactObject({
+    title: cleanText(source.title || source.name, 220),
+    purpose: cleanText(source.purpose, 600),
+    method_text: cleanText(source.method_text || source.methodText, 4000),
+    materials: asArray(source.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 20),
+    steps,
+    notes: cleanText(source.notes || source.troubleshooting, 800)
+  });
+}
+
+function compactGeneratedProtocolSummary(protocol = {}) {
+  const source = ensureObject(protocol);
+  if (!Object.keys(source).length) {
+    return undefined;
+  }
+  return compactObject({
+    id: cleanText(source.id || source.protocol_id || source.protocolId, 160),
+    name: cleanText(source.name || source.title, 220),
+    purpose: cleanText(source.purpose, 600),
+    status: cleanText(source.status, 80),
+    material_count: asArray(source.materials).length,
+    step_count: asArray(source.steps).length
+  });
+}
+
 function compactContextBlock(block = {}) {
   const lineRanges = asArray(block.line_ranges || block.lineRanges).map(compactLineRange).filter(Boolean);
   const sourceLines = asArray(block.source_lines || block.sourceLines).map(compactSourceLine).filter(Boolean);
@@ -174,6 +220,19 @@ function isLiteratureSearchResult(toolName = '', result = {}) {
     || asArray(nestedResult.loaded_context_blocks).length > 0
     || asArray(source.selected_papers).length > 0
     || asArray(source.loaded_context_blocks).length > 0;
+}
+
+function isPaperAnalysisResult(toolName = '', result = {}) {
+  const source = ensureObject(result);
+  const output = ensureObject(source.output);
+  const nestedResult = ensureObject(output.result);
+  return cleanText(toolName, 160) === 'paper_analysis'
+    || cleanText(source.mcp_tool, 160) === 'paper_analysis'
+    || cleanText(source.app_tool, 160) === 'paper-analysis'
+    || cleanText(output.mcp_tool, 160) === 'paper_analysis'
+    || cleanText(output.app_tool, 160) === 'paper-analysis'
+    || cleanText(nestedResult.mcp_tool, 160) === 'paper_analysis'
+    || cleanText(nestedResult.app_tool, 160) === 'paper-analysis';
 }
 
 function getToolResultPayload(result = {}) {
@@ -221,16 +280,161 @@ function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
       downloaded_papers: Math.max(0, downloadedPapers.length - MAX_MODEL_PAPERS),
       loaded_context_blocks: Math.max(0, loadedContextBlocks.length - MAX_MODEL_CONTEXT_BLOCKS)
     },
-    full_result_available_in_structured_content: true,
-    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth. In line-backed context blocks, source_lines are verbatim application-extracted paper Markdown lines selected by line_ranges; do not attribute text that is absent from source_lines. Treat related_comments as local user comments, not paper text. When citing a local source_path, use paper_title as the visible link label instead of the raw Markdown filename.'
+    // The source_lines / related_comments / link-label rules live in the server
+    // instructions, which are sent once per session instead of on every call.
+    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth.'
   };
 }
 
+// paper_analysis returns query-selected, line-backed evidence. Compact it at
+// block and source-line boundaries so the model never receives a cut JSON
+// fragment or a partial physical source line.
+function buildPaperAnalysisModelPayload(toolName = '', result = {}) {
+  const source = ensureObject(result);
+  const output = getToolResultPayload(source);
+  const selectedPapers = asArray(output.selected_papers);
+  const rawContextBlocks = asArray(output.loaded_context_blocks);
+  const compactedContextBlocks = rawContextBlocks
+    .slice(0, MAX_MODEL_CONTEXT_BLOCKS)
+    .map(compactContextBlock);
+  const totalSourceLines = rawContextBlocks.reduce((count, block) => (
+    count + asArray(block?.source_lines || block?.sourceLines).length
+  ), 0);
+  const payload = {
+    ok: source.ok !== false && output.ok !== false,
+    status: cleanText(output.status || source.status, 80),
+    mcp_tool: cleanText(source.mcp_tool || toolName, 160),
+    app_tool: cleanText(source.app_tool || output.app_tool || 'paper-analysis', 160),
+    summary: cleanText(output.summary || source.summary, 1200),
+    error: cleanText(output.error || source.error, 1200),
+    query: cleanText(output.query || source.query, 600),
+    paper_title: cleanText(output.paper_title || output.paperTitle, 320),
+    brief_summary: cleanText(output.brief_summary || output.briefSummary, 3000),
+    key_findings: asArray(output.key_findings || output.keyFindings)
+      .map((finding) => cleanText(finding, 600))
+      .filter(Boolean)
+      .slice(0, 8),
+    method_overview: cleanText(output.method_overview || output.methodOverview, 2400),
+    protocol_extraction: compactPaperAnalysisProtocol(
+      output.protocol_extraction || output.protocolExtraction
+    ),
+    generated_protocol: compactGeneratedProtocolSummary(
+      output.generated_protocol || output.generatedProtocol
+    ),
+    counts: {
+      selected_count: selectedPapers.length,
+      context_block_count: rawContextBlocks.length,
+      source_line_count: totalSourceLines,
+      papers_read_count: Number(output.papers_read_count) || 0
+    },
+    selected_papers: selectedPapers.slice(0, MAX_MODEL_PAPERS).map(compactSelectedPaper),
+    loaded_context_blocks: [],
+    notes: asArray(output.notes).map((note) => cleanText(note, 600)).filter(Boolean).slice(0, 8),
+    omitted: {
+      selected_papers: Math.max(0, selectedPapers.length - MAX_MODEL_PAPERS),
+      loaded_context_blocks: rawContextBlocks.length,
+      source_lines: totalSourceLines
+    },
+    model_note: rawContextBlocks.length
+      ? 'Use loaded_context_blocks.source_lines as the source of truth. Each included source line is complete and verbatim; do not attribute omitted evidence or related_comments to the paper.'
+      : 'Use brief_summary, key_findings, method_overview, and protocol_extraction as the bounded paper-analysis result.'
+  };
+
+  let includedSourceLines = 0;
+  let budgetExhausted = false;
+  for (const compactedBlock of compactedContextBlocks) {
+    if (budgetExhausted) {
+      break;
+    }
+    const sourceLines = asArray(compactedBlock.source_lines);
+    const blockPayload = {
+      ...compactedBlock,
+      // source_lines already carry the exact text, so avoid paying for a second
+      // excerpt copy when line-backed evidence is available.
+      ...(sourceLines.length ? { excerpt: undefined, source_lines: [] } : {})
+    };
+    payload.loaded_context_blocks.push(blockPayload);
+    if (JSON.stringify(payload, null, 2).length > PAPER_ANALYSIS_MODEL_TARGET_CHARS) {
+      payload.loaded_context_blocks.pop();
+      break;
+    }
+    for (const sourceLine of sourceLines) {
+      blockPayload.source_lines.push(sourceLine);
+      if (JSON.stringify(payload, null, 2).length > PAPER_ANALYSIS_MODEL_TARGET_CHARS) {
+        blockPayload.source_lines.pop();
+        budgetExhausted = true;
+        break;
+      }
+      includedSourceLines += 1;
+    }
+    if (sourceLines.length && !blockPayload.source_lines.length) {
+      payload.loaded_context_blocks.pop();
+    }
+  }
+
+  payload.omitted = {
+    selected_papers: Math.max(0, selectedPapers.length - payload.selected_papers.length),
+    loaded_context_blocks: Math.max(0, rawContextBlocks.length - payload.loaded_context_blocks.length),
+    source_lines: Math.max(0, totalSourceLines - includedSourceLines)
+  };
+  if (Object.values(payload.omitted).some((count) => count > 0)) {
+    payload.truncated = {
+      reason: 'paper_analysis_bounded_for_model',
+      max_chars: MAX_MODEL_TEXT_CHARS
+    };
+  }
+  return payload;
+}
+
+// Keep the spine and as much of the result as fits, rather than dropping the
+// payload outright: the model still needs the head of the data to answer, and
+// structuredContent carries the untruncated result for clients that read it.
+function buildTruncatedModelPayload(payload = {}, text = '', resultPreview = '') {
+  const source = ensureObject(payload);
+  return compactObject({
+    ok: source.ok !== false,
+    status: cleanText(source.status, 80),
+    mcp_tool: cleanText(source.mcp_tool, 160),
+    app_tool: cleanText(source.app_tool, 160),
+    summary: cleanText(source.summary, 1200),
+    error: cleanText(source.error, 1200),
+    truncated: {
+      reason: 'result_exceeded_model_text_budget',
+      original_chars: text.length,
+      max_chars: MAX_MODEL_TEXT_CHARS
+    },
+    result_preview: resultPreview,
+    model_note: 'result_preview is the leading slice of this tool result as JSON text, cut mid-document and not parseable on its own. Use it only when it fully covers the requested fact; otherwise report that the result was truncated rather than guessing at the omitted tail.'
+  });
+}
+
+function serializeTruncatedModelPayload(payload = {}, text = '') {
+  let previewLength = Math.min(MODEL_TEXT_PREVIEW_CHARS, text.length);
+  while (previewLength > 0) {
+    const candidate = JSON.stringify(
+      buildTruncatedModelPayload(payload, text, text.slice(0, previewLength)),
+      null,
+      2
+    );
+    if (candidate.length <= MAX_MODEL_TEXT_CHARS) {
+      return candidate;
+    }
+    previewLength = Math.floor(previewLength * 0.8);
+  }
+  return JSON.stringify(buildTruncatedModelPayload(payload, text), null, 2);
+}
+
 function buildMcpToolResponseContent(toolName = '', result = {}) {
-  const payload = isLiteratureSearchResult(toolName, result)
-    ? buildLiteratureSearchModelPayload(toolName, result)
-    : ensureObject(result);
-  return JSON.stringify(payload, null, 2);
+  const payload = isPaperAnalysisResult(toolName, result)
+    ? buildPaperAnalysisModelPayload(toolName, result)
+    : (isLiteratureSearchResult(toolName, result)
+      ? buildLiteratureSearchModelPayload(toolName, result)
+      : ensureObject(result));
+  const text = JSON.stringify(payload, null, 2);
+  if (text.length <= MAX_MODEL_TEXT_CHARS) {
+    return text;
+  }
+  return serializeTruncatedModelPayload(payload, text);
 }
 
 function createAgentMcpStdioServer(deps = {}) {
@@ -251,6 +455,24 @@ function createAgentMcpStdioServer(deps = {}) {
     }
   );
   let literatureSearchCalls = 0;
+  let literatureSearchTurnKey = null;
+
+  // The one-literature_search-per-turn budget is keyed on the request context's
+  // turn id, not on process lifetime. Codex respawns this stdio server per request
+  // today, so a bare counter happens to reset; keying it explicitly means a reused
+  // server cannot carry a spent budget into the next turn and reject every later
+  // search with a message that claims the current turn already used one.
+  function claimLiteratureSearchCall(turnKey) {
+    if (turnKey !== literatureSearchTurnKey) {
+      literatureSearchTurnKey = turnKey;
+      literatureSearchCalls = 0;
+    }
+    if (literatureSearchCalls >= 1) {
+      return false;
+    }
+    literatureSearchCalls += 1;
+    return true;
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: createMcpToolDefinitions()
@@ -259,7 +481,9 @@ function createAgentMcpStdioServer(deps = {}) {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const params = ensureObject(request?.params);
     const toolName = cleanText(params.name, 160);
-    if (toolName === 'literature_search' && literatureSearchCalls >= 1) {
+    const requestContext = getRequestContextFromEnv(env);
+    const turnKey = cleanText(requestContext.traceRequestId || requestContext.codexSessionId, 240);
+    if (toolName === 'literature_search' && !claimLiteratureSearchCall(turnKey)) {
       const result = {
         ok: false,
         status: 'rejected',
@@ -276,14 +500,11 @@ function createAgentMcpStdioServer(deps = {}) {
         isError: true
       };
     }
-    if (toolName === 'literature_search') {
-      literatureSearchCalls += 1;
-    }
     const result = await gateway.callGatewayTool(
       toolName,
       ensureObject(params.arguments),
       {
-        ...getRequestContextFromEnv(env),
+        ...requestContext,
         mcpRequest: request
       }
     );

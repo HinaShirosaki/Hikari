@@ -76,16 +76,16 @@
                   </label>
                 </div>
               </fieldset>
-              <label id="workflow-block-protocol-search-field">
-                Search Protocol
-                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
-              </label>
-              <label id="workflow-block-protocol-field">
-                Protocol
-                <select id="workflow-block-protocol">
+              <div id="workflow-block-protocol-field" class="workflow-block-protocol-picker">
+                <label id="workflow-block-protocol-search-field">
+                  Search &amp; Select Protocol
+                  <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="workflow-block-protocol-search-results" />
+                </label>
+                <div id="workflow-block-protocol-search-results" class="workflow-block-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
+                <select id="workflow-block-protocol" hidden aria-hidden="true" tabindex="-1">
                   <option value="">Select protocol</option>
                 </select>
-              </label>
+              </div>
               <label id="workflow-block-text-field" hidden>
                 Plain Text
                 <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
@@ -158,7 +158,6 @@
                 <div id="workflow-graph-nodes" class="workflow-graph-nodes"></div>
               </div>
             </div>
-            <p id="workflow-graph-status" class="small-note"></p>
             <div id="workflow-graph-context-menu" class="workflow-context-menu" hidden></div>
           </div>
         </div>

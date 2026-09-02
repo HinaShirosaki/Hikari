@@ -158,12 +158,14 @@ function createDirectMcpToolRouter(deps = {}) {
   }
 
   async function callTool(name = '', args = {}, context = {}) {
-    const handler = handlers.get(String(name || ''));
+    const toolName = String(name || '');
+    const handler = handlers.get(toolName);
     if (typeof handler !== 'function') {
       return {
         ok: false,
         status: 'unknown_tool',
-        error: `Unknown Hikari direct MCP tool "${String(name || 'unknown')}".`
+        mcp_tool: toolName,
+        error: `Unknown Hikari direct MCP tool "${toolName || 'unknown'}".`
       };
     }
     return handler(args, context, deps);

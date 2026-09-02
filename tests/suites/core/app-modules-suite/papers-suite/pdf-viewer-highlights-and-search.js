@@ -404,6 +404,35 @@ test('papers highlighted text hover markup is a compact ask and copy toolbar', (
   assert.match(markup, /aria-label="Ask Hikari about highlighted text"/);
   assert.doesNotMatch(markup, /First PDF line second PDF line/);
 });
+test('papers selection hover menu shows styled captions without native tooltips', () => {
+  const viewHtml = fs.readFileSync(
+    path.join(__dirname, 'ui', 'html', 'views', 'papers-view.html'),
+    'utf8'
+  );
+  const menuMarkup = viewHtml.match(
+    /<div id="paper-selection-menu"[\s\S]*?<div id="paper-selection-search-popover"/
+  )?.[0] || '';
+  const css = readPapersCss();
+  const captions = [
+    ['paper-selection-comment-btn', 'Add comment', 'Add comment'],
+    ['paper-selection-highlight-btn', 'Highlight', 'Highlight'],
+    ['paper-selection-underline-btn', 'Underline', 'Underline'],
+    ['paper-selection-search-btn', 'Search selected text', 'Search'],
+    ['paper-selection-ask-btn', 'Ask Hikari about selected text', 'Ask Hikari'],
+    ['paper-selection-copy-btn', 'Copy selected text', 'Copy']
+  ];
+
+  assert.ok(menuMarkup);
+  captions.forEach(([id, accessibleName, caption]) => {
+    assert.match(
+      menuMarkup,
+      new RegExp(`id="${id}"[^>]*aria-label="${accessibleName}"[^>]*data-hover-caption="${caption}"`)
+    );
+  });
+  assert.doesNotMatch(menuMarkup, /\btitle=/);
+  assert.match(css, /\.papers-selection-menu \.papers-selection-action-btn\[data-hover-caption\]::after\s*\{[^}]*content:\s*attr\(data-hover-caption\);/s);
+  assert.match(css, /\.papers-selection-menu \.papers-selection-action-btn\[data-hover-caption\]:hover::after,[\s\S]*:focus-visible::after\s*\{[^}]*visibility:\s*visible;/s);
+});
 test('papers PDF selection search helper finds matching pages and next target', () => {
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')

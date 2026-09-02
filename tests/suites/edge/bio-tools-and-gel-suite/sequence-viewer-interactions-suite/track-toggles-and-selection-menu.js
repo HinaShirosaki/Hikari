@@ -2,10 +2,7 @@ module.exports = function registerEdgeSequenceViewerInteractionsSuiteTrackToggle
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-function stripHtmlTags(html) {
-  return String(html || '').replace(/<[^>]*>/g, '');
-}
-test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus selected translation row', () => {
+test('[EDGE] sequence-viewer ORF clicks control the persistent translation row', () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
@@ -51,15 +48,24 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   moduleWithDom.initSequenceViewer();
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  const longOrf = `ATG${'AAA'.repeat(74)}TAA`;
-  const textarea = document.getElementById('sequence-viewer-textarea');
-  textarea.value = `>orf_test\n${longOrf}\n`;
-  trigger(document.getElementById('sequence-viewer-form'), 'submit');
+  const lysineOrf = `ATG${'AAA'.repeat(74)}TAA`;
+  const glutamateOrf = `ATG${'GAA'.repeat(74)}TAA`;
+  const textarea = document.getElementById('sequence-viewer-new-textarea');
+  textarea.value = `>orf_test\n${lysineOrf}CCC${glutamateOrf}\n`;
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
+
+  const restrictionNebToggle = document.getElementById('sequence-viewer-restriction-neb-toggle');
+  const restrictionThermoToggle = document.getElementById('sequence-viewer-restriction-thermo-toggle');
+  restrictionNebToggle.checked = false;
+  trigger(restrictionNebToggle, 'change');
+  restrictionThermoToggle.checked = false;
+  trigger(restrictionThermoToggle, 'change');
 
   const orfToggle = document.getElementById('sequence-viewer-orf-toggle');
   const orfStopTagToggle = document.getElementById('sequence-viewer-orf-stop-tag-toggle');
   const orfStopTaaToggle = document.getElementById('sequence-viewer-orf-stop-taa-toggle');
   const orfStopTgaToggle = document.getElementById('sequence-viewer-orf-stop-tga-toggle');
+  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
   assert.equal(Boolean(orfToggle.checked), false);
@@ -71,7 +77,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
 
   orfToggle.checked = true;
   trigger(orfToggle, 'change');
-  assert.equal(statFeatures.textContent, '1');
+  assert.equal(statFeatures.textContent, '2');
   assert.equal(sequenceHost.innerHTML.includes('ORF +1'), true);
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
 
@@ -85,6 +91,30 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
   assert.equal(sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-bottom') < sequenceHost.innerHTML.indexOf('sequence-viewer-aa-row-plus'), true);
   assert.equal(sequenceHost.innerHTML.includes('data-aa-display="TAA"'), false);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa="K"'), true);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa="E"'), false);
+
+  trigger(detailWorkspace, 'mousedown', {
+    button: 0,
+    target: { closest: () => null }
+  });
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
+
+  trigger(sequenceHost, 'click', { target: clickTarget });
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
+
+  trigger(sequenceHost, 'click', { target: clickTarget });
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
+
+  const secondOrfTarget = {
+    closest() {
+      return { dataset: { featureIndex: '1' } };
+    }
+  };
+  trigger(sequenceHost, 'click', { target: secondOrfTarget });
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa="K"'), false);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa="E"'), true);
 
   orfStopTaaToggle.checked = false;
   trigger(orfStopTaaToggle, 'change');
@@ -94,7 +124,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
 
   orfStopTaaToggle.checked = true;
   trigger(orfStopTaaToggle, 'change');
-  assert.equal(statFeatures.textContent, '1');
+  assert.equal(statFeatures.textContent, '2');
   assert.equal(sequenceHost.innerHTML.includes('ORF +1'), true);
 
   orfToggle.checked = false;
@@ -146,9 +176,9 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
   moduleWithDom.initSequenceViewer();
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  const textarea = document.getElementById('sequence-viewer-textarea');
+  const textarea = document.getElementById('sequence-viewer-new-textarea');
   textarea.value = '>vendor_filter\nTTATAAGAACAAAAAATCCCCATC\n';
-  trigger(document.getElementById('sequence-viewer-form'), 'submit');
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
 
   const nebToggle = document.getElementById('sequence-viewer-restriction-neb-toggle');
   const thermoToggle = document.getElementById('sequence-viewer-restriction-thermo-toggle');

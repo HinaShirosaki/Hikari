@@ -55,17 +55,11 @@ function createAgentMcpGateway(deps = {}) {
     };
   }
 
-  const directToolRouter = createDirectMcpToolRouter(buildDirectRouterDeps());
-
+  // The router owns unknown-tool handling so there is exactly one such response
+  // shape. Gating on hasTool() here only re-implemented it with a thinner payload.
   async function callGatewayTool(name = '', args = {}, context = {}) {
-    const toolName = cleanText(name, 120);
-    if (directToolRouter.hasTool(toolName)) {
-      return createDirectMcpToolRouter(buildDirectRouterDeps(context)).callTool(toolName, args, context);
-    }
-    return {
-      ok: false,
-      error: `Unknown Hikari MCP gateway tool "${toolName || 'unknown'}".`
-    };
+    return createDirectMcpToolRouter(buildDirectRouterDeps(context))
+      .callTool(cleanText(name, 120), args, context);
   }
 
   return {

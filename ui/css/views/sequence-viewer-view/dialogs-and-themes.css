@@ -10,6 +10,55 @@
   padding: 18px;
 }
 
+.sequence-viewer-new-dialog.app-dialog-surface {
+  --app-dialog-width: 680px;
+  --app-dialog-padding: 20px;
+  --app-dialog-gap: 16px;
+}
+
+.sequence-viewer-new-field {
+  display: grid;
+  gap: 8px;
+  color: var(--theme-text-strong);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.sequence-viewer-new-field textarea {
+  min-height: clamp(190px, 36vh, 360px);
+  box-sizing: border-box;
+  resize: vertical;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.9rem;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.sequence-viewer-new-field textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  outline-offset: 2px;
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-new-status {
+  margin: 0;
+}
+
+.sequence-viewer-new-status.is-error {
+  color: var(--theme-danger);
+}
+
+.sequence-viewer-new-actions {
+  justify-content: flex-end;
+}
+
 .sequence-viewer-feature-editor-overlay[hidden],
 .sequence-viewer-primer-design-overlay[hidden],
 .sequence-viewer-sequence-edit-overlay[hidden] {
@@ -525,4 +574,3 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
     background: var(--app-left-rail-surface, var(--theme-surface)) !important;
   }
 }
-

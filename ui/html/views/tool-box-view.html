@@ -474,7 +474,7 @@
             </label>
           </div>
         </form>
-        <div id="dna-protein-result" class="calc-output"></div>
+        <div id="dna-protein-result" class="calc-output tool-sequence-translation-output"></div>
       </div>
 
       <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
@@ -497,12 +497,24 @@
               Append terminal stop codon
             </label>
           </div>
-          <label>
-            Restriction Sites to Avoid
-            <textarea id="reverse-translate-sites" rows="3" placeholder="Comma/space/newline separated DNA motifs, e.g. GAATTC AAGCTT GGTCTC"></textarea>
-          </label>
+          <div class="reverse-translate-sites">
+            <div class="reverse-translate-sites-head">
+              <span class="reverse-translate-sites-title">Restriction Sites to Avoid</span>
+              <input id="reverse-translate-site-filter" type="search" placeholder="Filter by enzyme or motif" aria-label="Filter restriction enzymes" />
+            </div>
+            <div class="reverse-translate-sites-columns">
+              <div class="reverse-translate-sites-column">
+                <h4 id="reverse-translate-available-title">Available Enzymes</h4>
+                <div id="reverse-translate-site-available" class="reverse-translate-site-list" role="list" aria-labelledby="reverse-translate-available-title"></div>
+              </div>
+              <div class="reverse-translate-sites-column">
+                <h4 id="reverse-translate-selected-title">Selected</h4>
+                <div id="reverse-translate-site-selected" class="reverse-translate-site-list" role="list" aria-labelledby="reverse-translate-selected-title"></div>
+              </div>
+            </div>
+          </div>
         </form>
-        <div id="reverse-translate-result" class="calc-output"></div>
+        <div id="reverse-translate-result" class="calc-output tool-sequence-translation-output"></div>
       </div>
 
       <div id="tool-oligo-view" class="panel tool-subview" hidden>

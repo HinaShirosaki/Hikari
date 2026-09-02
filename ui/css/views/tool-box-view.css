@@ -147,6 +147,26 @@
   background: var(--theme-surface-subtle);
 }
 
+/* Let long translation results wrap to their actual available width. */
+.tool-sequence-translation-output {
+  padding: 0.875rem 0 0;
+  border: 0;
+  border-top: thin solid var(--theme-border-soft);
+  border-radius: 0;
+  background: transparent;
+}
+
+.tool-sequence-translation-output .sequence-block {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 1rem;
+  white-space: normal;
+}
+
 .tool-box-sheet-shell {
   gap: 12px;
 }
@@ -880,5 +900,91 @@ body.ui-neutral-compact input[id*="api-key"] {
 
   #tool-molarity-view .molarity-block {
     padding: 14px;
+  }
+}
+
+.reverse-translate-sites {
+  display: grid;
+  gap: 8px;
+}
+
+.reverse-translate-sites-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reverse-translate-sites-title {
+  color: var(--theme-text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+#reverse-translate-site-filter {
+  max-width: 16rem;
+}
+
+.reverse-translate-sites-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.reverse-translate-sites-column h4 {
+  margin: 0 0 6px;
+  color: var(--theme-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reverse-translate-site-list {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  max-height: 14rem;
+  padding: 6px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 10px;
+  background: var(--theme-surface-subtle);
+  overflow-y: auto;
+}
+
+.reverse-translate-site-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.reverse-translate-site-item:hover,
+.reverse-translate-site-item:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}
+
+.reverse-translate-site-name {
+  font-weight: 600;
+}
+
+.reverse-translate-site-motif {
+  color: var(--theme-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+}
+
+@media (max-width: 720px) {
+  .reverse-translate-sites-columns {
+    grid-template-columns: 1fr;
   }
 }

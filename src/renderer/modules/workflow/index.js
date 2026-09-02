@@ -30,7 +30,6 @@ export function initWorkflowManagement({
     || !elements.workflowGraphSvg
     || !elements.workflowGraphSelection
     || !elements.workflowGraphNodes
-    || !elements.workflowGraphStatus
     || !elements.workflowGraphContextMenu
   ) {
     return {
@@ -78,7 +77,6 @@ export function initWorkflowManagement({
     titleForBlock: renderer.titleForBlock,
     labelForBlockType: renderer.labelForBlockType,
     labelForAssignee: renderer.labelForAssignee,
-    displayLabelForBlock: renderer.displayLabelForBlock,
     getBlockType,
     renderBlockList: renderer.renderBlockList,
     document

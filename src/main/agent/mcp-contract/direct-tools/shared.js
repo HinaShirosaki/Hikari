@@ -207,6 +207,20 @@ function normalizeToolEnvelope(rawResult = {}) {
   };
 }
 
+// Success is allowlisted rather than failure-blocklisted: when an app tool grows a
+// new error status, an unrecognized status must read as a failure here instead of
+// leaking through as ok:true and clearing the MCP isError flag.
+function resolveDirectToolOk({ result = {}, payload = {}, status = '', successStatuses = [] } = {}) {
+  const resultSource = ensureObject(result);
+  const payloadSource = ensureObject(payload);
+  const reportedStatus = cleanText(payloadSource.status || resultSource.status, 80);
+  return Boolean(reportedStatus)
+    && reportedStatus === cleanText(status, 80)
+    && resultSource.ok !== false
+    && payloadSource.ok !== false
+    && asArray(successStatuses).includes(reportedStatus);
+}
+
 async function runAppTool({ runTool, toolId, args = {}, context = {} } = {}) {
   if (typeof runTool !== 'function') {
     return {
@@ -226,9 +240,11 @@ async function runAppTool({ runTool, toolId, args = {}, context = {} } = {}) {
   }
 }
 
-function buildLookupCitations(items = [], source = '', reason = '') {
+// The reason is one constant per lookup, so it is reported once as citation_reason
+// rather than repeated on all eight entries. Entries keep source and pointer, which
+// is what normalizeCitation needs to accept them in the agent's answer.
+function buildLookupCitations(items = [], source = '') {
   const sourceText = cleanText(source, 120);
-  const reasonText = cleanText(reason, 260);
   return asArray(items)
     .slice(0, 8)
     .map((item, index) => {
@@ -238,8 +254,7 @@ function buildLookupCitations(items = [], source = '', reason = '') {
       ].filter(Boolean).join(' | ');
       return {
         source: sourceText,
-        pointer: pointer || `${sourceText || 'lookup'}:${index + 1}`,
-        reason: reasonText
+        pointer: pointer || `${sourceText || 'lookup'}:${index + 1}`
       };
     })
     .filter((citation) => citation.source && citation.pointer);
@@ -274,28 +289,34 @@ function buildLookupResponse({
   const summary = ok
     ? buildLookupSummary(mcpToolName, resultItems, emptySummary)
     : (normalizedEnvelope.error || `${cleanText(mcpToolName, 120) || 'lookup'} failed.`);
-  return compactObject({
-    ok,
-    status: ok
-      ? (normalizedEnvelope.status || (resultItems.length ? 'matched' : 'no_match'))
-      : (normalizedEnvelope.status || 'failed'),
-    mcp_tool: cleanText(mcpToolName, 120),
-    app_tool: cleanText(appToolId, 120),
-    query: cleanText(normalizedEnvelope.query || query, 600),
-    source: cleanText(source || normalizedEnvelope.source, 120),
-    backfilled_sql: normalizedEnvelope.backfilledSql === true,
-    terms_used: normalizedEnvelope.termsUsed,
-    action: normalizedEnvelope.action,
-    detail: normalizedEnvelope.detail,
-    sources: normalizedEnvelope.sources,
-    scope: normalizedEnvelope.scope,
-    counts: normalizedEnvelope.counts,
-    access: normalizedEnvelope.access,
-    summary,
+  return {
+    ...compactObject({
+      ok,
+      status: ok
+        ? (normalizedEnvelope.status || (resultItems.length ? 'matched' : 'no_match'))
+        : (normalizedEnvelope.status || 'failed'),
+      mcp_tool: cleanText(mcpToolName, 120),
+      app_tool: cleanText(appToolId, 120),
+      query: cleanText(normalizedEnvelope.query || query, 600),
+      source: cleanText(source || normalizedEnvelope.source, 120),
+      backfilled_sql: normalizedEnvelope.backfilledSql === true,
+      terms_used: normalizedEnvelope.termsUsed,
+      action: normalizedEnvelope.action,
+      detail: normalizedEnvelope.detail,
+      sources: normalizedEnvelope.sources,
+      scope: normalizedEnvelope.scope,
+      counts: normalizedEnvelope.counts,
+      access: normalizedEnvelope.access,
+      summary,
+      error: normalizedEnvelope.error,
+      citation_reason: cleanText(citationReason, 260)
+    }),
+    // items and citations are the payload of a lookup, so they survive compaction
+    // even when empty: stripping [] leaves a caller unable to tell "searched, found
+    // nothing" from "this response never carried results at all".
     items: cloneJson(resultItems, []),
-    citations: buildLookupCitations(resultItems, mcpToolName, citationReason),
-    error: normalizedEnvelope.error
-  });
+    citations: buildLookupCitations(resultItems, mcpToolName)
+  };
 }
 
 module.exports = {
@@ -317,6 +338,7 @@ module.exports = {
   filterRecordItems,
   filterInventoryItemsByKind,
   normalizeToolEnvelope,
+  resolveDirectToolOk,
   runAppTool,
   buildLookupCitations,
   buildLookupSummary,

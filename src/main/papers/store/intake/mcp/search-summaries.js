@@ -44,6 +44,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
       ok: false,
       status: 'invalid_arguments',
       mcp_tool: TOOL_NAMES.SEARCH_SUMMARIES,
+      app_tool: TOOL_NAMES.SEARCH_SUMMARIES,
       error: 'Provide a non-empty query.'
     };
   }
@@ -53,6 +54,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
       ok: true,
       status: 'no_match',
       mcp_tool: TOOL_NAMES.SEARCH_SUMMARIES,
+      app_tool: TOOL_NAMES.SEARCH_SUMMARIES,
       query,
       summary: 'Query produced no usable search terms after stopword removal.',
       items: []
@@ -68,6 +70,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
       ok: false,
       status: load.status || 'failed',
       mcp_tool: TOOL_NAMES.SEARCH_SUMMARIES,
+      app_tool: TOOL_NAMES.SEARCH_SUMMARIES,
       query,
       error: load.error || 'Failed to read the paper intake store.'
     };
@@ -91,21 +94,24 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
   const ranked = rankAndTrim(scored, limit);
   const items = ranked.map(({ record, score, matched }) => projectionForSummaryMatch(record, score, matched));
 
-  return compact({
-    ok: true,
-    status: items.length ? 'matched' : 'no_match',
-    mcp_tool: TOOL_NAMES.SEARCH_SUMMARIES,
-    query,
-    terms_used: tokens,
-    project_id: projectId,
-    project_name: projectName,
-    doc_types: docTypes,
-    summary: items.length
-      ? `Matched ${items.length} paper${items.length === 1 ? '' : 's'} on summary terms: ${tokens.join(', ')}.`
-      : `No paper summary matched terms: ${tokens.join(', ')}.`,
-    items,
-    errors: load.errors
-  });
+  return {
+    ...compact({
+      ok: true,
+      status: items.length ? 'matched' : 'no_match',
+      mcp_tool: TOOL_NAMES.SEARCH_SUMMARIES,
+      app_tool: TOOL_NAMES.SEARCH_SUMMARIES,
+      query,
+      terms_used: tokens,
+      project_id: projectId,
+      project_name: projectName,
+      doc_types: docTypes,
+      summary: items.length
+        ? `Matched ${items.length} paper${items.length === 1 ? '' : 's'} on summary terms: ${tokens.join(', ')}.`
+        : `No paper summary matched terms: ${tokens.join(', ')}.`,
+      errors: load.errors
+    }),
+    items
+  };
 }
 
 module.exports = {

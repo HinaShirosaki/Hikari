@@ -146,7 +146,7 @@
 
 #workflow-management-view .left-rail-template.workflow-editor-layout > .workflow-editor-sidebar > .workflow-editor-sidebar-scroll.left-rail-template__scroll {
   display: grid;
-  gap: 18px;
+  gap: 16px;
   align-content: start;
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
@@ -166,6 +166,7 @@
 
 #workflow-management-view .workflow-editor-sidebar-scroll > .workflow-template-editor-panel,
 #workflow-management-view .workflow-editor-sidebar-scroll > .workflow-block-composer-panel {
+  padding-top: 0;
   border-top: 0;
 }
 
@@ -274,6 +275,52 @@
 .workflow-block-type-option input:focus-visible + span {
   outline: 2px solid var(--theme-focus);
   outline-offset: 1px;
+}
+
+.workflow-block-protocol-picker,
+.workflow-block-protocol-picker > label {
+  display: grid;
+  gap: 6px;
+}
+
+.workflow-block-protocol-search-results {
+  display: grid;
+  gap: 2px;
+  max-height: min(34vh, 240px);
+  overflow-y: auto;
+  padding: 4px;
+  border-top: 1px solid var(--theme-border-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.workflow-block-protocol-search-result,
+.workflow-block-protocol-search-empty {
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+  font: inherit;
+  text-align: left;
+}
+
+.workflow-block-protocol-search-result {
+  cursor: pointer;
+}
+
+.workflow-block-protocol-search-result:hover,
+.workflow-block-protocol-search-result:focus-visible,
+.workflow-block-protocol-search-result.is-selected {
+  background: var(--hikari-left-rail-list-hover);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.workflow-block-protocol-search-empty {
+  color: var(--theme-text-muted);
 }
 
 .workflow-block-composer-panel .workflow-inline-actions {
