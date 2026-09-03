@@ -482,6 +482,8 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.match(scopedState.agentChatContext.sessionPrompt, /notebook_append/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /inventory_lookup/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /reference preparation/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not stop at diluting an unverified stock/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Prefer one complete formulation/i);
   assert.match(scopedState.agentChatContext.sessionPrompt, /at most three short subsections and six bullets/i);
   assert.match(scopedState.agentChatContext.sessionPrompt, /failed-lookup transcripts/i);
   assert.match(scopedState.agentChatContext.sessionPrompt, /one to three unique/i);

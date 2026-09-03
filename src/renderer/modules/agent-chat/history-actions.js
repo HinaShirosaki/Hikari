@@ -69,13 +69,23 @@ export function createHistoryActionController({
       setStatus('Notebook append proposal is unavailable.');
       return { ok: false, error: 'Notebook append proposal is unavailable.' };
     }
+    markNotebookAppendMessage(message, 'applying', 'Notebook append is being saved.');
+    persist();
+    renderHistoryView({ forceScroll: true });
     const result = await onAppendNotebookEntry(append.proposal);
     if (result?.ok !== true) {
-      setStatus(trimText(result?.error, 500) || 'The notebook append could not be applied.');
+      const error = trimText(result?.error, 500) || 'The notebook append could not be applied.';
+      markNotebookAppendMessage(findMessage(messageId) || message, 'pending', error);
+      persist();
+      renderHistoryView({ forceScroll: true });
+      setStatus(error);
       return result || { ok: false, error: 'The notebook append could not be applied.' };
     }
+    // Applying the append can refresh notebook and chat state while this handler
+    // is awaiting. Reacquire the live message so approval is not written to an
+    // object that is no longer part of state.agentChat.messages.
     markNotebookAppendMessage(
-      message,
+      findMessage(messageId) || message,
       'approved',
       trimText(result?.summary, 500) || 'Notebook append approved by user.'
     );

@@ -61,10 +61,13 @@ export function renderAssistantMeta(meta, messageId = '', {
   );
   const showReviewNotebookAppendActions = showNotebookAppendCard
     && notebookAppendState.applied !== true
-    && notebookAppendState.status !== 'rejected';
+    && notebookAppendState.status !== 'rejected'
+    && notebookAppendState.status !== 'applying';
   const notebookAppendStatusLabel = notebookAppendState.applied === true
     ? 'Appended to page'
-    : (notebookAppendState.status === 'rejected' ? 'Rejected' : 'Review before appending');
+    : (notebookAppendState.status === 'rejected'
+      ? 'Rejected'
+      : (notebookAppendState.status === 'applying' ? 'Appending to page…' : 'Review before appending'));
   const notebookAppendProposal = notebookAppend?.proposal || {};
   const notebookAppendSources = asArray(notebookAppendProposal.sources).map((source) => {
     const label = trimText(source?.label || source?.record_id || source?.url, 320);

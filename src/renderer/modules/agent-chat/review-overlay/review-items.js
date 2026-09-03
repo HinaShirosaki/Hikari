@@ -42,6 +42,7 @@ function collectReviewItemsForMessage(message, {
     && notebookAppend.save?.mode === 'confirm_before_append'
     && notebookAppendState.applied !== true
     && notebookAppendState.status !== 'rejected'
+    && notebookAppendState.status !== 'applying'
   ) {
     const proposalId = trimText(notebookAppend?.proposal?.proposal_id, 200) || 'append';
     items.push({

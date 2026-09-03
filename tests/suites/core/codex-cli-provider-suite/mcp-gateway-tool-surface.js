@@ -329,6 +329,8 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       const mcpToolNames = mcpTools.map((tool) => tool.name);
       const mcpInstructions = buildHikariAgentMcpInstructions();
       assert.match(mcpInstructions, /reference preparation/i);
+      assert.match(mcpInstructions, /Do not stop at diluting an unverified stock/i);
+      assert.match(mcpInstructions, /Prefer one complete formulation/i);
       assert.match(mcpInstructions, /at most three short subsections and six bullets/i);
       assert.match(mcpInstructions, /failed-lookup transcripts/i);
       assert.match(mcpInstructions, /one to three unique useful records/i);

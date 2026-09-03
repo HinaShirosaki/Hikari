@@ -508,6 +508,7 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
 
   const state = { agentChat: { messages: [message] }, notebookEntries: [] };
   let appliedProposal = null;
+  let applyingHtml = '';
   let rerenderedHtml = '';
   const historyModule = loadEsmStyleModule(path.join(
     __dirname,
@@ -525,7 +526,8 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     syncComposerHeight: () => {},
     renderContextSummary: () => {},
     renderHistoryView: () => {
-      rerenderedHtml = renderingMetaModule.renderAssistantMeta(message.meta, message.id, {
+      const currentMessage = state.agentChat.messages[0];
+      rerenderedHtml = renderingMetaModule.renderAssistantMeta(currentMessage.meta, currentMessage.id, {
         safeText: shared.safeText,
         notebookDraftAdapter: {},
         notebookEntries: state.notebookEntries
@@ -536,6 +538,26 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     onOpenNotebookEntry: () => {},
     onAppendNotebookEntry: async (proposal) => {
       appliedProposal = proposal;
+      const applyingMessage = state.agentChat.messages[0];
+      applyingHtml = renderingMetaModule.renderAssistantMeta(applyingMessage.meta, applyingMessage.id, {
+        safeText: shared.safeText,
+        notebookDraftAdapter: {},
+        notebookEntries: state.notebookEntries
+      });
+      state.agentChat.messages = [{
+        ...message,
+        meta: {
+          ...message.meta,
+          notebook_append: {
+            ...appendWorkflow,
+            save: { ...appendWorkflow.save }
+          },
+          notebookAppend: {
+            ...appendWorkflow,
+            save: { ...appendWorkflow.save }
+          }
+        }
+      }];
       return { ok: true, summary: 'Content appended and saved to the notebook page.' };
     }
   });
@@ -548,8 +570,10 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     }
   });
   assert.equal(appliedProposal.notebook_entry_id, 'entry-inline-1');
-  assert.equal(message.meta.notebookAppend.save.applied, true);
-  assert.equal(message.meta.notebookAppend.save.status, 'approved');
+  assert.match(applyingHtml, /Appending to page…/);
+  assert.doesNotMatch(applyingHtml, /Append to Page/);
+  assert.equal(state.agentChat.messages[0].meta.notebookAppend.save.applied, true);
+  assert.equal(state.agentChat.messages[0].meta.notebookAppend.save.status, 'approved');
   assert.match(rerenderedHtml, /Appended to page/);
   assert.doesNotMatch(rerenderedHtml, /Append to Page/);
 });
