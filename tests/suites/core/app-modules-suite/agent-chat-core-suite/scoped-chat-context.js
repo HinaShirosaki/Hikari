@@ -481,6 +481,12 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.match(scopedState.agentChatContext.sessionPrompt, /Biology Notebook right-rail/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /notebook_append/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /inventory_lookup/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /reference preparation/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /at most three short subsections and six bullets/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /failed-lookup transcripts/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /one to three unique/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /without proposing an append/i);
+  assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /PBS|ampicillin/i);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'notebook-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].notebookEntryId, 'note-1');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].text.length > 4000, true);
@@ -942,7 +948,10 @@ test('notebook rail quick prompts initialize notebook composer and load page pro
   assert.equal(buttons[0].textContent, 'Research & append');
   assert.match(prompt, /complete hidden context/);
   assert.match(prompt, /notebook_append/);
-  assert.match(prompt, /inventory_lookup/);
+  assert.match(prompt, /local-first lookup/);
+  assert.match(prompt, /reference preparations/);
+  assert.match(prompt, /only when there is useful content/);
+  assert.doesNotMatch(prompt, /PBS|ampicillin/i);
   assert.doesNotMatch(prompt, /this paper/i);
   assert.equal(paperScreenshotBtn.hidden, true);
 

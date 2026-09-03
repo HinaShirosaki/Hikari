@@ -7,6 +7,9 @@ const {
   compactObject
 } = require('./shared.js');
 
+// Natively implemented in the MCP layer: no app tool is proxied, so app_tool
+// repeats the MCP name instead of dropping out of the response spine. An
+// app_tool equal to mcp_tool is the signal that nothing was forwarded.
 const NOTEBOOK_APPEND_MCP_TOOL = Object.freeze({
   name: 'notebook_append',
   description: 'Prepare a reviewable proposal to append evidence-backed markdown to the active Hikari biology notebook page. This tool never changes a notebook page directly; Hikari shows the proposed content and requires explicit user approval before applying it. Use the active hidden notebook-page context first, look up local inventory or chemicals when relevant, and do not use this tool to create a new notebook page.',
@@ -89,6 +92,7 @@ async function callNotebookAppend(input = {}) {
       ok: false,
       status: 'needs_more_info',
       mcp_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
+      app_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
       error: `${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} required before Hikari can prepare a notebook append proposal.`
     };
   }
@@ -97,6 +101,7 @@ async function callNotebookAppend(input = {}) {
       ok: false,
       status: 'needs_more_info',
       mcp_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
+      app_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
       error: 'expected_updated_at is required for a saved notebook page so Hikari can reject a stale append proposal.'
     };
   }
@@ -123,6 +128,7 @@ async function callNotebookAppend(input = {}) {
     ok: true,
     status: 'proposal_ready',
     mcp_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
+    app_tool: NOTEBOOK_APPEND_MCP_TOOL.name,
     summary: `Prepared a notebook append proposal${sectionTitle ? ` for “${sectionTitle}”` : ''}.`,
     proposal,
     save: {

@@ -164,6 +164,9 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const projectName = cleanText(input.projectName, 220);
   const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
+  const scopedAgentSessionPrompt = paperAgentSessionBlock
+    ? ''
+    : cleanText(input.agent?.sessionPrompt, 6000);
   const savedSettingsBlock = buildSavedSettingsBlock(input, cleanText);
   const sessionRecoveryBlock = buildCodexSessionRecoveryBlock(input, { cleanText });
   const protocolGenerationTool = buildHikariMcpToolName('protocol_generation');
@@ -193,6 +196,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
       ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
       : '',
     savedSettingsBlock,
+    scopedAgentSessionPrompt ? `Active Hikari view instructions:\n${scopedAgentSessionPrompt}` : '',
     paperAgentSessionBlock,
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
     sessionRecoveryBlock,

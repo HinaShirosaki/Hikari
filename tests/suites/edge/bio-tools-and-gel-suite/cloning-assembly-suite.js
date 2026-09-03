@@ -1103,6 +1103,77 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(clean.warnings.some((warning) => /binds more than one site/.test(warning)), false);
     });
 
+    test('[EDGE] a flagged Q5/KLD primer reaches the route warnings', () => {
+      const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
+      // High bits only: a power-of-two LCG's low bits cycle with period 4 and
+      // would make every "random" flank a repeat.
+      const rand = (n, seed) => {
+        let s2 = seed >>> 0;
+        let out = '';
+        for (let i = 0; i < n; i += 1) {
+          s2 = (Math.imul(s2, 1103515245) + 12345) >>> 0;
+          out += 'ACGT'[(s2 >>> 16) & 3];
+        }
+        return out;
+      };
+      // The G-run sits where the forward primer must start, so the designed
+      // oligo carries a homopolymer the quality check flags.
+      const original = `${rand(1000, 3)}GGGGGGG${rand(1000, 9)}`;
+      const plan = q5.buildQ5KldPlan({
+        originalSequence: original,
+        editedSequence: `${original.slice(0, 1000)}A${original.slice(1000)}`,
+        editRequest: { type: 'insertion', start: 1001, editedSequence: 'A' },
+        recordName: 'pTest',
+        topology: 'circular'
+      });
+
+      assert.equal(plan.feasible, true);
+      assert.equal(plan.primers.some((primer) => primer.qualityWarnings.some((w) => /homopolymer/.test(w))), true);
+      // All three buckets the cloning-design view reads from.
+      assert.equal(plan.warnings.some((w) => /homopolymer/.test(w)), true);
+      assert.equal(plan.plans[0].plan.warnings.some((w) => /homopolymer/.test(w)), true);
+      assert.equal(plan.plans[0].plan.primerOligoPlan.warnings.some((w) => /homopolymer/.test(w)), true);
+    });
+
+    test('[EDGE] backbone primers are checked against the intact pre-edit vector', () => {
+      const planBuilding = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'plan-building.js')
+      );
+      const rand = (n, seed) => {
+        let s2 = seed >>> 0;
+        let out = '';
+        for (let i = 0; i < n; i += 1) {
+          s2 = (Math.imul(s2, 1103515245) + 12345) >>> 0;
+          out += 'ACGT'[(s2 >>> 16) & 3];
+        }
+        return out;
+      };
+      // The stretch abutting the insert is duplicated by the *old* insert, so
+      // every backbone window has a second site on the DNA actually in the tube
+      // -- and none on the linearized backbone the edited record alone shows.
+      const repeat = rand(120, 41);
+      const upstream = rand(900, 17);
+      const downstream = rand(900, 23);
+      const newInsert = rand(300, 77);
+      const vector = `${upstream}${repeat}${repeat}${downstream}`;
+      const edited = `${upstream}${repeat}${newInsert}${downstream}`;
+      const plan = planBuilding.buildDisplayPlan({
+        strategy: 'gibson',
+        record: { name: 'pV', sequence: edited, topology: 'circular' },
+        source: {
+          recordName: 'pV',
+          originalSequence: vector,
+          editedSequence: edited,
+          editRequest: { type: 'replacement', start: 1021, end: 1140, originalSequence: repeat, editedSequence: newInsert }
+        },
+        range: { start: 1020, end: 1320 },
+        donor: null
+      });
+
+      assert.equal(plan.feasible, false);
+      assert.equal(plan.warnings.some((w) => /binds more than one site/.test(w)), true);
+    });
+
     test('[EDGE] a gene amplified from a donor plasmid is templated off the donor', () => {
       const primerRecords2 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'primer-records.js'));
       // Take the high bits: the low bits of a power-of-two LCG cycle with period

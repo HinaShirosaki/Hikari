@@ -2,6 +2,21 @@ module.exports = function registerAppCollaborationAndProtocolSuiteProtocolEditin
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+test('protocol-management keeps interactive-bar presets outside the Steps label hit area', () => {
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'protocol-management-view.html'), 'utf8');
+  const labelBodies = [...viewSource.matchAll(/<label(?:\s[^>]*)?>([\s\S]*?)<\/label>/g)]
+    .map((match) => match[1]);
+
+  assert.match(
+    viewSource,
+    /<div class="protocol-steps-field">\s*<label for="protocol-steps">Steps \(start each step with a bullet point\)<\/label>/
+  );
+  assert.equal(
+    labelBodies.some((body) => body.includes('data-protocol-placeholder-preset')),
+    false,
+    'preset buttons must not be descendants of a label that forwards distant clicks'
+  );
+});
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([
     'protocol-list-panel',

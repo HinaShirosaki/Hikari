@@ -297,9 +297,9 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
   moduleWithDom.initSequenceViewer();
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  const textarea = document.getElementById('sequence-viewer-textarea');
+  const textarea = document.getElementById('sequence-viewer-new-textarea');
   textarea.value = '>seq1\nACGTACGT\n';
-  trigger(document.getElementById('sequence-viewer-form'), 'submit');
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
 
   const modePasteBtn = document.getElementById('sequence-viewer-mode-paste');
   const modeFileBtn = document.getElementById('sequence-viewer-mode-file');
@@ -400,7 +400,7 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
   moduleWithDom.initSequenceViewer();
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  const textarea = document.getElementById('sequence-viewer-textarea');
+  const textarea = document.getElementById('sequence-viewer-new-textarea');
   textarea.value = `
 LOCUS       IMPORTED        12 bp    DNA     circular SYN 01-JAN-2026
 FEATURES             Location/Qualifiers
@@ -410,7 +410,7 @@ ORIGIN
         1 atgcgatttaaa
 //
 `;
-  trigger(document.getElementById('sequence-viewer-form'), 'submit');
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
   await flushAsync();
   await flushAsync();
 
@@ -514,7 +514,7 @@ test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible 
   moduleWithDom.initSequenceViewer();
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  const textarea = document.getElementById('sequence-viewer-textarea');
+  const textarea = document.getElementById('sequence-viewer-new-textarea');
   textarea.value = `
 LOCUS       PLAIN_GBK       12 bp    DNA     linear  SYN 01-JAN-2026
 DEFINITION  plain_gbk.
@@ -522,7 +522,7 @@ ORIGIN
         1 atgcgatttaaa
 //
 `;
-  trigger(document.getElementById('sequence-viewer-form'), 'submit');
+  trigger(document.getElementById('sequence-viewer-new-form'), 'submit');
   await flushAsync();
   await flushAsync();
 

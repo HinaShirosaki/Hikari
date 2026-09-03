@@ -209,6 +209,17 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(bufferResult.resultText, /NaCl: 8766 mg/i);
   assert.match(bufferResult.formulaText, /150 mM x 1 L x 58\.44 g\/mol/i);
 
+  const microliterBufferResult = toolBox.calculateBufferRecipe({
+    volumeValue: 1000,
+    volumeUnit: 'uL',
+    rows: [
+      { name: 'NaCl', form: 'solid', molecularWeight: 58.44, concentrationValue: 150 }
+    ]
+  });
+  assert.match(microliterBufferResult.resultText, /NaCl: 8\.766 mg/i);
+  assert.equal(microliterBufferResult.inputs.volumeMl, 1);
+  assert.equal(microliterBufferResult.inputs.volumeUnit, 'uL');
+
   const stockBufferResult = toolBox.calculateBufferRecipe({
     volumeMl: 1000,
     rows: [
@@ -250,7 +261,7 @@ test('[EDGE] bench tool calculations return instant results and substituted form
 });
 test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () => {
   const ids = [
-    'buffer-volume-ml', 'buffer-ph', 'buffer-rows', 'add-buffer-chemical-btn', 'buffer-total-result',
+    'buffer-volume-ml', 'buffer-volume-unit', 'buffer-ph', 'buffer-rows', 'add-buffer-chemical-btn', 'buffer-total-result',
     'buffer-solvent-output', 'buffer-naoh-output', 'buffer-hcl-output',
     'fixed-reaction-rows', 'fixed-reaction-add-row-btn', 'fixed-reaction-fill-name',
     'fixed-reaction-total-volume', 'fixed-reaction-solvent-output'
@@ -281,6 +292,7 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   }
 
   document.getElementById('buffer-volume-ml').value = '1000';
+  document.getElementById('buffer-volume-unit').value = 'mL';
   document.getElementById('buffer-name-1').value = 'NaCl';
   document.getElementById('buffer-mw-1').value = '58.44';
   document.getElementById('buffer-final-1').value = '150 mM';
@@ -306,6 +318,10 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   assert.match(document.getElementById('buffer-solvent-output').textContent, /999\.5 mL/i);
   assert.match(document.getElementById('fixed-reaction-output-1').textContent, /10 uL/i);
   assert.match(document.getElementById('fixed-reaction-solvent-output').textContent, /90 uL/i);
+
+  document.getElementById('buffer-volume-unit').value = 'uL';
+  trigger(document.getElementById('buffer-volume-unit'), 'change');
+  assert.match(document.getElementById('buffer-output-1').textContent, /8\.766 mg/i);
 
   document.getElementById('buffer-name-1').value = 'Stored';
   trigger(document.getElementById('buffer-name-1'), 'input');

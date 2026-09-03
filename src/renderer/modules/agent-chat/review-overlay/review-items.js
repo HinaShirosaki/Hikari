@@ -1,9 +1,14 @@
 import { trimText } from '../shared.js';
-import { getNotebookAppend, getProtocolReviewStatus, getSequenceEditReviewStatus } from './review-status.js';
+import {
+  getProtocolReviewStatus,
+  getSequenceEditReviewStatus,
+  resolveNotebookAppendReviewState
+} from './review-status.js';
 
 function collectReviewItemsForMessage(message, {
   notebookDraftAdapter,
-  protocolReviewAdapter
+  protocolReviewAdapter,
+  notebookEntries = []
 }) {
   const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
   const messageId = trimText(message?.id, 120);
@@ -30,12 +35,13 @@ function collectReviewItemsForMessage(message, {
   }
 
 
-  const notebookAppend = getNotebookAppend(meta);
+  const notebookAppendState = resolveNotebookAppendReviewState(meta, notebookEntries);
+  const notebookAppend = notebookAppendState.append;
   if (
     notebookAppend
     && notebookAppend.save?.mode === 'confirm_before_append'
-    && notebookAppend.save?.applied !== true
-    && trimText(notebookAppend.save?.status, 80) !== 'rejected'
+    && notebookAppendState.applied !== true
+    && notebookAppendState.status !== 'rejected'
   ) {
     const proposalId = trimText(notebookAppend?.proposal?.proposal_id, 200) || 'append';
     items.push({

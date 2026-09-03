@@ -81,7 +81,9 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [],
       declaredNames.add(name);
       return `const ${name} = ${buildImportExpression(specifier)};`;
     })
-    .replace(/^\s*import\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, name, specifier) => {
+    // Trailing `with { type: 'json' }` import attributes ride along; require()
+    // reads a JSON file the same way.
+    .replace(/^\s*import\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"](?:\s+with\s*\{[^}]*\})?\s*;?\s*$/gm, (_match, name, specifier) => {
       declaredNames.add(name);
       return `const ${name} = ${buildImportExpression(specifier)};`;
     })

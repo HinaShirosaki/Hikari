@@ -1334,7 +1334,8 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   trigger(document.getElementById('biology-notebook-tool-tab-buffer'), 'click');
   assert.equal(document.getElementById('biology-notebook-tool-tab-buffer').getAttribute('aria-selected'), 'true');
   assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, false);
-  document.getElementById('biology-notebook-tool-buffer-volume').value = '1000';
+  document.getElementById('biology-notebook-tool-buffer-volume').value = '1';
+  document.getElementById('biology-notebook-tool-buffer-volume-unit').value = 'L';
   document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
   document.getElementById('biology-notebook-tool-buffer-mw-1').value = '58.44';
   document.getElementById('biology-notebook-tool-buffer-stock-1').value = '';
@@ -1364,6 +1365,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[0].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][0], 'NaCl');
   assert.match(state.notebookEntries[0].toolCalculations[0].table.rows[0][4], /8766 mg/i);
+  assert.equal(state.notebookEntries[0].toolCalculations[0].table.metaRows[0][1], '1 L');
   assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note']);
   assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'ATP');
   assert.equal(state.notebookEntries[0].toolCalculations[1].table.footerRows[0][0], 'Water');

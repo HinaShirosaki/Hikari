@@ -66,6 +66,9 @@ function truncateToolOutput(toolOutput) {
     ? asArray(source.citations)
     : asArray(result.citations);
   const summary = cleanText(source.summary || result.summary);
+  // Lookup tools report one constant reason per call as citation_reason instead of
+  // repeating it on every citation, so fall back to it when the row omits its own.
+  const sharedReason = cleanText(source.citation_reason || result.citation_reason);
   return {
     ok: source.ok !== false,
     summary,
@@ -73,7 +76,7 @@ function truncateToolOutput(toolOutput) {
     citations: citations.slice(0, 5).map((row) => ({
       source: cleanText(row?.source),
       pointer: cleanText(row?.pointer),
-      reason: cleanText(row?.reason)
+      reason: cleanText(row?.reason) || sharedReason
     })),
     error: cleanText(source.error)
   };

@@ -67,6 +67,36 @@ function getNotebookAppend(meta = {}) {
   return source;
 }
 
+function resolveNotebookAppendReviewState(meta = {}, notebookEntries = []) {
+  const append = getNotebookAppend(meta);
+  if (!append) {
+    return { append: null, applied: false, status: '' };
+  }
+  const savedStatus = trimText(append.save?.status, 40);
+  const savedApplied = append.save?.applied === true || savedStatus === 'approved';
+  if (savedApplied || savedStatus === 'rejected') {
+    return {
+      append,
+      applied: savedApplied,
+      status: savedApplied ? 'approved' : 'rejected'
+    };
+  }
+  const proposalId = trimText(append.proposal?.proposal_id || append.proposal?.proposalId, 200);
+  const entryId = trimText(append.proposal?.notebook_entry_id || append.proposal?.notebookEntryId, 220);
+  const appliedInNotebook = Boolean(proposalId && asArray(notebookEntries).some((entry) => {
+    if (entryId && trimText(entry?.id, 220) !== entryId) {
+      return false;
+    }
+    return asArray(entry?.agentAppendProposalIds)
+      .some((id) => trimText(id, 200) === proposalId);
+  }));
+  return {
+    append,
+    applied: appliedInNotebook,
+    status: appliedInNotebook ? 'approved' : (savedStatus || 'pending')
+  };
+}
+
 function markNotebookAppendReview(messages, messageId, status, reason = '') {
   const normalizedMessageId = trimText(messageId, 120);
   const message = asArray(messages).find((item) => trimText(item?.id, 120) === normalizedMessageId);
@@ -102,5 +132,6 @@ export {
   getSequenceEditReviewStatus,
   markNotebookAppendReview,
   markProtocolReview,
-  markSequenceEditReview
+  markSequenceEditReview,
+  resolveNotebookAppendReviewState
 };

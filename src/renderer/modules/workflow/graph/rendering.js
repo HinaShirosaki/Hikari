@@ -16,7 +16,6 @@ function createGraphRendering({
   normalizeBlocks,
   normalizeLinks,
   titleForBlock,
-  displayLabelForBlock,
   getBlockType
 } = {}) {
   function getBlockById(blockId) {
@@ -145,22 +144,6 @@ function createGraphRendering({
     elements.workflowGraphSvg.innerHTML = paths.join('');
   }
 
-  function setGraphStatus(message = '') {
-    if (message) {
-      elements.workflowGraphStatus.textContent = message;
-      return;
-    }
-    if (!(runtime.draft?.blocks || []).length) {
-      elements.workflowGraphStatus.textContent = '';
-      return;
-    }
-    if (runtime.activeLinkFromBlockId) {
-      elements.workflowGraphStatus.textContent = `Connecting from ${displayLabelForBlock(runtime.activeLinkFromBlockId)}. Click an input dot on another block.`;
-      return;
-    }
-    elements.workflowGraphStatus.textContent = 'Tip: Drag blocks. Output dot -> input dot to connect. Right-click for actions.';
-  }
-
   function renderGraphNodes() {
     elements.workflowGraphNodes.innerHTML = (runtime.draft?.blocks || []).map((block) => {
       const isTextBlock = getBlockType(block) === 'text';
@@ -228,7 +211,6 @@ function createGraphRendering({
     renderGraphNodes();
     drawGraphLinks();
     updateSelectionOverlay();
-    setGraphStatus();
   }
 
   return {
@@ -243,7 +225,6 @@ function createGraphRendering({
     toggleSelected,
     updateSelectionOverlay,
     drawGraphLinks,
-    setGraphStatus,
     renderGraphNodes,
     hideContextMenu,
     showContextMenu,

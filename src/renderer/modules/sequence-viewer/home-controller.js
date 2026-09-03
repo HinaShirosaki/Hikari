@@ -199,6 +199,9 @@ export function createSequenceViewerHomeController(config = {}) {
   const {
     openSequenceFileInDetail,
     openNewSequenceDetail,
+    openNewSequenceDialog,
+    closeNewSequenceDialog,
+    submitNewSequenceDialog,
     openSequenceFilePicker,
     openSelectedSequenceFile
   } = createHomeFileOpen({
@@ -218,6 +221,9 @@ export function createSequenceViewerHomeController(config = {}) {
   function bindEvents() {
     previewZoom.bind();
     previewHover.bind();
+    if (elements.newSequenceOverlay) {
+      elements.newSequenceOverlay.hidden = true;
+    }
 
     // Widen the picker to whatever installed service plugins can convert, so a
     // SnapGene .dna file is selectable alongside the native formats.
@@ -231,7 +237,7 @@ export function createSequenceViewerHomeController(config = {}) {
     }
 
     elements.homePasteBtn?.addEventListener('click', () => {
-      openNewSequenceDetail();
+      openNewSequenceDialog(elements.homePasteBtn);
     });
 
     elements.homeOpenBtn?.addEventListener('click', () => {
@@ -243,7 +249,26 @@ export function createSequenceViewerHomeController(config = {}) {
     });
 
     elements.detailNewBtn?.addEventListener('click', () => {
-      openNewSequenceDetail();
+      openNewSequenceDialog(elements.detailNewBtn);
+    });
+
+    elements.newSequenceForm?.addEventListener('submit', (event) => {
+      event.preventDefault?.();
+      void submitNewSequenceDialog();
+    });
+
+    elements.newSequenceCloseBtn?.addEventListener('click', () => {
+      closeNewSequenceDialog();
+    });
+
+    elements.newSequenceCancelBtn?.addEventListener('click', () => {
+      closeNewSequenceDialog();
+    });
+
+    elements.newSequenceOverlay?.addEventListener('click', (event) => {
+      if (event.target === elements.newSequenceOverlay) {
+        closeNewSequenceDialog();
+      }
     });
 
     elements.detailOpenBtn?.addEventListener('click', () => {
@@ -425,6 +450,9 @@ export function createSequenceViewerHomeController(config = {}) {
     });
     rootDocument?.addEventListener?.('keydown', (event) => {
       if (String(event?.key || '') === 'Escape') {
+        if (elements.newSequenceOverlay && !elements.newSequenceOverlay.hidden) {
+          closeNewSequenceDialog();
+        }
         hideLibraryContextMenus();
       }
     });
@@ -440,6 +468,7 @@ export function createSequenceViewerHomeController(config = {}) {
     navigateToHome,
     navigateToDetail,
     openNewSequenceDetail,
+    openNewSequenceDialog,
     openSequenceFileInDetail,
     openLibraryEntryInDetail,
     openParsedRecordsInDetail,

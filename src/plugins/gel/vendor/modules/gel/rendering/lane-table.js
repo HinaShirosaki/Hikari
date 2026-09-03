@@ -23,6 +23,59 @@ function formatPercentWidth(value) {
   return `${Math.round(numeric * 10000) / 10000}%`;
 }
 
+function normalizeColumnWidths(columns) {
+  const totalWidth = columns.reduce((sum, column) => sum + column.widthPercent, 0);
+  if (!columns.length || totalWidth <= 0) {
+    return [];
+  }
+  return columns.map((column) => ({
+    ...column,
+    widthPercent: (column.widthPercent / totalWidth) * 100
+  }));
+}
+
+function resolveVisibleLayout(layout, includeLadder, ladderLane) {
+  const columns = Array.isArray(layout?.columns) ? layout.columns : [];
+  const baseLayout = {
+    columns: normalizeColumnWidths(columns),
+    leftOffsetPercent: layout?.leftOffsetPercent || 0,
+    rightOffsetPercent: layout?.rightOffsetPercent || 0
+  };
+  if (includeLadder || !ladderLane) {
+    return baseLayout;
+  }
+
+  const ladderColumnIndex = columns.findIndex((column) => column.laneIndex === ladderLane);
+  if (ladderColumnIndex < 0) {
+    return baseLayout;
+  }
+
+  const ladderColumn = columns[ladderColumnIndex];
+  if (ladderColumnIndex === 0 || ladderColumnIndex === columns.length - 1) {
+    const gelWidthPercent = Math.max(
+      0,
+      100 - baseLayout.leftOffsetPercent - baseLayout.rightOffsetPercent
+    );
+    const ladderWidthPercent = (ladderColumn.widthPercent / 100) * gelWidthPercent;
+    return {
+      columns: normalizeColumnWidths(columns.filter((column) => column !== ladderColumn)),
+      leftOffsetPercent: baseLayout.leftOffsetPercent + (ladderColumnIndex === 0 ? ladderWidthPercent : 0),
+      rightOffsetPercent: baseLayout.rightOffsetPercent
+        + (ladderColumnIndex === columns.length - 1 ? ladderWidthPercent : 0)
+    };
+  }
+
+  // An interior ladder leaves two non-contiguous sample groups in the source gel.
+  // Keep its track as an invisible gap so every remaining header stays over its lane.
+  return {
+    ...baseLayout,
+    columns: baseLayout.columns.map((column) => ({
+      ...column,
+      excluded: column.laneIndex === ladderLane
+    }))
+  };
+}
+
 function resolveLaneLayout(runtime) {
   if (!runtime.currentImage) {
     return null;
@@ -160,6 +213,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const canAddTable = dividerReady && Boolean(layout) && !runtime.cropperActive;
     const ladderLane = resolveLadderLane(layout);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
+    const visibleLayout = resolveVisibleLayout(layout, includeLadder, ladderLane);
+    const visibleColumns = visibleLayout.columns;
 
     elements.gelAddTableBtn.hidden = false;
     elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
@@ -173,11 +228,13 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const colMarkup = layout.columns
+    const colMarkup = visibleColumns
       .map((column) => `<col style="width:${formatPercentWidth(column.widthPercent)};" />`)
       .join('');
-    const headerMarkup = layout.columns
-      .map((column) => `<th scope="col">Lane ${column.laneIndex}</th>`)
+    const headerMarkup = visibleColumns
+      .map((column) => column.excluded
+        ? '<th class="gel-lane-table-excluded-cell" aria-hidden="true"></th>'
+        : `<th scope="col">Lane ${column.laneIndex}</th>`)
       .join('');
     const labelMarkup = rows.map((row, rowIndex) => `
       <div class="gel-lane-table-label-cell">
@@ -194,7 +251,12 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       </div>
     `).join('');
     const bodyMarkup = rows.map((row, rowIndex) => {
-      const cells = layout.columns.map((_column, columnIndex) => `
+      const cells = visibleColumns.map((column) => {
+        if (column.excluded) {
+          return '<td class="gel-lane-table-excluded-cell" aria-hidden="true"></td>';
+        }
+        const columnIndex = column.laneIndex - 1;
+        return `
         <td>
           <input
             type="text"
@@ -208,7 +270,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
             spellcheck="false"
           />
         </td>
-      `).join('');
+      `;
+      }).join('');
 
       return `
         <tr>
@@ -241,7 +304,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       <div class="gel-lane-table-grid-shell">
         <div
           class="gel-lane-table-grid-offsets"
-          style="padding-left:${formatPercentWidth(layout.leftOffsetPercent)}; padding-right:${formatPercentWidth(layout.rightOffsetPercent)};"
+          style="padding-left:${formatPercentWidth(visibleLayout.leftOffsetPercent)}; padding-right:${formatPercentWidth(visibleLayout.rightOffsetPercent)};"
         >
           <div class="gel-lane-table-wrap">
             <table class="gel-lane-table">
@@ -447,6 +510,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const ladderToggle = event?.target?.closest?.('[data-gel-table-include-ladder]');
     if (ladderToggle) {
       runtime.figureExportIncludeLadder = Boolean(ladderToggle.checked);
+      render();
       return;
     }
     const input = event?.target?.closest?.('[data-gel-table-row]');

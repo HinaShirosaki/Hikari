@@ -791,6 +791,258 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         await server.close();
       }
     });
+    test('agent MCP stdio server caps an oversized tool result for the model', async () => {
+      const { buildMcpToolResponseContent, createAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ));
+
+      // Tools without a dedicated compact model payload need a final text ceiling.
+      const oversizedResult = {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_download',
+        app_tool: 'paper-download',
+        summary: 'Analysed the requested papers.',
+        output: {
+          rows: Array.from({ length: 40000 }, (_, index) => ({
+            index,
+            text: 'lorem ipsum dolor sit amet consectetur'
+          }))
+        }
+      };
+      const rawLength = JSON.stringify(oversizedResult, null, 2).length;
+      const cappedText = buildMcpToolResponseContent('paper_download', oversizedResult);
+      const capped = JSON.parse(cappedText);
+
+      assert.ok(rawLength > 1000000);
+      assert.ok(cappedText.length < rawLength / 10);
+      assert.ok(cappedText.length <= 60000);
+      assert.equal(capped.truncated.reason, 'result_exceeded_model_text_budget');
+      assert.equal(capped.truncated.original_chars, rawLength);
+      assert.equal(capped.full_result_available_in_structured_content, undefined);
+      // The spine and the head of the payload survive the cut.
+      assert.equal(capped.summary, 'Analysed the requested papers.');
+      assert.equal(capped.app_tool, 'paper-download');
+      assert.ok(capped.result_preview.length > 0);
+
+      // Quotes and backslashes expand when the preview is serialized a second
+      // time, so enforce the ceiling on the final encoded response.
+      const escapedText = buildMcpToolResponseContent('paper_download', {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_download',
+        app_tool: 'paper-download',
+        output: '"'.repeat(70000)
+      });
+      assert.ok(escapedText.length <= 60000);
+      assert.ok(JSON.parse(escapedText).result_preview.length > 0);
+
+      // paper_analysis keeps every complete, exact source-line object instead
+      // of applying the generic model-text ceiling. Query-selected evidence is
+      // retained in relevance order without a second structured-content copy.
+      const analysisBlocks = Array.from({ length: 8 }, (_, blockIndex) => ({
+        paper_id: 'paper-1',
+        paper_title: 'Evidence paper',
+        section_label: `Section ${blockIndex + 1}`,
+        line_ranges: [{ start_line: blockIndex * 120 + 1, end_line: (blockIndex + 1) * 120 }],
+        source_lines: Array.from({ length: 120 }, (_, lineIndex) => ({
+          line_number: blockIndex * 120 + lineIndex + 1,
+          content: `block-${blockIndex + 1}-line-${lineIndex + 1}:${' exact evidence'.repeat(16)}`
+        })),
+        source_line_count: 960,
+        source_path: 'KnowledgeBase/papers.md/paper-1/Evidence paper.md'
+      }));
+      const paperAnalysisText = buildMcpToolResponseContent('paper_analysis', {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_analysis',
+        app_tool: 'paper-analysis',
+        output: {
+          ok: true,
+          status: 'completed',
+          query: 'Which evidence supports the conclusion?',
+          paper_title: 'Evidence paper',
+          selected_papers: [{ paper_id: 'paper-1', paper_title: 'Evidence paper' }],
+          loaded_context_blocks: analysisBlocks,
+          papers_read_count: 1,
+          summary: 'Loaded exact line-backed evidence.'
+        }
+      });
+      const paperAnalysisPayload = JSON.parse(paperAnalysisText);
+      const includedAnalysisLines = paperAnalysisPayload.loaded_context_blocks
+        .flatMap((block) => block.source_lines || []);
+      assert.ok(paperAnalysisText.length > 60000);
+      assert.equal(paperAnalysisPayload.result_preview, undefined);
+      assert.equal(paperAnalysisPayload.truncated, undefined);
+      assert.equal(paperAnalysisPayload.omitted, undefined);
+      assert.equal(includedAnalysisLines.length, 960);
+      includedAnalysisLines.forEach((line) => {
+        assert.equal(
+          line.content,
+          analysisBlocks.flatMap((block) => block.source_lines)
+            .find((sourceLine) => sourceLine.line_number === line.line_number).content
+        );
+      });
+      assert.doesNotMatch(paperAnalysisPayload.model_note, /narrow|call again/i);
+
+      const summarizedAnalysis = JSON.parse(buildMcpToolResponseContent('paper_analysis', {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_analysis',
+        app_tool: 'paper-analysis',
+        output: {
+          ok: true,
+          status: 'completed',
+          paper_title: 'Remote paper',
+          brief_summary: 'A bounded summary.',
+          key_findings: ['Finding one.'],
+          method_overview: 'A concise method.',
+          protocol_extraction: {
+            title: 'Extracted method',
+            steps: ['Add reagent.', 'Measure signal.']
+          }
+        }
+      }));
+      assert.equal(summarizedAnalysis.brief_summary, 'A bounded summary.');
+      assert.deepEqual(summarizedAnalysis.key_findings, ['Finding one.']);
+      assert.equal(summarizedAnalysis.method_overview, 'A concise method.');
+      assert.deepEqual(summarizedAnalysis.protocol_extraction.steps, ['Add reagent.', 'Measure signal.']);
+
+      const paperGatewayResult = {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_analysis',
+        app_tool: 'paper-analysis',
+        output: {
+          result: {
+            ok: true,
+            status: 'completed',
+            query: 'What did this paper find and what comments were returned?',
+            paper_title: 'Evidence paper',
+            selected_papers: [{ paper_id: 'paper-1', paper_title: 'Evidence paper' }],
+            loaded_context_blocks: [{
+              block_id: 'paper-1::lines-1',
+              paper_id: 'paper-1',
+              paper_title: 'Evidence paper',
+              section_label: 'Results',
+              relevance_reason: 'These lines directly answer the findings question.',
+              line_ranges: [{ start_line: 4, end_line: 5 }],
+              source_lines: [
+                { line_number: 4, content: 'First complete evidence line.' },
+                { line_number: 5, content: 'Second complete evidence line.' }
+              ],
+              related_comments: []
+            }],
+            papers_read_count: 1
+          }
+        }
+      };
+      const { server, connect } = createAgentMcpStdioServer({
+        gateway: {
+          async callGatewayTool() {
+            return paperGatewayResult;
+          }
+        }
+      });
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-paper-response-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+      try {
+        const response = await client.callTool({
+          name: 'paper_analysis',
+          arguments: {
+            query: 'What did this paper find and what comments were returned?',
+            paper: { title: 'Evidence paper' }
+          }
+        });
+        const responsePayload = JSON.parse(response.content[0].text);
+        assert.equal(response.structuredContent, undefined);
+        assert.equal(responsePayload.loaded_context_blocks[0].source_lines.length, 2);
+        assert.equal(responsePayload.analysis_comments.length, 1);
+        assert.equal(
+          responsePayload.analysis_comments[0].comment,
+          'These lines directly answer the findings question.'
+        );
+        assert.match(responsePayload.model_note, /related_comments are saved user annotations/i);
+        assert.match(responsePayload.model_note, /never claim there are no comments/i);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+
+      const smallResult = {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_download',
+        app_tool: 'paper-download',
+        output: { saved: 1 }
+      };
+      const smallPayload = JSON.parse(buildMcpToolResponseContent('paper_download', smallResult));
+      assert.equal(smallPayload.truncated, undefined);
+      assert.deepEqual(smallPayload.output, { saved: 1 });
+    });
+    test('agent MCP stdio server gives each turn its own literature_search budget', async () => {
+      const { createAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ));
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+
+      // The budget must follow the request context's turn id, not the process
+      // lifetime: a reused server may not carry a spent budget into the next turn.
+      const env = {
+        HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({ traceRequestId: 'turn-1' })
+      };
+      const { server, connect } = createAgentMcpStdioServer({
+        env,
+        gateway: {
+          async callGatewayTool() {
+            return { ok: true, status: 'completed', mcp_tool: 'literature_search' };
+          }
+        }
+      });
+
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+
+      const search = () => client.callTool({
+        name: 'literature_search',
+        arguments: { query: 'kinase inhibitor' }
+      });
+
+      try {
+        assert.equal((await search()).isError, false);
+        assert.equal((await search()).isError, true);
+
+        env.HIKARI_AGENT_MCP_REQUEST_CONTEXT = JSON.stringify({ traceRequestId: 'turn-2' });
+        assert.equal((await search()).isError, false);
+        assert.equal((await search()).isError, true);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    });
     test('agent MCP stdio server registers paper-intake direct tools', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-paper-intake-'));
       const sessionWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-session-workspace-'));

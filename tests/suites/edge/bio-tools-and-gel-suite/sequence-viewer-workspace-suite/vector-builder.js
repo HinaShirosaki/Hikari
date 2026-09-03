@@ -53,6 +53,35 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-feature-detail'
 ];
 
+test('[EDGE] sequence-viewer back actions share one compact accessible control', () => {
+  const markup = [
+    readSource('ui/html/views/sequence-viewer-view.html'),
+    readSource('ui/html/views/sequence-viewer-detail-view.html')
+  ].join('\n');
+  const backActions = [
+    ['sequence-viewer-protein-builder-back-btn', 'Back to Sequence Library'],
+    ['sequence-viewer-protein-builder-confirmation-back-btn', 'Back to Protein Builder'],
+    ['sequence-viewer-vector-builder-back-btn', 'Back to Sequence Viewer'],
+    ['sequence-viewer-cloning-design-back-btn', 'Back to Sequence']
+  ];
+
+  backActions.forEach(([id, label]) => {
+    const button = markup.match(new RegExp(`<button id="${id}"[\\s\\S]*?<\\/button>`))?.[0] || '';
+    assert.match(button, /class="ghost-btn sequence-viewer-back-action-btn"/);
+    assert.match(button, new RegExp(`aria-label="${label}"`));
+    assert.match(button, new RegExp(`title="${label}"`));
+    assert.match(button, /<svg[^>]*aria-hidden="true"[^>]*>[\s\S]*<path d="M19 12H5M11 6l-6 6 6 6"><\/path>[\s\S]*<\/svg>/);
+    assert.match(button, new RegExp(`<span class="sr-only">${label}<\\/span>`));
+  });
+
+  const sharedCss = readSource('ui/css/views/sequence-viewer-view/shell-and-builders.css');
+  const vectorCss = readSource('ui/css/views/sequence-viewer-view/vector-builder.css');
+  assert.match(sharedCss, /\.sequence-viewer-back-action-btn\s*\{[^}]*width:\s*30px;[^}]*height:\s*30px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
+  assert.match(sharedCss, /\.sequence-viewer-back-action-btn svg\s*\{[^}]*width:\s*18px;[^}]*height:\s*18px;[^}]*stroke:\s*currentColor;/s);
+  assert.doesNotMatch(sharedCss, /sequence-viewer-(?:protein-builder|cloning-design)-toolbar-nav \.ghost-btn/);
+  assert.doesNotMatch(vectorCss, /sequence-viewer-vector-builder-toolbar-nav \.ghost-btn/);
+});
+
 // The mock DOM only resolves [data-*] selectors, so a map click is simulated by
 // handing the handler a target whose closest() reports the arc it landed on.
 function featureTarget(index) {

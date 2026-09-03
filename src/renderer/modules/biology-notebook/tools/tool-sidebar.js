@@ -379,6 +379,7 @@ export function createNotebookToolSidebarController({
   });
   const interactiveIds = [
     'biology-notebook-tool-buffer-volume',
+    'biology-notebook-tool-buffer-volume-unit',
     'biology-notebook-tool-buffer-ph',
     'biology-notebook-tool-reaction-total-volume',
     'biology-notebook-tool-reaction-fill-name'

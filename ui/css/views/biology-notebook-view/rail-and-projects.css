@@ -701,6 +701,32 @@
   font: inherit;
 }
 
+.biology-notebook-buffer-volume-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.biology-notebook-buffer-volume-control select {
+  width: auto;
+  min-width: 3.75rem;
+  height: 32px;
+  padding: 6px 20px 6px 6px;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--theme-text);
+  font: inherit;
+}
+
+.biology-notebook-buffer-volume-control select:focus {
+  outline: none;
+  background-color: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+}
+
 .biology-notebook-buffer-sheet input:focus,
 .biology-notebook-reaction-sheet input:focus {
   outline: none;

@@ -481,11 +481,14 @@ test('workflow template navigation and graph actions use compact accessible icon
   assert.match(viewCss, /\.workflow-entry-panel > \.workflow-entry-back-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
   assert.match(viewCss, /\.workflow-template-actions > \.workflow-template-action-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/);
   assert.match(viewCss, /\.workflow-editor-sidebar-pinned\.left-rail-template__pinned \{[\s\S]*?border-bottom: 0;/);
-  assert.match(viewCss, /\.workflow-editor-sidebar-scroll > \.workflow-template-editor-panel,[\s\S]*?\.workflow-editor-sidebar-scroll > \.workflow-block-composer-panel \{[\s\S]*?border-top: 0;/);
+  assert.match(viewCss, /\.workflow-editor-sidebar-scroll > \.workflow-template-editor-panel,[\s\S]*?\.workflow-editor-sidebar-scroll > \.workflow-block-composer-panel \{[\s\S]*?padding-top: 0;[\s\S]*?border-top: 0;/);
+  assert.match(viewCss, /\.workflow-editor-sidebar-scroll\.left-rail-template__scroll \{[\s\S]*?gap: 16px;/);
 });
 
 test('workflow template editor omits redundant headings while retaining its controls', () => {
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'workflow-management-view.html'), 'utf8');
+  const graphRenderingSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'graph', 'rendering.js'), 'utf8');
+  const graphControllerSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'graph-controller.js'), 'utf8');
 
   assert.doesNotMatch(viewSource, /<h3>(?:Template Details|Add Blocks)<\/h3>/);
   assert.match(viewSource, /id="workflow-template-name"/);
@@ -497,10 +500,125 @@ test('workflow template editor omits redundant headings while retaining its cont
   assert.match(viewSource, /name="workflow-block-type-option" value="text"/);
   assert.doesNotMatch(viewSource, /<select id="workflow-block-type">/);
   assert.match(viewSource, /id="workflow-block-add-btn"/);
+  assert.doesNotMatch(viewSource, /id="workflow-graph-status"/);
+  assert.doesNotMatch(graphRenderingSource, /setGraphStatus|Tip: Drag blocks|Connecting from/);
+  assert.doesNotMatch(graphControllerSource, /setGraphStatus|Selection cleared\.|Connection created\.|Connection mode canceled\./);
+  assert.match(viewSource, /id="workflow-graph-context-menu"/);
 
   const actionsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'actions.js'), 'utf8');
   assert.match(actionsSource, /addEventListener\('keydown', onBlockTypeKeydown\)/);
   assert.match(actionsSource, /event\.key === 'ArrowRight'[\s\S]*event\.key === 'ArrowLeft'/);
+});
+
+test('workflow protocol picker matches the Biology Notebook search-result pattern', () => {
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'workflow-management-view.html'), 'utf8');
+  const viewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'workflow-management-view.css'), 'utf8');
+
+  assert.match(viewSource, /Search &amp; Select Protocol/);
+  assert.match(viewSource, /id="workflow-block-protocol-search"[^>]*autocomplete="off"[^>]*aria-controls="workflow-block-protocol-search-results"/);
+  assert.match(viewSource, /id="workflow-block-protocol-search-results"[^>]*role="listbox"[^>]*aria-label="Matching protocols"/);
+  assert.match(viewSource, /id="workflow-block-protocol" hidden aria-hidden="true" tabindex="-1"/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-results \{[\s\S]*?gap: 6px;[\s\S]*?max-height: min\(34vh, 240px\);[\s\S]*?overflow-y: auto;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-result,[\s\S]*?\.workflow-block-protocol-search-empty \{[\s\S]*?min-height: 40px;[\s\S]*?padding: 10px;[\s\S]*?line-height: 1\.4;[\s\S]*?overflow-wrap: anywhere;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-result:hover,[\s\S]*?\.workflow-block-protocol-search-result\.is-selected \{/);
+
+  const optionListsModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer', 'option-lists.js')
+  );
+  const results = { innerHTML: '' };
+  const search = { value: 'wash' };
+  const select = { value: 'protocol-wash' };
+  const optionLists = optionListsModule.createWorkflowOptionLists({
+    state: {
+      protocols: [
+        { id: 'protocol-lysis', name: 'Cell Lysis' },
+        { id: 'protocol-wash', name: 'Wash Cells' }
+      ]
+    },
+    elements: {
+      workflowBlockProtocolResults: results,
+      workflowBlockProtocolSearchInput: search,
+      workflowBlockProtocolInput: select
+    },
+    safeText: (value) => String(value || '')
+  });
+
+  optionLists.renderProtocolResults();
+  assert.doesNotMatch(results.innerHTML, /Cell Lysis/);
+  assert.match(results.innerHTML, /data-workflow-block-protocol-id="protocol-wash"/);
+  assert.match(results.innerHTML, /class="workflow-block-protocol-search-result is-selected"/);
+  assert.match(results.innerHTML, /aria-selected="true"/);
+
+  search.value = 'missing';
+  optionLists.renderProtocolResults();
+  assert.equal(results.innerHTML, '<p class="workflow-block-protocol-search-empty">No matching protocols.</p>');
+});
+
+test('workflow protocol picker clears stale selection on search and selects result rows', () => {
+  const windowObject = {
+    addEventListener() {},
+    alert() {}
+  };
+  const actionsModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'actions.js'),
+    {
+      window: windowObject,
+      FileReader: class {}
+    }
+  );
+  const listeners = {};
+  const protocolInput = { value: 'protocol-lysis' };
+  const searchInput = {
+    addEventListener(type, handler) {
+      listeners[`search:${type}`] = handler;
+    }
+  };
+  const results = {
+    addEventListener(type, handler) {
+      listeners[`results:${type}`] = handler;
+    }
+  };
+  let renderCount = 0;
+  const actions = actionsModule.createWorkflowActions({
+    state: {
+      protocols: [
+        { id: 'protocol-lysis', name: 'Cell Lysis' },
+        { id: 'protocol-wash', name: 'Wash Cells' }
+      ],
+      workflows: [],
+      workflowTemplates: []
+    },
+    runtime: {
+      draft: { blocks: [], links: [], entries: [], notebookEntryIds: [] }
+    },
+    elements: {
+      workflowBlockProtocolInput: protocolInput,
+      workflowBlockProtocolSearchInput: searchInput,
+      workflowBlockProtocolResults: results
+    },
+    renderer: {
+      renderProtocolPicker() {
+        renderCount += 1;
+      }
+    },
+    graphController: {},
+    windowObject
+  });
+
+  actions.bindEvents();
+  listeners['search:input']();
+  assert.equal(protocolInput.value, '');
+  assert.equal(renderCount, 1);
+
+  const resultButton = {
+    dataset: { workflowBlockProtocolId: 'protocol-wash' },
+    closest() {
+      return this;
+    }
+  };
+  listeners['results:click']({ target: resultButton });
+  assert.equal(protocolInput.value, 'protocol-wash');
+  assert.equal(renderCount, 2);
 });
 
 test('workflow block type switch synchronizes protocol and plain-text composer fields', () => {

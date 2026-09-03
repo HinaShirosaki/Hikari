@@ -11,8 +11,20 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
+
+const ASSAY_TABLE_SUCCESS_STATUSES = Object.freeze([
+  'completed',
+  'created',
+  'read',
+  'listed',
+  'derived',
+  'python_completed',
+  'deleted',
+  'cleared'
+]);
 
 const ASSAY_TABLE_MCP_TOOL = Object.freeze({
   name: 'assay_table',
@@ -70,11 +82,15 @@ async function callAssayTable(input = {}, context = {}, deps = {}) {
     context
   });
   const payload = resolveAssayTablePayload(result);
-  const status = cleanText(payload.status || result?.status, 80) || (result?.ok === false ? 'failed' : 'completed');
+  const status = cleanText(payload.status || result?.status, 80)
+    || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 4000);
-  const ok = result?.ok !== false
-    && payload.ok !== false
-    && !['error', 'failed', 'invalid_action', 'invalid_table', 'not_found', 'python_failed', 'invalid_python', 'missing_output_table', 'invalid_output_table'].includes(status);
+  const ok = resolveDirectToolOk({
+    result,
+    payload,
+    status,
+    successStatuses: ASSAY_TABLE_SUCCESS_STATUSES
+  });
 
   return compactObject({
     ok,

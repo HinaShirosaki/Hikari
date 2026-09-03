@@ -1,4 +1,5 @@
 import { formatSigFig, toNumber } from '../numbers.js';
+import { volumeToL } from '../molarity.js';
 import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, findBufferPkaHint, formatBufferMassDual, formatBufferVolumeDual, formatBufferVolumeMl, parseBufferConcentration } from './buffer-concentration.js';
 import { BUFFER_PH_ADJUSTMENT_MOLARITY } from './constants.js';
 import { buildResult, collectMissing, describeRawValue, withLabel } from './result-format.js';
@@ -133,10 +134,16 @@ function calculateBufferIngredient({
 
 function calculateBufferRecipe({
   volumeMl,
+  volumeValue,
+  volumeUnit = 'mL',
   pH,
   rows = [],
   solventName = 'Solvent'
 } = {}) {
+  const hasAdjustableVolume = volumeValue !== undefined && volumeValue !== null;
+  const sourceVolumeValue = hasAdjustableVolume ? volumeValue : volumeMl;
+  const sourceVolumeUnit = hasAdjustableVolume ? volumeUnit : 'mL';
+  const targetVolumeMl = volumeToL(sourceVolumeValue, sourceVolumeUnit) * 1000;
   const activeRows = (Array.isArray(rows) ? rows : [])
     .filter((row) => row && typeof row === 'object')
     .filter((row) => (
@@ -158,12 +165,11 @@ function calculateBufferRecipe({
       stockConcentration: row.stockConcentration ?? row.stockConcentrationValue,
       finalConcentration: row.finalConcentration ?? row.finalConcentrationValue,
       concentrationValue: row.concentrationValue,
-      volumeMl
+      volumeMl: targetVolumeMl
     });
     detail.rowIndex = row.rowIndex || index + 1;
     return detail;
   });
-  const targetVolumeMl = toNumber(volumeMl);
   const additiveVolumeMl = details.reduce((sum, detail) => {
     const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
     return sum + (Number(rowDetail?.addVolumeMl) || 0);
@@ -188,7 +194,14 @@ function calculateBufferRecipe({
     type: 'buffer',
     mode: 'recipe',
     title: 'Buffer Preparer',
-    inputs: { volumeMl, pH, solventName: solventLabel, rows: activeRows },
+    inputs: {
+      volumeMl: targetVolumeMl,
+      volumeValue: sourceVolumeValue,
+      volumeUnit: sourceVolumeUnit,
+      pH,
+      solventName: solventLabel,
+      rows: activeRows
+    },
     resultText: [...resultLines, solventText, naohText, hclText].filter(Boolean).join('\n'),
     formulaText: [
       ...formulaLines,

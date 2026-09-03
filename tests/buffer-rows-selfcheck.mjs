@@ -68,6 +68,7 @@ doc.getElementById('buffer-suggestions-1').hidden = true;
 const bufferRows = doc.getElementById('buffer-rows');
 bufferRows.appendChild(doc.getElementById('buffer-adjustment-row'));
 doc.getElementById('buffer-volume-ml');
+doc.getElementById('buffer-volume-unit').value = 'mL';
 doc.getElementById('buffer-total-result');
 const addBtn = doc.getElementById('add-buffer-chemical-btn');
 for (let i = 3; i <= 6; i += 1) doc.getElementById(`buffer-row-${i}`).hidden = true;

@@ -48,7 +48,6 @@ function createHomeFileOpen({
     }
 
     try {
-      setHomeStatus(`Reading ${file.name}...`);
       const text = await readSequenceFileText(file);
       const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
       await openParsedRecordsInDetail(parsed, text, 'Loaded');
@@ -58,6 +57,8 @@ function createHomeFileOpen({
     }
   }
 
+  let newSequenceReturnFocus = null;
+
   function openNewSequenceDetail() {
     onClearAll();
     navigateToDetail();
@@ -65,6 +66,63 @@ function createHomeFileOpen({
     setInputComposerVisible(true);
     setStatus('Paste sequence text, then click Load.');
     elements.inputTextarea?.focus?.();
+  }
+
+  function setNewSequenceDialogStatus(message = '', isError = false) {
+    if (!elements.newSequenceStatus) {
+      return;
+    }
+    const text = String(message || '').trim();
+    elements.newSequenceStatus.textContent = text;
+    elements.newSequenceStatus.hidden = !text;
+    elements.newSequenceStatus.classList?.toggle?.('is-error', Boolean(text && isError));
+  }
+
+  function openNewSequenceDialog(trigger = null) {
+    // Partial test and embed surfaces may omit the global dialog. Keep the old
+    // detail composer as a safe fallback in those environments.
+    if (!elements.newSequenceOverlay) {
+      openNewSequenceDetail();
+      return;
+    }
+    newSequenceReturnFocus = trigger || null;
+    if (elements.newSequenceTextarea) {
+      elements.newSequenceTextarea.value = '';
+    }
+    setNewSequenceDialogStatus();
+    elements.newSequenceOverlay.hidden = false;
+    elements.newSequenceTextarea?.focus?.();
+  }
+
+  function closeNewSequenceDialog(options = {}) {
+    if (elements.newSequenceOverlay) {
+      elements.newSequenceOverlay.hidden = true;
+    }
+    setNewSequenceDialogStatus();
+    if (options.restoreFocus !== false) {
+      newSequenceReturnFocus?.focus?.();
+    }
+    newSequenceReturnFocus = null;
+  }
+
+  async function submitNewSequenceDialog() {
+    const rawText = String(elements.newSequenceTextarea?.value || '');
+    if (!rawText.trim()) {
+      setNewSequenceDialogStatus('Paste a DNA sequence before loading.', true);
+      elements.newSequenceTextarea?.focus?.();
+      return false;
+    }
+
+    const parsed = parseInputRecords(rawText, { maxRecords: DEFAULT_MAX_RECORDS });
+    if (!Array.isArray(parsed?.records) || !parsed.records.length) {
+      setNewSequenceDialogStatus(parsed?.errors?.[0] || 'No valid DNA sequence was found.', true);
+      elements.newSequenceTextarea?.focus?.();
+      return false;
+    }
+
+    closeNewSequenceDialog({ restoreFocus: false });
+    await openParsedRecordsInDetail(parsed, rawText, 'Loaded');
+    return true;
   }
 
   function openSequenceFilePicker(input = elements.homeOpenInput) {
@@ -84,6 +142,9 @@ function createHomeFileOpen({
     readSequenceFileText,
     openSequenceFileInDetail,
     openNewSequenceDetail,
+    openNewSequenceDialog,
+    closeNewSequenceDialog,
+    submitNewSequenceDialog,
     openSequenceFilePicker,
     openSelectedSequenceFile
   };

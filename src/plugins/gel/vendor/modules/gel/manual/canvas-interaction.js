@@ -197,7 +197,7 @@ function createManualCanvasInteraction({
         deps.setStatus(`First lane divider added at x=${point.x}. Add at least one more to define the gel edges.`);
         return;
       }
-      deps.setStatus(`Lane divider added at x=${point.x}. The outermost lines define the gel edges; add more or click Done Dividers.`);
+      deps.setStatus(`Lane divider added at x=${point.x}. The outermost lines define the gel edges; add more or click Lane dividers again to finish.`);
       return;
     }
     if (step === 'ladder') {

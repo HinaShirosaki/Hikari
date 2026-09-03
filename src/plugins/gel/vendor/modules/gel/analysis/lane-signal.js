@@ -169,6 +169,91 @@ function computeLaneBaseline({ signal, width, lane, height, bandThickness }) {
   return { rowMeans, smoothed, baseline };
 }
 
+function median(values) {
+  const sorted = values
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+  if (!sorted.length) {
+    return null;
+  }
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? sorted[middle]
+    : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function profileRange(profile, start, end) {
+  if (!profile?.length || end < start) {
+    return [];
+  }
+  const safeStart = clamp(Math.floor(start), 0, profile.length - 1);
+  const safeEnd = clamp(Math.floor(end), safeStart, profile.length - 1);
+  return Array.from(profile.slice(safeStart, safeEnd + 1));
+}
+
+// Estimate the background underneath a target band without allowing the band
+// itself to lift that estimate. Robust medians come from flanking rows outside
+// a guard margin; a straight line joins the two sides across the band.
+function estimateBandBaselineFromFlanks({ rowMeans, top, bottom }) {
+  const height = rowMeans?.length || 0;
+  if (!height) {
+    return {
+      values: [],
+      mean: 0,
+      noiseStd: 0,
+      upperMedian: null,
+      lowerMedian: null,
+      mode: 'flanking-median-unavailable'
+    };
+  }
+
+  const safeTop = clamp(Math.floor(top), 0, height - 1);
+  const safeBottom = clamp(Math.floor(bottom), safeTop, height - 1);
+  const thickness = Math.max(1, safeBottom - safeTop + 1);
+  const guardRows = Math.max(2, Math.ceil(thickness * 0.25));
+  const flankRows = Math.min(
+    Math.max(4, thickness),
+    Math.max(4, Math.floor(height / 4))
+  );
+  const upperEnd = safeTop - guardRows - 1;
+  const lowerStart = safeBottom + guardRows + 1;
+  const upperValues = upperEnd >= 0
+    ? profileRange(rowMeans, upperEnd - flankRows + 1, upperEnd)
+    : [];
+  const lowerValues = lowerStart < height
+    ? profileRange(rowMeans, lowerStart, lowerStart + flankRows - 1)
+    : [];
+  const upperMedian = median(upperValues);
+  const lowerMedian = median(lowerValues);
+  const startBaseline = upperMedian ?? lowerMedian ?? 0;
+  const endBaseline = lowerMedian ?? upperMedian ?? 0;
+  const values = Array.from({ length: thickness }, (_unused, index) => {
+    const fraction = thickness <= 1 ? 0.5 : index / (thickness - 1);
+    return startBaseline + ((endBaseline - startBaseline) * fraction);
+  });
+  const mean = values.length
+    ? values.reduce((sum, value) => sum + value, 0) / values.length
+    : 0;
+  const residuals = [
+    ...upperValues.map((value) => value - (upperMedian ?? startBaseline)),
+    ...lowerValues.map((value) => value - (lowerMedian ?? endBaseline))
+  ];
+  const noiseStd = residuals.length
+    ? Math.sqrt(residuals.reduce((sum, value) => sum + (value ** 2), 0) / residuals.length)
+    : 0;
+
+  return {
+    values,
+    mean,
+    noiseStd,
+    upperMedian,
+    lowerMedian,
+    mode: upperValues.length || lowerValues.length
+      ? 'flanking-median'
+      : 'flanking-median-unavailable'
+  };
+}
+
 function computeCellIntensity({
   signal,
   rawGray,
@@ -182,12 +267,11 @@ function computeCellIntensity({
   const bottom = clamp(Math.floor(Math.max(bandTop, bandBottom)), top, height - 1);
   const thickness = Math.max(1, bottom - top + 1);
 
-  const { smoothed, baseline } = computeLaneBaseline({
-    signal,
-    width,
-    lane,
-    height,
-    bandThickness: thickness
+  const rowMeans = computeLaneRowMeans({ signal, width, lane, height });
+  const background = estimateBandBaselineFromFlanks({
+    rowMeans,
+    top,
+    bottom
   });
 
   let bandSignalSum = 0;
@@ -204,31 +288,14 @@ function computeCellIntensity({
   }
 
   let baselineSum = 0;
-  let baselineInWindowSum = 0;
-  let baselineRowCount = 0;
   const laneWidth = getLaneRectifiedWidth(lane);
-  for (let y = top; y <= bottom; y += 1) {
-    baselineSum += baseline[y] * laneWidth;
-    baselineInWindowSum += baseline[y];
-    baselineRowCount += 1;
-  }
-  const baselineMean = baselineRowCount ? (baselineInWindowSum / baselineRowCount) : 0;
+  background.values.forEach((value) => {
+    baselineSum += value * laneWidth;
+  });
+  const baselineMean = background.mean;
   const correctedIntensity = Math.max(0, bandSignalSum - baselineSum);
 
-  let residualSquares = 0;
-  let residualCount = 0;
-  const noisePad = 4;
-  for (let y = 0; y < height; y += 1) {
-    if (y >= top - noisePad && y <= bottom + noisePad) {
-      continue;
-    }
-    const residual = smoothed[y] - baseline[y];
-    residualSquares += residual * residual;
-    residualCount += 1;
-  }
-  const noiseStd = residualCount > 0
-    ? Math.sqrt(residualSquares / residualCount)
-    : 0;
+  const noiseStd = background.noiseStd;
 
   const bandMeanPerPixel = bandPixelCount ? (bandSignalSum / bandPixelCount) : 0;
   const noiseFloor = Math.max(noiseStd, 1e-6);
@@ -249,7 +316,7 @@ function computeCellIntensity({
     backgroundStd: noiseStd,
     areaPx: bandPixelCount,
     measurementMode: 'target-window',
-    baselineMode: 'lane-profile',
+    baselineMode: background.mode,
     snr,
     sharpness,
     saturationFraction: bandPixelCount ? (saturatedCount / bandPixelCount) : 0,
@@ -268,5 +335,6 @@ export {
   smoothFloat32,
   rollingMinimum,
   computeLaneRowMeans,
-  computeLaneBaseline
+  computeLaneBaseline,
+  estimateBandBaselineFromFlanks
 };

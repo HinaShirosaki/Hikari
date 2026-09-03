@@ -7,6 +7,9 @@ const {
   ensureObject
 } = require('./shared.js');
 
+// Natively implemented in the MCP layer: no app tool is proxied, so app_tool
+// repeats the MCP name instead of dropping out of the response spine. An
+// app_tool equal to mcp_tool is the signal that nothing was forwarded.
 const ASK_USER_MCP_TOOL = Object.freeze({
   name: 'ask_user',
   description: 'Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render. This is a turn boundary: after the tool returns, emit final_response and end the current turn so Hikari can collect one answer; resume work from the next user message without repeating the same question.',
@@ -101,6 +104,7 @@ async function callAskUser(input = {}) {
       ok: false,
       status: 'invalid_arguments',
       mcp_tool: ASK_USER_MCP_TOOL.name,
+      app_tool: ASK_USER_MCP_TOOL.name,
       error: 'ask_user requires a question and at least one answer option.'
     };
   }
@@ -108,7 +112,9 @@ async function callAskUser(input = {}) {
     ok: true,
     status: 'needs_user_answer',
     mcp_tool: ASK_USER_MCP_TOOL.name,
-    user_question: question,
+    app_tool: ASK_USER_MCP_TOOL.name,
+    // The question is carried once, inside the payload the agent is told to return.
+    // normalizeCodexAgentPayload reads final_response and ignores a top-level copy.
     final_response: {
       status: 'needs_more_info',
       assistant_text: question.question,

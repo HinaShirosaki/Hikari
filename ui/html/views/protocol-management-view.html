@@ -72,8 +72,8 @@
                 Materials
                 <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
               </label>
-              <label>
-                Steps (start each step with a bullet point)
+              <div class="protocol-steps-field">
+                <label for="protocol-steps">Steps (start each step with a bullet point)</label>
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
                   <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
@@ -86,7 +86,7 @@
                   </div>
                 </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
-              </label>
+              </div>
               <div class="inline-row">
                 <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert Interactive Bar</button>
                 <input id="placeholder-name" placeholder="Interactive bar name (e.g. volume)" />

@@ -149,6 +149,10 @@
   align-content: start;
 }
 
+.gel-setup-panel {
+  gap: 8px;
+}
+
 .gel-lane-profile-panel {
   min-width: 0;
 }
@@ -263,17 +267,6 @@
 }
 
 
-.gel-lane-profile-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  color: var(--gel-label);
-}
-
-.gel-lane-profile-meta span {
-  white-space: nowrap;
-}
-
 .gel-peak-editor-dialog.app-dialog-surface {
   --app-dialog-width: 1180px;
   --app-dialog-max-height: 920px;
@@ -337,8 +330,8 @@
 .gel-peak-editor-chart {
   display: block;
   width: 100%;
-  height: 100%;
-  min-height: 0;
+  height: min(52vh, 440px);
+  min-height: 300px;
   cursor: crosshair;
 }
 
@@ -453,12 +446,16 @@
 
 .gel-setup-panel #gel-form {
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  gap: 10px;
+}
+
+#gel-form .form-actions {
+  gap: 6px;
 }
 
 .gel-browser-panel {
   margin: 0;
-  padding: 0 0 6px;
+  padding: 0 0 4px;
   border: 0;
   border-bottom: 1px solid var(--theme-border-soft);
 }
@@ -469,7 +466,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 0 10px;
+  padding: 0 0 6px;
   cursor: pointer;
   color: var(--theme-text-strong);
   font-weight: 650;
@@ -495,8 +492,8 @@
 
 .gel-browser-body {
   display: grid;
-  gap: 12px;
-  padding: 0 0 8px;
+  gap: 8px;
+  padding: 0 0 4px;
 }
 
 .gel-browser-list {
@@ -513,7 +510,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 0;
+  padding: 4px 0;
 }
 
 .gel-browser-item-copy {
@@ -790,7 +787,8 @@
 
 .gel-lane-table-labels {
   display: grid;
-  grid-auto-rows: 40px;
+  /* Collapsed table borders add one CSS pixel to each nominal 40px row. */
+  grid-auto-rows: 41px;
   min-width: 0;
 }
 
@@ -826,7 +824,7 @@
 
 .gel-lane-table {
   width: 100%;
-  min-width: max-content;
+  min-width: 0;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -851,6 +849,10 @@
 .gel-lane-table tbody th {
   font-weight: 500;
   background: var(--gel-table-muted-background);
+}
+
+.gel-lane-table .gel-lane-table-excluded-cell {
+  visibility: hidden;
 }
 
 .gel-lane-table-input {
@@ -951,10 +953,8 @@ body.theme-night .gel-lane-profile-chart .lane-profile-peak {
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-axis-label,
-body.theme-night .gel-lane-profile-chart .lane-profile-empty,
-body.theme-night .gel-lane-profile-meta {
+body.theme-night .gel-lane-profile-chart .lane-profile-empty {
   fill: var(--gel-label);
-  color: var(--gel-label);
 }
 
 body.theme-night .gel-peak-editor-chart .peak-editor-frame {

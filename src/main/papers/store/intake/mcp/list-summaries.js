@@ -42,6 +42,7 @@ async function callListProjectSummaries(input = {}, context = {}, deps = {}) {
       ok: false,
       status: 'invalid_arguments',
       mcp_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
+      app_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
       error: 'Provide project_name (or open a project so it is available in context).'
     };
   }
@@ -54,6 +55,7 @@ async function callListProjectSummaries(input = {}, context = {}, deps = {}) {
       ok: false,
       status: load.status || 'failed',
       mcp_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
+      app_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
       error: load.error || 'Failed to read the paper intake store.'
     };
   }
@@ -66,21 +68,24 @@ async function callListProjectSummaries(input = {}, context = {}, deps = {}) {
     : projectRecords;
   const items = filtered.slice(0, limit).map(projectionForListing);
 
-  return compact({
-    ok: true,
-    status: items.length ? 'matched' : 'no_match',
-    mcp_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
-    project_id: projectId,
-    project_name: projectName,
-    doc_types: docTypes,
-    summary: items.length
-      ? `Found ${filtered.length} intake record${filtered.length === 1 ? '' : 's'} for ${projectId || projectName}.`
-      : `No paper intake records found for ${projectId || projectName}.`,
-    items,
-    total_matches: filtered.length,
-    truncated: filtered.length > items.length,
-    errors: load.errors
-  });
+  return {
+    ...compact({
+      ok: true,
+      status: items.length ? 'matched' : 'no_match',
+      mcp_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
+      app_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
+      project_id: projectId,
+      project_name: projectName,
+      doc_types: docTypes,
+      summary: items.length
+        ? `Found ${filtered.length} intake record${filtered.length === 1 ? '' : 's'} for ${projectId || projectName}.`
+        : `No paper intake records found for ${projectId || projectName}.`,
+      total_matches: filtered.length,
+      truncated: filtered.length > items.length,
+      errors: load.errors
+    }),
+    items
+  };
 }
 
 module.exports = {

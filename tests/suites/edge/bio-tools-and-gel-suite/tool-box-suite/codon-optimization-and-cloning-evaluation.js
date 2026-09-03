@@ -230,6 +230,83 @@ test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino 
   assert.equal(result.reason, 'unsupported_residue');
   assert.equal(result.unsupportedResidues.includes('X'), true);
 });
+test('[EDGE] tool-box Protein to DNA result wraps responsively without fixed line breaks', () => {
+  const translationUi = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'sequence-viewer',
+    'calculations',
+    'ui',
+    'translation-tool.js'
+  ));
+  const document = createMockDocument([
+    'reverse-translate-form',
+    'reverse-translate-organism',
+    'reverse-translate-result',
+    'reverse-translate-protein',
+    'reverse-translate-site-available',
+    'reverse-translate-site-selected',
+    'reverse-translate-site-filter',
+    'reverse-translate-append-stop'
+  ]);
+  document.getElementById('reverse-translate-protein').value = 'M'.repeat(30);
+
+  translationUi.initTranslationTool({ document });
+
+  const resultMarkup = document.getElementById('reverse-translate-result').innerHTML;
+  assert.match(resultMarkup, /^<div class="sequence-block">[ACGT]+<\/div>$/);
+  assert.equal(resultMarkup.includes('<br'), false);
+});
+test('[EDGE] tool-box DNA to Protein result wraps responsively without fixed line breaks', () => {
+  const translationUi = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'sequence-viewer',
+    'calculations',
+    'ui',
+    'translation-tool.js'
+  ));
+  const document = createMockDocument([
+    'dna-protein-form',
+    'dna-protein-result',
+    'dna-protein-sequence',
+    'dna-protein-type',
+    'dna-protein-frame',
+    'dna-protein-stop-mode'
+  ]);
+  document.getElementById('dna-protein-sequence').value = 'ATG'.repeat(90);
+  document.getElementById('dna-protein-type').value = 'DNA';
+  document.getElementById('dna-protein-frame').value = '1';
+  document.getElementById('dna-protein-stop-mode').value = 'star';
+
+  translationUi.initTranslationTool({ document });
+
+  const resultMarkup = document.getElementById('dna-protein-result').innerHTML;
+  assert.match(resultMarkup, /^<div class="sequence-block">M{90}<\/div>$/);
+  assert.equal(resultMarkup.includes('<br'), false);
+});
+test('[EDGE] tool-box sequence and property results use one flat surface with relative sizing', () => {
+  const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'tool-box-view.css'), 'utf8');
+  const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'tool-box-view.html'), 'utf8');
+  const resultRule = css.match(/\.tool-calculation-output\s*\{[^}]+\}/s)?.[0] || '';
+  const sequenceRule = css.match(/\.tool-sequence-translation-output \.sequence-block\s*\{[^}]+\}/s)?.[0] || '';
+
+  assert.match(html, /id="dna-protein-result" class="calc-output tool-calculation-output tool-sequence-translation-output"/);
+  assert.match(html, /id="reverse-translate-result" class="calc-output tool-calculation-output tool-sequence-translation-output"/);
+  assert.match(html, /id="peptide-result" class="calc-output stack-form tool-calculation-output"/);
+  assert.match(html, /id="oligo-result" class="calc-output tool-calculation-output"/);
+  assert.match(html, /id="extinction-result" class="calc-output tool-calculation-output"/);
+  assert.match(resultRule, /border:\s*0;/);
+  assert.match(resultRule, /background:\s*transparent;/);
+  assert.match(sequenceRule, /width:\s*100%;/);
+  assert.match(sequenceRule, /border:\s*0;/);
+  assert.match(sequenceRule, /background:\s*transparent;/);
+  assert.doesNotMatch(`${resultRule}\n${sequenceRule}`, /\dpx\b/);
+});
 [
   ['A', 'DNA', 313.21, 15400],
   ['AT', 'DNA', 617.41, 24100],

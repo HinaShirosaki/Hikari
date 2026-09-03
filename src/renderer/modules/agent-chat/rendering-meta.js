@@ -5,11 +5,13 @@ import {
   renderPythonSandboxRuns
 } from './rendering-python.js';
 import { renderUserQuestionCard } from './rendering-question-card.js';
+import { resolveNotebookAppendReviewState } from './review-overlay/review-status.js';
 import { asArray, trimText } from './shared.js';
 
 export function renderAssistantMeta(meta, messageId = '', {
   safeText,
   notebookDraftAdapter,
+  notebookEntries = [],
   canAnswerQuestion = true,
   showUserQuestion = true
 }) {
@@ -50,16 +52,19 @@ export function renderAssistantMeta(meta, messageId = '', {
     && !existingNotebookEntry
   );
   const showOpenNotebookPageButton = Boolean(notebookDraft && existingNotebookEntry && hasMessageId);
-  const notebookAppend = meta.notebookAppend && typeof meta.notebookAppend === 'object'
-    ? meta.notebookAppend
-    : (meta.notebook_append && typeof meta.notebook_append === 'object' ? meta.notebook_append : null);
-  const showReviewNotebookAppendButton = Boolean(
+  const notebookAppendState = resolveNotebookAppendReviewState(meta, notebookEntries);
+  const notebookAppend = notebookAppendState.append;
+  const showNotebookAppendCard = Boolean(
     notebookAppend?.proposal?.content_markdown
     && notebookAppend?.save?.mode === 'confirm_before_append'
-    && notebookAppend?.save?.applied !== true
-    && trimText(notebookAppend?.save?.status, 80) !== 'rejected'
     && hasMessageId
   );
+  const showReviewNotebookAppendActions = showNotebookAppendCard
+    && notebookAppendState.applied !== true
+    && notebookAppendState.status !== 'rejected';
+  const notebookAppendStatusLabel = notebookAppendState.applied === true
+    ? 'Appended to page'
+    : (notebookAppendState.status === 'rejected' ? 'Rejected' : 'Review before appending');
   const notebookAppendProposal = notebookAppend?.proposal || {};
   const notebookAppendSources = asArray(notebookAppendProposal.sources).map((source) => {
     const label = trimText(source?.label || source?.record_id || source?.url, 320);
@@ -79,11 +84,11 @@ export function renderAssistantMeta(meta, messageId = '', {
     userQuestionCard,
     hasPurchaseRecommendation ? renderPurchaseRecommendationCards(meta.purchase_recommendation, safeText) : '',
     renderPythonSandboxRuns(collectPythonSandboxRuns(meta), safeText),
-    showReviewNotebookAppendButton ? `
+    showNotebookAppendCard ? `
       <section class="agent-notebook-append-card">
         <div class="agent-notebook-append-card__header">
           <strong>${safeText(trimText(notebookAppendProposal.section_title, 220) || 'Suggested notebook enrichment')}</strong>
-          <span>Review before appending</span>
+          <span>${safeText(notebookAppendStatusLabel)}</span>
         </div>
         ${notebookAppendProposal.rationale ? `<p>${safeText(notebookAppendProposal.rationale)}</p>` : ''}
         <pre class="agent-review-append-text">${safeText(notebookAppendProposal.content_markdown)}</pre>
@@ -93,7 +98,7 @@ export function renderAssistantMeta(meta, messageId = '', {
             <ul>${notebookAppendSources.map((source) => `<li>${safeText(source)}</li>`).join('')}</ul>
           </div>
         ` : ''}
-        <div class="agent-notebook-append-card__actions">
+        ${showReviewNotebookAppendActions ? `<div class="agent-notebook-append-card__actions">
           <button
             type="button"
             class="primary-btn"
@@ -108,7 +113,7 @@ export function renderAssistantMeta(meta, messageId = '', {
           >
             Reject
           </button>
-        </div>
+        </div>` : ''}
       </section>
     ` : '',
     showCreatePlannedPageButton ? `

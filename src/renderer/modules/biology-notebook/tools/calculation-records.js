@@ -63,12 +63,13 @@ function createCalculationRecords({
       '',
       ['6 M HCl', cleanCell(result.phAdjustment?.hclText)].filter(Boolean).join(' ')
     ]];
-    const volumeValue = cleanCell(result.inputs?.volumeMl);
+    const volumeValue = cleanCell(result.inputs?.volumeValue ?? result.inputs?.volumeMl);
+    const volumeUnit = cleanCell(result.inputs?.volumeUnit) || 'mL';
     return {
       caption: 'Buffer Preparer',
       metaRows: [[
         'Volume',
-        volumeValue ? `${volumeValue} mL` : '',
+        volumeValue ? `${volumeValue} ${volumeUnit}` : '',
         'pH',
         cleanCell(result.inputs?.pH),
         ''

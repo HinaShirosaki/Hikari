@@ -77,7 +77,6 @@ export function createNavigationActions(ctx) {
       return;
     }
     try {
-      actions.setStatus(`Reading ${file.name}...`);
       await controllers.home?.openSequenceFileInDetail?.(file);
     } catch (error) {
       actions.setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true);

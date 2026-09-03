@@ -12,7 +12,6 @@ export function createWorkflowGraphController(config = {}) {
   const normalizeBlocks = config?.normalizeBlocks || ((blocks) => blocks || []);
   const normalizeLinks = config?.normalizeLinks || ((links) => links || []);
   const titleForBlock = config?.titleForBlock || (() => 'Block');
-  const displayLabelForBlock = config?.displayLabelForBlock || ((blockId) => blockId);
   const getBlockType = config?.getBlockType || (() => '');
   const renderBlockList = typeof config?.renderBlockList === 'function' ? config.renderBlockList : () => {};
   const rootDocument = config?.document || globalThis?.document || null;
@@ -24,7 +23,6 @@ export function createWorkflowGraphController(config = {}) {
     normalizeBlocks,
     normalizeLinks,
     titleForBlock,
-    displayLabelForBlock,
     getBlockType
   });
   const {
@@ -33,7 +31,6 @@ export function createWorkflowGraphController(config = {}) {
     toggleSelected,
     updateSelectionOverlay,
     drawGraphLinks,
-    setGraphStatus,
     hideContextMenu,
     showContextMenu,
     renderGraphEditor
@@ -54,13 +51,10 @@ export function createWorkflowGraphController(config = {}) {
   });
 
 
-  function clearSelection({ render = true, status = '' } = {}) {
+  function clearSelection({ render = true } = {}) {
     runtime.selectedBlockIds = new Set();
     if (render) {
       renderGraphEditor();
-      if (status) {
-        setGraphStatus(status);
-      }
     }
   }
 
@@ -80,7 +74,6 @@ export function createWorkflowGraphController(config = {}) {
 
     renderBlockList();
     renderGraphEditor();
-    setGraphStatus(`${ids.length} block(s) deleted.`);
   }
 
   function disconnectBlocks(blockIds) {
@@ -93,7 +86,6 @@ export function createWorkflowGraphController(config = {}) {
     runtime.draft.links = runtime.draft.links.filter((link) => !idSet.has(link.fromBlockId) && !idSet.has(link.toBlockId));
     renderBlockList();
     renderGraphEditor();
-    setGraphStatus('Connections removed for selected block(s).');
   }
 
   function removeLinkById(linkId) {
@@ -104,7 +96,6 @@ export function createWorkflowGraphController(config = {}) {
     runtime.draft.links = runtime.draft.links.filter((link) => link.id !== normalizedId);
     renderBlockList();
     renderGraphEditor();
-    setGraphStatus('Connection removed.');
   }
 
 
@@ -131,11 +122,10 @@ export function createWorkflowGraphController(config = {}) {
     if (runtime.activeLinkFromBlockId) {
       runtime.activeLinkFromBlockId = '';
       drawGraphLinks();
-      setGraphStatus('Connection mode canceled.');
       return;
     }
     if (runtime.selectedBlockIds.size) {
-      clearSelection({ render: true, status: 'Selection cleared.' });
+      clearSelection({ render: true });
     }
   }
 
@@ -156,7 +146,6 @@ export function createWorkflowGraphController(config = {}) {
       const blockId = outPortBtn.dataset.workflowPortOut;
       runtime.activeLinkFromBlockId = runtime.activeLinkFromBlockId === blockId ? '' : blockId;
       drawGraphLinks();
-      setGraphStatus();
       event.stopPropagation();
       return;
     }
@@ -165,12 +154,11 @@ export function createWorkflowGraphController(config = {}) {
     if (inPortBtn) {
       const targetBlockId = inPortBtn.dataset.workflowPortIn;
       if (!runtime.activeLinkFromBlockId) {
-        setGraphStatus('Select an output dot first, then click this input dot.');
+        showTransientNotice('Select an output dot first, then click this input dot.', { type: 'error' });
         event.stopPropagation();
         return;
       }
       if (runtime.activeLinkFromBlockId === targetBlockId) {
-        setGraphStatus('Cannot connect a block to itself.');
         showTransientNotice('Cannot connect a block to itself.', { type: 'error' });
         event.stopPropagation();
         return;
@@ -180,7 +168,7 @@ export function createWorkflowGraphController(config = {}) {
         (link) => link.fromBlockId === runtime.activeLinkFromBlockId && link.toBlockId === targetBlockId
       );
       if (hasDuplicate) {
-        setGraphStatus('This connection already exists.');
+        showTransientNotice('This connection already exists.', { type: 'error' });
         event.stopPropagation();
         return;
       }
@@ -195,7 +183,6 @@ export function createWorkflowGraphController(config = {}) {
       runtime.graphPointer = null;
       renderBlockList();
       renderGraphEditor();
-      setGraphStatus('Connection created.');
       event.stopPropagation();
       return;
     }
@@ -315,7 +302,7 @@ export function createWorkflowGraphController(config = {}) {
     }
 
     if (action === 'clear-selection') {
-      clearSelection({ render: true, status: 'Selection cleared.' });
+      clearSelection({ render: true });
       hideContextMenu();
       return;
     }
@@ -324,7 +311,6 @@ export function createWorkflowGraphController(config = {}) {
       runtime.activeLinkFromBlockId = '';
       runtime.graphPointer = null;
       drawGraphLinks();
-      setGraphStatus('Connection mode canceled.');
       hideContextMenu();
       return;
     }
@@ -352,12 +338,11 @@ export function createWorkflowGraphController(config = {}) {
       runtime.activeLinkFromBlockId = '';
       runtime.graphPointer = null;
       drawGraphLinks();
-      setGraphStatus('Connection mode canceled.');
       return;
     }
 
     if (runtime.selectedBlockIds.size) {
-      clearSelection({ render: true, status: 'Selection cleared.' });
+      clearSelection({ render: true });
     }
   }
 
@@ -389,7 +374,6 @@ export function createWorkflowGraphController(config = {}) {
     removeLinkById,
     renderGraphEditor,
     resetInteractionState,
-    setGraphStatus,
     setSelectedOnly,
     toggleSelected,
     updateSelectionOverlay

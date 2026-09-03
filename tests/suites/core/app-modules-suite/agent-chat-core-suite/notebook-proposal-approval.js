@@ -506,8 +506,9 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
   assert.match(html, /data-agent-append-notebook="message-inline-1"/);
   assert.match(html, /Append to Page/);
 
-  const state = { agentChat: { messages: [message] } };
+  const state = { agentChat: { messages: [message] }, notebookEntries: [] };
   let appliedProposal = null;
+  let rerenderedHtml = '';
   const historyModule = loadEsmStyleModule(path.join(
     __dirname,
     'src',
@@ -523,7 +524,13 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     setStatus: () => {},
     syncComposerHeight: () => {},
     renderContextSummary: () => {},
-    renderHistoryView: () => {},
+    renderHistoryView: () => {
+      rerenderedHtml = renderingMetaModule.renderAssistantMeta(message.meta, message.id, {
+        safeText: shared.safeText,
+        notebookDraftAdapter: {},
+        notebookEntries: state.notebookEntries
+      });
+    },
     answerAssistantQuestion: async () => {},
     notebookDraftAdapter: {},
     onOpenNotebookEntry: () => {},
@@ -543,6 +550,47 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
   assert.equal(appliedProposal.notebook_entry_id, 'entry-inline-1');
   assert.equal(message.meta.notebookAppend.save.applied, true);
   assert.equal(message.meta.notebookAppend.save.status, 'approved');
+  assert.match(rerenderedHtml, /Appended to page/);
+  assert.doesNotMatch(rerenderedHtml, /Append to Page/);
+});
+
+test('agent-chat reconciles a persisted pending notebook proposal with the applied notebook record', () => {
+  const renderingMetaModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'rendering-meta.js'
+  ));
+  const meta = {
+    notebook_append: {
+      status: 'proposal_ready',
+      proposal: {
+        proposal_id: 'proposal-persisted-1',
+        notebook_entry_id: 'entry-persisted-1',
+        section_title: 'Reference preparation',
+        content_markdown: '- Prepare the standard solution using the verified chemical form.'
+      },
+      save: {
+        mode: 'confirm_before_append',
+        applied: false,
+        status: 'pending'
+      }
+    }
+  };
+  const notebookEntries = [{
+    id: 'entry-persisted-1',
+    agentAppendProposalIds: ['proposal-persisted-1']
+  }];
+  const html = renderingMetaModule.renderAssistantMeta(meta, 'message-persisted-1', {
+    safeText: shared.safeText,
+    notebookDraftAdapter: {},
+    notebookEntries
+  });
+
+  assert.match(html, /Appended to page/);
+  assert.doesNotMatch(html, /Append to Page/);
 });
 
 test('agent-chat delegates notebook and protocol domain records to owner adapters', () => {

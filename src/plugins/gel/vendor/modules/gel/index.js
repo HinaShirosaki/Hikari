@@ -289,7 +289,6 @@ export function initGelAnalysis({
   elements.gelToolBandBottomBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-bottom'));
   elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
-  elements.gelMeasureIntensityBtn?.addEventListener('click', onRunAnalysis);
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
   elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);
   elements.gelForm?.addEventListener('submit', recordsManager.onSaveAnalysis);

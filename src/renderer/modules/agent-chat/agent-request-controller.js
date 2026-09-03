@@ -274,11 +274,18 @@ export function createAgentRequestController(deps) {
       setRequestStatus(request, 'Error.');
       showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
     } finally {
+      const requestWasVisible = isRequestVisible(request);
       runtime.sendPending = false;
       getCanceledRequestIds().delete(clientRequestId);
       getActiveRequests().delete(clientRequestId);
       syncRequestUiState();
       sessionManager.renderSessionList();
+      if (requestWasVisible) {
+        // The response render above occurs while the live request still exists.
+        // Render once more after removal so the completed answer cannot retain a
+        // stale Working placeholder or Stop control until the next view switch.
+        renderHistoryView();
+      }
     }
   }
 

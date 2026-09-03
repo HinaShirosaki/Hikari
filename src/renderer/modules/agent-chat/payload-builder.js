@@ -114,7 +114,7 @@ export function createAgentPayloadBuilder({
     const agentContext = state.agentChatContext && typeof state.agentChatContext === 'object'
       ? state.agentChatContext
       : {};
-    const sessionPrompt = trimText(agentContext.sessionPrompt, 2400);
+    const sessionPrompt = trimText(agentContext.sessionPrompt, 6000);
     const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
     const isPaperSession = trimText(agentContext.scopeType, 80) === 'paper';
     return {

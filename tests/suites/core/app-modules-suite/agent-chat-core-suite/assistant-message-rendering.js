@@ -517,6 +517,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
   assert.equal(questionDock.hidden, true);
   assert.equal(questionDock.innerHTML, '');
   assert.equal(document.getElementById('agent-status').textContent, 'Complete.');
+  assert.doesNotMatch(history.innerHTML, /Working on this/);
 });
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));

@@ -52,7 +52,8 @@ export default [
   {
     // Renderer is ESM.
     files: ['**/*.js'],
-    languageOptions: { ecmaVersion: 2024, sourceType: 'module' },
+    // 2025 for import attributes (`with { type: 'json' }`).
+    languageOptions: { ecmaVersion: 2025, sourceType: 'module' },
     // Directives left by a previous airbnb-style setup (no-await-in-loop,
     // no-nested-ternary) document intent for rules this config does not enable.
     linterOptions: { reportUnusedDisableDirectives: 'off' },

@@ -124,6 +124,14 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         'mcp-contract',
         'stdio-server.js'
       ));
+      const { buildHikariAgentMcpInstructions } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'instructions.js'
+      ));
       const { createAgentContainerRuntime } = require(path.join(
         __dirname,
         'src',
@@ -319,6 +327,13 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
 
       const mcpTools = createMcpToolDefinitions();
       const mcpToolNames = mcpTools.map((tool) => tool.name);
+      const mcpInstructions = buildHikariAgentMcpInstructions();
+      assert.match(mcpInstructions, /reference preparation/i);
+      assert.match(mcpInstructions, /at most three short subsections and six bullets/i);
+      assert.match(mcpInstructions, /failed-lookup transcripts/i);
+      assert.match(mcpInstructions, /one to three unique useful records/i);
+      assert.match(mcpInstructions, /without proposing an append/i);
+      assert.doesNotMatch(mcpInstructions, /PBS|ampicillin/i);
       const directToolDir = path.join(
         __dirname,
         'src',
@@ -396,10 +411,14 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       const plotlyGraphDefinition = mcpTools.find((tool) => tool.name === 'plotly_graph');
       const literatureSearchDefinition = mcpTools.find((tool) => tool.name === 'literature_search');
       const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
+      const paperAnalysisDefinition = mcpTools.find((tool) => tool.name === 'paper_analysis');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
       assert.equal(askUserDefinition.annotations.destructiveHint, false);
       assert.equal(askUserDefinition.annotations.idempotentHint, false);
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
+      assert.equal(paperAnalysisDefinition.inputSchema.properties.query.type, 'string');
+      assert.equal(paperAnalysisDefinition.inputSchema.properties.limit, undefined);
+      assert.match(paperAnalysisDefinition.description, /preserve the earlier request/i);
       assert.equal(protocolGenerationDefinition.annotations.readOnlyHint, false);
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
@@ -476,7 +495,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         query: 'download paper pdf'
       });
       assert.equal(hiddenSearchResult.ok, false);
-      assert.match(hiddenSearchResult.error, /Unknown Hikari MCP gateway tool/);
+      assert.match(hiddenSearchResult.error, /Unknown Hikari direct MCP tool/);
 
       const callResult = await gateway.callGatewayTool('notebook_lookup', {
         query: 'Protein purification',
@@ -626,8 +645,10 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       });
       assert.equal(askUserResult.ok, true);
       assert.equal(askUserResult.status, 'needs_user_answer');
-      assert.equal(askUserResult.user_question.question, 'Which project should I use?');
-      assert.equal(askUserResult.user_question.options.length, 2);
+      // The question is carried once, inside the payload the agent returns verbatim.
+      assert.equal(askUserResult.user_question, undefined);
+      assert.equal(askUserResult.final_response.user_question.question, 'Which project should I use?');
+      assert.equal(askUserResult.final_response.user_question.options.length, 2);
       assert.equal(askUserResult.final_response.status, 'needs_more_info');
       assert.match(askUserResult.summary, /end the current turn/);
       assert.match(askUserResult.summary, /without asking the same question again/);
@@ -746,12 +767,98 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(plotlyInspectResult.inspection.issues.length, 0);
       assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
 
+      // Regression: ok is allowlisted on success statuses, so an app-tool error status
+      // that no blocklist happened to name still surfaces as a failure to the model.
+      const scratchToolFailureStatuses = [
+        ['container', 'invalid_value_type'],
+        ['container', 'value_too_large'],
+        ['assay_table', 'executor_unavailable'],
+        ['plotly_graph', 'unrecognized_future_status']
+      ];
+      for (const [scratchToolName, failureStatus] of scratchToolFailureStatuses) {
+        const statusGateway = createAgentMcpGateway({
+          runTool: async () => ({ status: failureStatus })
+        });
+        const statusResult = await statusGateway.callGatewayTool(scratchToolName, { action: 'list' }, {});
+        assert.equal(statusResult.ok, false, `${scratchToolName}/${failureStatus} must not report ok`);
+        assert.equal(statusResult.status, failureStatus);
+      }
+
+      // Regression: a missing or empty executor response is not a successful
+      // synthetic "completed" result.
+      const malformedScratchResults = [undefined, null, {}, { output: {} }];
+      for (const malformedResult of malformedScratchResults) {
+        for (const scratchToolName of ['container', 'assay_table', 'plotly_graph']) {
+          const malformedGateway = createAgentMcpGateway({
+            runTool: async () => malformedResult
+          });
+          const malformedResponse = await malformedGateway.callGatewayTool(
+            scratchToolName,
+            { action: 'list' },
+            {}
+          );
+          assert.equal(malformedResponse.ok, false, `${scratchToolName} must reject an empty response`);
+          assert.equal(malformedResponse.status, 'invalid_response');
+        }
+      }
+
+      const scratchToolSuccessStatuses = [
+        ['container', 'renamed'],
+        ['assay_table', 'python_completed'],
+        ['plotly_graph', 'inspected']
+      ];
+      for (const [scratchToolName, successStatus] of scratchToolSuccessStatuses) {
+        const statusGateway = createAgentMcpGateway({
+          runTool: async () => ({ status: successStatus })
+        });
+        const statusResult = await statusGateway.callGatewayTool(scratchToolName, { action: 'list' }, {});
+        assert.equal(statusResult.ok, true, `${scratchToolName}/${successStatus} must report ok`);
+      }
+
+      // Regression: a lookup keeps items and citations even when it matched nothing,
+      // so "searched, found nothing" stays distinguishable from "no results field".
+      const emptyLookupGateway = createAgentMcpGateway({
+        runTool: async () => ({ ok: true, items: [] })
+      });
+      const emptyLookupResult = await emptyLookupGateway.callGatewayTool('inventory_lookup', {
+        query: 'nothing matches this'
+      }, {});
+      assert.equal(emptyLookupResult.status, 'no_match');
+      assert.deepEqual(emptyLookupResult.items, []);
+      assert.deepEqual(emptyLookupResult.citations, []);
+
+      const brokenLookupGateway = createAgentMcpGateway({});
+      const brokenLookupResult = await brokenLookupGateway.callGatewayTool('inventory_lookup', {
+        query: 'PEI'
+      }, {});
+      assert.equal(brokenLookupResult.ok, false);
+      assert.deepEqual(brokenLookupResult.items, []);
+
+      // Regression: natively implemented tools carry app_tool like every proxy tool.
+      const nativeToolGateway = createAgentMcpGateway({});
+      const nativeAskUserResult = await nativeToolGateway.callGatewayTool('ask_user', {
+        question: 'Which buffer?',
+        options: ['PBS', 'TBS']
+      }, {});
+      assert.equal(nativeAskUserResult.app_tool, 'ask_user');
+      const nativeNotebookAppendResult = await nativeToolGateway.callGatewayTool('notebook_append', {
+        notebook_entry_id: 'unsaved draft',
+        page_title: 'Mini prep',
+        project_name: 'Project',
+        protocol_name: 'Miniprep',
+        content_markdown: '## Result'
+      }, {});
+      assert.equal(nativeNotebookAppendResult.app_tool, 'notebook_append');
+
       const removedLegacyLookupResult = await gateway.callGatewayTool(retiredDirectToolName, {
         query: 'PEI',
         limit: 3
       });
       assert.equal(removedLegacyLookupResult.ok, false);
-      assert.match(removedLegacyLookupResult.error, /Unknown Hikari MCP gateway tool/);
+      assert.match(removedLegacyLookupResult.error, /Unknown Hikari direct MCP tool/);
+      // One unknown-tool shape, carrying the same spine as every other response.
+      assert.equal(removedLegacyLookupResult.status, 'unknown_tool');
+      assert.equal(removedLegacyLookupResult.mcp_tool, retiredDirectToolName);
     });
   }
 };

@@ -14,7 +14,6 @@
               <div id="gel-list" class="gel-browser-list"></div>
             </div>
           </details>
-          <h3>Setup</h3>
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
             <label>
@@ -37,13 +36,6 @@
               Ladder Preset
               <select id="gel-ladder-preset"></select>
             </label>
-            <label>
-              Normalization
-              <select id="gel-normalization">
-                <option value="none">None</option>
-                <option value="total-lane">Total Lane Intensity</option>
-              </select>
-            </label>
             <div class="form-actions gel-process-row">
               <button type="button" id="gel-process-image-btn" class="ghost-btn gel-compact-btn">Process Image</button>
             </div>
@@ -61,7 +53,7 @@
               <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
               <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
             </div>
-            <div id="gel-status" class="small-note" role="status" aria-live="polite" aria-atomic="true"></div>
+            <div id="gel-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
             <div class="form-actions">
               <button type="submit" id="gel-save-btn" class="primary-btn gel-compact-btn">Save</button>
               <button type="button" id="gel-cancel-btn" class="ghost-btn gel-compact-btn">Cancel</button>
@@ -113,7 +105,7 @@
                     <details class="gel-tool-group" open>
                       <summary>Lane</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Lane dividers</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" title="Click the gel to add lane boundaries; click this button again to finish. Outermost dividers define the gel edges">Lane dividers</button>
                         <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
                         <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Lane vertices</button>
                         <label class="small-note gel-tool-field">
@@ -144,7 +136,6 @@
                         <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" title="Detect ladder bands and label them from the selected preset">Detect ladder</button>
                         <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" title="Click a ladder band to label it with the MW above; drag a label to move it">Set MW</button>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
-                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure</button>
                         <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
                         <button type="button" id="gel-open-cell-table-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" title="Open per-cell band intensity" disabled>Band intensity</button>
                         <button type="button" id="gel-open-report-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-report-overlay" aria-expanded="false" title="Open analysis report" disabled>Report</button>
@@ -152,7 +143,7 @@
                     </details>
                   </div>
                   <div class="gel-tool-footer">
-                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done</button>
+                    <button type="button" id="gel-manual-next-btn" class="ghost-btn" hidden>Done</button>
                     <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset</button>
                   </div>
                 </section>
@@ -172,7 +163,6 @@
                   <div class="gel-lane-profile-chart-shell">
                     <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
                   </div>
-                  <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
                 </section>
 
               </div>
