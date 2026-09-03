@@ -38,16 +38,6 @@
   white-space: nowrap;
 }
 
-.sequence-viewer-vector-builder-toolbar-nav .ghost-btn {
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
-  border-color: var(--theme-accent);
-  color: var(--theme-text-strong);
-}
-
-.sequence-viewer-vector-builder-toolbar-nav .ghost-btn:hover {
-  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
-}
-
 .sequence-viewer-vector-builder-toolbar-actions {
   flex: 0 0 auto;
   align-items: center;

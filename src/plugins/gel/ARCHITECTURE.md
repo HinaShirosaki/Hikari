@@ -39,7 +39,8 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 The headline feature is a step-by-step manual override flow driven by `manual/manual-workflow.js` and rendered as a numbered progress stepper. A viewer tool is selected, the user clicks on the canvas to place geometry, and `runtime.manualOverrides` accumulates:
 
 1. **Set dividers** — lane boundaries, with the outermost dividers also defining
-   the gel edges (confirmed via "Done Dividers").
+   the gel edges. The green **Lane dividers** tool means editing is active;
+   clicking it again finishes the step.
 2. **Set ladder lane** — which lane is the MW ladder (Gel Tools → Lane → Ladder lane).
 3. **Ladder MW** — assign known molecular weights to ladder bands (confirmed
    via "Done Ladder MW").

@@ -124,6 +124,14 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         'mcp-contract',
         'stdio-server.js'
       ));
+      const { buildHikariAgentMcpInstructions } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'instructions.js'
+      ));
       const { createAgentContainerRuntime } = require(path.join(
         __dirname,
         'src',
@@ -319,6 +327,13 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
 
       const mcpTools = createMcpToolDefinitions();
       const mcpToolNames = mcpTools.map((tool) => tool.name);
+      const mcpInstructions = buildHikariAgentMcpInstructions();
+      assert.match(mcpInstructions, /reference preparation/i);
+      assert.match(mcpInstructions, /at most three short subsections and six bullets/i);
+      assert.match(mcpInstructions, /failed-lookup transcripts/i);
+      assert.match(mcpInstructions, /one to three unique useful records/i);
+      assert.match(mcpInstructions, /without proposing an append/i);
+      assert.doesNotMatch(mcpInstructions, /PBS|ampicillin/i);
       const directToolDir = path.join(
         __dirname,
         'src',
@@ -396,10 +411,14 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       const plotlyGraphDefinition = mcpTools.find((tool) => tool.name === 'plotly_graph');
       const literatureSearchDefinition = mcpTools.find((tool) => tool.name === 'literature_search');
       const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
+      const paperAnalysisDefinition = mcpTools.find((tool) => tool.name === 'paper_analysis');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
       assert.equal(askUserDefinition.annotations.destructiveHint, false);
       assert.equal(askUserDefinition.annotations.idempotentHint, false);
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
+      assert.equal(paperAnalysisDefinition.inputSchema.properties.query.type, 'string');
+      assert.equal(paperAnalysisDefinition.inputSchema.properties.limit, undefined);
+      assert.match(paperAnalysisDefinition.description, /preserve the earlier request/i);
       assert.equal(protocolGenerationDefinition.annotations.readOnlyHint, false);
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);

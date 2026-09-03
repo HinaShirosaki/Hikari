@@ -75,7 +75,6 @@ export function buildQ5KldPlan(payload = {}) {
   const editLabel = EDIT_LABELS[normalizedEdit.type] || 'edit';
   const changeTail = normalizedEdit.type === 'deletion' ? '' : normalizeSequence(normalizedEdit.editedSequence || '');
   const { downstream, upstream } = flankWindows(originalSequence, normalizedEdit.startIndex, normalizedEdit.endIndex, circular);
-  const topologyWarnings = [];
   let selectedSplitTail = false;
 
   const design = designWithThresholdFallback((thresholds) => {
@@ -152,24 +151,29 @@ export function buildQ5KldPlan(payload = {}) {
     return infeasible(asArray(design.warnings).filter(Boolean).length ? asArray(design.warnings) : 'Unable to design the Q5/KLD primer pair.');
   }
 
+  // Hairpins, self-dimers and homopolymers reach the caller through
+  // design.warnings; dropping them here left the route reporting "no warnings"
+  // on a primer the quality check had already flagged.
+  const warnings = asArray(design.warnings).filter(Boolean);
+
   const plan = {
     feasible: true,
     recommendedAssemblyStrategy: 'site-directed-mutagenesis',
     primerOligoPlan: {
       primers: design.primers,
       selectedThresholdLevel: design.selectedThresholdLevel,
-      warnings: topologyWarnings
+      warnings
     },
     restrictionEnzymeSelection: null,
     stepByStepProcedure: buildProcedure(recordName, editLabel, changeTail, selectedSplitTail),
-    warnings: topologyWarnings
+    warnings
   };
 
   return {
     feasible: true,
     plans: [{ label: 'Q5/KLD site-directed mutagenesis', plan }],
     primers: design.primers.map((primer) => ({ ...primer, groupLabel: 'Whole-plasmid PCR' })),
-    warnings: topologyWarnings,
+    warnings,
     summary
   };
 }

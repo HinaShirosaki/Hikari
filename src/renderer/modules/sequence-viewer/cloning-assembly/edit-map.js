@@ -76,7 +76,7 @@ export function buildOrderedFragmentMap({ host, fragments, resultSequence, editR
       orientation: 'forward',
       sequence: host.sequence,
       topology: host.topology,
-      metadata: {}
+      metadata: { ...host.metadata }
     });
   }
 

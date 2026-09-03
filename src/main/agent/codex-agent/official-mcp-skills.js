@@ -255,6 +255,9 @@ Common Plotly settings:
 - Dose response: use numeric dose on x, response on y, clear units, and log x-axis only if the dose spacing is logarithmic.
 - Hover: set \`hovertemplate\` when well id, condition, dose, or replicate count matters.
 - Export/render config: use \`config: { "responsive": true, "displaylogo": false }\` unless the user asks otherwise.
+- Numbers: plate values arrive as TSV strings, so the tool converts an \`x\`, \`y\`, \`z\`, or error array to numbers when every entry is numeric or blank, and turns blank wells into \`null\` gaps. Mixed label arrays such as sample names stay as text. Set \`layout.xaxis.type: "category"\` when a numeric-looking axis must stay categorical.
+- Point order: a line trace with numeric x is sorted ascending automatically, and every per-point channel of the same length (y, text, customdata, marker colors, error arrays) is reordered with it, so plate rows read out column-wise still draw a clean series. The result reports this under \`normalization\`; bar traces and marker-only scatters keep the order you sent. Read point positions back from the returned figure rather than from the arrays you sent.
+- \`inspect\` also reports error-bar arrays whose length does not match their values, zero or negative values on a log axis, and a line whose x values could not be sorted. Fix those with \`update\` before answering: give each error array one value per point, and keep a zero-dose control off a log axis.
 
 If these common settings are not enough, search the official Plotly.js documentation at the end of your reasoning loop, then return to \`${PLOTLY_GRAPH_TOOL_NAME}\` with the adjusted figure.
 `

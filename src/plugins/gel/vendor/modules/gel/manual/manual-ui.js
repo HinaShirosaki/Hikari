@@ -21,7 +21,9 @@ export function getViewerToolLabel(tool = '') {
 }
 
 export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
-  elements.gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
+  const dividersSelected = selectedViewerTool === 'dividers';
+  elements.gelToolDividersBtn?.classList.toggle('is-active', dividersSelected);
+  elements.gelToolDividersBtn?.setAttribute?.('aria-pressed', String(dividersSelected));
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
   elements.gelToolLadderMwBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder-mw');
   elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');

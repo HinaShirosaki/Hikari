@@ -13,7 +13,7 @@ function createManualStepNavigation({
   runtime,
   deps,
   clearCanvasInteractionState,
-  clearCanvasTool,
+  finishLaneDividers,
   getLaneBandProgress,
   getManualStep,
   renderManualProgress,
@@ -22,21 +22,8 @@ function createManualStepNavigation({
 } = {}) {
   function onManualNextStep() {
     const step = getManualStep();
-    const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
     if (step === 'dividers') {
-      if (
-        !Number.isFinite(segmentation.gelLeft)
-        || !Number.isFinite(segmentation.gelRight)
-        || segmentation.gelRight <= segmentation.gelLeft + 2
-      ) {
-        deps.setStatus('Add at least two lane dividers to define the gel edges before finishing.');
-        return;
-      }
-      runtime.manualDividerConfirmed = true;
-      updateLaneSegmentation({ dividerDone: true });
-      clearCanvasTool('dividers');
-      renderOverrideStatus();
-      deps.setStatus('Dividers confirmed. Click a lane to set ladder lane.');
+      finishLaneDividers();
       return;
     }
 

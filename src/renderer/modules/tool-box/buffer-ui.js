@@ -75,11 +75,12 @@ export function initBufferTool(options = {}) {
   }
 
   const bufferVolumeInput = getElement(rootDocument, 'buffer-volume-ml');
+  const bufferVolumeUnit = getElement(rootDocument, 'buffer-volume-unit');
   const bufferPhInput = getElement(rootDocument, 'buffer-ph');
   const bufferRows = getElement(rootDocument, 'buffer-rows');
   const addBufferChemicalBtn = getElement(rootDocument, 'add-buffer-chemical-btn');
   const bufferTotalResult = getElement(rootDocument, 'buffer-total-result');
-  if (!bufferVolumeInput || !bufferRows || !addBufferChemicalBtn || !bufferTotalResult) {
+  if (!bufferVolumeInput || !bufferVolumeUnit || !bufferRows || !addBufferChemicalBtn || !bufferTotalResult) {
     return;
   }
 
@@ -413,7 +414,8 @@ export function initBufferTool(options = {}) {
 
   function renderBuffer() {
     const result = calculateBufferRecipe({
-      volumeMl: inputValue(bufferVolumeInput),
+      volumeValue: inputValue(bufferVolumeInput),
+      volumeUnit: inputValue(bufferVolumeUnit) || 'mL',
       pH: inputValue(bufferPhInput),
       rows: collectBufferRows()
     });
@@ -475,6 +477,7 @@ export function initBufferTool(options = {}) {
   });
 
   addListener(bufferVolumeInput, 'input', renderBuffer);
+  addListener(bufferVolumeUnit, 'change', renderBuffer);
   addListener(bufferPhInput, 'input', renderBuffer);
 
   for (let index = 1; index <= rowCount(); index += 1) {

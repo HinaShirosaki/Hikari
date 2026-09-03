@@ -23,7 +23,6 @@ const MAX_MODEL_CONTEXT_BLOCKS = 8;
 // paper_analysis or paper_download result would otherwise land whole in context.
 const MAX_MODEL_TEXT_CHARS = 60000;
 const MODEL_TEXT_PREVIEW_CHARS = 40000;
-const PAPER_ANALYSIS_MODEL_TARGET_CHARS = MAX_MODEL_TEXT_CHARS - 4000;
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -203,6 +202,62 @@ function compactContextBlock(block = {}) {
   });
 }
 
+function compactPaperAnalysisSelectedPaper(paper = {}) {
+  return compactObject({
+    paper_id: cleanText(paper.paper_id || paper.paperId, 0),
+    paper_title: cleanText(paper.paper_title || paper.paperTitle || paper.title, 0),
+    source: cleanText(paper.source, 0),
+    journal: cleanText(paper.journal || paper.journal_name || paper.journalName, 0),
+    published_at: cleanText(paper.published_at || paper.publishedAt, 0),
+    doi: cleanText(paper.doi, 0),
+    pmid: cleanText(paper.pmid, 0),
+    pmcid: cleanText(paper.pmcid, 0),
+    url: cleanText(paper.url, 0),
+    pdf_urls: asArray(paper.pdf_urls || paper.pdfUrls).map((url) => cleanText(url, 0)).filter(Boolean),
+    download_available: paper.download_available === true || paper.downloadAvailable === true,
+    download_status: cleanText(paper.download_status || paper.downloadStatus, 0),
+    score: Number.isFinite(Number(paper.score)) ? Number(paper.score) : undefined,
+    summary: cleanText(paper.summary || paper.snippet, 0)
+  });
+}
+
+function compactPaperAnalysisContextBlock(block = {}) {
+  const lineRanges = asArray(block.line_ranges || block.lineRanges).map(compactLineRange).filter(Boolean);
+  const sourceLines = asArray(block.source_lines || block.sourceLines).map(compactSourceLine).filter(Boolean);
+  const relatedComments = asArray(block.related_comments || block.relatedComments)
+    .map((comment = {}) => {
+      const pageNumber = Math.round(Number(comment.page_number || comment.pageNumber));
+      return compactObject({
+        id: cleanText(comment.id, 0),
+        text: cleanText(comment.text || comment.comment || comment.note, 0),
+        author: cleanText(comment.author, 0),
+        page_number: Number.isFinite(pageNumber) && pageNumber > 0 ? pageNumber : undefined,
+        highlight_id: cleanText(comment.highlight_id || comment.highlightId, 0),
+        highlight_text: cleanText(comment.highlight_text || comment.highlightText, 0),
+        relation: cleanText(comment.relation, 0)
+      });
+    })
+    .filter((comment) => comment.text);
+  return compactObject({
+    block_id: cleanText(block.block_id || block.blockId, 0),
+    paper_id: cleanText(block.paper_id || block.paperId, 0),
+    paper_title: cleanText(block.paper_title || block.paperTitle, 0),
+    section_label: cleanText(block.section_label || block.sectionLabel, 0),
+    source: cleanText(block.source, 0),
+    evidence_kind: cleanText(block.evidence_kind || block.evidenceKind, 0),
+    relevance_reason: cleanText(block.relevance_reason || block.relevanceReason, 0),
+    // Exact source lines already carry the excerpt without a second copy.
+    excerpt: sourceLines.length ? undefined : cleanText(block.excerpt, 0),
+    line_ranges: lineRanges.length ? lineRanges : undefined,
+    source_lines: sourceLines.length ? sourceLines : undefined,
+    source_line_count: Number.isFinite(Number(block.source_line_count || block.sourceLineCount))
+      ? Number(block.source_line_count || block.sourceLineCount)
+      : undefined,
+    source_path: cleanText(block.source_path || block.sourcePath, 0),
+    related_comments: relatedComments.length ? relatedComments : undefined
+  });
+}
+
 function isLiteratureSearchResult(toolName = '', result = {}) {
   const source = ensureObject(result);
   const output = ensureObject(source.output);
@@ -286,35 +341,41 @@ function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
   };
 }
 
-// paper_analysis returns query-selected, line-backed evidence. Compact it at
-// block and source-line boundaries so the model never receives a cut JSON
-// fragment or a partial physical source line.
+// paper_analysis returns query-selected, line-backed evidence. Keep one compact
+// copy of every selected block, exact source line, relevance comment, and saved
+// annotation. The stdio response intentionally omits the duplicate full
+// structuredContent object for this tool, so transport size stays proportional
+// to the evidence without imposing an arbitrary character or item limit.
 function buildPaperAnalysisModelPayload(toolName = '', result = {}) {
   const source = ensureObject(result);
   const output = getToolResultPayload(source);
   const selectedPapers = asArray(output.selected_papers);
   const rawContextBlocks = asArray(output.loaded_context_blocks);
-  const compactedContextBlocks = rawContextBlocks
-    .slice(0, MAX_MODEL_CONTEXT_BLOCKS)
-    .map(compactContextBlock);
+  const compactedContextBlocks = rawContextBlocks.map(compactPaperAnalysisContextBlock);
   const totalSourceLines = rawContextBlocks.reduce((count, block) => (
     count + asArray(block?.source_lines || block?.sourceLines).length
   ), 0);
-  const payload = {
+  const analysisComments = compactedContextBlocks
+    .map((block) => compactObject({
+      block_id: block.block_id,
+      section_label: block.section_label,
+      comment: block.relevance_reason
+    }))
+    .filter((comment) => comment.comment);
+  return {
     ok: source.ok !== false && output.ok !== false,
-    status: cleanText(output.status || source.status, 80),
-    mcp_tool: cleanText(source.mcp_tool || toolName, 160),
-    app_tool: cleanText(source.app_tool || output.app_tool || 'paper-analysis', 160),
-    summary: cleanText(output.summary || source.summary, 1200),
-    error: cleanText(output.error || source.error, 1200),
-    query: cleanText(output.query || source.query, 600),
-    paper_title: cleanText(output.paper_title || output.paperTitle, 320),
-    brief_summary: cleanText(output.brief_summary || output.briefSummary, 3000),
+    status: cleanText(output.status || source.status, 0),
+    mcp_tool: cleanText(source.mcp_tool || toolName, 0),
+    app_tool: cleanText(source.app_tool || output.app_tool || 'paper-analysis', 0),
+    summary: cleanText(output.summary || source.summary, 0),
+    error: cleanText(output.error || source.error, 0),
+    query: cleanText(output.query || source.query, 0),
+    paper_title: cleanText(output.paper_title || output.paperTitle, 0),
+    brief_summary: cleanText(output.brief_summary || output.briefSummary, 0),
     key_findings: asArray(output.key_findings || output.keyFindings)
-      .map((finding) => cleanText(finding, 600))
-      .filter(Boolean)
-      .slice(0, 8),
-    method_overview: cleanText(output.method_overview || output.methodOverview, 2400),
+      .map((finding) => cleanText(finding, 0))
+      .filter(Boolean),
+    method_overview: cleanText(output.method_overview || output.methodOverview, 0),
     protocol_extraction: compactPaperAnalysisProtocol(
       output.protocol_extraction || output.protocolExtraction
     ),
@@ -327,63 +388,14 @@ function buildPaperAnalysisModelPayload(toolName = '', result = {}) {
       source_line_count: totalSourceLines,
       papers_read_count: Number(output.papers_read_count) || 0
     },
-    selected_papers: selectedPapers.slice(0, MAX_MODEL_PAPERS).map(compactSelectedPaper),
-    loaded_context_blocks: [],
-    notes: asArray(output.notes).map((note) => cleanText(note, 600)).filter(Boolean).slice(0, 8),
-    omitted: {
-      selected_papers: Math.max(0, selectedPapers.length - MAX_MODEL_PAPERS),
-      loaded_context_blocks: rawContextBlocks.length,
-      source_lines: totalSourceLines
-    },
+    selected_papers: selectedPapers.map(compactPaperAnalysisSelectedPaper),
+    loaded_context_blocks: compactedContextBlocks,
+    analysis_comments: analysisComments,
+    notes: asArray(output.notes).map((note) => cleanText(note, 0)).filter(Boolean),
     model_note: rawContextBlocks.length
-      ? 'Use loaded_context_blocks.source_lines as the source of truth. Each included source line is complete and verbatim; do not attribute omitted evidence or related_comments to the paper.'
-      : 'Use brief_summary, key_findings, method_overview, and protocol_extraction as the bounded paper-analysis result.'
+      ? 'Use loaded_context_blocks.source_lines as paper evidence. analysis_comments are the sub-agent relevance comments explaining why those lines were selected. related_comments are saved user annotations. When asked about notes or comments, report these two categories separately and never claim there are no comments when analysis_comments is non-empty.'
+      : 'Use brief_summary, key_findings, method_overview, and protocol_extraction as the paper-analysis result.'
   };
-
-  let includedSourceLines = 0;
-  let budgetExhausted = false;
-  for (const compactedBlock of compactedContextBlocks) {
-    if (budgetExhausted) {
-      break;
-    }
-    const sourceLines = asArray(compactedBlock.source_lines);
-    const blockPayload = {
-      ...compactedBlock,
-      // source_lines already carry the exact text, so avoid paying for a second
-      // excerpt copy when line-backed evidence is available.
-      ...(sourceLines.length ? { excerpt: undefined, source_lines: [] } : {})
-    };
-    payload.loaded_context_blocks.push(blockPayload);
-    if (JSON.stringify(payload, null, 2).length > PAPER_ANALYSIS_MODEL_TARGET_CHARS) {
-      payload.loaded_context_blocks.pop();
-      break;
-    }
-    for (const sourceLine of sourceLines) {
-      blockPayload.source_lines.push(sourceLine);
-      if (JSON.stringify(payload, null, 2).length > PAPER_ANALYSIS_MODEL_TARGET_CHARS) {
-        blockPayload.source_lines.pop();
-        budgetExhausted = true;
-        break;
-      }
-      includedSourceLines += 1;
-    }
-    if (sourceLines.length && !blockPayload.source_lines.length) {
-      payload.loaded_context_blocks.pop();
-    }
-  }
-
-  payload.omitted = {
-    selected_papers: Math.max(0, selectedPapers.length - payload.selected_papers.length),
-    loaded_context_blocks: Math.max(0, rawContextBlocks.length - payload.loaded_context_blocks.length),
-    source_lines: Math.max(0, totalSourceLines - includedSourceLines)
-  };
-  if (Object.values(payload.omitted).some((count) => count > 0)) {
-    payload.truncated = {
-      reason: 'paper_analysis_bounded_for_model',
-      max_chars: MAX_MODEL_TEXT_CHARS
-    };
-  }
-  return payload;
 }
 
 // Keep the spine and as much of the result as fits, rather than dropping the
@@ -425,12 +437,16 @@ function serializeTruncatedModelPayload(payload = {}, text = '') {
 }
 
 function buildMcpToolResponseContent(toolName = '', result = {}) {
-  const payload = isPaperAnalysisResult(toolName, result)
+  const paperAnalysisResult = isPaperAnalysisResult(toolName, result);
+  const payload = paperAnalysisResult
     ? buildPaperAnalysisModelPayload(toolName, result)
     : (isLiteratureSearchResult(toolName, result)
       ? buildLiteratureSearchModelPayload(toolName, result)
       : ensureObject(result));
   const text = JSON.stringify(payload, null, 2);
+  if (paperAnalysisResult) {
+    return text;
+  }
   if (text.length <= MAX_MODEL_TEXT_CHARS) {
     return text;
   }
@@ -508,14 +524,20 @@ function createAgentMcpStdioServer(deps = {}) {
         mcpRequest: request
       }
     );
-    return {
+    const response = {
       content: [{
         type: 'text',
         text: buildMcpToolResponseContent(toolName, result)
       }],
-      structuredContent: ensureObject(result),
       isError: result?.ok === false
     };
+    // paper_analysis already carries every selected line and comment in its one
+    // compact text payload. Repeating the full gateway result here made Codex
+    // serialize two copies and truncate the otherwise-valid response.
+    if (!isPaperAnalysisResult(toolName, result)) {
+      response.structuredContent = ensureObject(result);
+    }
+    return response;
   });
 
   let transport = null;

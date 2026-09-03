@@ -55,6 +55,11 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
     || extractOriginalTemplateForEditedRange(source, start, end)
     || insertSequence;
   const backboneSequence = buildLinearizedBackbone(sequence, start, end);
+  // The backbone amplicon is PCR'd off the intact pre-edit vector, which still
+  // carries whatever sat at the edit site and still wraps at the origin. Judging
+  // backbone primers against the linearized backbone alone passed a primer that
+  // also binds inside the removed region, or across the origin, as unique.
+  const vectorTemplateSequence = normalizeSequenceText(source?.originalSequence || '');
 
   if (!insertSequence.length || !backboneSequence.length) {
     return null;
@@ -67,7 +72,13 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
         id: 'edited_linearized_backbone',
         name: `${cleanText(record?.name || source?.recordName, 120) || 'Vector'} backbone`,
         topology: 'linear',
-        sequence: backboneSequence
+        sequence: backboneSequence,
+        metadata: vectorTemplateSequence
+          ? {
+              specificitySequence: vectorTemplateSequence,
+              specificityCircular: cleanText(record?.topology, 40).toLowerCase() !== 'linear'
+            }
+          : {}
       }
     ],
     hostVectorId: 'edited_linearized_backbone',

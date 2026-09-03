@@ -155,10 +155,12 @@ export function applyNormalization(lanes, normalizationMode) {
     lane.bands.forEach((band) => {
       if (normalizationMode === 'total-lane') {
         band.normalizedIntensity = total > 0 ? (band.rawIntensity / total) : null;
-      } else {
+      } else if (normalizationMode === 'max') {
         band.normalizedIntensity = maxIntensity > 0
           ? (band.rawIntensity / maxIntensity)
           : null;
+      } else {
+        band.normalizedIntensity = null;
       }
     });
   });

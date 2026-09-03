@@ -57,9 +57,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       ladderPreset,
       ladderStandards: getLadderPresetBands(ladderPreset),
       ladderLane: clamp(Math.floor(Number(runtime.manualOverrides?.ladderLane) || 1), 1, 999),
-      normalization: elements.gelNormalizationInput?.value === 'total-lane'
-        ? elements.gelNormalizationInput.value
-        : 'none',
+      normalization: 'none',
       cropApplied: runtime.cropApplied,
       tiffPage: Number.isFinite(runtime.currentImage?.tiffPageIndex) ? runtime.currentImage.tiffPageIndex : null,
       tiffPageCount: Number.isFinite(runtime.currentImage?.tiffPageCount) ? runtime.currentImage.tiffPageCount : null,
@@ -260,7 +258,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     elements.gelForm.reset();
     elements.gelTypeInput.value = 'sds-page';
     setLadderPreset(DEFAULT_LADDER_PRESET_ID);
-    elements.gelNormalizationInput.value = 'none';
     if (elements.gelDenoiseStrengthInput) {
       elements.gelDenoiseStrengthInput.value = '35';
     }
@@ -314,7 +311,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
       ? record.analysisType
       : 'sds-page';
     setLadderPreset(parameters.ladderPreset);
-    elements.gelNormalizationInput.value = parameters.normalization || 'none';
     const enhancement = normalizeEnhancementSettings(parameters.enhancement || {});
     if (elements.gelDenoiseStrengthInput) {
       elements.gelDenoiseStrengthInput.value = String(enhancement.denoiseStrength);

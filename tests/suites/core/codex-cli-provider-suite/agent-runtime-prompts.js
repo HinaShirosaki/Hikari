@@ -33,6 +33,28 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       ]
     };
 
+    test('Codex prompt carries complete non-paper scoped view instructions', () => {
+      const { buildCodexAgentPrompt } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'codex-agent',
+        'prompts.js'
+      ));
+      const sessionPrompt = `${'Notebook policy. '.repeat(180)}END OF NOTEBOOK POLICY`;
+      const prompt = buildCodexAgentPrompt({
+        message: 'Research this notebook page.',
+        agent: { sessionPrompt },
+        snapshot: {}
+      });
+
+      assert.match(prompt, /Active Hikari view instructions:/);
+      assert.match(prompt, /END OF NOTEBOOK POLICY/);
+      assert.match(prompt, /Current user request:\nResearch this notebook page\./);
+      assert.doesNotMatch(prompt, /Paper agent session:/);
+    });
+
     function buildJwt(payload = {}) {
       const encode = (value) => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
       return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(payload)}.signature`;

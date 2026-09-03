@@ -792,7 +792,7 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
       }
     });
     test('agent MCP stdio server caps an oversized tool result for the model', async () => {
-      const { buildMcpToolResponseContent } = require(path.join(
+      const { buildMcpToolResponseContent, createAgentMcpStdioServer } = require(path.join(
         __dirname,
         'src',
         'main',
@@ -842,8 +842,9 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
       assert.ok(escapedText.length <= 60000);
       assert.ok(JSON.parse(escapedText).result_preview.length > 0);
 
-      // paper_analysis keeps complete, exact source-line objects instead of a
-      // cut JSON preview. Query-selected evidence is retained in relevance order.
+      // paper_analysis keeps every complete, exact source-line object instead
+      // of applying the generic model-text ceiling. Query-selected evidence is
+      // retained in relevance order without a second structured-content copy.
       const analysisBlocks = Array.from({ length: 8 }, (_, blockIndex) => ({
         paper_id: 'paper-1',
         paper_title: 'Evidence paper',
@@ -875,11 +876,11 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
       const paperAnalysisPayload = JSON.parse(paperAnalysisText);
       const includedAnalysisLines = paperAnalysisPayload.loaded_context_blocks
         .flatMap((block) => block.source_lines || []);
-      assert.ok(paperAnalysisText.length <= 60000);
+      assert.ok(paperAnalysisText.length > 60000);
       assert.equal(paperAnalysisPayload.result_preview, undefined);
-      assert.equal(paperAnalysisPayload.truncated.reason, 'paper_analysis_bounded_for_model');
-      assert.ok(includedAnalysisLines.length > 0);
-      assert.ok(paperAnalysisPayload.omitted.source_lines > 0);
+      assert.equal(paperAnalysisPayload.truncated, undefined);
+      assert.equal(paperAnalysisPayload.omitted, undefined);
+      assert.equal(includedAnalysisLines.length, 960);
       includedAnalysisLines.forEach((line) => {
         assert.equal(
           line.content,
@@ -911,6 +912,74 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
       assert.deepEqual(summarizedAnalysis.key_findings, ['Finding one.']);
       assert.equal(summarizedAnalysis.method_overview, 'A concise method.');
       assert.deepEqual(summarizedAnalysis.protocol_extraction.steps, ['Add reagent.', 'Measure signal.']);
+
+      const paperGatewayResult = {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'paper_analysis',
+        app_tool: 'paper-analysis',
+        output: {
+          result: {
+            ok: true,
+            status: 'completed',
+            query: 'What did this paper find and what comments were returned?',
+            paper_title: 'Evidence paper',
+            selected_papers: [{ paper_id: 'paper-1', paper_title: 'Evidence paper' }],
+            loaded_context_blocks: [{
+              block_id: 'paper-1::lines-1',
+              paper_id: 'paper-1',
+              paper_title: 'Evidence paper',
+              section_label: 'Results',
+              relevance_reason: 'These lines directly answer the findings question.',
+              line_ranges: [{ start_line: 4, end_line: 5 }],
+              source_lines: [
+                { line_number: 4, content: 'First complete evidence line.' },
+                { line_number: 5, content: 'Second complete evidence line.' }
+              ],
+              related_comments: []
+            }],
+            papers_read_count: 1
+          }
+        }
+      };
+      const { server, connect } = createAgentMcpStdioServer({
+        gateway: {
+          async callGatewayTool() {
+            return paperGatewayResult;
+          }
+        }
+      });
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-paper-response-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+      try {
+        const response = await client.callTool({
+          name: 'paper_analysis',
+          arguments: {
+            query: 'What did this paper find and what comments were returned?',
+            paper: { title: 'Evidence paper' }
+          }
+        });
+        const responsePayload = JSON.parse(response.content[0].text);
+        assert.equal(response.structuredContent, undefined);
+        assert.equal(responsePayload.loaded_context_blocks[0].source_lines.length, 2);
+        assert.equal(responsePayload.analysis_comments.length, 1);
+        assert.equal(
+          responsePayload.analysis_comments[0].comment,
+          'These lines directly answer the findings question.'
+        );
+        assert.match(responsePayload.model_note, /related_comments are saved user annotations/i);
+        assert.match(responsePayload.model_note, /never claim there are no comments/i);
+      } finally {
+        await client.close();
+        await server.close();
+      }
 
       const smallResult = {
         ok: true,

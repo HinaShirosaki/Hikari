@@ -54,7 +54,8 @@ function createToolCalculations({
 
   function calculateCurrentBuffer() {
     return calculateBufferRecipe({
-      volumeMl: inputValue(getElement(doc, 'biology-notebook-tool-buffer-volume')),
+      volumeValue: inputValue(getElement(doc, 'biology-notebook-tool-buffer-volume')),
+      volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-buffer-volume-unit')) || 'mL',
       pH: inputValue(getElement(doc, 'biology-notebook-tool-buffer-ph')),
       rows: collectBufferRows()
     });

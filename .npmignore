@@ -11,7 +11,11 @@ output/
 dist/
 tmp/
 *.asar
+*.tgz
 *.zip
+coverage/
+.nyc_output/
+.eslintcache
 
 # Local editor and assistant state
 .codex/
@@ -27,20 +31,21 @@ Agent.md
 # Logs and runtime scratch data
 *.log
 logs/
-data/*.log
-/data/chemicals.json
-data/Config/codex-cli-home/log/
-data/Config/codex-cli-home/tmp/
+*.sqlite-shm
+*.sqlite-wal
 
 # Local secrets
 .env
 .env.*
-data/Config/codex-cli-home/auth.json
+data/
 
 # Repo-only development material
+.github/
 tests/
 scripts/
 docs/
+artifacts/
+examples/
 reports/
 idea/
 skills/
@@ -48,10 +53,19 @@ test.js
 
 # Local scratch / personal / test material
 Book3.xlsx
+*_debug_*.json
+hikari-data.json
+hikari-data.ena.json
+enana-data.json
+enana-data.ena.json
 Exported Standard Features/
 Testdata/
 TestData2/
 TestData3/
+TestData5/
+TestData6/
+TestData7/
+colony-counter/
 
 # Stray local biology samples dropped into data/
 data/*.gb

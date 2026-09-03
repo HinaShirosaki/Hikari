@@ -1440,11 +1440,15 @@
     }
   },
   "paper-analysis": {
-    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. For a locally-ingested paper reference, Hikari runs one Codex CLI paper-context sub-agent command, hydrates the returned physical line ranges from the paper's title-named Markdown file (or legacy `paper.md`), and returns exact `source_lines` with matching local `related_comments`. Only pass paper text fields when the paper is not in the local KnowledgeBase. Answer from `loaded_context_blocks`; to turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. Pass the user's complete analytical request as `query`; after asking which paper they mean, preserve the earlier request rather than replacing it with their title or DOI answer. For a locally-ingested paper reference, Hikari runs one Codex CLI paper-context sub-agent command, hydrates every returned physical line range from the paper's title-named Markdown file (or legacy `paper.md`), and returns exact `source_lines`, sub-agent `relevance_reason` analysis comments, and matching saved local `related_comments`. Only pass paper text fields when the paper is not in the local KnowledgeBase. Answer from `loaded_context_blocks`; report analysis comments separately from saved annotations; to turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "query": {
+          "type": "string",
+          "description": "The complete user request the paper-context reader should answer. Preserve this across a clarification that supplies only the paper title, DOI, or Hikari paper ID."
+        },
         "paper": {
           "$ref": "#/$defs/paper_record"
         }

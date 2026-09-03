@@ -289,14 +289,17 @@ test('[EDGE] tool-box DNA to Protein result wraps responsively without fixed lin
   assert.match(resultMarkup, /^<div class="sequence-block">M{90}<\/div>$/);
   assert.equal(resultMarkup.includes('<br'), false);
 });
-test('[EDGE] tool-box translation results use one flat surface with relative sizing', () => {
+test('[EDGE] tool-box sequence and property results use one flat surface with relative sizing', () => {
   const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'tool-box-view.css'), 'utf8');
   const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'tool-box-view.html'), 'utf8');
-  const resultRule = css.match(/\.tool-sequence-translation-output\s*\{[^}]+\}/s)?.[0] || '';
+  const resultRule = css.match(/\.tool-calculation-output\s*\{[^}]+\}/s)?.[0] || '';
   const sequenceRule = css.match(/\.tool-sequence-translation-output \.sequence-block\s*\{[^}]+\}/s)?.[0] || '';
 
-  assert.match(html, /id="dna-protein-result" class="calc-output tool-sequence-translation-output"/);
-  assert.match(html, /id="reverse-translate-result" class="calc-output tool-sequence-translation-output"/);
+  assert.match(html, /id="dna-protein-result" class="calc-output tool-calculation-output tool-sequence-translation-output"/);
+  assert.match(html, /id="reverse-translate-result" class="calc-output tool-calculation-output tool-sequence-translation-output"/);
+  assert.match(html, /id="peptide-result" class="calc-output stack-form tool-calculation-output"/);
+  assert.match(html, /id="oligo-result" class="calc-output tool-calculation-output"/);
+  assert.match(html, /id="extinction-result" class="calc-output tool-calculation-output"/);
   assert.match(resultRule, /border:\s*0;/);
   assert.match(resultRule, /background:\s*transparent;/);
   assert.match(sequenceRule, /width:\s*100%;/);

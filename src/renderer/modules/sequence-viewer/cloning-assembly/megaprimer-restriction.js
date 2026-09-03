@@ -204,17 +204,20 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
   }
 
   const [restrictionForward, mutForward, restrictionReverse] = design.primers;
+  // Quality warnings arrive folded into design.warnings; they were being
+  // dropped here, so the route rendered "no warnings" over a flagged primer.
+  const warnings = asArray(design.warnings).filter(Boolean);
   const plan = {
     feasible: true,
     recommendedAssemblyStrategy: 'restriction-ligation',
     primerOligoPlan: {
       primers: design.primers,
       selectedThresholdLevel: design.selectedThresholdLevel,
-      warnings: []
+      warnings
     },
     restrictionEnzymeSelection: [siteUp, siteDn],
     stepByStepProcedure: buildProcedure(recordName, siteUp, siteDn),
-    warnings: []
+    warnings
   };
 
   return {
@@ -226,7 +229,7 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
       withGroup(restrictionReverse, 'PCR 1', pcrOneLength),
       withGroup(restrictionForward, 'PCR 2', pcrTwoLength)
     ],
-    warnings: [],
+    warnings,
     summary
   };
 }

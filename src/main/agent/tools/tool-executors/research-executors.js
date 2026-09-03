@@ -184,6 +184,11 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
     const snapshot = context?.snapshot && typeof context.snapshot === 'object'
       ? context.snapshot
       : {};
+    // The agent owns conversational continuity, so the caller is responsible for
+    // passing the full analytical request as `query` (the tool description says to
+    // preserve it across a paper-reference clarification). Fall back to the current
+    // turn only when `query` is absent.
+    const analysisQuery = cleanText(args?.query || context?.message, 2400);
     return paperAnalysisRuntime.analyzePaper({
       ...args,
       provider: cleanText(context?.provider, 80),
@@ -192,7 +197,8 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
       model: cleanText(context?.model, 120),
       reasoning_effort: cleanText(context?.reasoning_effort || context?.reasoningEffort, 40),
       cwd: cleanText(context?.cwd, 2400),
-      message: cleanText(args?.message || context?.message, 2400),
+      query: analysisQuery,
+      message: analysisQuery,
       snapshot,
       storage_path: cleanText(
         args?.storage_path

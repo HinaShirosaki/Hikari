@@ -54,6 +54,15 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.equal(fs.existsSync(resolved), true);
     });
 
+    test('package manifest stays private and avoids redundant package entries', () => {
+      assert.equal(packageManifest.private, true);
+      assert.equal(packageManifest.devDependencies?.['onnxruntime-web'], undefined);
+      assert.equal(packageManifest.scripts?.package, undefined);
+      assert.match(packageManifest.scripts?.['package:app'] || '', /electron-forge package/);
+      assert.match(packageManifest.scripts?.dist || '', /electron-forge make/);
+      assert.match(packageManifest.scripts?.make || '', /electron-forge make/);
+    });
+
     test('forge config prunes dev deps and ignores build artifacts', () => {
       assert.equal(Boolean(forgeConfig.packagerConfig.asar), true);
       const unpackDir = forgeConfig.packagerConfig.asar?.unpackDir || '';
@@ -72,6 +81,12 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.match(ignoreAsText, /\\\/tmp\(\$\|\\\/\)/);
       assert.match(ignoreAsText, /\.DS_Store/);
       assert.match(ignoreAsText, /hikari-data\(\?:\\\.ena\)\?\\\.json/);
+      assert.match(ignoreAsText, /TestData6/);
+      assert.match(ignoreAsText, /TestData7/);
+      assert.match(ignoreAsText, /artifacts/);
+      assert.match(ignoreAsText, /examples/);
+      assert.match(ignoreAsText, /_debug_/);
+      assert.match(ignoreAsText, /\\\/data\(\$\|\\\/\)/);
     });
   }
 };

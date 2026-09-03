@@ -270,6 +270,26 @@ It requests only `storage`, `files`, `downloads`, and `layout` — it has no not
 
 ## Quick Start
 
+### Install Hikari with an agent
+
+Copy and paste this prompt into a coding agent that has terminal access:
+
+```text
+Download and install Hikari from its official repository:
+https://github.com/HinaShirosaki/Enana
+
+Please complete the installation for me:
+
+1. Detect my operating system and CPU architecture.
+2. Confirm that Git, Node.js 20 or newer, and npm are available. If a prerequisite is missing, explain what is needed and ask before installing system software or requesting administrator privileges.
+3. Clone the repository into a sensible user-owned location. If the private repository requires authentication, ask me to sign in through GitHub's normal login flow; never ask me to paste a token into the chat or print credentials.
+4. In the cloned repository, install the locked dependencies with `npm ci`, then build the native distribution with `npm run dist`.
+5. Find the artifact for my platform under `out/` and install Hikari using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
+6. Launch Hikari once and confirm that it opens. Report the repository path, build artifact, installed application path, and any step I still need to complete.
+
+Preserve any existing Hikari application data. Do not choose or change the Hikari storage root, and do not sign in to Codex on my behalf.
+```
+
 ### Prerequisites
 
 - Node.js 20+

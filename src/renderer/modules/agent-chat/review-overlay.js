@@ -239,7 +239,8 @@ export function createAgentReviewOverlayController({
   function openForMessage(message) {
     const nextItems = collectReviewItemsForMessage(message, {
       notebookDraftAdapter,
-      protocolReviewAdapter
+      protocolReviewAdapter,
+      notebookEntries: state.notebookEntries
     });
     if (!nextItems.length) {
       return;
@@ -276,7 +277,8 @@ export function createAgentReviewOverlayController({
     rejectItem,
     collectReviewItemsForMessage: (message) => collectReviewItemsForMessage(message, {
       notebookDraftAdapter,
-      protocolReviewAdapter
+      protocolReviewAdapter,
+      notebookEntries: state.notebookEntries
     })
   };
 }

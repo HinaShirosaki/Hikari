@@ -255,6 +255,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperAnaly
         assert.equal(modelPayload.app_tool, 'paper-analysis');
         assert.deepEqual(modelPayload.loaded_context_blocks[0].source_lines, result.loaded_context_blocks[0].source_lines);
         assert.equal(modelPayload.loaded_context_blocks[0].related_comments[0].text, 'Treat toxicity and cost as translation constraints.');
+        assert.equal(modelPayload.analysis_comments[0].comment, 'These lines answer the translation-constraint query.');
+        assert.match(modelPayload.model_note, /report these two categories separately/i);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -302,8 +304,25 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperAnaly
       assert.equal(capturedInput.snapshot, snapshot);
       assert.equal(capturedInput.storage_path, '/tmp/hikari-storage');
       assert.equal(capturedInput.message, 'Find the translation constraints.');
+      assert.equal(capturedInput.query, 'Find the translation constraints.');
       assert.equal(capturedInput.cwd, '/tmp/hikari-workspace');
       assert.equal(capturedInput.reasoning_effort, 'high');
+
+      // The agent preserves the analytical request across a paper-reference
+      // clarification, so an explicit query outranks the current turn text.
+      await executors.get('paper-analysis')({
+        args: {
+          query: 'Compare the paper findings with the saved annotations.',
+          paper: { title: 'Anti-PD-1 paper' }
+        },
+        context: {
+          provider: 'codex',
+          message: 'Anti-PD-1 paper',
+          snapshot
+        }
+      });
+      assert.equal(capturedInput.query, 'Compare the paper findings with the saved annotations.');
+      assert.equal(capturedInput.message, capturedInput.query);
     });
     test('sub-agent runtime creates, messages, lists, and deletes managed sub-agents', async () => {
       const runtime = agentSubAgent.createAgentSubAgentRuntime({

@@ -43,6 +43,7 @@ module.exports = {
       /^\/dist($|\/)/,
       /^\/tmp($|\/)/,
       /\.asar$/,
+      /\.tgz$/,
       /\.zip$/,
 
       // Editor / assistant / OS noise
@@ -52,16 +53,24 @@ module.exports = {
       /^\/\.npm-cache($|\/)/,
       /(^|\/)\.DS_Store$/,
       /(^|\/)~\$[^/]+$/,
+      /\.sqlite-(?:shm|wal)$/,
       /\.map$/,
 
       // Repo-only development material
+      /^\/\.github($|\/)/,
       /^\/tests($|\/)/,
       /^\/scripts($|\/)/,
       /^\/docs($|\/)/,
+      /^\/artifacts($|\/)/,
+      /^\/examples($|\/)/,
       /^\/reports($|\/)/,
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,
+      /^\/config($|\/)/,
+      /^\/ui\/(?:config|html)($|\/)/,
       /^\/test\.js$/,
+      /^\/(?:eslint|forge)\.config\.(?:js|mjs)$/,
+      /^\/[^/]*_debug_[^/]*\.json$/,
       /^\/\.gitignore$/,
       /^\/\.npmignore$/,
       /^\/Readme\.md$/,
@@ -75,18 +84,14 @@ module.exports = {
       /^\/TestData2($|\/)/,
       /^\/TestData3($|\/)/,
       /^\/TestData5($|\/)/,
-      /^\/idea($|\/)/,
+      /^\/TestData6($|\/)/,
+      /^\/TestData7($|\/)/,
 
       // ML training workspace (runtime uses vendor/colony-counter instead)
       /^\/colony-counter($|\/)/,
 
       // Runtime / secret material that shouldn't ship
-      /^\/data\/.*\.log$/,
-      /^\/data\/Config\/codex-cli-home\/auth\.json$/,
-      /^\/data\/Config\/codex-cli-home\/log($|\/)/,
-      /^\/data\/Config\/codex-cli-home\/tmp($|\/)/,
-      /^\/data\/[^/]+\.gb$/,
-      /^\/data\/[^/]+\.gbk$/
+      /^\/data($|\/)/
     ]
   },
   rebuildConfig: {},

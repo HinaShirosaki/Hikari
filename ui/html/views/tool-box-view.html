@@ -227,7 +227,7 @@
             <textarea id="peptide-sequence" rows="4" placeholder="e.g. ACDEFGHIKLMNPQRSTVWY"></textarea>
           </label>
         </form>
-        <div id="peptide-result" class="calc-output stack-form"></div>
+        <div id="peptide-result" class="calc-output stack-form tool-calculation-output"></div>
       </div>
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
@@ -244,7 +244,17 @@
               <tbody id="buffer-rows">
                 <tr class="tool-box-buffer-meta-row">
                   <th scope="row">Volume</th>
-                  <td><input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" aria-label="Buffer volume in mL" /></td>
+                  <td>
+                    <div class="tool-box-buffer-volume-control">
+                      <input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" aria-label="Buffer volume" />
+                      <select id="buffer-volume-unit" aria-label="Buffer volume unit">
+                        <option value="nL">nL</option>
+                        <option value="uL">uL</option>
+                        <option value="mL" selected>mL</option>
+                        <option value="L">L</option>
+                      </select>
+                    </div>
+                  </td>
                   <th scope="row">pH</th>
                   <td><input id="buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
                   <td></td>
@@ -474,7 +484,7 @@
             </label>
           </div>
         </form>
-        <div id="dna-protein-result" class="calc-output tool-sequence-translation-output"></div>
+        <div id="dna-protein-result" class="calc-output tool-calculation-output tool-sequence-translation-output"></div>
       </div>
 
       <div id="tool-reverse-translate-view" class="panel tool-subview" hidden>
@@ -514,7 +524,7 @@
             </div>
           </div>
         </form>
-        <div id="reverse-translate-result" class="calc-output tool-sequence-translation-output"></div>
+        <div id="reverse-translate-result" class="calc-output tool-calculation-output tool-sequence-translation-output"></div>
       </div>
 
       <div id="tool-oligo-view" class="panel tool-subview" hidden>
@@ -537,7 +547,7 @@
             </label>
           </div>
         </form>
-        <div id="oligo-result" class="calc-output"></div>
+        <div id="oligo-result" class="calc-output tool-calculation-output"></div>
       </div>
 
       <div id="tool-extinction-view" class="panel tool-subview" hidden>
@@ -559,7 +569,7 @@
             <textarea id="extinction-sequence" rows="4" placeholder="Enter sequence"></textarea>
           </label>
         </form>
-        <div id="extinction-result" class="calc-output"></div>
+        <div id="extinction-result" class="calc-output tool-calculation-output"></div>
       </div>
 
       <div id="tool-qpcr-view" class="panel tool-subview" hidden>

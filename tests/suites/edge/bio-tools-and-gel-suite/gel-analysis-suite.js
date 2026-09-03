@@ -118,7 +118,6 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
     gelIdInput: new MockElement('gel-id'),
     gelNameInput: new MockElement('gel-name'),
     gelTypeInput: new MockElement('gel-type'),
-    gelNormalizationInput: new MockElement('gel-normalization'),
     gelDenoiseStrengthInput: new MockElement('gel-denoise'),
     gelContrastStrengthInput: new MockElement('gel-contrast')
   };
@@ -417,6 +416,96 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-include-ladder/);
   assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-image>Generate image/);
   assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-pptx>Generate PowerPoint/);
+});
+
+test('[EDGE] gel-analysis lane table hides the ladder column and restores its saved value', () => {
+  const runtime = {
+    currentImage: { width: 600 },
+    cropperActive: false,
+    figureExportIncludeLadder: true,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 100,
+        gelRight: 500,
+        dividers: [250, 375],
+        dividerDone: true,
+        bandTop: null,
+        bandBottom: null
+      },
+      addedBands: [],
+      ladderLane: 1,
+      ladderBands: [],
+      ladderBandsDone: false,
+      laneTable: {
+        rows: [
+          { label: 'Samples', values: ['Ladder', 'WT', 'Mutant'] }
+        ]
+      }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer')
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+  const ladderToggle = {
+    checked: false,
+    closest(selector) {
+      return selector === '[data-gel-table-include-ladder]' ? this : null;
+    }
+  };
+
+  controller.render();
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
+
+  controller.onShellInput({ target: ladderToggle });
+
+  assert.equal(runtime.figureExportIncludeLadder, false);
+  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /Lane 1/);
+  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 2/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 3/);
+  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="0"/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="1"/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="2"/);
+  assert.equal((elements.gelLaneTableShell.innerHTML.match(/width:50%;/g) || []).length, 2);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:41\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
+
+  ladderToggle.checked = true;
+  controller.onShellInput({ target: ladderToggle });
+
+  assert.equal(runtime.figureExportIncludeLadder, true);
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
+
+  runtime.manualOverrides = {
+    ...runtime.manualOverrides,
+    ladderLane: 2
+  };
+  ladderToggle.checked = false;
+  controller.onShellInput({ target: ladderToggle });
+
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
+  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /Lane 2/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 3/);
+  assert.equal(
+    (elements.gelLaneTableShell.innerHTML.match(/gel-lane-table-excluded-cell/g) || []).length,
+    2,
+    'an interior ladder should leave one invisible header and value gap'
+  );
+  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="1"/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:16\.6667%;/);
+  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
 });
 
 test('[EDGE] gel-analysis figure plan crops between band lines and removes the ladder from table and gel', () => {
@@ -826,7 +915,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
     currentReport: null,
     manualDividerConfirmed: false,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({}),
-    selectedViewerTool: 'dividers'
+    selectedViewerTool: ''
   };
   const elements = {
     gelCanvas,
@@ -848,9 +937,25 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   });
 
   assert.equal(controller.getManualStep(), 'dividers');
+  controller.renderManualProgress();
+  assert.equal(elements.gelManualNextBtn.hidden, true);
+
+  controller.onCanvasClick({ clientX: 40, clientY: 50 });
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, null, 'inactive divider tool accepted a canvas click');
+
+  controller.onViewerToolSelected('dividers');
+  assert.equal(runtime.selectedViewerTool, 'dividers');
+  assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), true);
+  assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'true');
+  assert.equal(elements.gelManualNextBtn.hidden, true);
+
   controller.onCanvasClick({ clientX: 60, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 60);
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, null);
+
+  controller.onViewerToolSelected('dividers');
+  assert.equal(runtime.selectedViewerTool, 'dividers', 'divider tool stopped before two outer boundaries existed');
+  assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, false);
 
   controller.onCanvasClick({ clientX: 20, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
@@ -864,11 +969,23 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 80);
   assert.deepEqual(Array.from(runtime.manualOverrides.laneSegmentation.dividers), [60]);
 
-  controller.onManualNextStep();
+  controller.onViewerToolSelected('dividers');
   assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);
   assert.equal(runtime.selectedViewerTool, '');
+  assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), false);
+  assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(elements.gelManualNextBtn.hidden, true);
   assert.equal(controller.getManualStep(), 'ladder');
-  assert.match(statuses[statuses.length - 1], /dividers confirmed/i);
+  assert.match(statuses[statuses.length - 1], /dividers finished/i);
+
+  runtime.manualOverrides = {
+    ...gelAnalysisInternals.normalizeManualOverrides(runtime.manualOverrides),
+    ladderLane: 1
+  };
+  controller.renderManualProgress();
+  assert.equal(controller.getManualStep(), 'ladder-mw');
+  assert.equal(elements.gelManualNextBtn.hidden, false, 'Done Ladder MW should remain available');
+  assert.equal(elements.gelManualNextBtn.textContent, 'Done Ladder MW');
 });
 
 test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {
@@ -2054,6 +2171,62 @@ test('[EDGE] gel-analysis manual per-lane target windows feed lane-specific repo
   assert.equal(result.report.lanes[1].targetBand.bottom, 23);
 });
 
+test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking rows', () => {
+  const width = 12;
+  const height = 60;
+  const analyzeBand = (bandValue) => {
+    const gray = new Float32Array(width * height);
+    for (let y = 0; y < height; y += 1) {
+      const rowValue = y < 25 ? 0.1 : (y <= 34 ? bandValue : 0.2);
+      for (let x = 0; x < width; x += 1) {
+        gray[(y * width) + x] = rowValue;
+      }
+    }
+
+    return gelAnalysisInternals.analyzeGelImage({
+      gray,
+      imageName: 'flanking-baseline.png',
+      width,
+      height,
+      preprocessed: {
+        cleanNormalized: gray,
+        preprocessing: {
+          grayscale: true,
+          backend: 'test'
+        }
+      },
+      params: {
+        analysisType: 'western',
+        ladderLane: 1,
+        ladderStandards: [250, 150, 100],
+        normalization: 'none',
+        enhancement: {},
+        manualOverrides: {
+          laneSegmentation: {
+            gelLeft: 0,
+            gelRight: 11,
+            dividers: [],
+            dividerDone: true,
+            bandTop: 25,
+            bandBottom: 34
+          },
+          ladderLane: 1,
+          ladderBandsDone: true
+        }
+      }
+    }).report.lanes[0].targetBand;
+  };
+
+  const intenseBand = analyzeBand(0.9);
+  const moderateBand = analyzeBand(0.6);
+
+  assert.equal(intenseBand.baselineMode, 'flanking-median');
+  assert.equal(intenseBand.backgroundMean, 0.15);
+  assert.equal(intenseBand.baselineSum, 16.5);
+  assert.equal(moderateBand.baselineSum, intenseBand.baselineSum);
+  assert.ok(intenseBand.correctedIntensity > moderateBand.correctedIntensity);
+});
+
 [
   [' file name ', 'fallback', 'file-name'],
   ['***', 'fallback', 'fallback'],
@@ -2196,9 +2369,10 @@ test('[EDGE] gel-analysis applyCalibrationToBands sets estimatedMw', () => {
 });
 
 [
-  'max',
-  'total-lane'
-].forEach((mode, idx) => {
+  { mode: 'max', expected: [2 / 6, 1] },
+  { mode: 'total-lane', expected: [2 / 8, 6 / 8] },
+  { mode: 'none', expected: [null, null] }
+].forEach(({ mode, expected }, idx) => {
   test(`[EDGE] gel-analysis applyNormalization mode case ${idx + 1}`, () => {
     const lanes = [{
       bands: [
@@ -2207,9 +2381,10 @@ test('[EDGE] gel-analysis applyCalibrationToBands sets estimatedMw', () => {
       ]
     }];
     gelAnalysisInternals.applyNormalization(lanes, mode);
-    lanes[0].bands.forEach((band) => {
-      assert.equal(band.normalizedIntensity === null || (band.normalizedIntensity >= 0 && band.normalizedIntensity <= 1), true);
-    });
+    assert.deepEqual(
+      Array.from(lanes[0].bands, (band) => band.normalizedIntensity),
+      expected
+    );
   });
 });
 
@@ -2328,7 +2503,6 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
     gelIdInput: new MockElement('gel-id'),
     gelNameInput: new MockElement('gel-name'),
     gelTypeInput: new MockElement('gel-type'),
-    gelNormalizationInput: new MockElement('gel-normalization'),
     gelCanvas: canvas,
     gelSearchInput: new MockElement('gel-search'),
     gelBrowserCount: new MockElement('gel-browser-count'),
@@ -2336,7 +2510,6 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   };
   elements.gelNameInput.value = 'Concurrent save';
   elements.gelTypeInput.value = 'sds-page';
-  elements.gelNormalizationInput.value = 'none';
 
   let persistCalls = 0;
   let releasePersist;

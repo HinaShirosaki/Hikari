@@ -2,6 +2,7 @@
   "name": "hikari",
   "productName": "Hikari",
   "version": "1.0.0",
+  "private": true,
   "description": "Electron shell for Hikari sub-app launcher",
   "main": "src/main/main.js",
   "scripts": {
@@ -23,7 +24,6 @@
     "test": "npm run build:ui || exit 1; fail=0; npm run test:checks || fail=1; node test.js || fail=1; exit $fail",
     "dist": "npm run build:ui && electron-forge make",
     "package:app": "npm run build:ui && electron-forge package",
-    "package": "npm run build:ui && electron-forge package",
     "make": "npm run build:ui && electron-forge make"
   },
   "devDependencies": {
@@ -36,8 +36,7 @@
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
     "electron": "^40.7.0",
-    "eslint": "^9.39.5",
-    "onnxruntime-web": "^1.26.0"
+    "eslint": "^9.39.5"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

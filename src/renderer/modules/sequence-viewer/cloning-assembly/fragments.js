@@ -45,6 +45,9 @@ export function normalizeHostVector(host, index) {
     id: String(host?.id || buildStableFragmentId('host', index)),
     name: String(host?.name || host?.id || buildStableFragmentId('host', index)).trim() || buildStableFragmentId('host', index),
     topology: normalizeTopology(host?.topology || DEFAULT_CLONING_PREFERENCES.topology),
-    sequence: normalizeSequence(host?.sequence || '')
+    sequence: normalizeSequence(host?.sequence || ''),
+    // A linearized backbone is not the DNA in its own PCR tube, so the caller
+    // has to be able to name the template its primers must be unique against.
+    metadata: host?.metadata && typeof host.metadata === 'object' ? { ...host.metadata } : {}
   };
 }

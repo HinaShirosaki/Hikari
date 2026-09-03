@@ -57,7 +57,8 @@ function createManualProgress({
       return runtime.selectedViewerTool;
     }
     const laneBandStep = getLaneBandInteractionStep();
-    return laneBandStep || getManualStep();
+    const manualStep = laneBandStep || getManualStep();
+    return manualStep === 'dividers' ? '' : manualStep;
   }
 
   function getLaneBandInteractionStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
@@ -97,10 +98,10 @@ function createManualProgress({
     const laneBandMode = isPerLaneBandMode(overrides.laneSegmentation);
 
     if (elements.gelManualNextBtn) {
-      elements.gelManualNextBtn.disabled = !(activeStep === 'dividers' || activeStep === 'ladder-mw' || activeStep === 'quantify');
-      if (activeStep === 'dividers') {
-        elements.gelManualNextBtn.textContent = 'Done Dividers';
-      } else if (activeStep === 'ladder-mw') {
+      const showsCompletionAction = activeStep === 'ladder-mw' || activeStep === 'quantify';
+      elements.gelManualNextBtn.hidden = !showsCompletionAction;
+      elements.gelManualNextBtn.disabled = !showsCompletionAction;
+      if (activeStep === 'ladder-mw') {
         elements.gelManualNextBtn.textContent = 'Done Ladder MW';
       } else if (activeStep === 'quantify') {
         elements.gelManualNextBtn.textContent = 'Done Quantify';

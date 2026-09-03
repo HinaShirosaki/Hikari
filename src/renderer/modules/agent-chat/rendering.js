@@ -93,6 +93,7 @@ export function renderHistory({
       ? renderAssistantMeta(message.meta, message.id, {
         safeText,
         notebookDraftAdapter,
+        notebookEntries: state.notebookEntries,
         canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user'),
         showUserQuestion: showUserQuestions
       })

@@ -73,7 +73,7 @@
   },
   {
     "name": "paper-analysis",
-    "description": "Load exact line-backed context and matching local comments from an ingested paper through one Codex CLI sub-agent read; inline paper text can still be summarized or converted into a protocol seed."
+    "description": "Load every selected line plus sub-agent relevance comments and saved local annotations from an ingested paper through one Codex CLI sub-agent read; inline paper text can still be summarized or converted into a protocol seed."
   },
   {
     "name": "paper-search",

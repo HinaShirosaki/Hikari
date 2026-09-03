@@ -44,9 +44,21 @@ function truncateText(value, max = TEXT_PREVIEW_LIMIT) {
   return `${text.slice(0, max)}…`;
 }
 
+// Every use of this is an equality test, and JSON.stringify is key-order
+// sensitive: `values` is rebuilt from a DOM query on each save, so an
+// unchanged page reordered its keys and logged a phantom edit. Sorting object
+// keys (arrays keep their order, which is meaningful) makes the comparison
+// structural.
+function sortObjectKeys(_key, value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value;
+  }
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, value[key]]));
+}
+
 function safeStringify(value) {
   try {
-    return JSON.stringify(value ?? null);
+    return JSON.stringify(value ?? null, sortObjectKeys);
   } catch {
     return String(value ?? '');
   }
@@ -152,6 +164,44 @@ function describeResultTablesChange(before, after) {
   };
 }
 
+// Diff two lists of records by identity rather than position, so reordering
+// is not an edit and a changed item reports what changed on it.
+function describeKeyedListChange(before, after, keyOf, describeItem) {
+  const prev = Array.isArray(before) ? before : [];
+  const next = Array.isArray(after) ? after : [];
+  const indexByKey = (list) => new Map(
+    list.map((item, position) => [keyOf(item) || `index:${position}`, item])
+  );
+  const prevByKey = indexByKey(prev);
+  const nextByKey = indexByKey(next);
+  const added = [];
+  const removed = [];
+  const modified = [];
+  for (const [key, item] of nextByKey) {
+    if (!prevByKey.has(key)) {
+      added.push(describeItem(item));
+    } else if (safeStringify(prevByKey.get(key)) !== safeStringify(item)) {
+      modified.push({
+        key,
+        before: describeItem(prevByKey.get(key)),
+        after: describeItem(item)
+      });
+    }
+  }
+  for (const [key, item] of prevByKey) {
+    if (!nextByKey.has(key)) {
+      removed.push(describeItem(item));
+    }
+  }
+  return {
+    beforeCount: prev.length,
+    afterCount: next.length,
+    added,
+    removed,
+    modified
+  };
+}
+
 function sampleLinkKey(link) {
   if (!link || typeof link !== 'object') {
     return '';
@@ -175,44 +225,23 @@ function describeSampleLink(link) {
   };
 }
 
-function describeSampleLinksChange(before, after) {
-  const prev = Array.isArray(before) ? before : [];
-  const next = Array.isArray(after) ? after : [];
-  const prevByKey = new Map();
-  const nextByKey = new Map();
-  prev.forEach((link, index) => {
-    const key = sampleLinkKey(link) || `index:${index}`;
-    prevByKey.set(key, link);
-  });
-  next.forEach((link, index) => {
-    const key = sampleLinkKey(link) || `index:${index}`;
-    nextByKey.set(key, link);
-  });
-  const added = [];
-  const removed = [];
-  const modified = [];
-  for (const [key, link] of nextByKey) {
-    if (!prevByKey.has(key)) {
-      added.push(describeSampleLink(link));
-    } else if (safeStringify(prevByKey.get(key)) !== safeStringify(link)) {
-      modified.push({
-        key,
-        before: describeSampleLink(prevByKey.get(key)),
-        after: describeSampleLink(link)
-      });
-    }
+function toolCalculationKey(calculation) {
+  if (!calculation || typeof calculation !== 'object') {
+    return '';
   }
-  for (const [key, link] of prevByKey) {
-    if (!nextByKey.has(key)) {
-      removed.push(describeSampleLink(link));
-    }
+  const id = String(calculation.id || '').trim();
+  return id ? `calculation:${id}` : '';
+}
+
+function describeToolCalculation(calculation) {
+  if (!calculation || typeof calculation !== 'object') {
+    return {};
   }
   return {
-    beforeCount: prev.length,
-    afterCount: next.length,
-    added,
-    removed,
-    modified
+    id: calculation.id || '',
+    type: calculation.type || '',
+    title: calculation.title || '',
+    result: truncateText(calculation.result || calculation.summary || '', SCALAR_PREVIEW_LIMIT)
   };
 }
 
@@ -225,6 +254,22 @@ function describeProtocolSnapshotChange(before, after) {
     beforeStepCount: prevSteps,
     afterStepCount: nextSteps
   };
+}
+
+// The identity-keyed describers ignore list and key order on purpose, so they
+// can report "nothing changed" for a field the stringify comparison flagged.
+// Recording that as an edit is the phantom entry, not a change worth keeping.
+function isEmptyIdentityChange(description) {
+  if (description?.beforeCount !== description?.afterCount) {
+    return false;
+  }
+  return ['added', 'removed', 'modified'].every((key) => {
+    const value = description?.[key];
+    if (Array.isArray(value)) {
+      return value.length === 0;
+    }
+    return isPlainObject(value) && Object.keys(value).length === 0;
+  });
 }
 
 function describeFieldChange(field, before, after) {
@@ -240,7 +285,11 @@ function describeFieldChange(field, before, after) {
     case 'resultTables':
       return describeResultTablesChange(before, after);
     case 'sampleLinks':
-      return describeSampleLinksChange(before, after);
+      return describeKeyedListChange(before, after, sampleLinkKey, describeSampleLink);
+    // Without a case of its own this fell to describeScalarChange, which
+    // stringified the array to "[object Object]" for both sides.
+    case 'toolCalculations':
+      return describeKeyedListChange(before, after, toolCalculationKey, describeToolCalculation);
     case 'protocolSnapshot':
       return describeProtocolSnapshotChange(before, after);
     default:
@@ -261,13 +310,24 @@ export function describeNotebookEntryChanges(previous, next, fields) {
     if (safeStringify(prev[field] ?? null) === safeStringify(curr[field] ?? null)) {
       continue;
     }
-    changes[field] = describeFieldChange(field, prev[field], curr[field]);
+    const description = describeFieldChange(field, prev[field], curr[field]);
+    if (isEmptyIdentityChange(description)) {
+      continue;
+    }
+    changes[field] = description;
   }
   return changes;
 }
 
 export function changedFieldList(changes) {
   return changes && typeof changes === 'object' ? Object.keys(changes) : [];
+}
+
+// No caller inspects the result of a fire-and-forget log write, so a page log
+// that silently stopped recording would never be noticed. Warn instead.
+function reportLogFailure(error) {
+  console.warn('Notebook page log not written:', error);
+  return { ok: false, error };
 }
 
 // Fire-and-forget: log a notebook page activity. Returns a promise that
@@ -282,16 +342,16 @@ export function logNotebookPageEvent({
 } = {}) {
   const appendLog = window?.hikariApi?.appendNotebookPageLog;
   if (typeof appendLog !== 'function') {
-    return Promise.resolve({ ok: false, error: 'appendNotebookPageLog unavailable' });
+    return Promise.resolve(reportLogFailure('appendNotebookPageLog unavailable'));
   }
   const storageFolder = String(entry?.storageFolder || '').trim();
   const root = String(storagePath || '').trim();
   if (!storageFolder || !root || !isPathInsideRoot(root, storageFolder)) {
-    return Promise.resolve({ ok: false, error: 'storageFolder is not inside storagePath' });
+    return Promise.resolve(reportLogFailure('storageFolder is not inside storagePath'));
   }
   const cleanAction = safeString(action, 80);
   if (!cleanAction) {
-    return Promise.resolve({ ok: false, error: 'missing action' });
+    return Promise.resolve(reportLogFailure('missing action'));
   }
   return appendLog({
     storagePath: root,
@@ -301,5 +361,7 @@ export function logNotebookPageEvent({
     summary: safeString(summary, 600),
     details: ensureDetails(details),
     timestamp: new Date().toISOString()
-  }).catch((error) => ({ ok: false, error: String(error?.message || error) }));
+  })
+    .then((result) => (result?.ok ? result : reportLogFailure(String(result?.error || 'unknown error'))))
+    .catch((error) => reportLogFailure(String(error?.message || error)));
 }

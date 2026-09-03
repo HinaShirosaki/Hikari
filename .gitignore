@@ -16,7 +16,11 @@ output/
 dist/
 tmp/
 *.asar
+*.tgz
 *.zip
+coverage/
+.nyc_output/
+.eslintcache
 
 # Local editor and assistant state
 .codex/
@@ -32,6 +36,8 @@ Agent.md
 # Logs and runtime scratch data
 *.log
 logs/
+*.sqlite-shm
+*.sqlite-wal
 data/*.log
 /data/chemicals.json
 data/Config/codex-cli-home/log/
@@ -44,6 +50,11 @@ data/Config/codex-cli-home/auth.json
 
 # Local scratch / personal / test material (not part of the app)
 /Book3.xlsx
+/*_debug_*.json
+/hikari-data.json
+/hikari-data.ena.json
+/enana-data.json
+/enana-data.ena.json
 /Exported Standard Features/
 /Testdata/
 /TestData2/

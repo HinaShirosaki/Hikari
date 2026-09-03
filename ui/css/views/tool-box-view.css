@@ -147,8 +147,8 @@
   background: var(--theme-surface-subtle);
 }
 
-/* Let long translation results wrap to their actual available width. */
-.tool-sequence-translation-output {
+/* Keep sequence and property results flat against the tool canvas. */
+.tool-calculation-output {
   padding: 0.875rem 0 0;
   border: 0;
   border-top: thin solid var(--theme-border-soft);
@@ -246,6 +246,31 @@
   background: transparent;
   box-shadow: none;
   color: var(--theme-text);
+}
+
+.tool-box-buffer-volume-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.tool-box-buffer-volume-control select {
+  width: auto;
+  min-width: 4.25rem;
+  min-height: 40px;
+  padding: 8px 24px 8px 8px;
+  border: 0;
+  border-left: 1px solid var(--theme-border-soft);
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--theme-text);
+}
+
+.tool-box-buffer-volume-control select:focus {
+  outline: none;
+  background-color: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
 }
 
 .tool-box-buffer-sheet input:focus,

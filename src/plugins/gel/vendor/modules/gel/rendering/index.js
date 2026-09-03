@@ -218,7 +218,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       !elements.gelLaneProfilePanel
       || !elements.gelLaneProfileSelect
       || !elements.gelLaneProfileChart
-      || !elements.gelLaneProfileMeta
     ) {
       return;
     }
@@ -229,7 +228,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile appears here after you divide the gel into lanes.');
       return;
     }
@@ -241,7 +239,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Set the lane dividers first.');
       return;
     }
@@ -269,22 +266,11 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }) : null;
 
     if (!profile) {
-      elements.gelLaneProfileMeta.textContent = '';
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile unavailable.');
       return;
     }
 
     const selectedBandWindow = getTargetBandWindowForLane(overrides.laneSegmentation, selectedLane.laneIndex);
-    elements.gelLaneProfileMeta.innerHTML = [
-      `x ${selectedLane.xStart}-${selectedLane.xEnd}`,
-      `width ${profile.laneWidth}px`,
-      `peak row ${profile.peakRow}`,
-      `peak ${round(profile.peakValue, 4) ?? '-'}`,
-      `mean ${round(profile.meanValue, 4) ?? '-'}`
-    ]
-      .map((item) => `<span>${safeText(item)}</span>`)
-      .join('');
-
     renderLaneProfileSvg(
       elements.gelLaneProfileChart,
       profile,

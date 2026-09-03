@@ -1,5 +1,6 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
 import { printElement } from '../print/index.js';
+import { logNotebookPageEvent } from '../biology-notebook/storage/page-log.js';
 
 // Switching the protocol detail column between empty / editor / view, plus the
 // create, edit, view, export, print, and delete actions those panels drive.
@@ -191,11 +192,8 @@ function createProtocolDetailPanels({
 
   function deleteProtocol(protocolId) {
     const now = new Date().toISOString();
-    const deletedEntryIds = new Set(
-      state.notebookEntries
-        .filter((entry) => entry.protocolId === protocolId)
-        .map((entry) => entry.id)
-    );
+    const deletedEntries = state.notebookEntries.filter((entry) => entry.protocolId === protocolId);
+    const deletedEntryIds = new Set(deletedEntries.map((entry) => entry.id));
 
     state.protocols = state.protocols.filter((item) => item.id !== protocolId);
     state.notebookEntries = state.notebookEntries.filter((entry) => entry.protocolId !== protocolId);
@@ -240,6 +238,24 @@ function createProtocolDetailPanels({
     }
 
     persist();
+    // The page folder and its page.log outlive the entry, so without this the
+    // trail just stops mid-story and a deleted page looks like a crash.
+    deletedEntries.forEach((entry) => {
+      logNotebookPageEvent({
+        entry,
+        storagePath: state.settings?.storagePath,
+        action: 'delete',
+        summary: `Deleted notebook page${entry.experimentName ? ` "${entry.experimentName}"` : ''} with its protocol`,
+        details: {
+          reason: 'protocol-deleted',
+          protocolId,
+          protocolName: entry.protocolName || '',
+          experimentName: entry.experimentName || '',
+          notebookState: entry.notebookState || '',
+          executedAt: entry.executedAt || ''
+        }
+      });
+    });
     getListController().renderList();
     if (localState.activeProtocolId === protocolId) {
       setSelectedProtocol('');

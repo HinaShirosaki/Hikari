@@ -117,6 +117,39 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   stroke-linejoin: round;
 }
 
+.sequence-viewer-back-action-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  place-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sequence-viewer-back-action-btn:hover,
+.sequence-viewer-back-action-btn:focus-visible {
+  border: 0;
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-back-action-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .sequence-viewer-button-caption {
   font-size: 0.78rem;
   font-weight: 650;
@@ -530,22 +563,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   justify-content: flex-start;
   gap: 12px 16px;
   min-width: 0;
-}
-
-/* The toolbar shares the ghost-button surface (var(--theme-surface)), and in
-   some themes surface-subtle is nearly identical to it, so a default back
-   button blends in. Tint with the accent + an accent border so it always reads
-   as a button regardless of theme. */
-.sequence-viewer-protein-builder-toolbar-nav .ghost-btn,
-.sequence-viewer-cloning-design-toolbar-nav .ghost-btn {
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
-  border-color: var(--theme-accent);
-  color: var(--theme-text-strong);
-}
-
-.sequence-viewer-protein-builder-toolbar-nav .ghost-btn:hover,
-.sequence-viewer-cloning-design-toolbar-nav .ghost-btn:hover {
-  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
 }
 
 .sequence-viewer-cloning-design-toolbar-copy {
