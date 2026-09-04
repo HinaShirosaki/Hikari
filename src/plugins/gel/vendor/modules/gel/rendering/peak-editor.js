@@ -149,7 +149,7 @@ export function createPeakEditorController({
           data: tableRows,
           columns: PEAK_EDITOR_COLUMNS,
           layout: 'fitColumns',
-          height: '260px',
+          height: '100%',
           placeholder: 'No peak areas selected'
         });
       } else if (typeof runtime.peakIntegrationTable.setData === 'function') {

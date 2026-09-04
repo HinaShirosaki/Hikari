@@ -138,7 +138,6 @@
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
                         <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
                         <button type="button" id="gel-open-cell-table-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" title="Open per-cell band intensity" disabled>Band intensity</button>
-                        <button type="button" id="gel-open-report-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-report-overlay" aria-expanded="false" title="Open analysis report" disabled>Report</button>
                       </div>
                     </details>
                   </div>
@@ -184,21 +183,6 @@
                 <button type="button" id="gel-cell-table-close-btn" class="app-dialog-close-btn" aria-label="Close band intensity report" title="Close"><span aria-hidden="true">&times;</span></button>
               </header>
               <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
-            </section>
-          </div>
-
-          <div id="gel-report-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
-            <section class="gel-report-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-report-title" aria-describedby="gel-report-description">
-              <header class="app-dialog-head gel-report-dialog-head">
-                <div>
-                  <h3 id="gel-report-title">Analysis Report</h3>
-                  <p id="gel-report-description" class="small-note">Summary and complete data from the current gel analysis.</p>
-                </div>
-                <button type="button" id="gel-report-close-btn" class="app-dialog-close-btn" aria-label="Close analysis report" title="Close"><span aria-hidden="true">&times;</span></button>
-              </header>
-              <div class="gel-report-dialog-body">
-                <div id="gel-report-summary" class="cards"></div>
-              </div>
             </section>
           </div>
 

@@ -4,6 +4,24 @@ import { cleanText } from '../shared.js';
 export function installProteinBuilderEvents(ctx) {
   const { elements, state } = ctx;
 
+  async function copySequence(value, label) {
+    const clipboard = elements.proteinBuilderSequence?.ownerDocument?.defaultView?.navigator?.clipboard
+      || globalThis?.window?.navigator?.clipboard
+      || globalThis?.navigator?.clipboard;
+    if (!value || !clipboard?.writeText) {
+      ctx.setBuilderStatus(`Unable to copy the ${label} sequence.`, true);
+      return false;
+    }
+    try {
+      await clipboard.writeText(value);
+      ctx.setBuilderStatus(`Copied the ${label} sequence.`);
+      return true;
+    } catch {
+      ctx.setBuilderStatus(`Unable to copy the ${label} sequence.`, true);
+      return false;
+    }
+  }
+
   ctx.bindEvents = function bindEvents() {
     // Protein Builder is reached only through Vector Builder now: its toolbar for
     // the standalone stored-backbone path, its map menu for targeted inserts.
@@ -14,6 +32,24 @@ export function installProteinBuilderEvents(ctx) {
 
     // The assembled sequence is editable so an initiator M, a stop, or a point
     // mutation can go on without inventing a block for it.
+    const beginProteinSequenceEdit = () => {
+      elements.proteinBuilderSequenceEditor?.classList?.add('is-editing');
+      elements.proteinBuilderSequence?.focus?.();
+    };
+    elements.proteinBuilderProteinSequenceHighlight?.addEventListener('click', beginProteinSequenceEdit);
+    elements.proteinBuilderProteinSequenceHighlight?.addEventListener('keydown', (event) => {
+      const key = String(event?.key || '');
+      if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+        event.preventDefault?.();
+        beginProteinSequenceEdit();
+      }
+    });
+    elements.proteinBuilderSequence?.addEventListener('focus', () => {
+      elements.proteinBuilderSequenceEditor?.classList?.add('is-editing');
+    });
+    elements.proteinBuilderSequence?.addEventListener('blur', () => {
+      elements.proteinBuilderSequenceEditor?.classList?.remove('is-editing');
+    });
     elements.proteinBuilderSequence?.addEventListener('change', () => {
       const applied = ctx.setAssembledSequenceOverride(elements.proteinBuilderSequence.value);
       // Write the accepted sequence back even while the field still has focus,
@@ -33,6 +69,48 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setAssembledSequenceOverride('');
       ctx.render();
       ctx.setBuilderStatus('Assembled sequence reset to the block chain.');
+    });
+
+    elements.proteinBuilderCopyProteinBtn?.addEventListener('click', () => {
+      void copySequence(sanitizeProteinAssemblySequence(elements.proteinBuilderSequence?.value || '', true), 'protein');
+    });
+
+    elements.proteinBuilderCopyDnaBtn?.addEventListener('click', () => {
+      void copySequence(state.dnaConstruct?.sequence || '', 'DNA');
+    });
+
+    elements.proteinBuilderCodonUsageSelect?.addEventListener('change', () => {
+      ctx.invalidateDnaConstruct();
+      ctx.renderDnaConstruct();
+      ctx.setBuilderStatus('Codon usage changed. Build the DNA sequence again.');
+    });
+
+    elements.proteinBuilderAddProteinBtn?.addEventListener('click', () => {
+      ctx.openAddProteinDialog();
+    });
+
+    elements.proteinBuilderAddProteinForm?.addEventListener('input', () => {
+      ctx.renderAddProteinDialog();
+    });
+
+    elements.proteinBuilderAddProteinForm?.addEventListener('submit', (event) => {
+      event.preventDefault?.();
+      ctx.addProteinFromDialog();
+    });
+
+    elements.proteinBuilderAddProteinForm?.addEventListener('keydown', (event) => {
+      if (String(event?.key || '') === 'Escape') {
+        event.preventDefault?.();
+        ctx.closeAddProteinDialog();
+      }
+    });
+
+    elements.proteinBuilderAddProteinCloseBtn?.addEventListener('click', () => ctx.closeAddProteinDialog());
+    elements.proteinBuilderAddProteinCancelBtn?.addEventListener('click', () => ctx.closeAddProteinDialog());
+    elements.proteinBuilderAddProteinOverlay?.addEventListener('click', (event) => {
+      if (event?.target === elements.proteinBuilderAddProteinOverlay) {
+        ctx.closeAddProteinDialog();
+      }
     });
 
     elements.proteinBuilderForm?.addEventListener('input', (event) => {
@@ -143,7 +221,9 @@ export function installProteinBuilderEvents(ctx) {
       }
     });
 
-    elements.proteinBuilderWorkflow?.addEventListener('input', (event) => {
+    // Commit inline custom-block edits on change. Rebuilding this rendered list
+    // on every keystroke would replace the focused input before typing finishes.
+    elements.proteinBuilderWorkflow?.addEventListener('change', (event) => {
       const customLabelTrigger = event?.target?.closest?.('[data-protein-builder-custom-label]');
       const customSequenceTrigger = event?.target?.closest?.('[data-protein-builder-custom-sequence]');
 

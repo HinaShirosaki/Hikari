@@ -606,6 +606,7 @@ test('assay group selection stays silent but missing selections still explain th
   RangeTabulator.instance.ranges = [];
   manager.onAddSelectedRowGroup();
   assert.equal(selectionStatus.textContent, 'Select at least one row before adding a group.');
+  assert.equal(selectionStatus.classList.contains('is-error'), true, 'a blocked action reads as an error, not a note');
 });
 
 test('assay treats loading a saved plate as a clean setup and results baseline', () => {

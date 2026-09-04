@@ -149,6 +149,11 @@ body.theme-night #home-view {
   line-height: 1.25;
 }
 
+/* The tile-scoped muted colour outranks the global .small-note.is-error rule. */
+#home-view .home-tile .small-note.is-error {
+  color: var(--theme-danger);
+}
+
 #home-view .home-tile .home-link-btn {
   flex: 0 0 auto;
   padding: 0;

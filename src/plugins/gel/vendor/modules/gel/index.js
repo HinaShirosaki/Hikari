@@ -70,7 +70,6 @@ export function initGelAnalysis({
     persist,
     preprocessedCache: null,
     cellTableDialogOpen: false,
-    reportDialogOpen: false,
     safeText,
     laneProfileHoverY: null,
     laneVertexDrag: null,
@@ -132,7 +131,6 @@ export function initGelAnalysis({
       renderAll: () => {
         manualWorkflow.renderOverrideStatus();
         rendering.renderCanvas();
-        rendering.renderReport();
         onRunAnalysis();
       }
     }
@@ -161,7 +159,6 @@ export function initGelAnalysis({
       onRunAnalysis,
       renderCanvas: renderCanvasAndCommit,
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
-      renderReport: () => rendering.renderReport(),
       setStatus
     }
   });
@@ -174,7 +171,6 @@ export function initGelAnalysis({
       normalizeCurrentCanvasCrop: imageController.normalizeCurrentCanvasCrop,
       renderCanvas: renderCanvasAndCommit,
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
-      renderReport: () => rendering.renderReport(),
       setCurrentImage: imageController.setCurrentImage,
       setStatus
     }
@@ -186,7 +182,6 @@ export function initGelAnalysis({
       onRunAnalysis,
       renderCanvas: renderCanvasAndCommit,
       renderLaneTable: () => laneTable.render(),
-      renderReport: () => rendering.renderReport(),
       setStatus
     }
   });
@@ -209,7 +204,6 @@ export function initGelAnalysis({
       renderEnhancementValues: () => imageController.renderEnhancementValues(),
       renderManualProgress: () => manualWorkflow.renderManualProgress(),
       renderOverrideStatus: () => manualWorkflow.renderOverrideStatus(),
-      renderReport: () => rendering.renderReport(),
       setCurrentImage: imageController.setCurrentImage,
       setStatus
     }
@@ -342,13 +336,10 @@ export function initGelAnalysis({
   elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
   elements.gelOpenPeakEditorBtn?.addEventListener('click', rendering.onPeakEditorOpen);
   elements.gelPeakEditorCloseBtn?.addEventListener('click', rendering.onPeakEditorClose);
-  elements.gelOpenReportBtn?.addEventListener('click', rendering.onReportOpen);
-  elements.gelReportCloseBtn?.addEventListener('click', rendering.onReportClose);
-  elements.gelReportOverlay?.addEventListener('click', rendering.onReportOverlayClick);
   elements.gelOpenCellTableBtn?.addEventListener('click', rendering.onCellTableOpen);
   elements.gelCellTableCloseBtn?.addEventListener('click', rendering.onCellTableClose);
   elements.gelCellTableOverlay?.addEventListener('click', rendering.onCellTableOverlayClick);
-  rootDocument?.addEventListener?.('keydown', rendering.onReportKeyDown);
+  rootDocument?.addEventListener?.('keydown', rendering.onCellTableKeyDown);
   elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
   elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
   elements.gelPeakEditorDividerModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('divider'));
@@ -368,7 +359,6 @@ export function initGelAnalysis({
     manualWorkflow.renderManualProgress();
     manualWorkflow.renderViewerToolbar();
     laneTable.render();
-    rendering.renderReport();
     recordsManager.renderList();
     if (!runtime.currentImage) {
       rendering.renderCanvas();
@@ -398,7 +388,6 @@ export function initGelAnalysis({
       });
       runtime.currentReport = result.report;
       rendering.renderCanvas();
-      rendering.renderReport();
       manualWorkflow.renderOverrideStatus();
       setStatus(`Analysis complete: ${runtime.currentReport.lanes.length} lane(s), ${runtime.currentReport.bandGroups.length} group(s).`);
     } catch (error) {
@@ -420,7 +409,7 @@ export function initGelAnalysis({
       rootWindow.removeEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
       rootWindow.removeEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
     }
-    rootDocument.removeEventListener?.('keydown', rendering.onReportKeyDown);
+    rootDocument.removeEventListener?.('keydown', rendering.onCellTableKeyDown);
   }
 
   return {

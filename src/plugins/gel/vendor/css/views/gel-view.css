@@ -95,19 +95,6 @@
   margin-top: 0;
 }
 
-#gel-report-overlay.app-dialog-overlay {
-  position: absolute;
-}
-
-.gel-report-dialog.app-dialog-surface {
-  --app-dialog-width: 1040px;
-  --app-dialog-max-height: calc(100% - 36px);
-  --app-dialog-padding: 18px;
-  --app-dialog-gap: 14px;
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
-}
-
 .gel-cell-table-dialog.app-dialog-surface {
   --app-dialog-width: 900px;
   --app-dialog-max-height: calc(100% - 36px);
@@ -115,25 +102,6 @@
   --app-dialog-gap: 14px;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
-}
-
-.gel-report-dialog-head {
-  align-items: center;
-}
-
-.gel-report-dialog-head p {
-  margin-top: 4px;
-}
-
-.gel-report-dialog-body {
-  min-height: 0;
-  overflow: auto;
-  display: grid;
-  gap: 14px;
-}
-
-.gel-report-dialog-body .cards {
-  margin: 0;
 }
 
 .gel-setup-panel,
@@ -222,11 +190,6 @@
   pointer-events: none;
 }
 
-.gel-lane-profile-chart .lane-profile-frame {
-  fill: var(--gel-chart-surface);
-  stroke: var(--gel-chart-border);
-}
-
 .gel-lane-profile-chart .lane-profile-window {
   fill: var(--gel-chart-selection);
 }
@@ -235,14 +198,6 @@
   stroke: var(--gel-chart-grid);
   stroke-width: 1;
   stroke-dasharray: 3 4;
-}
-
-.gel-lane-profile-chart .lane-profile-path-shadow {
-  fill: none;
-  stroke: var(--gel-path-glow);
-  stroke-width: 9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
 }
 
 .gel-lane-profile-chart .lane-profile-path {
@@ -272,7 +227,8 @@
   --app-dialog-max-height: 920px;
   --app-dialog-padding: 16px;
   --app-dialog-gap: 12px;
-  grid-template-rows: auto auto minmax(260px, 1fr) auto;
+  height: min(var(--app-dialog-max-height), var(--app-dialog-available-height));
+  grid-template-rows: auto auto minmax(0, 2fr) minmax(96px, 1fr);
   overflow: hidden;
 }
 
@@ -330,8 +286,8 @@
 .gel-peak-editor-chart {
   display: block;
   width: 100%;
-  height: min(52vh, 440px);
-  min-height: 300px;
+  height: 100%;
+  min-height: 0;
   cursor: crosshair;
 }
 
@@ -409,10 +365,10 @@
   pointer-events: none;
 }
 
-/* Capped so a long table cannot squeeze the chart out of the dialog. */
+/* The dialog grid owns the height; long results scroll inside this region. */
 .gel-peak-editor-table {
-  min-height: 180px;
-  max-height: 34vh;
+  min-height: 0;
+  max-height: none;
   overflow: auto;
 }
 
@@ -926,21 +882,12 @@ body.theme-night .gel-lane-profile-chart-shell {
   background: transparent;
 }
 
-body.theme-night .gel-lane-profile-chart .lane-profile-frame {
-  fill: var(--gel-chart-surface);
-  stroke: var(--gel-chart-border);
-}
-
 body.theme-night .gel-lane-profile-chart .lane-profile-grid {
   stroke: var(--gel-chart-grid);
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-window {
   fill: var(--gel-chart-selection);
-}
-
-body.theme-night .gel-lane-profile-chart .lane-profile-path-shadow {
-  stroke: var(--gel-path-glow);
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-path {
@@ -1122,11 +1069,6 @@ body.theme-night .gel-lane-table-input:focus {
 }
 
 @media (max-width: 720px) {
-  .gel-report-dialog.app-dialog-surface {
-    --app-dialog-max-height: calc(100% - 24px);
-    --app-dialog-padding: 14px;
-  }
-
   .gel-lane-profile-head {
     flex-direction: column;
   }
@@ -1141,10 +1083,6 @@ body.theme-night .gel-lane-table-input:focus {
 
   .gel-peak-editor-header {
     align-items: flex-start;
-  }
-
-  .gel-peak-editor-chart {
-    height: 340px;
   }
 
   .gel-lane-table-toolbar {

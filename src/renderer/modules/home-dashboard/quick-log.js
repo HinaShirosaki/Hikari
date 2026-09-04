@@ -39,8 +39,10 @@ export function initQuickLogWidget({
     }
   }
 
-  function setQuickLogStatus(message) {
-    quickLogStatus.textContent = String(message || '').trim();
+  function setQuickLogStatus(message, isError = false) {
+    const text = String(message || '').trim();
+    quickLogStatus.textContent = text;
+    quickLogStatus.classList.toggle('is-error', Boolean(isError && text));
   }
 
   function lastSavedSummary() {
@@ -122,7 +124,7 @@ export function initQuickLogWidget({
   function onQuickLogSave() {
     const value = quickLogInput.value.trim();
     if (!value) {
-      setQuickLogStatus('Add a bench note before saving it.');
+      setQuickLogStatus('Add a bench note before saving it.', true);
       return;
     }
     const entry = commitQuickLog(value);
@@ -136,7 +138,7 @@ export function initQuickLogWidget({
   function onQuickLogSendToAgent() {
     const value = quickLogInput.value.trim();
     if (!value) {
-      setQuickLogStatus('Add a bench note before sending it to the Assistant.');
+      setQuickLogStatus('Add a bench note before sending it to the Assistant.', true);
       return;
     }
     const entry = commitQuickLog(value);
@@ -146,7 +148,7 @@ export function initQuickLogWidget({
     const sent = onSendQuickLogToAgent(value);
     render();
     if (sent === false) {
-      setQuickLogStatus('Logged locally. Assistant handoff unavailable.');
+      setQuickLogStatus('Logged locally. Assistant handoff unavailable.', true);
       showTransientNotice('Logged locally. Assistant handoff unavailable.', { type: 'error' });
       return;
     }

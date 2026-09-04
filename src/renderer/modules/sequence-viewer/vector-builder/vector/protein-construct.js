@@ -48,6 +48,9 @@ function createVectorProteinConstruct({
     }
 
     const label = cleanText(constructName, 140) || 'Protein construct';
+    const proteinInputAaLength = (Array.isArray(dnaConstruct?.parts) ? dnaConstruct.parts : [])
+      .filter((part) => cleanText(part?.kind, 40).toLowerCase() === 'custom')
+      .reduce((longest, part) => Math.max(longest, Math.max(0, Number(part?.proteinLength) || 0)), 0);
     const backboneName = resolveVectorBackboneName(record, record.name || 'Vector');
     try {
       await onApplySequenceEdit({ mode, range: { start, end }, sequence: insertSequence });
@@ -99,7 +102,8 @@ function createVectorProteinConstruct({
         generatedName,
         sourceKind: 'vector_builder',
         backboneName,
-        constructName: label
+        constructName: label,
+        proteinInputAaLength
       };
     }
 

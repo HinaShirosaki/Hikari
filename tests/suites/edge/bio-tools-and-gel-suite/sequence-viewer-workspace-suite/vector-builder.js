@@ -832,6 +832,41 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   assert.equal(builderWorkspace.hidden, false);
   assert.equal(insertBtn.hidden, false);
   assert.equal(assembleBtn.hidden, true);
+
+  const cloningDesignBtn = document.getElementById('sequence-viewer-vector-builder-cloning-design-btn');
+  assert.equal(cloningDesignBtn.hidden, false);
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-add-protein-btn'), 'click');
+  const addProteinOverlay = document.getElementById('sequence-viewer-protein-builder-add-protein-overlay');
+  const addProteinForm = document.getElementById('sequence-viewer-protein-builder-add-protein-form');
+  const addProteinName = document.getElementById('sequence-viewer-protein-builder-add-protein-name');
+  const addProteinSequence = document.getElementById('sequence-viewer-protein-builder-add-protein-sequence');
+  addProteinName.value = 'Long custom protein';
+  addProteinSequence.value = 'AAAAAAAAAAAAAAAAAAAAA';
+  trigger(addProteinForm, 'input');
+
+  assert.equal(addProteinOverlay.hidden, false);
+  assert.match(document.getElementById('sequence-viewer-protein-builder-add-protein-status').textContent, /21 aa/);
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-add-protein-confirm-btn').disabled, false);
+
+  trigger(addProteinForm, 'submit', { preventDefault() {} });
+  assert.equal(addProteinOverlay.hidden, true);
+  assert.match(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML, /Long custom protein/);
+
+  const codonUsage = document.getElementById('sequence-viewer-protein-builder-codon-usage');
+  assert.match(codonUsage.innerHTML, /E\. coli \(K-12\)/);
+  assert.match(codonUsage.innerHTML, /Yeast \(S\. cerevisiae\)/);
+  codonUsage.value = 'yeast';
+  trigger(codonUsage, 'change');
+  trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
+  assert.match(document.getElementById('sequence-viewer-protein-builder-dna-sequence').innerHTML, /sequence-viewer-protein-builder-block-custom/);
+
+  trigger(insertBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+  assert.equal(cloningDesignBtn.hidden, true);
+  trigger(document.getElementById('sequence-viewer-vector-builder-back-btn'), 'click', { preventDefault() {} });
+  assert.equal(document.getElementById('sequence-viewer-cloning-design-btn').hidden, true);
 });
 
   }

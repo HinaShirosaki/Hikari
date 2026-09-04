@@ -489,6 +489,9 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
       notebookAppend: appendWorkflow
     }
   };
+  // Shared graph cache so both modules see one review-status instance, the way
+  // the real ESM loader does; the in-flight append state lives in that module.
+  const graphCache = new Map();
   const renderingMetaModule = loadEsmStyleModule(path.join(
     __dirname,
     'src',
@@ -496,7 +499,7 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     'modules',
     'agent-chat',
     'rendering-meta.js'
-  ));
+  ), {}, [], graphCache);
   const html = renderingMetaModule.renderAssistantMeta(message.meta, message.id, {
     safeText: shared.safeText,
     notebookDraftAdapter: {}
@@ -517,7 +520,7 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
     'modules',
     'agent-chat',
     'history-actions.js'
-  ));
+  ), {}, [], graphCache);
   const history = historyModule.createHistoryActionController({
     state,
     input: {},
@@ -576,6 +579,71 @@ test('agent-chat rail renders and applies notebook append proposals inline', asy
   assert.equal(state.agentChat.messages[0].meta.notebookAppend.save.status, 'approved');
   assert.match(rerenderedHtml, /Appended to page/);
   assert.doesNotMatch(rerenderedHtml, /Append to Page/);
+});
+
+test('agent-chat restores notebook append actions when the save throws', async () => {
+  const appendWorkflow = {
+    status: 'proposal_ready',
+    proposal: {
+      proposal_id: 'proposal-throw-1',
+      notebook_entry_id: 'entry-throw-1',
+      section_title: 'Buffer preparation',
+      content_markdown: 'Prepare 1 L of 1x PBS from powder.',
+      sources: []
+    },
+    save: { mode: 'confirm_before_append', applied: false, status: 'pending' }
+  };
+  const message = {
+    id: 'message-throw-1',
+    role: 'assistant',
+    text: 'Notebook enrichment is ready for review.',
+    meta: { notebook_append: appendWorkflow, notebookAppend: appendWorkflow }
+  };
+  const graphCache = new Map();
+  const renderingMetaModule = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering-meta.js'
+  ), {}, [], graphCache);
+  const historyModule = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'agent-chat', 'history-actions.js'
+  ), {}, [], graphCache);
+
+  const state = { agentChat: { messages: [message] }, notebookEntries: [] };
+  const statuses = [];
+  let rerenderedHtml = '';
+  const history = historyModule.createHistoryActionController({
+    state,
+    input: {},
+    persist: () => {},
+    setStatus: (text) => statuses.push(text),
+    syncComposerHeight: () => {},
+    renderContextSummary: () => {},
+    renderHistoryView: () => {
+      rerenderedHtml = renderingMetaModule.renderAssistantMeta(message.meta, message.id, {
+        safeText: shared.safeText,
+        notebookDraftAdapter: {},
+        notebookEntries: state.notebookEntries
+      });
+    },
+    answerAssistantQuestion: async () => {},
+    notebookDraftAdapter: {},
+    onOpenNotebookEntry: () => {},
+    onAppendNotebookEntry: async () => {
+      throw new Error('Notebook storage is offline.');
+    }
+  });
+  const result = await history.onHistoryClick({
+    target: {
+      dataset: { agentAppendNotebook: 'message-throw-1' },
+      closest(selector) {
+        return selector === '[data-agent-append-notebook]' ? this : null;
+      }
+    }
+  });
+  assert.equal(result, undefined);
+  assert.equal(statuses.at(-1), 'Notebook storage is offline.');
+  assert.equal(message.meta.notebookAppend.save.status, 'pending');
+  assert.match(rerenderedHtml, /Append to Page/);
+  assert.doesNotMatch(rerenderedHtml, /Appending to page…/);
 });
 
 test('agent-chat reconciles a persisted pending notebook proposal with the applied notebook record', () => {

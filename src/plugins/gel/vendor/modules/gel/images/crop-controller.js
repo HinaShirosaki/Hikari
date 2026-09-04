@@ -253,7 +253,6 @@ export function createCropController({ runtime, elements, deps }) {
     runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
     deps.renderOverrideStatus();
-    deps.renderReport();
   }
 
   function onStartCrop() {

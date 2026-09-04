@@ -89,7 +89,7 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
       statusNode.textContent = message;
-      statusNode.style.color = isError ? 'var(--theme-danger)' : '';
+      statusNode.classList.toggle('is-error', Boolean(isError));
     });
   }
 

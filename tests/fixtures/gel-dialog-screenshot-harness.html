@@ -16,7 +16,7 @@
   <p id="harness-status" role="status">Loading dialog…</p>
   <script type="module">
     const params = new URLSearchParams(window.location.search);
-    const dialogId = params.get('dialog') || 'gel-report-overlay';
+    const dialogId = params.get('dialog') || 'gel-cell-table-overlay';
     const response = await fetch(`../../src/plugins/gel/vendor/gel-view.html?v=dialog-screenshot-1`);
     const template = document.createElement('template');
     template.innerHTML = await response.text();

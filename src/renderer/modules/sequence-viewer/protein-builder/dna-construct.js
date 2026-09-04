@@ -11,7 +11,7 @@ export function buildDnaPartFromProtein(part, options = {}) {
   }
 
   const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
-  if (sourceDnaSequence.length) {
+  if (sourceDnaSequence.length && part?.codonOptimize !== true) {
     const alignedSequence = alignDnaToProteinSequence(sourceDnaSequence, proteinSequence);
     return {
       ok: true,
@@ -19,11 +19,7 @@ export function buildDnaPartFromProtein(part, options = {}) {
       dnaSequence: alignedSequence,
       templateSequence: alignedSequence,
       templateName: cleanText(part?.sourceVectorName, 160),
-      templateHostSequence: normalizeSequenceText(part?.sourceVectorSequence || ''),
-      reusedSource: cleanText(part?.sourceDnaNote, 240)
-        || (cleanText(part?.kind, 40).toLowerCase() === 'feature'
-          ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
-          : '')
+      templateHostSequence: normalizeSequenceText(part?.sourceVectorSequence || '')
     };
   }
 
@@ -34,13 +30,14 @@ export function buildDnaPartFromProtein(part, options = {}) {
         ok: true,
         label: cleanText(part?.label, 160) || 'POI',
         dnaSequence: poiSource.dnaSequence,
-        templateSequence: poiSource.dnaSequence,
-        reusedSource: poiSource.note
+        templateSequence: poiSource.dnaSequence
       };
     }
   }
 
-  const reverseTranslated = reverseTranslateProteinSequence(proteinSequence);
+  const reverseTranslated = reverseTranslateProteinSequence(proteinSequence, {
+    organism: options?.organism
+  });
   if (!reverseTranslated?.ok || !reverseTranslated?.dna) {
     return {
       ok: false,
@@ -52,7 +49,8 @@ export function buildDnaPartFromProtein(part, options = {}) {
   return {
     ok: true,
     label: cleanText(part?.label, 160) || 'Block',
-    dnaSequence: normalizeSequenceText(reverseTranslated.dna)
+    dnaSequence: normalizeSequenceText(reverseTranslated.dna),
+    codonOptimized: part?.codonOptimize === true
   };
 }
 
@@ -60,7 +58,7 @@ export function buildDnaPartFromProtein(part, options = {}) {
 // residue or two. Rebuilding the whole coding sequence for that would throw away
 // the part templates the primers are designed against, so only the residues that
 // actually changed get new codons.
-function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein) {
+function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein, options = {}) {
   const dna = normalizeSequenceText(dnaSequence);
   const chain = normalizeProteinBuildSequence(chainProtein);
   const target = normalizeProteinBuildSequence(targetProtein);
@@ -70,7 +68,7 @@ function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein) {
   if (dna.length !== chain.length * 3) {
     // The coding sequence does not line up codon-for-codon with the chain, so
     // there is nothing safe to patch: build the edited protein outright.
-    const rebuilt = reverseTranslateProteinSequence(target);
+    const rebuilt = reverseTranslateProteinSequence(target, { organism: options?.organism });
     return rebuilt?.ok && rebuilt?.dna
       ? { sequence: normalizeSequenceText(rebuilt.dna), note: 'Hand-edited assembled sequence was reverse translated in full.' }
       : { sequence: dna, note: '' };
@@ -82,8 +80,8 @@ function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein) {
   if (chainAt >= 0 && chain.length) {
     const lead = target.slice(0, chainAt);
     const tail = target.slice(chainAt + chain.length);
-    const leadDna = lead.length ? reverseTranslateProteinSequence(lead) : { ok: true, dna: '' };
-    const tailDna = tail.length ? reverseTranslateProteinSequence(tail) : { ok: true, dna: '' };
+    const leadDna = lead.length ? reverseTranslateProteinSequence(lead, { organism: options?.organism }) : { ok: true, dna: '' };
+    const tailDna = tail.length ? reverseTranslateProteinSequence(tail, { organism: options?.organism }) : { ok: true, dna: '' };
     if (leadDna?.ok && tailDna?.ok) {
       const added = [
         lead.length ? `${lead} at the N-terminus` : '',
@@ -110,7 +108,9 @@ function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein) {
   }
 
   const changed = target.slice(prefix, target.length - suffix);
-  const replacement = changed.length ? reverseTranslateProteinSequence(changed) : { ok: true, dna: '' };
+  const replacement = changed.length
+    ? reverseTranslateProteinSequence(changed, { organism: options?.organism })
+    : { ok: true, dna: '' };
   if (!replacement?.ok && changed.length) {
     return { sequence: dna, note: '' };
   }
@@ -125,6 +125,7 @@ function reconcileDnaToProtein(dnaSequence, chainProtein, targetProtein) {
 
 export function buildDnaConstruct(payload = {}, options = {}) {
   const proteinConstruct = buildConstruct(payload);
+  const organism = cleanText(payload?.codonUsageProfile || options?.organism, 80);
   if (!proteinConstruct.ok) {
     return {
       ok: false,
@@ -132,31 +133,31 @@ export function buildDnaConstruct(payload = {}, options = {}) {
       sequence: '',
       warnings: Array.isArray(proteinConstruct?.warnings) ? proteinConstruct.warnings : [],
       errors: Array.isArray(proteinConstruct?.errors) ? proteinConstruct.errors : ['Unable to build the protein construct first.'],
-      parts: [],
-      notes: []
+      parts: []
     };
   }
 
   const parts = [];
   const warnings = Array.isArray(proteinConstruct?.warnings) ? [...proteinConstruct.warnings] : [];
   const errors = [];
-  const notes = [];
 
   (Array.isArray(proteinConstruct?.parts) ? proteinConstruct.parts : []).forEach((part) => {
-    const dnaPart = buildDnaPartFromProtein(part, options);
+    const dnaPart = buildDnaPartFromProtein(part, { ...options, organism });
     if (!dnaPart?.ok || !dnaPart?.dnaSequence) {
       errors.push(dnaPart?.error || `Unable to generate DNA for ${cleanText(part?.label, 160) || 'block'}.`);
       return;
     }
-    if (dnaPart.reusedSource) {
-      notes.push(dnaPart.reusedSource);
-    }
     parts.push({
       label: dnaPart.label,
+      type: cleanText(part?.type, 40) || 'custom',
+      kind: cleanText(part?.kind, 40) || 'custom',
+      paletteSlot: Math.max(1, Number(part?.paletteSlot) || parts.length + 1),
+      proteinLength: String(part?.sequence || '').replace(/\*/g, '').length,
       dnaSequence: dnaPart.dnaSequence,
       templateSequence: normalizeSequenceText(dnaPart.templateSequence || ''),
       templateName: cleanText(dnaPart.templateName, 160),
       templateHostSequence: normalizeSequenceText(dnaPart.templateHostSequence || ''),
+      codonOptimized: dnaPart.codonOptimized === true,
       length: dnaPart.dnaSequence.length
     });
   });
@@ -165,11 +166,9 @@ export function buildDnaConstruct(payload = {}, options = {}) {
   const reconciled = reconcileDnaToProtein(
     chainDna,
     proteinConstruct.chainSequence || proteinConstruct.sequence,
-    proteinConstruct.sequence
+    proteinConstruct.sequence,
+    { organism }
   );
-  if (reconciled.note) {
-    notes.push(reconciled.note);
-  }
   const sequence = reconciled.sequence;
   return {
     ok: Boolean(sequence.length) && errors.length === 0,
@@ -177,7 +176,6 @@ export function buildDnaConstruct(payload = {}, options = {}) {
     sequence,
     warnings,
     errors,
-    parts,
-    notes
+    parts
   };
 }

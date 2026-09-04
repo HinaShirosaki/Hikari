@@ -67,6 +67,29 @@ function getNotebookAppend(meta = {}) {
   return source;
 }
 
+// Applying is in-flight UI only. A status persisted into message meta survives a
+// reload or a crash mid-append and restores a card with neither an Append nor a
+// Reject button, so the in-flight set lives here and is never written to state.
+const appendsInFlight = new Set();
+
+function notebookAppendKey(append) {
+  return trimText(append?.proposal?.proposal_id || append?.proposal?.proposalId, 200)
+    || trimText(append?.proposal?.content_markdown, 500);
+}
+
+function setNotebookAppendInFlight(append, inFlight = true) {
+  const key = notebookAppendKey(append);
+  if (!key) {
+    return false;
+  }
+  if (inFlight) {
+    appendsInFlight.add(key);
+  } else {
+    appendsInFlight.delete(key);
+  }
+  return true;
+}
+
 function resolveNotebookAppendReviewState(meta = {}, notebookEntries = []) {
   const append = getNotebookAppend(meta);
   if (!append) {
@@ -90,10 +113,16 @@ function resolveNotebookAppendReviewState(meta = {}, notebookEntries = []) {
     return asArray(entry?.agentAppendProposalIds)
       .some((id) => trimText(id, 200) === proposalId);
   }));
+  if (appliedInNotebook) {
+    return { append, applied: true, status: 'approved' };
+  }
+  if (appendsInFlight.has(notebookAppendKey(append))) {
+    return { append, applied: false, status: 'applying' };
+  }
   return {
     append,
-    applied: appliedInNotebook,
-    status: appliedInNotebook ? 'approved' : (savedStatus || 'pending')
+    applied: false,
+    status: savedStatus && savedStatus !== 'applying' ? savedStatus : 'pending'
   };
 }
 
@@ -133,5 +162,6 @@ export {
   markNotebookAppendReview,
   markProtocolReview,
   markSequenceEditReview,
-  resolveNotebookAppendReviewState
+  resolveNotebookAppendReviewState,
+  setNotebookAppendInFlight
 };

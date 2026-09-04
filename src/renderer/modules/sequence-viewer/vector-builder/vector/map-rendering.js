@@ -8,6 +8,7 @@ import {
   getMapKind,
   resolveBaseFromPoint
 } from '../sequence-map.js';
+import { PROTEIN_DIRECT_CLONING_MAX_AA } from '../../protein-builder/constants.js';
 
 // Drawing the vector map and the paired sequence pane, plus the ring-drag
 // selection those two views share.
@@ -116,7 +117,10 @@ function createVectorMapRendering({
       elements.vectorBuilderProteinBuilderBtn.disabled = !hasRecord;
     }
     if (elements.vectorBuilderCloningDesignBtn) {
-      elements.vectorBuilderCloningDesignBtn.disabled = !hasRecord;
+      const hideForLongProtein = Math.max(0, Number(state.sequenceEditDesignSource?.proteinInputAaLength) || 0)
+        > PROTEIN_DIRECT_CLONING_MAX_AA;
+      elements.vectorBuilderCloningDesignBtn.hidden = hideForLongProtein;
+      elements.vectorBuilderCloningDesignBtn.disabled = !hasRecord || hideForLongProtein;
     }
   }
 

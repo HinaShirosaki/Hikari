@@ -123,6 +123,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
     if (elements.assayCsvStatus) {
       elements.assayCsvStatus.textContent = message || '';
+      elements.assayCsvStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
 
@@ -132,6 +133,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
     if (elements.assayLayoutStatus) {
       elements.assayLayoutStatus.textContent = message || '';
+      elements.assayLayoutStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
 
@@ -141,6 +143,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
     if (elements.assayResultStatus) {
       elements.assayResultStatus.textContent = message || '';
+      elements.assayResultStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
 

@@ -164,8 +164,6 @@ body.theme-night {
 .left-rail-template__rail .agent-session-card {
   display: grid !important;
   min-width: 0 !important;
-  width: 100% !important;
-  max-width: 100% !important;
   min-height: var(--left-rail-item-min-height, 36px) !important;
   padding-top: var(--left-rail-item-padding-block, 8px) !important;
   padding-bottom: var(--left-rail-item-padding-block, 8px) !important;

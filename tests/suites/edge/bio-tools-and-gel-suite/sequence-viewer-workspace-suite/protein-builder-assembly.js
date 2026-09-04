@@ -13,7 +13,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-vector-builder-btn',
     'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
-    'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
     'sequence-viewer-protein-builder-build-dna-btn',

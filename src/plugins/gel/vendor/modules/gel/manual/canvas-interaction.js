@@ -75,7 +75,6 @@ function createManualCanvasInteraction({
     runtime.suppressNextLaneVertexClick = true;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex selected.`);
     event.preventDefault?.();
   }
@@ -104,7 +103,6 @@ function createManualCanvasInteraction({
     updateLaneVertexFromPoint(point, runtime.laneVertexDrag);
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.renderReport();
     event.preventDefault?.();
   }
 
@@ -135,7 +133,6 @@ function createManualCanvasInteraction({
     runtime.laneVertexDrag = null;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
     deps.onRunAnalysis();
     event.preventDefault?.();
@@ -177,7 +174,6 @@ function createManualCanvasInteraction({
       }
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.renderReport();
       deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
       deps.onRunAnalysis();
       return;

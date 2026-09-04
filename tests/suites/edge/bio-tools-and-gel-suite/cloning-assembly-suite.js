@@ -565,6 +565,15 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         textContent: '',
         innerHTML: '',
         style: {},
+        classList: (() => {
+          const tokens = new Set();
+          return {
+            add: (token) => tokens.add(token),
+            remove: (token) => tokens.delete(token),
+            contains: (token) => tokens.has(token),
+            toggle: (token, on) => (on ? tokens.add(token) : tokens.delete(token))
+          };
+        })(),
         listeners: {},
         addEventListener(type, listener) {
           this.listeners[type] = listener;
@@ -647,6 +656,15 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         textContent: '',
         innerHTML: '',
         style: {},
+        classList: (() => {
+          const tokens = new Set();
+          return {
+            add: (token) => tokens.add(token),
+            remove: (token) => tokens.delete(token),
+            contains: (token) => tokens.has(token),
+            toggle: (token, on) => (on ? tokens.add(token) : tokens.delete(token))
+          };
+        })(),
         listeners: {},
         addEventListener(type, listener) {
           this.listeners[type] = listener;

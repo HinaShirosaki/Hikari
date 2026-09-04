@@ -71,7 +71,7 @@ function createVectorFeatureReplace({
       return;
     }
     elements.vectorBuilderFeatureReplaceStatus.textContent = String(message || '');
-    elements.vectorBuilderFeatureReplaceStatus.style.color = isError ? 'var(--theme-danger)' : '';
+    elements.vectorBuilderFeatureReplaceStatus.classList.toggle('is-error', Boolean(isError));
   }
 
   function describeFeatureReplaceTarget(record) {

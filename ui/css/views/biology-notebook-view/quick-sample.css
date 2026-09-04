@@ -301,10 +301,6 @@
   stroke-linejoin: round;
 }
 
-.biology-notebook-quick-sample-status.is-error {
-  color: var(--theme-danger);
-}
-
 @media (max-width: 780px) {
   .biology-notebook-quick-sample-layout {
     grid-template-columns: minmax(0, 1fr);

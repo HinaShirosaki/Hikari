@@ -1238,6 +1238,10 @@ button:disabled {
   font-size: 0.9rem;
 }
 
+.small-note.is-error {
+  color: var(--theme-danger);
+}
+
 
 
 

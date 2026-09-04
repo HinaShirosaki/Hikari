@@ -1,7 +1,5 @@
-// The protein builder paints its status line on every render pass, so setting a
-// status and re-applying it are deliberately separate calls: only the set path
-// may raise an app notice. Without that split a failed assembly would re-toast
-// on every later render.
+// Protein Builder feedback uses the app notice instead of adding persistent
+// messages beneath the workspace title.
 import assert from 'node:assert/strict';
 
 let notices = 0;
@@ -25,33 +23,56 @@ const { createProteinBuilderContext } = await import(
   '../src/renderer/modules/sequence-viewer/protein-builder/controller-context.js'
 );
 
-const statusEl = { textContent: '', hidden: true, style: {} };
-const searchEl = { textContent: '', style: {} };
+const mockClassList = () => {
+  const tokens = new Set();
+  return { toggle: (token, on) => (on ? tokens.add(token) : tokens.delete(token)), has: (token) => tokens.has(token) };
+};
+const searchEl = { textContent: '', style: {}, classList: mockClassList() };
 const ctx = createProteinBuilderContext({
   elements: {
-    proteinBuilderStatus: statusEl,
     proteinBuilderFeatureSearchStatus: searchEl
   }
 });
 
-// A failure notifies once and stays on the inline line.
+// Both failures and confirmations notify without needing an inline status node.
 ctx.setBuilderStatus('Unable to assemble the plasmid.', true);
 assert.equal(notices, 1, 'an error status raises one notice');
-assert.equal(statusEl.textContent, 'Unable to assemble the plasmid.');
-
-// The notice fades, then a render pass re-paints the same status.
-toast.hidden = true;
-ctx.applyBuilderStatus();
-assert.equal(notices, 1, 're-applying a stored status must not re-notify');
-
 ctx.setBuilderStatus('Opened construct review.');
-assert.equal(notices, 1, 'a success status stays inline only');
+assert.equal(notices, 2, 'a success status raises one notice');
+ctx.setBuilderStatus('');
+assert.equal(notices, 2, 'clearing status does not raise an empty notice');
 
 ctx.setFeatureSearchStatus('Failed to search stored features.', true);
-assert.equal(notices, 2, 'a feature-search failure raises a notice');
+assert.equal(notices, 3, 'a feature-search failure raises a notice');
 
 toast.hidden = true;
 ctx.applyFeatureSearchStatus('Failed to search stored features.', true);
-assert.equal(notices, 2, 'the render-time feature-search line must not notify');
+assert.equal(notices, 3, 'the render-time feature-search line must not notify');
+
+// The alignment controller has the same split: render() re-asserts the stored
+// status every pass, so painting it must never raise a notice.
+const { createSequenceViewerAlignmentController } = await import(
+  '../src/renderer/modules/sequence-viewer/alignment-controller.js'
+);
+
+const alignmentStatusEl = { textContent: '', style: {}, classList: mockClassList() };
+const alignment = createSequenceViewerAlignmentController({
+  elements: { alignmentStatus: alignmentStatusEl }
+});
+
+await alignment.runSequencingAlignment();
+assert.equal(
+  alignmentStatusEl.textContent,
+  'Load both a reference and a query before running the alignment.'
+);
+assert.equal(alignmentStatusEl.classList.has('is-error'), true, 'a blocked run paints the line red');
+
+// The notice fades, then render passes re-paint the same status.
+const noticesBeforeRender = notices;
+toast.hidden = true;
+alignment.render();
+alignment.render();
+assert.equal(notices, noticesBeforeRender, 'rendering a stored alignment failure must not re-notify');
+assert.equal(alignmentStatusEl.classList.has('is-error'), true, 'the error colour survives a render pass');
 
 console.log('status notice mirror selfcheck OK');

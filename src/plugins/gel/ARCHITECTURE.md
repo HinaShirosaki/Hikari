@@ -8,7 +8,7 @@ Start in `gel/index.js`, but treat it as wiring rather than logic. The subsystem
 
 ### The `runtime` bag
 
-`index.js` creates one mutable `runtime` object (the current image, viewer mode, crop state, `manualOverrides`, the latest `currentReport`, lane-profile selection, persistence callbacks, etc.) and passes the same reference to every controller. Controllers read and mutate shared state through `runtime` instead of holding their own copies, and they call into each other through injected `deps` callbacks (`renderCanvas`, `renderReport`, `renderLaneTable`, `setStatus`, `onRunAnalysis`, ...). This is why the controllers can stay in separate files without a formal store.
+`index.js` creates one mutable `runtime` object (the current image, viewer mode, crop state, `manualOverrides`, the latest `currentReport`, lane-profile selection, persistence callbacks, etc.) and passes the same reference to every controller. Controllers read and mutate shared state through `runtime` instead of holding their own copies, and they call into each other through injected `deps` callbacks (`renderCanvas`, `renderLaneTable`, `setStatus`, `onRunAnalysis`, ...). This is why the controllers can stay in separate files without a formal store.
 
 ### Controllers (stateful, DOM-facing)
 
@@ -18,8 +18,8 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `images/crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
 - `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
 - `rendering/lane-table.js`: the editable lane/sample table beneath the viewer.
-- `rendering/index.js`: canvas drawing, the analysis report, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
-- Dialogs: the analysis report, the peak editor, and the per-cell band intensity report each live in an overlay opened from **Gel Tools -> Analysis**, so none of them takes permanent workspace height. Their triggers disable when the underlying data is missing, and closing follows the same open/close/overlay-click/Escape shape.
+- `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
+- Dialogs: the peak editor and per-cell band intensity view each live in an overlay opened from **Gel Tools -> Analysis**, so neither takes permanent workspace height. Their triggers disable when the underlying data is missing, and closing follows the same open/close/overlay-click/Escape shape.
 - `history.js`: the frame's own undo/redo stack over `manualOverrides`. `commit()` runs after every render and is a no-op unless the overrides actually moved, so no call site has to decide whether an interaction was an edit. A changed `runtime.imageRevision` (load, crop, rotate) drops the stack rather than replaying coordinates onto different pixels.
 - `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
 
@@ -32,7 +32,7 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `shared.js`: math helpers plus the manual-override model (`createEmptyManualOverrides`, lane-vertex and lane-band-window normalization/geometry helpers).
 - `export.js`: `createBandsCsv` and `downloadTextFile`.
 - `manual/manual-ui.js`: small presentational helpers for the viewer toolbar and step classes.
-- `dom.js`, `constants.js`, `rendering/presentation.js`: element lookups and tiny constants.
+- `dom.js`, `constants.js`: element lookups and tiny constants.
 
 ### Guided manual segmentation workflow
 

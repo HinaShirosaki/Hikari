@@ -41,6 +41,7 @@ export function createResultImportController({
     }
     if (assayResultImportStatus) {
       assayResultImportStatus.textContent = message || '';
+      assayResultImportStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
 

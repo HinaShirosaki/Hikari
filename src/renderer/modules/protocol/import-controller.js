@@ -77,13 +77,14 @@ export function createProtocolImportController({
     return readTextFile(file);
   }
 
-  function setProtocolJsonImportStatus(message) {
+  function setProtocolJsonImportStatus(message, isError = false) {
     if (!ui.protocolJsonImportStatus) {
       return;
     }
     const text = String(message || '').trim();
     ui.protocolJsonImportStatus.textContent = text;
     ui.protocolJsonImportStatus.hidden = !text;
+    ui.protocolJsonImportStatus.classList.toggle('is-error', Boolean(isError && text));
   }
 
   function resetProtocolJsonImportUi() {
@@ -153,20 +154,20 @@ export function createProtocolImportController({
     try {
       rawInput = await readProtocolJsonImportInput();
     } catch (error) {
-      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'));
+      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'), true);
       showTransientNotice(String(error?.message || error || 'Failed to read JSON input.'), { type: 'error' });
       return;
     }
 
     if (!String(rawInput || '').trim()) {
-      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.');
+      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.', true);
       showTransientNotice('Paste protocol JSON or choose a JSON file first.', { type: 'error' });
       return;
     }
 
     const result = importProtocolsFromJson(rawInput, { copySuffixLabel: 'Imported Copy' });
     if (!result.ok) {
-      setProtocolJsonImportStatus(result.error || 'Failed to import protocol JSON.');
+      setProtocolJsonImportStatus(result.error || 'Failed to import protocol JSON.', true);
       showTransientNotice(result.error || 'Failed to import protocol JSON.', { type: 'error' });
       return;
     }

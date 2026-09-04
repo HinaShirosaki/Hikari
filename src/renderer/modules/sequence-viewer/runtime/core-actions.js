@@ -68,7 +68,7 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
       return;
     }
     elements.vectorBuilderStatusNote.textContent = text;
-    elements.vectorBuilderStatusNote.style.color = isError ? 'var(--theme-danger)' : '';
+    elements.vectorBuilderStatusNote.classList.toggle('is-error', Boolean(isError));
   }
 
   function updateMessages() {

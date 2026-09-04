@@ -254,7 +254,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       elements.cloningDesignStatus.textContent = hasSource
         ? `${formatStrategyLabel(designState.strategy)} ready.`
         : 'Edit the active sequence to enable cloning design.';
-      elements.cloningDesignStatus.style.color = hasSource ? '' : 'var(--theme-danger)';
+      elements.cloningDesignStatus.classList.toggle('is-error', !hasSource);
     }
   }
 

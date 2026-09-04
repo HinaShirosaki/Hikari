@@ -20,7 +20,7 @@ export function bindStructureButtons(ctx) {
   inventorySections.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
     button.addEventListener('click', () => {
       pasteInventoryStructure(button).catch(() => {
-        setStructureStatus('Cannot read a chemical structure from the clipboard yet.');
+        setStructureStatus('Cannot read a chemical structure from the clipboard yet.', true);
         showTransientNotice('Cannot read a chemical structure from the clipboard yet.', { type: 'error' });
       });
     });

@@ -147,7 +147,6 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
       renderEnhancementValues() {},
       renderManualProgress() {},
       renderOverrideStatus() {},
-      renderReport() {},
       setCurrentImage(image) {
         runtime.currentImage = image;
         runtime.imageRevision += 1;
@@ -192,66 +191,42 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
   assert.match(statuses.at(-1), /older record has no stored image/);
 });
 
-test('[EDGE] gel-analysis report opens in an overlapping window only when report data exists', () => {
-  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'));
-  const runtime = {
-    currentReport: null,
-    reportDialogOpen: false
-  };
-  const elements = {
-    gelOpenReportBtn: new MockElement('gel-open-report-btn'),
-    gelReportOverlay: new MockElement('gel-report-overlay'),
-    gelReportCloseBtn: new MockElement('gel-report-close-btn'),
-    gelReportSummary: new MockElement('gel-report-summary')
-  };
-  let closeFocused = 0;
-  let openerFocused = 0;
-  elements.gelReportCloseBtn.focus = () => {
-    closeFocused += 1;
-  };
-  elements.gelOpenReportBtn.focus = () => {
-    openerFocused += 1;
-  };
-  const controller = renderingModule.createRenderingController({
-    runtime,
-    elements,
-    safeText: (value) => String(value),
-    deps: {}
-  });
+test('[EDGE] gel-analysis omits the obsolete summary report controls', () => {
+  const markup = fs.readFileSync(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'gel-view.html'),
+    'utf8'
+  );
+  assert.doesNotMatch(markup, /id="gel-open-report-btn"/);
+  assert.doesNotMatch(markup, /id="gel-report-overlay"/);
+  assert.doesNotMatch(markup, />Analysis Report</);
+});
 
-  controller.renderReport();
-  assert.equal(elements.gelOpenReportBtn.disabled, true);
-  assert.equal(elements.gelReportOverlay.hidden, true);
+test('[EDGE] gel-analysis lane profile omits its outer frame and glow stroke', () => {
+  const source = fs.readFileSync(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'index.js'),
+    'utf8'
+  );
+  assert.doesNotMatch(source, /lane-profile-frame/);
+  assert.doesNotMatch(source, /lane-profile-path-shadow/);
+  assert.match(source, /class="lane-profile-grid"/);
+  assert.match(source, /class="lane-profile-path"/);
+});
 
-  runtime.currentReport = {
-    analysisType: 'sds-page',
-    lanes: [],
-    bandGroups: [],
-    warnings: [],
-    preprocessing: {},
-    confidence: {}
-  };
-  controller.renderReport();
-  assert.equal(elements.gelOpenReportBtn.disabled, false);
-  assert.equal(elements.gelReportOverlay.hidden, true);
-
-  controller.onReportOpen();
-  assert.equal(elements.gelReportOverlay.hidden, false);
-  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'true');
-  assert.equal(closeFocused, 1);
-  assert.match(elements.gelReportSummary.innerHTML, /SDS-PAGE/);
-
-  let escapePrevented = false;
-  controller.onReportKeyDown({
-    key: 'Escape',
-    preventDefault() {
-      escapePrevented = true;
-    }
-  });
-  assert.equal(escapePrevented, true);
-  assert.equal(elements.gelReportOverlay.hidden, true);
-  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'false');
-  assert.equal(openerFocused, 1);
+test('[EDGE] gel-analysis peak editor fits its chart and table inside the dialog', () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'css', 'views', 'gel-view.css'),
+    'utf8'
+  );
+  const source = fs.readFileSync(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'peak-editor.js'),
+    'utf8'
+  );
+  assert.match(css, /\.gel-peak-editor-dialog\.app-dialog-surface\s*\{[^}]*height:\s*min\(var\(--app-dialog-max-height\),\s*var\(--app-dialog-available-height\)\)/s);
+  assert.match(css, /\.gel-peak-editor-dialog\.app-dialog-surface\s*\{[^}]*grid-template-rows:\s*auto auto minmax\(0, 2fr\) minmax\(96px, 1fr\)/s);
+  assert.match(css, /\.gel-peak-editor-chart\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0/s);
+  assert.match(css, /\.gel-peak-editor-table\s*\{[^}]*min-height:\s*0;[^}]*max-height:\s*none;[^}]*overflow:\s*auto/s);
+  assert.match(source, /height:\s*'100%'/);
+  assert.doesNotMatch(source, /height:\s*'260px'/);
 });
 
 test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
@@ -281,7 +256,6 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
     deps: {
       renderCanvas() {},
       renderOverrideStatus() {},
-      renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
@@ -931,7 +905,6 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
       onRunAnalysis() {},
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
@@ -1046,7 +1019,6 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
       },
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
@@ -1138,7 +1110,6 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
       onRunAnalysis() {},
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus() {}
     }
   });
@@ -1263,7 +1234,6 @@ test('[EDGE] gel-analysis band intensity report opens as a dialog and closes whe
   const runtime = {
     currentImage: { width: 8, height: 5, gray: new Float32Array(40), imageData: { tag: 'image-data' } },
     cellTableDialogOpen: false,
-    reportDialogOpen: false,
     currentReport: {
       lanes: [
         { laneIndex: 1, targetBand: { snr: 9, correctedIntensity: 120, bandSignalSum: 200, baselineSum: 80, saturationFraction: 0 } },
@@ -1308,13 +1278,11 @@ test('[EDGE] gel-analysis band intensity report opens as a dialog and closes whe
   assert.equal(elements.gelCellTableOverlay.hidden, false);
   assert.equal(elements.gelOpenCellTableBtn.getAttribute('aria-expanded'), 'true');
 
-  // Escape takes this dialog before the report dialog underneath it.
-  runtime.reportDialogOpen = true;
+  // Escape closes the open band-intensity dialog.
   let prevented = false;
-  controller.onReportKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
+  controller.onCellTableKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
   assert.equal(prevented, true);
   assert.equal(runtime.cellTableDialogOpen, false);
-  assert.equal(runtime.reportDialogOpen, true, 'Escape closed both dialogs at once');
   assert.equal(elements.gelCellTableOverlay.hidden, true);
 
   // An open dialog must not survive losing the measurement it reports on.
@@ -1585,7 +1553,6 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
       },
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus: (message) => statuses.push(message)
     }
   });
@@ -1802,7 +1769,6 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
       },
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus() {}
     }
   });
@@ -1878,7 +1844,6 @@ test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () =
       onRunAnalysis() {},
       renderCanvas() {},
       renderLaneTable() {},
-      renderReport() {},
       setStatus() {}
     }
   });

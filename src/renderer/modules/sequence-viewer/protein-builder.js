@@ -1,6 +1,7 @@
 import { installProteinBuilderAssemblyActions } from './protein-builder/assembly-actions.js';
 import { installProteinBuilderAssemblyDialog } from './protein-builder/assembly-dialog.js';
 import { installProteinBuilderAssemblyState } from './protein-builder/assembly-state.js';
+import { installProteinBuilderAddProteinDialog } from './protein-builder/add-protein-dialog.js';
 import { installProteinBuilderBlockRendering } from './protein-builder/block-rendering.js';
 import { createProteinBuilderContext } from './protein-builder/controller-context.js';
 import { installProteinBuilderDnaRendering } from './protein-builder/dna-rendering.js';
@@ -10,6 +11,7 @@ import { installProteinBuilderWorkflowRendering } from './protein-builder/workfl
 
 export function createSequenceViewerProteinBuilderController(config = {}) {
   const ctx = createProteinBuilderContext(config);
+  installProteinBuilderAddProteinDialog(ctx);
   installProteinBuilderDnaRendering(ctx);
   installProteinBuilderAssemblyState(ctx);
   installProteinBuilderAssemblyDialog(ctx);

@@ -375,7 +375,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(service.getUnsavedSources().length, 0);
     });
 
-    test('unsaved changes service saves every dirty editor before approving close', async () => {
+    test('unsaved changes service saves the dirty editors that stay checked', async () => {
       const servicesModule = loadServicesModule();
       const elements = new Map();
       const makeElement = (id = '') => {
@@ -397,11 +397,21 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       ].forEach((id) => elements.set(id, makeElement(id)));
       elements.get('unsaved-changes-overlay').hidden = true;
 
+      const created = [];
       const documentObject = {
         getElementById: (id) => elements.get(id) || null,
-        createElement: () => makeElement(),
+        createElement: (tag) => {
+          const element = makeElement();
+          element.tagName = String(tag || '').toUpperCase();
+          created.push(element);
+          return element;
+        },
         addEventListener() {}
       };
+      const renderedLabels = () => created
+        .filter((element) => element.tagName === 'SPAN')
+        .map((element) => element.textContent);
+      const renderedBoxes = () => created.filter((element) => element.type === 'checkbox');
       const windowObject = {
         addEventListener() {}
       };
@@ -435,10 +445,9 @@ module.exports = function registerModuleServicesSuite(context = {}) {
 
       service.handleCloseRequested();
       assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
-      assert.deepEqual(
-        elements.get('unsaved-changes-list').children.map((item) => item.textContent),
-        ['Sample', 'Protocol']
-      );
+      assert.equal(elements.get('unsaved-changes-list').children.length, 2);
+      assert.deepEqual(renderedLabels(), ['Sample', 'Protocol']);
+      assert.equal(elements.get('unsaved-changes-save-btn').textContent, 'Save 2 & Quit');
 
       elements.get('unsaved-changes-close-btn').click();
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
@@ -452,6 +461,34 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
       assert.deepEqual(responses, ['cancel', 'quit']);
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
+
+      // Unchecked editors stay dirty: the app quits and drops their work.
+      dirty.set('sampleRegistry', true);
+      dirty.set('protocol', true);
+      savedKeys.length = 0;
+      created.length = 0;
+
+      service.handleCloseRequested();
+      const protocolBox = renderedBoxes()[1];
+      protocolBox.checked = false;
+      protocolBox.change();
+      assert.equal(elements.get('unsaved-changes-save-btn').textContent, 'Save & Quit');
+
+      await service.saveAndQuit();
+
+      assert.deepEqual(savedKeys, ['sampleRegistry']);
+      assert.equal(dirty.get('protocol'), true);
+      assert.deepEqual(responses, ['cancel', 'quit', 'quit']);
+
+      // Nothing checked leaves the primary action unavailable.
+      dirty.set('sampleRegistry', true);
+      created.length = 0;
+      service.handleCloseRequested();
+      renderedBoxes().forEach((box) => {
+        box.checked = false;
+        box.change();
+      });
+      assert.equal(elements.get('unsaved-changes-save-btn').disabled, true);
     });
   }
 };

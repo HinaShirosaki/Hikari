@@ -223,7 +223,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return exportPromise;
     }
     if (!runtime.currentReport) {
-      deps.setStatus('No analysis report to export.');
+      deps.setStatus('No analysis results to export.');
       return Promise.resolve(null);
     }
 
@@ -279,7 +279,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.renderOverrideStatus();
     deps.renderManualProgress();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus('');
     runtime.markDraftSaved?.();
   }
@@ -332,7 +331,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.leaveCropMode();
     deps.renderManualProgress();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus('Loading saved gel image...');
 
     const restored = await restoreRecordImage(record);
@@ -353,15 +351,14 @@ export function createRecordsManager({ runtime, elements, deps }) {
       runtime.originalImage = deps.copyNormalizedImage(restored.image);
       deps.leaveCropMode();
       deps.renderCanvas();
-      deps.renderReport();
       deps.setStatus(restored.kind === 'source'
         ? `Loaded saved gel: ${record.name || record.id}.`
         : `Loaded saved gel preview: ${record.name || record.id}. Upload the original image before reanalyzing.`);
     } else if (restored.hadCandidate) {
       const reason = restored.error instanceof Error ? ` ${restored.error.message}` : '';
-      deps.setStatus(`Loaded saved report, but its image could not be restored.${reason}`);
+      deps.setStatus(`Loaded saved analysis, but its image could not be restored.${reason}`);
     } else {
-      deps.setStatus('Loaded saved report. This older record has no stored image; upload the original to restore the viewer.');
+      deps.setStatus('Loaded saved analysis. This older record has no stored image; upload the original to restore the viewer.');
     }
     runtime.markDraftSaved?.();
   }

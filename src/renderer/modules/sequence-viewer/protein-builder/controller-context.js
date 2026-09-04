@@ -1,6 +1,10 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import {
+  CODON_USAGE_PROFILES,
+  REVERSE_TRANSLATE_DEFAULT_ORGANISM
+} from '../calculations/sequence.js';
+import {
   buildProteinArchitectureName,
   buildProteinTargetLabel
 } from '../sequence-naming.js';
@@ -38,9 +42,7 @@ export function createProteinBuilderContext(config = {}) {
     storedBackbones: [],
     selectedBackboneId: '',
     suggestedConstructName: '',
-    constructNameEdited: false,
-    statusMessage: '',
-    statusError: false
+    constructNameEdited: false
   };
 
   const ctx = {
@@ -66,25 +68,27 @@ export function createProteinBuilderContext(config = {}) {
       : null
   };
 
-  // Painting the stored status is separate from setting it: render() re-asserts
-  // the current status on every pass, and only the set path may raise a notice —
-  // otherwise a re-render would re-toast the same failure once the flag faded.
-  ctx.applyBuilderStatus = function applyBuilderStatus() {
-    if (!elements.proteinBuilderStatus) {
+  ctx.getCodonUsageProfile = function getCodonUsageProfile() {
+    const requested = cleanText(elements.proteinBuilderCodonUsageSelect?.value, 80);
+    return CODON_USAGE_PROFILES[requested] ? requested : REVERSE_TRANSLATE_DEFAULT_ORGANISM;
+  };
+
+  ctx.populateCodonUsageProfiles = function populateCodonUsageProfiles() {
+    if (!elements.proteinBuilderCodonUsageSelect) {
       return;
     }
-    elements.proteinBuilderStatus.textContent = state.statusMessage;
-    elements.proteinBuilderStatus.hidden = !state.statusMessage;
-    elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--theme-danger)' : '';
+    const selected = ctx.getCodonUsageProfile();
+    elements.proteinBuilderCodonUsageSelect.innerHTML = Object.entries(CODON_USAGE_PROFILES)
+      .map(([key, profile]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${profile.label}</option>`)
+      .join('');
+    elements.proteinBuilderCodonUsageSelect.value = selected;
   };
 
   ctx.setBuilderStatus = function setBuilderStatus(message, isError = false) {
-    state.statusMessage = String(message || '');
-    state.statusError = isError === true;
-    if (state.statusError && state.statusMessage) {
-      showTransientNotice(state.statusMessage, { type: 'error' });
+    const text = String(message || '').trim();
+    if (text) {
+      showTransientNotice(text, { type: isError === true ? 'error' : 'success' });
     }
-    ctx.applyBuilderStatus();
   };
 
   ctx.applyFeatureSearchStatus = function applyFeatureSearchStatus(message, isError = false) {
@@ -92,7 +96,7 @@ export function createProteinBuilderContext(config = {}) {
       return;
     }
     elements.proteinBuilderFeatureSearchStatus.textContent = String(message || '');
-    elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
+    elements.proteinBuilderFeatureSearchStatus.classList.toggle('is-error', Boolean(isError));
   };
 
   ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
@@ -238,7 +242,8 @@ export function createProteinBuilderContext(config = {}) {
       constructName: ctx.resolveConstructName(),
       activeDnaSource: ctx.getCurrentDnaSource(),
       rows: ctx.currentRows(),
-      sequenceOverride: state.assembledSequenceOverride
+      sequenceOverride: state.assembledSequenceOverride,
+      codonUsageProfile: ctx.getCodonUsageProfile()
     };
   };
 
@@ -271,8 +276,10 @@ export function createProteinBuilderContext(config = {}) {
             .join(',')
         ].join('|')
       : '';
-    return `${recordKey}::${featureKey}`;
+    return `${recordKey}::${featureKey}::${ctx.getCodonUsageProfile()}`;
   };
+
+  ctx.populateCodonUsageProfiles();
 
   return ctx;
 }

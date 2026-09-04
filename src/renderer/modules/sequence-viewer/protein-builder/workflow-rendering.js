@@ -4,6 +4,20 @@ import { cleanText } from '../shared.js';
 import { getBlockTypeLabel } from './constants.js';
 import { buildConstruct } from './protein-construct.js';
 import { escapeAttribute } from './row-factory.js';
+import { getProteinBuilderPaletteClass } from './block-palette.js';
+
+function renderHighlightedProtein(sequence, parts = []) {
+  const safeSequence = String(sequence || '');
+  const chainSequence = parts.map((part) => String(part?.sequence || '')).join('');
+  if (!parts.length || chainSequence !== safeSequence) {
+    return `<span class="sequence-viewer-protein-builder-protein-segment sequence-viewer-protein-builder-block-custom">${escapeHtml(safeSequence)}</span>`;
+  }
+  return parts.map((part, index) => {
+    const type = String(part?.type || 'custom').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom';
+    const paletteClass = getProteinBuilderPaletteClass(part?.paletteSlot || index + 1);
+    return `<span class="sequence-viewer-protein-builder-protein-segment sequence-viewer-protein-builder-block-${type} ${paletteClass}" title="${escapeAttribute(part?.label || 'Protein block')}">${escapeHtml(part?.sequence || '')}</span>`;
+  }).join('');
+}
 
 export function installProteinBuilderWorkflowRendering(ctx) {
   const { elements, state } = ctx;
@@ -78,7 +92,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
 
       return `
         <li
-          class="sequence-viewer-protein-builder-block sequence-viewer-protein-builder-block-${escapeAttribute(row.type)}${isSliver ? ' sequence-viewer-protein-builder-block-compact' : ''}"
+          class="sequence-viewer-protein-builder-block sequence-viewer-protein-builder-block-${escapeAttribute(row.type)} ${getProteinBuilderPaletteClass(index + 1)}${isSliver ? ' sequence-viewer-protein-builder-block-compact' : ''}"
           data-protein-builder-row-id="${escapeAttribute(row.id)}"
           style="--builder-block-aa: ${Math.max(1, sequence.length)}"
         >
@@ -136,11 +150,19 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         elements.proteinBuilderSequence.value = construct.sequence || '';
       }
     }
+    if (elements.proteinBuilderProteinSequenceHighlight) {
+      elements.proteinBuilderProteinSequenceHighlight.innerHTML = construct.sequence
+        ? `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedProtein(construct.sequence, construct.parts)}</span>`
+        : '<p class="small-note">Add a block to start the chain.</p>';
+    }
     if (elements.proteinBuilderSequenceEdited) {
       elements.proteinBuilderSequenceEdited.hidden = !construct.isEdited;
     }
     if (elements.proteinBuilderSequenceResetBtn) {
       elements.proteinBuilderSequenceResetBtn.hidden = !construct.isEdited;
+    }
+    if (elements.proteinBuilderCopyProteinBtn) {
+      elements.proteinBuilderCopyProteinBtn.disabled = !construct.sequence;
     }
   };
 
@@ -160,6 +182,5 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         !ctx.hasStoragePath()
       );
     }
-    ctx.applyBuilderStatus();
   };
 }

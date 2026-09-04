@@ -5,6 +5,7 @@ import {
 } from '../shared.js';
 import { buildAminoAcidSubstitution } from '../amino-acid-substitution.js';
 import { buildEditedSequenceName } from '../sequence-naming.js';
+import { PROTEIN_DIRECT_CLONING_MAX_AA } from '../protein-builder/constants.js';
 import { LIBRARY_STATUS_SAVED } from './config.js';
 import {
   adjustFeatureSegmentsForSequenceEdit,
@@ -20,7 +21,15 @@ export function createSequenceEditActions(ctx) {
     const record = actions.getSelectedRecord();
     const sourceSequence = normalizeSequenceText(source?.editedSequence || '');
     const recordSequence = normalizeSequenceText(record?.sequence || '');
-    return Boolean(source?.editRequest && sourceSequence.length && recordSequence && sourceSequence === recordSequence);
+    const isLongProteinInput = Math.max(0, Number(source?.proteinInputAaLength) || 0)
+      > PROTEIN_DIRECT_CLONING_MAX_AA;
+    return Boolean(
+      !isLongProteinInput
+      && source?.editRequest
+      && sourceSequence.length
+      && recordSequence
+      && sourceSequence === recordSequence
+    );
   }
 
   async function applySequenceEdit(payload = {}) {

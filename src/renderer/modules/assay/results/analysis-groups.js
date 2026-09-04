@@ -23,11 +23,12 @@ function createAssayAnalysisGroups({
       `assay-analysis-column-group-color-${colorIndex}`
     ]);
 
-  function setAnalysisSelectionStatus(message) {
+  function setAnalysisSelectionStatus(message, isError = false) {
     if (!assayAnalysisSelectionStatus) {
       return;
     }
     assayAnalysisSelectionStatus.textContent = message || '';
+    assayAnalysisSelectionStatus.classList.toggle('is-error', Boolean(isError && message));
   }
 
   function getCurrentResultRangeSelection() {
@@ -188,7 +189,7 @@ function createAssayAnalysisGroups({
     const selection = updateResultRangeSelectionStatus();
     const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
     if (!members.length) {
-      setAnalysisSelectionStatus(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`);
+      setAnalysisSelectionStatus(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`, true);
       return;
     }
 

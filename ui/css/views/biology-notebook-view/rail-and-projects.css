@@ -303,10 +303,6 @@
   margin: 0;
 }
 
-#biology-notebook-experiment-dialog-status.is-error {
-  color: var(--theme-danger);
-}
-
 .biology-notebook-viewer-column {
   align-content: start;
 }
@@ -1142,10 +1138,6 @@
 
 .project-paper-finder-status {
   min-width: min(100%, 240px);
-}
-
-.project-paper-finder-status.is-error {
-  color: var(--theme-danger);
 }
 
 .project-paper-finder-results {

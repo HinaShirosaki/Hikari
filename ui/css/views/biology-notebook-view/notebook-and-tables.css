@@ -332,10 +332,6 @@
   background: color-mix(in srgb, var(--theme-focus) 18%, transparent);
 }
 
-.biology-notebook-result-table-head .small-note.is-error {
-  color: var(--theme-danger);
-}
-
 /* A computed cell keeps the normal text colour — the accent is decorative and reads
    as low-contrast on the lighter palettes. Numbers just line up. */
 .spreadsheet-cell--formula {

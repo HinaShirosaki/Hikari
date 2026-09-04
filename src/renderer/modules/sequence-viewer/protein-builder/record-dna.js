@@ -156,7 +156,6 @@ export function resolvePoiSourceFromRecord(record, selectedFeature = null) {
     proteinSequence: best.proteinSequence,
     dnaSequence: best.dnaSequence,
     note: `Uses DNA from ${sourceDescription}.`,
-    reusedSource: `Reused active DNA from ${sourceDescription}.`,
     sourceLabel
   };
 }
@@ -176,11 +175,10 @@ export function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature
   }
 
   const best = candidates[0];
-  const { sourceLabel, sourceDescription } = describeRecordSequenceSource(best);
+  const { sourceLabel } = describeRecordSequenceSource(best);
 
   return {
     dnaSequence: alignDnaToProteinSequence(best.dnaSequence, proteinSequence),
-    note: `Reused active DNA from ${sourceDescription}.`,
     sourceLabel
   };
 }

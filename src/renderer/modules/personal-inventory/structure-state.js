@@ -42,10 +42,11 @@ function getStructureTypeInput(mode) {
   return selector ? inventorySections?.querySelector(selector) : null;
 }
 
-function setStructureStatus(message) {
+function setStructureStatus(message, isError = false) {
   const status = inventorySections?.querySelector('[data-inventory-sample-structure-status]');
   if (status) {
     status.textContent = String(message || '');
+    status.classList.toggle('is-error', Boolean(isError && message));
   }
 }
 

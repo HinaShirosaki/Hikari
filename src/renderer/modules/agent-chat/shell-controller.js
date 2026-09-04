@@ -115,6 +115,9 @@ export function createAgentChatShellController({
     }
     dom.status.textContent = text;
     const normalized = trimText(text, 160).toLowerCase();
+    // The pill ships hidden so a cleared status leaves no empty bubble, which
+    // means every write has to re-assert visibility or the pill stays dead.
+    dom.status.hidden = !normalized;
     let tone = 'neutral';
     if (!normalized || normalized === 'ready.' || normalized === 'waiting for your answer.') {
       tone = 'ready';
