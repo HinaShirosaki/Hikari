@@ -1,0 +1,290 @@
+/* Home-specific dimensions take precedence over the shared window defaults. */
+#home-view .home-dialog.home-dashboard-dialog.app-dialog-surface {
+  --app-dialog-width: 30rem;
+  --app-dialog-padding: 1.5rem;
+  --app-dialog-gap: 1.25rem;
+  width: min(var(--app-dialog-width), 100%);
+  border-color: var(--home-tile-line);
+  border-radius: 1rem;
+  color: var(--home-tile-text);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+#home-view .home-dialog.home-notebook-note-dialog.app-dialog-surface {
+  --app-dialog-width: 34rem;
+}
+
+#home-view .home-dialog-form {
+  display: grid;
+  min-width: 0;
+  gap: 1.25rem;
+}
+
+#home-view .home-dialog .app-dialog-head {
+  align-items: center;
+  padding-block-end: 1rem;
+  border-block-end: 1px solid var(--home-tile-line-soft);
+}
+
+#home-view .home-dialog h3 {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+}
+
+#home-view .home-dialog-section {
+  display: grid;
+  min-width: 0;
+  gap: 0.85rem;
+}
+
+#home-view .home-dialog-section + .home-dialog-section {
+  padding-block-start: 1.25rem;
+  border-block-start: 1px solid var(--home-tile-line-soft);
+}
+
+#home-view .home-dialog-section h4 {
+  margin: 0;
+  color: var(--home-tile-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#home-view .home-dialog-saved-section:has(> :last-child:empty) {
+  display: none;
+}
+
+#home-view .home-dialog-saved-section:has(> :last-child:empty) + .home-dialog-section {
+  padding-block-start: 0;
+  border-block-start: 0;
+}
+
+#home-view .home-dialog .dashboard-field {
+  min-width: 0;
+  margin: 0;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+#home-view .home-dialog input,
+#home-view .home-dialog textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--home-tile-control-border);
+  border-radius: 0.5rem;
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+#home-view .home-dialog input::placeholder,
+#home-view .home-dialog textarea::placeholder {
+  color: var(--home-tile-muted);
+  opacity: 0.75;
+}
+
+#home-view .home-dialog input:focus,
+#home-view .home-dialog textarea:focus {
+  border-color: var(--theme-accent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 20%, transparent);
+  outline-offset: 1px;
+}
+
+#home-view .home-dialog textarea {
+  min-height: 10rem;
+  resize: vertical;
+}
+
+#home-view .home-dialog-field-pair,
+#home-view .home-timer-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.85rem;
+}
+
+#home-view .home-timer-form-row {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+}
+
+#home-view .home-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding-block-start: 0.25rem;
+}
+
+#home-view .home-dialog :is(.primary-btn, .ghost-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+#home-view .home-dialog .ghost-btn {
+  border-color: var(--home-tile-line);
+  background: transparent;
+  color: var(--home-tile-text);
+}
+
+#home-view .home-dialog .ghost-btn:hover {
+  background: var(--theme-surface-subtle);
+}
+
+#home-view .home-dialog-context {
+  margin: 0;
+  padding: 0.65rem 0.85rem;
+  border-inline-start: 2px solid var(--theme-accent);
+  border-radius: 0 0.4rem 0.4rem 0;
+  background: var(--theme-surface-subtle);
+  color: var(--home-tile-text);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+#home-view .home-dialog-list,
+#home-view .home-timer-template-list,
+#home-view .home-incubation-location-list {
+  display: grid;
+  gap: 0;
+  min-height: 0;
+  max-height: min(32svh, 16rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-inline-end: 0.25rem;
+}
+
+#home-view .home-incubation-location-list {
+  max-height: min(22svh, 10rem);
+}
+
+#home-view .home-timer-template-row,
+#home-view .home-incubation-location-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 0;
+  border-block-end: 1px solid var(--home-tile-line-soft);
+}
+
+#home-view .home-timer-template-row:last-child,
+#home-view .home-incubation-location-row:last-child {
+  border-block-end: 0;
+}
+
+#home-view .home-timer-template-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+#home-view .home-timer-template-name,
+#home-view .home-incubation-location-name {
+  min-width: 0;
+  color: var(--home-tile-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+#home-view .home-timer-template-duration {
+  margin: 0;
+  color: var(--home-tile-muted);
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+#home-view .home-timer-template-actions {
+  display: flex;
+}
+
+#home-view .home-timer-template-start-btn,
+#home-view .home-incubation-delete-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--home-tile-muted);
+  cursor: pointer;
+}
+
+#home-view .home-timer-template-start-btn {
+  border-color: var(--home-tile-line);
+  color: var(--theme-accent);
+}
+
+#home-view .home-timer-template-start-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+}
+
+#home-view .home-incubation-delete-btn:hover {
+  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  color: var(--theme-danger);
+}
+
+#home-view .home-timer-template-start-btn:focus-visible,
+#home-view .home-incubation-delete-btn:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+}
+
+#home-view .home-timer-template-start-btn svg,
+#home-view .home-incubation-delete-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+#home-view .home-incubation-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.6rem;
+}
+
+@media (max-width: 480px) {
+  #home-view .home-dialog.home-dashboard-dialog.app-dialog-surface {
+    --app-dialog-padding: 1rem;
+  }
+  #home-view .home-dialog-form {
+    gap: 1rem;
+  }
+  #home-view .home-dialog-actions > button {
+    flex: 1 1 auto;
+  }
+  #home-view .home-incubation-add-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #home-view .home-incubation-add-row > button {
+    justify-self: end;
+  }
+}

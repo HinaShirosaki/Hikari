@@ -121,7 +121,7 @@ export function initPaperFindingWidget({
   onOpenNotebook = () => {},
   elements = {}
 } = {}) {
-  const { summary, list, openBtn } = elements;
+  const { summary, list, openBtn, nextRun } = elements;
   if (!summary || !list) {
     return { render: () => {} };
   }
@@ -130,8 +130,40 @@ export function initPaperFindingWidget({
   let tasks = null;
   let request = null;
   let lastLoadedAt = 0;
+  let lastMarkup = null;
+  let availabilityMessage = '';
+  let hasLoadError = false;
 
   openBtn?.addEventListener?.('click', () => onOpenNotebook());
+  list.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-paper-finding-setup]')) {
+      onOpenNotebook();
+    }
+  });
+
+  function setListMarkup(markup) {
+    if (markup === lastMarkup) {
+      return;
+    }
+    const expanded = new Set([...(list.querySelectorAll?.('details[open]') || [])]
+      .map((detail) => detail.dataset.paperFindingKey));
+    list.innerHTML = markup;
+    lastMarkup = markup;
+    list.querySelectorAll?.('details[data-paper-finding-key]').forEach((detail) => {
+      detail.open = expanded.has(detail.dataset.paperFindingKey);
+    });
+  }
+
+  function renderScheduleFooter(activeTasks) {
+    if (!nextRun) {
+      return;
+    }
+    const scheduled = sortScheduledTasks(activeTasks).find((task) => (
+      Number.isFinite(new Date(task?.next_run_at || task?.nextRunAt || '').getTime())
+    ));
+    nextRun.textContent = scheduled ? nextRunForTask(scheduled) : '';
+    nextRun.hidden = !scheduled;
+  }
 
   function renderPaperResult({ paper, task }) {
     const source = ensureObject(paper);
@@ -153,6 +185,8 @@ export function initPaperFindingWidget({
     const summaryText = cleanText(source.summary);
     const reasonText = cleanText(source.relevance_reason);
     const url = safeHttpUrl(source.url);
+    const key = `${cleanText(task.id) || projectName}:${cleanText(source.doi || source.pmid) || url || title}`;
+    const bibliography = [source.journal, source.published_at].map(cleanText).filter(Boolean).join(' · ');
     return `
       <article class="home-paper-finding-result" data-paper-finding-result>
         <div class="home-paper-finding-result-head">
@@ -160,41 +194,55 @@ export function initPaperFindingWidget({
           <span class="home-paper-finding-policy">Metadata only</span>
         </div>
         <h3 class="home-paper-finding-title">${escapeText(title)}</h3>
-        ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
-        ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
-        ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
+        ${bibliography ? `<p class="home-paper-finding-citation">${escapeText(bibliography)}</p>` : ''}
         ${reasonText ? `<p class="home-paper-finding-reason"><strong>Why it matters:</strong> ${escapeText(reasonText)}</p>` : ''}
+        ${summaryText || authors || meta.length ? `
+          <details class="home-paper-finding-details" data-paper-finding-key="${escapeText(key)}">
+            <summary>${summaryText ? 'Read summary' : 'Paper details'}</summary>
+            ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
+            ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
+            ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
+          </details>
+        ` : ''}
         ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">View source ↗</a>` : ''}
       </article>
     `;
   }
 
   function renderTasks() {
+    summary.classList?.toggle('is-error', hasLoadError);
+    if (availabilityMessage) {
+      summary.textContent = availabilityMessage;
+      renderScheduleFooter([]);
+      setListMarkup('<button type="button" class="home-paper-finding-setup" data-paper-finding-setup>Open project notebooks →</button>');
+      return;
+    }
     if (tasks === null) {
       summary.textContent = 'Loading schedules…';
-      list.innerHTML = '';
+      setListMarkup('');
       return;
     }
 
     const activeTasks = tasks.filter((task) => task?.enabled !== false);
     const foundPapers = papersForTasks(tasks);
+    renderScheduleFooter(activeTasks);
     summary.textContent = foundPapers.length
       ? `${foundPapers.length} paper${foundPapers.length === 1 ? '' : 's'} found · ${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
       : tasks.length
         ? `${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
-        : 'No schedules yet.';
+        : '';
 
     if (!tasks.length) {
-      list.innerHTML = '<p class="small-note">Set up paper finding from a project notebook.</p>';
+      setListMarkup('<button type="button" class="home-paper-finding-setup" data-paper-finding-setup>+ Set up paper finding</button>');
       return;
     }
 
     if (foundPapers.length) {
-      list.innerHTML = foundPapers.map(renderPaperResult).join('');
+      setListMarkup(foundPapers.map(renderPaperResult).join(''));
       return;
     }
 
-    list.innerHTML = sortScheduledTasks(tasks).slice(0, 3).map((task) => {
+    setListMarkup(sortScheduledTasks(tasks).slice(0, 3).map((task) => {
       const paused = task?.enabled === false;
       return `
         <div class="home-row home-paper-finding-row${paused ? ' is-muted' : ''}">
@@ -204,7 +252,7 @@ export function initPaperFindingWidget({
           </div>
         </div>
       `;
-    }).join('');
+    }).join(''));
   }
 
   async function refresh() {
@@ -214,8 +262,9 @@ export function initPaperFindingWidget({
     if (typeof api?.listPaperFindingTasks !== 'function') {
       tasks = [];
       lastLoadedAt = Date.now();
-      summary.textContent = 'Available in project notebooks.';
-      list.innerHTML = '<p class="small-note">Set up paper finding from a project notebook.</p>';
+      availabilityMessage = 'Available in project notebooks.';
+      hasLoadError = false;
+      renderTasks();
       return null;
     }
 
@@ -225,15 +274,18 @@ export function initPaperFindingWidget({
           throw new Error(cleanText(response?.error) || 'Could not load schedules.');
         }
         tasks = asArray(response.tasks);
+        availabilityMessage = '';
+        hasLoadError = false;
         lastLoadedAt = Date.now();
         renderTasks();
       })
       .catch(() => {
         tasks = [];
         lastLoadedAt = Date.now();
-        summary.textContent = 'Could not load schedules.';
-        showTransientNotice(summary.textContent, { type: 'error' });
-        list.innerHTML = '<p class="small-note">Open Notebook to manage paper finding.</p>';
+        availabilityMessage = 'Could not load schedules.';
+        hasLoadError = true;
+        renderTasks();
+        showTransientNotice(availabilityMessage, { type: 'error' });
       })
       .finally(() => {
         request = null;

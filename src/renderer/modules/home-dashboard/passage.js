@@ -110,39 +110,21 @@ export function initPassageWidget({
     return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
   }
 
-  function passageDotClass(row) {
-    if (row.status === 'overdue' || row.status === 'due_today') {
-      return ' is-alert';
-    }
-    if (row.status === 'unconfigured') {
-      return ' is-warn';
-    }
-    if (row.status === 'incubating' && row.daysFromToday <= 1) {
-      return ' is-warn';
-    }
-    return '';
-  }
-
   function passageTag(row) {
     if (row.status === 'unconfigured') {
-      return { text: 'set up', cls: '' };
+      return { text: 'Needs setup', cls: ' is-soon' };
     }
     if (row.status === 'overdue') {
       const days = Math.abs(row.daysFromToday);
-      return { text: days <= 0 ? 'due now' : `${days} d overdue`, cls: ' is-due' };
+      return { text: `Overdue · ${days} ${days === 1 ? 'day' : 'days'}`, cls: ' is-due' };
     }
     if (row.status === 'due_today') {
-      return { text: 'due today', cls: ' is-due' };
+      return { text: 'Due today', cls: ' is-soon' };
     }
     if (row.daysFromToday <= 1) {
-      return { text: 'in 1 d', cls: ' is-soon' };
+      return { text: 'Tomorrow', cls: '' };
     }
-    return { text: `in ${row.daysFromToday} d`, cls: '' };
-  }
-
-  function passageName(row) {
-    const label = sampleLabel(row.sample);
-    return row.passageNumber > 0 ? `${label} (P${row.passageNumber})` : label;
+    return { text: `In ${row.daysFromToday} days`, cls: '' };
   }
 
   function passageMeta(row) {
@@ -184,6 +166,7 @@ export function initPassageWidget({
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
         aria-label="Mark passage done for ${label}"
+        title="Mark passaged"
       >${renderPassageActionIcon('done')}</button>
       <button
         type="button"
@@ -192,6 +175,7 @@ export function initPassageWidget({
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
         aria-label="Extend passage reminder one day for ${label}"
+        title="Extend one day"
       >${renderPassageActionIcon('extend')}</button>
     `;
   }
@@ -377,19 +361,19 @@ export function initPassageWidget({
       return;
     }
     const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
-    summary.textContent = `${dueCount} due · ${passageRows.rows.length} line${passageRows.rows.length === 1 ? '' : 's'}`;
+    summary.textContent = String(passageRows.rows.length);
+    summary.setAttribute('aria-label', `${dueCount} due · ${passageRows.rows.length} cell lines`);
+    summary.title = `${dueCount} due`;
     summary.hidden = false;
     list.innerHTML = passageRows.rows.map((row) => {
       const tag = passageTag(row);
       return `
-      <article class="home-row${row.status === 'unconfigured' ? ' is-muted' : ''}">
-        <span class="home-dot${passageDotClass(row)}" aria-hidden="true"></span>
+      <article class="home-row home-passage-row${row.status === 'unconfigured' ? ' is-muted' : ''}">
         <div class="home-row-copy">
-          <div class="home-row-name">${safeText(passageName(row))}</div>
-          <div class="home-row-meta">${safeText(passageMeta(row))}</div>
+          <div class="home-row-name">${safeText(sampleLabel(row.sample))}${row.passageNumber > 0 ? ` <span class="home-passage-number">P${row.passageNumber}</span>` : ''}</div>
+          <div class="home-row-meta"><span class="home-row-tag${tag.cls}">${safeText(tag.text)}</span><span class="home-passage-interval"> · ${safeText(passageMeta(row))}</span></div>
         </div>
         <div class="home-row-end">
-          <span class="home-row-tag${tag.cls}">${safeText(tag.text)}</span>
           ${renderPassageActionButtons(row)}
         </div>
       </article>

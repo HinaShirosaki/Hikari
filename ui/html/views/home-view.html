@@ -3,22 +3,23 @@
         <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-timer-heading">Lab timers</h2>
-              <p id="dashboard-timer-status" class="small-note"></p>
+              <h2 id="dashboard-timer-heading">Lab timers <span id="dashboard-timer-status" class="home-widget-count" hidden></span></h2>
             </div>
-            <button type="button" id="dashboard-timer-open-btn" class="home-link-btn">+ Start timer</button>
-          </div>
-          <div class="home-timer-clock">
-            <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
-            <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
+            <button type="button" id="dashboard-timer-open-btn" class="home-add-btn" aria-label="Start timer" title="Start timer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            </button>
           </div>
           <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
+          <div class="home-timer-clock">
+            <p id="dashboard-local-date" class="dashboard-local-date"></p>
+            <p id="dashboard-local-time" class="dashboard-local-time">--:--</p>
+          </div>
         </section>
 
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-notebook-pages-heading">Quick Add Notes</h2>
+              <h2 id="dashboard-notebook-pages-heading">Notebook notes</h2>
               <p id="dashboard-notebook-pages-status" class="sr-only">Tap a page to add a note.</p>
             </div>
             <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all →</button>
@@ -31,7 +32,7 @@
         <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-quicklog-heading">Add Experiments</h2>
+              <h2 id="dashboard-quicklog-heading">Experiment log</h2>
             </div>
           </div>
           <div class="home-quicklog-body">
@@ -39,15 +40,17 @@
               id="dashboard-quick-log-input"
               class="home-quicklog-input"
               rows="2"
-              placeholder="Log a notebook entry or experiment note."
+              aria-label="Experiment or observation"
+              placeholder="Capture an experiment or observation…"
             ></textarea>
             <div class="home-quicklog-actions">
-              <span id="dashboard-quick-log-status" class="small-note home-quicklog-status"></span>
+              <span id="dashboard-quick-log-status" class="small-note home-quicklog-status" aria-live="polite"></span>
               <button
                 type="button"
                 id="dashboard-quick-log-save-btn"
                 class="home-icon-btn"
-                aria-label="Save experiment"
+                aria-label="Save experiment locally"
+                title="Save locally"
               >
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
                   <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -58,6 +61,7 @@
                 id="dashboard-quick-log-agent-btn"
                 class="home-icon-btn home-icon-btn-send"
                 aria-label="Save experiment and send to Assistant"
+                title="Save and send to Assistant (⌘/Ctrl + Enter)"
               >
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
                   <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
@@ -71,9 +75,10 @@
         <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-contribution-heading">Contribution heatmap</h2>
+              <h2 id="dashboard-contribution-heading">Lab activity</h2>
               <p id="dashboard-contribution-summary" class="small-note"></p>
             </div>
+            <span class="small-note">18 weeks</span>
           </div>
           <div class="home-contribution-display">
             <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
@@ -88,35 +93,46 @@
               </div>
             </div>
           </div>
+          <div class="home-contribution-footer">
+            <p id="dashboard-contribution-selected" class="small-note" aria-live="polite"></p>
+            <div class="home-contribution-legend" aria-label="Activity intensity: less to more">
+              <span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span>
+            </div>
+          </div>
         </section>
 
         <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-paper-finding-heading">Scheduled paper finding</h2>
+              <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
               <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
             </div>
-            <button type="button" id="dashboard-paper-finding-open-btn" class="home-link-btn">Manage →</button>
+            <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+            </button>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-paper-finding-list" class="dashboard-list"></div>
           </div>
+          <p id="dashboard-paper-finding-next-run" class="small-note home-paper-finding-schedule" hidden></p>
         </section>
 
         <section class="home-tile home-tile-soft home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-passage-heading">Cell passage</h2>
-              <p id="dashboard-passage-summary" class="small-note" hidden></p>
+              <h2 id="dashboard-passage-heading">Cell passage <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
             </div>
             <div class="home-tile-head-actions">
-              <button type="button" id="dashboard-passage-open-btn" class="home-link-btn">View all →</button>
+              <button type="button" id="dashboard-passage-open-btn" class="home-add-btn" aria-label="View all cell passage reminders" title="View all">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
               <button
                 type="button"
                 id="dashboard-passage-add-btn"
                 class="home-add-btn"
                 aria-label="Add cell to passage reminder"
-              >+</button>
+                title="Add reminder"
+              ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
             </div>
           </div>
           <div class="home-tile-scroll">
@@ -128,16 +144,19 @@
           <div class="home-tile-head">
             <div class="home-tile-titles">
               <h2 id="dashboard-incubation-heading">Overnight incubation</h2>
-              <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
+              <p id="dashboard-incubation-summary" class="sr-only"></p>
             </div>
             <div class="home-tile-head-actions">
-              <button type="button" id="dashboard-incubation-open-btn" class="home-link-btn">View all →</button>
+              <button type="button" id="dashboard-incubation-open-btn" class="home-add-btn" aria-label="View all overnight incubations" title="View all">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+              </button>
               <button
                 type="button"
                 id="dashboard-incubation-add-btn"
                 class="home-add-btn"
                 aria-label="Manage incubation locations"
-              >+</button>
+                title="Manage locations"
+              ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
             </div>
           </div>
           <div class="home-tile-scroll">
@@ -148,7 +167,7 @@
 
       <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-passage-dialog app-dialog-surface"
+          class="home-dialog home-dashboard-dialog home-passage-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-passage-dialog-title"
@@ -164,10 +183,14 @@
                 title="Close"
               ><span aria-hidden="true">&times;</span></button>
             </div>
-            <div id="dashboard-passage-panel-list" class="dashboard-list dashboard-passage-list home-dialog-list"></div>
-            <form id="dashboard-passage-dialog-form" class="home-dialog-form">
+            <section class="home-dialog-section home-dialog-saved-section">
+              <h4>Passage schedule</h4>
+              <div id="dashboard-passage-panel-list" class="dashboard-list dashboard-passage-list home-dialog-list"></div>
+            </section>
+            <form id="dashboard-passage-dialog-form" class="home-dialog-section">
+              <h4>New reminder</h4>
               <label class="dashboard-field">
-                Cell Strain
+                Cell strain
                 <input
                   id="dashboard-passage-strain-input"
                   type="text"
@@ -176,29 +199,33 @@
                   required
                 />
               </label>
-              <label class="dashboard-field">
-                Interval Time
-                <input
-                  id="dashboard-passage-interval-input"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="e.g. 3"
-                  required
-                />
-              </label>
-              <label class="dashboard-field">
-                Passage Number
-                <input
-                  id="dashboard-passage-number-input"
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="e.g. 5"
-                  required
-                />
-              </label>
-              <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add</button>
+              <div class="home-dialog-field-pair">
+                <label class="dashboard-field">
+                  Interval (days)
+                  <input
+                    id="dashboard-passage-interval-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 3"
+                    required
+                  />
+                </label>
+                <label class="dashboard-field">
+                  Passage number
+                  <input
+                    id="dashboard-passage-number-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 5"
+                    required
+                  />
+                </label>
+              </div>
+              <div class="home-dialog-actions">
+                <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add reminder</button>
+              </div>
             </form>
           </div>
         </div>
@@ -206,13 +233,13 @@
 
       <div id="dashboard-timer-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-timer-dialog app-dialog-surface"
+          class="home-dialog home-dashboard-dialog home-timer-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-timer-dialog-title"
         >
           <div class="home-dialog-form">
-            <div class="app-dialog-head home-timer-dialog-head">
+            <div class="app-dialog-head">
               <h3 id="dashboard-timer-dialog-title">Start timer</h3>
               <button
                 type="button"
@@ -222,41 +249,55 @@
                 title="Close"
               ><span aria-hidden="true">&times;</span></button>
             </div>
-            <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
-              <input
-                id="dashboard-timer-name-input"
-                type="text"
-                maxlength="80"
-                aria-label="Timer name"
-                placeholder="Timer name"
-                required
-              />
-              <input
-                id="dashboard-timer-minutes-input"
-                type="number"
-                min="1"
-                step="1"
-                aria-label="Timer time in minutes"
-                placeholder="Time (min)"
-                required
-              />
-              <button type="submit" id="dashboard-timer-add-btn" class="ghost-btn">Add</button>
+            <section class="home-dialog-section home-dialog-saved-section">
+              <h4>Saved timers</h4>
+              <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
+            </section>
+            <form id="dashboard-timer-dialog-form" class="home-dialog-section">
+              <h4>New timer preset</h4>
+              <div class="home-timer-form-row">
+                <label class="dashboard-field">
+                  Timer name
+                  <input
+                    id="dashboard-timer-name-input"
+                    type="text"
+                    maxlength="80"
+                    aria-label="Timer name"
+                    placeholder="e.g. Wash"
+                    required
+                  />
+                </label>
+                <label class="dashboard-field">
+                  Duration (min)
+                  <input
+                    id="dashboard-timer-minutes-input"
+                    type="number"
+                    min="1"
+                    step="1"
+                    aria-label="Timer time in minutes"
+                    placeholder="e.g. 5"
+                    required
+                  />
+                </label>
+              </div>
+              <div class="home-dialog-actions">
+                <button type="submit" id="dashboard-timer-add-btn" class="primary-btn">Save preset</button>
+              </div>
             </form>
-            <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
           </div>
         </div>
       </div>
 
       <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-notebook-note-dialog app-dialog-surface"
+          class="home-dialog home-dashboard-dialog home-notebook-note-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-notebook-note-dialog-title"
         >
           <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
             <div class="app-dialog-head">
-              <h3 id="dashboard-notebook-note-dialog-title">Add Note</h3>
+              <h3 id="dashboard-notebook-note-dialog-title">Add note</h3>
               <button
                 type="button"
                 id="dashboard-notebook-note-dialog-close-btn"
@@ -265,20 +306,20 @@
                 title="Close"
               ><span aria-hidden="true">&times;</span></button>
             </div>
-            <p id="dashboard-notebook-note-dialog-page" class="small-note"></p>
+            <p id="dashboard-notebook-note-dialog-page" class="home-dialog-context"></p>
             <label class="dashboard-field">
               Note
               <textarea
                 id="dashboard-notebook-note-input"
-                rows="5"
+                rows="7"
                 maxlength="4000"
                 placeholder="Add a quick note to this notebook page."
                 required
               ></textarea>
             </label>
-            <div class="dashboard-inline-row">
-              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save Note</button>
-              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn">Clarify and Save</button>
+            <div class="home-dialog-actions">
+              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn">Clarify and save</button>
+              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save note</button>
             </div>
           </form>
         </div>
@@ -286,7 +327,7 @@
 
       <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-incubation-dialog app-dialog-surface"
+          class="home-dialog home-dashboard-dialog home-incubation-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-incubation-dialog-title"
@@ -302,18 +343,27 @@
                 title="Close"
               ><span aria-hidden="true">&times;</span></button>
             </div>
-            <div id="dashboard-incubation-panel-list" class="dashboard-list home-dialog-list"></div>
-            <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
-            <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
-              <input
-                id="dashboard-incubation-location-input"
-                type="text"
-                maxlength="80"
-                placeholder="Add new incubation location"
-                required
-              />
-              <button type="submit" id="dashboard-incubation-location-submit-btn" class="ghost-btn">Add New</button>
-            </form>
+            <section class="home-dialog-section home-dialog-saved-section">
+              <h4>Reminders</h4>
+              <div id="dashboard-incubation-panel-list" class="dashboard-list home-dialog-list"></div>
+            </section>
+            <section class="home-dialog-section">
+              <h4>Manage locations</h4>
+              <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
+              <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
+                <label class="dashboard-field">
+                  New location
+                  <input
+                    id="dashboard-incubation-location-input"
+                    type="text"
+                    maxlength="80"
+                    placeholder="e.g. 37°C shaker"
+                    required
+                  />
+                </label>
+                <button type="submit" id="dashboard-incubation-location-submit-btn" class="primary-btn">Add location</button>
+              </form>
+            </section>
           </div>
         </div>
       </div>

@@ -185,26 +185,42 @@ export function initNotebookWidget({
       ? 'Tap a page to add a note.'
       : 'No notebook pages yet.';
     if (!entries.length) {
-      pageList.innerHTML = '<p class="small-note">Save a notebook page to show it here.</p>';
+      pageList.innerHTML = '';
       return;
     }
-    pageList.innerHTML = entries.map((entry) => {
+    const groups = new Map();
+    entries.forEach((entry) => {
       const project = String(entry?.projectName || 'No project').trim() || 'No project';
-      return `
+      const key = String(entry?.projectId || project);
+      if (!groups.has(key)) {
+        groups.set(key, { project, pages: [] });
+      }
+      groups.get(key).pages.push(entry);
+    });
+    pageList.innerHTML = [...groups.values()].map(({ project, pages }) => `
+      <section class="home-notebook-project" aria-label="${safeText(project)}">
+        <div class="home-notebook-project-head">
+          <h3>${safeText(project)}</h3>
+          <span>${pages.length} ${pages.length === 1 ? 'page' : 'pages'}</span>
+        </div>
+        ${pages.map((entry) => `
       <button
         type="button"
-        class="home-row is-clickable"
+        class="home-row home-notebook-row is-clickable"
         data-dashboard-notebook-entry="${safeText(entry.id)}"
+        aria-label="Add note to ${safeText(notebookPageLabel(entry))} in ${safeText(project)}"
       >
-        <span class="home-row-spacer" aria-hidden="true"></span>
-        <div class="home-row-copy">
-          <div class="home-row-name">${safeText(notebookPageLabel(entry))}</div>
-          <div class="home-row-meta">${safeText(project)}</div>
-        </div>
-        <span class="home-row-tag">${safeText(relativeShort(entry?.updatedAt || entry?.createdAt))}</span>
+        <span class="home-row-copy">
+          <span class="home-row-name">${safeText(notebookPageLabel(entry))}</span>
+          <span class="home-row-meta">${safeText(relativeShort(entry?.updatedAt || entry?.createdAt))}</span>
+        </span>
+        <span class="home-notebook-add" aria-hidden="true" title="Add note">
+          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+        </span>
       </button>
-    `;
-    }).join('');
+        `).join('')}
+      </section>
+    `).join('');
   }
 
   function renderWidget() {

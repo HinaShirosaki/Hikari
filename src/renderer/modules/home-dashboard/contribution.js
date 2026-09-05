@@ -5,7 +5,31 @@ import { formatDateLocal, normalizeNotebookState } from './utils.js';
 // notebook entries, completed protocol steps, file uploads, analysis notes,
 // and quick logs into per-day buckets.
 export function initContributionWidget({ state, safeText, elements }) {
-  const { monthLabels, grid, streak, summary } = elements;
+  const { monthLabels, grid, streak, summary, selected } = elements;
+  let selectedDayKey = '';
+  let visibleDays = [];
+
+  grid.addEventListener('click', (event) => {
+    const cell = event.target.closest('[data-contribution-day]');
+    if (!cell || cell.disabled) {
+      return;
+    }
+    selectedDayKey = cell.dataset.contributionDay;
+    renderSelectedDay();
+  });
+
+  function renderSelectedDay() {
+    const day = visibleDays.find((item) => item.dayKey === selectedDayKey);
+    if (selected) {
+      selected.textContent = day
+        ? `${day.date.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${day.bucket.total} ${day.bucket.total === 1 ? 'entry' : 'entries'}`
+        : '';
+      selected.title = day ? contributionCellLabel(day) : '';
+    }
+    grid.querySelectorAll('[data-contribution-day]').forEach((cell) => {
+      cell.setAttribute('aria-selected', String(cell.dataset.contributionDay === day?.dayKey));
+    });
+  }
 
   function createContributionBucket() {
     return {
@@ -218,7 +242,8 @@ export function initContributionWidget({ state, safeText, elements }) {
     if (!value) {
       return '';
     }
-    return `${value} ${label}${value === 1 ? '' : 's'}`;
+    const plural = label.endsWith('entry') ? `${label.slice(0, -5)}entries` : `${label}s`;
+    return `${value} ${value === 1 ? label : plural}`;
   }
 
   function contributionCellLabel(day) {
@@ -257,21 +282,24 @@ export function initContributionWidget({ state, safeText, elements }) {
     const weekCount = Math.ceil(days.length / 7);
     monthLabels.style.gridTemplateColumns = `repeat(${weekCount}, var(--contribution-cell-size))`;
     monthLabels.innerHTML = labels.map((label) => `
-      <span class="home-contribution-month-label" style="grid-column: ${label.column} / span 3;">${safeText(label.label)}</span>
+      <span class="home-contribution-month-label${label.column > weekCount - 2 ? ' is-last' : ''}" style="grid-column: ${Math.min(label.column, weekCount - 2)} / span 3;">${safeText(label.label)}</span>
     `).join('');
   }
 
   function renderContributionWidget(days) {
     renderContributionMonthLabels(days);
     grid.innerHTML = days.map((day) => `
-      <span
+      <button
+        type="button"
         class="home-contribution-cell"
+        data-contribution-day="${day.dayKey}"
         data-level="${day.isFuture ? 0 : day.level}"
         role="gridcell"
-        tabindex="0"
+        aria-selected="${day.dayKey === selectedDayKey}"
+        ${day.isFuture ? 'disabled' : ''}
         title="${safeText(contributionCellLabel(day))}"
         aria-label="${safeText(contributionCellLabel(day))}"
-      ></span>
+      ></button>
     `).join('');
   }
 
@@ -294,10 +322,12 @@ export function initContributionWidget({ state, safeText, elements }) {
   function render() {
     const dayMap = collectContributionActivity();
     const days = buildContributionDays(dayMap);
+    visibleDays = days;
     renderContributionWidget(days);
+    renderSelectedDay();
     if (summary) {
       const total = days.reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
-      summary.textContent = `${total} ${total === 1 ? 'entry' : 'entries'} · 18 weeks`;
+      summary.textContent = `${total} ${total === 1 ? 'entry' : 'entries'}`;
     }
     if (streak) {
       streak.textContent = String(computeLoggingStreak(dayMap));

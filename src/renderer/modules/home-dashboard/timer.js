@@ -5,6 +5,7 @@ import {
   normalizeIncubationLocationValue,
   normalizeTimerTemplateRecord
 } from './utils.js';
+import { renderActiveTimer, renderFinishedTimer, updateActiveTimer } from './timer-rendering.js';
 
 // Timer + clock widget. Owns a running local clock plus reusable named
 // countdowns: a dialog manages a list of timer templates the bench user
@@ -33,6 +34,7 @@ export function initTimerWidget({
 
   let timerTickHandle = 0;
   let localClockHandle = 0;
+  let lastTimerStructure = '';
 
   timerOpenBtn.addEventListener('click', openTimerDialog);
   timerDialogCloseBtn.addEventListener('click', closeTimerDialog);
@@ -192,6 +194,7 @@ export function initTimerWidget({
             class="home-timer-template-start-btn"
             data-dashboard-start-timer-template="${index}"
             aria-label="Start timer ${safeText(template.name)}"
+            title="Start timer"
           >
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
               <path d="M8 6.5 18 12 8 17.5Z" fill="currentColor"></path>
@@ -202,14 +205,6 @@ export function initTimerWidget({
     `).join('');
   }
 
-  function formatTimer(ms) {
-    const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
-
   function renderLocalClock() {
     const now = new Date();
     const weekday = now.toLocaleDateString([], { weekday: 'short' });
@@ -217,18 +212,9 @@ export function initTimerWidget({
     localTimeDisplay.textContent = now.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit',
       hour12: false
     });
     localDateDisplay.textContent = `Local · ${weekday} ${now.getDate()} ${month}`;
-  }
-
-  function formatTimerEndTime(timestampMs) {
-    return new Date(timestampMs).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
   }
 
   function stopTimerTick() {
@@ -272,9 +258,6 @@ export function initTimerWidget({
           isWarn,
           isAlert,
           isPaused: normalized.isPaused,
-          detail: isAlert
-            ? `${formatTimerTemplateDuration(normalized.durationMinutes)} timer complete`
-            : `${formatTimerTemplateDuration(normalized.durationMinutes)} timer | ends ${formatTimerEndTime(normalized.endAtMs)}`,
           endAtMs: normalized.endAtMs
         };
       })
@@ -283,6 +266,9 @@ export function initTimerWidget({
         if (left.isAlert !== right.isAlert) {
           return left.isAlert ? -1 : 1;
         }
+        if (left.isPaused !== right.isPaused) {
+          return left.isPaused ? 1 : -1;
+        }
         if (left.endAtMs !== right.endAtMs) {
           return left.endAtMs - right.endAtMs;
         }
@@ -290,104 +276,40 @@ export function initTimerWidget({
       });
   }
 
-  function renderTimerRow(timer) {
-    const cls = timer.isWarn ? ' is-warn' : '';
-    return `
-      <div class="home-timer-row">
-        <div class="home-timer-copy">
-          <div class="home-timer-name">${safeText(timer.name)}</div>
-          <div class="home-timer-meta">${timer.durationMinutes} min total${timer.isPaused ? ' · paused' : ''}</div>
-          <div class="home-timer-track" aria-hidden="true"><div class="home-timer-fill${cls}" style="width: ${timer.pct.toFixed(1)}%"></div></div>
-        </div>
-        <button
-          type="button"
-          class="home-timer-btn"
-          data-dashboard-toggle-active-timer="${timer.sourceIndex}"
-          aria-label="${timer.isPaused ? 'Resume' : 'Pause'} timer ${safeText(timer.name)}"
-        >
-          ${timer.isPaused
-            ? `<svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                <path d="M7 5l12 7-12 7z" fill="currentColor"></path>
-              </svg>`
-            : `<svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                <rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"></rect>
-                <rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"></rect>
-              </svg>`}
-        </button>
-        <span class="home-timer-count${cls}">${safeText(formatTimer(timer.remainingMs))}</span>
-      </div>
-    `;
-  }
-
-  function renderFinishedRow(timer) {
-    return `
-      <div class="home-row">
-        <span class="home-dot" aria-hidden="true"></span>
-        <div class="home-row-copy">
-          <div class="home-row-name">${safeText(timer.name)}</div>
-          <div class="home-row-meta">${timer.durationMinutes} min · complete</div>
-        </div>
-        <div class="home-row-end">
-          <span class="home-row-tag">done</span>
-          <button
-            type="button"
-            class="home-row-action"
-            data-dashboard-remove-active-timer="${timer.sourceIndex}"
-            aria-label="Dismiss finished timer ${safeText(timer.name)}"
-          >
-            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-              <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-    `;
-  }
-
   function renderTimerWidget() {
     const activeTimers = collectActiveTimers();
     const running = activeTimers.filter((timer) => !timer.isAlert);
-    const pausedCount = running.filter((timer) => timer.isPaused).length;
-    const tickingCount = running.length - pausedCount;
+    const tickingCount = running.filter((timer) => !timer.isPaused).length;
     const finished = activeTimers.filter((timer) => timer.isAlert);
-    const soon = running.some((timer) => timer.isWarn);
-    if (running.length) {
-      const parts = [];
-      if (tickingCount) {
-        parts.push(`${tickingCount} running`);
+    timerStatus.textContent = activeTimers.length ? String(activeTimers.length) : '';
+    timerStatus.hidden = !activeTimers.length;
+    timerStatus.setAttribute('aria-label', `${tickingCount} running, ${running.length - tickingCount} paused, ${finished.length} finished`);
+
+    const structure = JSON.stringify(activeTimers.map((timer) => [
+      timer.sourceIndex, timer.name, timer.durationMinutes, timer.isPaused, timer.isAlert, timer.endAtMs
+    ]));
+    if (structure !== lastTimerStructure) {
+      const focusedIndex = timerActiveList.ownerDocument?.activeElement?.dataset?.dashboardToggleActiveTimer;
+      const finishedHtml = finished.length
+        ? `<div class="home-timer-finished">${finished.map((timer) => renderFinishedTimer(timer, safeText)).join('')}</div>`
+        : '';
+      timerActiveList.innerHTML = finishedHtml + running.map((timer, index) => renderActiveTimer(timer, index, safeText)).join('');
+      lastTimerStructure = structure;
+      if (focusedIndex !== undefined) {
+        timerActiveList.querySelector(`[data-dashboard-toggle-active-timer="${Number(focusedIndex)}"], [data-dashboard-remove-active-timer="${Number(focusedIndex)}"]`)?.focus();
       }
-      if (pausedCount) {
-        parts.push(`${pausedCount} paused`);
-      }
-      if (soon) {
-        parts.push('1 due in < 5 min');
-      }
-      timerStatus.textContent = parts.join(' · ');
-    } else if (finished.length) {
-      timerStatus.textContent = `${finished.length} finished`;
-    } else {
-      timerStatus.textContent = '';
     }
-
-    if (!activeTimers.length) {
-      timerActiveList.innerHTML = '<p class="small-note">No countdown timers running.</p>';
-      stopTimerTick();
-      return;
-    }
-
-    const finishedHtml = finished.length
-      ? `<div class="home-timer-finished">
-          <div class="home-subhead"><span class="home-eyebrow">Finished today</span><span class="home-subhead-count">${finished.length}</span></div>
-          ${finished.map(renderFinishedRow).join('')}
-        </div>`
-      : '';
-    timerActiveList.innerHTML = running.map(renderTimerRow).join('') + finishedHtml;
-
+    running.forEach((timer) => {
+      const row = timerActiveList.querySelector(`[data-dashboard-timer-index="${timer.sourceIndex}"]`);
+      if (row) {
+        updateActiveTimer(row, timer);
+      }
+    });
     if (tickingCount) {
       startTimerTick();
-      return;
+    } else {
+      stopTimerTick();
     }
-    stopTimerTick();
   }
 
   function onTimerTick() {

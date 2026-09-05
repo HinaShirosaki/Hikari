@@ -47,13 +47,15 @@ export function initHomeDashboard({
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid'),
-    summary: document.getElementById('dashboard-contribution-summary')
+    summary: document.getElementById('dashboard-contribution-summary'),
+    selected: document.getElementById('dashboard-contribution-selected')
   };
 
   const paperFindingElements = {
     summary: document.getElementById('dashboard-paper-finding-summary'),
     list: document.getElementById('dashboard-paper-finding-list'),
-    openBtn: document.getElementById('dashboard-paper-finding-open-btn')
+    openBtn: document.getElementById('dashboard-paper-finding-open-btn'),
+    nextRun: document.getElementById('dashboard-paper-finding-next-run')
   };
 
   const notebookOpenBtn = document.getElementById('dashboard-notebook-open-btn');

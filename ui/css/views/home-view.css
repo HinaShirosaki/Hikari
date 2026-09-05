@@ -2,4 +2,5 @@
  * Layout/list rules precede dashboard content and responsive timer rules. */
 @import url("./home-view/layout-and-lists.css");
 @import url("./home-view/contribution-and-quick-log.css");
+@import url("./home-view/dialogs.css");
 @import url("./home-view/timers-dialogs-and-responsive.css");

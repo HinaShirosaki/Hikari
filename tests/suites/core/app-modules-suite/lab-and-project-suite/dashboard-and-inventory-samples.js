@@ -155,7 +155,8 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
   assert.equal(renderCalls, 1);
 
   widget.render();
-  assert.match(list.innerHTML, /HEK293 \(P12\)/);
+  assert.match(list.innerHTML, /HEK293/);
+  assert.match(list.innerHTML, /class="home-passage-number">P12<\/span>/);
   // the overlapping panel mirrors the tile list so both stay actionable
   assert.equal(panelList.innerHTML, list.innerHTML);
 });
