@@ -3,6 +3,7 @@ import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, resolveFragmentPrimerTemplate } from './primer-records.js';
+import { resolveRestrictionRecognitionSequence } from './restriction-ligation.js';
 
 export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluation, thresholds, config) {
   const inserts = asArray(fragmentMap?.fragments).filter((fragment) => fragment.role !== 'backbone');
@@ -15,20 +16,58 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
   }
 
   const insert = inserts[0];
+  const host = asArray(fragmentMap?.fragments).find((fragment) => fragment.role === 'backbone');
+  const templateDesign = resolveFragmentPrimerTemplate(insert);
+  if (templateDesign.feasible === false) {
+    return {
+      feasible: false,
+      primers: [],
+      warnings: asArray(templateDesign.blockingWarnings || templateDesign.warnings)
+    };
+  }
   const clampSequence = normalizeSequence(config?.primerClampSequence || DEFAULT_CLONING_PREFERENCES.primerClampSequence);
-  const forwardTail = `${clampSequence}${normalizeSequence(selectedSites[0].site || '')}`;
-  const reverseTail = `${clampSequence}${normalizeSequence(selectedSites[1].site || '')}`;
-  const forwardBinding = selectBindingWindow(insert.sequence, 'forward', thresholds, forwardTail.length, config);
-  const reverseBinding = selectBindingWindow(insert.sequence, 'reverse', thresholds, reverseTail.length, config);
+  const forwardSite = resolveRestrictionRecognitionSequence(selectedSites[0], host?.sequence || '');
+  const reverseSite = resolveRestrictionRecognitionSequence(selectedSites[1], host?.sequence || '');
+  if (!forwardSite || !reverseSite) {
+    return {
+      feasible: false,
+      warnings: ['The selected restriction recognition sequence could not be resolved to concrete A/C/G/T bases on the host; choose another enzyme pair.']
+    };
+  }
+  const forwardAddition = normalizeSequence(templateDesign.forwardAddedSequence);
+  const reverseAddition = normalizeSequence(templateDesign.reverseAddedSequence);
+  const forwardTail = `${clampSequence}${forwardSite}${forwardAddition}`;
+  const reverseTail = `${clampSequence}${reverseSite}${reverseComplementDna(reverseAddition)}`;
+  const fragmentConfig = insert?.metadata?.specificitySequence
+    ? {
+        ...config,
+        specificitySequence: insert.metadata.specificitySequence,
+        specificityCircular: Boolean(insert.metadata.specificityCircular)
+      }
+    : config;
+  const forwardBinding = selectBindingWindow(
+    templateDesign.templateSequence,
+    'forward',
+    thresholds,
+    forwardTail.length,
+    fragmentConfig
+  );
+  const reverseBinding = selectBindingWindow(
+    templateDesign.templateSequence,
+    'reverse',
+    thresholds,
+    reverseTail.length,
+    fragmentConfig
+  );
 
   if (!forwardBinding || !reverseBinding) {
     const missing = forwardBinding ? 'reverse' : 'forward';
     const reason = describeBindingWindowFailure(
-      insert.sequence,
+      templateDesign.templateSequence,
       missing,
       thresholds,
       (missing === 'forward' ? forwardTail : reverseTail).length,
-      config
+      fragmentConfig
     );
     return {
       feasible: false,
@@ -44,9 +83,13 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       tailSequence: forwardTail,
       bindingSequence: forwardBinding.bindingSequence,
       groupLabel: `${insert.name} PCR`,
-      ampliconLength: insert.sequence.length,
+      ampliconLength: templateDesign.desiredSequence.length,
       templateId: insert.id,
-      warnings: [`Adds ${selectedSites[0].name || selectedSites[0].site} to the 5' end.`]
+      warnings: [
+        ...asArray(templateDesign.warnings),
+        `Adds ${selectedSites[0].name || selectedSites[0].site} to the 5' end.`,
+        forwardAddition ? `Adds ${forwardAddition.length} nt of desired insert sequence from the forward primer tail.` : ''
+      ].filter(Boolean)
     }),
     buildPrimerRecord({
       name: `${insert.name}_R`,
@@ -55,9 +98,12 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       tailSequence: reverseTail,
       bindingSequence: reverseBinding.bindingSequence,
       groupLabel: `${insert.name} PCR`,
-      ampliconLength: insert.sequence.length,
+      ampliconLength: templateDesign.desiredSequence.length,
       templateId: insert.id,
-      warnings: [`Adds ${selectedSites[1].name || selectedSites[1].site} to the 5' end.`]
+      warnings: [
+        `Adds ${selectedSites[1].name || selectedSites[1].site} to the 5' end.`,
+        reverseAddition ? `Adds ${reverseAddition.length} nt of desired insert sequence from the reverse primer tail.` : ''
+      ].filter(Boolean)
     })
   ];
 
@@ -80,6 +126,10 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     const previousJunction = safeJunctions.find((junction) => junction.rightFragmentId === fragment.id && !junction.wrapAround)
       || safeJunctions.find((junction) => junction.rightFragmentId === fragment.id && junction.wrapAround);
     const templateDesign = resolveFragmentPrimerTemplate(fragment);
+    if (templateDesign.feasible === false) {
+      warnings.push(...asArray(templateDesign.blockingWarnings || templateDesign.warnings));
+      return;
+    }
     // Each seam is split between the two primers that meet at it, so this
     // fragment's forward primer carries the previous fragment's 3' end.
     const previousOverlap = previousJunction && previousJunction.mode === 'primer-introduced'

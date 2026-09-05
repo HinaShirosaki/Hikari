@@ -329,10 +329,10 @@ test('[EDGE] tool-box sequence and property results use one flat surface with re
   });
 });
 test('[EDGE] sequence-viewer evaluateOverlapPcr recognizes strong existing terminal overlaps', () => {
-  const overlap = 'GCGCGCGCGCGCGCGCG';
+  const overlap = 'GCGCGCATATGCGCGCGC';
   const result = sequenceViewerInternals.evaluateOverlapPcr([
-    { id: 'frag-a', name: 'Fragment A', sequence: `AAATTT${overlap}` },
-    { id: 'frag-b', name: 'Fragment B', sequence: `${overlap}TTTAAA` }
+    { id: 'frag-a', name: 'Fragment A', sequence: `AAATTT${overlap}`, metadata: { sharedOverlapWithNext: true } },
+    { id: 'frag-b', name: 'Fragment B', sequence: `${overlap}TTTAAA`, metadata: { sharedOverlapWithPrevious: true } }
   ]);
 
   assert.equal(result.feasible, true);
@@ -352,12 +352,12 @@ test('[EDGE] sequence-viewer evaluateOverlapPcr can propose primer-introduced ov
   assert.equal(result.junctions[0].overlapLength >= 12, true);
 });
 test('[EDGE] sequence-viewer evaluateGibsonAssembly supports multi-fragment junction analysis', () => {
-  const overlapOne = 'GCGCGCGCGCGCGCGCG';
-  const overlapTwo = 'CGCGCGCGCGCGCGCGC';
+  const overlapOne = 'GCGCGCATATGCGCGCGC';
+  const overlapTwo = 'CGCGCATATGCGCGCGCG';
   const result = sequenceViewerInternals.evaluateGibsonAssembly([
-    { id: 'frag-a', name: 'Fragment A', sequence: `AAA${overlapOne}` },
-    { id: 'frag-b', name: 'Fragment B', sequence: `${overlapOne}TTT${overlapTwo}` },
-    { id: 'frag-c', name: 'Fragment C', sequence: `${overlapTwo}GGGAAA` }
+    { id: 'frag-a', name: 'Fragment A', sequence: `AAA${overlapOne}`, metadata: { sharedOverlapWithNext: true } },
+    { id: 'frag-b', name: 'Fragment B', sequence: `${overlapOne}TTT${overlapTwo}`, metadata: { sharedOverlapWithPrevious: true, sharedOverlapWithNext: true } },
+    { id: 'frag-c', name: 'Fragment C', sequence: `${overlapTwo}GGGAAA`, metadata: { sharedOverlapWithPrevious: true } }
   ]);
 
   assert.equal(result.feasible, true);

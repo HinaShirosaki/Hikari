@@ -1,5 +1,5 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { normalizeSequence } from './sequence-utils.js';
+import { describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeHostVector } from './fragments.js';
 import { normalizeEditRequest } from './edit-map.js';
 
@@ -8,6 +8,19 @@ export function evaluateSiteDirectedMutagenesis(args = {}) {
     ...DEFAULT_CLONING_PREFERENCES,
     ...(args?.config || args?.preferences || {})
   };
+  const ambiguityWarnings = [
+    describeAmbiguousDna(args?.host?.sequence, `Mutagenesis template ${args?.host?.name || ''}`.trim()),
+    describeAmbiguousDna(args?.resultSequence, 'Mutagenesis result'),
+    describeAmbiguousDna(args?.editRequest?.originalSequence, 'Mutagenesis edited source'),
+    describeAmbiguousDna(args?.editRequest?.editedSequence, 'Mutagenesis edited bases')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return {
+      feasible: false,
+      warnings: ambiguityWarnings,
+      reason: 'Ambiguous DNA input must be resolved before mutagenesis design.'
+    };
+  }
   const host = args?.host ? normalizeHostVector(args.host, 0) : null;
   const templateSequence = host?.sequence || normalizeSequence(args?.resultSequence || '');
   const normalizedEdit = normalizeEditRequest(args?.editRequest, templateSequence);

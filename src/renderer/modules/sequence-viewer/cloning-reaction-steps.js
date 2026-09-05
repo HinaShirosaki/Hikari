@@ -7,12 +7,9 @@ import { asArray } from '../../lib/normalize.js';
 // reactions, so each one can become its own notebook page with its own
 // fixed-volume table.
 
-function enzymeNames(displayPlan) {
-  const names = asArray(displayPlan?.plans)
-    .flatMap((entry) => asArray(entry?.plan?.restrictionEnzymeSelection))
-    .map((enzyme) => cleanText(enzyme?.name || enzyme?.site, 60))
-    .filter(Boolean);
-  return [...new Set(names)];
+function selectedEnzymes(displayPlan) {
+  return asArray(displayPlan?.plans)
+    .flatMap((entry) => asArray(entry?.plan?.restrictionEnzymeSelection));
 }
 
 function ampliconNames(pcrPrograms) {
@@ -40,7 +37,8 @@ function ampliconRows(pcrPrograms, startIndex) {
 }
 
 function digestionStep(displayPlan) {
-  const enzymes = enzymeNames(displayPlan);
+  const selections = selectedEnzymes(displayPlan);
+  const enzymes = selections.map((enzyme) => cleanText(enzyme?.name || enzyme?.site, 60)).filter(Boolean);
   const pair = enzymes.length >= 2 ? enzymes.slice(0, 2) : [enzymes[0] || 'Restriction enzyme 1', 'Restriction enzyme 2'];
   return {
     id: 'digestion',
@@ -54,17 +52,18 @@ function digestionStep(displayPlan) {
       // A mass, not a volume: with the concentration blank the table keeps the
       // formula, which is what a miniprep of unknown yield needs.
       { rowIndex: 1, name: 'DNA to digest (1 ug)', finalConcentration: '20 ng/uL' },
-      { rowIndex: 2, name: '10x restriction buffer', stockConcentration: '10x', finalConcentration: '1x' },
+      { rowIndex: 2, name: '10x manufacturer-recommended restriction buffer', stockConcentration: '10x', finalConcentration: '1x' },
       { rowIndex: 3, name: pair[0], manualVolumeValue: '1 uL' },
       { rowIndex: 4, name: pair[1], manualVolumeValue: '1 uL' }
     ],
     steps: [
+      `Before setup, verify ${pair.join(' and ')} share a manufacturer-approved buffer and incubation temperature with acceptable activity and no methylation conflict.`,
+      'If the enzymes do not share validated conditions, digest sequentially and purify or exchange buffer between enzymes.',
       'Combine the reaction on ice in the volumes given by the reaction table, one tube per DNA to be cut.',
-      'Incubate at 37 C for 1 h (check the data sheet for star-activity-prone or slow enzymes).',
-      'Heat-inactivate at 65 C for 20 min where the enzyme pair allows it, otherwise column- or gel-purify.',
+      'Incubate and heat-inactivate only at the temperatures and times specified for the selected enzyme formulation; purify when either enzyme cannot be heat-inactivated under the same conditions.',
       'Gel-purify the cut backbone away from the excised stuffer, and column-purify the cut insert.'
     ],
-    materials: ['Backbone plasmid', 'Purified insert amplicon', '10x restriction buffer', ...pair, 'Nuclease-free water']
+    materials: ['Backbone plasmid', 'Purified insert amplicon', 'Manufacturer-recommended restriction buffer', ...pair, 'Nuclease-free water']
   };
 }
 
@@ -163,7 +162,7 @@ function inFusionStep(pcrPrograms) {
   return {
     id: 'in-fusion',
     name: 'In-Fusion Assembly',
-    purpose: 'Fuse the linearized vector and insert through their 15 bp designed overlaps.',
+    purpose: 'Fuse the linearized vector and insert through their method-specific 15-21 bp designed overlaps.',
     totalVolume: '10 uL',
     reagents: [
       { rowIndex: 1, name: '5x In-Fusion Snap Assembly master mix', stockConcentration: '5x', finalConcentration: '1x' },
@@ -180,7 +179,9 @@ function inFusionStep(pcrPrograms) {
 }
 
 function goldenGateStep(displayPlan, pcrPrograms) {
-  const enzyme = enzymeNames(displayPlan)[0] || 'BsaI-HFv2';
+  const enzymeSelection = selectedEnzymes(displayPlan)[0] || {};
+  const enzyme = cleanText(enzymeSelection?.name || enzymeSelection?.site, 60) || 'BsaI-HFv2';
+  const digestTemperature = Math.round(Number(enzymeSelection?.digestTemperatureC) || 37);
   return {
     id: 'golden-gate',
     name: 'Golden Gate Assembly',
@@ -195,7 +196,7 @@ function goldenGateStep(displayPlan, pcrPrograms) {
     steps: [
       'Use roughly equimolar amounts of each purified amplicon, 0.05-0.1 pmol per part.',
       'Combine the reaction on ice in the volumes given by the reaction table.',
-      'Cycle 30 x (37 C 5 min, 16 C 5 min), then hold 60 C for 5 min to finish the digest.',
+      `Cycle 30 x (${digestTemperature} C 5 min, 16 C 5 min), then hold 60 C for 5 min to finish the digest.`,
       'Transform 2-5 uL into competent cells.',
       `Any surviving ${enzyme} site inside a part is cut mid-assembly; domesticate it if colonies carry truncated inserts.`
     ],

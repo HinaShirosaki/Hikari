@@ -83,10 +83,10 @@ export function normalizeCloningDesign(displayPlan = {}, requestedStrategy = '')
 }
 
 // Full compute path: hypothetical edit -> design source -> plan -> normalized shape.
-export function designCloningRoute({ strategy, source, record, range }) {
+export function designCloningRoute({ strategy, source, record, range, donor = null }) {
   if (!isContractStrategy(strategy)) {
     return { error: { code: 'UNKNOWN_STRATEGY', message: `Unknown cloning strategy "${strategy}".` } };
   }
-  const displayPlan = buildDisplayPlan({ strategy, source, record, range });
+  const displayPlan = buildDisplayPlan({ strategy, source, record, range, donor });
   return normalizeCloningDesign(displayPlan, strategy);
 }

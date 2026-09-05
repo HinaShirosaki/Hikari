@@ -1186,6 +1186,16 @@
               "minimum": 1
             }
           }
+        },
+        "donorRecordId": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "design_cloning: optional loaded donor record id that physically contains the insert PCR template."
+        },
+        "donorRecordIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "design_cloning: optional loaded donor record index, used only when donorRecordId is unavailable."
         }
       }
     }

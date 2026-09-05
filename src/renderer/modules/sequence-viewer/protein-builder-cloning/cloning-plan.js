@@ -35,28 +35,122 @@ function linearizeBackboneAtInsertionOffset(backboneSequence, backbone = {}) {
   return `${sequence.slice(insertionOffset)}${sequence.slice(0, insertionOffset)}`;
 }
 
-// The longest part template stands in for the insert's own template, and it
-// carries the vector it came from: that plasmid is the PCR tube, so primer
-// specificity has to be judged over all of it.
-function resolveDnaConstructTemplate(dnaConstruct = {}) {
-  const empty = { sequence: '', name: '', hostSequence: '' };
-  if (!normalizeSequenceText(dnaConstruct?.sequence || '').length) {
-    return empty;
+const MAX_PRIMER_ENCODED_PART_LENGTH = 40;
+
+function proteinPartTemplate(part = {}) {
+  return normalizeSequenceText(
+    part?.templateSequence
+    || part?.sourceTemplateSequence
+    || part?.sourceDnaSequence
+    || ''
+  );
+}
+
+// Preserve one physical source per fragment. A construct assembled from two
+// donor plasmids must yield two PCR fragments instead of pretending that the
+// longest donor contains the complete concatenated insert. Short untemplated
+// tags/linkers can ride on the next primer; longer generated blocks become an
+// explicit synthesis fragment.
+function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein Builder Insert') {
+  const desiredSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
+  const parts = asArray(dnaConstruct?.parts)
+    .map((part, index) => ({
+      index,
+      label: cleanText(part?.label, 160) || `Part ${index + 1}`,
+      sequence: normalizeSequenceText(part?.dnaSequence || ''),
+      templateSequence: proteinPartTemplate(part),
+      templateName: cleanText(part?.templateName, 160),
+      templateHostSequence: normalizeSequenceText(part?.templateHostSequence || '')
+    }))
+    .filter((part) => part.sequence.length);
+  if (!desiredSequence.length) {
+    return [];
+  }
+  if (!parts.length) {
+    return [{
+      id: 'protein_builder_insert_1',
+      name: constructName,
+      type: 'insert',
+      sequence: desiredSequence,
+      metadata: { source: 'synthesis', partCount: 0 }
+    }];
+  }
+  const declaredLength = parts.reduce((sum, part) => sum + part.sequence.length, 0);
+  if (declaredLength === desiredSequence.length) {
+    let offset = 0;
+    parts.forEach((part) => {
+      part.sequence = desiredSequence.slice(offset, offset + part.sequence.length);
+      offset += part.sequence.length;
+    });
   }
 
-  return asArray(dnaConstruct?.parts)
-    .map((part) => ({
-      sequence: normalizeSequenceText(
-        part?.templateSequence
-        || part?.sourceTemplateSequence
-        || part?.sourceDnaSequence
-        || ''
-      ),
-      name: cleanText(part?.templateName, 160),
-      hostSequence: normalizeSequenceText(part?.templateHostSequence || '')
-    }))
-    .filter((entry) => entry.sequence.length)
-    .sort((left, right) => right.sequence.length - left.sequence.length)[0] || empty;
+  const templatedParts = parts.filter((part) => part.templateSequence.length);
+  if (templatedParts.length) {
+    const anchored = [];
+    let cursor = 0;
+    let anchorsValid = true;
+    templatedParts.forEach((part) => {
+      if (!anchorsValid) {
+        return;
+      }
+      const templateStart = desiredSequence.indexOf(part.sequence, cursor);
+      if (templateStart < 0) {
+        anchorsValid = false;
+        return;
+      }
+      const prefix = desiredSequence.slice(cursor, templateStart);
+      if (prefix.length > MAX_PRIMER_ENCODED_PART_LENGTH) {
+        anchored.push({
+          name: 'Synthetic block',
+          sequence: prefix,
+          metadata: { source: 'synthesis', templateName: 'Ordered synthetic DNA' }
+        });
+      }
+      anchored.push({
+        name: part.label,
+        sequence: `${prefix.length <= MAX_PRIMER_ENCODED_PART_LENGTH ? prefix : ''}${part.sequence}`,
+        metadata: {
+          source: 'protein_builder_template',
+          templateSequence: part.templateSequence,
+          templateName: part.templateName,
+          specificitySequence: part.templateHostSequence || part.templateSequence,
+          specificityCircular: Boolean(part.templateHostSequence)
+        }
+      });
+      cursor = templateStart + part.sequence.length;
+    });
+    if (anchorsValid) {
+      const suffix = desiredSequence.slice(cursor);
+      if (suffix.length && suffix.length <= MAX_PRIMER_ENCODED_PART_LENGTH) {
+        anchored[anchored.length - 1].sequence += suffix;
+      } else if (suffix.length) {
+        anchored.push({
+          name: 'Synthetic block',
+          sequence: suffix,
+          metadata: { source: 'synthesis', templateName: 'Ordered synthetic DNA' }
+        });
+      }
+      return anchored.map((fragment, index) => ({
+        id: `protein_builder_insert_${index + 1}`,
+        name: fragment.name,
+        type: 'insert',
+        sequence: fragment.sequence,
+        metadata: { ...fragment.metadata, partCount: parts.length }
+      }));
+    }
+  }
+
+  // No usable anchor: either no part names a physical template, or a templated
+  // part does not sit where the construct says it does. Both mean the parts no
+  // longer describe the sequence being built, so it is one ordered synthetic
+  // fragment -- splitting it further would only ask for more gBlocks.
+  return [{
+    id: 'protein_builder_insert_1',
+    name: constructName,
+    type: 'insert',
+    sequence: desiredSequence,
+    metadata: { source: 'synthesis', partCount: parts.length, templateName: 'Ordered synthetic DNA' }
+  }];
 }
 
 function resolveBackboneCloningPreferences(backbone = {}) {
@@ -132,7 +226,6 @@ function buildProteinBuilderCloningPlan({
   const rawBackboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
   const backboneSequence = linearizeBackboneAtInsertionOffset(rawBackboneSequence, backbone);
   const insertSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
-  const insertTemplate = resolveDnaConstructTemplate(dnaConstruct);
   const resultSequence = normalizeSequenceText(assembledRecord?.sequence || '');
   const safeConstructName = cleanText(constructName, 160)
     || cleanText(assembledRecord?.name, 160)
@@ -142,6 +235,7 @@ function buildProteinBuilderCloningPlan({
   if (!backboneSequence.length || !insertSequence.length) {
     return null;
   }
+  const insertFragments = buildProteinInsertFragments(dnaConstruct, safeConstructName);
 
   const plan = assembleCloningPlan({
     hostVectors: [
@@ -153,24 +247,7 @@ function buildProteinBuilderCloningPlan({
       }
     ],
     hostVectorId: 'protein_builder_backbone',
-    fragments: [
-      {
-        id: 'protein_builder_insert',
-        name: safeConstructName,
-        type: 'insert',
-        sequence: insertSequence,
-        metadata: {
-          source: 'protein_builder',
-          partCount: asArray(dnaConstruct?.parts).length,
-          templateSequence: insertTemplate.sequence,
-          templateName: insertTemplate.name,
-          // Uniqueness is judged over the whole source plasmid, since that is
-          // the DNA in the tube.
-          specificitySequence: insertTemplate.hostSequence,
-          specificityCircular: Boolean(insertTemplate.hostSequence)
-        }
-      }
-    ],
+    fragments: insertFragments,
     resultSequence,
     preferences: resolveBackboneCloningPreferences(backbone)
   });
@@ -187,6 +264,7 @@ function buildProteinBuilderCloningPlan({
 
 export {
   buildBackboneName,
+  buildProteinInsertFragments,
   buildProteinBuilderCloningPlan,
   resolvePcrTargets
 };

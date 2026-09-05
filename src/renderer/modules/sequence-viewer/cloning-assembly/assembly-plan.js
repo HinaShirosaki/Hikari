@@ -1,5 +1,5 @@
 import { CLONING_PRIMER_TM_THRESHOLDS, DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeFragment } from './fragments.js';
 import { findSelectedHostVector } from './host-vector-selection.js';
 import { buildOrderedFragmentMap, normalizeEditRequest } from './edit-map.js';
@@ -15,6 +15,32 @@ const ROUTE_THRESHOLD_LEVELS = [
   ['moderate', CLONING_PRIMER_TM_THRESHOLDS.moderate],
   ['relaxed', CLONING_PRIMER_TM_THRESHOLDS.relaxed]
 ];
+
+function inputAmbiguityWarnings(payload) {
+  const inputs = [
+    ['Designed result', payload?.resultSequence],
+    ...asArray(payload?.hostVectors).map((host, index) => [`Host vector ${host?.name || index + 1}`, host?.sequence]),
+    ...asArray(payload?.fragments).flatMap((fragment, index) => [
+      [`Fragment ${fragment?.name || index + 1}`, fragment?.sequence],
+      [`Template for ${fragment?.name || index + 1}`, fragment?.templateSequence || fragment?.metadata?.templateSequence],
+      [`Specificity template for ${fragment?.name || index + 1}`, fragment?.metadata?.specificitySequence]
+    ]),
+    ['Edit source', payload?.editRequest?.originalSequence],
+    ['Edited bases', payload?.editRequest?.editedSequence]
+  ];
+  return inputs.map(([label, sequence]) => describeAmbiguousDna(sequence, label)).filter(Boolean);
+}
+
+// An empty payload already produces the plan shape every consumer expects, with
+// every route infeasible. Only the warnings and the one actionable step differ.
+function invalidInputPlan(warnings) {
+  return {
+    ...assembleCloningPlan({}),
+    stepByStepProcedure: [{ step: 1, title: 'Resolve sequence ambiguity', details: warnings.join(' '), inputs: [], expectedOutput: 'A concrete A/C/G/T sequence' }],
+    warnings,
+    alternateStrategyRecommendation: 'Resolve ambiguous bases before comparing cloning routes.'
+  };
+}
 
 // Route feasibility climbs the same strict->moderate->relaxed ladder as primer
 // design: a junction whose only workable overlap sits in the moderate/relaxed Tm
@@ -34,6 +60,10 @@ function evaluateRouteWithFallback(evaluate, fragments, options) {
 }
 
 export function assembleCloningPlan(payload = {}) {
+  const ambiguityWarnings = inputAmbiguityWarnings(payload);
+  if (ambiguityWarnings.length) {
+    return invalidInputPlan(ambiguityWarnings);
+  }
   const config = {
     ...DEFAULT_CLONING_PREFERENCES,
     ...(payload?.preferences || {})

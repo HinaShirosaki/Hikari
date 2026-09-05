@@ -391,7 +391,24 @@ export function createSequenceViewerAgentApi(context = {}) {
       }
       range = { start: start - 1, end };
     }
-    return designCloningRoute({ strategy, source, record: designRecord, range });
+    let donor = null;
+    if (input.donorRecordId || Number.isFinite(Number(input.donorRecordIndex))) {
+      const donorRef = {
+        recordId: input.donorRecordId || '',
+        recordIndex: input.donorRecordIndex
+      };
+      const resolvedDonor = resolveRecord(donorRef);
+      if (!resolvedDonor.record) {
+        return fail('DONOR_RECORD_NOT_FOUND', 'No loaded record matches donorRecordId/donorRecordIndex.');
+      }
+      donor = {
+        id: recordIdAt(resolvedDonor.record, resolvedDonor.index),
+        name: resolvedDonor.record?.name || `record ${resolvedDonor.index + 1}`,
+        topology: String(resolvedDonor.record?.topology || 'linear').toLowerCase() === 'circular' ? 'circular' : 'linear',
+        sequence: normalizeSequenceText(resolvedDonor.record?.sequence || '')
+      };
+    }
+    return designCloningRoute({ strategy, source, record: designRecord, range, donor });
   }
 
   function getCloningDesign() {

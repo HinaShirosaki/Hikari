@@ -48,17 +48,27 @@ export function buildFixedReactionCalculation({
 
 export function buildPcrFixedReactionCalculation(pcrProgram = {}, nowIso = '', options = {}) {
   const polymerase = cleanText(pcrProgram?.polymerase, 160) || 'High-fidelity DNA polymerase';
+  const formulation = cleanText(pcrProgram?.reactionFormulation, 80);
+  const usesTwoXMasterMix = formulation === '2x-master-mix' || /\b2x\b.*master mix/i.test(polymerase);
+  const reagents = usesTwoXMasterMix
+    ? [
+        { rowIndex: 1, name: 'Forward primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+        { rowIndex: 2, name: 'Reverse primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+        { rowIndex: 3, name: polymerase, stockConcentration: '2x', finalConcentration: '1x' },
+        { rowIndex: 4, name: 'Template DNA (1-10 ng)', manualVolumeValue: '1 uL', note: 'Adjust template volume to its measured concentration and subtract the same volume from water.' }
+      ]
+    : [
+        { rowIndex: 1, name: 'Forward primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+        { rowIndex: 2, name: 'Reverse primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
+        { rowIndex: 3, name: 'dNTP mix', stockConcentration: '10 mM', finalConcentration: '0.2 mM' },
+        { rowIndex: 4, name: polymerase, manualVolumeValue: '0.5 uL' },
+        { rowIndex: 5, name: '5x polymerase buffer', stockConcentration: '5x', finalConcentration: '1x' },
+        { rowIndex: 6, name: 'Template DNA (10 ng)', finalConcentration: '0.2 ng/uL' }
+      ];
   return buildFixedReactionCalculation({
     id: cleanText(options?.id, 160) || 'pcr-fixed-reaction',
     totalVolume: '50 uL',
-    reagents: [
-      { rowIndex: 1, name: 'Forward primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
-      { rowIndex: 2, name: 'Reverse primer', stockConcentration: '10 uM', finalConcentration: '0.5 uM' },
-      { rowIndex: 3, name: 'dNTP mix', stockConcentration: '10 mM', finalConcentration: '0.2 mM' },
-      { rowIndex: 4, name: polymerase, manualVolumeValue: '0.5 uL' },
-      { rowIndex: 5, name: '5x polymerase buffer', stockConcentration: '5x', finalConcentration: '1x' },
-      { rowIndex: 6, name: 'Template DNA (10 ng)', finalConcentration: '0.2 ng/uL' }
-    ],
+    reagents,
     reactionLabels: options?.reactionLabels,
     nowIso
   });

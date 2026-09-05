@@ -1,8 +1,8 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { reverseComplementDna } from '../calculations/sequence.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { selectBindingWindow } from './overlap-windows.js';
-import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
+import { buildPrimerRecord, resolveFragmentPrimerTemplate, summarizePrimerPlan } from './primer-records.js';
 import { designWithThresholdFallback } from './strategy.js';
 import { sequenceContainsSite } from './restriction-ligation.js';
 
@@ -12,27 +12,34 @@ import { sequenceContainsSite } from './restriction-ligation.js';
 // directional. Recognition sites present inside the insert would be cut mid-part,
 // so the enzyme is auto-picked to avoid them (domestication otherwise required).
 const TYPE_IIS_ENZYMES = [
-  { name: 'BsaI', site: 'GGTCTC', spacer: 1, cut: 'GGTCTC(1/5)' },
-  { name: 'BbsI', site: 'GAAGAC', spacer: 2, cut: 'GAAGAC(2/6)' },
-  { name: 'BsmBI', site: 'CGTCTC', spacer: 1, cut: 'CGTCTC(1/5)' }
+  { name: 'BsaI-HFv2', site: 'GGTCTC', spacer: 1, cut: 'GGTCTC(1/5)', digestTemperatureC: 37 },
+  { name: 'BbsI-HF', site: 'GAAGAC', spacer: 2, cut: 'GAAGAC(2/6)', digestTemperatureC: 37 },
+  { name: 'BsmBI-v2', site: 'CGTCTC', spacer: 1, cut: 'CGTCTC(1/5)', digestTemperatureC: 42 }
 ];
 
 const OVERHANG = 4;
 const SPACER_BASE = 'A';
 const MINIMUM_TYPE_IIS_FLANK = 6;
 
-function pickEnzyme(insert) {
-  return TYPE_IIS_ENZYMES.find((enzyme) => !sequenceContainsSite(insert, enzyme.site)) || null;
+function pickEnzyme(constructSequence, circular = false) {
+  return TYPE_IIS_ENZYMES.find((enzyme) => !sequenceContainsSite(constructSequence, enzyme.site, circular)) || null;
 }
 
-function buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, insertTemplateName = '') {
-  const insertTemplate = String(insertTemplateName || '').trim() || recordName;
+function buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, insertTemplate) {
   return [
     { title: 'Order insert and backbone primers', details: `The four ${enzyme.name} (${enzyme.site})-tailed primers generate the matched ${upstreamOverhang}/${downstreamOverhang} junction overhangs.` },
     { title: 'Amplify both fragments', details: `PCR the insert from ${insertTemplate} and the linearized ${recordName} backbone separately, verify single products, and purify both amplicons.` },
-    { title: 'One-pot Golden Gate', details: `Combine the two amplicons with ${enzyme.name} + T4 DNA ligase and cycle digest-ligation (e.g. 37 C / 16 C).` },
+    { title: 'One-pot Golden Gate', details: `Combine the two amplicons with ${enzyme.name} + T4 DNA ligase and cycle ${enzyme.digestTemperatureC} C digestion / 16 C ligation.` },
     { title: 'Transform and screen', details: 'Transform the assembly, then confirm both junctions by colony PCR and sequencing.' }
   ];
+}
+
+function overhangQualityProblem(sequence) {
+  const overhang = normalizeSequence(sequence);
+  const gcCount = [...overhang].filter((base) => base === 'G' || base === 'C').length;
+  return gcCount === 0 || gcCount === OVERHANG
+    ? `${overhang} is all-AT or all-GC; shift the boundary to use a mixed-composition 4 nt overhang.`
+    : '';
 }
 
 function buildTypeIisFlank(config) {
@@ -52,6 +59,8 @@ export function buildGoldenGatePlan(payload = {}) {
   const topology = String(payload?.topology || '').toLowerCase() === 'linear' ? 'linear' : 'circular';
   const donorSequence = normalizeSequence(payload?.donor?.sequence || '');
   const donorName = String(payload?.donor?.name || '').trim();
+  const insertTemplateSequence = donorSequence || normalizeSequence(payload?.insertTemplateSequence || '');
+  const insertTemplateName = donorName || String(payload?.insertTemplateName || '').trim() || recordName;
   const vectorTemplateSequence = normalizeSequence(payload?.vectorTemplateSequence || sequence);
   const start = Math.max(0, Math.min(sequence.length, Math.round(Number(payload?.range?.start) || 0)));
   const end = Math.max(start, Math.min(sequence.length, Math.round(Number(payload?.range?.end) || start)));
@@ -77,17 +86,30 @@ export function buildGoldenGatePlan(payload = {}) {
     };
   };
 
+  const ambiguityWarnings = [
+    describeAmbiguousDna(payload?.sequence, 'Golden Gate result'),
+    describeAmbiguousDna(payload?.donor?.sequence, 'Golden Gate donor'),
+    describeAmbiguousDna(payload?.insertTemplateSequence, 'Golden Gate insert template'),
+    describeAmbiguousDna(payload?.vectorTemplateSequence, 'Golden Gate vector template')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return infeasible(ambiguityWarnings);
+  }
+
   if (insert.length < OVERHANG * 2 || backbone.length < OVERHANG * 2) {
     return infeasible('The selected insert and remaining backbone must each support two Golden Gate junctions.');
   }
-
-  const enzyme = pickEnzyme(sequence);
+  const enzyme = pickEnzyme(sequence, topology === 'circular');
   if (!enzyme) {
     return infeasible('The designed insert/backbone sequence contains every candidate Type IIS site (BsaI/BbsI/BsmBI); domesticate one before using Golden Gate.');
   }
 
   const upstreamOverhang = insert.slice(0, OVERHANG);
   const downstreamOverhang = backbone.slice(0, OVERHANG);
+  // Composition alone does not decide a Golden Gate junction: the identical,
+  // reverse-complementary, and self-complementary cases below are the ones that
+  // actually misligate. Low sequence diversity is a fidelity note, not a block.
+  const overhangProblem = overhangQualityProblem(upstreamOverhang) || overhangQualityProblem(downstreamOverhang);
   if (
     upstreamOverhang === downstreamOverhang
     || upstreamOverhang === reverseComplementDna(downstreamOverhang)
@@ -95,6 +117,22 @@ export function buildGoldenGatePlan(payload = {}) {
     || downstreamOverhang === reverseComplementDna(downstreamOverhang)
   ) {
     return infeasible('The native 4 nt junction overhangs are identical, reverse-complementary, or self-complementary. Shift the insert boundaries before using Golden Gate.');
+  }
+  if (!insertTemplateSequence.length) {
+    return infeasible('The Golden Gate insert has no physical PCR template. Choose a donor record or provide a synthesis fragment before designing primers.');
+  }
+
+  const insertTemplateDesign = resolveFragmentPrimerTemplate({
+    name: 'Golden Gate insert',
+    sequence: insert,
+    metadata: {
+      source: donorSequence ? 'donor_plasmid' : 'sequence_viewer_edit',
+      templateSequence: insertTemplateSequence,
+      templateName: insertTemplateName
+    }
+  });
+  if (insertTemplateDesign.feasible === false) {
+    return infeasible(insertTemplateDesign.blockingWarnings || insertTemplateDesign.warnings);
   }
 
   const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
@@ -105,19 +143,20 @@ export function buildGoldenGatePlan(payload = {}) {
     // pre-edit vector is the backbone's template, and never carries the insert.
     const insertConfig = {
       ...config,
-      specificitySequence: donorSequence || sequence,
+      specificitySequence: donorSequence || normalizeSequence(payload?.insertTemplateHostSequence || '') || insertTemplateSequence,
       specificityCircular: donorSequence
         ? String(payload?.donor?.topology || 'circular').toLowerCase() !== 'linear'
-        : topology === 'circular'
+        : Boolean(payload?.insertTemplateCircular)
     };
     const backboneConfig = {
       ...config,
       specificitySequence: vectorTemplateSequence,
       specificityCircular: topology === 'circular'
     };
-    const insertForward = selectBindingWindow(insert, 'forward', thresholds, baseTail.length, insertConfig);
-    const insertReverseTail = `${baseTail}${reverseComplementDna(downstreamOverhang)}`;
-    const insertReverse = selectBindingWindow(insert, 'reverse', thresholds, insertReverseTail.length, insertConfig);
+    const insertForwardTail = `${baseTail}${insertTemplateDesign.forwardAddedSequence}`;
+    const insertForward = selectBindingWindow(insertTemplateDesign.templateSequence, 'forward', thresholds, insertForwardTail.length, insertConfig);
+    const insertReverseTail = `${baseTail}${reverseComplementDna(downstreamOverhang)}${reverseComplementDna(insertTemplateDesign.reverseAddedSequence)}`;
+    const insertReverse = selectBindingWindow(insertTemplateDesign.templateSequence, 'reverse', thresholds, insertReverseTail.length, insertConfig);
     const backboneForward = selectBindingWindow(backbone, 'forward', thresholds, baseTail.length, backboneConfig);
     const backboneReverseTail = `${baseTail}${reverseComplementDna(upstreamOverhang)}`;
     const backboneReverse = selectBindingWindow(backbone, 'reverse', thresholds, backboneReverseTail.length, backboneConfig);
@@ -128,11 +167,11 @@ export function buildGoldenGatePlan(payload = {}) {
       buildPrimerRecord({
         name: 'gg_insert_F',
         role: 'golden-gate-forward',
-        sequence: `${baseTail}${insertForward.bindingSequence}`,
-        tailSequence: baseTail,
+        sequence: `${insertForwardTail}${insertForward.bindingSequence}`,
+        tailSequence: insertForwardTail,
         bindingSequence: insertForward.bindingSequence,
         groupLabel: 'Golden Gate insert PCR',
-        ampliconLength: insert.length,
+        ampliconLength: insertTemplateDesign.desiredSequence.length,
         templateId: 'golden_gate_insert',
         warnings: [`${enzyme.name} cut exposes the native ${upstreamOverhang} overhang.`]
       }),
@@ -143,7 +182,7 @@ export function buildGoldenGatePlan(payload = {}) {
         tailSequence: insertReverseTail,
         bindingSequence: insertReverse.bindingSequence,
         groupLabel: 'Golden Gate insert PCR',
-        ampliconLength: insert.length,
+        ampliconLength: insertTemplateDesign.desiredSequence.length,
         templateId: 'golden_gate_insert',
         warnings: [`${enzyme.name} cut exposes the matched ${downstreamOverhang} junction overhang.`]
       }),
@@ -179,6 +218,7 @@ export function buildGoldenGatePlan(payload = {}) {
 
   const warnings = [
     ...asArray(design.warnings),
+    overhangProblem ? `Low-diversity junction overhang: ${overhangProblem}` : '',
     'Native junction overhangs were checked for identity, reverse complementarity, and self-complementarity; review ligation-fidelity data before ordering.'
   ].filter(Boolean);
 
@@ -186,8 +226,14 @@ export function buildGoldenGatePlan(payload = {}) {
     feasible: true,
     recommendedAssemblyStrategy: 'golden-gate',
     primerOligoPlan: { primers: design.primers, selectedThresholdLevel: design.selectedThresholdLevel, warnings },
-    restrictionEnzymeSelection: [{ name: enzyme.name, site: enzyme.site, cut: enzyme.cut }],
-    stepByStepProcedure: buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, donorName),
+    restrictionEnzymeSelection: [{
+      name: enzyme.name,
+      site: enzyme.site,
+      cut: enzyme.cut,
+      digestTemperatureC: enzyme.digestTemperatureC,
+      ligationTemperatureC: 16
+    }],
+    stepByStepProcedure: buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, insertTemplateName),
     warnings
   };
 

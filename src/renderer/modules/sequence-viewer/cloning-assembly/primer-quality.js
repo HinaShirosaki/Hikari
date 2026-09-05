@@ -100,8 +100,9 @@ function longestHairpinStem(sequence, minimumLoopLength = 3) {
 export function evaluatePrimerQuality(sequence) {
   const cleaned = normalizeSequence(sequence);
   const warnings = [];
+  const blockingWarnings = [];
   if (!cleaned.length) {
-    return { warnings, gcContent: 0, longestHomopolymer: 0, hairpinStem: 0, selfDimerRun: 0, threePrimeSelfDimerRun: 0 };
+    return { warnings, blockingWarnings, gcContent: 0, longestHomopolymer: 0, hairpinStem: 0, selfDimerRun: 0, threePrimeSelfDimerRun: 0 };
   }
   const homopolymers = cleaned.match(/A+|C+|G+|T+/g) || [];
   const longestHomopolymer = homopolymers.reduce((max, run) => Math.max(max, run.length), 0);
@@ -112,20 +113,31 @@ export function evaluatePrimerQuality(sequence) {
 
   if (longestHomopolymer >= 5) {
     warnings.push(`Contains a ${longestHomopolymer}-base homopolymer; review synthesis and nonspecific priming risk.`);
+    if (longestHomopolymer >= 7) {
+      blockingWarnings.push(`Contains a ${longestHomopolymer}-base homopolymer that is too error-prone for an automatically approved cloning primer.`);
+    }
   }
   if (gcContent < 25 || gcContent > 75) {
     warnings.push(`Whole-oligo GC content (${gcContent.toFixed(1)}%) is outside the preferred 25-75% range.`);
   }
   if (hairpinStem >= 6) {
     warnings.push(`Potential hairpin contains a ${hairpinStem}-base complementary stem.`);
+    // A sequence-only stem count is deliberately conservative: without loop
+    // energetics, shorter stems are review warnings rather than hard failures.
+    if (hairpinStem >= 10) {
+      blockingWarnings.push(`Potential hairpin contains a ${hairpinStem}-base stem and requires primer redesign.`);
+    }
   }
   if (threePrimeSelfDimerRun >= 4) {
     warnings.push(`Potential 3' self-dimer contains ${threePrimeSelfDimerRun} complementary bases.`);
+    if (threePrimeSelfDimerRun >= 8) {
+      blockingWarnings.push(`Potential 3' self-dimer contains ${threePrimeSelfDimerRun} complementary bases and requires primer redesign.`);
+    }
   } else if (selfDimerRun >= 8) {
     warnings.push(`Potential self-dimer contains an ${selfDimerRun}-base complementary run.`);
   }
 
-  return { warnings, gcContent, longestHomopolymer, hairpinStem, selfDimerRun, threePrimeSelfDimerRun };
+  return { warnings, blockingWarnings, gcContent, longestHomopolymer, hairpinStem, selfDimerRun, threePrimeSelfDimerRun };
 }
 
 export function evaluatePrimerPairQuality(leftPrimer, rightPrimer) {
@@ -134,10 +146,14 @@ export function evaluatePrimerPairQuality(leftPrimer, rightPrimer) {
   const complementaryRun = longestComplementaryRun(left, right);
   const threePrimeComplementaryRun = longestThreePrimeComplementaryRun(left, right);
   const warnings = [];
+  const blockingWarnings = [];
   if (threePrimeComplementaryRun >= 4) {
     warnings.push(`Potential 3' heterodimer contains ${threePrimeComplementaryRun} complementary bases.`);
+    if (threePrimeComplementaryRun >= 8) {
+      blockingWarnings.push(`Potential 3' heterodimer contains ${threePrimeComplementaryRun} complementary bases and requires primer redesign.`);
+    }
   } else if (complementaryRun >= 8) {
     warnings.push(`Potential heterodimer contains an ${complementaryRun}-base complementary run.`);
   }
-  return { warnings, complementaryRun, threePrimeComplementaryRun };
+  return { warnings, blockingWarnings, complementaryRun, threePrimeComplementaryRun };
 }

@@ -1,8 +1,33 @@
 import { cleanNucleotideSequence } from '../calculations/sequence.js';
 import { asArray } from '../../../lib/normalize.js';
 
+const CONCRETE_DNA_BASES = new Set(['A', 'C', 'G', 'T']);
+const IUPAC_DNA_PATTERN = /^[ACGTRYSWKMBDHVN]+$/;
+
+function normalizedLetterSequence(raw) {
+  return String(raw || '')
+    .toUpperCase()
+    .replace(/U/g, 'T')
+    .replace(/[^A-Z]/g, '');
+}
+
 export function normalizeSequence(raw) {
   return cleanNucleotideSequence(raw, 'DNA');
+}
+
+// Primer coordinates and junctions must never be calculated after silently
+// deleting an ambiguous base. Keep the permissive normalizer for established
+// callers, but make every cloning entry point validate its raw inputs first.
+export function describeAmbiguousDna(raw, label = 'DNA sequence') {
+  const bases = [...new Set([...normalizedLetterSequence(raw)].filter((base) => !CONCRETE_DNA_BASES.has(base)))];
+  return bases.length
+    ? `${label} contains unresolved base${bases.length === 1 ? '' : 's'} (${bases.join(', ')}). Resolve every position to A, C, G, or T before primer design; ambiguous bases are not deleted or guessed.`
+    : '';
+}
+
+export function normalizeIupacSequence(raw) {
+  const normalized = normalizedLetterSequence(raw);
+  return normalized && IUPAC_DNA_PATTERN.test(normalized) ? normalized : '';
 }
 
 export function normalizeTopology(value) {

@@ -1,5 +1,5 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
@@ -97,6 +97,19 @@ export function designCloningPrimers(args = {}) {
 
 
 export function designPcrPrimerPair(sequence, options = {}) {
+  const ambiguityWarnings = [
+    describeAmbiguousDna(sequence, 'PCR target'),
+    describeAmbiguousDna(options?.specificitySequence, 'PCR specificity template')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return {
+      feasible: false,
+      primers: [],
+      selectedThresholdLevel: null,
+      attempts: [],
+      warnings: ambiguityWarnings
+    };
+  }
   const templateSequence = normalizeSequence(sequence);
   const config = {
     ...DEFAULT_CLONING_PREFERENCES,

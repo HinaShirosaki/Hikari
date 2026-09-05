@@ -136,11 +136,12 @@ function extractOriginalTemplateForEditedRange(source = {}, start, end) {
   }
 
   const originalStart = clamp(mapEditedIndexToOriginal(start, source), 0, originalSequence.length);
-  let originalEnd = clamp(mapEditedIndexToOriginal(end, source), originalStart, originalSequence.length);
-  if (originalEnd <= originalStart) {
-    const editedSpan = Math.max(1, Math.round(Number(end) || 0) - Math.round(Number(start) || 0));
-    originalEnd = clamp(originalStart + editedSpan, originalStart, originalSequence.length);
-  }
+  const originalEnd = clamp(mapEditedIndexToOriginal(end, source), originalStart, originalSequence.length);
+  // A range wholly inside a de-novo insertion maps to one zero-width point in
+  // the pre-edit record. Expanding that point by the inserted length silently
+  // substituted unrelated downstream vector DNA as the insert's PCR template.
+  // Keep the zero-width result: the caller can then require a real donor or a
+  // declared synthesis fragment.
   return originalSequence.slice(originalStart, originalEnd);
 }
 

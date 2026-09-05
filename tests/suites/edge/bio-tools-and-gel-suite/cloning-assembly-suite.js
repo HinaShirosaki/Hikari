@@ -12,6 +12,20 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly.js')
     );
 
+    // Deterministic non-repeating DNA gives primer-quality and specificity
+    // checks realistic sequence without making the suite nondeterministic.
+    function filler(length, seed) {
+      let state = seed >>> 0;
+      let out = '';
+      for (let index = 0; index < length; index += 1) {
+        state ^= state << 13; state >>>= 0;
+        state ^= state >>> 17;
+        state ^= state << 5; state >>>= 0;
+        out += 'ACGT'[state % 4];
+      }
+      return out;
+    }
+
     // --- Fix #2: restriction-site matching must honor IUPAC ambiguity codes ---
     test('[EDGE] cloning sequenceContainsSite matches a degenerate site (GTMKAC)', () => {
       // GTAGAC satisfies GTMKAC (M=A/C, K=G/T); the bare 4-mer GTAC must not.
@@ -80,11 +94,12 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
     // --- Megaprimer restriction-ligation mutagenesis route ---
     test('[EDGE] cloning buildMegaprimerRestrictionPlan builds a 3-primer megaprimer protocol', () => {
       const mega = loadEsmStyleModule(path.join(cloningAssemblyPath, 'megaprimer-restriction.js'));
-      const filler = 'ACAGTCATGACTTGACATGTCAGT'.repeat(3);
-      const left = 'TTGACCATGGTACCATTGACCATGGTACCATTGACCA';
-      const right = 'GGTTCAAGTTCGATGCTAGCTTGACCATGGTTCAAGT';
-      const original = `${filler}GAATTC${left}G${right}GGATCC${filler}`;
-      const editIndex = filler.length + 6 + left.length; // the single G between the flanks
+      const upstream = filler(300, 1);
+      const left = filler(120, 4);
+      const right = filler(120, 7);
+      const downstream = filler(300, 10);
+      const original = `${upstream}GAATTC${left}G${right}GGATCC${downstream}`;
+      const editIndex = upstream.length + 6 + left.length; // the single G between the flanks
       const edited = `${original.slice(0, editIndex)}A${original.slice(editIndex + 1)}`;
 
       const plan = mega.buildMegaprimerRestrictionPlan({
@@ -131,15 +146,15 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
     test('[EDGE] cloning buildQ5KldPlan uses non-overlapping primers and a KLD finish', () => {
       const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
       const sequence = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js'));
-      const filler = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
-      const original = `${filler}GGTACCTATTGACCATG${filler}`;
-      const editIndex = filler.length + 6; // the T
-      const edited = `${original.slice(0, editIndex)}A${original.slice(editIndex + 1)}`;
+      const original = filler(1000, 1);
+      const editIndex = 500;
+      const replacement = original[editIndex] === 'A' ? 'C' : 'A';
+      const edited = `${original.slice(0, editIndex)}${replacement}${original.slice(editIndex + 1)}`;
 
       const plan = q5.buildQ5KldPlan({
         originalSequence: original,
         editedSequence: edited,
-        editRequest: { type: 'point-mutation', start: editIndex + 1, end: editIndex + 1, originalSequence: 'T', editedSequence: 'A' },
+        editRequest: { type: 'point-mutation', start: editIndex + 1, end: editIndex + 1, originalSequence: original[editIndex], editedSequence: replacement },
         recordName: 'pT',
         topology: 'circular'
       });
@@ -150,7 +165,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       const reverse = plan.primers.find((p) => p.name === 'q5_R');
       // back-to-back divergent primers, NOT the overlapping complementary QuikChange pair
       assert.notEqual(sequence.reverseComplementDna(forward.sequence), reverse.sequence);
-      assert.equal(forward.sequence.startsWith('A'), true); // edit rides the forward 5' end
+      assert.equal(forward.sequence.startsWith(replacement), true); // edit rides the forward 5' end
       const steps = plan.plans[0].plan.stepByStepProcedure;
       assert.equal(steps.length, 4);
       assert.ok(/KLD/.test(steps[2].details));
@@ -160,9 +175,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
     test('[EDGE] cloning buildQ5KldPlan splits a long insertion across correctly oriented 5-prime tails', () => {
       const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
       const sequence = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js'));
-      const left = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG';
-      const right = 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA';
-      const insertion = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
+      const left = filler(300, 3);
+      const right = filler(300, 8);
+      const insertion = filler(50, 13);
       const original = `${left}${right}`;
       const plan = q5.buildQ5KldPlan({
         originalSequence: original,
@@ -205,7 +220,16 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       const end = 80;
       const insert = seq.slice(start, end);
 
-      const plan = gg.buildGoldenGatePlan({ sequence: seq, range: { start, end }, recordName: 'pGG', topology: 'circular' });
+      const plan = gg.buildGoldenGatePlan({
+        sequence: seq,
+        range: { start, end },
+        recordName: 'pGG',
+        topology: 'circular',
+        insertTemplateSequence: insert,
+        insertTemplateHostSequence: seq,
+        insertTemplateCircular: true,
+        vectorTemplateSequence: seq
+      });
       assert.equal(plan.feasible, true);
       assert.equal(plan.primers.length, 4);
       assert.equal(new Set(plan.primers.map((primer) => primer.groupLabel)).size, 2);
@@ -292,20 +316,6 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
     });
 
     // --- Overlap-extension route: cut sites out of primer reach ---
-    // Deterministic non-repeating filler; random-looking sequence is what makes
-    // unique primer windows and unique cutters available at all.
-    function filler(length, seed) {
-      let state = seed >>> 0;
-      let out = '';
-      for (let index = 0; index < length; index += 1) {
-        state ^= state << 13; state >>>= 0;
-        state ^= state >>> 17;
-        state ^= state << 5; state >>>= 0;
-        out += 'ACGT'[state % 4];
-      }
-      return out;
-    }
-
     test('[EDGE] Golden Gate checks the whole vector and selected donor as PCR templates', () => {
       const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
       const cloningDesign = loadEsmStyleModule(
@@ -322,7 +332,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
           range,
           recordName: 'pGolden',
           topology: 'circular',
-          vectorTemplateSequence: sequence
+          vectorTemplateSequence: sequence,
+          insertTemplateSequence: insert,
+          insertTemplateHostSequence: insert
         });
         if (plan.feasible) {
           fixture = { insert, backbone, sequence, range };
@@ -336,7 +348,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         range: fixture.range,
         recordName: 'pDuplicated',
         topology: 'circular',
-        vectorTemplateSequence: duplicatedVector
+        vectorTemplateSequence: duplicatedVector,
+        insertTemplateSequence: fixture.insert,
+        insertTemplateHostSequence: fixture.insert
       });
       assert.equal(duplicateVectorPlan.feasible, false);
 
@@ -376,7 +390,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(cloningDesign.isCloningDesignPlanActionable({ feasible: true, primers: [{ name: 'complete' }] }), true);
     });
 
-    test('[EDGE] Golden Gate templates the insert off this record when no donor is chosen', () => {
+    test('[EDGE] Golden Gate blocks a de novo insert when no physical donor is chosen', () => {
       const cloningDesign = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design.js')
       );
@@ -406,24 +420,14 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       let fixture = null;
       for (let seed = 1; seed <= 40 && !fixture; seed += 1) {
         const candidate = planFor(seed);
-        if (!/every candidate Type IIS/.test(candidate.plan.warnings?.[0] || '')) {
+        if (/does not contain this insert|no physical PCR template/i.test(candidate.plan.warnings?.join(' ') || '')) {
           fixture = candidate;
         }
       }
       assert.ok(fixture, 'expected a fixture with a usable Type IIS enzyme');
-      assert.equal(fixture.plan.feasible, true);
-      // Both insert primers anneal to sequence that exists in the tube.
-      const complement = { A: 'T', C: 'G', G: 'C', T: 'A' };
-      const revComp = (sequence) => [...sequence].reverse().map((base) => complement[base] || base).join('');
-      fixture.plan.primers
-        .filter((primer) => primer.name.startsWith('gg_insert'))
-        .forEach((primer) => {
-          assert.ok(
-            fixture.gene.includes(primer.bindingSequence)
-              || fixture.gene.includes(revComp(primer.bindingSequence)),
-            `${primer.name} does not bind the insert`
-          );
-        });
+      assert.equal(fixture.plan.feasible, false);
+      assert.equal(fixture.plan.primers.length, 0);
+      assert.match(fixture.plan.warnings.join(' '), /does not contain this insert|no physical PCR template/i);
     });
 
     test('[EDGE] an AT-rich Gibson seam splits its overlap across both primers', () => {
@@ -798,7 +802,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         sequence: construct,
         range: { start, end },
         recordName: 'pOverlap',
-        topology: 'circular'
+        topology: 'circular',
+        insertTemplate: insert,
+        insertTemplateHostSequence: insert
       });
 
       assert.equal(plan.feasible, true);
@@ -825,8 +831,8 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(`${product}${product}`.includes(construct), true);
 
       // Outer primers clamp the sites; inner ones carry the fusion overlaps.
-      assert.equal(plan.primers[0].tailSequence, 'GCGC');
-      assert.equal(plan.primers[5].tailSequence, 'GCGC');
+      assert.equal(plan.primers[0].tailSequence, 'GCGCGC');
+      assert.equal(plan.primers[5].tailSequence, 'GCGCGC');
       assert.equal(plan.primers[1].tailSequence.length > 8, true);
       assert.equal(plan.primers[3].tailSequence.length > 8, true);
     });
@@ -841,7 +847,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         sequence: `${insert}${backbone}`,
         range: { start: 0, end: insert.length },
         recordName: 'pClose',
-        topology: 'circular'
+        topology: 'circular',
+        insertTemplate: insert,
+        insertTemplateHostSequence: insert
       });
 
       assert.equal(plan.feasible, false);
@@ -1121,7 +1129,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(clean.warnings.some((warning) => /binds more than one site/.test(warning)), false);
     });
 
-    test('[EDGE] a flagged Q5/KLD primer reaches the route warnings', () => {
+    test('[EDGE] a severe Q5/KLD primer defect blocks the route', () => {
       const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
       // High bits only: a power-of-two LCG's low bits cycle with period 4 and
       // would make every "random" flank a repeat.
@@ -1145,12 +1153,11 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         topology: 'circular'
       });
 
-      assert.equal(plan.feasible, true);
-      assert.equal(plan.primers.some((primer) => primer.qualityWarnings.some((w) => /homopolymer/.test(w))), true);
-      // All three buckets the cloning-design view reads from.
+      assert.equal(plan.feasible, false);
+      assert.equal(plan.primers.length, 0);
       assert.equal(plan.warnings.some((w) => /homopolymer/.test(w)), true);
       assert.equal(plan.plans[0].plan.warnings.some((w) => /homopolymer/.test(w)), true);
-      assert.equal(plan.plans[0].plan.primerOligoPlan.warnings.some((w) => /homopolymer/.test(w)), true);
+      assert.equal(plan.plans[0].plan.primerOligoPlan, null);
     });
 
     test('[EDGE] backbone primers are checked against the intact pre-edit vector', () => {
@@ -1226,7 +1233,8 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         metadata: { templateSequence: rand(900, 29), templateName: 'pWrongDonor' }
       });
       assert.match(wrong.warnings[0], /pWrongDonor does not contain this insert/);
-      assert.equal(wrong.templateSequence, `${tag}${gene}`);
+      assert.equal(wrong.feasible, false);
+      assert.equal(wrong.templateSequence, '');
     });
 
     test('[EDGE] donor primers are checked for specificity across the whole donor', () => {
@@ -1623,6 +1631,445 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.deepEqual(persisted, ['pET28a · 6xHis–MDM2(E45G)']);
       assert.equal(state.sequenceEditDesignSource.sourceKind, 'vector_builder');
       assert.equal(state.sequenceEditDesignSource.backboneName, 'pET28a');
+    });
+
+    test('[EDGE] every public cloning evaluator rejects unresolved DNA bases', () => {
+      const concrete = filler(180, 211);
+      const ambiguous = `${concrete.slice(0, 80)}N${concrete.slice(81)}`;
+      const pcr = assembly.designPcrPrimerPair(ambiguous, { name: 'ambiguous target' });
+      const gibson = assembly.evaluateGibsonAssembly([
+        { id: 'a', sequence: ambiguous },
+        { id: 'b', sequence: concrete }
+      ]);
+      const restrictionPlan = assembly.evaluateRestrictionLigation({
+        host: { name: 'pAmbiguous', topology: 'circular', sequence: ambiguous },
+        fragments: [{ id: 'insert', sequence: concrete }]
+      });
+      const mutagenesis = assembly.evaluateSiteDirectedMutagenesis({
+        host: { name: 'pAmbiguous', topology: 'circular', sequence: ambiguous },
+        resultSequence: ambiguous,
+        editRequest: { type: 'point-mutation', start: 20, end: 20, originalSequence: 'A', editedSequence: 'C' }
+      });
+
+      [pcr, gibson, restrictionPlan, mutagenesis].forEach((result) => {
+        assert.equal(result.feasible, false);
+        assert.match(result.warnings.join(' '), /unresolved base/i);
+      });
+      const combined = assembly.assembleCloningPlan({
+        hostVectors: [{ name: 'pHost', topology: 'circular', sequence: concrete }],
+        fragments: [{ name: 'ambiguous insert', sequence: ambiguous }],
+        resultSequence: `${concrete}${ambiguous}`
+      });
+      assert.equal(combined.recommendedAssemblyStrategy, null);
+      assert.equal(combined.primersFeasible, false);
+    });
+
+    test('[EDGE] restriction tails resolve degenerate sites and reject cross-compatible ends', () => {
+      const assemblyPrimers = loadEsmStyleModule(path.join(cloningAssemblyPath, 'assembly-primers.js'));
+      const hostSequence = 'AAAGTAGACTTTTGGTACCAAA';
+      const accI = { name: 'AccI', site: 'GTMKAC', cut: 'GT^MKAC', strand: 1, segments: [{ start: 3, end: 9 }] };
+      const kpnI = { name: 'KpnI', site: 'GGTACC', cut: 'GGTAC^C', strand: 1, segments: [{ start: 13, end: 19 }] };
+      assert.equal(restriction.resolveRestrictionRecognitionSequence(accI, hostSequence), 'GTAGAC');
+
+      let primerPlan = null;
+      for (let seed = 1; seed <= 40 && !primerPlan; seed += 1) {
+        const insert = filler(180, 300 + seed);
+        const candidate = assemblyPrimers.designRestrictionLigationPrimers({
+          fragments: [
+            { id: 'host', name: 'pHost', role: 'backbone', sequence: hostSequence },
+            { id: 'insert', name: 'payload', role: 'insert', sequence: insert }
+          ]
+        }, { selectedSites: [accI, kpnI] }, {
+          primerLength: { min: 18, max: 32 },
+          primerTm: { min: 54, max: 68 },
+          overlapTm: { min: 56, max: 72 }
+        }, { maxPrimerLength: 60, primerClampSequence: 'GCGCGC' });
+        if (candidate.feasible) {
+          primerPlan = candidate;
+        }
+      }
+      assert.ok(primerPlan, 'expected a restriction-primer fixture');
+      assert.equal(primerPlan.primers[0].tailSequence, 'GCGCGCGTAGAC');
+      assert.equal(primerPlan.primers.every((primer) => /^[ACGT]+$/.test(primer.sequence)), true);
+
+      const bamHI = restriction.restrictionCutEnd({ site: 'GGATCC', cut: 'G^GATCC' });
+      const bglII = restriction.restrictionCutEnd({ site: 'AGATCT', cut: 'A^GATCT' });
+      assert.deepEqual(JSON.parse(JSON.stringify(bamHI)), {
+        type: 'sticky', polarity: '5-prime', sequence: 'GATC', length: 4
+      });
+      assert.equal(restriction.restrictionEndsAreCrossCompatible(bamHI, bglII), true);
+    });
+
+    test('[EDGE] restriction primers require and anneal to the stated physical insert template', () => {
+      const assemblyPrimers = loadEsmStyleModule(path.join(cloningAssemblyPath, 'assembly-primers.js'));
+      const hostSequence = 'AAAAGAATTCCCCCCCCGGATCCTTTT';
+      const ecoStart = hostSequence.indexOf('GAATTC');
+      const bamStart = hostSequence.indexOf('GGATCC');
+      const selectedSites = [
+        { name: 'EcoRI', site: 'GAATTC', cut: 'G^AATTC', strand: 1, segments: [{ start: ecoStart, end: ecoStart + 6 }] },
+        { name: 'BamHI', site: 'GGATCC', cut: 'G^GATCC', strand: 1, segments: [{ start: bamStart, end: bamStart + 6 }] }
+      ];
+      const thresholds = {
+        primerLength: { min: 15, max: 30 },
+        primerTm: { min: 0, max: 500 },
+        overlapTm: { min: 0, max: 500 }
+      };
+      const config = { maxPrimerLength: 60, primerClampSequence: 'GCGCGC', requireUniqueBinding: false };
+      const core = filler(80, 4101);
+      const desired = `TAG${core}GGC`;
+      const fragmentMap = (metadata) => ({
+        fragments: [
+          { id: 'host', name: 'pHost', role: 'backbone', sequence: hostSequence },
+          { id: 'insert', name: 'payload', role: 'insert', sequence: desired, metadata }
+        ]
+      });
+
+      const missingTemplate = assemblyPrimers.designRestrictionLigationPrimers(
+        fragmentMap({ source: 'sequence_viewer_edit' }),
+        { selectedSites },
+        thresholds,
+        config
+      );
+      assert.equal(missingTemplate.feasible, false);
+      assert.equal(missingTemplate.primers.length, 0);
+      assert.match(missingTemplate.warnings.join(' '), /no physical PCR template/i);
+
+      const donorBacked = assemblyPrimers.designRestrictionLigationPrimers(
+        fragmentMap({
+          source: 'donor_plasmid',
+          templateSequence: core,
+          templateName: 'pDonor',
+          specificitySequence: core,
+          specificityCircular: false
+        }),
+        { selectedSites },
+        thresholds,
+        config
+      );
+      assert.equal(donorBacked.feasible, true);
+      assert.equal(donorBacked.primers[0].tailSequence, 'GCGCGCGAATTCTAG');
+      assert.equal(donorBacked.primers[1].tailSequence, 'GCGCGCGGATCCGCC');
+      assert.equal(donorBacked.primers[0].bindingSequence, core.slice(0, donorBacked.primers[0].bindingSequence.length));
+    });
+
+    test('[EDGE] restriction outer-arc replacement swaps the insert-facing enzyme order', () => {
+      const assemblyPrimers = loadEsmStyleModule(path.join(cloningAssemblyPath, 'assembly-primers.js'));
+      const hostSequence = 'AAAAGAATTCCCCCCCCGGATCCTTTT';
+      const ecoStart = hostSequence.indexOf('GAATTC');
+      const bamStart = hostSequence.indexOf('GGATCC');
+      const features = [
+        { name: 'EcoRI', site: 'GAATTC', cut: 'G^AATTC', strand: 1, segments: [{ start: ecoStart, end: ecoStart + 6 }] },
+        { name: 'BamHI', site: 'GGATCC', cut: 'G^GATCC', strand: 1, segments: [{ start: bamStart, end: bamStart + 6 }] }
+      ];
+      let insert = '';
+      for (let seed = 1; seed <= 20 && !insert; seed += 1) {
+        const candidate = filler(100, 4300 + seed);
+        if (!restriction.sequenceContainsSite(candidate, 'GAATTC') && !restriction.sequenceContainsSite(candidate, 'GGATCC')) {
+          insert = candidate;
+        }
+      }
+      assert.ok(insert, 'expected an insert without either selected restriction site');
+      const requestedResult = `${hostSequence.slice(ecoStart, bamStart + 6)}${insert}`;
+      const candidates = restriction.buildRestrictionCandidatePairs(features, hostSequence.length, [{ sequence: insert }], {
+        hostSequence,
+        resultSequence: requestedResult,
+        circular: true
+      });
+
+      assert.equal(candidates.length, 1);
+      assert.equal(candidates[0].replacedArc, 'outer');
+      assert.equal(candidates[0].left.name, 'BamHI');
+      assert.equal(candidates[0].right.name, 'EcoRI');
+
+      const primerPlan = assemblyPrimers.designRestrictionLigationPrimers({
+        fragments: [
+          { id: 'host', name: 'pHost', role: 'backbone', sequence: hostSequence },
+          { id: 'insert', name: 'payload', role: 'insert', sequence: insert }
+        ]
+      }, { selectedSites: [candidates[0].left, candidates[0].right] }, {
+        primerLength: { min: 15, max: 30 },
+        primerTm: { min: 0, max: 500 },
+        overlapTm: { min: 0, max: 500 }
+      }, { maxPrimerLength: 60, primerClampSequence: 'GCGCGC', requireUniqueBinding: false });
+      assert.equal(primerPlan.feasible, true);
+      assert.equal(primerPlan.primers[0].tailSequence, 'GCGCGCGGATCC');
+      assert.equal(primerPlan.primers[1].tailSequence, 'GCGCGCGAATTC');
+    });
+
+    test('[EDGE] Golden Gate rejects Type IIS sites that span a circular origin', () => {
+      const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
+      assert.equal(restriction.sequenceContainsSite('CTCAAAAAAGGT', 'GGTCTC'), false);
+      assert.equal(restriction.sequenceContainsSite('CTCAAAAAAGGT', 'GGTCTC', true), true);
+
+      let plan = null;
+      for (let seed = 1; seed <= 80 && !plan; seed += 1) {
+        const sequence = `CTC${filler(760, 4500 + seed)}GGT`;
+        const range = { start: 60, end: 280 };
+        const insert = sequence.slice(range.start, range.end);
+        const candidate = gg.buildGoldenGatePlan({
+          sequence,
+          range,
+          recordName: 'pOriginSite',
+          topology: 'circular',
+          vectorTemplateSequence: sequence,
+          insertTemplateSequence: insert,
+          insertTemplateHostSequence: sequence,
+          insertTemplateCircular: true
+        });
+        if (candidate.feasible) {
+          plan = candidate;
+        }
+      }
+      assert.ok(plan, 'expected a feasible alternative-enzyme Golden Gate fixture');
+      assert.notEqual(plan.plans[0].plan.restrictionEnzymeSelection[0].name, 'BsaI-HFv2');
+    });
+
+    test('[EDGE] existing overlaps must be explicit and inside both Tm bounds', () => {
+      const overlap = 'GCGCGCGCGCGCGCGCGCGC';
+      const thresholds = {
+        primerLength: { min: 18, max: 18 },
+        primerTm: { min: 54, max: 68 },
+        overlapTm: { min: 60, max: 68 }
+      };
+      const left = { id: 'left', sequence: `${filler(30, 501)}${overlap}` };
+      const right = { id: 'right', sequence: `${overlap}${filler(30, 503)}` };
+      const undeclared = overlapEvaluation.evaluateJunction(left, right, thresholds, { maxPrimerLength: 18 });
+      const declared = overlapEvaluation.evaluateJunction(
+        { ...left, metadata: { sharedOverlapWithNext: true } },
+        right,
+        thresholds,
+        { maxPrimerLength: 18 }
+      );
+      assert.equal(undeclared.feasible, false);
+      assert.equal(undeclared.mode, 'missing');
+      assert.match(undeclared.warnings.join(' '), /not declared/i);
+      assert.equal(declared.feasible, false);
+      assert.equal(declared.mode, 'weak-existing');
+      assert.equal(declared.overlapTm > thresholds.overlapTm.max, true);
+    });
+
+    test('[EDGE] only a designed-length terminal match is reported as undeclared overlap', () => {
+      const junctionOf = (leftSuffix, rightPrefix) => overlapEvaluation.evaluateFragmentAssembly([
+        { id: 'left', sequence: `${filler(120, 601)}${leftSuffix}` },
+        { id: 'right', sequence: `${rightPrefix}${filler(120, 603)}` }
+      ], { circular: false });
+
+      // Two fragments cut from one sequence share their boundary base a quarter
+      // of the time; that is coincidence, not undeclared provenance.
+      const accidental = junctionOf('G', 'G');
+      assert.equal(accidental.junctions[0].mode, 'primer-introduced');
+      assert.doesNotMatch(accidental.warnings.join(' '), /separate intended sequence/i);
+
+      const designed = 'CTGACCTTGCAGCTGACCGT';
+      const deliberate = junctionOf(designed, designed);
+      assert.equal(deliberate.junctions[0].mode, 'primer-introduced');
+      assert.match(deliberate.warnings.join(' '), /separate intended sequence/i);
+    });
+
+    test('[EDGE] a low-diversity Golden Gate overhang warns but still designs', () => {
+      const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
+      let plan = null;
+      for (let seed = 1; seed <= 80 && !plan; seed += 1) {
+        // GGCG is all-GC but not self-complementary, so only the composition
+        // check has anything to say about it.
+        const insert = `GGCG${filler(400, 2100 + seed)}`;
+        const candidate = gg.buildGoldenGatePlan({
+          sequence: `${insert}${filler(700, 2300 + seed)}`,
+          range: { start: 0, end: insert.length },
+          recordName: 'pLowDiversity',
+          topology: 'circular',
+          insertTemplateSequence: insert,
+          insertTemplateHostSequence: insert
+        });
+        if (candidate.feasible) {
+          plan = candidate;
+        }
+      }
+      assert.ok(plan, 'expected a feasible low-diversity-overhang fixture');
+      assert.match(plan.warnings.join(' '), /Low-diversity junction overhang: GGCG/);
+
+      // The overhangs that actually misligate are still hard failures.
+      const palindromic = gg.buildGoldenGatePlan({
+        sequence: `GGCC${filler(400, 2999)}${filler(700, 3111)}`,
+        range: { start: 0, end: 404 },
+        recordName: 'pPalindrome',
+        topology: 'circular',
+        insertTemplateSequence: `GGCC${filler(400, 2999)}`,
+        insertTemplateHostSequence: `GGCC${filler(400, 2999)}`
+      });
+      assert.equal(palindromic.feasible, false);
+      assert.match(palindromic.warnings.join(' '), /self-complementary/i);
+    });
+
+    test('[EDGE] Q5/KLD notebook setup does not duplicate master-mix components', () => {
+      const pcrPrograms = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design-notebook', 'pcr-programs.js'
+      ));
+      const reactions = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'pcr-reaction-setup.js'
+      ));
+      const programs = pcrPrograms.buildSequenceViewerPcrPrograms({
+        displayPlan: {
+          strategy: 'q5-kld',
+          primers: [
+            { name: 'q5_F', groupLabel: 'Whole plasmid PCR', tm: 61, ampliconLength: 1200 },
+            { name: 'q5_R', groupLabel: 'Whole plasmid PCR', tm: 62, ampliconLength: 1200 }
+          ],
+          summary: { templateLength: 1200 }
+        },
+        source: { originalSequence: filler(1200, 601) }
+      });
+      assert.equal(programs[0].reactionFormulation, '2x-master-mix');
+      const setup = reactions.buildPcrFixedReactionCalculation(programs[0]);
+      const reagentNames = setup.inputs.reagents.map((reagent) => reagent.name);
+      assert.equal(reagentNames.some((name) => /dNTP|polymerase buffer/i.test(name)), false);
+      assert.equal(reagentNames.some((name) => /Q5 Hot Start High-Fidelity 2X Master Mix/.test(name)), true);
+    });
+
+    test('[EDGE] BsmBI Golden Gate carries its 42 C digest into the bench recipe', () => {
+      const gg = loadEsmStyleModule(path.join(cloningAssemblyPath, 'golden-gate.js'));
+      const reactionSteps = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-reaction-steps.js'
+      ));
+      let plan = null;
+      for (let seed = 1; seed <= 80 && !plan; seed += 1) {
+        const insert = `ATGC${filler(90, 700 + seed)}GGTCTC${filler(80, 900 + seed)}GAAGAC${filler(90, 1100 + seed)}`;
+        const backbone = `CGTA${filler(500, 1300 + seed)}`;
+        const candidate = gg.buildGoldenGatePlan({
+          sequence: `${insert}${backbone}`,
+          range: { start: 0, end: insert.length },
+          recordName: 'pBsmBI',
+          topology: 'circular',
+          vectorTemplateSequence: `${insert}${backbone}`,
+          insertTemplateSequence: insert,
+          insertTemplateHostSequence: insert
+        });
+        if (candidate.feasible && candidate.plans[0].plan.restrictionEnzymeSelection[0].name === 'BsmBI-v2') {
+          plan = candidate;
+        }
+      }
+      assert.ok(plan, 'expected a feasible BsmBI-specific Golden Gate fixture');
+      const selected = plan.plans[0].plan.restrictionEnzymeSelection[0];
+      assert.equal(selected.digestTemperatureC, 42);
+      const step = reactionSteps.buildCloningReactionSteps({
+        strategy: 'golden-gate',
+        displayPlan: plan,
+        pcrPrograms: []
+      })[0];
+      assert.match(step.steps.join(' '), /42 C 5 min/);
+    });
+
+    test('[EDGE] agent cloning can use a loaded donor and exposes donor fields in its schema', () => {
+      const agentApi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'agent', 'agent-api.js'));
+      let fixture = null;
+      for (let seed = 1; seed <= 50 && !fixture; seed += 1) {
+        const vector = filler(800, 1500 + seed);
+        const insert = filler(220, 1700 + seed);
+        const records = [
+          { id: 'vector', name: 'pVector', topology: 'circular', sequence: vector, features: [] },
+          { id: 'donor', name: 'pDonor', topology: 'circular', sequence: `${filler(300, 1900 + seed)}${insert}${filler(280, 2100 + seed)}`, features: [] }
+        ];
+        const api = agentApi.createSequenceViewerAgentApi({ getRecords: () => records });
+        const input = {
+          recordId: 'vector',
+          strategy: 'gibson',
+          edit: { mode: 'insert', start: 401, sequence: insert },
+          insertRange: { start: 401, end: 400 + insert.length }
+        };
+        const withDonor = api.designCloning({ ...input, donorRecordId: 'donor' });
+        if (withDonor.feasible) {
+          fixture = { api, input, withDonor };
+        }
+      }
+      assert.ok(fixture, 'expected a feasible donor-backed agent design');
+      assert.match(fixture.withDonor.procedure.map((step) => step.details).join(' '), /pDonor/);
+      const withoutDonor = fixture.api.designCloning(fixture.input);
+      assert.equal(withoutDonor.feasible, false);
+      assert.match(withoutDonor.warnings.join(' '), /no physical PCR template|does not contain the desired fragment/i);
+      assert.equal(
+        fixture.api.designCloning({ ...fixture.input, donorRecordId: 'missing' }).error.code,
+        'DONOR_RECORD_NOT_FOUND'
+      );
+
+      const toolSchema = JSON.parse(fs.readFileSync(
+        path.join(__dirname, 'src', 'main', 'agent', 'tools', 'Tool-call.json'),
+        'utf8'
+      ))['sequence-viewer'].input_schema;
+      assert.equal(toolSchema.properties.donorRecordId.type, 'string');
+      assert.equal(toolSchema.properties.donorRecordIndex.type, 'integer');
+    });
+
+    test('[EDGE] In-Fusion uses method-specific 15-21 bp primer overlaps', () => {
+      const planBuilding = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'plan-building.js'
+      ));
+      let plan = null;
+      for (let seed = 1; seed <= 50 && !plan; seed += 1) {
+        const vector = filler(800, 2300 + seed);
+        const insert = filler(220, 2500 + seed);
+        const edited = `${vector.slice(0, 400)}${insert}${vector.slice(400)}`;
+        const candidate = planBuilding.buildDisplayPlan({
+          strategy: 'in-fusion',
+          source: {
+            recordName: 'pVector',
+            originalSequence: vector,
+            editedSequence: edited,
+            editRequest: { type: 'insertion', start: 401, end: 400, originalSequence: '', editedSequence: insert }
+          },
+          record: { name: 'pVector', topology: 'circular', sequence: edited },
+          range: { start: 400, end: 400 + insert.length },
+          donor: {
+            name: 'pDonor',
+            topology: 'circular',
+            sequence: `${filler(300, 2700 + seed)}${insert}${filler(280, 2900 + seed)}`
+          }
+        });
+        if (candidate.feasible) {
+          plan = candidate;
+        }
+      }
+      assert.ok(plan, 'expected a feasible In-Fusion fixture');
+      const junctions = plan.plans[0].plan.routeEvaluations.gibson.junctions;
+      assert.equal(junctions.length, 2);
+      assert.equal(junctions.every((junction) => junction.overlapLength >= 15 && junction.overlapLength <= 21), true);
+      assert.match(
+        `${plan.plans[0].plan.stepByStepProcedure[1].title} ${plan.plans[0].plan.stepByStepProcedure[1].details}`,
+        /15-21 bp overlaps/
+      );
+    });
+
+    test('[EDGE] Protein Builder preserves separate physical templates for multipart inserts', () => {
+      const proteinCloning = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning', 'cloning-plan.js'
+      ));
+      const first = filler(180, 3101);
+      const second = filler(210, 3103);
+      const fragments = proteinCloning.buildProteinInsertFragments({
+        sequence: `${first}${second}`,
+        parts: [
+          { label: 'Domain A', dnaSequence: first, templateSequence: first, templateName: 'pDomainA' },
+          { label: 'Domain B', dnaSequence: second, templateSequence: second, templateName: 'pDomainB' }
+        ]
+      }, 'A-B fusion');
+
+      assert.equal(fragments.length, 2);
+      assert.equal(fragments.map((fragment) => fragment.sequence).join(''), `${first}${second}`);
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(fragments.map((fragment) => fragment.metadata.templateName))),
+        ['pDomainA', 'pDomainB']
+      );
+      assert.equal(fragments[0].metadata.templateSequence, first);
+      assert.equal(fragments[1].metadata.templateSequence, second);
+    });
+
+    test('[EDGE] cloning UI keeps all seven supported methods available', () => {
+      const strategies = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'strategies.js'
+      ));
+      assert.deepEqual(
+        JSON.parse(JSON.stringify(strategies.STRATEGIES.map((strategy) => strategy.id))),
+        ['whole-plasmid', 'q5-kld', 'two-step-ligation', 'golden-gate', 'gibson', 'in-fusion', 'overlap-extension']
+      );
     });
 
     test('[EDGE] annotatePrimersOnSelectedRecord writes and persists onto the selected record', async () => {
