@@ -20,6 +20,7 @@ export function createSequenceViewerHomeController(config = {}) {
   const getBridge = config?.getBridge || (() => null);
   const getStoragePath = config?.getStoragePath || (() => '');
   const hasStoragePath = config?.hasStoragePath || (() => false);
+  const getProjects = config?.getProjects || (() => []);
   const setMode = config?.setMode || (() => {});
   const setInputComposerVisible = config?.setInputComposerVisible || (() => {});
   const setRecords = config?.setRecords || (() => {});
@@ -89,7 +90,7 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
       statusNode.textContent = message;
-      statusNode.style.color = isError ? 'var(--theme-danger)' : '';
+      statusNode.classList.toggle('is-error', Boolean(isError));
     });
   }
 
@@ -176,6 +177,7 @@ export function createSequenceViewerHomeController(config = {}) {
     libraryPreviewDelayMs,
     getBridge,
     getStoragePath,
+    getProjects,
     setMode,
     setRecords,
     setStatus,
@@ -226,7 +228,7 @@ export function createSequenceViewerHomeController(config = {}) {
     }
 
     // Widen the picker to whatever installed service plugins can convert, so a
-    // SnapGene .dna file is selectable alongside the native formats.
+    // .dna file is selectable alongside the native formats.
     const serviceAccept = pluginServices?.acceptExtensions?.() || '';
     const combinedAccept = [fileAccept, serviceAccept].filter(Boolean).join(',');
     if (elements.homeOpenInput && typeof elements.homeOpenInput.setAttribute === 'function') {

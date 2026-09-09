@@ -51,10 +51,6 @@
   margin: 0;
 }
 
-.sequence-viewer-new-status.is-error {
-  color: var(--theme-danger);
-}
-
 .sequence-viewer-new-actions {
   justify-content: flex-end;
 }

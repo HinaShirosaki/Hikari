@@ -1,4 +1,5 @@
 import { createNotebookHistoryActions } from './history-notebook-actions.js';
+import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
 
 function getNotebookAppendFromMessage(message) {
@@ -69,13 +70,29 @@ export function createHistoryActionController({
       setStatus('Notebook append proposal is unavailable.');
       return { ok: false, error: 'Notebook append proposal is unavailable.' };
     }
-    const result = await onAppendNotebookEntry(append.proposal);
+    // Hides both the Append and Reject buttons while the save runs, so the flag
+    // has to be cleared on every exit, including a throw, or the card is stuck.
+    setNotebookAppendInFlight(append, true);
+    renderHistoryView({ forceScroll: true });
+    let result = null;
+    try {
+      result = await onAppendNotebookEntry(append.proposal);
+    } catch (error) {
+      result = { ok: false, error: trimText(error?.message || error, 500) };
+    } finally {
+      setNotebookAppendInFlight(append, false);
+    }
     if (result?.ok !== true) {
-      setStatus(trimText(result?.error, 500) || 'The notebook append could not be applied.');
+      const error = trimText(result?.error, 500) || 'The notebook append could not be applied.';
+      renderHistoryView({ forceScroll: true });
+      setStatus(error);
       return result || { ok: false, error: 'The notebook append could not be applied.' };
     }
+    // Applying the append can refresh notebook and chat state while this handler
+    // is awaiting. Reacquire the live message so approval is not written to an
+    // object that is no longer part of state.agentChat.messages.
     markNotebookAppendMessage(
-      message,
+      findMessage(messageId) || message,
       'approved',
       trimText(result?.summary, 500) || 'Notebook append approved by user.'
     );

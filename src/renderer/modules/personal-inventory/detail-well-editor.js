@@ -45,8 +45,24 @@ export function createWellEditorRenderer({
             <strong>Set Samples</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="primary-btn" data-well-sample-save="${safeText(activeSample.id)}">Save Sample</button>
-            <button type="button" class="ghost-btn" data-well-sample-unlink="${safeText(activeSample.id)}">Delete Sample</button>
+            <button type="button" class="primary-btn inventory-sample-editor-icon-btn" data-well-sample-save="${safeText(activeSample.id)}" aria-label="Save Sample" title="Save Sample">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M5 3h12l3 3v15H4V3Z"></path>
+                <path d="M8 3v6h8V3"></path>
+                <path d="M8 21v-7h8v7"></path>
+              </svg>
+              <span class="sr-only">Save Sample</span>
+            </button>
+            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-well-sample-unlink="${safeText(activeSample.id)}" aria-label="Delete Sample" title="Delete Sample">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M3 6h18"></path>
+                <path d="M8 6V4h8v2"></path>
+                <path d="M19 6l-1 14H6L5 6"></path>
+                <path d="M10 11v5"></path>
+                <path d="M14 11v5"></path>
+              </svg>
+              <span class="sr-only">Delete Sample</span>
+            </button>
           </div>
         </div>
         ${sampleSelector}

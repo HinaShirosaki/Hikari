@@ -236,6 +236,66 @@ export function initAgentChat({
     return true;
   }
 
+  async function submitExternalMessage(message) {
+    const text = String(message || '').trim();
+    if (!text) {
+      return { ok: false, reason: 'empty' };
+    }
+    if (text.length > 3000) {
+      return { ok: false, reason: 'too_long' };
+    }
+    if (!api?.agentChat || !requestController) {
+      return { ok: false, reason: 'unavailable' };
+    }
+    shell.syncActiveRequestState();
+    if (runtime.inFlight || runtime.sendPending || runtime.sessionTransitionPending) {
+      return { ok: false, reason: 'busy' };
+    }
+    const hasComposerDraft = Boolean(String(dom.input?.value || '').trim());
+    const hasAttachments = attachmentsController.getAttachments().length > 0;
+    const hasHiddenContext = payloadBuilder.getPrimedHiddenContexts()
+      .some((context) => String(context?.text || '').trim());
+    if (hasComposerDraft || hasAttachments || hasHiddenContext) {
+      return { ok: false, reason: 'composer_not_empty' };
+    }
+
+    dom.input.value = text;
+    shell.syncComposerHeight();
+    return new Promise((resolve) => {
+      let accepted = false;
+      const clearInjectedDraft = () => {
+        if (String(dom.input?.value || '') !== text) {
+          return;
+        }
+        dom.input.value = '';
+        shell.syncComposerHeight();
+      };
+      const request = requestController.sendMessage({
+        onAccepted: (details) => {
+          accepted = true;
+          resolve({ ok: true, ...details });
+        }
+      });
+      Promise.resolve(request)
+        .then((result) => {
+          if (!accepted) {
+            clearInjectedDraft();
+            resolve(result?.ok ? result : {
+              ok: false,
+              reason: result?.reason || 'session_error'
+            });
+          }
+        })
+        .catch((error) => {
+          console.warn('External Agent message could not be submitted:', error);
+          if (!accepted) {
+            clearInjectedDraft();
+            resolve({ ok: false, reason: 'session_error' });
+          }
+        });
+    });
+  }
+
   bindAgentChatEvents({
     dom,
     api,
@@ -256,6 +316,7 @@ export function initAgentChat({
   return {
     focusComposer,
     primeHiddenContext,
+    submitExternalMessage,
     render
   };
 }

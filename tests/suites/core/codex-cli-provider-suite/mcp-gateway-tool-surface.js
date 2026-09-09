@@ -329,6 +329,8 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       const mcpToolNames = mcpTools.map((tool) => tool.name);
       const mcpInstructions = buildHikariAgentMcpInstructions();
       assert.match(mcpInstructions, /reference preparation/i);
+      assert.match(mcpInstructions, /Do not stop at diluting an unverified stock/i);
+      assert.match(mcpInstructions, /Prefer one complete formulation/i);
       assert.match(mcpInstructions, /at most three short subsections and six bullets/i);
       assert.match(mcpInstructions, /failed-lookup transcripts/i);
       assert.match(mcpInstructions, /one to three unique useful records/i);
@@ -342,7 +344,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         'mcp-contract',
         'direct-tools'
       );
-      const helperDirectToolFiles = new Set(['index.js', 'shared.js', 'generic-app-tool.js']);
+      const helperDirectToolFiles = new Set(['index.js', 'shared.js', 'generic-app-tool.js', 'sequence-tools.js', 'notebook-suggest.js']);
       const directToolFileNames = fs.readdirSync(directToolDir)
         .filter((name) => name.endsWith('.js') && !helperDirectToolFiles.has(name))
         .map((name) => name.replace(/\.js$/u, '').replace(/-/g, '_'))
@@ -360,7 +362,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       ));
       assert.deepEqual(
         [...mcpToolNames].sort(),
-        [...directToolFileNames, ...PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES].sort()
+        [...directToolFileNames, ...PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES, ...require(path.join(directToolDir, 'sequence-tools.js')).SEQUENCE_MCP_TOOLS.map(t => t.definition.name)].sort()
       );
       assert.deepEqual(mcpToolNames.slice(0, 6), [
         'inventory_lookup',
@@ -436,7 +438,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(notebookLookupDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookLookupDefinition.inputSchema.properties.action, undefined);
       assert.equal(notebookLookupDefinition.inputSchema.properties.entry_id, undefined);
-      assert.deepEqual(notebookLookupDefinition.inputSchema.properties.notebook_state.enum, ['planned', 'executed']);
+      assert.deepEqual(notebookLookupDefinition.inputSchema.properties.notebook_state.enum, ['planned', 'executed', 'suggested']);
       assert.deepEqual(notebookLookupDefinition.inputSchema.properties.detail.enum, ['summary', 'full']);
       assert.deepEqual(notebookLookupDefinition.inputSchema.required, []);
       assert.equal(containerDefinition.annotations.readOnlyHint, false);

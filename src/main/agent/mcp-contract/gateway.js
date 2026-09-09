@@ -51,7 +51,8 @@ function createAgentMcpGateway(deps = {}) {
       ...deps,
       runTool,
       fs: deps.fs || fs,
-      workspacePath
+      workspacePath,
+      sequenceStoragePath: cleanText(deps.storagePath || deps.storage_path || env.HIKARI_AGENT_STORAGE_PATH || safeContext.storagePath || safeContext.storage_path || contextSettings.storagePath || contextSettings.storage_path || contextSnapshot.storagePath || contextSnapshot.storage_path, 2400)
     };
   }
 

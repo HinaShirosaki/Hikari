@@ -5,6 +5,7 @@ import { buildProtocolStepsHtml, buildViewerMeta } from '../entry/viewer-rendere
 // plus the save-button states those two views drive.
 function createNotebookViewerRender({
   elements,
+  onProjectDashboardRendered = () => {},
   state,
   safeText,
   selectionInsightsController,
@@ -52,8 +53,7 @@ function createNotebookViewerRender({
     notebookResult,
     notebookSteps,
     saveNotebookBtn,
-    clarifySaveNotebookBtn,
-    cancelEditBtn
+    clarifySaveNotebookBtn
   } = elements;
 
   function renderProtocolViewer({
@@ -154,6 +154,7 @@ function createNotebookViewerRender({
       contributionHeadingId: 'biology-notebook-project-contribution-heading'
     });
     renderProjectDashboardActions(project);
+    onProjectDashboardRendered();
     notebookProjectDashboard.hidden = false;
     loadPaperFinderForProject(project);
     syncViewerVisibility();
@@ -251,9 +252,6 @@ function createNotebookViewerRender({
     setNotebookSaveButtonLabel('Save notebook page');
     if (clarifySaveNotebookBtn) {
       clarifySaveNotebookBtn.textContent = 'Clarify and Save';
-    }
-    if (cancelEditBtn) {
-      cancelEditBtn.hidden = !getEditingEntryId();
     }
     protocolEditor.syncControls(resolveViewerProtocol(getActiveEntry()), getActiveEntry());
   }

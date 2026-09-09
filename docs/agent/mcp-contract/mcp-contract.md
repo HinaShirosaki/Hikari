@@ -2,6 +2,10 @@
 
 This document exports the provider-neutral MCP-facing contract for Hikari agents. The live reusable implementation is in `src/main/agent/mcp-contract/`. Codex-specific behavior, such as AGENTS.md injection and Codex CLI config writing, stays in `src/main/agent/codex-agent/`.
 
+## Background experiment suggestions
+
+`notebook_suggest` is a conditional tool available only to Hikari background experiment suggestion runs. It prepares a Suggested page with the notebook draft contract; paper downloads are blocked. See [Notebook suggestions](notebook-suggestions.md) for triggers, state transitions and access rules.
+
 ## Runtime config
 
 Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
@@ -14,12 +18,22 @@ required = true
 command = "/absolute/path/to/node"
 args = ["/absolute/path/to/src/main/agent/mcp-contract/stdio-server.js"]
 enabled_tools = [
+  "sequence_list",
+  "sequence_search",
+  "sequence_get",
+  "sequence_feature_edit",
+  "sequence_protein_parts",
+  "sequence_protein_build",
+  "sequence_protein_get",
+  "sequence_protein_edit",
+  "sequence_mutagenesis_primers",
   "inventory_lookup",
   "chemical_lookup",
   "notebook_lookup",
   "protocol_lookup",
   "protocol_generation",
   "notebook_draft",
+  "notebook_suggest",
   "literature_search",
   "paper_download",
   "paper_analysis",
@@ -30,8 +44,6 @@ enabled_tools = [
   "container",
   "assay_table",
   "plotly_graph",
-  "sequence_viewer",
-  "sequence_edit",
   "ask_user"
 ]
 default_tools_approval_mode = "approve"
@@ -137,8 +149,6 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `container`
 - `assay_table`
 - `plotly_graph`
-- `sequence_viewer`
-- `sequence_edit`
 - `ask_user`
 
 Codex-facing instructions, skills, and examples use these same raw tool names.
@@ -338,35 +348,6 @@ Input schema:
 
 `pending_values` keys must exactly match the generated `placeholder_key` form `<step-id>:<placeholder-id>`; display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
 
-### `sequence_viewer`
-
-Read + compute over the loaded sequence-viewer records. Read-only, all coordinates 1-based inclusive. The tool round-trips into the renderer (`SEQUENCE_AGENT` channels → `sequence-viewer/agent/bridge.js`) so it always sees live state.
-
-`action` enum: `list_records`, `get_record`, `get_sequence`, `get_features`, `analyze`, `design_cloning`, `get_cloning_design`.
-
-| action | key inputs | returns |
-|---|---|---|
-| `list_records` | — | `[{ id, name, length, topology, featureCount, selected }]` |
-| `get_record` | `recordId`, `include?: [sequence,features,stats]` | metadata + a `target` identity block; `sequence` omitted unless requested |
-| `get_sequence` | `recordId`, `start`, `end` | `{ start, end, length, sequence, gcPercent }` — windowed, capped ~20 kb |
-| `get_features` | `recordId`, `type?` | `[{ id, name, type, strand, segments }]` |
-| `analyze` | `recordId`, `kind: restriction\|orf\|translation\|gc`, `start?`, `end?` | analysis result, no mutation |
-| `design_cloning` | `recordId`, `strategy`, `edit?`, `insertRange?` | normalized plan `{ feasible, strategy, engineRoute, primers, enzymes, procedure, warnings, summary }` — compute-only |
-| `get_cloning_design` | — | the current in-app design source, if any |
-
-Structured errors: `RECORD_NOT_FOUND`, `RANGE_OUT_OF_BOUNDS`, `UNKNOWN_STRATEGY`, `NO_EDIT_CONTEXT`, `VIEWER_UNAVAILABLE` (viewer not open). The full input schema is in `mcp-contract.json`.
-
-### `sequence_edit`
-
-Propose a base edit or feature annotation. **Never applies** — returns a preview plus a pending-approval token; Hikari renders an approve/reject card and applies only on approval after re-verifying the target.
-
-`action` enum: `propose_edit`, `propose_annotation`. Every call carries a `target` identity (`entryId`, `recordId`, `recordIndex`, `baseLength`, `baseDigest`) that is re-resolved and re-checked at approval time.
-
-- `propose_edit`: `target`, `mode: insert|delete|replace`, `start`, `end`, `sequence`. Returns `{ pending_approval: true, kind: "edit", target, mode, edit, summary, preview: { before, after, newLength }, affectedFeatures, approvalToken }`.
-- `propose_annotation`: `target`, `mode: add|edit|delete`, `name`/`type`/`strand`/`description`/`segments` (add/edit), `featureRef` (edit/delete). Returns `{ pending_approval: true, kind: "annotation", target, mode, feature, featureRef, summary, approvalToken }`.
-
-At approval the host rejects with `TARGET_CHANGED` (digest/length moved) or `TARGET_NOT_FOUND` (record unloaded); `propose_annotation` returns `AMBIGUOUS_FEATURE` when `featureRef` does not match exactly one feature. The proposal is surfaced on the assistant message as `meta.sequenceEditProposal[approvalToken]` and reviewed via `agent-chat/review-overlay.js` (`type: 'sequence-edit'`).
-
 ### `ask_user`
 
 Direct MCP helper for one blocking clarification. It is a turn boundary: Codex emits the returned `final_response` and ends the current turn in a completed waiting state. Hikari renders the one-shot options and custom text box, then sends the answer as the next chat turn. Codex resumes from that answer without repeating the same question.
@@ -520,3 +501,7 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 The MCP surface is allow-listed by `src/main/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools stay with their domain owner in `src/main/papers/store/intake/mcp-tools.js` and are folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `notebook-lookup` as `notebook_lookup`.
 
 See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.
+
+## Sequence Viewer
+
+The nine `sequence_*` tools provide plasmid discovery, feature editing, Protein Builder assembly, residue-level mutations, and persisted primer comparisons. See [Sequence Viewer tool contract](sequence-tools.md) for coordinates, retry behavior, examples, and limitations.

@@ -1,6 +1,6 @@
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { reverseComplementDna } from '../calculations/sequence.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
@@ -64,6 +64,16 @@ export function buildQ5KldPlan(payload = {}) {
       summary
     };
   };
+
+  const ambiguityWarnings = [
+    describeAmbiguousDna(payload?.originalSequence, 'Q5/KLD template'),
+    describeAmbiguousDna(payload?.editedSequence, 'Q5/KLD result'),
+    describeAmbiguousDna(payload?.editRequest?.originalSequence, 'Q5/KLD edited source'),
+    describeAmbiguousDna(payload?.editRequest?.editedSequence, 'Q5/KLD edited bases')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return infeasible(ambiguityWarnings);
+  }
 
   if (!originalSequence.length || !normalizedEdit) {
     return infeasible('Edit the sequence before designing a Q5/KLD route.');

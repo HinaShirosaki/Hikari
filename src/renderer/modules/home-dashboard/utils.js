@@ -47,6 +47,44 @@ export function formatTimerTemplateDuration(minutes) {
   return `${rounded} min`;
 }
 
+// Timer presets are persisted in whole minutes, while the dashboard form
+// accepts common bench notation such as "90 min", "1.5 h", or "1 h 30 min".
+// A bare number remains a minutes value so existing entries and habits work.
+export function parseTimerDuration(value) {
+  const raw = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!raw) {
+    return null;
+  }
+
+  if (/^\d+(?:\.\d+)?$/.test(raw)) {
+    const minutes = Math.round(Number(raw));
+    return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+  }
+
+  const segmentPattern = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|hr|h|minutes?|mins?|min|m)\b/gi;
+  let totalMinutes = 0;
+  let lastEnd = 0;
+  let match;
+  while ((match = segmentPattern.exec(raw))) {
+    if (!/^\s*$/.test(raw.slice(lastEnd, match.index))) {
+      return null;
+    }
+    const amount = Number(match[1]);
+    const unit = match[2].toLowerCase();
+    if (!Number.isFinite(amount) || amount < 0) {
+      return null;
+    }
+    totalMinutes += amount * (/^(hours?|hrs?|hr|h)$/.test(unit) ? 60 : 1);
+    lastEnd = segmentPattern.lastIndex;
+  }
+
+  if (lastEnd === 0 || !/^\s*$/.test(raw.slice(lastEnd))) {
+    return null;
+  }
+  const minutes = Math.round(totalMinutes);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : null;
+}
+
 export function notebookPageLabel(entry) {
   return String(entry?.protocolName || entry?.workflowContext?.workflowBlockTitle || 'Untitled Page').trim()
     || 'Untitled Page';
@@ -67,7 +105,8 @@ export function formatNotebookTimestamp(timestamp) {
 }
 
 export function normalizeNotebookState(value) {
-  return String(value || '').trim().toLowerCase() === 'planned' ? 'planned' : 'executed';
+  const status = String(value || '').trim().toLowerCase();
+  return ['planned', 'suggested'].includes(status) ? status : 'executed';
 }
 
 export function normalizeIncubationLocationValue(value) {
@@ -322,8 +361,7 @@ export function ensureDashboardState(state) {
   } else {
     const normalizedQuickLogs = state.settings.dashboard.quickLogEntries
       .map(normalizeQuickLogRecord)
-      .filter(Boolean)
-      .slice(-500);
+      .filter(Boolean);
     const rawQuickLogs = state.settings.dashboard.quickLogEntries;
     const quickLogsChanged = normalizedQuickLogs.length !== rawQuickLogs.length
       || normalizedQuickLogs.some((entry, index) => (

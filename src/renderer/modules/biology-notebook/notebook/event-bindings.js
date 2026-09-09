@@ -181,7 +181,6 @@ function bindNotebookEvents({
     toolSidebarController.clearSelection();
     quickSampleController.open();
   });
-  elements.cancelEditBtn?.addEventListener('click', cancelEdit);
   elements.notebookEntryList?.addEventListener('click', onEntryListClick);
   elements.notebookProjectDashboard?.addEventListener('input', onProjectDashboardDescriptionInput);
   elements.notebookProjectDashboard?.addEventListener('change', onProjectDashboardDescriptionInput);

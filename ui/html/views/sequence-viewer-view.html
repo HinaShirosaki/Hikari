@@ -93,7 +93,6 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <span id="sequence-viewer-protein-builder-status" class="small-note" hidden></span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
               <button id="sequence-viewer-protein-builder-cancel-vector-btn" type="button" class="ghost-btn" hidden>Cancel Vector Insert</button>
@@ -146,6 +145,10 @@
                     <div id="sequence-viewer-protein-builder-feature-hosts" class="sequence-viewer-feature-source-list"></div>
                     <h5>Plasmid preview</h5>
                     <div id="sequence-viewer-protein-builder-feature-preview" class="sequence-viewer-feature-source-preview"></div>
+                    <label class="sequence-viewer-inline-toggle" title="Replace the stored coding DNA with a reverse-translated sequence using the selected codon-usage table.">
+                      <input id="sequence-viewer-protein-builder-feature-codon-optimize" type="checkbox" />
+                      <span>Codon-optimize</span>
+                    </label>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-feature-add-btn" type="button" class="primary-btn" disabled>Add Block</button>
                     </div>
@@ -157,7 +160,10 @@
               <div class="sequence-viewer-protein-builder-main left-rail-template__main">
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-workflow-panel">
                   <div class="result-card-head">
-                    <h4>Assembly Chain</h4>
+                    <div class="sequence-viewer-protein-builder-section-title">
+                      <h4>Assembly Chain</h4>
+                      <button id="sequence-viewer-protein-builder-add-protein-btn" type="button" class="ghost-btn sequence-viewer-protein-builder-add-protein-btn">+Protein</button>
+                    </div>
                     <span id="sequence-viewer-protein-builder-meta" class="small-note">0 aa | 0 blocks</span>
                   </div>
                   <div id="sequence-viewer-protein-builder-workflow" class="sequence-viewer-protein-builder-workflow">
@@ -171,23 +177,57 @@
                     <div class="sequence-viewer-protein-builder-sequence-head-actions">
                       <span id="sequence-viewer-protein-builder-sequence-edited" class="small-note" hidden>Hand-edited</span>
                       <button id="sequence-viewer-protein-builder-sequence-reset-btn" type="button" class="ghost-btn" hidden>Reset to chain</button>
+                      <button id="sequence-viewer-protein-builder-copy-protein-btn" type="button" class="ghost-btn sequence-viewer-protein-builder-copy-btn" aria-label="Copy protein sequence" title="Copy protein sequence" disabled>
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
+                          <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
+                        </svg>
+                        <span class="sr-only">Copy protein sequence</span>
+                      </button>
                     </div>
                   </div>
-                  <textarea
-                    id="sequence-viewer-protein-builder-sequence"
-                    class="sequence-block sequence-viewer-protein-builder-sequence-input"
-                    rows="3"
-                    spellcheck="false"
-                    autocomplete="off"
-                    aria-label="Assembled amino-acid sequence"
-                    placeholder="Add a block to start the chain"
-                  ></textarea>
+                  <div id="sequence-viewer-protein-builder-sequence-editor" class="sequence-viewer-protein-builder-sequence-editor">
+                    <div
+                      id="sequence-viewer-protein-builder-protein-sequence-highlight"
+                      class="sequence-block sequence-viewer-protein-builder-protein-sequence-highlight"
+                      role="button"
+                      tabindex="0"
+                      aria-label="Edit assembled amino-acid sequence"
+                      title="Click to edit the assembled amino-acid sequence"
+                    >
+                      <p class="small-note">Add a block to start the chain.</p>
+                    </div>
+                    <textarea
+                      id="sequence-viewer-protein-builder-sequence"
+                      class="sequence-block sequence-viewer-protein-builder-sequence-input"
+                      rows="3"
+                      spellcheck="false"
+                      autocomplete="off"
+                      aria-label="Assembled amino-acid sequence"
+                      placeholder="Add a block to start the chain"
+                    ></textarea>
+                  </div>
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
                   <div class="result-card-head">
-                    <h4>DNA Build</h4>
-                    <button id="sequence-viewer-protein-builder-build-dna-btn" type="button" class="ghost-btn">Build DNA Sequence</button>
+                    <div class="sequence-viewer-protein-builder-dna-title">
+                      <h4>DNA Build</h4>
+                      <label class="sequence-viewer-protein-builder-codon-usage">
+                        <span>Codon usage</span>
+                        <select id="sequence-viewer-protein-builder-codon-usage" aria-label="Codon usage table"></select>
+                      </label>
+                    </div>
+                    <div class="sequence-viewer-protein-builder-sequence-head-actions">
+                      <button id="sequence-viewer-protein-builder-build-dna-btn" type="button" class="ghost-btn">Build DNA Sequence</button>
+                      <button id="sequence-viewer-protein-builder-copy-dna-btn" type="button" class="ghost-btn sequence-viewer-protein-builder-copy-btn" aria-label="Copy DNA sequence" title="Copy DNA sequence" disabled>
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
+                          <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
+                        </svg>
+                        <span class="sr-only">Copy DNA sequence</span>
+                      </button>
+                    </div>
                   </div>
                   <span id="sequence-viewer-protein-builder-dna-meta" class="small-note">DNA build not run yet.</span>
                   <div id="sequence-viewer-protein-builder-dna-sequence" class="sequence-block">
@@ -196,6 +236,29 @@
                 </section>
               </div>
             </div>
+          </div>
+
+          <div id="sequence-viewer-protein-builder-add-protein-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+            <form id="sequence-viewer-protein-builder-add-protein-form" class="sequence-viewer-protein-builder-add-protein-dialog app-dialog-surface" role="dialog" aria-modal="true" autocomplete="off" aria-labelledby="sequence-viewer-protein-builder-add-protein-title">
+              <div class="app-dialog-head">
+                <h4 id="sequence-viewer-protein-builder-add-protein-title">Add Protein</h4>
+                <button id="sequence-viewer-protein-builder-add-protein-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close Add Protein window" title="Close"><span aria-hidden="true">&times;</span></button>
+              </div>
+              <label class="sequence-viewer-protein-builder-add-protein-field">
+                Protein name
+                <input id="sequence-viewer-protein-builder-add-protein-name" type="text" placeholder="e.g. Fluorescent protein" />
+              </label>
+              <label class="sequence-viewer-protein-builder-add-protein-field">
+                Protein sequence
+                <textarea id="sequence-viewer-protein-builder-add-protein-sequence" rows="6" spellcheck="false" placeholder="Enter an amino-acid sequence"></textarea>
+              </label>
+              <p id="sequence-viewer-protein-builder-add-protein-status" class="small-note" aria-live="polite">0 aa</p>
+              <p class="small-note">Protein additions over 20 aa can be built as DNA, but the direct Cloning Design action will be hidden after vector insertion.</p>
+              <div class="form-actions sequence-viewer-protein-builder-add-protein-actions">
+                <button id="sequence-viewer-protein-builder-add-protein-confirm-btn" type="submit" class="primary-btn" disabled>Add to Chain</button>
+                <button id="sequence-viewer-protein-builder-add-protein-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+              </div>
+            </form>
           </div>
 
           <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>

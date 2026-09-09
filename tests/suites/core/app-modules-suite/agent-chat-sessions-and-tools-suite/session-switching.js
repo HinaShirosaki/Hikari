@@ -330,6 +330,17 @@ test('agent-chat keeps running requests isolated to their own sessions', async (
   assert.doesNotMatch(agentViewCss, /\.agent-session-rail\.is-agent-running/);
   assert.match(agentViewCss, /\.agent-session-card\.is-agent-running::after/);
 });
+
+test('agent chat has no status pill or reserved row above the conversation', () => {
+  const agentViewHtml = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'agent-view.html'), 'utf8');
+  const agentViewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'agent-view', 'chat-refresh-and-composer.css'), 'utf8');
+
+  assert.doesNotMatch(agentViewHtml, /id="agent-status"/);
+  assert.doesNotMatch(agentViewCss, /\.agent-status-pill/);
+  assert.match(agentViewCss, /\.agent-chat-stage\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);/s);
+  assert.doesNotMatch(agentViewCss, /\.agent-chat-stage > \.agent-conversation-shell\s*\{[^}]*grid-row:/s);
+});
+
 test('agent-chat creates project folders, custom folders, and project-scoped chats', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -850,6 +861,130 @@ test('agent-chat session switching honors nested click targets and replays the l
   assert.equal(state.agentChat.currentSessionId, 'chat-3');
   assert.match(history.innerHTML, /Third session opened/);
   assert.equal(status.textContent, 'Ready.');
+});
+test('agent-chat external submission preserves composer drafts and honors the active-session busy state', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-stop-btn',
+    'agent-status'
+  ]);
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '', agent: {} },
+    agentChat: { projectId: '', currentSessionId: '', sessions: [], messages: [] }
+  };
+  let finishRequest = null;
+  const window = {
+    hikariApi: {
+      agentChat: () => new Promise((resolve) => {
+        finishRequest = resolve;
+      })
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let index = 0;
+      return () => `external-message-${index += 1}`;
+    })(),
+    safeText: shared.safeText,
+    loadPersistentSessions: false,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  const input = document.getElementById('agent-message-input');
+  input.value = 'Keep my existing draft.';
+  const blockedByDraft = await agent.submitExternalMessage('Do not overwrite this.');
+  assert.equal(blockedByDraft.ok, false);
+  assert.equal(blockedByDraft.reason, 'composer_not_empty');
+  assert.equal(input.value, 'Keep my existing draft.');
+
+  input.value = '';
+  const accepted = await agent.submitExternalMessage('PCR yielded one clean band.');
+  assert.equal(accepted.ok, true);
+  assert.equal(state.agentChat.messages.filter((message) => message.role === 'user').length, 1);
+  assert.equal(state.agentChat.messages.find((message) => message.role === 'user').text, 'PCR yielded one clean band.');
+  const blockedByRequest = await agent.submitExternalMessage('Do not collide with the running request.');
+  assert.equal(blockedByRequest.ok, false);
+  assert.equal(blockedByRequest.reason, 'busy');
+  assert.equal(input.value, '');
+
+  await flushAsync();
+  assert.equal(typeof finishRequest, 'function');
+  finishRequest({ ok: false, canceled: true, error: 'Test request finished.' });
+  await flushAsync();
+  await flushAsync();
+});
+test('agent-chat external submission removes its injected draft when session creation fails', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-stop-btn',
+    'agent-status'
+  ]);
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '/tmp/hikari-storage', agent: {} },
+    agentChat: { projectId: '', currentSessionId: '', sessions: [], messages: [] }
+  };
+  const window = {
+    hikariApi: {
+      agentChat: async () => ({ ok: true }),
+      agentChatLogCreateSession: async () => ({ ok: false, error: 'Storage is unavailable.' })
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: () => 'external-session-error',
+    safeText: shared.safeText,
+    loadPersistentSessions: false,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  const result = await agent.submitExternalMessage('Keep this only in the Experiment log.');
+  assert.equal(result.ok, false);
+  assert.equal(result.reason, 'session_error');
+  assert.equal(document.getElementById('agent-message-input').value, '');
+  assert.equal(state.agentChat.messages.length, 0);
 });
   }
 };

@@ -1,6 +1,7 @@
 import { installProteinBuilderAssemblyActions } from './protein-builder/assembly-actions.js';
 import { installProteinBuilderAssemblyDialog } from './protein-builder/assembly-dialog.js';
 import { installProteinBuilderAssemblyState } from './protein-builder/assembly-state.js';
+import { installProteinBuilderAddProteinDialog } from './protein-builder/add-protein-dialog.js';
 import { installProteinBuilderBlockRendering } from './protein-builder/block-rendering.js';
 import { createProteinBuilderContext } from './protein-builder/controller-context.js';
 import { installProteinBuilderDnaRendering } from './protein-builder/dna-rendering.js';
@@ -10,6 +11,7 @@ import { installProteinBuilderWorkflowRendering } from './protein-builder/workfl
 
 export function createSequenceViewerProteinBuilderController(config = {}) {
   const ctx = createProteinBuilderContext(config);
+  installProteinBuilderAddProteinDialog(ctx);
   installProteinBuilderDnaRendering(ctx);
   installProteinBuilderAssemblyState(ctx);
   installProteinBuilderAssemblyDialog(ctx);
@@ -23,6 +25,19 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
   ctx.render();
 
   return {
+    loadMcpConstruct: (payload) => {
+      ctx.state.rows = structuredClone(payload.rows || []);
+      ctx.state.nextRowId = ctx.state.rows.length + 1;
+      ctx.state.assembledSequenceOverride = payload.sequenceOverride || '';
+      ctx.state.constructNameEdited = true;
+      ctx.state.suggestedConstructName = payload.constructName || '';
+      ctx.populateCodonUsageProfiles();
+      if (ctx.elements.proteinBuilderNameInput) ctx.elements.proteinBuilderNameInput.value = payload.constructName || '';
+      if (ctx.elements.proteinBuilderCodonUsageSelect) ctx.elements.proteinBuilderCodonUsageSelect.value = payload.codonUsageProfile || 'ecoli';
+      ctx.invalidateDnaConstruct();
+      ctx.render();
+      ctx.buildCurrentDnaSequence();
+    },
     bindEvents: ctx.bindEvents,
     render: ctx.render
   };

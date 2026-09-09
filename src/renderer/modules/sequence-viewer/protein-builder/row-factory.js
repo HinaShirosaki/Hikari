@@ -31,6 +31,17 @@ export function createPoiRow(nextRowId) {
   };
 }
 
+export function createCustomRow(nextRowId, label, sequence) {
+  return {
+    id: `builder_row_${nextRowId}`,
+    kind: 'custom',
+    type: 'custom',
+    label: cleanText(label, 160).trim() || 'Custom Protein',
+    sequence: sanitizeProteinAssemblySequence(sequence || '', true),
+    note: 'User-defined protein sequence.'
+  };
+}
+
 export function createFeatureRow(nextRowId, feature, source = {}) {
   const derived = buildFeatureDerivedSequence(feature);
   const hostCount = Math.max(0, Number(feature?.hostCount) || 0);
@@ -44,13 +55,15 @@ export function createFeatureRow(nextRowId, feature, source = {}) {
       : 'Stored as protein sequence',
     sourceVectorName
       ? `From ${sourceVectorName}`
-      : (hostCount ? `${hostCount} host vector${hostCount === 1 ? '' : 's'}` : '')
+      : (hostCount ? `${hostCount} host vector${hostCount === 1 ? '' : 's'}` : ''),
+    source?.codonOptimize ? 'Codon optimization enabled' : ''
   ].filter(Boolean);
 
   return {
     sourceVectorId: cleanText(source?.host?.hostVectorId, 200),
     sourceVectorName,
     sourceVectorSequence: cleanText(source?.hostRecord?.sequence, 400000),
+    codonOptimize: Boolean(source?.codonOptimize),
     id: `builder_row_${nextRowId}`,
     kind: 'feature',
     type: 'feature',

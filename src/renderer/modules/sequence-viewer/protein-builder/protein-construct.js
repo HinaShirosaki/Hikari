@@ -1,6 +1,7 @@
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { getBlockTypeLabel, SELF_CLEAVING_BLOCK_TYPE } from './constants.js';
+import { getProteinBuilderPaletteSlot } from './block-palette.js';
 
 export function buildConstruct(payload = {}) {
   const constructName = cleanText(payload?.constructName, 140) || 'Untitled construct';
@@ -17,7 +18,6 @@ export function buildConstruct(payload = {}) {
   const sourceDnaSequence = normalizeSequenceText(activeDnaSource.dnaSequence || '');
   const sourceNote = cleanText(activeDnaSource.note, 240)
     || (sourceSequence.length ? 'User-supplied protein sequence' : '');
-  const sourceDnaNote = cleanText(activeDnaSource.reusedSource, 240);
   const rows = Array.isArray(payload?.rows) ? payload.rows : [];
 
   const errors = [];
@@ -41,8 +41,7 @@ export function buildConstruct(payload = {}) {
         label: sourceName,
         sequence: sourceSequence,
         note: sourceNote,
-        sourceDnaSequence,
-        sourceDnaNote
+        sourceDnaSequence
       });
       return;
     }
@@ -64,6 +63,7 @@ export function buildConstruct(payload = {}) {
       note: cleanText(row?.note, 240),
       sourceSequence: cleanText(row?.sourceSequence, 24000),
       sourceDnaSequence: normalizeSequenceText(row?.sourceDnaSequence || ''),
+      codonOptimize: row?.codonOptimize === true,
       sourceFeatureId: cleanText(row?.sourceFeatureId, 200),
       sourceFeatureType: cleanText(row?.sourceFeatureType, 120),
       sourceVectorName: cleanText(row?.sourceVectorName, 160),
@@ -101,6 +101,7 @@ export function buildConstruct(payload = {}) {
     cursor = end + 1;
     return {
       ...part,
+      paletteSlot: getProteinBuilderPaletteSlot(part.index),
       length: part.sequence.length,
       start,
       end

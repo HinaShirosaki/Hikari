@@ -58,7 +58,7 @@ async function requestCodexCliText({
 
   const safeCwd = resolveWorkingDirectory(cwd);
   if (cleanText(cwd, 2400)) {
-    await ensureCodexCliWorkingDirectoryGuidance(safeCwd);
+    await ensureCodexCliWorkingDirectoryGuidance(safeCwd, { envOverrides });
   }
 
   const loginStatus = await getCodexLoginStatus({ cwd: safeCwd });

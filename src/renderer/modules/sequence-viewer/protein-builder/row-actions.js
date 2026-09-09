@@ -57,6 +57,9 @@ export function installProteinBuilderRowActions(ctx) {
     state.featureSelectedId = '';
     state.featureHostId = '';
     state.featureHostRequestId += 1;
+    if (elements.proteinBuilderFeatureCodonOptimize) {
+      elements.proteinBuilderFeatureCodonOptimize.checked = false;
+    }
   };
 
   ctx.selectSearchFeature = function selectSearchFeature(featureId) {
@@ -65,6 +68,11 @@ export function installProteinBuilderRowActions(ctx) {
       return;
     }
     state.featureSelectedId = safeId;
+    if (elements.proteinBuilderFeatureCodonOptimize) {
+      // Preserve the existing stored-CDS behavior unless the user explicitly
+      // opts into rebuilding this database feature with the selected table.
+      elements.proteinBuilderFeatureCodonOptimize.checked = false;
+    }
     // The first host is the most recently updated one, which is the vector most
     // likely still on the bench.
     state.featureHostId = cleanText(
@@ -140,7 +148,8 @@ export function installProteinBuilderRowActions(ctx) {
     }
     ctx.appendRow(createFeatureRow(state.nextRowId++, feature, {
       host,
-      hostRecord
+      hostRecord,
+      codonOptimize: Boolean(elements.proteinBuilderFeatureCodonOptimize?.checked)
     }));
     ctx.invalidateDnaConstruct();
     ctx.render();

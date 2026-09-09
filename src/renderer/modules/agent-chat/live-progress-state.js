@@ -1,3 +1,4 @@
+import { mergeSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
 import { asArray, trimText } from './shared.js';
 import {
   extractLiveCodexCliDisplayText,
@@ -276,6 +277,7 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
     text: summaryText,
     meta: {
       ...liveAssistantMessage.meta,
+      sequence_actions: mergeSequenceActions(liveAssistantMessage.meta?.sequence_actions, eventPayload.meta?.sequence_actions),
       live_progress: {
         ...currentMeta,
         client_request_id: trimText(eventPayload?.client_request_id, 120) || currentMeta.client_request_id,

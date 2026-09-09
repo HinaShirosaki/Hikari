@@ -5,10 +5,14 @@ const { cleanText } = require('./storage-utils');
 
 const ASSAYS_ROOT_FOLDER_NAME = 'Assays';
 const CHEMICALS_SQLITE_FILE_NAME = 'hikari-chemicals.index.sqlite';
+const DASHBOARD_ROOT_FOLDER_NAME = 'Dashboard';
+const EXPERIMENT_LOG_FILE_NAME = 'experiment-log.json';
 const GELS_ROOT_FOLDER_NAME = 'Gels';
 const KNOWLEDGE_BASE_ROOT_FOLDER_NAME = 'KnowledgeBase';
 const PAPER_MARKDOWN_ROOT_FOLDER_NAME = 'papers.md';
 const PAPERS_ROOT_FOLDER_NAME = 'Papers';
+const PROJECT_ROOT_FOLDER_NAME = 'Project';
+const PROJECT_SEQUENCE_FOLDER_NAME = 'Sequence';
 const PROTOCOL_ROOT_FOLDER_NAME = 'Protocol';
 const PROTOCOL_INDEX_FILE_NAME = 'protocol.index.sqlite';
 const ROOT_BUNDLE_BASE_NAME = 'hikari-data';
@@ -93,6 +97,8 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
   if (!rootPath) {
     return {
       storageRootPath: '',
+      dashboardRootPath: '',
+      experimentLogPath: '',
       papersRootPath: '',
       assaysRootPath: '',
       gelsRootPath: '',
@@ -105,6 +111,8 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
   }
   return {
     storageRootPath: rootPath,
+    dashboardRootPath: path.join(rootPath, DASHBOARD_ROOT_FOLDER_NAME),
+    experimentLogPath: path.join(rootPath, DASHBOARD_ROOT_FOLDER_NAME, EXPERIMENT_LOG_FILE_NAME),
     papersRootPath: path.join(rootPath, PAPERS_ROOT_FOLDER_NAME),
     assaysRootPath: path.join(rootPath, ASSAYS_ROOT_FOLDER_NAME),
     gelsRootPath: path.join(rootPath, GELS_ROOT_FOLDER_NAME),
@@ -123,6 +131,8 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
       dataFilePath: '',
       basePath: '',
       storageRootPath: '',
+      dashboardRootPath: '',
+      experimentLogPath: '',
       papersRootPath: '',
       assaysRootPath: '',
       gelsRootPath: '',
@@ -151,6 +161,8 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
     dataFilePath: '',
     basePath: resolvedBasePath,
     storageRootPath: storageLayout.storageRootPath,
+    dashboardRootPath: storageLayout.dashboardRootPath,
+    experimentLogPath: storageLayout.experimentLogPath,
     papersRootPath: storageLayout.papersRootPath,
     assaysRootPath: storageLayout.assaysRootPath,
     gelsRootPath: storageLayout.gelsRootPath,
@@ -202,6 +214,8 @@ function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath =
     dataFilePath: resolvedDataFilePath,
     basePath,
     storageRootPath: storageLayout.storageRootPath,
+    dashboardRootPath: storageLayout.dashboardRootPath,
+    experimentLogPath: storageLayout.experimentLogPath,
     papersRootPath: storageLayout.papersRootPath,
     assaysRootPath: storageLayout.assaysRootPath,
     gelsRootPath: storageLayout.gelsRootPath,
@@ -221,10 +235,14 @@ function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath =
 module.exports = {
   ASSAYS_ROOT_FOLDER_NAME,
   CHEMICALS_SQLITE_FILE_NAME,
+  DASHBOARD_ROOT_FOLDER_NAME,
+  EXPERIMENT_LOG_FILE_NAME,
   GELS_ROOT_FOLDER_NAME,
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   PAPERS_ROOT_FOLDER_NAME,
   PAPER_MARKDOWN_ROOT_FOLDER_NAME,
+  PROJECT_ROOT_FOLDER_NAME,
+  PROJECT_SEQUENCE_FOLDER_NAME,
   PROTOCOL_INDEX_FILE_NAME,
   PROTOCOL_ROOT_FOLDER_NAME,
   ROOT_BUNDLE_BASE_NAME,

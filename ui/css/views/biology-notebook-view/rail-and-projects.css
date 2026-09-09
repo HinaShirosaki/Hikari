@@ -132,6 +132,19 @@
   gap: 0;
 }
 
+/* Carry every folder and page highlight through the rail's right inset. */
+#biology-notebook-view .biology-notebook-folder {
+  width: calc(100% + var(--app-left-rail-padding-inline, 16px));
+}
+
+#biology-notebook-view .biology-notebook-folder-item {
+  box-sizing: border-box;
+}
+
+#biology-notebook-view .biology-notebook-page-row {
+  padding-right: var(--app-left-rail-padding-inline, 16px);
+}
+
 .biology-notebook-folder-item {
   color: var(--theme-text);
 }
@@ -196,6 +209,11 @@
   color: var(--theme-text-strong);
 }
 
+/* The open page remains selected after the pointer or keyboard focus leaves. */
+#biology-notebook-view .biology-notebook-page-row.is-active {
+  background: var(--hikari-left-rail-list-selected) !important;
+}
+
 .biology-notebook-page-name {
   white-space: nowrap;
   overflow: hidden;
@@ -214,6 +232,36 @@
 
 .biology-notebook-page-row.is-executed .biology-notebook-page-badge {
   color: var(--theme-success);
+}
+
+#biology-notebook-view .biology-notebook-page-row.is-suggested {
+  background: linear-gradient(100deg,
+    var(--biology-notebook-suggestion-violet),
+    var(--biology-notebook-suggestion-blue),
+    var(--biology-notebook-suggestion-green),
+    var(--biology-notebook-suggestion-yellow),
+    var(--biology-notebook-suggestion-orange),
+    var(--biology-notebook-suggestion-red)) !important;
+  color: var(--biology-notebook-suggestion-ink) !important;
+  font-style: italic;
+}
+
+#biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-name,
+#biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-badge {
+  color: var(--biology-notebook-suggestion-ink) !important;
+  font-weight: 400 !important;
+}
+
+#biology-notebook-view .biology-notebook-page-row.is-suggested:focus-visible {
+  outline: 0.125rem solid var(--theme-focus-ring);
+  outline-offset: -0.125rem;
+}
+
+.project-experiment-suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .biology-notebook-page-list-empty {
@@ -303,12 +351,26 @@
   margin: 0;
 }
 
-#biology-notebook-experiment-dialog-status.is-error {
-  color: var(--theme-danger);
-}
-
 .biology-notebook-viewer-column {
   align-content: start;
+}
+
+/* The title display and its rename editor swap in place, so they must share the
+   exact same box and typography or the heading jumps size when you double-click. */
+.biology-notebook-title-display,
+.biology-notebook-title-editor {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-strong);
+  font-size: 1.17em;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .biology-notebook-title-display {
@@ -316,14 +378,17 @@
 }
 
 .biology-notebook-title-editor {
-  box-sizing: border-box;
-  width: min(100%, 28rem);
-  min-height: 34px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.25;
+  overflow: hidden;
+  resize: none;
+  /* Grows with the wrapped name so a long title stays fully visible while editing. */
+  field-sizing: content;
+}
+
+.biology-notebook-title-editor:focus,
+.biology-notebook-title-editor:focus-visible {
+  outline: none;
+  /* Inset so the affordance never nudges the text. */
+  box-shadow: inset 0 -1px 0 var(--theme-focus);
 }
 
 .biology-notebook-tool-sidebar {
@@ -1097,19 +1162,42 @@
 
 .project-paper-finder-fields {
   display: grid;
-  grid-template-columns: minmax(170px, 0.42fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(320px, 1.15fr) minmax(260px, 1fr);
   gap: 14px;
   align-items: start;
 }
 
+.project-paper-finder-schedule {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.project-paper-finder-schedule legend,
 .project-paper-finder-frequency,
+.project-paper-finder-calendar-field,
+.project-paper-finder-requirements {
+  color: var(--theme-text);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.project-paper-finder-frequency,
+.project-paper-finder-calendar-field,
 .project-paper-finder-requirements {
   display: grid;
   gap: 7px;
   min-width: 0;
-  color: var(--theme-text);
-  font-size: 0.84rem;
-  font-weight: 650;
+}
+
+.project-paper-finder-schedule-grid {
+  display: grid;
+  grid-template-columns: minmax(142px, 1.25fr) repeat(2, minmax(104px, 1fr));
+  gap: 8px;
+  align-items: end;
 }
 
 .project-paper-finder-frequency-controls {
@@ -1120,17 +1208,19 @@
 
 .project-paper-finder-frequency input,
 .project-paper-finder-frequency select,
+.project-paper-finder-calendar-field input,
+.project-paper-finder-calendar-field select,
 .project-paper-finder-requirements textarea {
   width: 100%;
+}
+
+.project-paper-finder-timezone {
+  justify-self: end;
 }
 
 .project-paper-finder-requirements textarea {
   min-height: 88px;
   resize: vertical;
-}
-
-.project-paper-finder-hint {
-  margin: 0;
 }
 
 .project-paper-finder-actions {
@@ -1142,10 +1232,6 @@
 
 .project-paper-finder-status {
   min-width: min(100%, 240px);
-}
-
-.project-paper-finder-status.is-error {
-  color: var(--theme-danger);
 }
 
 .project-paper-finder-results {
@@ -1371,5 +1457,15 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   .project-paper-finder-fields {
     display: grid;
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .project-paper-finder-schedule-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .project-paper-finder-frequency {
+    grid-column: 1 / -1;
   }
 }

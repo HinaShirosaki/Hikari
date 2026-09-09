@@ -1,6 +1,6 @@
 // Runtime for "service" plugins: hidden sandboxed iframes that provide a
 // capability instead of a workspace view. The only capability today is file
-// conversion (e.g. SnapGene .dna -> GenBank .gbk), which lets a built-in
+// conversion (e.g. .dna -> GenBank .gbk), which lets a built-in
 // feature open a file format it does not natively understand.
 //
 // The messaging mirrors plugin-bridge.js but reversed. There the plugin calls
@@ -15,6 +15,8 @@
 // crosstalk. Service frames are also registered with that permission bridge,
 // allowing a converter to use a narrowly declared host capability such as
 // `python` while remaining headless.
+
+import { pluginOrigin } from './plugin-origin.js';
 
 const PROTOCOL_MARKER = 1;
 const CONVERT_TIMEOUT_MS = 15000;
@@ -36,7 +38,7 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
   let nextCallId = 0;
 
   function settleRuntime(runtime, error = '') {
-    if (!runtime || runtime.ready || runtime.error) {
+    if (!runtime || runtime.error || (!error && (runtime.ready || !runtime.origin))) {
       return;
     }
     runtime.ready = !error;
@@ -50,6 +52,15 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
       }
     }
     runtime.waiters.clear();
+    if (error) {
+      for (const [id, call] of pending) {
+        if (call.runtime === runtime) {
+          clearTimeout(call.timer);
+          pending.delete(id);
+          call.reject(new Error(runtime.error));
+        }
+      }
+    }
   }
 
   function waitUntilReady(runtime) {
@@ -69,10 +80,11 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
     });
   }
 
-  function register(frame, plugin) {
+  function register(frame, plugin, baseUrl = '') {
     const runtime = {
       pluginId: String(plugin?.id || 'plugin'),
       frame,
+      origin: pluginOrigin(baseUrl),
       ready: false,
       error: '',
       waiters: new Set()
@@ -91,6 +103,13 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
       }
     }
     return {
+      setOrigin(value) {
+        // Assigned by the loader once, before navigating the frame. An
+        // untrusted document cannot move its grant to another origin.
+        if (!runtime.origin && !runtime.error) {
+          runtime.origin = pluginOrigin(value);
+        }
+      },
       ready() {
         settleRuntime(runtime);
       },
@@ -116,7 +135,7 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
   // a service-reported error — the caller decides how to surface it.
   function postConversion({ converter, filename, bytes }) {
     const target = converter.frame?.contentWindow;
-    if (!target) {
+    if (!target || !converter.runtime.origin || converter.runtime.error) {
       return Promise.reject(new Error(`The "${converter.pluginId}" service is not running.`));
     }
     return new Promise((resolve, reject) => {
@@ -125,16 +144,22 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
         pending.delete(id);
         reject(new Error(`Conversion of ${filename || 'the file'} timed out.`));
       }, CONVERT_TIMEOUT_MS);
-      pending.set(id, { resolve, reject, timer, to: converter.to, source: target });
-      target.postMessage({
-        hikari: PROTOCOL_MARKER,
-        call: 'convert',
-        id,
-        from: converter.from,
-        to: converter.to,
-        filename: String(filename || ''),
-        bytes
-      }, '*');
+      pending.set(id, { resolve, reject, timer, to: converter.to, source: target, runtime: converter.runtime });
+      try {
+        target.postMessage({
+          hikari: PROTOCOL_MARKER,
+          call: 'convert',
+          id,
+          from: converter.from,
+          to: converter.to,
+          filename: String(filename || ''),
+          bytes
+        }, converter.runtime.origin);
+      } catch (error) {
+        clearTimeout(timer);
+        pending.delete(id);
+        reject(error);
+      }
     });
   }
 
@@ -154,8 +179,16 @@ export function createPluginServiceRegistry({ windowObject = globalThis.window }
     if (!reply || typeof reply !== 'object' || reply.hikari !== PROTOCOL_MARKER) {
       return;
     }
+    const runtime = runtimes.get(event.source);
+    if (!runtime?.origin || runtime.error) {
+      return;
+    }
+    if (event.origin !== runtime.origin) {
+      settleRuntime(runtime, `The "${runtime.pluginId}" service navigated away from its assigned origin.`);
+      return;
+    }
     if (reply.call === 'service:ready') {
-      settleRuntime(runtimes.get(event.source));
+      settleRuntime(runtime);
       return;
     }
     if (reply.call !== 'convert:result') {

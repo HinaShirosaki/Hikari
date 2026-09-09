@@ -1,3 +1,4 @@
+import { renderSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
 import { renderMarkdown } from './markdown.js';
 import { renderUserAttachments } from './rendering-attachments.js';
 import { renderEmptyHistory } from './rendering-empty-state.js';
@@ -118,6 +119,7 @@ export function renderHistory({
           ${messageBody}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}
+          ${role === 'assistant' ? renderSequenceActions(message.meta, safeText) : ''}
         </article>
       </div>
     `;

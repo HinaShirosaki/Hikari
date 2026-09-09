@@ -122,11 +122,15 @@ function collectCodexWorkspacePaths({ cwd = '', snapshot = {}, storagePath = '',
   return [...workspacePaths];
 }
 
-async function releaseSkillsForWorkspaces(workspacePaths = [], releaseOfficialSkills = releaseOfficialMcpSkillsForWorkspace) {
+async function releaseSkillsForWorkspaces(
+  workspacePaths = [],
+  releaseOfficialSkills = releaseOfficialMcpSkillsForWorkspace,
+  context = {}
+) {
   const releases = [];
   for (const workspacePath of workspacePaths) {
     try {
-      const skillReleases = await releaseOfficialSkills(workspacePath);
+      const skillReleases = await releaseOfficialSkills(workspacePath, context);
       releases.push({
         workspacePath,
         ok: true,
@@ -260,7 +264,11 @@ function createCodexWorkspaceInitializer(deps = {}) {
       dataFilePath,
       cleanText
     });
-    const skillReleases = await releaseSkillsForWorkspaces(workspacePaths, releaseOfficialSkills);
+    const skillReleases = await releaseSkillsForWorkspaces(
+      workspacePaths,
+      releaseOfficialSkills,
+      { snapshot }
+    );
     const result = {
       ok: Boolean(runtimeHome) && skillReleases.every((release) => release.ok !== false),
       status: 'initialized',

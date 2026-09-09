@@ -63,48 +63,56 @@
 body.theme-night {
   color-scheme: dark;
 
-  --theme-background: #11140f;
-  --theme-surface: #171c17;
-  --theme-surface-subtle: #222a22;
-  --theme-surface-elevated: #1c231d;
-  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
-  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
-  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  /*
+   * Night keeps day's sage/warm-neutral identity. The ramp is monotonic:
+   * background < surface < surface-subtle < surface-elevated, so a raised
+   * dialog reads as raised. `--theme-border` is tuned to 3:1 against
+   * surface-elevated (the lightest thing it ever sits on) because form
+   * fields on dark are told apart by their edge, not by their fill.
+   */
+  --theme-background: #12150f;
+  --theme-surface: #191d16;
+  --theme-surface-subtle: #242a21;
+  --theme-surface-elevated: #2b3228;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface));
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
 
-  --theme-border: #3c473d;
-  --theme-border-soft: #2e382f;
+  --theme-border: #727c6b;
+  --theme-border-soft: #3a4235;
   --theme-border-translucent: color-mix(in srgb, var(--theme-border) 90%, transparent);
 
-  --theme-text: #e8eee5;
-  --theme-text-muted: #b4c0ae;
-  --theme-text-strong: #f8fbf4;
+  --theme-text: #e9eee3;
+  --theme-text-muted: #aab4a1;
+  --theme-text-strong: #f7faf2;
   --theme-primary: var(--theme-text-strong);
   /* Accent is light in night mode, so ink that sits on it must be dark. */
-  --theme-text-on-accent: #071006;
+  --theme-text-on-accent: #0e1509;
 
-  --theme-accent: #91aa75;
-  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-  --theme-focus: #a4bd8a;
-  --theme-success: #5cc98a;
-  --theme-warning: #e5a063;
-  --theme-danger: #ef8b77;
+  --theme-accent: #9dba7d;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 20%, transparent);
+  --theme-focus: #b3cf92;
+  --theme-success: #74d69e;
+  --theme-warning: #eeae70;
+  --theme-danger: #f3947f;
 
   --theme-panel: var(--theme-surface-elevated);
-  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
-  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+  /* Fields recede into the page; the border does the identifying work. */
+  --theme-control-background: var(--theme-background);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-background) 82%, var(--theme-accent) 18%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
 
-  --theme-loading-background: #11140f;
-  --theme-overlay: rgba(5, 9, 6, 0.46);
-  --theme-overlay-strong: rgba(5, 9, 6, 0.58);
-  --theme-shadow-color-subtle: rgba(0, 0, 0, 0.18);
-  --theme-shadow-color: rgba(0, 0, 0, 0.3);
-  --theme-shadow-color-strong: rgba(0, 0, 0, 0.46);
-  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.24);
-  --theme-shadow-medium: 0 6px 14px rgba(0, 0, 0, 0.3);
+  --theme-loading-background: #12150f;
+  --theme-overlay: rgba(6, 9, 5, 0.5);
+  --theme-overlay-strong: rgba(6, 9, 5, 0.66);
+  --theme-shadow-color-subtle: rgba(0, 0, 0, 0.3);
+  --theme-shadow-color: rgba(0, 0, 0, 0.44);
+  --theme-shadow-color-strong: rgba(0, 0, 0, 0.6);
+  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --theme-shadow-medium: 0 6px 14px rgba(0, 0, 0, 0.48);
 
-  --theme-scrollbar-thumb: rgba(226, 236, 220, 0.24);
-  --theme-scrollbar-thumb-hover: rgba(226, 236, 220, 0.36);
+  --theme-scrollbar-thumb: rgba(226, 236, 220, 0.26);
+  --theme-scrollbar-thumb-hover: rgba(226, 236, 220, 0.42);
 }
 
 body.theme-miku {

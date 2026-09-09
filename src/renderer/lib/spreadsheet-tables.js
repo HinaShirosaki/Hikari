@@ -18,6 +18,7 @@ import { normalizeCellForColumn } from './table-units.js';
 import { showTransientNotice } from './notify.js';
 import { createSpreadsheetFillHandle } from './spreadsheet-tables/fill-handle.js';
 import { createSpreadsheetColumnDefs } from './spreadsheet-tables/column-defs.js';
+import { createSpreadsheetTableContextMenu } from './spreadsheet-tables/context-menu.js';
 
 function getResultTableHeight(table) {
   const rowCount = Array.isArray(table?.rows) ? table.rows.length : 0;
@@ -38,6 +39,7 @@ export function createSpreadsheetTables({
   addRowBtn,
   addColBtn,
   removeBtn,
+  contextMenuEl,
   createId,
   TabulatorLib,
   label = 'table',
@@ -50,6 +52,22 @@ export function createSpreadsheetTables({
   // Computed values for every cell, index-aligned with draftTables. Cells store the
   // formula text the user typed; this is what the grid actually shows.
   let computedTables = [];
+
+  function selectActiveTable(index) {
+    activeTableIndex = clampActiveIndex(index, draftTables);
+    Array.from(host?.querySelectorAll?.('[data-result-table-editor]') || []).forEach((editor) => {
+      editor.classList?.toggle?.(
+        'is-active',
+        Number(editor.dataset?.resultTableEditor) === activeTableIndex
+      );
+    });
+  }
+
+  const tableContextMenu = createSpreadsheetTableContextMenu({
+    host,
+    menu: contextMenuEl,
+    onSelectTable: selectActiveTable
+  });
 
   function recomputeTables() {
     computedTables = computeNotebookResultTables(draftTables).map((result) => result.byRowId);
@@ -208,6 +226,9 @@ export function createSpreadsheetTables({
     if (removeBtn) {
       removeBtn.hidden = !hasTable;
     }
+    if (!hasTable) {
+      tableContextMenu.hide();
+    }
   }
 
   function syncDraftFromGrid() {
@@ -271,6 +292,7 @@ export function createSpreadsheetTables({
   }
 
   function renderEditor(rawTables = null, options = {}) {
+    tableContextMenu.hide();
     draftTables = cloneNotebookResultTables(rawTables);
     activeTableIndex = clampActiveIndex(
       Object.prototype.hasOwnProperty.call(options, 'activeIndex') ? options.activeIndex : activeTableIndex,

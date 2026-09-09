@@ -21,7 +21,7 @@ Runnable examples:
 | [`hello-world`](../../examples/plugins/hello-world/) | local | The minimum that installs: manifest, entry page, no host access. |
 | [`notebook-results`](../../examples/plugins/notebook-results/) | local | Reading and writing notebook data through the host API. |
 | [`imagej`](../../examples/plugins/imagej/) | served | Real ImageJ running locally, on its own loopback origin. |
-| [`snapgene-dna`](../../examples/plugins/snapgene-dna/) | service | Headless `.dna` → GenBank converter, so the sequence viewer can open `.dna`. |
+| [`dna-importer`](../../examples/plugins/dna-importer/) | service | Headless `.dna` → GenBank converter, so the sequence viewer can open `.dna`. |
 
 Internal reference: [`src/plugins/gel`](../../src/plugins/gel/) is Hikari's
 source-owned, bundled Gel workspace. It is not installed through **Add Plugin

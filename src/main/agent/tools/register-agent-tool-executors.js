@@ -8,7 +8,6 @@ const {
 } = require('./tool-executors/shared.js');
 const { registerLabToolExecutors } = require('./tool-executors/lab-executors.js');
 const { registerSystemToolExecutors } = require('./tool-executors/system-executors.js');
-const { registerViewerToolExecutors } = require('./tool-executors/viewer-executors.js');
 const { registerResearchToolExecutors } = require('./tool-executors/research-executors.js');
 
 function registerAgentToolExecutors(deps = {}) {
@@ -28,7 +27,6 @@ function registerAgentToolExecutors(deps = {}) {
   const containerRuntime = deps.containerRuntime || {};
   const assayTableRuntime = deps.assayTableRuntime || {};
   const plotlyGraphRuntime = deps.plotlyGraphRuntime || {};
-  const sequenceAgentRuntime = deps.sequenceAgentRuntime || {};
   const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
@@ -67,7 +65,6 @@ function registerAgentToolExecutors(deps = {}) {
     containerRuntime,
     pythonSandboxToolRuntime,
     commandLineRuntime,
-    sequenceAgentRuntime,
     webSearchRuntime,
     literatureSearchRuntime,
     paperDownloadRuntime,
@@ -83,7 +80,6 @@ function registerAgentToolExecutors(deps = {}) {
 
   registerLabToolExecutors(genericAgentToolRuntime, executorContext);
   registerSystemToolExecutors(genericAgentToolRuntime, executorContext);
-  registerViewerToolExecutors(genericAgentToolRuntime, executorContext);
   registerResearchToolExecutors(genericAgentToolRuntime, executorContext);
 
   return [
@@ -100,8 +96,6 @@ function registerAgentToolExecutors(deps = {}) {
     'container',
     'assay-table',
     'plotly-graph',
-    'sequence-viewer',
-    'sequence-edit',
     'literature-search',
     'purchase-recommendation',
     'paper-download',

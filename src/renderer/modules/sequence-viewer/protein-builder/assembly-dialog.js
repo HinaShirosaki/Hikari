@@ -66,7 +66,6 @@ export function installProteinBuilderAssemblyDialog(ctx) {
         elements.proteinBuilderAssemblySummary.innerHTML = '<p class="small-note">Choose a stored backbone to preview the assembled plasmid length.</p>';
       } else {
         const totalLength = Math.max(0, Number(selectedBackbone?.backboneLength) || 0) + Math.max(0, Number(state.dnaConstruct.length) || 0);
-        const notes = Array.isArray(state.dnaConstruct?.notes) ? state.dnaConstruct.notes.filter(Boolean) : [];
         elements.proteinBuilderAssemblySummary.innerHTML = [
           `<p><strong>Construct:</strong> ${escapeHtml(constructName)}</p>`,
           `<p><strong>Stored Backbone:</strong> ${escapeHtml(buildStoredBackboneDisplayName(selectedBackbone))}</p>`,
@@ -78,9 +77,6 @@ export function installProteinBuilderAssemblyDialog(ctx) {
             : '',
           cleanText(selectedBackbone?.promoterName, 160)
             ? `<p><strong>Promoter:</strong> ${escapeHtml(cleanText(selectedBackbone.promoterName, 160))}</p>`
-            : '',
-          notes.length
-            ? `<p><strong>DNA Build Notes:</strong> ${escapeHtml(notes.join(' | '))}</p>`
             : ''
         ].filter(Boolean).join('');
       }

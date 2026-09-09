@@ -10,7 +10,8 @@ function notebookEntryMeta(entry) {
 }
 
 function notebookStateLabel(entry) {
-  return String(entry?.notebookState || '').trim().toLowerCase() === 'planned' ? 'Planned' : 'Executed';
+  const status = String(entry?.notebookState || '').trim().toLowerCase();
+  return status === 'suggested' ? 'Suggested' : status === 'planned' ? 'Planned' : 'Executed';
 }
 
 function formatGelAnalysisTypeLabel(type) {

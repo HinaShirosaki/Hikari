@@ -105,7 +105,7 @@ export function createAssayAnalysisView({
 
   // A fitted curve is the analysis's own densely-sampled model. Rebuilding it from the
   // result table would throw the fit away and plot its diagnostics (R2, RMSE, Points)
-  // as bars, so column overrides do not apply there -- and the Data tab hides them.
+  // as bars, so column overrides do not apply there; Data Series hides that mapping.
   function modelForStyle(result, analysis, style) {
     const overridden = MODEL_STYLE_KEYS.some((key) => style?.[key] && style[key] !== 'auto');
     return ((!overridden || chartSurface.hasFittedCurve(result.chartModel)) && result.chartModel)
@@ -139,6 +139,7 @@ export function createAssayAnalysisView({
         onChartStyleChanged(style);
       }
       redrawForStyleChange(style, previous);
+      chartControls?.refresh();
     }
   });
   const chartControls = assayChartStyleMount
@@ -172,7 +173,7 @@ export function createAssayAnalysisView({
 
   // Every analysis ships its own chartModel, which is what "auto" means. The moment a
   // column is overridden that model no longer answers the question, so it has to be
-  // rebuilt from the result table -- otherwise the Data tab's selects do nothing.
+  // rebuilt from the result table -- otherwise the Data Series mapping does nothing.
   chartSurface = createChartSurface({
     safeText,
     runtime,

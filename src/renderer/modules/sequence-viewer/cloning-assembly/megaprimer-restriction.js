@@ -1,12 +1,18 @@
 import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designSimpleMutagenesisPrimers } from './mutagenesis-simple.js';
 import { designWithThresholdFallback } from './strategy.js';
-import { normalizeVendorFilter, restrictionCutOverhang } from './restriction-ligation.js';
+import {
+  expandRestrictionFeatureVariants,
+  normalizeVendorFilter,
+  restrictionCutEnd,
+  restrictionCutOverhang,
+  restrictionEndsAreCrossCompatible
+} from './restriction-ligation.js';
 
 // Megaprimer restriction-ligation mutagenesis. Uses two *native* unique cutters
 // that flank the edit in the plasmid:
@@ -21,8 +27,8 @@ function featureCut(feature) {
   if (feature?.cut) {
     return feature.cut;
   }
-  const patterns = asArray(feature?.cutPatterns);
-  return patterns.length ? patterns[0] : '';
+  const patterns = [...new Set(asArray(feature?.cutPatterns).filter(Boolean))];
+  return patterns.length === 1 ? patterns[0] : '';
 }
 
 function isSticky(feature) {
@@ -34,8 +40,10 @@ function isSticky(feature) {
 function pickFlankingSite(features, side, editStart, editEnd, excludeSite, options = {}) {
   const circular = Boolean(options?.circular);
   const sequenceLength = Math.max(0, Number(options?.sequenceLength) || 0);
+  const hostSequence = normalizeSequence(options?.hostSequence || '');
+  const excludedCutEnd = options?.excludedCutEnd || null;
   const candidates = features
-    .filter((feature) => feature.site && feature.site !== excludeSite)
+    .filter((feature) => feature.site && feature.site !== excludeSite && featureCut(feature).includes('^'))
     .map((feature) => {
       const start = Number(feature?.segments?.[0]?.start);
       const end = Number(feature?.segments?.[0]?.end);
@@ -43,6 +51,10 @@ function pickFlankingSite(features, side, editStart, editEnd, excludeSite, optio
         return null;
       }
       if (start < editEnd && end > editStart) {
+        return null;
+      }
+      const cutEnd = restrictionCutEnd(feature, hostSequence);
+      if (cutEnd.type === 'unknown' || (excludedCutEnd && restrictionEndsAreCrossCompatible(excludedCutEnd, cutEnd))) {
         return null;
       }
       if (!circular && side === 'upstream' && end > editStart) {
@@ -56,7 +68,7 @@ function pickFlankingSite(features, side, editStart, editEnd, excludeSite, optio
             ? (editStart - end + sequenceLength) % sequenceLength
             : (start - editEnd + sequenceLength) % sequenceLength)
         : (side === 'upstream' ? editStart - end : start - editEnd);
-      return { feature, distance };
+      return { feature: { ...feature, cutEnd }, distance };
     })
     .filter(Boolean);
   candidates.sort((left, right) => {
@@ -128,17 +140,36 @@ export function buildMegaprimerRestrictionPlan(payload = {}) {
     };
   };
 
+  const ambiguityWarnings = [
+    describeAmbiguousDna(payload?.originalSequence, 'Megaprimer template'),
+    describeAmbiguousDna(payload?.editedSequence, 'Megaprimer result'),
+    describeAmbiguousDna(payload?.editRequest?.originalSequence, 'Megaprimer edited source'),
+    describeAmbiguousDna(payload?.editRequest?.editedSequence, 'Megaprimer edited bases')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return infeasible(ambiguityWarnings);
+  }
+
   if (!originalSequence.length || !normalizedEdit) {
     return infeasible('Edit the sequence before designing a megaprimer restriction route.');
   }
 
   const features = buildCommercialRestrictionFeatures(originalSequence, topology, {
     vendorFilter: normalizeVendorFilter(config.vendorFilter)
-  }).filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site');
+  })
+    .filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site')
+    .flatMap(expandRestrictionFeatureVariants);
 
-  const flankingOptions = { circular: topology === 'circular', sequenceLength: originalSequence.length };
+  const flankingOptions = {
+    circular: topology === 'circular',
+    sequenceLength: originalSequence.length,
+    hostSequence: originalSequence
+  };
   const siteUp = pickFlankingSite(features, 'upstream', normalizedEdit.startIndex, normalizedEdit.endIndex, '', flankingOptions);
-  const siteDn = pickFlankingSite(features, 'downstream', normalizedEdit.startIndex, normalizedEdit.endIndex, siteUp?.site, flankingOptions);
+  const siteDn = pickFlankingSite(features, 'downstream', normalizedEdit.startIndex, normalizedEdit.endIndex, siteUp?.site, {
+    ...flankingOptions,
+    excludedCutEnd: siteUp?.cutEnd
+  });
   if (!siteUp || !siteDn) {
     return infeasible('No pair of unique restriction sites flanks the edit on both sides; try a different route or add sites.');
   }

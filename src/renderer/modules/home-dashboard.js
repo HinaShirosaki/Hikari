@@ -22,12 +22,8 @@ export function initHomeDashboard({
   persist,
   createId = () => '',
   safeText,
-  onOpenSampleSearch = () => {},
-  onOpenSamples = () => onOpenSampleSearch(''),
   onOpenNotebook = () => {},
-  onOpenWorkflow = () => {},
-  onOpenAssistant = () => {},
-  onSendQuickLogToAgent = () => false,
+  onSendQuickLogToAgent = async () => ({ ok: false, reason: 'unavailable' }),
   api = null
 }) {
   const passageElements = {
@@ -47,13 +43,15 @@ export function initHomeDashboard({
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid'),
-    summary: document.getElementById('dashboard-contribution-summary')
+    summary: document.getElementById('dashboard-contribution-summary'),
+    selected: document.getElementById('dashboard-contribution-selected')
   };
 
   const paperFindingElements = {
     summary: document.getElementById('dashboard-paper-finding-summary'),
     list: document.getElementById('dashboard-paper-finding-list'),
-    openBtn: document.getElementById('dashboard-paper-finding-open-btn')
+    openBtn: document.getElementById('dashboard-paper-finding-open-btn'),
+    nextRun: document.getElementById('dashboard-paper-finding-next-run')
   };
 
   const notebookOpenBtn = document.getElementById('dashboard-notebook-open-btn');
@@ -78,8 +76,7 @@ export function initHomeDashboard({
     quickLogInput: document.getElementById('dashboard-quick-log-input'),
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
-    quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
+    quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn')
   };
 
   const notebookElements = {
@@ -183,12 +180,7 @@ export function initHomeDashboard({
       state,
       persist,
       createId,
-      safeText,
       render: masterRender,
-      onOpenSamples,
-      onOpenNotebook,
-      onOpenWorkflow,
-      onOpenAssistant,
       onSendQuickLogToAgent,
       elements: quickLogElements
     })

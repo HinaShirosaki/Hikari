@@ -155,7 +155,8 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
   assert.equal(renderCalls, 1);
 
   widget.render();
-  assert.match(list.innerHTML, /HEK293 \(P12\)/);
+  assert.match(list.innerHTML, /HEK293/);
+  assert.match(list.innerHTML, /class="home-passage-number">P12<\/span>/);
   // the overlapping panel mirrors the tile list so both stay actionable
   assert.equal(panelList.innerHTML, list.innerHTML);
 });
@@ -453,7 +454,7 @@ test('personal-inventory single container uses the same labeled set-samples form
   assert.equal(state.samples[0].inventoryLink.containerId, 'tube-1');
   assert.equal(state.samples[0].inventoryLink.wellIndex, null);
 });
-test('personal-inventory Add Sample actions are compact accessible icons', () => {
+test('personal-inventory sample editor actions are compact accessible icons', () => {
   const singleEditorSource = fs.readFileSync(path.join(
     __dirname,
     'src',
@@ -483,6 +484,13 @@ test('personal-inventory Add Sample actions are compact accessible icons', () =>
   assert.doesNotMatch(singleEditorSource, /data-single-sample-create="true">Add Sample<\/button>/);
   assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
   assert.match(css, /\.inventory-add-sample-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
+  assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*title="Save Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
+  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*title="Delete Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*title="Save Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
+  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*title="Delete Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.doesNotMatch(singleEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
+  assert.doesNotMatch(wellEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
+  assert.match(css, /\.inventory-sample-editor-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
 });
 test('personal-inventory keeps folders nestable while physical containers remain distinct leaves', () => {
   const document = createMockDocument([

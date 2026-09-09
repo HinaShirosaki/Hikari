@@ -20,4 +20,3 @@ This page is a source map, not a copied schema dump. Static copies of the retire
 
 Change the owning source and its focused tests together. Do not paste another large schema copy into this document. For the exact MCP tool list and input schemas, inspect the direct-tool definitions or regenerate the MCP contract snapshot from the live server.
 
-The Sequence Viewer proposal is intentionally documented separately in `docs/agent/mcp-contract/sequence-viewer-contract.md`; its pending tools are not part of the live allow-list until their cross-process wiring is implemented and verified.

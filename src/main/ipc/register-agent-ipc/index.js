@@ -1,11 +1,13 @@
 'use strict';
 
+const { AGENT } = require('../../../shared/ipc/channels');
 const { createAgentLifecycleService } = require('./agent-lifecycle-service');
 const { createAgentControllerCore } = require('./agent-controller-core');
 const { registerAgentChatHandler } = require('./agent-chat-handler');
 const { registerAgentLogHandlers } = require('./agent-log-handlers');
 
 function registerAgentIpc(deps = {}) {
+  deps.ipcMain.handle(AGENT.SUGGEST_EXPERIMENT, (_event, input) => deps.notebookSuggestionService.suggest(input));
   const cleanText = typeof deps.cleanText === 'function'
     ? deps.cleanText
     : ((value, _maxLength = 2000) => {

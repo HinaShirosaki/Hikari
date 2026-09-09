@@ -35,7 +35,7 @@ async function runCodexCommand({
   onJsonEvent = null
 }) {
   const safeCwd = resolveWorkingDirectory(cwd);
-  await ensureCodexCliWorkingDirectoryGuidance(safeCwd);
+  await ensureCodexCliWorkingDirectoryGuidance(safeCwd, { env });
   return new Promise((resolve, reject) => {
     throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI.');
     const invocation = resolveCodexInvocation(env);

@@ -2,7 +2,7 @@ import { escapeHtml } from '../../../lib/html.js';
 import { DEFAULT_STRAND_COLUMN_GAP_PX, DEFAULT_STRAND_MARKER_COLUMN_PX, FALLBACK_CHAR_ADVANCE_PX, LINE_FEATURE_BAR_GAP_PX, LINE_FEATURE_BAR_HEIGHT_PX, LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX } from '../constants.js';
 import { buildFeatureLocationText, hashTypeToColor } from '../feature-model.js';
 import { isPrimerBindingFeature } from '../feature-types.js';
-import { SNAPGENE_PRIMER_BAR_HEIGHT_PX, SNAPGENE_PRIMER_STYLE, buildSnapGenePrimerHtml, withSnapGenePrimerGeometry } from '../primer-snapgene.js';
+import { OLIGO_PRIMER_BAR_HEIGHT_PX, OLIGO_PRIMER_STYLE, buildOligoPrimerHtml, withOligoPrimerGeometry } from '../primer-oligo.js';
 import { computeRestrictionAnnotationGeometry } from '../restriction-analysis.js';
 
 function renderLineFeatureButtonsHtml(
@@ -52,7 +52,7 @@ function renderLineFeatureButtonsHtml(
             rightPx: geometry.leftPx + geometry.widthPx
           };
           return isPrimer
-            ? withSnapGenePrimerGeometry(fragment, {
+            ? withOligoPrimerGeometry(fragment, {
               segment, lineStart, lineEnd, templateSequence, charAdvancePx: safeAdvance
             })
             : fragment;
@@ -66,8 +66,8 @@ function renderLineFeatureButtonsHtml(
       return right.widthPx - left.widthPx;
     });
 
-  const primerBarHeightPx = SNAPGENE_PRIMER_STYLE
-    ? SNAPGENE_PRIMER_BAR_HEIGHT_PX
+  const primerBarHeightPx = OLIGO_PRIMER_STYLE
+    ? OLIGO_PRIMER_BAR_HEIGHT_PX
     : LINE_FEATURE_BAR_HEIGHT_PX;
 
   // Primers ride their own tracks on the side of the duplex they anneal to:
@@ -128,8 +128,8 @@ function buildLineFeatureTrackHtml(fragments, options) {
       // A wrapped primer is named once, on the fragment carrying its 5' end.
       const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0))
         && (!fragment.isPrimer || fragment.hasFivePrime);
-      if (fragment.snapgene) {
-        return buildSnapGenePrimerHtml(fragment, { topPx, isActive, label, lineWidthPx });
+      if (fragment.oligo) {
+        return buildOligoPrimerHtml(fragment, { topPx, isActive, label, lineWidthPx });
       }
       if (fragment.isPrimer) {
         const directionClass = fragment.direction === -1

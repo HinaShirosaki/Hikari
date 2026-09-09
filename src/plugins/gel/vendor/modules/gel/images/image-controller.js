@@ -119,7 +119,6 @@ export function createImageController({ runtime, elements, deps }) {
       deps.leaveCropMode();
       deps.renderOverrideStatus();
       deps.renderCanvas();
-      deps.renderReport();
       if (isTiffFile(file)) {
         deps.setStatus(
           `Loaded ${file.name} page ${runtime.currentImage.tiffPageIndex || 1}/${runtime.currentImage.tiffPageCount || 1} (${runtime.currentImage.width}x${runtime.currentImage.height}) via TIFF decoder.`
@@ -138,7 +137,6 @@ export function createImageController({ runtime, elements, deps }) {
       deps.leaveCropMode();
       deps.renderOverrideStatus();
       deps.renderCanvas();
-      deps.renderReport();
       deps.setStatus(error instanceof Error ? error.message : 'Failed to load image.');
     }
   }

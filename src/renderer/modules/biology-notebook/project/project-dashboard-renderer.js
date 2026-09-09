@@ -154,47 +154,84 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
   }
 
   function renderProjectPaperFinder(project) {
+    const monthDayOptions = Array.from({ length: 31 }, (_, index) => {
+      const day = index + 1;
+      return `<option value="${day}">${day}</option>`;
+    }).join('');
     return `
       <section class="panel project-paper-finder-panel" aria-labelledby="project-paper-finder-heading">
         <div class="project-panel-head project-paper-finder-head">
           <div class="project-panel-copy">
             <h3 id="project-paper-finder-heading">Paper Finder</h3>
-            <p class="small-note">Periodically find relevant papers for this project. Results stay metadata-only; PDFs are not downloaded.</p>
           </div>
           <span class="project-paper-finder-state" data-paper-finder-state>Not scheduled</span>
         </div>
         <form class="project-paper-finder-form" data-paper-finder-form data-project-id="${escapeText(project?.id || '')}">
           <div class="project-paper-finder-fields">
-            <label class="project-paper-finder-frequency">
-              <span>Find papers every</span>
-              <span class="project-paper-finder-frequency-controls">
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="1"
-                  aria-label="Paper finding frequency"
-                  data-paper-finder-frequency-value
-                  required
-                />
-                <select aria-label="Paper finding frequency unit" data-paper-finder-frequency-unit>
-                  <option value="day">day</option>
-                  <option value="week" selected>week</option>
-                  <option value="month">month</option>
-                </select>
-              </span>
-            </label>
+            <fieldset class="project-paper-finder-schedule">
+              <legend>Schedule</legend>
+              <div class="project-paper-finder-schedule-grid">
+                <label class="project-paper-finder-frequency">
+                  <span>Every</span>
+                  <span class="project-paper-finder-frequency-controls">
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value="1"
+                      aria-label="Paper finding frequency"
+                      data-paper-finder-frequency-value
+                      required
+                    />
+                    <select aria-label="Paper finding frequency unit" data-paper-finder-frequency-unit>
+                      <option value="day">day</option>
+                      <option value="week" selected>week</option>
+                      <option value="month">month</option>
+                    </select>
+                  </span>
+                </label>
+                <label class="project-paper-finder-calendar-field" data-paper-finder-weekday-field>
+                  <span>On</span>
+                  <select aria-label="Paper finding weekday" data-paper-finder-weekday>
+                    <option value="1" selected>Monday</option>
+                    <option value="2">Tuesday</option>
+                    <option value="3">Wednesday</option>
+                    <option value="4">Thursday</option>
+                    <option value="5">Friday</option>
+                    <option value="6">Saturday</option>
+                    <option value="0">Sunday</option>
+                  </select>
+                </label>
+                <label class="project-paper-finder-calendar-field" data-paper-finder-monthday-field hidden>
+                  <span>On day</span>
+                  <select aria-label="Paper finding day of month" data-paper-finder-monthday>
+                    ${monthDayOptions}
+                  </select>
+                  <span class="small-note">Shorter months use their last day.</span>
+                </label>
+                <label class="project-paper-finder-calendar-field">
+                  <span>At</span>
+                  <input
+                    type="time"
+                    value="09:00"
+                    aria-label="Paper finding time"
+                    data-paper-finder-time
+                    required
+                  />
+                </label>
+              </div>
+              <span class="small-note project-paper-finder-timezone" data-paper-finder-timezone>Local time</span>
+            </fieldset>
             <label class="project-paper-finder-requirements">
               <span>Requirements <span class="small-note">(optional)</span></span>
               <textarea
-                rows="4"
+                rows="5"
                 maxlength="12000"
                 data-paper-finder-requirements
                 placeholder="e.g. recent primary research on delivery efficiency and off-target effects"
               ></textarea>
             </label>
           </div>
-          <p class="small-note project-paper-finder-hint">Leave requirements empty to use the project description, current project memory, and related durable memory.</p>
           <div class="project-paper-finder-actions">
             <button type="submit" class="primary-btn" data-paper-finder-save>Schedule</button>
             <button type="button" class="ghost-btn" data-paper-finder-run hidden>Run now</button>
@@ -330,6 +367,10 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         <div class="project-dashboard-title">
           <span class="project-eyebrow">Project Activity</span>
           <h2>${escapeText(heading)}</h2>
+        </div>
+        <div class="project-experiment-suggestions">
+          <button type="button" class="ghost-btn" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
+          <span class="small-note" role="status" aria-live="polite" data-experiment-suggestion-status></span>
         </div>
         ${includeEditAction ? `
           <div class="project-dashboard-actions">

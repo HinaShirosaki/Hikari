@@ -392,7 +392,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
-    deps.renderReport();
     deps.setStatus('Manual overrides cleared.');
     if (runtime.currentImage) {
       deps.onRunAnalysis();

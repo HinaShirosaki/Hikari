@@ -2,13 +2,13 @@ import { reverseComplementDna } from '../calculations/sequence.js';
 import { matchesIupacPattern, normalizeIupacPattern } from '../calculations/crispr.js';
 import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, circularSlice, describeAmbiguousDna, normalizeIupacSequence, normalizeSequence } from './sequence-utils.js';
 import { normalizeFragment, normalizeHostVector } from './fragments.js';
 
 // Count windows of `sequence` (concrete ACGT) that satisfy `site`. Recognition
 // sites may carry IUPAC ambiguity codes (e.g. GTMKAC, CACNNNGTG); normalizeSequence
 // would strip those codes and corrupt the motif, so match position-by-position.
-export function countSiteMatches(sequence, site) {
+export function countSiteMatches(sequence, site, circular = false) {
   const cleaned = normalizeSequence(sequence);
   const rawSite = String(site || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (!cleaned.length || !rawSite.length) {
@@ -16,23 +16,31 @@ export function countSiteMatches(sequence, site) {
   }
 
   const pattern = normalizeIupacPattern(rawSite);
+  if (!circular && pattern.length > cleaned.length) {
+    return 0;
+  }
+  const limit = circular ? cleaned.length : cleaned.length - pattern.length + 1;
+  const scanLength = circular ? cleaned.length + pattern.length - 1 : cleaned.length;
+  const scanSequence = circular
+    ? cleaned.repeat(Math.ceil(scanLength / cleaned.length)).slice(0, scanLength)
+    : cleaned;
   let count = 0;
-  for (let index = 0; index + pattern.length <= cleaned.length; index += 1) {
-    if (matchesIupacPattern(cleaned.slice(index, index + pattern.length), pattern)) {
+  for (let index = 0; index < limit; index += 1) {
+    if (matchesIupacPattern(scanSequence.slice(index, index + pattern.length), pattern)) {
       count += 1;
     }
   }
   return count;
 }
 
-export function sequenceContainsSite(sequence, site) {
+export function sequenceContainsSite(sequence, site, circular = false) {
   const cleaned = normalizeSequence(sequence);
-  if (countSiteMatches(cleaned, site) > 0) {
+  if (countSiteMatches(cleaned, site, circular) > 0) {
     return true;
   }
   // Scan the reverse strand by matching the same pattern against the
   // reverse-complement of the (concrete) insert sequence.
-  return countSiteMatches(reverseComplementDna(cleaned), site) > 0;
+  return countSiteMatches(reverseComplementDna(cleaned), site, circular) > 0;
 }
 
 export function circularDistance(totalLength, leftStart, rightStart) {
@@ -80,8 +88,89 @@ function featureCutPattern(feature) {
   if (feature?.cut) {
     return feature.cut;
   }
-  const patterns = asArray(feature?.cutPatterns);
-  return patterns.length ? patterns[0] : '';
+  const patterns = [...new Set(asArray(feature?.cutPatterns).filter(Boolean))];
+  // A catalog feature may group isoschizomers that recognize the same site but
+  // cut it differently. Do not invent one enzyme/end chemistry by taking the
+  // first pattern from an ambiguous group.
+  return patterns.length === 1 ? patterns[0] : '';
+}
+
+export function expandRestrictionFeatureVariants(feature) {
+  if (!feature?.site) {
+    return [];
+  }
+  const directCut = String(feature?.cut || '').trim();
+  if (directCut) {
+    return [{ ...feature, cut: directCut }];
+  }
+  return asArray(feature?.enzymes)
+    .map((enzyme) => ({
+      ...feature,
+      ...enzyme,
+      site: feature.site,
+      segments: asArray(feature?.segments),
+      cut: String(enzyme?.cut || '').trim(),
+      cutPatterns: [String(enzyme?.cut || '').trim()].filter(Boolean),
+      enzymes: [enzyme]
+    }))
+    .filter((variant) => variant.cut && !variant.cut.includes('?'));
+}
+
+export function resolveRestrictionRecognitionSequence(feature, hostSequence) {
+  const host = normalizeSequence(hostSequence);
+  const site = normalizeIupacSequence(feature?.site || '');
+  if (!site.length) {
+    return '';
+  }
+  if (!host.length) {
+    return /^[ACGT]+$/.test(site) ? site : '';
+  }
+  const segments = asArray(feature?.segments)
+    .map((segment) => ({
+      start: Number(segment?.start),
+      end: Number(segment?.end)
+    }))
+    .filter((segment) => Number.isFinite(segment.start) && Number.isFinite(segment.end) && segment.end > segment.start);
+  let concrete = segments.length ? circularSlice(host, segments[0].start, site.length) : '';
+  if (String(feature?.strand || '') === '-1' || Number(feature?.strand) === -1) {
+    concrete = reverseComplementDna(concrete);
+  }
+  return concrete.length === site.length && /^[ACGT]+$/.test(concrete) && matchesIupacPattern(concrete, site)
+    ? concrete
+    : '';
+}
+
+export function restrictionCutEnd(feature, hostSequence = '') {
+  const cutPattern = featureCutPattern(feature);
+  const caretIndex = cutPattern.indexOf('^');
+  const patternSite = normalizeIupacSequence(cutPattern.replace(/\^/g, ''));
+  const recognitionSequence = resolveRestrictionRecognitionSequence(feature, hostSequence)
+    || (/^[ACGT]+$/.test(patternSite) ? patternSite : '');
+  if (caretIndex < 0 || !patternSite.length || recognitionSequence.length !== patternSite.length) {
+    return { type: 'unknown', polarity: 'unknown', sequence: '', length: 0 };
+  }
+  const signedLength = patternSite.length - (2 * caretIndex);
+  if (!signedLength) {
+    return { type: 'blunt', polarity: 'blunt', sequence: '', length: 0 };
+  }
+  const start = Math.min(caretIndex, patternSite.length - caretIndex);
+  const end = Math.max(caretIndex, patternSite.length - caretIndex);
+  return {
+    type: 'sticky',
+    polarity: signedLength > 0 ? '5-prime' : '3-prime',
+    sequence: recognitionSequence.slice(start, end),
+    length: Math.abs(signedLength)
+  };
+}
+
+export function restrictionEndsAreCrossCompatible(leftEnd, rightEnd) {
+  if (leftEnd.type === 'blunt' && rightEnd.type === 'blunt') {
+    return true;
+  }
+  return leftEnd.type === 'sticky'
+    && rightEnd.type === 'sticky'
+    && leftEnd.polarity === rightEnd.polarity
+    && leftEnd.sequence === rightEnd.sequence;
 }
 
 function circularlyEquivalent(leftSequence, rightSequence) {
@@ -90,46 +179,84 @@ function circularlyEquivalent(leftSequence, rightSequence) {
   return left.length === right.length && (!left.length || `${left}${left}`.includes(right));
 }
 
-function candidateRecreatesRequestedResult(hostSequence, insertSequence, resultSequence, leftFeature, rightFeature, circular = true) {
+function matchCandidateToRequestedResult(hostSequence, insertSequence, resultSequence, leftFeature, rightFeature, circular = true) {
   const host = normalizeSequence(hostSequence);
   const insert = normalizeSequence(insertSequence);
   const result = normalizeSequence(resultSequence);
+  const orderedFeatures = [leftFeature, rightFeature].sort((left, right) => (
+    Number(left?.segments?.[0]?.start) - Number(right?.segments?.[0]?.start)
+  ));
   if (!result.length) {
-    return true;
+    return {
+      matches: true,
+      forwardFeature: orderedFeatures[0],
+      reverseFeature: orderedFeatures[1],
+      replacedArc: 'unspecified'
+    };
   }
-  const ordered = [leftFeature, rightFeature]
+  const ordered = orderedFeatures
     .map((feature) => ({
       start: Number(feature?.segments?.[0]?.start),
       end: Number(feature?.segments?.[0]?.end)
     }))
     .sort((left, right) => left.start - right.start);
   if (!host.length || !insert.length || ordered.some((site) => !Number.isFinite(site.start) || !Number.isFinite(site.end))) {
-    return false;
+    return { matches: false };
   }
   const [first, second] = ordered;
   // Either arc between the two cutters can be replaced. Preserve both complete
   // recognition sites because the same sites are added to the insert primers.
   const replaceInnerArc = `${host.slice(0, first.end)}${insert}${host.slice(second.start)}`;
   const replaceOuterArc = `${host.slice(first.start, second.end)}${insert}`;
-  return circular
-    ? circularlyEquivalent(replaceInnerArc, result) || circularlyEquivalent(replaceOuterArc, result)
+  const innerMatches = circular
+    ? circularlyEquivalent(replaceInnerArc, result)
     : replaceInnerArc === result;
+  if (innerMatches) {
+    return {
+      matches: true,
+      forwardFeature: orderedFeatures[0],
+      reverseFeature: orderedFeatures[1],
+      replacedArc: 'inner'
+    };
+  }
+  if (circular && circularlyEquivalent(replaceOuterArc, result)) {
+    // The retained vector arc runs first -> second, so the insert closes the
+    // circle from the second cutter back to the first cutter.
+    return {
+      matches: true,
+      forwardFeature: orderedFeatures[1],
+      reverseFeature: orderedFeatures[0],
+      replacedArc: 'outer'
+    };
+  }
+  return { matches: false };
 }
 
 export function buildRestrictionCandidatePairs(features, hostLength, inserts, options = {}) {
   const candidates = [];
   const hostSequence = normalizeSequence(options?.hostSequence || '');
   const resultSequence = normalizeSequence(options?.resultSequence || '');
-  for (let leftIndex = 0; leftIndex < features.length; leftIndex += 1) {
-    for (let rightIndex = leftIndex + 1; rightIndex < features.length; rightIndex += 1) {
-      const left = features[leftIndex];
-      const right = features[rightIndex];
+  const concreteFeatures = asArray(features).flatMap(expandRestrictionFeatureVariants);
+  for (let leftIndex = 0; leftIndex < concreteFeatures.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < concreteFeatures.length; rightIndex += 1) {
+      const left = concreteFeatures[leftIndex];
+      const right = concreteFeatures[rightIndex];
       if (!left?.site || !right?.site || left.site === right.site) {
         continue;
       }
-      const leftOverhang = restrictionCutOverhang(featureCutPattern(left));
-      const rightOverhang = restrictionCutOverhang(featureCutPattern(right));
-      if (leftOverhang.type === 'unknown' || rightOverhang.type === 'unknown') {
+      // Conventional restriction-ligation adds the complete recognition site to
+      // each PCR primer. Offset cutters belong in the Type IIS/Golden Gate route.
+      if (!featureCutPattern(left).includes('^') || !featureCutPattern(right).includes('^')) {
+        continue;
+      }
+      const leftCutEnd = restrictionCutEnd(left, hostSequence);
+      const rightCutEnd = restrictionCutEnd(right, hostSequence);
+      if (leftCutEnd.type === 'unknown' || rightCutEnd.type === 'unknown') {
+        continue;
+      }
+      // The two vector ends must not ligate to one another. BamHI/BglII is the
+      // classic counterexample: different sites, but both expose 5'-GATC.
+      if (restrictionEndsAreCrossCompatible(leftCutEnd, rightCutEnd)) {
         continue;
       }
       const leftStart = Number(left?.segments?.[0]?.start);
@@ -153,28 +280,35 @@ export function buildRestrictionCandidatePairs(features, hostLength, inserts, op
       if (rejectedInsert) {
         continue;
       }
-      if (resultSequence && !candidateRecreatesRequestedResult(
+      const resultMatch = matchCandidateToRequestedResult(
         hostSequence,
         inserts[0]?.sequence,
         resultSequence,
         left,
         right,
         options?.circular !== false
-      )) {
+      );
+      if (resultSequence && !resultMatch.matches) {
         continue;
       }
 
       const distance = circularDistance(hostLength, left?.segments?.[0]?.start, right?.segments?.[0]?.start);
       // Sticky-overhang cutters ligate directionally and far more efficiently than
       // blunt ones, so reward them heavily over the proximity tie-breaker.
-      const stickyBonus = leftOverhang.type === 'sticky' ? 1 : 0;
-      const rightStickyBonus = rightOverhang.type === 'sticky' ? 1 : 0;
-      const score = (stickyBonus + rightStickyBonus) * 1000 - distance;
+      const stickyEnds = (leftCutEnd.type === 'sticky' ? 1 : 0) + (rightCutEnd.type === 'sticky' ? 1 : 0);
+      const score = stickyEnds * 1000 - distance;
 
       candidates.push({
         feasible: true,
-        left,
-        right,
+        left: {
+          ...resultMatch.forwardFeature,
+          cutEnd: restrictionCutEnd(resultMatch.forwardFeature, hostSequence)
+        },
+        right: {
+          ...resultMatch.reverseFeature,
+          cutEnd: restrictionCutEnd(resultMatch.reverseFeature, hostSequence)
+        },
+        replacedArc: resultMatch.replacedArc,
         score,
         distance,
         insertWarnings: []
@@ -199,8 +333,24 @@ export function evaluateRestrictionLigation(args = {}) {
     ...DEFAULT_CLONING_PREFERENCES,
     ...(args?.config || args?.preferences || {})
   };
-  const host = args?.host ? normalizeHostVector(args.host, 0) : null;
   const fragments = args?.fragmentMap?.fragments || args?.fragments || [];
+  const ambiguityWarnings = [
+    describeAmbiguousDna(args?.host?.sequence, `Host vector ${args?.host?.name || ''}`.trim()),
+    describeAmbiguousDna(args?.resultSequence || args?.fragmentMap?.resultSequence, 'Designed result'),
+    ...asArray(fragments).map((fragment, index) => (
+      describeAmbiguousDna(fragment?.sequence, `Fragment ${fragment?.name || index + 1}`)
+    ))
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return {
+      feasible: false,
+      selectedSites: null,
+      candidatePairs: [],
+      warnings: ambiguityWarnings,
+      reason: 'Ambiguous DNA input must be resolved before restriction-ligation design.'
+    };
+  }
+  const host = args?.host ? normalizeHostVector(args.host, 0) : null;
   const inserts = asArray(fragments)
     .map((fragment, index) => normalizeFragment(fragment, index))
     .filter((fragment) => String(fragment?.role || fragment?.type || '').toLowerCase() !== 'backbone');
@@ -246,7 +396,8 @@ export function evaluateRestrictionLigation(args = {}) {
       candidate.left?.site,
       candidate.right?.site
     ],
-    distance: candidate.distance
+    distance: candidate.distance,
+    cutEnds: [candidate.left?.cutEnd, candidate.right?.cutEnd]
   }));
 
   if (!candidates.length) {
@@ -268,7 +419,7 @@ export function evaluateRestrictionLigation(args = {}) {
     feasible: true,
     selectedSites: [selected.left, selected.right],
     candidatePairs,
-    warnings: [],
-    reason: 'Suitable unique restriction sites were identified on the host backbone.'
+    warnings: ['Confirm both enzymes are active in one manufacturer-recommended buffer and share compatible incubation/heat-inactivation conditions; otherwise digest sequentially and purify between enzymes.'],
+    reason: 'Suitable unique restriction sites with non-cross-compatible vector ends were identified on the host backbone.'
   };
 }

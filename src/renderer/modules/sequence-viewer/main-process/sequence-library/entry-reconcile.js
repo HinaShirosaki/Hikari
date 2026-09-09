@@ -75,6 +75,15 @@ async function recoverMissingSequenceEntries({ db, paths }) {
         createdAt,
         updatedAt: new Date(fileStat.mtime).toISOString()
       };
+      // A fully published agent entry can recover after a crash before index commit.
+      const design = await fs.readFile(path.join(entryDir, 'agent-design.json'), 'utf8')
+        .then(JSON.parse, () => null);
+      if (design?.version === 1 && design.entry?.id === entryId) {
+        row.status = design.entry.status === 'saved' ? 'saved' : 'temporary';
+        row.folderId = cleanText(design.entry.folderId, 200);
+        row.name = cleanText(design.entry.name, 140) || row.name;
+        row.normalizedName = row.name.toLowerCase();
+      }
       upsertEntryRow(db, row);
       replaceFeatureOccurrencesForEntry(db, row, {
         sequence: record.sequence,

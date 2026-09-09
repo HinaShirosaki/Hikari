@@ -37,7 +37,7 @@ function buildWholePlasmidPlan(source = {}, record = {}) {
   });
 }
 
-function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy, donor = null) {
+function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy, donor = null, preferenceOverrides = {}) {
   const sequence = normalizeSequenceText(record?.sequence || source?.editedSequence || '');
   const sequenceLength = sequence.length;
   if (!sequenceLength) {
@@ -51,9 +51,9 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
   // record: the donor is what the primers anneal to, and what their specificity
   // has to be checked against.
   const donorSequence = normalizeSequenceText(donor?.sequence || '');
+  const originalSequence = normalizeSequenceText(source?.originalSequence || '');
   const templateSequence = donorSequence
-    || extractOriginalTemplateForEditedRange(source, start, end)
-    || insertSequence;
+    || extractOriginalTemplateForEditedRange(source, start, end);
   const backboneSequence = buildLinearizedBackbone(sequence, start, end);
   // The backbone amplicon is PCR'd off the intact pre-edit vector, which still
   // carries whatever sat at the edit site and still wraps at the origin. Judging
@@ -96,10 +96,8 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
           templateName: donorSequence ? cleanText(donor?.name, 120) : '',
           // Uniqueness is judged over the whole donor, since that is the DNA in
           // the tube -- a primer unique to the gene can still prime elsewhere.
-          specificitySequence: donorSequence,
-          specificityCircular: donorSequence
-            ? cleanText(donor?.topology, 40).toLowerCase() !== 'linear'
-            : false
+          specificitySequence: donorSequence || originalSequence,
+          specificityCircular: cleanText(donorSequence ? donor?.topology : record?.topology, 40).toLowerCase() !== 'linear'
         }
       }
     ],
@@ -108,12 +106,14 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
       ? {
           allowRestrictionLigation: false,
           preferRestrictionLigation: false,
-          preferGibsonForMultiFragment: true
+          preferGibsonForMultiFragment: true,
+          ...preferenceOverrides
         }
       : {
           allowRestrictionLigation: true,
           preferRestrictionLigation: true,
-          preferGibsonForMultiFragment: false
+          preferGibsonForMultiFragment: false,
+          ...preferenceOverrides
         }
   });
 }
@@ -228,12 +228,17 @@ function buildRoutePlan({ strategy, source, record, range, donor }) {
         // insert was placed into it.
         vectorSequence: source?.originalSequence,
         insertTemplate: extractOriginalTemplateForEditedRange(source, insertStart, insertEnd),
+        insertTemplateHostSequence: source?.originalSequence,
+        insertTemplateCircular: cleanText(record?.topology, 40).toLowerCase() !== 'linear',
         donor
       })
     };
   }
 
   if (strategy === STRATEGY_GOLDEN_GATE) {
+    const insertStart = Math.max(0, Math.round(Number(range?.start) || 0));
+    const insertEnd = Math.max(insertStart, Math.round(Number(range?.end) || insertStart));
+    const insertTemplateSequence = extractOriginalTemplateForEditedRange(source, insertStart, insertEnd);
     return {
       strategy,
       ...buildGoldenGatePlan({
@@ -242,6 +247,10 @@ function buildRoutePlan({ strategy, source, record, range, donor }) {
         recordName: source?.recordName || record?.name,
         topology: record?.topology,
         vectorTemplateSequence: source?.originalSequence,
+        insertTemplateSequence,
+        insertTemplateHostSequence: source?.originalSequence,
+        insertTemplateName: source?.recordName || record?.name,
+        insertTemplateCircular: cleanText(record?.topology, 40).toLowerCase() !== 'linear',
         donor
       })
     };
@@ -250,7 +259,12 @@ function buildRoutePlan({ strategy, source, record, range, donor }) {
   // In-Fusion reuses the Gibson homology-overlap primers; only the bench
   // procedure differs (one In-Fusion reaction vs. exonuclease + ligase).
   if (strategy === STRATEGY_IN_FUSION) {
-    const inFusionAssembly = buildInsertAssemblyPlan(source, record, range, STRATEGY_GIBSON, donor);
+    const inFusionAssembly = buildInsertAssemblyPlan(source, record, range, STRATEGY_GIBSON, donor, {
+      minEngineeredOverlapLength: 15,
+      maxEngineeredOverlapLength: 21,
+      overlapTmRange: { min: 45, max: 75 },
+      allowExistingTerminalOverlap: false
+    });
     const plan = inFusionAssembly
       ? { ...inFusionAssembly, stepByStepProcedure: IN_FUSION_PROCEDURE }
       : inFusionAssembly;

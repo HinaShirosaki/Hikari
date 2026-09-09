@@ -36,6 +36,7 @@ function queryNotebookElements(doc = document) {
     notebookCancelProtocolEditBtn: doc.getElementById('biology-notebook-cancel-protocol-edit-btn'),
     notebookExportBtn: doc.getElementById('biology-notebook-export-btn'),
     notebookPrintBtn: doc.getElementById('biology-notebook-print-btn'),
+    notebookTakeIntoPlanBtn: doc.getElementById('biology-notebook-take-into-plan-btn'),
     notebookMarkExecutedBtn: doc.getElementById('biology-notebook-mark-executed-btn'),
     notebookProtocolEditor: doc.getElementById('biology-notebook-protocol-editor'),
     notebookProtocolDraftName: doc.getElementById('biology-notebook-page-protocol-name'),
@@ -55,6 +56,7 @@ function queryNotebookElements(doc = document) {
     notebookAddTableRowBtn: doc.getElementById('biology-notebook-add-table-row-btn'),
     notebookAddTableColumnBtn: doc.getElementById('biology-notebook-add-table-column-btn'),
     notebookRemoveTableBtn: doc.getElementById('biology-notebook-remove-table-btn'),
+    notebookTableContextMenu: doc.getElementById('biology-notebook-table-context-menu'),
     notebookResultTableWrap: doc.getElementById('biology-notebook-result-table-wrap'),
     notebookResultTableHost: doc.getElementById('biology-notebook-result-table'),
     notebookResultTableStatus: doc.getElementById('biology-notebook-result-table-status'),
@@ -64,7 +66,6 @@ function queryNotebookElements(doc = document) {
     notebookToolCalculations: doc.getElementById('biology-notebook-tool-calculations'),
     saveNotebookBtn: doc.getElementById('save-biology-notebook-btn'),
     clarifySaveNotebookBtn: doc.getElementById('clarify-save-biology-notebook-btn'),
-    cancelEditBtn: doc.getElementById('cancel-biology-notebook-edit-btn'),
     notebookEntryList: doc.getElementById('biology-notebook-entry-list')
   };
 }

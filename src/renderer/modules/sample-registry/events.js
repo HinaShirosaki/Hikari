@@ -15,15 +15,18 @@ import {
 import { onListClick, renderList } from './sample-list.js';
 import { mergeSamplesFromCsv, parseSamplesCsv, toSamplesCsv } from './csv-io.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { bindPlasmidNameSuggestions } from './name-suggestions.js';
 
-function setSampleCsvStatus(ctx, message) {
+function setSampleCsvStatus(ctx, message, isError = false) {
   if (ctx.dom.sampleCsvStatus) {
     ctx.dom.sampleCsvStatus.textContent = String(message || '');
+    ctx.dom.sampleCsvStatus.classList.toggle('is-error', Boolean(isError && message));
   }
 }
 
 export function bindSampleRegistryEvents(ctx) {
   const dom = ctx.dom;
+  bindPlasmidNameSuggestions(dom.sampleForm, ctx.state);
   dom.sampleStorageTypeInput?.addEventListener('change', () => renderLocationFields(ctx));
   dom.sampleLinkContainerInput?.addEventListener('change', () => renderLinkedPositionOptions(ctx));
   dom.sampleTypeInput?.addEventListener('change', () => onSampleTypeChange(ctx));
@@ -52,7 +55,7 @@ export function bindSampleRegistryEvents(ctx) {
     try {
       const rows = parseSamplesCsv(await file.text());
       if (!rows.length) {
-        setSampleCsvStatus(ctx, 'Import failed: no rows with a "name" column were found.');
+        setSampleCsvStatus(ctx, 'Import failed: no rows with a "name" column were found.', true);
         showTransientNotice('Import failed: no rows with a "name" column were found.', { type: 'error' });
         return;
       }
@@ -62,7 +65,7 @@ export function bindSampleRegistryEvents(ctx) {
       renderList(ctx);
       setSampleCsvStatus(ctx, `Imported ${created + updated} samples (${created} new, ${updated} updated).`);
     } catch (error) {
-      setSampleCsvStatus(ctx, `Import failed: ${error?.message || 'could not read the CSV file.'}`);
+      setSampleCsvStatus(ctx, `Import failed: ${error?.message || 'could not read the CSV file.'}`, true);
       showTransientNotice(`Import failed: ${error?.message || 'could not read the CSV file.'}`, { type: 'error' });
     } finally {
       event.target.value = '';

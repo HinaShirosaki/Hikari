@@ -1,13 +1,13 @@
 'use strict';
 
+const { extractSequenceActions } = require('../../../renderer/modules/sequence-viewer/main-process/mcp/artifact-events');
 const {
   extractAskUserPayloadFromToolEvent
 } = require('./payloads.js');
 const {
   extractNotebookAppendArtifactFromToolEvent,
   extractNotebookDraftArtifactFromToolEvent,
-  extractProtocolGenerationArtifactFromToolEvent,
-  extractSequenceEditProposalFromToolEvent
+  extractProtocolGenerationArtifactFromToolEvent
 } = require('./artifacts.js');
 const {
   extractPlotlyGraphArtifactFromToolEvent
@@ -29,7 +29,6 @@ function createCodexStreamProgressHandler({
   let streamedNotebookDraftPayload = null;
   let streamedNotebookAppendPayload = null;
   const streamedProtocolGenerationPayloads = [];
-  const streamedSequenceEditProposals = [];
 
   function publishCodexProgress(progressEvent = {}) {
     const recorded = recordLifecycleEvent(lifecycleRecorder, progressEvent);
@@ -56,10 +55,6 @@ function createCodexStreamProgressHandler({
       const protocolGenerationArtifact = extractProtocolGenerationArtifactFromToolEvent(streamEvent);
       if (protocolGenerationArtifact?.protocol) {
         streamedProtocolGenerationPayloads.push(protocolGenerationArtifact);
-      }
-      const sequenceEditProposal = extractSequenceEditProposalFromToolEvent(streamEvent);
-      if (sequenceEditProposal?.approvalToken) {
-        streamedSequenceEditProposals.push(sequenceEditProposal);
       }
     }
     if (eventType === 'codex_cli_display') {
@@ -141,8 +136,10 @@ function createCodexStreamProgressHandler({
       const status = rawStatus === 'failed' || rawStatus === 'error'
         ? 'failed'
         : (rawStatus === 'completed' || rawStatus === 'done' || rawStatus === 'ok' ? 'completed' : 'started');
+      const sequenceActions = extractSequenceActions(streamEvent);
       const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolEvent(streamEvent);
       const meta = {
+        sequence_actions: sequenceActions,
         tool_call_text: toolCallText,
         thinking_trace: toolCallText,
         codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
@@ -193,8 +190,7 @@ function createCodexStreamProgressHandler({
       streamedAskUserPayload,
       streamedNotebookDraftPayload,
       streamedNotebookAppendPayload,
-      streamedProtocolGenerationPayloads,
-      streamedSequenceEditProposals
+      streamedProtocolGenerationPayloads
     };
   }
 

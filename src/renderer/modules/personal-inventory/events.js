@@ -1,4 +1,7 @@
+import { bindPlasmidNameSuggestions } from '../sample-registry/name-suggestions.js';
+
 export function bindPersonalInventoryEvents(ctx) {
+  bindPlasmidNameSuggestions(ctx.elements.inventorySections, ctx.state);
   const {
     addContainerOverlay,
     addContainerTypeSelect,

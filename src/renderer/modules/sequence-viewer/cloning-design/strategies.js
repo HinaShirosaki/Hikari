@@ -27,8 +27,8 @@ function isCloningDesignPlanActionable(displayPlan) {
 
 const IN_FUSION_PROCEDURE = Object.freeze([
   { title: 'Linearize the vector', details: 'Linearize the backbone by PCR or a single restriction cut at the insertion point, then purify.' },
-  { title: 'Amplify insert with 15 bp overlaps', details: "PCR the insert with primers whose 5' extensions match the flanking vector ends (the overlaps designed above)." },
-  { title: 'In-Fusion reaction', details: 'Combine the linearized vector and insert with In-Fusion enzyme (15 min, 50 C); it fuses the homologous 15 bp ends.' },
+  { title: 'Amplify insert with 15-21 bp overlaps', details: "PCR the insert with primers whose 5' extensions match the flanking vector ends using the method-specific overlaps designed above." },
+  { title: 'In-Fusion reaction', details: 'Combine the linearized vector and insert with In-Fusion enzyme (15 min, 50 C); it fuses the homologous ends designed above.' },
   { title: 'Transform and screen', details: 'Transform competent cells and confirm both junctions by colony PCR and sequencing.' }
 ]);
 

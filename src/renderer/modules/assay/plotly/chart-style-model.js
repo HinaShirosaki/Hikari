@@ -26,6 +26,9 @@ const REF_AXES = Object.freeze(['y', 'x']);
 const CHART_TYPES = Object.freeze(['auto', 'line', 'bar']);
 
 export const CHART_FONT_FAMILY = 'Arial, sans-serif';
+export const TEXT_TARGETS = Object.freeze(['title', 'xTitle', 'yTitle', 'xTicks', 'yTicks', 'legend', 'barLabels']);
+export const pointsToPixels = (value) => value * 4 / 3;
+export const pixelsToPoints = (value) => value * 3 / 4;
 
 function createDefaultChartTextStyle() {
   return {
@@ -47,7 +50,7 @@ function sanitizeChartTextStyle(input) {
     fontFamily: typeof input.fontFamily === 'string' && input.fontFamily.trim()
       ? input.fontFamily.trim()
       : base.fontFamily,
-    fontSize: clampNumber(input.fontSize, 6, 72, base.fontSize),
+    fontSize: clampNumber(input.fontSize, 6, 96, base.fontSize),
     color: sanitizeColor(input.color, base.color),
     bold: Boolean(input.bold),
     italic: Boolean(input.italic),
@@ -59,6 +62,21 @@ function sanitizeChartTextStyle(input) {
 
 export function createDefaultChartStyle() {
   return {
+    styleVersion: 2,
+    axisStyles: {},
+    seriesStyles: {},
+    replicateStyle: {},
+    textStyles: Object.fromEntries(TEXT_TARGETS.map((target) => [target, {
+      ...createDefaultChartTextStyle(),
+      fontSize: pointsToPixels(target === 'title' ? 14 : /Title$/.test(target) ? 12 : 10),
+      bold: target === 'title' || /Title$/.test(target)
+    }])),
+    seriesColor: null,
+    barOutlineColor: null,
+    barOutlineWidth: 1,
+    errorColor: null,
+    titlePos: null,
+    titleOffset: null,
     chartType: 'auto',
     xColumn: 'auto',
     yColumn: 'auto',
@@ -83,7 +101,7 @@ export function createDefaultChartStyle() {
     pointShape: 'circle',
     pointSize: 6,
     lineStyle: 'solid',
-    lineWidth: 2.5,
+    lineWidth: 2,
     curve: 'curveMonotoneX',
     frameStyle: 'offset',
     frameStroke: '#000000',
@@ -168,6 +186,16 @@ export function normalizeChartStyle(input) {
   if (!input || typeof input !== 'object') {
     return base;
   }
+  // Pre-v2 dimensions were already Plotly pixels, even where the UI said pt.
+  // Materialize the old shared font for every target without restyling saved figures.
+  const legacy = input.styleVersion !== 2;
+  if (legacy) base.lineWidth = 2.5;
+  const oldText = sanitizeChartTextStyle(input.text);
+  const textStyles = Object.fromEntries(TEXT_TARGETS.map((target) => [target,
+    sanitizeChartTextStyle(input.textStyles?.[target] || (legacy
+      ? { ...oldText, bold: /Ticks$/.test(target) ? false : oldText.bold }
+      : base.textStyles[target]))
+  ]));
   const palette = Array.isArray(input.palette) && input.palette.length
     ? input.palette.map((color, index) => sanitizeColor(color, base.palette[index % base.palette.length]))
     : base.palette;
@@ -189,6 +217,20 @@ export function normalizeChartStyle(input) {
     });
   }
   return {
+    styleVersion: 2,
+    axisStyles: normalizeAxisStyles(input.axisStyles),
+    seriesStyles: normalizeSeriesStyles(input.seriesStyles),
+    replicateStyle: legacy ? {
+      pointSize: Math.max(4, clampNumber(input.pointSize, 1, 20, 6) - 1),
+      color: sanitizeColor(input.frameStroke, '#000000'), markerFill: 'open', outlineWidth: 1
+    } : normalizeReplicateStyle(input.replicateStyle),
+    textStyles,
+    seriesColor: sanitizeColor(input.seriesColor, null),
+    barOutlineColor: sanitizeColor(input.barOutlineColor, null),
+    barOutlineWidth: clampNumber(input.barOutlineWidth, 0, 8, base.barOutlineWidth),
+    errorColor: sanitizeColor(input.errorColor, null),
+    titlePos: clampOptional(input.titlePos, 0, 1),
+    titleOffset: clampOptional(input.titleOffset, 0, 200),
     chartType: sanitizeEnum(input.chartType, CHART_TYPES, base.chartType),
     xColumn: typeof input.xColumn === 'string' ? input.xColumn : base.xColumn,
     yColumn: typeof input.yColumn === 'string' ? input.yColumn : base.yColumn,
@@ -242,6 +284,57 @@ export function normalizeChartStyle(input) {
     errorThickness: clampNumber(input.errorThickness, 0.5, 6, base.errorThickness),
     text: sanitizeChartTextStyle(input.text)
   };
+}
+
+export const AXIS_STYLE_KEYS = Object.freeze(['tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'tickAngle']);
+export const SERIES_STYLE_KEYS = Object.freeze([
+  'color', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'mode', 'lineStyle', 'lineWidth',
+  'barOutlineColor', 'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'
+]);
+
+function normalizeAxisStyles(input) {
+  return Object.fromEntries(['x', 'y'].map((axis) => {
+    const value = input?.[axis] || {};
+    const normalized = {
+      tickDir: sanitizeEnum(value.tickDir, TICK_DIRECTIONS, 'outside'),
+      tickLen: clampNumber(value.tickLen, 0, 20, 5),
+      minorTicks: Boolean(value.minorTicks),
+      tickFormat: sanitizeEnum(value.tickFormat, TICK_FORMATS, 'auto'),
+      tickAngle: clampOptional(value.tickAngle, -90, 90)
+    };
+    return [axis, Object.fromEntries(AXIS_STYLE_KEYS.filter((key) => Object.hasOwn(value, key))
+      .map((key) => [key, normalized[key]]))];
+  }));
+}
+
+function normalizeSeriesStyles(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
+  return Object.fromEntries(Object.entries(input).map(([label, value]) => {
+    const v = value && typeof value === 'object' ? value : {};
+    const normalized = {
+      color: sanitizeColor(v.color, null),
+      pointShape: sanitizeEnum(v.pointShape, POINT_SHAPES, 'circle'),
+      pointSize: clampNumber(v.pointSize, 1, 20, 6),
+      markerFill: sanitizeEnum(v.markerFill, MARKER_FILLS, 'filled'),
+      opacity: clampNumber(v.opacity, 0.1, 1, 1),
+      mode: sanitizeEnum(v.mode, DISPLAY_MODES, 'lines+markers'),
+      lineStyle: sanitizeEnum(v.lineStyle, LINE_STYLES, 'solid'),
+      lineWidth: clampNumber(v.lineWidth, 0.5, 8, 2),
+      barOutlineColor: sanitizeColor(v.barOutlineColor, null),
+      barOutlineWidth: clampNumber(v.barOutlineWidth, 0, 8, 1),
+      errorColor: sanitizeColor(v.errorColor, null),
+      errorCapWidth: clampNumber(v.errorCapWidth, 0, 20, 4),
+      errorThickness: clampNumber(v.errorThickness, 0.5, 6, 1.2)
+    };
+    return [label, Object.fromEntries(SERIES_STYLE_KEYS.filter((key) => Object.hasOwn(v, key))
+      .map((key) => [key, normalized[key]]))];
+  }));
+}
+
+function normalizeReplicateStyle(input) {
+  const normalized = normalizeSeriesStyles({ legacy: input }).legacy;
+  if (input?.outlineWidth === 1) normalized.outlineWidth = 1;
+  return normalized;
 }
 
 export const CHART_STYLE_OPTIONS = Object.freeze({

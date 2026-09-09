@@ -41,6 +41,7 @@ function createNotebookSaveEntry({
   resultTableController,
   toolSidebarController,
   onNotebookEntriesChanged,
+  onEntryExecuted = () => {},
   collectNotebookValues,
   collectNotebookSampleLinks,
   getSelectedNotebookResultFiles,
@@ -211,6 +212,7 @@ function createNotebookSaveEntry({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
+    if (!previousEntrySnapshot && entry.notebookState === 'executed') onEntryExecuted(entry);
     return entry;
   }
 

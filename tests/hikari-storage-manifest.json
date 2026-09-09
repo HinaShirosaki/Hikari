@@ -201,7 +201,7 @@
       "modified_at": "2026-08-10T04:21:32.304Z"
     },
     {
-      "relative_path": "primer-snapgene-selfcheck.mjs",
+      "relative_path": "primer-oligo-selfcheck.mjs",
       "type": "file",
       "role": "other",
       "size_bytes": 9318,

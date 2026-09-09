@@ -76,7 +76,6 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-vector-builder-btn',
     'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
-    'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
     'sequence-viewer-protein-builder-common-blocks',
@@ -86,9 +85,12 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-feature-source',
     'sequence-viewer-protein-builder-feature-hosts',
     'sequence-viewer-protein-builder-feature-preview',
+    'sequence-viewer-protein-builder-feature-codon-optimize',
     'sequence-viewer-protein-builder-feature-add-btn',
     'sequence-viewer-protein-builder-meta',
     'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence-editor',
+    'sequence-viewer-protein-builder-protein-sequence-highlight',
     'sequence-viewer-protein-builder-sequence',
     'sequence-viewer-home-status',
     'sequence-viewer-library-filter-saved',
@@ -212,6 +214,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(getCalls.map((call) => call.id).join(','), 'entry_tag_a');
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-preview').innerHTML.includes('<svg'), true);
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, false);
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-codon-optimize').checked, false);
 
   // Choosing the other vector previews that one instead.
   trigger(document.getElementById('sequence-viewer-protein-builder-feature-hosts'), 'click', {
@@ -230,6 +233,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
 
   // Nothing joins the chain until Add Block.
   assert.equal(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML.includes('stored_affinity_tag'), false);
+  document.getElementById('sequence-viewer-protein-builder-feature-codon-optimize').checked = true;
   trigger(document.getElementById('sequence-viewer-protein-builder-feature-add-btn'), 'click', { preventDefault() {} });
   await flushAsync();
 
@@ -238,6 +242,8 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(workflowHtml.includes('stored_affinity_tag'), true);
   // The block records the vector it came from, not just how many carry it.
   assert.equal(workflowHtml.includes('From pTagSource-B'), true);
+  assert.equal(workflowHtml.includes('Codon optimization enabled'), true);
+  assert.equal(workflowHtml.includes('sequence-viewer-protein-builder-palette-1'), true);
   assert.equal(assembledSequence.value.includes('MAE'), true);
 });
 test('[EDGE] sequence-viewer protein builder can build DNA from the active vector source', async () => {
@@ -252,7 +258,6 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-vector-builder-btn',
     'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
-    'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
     'sequence-viewer-protein-builder-build-dna-btn',
@@ -265,6 +270,8 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-protein-builder-feature-search-results',
     'sequence-viewer-protein-builder-meta',
     'sequence-viewer-protein-builder-workflow',
+    'sequence-viewer-protein-builder-sequence-editor',
+    'sequence-viewer-protein-builder-protein-sequence-highlight',
     'sequence-viewer-protein-builder-sequence',
     'sequence-viewer-protein-builder-dna-meta',
     'sequence-viewer-protein-builder-dna-sequence',
@@ -301,10 +308,20 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-feature-detail',
     'sequence-viewer-sequence-host'
   ];
+  const copiedSequences = [];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
-    { document }
+    {
+      document,
+      navigator: {
+        clipboard: {
+          async writeText(value) {
+            copiedSequences.push(value);
+          }
+        }
+      }
+    }
   );
   const viewer = moduleWithDom.initSequenceViewer();
   viewer.loadFromExternal({
@@ -335,11 +352,8 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
 
   const dnaMeta = document.getElementById('sequence-viewer-protein-builder-dna-meta');
   const dnaSequence = document.getElementById('sequence-viewer-protein-builder-dna-sequence');
-  const builderStatus = document.getElementById('sequence-viewer-protein-builder-status');
-
   assert.match(dnaMeta.textContent, /nt/);
   assert.equal(dnaSequence.innerHTML.includes('ATGTTATTATTA'), true);
-  assert.match(builderStatus.textContent, /Reused active DNA from current vector CDS PoiCds/i);
 
   // The assembled sequence is editable: a stop typed onto the end is carried
   // into the DNA build as a stop codon, and the vector's own codons upstream of
@@ -348,8 +362,21 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
   const editedFlag = document.getElementById('sequence-viewer-protein-builder-sequence-edited');
   const resetBtn = document.getElementById('sequence-viewer-protein-builder-sequence-reset-btn');
   const chainProtein = assembled.value;
+  const sequenceEditor = document.getElementById('sequence-viewer-protein-builder-sequence-editor');
+  const highlightedProtein = document.getElementById('sequence-viewer-protein-builder-protein-sequence-highlight');
   assert.match(chainProtein, /MLLL$/);
+  assert.equal(highlightedProtein.innerHTML.includes('sequence-viewer-protein-builder-protein-segment'), true);
+  assert.equal(highlightedProtein.innerHTML.includes('sequence-viewer-protein-builder-block-poi'), true);
+  assert.deepEqual(
+    highlightedProtein.innerHTML.match(/sequence-viewer-protein-builder-palette-\d+/g) || [],
+    dnaSequence.innerHTML.match(/sequence-viewer-protein-builder-palette-\d+/g) || []
+  );
   assert.equal(Boolean(editedFlag.hidden), true);
+
+  trigger(highlightedProtein, 'click');
+  assert.equal(sequenceEditor.classList.contains('is-editing'), true);
+  trigger(assembled, 'blur');
+  assert.equal(sequenceEditor.classList.contains('is-editing'), false);
 
   assembled.value = `${chainProtein}*`;
   trigger(assembled, 'change');
@@ -369,16 +396,78 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
   trigger(assembled, 'change');
   await flushAsync();
   assert.equal(assembled.value, `${chainProtein}*`);
-  assert.match(
-    document.getElementById('sequence-viewer-protein-builder-status').textContent,
-    /Ignored Z/
-  );
 
   // Reset puts the chain's own sequence back.
   trigger(resetBtn, 'click', { preventDefault() {} });
   await flushAsync();
   assert.equal(assembled.value, chainProtein);
   assert.equal(Boolean(editedFlag.hidden), true);
+
+  trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
+  const copiedDna = document.getElementById('sequence-viewer-protein-builder-dna-sequence').innerHTML
+    .replace(/<[^>]+>/g, '');
+  trigger(document.getElementById('sequence-viewer-protein-builder-copy-protein-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-protein-builder-copy-dna-btn'), 'click');
+  await flushAsync();
+  assert.deepEqual(copiedSequences, [chainProtein, copiedDna]);
+});
+
+test('[EDGE] protein builder DNA build uses the selected shared codon usage profile', () => {
+  const { buildDnaConstruct } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'dna-construct.js')
+  );
+  const payload = {
+    constructName: 'Arginine repeat',
+    activeDnaSource: {},
+    rows: [{ id: 'custom_1', kind: 'custom', type: 'custom', label: 'Arg3', sequence: 'RRR' }]
+  };
+  const ecoli = buildDnaConstruct({ ...payload, codonUsageProfile: 'ecoli' });
+  const yeast = buildDnaConstruct({ ...payload, codonUsageProfile: 'yeast' });
+
+  assert.equal(ecoli.ok, true);
+  assert.equal(yeast.ok, true);
+  assert.equal(ecoli.sequence, 'CGTCGTCGT');
+  assert.equal(yeast.sequence, 'AGAAGAAGA');
+  assert.equal(yeast.parts[0].type, 'custom');
+  assert.equal(yeast.parts[0].proteinLength, 3);
+  assert.equal(yeast.parts[0].paletteSlot, 1);
+
+  const storedFeature = {
+    constructName: 'Stored arginine feature',
+    activeDnaSource: {},
+    codonUsageProfile: 'ecoli',
+    rows: [{
+      id: 'feature_1',
+      kind: 'feature',
+      type: 'feature',
+      label: 'Stored Arg3',
+      sequence: 'RRR',
+      sourceDnaSequence: 'AGAAGAAGA'
+    }]
+  };
+  const preserved = buildDnaConstruct(storedFeature);
+  const optimized = buildDnaConstruct({
+    ...storedFeature,
+    rows: storedFeature.rows.map((row) => ({ ...row, codonOptimize: true }))
+  });
+
+  assert.equal(preserved.sequence, 'AGAAGAAGA');
+  assert.equal(preserved.parts[0].codonOptimized, false);
+  assert.equal(optimized.sequence, 'CGTCGTCGT');
+  assert.equal(optimized.parts[0].codonOptimized, true);
+  assert.equal(optimized.parts[0].templateSequence, '');
+});
+
+test('[EDGE] protein builder rotates through all twelve light palette slots', () => {
+  const { getProteinBuilderPaletteSlot, getProteinBuilderPaletteClass } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'block-palette.js')
+  );
+
+  assert.deepEqual(
+    [1, 2, 11, 12, 13, 24, 25].map((position) => getProteinBuilderPaletteSlot(position)),
+    [1, 2, 11, 12, 1, 12, 1]
+  );
+  assert.equal(getProteinBuilderPaletteClass(13), 'sequence-viewer-protein-builder-palette-1');
 });
 test('[EDGE] sequence-viewer protein builder uses flat sections instead of nested panel boxes', () => {
   const css = fs.readFileSync(
@@ -391,6 +480,20 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   assert.match(css, /\.sequence-viewer-protein-builder-panel\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*padding:\s*0;/s);
   assert.match(css, /\.sequence-viewer-protein-builder-common-fold\s*\{[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid var\(--theme-border-soft\);[^}]*background:\s*transparent;/s);
   assert.match(css, /\.sequence-viewer-protein-builder-sequence-panel \.sequence-block\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-protein-segment,\s*\.sequence-viewer-protein-builder-dna-segment\s*\{[^}]*background:\s*var\(--builder-block-fill, var\(--sequence-viewer-builder-custom\)\);[^}]*color:\s*var\(--sequence-viewer-builder-ink\);/s);
+  assert.equal((css.match(/\.sequence-viewer-protein-builder-palette-\d+\s*\{/g) || []).length, 12);
+
+  const html = fs.readFileSync(
+    path.join(__dirname, 'ui', 'html', 'views', 'sequence-viewer-view.html'),
+    'utf8'
+  );
+  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*>\+Protein<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-form"[^>]*role="dialog"[^>]*aria-modal="true"/);
+  assert.match(html, /id="sequence-viewer-protein-builder-codon-usage"/);
+  assert.match(html, /id="sequence-viewer-protein-builder-feature-codon-optimize"[^>]*type="checkbox"/);
+  assert.match(html, /id="sequence-viewer-protein-builder-copy-protein-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy protein sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy protein sequence<\/span>[\s\S]*?<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-protein-sequence-highlight"[^>]*role="button"[^>]*tabindex="0"/);
 });
   }
 };

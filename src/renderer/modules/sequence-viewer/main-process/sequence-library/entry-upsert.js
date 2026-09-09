@@ -86,7 +86,7 @@ async function writeEntryFilesAndRow({ db, existing, paths, payload, gbkText }) 
   const entryId = existing?.id || inputId || buildEntryId();
   const entryDir = path.join(paths.entriesRoot, entryId);
   await fs.mkdir(entryDir, { recursive: true });
-  await clearDirectoryContents(entryDir, { preserveNames: [ALIGNMENTS_DIR_NAME] });
+  await clearDirectoryContents(entryDir, { preserveNames: [ALIGNMENTS_DIR_NAME, 'agent-design.json'] });
 
   const fileSafeName = sanitizeFileName(resolvedName, 'sequence');
   const gbkAbsPath = path.join(entryDir, `${fileSafeName}.gbk`);
@@ -95,6 +95,13 @@ async function writeEntryFilesAndRow({ db, existing, paths, payload, gbkText }) 
   const now = new Date().toISOString();
   const row = buildEntryRow({ existing, payload, entryId, resolvedName, status, gbkAbsPath, paths, now });
   upsertEntryRow(db, row);
+  const designPath = path.join(entryDir, 'agent-design.json');
+  const design = await fs.readFile(designPath, 'utf8').then(JSON.parse, error => { if (error.code === 'ENOENT') return null; throw error; });
+  if (design?.version === 1) {
+    const temporary = `${designPath}.tmp`;
+    await fs.writeFile(temporary, JSON.stringify({ ...design, entry: row }));
+    await fs.rename(temporary, designPath);
+  }
   return row;
 }
 

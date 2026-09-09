@@ -8,8 +8,8 @@ This is the reference example for the **host API**: it uses a read verb
 exactly those two permissions and nothing else.
 
 It is also the copyable reference for a **local** plugin. Its scripts are
-classic scripts loaded in dependency order because opaque-origin local frames
-cannot fetch relative ES modules. The UI keeps loading, empty, failure, retry,
+classic scripts loaded in dependency order. Hikari delivers the folder through
+its private loopback server; ES modules are supported too. The UI keeps loading, empty, failure, retry,
 and in-progress states visible instead of leaving a blank or double-submitting
 an attachment.
 

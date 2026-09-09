@@ -30,6 +30,8 @@ assert.equal(gelDialogCss, dialogCss, 'Gel must carry the same shared dialog sty
 assert.match(dialogCss, /--app-dialog-safe-top/);
 assert.match(dialogCss, /max-height:\s*min\(var\(--app-dialog-max-height\), var\(--app-dialog-available-height\)\)/);
 assert.match(dialogCss, /\.app-dialog-head > button\.app-dialog-close-btn[\s\S]*inset-inline-end:\s*0/);
+assert.match(dialogCss, /\.unsaved-changes-dialog\.app-dialog-surface\s*\{[^}]*--app-dialog-width:\s*440px/s);
+assert.match(dialogCss, /\.unsaved-changes-list li\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent/s);
 
 assert.match(agentHtml, /class="agent-review-dialog app-dialog-surface"/);
 assert.match(agentHtml, /class="agent-review-dialog-header app-dialog-head"/);

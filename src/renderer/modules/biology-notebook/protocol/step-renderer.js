@@ -46,8 +46,8 @@ export function buildInlinePlaceholderHtml({
     ? ` data-linked-sample-id="${safeText(sampleLink.sampleId)}"`
     : '';
   const title = sampleLink?.sampleId
-    ? `Linked sample: ${formatLinkValue(sampleLink)}. Right-click to replace.`
-    : (placeholderType ? `Right-click to link a ${getSampleLabel(placeholderType)} sample.` : '');
+    ? `Linked sample: ${formatLinkValue(sampleLink)}. Click and type to replace.`
+    : (placeholderType ? `Click and type to find a ${getSampleLabel(placeholderType)} sample.` : '');
 
   return `
       <span class="inline-placeholder-wrap" data-inline-placeholder data-placeholder-name="${cleanName}"${sampleTypeAttrs}${linkedAttrs}>

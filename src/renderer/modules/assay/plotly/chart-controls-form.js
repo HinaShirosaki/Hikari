@@ -1,201 +1,134 @@
-import { escapeHtml as escape } from '../../../lib/html.js';
-import {
-  LINE_WIDTH_OPTIONS,
-  POINT_SIZE_OPTIONS,
-  SHAPE_OPTIONS,
-  STROKE_WIDTH_OPTIONS
-} from './chart-style-pickers.js';
+import { pixelsToPoints } from './chart-style-model.js';
+import { resolveAxisStyle, resolveSeriesStyle } from './chart-style-targets.js';
 
-// Pushes the stored chart style into the form controls and keeps the
-// per-series colour rows in sync with whatever the figure currently plots.
-function createChartControlsForm({
-  q,
-  store,
-  pickers,
-  textControls,
-  seriesColorListeners,
-  setValueIfPresent,
-  setPickerValue,
-  applyContextVisibility,
-  renderColumnOptions,
-  applyPatch
-} = {}) {
-  function syncFormFromStyle() {
+export const POINT_FIELDS = new Set(['frameStrokeWidth', 'gridStrokeWidth', 'pointSize', 'lineWidth',
+  'xTickLen', 'yTickLen', 'barOutlineWidth', 'barCornerRadius', 'errorCapWidth', 'errorThickness']);
+// Per-axis field suffixes; the data-cc key is the axis plus the suffix (xScale, yTickDir…).
+export const AXIS_FIELDS = ['Scale', 'RangeAuto', 'Min', 'Max', 'TickPreset', 'Tick',
+  'TickDir', 'TickLen', 'MinorTicks', 'TickFormat', 'TickAngle'];
+export const AXIS_STYLE_SUFFIXES = ['TickDir', 'TickLen', 'MinorTicks', 'TickFormat', 'TickAngle'];
+export const axisStyleKey = (suffix) => suffix[0].toLowerCase() + suffix.slice(1);
+export const GLOBAL_FIELDS = ['frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
+  'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight',
+  'refLineAxis', 'refLineValue', 'barMode', 'barLabels', 'barCornerRadius', 'legendPosition',
+  'xColumn', 'yColumn', 'seriesColumn'];
+export const SERIES_FIELDS = ['color', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'mode',
+  'lineStyle', 'lineWidth', 'barOutlineColor', 'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'];
+
+const TICK_PRESETS = {
+  linear: [0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 25, 50, 100].map((value) => [String(value), String(value)]),
+  // Labels stay short so they read inside the half-width axis column; the hint below spells out the base.
+  log10: [['1', '10×'], ['2', '100×'], ['3', '1000×']],
+  log2: [['1', '2×'], ['2', '4×'], ['3', '8×'], ['4', '16×']],
+  ln: [['1', 'e×'], ['2', 'e²×'], ['3', 'e³×']]
+};
+
+// Form synchronization never commits values. Target changes cannot mutate chart state.
+export function createChartControlsForm({ q, store, selection, pickers, textControls }) {
+  function set(key, value) {
+    const field = q(key);
+    if (!field) return;
+    if (field.type === 'checkbox') field.checked = Boolean(value);
+    else {
+      const next = value === null || value === undefined ? '' : String(value);
+      if (field.value !== next) field.value = next;
+    }
+  }
+  function options(key, entries) {
+    const field = q(key);
+    const signature = JSON.stringify(entries);
+    if (field.dataset.options === signature) return;
+    field.replaceChildren(...entries.map(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      return option;
+    }));
+    field.dataset.options = signature;
+  }
+  function refreshAxis(axis, style, context) {
+    const axisStyle = resolveAxisStyle(style, axis);
+    const scale = style[`${axis}Scale`];
+    set(`${axis}Scale`, scale);
+    const range = style[`${axis}Range`];
+    set(`${axis}RangeAuto`, range.auto);
+    set(`${axis}Min`, range.min);
+    set(`${axis}Max`, range.max);
+    q(`${axis}Min`).disabled = range.auto;
+    q(`${axis}Max`).disabled = range.auto;
+    const tick = style[`${axis}Tick`];
+    const tickPresets = TICK_PRESETS[scale];
+    const customTick = selection.customTick[axis] || (tick !== null && !tickPresets.some(([value]) => Number(value) === tick));
+    options(`${axis}TickPreset`, [['auto', 'Auto'], ...tickPresets, ['custom', 'Custom…']]);
+    set(`${axis}TickPreset`, customTick ? 'custom' : tick === null ? 'auto' : tick);
+    set(`${axis}Tick`, tick);
+    q(`${axis}Tick`).closest('label').hidden = !customTick;
+    q(`${axis}Tick`).title = scale !== 'linear'
+      ? 'Interval in powers of the selected base; 1 labels each power.' : 'Interval in data units.';
+    q(`${axis}TickHint`).textContent = scale === 'linear' ? ''
+      : `Steps in powers of ${scale === 'log10' ? '10' : scale === 'log2' ? '2' : 'e'}; 1 labels each power.`;
+    q(`${axis}TickHint`).hidden = !customTick || scale === 'linear';
+    AXIS_STYLE_SUFFIXES.forEach((suffix) => {
+      const field = axisStyleKey(suffix);
+      set(`${axis}${suffix}`, field === 'tickLen' ? pixelsToPoints(axisStyle[field]) : axisStyle[field]);
+    });
+    const category = axis === 'x' && context.hasCategoryX;
+    q(`${axis}NumericFields`).hidden = category;
+    q(`${axis}NumericTickFields`).hidden = category;
+  }
+  function refresh() {
     const style = store.getStyle();
-    const ctx = store.getContext();
-
-    setValueIfPresent(q('xScale'), style.xScale);
-    setValueIfPresent(q('yScale'), style.yScale);
-    setValueIfPresent(q('xRangeAuto'), style.xRange.auto);
-    setValueIfPresent(q('xMin'), style.xRange.min);
-    setValueIfPresent(q('xMax'), style.xRange.max);
-    setValueIfPresent(q('yRangeAuto'), style.yRange.auto);
-    setValueIfPresent(q('yMin'), style.yRange.min);
-    setValueIfPresent(q('yMax'), style.yRange.max);
-    setValueIfPresent(q('xTick'), style.xTick);
-    setValueIfPresent(q('yTick'), style.yTick);
-
-    if (pickers.pointShape) pickers.pointShape.setValue(style.pointShape);
-    setPickerValue(pickers.pointSize, style.pointSize, POINT_SIZE_OPTIONS);
-    if (pickers.pointSize) pickers.pointSize.setShapeContext(style.pointShape);
-    if (pickers.lineStyle) pickers.lineStyle.setValue(style.lineStyle);
-    setPickerValue(pickers.lineWidth, style.lineWidth, LINE_WIDTH_OPTIONS);
-    if (pickers.frameStyle) pickers.frameStyle.setValue(style.frameStyle);
-    setValueIfPresent(q('frameStroke'), style.frameStroke);
-    setPickerValue(pickers.frameStrokeWidth, style.frameStrokeWidth, STROKE_WIDTH_OPTIONS);
-    setValueIfPresent(q('backgroundColor'), style.backgroundColor);
-    setValueIfPresent(q('sizeAuto'), style.sizeAuto !== false);
-    setValueIfPresent(q('frameWidth'), Number.isFinite(style.frameWidth) ? style.frameWidth : '');
-    setValueIfPresent(q('frameHeight'), Number.isFinite(style.frameHeight) ? style.frameHeight : '');
-    setValueIfPresent(q('gridVertical'), style.showVerticalGrid !== false);
-    setValueIfPresent(q('gridHorizontal'), style.showHorizontalGrid !== false);
-    setValueIfPresent(q('gridColor'), style.gridColor);
-    setPickerValue(pickers.gridStrokeWidth, style.gridStrokeWidth, STROKE_WIDTH_OPTIONS);
-    setValueIfPresent(q('title'), style.title);
-    setValueIfPresent(q('xTitle'), style.xTitle);
-    setValueIfPresent(q('yTitle'), style.yTitle);
-    setValueIfPresent(q('xTitlePos'), style.xTitlePos);
-    setValueIfPresent(q('yTitlePos'), style.yTitlePos);
-    setValueIfPresent(q('xTitleOffset'), style.xTitleOffset);
-    setValueIfPresent(q('yTitleOffset'), style.yTitleOffset);
-    setValueIfPresent(q('mode'), style.mode);
-    setValueIfPresent(q('legendPosition'), style.legendPosition);
-    setValueIfPresent(q('tickDir'), style.tickDir);
-    setValueIfPresent(q('tickLen'), style.tickLen);
-    setValueIfPresent(q('minorTicks'), style.minorTicks);
-    setValueIfPresent(q('tickFormat'), style.tickFormat);
-    setValueIfPresent(q('markerFill'), style.markerFill);
-    setValueIfPresent(q('opacity'), style.opacity);
-    setValueIfPresent(q('opacityBar'), style.opacity);
-    setValueIfPresent(q('errorCapWidth'), style.errorCapWidth);
-    setValueIfPresent(q('errorThickness'), style.errorThickness);
-    setValueIfPresent(q('refLineAxis'), style.refLineAxis);
-    setValueIfPresent(q('refLineValue'), style.refLineValue);
-    setValueIfPresent(q('barMode'), style.barMode);
-    setValueIfPresent(q('barLabels'), style.barLabels);
-    setValueIfPresent(q('barCornerRadius'), style.barCornerRadius);
-    if (textControls) textControls.setValue(style.text || {});
-
-    renderColumnOptions(ctx);
-    applyContextVisibility(ctx);
-    applyRangeDisabledState();
-    applySizeDisabledState();
-    renderSeriesColors(style, ctx.seriesLabels);
-  }
-
-  function applyRangeDisabledState() {
-    const xAuto = Boolean(q('xRangeAuto')?.checked);
-    const yAuto = Boolean(q('yRangeAuto')?.checked);
-    if (q('xMin')) q('xMin').disabled = xAuto;
-    if (q('xMax')) q('xMax').disabled = xAuto;
-    if (q('yMin')) q('yMin').disabled = yAuto;
-    if (q('yMax')) q('yMax').disabled = yAuto;
-  }
-
-  function applySizeDisabledState() {
-    const auto = Boolean(q('sizeAuto')?.checked);
-    if (q('frameWidth')) q('frameWidth').disabled = auto;
-    if (q('frameHeight')) q('frameHeight').disabled = auto;
-  }
-
-  function clampDim(value, min, max) {
-    if (value == null) return null;
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function clearSeriesColorListeners() {
-    while (seriesColorListeners.length) {
-      const { el, event, handler } = seriesColorListeners.pop();
-      el.removeEventListener(event, handler);
-    }
-  }
-
-  function renderSeriesColors(style, seriesLabels) {
-    const host = q('seriesColors');
-    if (!host) return;
-    clearSeriesColorListeners();
-    host.innerHTML = '';
-    if (!seriesLabels.length) {
-      const empty = document.createElement('p');
-      empty.className = 'assay-chart-style-series-empty';
-      empty.textContent = 'Run analysis to configure series colours & shapes.';
-      host.appendChild(empty);
-      return;
-    }
-    const isBar = (store.getContext().chartType || 'line') === 'bar';
-    seriesLabels.forEach((label, index) => {
-      const row = document.createElement('div');
-      row.className = 'assay-chart-style-series-row';
-      const labelEl = document.createElement('span');
-      labelEl.textContent = label || `Series ${index + 1}`;
-      row.appendChild(labelEl);
-
-      if (!isBar) {
-        const shape = document.createElement('select');
-        shape.className = 'assay-chart-style-series-shape';
-        shape.setAttribute('aria-label', `Point shape for ${label || `series ${index + 1}`}`);
-        shape.innerHTML = `<option value="">Default</option>${SHAPE_OPTIONS
-          .map((opt) => `<option value="${opt.value}">${escape(opt.label)}</option>`)
-          .join('')}`;
-        shape.value = (style.seriesShapes || {})[label] || '';
-        const shapeHandler = () => {
-          // Read the live style, not the snapshot these rows were built from: a style
-          // change does not re-render them, so a captured copy would drop sibling edits.
-          const next = { ...store.getStyle().seriesShapes };
-          if (shape.value) next[label] = shape.value;
-          else delete next[label];
-          applyPatch({ seriesShapes: next });
-        };
-        shape.addEventListener('change', shapeHandler);
-        seriesColorListeners.push({ el: shape, event: 'change', handler: shapeHandler });
-        row.appendChild(shape);
-      }
-
-      const input = document.createElement('input');
-      input.type = 'color';
-      input.setAttribute('aria-label', `Colour for ${label || `series ${index + 1}`}`);
-      input.value = style.seriesColors[label] || style.palette[index % style.palette.length] || '#1f77b4';
-      const handler = () => applyPatch({
-        seriesColors: { ...store.getStyle().seriesColors, [label]: input.value }
-      });
-      input.addEventListener('input', handler);
-      seriesColorListeners.push({ el: input, event: 'input', handler });
-      row.appendChild(input);
-      host.appendChild(row);
+    const context = store.getContext();
+    const seriesIndex = context.seriesLabels.indexOf(selection.series);
+    if (seriesIndex < 0) selection.series = null;
+    const series = resolveSeriesStyle(selection.series === null
+      ? { ...style, seriesStyles: {}, seriesColors: {}, seriesShapes: {} } : style,
+    selection.series ?? '', Math.max(0, seriesIndex));
+    GLOBAL_FIELDS.forEach((key) => set(key, POINT_FIELDS.has(key) ? pixelsToPoints(style[key]) : style[key]));
+    pickers.frameStyle.setValue(style.frameStyle);
+    ['frameWidth', 'frameHeight'].forEach((key) => { q(key).disabled = style.sizeAuto; });
+    ['gridColor', 'gridStrokeWidth'].forEach((key) => {
+      q(key).disabled = !style.showVerticalGrid && !style.showHorizontalGrid;
+    });
+    ['x', 'y'].forEach((axis) => refreshAxis(axis, style, context));
+    options('seriesTarget', [['', 'All series'], ...context.seriesLabels.map((label, i) => [String(i), label || `Series ${i + 1}`])]);
+    set('seriesTarget', selection.series === null ? '' : String(seriesIndex));
+    q('seriesDefaults').hidden = selection.series === null;
+    SERIES_FIELDS.forEach((key) => {
+      const value = key === 'barOutlineColor' ? series[key] || style.frameStroke
+        : key === 'errorColor' ? series[key] || (context.chartType === 'bar' ? style.frameStroke : series.color)
+          : series[key];
+      if (pickers[key]) pickers[key].setValue(value);
+      else set(key, POINT_FIELDS.has(key) ? pixelsToPoints(value) : value);
+    });
+    q('symbolFields').hidden = context.chartType === 'bar' && !context.hasReplicates;
+    q('errorFields').hidden = !context.hasErrorBars;
+    q('columnFields').hidden = context.hasFittedCurve;
+    q('columnNote').textContent = context.hasFittedCurve ? 'The fitted analysis determines its plotted columns.' : '';
+    q('columnNote').hidden = !context.hasFittedCurve;
+    ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
+      const headers = key === 'yColumn' ? context.numericHeaders : context.headers;
+      options(key, [['auto', 'Auto'], ...headers.map((name) => [name, name])]);
+      set(key, headers.includes(style[key]) ? style[key] : 'auto');
+      q(key).disabled = !headers.length;
+    });
+    if (selection.text === 'barLabels' && context.chartType !== 'bar') selection.text = 'title';
+    set('textTarget', selection.text);
+    const barTextOption = q('textTarget').querySelector('option[value="barLabels"]');
+    barTextOption.disabled = context.chartType !== 'bar';
+    const target = selection.text;
+    q('titleFields').hidden = !['title', 'xTitle', 'yTitle'].includes(target);
+    set('titleText', style[target]);
+    q('titleText').placeholder = target === 'title' ? '(none)' : '(from analysis)';
+    const prefix = target === 'title' ? 'title' : target;
+    set('titlePos', style[`${prefix}Pos`]);
+    const offset = style[`${prefix}Offset`];
+    set('titleOffset', Number.isFinite(offset) ? pixelsToPoints(offset) : null);
+    const text = style.textStyles[target];
+    textControls.setValue({ ...text, fontSize: pixelsToPoints(text.fontSize) });
+    q('frameStyle').closest('.assay-chart-style').querySelectorAll('[data-cc-when]').forEach((element) => {
+      element.hidden = element.dataset.ccWhen !== (context.chartType || 'line');
     });
   }
-
-  function parseRangeNumber(input) {
-    if (!input) return null;
-    const raw = input.value;
-    if (raw === '' || raw === null || raw === undefined) return null;
-    const num = Number(raw);
-    return Number.isFinite(num) ? num : null;
-  }
-
-  function pickerNumberValue(picker, fallback) {
-    if (!picker) return fallback;
-    const v = Number(picker.value);
-    return Number.isFinite(v) ? v : fallback;
-  }
-
-  function selectValue(key, fallback) {
-    const select = q(key);
-    if (!select || select.disabled) return fallback;
-    return select.value || fallback;
-  }
-
-  return {
-    syncFormFromStyle,
-    applyRangeDisabledState,
-    applySizeDisabledState,
-    clampDim,
-    clearSeriesColorListeners,
-    renderSeriesColors,
-    parseRangeNumber,
-    pickerNumberValue,
-    selectValue
-  };
+  return { refresh, set, options };
 }
-
-export { createChartControlsForm };

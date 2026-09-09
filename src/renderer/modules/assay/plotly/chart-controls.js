@@ -1,414 +1,204 @@
-import {
-  createChartStylePicker,
-  SHAPE_OPTIONS,
-  LINE_STYLE_OPTIONS,
-  FRAME_STYLE_OPTIONS,
-  POINT_SIZE_OPTIONS,
-  LINE_WIDTH_OPTIONS,
-  STROKE_WIDTH_OPTIONS
-} from './chart-style-pickers.js';
+import { createChartStylePicker, SHAPE_OPTIONS, LINE_STYLE_OPTIONS, FRAME_STYLE_OPTIONS } from './chart-style-pickers.js';
 import { createChartTextControls } from './chart-text-controls.js';
-import {
-  deleteChartPreset,
-  getChartPreset,
-  listChartPresets,
-  sanitizePresetName,
-  saveChartPreset
-} from './chart-presets.js';
+import { deleteChartPreset, getChartPreset, listChartPresets, sanitizePresetName, saveChartPreset, PRISM_CLASSIC_PRESET } from './chart-presets.js';
 import { PANEL_HTML, TABS, TAB_KEYS } from './chart-controls-markup.js';
-import { createChartControlsForm } from './chart-controls-form.js';
+import { createChartControlsForm, GLOBAL_FIELDS, SERIES_FIELDS, POINT_FIELDS, AXIS_FIELDS, axisStyleKey } from './chart-controls-form.js';
+import { pointsToPixels } from './chart-style-model.js';
+import { axisStylePatch, seriesStylePatch, validateAxisRange, prismClassicPatch } from './chart-style-targets.js';
 
-function defaultSafeText(value) {
-  return String(value).replace(/[&<>"']/g, (c) => (
-    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
-  ));
-}
-
-function nearestOption(value, options) {
-  if (!options.length) return value;
-  if (!Number.isFinite(value)) return options[0].value;
-  let best = options[0].value;
-  let bestDist = Math.abs(value - best);
-  for (let i = 1; i < options.length; i++) {
-    const dist = Math.abs(value - options[i].value);
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = options[i].value;
-    }
-  }
-  return best;
-}
-
-// Builds the tabbed chart format panel into `container` and binds it to `store`.
-// store: { getStyle, setStyle(patch), resetStyle, getContext } (see chart-style-store.js)
-export function mountChartControls(container, {
-  store,
-  safeText,
-  promptForName
-} = {}) {
-  if (!container || !store) {
-    return { refresh() {}, destroy() {} };
-  }
-  const escape = typeof safeText === 'function' ? safeText : defaultSafeText;
-  const askName = typeof promptForName === 'function'
-    ? promptForName
-    : (message, initial) => globalThis.prompt?.(message, initial);
+export function mountChartControls(container, { store, promptForName } = {}) {
+  if (!container || !store) return { refresh() {}, destroy() {} };
+  const askName = promptForName || ((message, initial) => globalThis.prompt?.(message, initial));
   container.innerHTML = PANEL_HTML;
   const q = (key) => container.querySelector(`[data-cc="${key}"]`);
-
-  let suppressInputEvents = false;
-  let activeTab = TABS[0].id;
-  const seriesColorListeners = [];
-  const pickers = {};
-  let textControls = null;
-
-  function buildPickers() {
-    pickers.pointShape = createChartStylePicker(q('pointShape'), {
-      kind: 'shape',
-      options: SHAPE_OPTIONS,
-      value: 'circle',
-      onChange: () => {
-        if (pickers.pointSize) pickers.pointSize.setShapeContext(pickers.pointShape.value);
-        onFormInput();
-      }
-    });
-    pickers.pointSize = createChartStylePicker(q('pointSize'), {
-      kind: 'point-size',
-      options: POINT_SIZE_OPTIONS,
-      value: POINT_SIZE_OPTIONS[1].value,
-      shapeContext: pickers.pointShape ? pickers.pointShape.value : 'circle',
-      onChange: onFormInput
-    });
-    pickers.lineStyle = createChartStylePicker(q('lineStyle'), {
-      kind: 'line-style', options: LINE_STYLE_OPTIONS, value: 'solid', onChange: onFormInput
-    });
-    pickers.lineWidth = createChartStylePicker(q('lineWidth'), {
-      kind: 'line-width', options: LINE_WIDTH_OPTIONS, value: 1.5, onChange: onFormInput
-    });
-    pickers.frameStyle = createChartStylePicker(q('frameStyle'), {
-      kind: 'frame-style', options: FRAME_STYLE_OPTIONS, value: 'box', onChange: onFormInput
-    });
-    pickers.frameStrokeWidth = createChartStylePicker(q('frameStrokeWidth'), {
-      kind: 'stroke-width', options: STROKE_WIDTH_OPTIONS, value: 1, onChange: onFormInput
-    });
-    pickers.gridStrokeWidth = createChartStylePicker(q('gridStrokeWidth'), {
-      kind: 'grid-width', options: STROKE_WIDTH_OPTIONS, value: 1, onChange: onFormInput
-    });
-    textControls = createChartTextControls(q('textBar'), {
-      value: store.getStyle().text || {},
-      onChange: (textValue) => {
-        if (suppressInputEvents) return;
-        applyPatch({ text: textValue });
-      }
-    });
+  const selection = { series: null, text: 'title', customTick: {} };
+  let activeTab = 'frame';
+  let refreshing = false;
+  let form;
+  function notice(message = '') {
+    q('validation').textContent = message;
+    q('validation').hidden = !message;
   }
-
-  function setValueIfPresent(input, value) {
-    if (!input) return;
-    if (input.type === 'checkbox') {
-      input.checked = Boolean(value);
-    } else if (value === null || value === undefined) {
-      input.value = '';
-    } else {
-      input.value = String(value);
-    }
-  }
-
-  function setPickerValue(picker, value, options) {
-    if (!picker) return;
-    const snapped = options ? nearestOption(Number(value), options) : value;
-    picker.setValue(snapped);
-  }
-
-  function selectTab(tabId) {
-    activeTab = TABS.some((tab) => tab.id === tabId) ? tabId : TABS[0].id;
-    container.querySelectorAll('[data-cc-tab]').forEach((button) => {
-      button.setAttribute('aria-selected', button.getAttribute('data-cc-tab') === activeTab ? 'true' : 'false');
-    });
-    container.querySelectorAll('[data-cc-panel]').forEach((panel) => {
-      panel.hidden = panel.getAttribute('data-cc-panel') !== activeTab;
-    });
-  }
-
-  // Hide what this figure cannot use: bar-only settings on a line chart and vice
-  // versa, and error-bar geometry when nothing draws error bars.
-  function applyContextVisibility(context) {
-    const chartType = context.chartType || 'line';
-    container.querySelectorAll('[data-cc-when]').forEach((element) => {
-      element.hidden = element.getAttribute('data-cc-when') !== chartType;
-    });
-    container.querySelectorAll('[data-cc-needs="errorBars"]').forEach((element) => {
-      element.hidden = !context.hasErrorBars;
-    });
-  }
-
-  // Y can only carry a column that parses as a number; X and series can be either a
-  // category or a continuous column (a dose-response X is numeric), so they get all of
-  // them. On a fitted curve no override applies at all, so the selects are hidden.
-  function renderColumnOptions(context) {
-    const headers = context.headers;
-    const note = q('columnNote');
-    const fields = q('columnFields');
-    if (fields) {
-      fields.hidden = context.hasFittedCurve;
-    }
-    ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
-      const select = q(key);
-      if (!select) return;
-      const options = key === 'yColumn' ? context.numericHeaders : headers;
-      const current = store.getStyle()[key] || 'auto';
-      select.innerHTML = `<option value="auto">Auto</option>${options
-        .map((header) => `<option value="${escape(header)}">${escape(header)}</option>`)
-        .join('')}`;
-      select.value = options.includes(current) ? current : 'auto';
-      select.disabled = !options.length;
-    });
-    if (note) {
-      if (context.hasFittedCurve) {
-        note.textContent = 'This analysis draws its own fitted curve, so the plotted columns are fixed.';
-      } else {
-        note.textContent = headers.length
-          ? 'Auto picks the column the analysis intends. Override to plot a different metric.'
-          : 'Run an analysis to choose which columns are plotted.';
-      }
-    }
-  }
-
-  function refreshPresetOptions(selected = '') {
-    const select = q('presetSelect');
-    if (!select) return;
-    const names = listChartPresets();
-    select.innerHTML = `<option value="">Custom</option>${names
-      .map((name) => `<option value="${escape(name)}">${escape(name)}</option>`)
-      .join('')}`;
-    select.value = names.includes(selected) ? selected : '';
-  }
-
-
-  const {
-    syncFormFromStyle,
-    applyRangeDisabledState,
-    applySizeDisabledState,
-    clearSeriesColorListeners,
-    clampDim,
-    parseRangeNumber,
-    pickerNumberValue,
-    selectValue
-  } = createChartControlsForm({
-    q,
-    store,
-    pickers,
-    textControls,
-    seriesColorListeners,
-    setValueIfPresent,
-    setPickerValue,
-    applyContextVisibility,
-    renderColumnOptions,
-    applyPatch: (patch) => applyPatch(patch)
-  });
-
-  function readFormPatch() {
-    const style = store.getStyle();
-    // Opacity has a control on both the line and bar panels; the visible one wins.
-    const barOpacity = q('opacityBar');
-    const opacityInput = barOpacity && !barOpacity.hidden && barOpacity.offsetParent !== null
-      ? barOpacity
-      : q('opacity');
-    return {
-      xColumn: selectValue('xColumn', style.xColumn),
-      yColumn: selectValue('yColumn', style.yColumn),
-      seriesColumn: selectValue('seriesColumn', style.seriesColumn),
-      xScale: q('xScale')?.value || 'linear',
-      yScale: q('yScale')?.value || 'linear',
-      xRange: { auto: Boolean(q('xRangeAuto')?.checked), min: parseRangeNumber(q('xMin')), max: parseRangeNumber(q('xMax')) },
-      yRange: { auto: Boolean(q('yRangeAuto')?.checked), min: parseRangeNumber(q('yMin')), max: parseRangeNumber(q('yMax')) },
-      xTick: parseRangeNumber(q('xTick')),
-      yTick: parseRangeNumber(q('yTick')),
-      pointShape: pickers.pointShape ? pickers.pointShape.value : style.pointShape,
-      pointSize: pickerNumberValue(pickers.pointSize, style.pointSize),
-      lineStyle: pickers.lineStyle ? pickers.lineStyle.value : style.lineStyle,
-      lineWidth: pickerNumberValue(pickers.lineWidth, style.lineWidth),
-      frameStyle: pickers.frameStyle ? pickers.frameStyle.value : style.frameStyle,
-      frameStroke: q('frameStroke')?.value || style.frameStroke,
-      frameStrokeWidth: pickerNumberValue(pickers.frameStrokeWidth, style.frameStrokeWidth),
-      backgroundColor: q('backgroundColor')?.value || style.backgroundColor,
-      sizeAuto: q('sizeAuto') ? Boolean(q('sizeAuto').checked) : style.sizeAuto,
-      frameWidth: clampDim(parseRangeNumber(q('frameWidth')), 320, 2000),
-      frameHeight: clampDim(parseRangeNumber(q('frameHeight')), 180, 1200),
-      showVerticalGrid: q('gridVertical') ? Boolean(q('gridVertical').checked) : style.showVerticalGrid,
-      showHorizontalGrid: q('gridHorizontal') ? Boolean(q('gridHorizontal').checked) : style.showHorizontalGrid,
-      gridColor: q('gridColor')?.value || style.gridColor,
-      gridStrokeWidth: pickerNumberValue(pickers.gridStrokeWidth, style.gridStrokeWidth),
-      title: q('title') ? q('title').value : style.title,
-      xTitle: q('xTitle') ? q('xTitle').value : style.xTitle,
-      yTitle: q('yTitle') ? q('yTitle').value : style.yTitle,
-      xTitlePos: parseRangeNumber(q('xTitlePos')),
-      yTitlePos: parseRangeNumber(q('yTitlePos')),
-      xTitleOffset: parseRangeNumber(q('xTitleOffset')),
-      yTitleOffset: parseRangeNumber(q('yTitleOffset')),
-      mode: q('mode')?.value || 'lines+markers',
-      legendPosition: q('legendPosition')?.value || 'top',
-      tickDir: q('tickDir')?.value || 'outside',
-      tickLen: parseRangeNumber(q('tickLen')),
-      minorTicks: q('minorTicks') ? Boolean(q('minorTicks').checked) : style.minorTicks,
-      tickFormat: q('tickFormat')?.value || 'auto',
-      markerFill: q('markerFill')?.value || 'filled',
-      opacity: parseRangeNumber(opacityInput),
-      errorCapWidth: parseRangeNumber(q('errorCapWidth')),
-      errorThickness: parseRangeNumber(q('errorThickness')),
-      refLineAxis: q('refLineAxis')?.value || 'y',
-      refLineValue: parseRangeNumber(q('refLineValue')),
-      barMode: q('barMode')?.value || 'group',
-      barLabels: q('barLabels') ? Boolean(q('barLabels').checked) : style.barLabels,
-      barCornerRadius: parseRangeNumber(q('barCornerRadius'))
-    };
-  }
-
-  function applyPatch(patch) {
+  function apply(patch) {
+    notice();
     store.setStyle(patch);
-    applyRangeDisabledState();
-    applySizeDisabledState();
+    q('presetSelect').value = '';
+    q('presetDeleteBtn').disabled = true;
+    refresh();
   }
-
-  function onFormInput() {
-    if (suppressInputEvents) return;
-    applyPatch(readFormPatch());
-  }
-
-  function resync() {
-    suppressInputEvents = true;
-    syncFormFromStyle();
-    suppressInputEvents = false;
-  }
-
-  function onResetClick() {
-    store.resetStyle();
-    refreshPresetOptions();
-    resync();
-  }
-
-  // Reset only the fields the active tab owns, so tuning one section can't discard
-  // the title you typed on another.
-  function onResetTabClick() {
-    const defaults = store.getDefaultStyle();
-    const patch = {};
-    (TAB_KEYS[activeTab] || []).forEach((key) => {
-      patch[key] = defaults[key];
-    });
-    applyPatch(patch);
-    resync();
-  }
-
-  function onTabClick(event) {
-    const button = event.target.closest('[data-cc-tab]');
-    if (!button || !container.contains(button)) return;
-    selectTab(button.getAttribute('data-cc-tab'));
-  }
-
-  function onTabKeyDown(event) {
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    const index = TABS.findIndex((tab) => tab.id === activeTab);
-    const next = event.key === 'ArrowRight'
-      ? TABS[(index + 1) % TABS.length]
-      : TABS[(index - 1 + TABS.length) % TABS.length];
-    event.preventDefault();
-    selectTab(next.id);
-    container.querySelector(`[data-cc-tab="${next.id}"]`)?.focus();
-  }
-
-  function onPresetChange() {
-    const name = q('presetSelect')?.value || '';
-    if (!name) return;
-    const preset = getChartPreset(name);
-    if (preset) {
-      applyPatch(preset);
-      resync();
-    }
-  }
-
-  function onPresetSave() {
-    const current = q('presetSelect')?.value || '';
-    const name = sanitizePresetName(askName('Save this chart style as:', current));
-    if (!name) return;
-    if (saveChartPreset(name, store.getStyle())) {
-      refreshPresetOptions(name);
-    }
-  }
-
-  function onPresetDelete() {
-    const name = q('presetSelect')?.value || '';
-    if (name && deleteChartPreset(name)) {
-      refreshPresetOptions();
-    }
-  }
-
-  const nativeInputKeys = [
-    'xColumn', 'yColumn', 'seriesColumn',
-    'xScale', 'yScale',
-    'xRangeAuto', 'xMin', 'xMax', 'yRangeAuto', 'yMin', 'yMax',
-    'xTick', 'yTick',
-    'frameStroke', 'backgroundColor', 'sizeAuto', 'frameWidth', 'frameHeight',
-    'gridVertical', 'gridHorizontal', 'gridColor',
-    'title', 'xTitle', 'yTitle',
-    'xTitlePos', 'yTitlePos', 'xTitleOffset', 'yTitleOffset',
-    'mode', 'legendPosition',
-    'tickDir', 'tickLen', 'minorTicks', 'tickFormat',
-    'markerFill', 'opacity', 'opacityBar', 'errorCapWidth', 'errorThickness',
-    'refLineAxis', 'refLineValue', 'barMode', 'barLabels', 'barCornerRadius'
-  ];
-
-  function inputEventName(input) {
-    return input.tagName === 'SELECT' || input.type === 'checkbox' || input.type === 'color'
-      ? 'change'
-      : 'input';
-  }
-
-  buildPickers();
-  nativeInputKeys.forEach((key) => {
-    const input = q(key);
-    if (!input) return;
-    // Colour inputs still fire `input` while dragging; listening on both keeps the
-    // live preview without duplicating work (the store patches are idempotent).
-    input.addEventListener(inputEventName(input), onFormInput);
-    if (input.type === 'color') {
-      input.addEventListener('input', onFormInput);
+  const pickers = {};
+  [['frameStyle', 'frame-style', FRAME_STYLE_OPTIONS], ['pointShape', 'shape', SHAPE_OPTIONS],
+    ['lineStyle', 'line-style', LINE_STYLE_OPTIONS]].forEach(([key, kind, options]) => {
+    pickers[key] = createChartStylePicker(q(key), { kind, options, value: store.getStyle()[key],
+      onChange: (value) => {
+        if (refreshing) return;
+        apply(key === 'frameStyle' ? { [key]: value } : seriesStylePatch(store.getStyle(), selection.series, key, value));
+      } });
+    q(key).querySelector('button').setAttribute('aria-label', key === 'frameStyle' ? 'Frame style' : key === 'pointShape' ? 'Symbol shape' : 'Line pattern');
+  });
+  const textControls = createChartTextControls(q('textBar'), {
+    basicOnly: true,
+    value: {},
+    onChange: (value) => {
+      if (refreshing) return;
+      const style = store.getStyle();
+      apply({ textStyles: { ...style.textStyles, [selection.text]: { ...value, fontSize: pointsToPixels(value.fontSize) } } });
     }
   });
-  container.addEventListener('click', onTabClick);
-  container.querySelector('.assay-chart-style-tabs')?.addEventListener('keydown', onTabKeyDown);
-  q('resetBtn')?.addEventListener('click', onResetClick);
-  q('resetTabBtn')?.addEventListener('click', onResetTabClick);
-  q('presetSelect')?.addEventListener('change', onPresetChange);
-  q('presetSaveBtn')?.addEventListener('click', onPresetSave);
-  q('presetDeleteBtn')?.addEventListener('click', onPresetDelete);
-
-  refreshPresetOptions();
-  selectTab(activeTab);
-  resync();
-
-  return {
-    refresh: resync,
-    selectTab,
-    destroy() {
-      nativeInputKeys.forEach((key) => {
-        const input = q(key);
-        if (!input) return;
-        input.removeEventListener(inputEventName(input), onFormInput);
-        if (input.type === 'color') {
-          input.removeEventListener('input', onFormInput);
-        }
-      });
-      container.removeEventListener('click', onTabClick);
-      container.querySelector('.assay-chart-style-tabs')?.removeEventListener('keydown', onTabKeyDown);
-      q('resetBtn')?.removeEventListener('click', onResetClick);
-      q('resetTabBtn')?.removeEventListener('click', onResetTabClick);
-      q('presetSelect')?.removeEventListener('change', onPresetChange);
-      q('presetSaveBtn')?.removeEventListener('click', onPresetSave);
-      q('presetDeleteBtn')?.removeEventListener('click', onPresetDelete);
-      clearSeriesColorListeners();
-      Object.values(pickers).forEach((picker) => picker && picker.destroy());
-      if (textControls) textControls.destroy();
-      container.innerHTML = '';
+  form = createChartControlsForm({ q, store, selection, pickers, textControls });
+  function refresh() {
+    refreshing = true;
+    form.refresh();
+    refreshing = false;
+  }
+  function selectTab(id) {
+    activeTab = TABS.some((tab) => tab.id === id) ? id : 'frame';
+    container.querySelectorAll('[data-cc-tab]').forEach((button) => {
+      const selected = button.dataset.ccTab === activeTab;
+      button.setAttribute('aria-selected', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+    container.querySelectorAll('[data-cc-panel]').forEach((panel) => { panel.hidden = panel.dataset.ccPanel !== activeTab; });
+  }
+  function refreshPresets(selected = '') {
+    form.options('presetSelect', [['', 'Custom'], [PRISM_CLASSIC_PRESET, 'Prism Classic'],
+      ...listChartPresets().map((name) => [`saved:${name}`, name === 'Prism Classic' ? `${name} (saved)` : name])]);
+    q('presetSelect').value = selected;
+    q('presetDeleteBtn').disabled = !selected || selected === PRISM_CLASSIC_PRESET;
+  }
+  function read(key) {
+    const input = q(key);
+    if (input.type === 'checkbox') return input.checked;
+    if (input.type !== 'number') return input.value;
+    if (!input.value.trim()) return null;
+    const value = Number(input.value);
+    return POINT_FIELDS.has(key) ? pointsToPixels(value) : value;
+  }
+  function changeAxis(axis) {
+    const scale = read(`${axis}Scale`);
+    const range = { auto: read(`${axis}RangeAuto`), min: read(`${axis}Min`), max: read(`${axis}Max`) };
+    q(`${axis}Min`).disabled = range.auto;
+    q(`${axis}Max`).disabled = range.auto;
+    const error = validateAxisRange(scale, range);
+    if (error) { notice(error); return; }
+    apply({ [`${axis}Scale`]: scale, [`${axis}Range`]: range });
+  }
+  // Both axes are on screen at once, so the edited field's own key names its axis.
+  function changeAxisField(axis, suffix, style) {
+    if (['Scale', 'RangeAuto', 'Min', 'Max'].includes(suffix)) { changeAxis(axis); return; }
+    if (suffix === 'TickPreset') {
+      const value = read(`${axis}TickPreset`);
+      selection.customTick[axis] = value === 'custom';
+      if (value === 'custom') {
+        notice(); refresh(); q(`${axis}Tick`).focus(); q(`${axis}Tick`).select(); return;
+      }
+      apply({ [`${axis}Tick`]: value === 'auto' ? null : Number(value) }); return;
     }
-  };
+    if (suffix === 'Tick') {
+      const value = read(`${axis}Tick`);
+      if (value !== null && value <= 0) { notice('Tick interval must be greater than zero.'); return; }
+      apply({ [`${axis}Tick`]: value }); return;
+    }
+    apply(axisStylePatch(style, axis, axisStyleKey(suffix), read(`${axis}${suffix}`)));
+  }
+  function onChange(event) {
+    if (refreshing) return;
+    const key = event.target.dataset.cc;
+    if (!key) return;
+    if (event.target.type === 'number' && !event.target.validity.valid) {
+      notice('Enter a value within the indicated limits.');
+      return;
+    }
+    const style = store.getStyle();
+    if (key === 'seriesTarget' || key === 'textTarget') {
+      if (key === 'seriesTarget') selection.series = read(key) === '' ? null : store.getContext().seriesLabels[Number(read(key))];
+      if (key === 'textTarget') selection.text = read(key);
+      notice(); refresh(); return;
+    }
+    const axisMatch = /^([xy])(.+)$/.exec(key);
+    if (axisMatch && AXIS_FIELDS.includes(axisMatch[2])) {
+      changeAxisField(axisMatch[1], axisMatch[2], style); return;
+    }
+    if (SERIES_FIELDS.includes(key)) { apply(seriesStylePatch(style, selection.series, key, read(key))); return; }
+    if (GLOBAL_FIELDS.includes(key)) {
+      if (key === 'refLineValue' && read(key) !== null) {
+        const axis = style.refLineAxis;
+        if (style[`${axis}Scale`] !== 'linear' && read(key) <= 0) {
+          notice('A logarithmic reference value must be greater than zero.'); return;
+        }
+      }
+      apply({ [key]: read(key) }); return;
+    }
+    if (['titleText', 'titlePos', 'titleOffset'].includes(key)) {
+      const target = selection.text;
+      const field = key === 'titleText' ? target : `${target}${key === 'titlePos' ? 'Pos' : 'Offset'}`;
+      const value = read(key);
+      apply({ [field]: key === 'titleOffset' && value !== null ? pointsToPixels(value) : value }); return;
+    }
+    if (key === 'presetSelect') {
+      const name = read(key);
+      const preset = name === PRISM_CLASSIC_PRESET ? prismClassicPatch() : name && getChartPreset(name.slice(6));
+      if (preset) apply(preset);
+      refreshPresets(name);
+    }
+  }
+  function onInput(event) {
+    if (event.target.type === 'color' || event.target.dataset.cc === 'titleText') onChange(event);
+  }
+  function onClick(event) {
+    const button = event.target.closest('button');
+    if (!button || !container.contains(button)) return;
+    if (button.dataset.ccTab) { selectTab(button.dataset.ccTab); return; }
+    const key = button.dataset.cc;
+    if (key === 'resetBtn') { notice(); selection.customTick = {}; store.resetStyle(); refresh(); refreshPresets(); }
+    if (key === 'resetTabBtn') {
+      const defaults = store.getDefaultStyle();
+      if (activeTab === 'axis') selection.customTick = {};
+      apply(Object.fromEntries(TAB_KEYS[activeTab].map((field) => [field, defaults[field]])));
+    }
+    if (key === 'seriesDefaults' && selection.series !== null) {
+      const style = store.getStyle();
+      const patch = {};
+      ['seriesStyles', 'seriesColors', 'seriesShapes'].forEach((field) => {
+        patch[field] = { ...style[field] }; delete patch[field][selection.series];
+      });
+      apply(patch);
+    }
+    if (key === 'presetSaveBtn') {
+      const current = q('presetSelect').value;
+      const name = sanitizePresetName(askName('Save this chart style as:', current.startsWith('saved:') ? current.slice(6) : ''));
+      if (name) {
+        if (saveChartPreset(name, store.getStyle())) refreshPresets(`saved:${name}`);
+        else notice('Unable to save this preset.');
+      }
+    }
+    if (key === 'presetDeleteBtn') {
+      if (q('presetSelect').value.startsWith('saved:') && deleteChartPreset(q('presetSelect').value.slice(6))) refreshPresets();
+      else notice('Unable to delete this preset.');
+    }
+  }
+  function onKeyDown(event) {
+    if (!event.target.closest('[role="tab"]')) return;
+    const index = TABS.findIndex((tab) => tab.id === activeTab);
+    const next = event.key === 'ArrowRight' ? (index + 1) % TABS.length
+      : event.key === 'ArrowLeft' ? (index - 1 + TABS.length) % TABS.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : -1;
+    if (next < 0) return;
+    event.preventDefault();
+    selectTab(TABS[next].id);
+    q('frameStyle').closest('.assay-chart-style').querySelector(`[data-cc-tab="${activeTab}"]`).focus();
+  }
+  container.addEventListener('change', onChange);
+  container.addEventListener('input', onInput);
+  container.addEventListener('click', onClick);
+  container.addEventListener('keydown', onKeyDown);
+  refreshPresets(); selectTab(activeTab); refresh();
+  return { refresh, selectTab, destroy() {
+    container.removeEventListener('change', onChange);
+    container.removeEventListener('input', onInput);
+    container.removeEventListener('click', onClick);
+    container.removeEventListener('keydown', onKeyDown);
+    Object.values(pickers).forEach((picker) => picker.destroy());
+    textControls.destroy(); container.innerHTML = '';
+  } };
 }

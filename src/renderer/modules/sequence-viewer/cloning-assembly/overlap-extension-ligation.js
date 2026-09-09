@@ -1,11 +1,18 @@
 import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
-import { asArray, normalizeSequence } from './sequence-utils.js';
+import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { designAssemblyPrimersForRoute } from './assembly-primers.js';
 import { evaluateOverlapPcr } from './overlap-evaluation.js';
 import { summarizePrimerPlan } from './primer-records.js';
 import { designWithThresholdFallback } from './strategy.js';
-import { normalizeVendorFilter, restrictionCutOverhang, sequenceContainsSite } from './restriction-ligation.js';
+import {
+  expandRestrictionFeatureVariants,
+  normalizeVendorFilter,
+  restrictionCutEnd,
+  restrictionCutOverhang,
+  restrictionEndsAreCrossCompatible,
+  sequenceContainsSite
+} from './restriction-ligation.js';
 
 // Overlap-extension cloning for an insert whose vector cut sites are out of
 // primer reach. A primer carries at most ~40 nt of 5' tail, so a unique site
@@ -27,7 +34,11 @@ import { normalizeVendorFilter, restrictionCutOverhang, sequenceContainsSite } f
 const PRIMER_TAIL_REACH = 40;
 
 function featureCut(feature) {
-  return feature?.cut || asArray(feature?.cutPatterns)[0] || '';
+  if (feature?.cut) {
+    return feature.cut;
+  }
+  const patterns = [...new Set(asArray(feature?.cutPatterns).filter(Boolean))];
+  return patterns.length === 1 ? patterns[0] : '';
 }
 
 function isSticky(feature) {
@@ -141,16 +152,27 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
     };
   };
 
+  const ambiguityWarnings = [
+    describeAmbiguousDna(payload?.sequence, 'Overlap-extension result'),
+    describeAmbiguousDna(payload?.donor?.sequence, 'Overlap-extension donor'),
+    describeAmbiguousDna(payload?.insertTemplate, 'Overlap-extension insert template'),
+    describeAmbiguousDna(payload?.vectorSequence, 'Overlap-extension vector template')
+  ].filter(Boolean);
+  if (ambiguityWarnings.length) {
+    return infeasible(ambiguityWarnings);
+  }
+
   if (!insert.length || !backbone.length) {
     return infeasible('Select an insert range inside the construct before designing an overlap-extension route.');
   }
-
   // Sites are searched on the backbone as a linear stretch: the two ends of that
   // stretch meet only through the insertion point, so a match spanning the join
   // does not exist in the finished construct.
   const features = buildCommercialRestrictionFeatures(backbone, 'linear', {
     vendorFilter: normalizeVendorFilter(config.vendorFilter)
-  }).filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site');
+  })
+    .filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site')
+    .flatMap(expandRestrictionFeatureVariants);
 
   const downstreamRanked = rankSites(features, 'downstream', backbone.length, insert, '');
   const downstream = downstreamRanked.find((candidate) => candidate.flankLength >= PRIMER_TAIL_REACH);
@@ -159,10 +181,20 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
   }
   const upstreamRanked = rankSites(features, 'upstream', backbone.length, insert, downstream.feature.site);
   const upstream = upstreamRanked.find((candidate) => (
-    candidate.flankLength >= PRIMER_TAIL_REACH && candidate.start >= downstream.end
+    candidate.flankLength >= PRIMER_TAIL_REACH
+    && candidate.start >= downstream.end
+    && !restrictionEndsAreCrossCompatible(
+      restrictionCutEnd(candidate.feature, backbone),
+      restrictionCutEnd(downstream.feature, backbone)
+    )
   ));
   if (!upstream) {
     return infeasible(describeMissingSite(upstreamRanked, 'upstream'));
+  }
+
+  const insertTemplate = donorSequence || normalizeSequence(payload?.insertTemplate || '');
+  if (!insertTemplate.length) {
+    return infeasible('The overlap-extension insert has no physical PCR template. Choose a donor record or provide a synthesis fragment before designing primers.');
   }
 
   const clamp = normalizeSequence(config.primerClampSequence || DEFAULT_CLONING_PREFERENCES.primerClampSequence);
@@ -188,12 +220,13 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
       type: 'insert',
       sequence: insert,
       metadata: {
-        templateSequence: donorSequence || normalizeSequence(payload?.insertTemplate || '') || insert,
-        templateName: donorName,
-        specificitySequence: donorSequence || sequence,
+        source: donorSequence ? 'donor_plasmid' : 'sequence_viewer_edit',
+        templateSequence: insertTemplate,
+        templateName: donorName || recordName,
+        specificitySequence: donorSequence || normalizeSequence(payload?.insertTemplateHostSequence || '') || insertTemplate,
         specificityCircular: donorSequence
           ? String(payload?.donor?.topology || 'circular').toLowerCase() !== 'linear'
-          : topology === 'circular'
+          : Boolean(payload?.insertTemplateCircular)
       }
     },
     {

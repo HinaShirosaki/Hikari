@@ -11,6 +11,7 @@ import { escapeHtml } from '../../../lib/html.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 import { copyPrimerValueFromEvent } from '../primer-copy.js';
 import { createHoverTooltipInteractivity, renderPrimerHoverSection } from '../primer-hover.js';
+import { renderCdsProteinHoverSection } from '../rendering/protein-summary.js';
 
 const TOOLTIP_CLASS = 'vector-map__tooltip';
 const POINTER_OFFSET_PX = 14;
@@ -68,18 +69,19 @@ export function attachMapHoverLabel(config = {}) {
     interactivity.requestHide();
   }
 
-  function show(text, primerHtml, clientX, clientY) {
+  function show(text, detailHtml, clientX, clientY) {
     const element = ensureNode();
     if (!element) {
       return;
     }
     interactivity?.cancelHide();
-    if (primerHtml) {
-      element.innerHTML = `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${primerHtml}`;
+    if (detailHtml) {
+      element.innerHTML = `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${detailHtml}`;
     } else {
       element.textContent = text;
     }
-    interactivity?.setInteractive(Boolean(primerHtml));
+    element.classList?.toggle('has-protein-properties', detailHtml.includes('sequence-viewer-protein-hover'));
+    interactivity?.setInteractive(detailHtml.includes('sequence-viewer-primer-copy-btn'));
     element.hidden = false;
 
     // Flip to the other side of the cursor rather than letting the readout run
@@ -110,7 +112,7 @@ export function attachMapHoverLabel(config = {}) {
       return;
     }
 
-    host.addEventListener('mousemove', (event) => {
+    function showFeatureReadout(event) {
       const trigger = event.target?.closest?.('[data-feature-index]') || null;
       const label = trigger ? readLabel(trigger) : '';
       if (!label) {
@@ -118,8 +120,15 @@ export function attachMapHoverLabel(config = {}) {
         return;
       }
       const feature = getFeature(Number(trigger.dataset.featureIndex));
-      show(label, renderPrimerHoverSection(feature, getSequence()), event.clientX, event.clientY);
-    });
+      const sequence = getSequence();
+      const detailHtml = renderPrimerHoverSection(feature, sequence) + renderCdsProteinHoverSection(feature, sequence);
+      const rect = event.type === 'focusin' ? trigger.getBoundingClientRect?.() : null;
+      show(label, detailHtml, rect ? rect.left : event.clientX, rect ? rect.bottom : event.clientY);
+    }
+
+    host.addEventListener('mousemove', showFeatureReadout);
+    host.addEventListener('focusin', showFeatureReadout);
+    host.addEventListener('focusout', hideNow);
 
     host.addEventListener('mouseleave', hide);
     // Zooming and panning move the map out from under the pointer.

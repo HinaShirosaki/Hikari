@@ -13,6 +13,8 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
     method: '',
     chartType: '',
     hasErrorBars: false,
+    hasCategoryX: false,
+    hasReplicates: false,
     hasFittedCurve: false
   };
 
@@ -48,6 +50,8 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
       method: context.method,
       chartType: context.chartType,
       hasErrorBars: context.hasErrorBars,
+      hasCategoryX: context.hasCategoryX,
+      hasReplicates: context.hasReplicates,
       hasFittedCurve: context.hasFittedCurve
     }),
     setContext(ctx) {
@@ -58,6 +62,8 @@ export function createChartStyleStore({ initialStyle, onChange } = {}) {
         method: ctx?.method || '',
         chartType: ctx?.chartType || '',
         hasErrorBars: Boolean(ctx?.hasErrorBars),
+        hasCategoryX: Boolean(ctx?.hasCategoryX),
+        hasReplicates: Boolean(ctx?.hasReplicates),
         hasFittedCurve: Boolean(ctx?.hasFittedCurve)
       };
     }

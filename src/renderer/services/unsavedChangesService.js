@@ -29,11 +29,14 @@ export function createUnsavedChangesService({
 } = {}) {
   const overlay = documentObject?.getElementById?.('unsaved-changes-overlay') || null;
   const list = documentObject?.getElementById?.('unsaved-changes-list') || null;
+  const description = documentObject?.getElementById?.('unsaved-changes-description') || null;
   const status = documentObject?.getElementById?.('unsaved-changes-status') || null;
   const closeButton = documentObject?.getElementById?.('unsaved-changes-close-btn') || null;
   const cancelButton = documentObject?.getElementById?.('unsaved-changes-cancel-btn') || null;
   const discardButton = documentObject?.getElementById?.('unsaved-changes-discard-btn') || null;
   const saveButton = documentObject?.getElementById?.('unsaved-changes-save-btn') || null;
+  const checkboxes = [];
+  const selectedKeys = new Set();
   let allowUnload = false;
   let saveInProgress = false;
 
@@ -62,11 +65,12 @@ export function createUnsavedChangesService({
     status.classList.toggle('is-error', isError);
   }
 
-  function setBusy(isBusy) {
-    saveInProgress = Boolean(isBusy);
+  function syncActions() {
     if (saveButton) {
-      saveButton.disabled = saveInProgress;
-      saveButton.textContent = saveInProgress ? 'Saving...' : 'Save and Quit';
+      saveButton.disabled = saveInProgress || selectedKeys.size === 0;
+      saveButton.textContent = saveInProgress
+        ? 'Saving...'
+        : (selectedKeys.size > 1 ? `Save ${selectedKeys.size} & Quit` : 'Save & Quit');
     }
     if (discardButton) {
       discardButton.disabled = saveInProgress;
@@ -77,15 +81,64 @@ export function createUnsavedChangesService({
     if (closeButton) {
       closeButton.disabled = saveInProgress;
     }
+    checkboxes.forEach((checkbox) => {
+      checkbox.disabled = saveInProgress;
+    });
+  }
+
+  function setBusy(isBusy) {
+    saveInProgress = Boolean(isBusy);
+    syncActions();
+  }
+
+  function renderOption(source) {
+    const option = documentObject.createElement('label');
+    option.className = 'unsaved-changes-option';
+    const checkbox = documentObject.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = true;
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) {
+        selectedKeys.add(source.key);
+      } else {
+        selectedKeys.delete(source.key);
+      }
+      syncActions();
+    });
+    const text = documentObject.createElement('span');
+    text.textContent = source.label;
+    option.appendChild(checkbox);
+    option.appendChild(text);
+    checkboxes.push(checkbox);
+    return option;
   }
 
   function renderSourceList(sources) {
+    checkboxes.length = 0;
+    selectedKeys.clear();
+    sources.forEach((source) => selectedKeys.add(source.key));
     if (!list) {
       return;
     }
+    // A single dirty editor needs no chooser: unchecking the only box would
+    // just be "Discard & Quit", which is already a button.
+    const selectable = sources.length > 1;
+    if (description) {
+      description.textContent = selectable
+        ? 'Pick what to save. Anything left unchecked is discarded on quit.'
+        : 'The following work has not been saved.';
+    }
+    if (discardButton) {
+      // "Discard" has to own up to dropping the checked rows too.
+      discardButton.textContent = selectable ? 'Discard All & Quit' : 'Discard & Quit';
+    }
     list.replaceChildren(...sources.map((source) => {
       const item = documentObject.createElement('li');
-      item.textContent = source.label;
+      if (selectable) {
+        item.appendChild(renderOption(source));
+      } else {
+        item.textContent = source.label;
+      }
       return item;
     }));
   }
@@ -130,7 +183,8 @@ export function createUnsavedChangesService({
     if (saveInProgress) {
       return;
     }
-    const sources = getUnsavedSources();
+    // Unchecked editors are left dirty on purpose: quitting drops them.
+    const sources = getUnsavedSources().filter((source) => selectedKeys.has(source.key));
     if (!sources.length) {
       hideDialog();
       respondToClose('quit');

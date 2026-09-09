@@ -42,6 +42,11 @@ function findTmDifferenceViolation(result, thresholds) {
   return null;
 }
 
+function qualityViolation(result) {
+  const blockers = asArray(result?.qualityBlockers).filter(Boolean);
+  return blockers.length ? blockers : null;
+}
+
 export function designWithThresholdFallback(designCallback) {
   const levels = [
     ['strict', CLONING_PRIMER_TM_THRESHOLDS.strict],
@@ -50,21 +55,34 @@ export function designWithThresholdFallback(designCallback) {
   ];
   const attempts = [];
   let lastTmViolation = null;
+  let lastQualityViolation = null;
   let lastResult = null;
 
   for (const [levelName, thresholds] of levels) {
     const result = designCallback(thresholds, levelName);
     lastResult = result;
     const tmViolation = result?.feasible ? findTmDifferenceViolation(result, thresholds) : null;
-    const levelFeasible = Boolean(result?.feasible) && !tmViolation;
+    const primerQualityViolation = result?.feasible ? qualityViolation(result) : null;
+    const levelFeasible = Boolean(result?.feasible) && !tmViolation && !primerQualityViolation;
     attempts.push({
       level: levelName,
       feasible: levelFeasible,
       warningCount: asArray(result?.warnings).length,
-      ...(tmViolation ? { rejectedForTmDifference: true } : {})
+      ...(tmViolation ? { rejectedForTmDifference: true } : {}),
+      ...(primerQualityViolation ? { rejectedForPrimerQuality: true } : {})
     });
     if (tmViolation) {
       lastTmViolation = { level: levelName, ...tmViolation };
+    }
+    if (primerQualityViolation) {
+      lastQualityViolation = primerQualityViolation;
+      lastResult = {
+        ...result,
+        warnings: [...new Set([
+          ...asArray(result?.warnings),
+          ...primerQualityViolation
+        ])]
+      };
     }
     if (levelFeasible) {
       return {
@@ -87,18 +105,33 @@ export function designWithThresholdFallback(designCallback) {
     attempts,
     warnings: [...new Set([
       ...asArray(lastResult?.warnings),
-      lastTmViolation
-        ? `Designed oligos exceeded the ${lastTmViolation.level} ${lastTmViolation.kind} Tm-difference cap (${lastTmViolation.spread.toFixed(1)} °C vs ${lastTmViolation.cap} °C limit) and no looser threshold level produced a balanced set. Consider redesigning fragment boundaries, Gibson assembly, overlap PCR, or synthesis.`
-        : 'Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.'
+      // A blocking sequence defect is named first: unlike a Tm miss, no looser
+      // threshold level can resolve it, so "failed under all thresholds" would
+      // point at the wrong knob.
+      lastQualityViolation
+        ? 'Every threshold level produced primers with a blocking sequence defect (listed above); loosening Tm limits cannot resolve it. Shift the fragment boundaries or order the fragment by synthesis.'
+        : lastTmViolation
+          ? `Designed oligos exceeded the ${lastTmViolation.level} ${lastTmViolation.kind} Tm-difference cap (${lastTmViolation.spread.toFixed(1)} °C vs ${lastTmViolation.cap} °C limit) and no looser threshold level produced a balanced set. Consider redesigning fragment boundaries, Gibson assembly, overlap PCR, or synthesis.`
+          : 'Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.'
     ].filter(Boolean))]
   };
 }
 
+const ROUTE_KEY_BY_STRATEGY = {
+  'restriction-ligation': 'restrictionLigation',
+  gibson: 'gibson',
+  'overlap-pcr': 'overlapPCR',
+  'site-directed-mutagenesis': 'siteDirectedMutagenesis'
+};
+
 export function buildGlobalWarnings(routeEvaluations, primerPlan, strategyName) {
   const warnings = [];
-  Object.values(routeEvaluations || {}).forEach((result) => {
-    warnings.push(...buildRouteWarnings(result));
-  });
+  const selectedRoute = routeEvaluations?.[ROUTE_KEY_BY_STRATEGY[strategyName]] || null;
+  // A successful plan should not read like four simultaneous protocols. Keep
+  // its warnings scoped to the route the user can execute; when no route was
+  // selected, retain every evaluator's failure details for diagnosis.
+  const routeResults = selectedRoute ? [selectedRoute] : Object.values(routeEvaluations || {});
+  routeResults.forEach((result) => warnings.push(...buildRouteWarnings(result)));
   warnings.push(...asArray(primerPlan?.warnings));
   if (!strategyName) {
     warnings.push('No feasible assembly strategy was identified from the provided inputs.');

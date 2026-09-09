@@ -6,11 +6,12 @@ export { buildNotebookFolderPath, sanitizeFolderName };
 export const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 
 export function normalizeNotebookState(value) {
-  return String(value || '').trim().toLowerCase() === 'planned' ? 'planned' : 'executed';
+  const state = String(value || '').trim().toLowerCase();
+  return ['planned', 'suggested'].includes(state) ? state : 'executed';
 }
 
 export function notebookStateLabel(entry) {
-  return normalizeNotebookState(entry?.notebookState) === 'planned' ? 'Planned' : 'Executed';
+  return { planned: 'Planned', suggested: 'Suggested', executed: 'Executed' }[normalizeNotebookState(entry?.notebookState)];
 }
 
 export function resolveEntryNotebookState(entry) {
@@ -18,7 +19,7 @@ export function resolveEntryNotebookState(entry) {
 }
 
 export function resolveEntryExecutedAt(entry, fallbackTimestamp = '') {
-  if (resolveEntryNotebookState(entry) === 'planned') {
+  if (resolveEntryNotebookState(entry) !== 'executed') {
     return '';
   }
   return String(entry?.executedAt || '').trim()

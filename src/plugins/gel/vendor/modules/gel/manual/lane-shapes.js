@@ -193,7 +193,6 @@ function createManualLaneShapes({
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.renderReport();
     const nextMode = isPerLaneBandMode(runtime.manualOverrides.laneSegmentation);
     if (nextMode) {
       const progress = getLaneBandProgress();

@@ -162,7 +162,7 @@ function createSessionLoading({
       } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
         await loadChatSession(state.agentChat.currentSessionId, { silent: true, preserveLocalMessages: true });
       } else {
-        setSessionStatus(state.agentChat.sessions.length ? 'Saved chats ready.' : 'No saved chats yet.');
+        setSessionStatus('');
       }
       return state.agentChat.sessions;
     }).catch((error) => {
@@ -212,7 +212,7 @@ function createSessionLoading({
     upsertSessionSummary(result.session);
     assignSessionToFolder(state.agentChat.currentSessionId, state.agentChat.selectedFolderId);
     renderSessionList();
-    setSessionStatus('New chat session created.');
+    setSessionStatus('');
     return state.agentChat.currentSessionId;
   }
 
@@ -265,7 +265,7 @@ function createSessionLoading({
       assignSessionToFolder(state.agentChat.currentSessionId, selectedFolder?.id || GENERAL_CHAT_FOLDER_ID);
       renderSessionList();
       renderHistory({ forceScroll: true });
-      setSessionStatus('New chat session created.');
+      setSessionStatus('');
       setStatus('New chat ready.');
       return true;
     } catch (error) {

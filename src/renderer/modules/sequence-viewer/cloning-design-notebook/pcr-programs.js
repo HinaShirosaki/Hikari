@@ -162,6 +162,7 @@ function buildSequenceViewerPcrPrograms({ displayPlan = {}, source = {}, record 
     return {
       label,
       polymerase: isQ5Kld ? 'Q5 Hot Start High-Fidelity 2X Master Mix' : 'Q5 High-Fidelity DNA Polymerase (or validated equivalent)',
+      reactionFormulation: isQ5Kld ? '2x-master-mix' : 'standalone-polymerase',
       primerNames,
       lowestPrimerTm,
       annealingTemperature,

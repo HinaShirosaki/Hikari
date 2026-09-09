@@ -8,8 +8,8 @@ capability that a built-in feature calls into.
 Today the one capability is **file conversion**: a service declares that it can
 turn one file extension into another, and a feature that opens files gains the
 ability to open the source format. The reference example,
-[`snapgene-dna`](../../examples/plugins/snapgene-dna/), lets the Sequence
-Viewer open SnapGene `.dna` files by converting them to GenBank.
+[`dna-importer`](../../examples/plugins/dna-importer/), lets the Sequence
+Viewer open `.dna` files by converting them to GenBank.
 
 Prerequisite: [plugin-system.md](plugin-system.md) for the folder contract.
 
@@ -19,8 +19,8 @@ Prerequisite: [plugin-system.md](plugin-system.md) for the folder contract.
 
 ```json
 {
-  "id": "snapgene-dna",
-  "name": "SnapGene .dna importer",
+  "id": "dna-importer",
+  "name": ".dna importer",
   "version": "1.0.0",
   "service": {
     "fileConversions": [
@@ -62,7 +62,7 @@ A service may separately declare the `notifications` permission and call
 [`notifications.show`](plugin-api.md#notificationsshow--notifications). The
 toast is host-owned and attributed to the plugin; it does not unhide the frame
 or create a plugin view. Reserve it for a completion or recoverable error, not
-for per-file progress. The reference `snapgene-dna` service requests only
+for per-file progress. The reference `dna-importer` service requests only
 `python` and does not show notifications.
 
 The loopback origin lets packaged Electron load the script host and its sibling
@@ -93,6 +93,10 @@ registered with the permission-gated host-API bridge. This lets a converter
 use a narrowly declared capability such as `python.run` without gaining any
 undeclared Hikari access.
 
+Service messages are accepted only from the registered frame at its assigned
+loopback origin. Conversion bytes target that origin explicitly, and a message
+from a replacement origin fails pending calls and revokes the runtime.
+
 The registry accepts a conversion declaration at boot so the file picker can
 offer `.dna` immediately, but it does not post bytes until `service:ready`
 arrives. A startup failure is therefore reported as a service-start error,
@@ -105,7 +109,7 @@ window.addEventListener('message', async (event) => {
   const req = event.data;
   if (!req || req.hikari !== 1 || req.call !== 'convert') return;
   try {
-    const text = await window.SnapGeneBiopython.convertWithPython(
+    const text = await window.DnaBiopython.convertWithPython(
       window.HikariPlugin.hikari,
       req.bytes,
       { filename: req.filename }

@@ -31,6 +31,12 @@ function detectManifestRole(relativePath) {
   if (normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
     return 'storage_manifest';
   }
+  if (normalized === 'dashboard') {
+    return 'dashboard_root';
+  }
+  if (normalized === 'dashboard/experiment-log.json') {
+    return 'experiment_log';
+  }
   if (normalized === 'protocol') {
     return 'protocol_root';
   }
@@ -174,6 +180,7 @@ function normalizeBundleSummary(snapshot) {
   return {
     protocols: asArray(source.protocols).length,
     notebookEntries: asArray(source.notebookEntries).length,
+    quickLogEntries: asArray(ensureObject(source.settings).dashboard?.quickLogEntries).length,
     samples: asArray(source.samples).length,
     workflowTemplates: asArray(source.workflowTemplates).length,
     workflows: asArray(source.workflows).length,

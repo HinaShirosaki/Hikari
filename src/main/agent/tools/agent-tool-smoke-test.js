@@ -11,7 +11,6 @@ const { createStructuredJsonResponder } = require('./smoke-test/structured-respo
 const { normalizeToolSmokeItem } = require('./smoke-test/result-formatting.js');
 const { createLabSmokeChecks } = require('./smoke-test/lab-checks.js');
 const { createSystemSmokeChecks } = require('./smoke-test/system-checks.js');
-const { createViewerSmokeChecks } = require('./smoke-test/viewer-checks.js');
 const { createResearchSmokeChecks } = require('./smoke-test/research-checks.js');
 
 function createAgentToolSmokeTestRuntime(deps = {}) {
@@ -38,7 +37,6 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     smokeMemory,
     smokeContainer
   } = createSystemSmokeChecks({ now, pythonSandboxFn, pythonSandboxRoot });
-  const { smokeSequenceViewer, smokeSequenceEdit } = createViewerSmokeChecks();
   const {
     smokeLiteratureSearch,
     smokeWebSearch,
@@ -62,8 +60,6 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     container: async (options = {}) => smokeContainer(options),
     'assay-table': async (options = {}) => smokeAssayTable(options),
     'plotly-graph': async (options = {}) => smokePlotlyGraph(options),
-    'sequence-viewer': async () => smokeSequenceViewer(),
-    'sequence-edit': async () => smokeSequenceEdit(),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),
     'purchase-recommendation': async (options = {}) => smokePurchaseRecommendation(options),
     'paper-download': async (options = {}) => smokePaperDownload(options),

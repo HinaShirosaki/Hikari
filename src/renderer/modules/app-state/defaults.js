@@ -87,6 +87,7 @@ export const defaultState = {
         bundles: 0,
         protocols: 0,
         notebookEntries: 0,
+        quickLogEntries: 0,
         workflowTemplates: 0,
         workflows: 0,
         papers: 0,
@@ -104,7 +105,8 @@ export const defaultState = {
     },
     agent: {
       externalSkillsEnabled: true,
-      disabledExternalSkillNames: []
+      disabledExternalSkillNames: [],
+      disabledMcpToolNames: []
     },
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     sampleInventoryLocations: [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS],

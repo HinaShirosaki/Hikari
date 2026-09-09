@@ -5,14 +5,11 @@ import {
   getLaneRectifiedWidth,
   getLaneRowSegment,
   getTargetBandWindowForLane,
-  mean,
   normalizeManualOverrides,
-  round,
   sampleArrayValue
 } from '../shared.js';
 import { createCanvasDrawController } from './canvas-draw.js';
 import { createPeakEditorController } from './peak-editor.js';
-import { formatAnalysisTypeLabel } from './presentation.js';
 import { buildSmoothPath, downsampleLaneProfile } from './profile-shape.js';
 
 export { calculatePeakIntegrationRows } from './peak-editor-svg.js';
@@ -115,7 +112,6 @@ function renderLaneProfilePlaceholder(svg, message) {
   } = LANE_PROFILE_VIEWBOX;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML = `
-    <rect class="lane-profile-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="12" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
     <text class="lane-profile-empty" x="${width / 2}" y="${height / 2}" text-anchor="middle">${message}</text>
@@ -156,14 +152,12 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
 
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML = `
-    <rect class="lane-profile-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="12" />
     ${highlightedBand}
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + (plotHeight / 4)}" x2="${plotRight}" y2="${plotTop + (plotHeight / 4)}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + (plotHeight / 2)}" x2="${plotRight}" y2="${plotTop + (plotHeight / 2)}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + ((plotHeight * 3) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotHeight * 3) / 4)}" />
-    <path class="lane-profile-path-shadow" d="${path}" />
     <path class="lane-profile-path" d="${path}" />
     <circle class="lane-profile-peak" cx="${peakX}" cy="${peakY}" r="4" />
     <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
@@ -335,79 +329,6 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     renderCellTable
   } = canvasDrawController;
 
-  function renderReport() {
-    const hasReport = Boolean(runtime.currentReport);
-    if (elements.gelOpenReportBtn) {
-      elements.gelOpenReportBtn.disabled = !hasReport;
-      elements.gelOpenReportBtn.setAttribute?.('aria-expanded', String(hasReport && runtime.reportDialogOpen));
-    }
-    if (!hasReport) {
-      runtime.reportDialogOpen = false;
-    }
-    if (elements.gelReportOverlay) {
-      elements.gelReportOverlay.hidden = !hasReport || !runtime.reportDialogOpen;
-    }
-
-    if (!elements.gelReportSummary) {
-      return;
-    }
-
-    if (!hasReport) {
-      elements.gelReportSummary.innerHTML = '<p class="small-note">No analysis report yet.</p>';
-      return;
-    }
-
-    const totalBands = (runtime.currentReport.lanes || []).reduce((sum, lane) => sum + (lane.bands?.length || 0), 0);
-    const targetIntensities = (runtime.currentReport.lanes || [])
-      .map((lane) => Number(lane.targetBandIntensity))
-      .filter((value) => Number.isFinite(value));
-    const averageTargetIntensity = targetIntensities.length
-      ? round(mean(targetIntensities), 4)
-      : null;
-    const calibrationText = runtime.currentReport.calibration?.ok
-      ? `R^2 ${runtime.currentReport.calibration.r2}`
-      : 'Not calibrated';
-    const enhancementText = `${runtime.currentReport.preprocessing?.denoiseStrength ?? '-'}% denoise / ${runtime.currentReport.preprocessing?.contrastBoost ?? '-'}% contrast`;
-    const tiffPageText = runtime.currentReport.image?.tiffPageCount
-      ? `${runtime.currentReport.image.tiffPage}/${runtime.currentReport.image.tiffPageCount}`
-      : '-';
-    elements.gelReportSummary.innerHTML = `
-      <article class="card">
-        <h3>${safeText(formatAnalysisTypeLabel(runtime.currentReport.analysisType))}</h3>
-        <p><strong>Lanes:</strong> ${safeText(String(runtime.currentReport.lanes?.length || 0))}</p>
-        <p><strong>Total Bands:</strong> ${safeText(String(totalBands))}</p>
-        <p><strong>TIFF Page:</strong> ${safeText(String(tiffPageText))}</p>
-        <p><strong>Calibration:</strong> ${safeText(calibrationText)}</p>
-        <p><strong>Enhancement:</strong> ${safeText(enhancementText)}</p>
-        <p><strong>Avg Target Intensity:</strong> ${safeText(String(averageTargetIntensity ?? '-'))}</p>
-        <p><strong>Confidence:</strong> ${safeText(runtime.currentReport.confidence?.label || '-')} (${safeText(String(runtime.currentReport.confidence?.score ?? '-'))})</p>
-      </article>
-      <article class="card">
-        <h3>Warnings</h3>
-        <p>${safeText((runtime.currentReport.warnings || []).join(' | ') || 'None')}</p>
-      </article>
-    `;
-  }
-
-  function onReportOpen() {
-    if (!runtime.currentReport) {
-      deps.setStatus?.('Run a gel analysis before opening the report.');
-      return;
-    }
-    runtime.reportDialogOpen = true;
-    renderReport();
-    elements.gelReportCloseBtn?.focus?.();
-  }
-
-  function onReportClose() {
-    if (!runtime.reportDialogOpen) {
-      return;
-    }
-    runtime.reportDialogOpen = false;
-    renderReport();
-    elements.gelOpenReportBtn?.focus?.();
-  }
-
   function onCellTableOpen() {
     if (elements.gelOpenCellTableBtn?.disabled) {
       deps.setStatus?.('Measure a target band before opening the band intensity report.');
@@ -433,31 +354,20 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }
   }
 
-  function onReportOverlayClick(event) {
-    if (event?.target === elements.gelReportOverlay) {
-      onReportClose();
-    }
-  }
-
-  function onReportKeyDown(event) {
+  function onCellTableKeyDown(event) {
     if (event?.key !== 'Escape') {
       return;
     }
     if (runtime.cellTableDialogOpen) {
       event.preventDefault?.();
       onCellTableClose();
-      return;
     }
-    if (!runtime.reportDialogOpen) {
-      return;
-    }
-    event.preventDefault?.();
-    onReportClose();
   }
 
   return {
     onCanvasHoverLeave,
     onCellTableClose,
+    onCellTableKeyDown,
     onCellTableOpen,
     onCellTableOverlayClick,
     onCanvasHoverMove,
@@ -472,14 +382,9 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     onPeakEditorLaneChange,
     onPeakEditorModeSelected,
     onPeakEditorOpen,
-    onReportClose,
-    onReportKeyDown,
-    onReportOpen,
-    onReportOverlayClick,
     renderCanvas,
     renderCellTable,
     renderLaneProfile,
-    renderPeakEditor,
-    renderReport
+    renderPeakEditor
   };
 }

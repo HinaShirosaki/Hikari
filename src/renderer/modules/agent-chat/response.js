@@ -109,8 +109,6 @@ export function normalizeAgentResponse(result) {
     projectScienceQuestion,
     resultAnalysis,
     thinkingTrace: extractStructuredThinkingTrace(result),
-    sequenceEditProposals: asArray(result?.sequence_edit?.proposals)
-      .filter((proposal) => proposal && typeof proposal === 'object' && proposal.approvalToken),
     assistantText
   };
 }

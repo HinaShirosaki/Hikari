@@ -3,6 +3,7 @@
 
 const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const fs = require('node:fs');
 const {
   CallToolRequestSchema,
   ListToolsRequestSchema
@@ -54,15 +55,53 @@ function parseJsonObject(raw = '') {
   }
 }
 
+function getPersistedAgentSettingsFromEnv(env = process.env) {
+  const dataFilePath = cleanText(env.HIKARI_AGENT_DATA_FILE, 2400);
+  if (!dataFilePath) {
+    return {};
+  }
+  try {
+    const persisted = parseJsonObject(fs.readFileSync(dataFilePath, 'utf8'));
+    return ensureObject(ensureObject(persisted.settings).agent);
+  } catch {
+    return {};
+  }
+}
+
 function getRequestContextFromEnv(env = process.env) {
-  return parseJsonObject(
+  const context = parseJsonObject(
     env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
       || env.HIKARI_CODEX_REQUEST_CONTEXT
   );
+  const persistedAgentSettings = getPersistedAgentSettingsFromEnv(env);
+  if (!Object.keys(persistedAgentSettings).length) {
+    return context;
+  }
+  const snapshot = ensureObject(context.snapshot);
+  const settings = ensureObject(snapshot.settings || context.settings);
+  const contextAgentSettings = ensureObject(settings.agent);
+  const hasRequestToolSetting = Object.prototype.hasOwnProperty.call(contextAgentSettings, 'disabledMcpToolNames')
+    || Object.prototype.hasOwnProperty.call(contextAgentSettings, 'disabled_mcp_tool_names');
+  if (hasRequestToolSetting) {
+    return context;
+  }
+  return {
+    ...context,
+    snapshot: {
+      ...snapshot,
+      settings: {
+        ...settings,
+        agent: {
+          ...persistedAgentSettings,
+          ...contextAgentSettings
+        }
+      }
+    }
+  };
 }
 
-function createMcpToolDefinitions() {
-  return getDirectMcpToolDefinitions();
+function createMcpToolDefinitions(context = {}) {
+  return getDirectMcpToolDefinitions(context);
 }
 
 function countSuccessfulDownloads(downloadedPapers = []) {
@@ -491,7 +530,7 @@ function createAgentMcpStdioServer(deps = {}) {
   }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: createMcpToolDefinitions()
+    tools: createMcpToolDefinitions(getRequestContextFromEnv(env))
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {

@@ -12,14 +12,15 @@ Use a **local plugin** unless you know you need something else.
 | Need | Kind | Manifest setting |
 | --- | --- | --- |
 | HTML/CSS/JavaScript workspace | Local | none |
-| ES modules, IndexedDB, WebAssembly, or browser storage | Served | `"serve": true` |
+| ES modules, IndexedDB, WebAssembly, or browser storage | Local (or existing served plugin) | none; `"serve": true` remains supported |
 | Embed an existing HTTPS application | Remote | `"embed": "https://…"` |
 | Add a headless file converter | Service | `"service": {…}` |
 
-Local view plugins run with an opaque origin, so their scripts must be classic
-scripts—do not use `type="module"` or relative `import` statements. Served view
-plugins and headless services have their own loopback origins and may use
-modules; the service host is still hidden and has no UI.
+Local view plugins and headless services receive their own loopback origins.
+Both classic scripts and ES modules work; services remain hidden and have no
+workspace UI. Use the host `storage` and `files` APIs for durable data:
+loopback ports are recycled between runs, so each app run starts the plugin's
+browser storage empty rather than risk handing it another plugin's.
 
 ## 2. Start with four files
 
@@ -136,7 +137,7 @@ try {
     path: 'results/run-1.json',
     dataBase64
   });
-  // Keep the returned path; the host may have de-duplicated the file name.
+  // Keep the returned path. Writing that path again replaces the file.
   await hikari.call('storage.set', {
     value: { latestResultPath: path }
   });

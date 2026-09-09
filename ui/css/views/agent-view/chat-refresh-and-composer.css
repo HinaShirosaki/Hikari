@@ -18,7 +18,7 @@
 .agent-session-card {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
-  padding: 7px 0;
+  padding: 7px 8px 7px 0;
   border: 0;
   border-radius: 0;
   min-width: 0;
@@ -72,47 +72,10 @@
 
 .agent-chat-stage {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   height: 100%;
   position: relative;
-}
-
-.agent-chat-stage > .agent-conversation-shell {
-  grid-row: 2;
-}
-
-.agent-status-pill {
-  margin: 0;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 80%, transparent);
-  background: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-surface-elevated) 10%);
-  color: var(--theme-text-muted);
-  white-space: nowrap;
-}
-
-.agent-status-pill[data-state="ready"] {
-  color: var(--theme-text-muted);
-}
-
-.agent-status-pill[data-state="working"] {
-  color: color-mix(in srgb, var(--theme-text-strong) 76%, var(--theme-warning));
-  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
-}
-
-.agent-status-pill[data-state="complete"] {
-  color: var(--theme-success);
-  border-color: color-mix(in srgb, var(--theme-success) 18%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface-elevated));
-}
-
-.agent-status-pill[data-state="error"] {
-  color: var(--theme-danger);
-  border-color: color-mix(in srgb, var(--theme-danger) 22%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
 }
 
 .agent-conversation-shell {

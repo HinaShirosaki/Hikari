@@ -175,7 +175,8 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
       if (!parsed) {
         return;
       }
-      current.qualifiers[parsed.key] = parsed.value;
+      const previous = current.qualifiers[parsed.key];
+      current.qualifiers[parsed.key] = previous === undefined ? parsed.value : [...(Array.isArray(previous) ? previous : [previous]), parsed.value];
       current.pendingQualifierKey = parsed.openQuote ? parsed.key : '';
       return;
     }
@@ -197,8 +198,9 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         text = text.slice(0, -1);
         closed = true;
       }
-      const merged = [current.qualifiers[current.pendingQualifierKey], text].filter(Boolean).join(' ');
-      current.qualifiers[current.pendingQualifierKey] = merged;
+      const previous = current.qualifiers[current.pendingQualifierKey];
+      if (Array.isArray(previous)) previous[previous.length - 1] = [previous.at(-1), text].filter(Boolean).join(' ');
+      else current.qualifiers[current.pendingQualifierKey] = [previous, text].filter(Boolean).join(' ');
       if (closed) {
         current.pendingQualifierKey = '';
       }
@@ -256,6 +258,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         ...(primerSequence ? { primerSequence } : {}),
         source: 'genbank',
         locationText: entry.location,
+        qualifiers: { ...entry.qualifiers },
         segments
       };
     })

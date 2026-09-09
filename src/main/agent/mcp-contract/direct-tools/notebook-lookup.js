@@ -16,7 +16,7 @@ const {
 const PROJECT_FILTER_SCHEMA = Object.freeze({
   project_name: { type: 'string' },
   protocol_name: { type: 'string' },
-  notebook_state: { type: 'string', enum: ['planned', 'executed'] },
+  notebook_state: { type: 'string', enum: ['planned', 'executed', 'suggested'] },
   detail: { type: 'string', enum: ['summary', 'full'] }
 });
 

@@ -22,7 +22,7 @@ function createHomeFileOpen({
   }
 
   // A service plugin may register a converter for a format the viewer cannot
-  // parse natively (e.g. SnapGene .dna -> GenBank). If one is installed for
+  // parse natively (e.g. .dna -> GenBank). If one is installed for
   // this file's extension, hand it the raw bytes and continue with the text it
   // returns; otherwise read the file as text as usual.
   async function readSequenceFileText(file) {

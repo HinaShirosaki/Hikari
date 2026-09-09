@@ -50,7 +50,7 @@ export const DEFAULT_CLONING_PREFERENCES = Object.freeze({
   minMutagenesisFlankLength: 8,
   topology: 'circular',
   vendorFilter: DEFAULT_VENDOR_FILTER,
-  primerClampSequence: 'GCGC',
+  primerClampSequence: 'GCGCGC',
   minEngineeredOverlapLength: DEFAULT_MIN_ENGINEERED_OVERLAP_LENGTH,
   maxEngineeredOverlapLength: DEFAULT_MAX_ENGINEERED_OVERLAP_LENGTH
 });

@@ -213,6 +213,7 @@ function buildStorageImportSummary(payload) {
       bundles: Number(summary.bundles) || 0,
       protocols: Number(summary.protocols) || 0,
       notebookEntries: Number(summary.notebookEntries) || 0,
+      quickLogEntries: Number(summary.quickLogEntries) || 0,
       workflowTemplates: Number(summary.workflowTemplates) || 0,
       workflows: Number(summary.workflows) || 0,
       papers: Number(summary.papers) || 0,
@@ -238,6 +239,7 @@ function buildStorageImportError(previous, message) {
         bundles: 0,
         protocols: 0,
         notebookEntries: 0,
+        quickLogEntries: 0,
         workflowTemplates: 0,
         workflows: 0,
         papers: 0,
@@ -275,6 +277,24 @@ export function createStorageImportController({
 
   function mergeStorageImportPatch(statePatch) {
     const patch = statePatch && typeof statePatch === 'object' ? statePatch : {};
+    const importedDashboard = patch.settings?.dashboard;
+    if (importedDashboard && typeof importedDashboard === 'object' && !Array.isArray(importedDashboard)) {
+      if (!state.settings || typeof state.settings !== 'object') {
+        state.settings = cloneDefaultValue(defaultState.settings);
+      }
+      const currentDashboard = state.settings.dashboard
+        && typeof state.settings.dashboard === 'object'
+        && !Array.isArray(state.settings.dashboard)
+        ? state.settings.dashboard
+        : cloneDefaultValue(defaultState.settings.dashboard);
+      state.settings.dashboard = {
+        ...currentDashboard,
+        quickLogDraft: String(importedDashboard.quickLogDraft || ''),
+        quickLogEntries: Array.isArray(importedDashboard.quickLogEntries)
+          ? importedDashboard.quickLogEntries
+          : []
+      };
+    }
     state.projects = mergeRecordsById(state.projects, patch.projects, 'project');
     state.protocols = mergeRecordsById(state.protocols, patch.protocols, 'protocol');
     state.notebookEntries = mergeRecordsById(state.notebookEntries, patch.notebookEntries, 'notebook');

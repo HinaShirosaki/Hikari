@@ -87,7 +87,7 @@ export function initColonyCounterTool() {
       return;
     }
     colonyStatus.textContent = message;
-    colonyStatus.style.color = isError ? 'var(--theme-danger)' : '';
+    colonyStatus.classList.toggle('is-error', Boolean(isError));
   }
 
   // Clear results when the tool returns to its initial state.

@@ -4,6 +4,7 @@ const { getBundlePaths } = require('./storage-paths');
 const { readNotebookRowsFromSqlite, readPaperRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
 const { asArray, cleanText, cloneJson, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
+const { readExperimentLogSidecar } = require('./experiment-log-storage');
 const { hydrateProjectRootFromStoragePath } = require('./hydration/project-folders.js');
 const { getLegacyProtocolsFilePath, getLegacySqlitePath, hydrateSamplesRootFromStoragePath, readProtocolDirectory } = require('./hydration/protocol-directory.js');
 const { hydrateInventoryFromSqliteSnapshot, mergeInventorySqliteSnapshots, mergePaperExperimentLinks, mergePaperRecords, mergeRecordsById, mergeSamplesSidecarIntoSnapshot, readNotebookEntriesFromSidecar, readProtocolsFromSidecar, readRecordIndexPayloadsByType } = require('./hydration/sqlite-inventory.js');
@@ -67,6 +68,25 @@ async function hydrateSnapshotFromBundle({
     }
   } else if (samplesSidecar.exists && samplesSidecar.error) {
     migration.warnings.push(samplesSidecar.error);
+  }
+
+  const experimentLogSidecar = await readExperimentLogSidecar(bundlePaths.experimentLogPath);
+  if (experimentLogSidecar.ok) {
+    if (!nextSnapshot.settings || typeof nextSnapshot.settings !== 'object' || Array.isArray(nextSnapshot.settings)) {
+      nextSnapshot.settings = {};
+    }
+    const existingDashboard = nextSnapshot.settings.dashboard
+      && typeof nextSnapshot.settings.dashboard === 'object'
+      && !Array.isArray(nextSnapshot.settings.dashboard)
+      ? nextSnapshot.settings.dashboard
+      : {};
+    nextSnapshot.settings.dashboard = {
+      ...existingDashboard,
+      ...experimentLogSidecar.data
+    };
+    migration.applied.push('experiment_log_sidecar');
+  } else if (experimentLogSidecar.exists && experimentLogSidecar.error) {
+    migration.warnings.push(experimentLogSidecar.error);
   }
 
   const storageRootPath = cleanText(nextSnapshot?.settings?.storagePath, 2400)
@@ -160,6 +180,7 @@ async function hydrateSnapshotFromBundle({
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
       notebookPagesPath: bundlePaths.notebookPagesPath,
+      experimentLogPath: bundlePaths.experimentLogPath,
       samplesPath: bundlePaths.samplesPath
     },
     migration: migration.applied.length || migration.warnings.length ? migration : null

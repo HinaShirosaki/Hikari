@@ -11,7 +11,10 @@ const MAX_INTERVAL_MINUTES = 525_600;
 const MAX_METADATA_JSON_LENGTH = 48_000;
 const SCHEDULE_KEYS = [
   'kind', 'type', 'cadence', 'runAt', 'run_at',
-  'intervalMinutes', 'interval_minutes', 'anchorAt', 'anchor_at'
+  'intervalMinutes', 'interval_minutes', 'intervalValue', 'interval_value',
+  'intervalUnit', 'interval_unit', 'timeOfDay', 'time_of_day',
+  'dayOfWeek', 'day_of_week', 'dayOfMonth', 'day_of_month',
+  'timezone', 'timeZone', 'anchorAt', 'anchor_at'
 ];
 // ponytail: bound the catch-up stampede when many overdue tasks arm at once after
 // the app was closed for a while. Fixed 5s spread, revisit if task counts get large.

@@ -2,7 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { getBundlePaths } = require('./storage-paths');
+const { PROJECT_SEQUENCE_FOLDER_NAME, getBundlePaths } = require('./storage-paths');
 const {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_SKILLS_FOLDER_NAME,
@@ -14,6 +14,7 @@ const {
   writeChemicalSqliteBundleIndex,
   writeSqliteBundleIndex
 } = require('./storage-sql-write');
+const { writeExperimentLogSidecar } = require('./experiment-log-storage');
 const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
@@ -184,7 +185,10 @@ async function writeProjectMemoryFiles(
     const filePath = path.join(folderPath, MEMORY_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
     await fs.mkdir(path.join(folderPath, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME), { recursive: true });
-    await releaseOfficialSkills(folderPath);
+    // Sequence viewer's per-project folder, sibling of the project's Notebook
+    // folder. The library rail mirrors the same set from `sequence_folders`.
+    await fs.mkdir(path.join(folderPath, PROJECT_SEQUENCE_FOLDER_NAME), { recursive: true });
+    await releaseOfficialSkills(folderPath, { snapshot });
     const result = await writeProjectMemoryFile({
       storageRootPath,
       folderPath,
@@ -233,7 +237,7 @@ async function syncBundleFromSnapshot({
   }
   const updatedAt = new Date().toISOString();
   await fs.mkdir(storageRootPath, { recursive: true });
-  await releaseOfficialMcpSkillsForWorkspace(storageRootPath);
+  await releaseOfficialMcpSkillsForWorkspace(storageRootPath, { snapshot: safeSnapshot });
   if (bundlePaths.dataFilePath) {
     await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
   }
@@ -258,6 +262,11 @@ async function syncBundleFromSnapshot({
     : [];
   await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
   const samplesPath = await writeSamplesFile(bundlePaths.samplesPath, safeSnapshot, updatedAt);
+  const experimentLogPath = await writeExperimentLogSidecar(
+    bundlePaths.experimentLogPath,
+    safeSnapshot,
+    updatedAt
+  );
   await writeSqliteBundleIndex(bundlePaths.sqlitePath, safeSnapshot);
   await writeChemicalSqliteBundleIndex(bundlePaths.chemicalsSqlitePath, safeSnapshot);
   const workflowSync = await syncWorkflowRootFromSnapshot({
@@ -272,6 +281,7 @@ async function syncBundleFromSnapshot({
       notebookPagesPath: '',
       notebookPageFolderPaths,
       projectMemoryFilePaths,
+      experimentLogPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,
       paperMarkdownRootPath: bundlePaths.paperMarkdownRootPath,
       samplesPath

@@ -3,11 +3,6 @@ import { getCachedFonts, loadSystemFonts } from './chart-font-source.js';
 
 // Text controls for the Assay Plotly style panel.
 
-const FONT_SIZE_OPTIONS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48].map((v) => ({
-  value: v,
-  label: String(v)
-}));
-
 const SVG_NS = 'http://www.w3.org/2000/svg';
 function svgEl(tag, attrs) {
   const el = document.createElementNS(SVG_NS, tag);
@@ -132,33 +127,32 @@ export function createChartTextControls(mount, config) {
   if (!mount) return null;
   const onChange = typeof config?.onChange === 'function' ? config.onChange : () => {};
   let value = { ...config?.value };
+  let destroyed = false;
 
   mount.innerHTML = '';
   mount.classList.add('assay-chart-text-bar');
 
-  const row1 = document.createElement('div');
-  row1.className = 'assay-chart-text-bar__row';
-  mount.appendChild(row1);
-
-  const row2 = document.createElement('div');
-  row2.className = 'assay-chart-text-bar__row';
-  mount.appendChild(row2);
+  // One wrapping toolbar: font, size and the formatting controls share a line when the panel allows it.
+  const bar = document.createElement('div');
+  bar.className = 'assay-chart-text-bar__row';
+  mount.appendChild(bar);
 
   const fontMount = document.createElement('div');
   fontMount.className = 'assay-chart-text-bar__font-mount';
-  row1.appendChild(fontMount);
+  bar.appendChild(fontMount);
 
   const sizeMount = document.createElement('div');
   sizeMount.className = 'assay-chart-text-bar__size-mount';
-  row1.appendChild(sizeMount);
+  bar.appendChild(sizeMount);
 
   const colorWrap = document.createElement('label');
   colorWrap.className = 'assay-chart-text-bar__color';
   colorWrap.title = 'Text color';
   const colorInput = document.createElement('input');
   colorInput.type = 'color';
+  colorInput.setAttribute('aria-label', 'Text color');
   colorWrap.appendChild(colorInput);
-  row1.appendChild(colorWrap);
+  bar.appendChild(colorWrap);
 
   function buildFontOptions(list) {
     return list.map((family) => ({ value: family, label: family }));
@@ -170,6 +164,7 @@ export function createChartTextControls(mount, config) {
     value: value.fontFamily || 'Arial',
     renderOption: (opt) => buildFontOption(opt.value),
     renderTrigger: () => null,
+    showLabelInOption: false,
     onChange: (val) => {
       value.fontFamily = val;
       updateTriggerFont();
@@ -177,6 +172,7 @@ export function createChartTextControls(mount, config) {
     }
   });
   fontMount.classList.add('assay-chart-text-bar__font');
+  fontMount.querySelector('button').setAttribute('aria-label', 'Font family');
 
   function updateTriggerFont() {
     const trigger = fontMount.querySelector('.assay-chart-picker__label');
@@ -185,18 +181,26 @@ export function createChartTextControls(mount, config) {
   updateTriggerFont();
 
   loadSystemFonts().then((list) => {
-    if (!fontPicker) return;
+    if (destroyed || !fontPicker) return;
     fontPicker.setOptions(buildFontOptions(list));
   }).catch(() => {});
 
-  const sizePicker = createChartStylePicker(sizeMount, {
-    kind: 'font-size',
-    options: FONT_SIZE_OPTIONS,
-    value: Number.isFinite(value.fontSize) ? value.fontSize : 12,
-    onChange: (val) => {
-      value.fontSize = Number(val) || 12;
-      emit();
-    }
+  const sizeInput = document.createElement('input');
+  sizeInput.type = 'number';
+  sizeInput.min = '4.5';
+  sizeInput.max = '72';
+  sizeInput.step = 'any';
+  sizeInput.setAttribute('aria-label', 'Font size (pt)');
+  sizeInput.title = 'Font size (pt)';
+  sizeMount.appendChild(sizeInput);
+  const sizeUnit = document.createElement('span');
+  sizeUnit.className = 'assay-chart-text-bar__unit';
+  sizeUnit.textContent = 'pt';
+  sizeMount.appendChild(sizeUnit);
+  sizeInput.addEventListener('change', () => {
+    if (!sizeInput.value || !sizeInput.validity.valid) return;
+    value.fontSize = Number(sizeInput.value);
+    emit();
   });
 
   colorInput.value = value.color || '#222222';
@@ -215,22 +219,24 @@ export function createChartTextControls(mount, config) {
     btn.addEventListener('click', () => {
       value[key] = !value[key];
       btn.classList.toggle('is-active', Boolean(value[key]));
+      btn.setAttribute('aria-pressed', String(Boolean(value[key])));
       emit();
     });
     if (value[key]) btn.classList.add('is-active');
+    btn.setAttribute('aria-pressed', String(Boolean(value[key])));
     return btn;
   }
 
   const boldBtn = makeToggle('bold', 'bold', 'Bold');
   const italicBtn = makeToggle('italic', 'italic', 'Italic');
   const underlineBtn = makeToggle('underline', 'underline', 'Underline');
-  row2.appendChild(boldBtn);
-  row2.appendChild(italicBtn);
-  row2.appendChild(underlineBtn);
+  bar.appendChild(boldBtn);
+  bar.appendChild(italicBtn);
+  bar.appendChild(underlineBtn);
 
   const sep1 = document.createElement('span');
   sep1.className = 'assay-chart-text-bar__sep';
-  row2.appendChild(sep1);
+  bar.appendChild(sep1);
 
   function makeBaselineButton(baselineValue, iconKey, tooltip) {
     const btn = document.createElement('button');
@@ -249,8 +255,8 @@ export function createChartTextControls(mount, config) {
 
   const supBtn = makeBaselineButton('super', 'superscript', 'Superscript');
   const subBtn = makeBaselineButton('sub', 'subscript', 'Subscript');
-  row2.appendChild(supBtn);
-  row2.appendChild(subBtn);
+  bar.appendChild(supBtn);
+  bar.appendChild(subBtn);
 
   function syncBaselineButtons() {
     supBtn.classList.toggle('is-active', value.baseline === 'super');
@@ -260,7 +266,7 @@ export function createChartTextControls(mount, config) {
 
   const sep2 = document.createElement('span');
   sep2.className = 'assay-chart-text-bar__sep';
-  row2.appendChild(sep2);
+  bar.appendChild(sep2);
 
   function makeAlignButton(alignValue, iconKey, tooltip) {
     const btn = document.createElement('button');
@@ -280,9 +286,12 @@ export function createChartTextControls(mount, config) {
   const alignLeftBtn = makeAlignButton('start', 'alignLeft', 'Align left');
   const alignCenterBtn = makeAlignButton('middle', 'alignCenter', 'Align center');
   const alignRightBtn = makeAlignButton('end', 'alignRight', 'Align right');
-  row2.appendChild(alignLeftBtn);
-  row2.appendChild(alignCenterBtn);
-  row2.appendChild(alignRightBtn);
+  bar.appendChild(alignLeftBtn);
+  bar.appendChild(alignCenterBtn);
+  bar.appendChild(alignRightBtn);
+  if (config?.basicOnly) {
+    [sep1, sep2, supBtn, subBtn, alignLeftBtn, alignCenterBtn, alignRightBtn].forEach((element) => element.remove());
+  }
 
   function syncAlignButtons() {
     alignLeftBtn.classList.toggle('is-active', value.textAlign === 'start');
@@ -303,11 +312,13 @@ export function createChartTextControls(mount, config) {
     value = { ...next };
     if (fontPicker) fontPicker.setValue(value.fontFamily);
     updateTriggerFont();
-    if (sizePicker) sizePicker.setValue(value.fontSize);
+    sizeInput.value = String(Number((value.fontSize || 10).toFixed(6)));
     if (colorInput) colorInput.value = value.color || '#222222';
     boldBtn.classList.toggle('is-active', Boolean(value.bold));
     italicBtn.classList.toggle('is-active', Boolean(value.italic));
     underlineBtn.classList.toggle('is-active', Boolean(value.underline));
+    [[boldBtn, value.bold], [italicBtn, value.italic], [underlineBtn, value.underline]]
+      .forEach(([button, pressed]) => button.setAttribute('aria-pressed', String(Boolean(pressed))));
     syncBaselineButtons();
     syncAlignButtons();
     suppress = false;
@@ -318,8 +329,8 @@ export function createChartTextControls(mount, config) {
   return {
     setValue,
     destroy() {
+      destroyed = true;
       if (fontPicker) fontPicker.destroy();
-      if (sizePicker) sizePicker.destroy();
       mount.innerHTML = '';
       mount.classList.remove('assay-chart-text-bar');
     }

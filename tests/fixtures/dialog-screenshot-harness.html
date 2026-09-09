@@ -50,6 +50,40 @@
       throw new Error(`Unknown dialog: ${dialogId}`);
     }
     target.hidden = false;
+    if (dialogId === 'unsaved-changes-overlay') {
+      // Mirrors createUnsavedChangesService(): several dirty editors render as
+      // a checklist, a single one renders as plain text.
+      const unsavedList = document.getElementById('unsaved-changes-list');
+      const labels = (params.get('unsaved') || 'Sample,Notebook,Assay').split(',').filter(Boolean);
+      if (unsavedList && !unsavedList.children.length) {
+        document.getElementById('unsaved-changes-description').textContent = labels.length > 1
+          ? 'Pick what to save. Anything left unchecked is discarded on quit.'
+          : 'The following work has not been saved.';
+        unsavedList.append(...labels.map((label, index) => {
+          const item = document.createElement('li');
+          if (labels.length < 2) {
+            item.textContent = label;
+            return item;
+          }
+          const option = document.createElement('label');
+          option.className = 'unsaved-changes-option';
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = index < labels.length - 1;
+          const text = document.createElement('span');
+          text.textContent = label;
+          option.append(checkbox, text);
+          item.append(option);
+          return item;
+        }));
+        document.getElementById('unsaved-changes-save-btn').textContent = labels.length > 2
+          ? `Save ${labels.length - 1} & Quit`
+          : 'Save & Quit';
+        document.getElementById('unsaved-changes-discard-btn').textContent = labels.length > 1
+          ? 'Discard All & Quit'
+          : 'Discard & Quit';
+      }
+    }
     let ancestor = target.parentElement;
     while (ancestor) {
       ancestor.hidden = false;

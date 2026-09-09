@@ -12,7 +12,7 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
   const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
     .filter((candidate) => candidate?.sourceFormat !== 'image');
   if (!supportedCandidates.length) {
-    ctx.setStructureStatus(ctx.buildStructureClipboardNotFoundMessage(formats));
+    ctx.setStructureStatus(ctx.buildStructureClipboardNotFoundMessage(formats), true);
     return false;
   }
 
@@ -25,7 +25,7 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
     }
   }
 
-  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.');
+  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.', true);
   showTransientNotice('Cannot save that structure yet. Try SMILES or MOL/SDF data.', { type: 'error' });
   return false;
 }
@@ -80,7 +80,7 @@ function applyCapturedStructureDraft(draft) {
     if (!normalized) {
       showTransientNotice('No structure detected.', { type: 'error' });
     }
-    ctx.setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.');
+    ctx.setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.', !normalized);
     return;
   }
 
@@ -90,7 +90,7 @@ function applyCapturedStructureDraft(draft) {
   } else {
     pendingStructureDrafts.delete(context.pendingKey);
     showTransientNotice('No structure detected.', { type: 'error' });
-    ctx.setStructureStatus('No structure detected.');
+    ctx.setStructureStatus('No structure detected.', true);
   }
 }
 

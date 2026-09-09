@@ -28,8 +28,8 @@ function normalizeFeatureSegments(rawSegments, sequenceLength) {
       const end = clamp(Math.round(Number(segment?.end) || 0), 0, safeLength);
       return end > start ? { start, end } : null;
     })
-    .filter(Boolean)
-    .sort((left, right) => (left.start - right.start) || (left.end - right.end));
+    // GenBank join order carries the circular origin; sorting changes the CDS.
+    .filter(Boolean);
 }
 
 function normalizeFeaturePayload(feature, sequenceLength, index = 0) {
@@ -55,6 +55,7 @@ function normalizeFeaturePayload(feature, sequenceLength, index = 0) {
     name: normalizeName(feature?.name || feature?.label || `feature_${index + 1}`, `feature_${index + 1}`),
     type: cleanText(feature?.type || 'misc_feature', 120).toLowerCase() || 'misc_feature',
     translation: normalizeProteinSequenceForPayload(feature),
+    qualifiers: { ...feature.qualifiers },
     strand,
     source,
     segments

@@ -34,21 +34,21 @@ different install flow.
 | --- | --- | --- | --- | --- |
 | Ships | `index.html` + assets | `index.html` + assets | nothing but `plugin.json` | `index.html` + assets |
 | Manifest | no flag | `serve: true` | `embed: "https://…"` | `service: {…}` |
-| Loaded from | `file://` | `http://127.0.0.1:<port>` | the remote URL | `http://127.0.0.1:<port>` (hidden) |
-| Runs as | opaque origin (`null`) | its own loopback origin | the remote site's origin | its own loopback origin |
-| Sandbox | `allow-scripts allow-forms allow-modals allow-popups` | the same **+ `allow-same-origin`** | the same **+ `allow-same-origin`** | same as served |
-| `localStorage` / `IndexedDB` | **denied** | works | works | works |
-| Scripts | **classic only** (§5.4) | classic or module | (remote's own) | classic or module |
+| Loaded from | `http://127.0.0.1:<port>` | `http://127.0.0.1:<port>` | the remote URL | `http://127.0.0.1:<port>` (hidden) |
+| Runs as | its own loopback origin | its own loopback origin | the remote site's origin | its own loopback origin |
+| Sandbox | `allow-scripts allow-forms allow-modals allow-popups allow-same-origin` | same as local | same as local | same as local |
+| `localStorage` / `IndexedDB` | works | works | works | works |
+| Scripts | classic or module (§5.4) | classic or module | (remote's own) | classic or module |
 | Has a view | yes (whole pane) | yes | yes | **no** — headless |
 | Host API | may hold permissions | may hold permissions | **never** | may hold permissions |
-| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — | [`snapgene-dna`](../../examples/plugins/snapgene-dna/) |
+| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — | [`dna-importer`](../../examples/plugins/dna-importer/) |
 
 **Which to write:**
 
-- **Local** by default. Simplest, most locked-down, no server.
-- **Served** when the plugin needs storage — `localStorage`, `IndexedDB`, or
-  any WebAssembly runtime that keeps a filesystem. An opaque origin denies all
-  of it, so this is not a preference but a hard requirement (§5.1).
+- **Local** by default. Hikari automatically serves the installed folder on
+  its own loopback origin so scripts and styles load in Electron.
+- **Served** remains supported for existing manifests. `serve: true` now uses
+  the same delivery and sandbox as a local plugin without the flag.
 - **Remote** only to embed an existing web app you cannot bundle. It buys
   nothing except someone else's hosting, and costs you the host API entirely.
 - **Service** to extend a built-in feature rather than add a workspace — today,
@@ -62,8 +62,8 @@ change tomorrow. That is why only the first may hold permissions.
 
 ### 1.1 Local and served plugin layout
 
-Identical — `serve: true` changes how the folder is *delivered*, not what is
-in it:
+Identical — `serve: true` is retained for compatibility; both use loopback
+delivery:
 
 ```
 notebook-results/       <- folder name MUST equal the manifest "id"
@@ -77,10 +77,9 @@ notebook-results/       <- folder name MUST equal the manifest "id"
 
 Everything below the root is unconstrained. `index.html` is loaded like a
 normal webpage, so relative stylesheets, classic scripts, images, and
-subfolders resolve against the plugin folder. A **served** plugin can also use
-relative ES module imports. A local plugin has an opaque `file://` origin, so
-browsers refuse those module fetches; use classic scripts there (§5.4). There
-is no build step and no framework requirement.
+subfolders resolve against the plugin folder. Both local and explicitly served
+plugins can use relative ES module imports (§5.4). There is no build step and
+no framework requirement.
 
 For a served plugin the whole folder is reachable over its loopback origin, so
 the folder is also the web root: `/ij153/ij.jar` means
@@ -134,7 +133,7 @@ Source of truth:
 | `version` | string | **yes** | `major.minor.patch`. Shown in Settings; Hikari does not currently act on it. |
 | `description` | string | no | Shown in Settings and as the view subtitle. Max 400 chars. |
 | `permissions` | string[] | no | Host API capabilities. Defaults to `[]`. Rejected alongside `embed`. |
-| `serve` | boolean | no | Serve the folder over `http://127.0.0.1:<port>` instead of `file://`, giving the plugin a real origin with working storage. Rejected alongside `embed`. |
+| `serve` | boolean | no | Legacy explicit opt-in to loopback delivery; local folders now receive this automatically. Rejected alongside `embed`. |
 | `embed` | string | no | Absolute **https** URL. Makes this a remote plugin: `index.html` is not required and host permissions are refused. |
 | `service` | object | no | Makes this a headless service. `{ "fileConversions": [{ "from": "dna", "to": "gbk" }] }`. No view is created. Rejected alongside `embed`/`serve`. See [service-plugins.md](service-plugins.md). |
 
@@ -278,11 +277,12 @@ A plugin holding the `files` permission also gets a folder at
 `<storage root>/Plugins/<plugin id>/`, addressed with `files.write` /
 `files.read` and relative paths only.
 
-- **Containment is enforced in the bridge**, not downstream: the host's own
-  `readFileBase64` reads any absolute path it is handed, and `storeImportedFile`
-  confines writes to the storage root but not below it. `resolvePluginFilePath()`
-  in [`plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js) is what keeps
-  a plugin out of the user's notebook files, and it is tested directly (§9).
+- **Containment is enforced in the main process.** Dedicated plugin-file IPC
+  validates the plugin id and relative path, resolves the configured root, and
+  rejects symlinks anywhere beneath it, including `Plugins/`, the plugin
+  directory, intermediate directories, and the file itself. See
+  [`plugin-files.js`](../../src/main/lib/plugin-files.js). Writes replace the
+  addressed file atomically; a failed write retains the previous file.
 - **The storage root must be configured.** Without one the verbs refuse rather
   than falling back to somewhere else.
 - **Files outlive the plugin record**, like the storage blob, and removing a
@@ -312,8 +312,8 @@ For each entry with `enabled !== false`,
    ```html
    <section id="plugin-<id>-view" class="view plugin-view">
      <div class="plugin-view__main">
-       <iframe class="plugin-frame" src="<entryUrl>"
-               sandbox="allow-scripts allow-forms allow-modals allow-popups"
+       <iframe class="plugin-frame" src="<loopback URL>"
+               sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
                title="<name> — <kind>, host access: …">
      </div>
    </section>
@@ -340,12 +340,11 @@ For each entry with `enabled !== false`,
    list on the plugin's row in Settings, shown before the plugin is enabled
    (§2).
 
-2. **Registers the frame with the bridge**, mapping its `contentWindow` to the
-   installed record. This is how the host later knows which plugin a message
-   came from — and therefore which permissions apply. Remote frames are
-   skipped: third-party code gets no bridge entry at all.
+2. **Starts the loopback server and registers the frame with the bridge**,
+   binding both its `contentWindow` and assigned origin to the installed record
+   before navigation. Remote frames receive no bridge entry.
 
-   For a **served** plugin the `src` is left empty at this point and filled in
+   For every folder plugin the `src` is initially empty and filled in
    asynchronously, once the main process reports the loopback URL over
    `plugins:serve-folder`. The section and the registry entry are still created
    synchronously, because the shell snapshots both; only the URL arrives late.
@@ -392,12 +391,12 @@ stores, plus `enabled: true`. The directory picker reuses
 
 ### 4.4 Serving a plugin folder
 
-For `serve: true` view plugins and all service plugins the renderer calls
+For all local/served view plugins and service plugins the renderer calls
 `window.hikariApi.servePluginFolder(id, path)` (channel
 `plugins:serve-folder`), which asks the main-process registry in
 [`plugin-server.js`](../../src/main/lib/plugin-server.js) to start — or reuse —
 a loopback server rooted at that folder, and returns its base URL. The
-renderer re-validates that URL with `isSameOriginSafeUrl()` before assigning it
+renderer requires a loopback origin via `pluginOrigin()` before assigning it
 as the frame `src`, so a compromised reply cannot widen the sandbox. Server
 constraints are in §5.2.
 
@@ -417,34 +416,44 @@ constraints are in §5.2.
 Plugins are untrusted third-party code and run with the least privilege the
 platform offers.
 
-- **Sandboxed iframe.** Local plugins get `sandbox="allow-scripts allow-forms
-  allow-modals allow-popups"` and deliberately **no** `allow-same-origin`, so
-  the plugin is an opaque origin: no host DOM, no host `localStorage` (where
-  app state lives), no cookies.
+- **Sandboxed iframe.** Folder plugins receive their own loopback origin with
+  `allow-scripts allow-forms allow-modals allow-popups allow-same-origin`. They
+  remain cross-origin from the host DOM and host storage. Before the server
+  responds, the empty frame stays opaque and has no bridge grant.
 - **No Node, no preload bridge.** The renderer runs with
   `contextIsolation: true` / `nodeIntegration: false`, and Electron preload
   scripts do not run in subframes, so plugins never see `window.hikariApi`.
 - **The host API is the only channel in, and it is narrow.** Every request
-  crosses `postMessage` and is checked against the *frame identity*, not
-  against anything in the payload — a plugin cannot claim another plugin's id
-  to borrow its permissions. Handlers copy and clamp the fields they return
+  crosses `postMessage` and is checked against both the *frame identity* and
+  *assigned origin*. A call from another origin revokes the frame grant. Replies,
+  broadcasts, and service requests target the assigned origin explicitly, so
+  navigating the frame cannot transfer access to the replacement document. Handlers copy and clamp the fields they return
   rather than handing back live state objects.
 - **Grants are frozen at install time.** Editing `permissions` in an installed
   plugin's manifest has no effect until the user re-adds it (§3).
 
-### 5.1 Why served, service, and remote plugins may use `allow-same-origin`
+### 5.1 Why plugin frames may use `allow-same-origin`
 
-Served and remote frames carry `allow-same-origin`, which on a local plugin
-would be catastrophic — a `file://` frame would inherit the host's own origin
-and could read the host document and its `localStorage`. It is safe for the
-other two for one reason: **their `src` is a real origin of its own, so the
-flag grants them *that* origin rather than Hikari's.**
+All running plugin frames carry `allow-same-origin`. This would be unsafe on a
+`file://` frame, which could share the host origin. Hikari instead uses real
+origins separate from its own:
 
 - Remote: the embedded site's https origin.
-- Served and service: `http://127.0.0.1:<random port>`. The host runs from `file://`, and
+- Local, served, and service: `http://127.0.0.1:<random port>`. The host runs from `file://`, and
   a distinct port is a distinct origin, so they never coincide. Each served
   plugin gets its **own** port too, so plugins cannot read each other's
   storage either.
+
+Within one run that holds, because a live server owns its port. Across runs it
+does not: the OS assigns the port, `localStorage` and `IndexedDB` outlive the
+process keyed by origin, and the port a plugin is handed today may be the one a
+*different* plugin's storage is still filed under. So a newly bound origin is
+emptied — `session.clearStorageData({ origin })` — before the plugin is allowed
+to load on it. A host that cannot empty it refuses to serve the plugin at all
+rather than hand over a neighbour's data. Reusing a server already running for
+that plugin does not clear anything, so storage survives renderer reloads; it is
+a fresh app run that starts empty. That is why durable plugin data belongs in
+the `storage` and `files` verbs (§3.1, §3.2) and not in browser storage.
 
 Measured both ways, from the host, against a served frame:
 
@@ -459,14 +468,11 @@ Real applications need this. An opaque origin denies `localStorage` *and*
 included — keeps its filesystem in IndexedDB. It does not degrade: `cheerpjInit`
 simply never resolves.
 
-The flag is gated on an **origin check, not a manifest field**:
-`isSameOriginSafeUrl()` in
-[`plugin-loader.js`](../../src/renderer/app/plugin-loader.js) decides the
-sandbox string at mount time and accepts only https or loopback http;
-`inspectPluginFolder` rejects a non-https `embed` at install; and
-`normalizePluginEntries` strips a non-https `embedUrl` on load. A hand-edited
-settings file cannot walk a `file://` URL into a same-origin frame. All three
-layers are covered by tests (§9).
+The flag is gated on an **origin check, not a manifest field**. Folder frames
+require a validated `http://127.0.0.1` URL from the main process; `entryUrl` is
+never loaded directly. Remote embeds must pass the HTTPS manifest and state
+validation and receive no host grant. A `file:` URL cannot enter a frame
+carrying `allow-same-origin`.
 
 ### 5.5 The CSP has to admit the plugin's origin
 
@@ -501,7 +507,7 @@ navigates today but its frame will not load until that entry is added.
 
 ### 5.2 The plugin server
 
-Served view plugins and headless service plugins are delivered by
+All folder view plugins and headless service plugins are delivered by
 [`plugin-server.js`](../../src/main/lib/plugin-server.js), a Node `http` server
 in the main process. Its constraints:
 
@@ -518,7 +524,10 @@ in the main process. Its constraints:
   (unknown extensions are served as `application/octet-stream`, never guessed).
 
 Servers start lazily when a served view or service plugin mounts, are reused
-across renderer reloads, and die with the app.
+across renderer reloads when the canonical folder is unchanged, and die with
+the app. Reinstalling an id from a different folder replaces and closes its old
+server. Symlinked installation roots are canonicalized before containment checks.
+Every newly bound origin is emptied before its URL reaches the renderer (§5.1).
 
 ### 5.3 What none of this prevents
 
@@ -536,25 +545,21 @@ with a workspace around it.
 Only install plugin folders you trust, and for remote plugins, only embed sites
 you trust.
 
-### 5.4 Opaque origins cannot load ES modules
+### 5.4 Loading local scripts
 
-A side effect of the opaque-origin sandbox worth knowing when you write a
-**local view** plugin: a `null`-origin document cannot fetch a
-relative ES module. `<script type="module" src="./main.js">` (or any inline
-module with a relative `import`) is silently CORS-blocked, so the script never
-runs and the plugin does nothing — no error in the host console.
+Local and served plugins both load from loopback. Classic scripts, relative ES
+modules, stylesheets, and images work without adding `serve: true`. Earlier
+versions loaded default local plugins from an opaque `file:` frame, which
+Electron blocks from loading sibling assets; that delivery path is no longer
+used.
 
-Use **classic scripts** in local view plugins:
+The copyable `hikari.js` client remains a classic script. Load it before code
+that calls `window.HikariPlugin.hikari`:
 
 ```html
-<script src="./hikari.js"></script>       <!-- defines window.HikariPlugin -->
-<script src="./parse-results.js"></script><!-- defines a plugin-owned global -->
-<script src="./main.js"></script>         <!-- uses both globals -->
+<script src="./hikari.js"></script>
+<script src="./main.js"></script>
 ```
-
-Served, service, and remote plugins have a real origin and are unaffected —
-modules work there. The copyable `hikari.js` client itself remains a classic
-script and works in both local and loopback-served plugins.
 
 ---
 
@@ -576,10 +581,11 @@ script and works in both local and loopback-served plugins.
   a bridge verb the host renders, not the frame reaching into host DOM.
 - **No inter-plugin communication**, and no background execution — a plugin
   only runs while its view exists.
-- **Persistence is the host's, not the platform's.** The sandbox denies
-  `localStorage` to opaque origins, so a plugin that needs to remember anything
-  uses the `storage` verbs (§3.1) and lives within their cap. Larger artifacts
-  use the plugin-scoped `files` verbs (§3.2).
+- **Durable persistence uses the host APIs.** Browser storage works for the
+  life of the loopback origin and survives renderer reloads, but every app run
+  starts empty — deliberately, because ports are recycled across runs (§5.1).
+  Use `storage` (§3.1) for durable records and `files` (§3.2) for larger
+  artifacts.
 
 ---
 
@@ -592,11 +598,11 @@ script and works in both local and loopback-served plugins.
 | `plugin.json needs a "version" like "1.0.0"` | Three numeric parts. `"1.0"` and `"v1.0.0"` are rejected. |
 | `Unknown permission "…"` | Typo, or a capability that does not exist. Allowed names are in §1.2. |
 | Plugin added but not in navigation | Reload the app (Settings → Plugins → Reload App). |
-| Blank local plugin view using `type="module"` | Local frames have an opaque origin and cannot fetch relative ES modules. Load classic scripts in dependency order (§5.4), or opt into `serve: true` when modules are necessary. |
+| Local scripts fail to load | Reload with the current app version and check that the plugin folder still exists. All local assets now load from loopback (§5.4). |
 | Blank plugin view | Open DevTools; the page failed like any webpage would (bad script path, JS error). Paths inside the plugin must be relative. Add an in-frame loading/error state so users see the failure too. |
 | `…did not declare the "X" permission in plugin.json` | Add it to `permissions`, then **remove and re-add** the plugin — grants are snapshotted. |
 | Host calls time out | The frame is not registered: the plugin is disabled, or the page is open outside Hikari (e.g. straight in a browser). |
-| `localStorage` throws | Expected; the sandbox denies storage to opaque origins. |
+| `localStorage` / `IndexedDB` empty after an app restart | Expected. A recycled loopback port would otherwise hand you another plugin's storage, so each run starts the origin empty (§5.1). Use `storage` and `files` for durable data. |
 | The UI says “saved,” but data is missing | Only show success after every awaited API call resolves. `storage.set` rejects a missing `value`, and `files.write` rejects invalid base64 or a downstream disk failure. |
 
 ---
@@ -818,3 +824,14 @@ folder checks live in [`tests/`](../../tests/). For manual end-to-end checks, in
 for the host API and [`examples/plugins/imagej/`](../../examples/plugins/imagej/)
 for a served plugin, then follow
 [imagej-walkthrough.md](imagej-walkthrough.md).
+
+`node tests/plugin-boundaries-selfcheck.mjs` covers origin revocation, service
+message routing, notebook fields, storage rollback, real filesystem symlinks,
+server replacement, and that no origin is served before it has been emptied. It
+needs loopback networking.
+
+`node node_modules/electron/cli.js tests/plugin-runtime-electron.cjs` runs a
+hidden Electron window with a temporary profile and the real preload. It checks
+local asset loading, host isolation, navigation grants, loopback-origin
+clearing, file IPC, notebook and storage persistence, and headless conversion
+without opening user data.

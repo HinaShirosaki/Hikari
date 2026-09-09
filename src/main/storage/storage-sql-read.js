@@ -64,7 +64,7 @@ function readNotebookRowsFromSqlite(rows) {
       resultFiles: [],
       resultFileRecords: [],
       resultFileAddresses: [],
-      notebookState: cleanText(source.notebook_state, 40).toLowerCase() === 'planned' ? 'planned' : 'executed',
+      notebookState: (['planned', 'suggested'].includes(cleanText(source.notebook_state, 40).toLowerCase()) ? cleanText(source.notebook_state, 40).toLowerCase() : 'executed'),
       executedAt: cleanText(source.executed_at, 80),
       agentDraftStatus: cleanText(source.agent_draft_status, 80),
       agentDraftMeta: {

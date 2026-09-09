@@ -1,3 +1,4 @@
+import { parseGenBankLocationSegments } from './parsing/genbank.js';
 import {
   getFeatureTypeGenbankKey,
   normalizeFeatureType
@@ -115,7 +116,8 @@ function buildGenbankFeatureLocation(feature, sequenceLength) {
     return '';
   }
 
-  const ordered = strand === -1 ? [...segments].reverse() : segments;
+  // Parser segments retain GenBank location order; complement reverses coding traversal.
+  const ordered = segments;
   const parts = ordered.map((segment) => `${segment.start + 1}..${segment.end}`);
   const location = parts.length === 1 ? parts[0] : `join(${parts.join(',')})`;
   return strand === -1 ? `complement(${location})` : location;
@@ -140,7 +142,9 @@ function formatGenbankOriginLines(sequence) {
 // The GenBank lines for a single feature. Split out so an annotation can be
 // spliced into a file that already exists without rewriting the rest of it.
 export function buildGenbankFeatureLines(feature, sequenceLength) {
-  const location = buildGenbankFeatureLocation(feature, sequenceLength);
+  const parsedLocation = feature?.locationText ? parseGenBankLocationSegments(feature.locationText, sequenceLength) : [];
+  const rawLocationMatches = parsedLocation.length === feature?.segments?.length && parsedLocation.every((segment, index) => segment.start === feature.segments[index].start && segment.end === feature.segments[index].end && segment.strand === feature.strand);
+  const location = rawLocationMatches ? feature.locationText : buildGenbankFeatureLocation(feature, sequenceLength);
   if (!location) {
     return [];
   }
@@ -149,7 +153,10 @@ export function buildGenbankFeatureLines(feature, sequenceLength) {
   const qualifierPrefix = '                     ';
   const lines = [...wrapGenbankLine(location, featurePrefix, qualifierPrefix)];
 
+  const preservedQualifiers = Object.entries(feature?.qualifiers || {}).filter(([key]) =>
+    /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) && !['label', 'note', 'primer_sequence', 'translation'].includes(key));
   [
+    ...preservedQualifiers,
     ['label', feature?.name || type],
     ['note', feature?.description || ''],
     // Without this the oligo is lost on the way to disk, and reopening the file
@@ -158,12 +165,12 @@ export function buildGenbankFeatureLines(feature, sequenceLength) {
     // primer that was ordered.
     ['primer_sequence', sanitizeGenbankQualifierValue(feature?.primerSequence || '')],
     ['translation', sanitizeGenbankProteinQualifierValue(feature?.translation || '')]
-  ].forEach(([key, rawValue]) => {
+  ].flatMap(([key, rawValue]) => (Array.isArray(rawValue) ? rawValue : [rawValue]).map(value => [key, value])).forEach(([key, rawValue]) => {
     const value = sanitizeGenbankQualifierValue(rawValue);
     if (!value) {
       return;
     }
-    lines.push(...wrapGenbankLine(`/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
+    lines.push(...wrapGenbankLine(value === 'true' && ['pseudo', 'partial', 'trans_splicing', 'ribosomal_slippage'].includes(key) ? `/${key}` : `/${key}="${value}"`, qualifierPrefix, qualifierPrefix));
   });
   return lines;
 }

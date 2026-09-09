@@ -10,22 +10,22 @@
 }
 
 body.theme-night {
-  --workflow-canvas-border: rgba(145, 174, 214, 0.35);
-  --workflow-canvas-grid: rgba(111, 138, 183, 0.2);
-  --workflow-canvas-start: rgba(27, 42, 72, 0.9);
-  --workflow-canvas-end: rgba(19, 31, 56, 0.84);
-  --workflow-node-border: rgba(142, 174, 217, 0.45);
-  --workflow-node-selected-border: rgba(116, 179, 244, 0.95);
-  --workflow-node-selected-highlight: rgba(165, 196, 235, 0.16);
-  --workflow-node-selected-ring: rgba(116, 179, 244, 0.3);
-  --workflow-port-border: rgba(171, 204, 246, 0.45);
-  --workflow-link: rgba(114, 177, 244, 0.88);
-  --workflow-selection-border: rgba(114, 177, 244, 0.95);
-  --workflow-selection-background: rgba(88, 149, 214, 0.22);
-  --workflow-context-border: rgba(121, 152, 198, 0.6);
-  --workflow-context-item-border: rgba(85, 115, 162, 0.7);
-  --workflow-context-item-background: rgba(34, 52, 86, 0.9);
-  --workflow-context-item-hover: rgba(46, 68, 109, 0.94);
+  --workflow-canvas-border: var(--theme-border);
+  --workflow-canvas-grid: color-mix(in srgb, var(--theme-border) 40%, transparent);
+  --workflow-canvas-start: var(--theme-background);
+  --workflow-canvas-end: color-mix(in srgb, var(--theme-background) 88%, var(--theme-surface));
+  --workflow-node-border: var(--theme-border);
+  --workflow-node-selected-border: var(--theme-focus);
+  --workflow-node-selected-highlight: color-mix(in srgb, var(--theme-text) 14%, transparent);
+  --workflow-node-selected-ring: color-mix(in srgb, var(--theme-focus) 34%, transparent);
+  --workflow-port-border: var(--theme-border);
+  --workflow-link: var(--theme-accent);
+  --workflow-selection-border: var(--theme-focus);
+  --workflow-selection-background: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  --workflow-context-border: var(--theme-border);
+  --workflow-context-item-border: var(--theme-border-soft);
+  --workflow-context-item-background: var(--theme-surface-elevated);
+  --workflow-context-item-hover: var(--theme-surface-active);
 }
 
 body.theme-miku {

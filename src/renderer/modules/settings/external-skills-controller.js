@@ -59,7 +59,8 @@ export function createExternalSkillsController({
     const settings = getAgentSettings();
     const agent = {
       externalSkillsEnabled: settings.externalSkillsEnabled !== false,
-      disabledExternalSkillNames: normalizeDisabledNames(settings.disabledExternalSkillNames)
+      disabledExternalSkillNames: normalizeDisabledNames(settings.disabledExternalSkillNames),
+      disabledMcpToolNames: normalizeDisabledNames(settings.disabledMcpToolNames)
     };
     return {
       agent,
@@ -107,14 +108,23 @@ export function createExternalSkillsController({
 
     listElement.innerHTML = skills.map((skill) => {
       const individuallyEnabled = !disabledSet.has(skill.name.toLowerCase());
+      const blockedByDependency = globallyEnabled
+        && individuallyEnabled
+        && skill.settingsEnabled === false;
       const statusText = !globallyEnabled
         ? 'Paused by global switch.'
         : !individuallyEnabled
           ? 'Hidden from agent prompts.'
+          : blockedByDependency
+            ? (skill.disabledReason || 'Blocked by an unavailable dependency.')
           : skill.eligible
             ? 'Available to agent.'
             : (skill.disabledReason || 'Not eligible in this environment.');
-      const toggleText = individuallyEnabled ? (globallyEnabled ? 'On' : 'Allowed') : 'Off';
+      const toggleText = blockedByDependency
+        ? 'Blocked'
+        : individuallyEnabled
+          ? (globallyEnabled ? 'On' : 'Allowed')
+          : 'Off';
       const commandText = skill.commandName ? `/${escapeHtml(skill.commandName)}` : 'no command';
       const modelText = skill.modelVisible ? 'model visible' : 'command only';
       const pathText = skill.path
@@ -132,7 +142,7 @@ export function createExternalSkillsController({
             ${pathText}
           </div>
           <label class="settings-skill-toggle">
-            <input type="checkbox" data-external-skill-toggle data-skill-name="${escapeHtml(skill.name)}" ${individuallyEnabled ? 'checked' : ''} />
+            <input type="checkbox" data-external-skill-toggle data-skill-name="${escapeHtml(skill.name)}" ${individuallyEnabled ? 'checked' : ''} ${blockedByDependency ? 'disabled' : ''} />
             <span>${escapeHtml(toggleText)}</span>
           </label>
         </div>

@@ -126,7 +126,12 @@ function bindSequenceHostEvents(context = {}) {
       return;
     }
 
-    hideSequenceHoverTooltip();
+    // mouseover opened this readout; hiding it on every move over the same
+    // feature made it flicker and then vanish as soon as the pointer held
+    // still. Leaving a feature is already covered by mouseout/mouseleave.
+    if (!event.target?.closest?.('[data-feature-index]')) {
+      hideSequenceHoverTooltip();
+    }
     const boundary = resolveSequenceBoundaryFromEvent(event, record);
     if (Number.isFinite(boundary)) {
       if (state.sequenceCursorBase !== boundary) {
@@ -143,7 +148,7 @@ function bindSequenceHostEvents(context = {}) {
     }
   });
 
-  elements.sequenceHost?.addEventListener('mouseover', (event) => {
+  function showFeatureReadout(event) {
     const record = getSelectedRecord();
     const trigger = event.target?.closest?.('[data-feature-index]');
     if (!trigger || !record?.sequence?.length) {
@@ -160,8 +165,13 @@ function bindSequenceHostEvents(context = {}) {
       hideSequenceHoverTooltip();
       return;
     }
-    showSequenceHoverTooltip(event, feature, record.sequence.length);
-  });
+    const rect = event.type === 'focusin' ? trigger.getBoundingClientRect?.() : null;
+    showSequenceHoverTooltip(rect ? { clientX: rect.left, clientY: rect.bottom } : event, feature, record.sequence.length);
+  }
+
+  elements.sequenceHost?.addEventListener('mouseover', showFeatureReadout);
+  elements.sequenceHost?.addEventListener('focusin', showFeatureReadout);
+  elements.sequenceHost?.addEventListener('focusout', hideSequenceHoverTooltip);
 
   elements.sequenceHost?.addEventListener('mouseout', (event) => {
     if (!event?.relatedTarget?.closest?.('[data-feature-index]')) {

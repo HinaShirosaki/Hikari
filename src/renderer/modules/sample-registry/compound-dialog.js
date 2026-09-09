@@ -14,7 +14,7 @@ export function setCompoundStatus(ctx, message, isError) {
     return;
   }
   sampleCompoundStatus.textContent = String(message || '');
-  sampleCompoundStatus.style.color = isError ? '#982a38' : '';
+  sampleCompoundStatus.classList.toggle('is-error', Boolean(isError));
 }
 
 export function renderCompoundFields(ctx) {

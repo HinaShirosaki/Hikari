@@ -1,17 +1,28 @@
 import {
+  buildNotebookSampleLinkMetadata,
   formatSampleLinkValue,
   getSampleTypeLabel
 } from '../samples/sample-helpers.js';
+import { createPlaceholderSuggestions } from '../samples/placeholder-suggestions.js';
 
 export function createInlinePlaceholderController({
   stepsHost,
   getSampleLink,
   deleteSampleLink,
+  setSampleLink,
+  getSamples = () => [],
+  getInventory = () => ({}),
   getSettings,
   onOpenSampleLinkMenu,
   onPersistSampleLinks,
   onValueCommitted
 } = {}) {
+  const suggestions = createPlaceholderSuggestions({
+    stepsHost, getSamples, getInventory,
+    getSettings: () => getSettings?.() || {},
+    onSelect: (editor, sample) => commitEditor(editor, sample)
+  });
+  let committing = false;
   function renderedWidth(element) {
     const rect = typeof element?.getBoundingClientRect === 'function'
       ? element.getBoundingClientRect()
@@ -54,9 +65,9 @@ export function createInlinePlaceholderController({
     token.classList.toggle('is-empty', !cleanValue);
     token.classList.toggle('is-linked-sample', Boolean(sampleLink?.sampleId));
     token.title = sampleLink?.sampleId
-      ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Right-click to replace.`
+      ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Click and type to replace.`
       : (wrap.dataset.samplePlaceholderType
-        ? `Right-click to link a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType, typeof getSettings === 'function' ? getSettings() : {})} sample.`
+        ? `Click and type to find a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType, typeof getSettings === 'function' ? getSettings() : {})} sample.`
         : '');
     if (sampleLink?.sampleId) {
       wrap.dataset.linkedSampleId = sampleLink.sampleId;
@@ -70,6 +81,7 @@ export function createInlinePlaceholderController({
   }
 
   function closeEditor(editor) {
+    suggestions.close();
     const wrap = editor.closest('[data-inline-placeholder]');
     const hiddenValue = wrap?.querySelector('[data-nb-key]');
     const token = wrap?.querySelector('[data-inline-token]');
@@ -79,28 +91,47 @@ export function createInlinePlaceholderController({
     refreshTokenFromValue(wrap);
   }
 
-  function commitEditor(editor) {
-    const wrap = editor.closest('[data-inline-placeholder]');
-    const hiddenValue = wrap?.querySelector('[data-nb-key]');
-    if (!hiddenValue) {
-      closeEditor(editor);
-      return;
-    }
+  function commitEditor(editor, selectedSample = null) {
+    if (committing) return;
+    committing = true;
+    try {
+      const wrap = editor.closest('[data-inline-placeholder]');
+      const hiddenValue = wrap?.querySelector('[data-nb-key]');
+      if (!hiddenValue) {
+        closeEditor(editor);
+        return;
+      }
 
-    const cleanValue = editor.value.trim();
-    const key = String(hiddenValue.dataset.nbKey || '').trim();
-    const existingLink = key ? getSampleLink(key) : null;
-    let removedSampleLink = false;
-    if (existingLink && cleanValue !== formatSampleLinkValue(existingLink)) {
-      deleteSampleLink(key);
-      removedSampleLink = true;
+      const key = String(hiddenValue.dataset.nbKey || '').trim();
+      const existingLink = key ? getSampleLink(key) : null;
+      let selectedLink = null;
+      if (selectedSample && key && setSampleLink) {
+        selectedLink = buildNotebookSampleLinkMetadata({
+          key,
+          name: wrap.dataset.placeholderName,
+          placeholderType: selectedSample.type,
+          sample: selectedSample,
+          existingLink,
+          inventory: getInventory()
+        });
+        setSampleLink(key, selectedLink);
+        editor.value = formatSampleLinkValue(selectedLink);
+      }
+      const cleanValue = editor.value.trim();
+      let removedSampleLink = false;
+      if (!selectedLink && existingLink && cleanValue !== formatSampleLinkValue(existingLink)) {
+        deleteSampleLink(key);
+        removedSampleLink = true;
+      }
+      hiddenValue.value = cleanValue;
+      closeEditor(editor);
+      if (removedSampleLink || selectedLink) {
+        onPersistSampleLinks?.();
+      }
+      onValueCommitted?.({ key, value: cleanValue });
+    } finally {
+      committing = false;
     }
-    hiddenValue.value = cleanValue;
-    closeEditor(editor);
-    if (removedSampleLink) {
-      onPersistSampleLinks?.();
-    }
-    onValueCommitted?.({ key, value: cleanValue });
   }
 
   function onContextMenu(event) {
@@ -145,24 +176,27 @@ export function createInlinePlaceholderController({
     editor.hidden = false;
     editor.focus();
     editor.select();
+    suggestions.update(editor);
   }
 
   function onInput(event) {
     const editor = event.target.closest('[data-inline-input]');
     if (editor) {
       resizeEditorForValue(editor);
+      suggestions.update(editor);
     }
   }
 
   function onBlur(event) {
     const editor = event.target.closest('[data-inline-input]');
-    if (!editor) {
+    if (!editor || editor.hidden) {
       return;
     }
     commitEditor(editor);
   }
 
   function onKeydown(event) {
+    if (event.isComposing || suggestions.onKeydown(event)) return;
     const editor = event.target.closest('[data-inline-input]');
     if (!editor) {
       return;

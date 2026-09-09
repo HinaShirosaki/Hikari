@@ -22,6 +22,7 @@ function createNotebookSampleLinks({
   resultTableController,
   toolSidebarController,
   onNotebookEntriesChanged,
+  onEntryExecuted = () => {},
   getActiveEntry,
   collectNotebookValues,
   collectNotebookSampleLinks,
@@ -81,6 +82,7 @@ function createNotebookSampleLinks({
       onNotebookEntriesChanged();
     }
     markDraftSaved();
+    onEntryExecuted(nextEntry);
   }
 
   function persistActiveEntrySampleLinks() {

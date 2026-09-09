@@ -27,6 +27,9 @@ const { callProtocolGeneration } = require('../mcp-contract/direct-tools/protoco
 const {
   resolveProtocolGenerationArtifact
 } = require('../runtime/artifact-recovery/protocol-generation.js');
+const {
+  isHikariMcpToolEnabled
+} = require('../mcp-contract/tool-availability.js');
 
 function createCodexAgentRuntime(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
@@ -257,6 +260,12 @@ function createCodexAgentRuntime(deps = {}) {
     );
     codexAgent.recovered_from_codex_session_id = recoveredFromCodexSessionId;
 
+    const protocolToolContext = {
+      ...buildCodexMcpContext({ ...effectiveInput, cwd, model }, { cleanText }),
+      snapshot: ensureObject(input.snapshot),
+      traceContext,
+      lifecycleRecorder
+    };
     const protocolGenerationArtifact = await resolveProtocolGenerationArtifact({
       agentResult: codexAgent,
       userMessage: input.message,
@@ -264,16 +273,11 @@ function createCodexAgentRuntime(deps = {}) {
       cleanText,
       lifecycleRecorder,
       recordLifecycleEvent,
-      executeProtocolGeneration: runTool
+      executeProtocolGeneration: runTool && isHikariMcpToolEnabled('protocol_generation', protocolToolContext)
         ? (args, context) => callProtocolGeneration(args, context, { runTool })
         : null,
       streamedProtocolGenerationPayloads: streamState.streamedProtocolGenerationPayloads,
-      toolContext: {
-        ...buildCodexMcpContext({ ...effectiveInput, cwd, model }, { cleanText }),
-        snapshot: ensureObject(input.snapshot),
-        traceContext,
-        lifecycleRecorder
-      },
+      toolContext: protocolToolContext,
       lifecycleStage: 'codex_agent_direct_tool_fallback',
       routingIntent: 'codex_agent',
       agentLabel: 'Codex'
@@ -339,9 +343,6 @@ function createCodexAgentRuntime(deps = {}) {
         ? { notebook_append: streamState.streamedNotebookAppendPayload }
         : {}),
       ...(protocolGenerationArtifact ? { protocol_generation: protocolGenerationArtifact } : {}),
-      ...(streamState.streamedSequenceEditProposals?.length
-        ? { sequence_edit: { proposals: streamState.streamedSequenceEditProposals } }
-        : {}),
       thinking_trace: {
         intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)

@@ -713,22 +713,26 @@ body.theme-night .result-table th {
   background: var(--theme-surface-subtle);
 }
 
+/*
+ * Night chips mix their status hue toward the light text, not toward the dark
+ * surface. Mixing toward the surface put 1.5:1 ink on its own fill.
+ */
 body.theme-night .crispr-risk-low {
-  color: color-mix(in srgb, var(--theme-success) 38%, var(--theme-surface-elevated));
-  border-color: color-mix(in srgb, var(--theme-success) 50%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-success) 24%, var(--theme-surface));
+  color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-text-strong));
+  border-color: color-mix(in srgb, var(--theme-success) 42%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 16%, var(--theme-surface));
 }
 
 body.theme-night .crispr-risk-medium {
-  color: color-mix(in srgb, var(--theme-warning) 48%, var(--theme-surface-elevated));
-  border-color: color-mix(in srgb, var(--theme-warning) 58%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-warning) 24%, var(--theme-surface));
+  color: color-mix(in srgb, var(--theme-warning) 72%, var(--theme-text-strong));
+  border-color: color-mix(in srgb, var(--theme-warning) 42%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-warning) 16%, var(--theme-surface));
 }
 
 body.theme-night .crispr-risk-high {
-  color: color-mix(in srgb, var(--theme-danger) 46%, var(--theme-surface-elevated));
-  border-color: color-mix(in srgb, var(--theme-danger) 54%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 24%, var(--theme-surface));
+  color: color-mix(in srgb, var(--theme-danger) 72%, var(--theme-text-strong));
+  border-color: color-mix(in srgb, var(--theme-danger) 42%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 16%, var(--theme-surface));
 }
 
 body.ui-neutral-compact .calc-output,

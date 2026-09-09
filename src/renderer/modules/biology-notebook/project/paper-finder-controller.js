@@ -5,6 +5,22 @@ function cleanText(value) {
   return String(value || '').trim();
 }
 
+function localTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    return 'UTC';
+  }
+}
+
+function timeValueFromDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 function taskConfig(task = {}) {
   return ensureObject(ensureObject(ensureObject(task).metadata).paper_finding);
 }
@@ -18,11 +34,13 @@ function formatNextRun(task = {}) {
   if (Number.isNaN(parsed.getTime())) {
     return 'Scheduled';
   }
+  const timezone = cleanText(ensureObject(task.schedule).timezone);
   return `Next: ${parsed.toLocaleString([], {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    ...(timezone ? { timeZone: timezone, timeZoneName: 'short' } : {})
   })}`;
 }
 
@@ -84,6 +102,7 @@ export function createProjectPaperFinderController({
   let activeTask = null;
   let loadRevision = 0;
   let busy = false;
+  let scheduleTimezone = localTimeZone();
 
   function findElement(selector) {
     return host?.querySelector?.(selector) || null;
@@ -95,6 +114,12 @@ export function createProjectPaperFinderController({
       stateLabel: findElement('[data-paper-finder-state]'),
       frequencyValue: findElement('[data-paper-finder-frequency-value]'),
       frequencyUnit: findElement('[data-paper-finder-frequency-unit]'),
+      weekdayField: findElement('[data-paper-finder-weekday-field]'),
+      weekday: findElement('[data-paper-finder-weekday]'),
+      monthdayField: findElement('[data-paper-finder-monthday-field]'),
+      monthday: findElement('[data-paper-finder-monthday]'),
+      time: findElement('[data-paper-finder-time]'),
+      timezone: findElement('[data-paper-finder-timezone]'),
       requirements: findElement('[data-paper-finder-requirements]'),
       saveBtn: findElement('[data-paper-finder-save]'),
       runBtn: findElement('[data-paper-finder-run]'),
@@ -103,6 +128,26 @@ export function createProjectPaperFinderController({
       status: findElement('[data-paper-finder-status]'),
       results: findElement('[data-paper-finder-results]')
     };
+  }
+
+  function syncScheduleFields() {
+    const controls = elements();
+    const unit = cleanText(controls.frequencyUnit?.value) || 'week';
+    if (controls.weekdayField) {
+      controls.weekdayField.hidden = unit !== 'week';
+    }
+    if (controls.monthdayField) {
+      controls.monthdayField.hidden = unit !== 'month';
+    }
+    if (controls.frequencyValue) {
+      controls.frequencyValue.max = String({ day: 365, week: 52, month: 12 }[unit] || 1);
+    }
+    if (controls.timezone) {
+      const localZone = localTimeZone();
+      controls.timezone.textContent = scheduleTimezone === localZone
+        ? `Local time · ${localZone}`
+        : `Time zone · ${scheduleTimezone}`;
+    }
   }
 
   function renderResults(task = activeTask) {
@@ -172,15 +217,36 @@ export function createProjectPaperFinderController({
   function hydrateFields(task = null) {
     const controls = elements();
     const config = taskConfig(task);
+    const schedule = ensureObject(task?.schedule);
+    const referenceDate = new Date(schedule.anchor_at || task?.next_run_at || '');
+    const hasReferenceDate = !Number.isNaN(referenceDate.getTime());
+    const frequencyUnit = cleanText(schedule.interval_unit || config.frequency_unit) || 'week';
     if (controls.frequencyValue) {
-      controls.frequencyValue.value = String(Number(config.frequency_value) || 1);
+      controls.frequencyValue.value = String(Number(schedule.interval_value || config.frequency_value) || 1);
     }
     if (controls.frequencyUnit) {
-      controls.frequencyUnit.value = cleanText(config.frequency_unit) || 'week';
+      controls.frequencyUnit.value = frequencyUnit;
     }
+    if (controls.weekday) {
+      controls.weekday.value = String(
+        Number(schedule.day_of_week ?? config.schedule_day_of_week ?? (hasReferenceDate ? referenceDate.getDay() : 1))
+      );
+    }
+    if (controls.monthday) {
+      controls.monthday.value = String(
+        Number(schedule.day_of_month ?? config.schedule_day_of_month ?? (hasReferenceDate ? referenceDate.getDate() : 1))
+      );
+    }
+    if (controls.time) {
+      controls.time.value = cleanText(schedule.time_of_day || config.schedule_time)
+        || (hasReferenceDate ? timeValueFromDate(referenceDate) : '')
+        || '09:00';
+    }
+    scheduleTimezone = cleanText(schedule.timezone || config.schedule_timezone) || localTimeZone();
     if (controls.requirements) {
       controls.requirements.value = cleanText(config.requirements);
     }
+    syncScheduleFields();
   }
 
   function taskMatchesProject(task, project) {
@@ -226,7 +292,7 @@ export function createProjectPaperFinderController({
       syncTask(task);
       hydrateFields(task);
       renderResults(task);
-      setStatus(task ? 'Metadata-only paper finding is active.' : 'No paper-finding schedule yet.');
+      setStatus(task ? 'Metadata-only paper finding is active.' : '');
       return task;
     } catch (error) {
       if (revision === loadRevision) {
@@ -252,6 +318,12 @@ export function createProjectPaperFinderController({
       frequency: {
         value: Number(controls.frequencyValue?.value) || 1,
         unit: cleanText(controls.frequencyUnit?.value) || 'week'
+      },
+      timing: {
+        time_of_day: cleanText(controls.time?.value) || '09:00',
+        timezone: scheduleTimezone,
+        day_of_week: Number(controls.weekday?.value ?? 1),
+        day_of_month: Number(controls.monthday?.value ?? 1)
       },
       preferred_journals: asArray(settings.preferredJournals),
       enabled: true,
@@ -397,8 +469,18 @@ export function createProjectPaperFinderController({
     }
   }
 
+  function onHostChange(event) {
+    if (
+      event?.target?.matches?.('[data-paper-finder-frequency-unit]')
+      || event?.target?.dataset?.paperFinderFrequencyUnit !== undefined
+    ) {
+      syncScheduleFields();
+    }
+  }
+
   host?.addEventListener?.('submit', onHostSubmit);
   host?.addEventListener?.('click', onHostClick);
+  host?.addEventListener?.('change', onHostChange);
 
   return {
     getActiveTask: () => activeTask,
@@ -406,6 +488,7 @@ export function createProjectPaperFinderController({
     remove,
     runNow,
     save,
+    syncScheduleFields,
     syncTask,
     toggleEnabled
   };

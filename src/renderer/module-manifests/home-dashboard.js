@@ -10,36 +10,31 @@ export const homeDashboardManifest = {
     persist,
     createId,
     safeText,
-    rendererServices,
     showView,
     views,
-    rootDocument,
+    modules,
     apiBridge
   }) => ({
     state,
     persist,
     createId,
     safeText,
-    onOpenSampleSearch: rendererServices.inventory.openSampleSearch,
-    onOpenSamples: () => rendererServices.inventory.openSampleSearch(''),
     onOpenNotebook: () => showView(views.BIOLOGY_NOTEBOOK),
-    onOpenWorkflow: () => showView(views.WORKFLOW_MANAGEMENT),
-    onOpenAssistant: () => showView(views.AGENT),
     api: apiBridge,
-    onSendQuickLogToAgent: (message) => {
+    onSendQuickLogToAgent: async (message) => {
       const draft = String(message || '').trim();
       if (!draft) {
-        return false;
+        return { ok: false, reason: 'empty' };
       }
-      showView(views.AGENT);
-      const agentInput = rootDocument?.getElementById?.('agent-message-input');
-      const sendButton = rootDocument?.getElementById?.('agent-send-btn');
-      if (!(agentInput instanceof HTMLTextAreaElement) || !(sendButton instanceof HTMLButtonElement)) {
-        return false;
+      const submitExternalMessage = modules.agentChat?.submitExternalMessage;
+      if (typeof submitExternalMessage !== 'function') {
+        return { ok: false, reason: 'unavailable' };
       }
-      agentInput.value = draft;
-      sendButton.click();
-      return true;
+      const result = await submitExternalMessage(draft);
+      if (result?.ok) {
+        showView(views.AGENT);
+      }
+      return result;
     }
   }),
   render: ({ modules }) => modules.homeDashboard?.render()

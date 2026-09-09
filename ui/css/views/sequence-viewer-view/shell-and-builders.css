@@ -975,6 +975,70 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   overflow: hidden;
 }
 
+.sequence-viewer-protein-builder-section-title,
+.sequence-viewer-protein-builder-dna-title,
+.sequence-viewer-protein-builder-sequence-head-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-copy-btn.ghost-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-protein-builder-copy-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sequence-viewer-protein-builder-copy-btn.ghost-btn:hover,
+.sequence-viewer-protein-builder-copy-btn.ghost-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-protein-builder-add-protein-btn {
+  min-height: 28px;
+  padding: 4px 9px;
+  line-height: 1;
+}
+
+.sequence-viewer-protein-builder-codon-usage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.sequence-viewer-protein-builder-codon-usage select {
+  width: auto;
+  min-width: 160px;
+  min-height: 30px;
+  padding: 4px 28px 4px 8px;
+  font-size: 0.8rem;
+}
+
 .sequence-viewer-protein-builder-workflow {
   --builder-notch: 15px;
   margin-top: 10px;
@@ -1045,7 +1109,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   justify-items: start;
   gap: 1px;
   background: var(--builder-block-fill, var(--theme-accent));
-  color: var(--theme-text-on-accent);
+  color: var(--sequence-viewer-builder-ink);
   clip-path: polygon(0 0, calc(100% - var(--builder-notch)) 0, 100% 50%, calc(100% - var(--builder-notch)) 100%, 0 100%);
 }
 
@@ -1150,6 +1214,54 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   --builder-block-fill: var(--sequence-viewer-builder-poi);
 }
 
+.sequence-viewer-protein-builder-palette-1 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-1);
+}
+
+.sequence-viewer-protein-builder-palette-2 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-2);
+}
+
+.sequence-viewer-protein-builder-palette-3 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-3);
+}
+
+.sequence-viewer-protein-builder-palette-4 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-4);
+}
+
+.sequence-viewer-protein-builder-palette-5 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-5);
+}
+
+.sequence-viewer-protein-builder-palette-6 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-6);
+}
+
+.sequence-viewer-protein-builder-palette-7 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-7);
+}
+
+.sequence-viewer-protein-builder-palette-8 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-8);
+}
+
+.sequence-viewer-protein-builder-palette-9 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-9);
+}
+
+.sequence-viewer-protein-builder-palette-10 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-10);
+}
+
+.sequence-viewer-protein-builder-palette-11 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-11);
+}
+
+.sequence-viewer-protein-builder-palette-12 {
+  --builder-block-fill: var(--sequence-viewer-builder-palette-12);
+}
+
 /* The controls belong to the block being pointed at, so they stay out of the
    ribbon until it is hovered or a button inside takes focus. */
 .sequence-viewer-protein-builder-block-actions {
@@ -1217,8 +1329,63 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   word-break: break-all;
 }
 
-.sequence-viewer-protein-builder-dna-notes {
-  margin-top: 10px;
+.sequence-viewer-protein-builder-sequence-editor {
+  min-height: 136px;
+}
+
+.sequence-viewer-protein-builder-sequence-editor .sequence-viewer-protein-builder-sequence-input {
+  display: none;
+}
+
+.sequence-viewer-protein-builder-sequence-editor.is-editing .sequence-viewer-protein-builder-protein-sequence-highlight {
+  display: none;
+}
+
+.sequence-viewer-protein-builder-sequence-editor.is-editing .sequence-viewer-protein-builder-sequence-input {
+  display: block;
+  width: 100%;
+}
+
+.sequence-viewer-protein-builder-protein-sequence-highlight {
+  cursor: text;
+}
+
+.sequence-viewer-protein-builder-protein-segment,
+.sequence-viewer-protein-builder-dna-segment {
+  padding: 0.12em 0.08em;
+  background: var(--builder-block-fill, var(--sequence-viewer-builder-custom));
+  color: var(--sequence-viewer-builder-ink);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.sequence-viewer-protein-builder-add-protein-dialog {
+  --app-dialog-width: 560px;
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-protein-builder-add-protein-field {
+  display: grid;
+  gap: 6px;
+  color: var(--theme-text-strong);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.sequence-viewer-protein-builder-add-protein-field textarea {
+  min-height: 150px;
+  resize: vertical;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  text-transform: uppercase;
+}
+
+.sequence-viewer-protein-builder-add-protein-dialog .small-note {
+  margin: 0;
+}
+
+.sequence-viewer-protein-builder-add-protein-actions {
+  justify-content: flex-end;
 }
 
 .sequence-viewer-detail-workspace {

@@ -107,7 +107,6 @@ function createManualStepNavigation({
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus('Moved back to previous step.');
   }
 
@@ -189,7 +188,6 @@ function createManualStepNavigation({
     renderOverrideStatus();
     renderManualProgress();
     deps.renderCanvas();
-    deps.renderReport();
     deps.setStatus('Gel tool selections reset.');
   }
 

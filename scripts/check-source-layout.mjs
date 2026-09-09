@@ -186,14 +186,12 @@ const allowedSequencePrefixes = [
   'src/main/preload/',
   'src/main/storage/'
 ];
-// Agent-side MCP wiring for the sequence_viewer / sequence_edit tools lives with
-// the other agent tools, not in the viewer module. These specific files are the
-// only sequence-named exceptions in the agent layer.
 const allowedSequenceFiles = new Set([
   'src/renderer/module-manifests/sequence-viewer.js',
-  'src/main/agent/mcp-contract/direct-tools/sequence-viewer.js',
-  'src/main/agent/mcp-contract/direct-tools/sequence-edit.js',
-  'src/main/agent/tools/agent-sequence-viewer.js'
+  // Thin MCP validation/registration adapter; domain logic remains in Sequence Viewer.
+  'src/main/agent/mcp-contract/direct-tools/sequence-tools.js',
+  // Packaged official agent guidance; executable domain code stays in the feature.
+  'src/main/agent/codex-agent/official-skills/hikari-sequence-viewer/references/primer-review.md'
 ]);
 allFiles.forEach((filePath) => {
   const file = relative(filePath);

@@ -71,16 +71,24 @@ export function createSequenceViewerAlignmentController(config = {}) {
     );
   }
 
+  // Painting the stored status is separate from setting it: render() re-asserts
+  // the current status on every pass, and only the set path may raise a notice —
+  // otherwise a re-render would re-toast the same failure once the flag faded.
+  function applyAlignmentStatus() {
+    if (!elements.alignmentStatus) {
+      return;
+    }
+    elements.alignmentStatus.textContent = state.statusMessage;
+    elements.alignmentStatus.classList.toggle('is-error', Boolean(state.statusIsError));
+  }
+
   function setAlignmentStatus(message, isError = false) {
     if (isError && message) {
       showTransientNotice(message, { type: 'error' });
     }
     state.statusMessage = String(message || '').trim() || 'Idle';
     state.statusIsError = isError === true;
-    if (elements.alignmentStatus) {
-      elements.alignmentStatus.textContent = state.statusMessage;
-      elements.alignmentStatus.style.color = isError ? 'var(--theme-danger)' : '';
-    }
+    applyAlignmentStatus();
   }
 
   function setQueryMode(mode) {
@@ -207,21 +215,17 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (elements.alignmentQueryStatus) {
       if (state.query.errors.length) {
         elements.alignmentQueryStatus.textContent = state.query.errors[0];
-        showTransientNotice(state.query.errors[0], { type: 'error' });
-        elements.alignmentQueryStatus.style.color = 'var(--theme-danger)';
       } else if (state.query.warnings.length) {
         elements.alignmentQueryStatus.textContent = state.query.warnings.join(' | ');
-        elements.alignmentQueryStatus.style.color = '';
       } else if (state.query.records.length) {
         const sourceFormat = String(state.query.format || state.query.records[0]?.sourceFormat || 'unknown').toUpperCase();
         elements.alignmentQueryStatus.textContent = `Loaded ${state.query.records.length} ${sourceFormat} record${state.query.records.length === 1 ? '' : 's'}.`;
-        elements.alignmentQueryStatus.style.color = '';
       } else {
         elements.alignmentQueryStatus.textContent = state.queryMode === 'paste'
           ? 'Paste a query sequence, then run alignment.'
           : 'Query parser idle.';
-        elements.alignmentQueryStatus.style.color = '';
       }
+      elements.alignmentQueryStatus.classList.toggle('is-error', state.query.errors.length > 0);
     }
   }
 
@@ -230,7 +234,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     setQueryMode(state.queryMode);
     renderQuerySource();
     syncButtons();
-    setAlignmentStatus(state.statusMessage, state.statusIsError);
+    applyAlignmentStatus();
   }
 
   function openSequencingAlignmentWorkspace() {

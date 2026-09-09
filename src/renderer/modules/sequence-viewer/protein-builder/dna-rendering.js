@@ -1,5 +1,20 @@
 import { escapeHtml } from '../../../lib/html.js';
 import { buildDnaConstruct } from './dna-construct.js';
+import { escapeAttribute } from './row-factory.js';
+import { getProteinBuilderPaletteClass } from './block-palette.js';
+
+function renderHighlightedDna(sequence, parts = []) {
+  const safeSequence = String(sequence || '');
+  const chainSequence = parts.map((part) => String(part?.dnaSequence || '')).join('');
+  if (!parts.length || chainSequence !== safeSequence) {
+    return `<span class="sequence-viewer-protein-builder-dna-segment sequence-viewer-protein-builder-block-custom">${escapeHtml(safeSequence)}</span>`;
+  }
+  return parts.map((part, index) => {
+    const type = String(part?.type || 'custom').toLowerCase().replace(/[^a-z0-9-]/g, '') || 'custom';
+    const paletteClass = getProteinBuilderPaletteClass(part?.paletteSlot || index + 1);
+    return `<span class="sequence-viewer-protein-builder-dna-segment sequence-viewer-protein-builder-block-${type} ${paletteClass}" title="${escapeAttribute(part?.label || 'Protein block')}">${escapeHtml(part?.dnaSequence || '')}</span>`;
+  }).join('');
+}
 
 export function installProteinBuilderDnaRendering(ctx) {
   const { elements, state } = ctx;
@@ -12,6 +27,9 @@ export function installProteinBuilderDnaRendering(ctx) {
       elements.proteinBuilderDnaMeta.textContent = state.dnaConstruct?.sequence?.length
         ? `${state.dnaConstruct.length} nt | ${state.dnaConstruct.parts.length} block${state.dnaConstruct.parts.length === 1 ? '' : 's'}`
         : 'DNA build not run yet.';
+    }
+    if (elements.proteinBuilderCopyDnaBtn) {
+      elements.proteinBuilderCopyDnaBtn.disabled = !state.dnaConstruct?.ok || !state.dnaConstruct?.sequence;
     }
     if (!elements.proteinBuilderDnaSequence) {
       return;
@@ -33,23 +51,16 @@ export function installProteinBuilderDnaRendering(ctx) {
       return;
     }
 
-    const supplemental = [
-      ...(Array.isArray(state.dnaConstruct.notes) ? state.dnaConstruct.notes : []),
-      ...(Array.isArray(state.dnaConstruct.warnings) ? state.dnaConstruct.warnings : [])
-    ].filter(Boolean);
-    elements.proteinBuilderDnaSequence.innerHTML = `
-      <span class="sequence-viewer-protein-builder-sequence-text">${escapeHtml(state.dnaConstruct.sequence)}</span>
-      ${supplemental.length
-        ? `<div class="sequence-viewer-protein-builder-dna-notes">${supplemental.map((message) => `<p class="small-note">${escapeHtml(message)}</p>`).join('')}</div>`
-        : ''}
-    `;
+    elements.proteinBuilderDnaSequence.innerHTML =
+      `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedDna(state.dnaConstruct.sequence, state.dnaConstruct.parts)}</span>`;
   };
 
   ctx.buildCurrentDnaSequence = function buildCurrentDnaSequence() {
     const payload = ctx.getProteinBuilderPayload();
     const dnaConstruct = buildDnaConstruct(payload, {
       record: ctx.getSelectedRecord(),
-      selectedFeature: ctx.getSelectedFeature()
+      selectedFeature: ctx.getSelectedFeature(),
+      organism: payload.codonUsageProfile
     });
     state.dnaConstruct = {
       ...dnaConstruct,
@@ -65,8 +76,8 @@ export function installProteinBuilderDnaRendering(ctx) {
       return state.dnaConstruct;
     }
 
-    const noteText = state.dnaConstruct.notes.length ? ` ${state.dnaConstruct.notes.join(' ')}` : '';
-    ctx.setBuilderStatus(`Built ${state.dnaConstruct.length} nt DNA sequence from the current protein chain.${noteText}`);
+    // The nt | block meta line already reports a successful build; no status echo.
+    ctx.setBuilderStatus('');
     return state.dnaConstruct;
   };
 }

@@ -192,7 +192,7 @@ button.app-dialog-close-btn--floating {
 }
 
 .unsaved-changes-dialog.app-dialog-surface {
-  --app-dialog-width: 520px;
+  --app-dialog-width: 440px;
   --app-dialog-padding: 20px;
   --app-dialog-gap: 14px;
 }
@@ -206,14 +206,15 @@ button.app-dialog-close-btn--floating {
 }
 
 .unsaved-changes-list li {
-  padding: 9px 10px;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
-  background: var(--theme-surface-subtle);
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--theme-text-strong);
 }
 
 .unsaved-changes-actions {
+  gap: 6px;
   justify-content: flex-end;
 }
 

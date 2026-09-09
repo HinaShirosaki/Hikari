@@ -15,7 +15,9 @@ const { recoverMissingSequenceEntries } = require('./entry-reconcile');
 const { deleteOrphanFeatures, rebuildCdsSequenceTable } = require('./feature-store');
 const {
   ensureLibraryDirectories,
+  ensureLibraryFolderDir,
   ensurePathWithinRoot,
+  ensureProjectSequenceDirectories,
   resolveLibraryPaths
 } = require('./paths');
 const { cleanText } = require('./utils');
@@ -23,15 +25,21 @@ const {
   attachAlignmentSourcePaths,
   readAlignmentManifest
 } = require('./alignment-store');
-const { listSequenceFoldersFromDb } = require('./folder-store');
+const {
+  isProjectFolderId,
+  listSequenceFoldersFromDb,
+  syncProjectFolderRows
+} = require('./folder-store');
 
-async function listSequenceEntries({ storagePath, status = '' }) {
+async function listSequenceEntries({ storagePath, status = '', projects = [] }) {
   const paths = resolveLibraryPaths(storagePath);
   await ensureLibraryDirectories(paths);
+  await ensureProjectSequenceDirectories(paths, projects);
   const db = await openDatabase(paths.sqlitePath);
   try {
     const recoveredEntryCount = await recoverMissingSequenceEntries({ db, paths });
-    if (recoveredEntryCount > 0) {
+    const syncedProjectFolders = syncProjectFolderRows(db, projects);
+    if (recoveredEntryCount > 0 || syncedProjectFolders) {
       await persistDatabase(paths.sqlitePath, db);
     }
     const normalizedStatus = cleanText(status, 40).toLowerCase();
@@ -49,10 +57,16 @@ async function listSequenceEntries({ storagePath, status = '' }) {
         `SELECT * FROM sequence_entries
          ORDER BY status ASC, updated_at DESC, name COLLATE NOCASE ASC`
       );
+    const folders = listSequenceFoldersFromDb(db);
+    // Backfills folders that predate the on-disk mirror, and puts a directory
+    // back if one was removed outside the app.
+    await Promise.all(folders
+      .filter((folder) => !isProjectFolderId(folder.id))
+      .map((folder) => ensureLibraryFolderDir(paths, folder.name)));
     return {
       rootPath: paths.libraryRoot,
       sqlitePath: paths.sqlitePath,
-      folders: listSequenceFoldersFromDb(db),
+      folders,
       entries: rows.map((row) => normalizeEntryRow(row)).filter(Boolean)
     };
   } finally {

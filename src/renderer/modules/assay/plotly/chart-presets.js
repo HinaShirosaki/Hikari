@@ -1,4 +1,6 @@
 import { normalizeChartStyle } from './chart-style-model.js';
+// UI-only identifier; saved names remain a separate namespace, including "Prism Classic".
+export const PRISM_CLASSIC_PRESET = 'builtin:prism-classic';
 
 // Named chart styles, shared across assays. normalizeChartStyle already sanitises
 // anything read back, so the store is a plain name -> style map in localStorage.

@@ -2,11 +2,24 @@ module.exports = function registerEdgeToolBoxSuitePrimerDesignAndCrisprGuides(co
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+function deterministicDna(length, seed) {
+  let state = seed >>> 0;
+  let result = '';
+  for (let index = 0; index < length; index += 1) {
+    state ^= state << 13; state >>>= 0;
+    state ^= state >>> 17;
+    state ^= state << 5; state >>>= 0;
+    result += 'ACGT'[state % 4];
+  }
+  return result;
+}
 test('[EDGE] sequence-viewer designCloningPrimers falls back to relaxed thresholds when needed', () => {
   const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'restriction-ligation',
     preferences: {
-      maxPrimerLength: 25
+      // Six clamp bases plus a six-base site leave room for the relaxed
+      // 15-base binding minimum in a 27-mer.
+      maxPrimerLength: 27
     },
     fragmentMap: {
       fragments: [
@@ -54,8 +67,8 @@ test('[EDGE] sequence-viewer designCloningPrimers rejects non-annealing same-str
 test('[EDGE] sequence-viewer designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
   const fragmentMap = {
     fragments: [
-      { id: 'frag-1', name: 'Frag1', role: 'insert', sequence: 'ATGGCAGCAGCAGGTGCAGCAGCAGGTGCAGCAGCAGGT' },
-      { id: 'frag-2', name: 'Frag2', role: 'insert', sequence: 'GCAGCAGCAGGTGCAGCAGCAGGTATGGCAGCAGCAGGT' }
+      { id: 'frag-1', name: 'Frag1', role: 'insert', sequence: deterministicDna(100, 1) },
+      { id: 'frag-2', name: 'Frag2', role: 'insert', sequence: deterministicDna(100, 101) }
     ]
   };
   const planWithOverlapTms = (leftTm, rightTm) => sequenceViewerInternals.designCloningPrimers({
@@ -111,7 +124,7 @@ test('[EDGE] sequence-viewer restrictionCutOverhang distinguishes sticky from bl
 });
 test('[EDGE] sequence-viewer designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
   const primerPlan = sequenceViewerInternals.designPcrPrimerPair(
-    'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT',
+    deterministicDna(120, 1),
     { name: 'selected_region' }
   );
 
@@ -380,6 +393,8 @@ test('[EDGE] sequence-viewer assembleCloningPlan can prefer restriction-ligation
   assert.equal(plan.stepByStepProcedure.length >= 4, true);
   assert.equal(Array.isArray(plan.validationPlan), true);
   assert.equal(plan.primerOligoPlan.feasible, true);
+  assert.equal(plan.warnings.some((warning) => /No terminal overlap/.test(warning)), false);
+  assert.equal(plan.warnings.some((warning) => /manufacturer-recommended buffer/.test(warning)), true);
 });
 test('[EDGE] sequence-viewer assembleCloningPlan reports infeasible inputs with alternate guidance', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({
@@ -542,10 +557,8 @@ test('[EDGE] protein-builder Gibson backbone keeps primer design on the Gibson r
   const notebookAdapter = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
   );
-  const leftOverlap = 'ATGCGTACGATCGTACGATCGTACGATCGA';
-  const rightOverlap = 'CGATGCTAGCTAGCATGCTAGCATGCTAGC';
-  const backboneSequence = `${rightOverlap}TTTTTATATATATATATAT${leftOverlap}`;
-  const insertSequence = `${leftOverlap}GGGGGGCCCCCCC${rightOverlap}`;
+  const backboneSequence = deterministicDna(240, 211);
+  const insertSequence = deterministicDna(120, 223);
   const plan = notebookAdapter.buildProteinBuilderCloningPlan({
     constructName: 'Overlap-POI',
     backbone: {

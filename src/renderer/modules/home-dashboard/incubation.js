@@ -134,10 +134,10 @@ export function initIncubationWidget({
           class="home-incubation-delete-btn"
           data-dashboard-incubation-location-delete="${index}"
           aria-label="Delete incubation location ${safeText(location.name)}"
+          title="Delete location"
         >
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-            <circle cx="12" cy="12" r="12" fill="currentColor"></circle>
-            <path d="M7 7l10 10M17 7 7 17" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round"></path>
+            <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
         </button>
       </div>
@@ -194,7 +194,7 @@ export function initIncubationWidget({
 
   function renderIncubationWidget(locations) {
     if (!locations.length) {
-      summary.textContent = 'No incubation locations yet.';
+      summary.textContent = '';
       list.innerHTML = '';
       panelList.innerHTML = '';
       return;
@@ -202,18 +202,20 @@ export function initIncubationWidget({
     const dueCount = locations.filter((location) => location.isDue).length;
     summary.textContent = `${dueCount} due · ${locations.length} location${locations.length === 1 ? '' : 's'}`;
     list.innerHTML = locations.map((location) => `
-      <article class="home-row">
-        <span class="home-dot${location.isDue ? ' is-warn' : ''}" aria-hidden="true"></span>
+      <article class="home-row home-incubation-row">
+        <svg class="home-incubation-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0ZM12 8v10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
         <div class="home-row-copy">
           <div class="home-row-name">${safeText(location.name)}</div>
-          <div class="home-row-meta">${safeText(location.detail)}</div>
+          <div class="home-row-meta${location.isDue ? ' is-due' : ''}">${safeText(location.detail)}</div>
         </div>
         <div class="home-row-end">
+          ${location.reminderDate ? `<time class="home-row-tag" datetime="${safeText(location.reminderDate)}">${safeText(parseLocalDate(location.reminderDate).toLocaleDateString([], { month: 'short', day: 'numeric' }))}</time>` : ''}
           <button
             type="button"
             class="home-row-action"
             data-dashboard-incubation-remind="${location.sourceIndex}"
             aria-label="Set reminder for tomorrow for ${safeText(location.name)}"
+            title="Remind tomorrow"
           >
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
               <path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>

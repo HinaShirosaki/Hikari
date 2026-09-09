@@ -16,6 +16,7 @@ export const BLOCK_TYPE_LABELS = Object.freeze({
 });
 
 export const DNA_ALPHABET = /^[ACGTRYSWKMBDHVN*]+$/;
+export const PROTEIN_DIRECT_CLONING_MAX_AA = 20;
 export const DEFAULT_CHAIN = Object.freeze([
   { kind: 'library', type: 'tag', libraryId: 'his6' },
   { kind: 'library', type: 'cleavage', libraryId: 'tev' },

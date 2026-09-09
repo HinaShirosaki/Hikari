@@ -29,9 +29,7 @@ export function createEntryListRenderer({
   function buildEntryButtonHtml(entry) {
     const isActive = entry.id === getEditingEntryId();
     const stateLabel = notebookStateLabel(entry);
-    const stateClass = normalizeNotebookState(entry?.notebookState) === 'planned'
-      ? ' is-planned'
-      : ' is-executed';
+    const stateClass = ` is-${normalizeNotebookState(entry?.notebookState)}`;
     return renderFolderTreeLeaf({
       active: isActive,
       wrapperClass: 'biology-notebook-page-leaf',
@@ -107,6 +105,9 @@ export function createEntryListRenderer({
         if (collectionCompare !== 0) {
           return collectionCompare;
         }
+        const suggestionOrder = Number(normalizeNotebookState(right.notebookState) === 'suggested')
+          - Number(normalizeNotebookState(left.notebookState) === 'suggested');
+        if (suggestionOrder) return suggestionOrder;
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
 

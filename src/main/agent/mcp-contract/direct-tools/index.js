@@ -45,14 +45,6 @@ const {
   callPlotlyGraph
 } = require('./plotly-graph.js');
 const {
-  SEQUENCE_VIEWER_MCP_TOOL,
-  callSequenceViewer
-} = require('./sequence-viewer.js');
-const {
-  SEQUENCE_EDIT_MCP_TOOL,
-  callSequenceEdit
-} = require('./sequence-edit.js');
-const {
   LITERATURE_SEARCH_MCP_TOOL,
   callLiteratureSearch
 } = require('./literature-search.js');
@@ -71,6 +63,12 @@ const {
 const {
   PAPER_INTAKE_DIRECT_MCP_TOOLS
 } = require('../../../papers/store/intake/mcp-tools.js');
+
+const { SEQUENCE_MCP_TOOLS } = require('./sequence-tools.js');
+
+const { NOTEBOOK_SUGGEST_MCP_TOOL, callNotebookSuggest } = require('./notebook-suggest.js');
+const { isToolAllowedForContext } = require('../notebook-suggestion-policy.js');
+const { isHikariMcpToolEnabled } = require('../tool-availability.js');
 
 const DIRECT_MCP_TOOLS = Object.freeze([
   {
@@ -93,6 +91,7 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     definition: PROTOCOL_GENERATION_MCP_TOOL,
     handler: callProtocolGeneration
   },
+  { definition: NOTEBOOK_SUGGEST_MCP_TOOL, handler: callNotebookSuggest },
   {
     definition: NOTEBOOK_DRAFT_MCP_TOOL,
     handler: callNotebookDraft
@@ -130,22 +129,18 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     definition: PLOTLY_GRAPH_MCP_TOOL,
     handler: callPlotlyGraph
   },
-  {
-    definition: SEQUENCE_VIEWER_MCP_TOOL,
-    handler: callSequenceViewer
-  },
-  {
-    definition: SEQUENCE_EDIT_MCP_TOOL,
-    handler: callSequenceEdit
-  },
+  ...SEQUENCE_MCP_TOOLS,
   {
     definition: ASK_USER_MCP_TOOL,
     handler: callAskUser
   }
 ]);
 
-function getDirectMcpToolDefinitions() {
-  return DIRECT_MCP_TOOLS.map((tool) => tool.definition);
+function getDirectMcpToolDefinitions(context = {}) {
+  return DIRECT_MCP_TOOLS
+    .filter((tool) => isToolAllowedForContext(tool.definition.name, context))
+    .filter((tool) => isHikariMcpToolEnabled(tool.definition.name, context))
+    .map((tool) => tool.definition);
 }
 
 function createDirectMcpToolRouter(deps = {}) {
@@ -167,6 +162,17 @@ function createDirectMcpToolRouter(deps = {}) {
         mcp_tool: toolName,
         error: `Unknown Hikari direct MCP tool "${toolName || 'unknown'}".`
       };
+    }
+    if (!isHikariMcpToolEnabled(toolName, context)) {
+      return {
+        ok: false,
+        status: 'disabled',
+        mcp_tool: toolName,
+        error: `The Hikari MCP tool "${toolName}" is switched off in Settings.`
+      };
+    }
+    if (!isToolAllowedForContext(toolName, context)) {
+      return { ok: false, status: 'rejected', mcp_tool: toolName, error: 'This tool is not available in this workflow.' };
     }
     return handler(args, context, deps);
   }

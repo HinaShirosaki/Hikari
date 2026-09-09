@@ -151,20 +151,20 @@ const presets = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/plotly/chart-presets.js'),
   { localStorage: storage }
 );
-assert.deepEqual(presets.listChartPresets(), [], 'no presets to start');
+assert.equal(presets.listChartPresets().join('|'), '', 'no presets to start');
 assert.equal(presets.saveChartPreset('  Publication  ', { pointSize: 11, chartType: 'bar' }), true, 'saving returns true');
 assert.equal(presets.listChartPresets().join('|'), 'Publication', 'preset name is trimmed');
 const loaded = presets.getChartPreset('Publication');
 assert.equal(loaded.pointSize, 11, 'preset keeps its style');
 assert.equal(loaded.chartType, 'bar', 'preset keeps the chart type');
-assert.equal(loaded.lineWidth, createDefaultChartStyle().lineWidth, 'preset is normalized on read');
+assert.equal(loaded.lineWidth, 2.5, 'preset is normalized on read');
 assert.equal(presets.getChartPreset('missing'), null, 'unknown preset reads as null');
 assert.equal(presets.saveChartPreset('   ', {}), false, 'a blank name is rejected');
 assert.equal(presets.deleteChartPreset('Publication'), true, 'deleting returns true');
-assert.deepEqual(presets.listChartPresets(), [], 'preset removed');
+assert.equal(presets.listChartPresets().join('|'), '', 'preset removed');
 assert.equal(presets.deleteChartPreset('Publication'), false, 'deleting twice is a no-op');
 storage.setItem('hikari_assay_chart_presets_v1', 'not json');
-assert.deepEqual(presets.listChartPresets(), [], 'corrupt storage reads as empty, not a throw');
+assert.equal(presets.listChartPresets().join('|'), '', 'corrupt storage reads as empty, not a throw');
 
 // --- renderer: the Prism defaults (offset frame, no grid, plain tick numbers) ---
 const plots = [];
@@ -414,3 +414,81 @@ const autoSized = draw(barModel, {});
 assert.equal(autoSized.layout.xaxis.automargin, true, 'auto sizing keeps automargin on');
 
 console.log('assay Plotly self-check passed');
+
+// v2: typography, migration and independent target edits.
+const targets = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/plotly/chart-style-targets.js'));
+const fresh = createDefaultChartStyle();
+assert.equal(fresh.styleVersion, 2);
+assert.equal(fresh.textStyles.title.fontSize, 14 * 4 / 3);
+assert.equal(fresh.textStyles.xTitle.fontSize, 16);
+assert.equal(fresh.textStyles.legend.bold, false);
+assert.equal(fresh.lineWidth, 2);
+const legacy = normalizeChartStyle({ text: { fontSize: 21, bold: true, italic: true }, lineWidth: 3.7 });
+assert.equal(legacy.textStyles.title.fontSize, 21, 'legacy dimensions remain pixels');
+assert.equal(legacy.textStyles.xTicks.bold, false, 'legacy regular ticks are materialized');
+assert.equal(legacy.textStyles.legend.bold, true, 'legacy bold legends are preserved');
+assert.equal(legacy.lineWidth, 3.7);
+assert.deepEqual(JSON.parse(JSON.stringify(normalizeChartStyle(legacy))), JSON.parse(JSON.stringify(legacy)), 'migration is idempotent');
+
+const independent = createChartStyleStore({ initialStyle: fresh });
+independent.setStyle(targets.seriesStylePatch(independent.getStyle(), 'A', 'pointSize', 12));
+independent.setStyle(targets.seriesStylePatch(independent.getStyle(), 'B', 'color', '#ff0000'));
+independent.setStyle(targets.seriesStylePatch(independent.getStyle(), null, 'color', '#123456'));
+assert.equal(independent.getStyle().seriesStyles.A.pointSize, 12, 'global color preserves individual size');
+assert.equal(Object.hasOwn(independent.getStyle().seriesStyles.B, 'color'), false, 'global color clears only color overrides');
+assert.equal(targets.resolveSeriesStyle(independent.getStyle(), 'A').color, '#123456');
+independent.setStyle(targets.axisStylePatch(independent.getStyle(), 'x', 'tickDir', 'inside'));
+assert.equal(targets.resolveAxisStyle(independent.getStyle(), 'x').tickDir, 'inside');
+assert.equal(targets.resolveAxisStyle(independent.getStyle(), 'y').tickDir, 'outside');
+
+for (const scale of ['linear', 'log10', 'log2', 'ln']) {
+  const result = draw(fittedModel, { ...fresh, xScale: scale, yScale: scale,
+    xRange: { auto: false, min: 1, max: 100 }, yRange: { auto: false, min: 1, max: 1000 } });
+  assert.equal(result.layout.xaxis.range.join(','), scale === 'linear' ? '1,100' : '0,2');
+  assert.equal(result.layout.yaxis.range.join(','), scale === 'linear' ? '1,1000' : '0,3');
+}
+assert.ok(targets.validateAxisRange('log2', { auto: false, min: 0, max: 8 }));
+assert.ok(targets.validateAxisRange('linear', { auto: false, min: 10, max: 1 }));
+assert.equal(targets.validateAxisRange('ln', { auto: true, min: -1, max: null }), '');
+const axisTarget = draw(fittedModel, { ...fresh, axisStyles: { x: { tickDir: 'inside', tickAngle: 25 }, y: { tickLen: 12 } },
+  textStyles: { ...fresh.textStyles, yTicks: { ...fresh.textStyles.yTicks, bold: true, color: '#ff0000' } } });
+assert.equal(axisTarget.layout.xaxis.ticks, 'inside');
+assert.equal(axisTarget.layout.yaxis.ticks, 'outside');
+assert.equal(axisTarget.layout.xaxis.tickangle, 25);
+assert.equal(axisTarget.layout.yaxis.ticklen, 12);
+assert.equal(axisTarget.layout.yaxis.tickfont.weight, 700, 'tick font is now independently controllable');
+assert.equal(axisTarget.layout.xaxis.tickfont.weight, 400);
+const logReference = draw(fittedModel, { ...fresh, yScale: 'log10', refLineValue: 100 });
+assert.equal(logReference.layout.shapes[2].y0, 100, 'shape endpoints remain data values on log axes');
+
+const modelSnapshot = JSON.stringify(fittedModel);
+const styledFit = draw(fittedModel, { ...fresh, seriesStyles: { S1: {
+  color: '#123456', pointSize: 11, lineWidth: 4, lineStyle: 'dashed', errorColor: '#ff0000', errorThickness: 3
+} } });
+assert.equal(styledFit.traces[0].line.width, 4);
+assert.equal(styledFit.traces[0].line.dash, 'dash');
+assert.equal(styledFit.traces[1].marker.size, 11);
+assert.equal(styledFit.traces[1].error_y.color, '#ff0000');
+assert.equal(styledFit.traces[1].error_y.thickness, 3);
+assert.equal(JSON.stringify(fittedModel), modelSnapshot, 'formatting does not mutate scientific results');
+assert.equal(draw(fittedModel, { ...fresh, mode: 'markers' }).traces.length, 1, 'points-only fitted graph shows observations only');
+assert.equal(draw(fittedModel, { ...fresh, mode: 'lines' }).traces.length, 1, 'line-only fitted graph shows the fitted line only');
+const barsStyled = draw(barModel, { ...fresh, seriesStyles: { Treated: { barOutlineColor: '#123456', barOutlineWidth: 4 } } });
+assert.equal(barsStyled.traces[0].marker.line.color, '#123456');
+assert.equal(barsStyled.traces[0].marker.line.width, 4);
+
+const beforePreset = normalizeChartStyle({ ...fresh, title: 'Keep title', xTitle: 'Keep axis',
+  xColumn: 'Concentration', xRange: { auto: false, min: 1, max: 10 }, xScale: 'log2', frameStyle: 'box' });
+const afterPreset = normalizeChartStyle({ ...beforePreset, ...targets.prismClassicPatch() });
+assert.equal(afterPreset.title, beforePreset.title);
+assert.equal(afterPreset.xTitle, beforePreset.xTitle);
+assert.equal(afterPreset.xColumn, beforePreset.xColumn);
+assert.equal(JSON.stringify(afterPreset.xRange), JSON.stringify(beforePreset.xRange));
+assert.equal(afterPreset.xScale, 'log2');
+assert.equal(afterPreset.frameStyle, 'offset');
+assert.equal(presets.deleteChartPreset('Prism Classic'), false);
+assert.equal(presets.saveChartPreset('Prism Classic', {pointSize: 13}), true, 'an existing name never collides with the built-in preset');
+assert.equal(presets.getChartPreset('Prism Classic').pointSize, 13);
+assert.equal(presets.saveChartPreset('Targets', independent.getStyle()), true);
+assert.equal(JSON.stringify(presets.getChartPreset('Targets')), JSON.stringify(independent.getStyle()), 'all targets survive preset storage');
+console.log('assay Prism formatting target checks passed');

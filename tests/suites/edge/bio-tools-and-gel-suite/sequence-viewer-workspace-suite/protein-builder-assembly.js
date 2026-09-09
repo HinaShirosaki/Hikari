@@ -13,7 +13,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-vector-builder-btn',
     'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
-    'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
     'sequence-viewer-protein-builder-build-dna-btn',
@@ -342,11 +341,13 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
   assert.equal(appState.notebookEntries[1].cloningReactionStep.stepId, 'gibson');
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.insertLength, editedInsert.length);
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.assembledLength, editedSequence.length);
-  // Bench-style name: the terminal tag the primer adds, the insert, then F.
+  // The edited 42 nt tag no longer fits safely beside a binding region and a
+  // Gibson overlap, so it becomes an explicit synthesis fragment instead of an
+  // overlong primer tail.
   const forwardPrimer = appState.notebookEntries[0].resultTable.rows.find((row) => row.name === '6xHis Tagged-POI F');
   assert.equal(Boolean(forwardPrimer), true);
-  assert.equal(forwardPrimer.sequence.startsWith(editedTag), true);
-  assert.match(forwardPrimer.notes, new RegExp(`Adds ${editedTag.length} nt at the 5' end`, 'i'));
+  assert.equal(appState.notebookEntries[0].resultTable.rows.every((row) => Number(row.length) <= 60), true);
+  assert.match(appState.notebookEntries[0].result, /Synthetic block must be ordered as synthetic DNA/i);
 });
   }
 };

@@ -23,6 +23,7 @@ import { queryNotebookElements } from './notebook/elements.js';
 import { createNotebookControllers } from './notebook/controllers.js';
 import { createNotebookDraftState } from './notebook/draft-state.js';
 import { createNotebookAgentAppend } from './notebook/agent-append.js';
+import { createExperimentSuggestions } from './project/experiment-suggestions.js';
 import { bindNotebookEvents } from './notebook/event-bindings.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
@@ -275,6 +276,7 @@ export function initLabNotebook({
   });
 
   const { saveEntry, clarifyAndSaveEntry } = createNotebookSaveEntry({
+    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true }); },
     resultTableController,
     toolSidebarController,
     clearPendingNotebookResultFiles: (...args) => clearPendingNotebookResultFiles(...args),
@@ -305,6 +307,7 @@ export function initLabNotebook({
     persistActiveEntrySampleLinks,
     applyQuickSampleCapture
   } = createNotebookSampleLinks({
+    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true }); },
     resultTableController,
     toolSidebarController,
     getActiveEntry: (...args) => getActiveEntry(...args),
@@ -335,6 +338,7 @@ export function initLabNotebook({
     syncViewerVisibility,
     setNotebookSaveBusy
   } = createNotebookViewerRender({
+    onProjectDashboardRendered: () => experimentSuggestions.render(),
     elements,
     state,
     safeText,
@@ -394,6 +398,13 @@ export function initLabNotebook({
     getEntryProtocol: (...args) => getEntryProtocol(...args),
     syncPageStarterProject: (...args) => syncPageStarterProject(...args),
     onProtocolChange: (...args) => onProtocolChange(...args)
+  });
+
+  const experimentSuggestions = createExperimentSuggestions({
+    state, persist, createId, host: elements.notebookProjectDashboard,
+    acceptButton: elements.notebookTakeIntoPlanBtn, api: window.hikariApi,
+    getActiveEntry, saveEntry, editEntry,
+    onEntriesChanged: () => { entryListRenderer.renderEntries(); onNotebookEntriesChanged?.(); }
   });
 
   const { cancelEdit } = bindNotebookEvents({
