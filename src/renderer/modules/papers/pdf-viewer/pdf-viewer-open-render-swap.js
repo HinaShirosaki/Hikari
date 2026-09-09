@@ -22,7 +22,11 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
   const ownerDoc = pageLayer?.ownerDocument || (typeof document !== 'undefined' ? document : null);
   const newPageRecords = buildPageRecords({
     doc: ownerDoc,
-    pageMetrics: state.pageMetrics
+    pageMetrics: state.pageMetrics,
+    onCanvasContextLost: (record) => {
+      record.renderedScale = 0;
+      ctx.scheduleVisiblePageRender?.();
+    }
   });
   const swapScale = (() => {
     const previousRecords = state.pageRecords;

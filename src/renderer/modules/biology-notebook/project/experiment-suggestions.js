@@ -6,20 +6,28 @@ export function createExperimentSuggestions({
   getActiveEntry, saveEntry, editEntry, onEntriesChanged = () => {}
 } = {}) {
   const runs = new Map();
+  const pauses = () => state.settings?.notebookSuggestionPauses || {};
+  const pauseMessage = 'No further suggestions until you add a new experiment manually and finish it.';
 
   function render() {
     host?.querySelectorAll('[data-suggest-experiment]').forEach((button) => {
       const run = runs.get(button.dataset.suggestExperiment);
-      button.disabled = Boolean(run?.busy);
+      button.disabled = Boolean(run?.busy || pauses()[button.dataset.suggestExperiment]);
       button.textContent = run?.busy ? 'Suggesting…' : 'Suggest next experiment';
       const status = host.querySelector('[data-experiment-suggestion-status]');
-      if (status) status.textContent = run?.error || '';
+      if (status) status.textContent = run?.error || (pauses()[button.dataset.suggestExperiment] ? pauseMessage : '');
     });
   }
 
-  async function suggest(projectId, { automatic = false } = {}) {
+  async function suggest(projectId, { automatic = false, completedEntry = null } = {}) {
     const project = state.projects?.find((item) => item.id === projectId);
     if (!project || runs.get(projectId)?.busy) return null;
+    const paused = pauses()[projectId];
+    const resumes = paused && completedEntry?.projectId === projectId
+      && completedEntry.notebookState === 'executed' && !completedEntry.agentDraftMeta?.source
+      && !(paused.entryIds || []).includes(completedEntry.id)
+      && state.notebookEntries?.includes(completedEntry);
+    if (paused && !resumes) { render(); return null; }
     const existing = state.notebookEntries?.find((entry) => entry.projectId === projectId && entry.notebookState === 'suggested');
     if (existing) {
       if (!automatic) editEntry(existing.id);
@@ -42,23 +50,40 @@ export function createExperimentSuggestions({
       });
       if (!response?.ok) throw new Error(response?.error || 'Could not suggest the next experiment.');
       if (state.settings?.storagePath !== storagePath || !state.projects?.includes(project)) return null;
-      const draft = normalizeNotebookDraft(response.notebook);
-      if (draft?.save?.mode !== 'suggestion_only' || draft?.entry_template?.projectId !== projectId
-          || draft?.entry_template?.notebookState !== 'suggested' || !draft?.entry_template?.protocolSnapshot?.steps?.length) {
+      const notebooks = Array.isArray(response.notebooks) ? response.notebooks : (response.notebook ? [response.notebook] : null);
+      if (!notebooks || notebooks.length > 5) throw new Error('The agent returned an invalid suggestion batch.');
+      const drafts = notebooks.map(normalizeNotebookDraft);
+      if (drafts.some(draft => draft?.save?.mode !== 'suggestion_only' || draft?.entry_template?.projectId !== projectId
+          || draft?.entry_template?.notebookState !== 'suggested' || !draft?.entry_template?.protocolSnapshot?.steps?.length)) {
         throw new Error('The agent returned an incomplete experiment suggestion. Try again.');
       }
       const duplicate = state.notebookEntries?.find((entry) => entry.projectId === projectId && entry.notebookState === 'suggested');
       if (duplicate) return duplicate;
-      const entry = buildNotebookEntryFromDraft(draft, '', { createId });
-      const unresolved = draft.unresolved_placeholders.map((item) => item.display || item.placeholder_key);
-      if (unresolved.length) entry.result += `\n\nValues to review: ${unresolved.join(', ')}`;
-      state.notebookEntries.push(entry);
+      const entries = drafts.map(draft => {
+        const entry = buildNotebookEntryFromDraft(draft, '', { createId });
+        const unresolved = draft.unresolved_placeholders.map((item) => item.display || item.placeholder_key);
+        if (unresolved.length) entry.result += `\n\nValues to review: ${unresolved.join(', ')}`;
+        return entry;
+      });
+      const previousPause = pauses()[projectId];
+      state.settings ||= {};
+      state.settings.notebookSuggestionPauses ||= {};
+      if (!entries.length) {
+        state.settings.notebookSuggestionPauses[projectId] = {
+          entryIds: state.notebookEntries.filter(entry => entry.projectId === projectId).map(entry => entry.id)
+        };
+      } else {
+        delete state.settings.notebookSuggestionPauses[projectId];
+      }
+      state.notebookEntries.push(...entries);
       try { await persist(); } catch (error) {
-        state.notebookEntries = state.notebookEntries.filter((item) => item !== entry);
+        state.notebookEntries = state.notebookEntries.filter(item => !entries.includes(item));
+        if (previousPause) state.settings.notebookSuggestionPauses[projectId] = previousPause;
+        else delete state.settings.notebookSuggestionPauses[projectId];
         throw error;
       }
       onEntriesChanged();
-      return entry;
+      return entries[0] || null;
     } catch (error) {
       run.error = error?.message || 'Could not suggest the next experiment.';
       showTransientNotice(run.error, { type: 'error' });

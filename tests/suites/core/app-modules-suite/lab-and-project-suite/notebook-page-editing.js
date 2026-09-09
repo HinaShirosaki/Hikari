@@ -1517,6 +1517,131 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.equal(editedReaction.table.rows[0][4], '48 ng from tube A7');
   assert.match(editedReaction.table.footerRows[0][3], /90 uL/);
 });
+test('biology-notebook bench toolbox belongs to the open page, not to every page', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'biology-notebook-layout',
+    'biology-notebook-tool-sidebar',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-collapse-btn',
+    'biology-notebook-tool-workspace',
+    'biology-notebook-tool-calculations',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+  document.querySelector = (selector) => (
+    selector === '[data-notebook-tool-sidebar]'
+      ? document.getElementById('biology-notebook-tool-sidebar')
+      : null
+  );
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [
+      { id: 'pr1', name: 'Bench Prep', steps: [{ id: 's1', text: 'Prepare reaction.', placeholders: [] }] },
+      { id: 'pr2', name: 'Other Prep', steps: [{ id: 's2', text: 'Other bench work.', placeholders: [] }] }
+    ],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    settings: { storagePath: '' }
+  };
+  // The markup ships these defaults, and a reset restores what the sheet
+  // started as rather than blanking it.
+  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
+  document.getElementById('biology-notebook-tool-reaction-fill-name').value = 'Solvent';
+
+  let idIndex = 0;
+  const notebookModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'),
+    { document, window: { hikariApi: {} } }
+  );
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => `generated-${idIndex += 1}`,
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  document.getElementById('biology-notebook-project-select').value = 'p1';
+
+  const startPage = (protocolId, notes) => {
+    notebook.renderProtocolOptions(protocolId);
+    document.getElementById('biology-notebook-protocol-select').value = protocolId;
+    notebook.onProtocolChange();
+    document.getElementById('biology-notebook-result').value = notes;
+  };
+  const save = async () => {
+    trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+    await flushAsync();
+  };
+
+  startPage('pr1', 'Page A notes');
+  await save();
+  startPage('pr2', 'Page B notes');
+  await save();
+  const [pageA, pageB] = state.notebookEntries;
+
+  notebook.openEntry(pageA.id);
+  trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
+  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
+  document.getElementById('biology-notebook-tool-reaction-fill-name').value = 'Water';
+  document.getElementById('biology-notebook-tool-reaction-name-1').value = 'ATP';
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
+  document.getElementById('biology-notebook-tool-reaction-final-1').value = '1 mM';
+  trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
+  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
+  // Half-typed into the other tool, never recorded.
+  document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
+  await save();
+
+  // Saving the page it was built on leaves the sheet alone: the same reaction is
+  // still there to tweak and record again.
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-name-1').value, 'ATP');
+
+  // Opening another page hands the toolbox over to that page: its sheet, its
+  // open panel and its last result all reset, so the previous page's reaction
+  // is no longer one "Insert" away from being recorded here.
+  notebook.openEntry(pageB.id);
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-name-1').value, '');
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-fill-name').value, 'Solvent');
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-total-volume').value, '100 uL');
+  assert.equal(document.getElementById('biology-notebook-tool-buffer-name-1').value, '');
+  assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, true);
+  assert.equal(document.getElementById('biology-notebook-tool-calculations').innerHTML, '');
+
+  trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
+  document.getElementById('biology-notebook-tool-reaction-name-1').value = 'GTP';
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
+  document.getElementById('biology-notebook-tool-reaction-final-1').value = '2 mM';
+  trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
+  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
+  await save();
+
+  const savedA = state.notebookEntries.find((entry) => entry.id === pageA.id);
+  const savedB = state.notebookEntries.find((entry) => entry.id === pageB.id);
+  assert.equal(savedA.toolCalculations.length, 1);
+  assert.equal(savedA.toolCalculations[0].table.rows[0][0], 'ATP');
+  assert.equal(savedB.toolCalculations.length, 1);
+  assert.equal(savedB.toolCalculations[0].table.rows[0][0], 'GTP');
+  assert.doesNotMatch(savedB.result, /ATP/);
+});
 test('biology-notebook folded toolbox icon drags within the workspace without opening', () => {
   const document = createMockDocument([
     'biology-notebook-layout',

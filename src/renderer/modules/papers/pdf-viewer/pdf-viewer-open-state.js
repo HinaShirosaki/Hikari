@@ -14,6 +14,7 @@ export function capturePreviousOpenState(state) {
     comments: state.comments,
     highlights: state.highlights,
     bookmarks: state.bookmarks,
+    hasFormFields: state.hasFormFields,
     selectedCommentId: state.selectedCommentId,
     pendingSelection: state.pendingSelection,
     pendingSearchSelection: state.pendingSearchSelection,
@@ -33,6 +34,7 @@ export function applyPaperOpenShellState(ctx, { paper, summary = '', resolveByte
   state.comments = [];
   state.highlights = [];
   state.bookmarks = [];
+  state.hasFormFields = false;
   state.selectedCommentId = '';
   state.pendingSelection = null;
   state.pendingCommentSelection = null;
@@ -60,6 +62,7 @@ export function restorePreviousOpenState(ctx, previousState) {
   state.comments = previousState.comments;
   state.highlights = previousState.highlights;
   state.bookmarks = previousState.bookmarks;
+  state.hasFormFields = previousState.hasFormFields;
   state.selectedCommentId = previousState.selectedCommentId;
   state.pendingSelection = previousState.pendingSelection;
   state.pendingSearchSelection = previousState.pendingSearchSelection;

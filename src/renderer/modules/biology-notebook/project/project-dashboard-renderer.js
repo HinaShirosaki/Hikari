@@ -369,7 +369,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
           <h2>${escapeText(heading)}</h2>
         </div>
         <div class="project-experiment-suggestions">
-          <button type="button" class="ghost-btn" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
+          <button type="button" class="ghost-btn hikari-agent-action" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
           <span class="small-note" role="status" aria-live="polite" data-experiment-suggestion-status></span>
         </div>
         ${includeEditAction ? `

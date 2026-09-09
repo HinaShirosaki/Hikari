@@ -538,11 +538,13 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-viewer-url-'));
       const openedUrls = [];
       const forcedDownloadUrls = [];
+      const executedScripts = [];
 
       class FakeBrowserWindow {
         constructor() {
           this.destroyed = false;
           this.handlers = new Map();
+          this.webContentsHandlers = new Map();
           this.sessionHandlers = new Map();
           this.webContents = {
             session: {
@@ -551,7 +553,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
             },
             downloadURL: (url) => forcedDownloadUrls.push(url),
             setWindowOpenHandler: () => {},
-            on: () => {}
+            executeJavaScript: async (script) => {
+              executedScripts.push(script);
+              return true;
+            },
+            on: (eventName, listener) => this.webContentsHandlers.set(eventName, listener)
           };
         }
 
@@ -570,6 +576,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         async loadURL(url) {
           openedUrls.push(url);
           setImmediate(() => {
+            this.webContentsHandlers.get('did-finish-load')?.();
             const listener = this.sessionHandlers.get('will-download');
             const item = {
               savePath: '',
@@ -623,6 +630,9 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         assert.equal(result.method, 'browser');
         assert.equal(openedUrls[0], viewerUrl);
         assert.deepEqual(forcedDownloadUrls, []);
+        assert.equal(executedScripts.length >= 2, true);
+        assert.equal(executedScripts.every((script) => script.includes('hikari-paper-download-notice')), true);
+        assert.equal(executedScripts.every((script) => script.includes('Click the Download button on this page.')), true);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -631,11 +641,20 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-popup-viewer-'));
       let popupDecision = null;
       let childWindowShown = false;
+      const childExecutedScripts = [];
 
       class FakeChildWindow {
         constructor() {
           this.destroyed = false;
           this.handlers = new Map();
+          this.webContentsHandlers = new Map();
+          this.webContents = {
+            executeJavaScript: async (script) => {
+              childExecutedScripts.push(script);
+              return true;
+            },
+            on: (eventName, listener) => this.webContentsHandlers.set(eventName, listener)
+          };
         }
 
         on(eventName, listener) {
@@ -644,6 +663,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
 
         show() {
           childWindowShown = true;
+          this.webContentsHandlers.get('did-finish-load')?.();
         }
 
         isDestroyed() {
@@ -742,6 +762,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         assert.equal(popupDecision?.action, 'allow');
         assert.equal(popupDecision?.overrideBrowserWindowOptions, undefined);
         assert.equal(childWindowShown, true);
+        assert.equal(childExecutedScripts.length >= 1, true);
+        assert.equal(childExecutedScripts.every((script) => script.includes('hikari-paper-download-notice')), true);
         assert.equal(result.ok, true);
         assert.equal(result.method, 'browser');
       } finally {

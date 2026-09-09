@@ -21,6 +21,38 @@ export function createEntryListRenderer({
   getActiveProjectDashboardId = () => ''
 } = {}) {
   const folderTree = createFolderTreeState({ defaultExpanded: true });
+  let reasonBox, hideTimer;
+  function hideReason() { clearTimeout(hideTimer); if (reasonBox) reasonBox.hidden = true; }
+  function showReason(event) {
+    const row = event.target?.closest?.('[data-suggestion-reason]');
+    if (!row || !listEl.contains(row)) return;
+    clearTimeout(hideTimer);
+    const doc = listEl.ownerDocument;
+    if (!reasonBox) {
+      reasonBox = doc.createElement('div');
+      reasonBox.className = 'biology-notebook-suggestion-reason';
+      reasonBox.setAttribute('role', 'tooltip');
+      reasonBox.addEventListener('mouseleave', hideReason);
+      reasonBox.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      doc.body.append(reasonBox);
+    }
+    reasonBox.textContent = row.dataset.suggestionReason;
+    reasonBox.hidden = false;
+    const bounds = row.getBoundingClientRect();
+    const view = doc.defaultView;
+    const gap = 8;
+    const box = reasonBox.getBoundingClientRect();
+    reasonBox.style.left = `${Math.max(gap, Math.min(bounds.right + gap, view.innerWidth - box.width - gap))}px`;
+    reasonBox.style.top = `${Math.max(gap, Math.min(bounds.top, view.innerHeight - box.height - gap))}px`;
+  }
+  listEl?.addEventListener?.('mouseover', showReason);
+  listEl?.addEventListener?.('focusin', showReason);
+  listEl?.addEventListener?.('mouseout', event => {
+    if (!reasonBox?.contains(event.relatedTarget) && !event.target?.closest?.('[data-suggestion-reason]')?.contains(event.relatedTarget)) hideTimer = setTimeout(hideReason, 150);
+  });
+  listEl?.addEventListener?.('focusout', hideReason);
+  listEl?.addEventListener?.('scroll', hideReason);
+  listEl?.ownerDocument?.addEventListener('keydown', event => { if (event.key === 'Escape') hideReason(); });
 
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
@@ -30,11 +62,13 @@ export function createEntryListRenderer({
     const isActive = entry.id === getEditingEntryId();
     const stateLabel = notebookStateLabel(entry);
     const stateClass = ` is-${normalizeNotebookState(entry?.notebookState)}`;
+    const reason = normalizeNotebookState(entry?.notebookState) === 'suggested'
+      ? String(entry.agentDraftMeta?.rationale || '').trim() : '';
     return renderFolderTreeLeaf({
       active: isActive,
       wrapperClass: 'biology-notebook-page-leaf',
       controlClass: `biology-notebook-page-row folder-tree-template__rail-leaf${stateClass}`,
-      controlAttributes: { 'data-notebook-entry-id': entry.id },
+      controlAttributes: { 'data-notebook-entry-id': entry.id, ...(reason ? { 'data-suggestion-reason': reason, 'aria-description': reason } : {}) },
       contentHtml: `
         <span class="biology-notebook-page-name folder-tree-template__leaf-label">${safeText(resolveEntryExperimentName(entry))}</span>
         <span class="biology-notebook-page-badge folder-tree-template__leaf-meta">${safeText(stateLabel)}</span>
@@ -92,6 +126,7 @@ export function createEntryListRenderer({
   }
 
   function renderEntries() {
+    hideReason();
     if (!listEl) {
       return;
     }

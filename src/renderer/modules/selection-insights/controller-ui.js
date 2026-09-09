@@ -13,8 +13,8 @@ export function ensureUi(ctx) {
     ctx.menuNode.className = 'selection-insight-menu';
     ctx.menuNode.hidden = true;
     ctx.menuNode.innerHTML = `
-      <button type="button" class="selection-insight-menu-item" data-selection-insight-action="${ACTION_WHAT_IS_IT}">What is it</button>
-      <button type="button" class="selection-insight-menu-item" data-selection-insight-action="${ACTION_WHERE_TO_BUY}">Where to buy it</button>
+      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHAT_IS_IT}">What is it</button>
+      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHERE_TO_BUY}">Where to buy it</button>
     `;
     ctx.rootDocument.body.appendChild(ctx.menuNode);
     ctx.menuNode.addEventListener('click', (event) => {

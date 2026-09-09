@@ -172,6 +172,7 @@ function createNotebookControllers({
     getProtocols: () => state.protocols,
     getGelAnalyses: () => getGelAnalyses(state),
     getAssays: () => state.assays,
+    getPdfSettings: () => state.settings?.notebookPdf || {},
     previewImageLoader,
     resultFileAttachmentLoader,
     onCreateLinkedAssay

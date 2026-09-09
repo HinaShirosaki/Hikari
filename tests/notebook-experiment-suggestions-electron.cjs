@@ -37,7 +37,7 @@ if (!process.versions.electron) {
           window.requestCount++;
           await new Promise(resolve => {window.pendingResponse=resolve;});
           const entry = makeEntry('','suggested','Compare the next growth condition');
-          entry.agentDraftMeta={source:'agent_notebook_suggestion_v1',suggestionRunId:'run-'+window.requestCount};
+          entry.agentDraftMeta={source:'agent_notebook_suggestion_v1',suggestionRunId:'run-'+window.requestCount,rationale:'Compare the next condition against the recorded control.'};
           entry.result='Suggestion rationale: Compare the next condition against the recorded control.';
           return {ok:true,notebook:{protocol:{id:protocol.id,name:protocol.name},project:{id:'p',name:'Growth study'},notebook_type:'biology',save:{mode:'suggestion_only'},entry_template:entry}};
         }
@@ -71,12 +71,27 @@ if (!process.versions.electron) {
         const style=getComputedStyle(row), nameStyle=getComputedStyle(row.querySelector('.biology-notebook-page-name'));
         check(style.backgroundImage.includes('linear-gradient'),'Spectrum gradient survives cascade');
         check(style.fontStyle==='italic' && nameStyle.color==='rgb(80, 84, 90)','Italic dark-grey suggestion text: '+style.fontStyle+' / '+nameStyle.color);
+        row.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+        const reasonBox=document.querySelector('.biology-notebook-suggestion-reason');
+        check(reasonBox && !reasonBox.hidden && reasonBox.textContent.includes('recorded control'),'Hover textbox shows the suggestion reason');
+        check(reasonBox.getBoundingClientRect().right<=window.innerWidth,'Reason textbox fits the viewport');
+        document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+        check(reasonBox.hidden,'Escape dismisses the reason');
+        row.blur();
+        row.focus();
+        row.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));
+        check(!reasonBox.hidden,'Keyboard focus reveals the reason');
+        row.blur();
+        row.dispatchEvent(new FocusEvent('focusout',{bubbles:true}));
+        check(reasonBox.hidden,'Leaving keyboard focus hides the reason');
         document.getElementById('biology-notebook-result').value += '\\nUser review note.';
         await notebook.saveUnsavedChanges();
         check(state.notebookEntries.find(e=>e.id===suggestionId).notebookState==='suggested','Ordinary save preserves Suggested');
       })()`);
       await win.webContents.executeJavaScript('document.activeElement?.blur();');
       fs.writeFileSync(path.join(artifacts, 'suggested.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript(`document.querySelector('[data-suggestion-reason]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));`);
+      fs.writeFileSync(path.join(artifacts, 'suggestion-reason.png'), (await win.webContents.capturePage()).toPNG());
       await win.reload();
       await new Promise(resolve => win.webContents.once('did-finish-load', resolve));
       await win.webContents.executeJavaScript(bootstrap);

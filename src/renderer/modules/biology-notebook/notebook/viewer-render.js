@@ -106,9 +106,11 @@ function createNotebookViewerRender({
     notebookResult.value = entry?.result || '';
     resultTableController.renderEditor(resultTablesOverride ?? resultTableOverride ?? entry?.resultTables ?? entry?.resultTable ?? null);
     if (entry) {
-      toolSidebarController.setCalculations(entry.toolCalculations || []);
+      toolSidebarController.setCalculations(entry.toolCalculations || [], entry.id);
     } else if (!preserveToolCalculations) {
-      toolSidebarController.setCalculations([]);
+      // One unsaved draft at a time, so every draft shares a page identity: the
+      // first save of a draft is the same page, not a new one.
+      toolSidebarController.setCalculations([], 'draft');
     } else {
       toolSidebarController.renderCalculations();
     }
@@ -218,7 +220,7 @@ function createNotebookViewerRender({
     clearPendingNotebookResultFiles();
     resultFileAttachmentController.clear();
     resultTableController.renderEditor(null);
-    toolSidebarController.setCalculations([]);
+    toolSidebarController.setCalculations([], '');
     if (notebookExperimentName) {
       notebookExperimentName.value = '';
       notebookExperimentName.hidden = true;

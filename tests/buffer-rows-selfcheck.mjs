@@ -66,6 +66,7 @@ doc.getElementById('buffer-name-1').setAttribute('aria-label', 'Ingredient 1 che
 doc.getElementById('buffer-name-1').dataset.bufferChemicalIndex = '1';
 doc.getElementById('buffer-suggestions-1').hidden = true;
 const bufferRows = doc.getElementById('buffer-rows');
+bufferRows.appendChild(doc.getElementById('buffer-add-row'));
 bufferRows.appendChild(doc.getElementById('buffer-adjustment-row'));
 doc.getElementById('buffer-volume-ml');
 doc.getElementById('buffer-volume-unit').value = 'mL';
@@ -84,8 +85,8 @@ const row7 = doc.getElementById('buffer-row-7');
 assert.equal(row7.hidden, false);
 assert.deepEqual(
   bufferRows.children.map((child) => child.id),
-  ['buffer-row-7', 'buffer-adjustment-row'],
-  'new ingredients stay above the solvent and pH adjustment row'
+  ['buffer-row-7', 'buffer-add-row', 'buffer-adjustment-row'],
+  'new ingredients land above the add-ingredient row and the adjustment row'
 );
 assert.equal(doc.getElementById('buffer-name-7').getAttribute('aria-controls'), 'buffer-suggestions-7');
 assert.equal(doc.getElementById('buffer-name-7').getAttribute('aria-label'), 'Ingredient 7 chemical');

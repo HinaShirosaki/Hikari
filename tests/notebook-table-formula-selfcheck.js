@@ -19,8 +19,10 @@ const {
 } = loadEsmStyleModule(path.join(root, 'src/renderer/lib/notebook-table-formulas.js'));
 const {
   addNotebookResultTableColumn,
+  addNotebookResultTableRow,
   createDefaultNotebookResultTable,
   createMolarityNotebookResultTable,
+  molarityRowFormulas,
   normalizeNotebookResultTable,
   setNotebookResultTableColumnUnit
 } = loadEsmStyleModule(
@@ -457,6 +459,43 @@ assert.equal(twoKnown.E.text, '5000/(100*D1)', 'the molarity column states its o
 assert.equal(twoKnown.D.pending, true, 'a column waiting on another is pending');
 assert.equal(twoKnown.D.error, null, 'waiting on the other unknown is not an error');
 assert.equal(twoKnown.B.text, '100', 'a typed column stays exactly as typed');
+
+// The formula belongs to the table, not to the cells: nothing is stored, so a value is
+// typed into an empty editor and clearing it hands the cell back to the formula.
+const blank = createMolarityNotebookResultTable(null, 2);
+assert.equal(
+  blank.rows.flatMap((row) => blank.columns.map((column) => row[column.field])).join(''),
+  '',
+  'a new molarity worksheet stores no formula text in any cell'
+);
+assert.equal(molarity({ B: '100', C: '5', D: '9', E: '50' }).D.text, '9', 'a typed value wins over the formula');
+assert.equal(molarity({ B: '100', C: '5', D: '', E: '50' }).D.text, '1', 'clearing a cell computes it again');
+
+// A row added to the worksheet solves like the rest, without dragging anything into it.
+const grown = addNotebookResultTableRow(createMolarityNotebookResultTable(null, 1), null);
+grown.rows[1][grown.columns[1].field] = '100';
+grown.rows[1][grown.columns[2].field] = '5';
+grown.rows[1][grown.columns[3].field] = '1';
+assert.equal(
+  computeNotebookResultTable(grown).byRowId[grown.rows[1].id][grown.columns[4].field].text,
+  '50',
+  'an added row carries the row formulas too'
+);
+
+// Worksheets saved when the formula lived in the cells come back as values-only.
+const legacy = (() => {
+  const table = createMolarityNotebookResultTable(null, 1);
+  const cells = molarityRowFormulas(table.columns, 0);
+  table.columns.forEach((column, index) => {
+    table.rows[0][column.field] = cells[index];
+  });
+  return normalizeNotebookResultTable(table);
+})();
+assert.equal(
+  legacy.columns.map((column) => legacy.rows[0][column.field]).join(''),
+  '',
+  'a stored copy of the generated formula is dropped when an old worksheet is opened'
+);
 
 // Outside a solve table the same mutual reference is still the mistake it always was.
 assert.equal(text(tableOf([['=B1+1', '=A1+1']]), 0, 0), '#ERROR', 'plain tables still reject cycles');

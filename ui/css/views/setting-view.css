@@ -3,11 +3,6 @@
 #setting-view {
 }
 
-#setting-view .settings-head {
-  display: grid;
-  gap: 4px;
-}
-
 #setting-view .settings-layout {
   --left-rail-main-gap: 20px;
 }

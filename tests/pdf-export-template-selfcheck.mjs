@@ -1,13 +1,26 @@
 import assert from 'node:assert/strict';
 
 // Stub jsPDF: records the text/shape calls so we can assert on the rendered template.
-const calls = { text: [], images: [], pages: 1, saved: '' };
+const calls = { text: [], images: [], pages: 1, saved: '', documents: [] };
 
 class FakeDoc {
-  constructor() {
+  constructor(options = {}) {
+    this.options = options;
     this.currentPage = 1;
+    calls.documents.push(this);
+    const portraitSizes = {
+      a4: [595.28, 841.89],
+      a5: [419.53, 595.28],
+      legal: [612, 1008],
+      letter: [612, 792]
+    };
+    const pageSize = portraitSizes[options.format] || portraitSizes.letter;
+    const landscape = options.orientation === 'l' || options.orientation === 'landscape';
     this.internal = {
-      pageSize: { getWidth: () => 612, getHeight: () => 792 },
+      pageSize: {
+        getWidth: () => (landscape ? pageSize[1] : pageSize[0]),
+        getHeight: () => (landscape ? pageSize[0] : pageSize[1])
+      },
       getNumberOfPages: () => calls.pages
     };
   }
@@ -78,6 +91,56 @@ class FakeDoc {
   }
 }
 
+class FakeImage {
+  constructor() {
+    this.width = 256;
+    this.height = 256;
+    this.naturalWidth = 256;
+    this.naturalHeight = 256;
+    this.source = '';
+  }
+
+  set src(value) {
+    this.source = String(value || '');
+    this.onload?.();
+  }
+}
+
+globalThis.Image = FakeImage;
+globalThis.document = {
+  createElement(tagName) {
+    if (tagName !== 'canvas') {
+      return {};
+    }
+    const canvas = {
+      width: 0,
+      height: 0,
+      drawnSource: '',
+      tintColor: '',
+      getContext() {
+        return {
+          fillStyle: '',
+          globalCompositeOperation: 'source-over',
+          clearRect() {},
+          fillRect() {
+            if (this.globalCompositeOperation === 'source-in') {
+              canvas.tintColor = this.fillStyle;
+            }
+          },
+          drawImage(image) {
+            canvas.drawnSource = String(image?.source || '');
+          }
+        };
+      },
+      toDataURL() {
+        return canvas.drawnSource === './assets/loadingicon.png' && canvas.tintColor === '#185fa5'
+          ? 'data:image/png;base64,SElLQVJJ'
+          : 'data:image/png;base64,RklHVVJF';
+      }
+    };
+    return canvas;
+  }
+};
 globalThis.window = { jspdf: { jsPDF: FakeDoc }, alert: () => {} };
 
 const {
@@ -146,11 +209,25 @@ const notebookOk = await exportNotebookEntryPdf({
     plateType: '6',
     wellLayout: [{ well: 'A1', sampleId: 'PDF Cell Sample', concentration: '3.5 uM' }]
   },
-  resultFileImages: [{ name: 'cells.png', dataUrl: 'data:image/png;base64,aW1hZ2U=' }]
+  resultFileImages: [{ name: 'cells.png', dataUrl: 'data:image/png;base64,aW1hZ2U=' }],
+  pdfSettings: { pageSize: 'a4', stapleEdge: 'left' }
 });
 assert.equal(notebookOk, true, 'notebook export should report success');
+assert.equal(calls.documents.at(-1).options.format, 'a4', 'notebook export uses the selected page size');
+assert.equal(
+  calls.text.find((item) => item.text === 'NOTEBOOK PAGE')?.x,
+  108,
+  'left staple space shifts notebook content inward by 0.5 inch'
+);
 assert.equal(calls.saved, 'notebook-Atlas-Microscope-capture.pdf');
-assert.equal(calls.images.length, 1, 'attached notebook images are embedded in PDF output');
+const notebookCornerIcons = calls.images.filter((args) => args[0] === 'data:image/png;base64,SElLQVJJ');
+const notebookFigures = calls.images.filter((args) => args[0] === 'data:image/png;base64,RklHVVJF');
+assert.equal(notebookFigures.length, 1, 'attached notebook images are embedded in PDF output');
+assert.equal(notebookCornerIcons.length, calls.pages, 'the Hikari icon is rendered once on every notebook PDF page');
+assert.ok(Math.abs(notebookCornerIcons[0][2] - 543.28) < 0.01, 'the Hikari icon sits in the lower-right A4 margin');
+assert.ok(Math.abs(notebookCornerIcons[0][3] - 773.89) < 0.01, 'the Hikari icon aligns beside the A4 footer');
+assert.equal(notebookCornerIcons[0][4], 32, 'the Hikari icon is large enough to remain visible');
+assert.equal(notebookCornerIcons[0][5], 32, 'the Hikari icon remains square');
 assert.ok(calls.text.some((item) => item.text.includes('cells.png')), 'attached image filename is rendered as a caption');
 assert.ok(calls.text.some((item) => item.text.includes('PDF Cell Sample')), 'linked plate cells retain their saved sample labels');
 assert.ok(calls.text.some((item) => item.text.includes('3.5 uM')), 'linked plate cells retain their saved concentration labels');
@@ -183,11 +260,21 @@ const projectNotebookOk = await exportProjectNotebookEntriesPdf({
   ]),
   resultFileImagesByEntryId: new Map([
     ['page-1', [{ name: 'cells.png', dataUrl: 'data:image/png;base64,aW1hZ2U=' }]]
-  ])
+  ]),
+  pdfSettings: { pageSize: 'legal', stapleEdge: 'top' }
 });
 assert.equal(projectNotebookOk, true, 'project notebook export should report success');
+assert.equal(calls.documents.at(-1).options.format, 'legal', 'project notebook export uses the selected page size');
+assert.equal(
+  calls.text.find((item) => item.text === 'PROJECT NOTEBOOK')?.y,
+  108,
+  'top staple space shifts project notebook content downward by 0.5 inch'
+);
 assert.equal(calls.saved, 'project-notebook-Atlas.pdf');
-assert.equal(calls.images.length, 1, 'attached images are embedded in whole-project notebook PDFs');
+const projectCornerIcons = calls.images.filter((args) => args[0] === 'data:image/png;base64,SElLQVJJ');
+const projectFigures = calls.images.filter((args) => args[0] === 'data:image/png;base64,RklHVVJF');
+assert.equal(projectFigures.length, 1, 'attached images are embedded in whole-project notebook PDFs');
+assert.equal(projectCornerIcons.length, calls.pages, 'the Hikari icon is repeated on every project notebook PDF page');
 assert.ok(calls.text.some((item) => item.text.includes('Project PDF Sample')), 'project notebook PDFs retain linked plate sample labels');
 assert.ok(calls.text.some((item) => item.text.includes('7 uM')), 'project notebook PDFs retain linked plate concentration labels');
 

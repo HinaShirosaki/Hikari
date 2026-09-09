@@ -13,6 +13,7 @@ import { normalizeAppearanceMode } from './appearance.js';
 import { normalizePluginStorage } from '../../lib/plugin-storage.js';
 import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
+import { normalizeNotebookPdfSettings } from '../../lib/notebook-pdf-settings.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
@@ -136,7 +137,9 @@ function normalizeSettings(source) {
 
   return {
     ...structuredClone(defaultState.settings),
+    notebookSuggestionPauses: asObject(rawSettings.notebookSuggestionPauses),
     storagePath: String(rawSettings.storagePath || '').trim(),
+    notebookPdf: normalizeNotebookPdfSettings(rawSettings.notebookPdf),
     personalInfo: {
       ...defaultState.settings.personalInfo,
       ...rawPersonalInfo

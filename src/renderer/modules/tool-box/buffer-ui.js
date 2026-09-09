@@ -93,12 +93,11 @@ export function initBufferTool(options = {}) {
   }
 
   function insertBufferRowBeforeAdjustment(row) {
-    const adjustmentRow = getElement(rootDocument, 'buffer-adjustment-row');
-    if (
-      adjustmentRow?.parentElement === bufferRows
-      && typeof bufferRows.insertBefore === 'function'
-    ) {
-      bufferRows.insertBefore(row, adjustmentRow);
+    const anchorRow = ['buffer-add-row', 'buffer-adjustment-row']
+      .map((id) => getElement(rootDocument, id))
+      .find((candidate) => candidate?.parentElement === bufferRows);
+    if (anchorRow && typeof bufferRows.insertBefore === 'function') {
+      bufferRows.insertBefore(row, anchorRow);
       return;
     }
     bufferRows.appendChild(row);

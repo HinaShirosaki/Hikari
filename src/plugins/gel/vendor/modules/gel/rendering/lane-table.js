@@ -195,6 +195,22 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
   }
 
   function renderLaneTableShell() {
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    const layout = resolveLaneLayout(runtime);
+    const dividerReady = hasDividerLayout(overrides);
+    const rows = cloneLaneTableRows(overrides.laneTable?.rows || []);
+    const hasTable = Boolean(layout && rows.length && !runtime.cropperActive);
+    const canAddTable = dividerReady && Boolean(layout) && !runtime.cropperActive;
+    // Export only needs finished lane dividers, so the toolbar buttons stay usable
+    // whether or not a lane table has been added.
+    const canExport = canAddTable && Boolean(runtime.currentImage?.imageData);
+    if (elements.gelExportImageBtn) {
+      elements.gelExportImageBtn.disabled = !canExport;
+    }
+    if (elements.gelExportPptxBtn) {
+      elements.gelExportPptxBtn.disabled = !canExport;
+    }
+
     if (
       !elements.gelAddTableBtn
       || !elements.gelLaneTableShell
@@ -205,12 +221,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const overrides = normalizeManualOverrides(runtime.manualOverrides);
-    const layout = resolveLaneLayout(runtime);
-    const dividerReady = hasDividerLayout(overrides);
-    const rows = cloneLaneTableRows(overrides.laneTable?.rows || []);
-    const hasTable = Boolean(layout && rows.length && !runtime.cropperActive);
-    const canAddTable = dividerReady && Boolean(layout) && !runtime.cropperActive;
     const ladderLane = resolveLadderLane(layout);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
     const visibleLayout = resolveVisibleLayout(layout, includeLadder, ladderLane);
@@ -293,8 +303,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
             Include ladder lane
           </label>
           <button type="button" class="ghost-btn" data-gel-table-add-row>Add row</button>
-          <button type="button" class="primary-btn" data-gel-table-generate-image>Generate image</button>
-          <button type="button" class="ghost-btn" data-gel-table-generate-pptx>Generate PowerPoint</button>
         </div>
       </div>
       <div class="gel-lane-table-labels">
@@ -356,7 +364,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const layout = resolveLaneLayout(runtime);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
     const ladderLane = resolveLadderLane(layout);
-    const originalLabel = button?.textContent || 'Generate image';
+    const originalLabel = button?.textContent || 'Export image';
     if (button) {
       button.disabled = true;
       button.setAttribute?.('aria-busy', 'true');
@@ -416,7 +424,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const layout = resolveLaneLayout(runtime);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
     const ladderLane = resolveLadderLane(layout);
-    const originalLabel = button?.textContent || 'Generate PowerPoint';
+    const originalLabel = button?.textContent || 'Export PPT';
     if (button) {
       button.disabled = true;
       button.setAttribute?.('aria-busy', 'true');
@@ -460,7 +468,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         const ladderSummary = !gelResult.plan.includeLadder && gelResult.plan.ladderLane
           ? ` Ladder lane ${gelResult.plan.ladderLane} excluded.`
           : '';
-        deps.setStatus?.(`Generated ${downloadResult?.fileName || fileName} with an editable table.${cropSummary}${ladderSummary}`);
+        const tableSummary = gelResult.plan.rows?.length ? ' with an editable table' : '';
+        deps.setStatus?.(`Generated ${downloadResult?.fileName || fileName}${tableSummary}.${cropSummary}${ladderSummary}`);
         return downloadResult;
       })
       .catch((error) => {
@@ -479,14 +488,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
   }
 
   function onShellClick(event) {
-    const powerPointButton = event?.target?.closest?.('[data-gel-table-generate-pptx]');
-    if (powerPointButton) {
-      return onGeneratePowerPointClick(powerPointButton);
-    }
-    const generateButton = event?.target?.closest?.('[data-gel-table-generate-image]');
-    if (generateButton) {
-      return onGenerateFigureClick(generateButton);
-    }
     const addRowButton = event?.target?.closest?.('[data-gel-table-add-row]');
     if (!addRowButton) {
       return;

@@ -27,8 +27,10 @@ function createSpreadsheetColumnDefs({
       element.className = 'spreadsheet-cell spreadsheet-cell--formula';
     }
     element.textContent = computed.text;
-    // Editing shows the formula again; until then the tooltip is where it lives.
-    element.title = computed.error ? `${raw} — ${computed.error}` : raw;
+    // A solve table's formula is set by the table, not stored in the cell, so `source`
+    // is where it lives -- and the tooltip is the only place it shows.
+    const source = computed.source || raw;
+    element.title = computed.error ? `${source} — ${computed.error}` : source;
     return element;
   }
 

@@ -2,12 +2,6 @@
       <div class="settings-layout left-rail-template">
         <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
           <div class="left-rail-template__stack">
-            <section class="left-rail-template__section">
-              <div class="settings-head">
-                <h2>Settings</h2>
-              </div>
-            </section>
-
             <section class="left-rail-template__section settings-nav-list">
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
               <span>Appearance</span>
@@ -20,6 +14,10 @@
             <button type="button" class="settings-nav-item" data-settings-target="startup">
               <span>Startup &amp; Data</span>
               <small>Launch behavior and .json file</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="notebook-pdf">
+              <span>Notebook PDF</span>
+              <small>Page size and binding space</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="locations">
               <span>Inventory Locations</span>
@@ -128,6 +126,36 @@
                 </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Startup Settings</button>
+                </div>
+              </form>
+            </section>
+
+            <section class="settings-section" data-settings-panel="notebook-pdf" hidden>
+              <div class="settings-section-head">
+                <h3>Notebook PDF</h3>
+                <p class="small-note">These settings apply to individual notebook pages and whole-project PDF exports.</p>
+              </div>
+              <form id="notebook-pdf-form" class="stack-form">
+                <label class="settings-choice-field settings-choice-field--medium">
+                  Page Size
+                  <select id="setting-notebook-pdf-page-size">
+                    <option value="letter">US Letter</option>
+                    <option value="a4">A4</option>
+                    <option value="a5">A5</option>
+                    <option value="legal">US Legal</option>
+                  </select>
+                </label>
+                <label class="settings-choice-field settings-choice-field--medium">
+                  Staple Region
+                  <select id="setting-notebook-pdf-staple-edge">
+                    <option value="none">None</option>
+                    <option value="left">Left edge</option>
+                    <option value="top">Top edge</option>
+                  </select>
+                </label>
+                <p class="small-note">Left or top reserves an extra 0.5 inch of blank space for stapling or binding.</p>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Notebook PDF Settings</button>
                 </div>
               </form>
             </section>

@@ -24,6 +24,11 @@ body.theme-example {
 }
 ```
 
+Filled `input`, `textarea`, and `select` elements use the
+`--theme-control-background` contract. The default day theme intentionally
+aliases that token to `--theme-surface` to preserve its near-white fields;
+night and other themes may override the control fill independently.
+
 Modules should use the shared `--theme-*` variables unless a color carries
 module-specific meaning. Extra colors belong in a dedicated module palette:
 
@@ -35,12 +40,17 @@ module-specific meaning. Extra colors belong in a dedicated module palette:
 - `views/tool-box-palette.css` — fixed-color scientific canvases
 - `views/workflow-palette.css` — workflow graph links and selections
 
-A module palette that varies by theme must declare those values under
-`body.theme-night` (or `body.theme-miku`), never on `:root`. A custom property
-is substituted where it is *declared*, so `--x-night-panel: var(--theme-surface)`
-written on `:root` resolves against the day palette and inherits a light color
-into night mode. `tests/night-palette-selfcheck.mjs` enforces this, along with
-the night ramp's ordering and its text/border contrast minimums.
+A custom property that reads a `--theme-*` token must **not** be declared on
+`:root`. Substitution happens where a property is *declared*, so
+`--app-left-rail-surface: color-mix(..., var(--theme-surface-elevated) ...)` on
+`:root` freezes the day value and inherits that light color into night mode —
+this is what once painted the left rail near-white behind light text. Declare it
+on `body` instead: the theme class lives there, so one declaration resolves
+correctly in every theme. Re-declaring the property in each theme block works
+too, and is what `base/palette.css` does for the contract itself.
+
+`tests/night-palette-selfcheck.mjs` enforces this across every stylesheet, along
+with the night ramp's ordering and its text/border contrast minimums.
 
 Every palette must be listed in `ui/config/css-order.json` before view styles.
 Raw color literals are not allowed in ordinary component/view CSS. Run

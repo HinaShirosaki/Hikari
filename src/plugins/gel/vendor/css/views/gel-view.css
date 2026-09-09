@@ -504,6 +504,11 @@
   align-items: center;
 }
 
+/* Export is an output action, not a crop tool: keep it at the far end of the bar. */
+#gel-export-image-btn {
+  margin-left: auto;
+}
+
 .gel-viewer-toolbar .ghost-btn {
   border: 1px solid var(--gel-chart-border);
   background: var(--gel-chart-surface);

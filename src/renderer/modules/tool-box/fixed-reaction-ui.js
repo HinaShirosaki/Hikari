@@ -54,12 +54,11 @@ export function initFixedReactionTool(options = {}) {
   }
 
   function insertReactionRowBeforeSolvent(row) {
-    const solventRow = getElement(rootDocument, 'fixed-reaction-solvent-row');
-    if (
-      solventRow?.parentElement === rowsHost
-      && typeof rowsHost.insertBefore === 'function'
-    ) {
-      rowsHost.insertBefore(row, solventRow);
+    const anchorRow = ['fixed-reaction-add-row', 'fixed-reaction-solvent-row']
+      .map((id) => getElement(rootDocument, id))
+      .find((candidate) => candidate?.parentElement === rowsHost);
+    if (anchorRow && typeof rowsHost.insertBefore === 'function') {
+      rowsHost.insertBefore(row, anchorRow);
       return;
     }
     rowsHost.appendChild(row);

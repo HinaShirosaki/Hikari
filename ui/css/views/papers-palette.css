@@ -2,4 +2,7 @@
 
 :root {
   --papers-highlight: rgba(255, 224, 102, 0.5);
+  --papers-form-field-bg: rgba(0, 84, 220, 0.08);
+  --papers-form-field-border: rgba(0, 84, 220, 0.32);
+  --papers-form-field-focus: rgba(0, 84, 220, 0.6);
 }

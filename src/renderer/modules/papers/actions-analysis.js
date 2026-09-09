@@ -192,6 +192,49 @@ function createPaperAnalysisActions({
     throw new Error('Unable to load this PDF from app storage.');
   }
 
+  // Overwrites the stored PDF in place: the paper record already points at that
+  // path, so a copy would leave the library showing the unfilled original.
+  async function saveFilledPaperPdf(paper) {
+    if (!paper || paperViewer?.getActivePaperId?.() !== paper.id) {
+      return false;
+    }
+    const storedPath = resolveStoredPaperPath(paper, state.settings?.storagePath);
+    const storageRoot = String(state.settings?.storagePath || '').trim();
+    if (!storedPath || !storageRoot || !windowRef?.hikariApi?.storeImportedFile) {
+      showTransientNotice('This PDF is not stored in the app folder, so filled values cannot be saved.', { type: 'error' });
+      return false;
+    }
+
+    const separatorIndex = Math.max(storedPath.lastIndexOf('/'), storedPath.lastIndexOf('\\'));
+    if (separatorIndex <= 0) {
+      showTransientNotice('Cannot resolve where this PDF is stored.', { type: 'error' });
+      return false;
+    }
+
+    try {
+      const bytes = await paperViewer.getFilledPdfBytes();
+      if (!bytes?.byteLength) {
+        showTransientNotice('Nothing to save from this PDF.', { type: 'error' });
+        return false;
+      }
+      const result = await windowRef.hikariApi.storeImportedFile({
+        storagePath: storageRoot,
+        targetFolder: storedPath.slice(0, separatorIndex),
+        fileName: storedPath.slice(separatorIndex + 1),
+        dataBytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
+        overwrite: true
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to save the filled PDF.');
+      }
+      showTransientNotice('Filled PDF saved.');
+      return true;
+    } catch (error) {
+      showTransientNotice(String(error?.message || error || 'Failed to save the filled PDF.'), { type: 'error' });
+      return false;
+    }
+  }
+
   async function resolvePaperPdfDataUrl(paper) {
     const embeddedBase64 = parsePdfDataUrl(paper?.pdfDataUrl);
     if (embeddedBase64) {
@@ -236,6 +279,10 @@ function createPaperAnalysisActions({
         onOpenExternal: openPaperPdf
       });
       context.onActivePaperChanged?.(paper);
+      // openPaper already switched the viewer to this paper synchronously, so push the
+      // annotations now: waiting for the promise means highlights and pins only appear
+      // after every visible page has finished rendering.
+      context.comments?.syncViewerComments();
       context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
       const opened = await openPaperPromise;
       if (!opened) {
@@ -264,6 +311,7 @@ function createPaperAnalysisActions({
     openPaperPdf,
     resolvePaperPdfBytes,
     resolvePaperPdfDataUrl,
+    saveFilledPaperPdf,
     buildPaperViewerSummary,
     viewPaperPdf,
     handleMethodToProtocol

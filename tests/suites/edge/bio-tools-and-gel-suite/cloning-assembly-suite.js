@@ -1949,6 +1949,69 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(fragments[1].metadata.templateSequence, second);
     });
 
+    test('[EDGE] a Protein Builder insert is amplified per block, not as one amplicon', () => {
+      const helpers = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
+      ));
+      const planBuilding = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'plan-building.js'
+      ));
+      const vector = filler(3000, 4007);
+      const gene = filler(600, 4101);
+      // Tags and linker are reverse translated, so they exist only as ordered DNA;
+      // the gene came off pDonor. One template for the lot cannot prime the 5' end.
+      const tags = 'ATGCATCATCATCATCATCAC';
+      const linker = 'GGCGGAGGCGGTTCTGGCGGAGGCGGTTCT';
+      const insert = `${tags}${linker}${gene}TAA`;
+      const at = 1200;
+      const edited = `${vector.slice(0, at)}${insert}${vector.slice(at)}`;
+      const base = helpers.buildSequenceEditDesignSource({
+        record: { name: 'pVector' },
+        originalSequence: vector,
+        nextSequence: edited,
+        baseName: 'pVector'
+      });
+      const planFor = (source) => planBuilding.buildDisplayPlan({
+        strategy: 'gibson',
+        record: { name: 'pVector (POI-His)', topology: 'circular', sequence: edited },
+        source,
+        range: { start: at, end: at + insert.length },
+        donor: null
+      });
+
+      // Without the block list there is no template for the untemplated 5' blocks.
+      const flat = planFor(base);
+      assert.equal(flat.feasible, false);
+      assert.equal(flat.warnings.some((warning) => /no physical PCR template/.test(warning)), true);
+
+      const split = planFor({
+        ...base,
+        sourceKind: 'vector_builder',
+        constructName: 'POI-His',
+        insertSequence: insert,
+        insertParts: [
+          { label: '6xHis', kind: 'library', dnaSequence: tags },
+          { label: 'GS linker', kind: 'library', dnaSequence: linker },
+          {
+            label: 'POI',
+            kind: 'feature',
+            dnaSequence: gene,
+            templateSequence: gene,
+            templateName: 'pDonor',
+            templateHostSequence: `${filler(400, 4555)}${gene}${filler(500, 4777)}`
+          }
+        ]
+      });
+      assert.equal(split.feasible, true);
+      assert.equal(split.warnings.some((warning) => /no physical PCR template/.test(warning)), false);
+      // The gene is amplified off pDonor; the tags/linker become an ordered block.
+      const templates = split.plans[0].plan.orderedFragmentMap.fragments
+        .filter((fragment) => (fragment.role || fragment.type) !== 'backbone')
+        .map((fragment) => fragment.name);
+      assert.equal(templates.length, 2);
+      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['Synthetic block', 'POI']);
+    });
+
     test('[EDGE] cloning UI keeps all seven supported methods available', () => {
       const strategies = loadEsmStyleModule(path.join(
         __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'strategies.js'

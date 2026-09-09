@@ -78,11 +78,14 @@ export function createNotebookToolSidebarController({
   const insertNotesBtn = getElement(doc, 'biology-notebook-tool-insert-notes-btn');
   const bufferRows = getElement(doc, 'biology-notebook-tool-buffer-rows');
   const bufferRowTemplate = getElement(doc, 'biology-notebook-tool-buffer-row-1')?.cloneNode?.(true) || null;
+  const reactionRowTemplate = getElement(doc, 'biology-notebook-tool-reaction-row-1')?.cloneNode?.(true) || null;
 
   let activeTool = '';
   let currentResult = null;
   let toolCalculations = [];
+  let boundPageId = '';
   let bufferRowTotal = INITIAL_BUFFER_ROW_COUNT;
+  let reactionRowTotal = REACTION_ROW_COUNT;
   let toolboxDragState = null;
   let toolboxAnchor = null;
   let suppressFoldToggleClick = false;
@@ -202,7 +205,7 @@ export function createNotebookToolSidebarController({
     isHidden,
     setText,
     setStatus: (message) => setStatus(message),
-    REACTION_ROW_COUNT,
+    reactionRowCount,
     outputEl,
     formulaEl,
     toolOutput,
@@ -230,16 +233,112 @@ export function createNotebookToolSidebarController({
     setStatus: (message) => setStatus(message)
   });
 
-  function revealNextRow(prefix, count) {
-    for (let index = 1; index <= count; index += 1) {
-      const row = getElement(doc, `${prefix}-${index}`);
+  function reactionRowCount() {
+    return reactionRowTotal;
+  }
+
+  // The toolbox is a scratchpad for the page in the viewer, but its sheet lives
+  // in one shared bit of DOM. Without this, the previous page's reagents sit in
+  // the form and its result stays one "Insert" away from the wrong page.
+  function eachToolFieldId(visit) {
+    [
+      'biology-notebook-tool-buffer-volume',
+      'biology-notebook-tool-buffer-volume-unit',
+      'biology-notebook-tool-buffer-ph',
+      'biology-notebook-tool-reaction-total-volume',
+      'biology-notebook-tool-reaction-fill-name'
+    ].forEach(visit);
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
+      ['name', 'mw', 'stock', 'final'].forEach((field) => visit(`biology-notebook-tool-buffer-${field}-${index}`));
+    }
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
+      ['name', 'stock', 'final', 'volume'].forEach((field) => visit(`biology-notebook-tool-reaction-${field}-${index}`));
+    }
+  }
+
+  function eachToolRowId(visit) {
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
+      visit(`biology-notebook-tool-buffer-row-${index}`);
+    }
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
+      visit(`biology-notebook-tool-reaction-row-${index}`);
+    }
+  }
+
+  // Captured before anyone types: the markup ships a default total volume and
+  // solvent name, so "empty" is what the sheet started as, not blank.
+  const toolFieldDefaults = new Map();
+  const toolRowDefaults = new Map();
+  eachToolFieldId((id) => toolFieldDefaults.set(id, inputValue(getElement(doc, id))));
+  eachToolRowId((id) => toolRowDefaults.set(id, isHidden(getElement(doc, id))));
+
+  function resetToolInputs() {
+    eachToolFieldId((id) => {
+      const element = getElement(doc, id);
+      if (element) {
+        // Rows added since load are not in the snapshot; they start empty.
+        element.value = toolFieldDefaults.get(id) ?? '';
+      }
+    });
+    eachToolRowId((id) => {
+      const row = getElement(doc, id);
+      if (row) {
+        row.hidden = toolRowDefaults.get(id) ?? true;
+      }
+    });
+    closeBufferSuggestions();
+    renderCurrentTool();
+    clearToolSelection();
+  }
+
+  function bindReactionRow(index) {
+    [
+      `biology-notebook-tool-reaction-name-${index}`,
+      `biology-notebook-tool-reaction-stock-${index}`,
+      `biology-notebook-tool-reaction-final-${index}`,
+      `biology-notebook-tool-reaction-volume-${index}`
+    ].forEach((id) => {
+      const element = getElement(doc, id);
+      addListener(element, 'input', renderCurrentTool);
+      addListener(element, 'change', renderCurrentTool);
+    });
+  }
+
+  function appendReactionRow() {
+    const addRow = getElement(doc, 'biology-notebook-tool-reaction-add-row-anchor');
+    const rowsHost = addRow?.parentElement;
+    if (!reactionRowTemplate?.cloneNode || typeof rowsHost?.insertBefore !== 'function') {
+      return;
+    }
+    const index = reactionRowTotal + 1;
+    const row = reactionRowTemplate.cloneNode(true);
+    row.hidden = false;
+    row.id = `biology-notebook-tool-reaction-row-${index}`;
+    row.querySelectorAll?.('[id]').forEach((element) => {
+      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
+      element.value = '';
+      element.textContent = '';
+      const label = element.getAttribute?.('aria-label');
+      if (label) {
+        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
+      }
+    });
+    rowsHost.insertBefore(row, addRow);
+    reactionRowTotal = index;
+    bindReactionRow(index);
+  }
+
+  function revealOrAddReactionRow() {
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
+      const row = getElement(doc, `biology-notebook-tool-reaction-row-${index}`);
       if (row?.hidden) {
         row.hidden = false;
         renderCurrentTool();
         return;
       }
     }
-    setStatus('All available rows are already visible.');
+    appendReactionRow();
+    renderCurrentTool();
   }
 
   function insertBufferRowBeforeAddRow(row) {
@@ -350,7 +449,7 @@ export function createNotebookToolSidebarController({
     revealOrAddBufferRow();
   });
   addListener(getElement(doc, 'biology-notebook-tool-reaction-add-row'), 'click', () => {
-    revealNextRow('biology-notebook-tool-reaction-row', REACTION_ROW_COUNT);
+    revealOrAddReactionRow();
   });
   for (let index = 1; index <= bufferRowCount(); index += 1) {
     bindBufferRow(index);
@@ -384,19 +483,14 @@ export function createNotebookToolSidebarController({
     'biology-notebook-tool-reaction-total-volume',
     'biology-notebook-tool-reaction-fill-name'
   ];
-  for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
-    interactiveIds.push(
-      `biology-notebook-tool-reaction-name-${index}`,
-      `biology-notebook-tool-reaction-stock-${index}`,
-      `biology-notebook-tool-reaction-final-${index}`,
-      `biology-notebook-tool-reaction-volume-${index}`
-    );
-  }
   interactiveIds.forEach((id) => {
     const element = getElement(doc, id);
     addListener(element, 'input', renderCurrentTool);
     addListener(element, 'change', renderCurrentTool);
   });
+  for (let index = 1; index <= reactionRowCount(); index += 1) {
+    bindReactionRow(index);
+  }
 
   // Cells are inputs, so a committed change is what triggers the recompute; the
   // focused cell is restored because the whole table is re-rendered.
@@ -447,7 +541,13 @@ export function createNotebookToolSidebarController({
 
   return {
     getCalculations: () => normalizeNotebookToolCalculations(toolCalculations),
-    setCalculations: (calculations) => {
+    // pageId identifies the page now in the viewer; re-rendering the same page
+    // (a save, a mark-executed) keeps whatever is half-typed in the sheet.
+    setCalculations: (calculations, pageId = '') => {
+      if (String(pageId) !== boundPageId) {
+        boundPageId = String(pageId);
+        resetToolInputs();
+      }
       toolCalculations = normalizeNotebookToolCalculations(calculations);
       renderSavedCalculations();
     },

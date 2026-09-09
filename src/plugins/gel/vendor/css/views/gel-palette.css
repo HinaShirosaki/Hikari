@@ -61,4 +61,7 @@ body.theme-night {
   --gel-table-text: var(--theme-text);
   --gel-table-placeholder: var(--theme-text-muted);
   --gel-table-focus-background: var(--theme-surface-elevated);
+  --gel-table-divider: var(--theme-border-soft);
+  --gel-dialog-shadow: var(--theme-shadow-color);
+  --gel-empty-text: var(--theme-text-muted);
 }

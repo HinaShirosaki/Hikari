@@ -140,7 +140,7 @@ function frameStyleSvg(style) {
       fill: 'none', stroke, 'stroke-width': sw, rx: '2'
     }));
   } else if (style === 'offset') {
-    // Prism offset axes: the two arms stop short of the origin corner.
+    // Offset axes: the two arms stop short of the origin corner.
     svg.appendChild(svgEl('path', {
       d: `M 3 3 V ${h - 8} M 8 ${h - 3} H ${w - 3}`,
       fill: 'none', stroke, 'stroke-width': sw, 'stroke-linecap': 'round'

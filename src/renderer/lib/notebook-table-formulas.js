@@ -1,5 +1,5 @@
 import { FormulaError, compileFormula } from './formula.js';
-import { normalizeNotebookResultTables } from './notebook-result-tables.js';
+import { normalizeNotebookResultTables, solveTableCellFormula } from './notebook-result-tables.js';
 import { fail, formatCellAddress, formatNotebookTableNumber, isNotebookTableFormula, notebookTableCellText, parseCellAddress } from './notebook-table-formulas/cell-address.js';
 import { simplifyFormula } from './notebook-table-formulas/formula-simplify.js';
 
@@ -20,7 +20,10 @@ export function computeNotebookResultTables(rawTables, { plateAddressing = false
     if (!table || column < 0 || column >= table.columns.length || row < 0 || row >= table.rows.length) {
       return null;
     }
-    return String(table.rows[row][table.columns[column].field] ?? '').trim();
+    const stored = String(table.rows[row][table.columns[column].field] ?? '').trim();
+    // A solve table's cells hold typed values only, so an empty one is the unknown: its
+    // formula comes from the table rather than from text the user would have to edit.
+    return stored || solveTableCellFormula(table, column, row);
   }
 
   function targetTableIndex(node, currentTableIndex) {
@@ -168,7 +171,7 @@ export function computeNotebookResultTables(rawTables, { plateAddressing = false
     table.rows.forEach((row, rowIndex) => {
       const cells = {};
       table.columns.forEach((column, columnIndex) => {
-        const raw = String(row[column.field] ?? '');
+        const raw = rawAt(tableIndex, columnIndex, rowIndex) ?? '';
         if (!isNotebookTableFormula(raw)) {
           cells[column.field] = { text: notebookTableCellText(raw), error: null, formula: false };
           return;
@@ -177,16 +180,18 @@ export function computeNotebookResultTables(rawTables, { plateAddressing = false
           cells[column.field] = {
             text: formatNotebookTableNumber(valueAt(tableIndex, columnIndex, rowIndex)),
             error: null,
-            formula: true
+            formula: true,
+            source: raw
           };
         } catch (error) {
           const pendingText = error?.pending ? pendingExpressionFor(raw, tableIndex) : '';
           cells[column.field] = pendingText
-            ? { text: pendingText, error: null, formula: true, pending: true }
+            ? { text: pendingText, error: null, formula: true, pending: true, source: raw }
             : {
               text: error?.numeric ? '#NUM!' : '#ERROR',
               error: error instanceof FormulaError ? error.message : String(error?.message || error),
-              formula: true
+              formula: true,
+              source: raw
             };
         }
       });

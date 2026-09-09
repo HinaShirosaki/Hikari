@@ -127,9 +127,6 @@
               </details>
 
               <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
-                <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
-                  <span>Notes / Results</span>
-                </div>
                 <div class="biology-notebook-viewer-section-body">
                   <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
                   <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
@@ -144,7 +141,7 @@
                     <label for="biology-notebook-result">Notes</label>
                     <div class="biology-notebook-notes-composer">
                       <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn hikari-agent-action" type="button">Clarify and Save</button>
                     </div>
                   </div>
                   <label>
@@ -314,8 +311,8 @@
                       <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
                     </tr>
-                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-buffer-add-row">
-                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-buffer-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
+                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-sheet-add-row">
+                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
                     </tr>
                     <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
                       <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
@@ -330,9 +327,6 @@
             </section>
 
             <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
-              <div class="form-actions">
-                <button id="biology-notebook-tool-reaction-add-row" class="ghost-btn" type="button">Add Reagent</button>
-              </div>
               <div class="biology-notebook-reaction-sheet-wrap">
                 <table class="biology-notebook-reaction-sheet" aria-label="Fixed volume reaction preparer">
                   <colgroup>
@@ -387,6 +381,9 @@
                       <td><input id="biology-notebook-tool-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
                       <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="biology-notebook-tool-reaction-output-6" aria-live="polite"></output></td>
+                    </tr>
+                    <tr id="biology-notebook-tool-reaction-add-row-anchor" class="biology-notebook-sheet-add-row">
+                      <td colspan="4"><button id="biology-notebook-tool-reaction-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add reagent" title="Add reagent">+</button></td>
                     </tr>
                     <tr class="biology-notebook-reaction-solvent-row">
                       <th scope="row"><input id="biology-notebook-tool-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>

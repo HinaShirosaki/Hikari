@@ -19,18 +19,22 @@ function toInches(value) {
 function resolvePowerPointLayout(plan) {
   const gelWidthPx = Math.max(1, Number(plan?.gelWidth) || 0);
   const gelHeightPx = Math.max(1, Number(plan?.sourceHeight) || 0);
-  const rowCount = Math.max(1, plan?.rows?.length || 0);
+  const rowCount = Math.max(0, plan?.rows?.length || 0);
   const tableHeight = rowCount * TABLE_ROW_HEIGHT_EMU;
+  // No table rows means no table and no label column: the slide is just the gel.
+  const tableGelGap = rowCount ? TABLE_GEL_GAP_EMU : 0;
   const maxGelHeight = Math.max(
     EMU_PER_INCH,
-    SLIDE_HEIGHT_EMU - (SLIDE_MARGIN_EMU * 2) - tableHeight - TABLE_GEL_GAP_EMU
+    SLIDE_HEIGHT_EMU - (SLIDE_MARGIN_EMU * 2) - tableHeight - tableGelGap
   );
   const labelRatio = Math.max(0.08, Number(plan?.labelWidth) / Math.max(1, Number(plan?.canvasWidth)));
-  const labelWidth = clamp(
-    Math.round((SLIDE_WIDTH_EMU - (SLIDE_MARGIN_EMU * 2)) * labelRatio),
-    MIN_LABEL_WIDTH_EMU,
-    MAX_LABEL_WIDTH_EMU
-  );
+  const labelWidth = rowCount
+    ? clamp(
+      Math.round((SLIDE_WIDTH_EMU - (SLIDE_MARGIN_EMU * 2)) * labelRatio),
+      MIN_LABEL_WIDTH_EMU,
+      MAX_LABEL_WIDTH_EMU
+    )
+    : 0;
   const maxGelWidth = SLIDE_WIDTH_EMU - (SLIDE_MARGIN_EMU * 2) - labelWidth;
   const gelWidth = Math.max(
     EMU_PER_INCH,
@@ -39,7 +43,7 @@ function resolvePowerPointLayout(plan) {
   const gelHeight = Math.max(1, Math.round(gelWidth * (gelHeightPx / gelWidthPx)));
   const tableWidth = labelWidth + gelWidth;
   const groupLeft = Math.round((SLIDE_WIDTH_EMU - tableWidth) / 2);
-  const groupHeight = tableHeight + TABLE_GEL_GAP_EMU + gelHeight;
+  const groupHeight = tableHeight + tableGelGap + gelHeight;
   const tableTop = Math.max(SLIDE_MARGIN_EMU, Math.round((SLIDE_HEIGHT_EMU - groupHeight) / 2));
 
   const columnWidths = [labelWidth];
@@ -61,7 +65,7 @@ function resolvePowerPointLayout(plan) {
     tableHeight,
     tableRowHeight: TABLE_ROW_HEIGHT_EMU,
     gelLeft: groupLeft + labelWidth,
-    gelTop: tableTop + tableHeight + TABLE_GEL_GAP_EMU,
+    gelTop: tableTop + tableHeight + tableGelGap,
     gelWidth,
     gelHeight,
     columnWidths
@@ -116,7 +120,7 @@ export async function createGelPowerPoint({
   pptxgenConstructor = null,
   zipConstructor = null
 } = {}) {
-  if (!plan?.rows?.length || !plan?.slices?.length) {
+  if (!plan?.slices?.length) {
     throw new Error('PowerPoint export needs a completed Gel figure plan.');
   }
   if (!String(gelImageDataUrl || '').startsWith('data:image/png;base64,')) {
@@ -141,25 +145,27 @@ export async function createGelPowerPoint({
 
   const slide = presentation.addSlide();
   slide.background = { color: 'FFFFFF' };
-  slide.addTable(toTableRows(plan), {
-    x: toInches(layout.tableLeft),
-    y: toInches(layout.tableTop),
-    w: toInches(layout.tableWidth),
-    h: toInches(layout.tableHeight),
-    colW: layout.columnWidths.map(toInches),
-    rowH: Array.from({ length: plan.rows.length }, () => toInches(layout.tableRowHeight)),
-    objectName: 'Editable lane table',
-    autoPage: false,
-    border: { type: 'none' },
-    fill: { color: 'FFFFFF', transparency: 100 },
-    color: '000000',
-    bold: true,
-    fontFace: 'Arial',
-    fontSize: TABLE_FONT_SIZE_POINTS,
-    align: 'center',
-    valign: 'mid',
-    margin: 0.05
-  });
+  if (plan.rows?.length) {
+    slide.addTable(toTableRows(plan), {
+      x: toInches(layout.tableLeft),
+      y: toInches(layout.tableTop),
+      w: toInches(layout.tableWidth),
+      h: toInches(layout.tableHeight),
+      colW: layout.columnWidths.map(toInches),
+      rowH: Array.from({ length: plan.rows.length }, () => toInches(layout.tableRowHeight)),
+      objectName: 'Editable lane table',
+      autoPage: false,
+      border: { type: 'none' },
+      fill: { color: 'FFFFFF', transparency: 100 },
+      color: '000000',
+      bold: true,
+      fontFace: 'Arial',
+      fontSize: TABLE_FONT_SIZE_POINTS,
+      align: 'center',
+      valign: 'mid',
+      margin: 0.05
+    });
+  }
   slide.addImage({
     data: gelImageDataUrl,
     x: toInches(layout.gelLeft),

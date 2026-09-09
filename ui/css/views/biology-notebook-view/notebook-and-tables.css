@@ -189,8 +189,8 @@
   resize: vertical;
 }
 
-.biology-notebook-viewer-section-static .biology-notebook-viewer-section-summary-static {
-  cursor: default;
+.biology-notebook-viewer-section-static > .biology-notebook-viewer-section-body {
+  padding-top: 0;
 }
 
 .biology-notebook-linked-results:empty,

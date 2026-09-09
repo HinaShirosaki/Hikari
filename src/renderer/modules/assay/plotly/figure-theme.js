@@ -1,12 +1,12 @@
-// The Prism look, shared by the assay renderer and by agent-authored figures:
+// The publication-figure look, shared by the assay renderer and by agent-authored figures:
 // offset axis frame, no gridlines, plain tick numbers, outlined bars.
 import { CHART_FONT_FAMILY, DEFAULT_CHART_PALETTE } from './chart-style-model.js';
 import { asArray, ensureObject } from '../../../lib/normalize.js';
 
 // Fraction of the plot each offset axis arm leaves empty at the origin corner.
-export const PRISM_CORNER_GAP = 0.04;
-export const PRISM_BAR_GAP = 0.35;
-export const PRISM_BAR_GROUP_GAP = 0.12;
+export const FIGURE_CORNER_GAP = 0.04;
+export const FIGURE_BAR_GAP = 0.35;
+export const FIGURE_BAR_GROUP_GAP = 0.12;
 
 // Trace types drawn on cartesian axes. A figure with none of them (pie, sankey,
 // polar, 3d) gets no axis frame - the arms would just float over the graphic.
@@ -27,8 +27,8 @@ export function tickFormatSpec(format) {
   }
 }
 
-// Prism never sets tick numbers in bold; only titles/legend follow the text style.
-export function prismTextFont(style = {}, target = 'xTitle') {
+// Tick numbers are never bold; only titles/legend follow the text style.
+export function figureTextFont(style = {}, target = 'xTitle') {
   const specific = style.textStyles?.[target];
   const textStyle = ensureObject(specific || style.text);
   return {
@@ -41,11 +41,11 @@ export function prismTextFont(style = {}, target = 'xTitle') {
   };
 }
 
-export function prismFonts(style = {}) {
-  return { font: prismTextFont(style, 'xTitle'), tickFont: prismTextFont(style, 'xTicks') };
+export function figureFonts(style = {}) {
+  return { font: figureTextFont(style, 'xTitle'), tickFont: figureTextFont(style, 'xTicks') };
 }
 
-export function prismAxisDefaults(style = {}, tickFont) {
+export function figureAxisDefaults(style = {}, tickFont) {
   const frameStyle = style.frameStyle || 'offset';
   const axisColor = style.frameStroke || '#9bb0c9';
   const tickMark = style.tickDir === 'none' ? '' : (style.tickDir || 'outside');
@@ -58,7 +58,7 @@ export function prismAxisDefaults(style = {}, tickFont) {
     showgrid: false,
     gridcolor: style.gridColor || '#9bb0c9',
     gridwidth: style.gridStrokeWidth ?? 1,
-    tickfont: tickFont || prismFonts(style).tickFont,
+    tickfont: tickFont || figureFonts(style).tickFont,
     ticks: tickMark,
     tickwidth: style.frameStrokeWidth ?? 1,
     ticklen: Number.isFinite(style.tickLen) ? style.tickLen : 5,
@@ -68,24 +68,24 @@ export function prismAxisDefaults(style = {}, tickFont) {
   };
 }
 
-// 'offset' is the Prism frame: an L whose two arms stop short of the origin corner.
+// 'offset' is the figure frame: an L whose two arms stop short of the origin corner.
 // Plotly's own axis lines always meet, so the arms are drawn as paper-space shapes.
-export function prismFrameShapes(style = {}) {
+export function figureFrameShapes(style = {}) {
   if ((style.frameStyle || 'offset') !== 'offset') {
     return [];
   }
   const line = { color: style.frameStroke || '#9bb0c9', width: style.frameStrokeWidth ?? 1 };
   return [
     {
-      type: 'line', xref: 'paper', yref: 'paper', x0: PRISM_CORNER_GAP, x1: 1, y0: 0, y1: 0, line
+      type: 'line', xref: 'paper', yref: 'paper', x0: FIGURE_CORNER_GAP, x1: 1, y0: 0, y1: 0, line
     },
     {
-      type: 'line', xref: 'paper', yref: 'paper', x0: 0, x1: 0, y0: PRISM_CORNER_GAP, y1: 1, line
+      type: 'line', xref: 'paper', yref: 'paper', x0: 0, x1: 0, y0: FIGURE_CORNER_GAP, y1: 1, line
     }
   ];
 }
 
-function prismTrace(trace, index, style, axisColor) {
+function figureTrace(trace, index, style, axisColor) {
   const type = String(trace.type || 'scatter');
   const palette = asArray(style.palette).length ? style.palette : DEFAULT_CHART_PALETTE;
   const color = palette[index % palette.length];
@@ -96,7 +96,7 @@ function prismTrace(trace, index, style, axisColor) {
       marker: {
         color: marker.color === undefined ? color : marker.color,
         ...marker,
-        // Prism outlines every bar in the axis colour.
+        // Every bar is outlined in the axis colour.
         line: { color: axisColor, width: 1, ...ensureObject(marker.line) }
       }
     };
@@ -111,9 +111,9 @@ function prismTrace(trace, index, style, axisColor) {
   };
 }
 
-// Fills the Prism defaults into a figure the agent authored. Everything the figure
+// Fills the figure defaults into a figure the agent authored. Everything the figure
 // states itself wins, so an agent that picks colours or turns gridlines on keeps them.
-export function applyPrismDefaults(figure = {}, style = {}) {
+export function applyFigureDefaults(figure = {}, style = {}) {
   const source = ensureObject(figure);
   const layout = ensureObject(source.layout);
   const data = asArray(source.data);
@@ -121,10 +121,10 @@ export function applyPrismDefaults(figure = {}, style = {}) {
   if (!cartesian) {
     return { ...source, data, layout };
   }
-  const { font, tickFont } = prismFonts(style);
+  const { font, tickFont } = figureFonts(style);
   const axisColor = style.frameStroke || '#9bb0c9';
   const background = style.backgroundColor || '#ffffff';
-  const axisDefaults = prismAxisDefaults(style, tickFont);
+  const axisDefaults = figureAxisDefaults(style, tickFont);
   const axisKeys = new Set(['xaxis', 'yaxis', ...Object.keys(layout).filter((key) => /^[xy]axis\d*$/.test(key))]);
   const axes = {};
   axisKeys.forEach((key) => {
@@ -132,16 +132,16 @@ export function applyPrismDefaults(figure = {}, style = {}) {
   });
   return {
     ...source,
-    data: data.map((trace, index) => prismTrace(ensureObject(trace), index, style, axisColor)),
+    data: data.map((trace, index) => figureTrace(ensureObject(trace), index, style, axisColor)),
     layout: {
       font,
       paper_bgcolor: background,
       plot_bgcolor: background,
-      bargap: PRISM_BAR_GAP,
-      bargroupgap: PRISM_BAR_GROUP_GAP,
+      bargap: FIGURE_BAR_GAP,
+      bargroupgap: FIGURE_BAR_GROUP_GAP,
       ...layout,
       ...axes,
-      shapes: [...prismFrameShapes(style), ...asArray(layout.shapes)]
+      shapes: [...figureFrameShapes(style), ...asArray(layout.shapes)]
     }
   };
 }

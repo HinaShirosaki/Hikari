@@ -21,6 +21,7 @@ export const installPdfViewerToolbarController = (ctx) => {
     zoomLabel,
     openExternalBtn,
     printBtn,
+    saveFormBtn,
     closeBtn
   } = elements;
 
@@ -42,7 +43,10 @@ export const installPdfViewerToolbarController = (ctx) => {
     if (pageCount) {
       pageCount.textContent = active ? `/ ${state.pageCount}` : '/ 0';
     }
-    [zoomOutBtn, zoomInBtn, zoomResetBtn, fitWidthBtn, openExternalBtn, printBtn, closeBtn]
+    if (saveFormBtn) {
+      saveFormBtn.hidden = !active || !state.hasFormFields;
+    }
+    [zoomOutBtn, zoomInBtn, zoomResetBtn, fitWidthBtn, openExternalBtn, printBtn, saveFormBtn, closeBtn]
       .forEach((button) => {
         if (button) button.disabled = !active;
       });
@@ -72,6 +76,7 @@ export const installPdfViewerToolbarController = (ctx) => {
     state.comments = [];
     state.highlights = [];
     state.bookmarks = [];
+    state.hasFormFields = false;
     state.selectedCommentId = '';
     state.pendingSelection = null;
     state.pendingCommentSelection = null;

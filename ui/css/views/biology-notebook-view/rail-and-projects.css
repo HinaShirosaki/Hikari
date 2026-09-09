@@ -825,11 +825,11 @@
   padding: 0;
 }
 
-.biology-notebook-buffer-add-row td {
+.biology-notebook-sheet-add-row td {
   padding: 0;
 }
 
-.biology-notebook-buffer-add-row-button {
+.biology-notebook-sheet-add-row-button {
   display: grid;
   place-items: center;
   width: 100%;
@@ -843,8 +843,8 @@
   line-height: 1;
 }
 
-.biology-notebook-buffer-add-row-button:hover,
-.biology-notebook-buffer-add-row-button:focus-visible {
+.biology-notebook-sheet-add-row-button:hover,
+.biology-notebook-sheet-add-row-button:focus-visible {
   background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
   color: var(--theme-text-strong);
 }
@@ -1469,3 +1469,25 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
     grid-column: 1 / -1;
   }
 }
+
+/* Render outside the scroll rail so long reasons remain readable. */
+.biology-notebook-suggestion-reason {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(24rem, calc(100vw - 1rem));
+  max-height: min(24rem, calc(100vh - 1rem));
+  overflow: auto;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 0.5rem;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: 0 0.3rem 1rem var(--theme-shadow-color-subtle);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.biology-notebook-suggestion-reason[hidden] { display: none; }

@@ -1084,6 +1084,49 @@ button:focus-visible {
   color: var(--theme-text);
 }
 
+/* A rainbow Hikari mark identifies actions that ask the configured LLM to
+   generate or transform content. The asset stays monochrome and editable;
+   the spectrum is applied here so the treatment works in every theme. */
+.hikari-agent-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.hikari-agent-action::before {
+  content: '';
+  display: block;
+  flex: 0 0 auto;
+  width: 1.45rem;
+  height: 1.45rem;
+  background: linear-gradient(
+    180deg,
+    var(--theme-hikari-rainbow-red),
+    var(--theme-hikari-rainbow-orange) 17%,
+    var(--theme-hikari-rainbow-yellow) 33%,
+    var(--theme-hikari-rainbow-green) 50%,
+    var(--theme-hikari-rainbow-cyan) 66%,
+    var(--theme-hikari-rainbow-blue) 83%,
+    var(--theme-hikari-rainbow-violet)
+  );
+  -webkit-mask: url("../../../assets/icons/hikari-button.svg") center / contain no-repeat;
+  mask: url("../../../assets/icons/hikari-button.svg") center / contain no-repeat;
+}
+
+.hikari-agent-action-icon::before {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.hikari-agent-action-icon > svg {
+  display: none;
+}
+
+.hikari-agent-action:disabled::before {
+  opacity: 0.58;
+}
+
 a.ghost-btn {
   display: inline-flex;
   align-items: center;

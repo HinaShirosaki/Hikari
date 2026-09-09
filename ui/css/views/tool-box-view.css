@@ -192,6 +192,20 @@
   background: var(--theme-surface-subtle);
 }
 
+.tool-box-sheet-add-row td {
+  padding: 0;
+  border-left: 0;
+  border-right: 0;
+  background: transparent;
+}
+
+.tool-box-sheet-add-row .tool-box-sheet-add-btn {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 0;
+  color: var(--theme-text-muted);
+}
+
 .tool-box-buffer-sheet-wrap,
 .tool-box-reaction-sheet-wrap {
   max-width: 100%;
@@ -799,7 +813,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 /* Molarity calculator */
 .molarity-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -837,6 +851,10 @@ body.ui-neutral-compact input[id*="api-key"] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+#tool-molarity-view #molarity-solver-form {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 #tool-molarity-view .molarity-form > label {
@@ -914,12 +932,6 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 #tool-molarity-view .molarity-output[data-state="warning"]::before {
   color: var(--theme-danger);
-}
-
-@media (max-width: 1200px) {
-  .molarity-card-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 760px) {

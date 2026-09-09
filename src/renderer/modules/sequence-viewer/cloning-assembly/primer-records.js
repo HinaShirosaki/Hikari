@@ -126,6 +126,22 @@ export function findTemplateCoreInDesiredSequence(desiredSequence, templateSeque
   return best;
 }
 
+// A PCR template is double-stranded. A feature stored from (or dropped onto) a
+// minus-strand site reads as the reverse complement of the donor's plus strand,
+// and scanning only the plus strand called that "wrong donor" -- every insert
+// route came back infeasible for a swap that is perfectly amplifiable.
+function findTemplateCoreOnEitherStrand(desiredSequence, templateSequence) {
+  const plus = findTemplateCoreInDesiredSequence(desiredSequence, templateSequence);
+  if (plus && plus.length >= normalizeSequence(desiredSequence).length) {
+    return { core: plus, templateSequence };
+  }
+  const minusTemplate = reverseComplementDna(templateSequence);
+  const minus = findTemplateCoreInDesiredSequence(desiredSequence, minusTemplate);
+  return (minus?.length || 0) > (plus?.length || 0)
+    ? { core: minus, templateSequence: minusTemplate }
+    : { core: plus, templateSequence };
+}
+
 function blockedTemplate(desiredSequence, warning) {
   return {
     feasible: false,
@@ -184,7 +200,8 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
     };
   }
 
-  const core = findTemplateCoreInDesiredSequence(desiredSequence, templateSequence);
+  const { core, templateSequence: strandTemplate } =
+    findTemplateCoreOnEitherStrand(desiredSequence, templateSequence);
   // A one- or two-base accidental match is not a PCR template. Requiring one
   // full primer-sized seed also turns a de-novo insertion (whose mapped
   // pre-edit range can retain a shared boundary base) into the actionable
@@ -195,7 +212,7 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
       : 'The stated PCR template does not contain the desired fragment. Provide the correct physical template or order the fragment by synthesis.');
   }
 
-  const templateCore = templateSequence.slice(core.templateStart, core.templateStart + core.length);
+  const templateCore = strandTemplate.slice(core.templateStart, core.templateStart + core.length);
   return {
     feasible: true,
     desiredSequence,

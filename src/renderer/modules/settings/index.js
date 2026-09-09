@@ -15,6 +15,7 @@ import {
 } from '../app-state/appearance.js';
 import { createCodexAccountSettings } from './codex-account.js';
 import { createPreferredJournalSettings } from './preferred-journals.js';
+import { createNotebookPdfSettingsController } from './notebook-pdf-controller.js';
 
 
 export function initSettings({
@@ -39,6 +40,9 @@ export function initSettings({
     startupForm,
     settingStartupDefaultView,
     settingStartupRememberLastView,
+    notebookPdfForm,
+    settingNotebookPdfPageSize,
+    settingNotebookPdfStapleEdge,
     llmForm,
     settingModel,
     settingModelOptions,
@@ -78,6 +82,12 @@ export function initSettings({
   } = getSettingsElements(document);
   const llmModelCatalog = createLlmModelCatalog();
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
+  const notebookPdfController = createNotebookPdfSettingsController({
+    state,
+    persist,
+    pageSizeInput: settingNotebookPdfPageSize,
+    stapleEdgeInput: settingNotebookPdfStapleEdge
+  });
   const mcpToolsController = createMcpToolsController({
     state,
     persist,
@@ -167,6 +177,7 @@ export function initSettings({
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
   startupForm?.addEventListener('submit', onSaveStartupSettings);
+  notebookPdfForm?.addEventListener('submit', notebookPdfController.save);
   llmForm.addEventListener('submit', onSaveLlmSettings);
   settingModel?.addEventListener('input', onModelChanged);
   settingModel?.addEventListener('change', onModelChanged);
@@ -343,6 +354,7 @@ export function initSettings({
     if (settingStartupRememberLastView) {
       settingStartupRememberLastView.checked = state.settings.startup?.rememberLastView === true;
     }
+    notebookPdfController.render();
     const llmProvider = DEFAULT_LLM_PROVIDER;
     settingModel.value = llm.model || '';
     settingModel.placeholder = 'optional, e.g. gpt-5.4';

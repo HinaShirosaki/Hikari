@@ -82,7 +82,7 @@ async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } 
     return false;
   }
 
-  const availableHeight = Math.max(80, ctx.pageHeight - (ctx.margin * 2) - 20);
+  const availableHeight = Math.max(80, ctx.pageHeight - ctx.marginTop - ctx.marginBottom - 20);
   const targetMaxHeight = Math.min(maxHeight, availableHeight);
   const widthScale = ctx.maxWidth / asset.width;
   const heightScale = targetMaxHeight / asset.height;

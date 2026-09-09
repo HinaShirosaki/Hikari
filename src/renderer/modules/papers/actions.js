@@ -152,6 +152,7 @@ export function createPapersActions(context) {
     openPaperPdf,
     resolvePaperPdfBytes,
     resolvePaperPdfDataUrl,
+    saveFilledPaperPdf,
     viewPaperPdf,
     handleMethodToProtocol
   } = createPaperAnalysisActions({
@@ -205,6 +206,7 @@ export function createPapersActions(context) {
     viewPaperPdf,
     handleMethodToProtocol,
     resolvePaperPdfBytes,
-    resolvePaperPdfDataUrl
+    resolvePaperPdfDataUrl,
+    saveFilledPaperPdf
   };
 }

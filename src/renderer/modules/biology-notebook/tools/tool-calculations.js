@@ -9,7 +9,7 @@ function createToolCalculations({
   isHidden,
   setText,
   setStatus,
-  REACTION_ROW_COUNT,
+  reactionRowCount,
   outputEl,
   formulaEl,
   toolOutput,
@@ -63,7 +63,7 @@ function createToolCalculations({
 
   function collectReactionRows() {
     const rows = [];
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
       if (isHidden(getElement(doc, `biology-notebook-tool-reaction-row-${index}`))) {
         continue;
       }
@@ -117,7 +117,7 @@ function createToolCalculations({
   }
 
   function renderReactionTableResult(result) {
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
       setText(getElement(doc, `biology-notebook-tool-reaction-output-${index}`), '');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {

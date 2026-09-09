@@ -397,7 +397,9 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     clearSequenceSelection();
     hideFeatureContextMenu();
     hideFeatureEditor();
-    renderActiveRecord();
+    // Deleting clears the selection, so without this the sequence pane would
+    // scroll back to base 1 instead of staying where the feature was.
+    renderActiveRecord({ preserveScroll: true });
     await persistFeatureMutation(current, `Deleted feature ${removedFeature?.name || 'feature'}.`);
   }
 

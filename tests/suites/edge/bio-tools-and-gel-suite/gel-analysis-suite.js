@@ -342,7 +342,7 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
 
 test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
   const runtime = {
-    currentImage: { width: 600 },
+    currentImage: { width: 600, imageData: { tag: 'source' } },
     cropperActive: false,
     manualOverrides: {
       laneSegmentation: {
@@ -369,7 +369,9 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
     gelLaneTableShell: new MockElement('gel-lane-table-shell'),
     gelViewerStage: new MockElement('gel-viewer-stage'),
     gelImageRow: new MockElement('gel-image-row'),
-    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer')
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelExportImageBtn: new MockElement('gel-export-image-btn'),
+    gelExportPptxBtn: new MockElement('gel-export-pptx-btn')
   };
   const controller = gelLaneTableInternals.createLaneTableController({
     runtime,
@@ -388,8 +390,76 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-include-ladder/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-image>Generate image/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-generate-pptx>Generate PowerPoint/);
+  assert.equal(elements.gelExportImageBtn.disabled, false);
+  assert.equal(elements.gelExportPptxBtn.disabled, false);
+});
+
+test('[EDGE] gel-analysis toolbar export buttons unlock from finished dividers, before any table exists', () => {
+  const runtime = {
+    currentImage: { width: 600, imageData: { tag: 'source' } },
+    cropperActive: false,
+    manualOverrides: {
+      laneSegmentation: {
+        gelLeft: 100,
+        gelRight: 500,
+        dividers: [250, 375],
+        dividerDone: true
+      },
+      laneTable: { rows: [] }
+    }
+  };
+  const elements = {
+    gelAddTableBtn: new MockElement('gel-add-table-btn'),
+    gelLaneTableShell: new MockElement('gel-lane-table-shell'),
+    gelViewerStage: new MockElement('gel-viewer-stage'),
+    gelImageRow: new MockElement('gel-image-row'),
+    gelLaneTableSpacer: new MockElement('gel-lane-table-spacer'),
+    gelExportImageBtn: new MockElement('gel-export-image-btn'),
+    gelExportPptxBtn: new MockElement('gel-export-pptx-btn')
+  };
+  const controller = gelLaneTableInternals.createLaneTableController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.render();
+
+  assert.equal(elements.gelLaneTableShell.hidden, true, 'no table has been added yet');
+  assert.equal(elements.gelExportImageBtn.disabled, false);
+  assert.equal(elements.gelExportPptxBtn.disabled, false);
+
+  runtime.manualOverrides.laneSegmentation.dividerDone = false;
+  controller.render();
+
+  assert.equal(elements.gelExportImageBtn.disabled, true);
+  assert.equal(elements.gelExportPptxBtn.disabled, true);
+});
+
+test('[EDGE] gel-analysis figure plan drops the label column and table strip when there are no rows', () => {
+  const overrides = {
+    laneSegmentation: {
+      gelLeft: 100,
+      gelRight: 500,
+      dividers: [300],
+      dividerDone: true,
+      bandTop: null,
+      bandBottom: null
+    },
+    laneTable: { rows: [] }
+  };
+  const plan = gelLaneTableInternals.buildGelFigurePlan({
+    imageWidth: 600,
+    imageHeight: 400,
+    manualOverrides: overrides
+  });
+
+  assert.equal(plan.rows.length, 0);
+  assert.equal(plan.labelWidth, 0);
+  assert.equal(plan.tableHeight, 0);
+  assert.equal(plan.canvasWidth, plan.gelWidth);
+  assert.equal(plan.slices[0].outputX, 0);
 });
 
 test('[EDGE] gel-analysis lane table hides the ladder column and restores its saved value', () => {
@@ -760,6 +830,38 @@ test('[EDGE] gel-analysis PowerPoint archive contains an editable transparent ta
   assert.match(masterXml, /<p:sldLayoutId id="2147483649"/, 'PowerPoint layout IDs must use the Office-valid range');
   assert.doesNotMatch(slideXml, /Lane 1|Lane 2/, 'the exported table should not add a synthetic lane-header row');
   assert.ok(result.layout.gelLeft > result.layout.tableLeft);
+});
+
+test('[EDGE] gel-analysis PowerPoint export without a lane table ships the gel alone', async () => {
+  const pptxgen = loadPptxGenJsSandbox();
+  const powerPointModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'rendering', 'powerpoint-export.js'),
+    {}
+  );
+  const result = await powerPointModule.createGelPowerPoint({
+    title: 'No table',
+    pptxgenConstructor: pptxgen.PptxGenJS,
+    zipConstructor: pptxgen.JSZip,
+    gelImageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Av5PAAAAAElFTkSuQmCC',
+    plan: {
+      canvasWidth: 200,
+      gelWidth: 200,
+      labelWidth: 0,
+      sourceHeight: 80,
+      slices: [
+        { laneIndex: 1, sourceWidth: 100 },
+        { laneIndex: 2, sourceWidth: 100 }
+      ],
+      rows: []
+    }
+  });
+  const archive = await pptxgen.JSZip.loadAsync(Array.from(result.bytes));
+  const slideXml = await archive.file('ppt/slides/slide1.xml').async('string');
+
+  assert.doesNotMatch(slideXml, /<a:tbl>/, 'an empty table must not be placed on the slide');
+  assert.match(slideXml, /name="Cropped gel image"/);
+  assert.equal(result.layout.tableHeight, 0);
+  assert.equal(result.layout.gelLeft, result.layout.tableLeft, 'without a label column the gel starts at the group edge');
 });
 
 test('[EDGE] gel-analysis PowerPoint action exports PPTX bytes with the current ladder choice', async () => {

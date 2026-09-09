@@ -223,6 +223,7 @@ export function initPapersManagement({
     zoomLabel: elements.paperViewerZoomLabel,
     openExternalBtn: elements.paperViewerOpenExternalBtn,
     printBtn: elements.paperViewerPrintBtn,
+    saveFormBtn: elements.paperViewerSaveFormBtn,
     selectionMenu: elements.paperSelectionMenu,
     selectionCommentBtn: elements.paperSelectionCommentBtn,
     selectionHighlightBtn: elements.paperSelectionHighlightBtn,
@@ -436,6 +437,14 @@ export function initPapersManagement({
     } catch (error) {
       showTransientNotice(String(error?.message || error || 'Failed to open the PDF for printing.'), { type: 'error' });
     }
+  });
+
+  elements.paperViewerSaveFormBtn?.addEventListener('click', async () => {
+    const activePaper = context.getActivePaper?.() || null;
+    if (!activePaper) {
+      return;
+    }
+    await actions.saveFilledPaperPdf(activePaper);
   });
 
   bindFileDropTarget({

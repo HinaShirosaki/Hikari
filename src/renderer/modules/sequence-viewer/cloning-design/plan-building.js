@@ -6,6 +6,7 @@ import { buildOverlapExtensionLigationPlan } from '../cloning-assembly/overlap-e
 import { clamp, cleanText, normalizeSequenceText } from '../shared.js';
 import { describeEditTarget, renamePrimers } from '../primer-naming.js';
 import { asArray } from '../../../lib/normalize.js';
+import { buildProteinInsertFragments } from '../protein-builder-cloning/cloning-plan.js';
 import { buildLinearizedBackbone, extractOriginalTemplateForEditedRange } from './edit-ranges.js';
 import { IN_FUSION_PROCEDURE, STRATEGY_GIBSON, STRATEGY_GOLDEN_GATE, STRATEGY_IN_FUSION, STRATEGY_OVERLAP_EXTENSION, STRATEGY_Q5_KLD, STRATEGY_TWO_STEP_LIGATION, STRATEGY_WHOLE_PLASMID } from './strategies.js';
 
@@ -35,6 +36,42 @@ function buildWholePlasmidPlan(source = {}, record = {}) {
       preferGibsonForMultiFragment: false
     }
   });
+}
+
+// A Protein Builder construct is several blocks from several physical sources: a
+// gene off a donor plasmid, plus tags and linkers that exist only as ordered DNA.
+// Modelling the whole span as one amplicon off one template leaves the
+// untemplated blocks with no binding window, so every route came back
+// infeasible. The builder already splits itself by physical source for the
+// stored-backbone route, so reuse that split whenever the selected range is
+// still exactly the construct that was inserted.
+function buildInsertFragments({ source, record, insertSequence, donor, donorSequence, templateSequence, originalSequence }) {
+  const parts = asArray(source?.insertParts);
+  if (parts.length && normalizeSequenceText(source?.insertSequence || '') === insertSequence) {
+    return buildProteinInsertFragments(
+      { sequence: insertSequence, parts },
+      cleanText(source?.constructName, 160) || 'Insert'
+    );
+  }
+  return [
+    {
+      id: 'edited_amplicon',
+      // The donor belongs in templateName, not in the fragment name, or the
+      // procedure reads "amplify pDonor amplicon off pDonor".
+      name: donorSequence ? 'Insert amplicon' : 'Edited amplicon',
+      type: 'insert',
+      sequence: insertSequence,
+      metadata: {
+        source: donorSequence ? 'donor_plasmid' : 'sequence_viewer_edit',
+        templateSequence,
+        templateName: donorSequence ? cleanText(donor?.name, 120) : '',
+        // Uniqueness is judged over the whole donor, since that is the DNA in
+        // the tube -- a primer unique to the gene can still prime elsewhere.
+        specificitySequence: donorSequence || originalSequence,
+        specificityCircular: cleanText(donorSequence ? donor?.topology : record?.topology, 40).toLowerCase() !== 'linear'
+      }
+    }
+  ];
 }
 
 function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy, donor = null, preferenceOverrides = {}) {
@@ -82,25 +119,9 @@ function buildInsertAssemblyPlan(source = {}, record = {}, range = {}, strategy,
       }
     ],
     hostVectorId: 'edited_linearized_backbone',
-    fragments: [
-      {
-        id: 'edited_amplicon',
-        // The donor belongs in templateName, not in the fragment name, or the
-        // procedure reads "amplify pDonor amplicon off pDonor".
-        name: donorSequence ? 'Insert amplicon' : 'Edited amplicon',
-        type: 'insert',
-        sequence: insertSequence,
-        metadata: {
-          source: donorSequence ? 'donor_plasmid' : 'sequence_viewer_edit',
-          templateSequence,
-          templateName: donorSequence ? cleanText(donor?.name, 120) : '',
-          // Uniqueness is judged over the whole donor, since that is the DNA in
-          // the tube -- a primer unique to the gene can still prime elsewhere.
-          specificitySequence: donorSequence || originalSequence,
-          specificityCircular: cleanText(donorSequence ? donor?.topology : record?.topology, 40).toLowerCase() !== 'linear'
-        }
-      }
-    ],
+    fragments: buildInsertFragments({
+      source, record, insertSequence, donor, donorSequence, templateSequence, originalSequence
+    }),
     resultSequence: sequence,
     preferences: isGibson
       ? {

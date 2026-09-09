@@ -146,7 +146,7 @@ The notebook page contains a snapshot of the protocol. Fill its interactive bars
 
    Column B represents OD600 and column C represents GFP fluorescence in arbitrary units for this tutorial.
 
-5. Under **Notes / Results**, enter:
+5. In the **Notes** field, enter:
 
    ```text
    Both fictional replicates reached similar density and showed GFP fluorescence. No contamination was noted in the tutorial record.
