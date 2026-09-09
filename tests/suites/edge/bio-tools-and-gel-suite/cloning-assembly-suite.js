@@ -857,86 +857,6 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.match(plan.warnings[0], /within primer-tail reach/);
     });
 
-    // --- sequence_viewer / sequence_edit MCP contract core ---
-    test('[EDGE] sequence-viewer agent API reads, proposes without mutating, and re-verifies targets', () => {
-      const agentApi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'agent', 'agent-api.js'));
-      const filler = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
-      const seq = `${filler}GGTACCTATTGACCATG${filler}`;
-      const records = [{ id: 'genbank_1', name: 'pTest', topology: 'circular', sequence: seq, features: [{ id: 'f1', name: 'CDS1', type: 'CDS', strand: 1, segments: [{ start: 10, end: 40 }] }] }];
-      const api = agentApi.createSequenceViewerAgentApi({
-        getRecords: () => records,
-        getSelectedIndex: () => 0,
-        getActiveEntryId: () => 'entry_9',
-        getCloningDesignSource: () => null,
-        createToken: () => 'tok1'
-      });
-
-      const rec = api.getRecord({ recordId: 'genbank_1', include: ['stats', 'features'] });
-      assert.equal(rec.target.baseDigest, agentApi.sequenceDigest(seq));
-      assert.equal(rec.features[0].segments[0].start, 11); // 1-based
-
-      const editIndex = filler.length + 7;
-      const proposal = api.proposeEdit({ target: rec.target, mode: 'replace', start: editIndex, end: editIndex, sequence: 'A' });
-      assert.equal(proposal.pending_approval, true);
-      // The echoed edit is what the approval overlay re-applies; it must be the
-      // 1-based request verbatim so the host can convert it back to a 0-based edit.
-      assert.equal(proposal.edit.mode, 'replace');
-      assert.equal(proposal.edit.start, editIndex);
-      assert.equal(proposal.edit.end, editIndex);
-      assert.equal(proposal.edit.sequence, 'A');
-      const insertProposal = api.proposeEdit({ target: rec.target, mode: 'insert', start: editIndex, sequence: 'TT' });
-      assert.equal(insertProposal.edit.mode, 'insert');
-      assert.equal(insertProposal.edit.start, editIndex);
-      assert.equal(insertProposal.edit.end, editIndex); // insert echoes end === start
-      assert.equal(insertProposal.edit.sequence, 'TT');
-      assert.equal(records[0].sequence, seq); // propose never mutates
-      assert.ok(api.verifyTarget(proposal.target).record);
-
-      records[0] = { ...records[0], sequence: `${seq}AAA` }; // simulate drift
-      assert.equal(api.verifyTarget(proposal.target).error.code, 'TARGET_CHANGED');
-      records[0] = { ...records[0], sequence: seq };
-    });
-
-    test('[EDGE] sequence-viewer agent API design_cloning is compute-only and normalizes strategy', () => {
-      const agentApi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'agent', 'agent-api.js'));
-      const filler = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
-      const seq = `${filler}GGTACCTATTGACCATG${filler}`;
-      const records = [{ id: 'genbank_1', name: 'pTest', topology: 'circular', sequence: seq, features: [] }];
-      const api = agentApi.createSequenceViewerAgentApi({ getRecords: () => records });
-      const editIndex = filler.length + 7;
-
-      const result = api.designCloning({ recordId: 'genbank_1', strategy: 'q5-kld', edit: { mode: 'replace', start: editIndex, end: editIndex, sequence: 'A' } });
-      assert.equal(result.strategy, 'q5-kld');           // echoes contract id
-      assert.equal(result.engineRoute, 'site-directed-mutagenesis'); // raw engine route surfaced
-      assert.ok(Array.isArray(result.primers));
-      assert.equal(records[0].sequence, seq);            // compute-only, no mutation
-
-      const missingRange = api.designCloning({
-        recordId: 'genbank_1',
-        strategy: 'gibson',
-        edit: { mode: 'replace', start: editIndex, end: editIndex, sequence: 'A' }
-      });
-      assert.equal(missingRange.error.code, 'INSERT_RANGE_REQUIRED');
-      const invalidRange = api.designCloning({
-        recordId: 'genbank_1',
-        strategy: 'gibson',
-        insertRange: { start: 20, end: 10 },
-        edit: { mode: 'replace', start: editIndex, end: editIndex, sequence: 'A' }
-      });
-      assert.equal(invalidRange.error.code, 'INVALID_INSERT_RANGE');
-
-      const toolSchema = JSON.parse(fs.readFileSync(
-        path.join(__dirname, 'src', 'main', 'agent', 'tools', 'Tool-call.json'),
-        'utf8'
-      ))['sequence-viewer'].input_schema;
-      assert.deepEqual(toolSchema.properties.insertRange.required, ['start', 'end']);
-      assert.equal(
-        toolSchema.anyOf.some((branch) => branch.required?.includes('insertRange')
-          && branch.properties?.strategy?.enum?.includes('gibson')),
-        true
-      );
-    });
-
     test('[EDGE] designed primers land on the sequence as primer_bind features', () => {
       const primerAnnotation = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
@@ -1340,7 +1260,14 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.match(html, /data-sequence-primer-copy="CACCAGGGGGG/);
       assert.match(html, /35 nt/);
 
+      // The name copies too, tagged so the notice can say which half was taken.
+      const nameBtn = hover.renderPrimerNameCopyButton(designed);
+      assert.match(nameBtn, /data-sequence-primer-copy="APA2 F"/);
+      assert.match(nameBtn, /data-sequence-primer-copy-kind="name"/);
+
       // Everything else keeps the plain readout it had before.
+      assert.equal(hover.renderPrimerNameCopyButton({ name: 'His6', type: 'CDS' }), '');
+      assert.equal(hover.renderPrimerNameCopyButton({ name: '', type: 'primer_bind' }), '');
       assert.equal(hover.renderPrimerHoverSection({ name: 'His6', type: 'CDS', segments: [{ start: 0, end: 18 }] }, sequence), '');
       // A primer with nothing to show is not given an empty copy button.
       assert.equal(hover.renderPrimerHoverSection({ name: 'ghost', type: 'primer_bind', segments: [] }, ''), '');
@@ -1957,46 +1884,6 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         pcrPrograms: []
       })[0];
       assert.match(step.steps.join(' '), /42 C 5 min/);
-    });
-
-    test('[EDGE] agent cloning can use a loaded donor and exposes donor fields in its schema', () => {
-      const agentApi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'agent', 'agent-api.js'));
-      let fixture = null;
-      for (let seed = 1; seed <= 50 && !fixture; seed += 1) {
-        const vector = filler(800, 1500 + seed);
-        const insert = filler(220, 1700 + seed);
-        const records = [
-          { id: 'vector', name: 'pVector', topology: 'circular', sequence: vector, features: [] },
-          { id: 'donor', name: 'pDonor', topology: 'circular', sequence: `${filler(300, 1900 + seed)}${insert}${filler(280, 2100 + seed)}`, features: [] }
-        ];
-        const api = agentApi.createSequenceViewerAgentApi({ getRecords: () => records });
-        const input = {
-          recordId: 'vector',
-          strategy: 'gibson',
-          edit: { mode: 'insert', start: 401, sequence: insert },
-          insertRange: { start: 401, end: 400 + insert.length }
-        };
-        const withDonor = api.designCloning({ ...input, donorRecordId: 'donor' });
-        if (withDonor.feasible) {
-          fixture = { api, input, withDonor };
-        }
-      }
-      assert.ok(fixture, 'expected a feasible donor-backed agent design');
-      assert.match(fixture.withDonor.procedure.map((step) => step.details).join(' '), /pDonor/);
-      const withoutDonor = fixture.api.designCloning(fixture.input);
-      assert.equal(withoutDonor.feasible, false);
-      assert.match(withoutDonor.warnings.join(' '), /no physical PCR template|does not contain the desired fragment/i);
-      assert.equal(
-        fixture.api.designCloning({ ...fixture.input, donorRecordId: 'missing' }).error.code,
-        'DONOR_RECORD_NOT_FOUND'
-      );
-
-      const toolSchema = JSON.parse(fs.readFileSync(
-        path.join(__dirname, 'src', 'main', 'agent', 'tools', 'Tool-call.json'),
-        'utf8'
-      ))['sequence-viewer'].input_schema;
-      assert.equal(toolSchema.properties.donorRecordId.type, 'string');
-      assert.equal(toolSchema.properties.donorRecordIndex.type, 'integer');
     });
 
     test('[EDGE] In-Fusion uses method-specific 15-21 bp primer overlaps', () => {

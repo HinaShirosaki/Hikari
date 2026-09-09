@@ -57,3 +57,10 @@ module.exports = {
   recognizeSequenceBackbone,
   sanitizeFileName
 };
+
+const { withLibraryLock } = require('./operation-lock');
+for (const [name, action] of Object.entries(module.exports)) {
+  if (typeof action === 'function' && name !== 'sanitizeFileName') {
+    module.exports[name] = (payload = {}) => withLibraryLock(payload.storagePath, () => action(payload));
+  }
+}

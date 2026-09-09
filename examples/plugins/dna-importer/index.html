@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>.dna importer (service)</title>
+  </head>
+  <body>
+    <!--
+      A service plugin has NO user interface. This file is not a page: it is
+      only the script host the sandbox needs in order to run the service, and
+      it renders nothing. Do not add markup, styles, or DOM code here — the
+      frame is mounted hidden and a service must never try to show anything.
+
+      Both scripts are CLASSIC (no type="module"): a service runs in an
+      opaque-origin sandbox where relative ES module fetches are CORS-blocked.
+    -->
+    <script src="./hikari.js"></script>
+    <script src="./biopython-converter.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

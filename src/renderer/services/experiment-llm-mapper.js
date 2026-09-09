@@ -28,9 +28,8 @@ function toFiniteNumber(value) {
 }
 
 function mapNotebookRun(entry) {
-  const notebookState = String(entry?.notebookState || '').trim().toLowerCase() === 'planned'
-    ? 'planned'
-    : 'executed';
+  const status = String(entry?.notebookState || '').trim().toLowerCase();
+  const notebookState = ['planned', 'suggested'].includes(status) ? status : 'executed';
   return {
     id: String(entry?.id || ''),
     project_id: String(entry?.projectId || ''),

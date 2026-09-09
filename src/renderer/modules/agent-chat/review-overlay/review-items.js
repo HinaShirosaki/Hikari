@@ -1,7 +1,6 @@
 import { trimText } from '../shared.js';
 import {
   getProtocolReviewStatus,
-  getSequenceEditReviewStatus,
   resolveNotebookAppendReviewState
 } from './review-status.js';
 
@@ -65,27 +64,6 @@ function collectReviewItemsForMessage(message, {
       type: 'protocol',
       messageId,
       protocol
-    });
-  });
-
-  const sequenceProposals = meta.sequenceEditProposal && typeof meta.sequenceEditProposal === 'object'
-    ? meta.sequenceEditProposal
-    : {};
-  Object.keys(sequenceProposals).forEach((token) => {
-    const proposal = sequenceProposals[token];
-    if (!proposal || typeof proposal !== 'object') {
-      return;
-    }
-    const status = getSequenceEditReviewStatus(meta, token);
-    if (status === 'approved' || status === 'rejected') {
-      return;
-    }
-    items.push({
-      id: `sequence-edit:${messageId}:${token}`,
-      type: 'sequence-edit',
-      messageId,
-      token,
-      proposal
     });
   });
   return items;

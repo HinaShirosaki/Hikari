@@ -193,14 +193,6 @@
   cursor: default;
 }
 
-.biology-notebook-linked-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.biology-notebook-linked-toolbar:not(:has(> button:not([hidden]))),
 .biology-notebook-linked-results:empty,
 .biology-notebook-tool-calculations:empty {
   display: none;
@@ -661,3 +653,36 @@
   display: none;
 }
 
+.biology-notebook-sample-suggestions {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0.0625rem solid var(--theme-border);
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: 0 0.5rem 1.375rem var(--theme-shadow-color);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.biology-notebook-sample-suggestions [role="option"] {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.5rem 0.625rem;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.biology-notebook-sample-suggestions [role="option"]:hover,
+.biology-notebook-sample-suggestions [aria-selected="true"] {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+}
+
+.biology-notebook-sample-suggestion-detail {
+  color: var(--theme-text-muted);
+  font-size: 0.75rem;
+}

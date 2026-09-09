@@ -15,6 +15,7 @@ import {
 import { onListClick, renderList } from './sample-list.js';
 import { mergeSamplesFromCsv, parseSamplesCsv, toSamplesCsv } from './csv-io.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { bindPlasmidNameSuggestions } from './name-suggestions.js';
 
 function setSampleCsvStatus(ctx, message, isError = false) {
   if (ctx.dom.sampleCsvStatus) {
@@ -25,6 +26,7 @@ function setSampleCsvStatus(ctx, message, isError = false) {
 
 export function bindSampleRegistryEvents(ctx) {
   const dom = ctx.dom;
+  bindPlasmidNameSuggestions(dom.sampleForm, ctx.state);
   dom.sampleStorageTypeInput?.addEventListener('change', () => renderLocationFields(ctx));
   dom.sampleLinkContainerInput?.addEventListener('change', () => renderLinkedPositionOptions(ctx));
   dom.sampleTypeInput?.addEventListener('change', () => onSampleTypeChange(ctx));

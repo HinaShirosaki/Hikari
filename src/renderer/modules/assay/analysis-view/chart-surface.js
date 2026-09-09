@@ -60,6 +60,8 @@ function createChartSurface({
       seriesLabels,
       chartType: info?.chartType || '',
       hasErrorBars: Boolean(info?.hasErrorBars),
+      hasCategoryX: Boolean(info?.hasCategoryX),
+      hasReplicates: Boolean(info?.hasReplicates),
       hasFittedCurve: Boolean(info?.hasFittedCurve)
     };
     // headers drives the column selects, so it has to be part of the comparison or a
@@ -67,6 +69,8 @@ function createChartSurface({
     const renderedHeaders = chartStyleStore.getContext().headers;
     const unchanged = next.chartType === lastAnalysisContext.chartType
       && next.hasErrorBars === lastAnalysisContext.hasErrorBars
+      && next.hasCategoryX === lastAnalysisContext.hasCategoryX
+      && next.hasReplicates === lastAnalysisContext.hasReplicates
       && next.hasFittedCurve === lastAnalysisContext.hasFittedCurve
       && seriesLabels.length === lastAnalysisContext.seriesLabels.length
       && seriesLabels.every((label, index) => label === lastAnalysisContext.seriesLabels[index])

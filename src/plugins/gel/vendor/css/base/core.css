@@ -1002,12 +1002,17 @@ button {
   font: inherit;
 }
 
+/*
+ * Fields use the control fill, not the page surface. Painting a field the same
+ * color as the panel behind it left the border as the only affordance, which
+ * night mode could not carry.
+ */
 input,
 textarea,
 select {
   width: 100%;
   border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
+  background: var(--theme-control-background);
   color: var(--theme-text);
   padding: 9px 11px;
   border-radius: 8px;

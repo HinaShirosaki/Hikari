@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import runtime from './support/runtime.js';
 
-const { MockElement, loadEsmStyleModule, trigger, wireFormReset } = runtime;
+const { MockElement, flushAsync, loadEsmStyleModule, trigger, wireFormReset } = runtime;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const safeText = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -26,6 +26,16 @@ const windowObject = {
 const load = (name) => loadEsmStyleModule(path.join(root, 'src/renderer/modules/home-dashboard', name), {
   window: windowObject, Date: Clock
 });
+
+const { parseTimerDuration } = load('utils.js');
+assert.equal(parseTimerDuration('5'), 5, 'bare durations remain minutes');
+assert.equal(parseTimerDuration('15 min'), 15);
+assert.equal(parseTimerDuration('15 mins'), 15);
+assert.equal(parseTimerDuration('1 h'), 60);
+assert.equal(parseTimerDuration('1 hour'), 60);
+assert.equal(parseTimerDuration('1.5 hours'), 90);
+assert.equal(parseTimerDuration('1 h 30 min'), 90);
+assert.equal(parseTimerDuration('1 hour nonsense'), null, 'unrecognized duration text is rejected');
 
 // A countdown tick must not replace the control tree; pause/resume keeps the
 // selected timer's remaining duration even when display order changes.
@@ -73,6 +83,17 @@ timerElements.timerOpenBtn.click();
 assert.equal(timerElements.timerDialogOverlay.hidden, false);
 assert.equal(timer.handleEscape(), true);
 assert.equal(timerElements.timerDialogOverlay.hidden, true);
+timerElements.timerNameInput.value = 'Overnight incubation';
+timerElements.timerMinutesInput.value = '1.5 h';
+trigger(timerElements.timerDialogForm, 'submit');
+assert.equal(timerState.settings.dashboard.timerTemplates.at(-1).name, 'Overnight incubation');
+assert.equal(timerState.settings.dashboard.timerTemplates.at(-1).durationMinutes, 90);
+assert.equal(timerElements.timerMinutesInput.validationMessage, '');
+const presetCount = timerState.settings.dashboard.timerTemplates.length;
+timerElements.timerMinutesInput.value = 'about an hour';
+trigger(timerElements.timerDialogForm, 'submit');
+assert.equal(timerState.settings.dashboard.timerTemplates.length, presetCount);
+assert.match(timerElements.timerMinutesInput.validationMessage, /Enter a duration/);
 now += 1_300_000;
 [...intervals.values()].forEach((callback) => callback());
 assert.match(timerElements.timerActiveList.innerHTML, /Dismiss finished timer First &lt;timer&gt;/);
@@ -115,5 +136,61 @@ trigger(notes.pageList, 'click', { target: targetFor('data-dashboard-notebook-en
 assert.equal(notebook.handleEscape(), true);
 assert.equal(notes.noteDialogOverlay.hidden, true);
 assert.equal(notePersists, 1, 'closing a window does not save a note');
+
+// Experiment drafts debounce whole-workspace persistence. Failed Agent
+// handoffs preserve the draft; accepted handoffs commit exactly one log entry.
+const quickLogElements = elementsFor([
+  'quickLogInput', 'quickLogStatus', 'quickLogSaveBtn', 'quickLogAgentBtn'
+]);
+const quickLogState = { settings: { dashboard: {
+  quickLogDraft: '',
+  quickLogEntries: []
+} } };
+const scheduledDraftSaves = new Map();
+let nextDraftSaveId = 0;
+let quickLogPersists = 0;
+let quickLogRenders = 0;
+let handoffResult = { ok: false, reason: 'composer_not_empty' };
+const quickLog = load('quick-log.js').initQuickLogWidget({
+  state: quickLogState,
+  persist: () => { quickLogPersists += 1; },
+  createId: () => 'quick-log-1',
+  render: () => { quickLogRenders += 1; },
+  onSendQuickLogToAgent: async () => handoffResult,
+  scheduleDraftPersist: (callback) => {
+    const id = nextDraftSaveId += 1;
+    scheduledDraftSaves.set(id, callback);
+    return id;
+  },
+  cancelDraftPersist: (id) => scheduledDraftSaves.delete(id),
+  elements: quickLogElements
+});
+quickLog.render();
+assert.equal(quickLogElements.quickLogSaveBtn.disabled, true);
+quickLogElements.quickLogInput.value = 'PCR yielded a single clean band.';
+trigger(quickLogElements.quickLogInput, 'input');
+assert.equal(quickLogPersists, 0, 'typing does not persist the full workspace per keystroke');
+assert.equal(scheduledDraftSaves.size, 1);
+[...scheduledDraftSaves.values()][0]();
+scheduledDraftSaves.clear();
+assert.equal(quickLogPersists, 1);
+assert.equal(quickLogState.settings.dashboard.quickLogDraft, 'PCR yielded a single clean band.');
+
+quickLogElements.quickLogAgentBtn.click();
+await flushAsync();
+assert.equal(quickLogState.settings.dashboard.quickLogEntries.length, 0);
+assert.equal(quickLogElements.quickLogInput.value, 'PCR yielded a single clean band.');
+assert.match(quickLogElements.quickLogStatus.textContent, /unsent draft/);
+
+handoffResult = { ok: true, clientRequestId: 'agent-request-1' };
+quickLogElements.quickLogAgentBtn.click();
+await flushAsync();
+assert.equal(quickLogState.settings.dashboard.quickLogEntries.length, 1);
+assert.equal(quickLogState.settings.dashboard.quickLogEntries[0].text, 'PCR yielded a single clean band.');
+assert.equal(quickLogState.settings.dashboard.quickLogDraft, '');
+assert.equal(quickLogElements.quickLogInput.value, '');
+assert.equal(quickLogPersists, 2);
+assert.equal(quickLogRenders, 1);
+assert.equal(quickLogElements.quickLogStatus.textContent, 'Logged and sent to Assistant.');
 
 console.log('home dashboard interaction selfcheck OK');

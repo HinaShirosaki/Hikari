@@ -34,26 +34,31 @@
 }
 
 body.theme-night {
-  --gel-label: #9db2d5;
-  --gel-chart-surface: rgba(11, 19, 35, 0.4);
-  --gel-chart-border: rgba(145, 174, 214, 0.2);
-  --gel-chart-border-strong: rgba(145, 174, 214, 0.3);
-  --gel-chart-selection: rgba(56, 189, 248, 0.14);
-  --gel-chart-grid: rgba(157, 178, 213, 0.2);
+  /*
+   * Chrome follows the shared theme so the gel view sits in the same room as
+   * the rest of the app. The measurement colors below (marker, path, divider,
+   * band) stay fixed: they encode data, not decoration.
+   */
+  --gel-label: var(--theme-text-muted);
+  --gel-chart-surface: var(--theme-surface);
+  --gel-chart-border: var(--theme-border-soft);
+  --gel-chart-border-strong: var(--theme-border);
+  --gel-chart-selection: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  --gel-chart-grid: color-mix(in srgb, var(--theme-border) 45%, transparent);
   --gel-path: #5eead4;
   --gel-path-glow: rgba(45, 212, 191, 0.18);
-  --gel-point-border: rgba(15, 23, 42, 0.88);
-  --gel-overlay: rgba(2, 6, 23, 0.72);
-  --gel-dialog-background: rgba(15, 23, 42, 0.98);
-  --gel-active-border: rgba(74, 222, 128, 0.42);
-  --gel-active-background: rgba(20, 83, 45, 0.46);
-  --gel-active-text: #bbf7d0;
-  --gel-table-border: rgba(145, 174, 214, 0.32);
-  --gel-table-background: rgba(20, 33, 57, 0.68);
-  --gel-table-header-background: rgba(34, 51, 80, 0.96);
-  --gel-table-muted-background: rgba(25, 40, 66, 0.96);
-  --gel-table-header-text: #d9e5f7;
-  --gel-table-text: #f6f8fc;
-  --gel-table-placeholder: #8da6ca;
-  --gel-table-focus-background: rgba(34, 51, 80, 0.92);
+  --gel-point-border: var(--theme-background);
+  --gel-overlay: var(--theme-overlay-strong);
+  --gel-dialog-background: var(--theme-surface-elevated);
+  --gel-active-border: color-mix(in srgb, var(--theme-success) 55%, transparent);
+  --gel-active-background: color-mix(in srgb, var(--theme-success) 20%, var(--theme-surface));
+  --gel-active-text: color-mix(in srgb, var(--theme-success) 70%, var(--theme-text-strong));
+  --gel-table-border: var(--theme-border-soft);
+  --gel-table-background: var(--theme-surface);
+  --gel-table-header-background: var(--theme-surface-subtle);
+  --gel-table-muted-background: var(--theme-surface-muted);
+  --gel-table-header-text: var(--theme-text);
+  --gel-table-text: var(--theme-text);
+  --gel-table-placeholder: var(--theme-text-muted);
+  --gel-table-focus-background: var(--theme-surface-elevated);
 }

@@ -314,6 +314,7 @@ export function initBufferTool(options = {}) {
     if (!input || !menu) {
       return;
     }
+    closeBufferSuggestions();
     const query = String(input.value || '').trim().toLowerCase();
     const matches = buildBufferCandidates()
       .filter((candidate) => {

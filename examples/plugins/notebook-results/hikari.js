@@ -4,7 +4,7 @@
 //   <script src="./main.js"></script>
 //
 // Then call `window.HikariPlugin.hikari.call(...)`. Keeping this file classic
-// makes the same copy work in local opaque-origin plugins and served plugins.
+// makes the same copy work in local plugins and explicitly served plugins.
 (function installHikariPluginClient(root) {
   'use strict';
 

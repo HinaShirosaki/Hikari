@@ -15,6 +15,7 @@
 </p>
 
 <a href="#quick-start">Quick Start</a> ·
+<a href="docs/getting-started/first-experiment.md">Tutorial</a> ·
 <a href="#app-surface">Features</a> ·
 <a href="#plugins">Plugins</a> ·
 <a href="#ai-and-agent-setup">AI Setup</a> ·
@@ -168,7 +169,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 - **Sessions** — multiple named sessions, organized in folders, with history.
 - **Project context** — pick the project scope; the assistant reads a compact snapshot of that project's state.
-- **Grounded tools** — it can look up notebook entries, protocols, samples, chemicals, containers, and papers; run literature search and paper download/analysis; read assay tables; build Plotly graphs; propose sequence edits; and suggest purchases.
+- **Grounded tools** — it can look up notebook entries, protocols, samples, chemicals, containers, and papers; run literature search and paper download/analysis; read assay tables; build Plotly graphs; and suggest purchases.
 - **Review before write** — generated notebook drafts and protocols land as review cards you approve or reject; the owning module, not the assistant, defines the record schema.
 - **Side rail** — the same chat mounts as a rail inside `Papers`, `Notebook`, and `Assay`, scoped to what is open there.
 
@@ -269,6 +270,8 @@ It requests only `storage`, `files`, `downloads`, and `layout` — it has no not
 <!-- SCREENSHOT: docs/screenshots/gel-analysis.png — lane segmentation with a quantified band table -->
 
 ## Quick Start
+
+New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting-started/first-experiment.md)** to configure storage and carry one fictional experiment from sample registration through a saved notebook result.
 
 ### Install Hikari with an agent
 

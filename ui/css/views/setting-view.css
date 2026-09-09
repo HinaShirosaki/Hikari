@@ -371,6 +371,14 @@
   gap: 8px;
 }
 
+#setting-view .settings-mcp-tool-list {
+  gap: 6px;
+}
+
+#setting-view .settings-mcp-tool-row {
+  align-items: center;
+}
+
 #setting-view .settings-skill-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

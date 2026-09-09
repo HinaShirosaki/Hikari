@@ -25,6 +25,19 @@ export function createSequenceViewerProteinBuilderController(config = {}) {
   ctx.render();
 
   return {
+    loadMcpConstruct: (payload) => {
+      ctx.state.rows = structuredClone(payload.rows || []);
+      ctx.state.nextRowId = ctx.state.rows.length + 1;
+      ctx.state.assembledSequenceOverride = payload.sequenceOverride || '';
+      ctx.state.constructNameEdited = true;
+      ctx.state.suggestedConstructName = payload.constructName || '';
+      ctx.populateCodonUsageProfiles();
+      if (ctx.elements.proteinBuilderNameInput) ctx.elements.proteinBuilderNameInput.value = payload.constructName || '';
+      if (ctx.elements.proteinBuilderCodonUsageSelect) ctx.elements.proteinBuilderCodonUsageSelect.value = payload.codonUsageProfile || 'ecoli';
+      ctx.invalidateDnaConstruct();
+      ctx.render();
+      ctx.buildCurrentDnaSequence();
+    },
     bindEvents: ctx.bindEvents,
     render: ctx.render
   };

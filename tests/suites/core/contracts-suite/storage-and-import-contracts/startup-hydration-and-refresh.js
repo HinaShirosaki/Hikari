@@ -51,6 +51,12 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       state.settings.storagePath = '/old/root';
       state.settings.llm.apiKey = 'keep-this-key';
       state.settings.dashboard.quickLogDraft = 'old quick log';
+      state.settings.dashboard.quickLogEntries = [{
+        id: 'old-quick-log',
+        text: 'Old root observation',
+        createdAt: '2026-04-01T10:00:00.000Z',
+        updatedAt: '2026-04-01T10:00:00.000Z'
+      }];
 
       let ensuredPath = '';
       let stateAtImport = null;
@@ -74,9 +80,20 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
                 ok: true,
                 statePatch: {
                   projects: [{ id: 'new-project', name: 'New Project' }],
-                  protocols: [{ id: 'new-protocol', name: 'New Protocol' }]
+                  protocols: [{ id: 'new-protocol', name: 'New Protocol' }],
+                  settings: {
+                    dashboard: {
+                      quickLogDraft: 'new root draft',
+                      quickLogEntries: [{
+                        id: 'new-quick-log',
+                        text: 'New root observation',
+                        createdAt: '2026-04-02T10:00:00.000Z',
+                        updatedAt: '2026-04-02T10:00:00.000Z'
+                      }]
+                    }
+                  }
                 },
-                summary: { protocols: 1 },
+                summary: { protocols: 1, quickLogEntries: 1 },
                 warnings: [],
                 manifestPath: '/new/root/hikari-storage-manifest.json'
               };
@@ -104,10 +121,14 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.equal(stateAtImport.settings.storagePath, '/new/root');
       assert.equal(stateAtImport.settings.llm.apiKey, 'keep-this-key');
       assert.equal(stateAtImport.settings.dashboard.quickLogDraft, '');
+      assert.equal(stateAtImport.settings.dashboard.quickLogEntries.length, 0);
       assert.equal(state.projects.some((project) => project.id === 'old-project'), false);
       assert.equal(state.projects.some((project) => project.id === 'new-project'), true);
       assert.equal(state.protocols.some((protocol) => protocol.id === 'new-protocol'), true);
       assert.equal(state.settings.llm.apiKey, 'keep-this-key');
+      assert.equal(state.settings.dashboard.quickLogDraft, 'new root draft');
+      assert.equal(state.settings.dashboard.quickLogEntries[0].id, 'new-quick-log');
+      assert.equal(state.settings.storageImport.summary.quickLogEntries, 1);
       assert.equal(persistedSnapshot.projects.some((project) => project.id === 'new-project'), true);
     });
     test('startup storage hydration syncs sidecars for imported project state', async () => {

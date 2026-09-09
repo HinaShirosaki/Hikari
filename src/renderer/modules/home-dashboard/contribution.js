@@ -90,6 +90,7 @@ export function initContributionWidget({ state, safeText, elements }) {
 
   function collectNotebookContribution(dayMap) {
     (Array.isArray(state.notebookEntries) ? state.notebookEntries : []).forEach((entry) => {
+      if (entry?.notebookState === 'suggested') return;
       const entryTimestamp = entry?.updatedAt || entry?.executedAt || entry?.createdAt;
       addContributionActivity(dayMap, entryTimestamp, 'notebookEntries');
 

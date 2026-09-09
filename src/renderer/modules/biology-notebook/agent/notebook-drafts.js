@@ -1,4 +1,4 @@
-import { normalizeNotebookState } from '../entry/entry-helpers.js';
+import { normalizeNotebookState, cloneProtocolSnapshot } from '../entry/entry-helpers.js';
 import { asArray } from '../../../lib/normalize.js';
 
 export { normalizeNotebookState };
@@ -117,8 +117,10 @@ export function normalizeNotebookDraft(rawDraft) {
       projectName: trimText(entryTemplate.projectName, 180),
       protocolId: trimText(entryTemplate.protocolId, 120),
       protocolName: trimText(entryTemplate.protocolName, 220),
+      experimentName: trimText(entryTemplate.experimentName || proposal.title, 220),
+      protocolSnapshot: cloneProtocolSnapshot(entryTemplate.protocolSnapshot),
       values: entryTemplate.values && typeof entryTemplate.values === 'object' ? entryTemplate.values : {},
-      result: trimText(entryTemplate.result, 900),
+      result: trimText(entryTemplate.result, rawDraft?.save?.mode === 'suggestion_only' ? 12000 : 900),
       updatedAt: trimText(entryTemplate.updatedAt, 80),
       notebookState: normalizeNotebookState(entryTemplate.notebookState),
       executedAt: trimText(entryTemplate.executedAt, 80),
@@ -143,7 +145,7 @@ export function buildNotebookEntryFromDraft(draft, requestText = '', options = {
     template.notebookState || (draft?.save?.mode === 'confirm_before_save' ? 'planned' : 'executed')
   );
   const updatedAt = trimText(template.updatedAt, 80) || nowIso;
-  const executedAt = notebookState === 'planned'
+  const executedAt = notebookState !== 'executed'
     ? ''
     : (trimText(template.executedAt, 80) || updatedAt);
   const createId = typeof options.createId === 'function'
@@ -157,8 +159,11 @@ export function buildNotebookEntryFromDraft(draft, requestText = '', options = {
     projectName: trimText(template.projectName, 180) || trimText(draft?.project?.name, 180),
     protocolId: trimText(template.protocolId, 120) || trimText(draft?.protocol?.id, 120),
     protocolName: trimText(template.protocolName, 220) || trimText(draft?.protocol?.name, 220),
+    experimentName: trimText(template.experimentName || draft?.proposal?.title, 220),
+    protocolSnapshot: cloneProtocolSnapshot(template.protocolSnapshot),
+    createdAt: updatedAt,
     values: template.values && typeof template.values === 'object' ? template.values : {},
-    result: trimText(template.result, 900) || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
+    result: trimText(template.result, draft?.save?.mode === 'suggestion_only' ? 12000 : 900) || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
     resultFiles: asArray(template.resultFiles),
     resultFileRecords: asArray(template.resultFileRecords),
     updatedAt,

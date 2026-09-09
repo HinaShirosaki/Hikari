@@ -1,227 +1,122 @@
-
-// Assay-owned controls for the Plotly figure configuration, grouped into five tabs.
-// `data-cc-when="bar|line"` marks a control that only affects one chart type;
-// `data-cc-needs` marks one that needs something in the rendered figure.
-
+// Assay-owned formatting controls. All dimensions are displayed in pt except plot size.
 const TABS = [
-  { id: 'data', label: 'Data' },
-  { id: 'axes', label: 'Axes' },
-  { id: 'series', label: 'Series' },
-  { id: 'style', label: 'Style' },
-  { id: 'text', label: 'Text' }
+  { id: 'frame', label: 'Frame' }, { id: 'axis', label: 'Axis' },
+  { id: 'series', label: 'Data Series' }, { id: 'text', label: 'Text' }
 ];
-
-// Which style fields each tab owns, so "Reset tab" can restore just that section.
 const TAB_KEYS = {
-  data: ['chartType', 'xColumn', 'yColumn', 'seriesColumn', 'barMode', 'barLabels', 'barCornerRadius'],
-  axes: [
-    'xScale', 'yScale', 'xRange', 'yRange', 'xTick', 'yTick',
-    'tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'refLineAxis', 'refLineValue'
-  ],
-  series: [
-    'mode', 'legendPosition', 'pointShape', 'pointSize', 'markerFill', 'opacity',
-    'lineStyle', 'lineWidth', 'seriesColors', 'seriesShapes', 'palette'
-  ],
-  style: [
-    'frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor',
-    'showVerticalGrid', 'showHorizontalGrid', 'gridColor', 'gridStrokeWidth',
-    'errorCapWidth', 'errorThickness', 'sizeAuto', 'frameWidth', 'frameHeight'
-  ],
-  text: [
-    'title', 'xTitle', 'yTitle', 'text',
-    'xTitlePos', 'yTitlePos', 'xTitleOffset', 'yTitleOffset'
-  ]
+  frame: ['frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
+    'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight'],
+  axis: ['xScale', 'yScale', 'xRange', 'yRange', 'xTick', 'yTick', 'axisStyles',
+    'tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'refLineAxis', 'refLineValue'],
+  series: ['chartType', 'xColumn', 'yColumn', 'seriesColumn', 'barMode', 'barLabels', 'barCornerRadius',
+    'mode', 'legendPosition', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'lineStyle', 'lineWidth',
+    'seriesColors', 'seriesShapes', 'seriesStyles', 'replicateStyle', 'palette', 'seriesColor', 'barOutlineColor',
+    'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'],
+  text: ['title', 'xTitle', 'yTitle', 'text', 'textStyles', 'titlePos', 'titleOffset',
+    'xTitlePos', 'yTitlePos', 'xTitleOffset', 'yTitleOffset']
 };
+const select = (key, label, values) => `<label>${label}<select data-cc="${key}" aria-label="${label}">${values
+  .map(([value, name]) => `<option value="${value}">${name}</option>`).join('')}</select></label>`;
+const number = (key, label, min, max, step = 'any', placeholder = '') => `<label class="assay-chart-style-number">${label}<input data-cc="${key}"
+  aria-label="${label}" type="number" ${min !== null ? `min="${min}"` : ''} ${max !== null ? `max="${max}"` : ''}
+  step="${step}" placeholder="${placeholder}" /></label>`;
+const check = (key, label) => `<label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="${key}" />${label}</label>`;
+const color = (key, label) => `<label>${label}<input type="color" data-cc="${key}" aria-label="${label}" /></label>`;
+// Preset and reset actions share one icon strip; aria-label supplies the hover caption.
+const ICON_PATHS = {
+  presetSaveBtn: '<path d="M5 3h11l4 4v14H5Z" /><path d="M8 3v6h7V3" /><path d="M8 21v-7h8v7" />',
+  presetDeleteBtn: '<path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" />',
+  resetTabBtn: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8" /><path d="M3 3v5h5" />',
+  resetBtn: '<path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.4 2.6L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.4-2.6L21 16" /><path d="M16 16h5v5" />'
+};
+const iconButton = (key, label, danger = false) => `<button type="button" data-cc="${key}"
+  class="row-action-icon-btn${danger ? ' row-action-icon-btn-danger' : ''}" aria-label="${label}">
+  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">${ICON_PATHS[key]}</svg></button>`;
+const picker = (key, label) => `<label>${label}<div data-cc="${key}" class="assay-chart-picker-mount"></div></label>`;
+const section = (title, content, attributes = '') => `<div class="assay-chart-style-subsection" ${attributes}>
+  <span class="assay-chart-style-subhead">${title}</span>${content}</div>`;
+const row = (content, className = '') => `<div class="assay-chart-style-row ${className}">${content}</div>`;
+const panel = (id, content) => `<div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-${id}"
+  aria-labelledby="assay-cc-tab-${id}" data-cc-panel="${id}" ${id === 'frame' ? '' : 'hidden'}>${content}</div>`;
+const stack = (content, attributes = '') => `<div class="assay-chart-style-axis-column" ${attributes}>${content}</div>`;
+const axisGrid = (content) => `<div class="assay-chart-style-axis-grid">${content}</div>`;
+// The X and Y columns carry identical fields so their rows line up across the grid.
+const axisColumn = (axis) => stack(`<span class="assay-chart-style-subhead">${axis.toUpperCase()} axis</span>`
+  + stack(select(`${axis}Scale`, 'Scale', [['linear', 'Linear'], ['log10', 'Log10'], ['log2', 'Log2'], ['ln', 'Natural log']])
+    + check(`${axis}RangeAuto`, 'Auto range')
+    + number(`${axis}Min`, 'Minimum', null, null) + number(`${axis}Max`, 'Maximum', null, null)
+    + select(`${axis}TickPreset`, 'Tick interval', [])
+    + number(`${axis}Tick`, 'Custom interval', 0, null, 'any', 'Auto')
+    + `<p data-cc="${axis}TickHint" class="assay-chart-style-note" hidden></p>`, `data-cc="${axis}NumericFields"`));
+const tickColumn = (axis) => stack(select(`${axis}TickDir`, 'Direction', [['outside', 'Outside'], ['inside', 'Inside'], ['none', 'None']])
+  + number(`${axis}TickLen`, 'Length (pt)', 0, 15, 0.25)
+  + stack(check(`${axis}MinorTicks`, 'Minor ticks')
+    + select(`${axis}TickFormat`, 'Number format', [['auto', 'Auto'], ['fixed1', '0.0'], ['fixed2', '0.00'],
+      ['sci', '1e3'], ['si', 'SI (k/M)'], ['power', 'Powers']]), `data-cc="${axis}NumericTickFields"`)
+  + number(`${axis}TickAngle`, 'Label angle (°)', -90, 90, 1, 'Auto'));
 
-const PANEL_HTML = `
-  <div class="assay-chart-style">
-    <div class="assay-chart-style-presets">
-      <label>
-        Preset
-        <select data-cc="presetSelect">
-          <option value="">Custom</option>
-        </select>
-      </label>
-      <div class="form-actions assay-chart-style-preset-actions">
-        <button type="button" data-cc="presetSaveBtn" class="ghost-btn">Save as&hellip;</button>
-        <button type="button" data-cc="presetDeleteBtn" class="ghost-btn">Delete</button>
-      </div>
-    </div>
-    <div class="assay-chart-style-tabs" role="tablist" aria-label="Chart format sections">
-      ${TABS.map((tab, index) => `
-        <button type="button" role="tab" id="assay-cc-tab-${tab.id}"
-          aria-controls="assay-cc-panel-${tab.id}"
-          aria-selected="${index === 0 ? 'true' : 'false'}"
-          data-cc-tab="${tab.id}">${tab.label}</button>
-      `).join('')}
-    </div>
-
-    <div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-data"
-      aria-labelledby="assay-cc-tab-data" data-cc-panel="data">
-      <div data-cc="columnFields">
-        <label>X column<select data-cc="xColumn"></select></label>
-        <label>Y column<select data-cc="yColumn"></select></label>
-        <label>Series column<select data-cc="seriesColumn"></select></label>
-      </div>
-      <p class="assay-chart-style-note" data-cc="columnNote"></p>
-      <div class="assay-chart-style-subsection" data-cc-when="bar">
-        <span class="assay-chart-style-subhead">Bars</span>
-        <label>Mode<select data-cc="barMode"><option value="group">Grouped</option><option value="stack">Stacked</option></select></label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="barLabels" />Value labels</label>
-        <label>Corner radius<input type="number" min="0" max="30" step="1" data-cc="barCornerRadius" /></label>
-      </div>
-    </div>
-
-    <div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-axes"
-      aria-labelledby="assay-cc-tab-axes" data-cc-panel="axes" hidden>
-      <div class="assay-chart-style-axis-grid">
-        <span></span><span class="assay-chart-style-axis-head">X</span><span class="assay-chart-style-axis-head">Y</span>
-        <span class="assay-chart-style-axis-label">Scale</span>
-        <select data-cc="xScale" aria-label="X scale" data-cc-when="line">
-          <option value="linear">Linear</option><option value="log10">Log10</option>
-          <option value="log2">Log2</option><option value="ln">Ln</option>
-        </select>
-        <select data-cc="yScale" aria-label="Y scale">
-          <option value="linear">Linear</option><option value="log10">Log10</option>
-          <option value="log2">Log2</option><option value="ln">Ln</option>
-        </select>
-        <span class="assay-chart-style-axis-label">Auto range</span>
-        <input type="checkbox" data-cc="xRangeAuto" aria-label="X auto range" data-cc-when="line" />
-        <input type="checkbox" data-cc="yRangeAuto" aria-label="Y auto range" />
-        <span class="assay-chart-style-axis-label">Min</span>
-        <input type="number" step="any" data-cc="xMin" aria-label="X min" data-cc-when="line" />
-        <input type="number" step="any" data-cc="yMin" aria-label="Y min" />
-        <span class="assay-chart-style-axis-label">Max</span>
-        <input type="number" step="any" data-cc="xMax" aria-label="X max" data-cc-when="line" />
-        <input type="number" step="any" data-cc="yMax" aria-label="Y max" />
-        <span class="assay-chart-style-axis-label">Tick step</span>
-        <input type="number" step="any" min="0" data-cc="xTick" aria-label="X tick interval" data-cc-when="line" />
-        <input type="number" step="any" min="0" data-cc="yTick" aria-label="Y tick interval" />
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Ticks</span>
-        <label>Marks<select data-cc="tickDir">
-          <option value="outside">Outside</option><option value="inside">Inside</option><option value="none">None</option>
-        </select></label>
-        <label>Length<input type="number" min="0" max="20" step="1" data-cc="tickLen" /></label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="minorTicks" />Minor ticks</label>
-        <label>Number format<select data-cc="tickFormat">
-          <option value="auto">Auto</option><option value="fixed1">0.0</option><option value="fixed2">0.00</option>
-          <option value="sci">1e3</option><option value="si">SI (k/M)</option><option value="power">10&#8319;</option>
-        </select></label>
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Reference line</span>
-        <div class="assay-chart-style-row">
-          <label>Axis<select data-cc="refLineAxis">
-            <option value="y">Horizontal (Y)</option><option value="x">Vertical (X)</option>
-          </select></label>
-          <label>Value<input type="number" step="any" data-cc="refLineValue" placeholder="(off)" /></label>
-        </div>
-      </div>
-    </div>
-
-    <div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-series"
-      aria-labelledby="assay-cc-tab-series" data-cc-panel="series" hidden>
-      <label data-cc-when="line">Display<select data-cc="mode">
-        <option value="lines+markers">Line + points</option>
-        <option value="lines">Line only</option>
-        <option value="markers">Points only</option>
-      </select></label>
-      <label>Legend<select data-cc="legendPosition">
-        <option value="top">Top</option><option value="bottom">Bottom</option>
-        <option value="right">Right</option><option value="none">Hidden</option>
-      </select></label>
-      <div class="assay-chart-style-subsection" data-cc-when="line">
-        <span class="assay-chart-style-subhead">Defaults for all series</span>
-        <div class="assay-chart-style-row">
-          <label>Shape<div data-cc="pointShape" class="assay-chart-picker-mount"></div></label>
-          <label>Size<div data-cc="pointSize" class="assay-chart-picker-mount"></div></label>
-        </div>
-        <div class="assay-chart-style-row">
-          <label>Fill<select data-cc="markerFill"><option value="filled">Filled</option><option value="open">Open</option></select></label>
-          <label>Opacity<input type="number" min="0.1" max="1" step="0.1" data-cc="opacity" /></label>
-        </div>
-        <div class="assay-chart-style-row">
-          <label>Line<div data-cc="lineStyle" class="assay-chart-picker-mount"></div></label>
-          <label>Width (pt)<div data-cc="lineWidth" class="assay-chart-picker-mount"></div></label>
-        </div>
-      </div>
-      <label data-cc-when="bar">Opacity<input type="number" min="0.1" max="1" step="0.1" data-cc="opacityBar" /></label>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Overrides</span>
-        <div data-cc="seriesColors" class="assay-chart-style-series"></div>
-      </div>
-    </div>
-
-    <div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-style"
-      aria-labelledby="assay-cc-tab-style" data-cc-panel="style" hidden>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Frame</span>
-        <label>Style<div data-cc="frameStyle" class="assay-chart-picker-mount"></div></label>
-        <div class="assay-chart-style-row">
-          <label>Stroke<input type="color" data-cc="frameStroke" /></label>
-          <label>Width (pt)<div data-cc="frameStrokeWidth" class="assay-chart-picker-mount"></div></label>
-        </div>
-        <label>Background<input type="color" data-cc="backgroundColor" /></label>
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Grid</span>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridVertical" />Vertical lines</label>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridHorizontal" />Horizontal lines</label>
-        <div class="assay-chart-style-row">
-          <label>Colour<input type="color" data-cc="gridColor" /></label>
-          <label>Width (px)<div data-cc="gridStrokeWidth" class="assay-chart-picker-mount"></div></label>
-        </div>
-      </div>
-      <div class="assay-chart-style-subsection" data-cc-needs="errorBars">
-        <span class="assay-chart-style-subhead">Error bars</span>
-        <div class="assay-chart-style-row">
-          <label>Cap width<input type="number" min="0" max="20" step="1" data-cc="errorCapWidth" /></label>
-          <label>Thickness<input type="number" min="0.5" max="6" step="0.5" data-cc="errorThickness" /></label>
-        </div>
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Plot size</span>
-        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="sizeAuto" />Fit to canvas</label>
-        <div class="assay-chart-style-row">
-          <label>Width (px)<input type="number" min="320" max="2000" step="1" data-cc="frameWidth" /></label>
-          <label>Height (px)<input type="number" min="180" max="1200" step="1" data-cc="frameHeight" /></label>
-        </div>
-        <p class="assay-chart-style-note">The framed plot area, not the whole figure &mdash; equal values give a square plot. Axis labels and titles sit outside it.</p>
-      </div>
-    </div>
-
-    <div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-text"
-      aria-labelledby="assay-cc-tab-text" data-cc-panel="text" hidden>
-      <label>Chart title<input type="text" data-cc="title" placeholder="(none)" /></label>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">X axis title</span>
-        <label>Name<input type="text" data-cc="xTitle" placeholder="(from analysis)" /></label>
-        <div class="assay-chart-style-row">
-          <label>Along axis (0&ndash;1)<input type="number" min="0" max="1" step="0.05" data-cc="xTitlePos" placeholder="(centred)" /></label>
-          <label>Distance (px)<input type="number" min="0" max="200" step="1" data-cc="xTitleOffset" placeholder="(auto)" /></label>
-        </div>
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Y axis title</span>
-        <label>Name<input type="text" data-cc="yTitle" placeholder="(from analysis)" /></label>
-        <div class="assay-chart-style-row">
-          <label>Along axis (0&ndash;1)<input type="number" min="0" max="1" step="0.05" data-cc="yTitlePos" placeholder="(centred)" /></label>
-          <label>Distance (px)<input type="number" min="0" max="200" step="1" data-cc="yTitleOffset" placeholder="(auto)" /></label>
-        </div>
-      </div>
-      <div class="assay-chart-style-subsection">
-        <span class="assay-chart-style-subhead">Type</span>
-        <div data-cc="textBar"></div>
-      </div>
-    </div>
-
-    <div class="form-actions assay-chart-style-actions">
-      <button type="button" data-cc="resetTabBtn" class="ghost-btn">Reset this tab</button>
-      <button type="button" data-cc="resetBtn" class="ghost-btn">Reset all</button>
+const PANEL_HTML = `<div class="assay-chart-style">
+  <div class="assay-chart-style-presets">
+    ${select('presetSelect', 'Preset', [['', 'Custom']])}
+    <div class="assay-chart-style-actions">
+      ${iconButton('presetSaveBtn', 'Save preset as…')}
+      ${iconButton('presetDeleteBtn', 'Delete preset', true)}
+      ${iconButton('resetTabBtn', 'Reset this tab')}
+      ${iconButton('resetBtn', 'Reset all formatting')}
     </div>
   </div>
-`;
-
+  <div class="assay-chart-style-tabs" role="tablist" aria-label="Chart format sections">
+    ${TABS.map((tab, i) => `<button type="button" role="tab" id="assay-cc-tab-${tab.id}"
+      aria-controls="assay-cc-panel-${tab.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"
+      data-cc-tab="${tab.id}">${tab.label}</button>`).join('')}
+  </div>
+  ${panel('frame', `
+    ${picker('frameStyle', 'Frame')}
+    ${row(color('frameStroke', 'Color') + number('frameStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25))}
+    ${color('backgroundColor', 'Background')}
+    ${section('Grid', row(check('showVerticalGrid', 'Vertical') + check('showHorizontalGrid', 'Horizontal'))
+      + row(color('gridColor', 'Grid color') + number('gridStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25)))}
+    ${section('Plot dimensions', check('sizeAuto', 'Fit to canvas')
+      + row(number('frameWidth', 'Width (px)', 320, 2000, 1) + number('frameHeight', 'Height (px)', 180, 1200, 1))
+      + '<p class="assay-chart-style-note">Dimensions describe the framed plot. Titles and labels sit outside it.</p>')}
+  `)}
+  ${panel('axis', `
+    ${axisGrid(axisColumn('x') + axisColumn('y'))}
+    ${section('Ticks', axisGrid(tickColumn('x') + tickColumn('y')))}
+    ${section('Reference line', select('refLineAxis', 'Reference axis', [['y', 'Horizontal (Y)'], ['x', 'Vertical (X)']])
+      + number('refLineValue', 'Value', null, null, 'any', 'Off'))}
+  `)}
+  ${panel('series', `
+    ${select('seriesTarget', 'Data series', [['', 'All series']])}
+    ${row(color('color', 'Series color') + number('opacity', 'Opacity', 0.1, 1, 0.1))}
+    <div class="form-actions"><button type="button" data-cc="seriesDefaults" class="ghost-btn">Use defaults</button></div>
+    ${section('Symbols', row(picker('pointShape', 'Shape') + number('pointSize', 'Size (pt)', 0.75, 15, 0.25))
+      + select('markerFill', 'Fill', [['filled', 'Filled'], ['open', 'Open']]), 'data-cc="symbolFields"')}
+    ${section('Lines', select('mode', 'Display', [['lines+markers', 'Line + points'], ['lines', 'Line only'], ['markers', 'Points only']])
+      + row(picker('lineStyle', 'Pattern') + number('lineWidth', 'Thickness (pt)', 0.375, 6, 0.125)), 'data-cc-when="line"')}
+    ${section('Bars', row(color('barOutlineColor', 'Outline color') + number('barOutlineWidth', 'Thickness (pt)', 0, 6, 0.25))
+      + row(select('barMode', 'Arrangement', [['group', 'Grouped'], ['stack', 'Stacked']])
+        + number('barCornerRadius', 'Corner radius (pt)', 0, 22.5, 0.25))
+      + check('barLabels', 'Value labels'), 'data-cc-when="bar"')}
+    ${section('Error bars', color('errorColor', 'Error-bar color')
+      + row(number('errorCapWidth', 'Cap width (pt)', 0, 15, 0.25)
+        + number('errorThickness', 'Thickness (pt)', 0.375, 4.5, 0.125)), 'data-cc="errorFields"')}
+    ${select('legendPosition', 'Legend position', [['top', 'Top'], ['bottom', 'Bottom'], ['right', 'Right'], ['none', 'Hidden']])}
+    <details class="assay-chart-style-subsection" data-cc="columnFields">
+      <summary class="assay-chart-style-subhead">Data mapping</summary>
+      ${select('xColumn', 'X column', [])}${select('yColumn', 'Y column', [])}${select('seriesColumn', 'Series column', [])}
+    </details>
+    <p class="assay-chart-style-note" data-cc="columnNote"></p>
+  `)}
+  ${panel('text', `
+    ${select('textTarget', 'Text element', [['title', 'Chart title'], ['xTitle', 'X axis title'], ['yTitle', 'Y axis title'],
+      ['xTicks', 'X tick labels'], ['yTicks', 'Y tick labels'], ['legend', 'Legend'], ['barLabels', 'Bar-value labels']])}
+    <div data-cc="titleFields" class="assay-chart-style-subsection">
+      <label>Text<input type="text" data-cc="titleText" maxlength="200" /></label>
+      ${row(number('titlePos', 'Position (0–1)', 0, 1, 0.05, 'Center') + number('titleOffset', 'Distance (pt)', 0, 150, 0.25, 'Auto'))}
+    </div>
+    ${section('Font', '<div data-cc="textBar"></div>')}
+  `)}
+  <p data-cc="validation" class="assay-chart-style-validation" role="status" aria-live="polite" hidden></p>
+</div>`;
 export { TABS, TAB_KEYS, PANEL_HTML };

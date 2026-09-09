@@ -38,6 +38,6 @@
 }
 
 body.theme-night {
-  --assay-plate-danger: #f1a7a7;
-  --assay-plate-line: rgba(145, 174, 214, 0.32);
+  --assay-plate-danger: var(--theme-danger);
+  --assay-plate-line: var(--theme-border-soft);
 }

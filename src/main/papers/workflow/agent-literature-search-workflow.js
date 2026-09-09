@@ -111,7 +111,10 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     const copiedContext = buildCopiedContext(source, query);
     const useCodexPaperContext = Boolean(codexSubAgentRuntime)
       && shouldUseCodexPaperContextWorkflow(source);
-    if (useCodexPaperContext) {
+    const taskContext = source.snapshot?.scheduled_task || source.snapshot?.scheduledTask;
+    const isExperimentSuggestion = taskContext?.task_type === 'notebook_suggestion'
+      && taskContext.deny_paper_download === true;
+    if (useCodexPaperContext || isExperimentSuggestion) {
       const workflowResult = await runLiteratureWorkflow({
         ...source,
         query,

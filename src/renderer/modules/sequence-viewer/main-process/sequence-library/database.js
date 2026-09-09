@@ -174,7 +174,11 @@ async function openDatabase(sqlitePath) {
 async function persistDatabase(sqlitePath, db) {
   const bytes = db.export();
   await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
-  await fs.writeFile(sqlitePath, Buffer.from(bytes));
+  const temporaryPath = `${sqlitePath}.${process.pid}.tmp`;
+  try {
+    await fs.writeFile(temporaryPath, Buffer.from(bytes));
+    await fs.rename(temporaryPath, sqlitePath);
+  } finally { await fs.rm(temporaryPath, { force: true }); }
 }
 function readSingleRow(db, sql, values = []) {
   const stmt = db.prepare(sql);

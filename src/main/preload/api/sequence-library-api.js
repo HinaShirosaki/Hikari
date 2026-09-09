@@ -4,6 +4,7 @@ const { SEQUENCE_LIBRARY } = require('../../../shared/ipc/channels');
 
 function createSequenceLibraryApi(ipcRenderer) {
   return {
+    sequenceLibraryAgentArtifact: (payload) => ipcRenderer.invoke(SEQUENCE_LIBRARY.AGENT_ARTIFACT, payload),
     sequenceLibraryList: (payload) => ipcRenderer.invoke(SEQUENCE_LIBRARY.LIST, payload),
     sequenceLibraryGet: (payload) => ipcRenderer.invoke(SEQUENCE_LIBRARY.GET, payload),
     sequenceLibraryUpsert: (payload) => ipcRenderer.invoke(SEQUENCE_LIBRARY.UPSERT, payload),

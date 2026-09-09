@@ -104,7 +104,7 @@ function isEligibleNotebookMemoryEntry(entry = {}) {
     !cleanText(normalized.id, 220)
     || (notebookType && notebookType !== 'biology')
     || hasWorkflowNotebookContext(normalized)
-    || cleanText(normalized.notebookState, 40).toLowerCase() === 'planned'
+    || ['planned', 'suggested'].includes(cleanText(normalized.notebookState, 40).toLowerCase())
   ) {
     return false;
   }

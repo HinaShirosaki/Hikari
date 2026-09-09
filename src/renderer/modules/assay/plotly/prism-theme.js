@@ -28,17 +28,21 @@ export function tickFormatSpec(format) {
 }
 
 // Prism never sets tick numbers in bold; only titles/legend follow the text style.
-export function prismFonts(style = {}) {
-  const textStyle = ensureObject(style.text);
-  const font = {
+export function prismTextFont(style = {}, target = 'xTitle') {
+  const specific = style.textStyles?.[target];
+  const textStyle = ensureObject(specific || style.text);
+  return {
     family: textStyle.fontFamily ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}` : CHART_FONT_FAMILY,
     size: Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11,
     color: textStyle.color || style.frameStroke || '#000000',
-    weight: textStyle.bold ? 700 : 400,
+    weight: !specific && /Ticks$/.test(target) ? 400 : textStyle.bold ? 700 : 400,
     style: textStyle.italic ? 'italic' : 'normal',
     lineposition: textStyle.underline ? 'under' : 'none'
   };
-  return { font, tickFont: { ...font, weight: 400 } };
+}
+
+export function prismFonts(style = {}) {
+  return { font: prismTextFont(style, 'xTitle'), tickFont: prismTextFont(style, 'xTicks') };
 }
 
 export function prismAxisDefaults(style = {}, tickFont) {

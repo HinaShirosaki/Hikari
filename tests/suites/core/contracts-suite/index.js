@@ -12,4 +12,5 @@ module.exports = function registerContractsSuite(context = {}) {
   registerAgentContractsB(context);
   registerAgentSequenceLibraryContracts(context);
   registerManifestContracts(context);
+  require('./sequence-mcp-contracts.js')(context);
 };

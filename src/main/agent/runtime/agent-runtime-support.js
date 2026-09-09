@@ -208,6 +208,14 @@ function createAgentRuntimeSupport(deps = {}) {
     const settingsSource = snapshot.settings && typeof snapshot.settings === 'object'
       ? snapshot.settings
       : {};
+    const agentSettingsSource = settingsSource.agent && typeof settingsSource.agent === 'object'
+      && !Array.isArray(settingsSource.agent)
+      ? settingsSource.agent
+      : {};
+    const disabledMcpToolNames = asArray(
+      agentSettingsSource.disabledMcpToolNames
+        || agentSettingsSource.disabled_mcp_tool_names
+    ).map((name) => cleanText(name, 160)).filter(Boolean);
     const preferredJournals = normalizePreferredJournalNames([
       settingsSource.preferredJournals,
       settingsSource.preferred_journals,
@@ -279,7 +287,10 @@ function createAgentRuntimeSupport(deps = {}) {
       settings: {
         storagePath: cleanText(settingsSource.storagePath || snapshot?.storagePath, 1200),
         preferredJournals,
-        preferredJournal
+        preferredJournal,
+        agent: {
+          disabledMcpToolNames
+        }
       },
       // Scheduled-task policy has to survive normalization: the paper-download
       // executor reads deny_paper_download off the normalized snapshot.

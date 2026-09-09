@@ -122,6 +122,9 @@ export function createAgentPayloadBuilder({
       disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
         .map((item) => trimText(item, 160))
         .filter(Boolean),
+      disabledMcpToolNames: asArray(state.settings?.agent?.disabledMcpToolNames)
+        .map((item) => trimText(item, 160))
+        .filter(Boolean),
       ...(hiddenContexts.length ? { hiddenContexts } : {}),
       ...(sessionPrompt ? { sessionPrompt } : {}),
       ...(sessionPrompt && isPaperSession ? {

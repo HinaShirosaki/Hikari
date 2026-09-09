@@ -1,20 +1,3 @@
-// Keyed by approvalToken so the review overlay can render one card per proposal
-// and mark each independently, mirroring meta.protocolReview.
-function buildSequenceEditProposalMeta(proposals) {
-  const list = Array.isArray(proposals) ? proposals : [];
-  return list.reduce((map, proposal) => {
-    const token = proposal && typeof proposal === 'object' ? String(proposal.approvalToken || '') : '';
-    if (!token) {
-      return map;
-    }
-    map[token] = {
-      ...proposal,
-      save: { mode: 'confirm_before_save', applied: false, status: 'pending' }
-    };
-    return map;
-  }, {});
-}
-
 export function buildAssistantResponseMessage({
   createId,
   response,
@@ -22,7 +5,6 @@ export function buildAssistantResponseMessage({
   traceRows,
   messageText
 }) {
-  const sequenceEditProposal = buildSequenceEditProposalMeta(response.sequenceEditProposals);
   return {
     id: createId(),
     role: 'assistant',
@@ -45,7 +27,7 @@ export function buildAssistantResponseMessage({
       result_analysis: response.resultAnalysis,
       thinking_trace: response.thinkingTrace,
       notebookDraft: notebookDraft || null,
-      sequenceEditProposal,
+      sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,
       codex_cli_display_rows: traceRows.codexCliDisplay,
@@ -93,6 +75,7 @@ export function buildAssistantErrorMessage({
       result_analysis: null,
       thinking_trace: null,
       notebookDraft: null,
+      sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,
       codex_cli_display_rows: traceRows.codexCliDisplay,

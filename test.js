@@ -25,6 +25,7 @@ const {
 fs.mkdirSync(path.join(__dirname, 'tmp'), { recursive: true });
 
 const tests = [];
+const PLUGIN_TEST_ORIGIN = 'http://127.0.0.1:43210';
 const suitesRoot = path.join(__dirname, 'tests', 'suites');
 
 // The suite file that called test() is the category — the tests/suites tree is
@@ -382,6 +383,26 @@ test('plugin system: Gel has no active renderer-module integrations after the pl
   assert.match(bridgeSource, /migration\.importLegacyGel/, 'legacy Gel data keeps an identity-locked migration path');
 });
 
+test('plugin system: a plugin folder is not served when its origin cannot be isolated', async () => {
+  const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+  const { PLUGINS } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+  const handlers = new Map();
+  // No `session`: the wiring that empties a recycled loopback origin is absent,
+  // so no plugin may be handed one — a port the OS just assigned may be the one
+  // a different plugin's localStorage and IndexedDB are still filed under.
+  registerDataIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+    dialog: {},
+    shell: {},
+    fs: {},
+    mainDataHelpers: {}
+  });
+
+  const result = await handlers.get(PLUGINS.SERVE_FOLDER)(null, { id: 'audit', path: __dirname });
+  assert.equal(result.ok, false, 'an unprepared origin is never served');
+  assert.match(result.error, /Electron session/);
+});
+
 test('plugin system: export IPC validates bytes and writes only after the user chooses a path', async () => {
   const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
   const { PLUGINS } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
@@ -497,16 +518,16 @@ test('plugin service registry routes a conversion to the owning frame', async ()
 
   const posted = [];
   const frame = { contentWindow: { postMessage: (payload) => posted.push(payload) } };
-  registry.register(frame, { id: 'snapgene-dna', service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } });
+  registry.register(frame, { id: 'dna-importer', service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }, PLUGIN_TEST_ORIGIN);
 
   assert.equal(registry.acceptExtensions(), '.dna');
-  assert.equal(registry.getConverter('DNA')?.pluginId, 'snapgene-dna', 'lookup is case/dot-insensitive');
+  assert.equal(registry.getConverter('DNA')?.pluginId, 'dna-importer', 'lookup is case/dot-insensitive');
   assert.equal(registry.getConverter('gbk'), null, 'only registered extensions resolve');
 
   const bytes = new Uint8Array([1, 2, 3]);
   const resultPromise = registry.convert({ extension: 'dna', filename: 'p.dna', bytes });
   assert.equal(posted.length, 0, 'an early conversion waits for the service listener');
-  messageHandler({
+  messageHandler({ origin: PLUGIN_TEST_ORIGIN,
     source: frame.contentWindow,
     data: { hikari: 1, call: 'service:ready' }
   });
@@ -517,7 +538,7 @@ test('plugin service registry routes a conversion to the owning frame', async ()
   const callId = posted[0].id;
 
   // The frame answers on the shared message channel.
-  messageHandler({
+  messageHandler({ origin: PLUGIN_TEST_ORIGIN,
     source: frame.contentWindow,
     data: { hikari: 1, call: 'convert:result', id: callId, ok: true, text: 'LOCUS ...' }
   });
@@ -527,7 +548,7 @@ test('plugin service registry routes a conversion to the owning frame', async ()
   // A service-reported failure rejects.
   const failing = registry.convert({ extension: 'dna', filename: 'bad.dna', bytes });
   const failId = posted[posted.length - 1].id;
-  messageHandler({
+  messageHandler({ origin: PLUGIN_TEST_ORIGIN,
     source: frame.contentWindow,
     data: { hikari: 1, call: 'convert:result', id: failId, ok: false, error: 'boom' }
   });
@@ -538,7 +559,7 @@ test('plugin service registry routes a conversion to the owning frame', async ()
 
 test('plugin service: Biopython converts .dna through the host API into GenBank the sequence viewer can parse', async () => {
   const converter = require(
-    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'biopython-converter.js')
+    path.join(__dirname, 'examples', 'plugins', 'dna-importer', 'biopython-converter.js')
   );
   const { createPluginBridge } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
@@ -563,13 +584,13 @@ test('plugin service: Biopython converts .dna through the host API into GenBank 
     state: { settings: {} },
     api: {
       runPython: (payload) => runPythonSandbox(payload, {
-        sandboxRoot: path.join(__dirname, 'tmp', 'snapgene-biopython-plugin')
+        sandboxRoot: path.join(__dirname, 'tmp', 'dna-importer-biopython-plugin')
       })
     },
     windowObject: { addEventListener() {} }
   });
-  bridge.register(frame, { id: 'snapgene-dna', permissions: ['python'] });
-  bridge.handleMessage({
+  bridge.register(frame, { id: 'dna-importer', permissions: ['python'] }, PLUGIN_TEST_ORIGIN);
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: frame,
     data: {
       hikari: 1,
@@ -650,14 +671,14 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   };
 
   const state = { settings: { plugins: [
-    { id: 'snapgene-dna', name: 'Svc', entryUrl: 'file:///tmp/snapgene-dna/index.html', path: '/tmp/snapgene-dna', permissions: ['python'], service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
+    { id: 'dna-importer', name: 'Svc', entryUrl: 'file:///tmp/dna-importer/index.html', path: '/tmp/dna-importer', permissions: ['python'], service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
   ] } };
   installPlugins({ state, documentObject, appRegistry, services, bridge, api });
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.equal(documentObject.getElementById('plugin-snapgene-dna-view'), null, 'a service has no view section');
+  assert.equal(documentObject.getElementById('plugin-dna-importer-view'), null, 'a service has no view section');
   assert.equal(appRegistry.length, 0, 'a service adds no navigation entry');
-  const frame = documentObject.getElementById('plugin-service-snapgene-dna');
+  const frame = documentObject.getElementById('plugin-service-dna-importer');
   assert.ok(frame, 'a hidden service frame is mounted');
   assert.equal(frame.hidden, true, 'the service frame is hidden');
   assert.ok(
@@ -671,14 +692,14 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   );
   assert.deepEqual(
     serveCalls,
-    [{ id: 'snapgene-dna', pluginPath: '/tmp/snapgene-dna' }],
+    [{ id: 'dna-importer', pluginPath: '/tmp/dna-importer' }],
     'the service folder is loaded through the packaged-safe plugin server'
   );
   assert.equal(frame.src, 'http://127.0.0.1:43210/');
   frame.dispatchEvent({ type: 'load' });
   assert.deepEqual(readyFrames, [frame], 'load marks older service workers ready as a compatibility fallback');
   assert.equal(registered.length, 1, 'the frame is registered with the service registry');
-  assert.equal(registered[0].plugin.id, 'snapgene-dna');
+  assert.equal(registered[0].plugin.id, 'dna-importer');
   assert.equal(bridged.length, 1, 'the frame is registered with the permission bridge');
   assert.equal(bridged[0].frameWindow, frame.contentWindow);
   assert.deepEqual(bridged[0].plugin.permissions, ['python']);
@@ -693,7 +714,7 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
 });
 
 test('plugin service: the example service ships no UI', () => {
-  const html = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'index.html'));
+  const html = readSource(path.join('examples', 'plugins', 'dna-importer', 'index.html'));
   // Strip comments, then the body should hold script tags and nothing else.
   const body = (/<body[^>]*>([\s\S]*?)<\/body>/i.exec(html) || [])[1] || '';
   const withoutComments = body.replace(/<!--[\s\S]*?-->/g, '');
@@ -702,20 +723,20 @@ test('plugin service: the example service ships no UI', () => {
   assert.equal(/\bstyle\s*=|<style\b/i.test(html), false, 'a service page carries no styling');
 
   // The service worker must not touch the DOM.
-  const worker = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
+  const worker = readSource(path.join('examples', 'plugins', 'dna-importer', 'main.js'));
   assert.equal(/\bdocument\./.test(worker), false, 'the service worker touches no DOM');
   assert.match(worker, /call:\s*'service:ready'/, 'the worker announces when its listener is installed');
-  const converter = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'biopython-converter.js'));
+  const converter = readSource(path.join('examples', 'plugins', 'dna-importer', 'biopython-converter.js'));
   assert.match(converter, /hikari\.call\('python\.run'/, 'the service delegates conversion to the Python API');
   assert.match(converter, /from Bio import SeqIO/, 'the Python program uses Biopython');
-  const manifest = JSON.parse(readSource(path.join('examples', 'plugins', 'snapgene-dna', 'plugin.json')));
+  const manifest = JSON.parse(readSource(path.join('examples', 'plugins', 'dna-importer', 'plugin.json')));
   assert.deepEqual(manifest.permissions, ['python'], 'the headless service declares only Python access');
 });
 
 test('plugin service: the headless worker routes conversion through python.run and replies with GenBank', async () => {
-  const workerSource = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
+  const workerSource = readSource(path.join('examples', 'plugins', 'dna-importer', 'main.js'));
   const converter = require(
-    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'biopython-converter.js')
+    path.join(__dirname, 'examples', 'plugins', 'dna-importer', 'biopython-converter.js')
   );
   const genBank = [
     'LOCUS       pWorker         4 bp    DNA     linear   SYN 01-JAN-1980',
@@ -738,7 +759,7 @@ test('plugin service: the headless worker routes conversion through python.run a
         }
       }
     },
-    SnapGeneBiopython: converter,
+    DnaBiopython: converter,
     addEventListener: (_type, listener) => { messageHandler = listener; }
   };
   vm.runInNewContext(workerSource, { window: windowObject, console });
@@ -1029,7 +1050,10 @@ test('plugin system: a plugin view is its frame, with no host chrome around it',
 
   const servedTitle = frameFor('served-one').title;
   assert.ok(servedTitle.includes('Served One'), 'served plugin is named');
-  assert.ok(servedTitle.includes('Served plugin'), 'served plugin is labelled as such');
+  assert.ok(
+    servedTitle.includes('Local plugin'),
+    'serve:true no longer changes delivery, so it no longer changes the label'
+  );
   assert.ok(servedTitle.includes('host access: none'), 'served plugin with no permissions says none');
 
   const localTitle = frameFor('local-one').title;
@@ -1058,7 +1082,7 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
 
   const state = {
     protocols: [{ id: 'p1', name: 'Gel run', steps: [] }],
-    notebookEntries: [{ id: 'n1', experimentName: 'Exp 1', resultText: 'first', resultTables: [] }]
+    notebookEntries: [{ id: 'n1', experimentName: 'Exp 1', result: 'first', resultTables: [] }]
   };
   let persisted = 0;
   const listeners = [];
@@ -1103,17 +1127,17 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   };
   const reader = makeFrame();
   const stranger = makeFrame();
-  bridge.register(reader, { id: 'reader', permissions: ['notebook:read', 'notebook:write', 'layout'] });
+  bridge.register(reader, { id: 'reader', permissions: ['notebook:read', 'notebook:write', 'layout'] }, PLUGIN_TEST_ORIGIN);
   const noLayout = makeFrame();
-  bridge.register(noLayout, { id: 'no-layout', permissions: ['notebook:read'] });
+  bridge.register(noLayout, { id: 'no-layout', permissions: ['notebook:read'] }, PLUGIN_TEST_ORIGIN);
 
   const send = (source, verb, params = {}) => {
-    bridge.handleMessage({ source, data: { hikari: 1, id: verb, verb, params } });
+    bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN, source, data: { hikari: 1, id: verb, verb, params } });
     return source.replies[source.replies.length - 1];
   };
 
   // Unregistered frames get no reply at all — not even an error.
-  bridge.handleMessage({ source: stranger, data: { hikari: 1, id: 'x', verb: 'notebook.list' } });
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN, source: stranger, data: { hikari: 1, id: 'x', verb: 'notebook.list' } });
   assert.equal(stranger.replies.length, 0);
 
   assert.equal(send(reader, 'notebook.list').ok, true);
@@ -1153,7 +1177,7 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   });
   assert.equal(appended.ok, true);
   assert.equal(persisted, 1, 'writes persist state');
-  assert.equal(state.notebookEntries[0].resultText, 'first\n\nsecond');
+  assert.equal(state.notebookEntries[0].result, 'first\n\nsecond');
   assert.equal(state.notebookEntries[0].resultTables.length, 1);
 
   assert.equal(send(reader, 'notebook.appendResult', { entryId: 'missing', text: 'x' }).ok, false);
@@ -1163,8 +1187,8 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   // there is no parameter a plugin could pass to reach another plugin's data.
   const keeper = makeFrame();
   const neighbour = makeFrame();
-  bridge.register(keeper, { id: 'keeper', permissions: ['storage'] });
-  bridge.register(neighbour, { id: 'neighbour', permissions: ['storage'] });
+  bridge.register(keeper, { id: 'keeper', permissions: ['storage'] }, PLUGIN_TEST_ORIGIN);
+  bridge.register(neighbour, { id: 'neighbour', permissions: ['storage'] }, PLUGIN_TEST_ORIGIN);
 
   assert.equal(send(reader, 'storage.get').ok, false, 'storage needs its own permission');
   assert.equal(send(keeper, 'storage.get').result.value, null, 'unset storage reads as null');
@@ -1218,11 +1242,11 @@ test('plugin system: notifications are permission gated, attributed, and bounded
   };
   const notifier = makeFrame();
   const reader = makeFrame();
-  bridge.register(notifier, { id: 'notifier', name: 'Trusted Notifier', permissions: ['notifications'] });
-  bridge.register(reader, { id: 'reader', name: 'Reader', permissions: ['notebook:read'] });
+  bridge.register(notifier, { id: 'notifier', name: 'Trusted Notifier', permissions: ['notifications'] }, PLUGIN_TEST_ORIGIN);
+  bridge.register(reader, { id: 'reader', name: 'Reader', permissions: ['notebook:read'] }, PLUGIN_TEST_ORIGIN);
 
   const send = (source, params) => {
-    bridge.handleMessage({
+    bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
       source,
       data: { hikari: 1, id: `notice-${source.replies.length}`, verb: 'notifications.show', params }
     });
@@ -1268,24 +1292,21 @@ test('plugin system: files verbs stay inside the plugin folder', async () => {
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
   );
 
-  // Stands in for the preload bridge. readFileBase64 in the real app reads any
-  // absolute path it is handed and storeImportedFile confines writes to the
-  // storage root but not below it, so containment has to come from the bridge —
-  // this fake records exactly what the bridge asked for.
+  // The renderer supplies identity and a relative path to dedicated plugin
+  // IPC. Real filesystem containment is covered by plugin-boundaries-selfcheck.
   const disk = new Map();
-  const overwriteRequests = [];
   let writeFailure = '';
   const api = {
-    async storeImportedFile({ storagePath, targetFolder, fileName, dataBase64, overwrite }) {
+    async writePluginFile({ storagePath, pluginId, path: relative, dataBase64 }) {
       if (writeFailure) {
         return { ok: false, error: writeFailure };
       }
-      overwriteRequests.push(overwrite);
-      const filePath = `${targetFolder}/${fileName}`;
+      const filePath = `${storagePath}/Plugins/${pluginId}/${relative}`;
       disk.set(filePath, dataBase64);
-      return { ok: true, filePath, relativePath: filePath.slice(`${storagePath}/`.length) };
+      return { ok: true, path: relative };
     },
-    async readFileBase64(target) {
+    async readPluginFile({ storagePath, pluginId, path: relative }) {
+      const target = `${storagePath}/Plugins/${pluginId}/${relative}`;
       return disk.has(target)
         ? { ok: true, dataBase64: disk.get(target) }
         : { ok: false, error: 'ENOENT' };
@@ -1300,11 +1321,11 @@ test('plugin system: files verbs stay inside the plugin folder', async () => {
     windowObject: { addEventListener: (_type, fn) => listeners.push(fn) }
   });
   const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
-  bridge.register(frame, { id: 'gel', permissions: ['files'] });
+  bridge.register(frame, { id: 'gel', permissions: ['files'] }, PLUGIN_TEST_ORIGIN);
 
   // files verbs are async, so a reply lands a turn later than a sync verb's.
   const call = async (verb, params) => {
-    bridge.handleMessage({ source: frame, data: { hikari: 1, id: verb, verb, params } });
+    bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN, source: frame, data: { hikari: 1, id: verb, verb, params } });
     await new Promise((resolve) => setTimeout(resolve, 0));
     return frame.replies[frame.replies.length - 1];
   };
@@ -1348,13 +1369,15 @@ test('plugin system: files verbs stay inside the plugin folder', async () => {
   // The plugin owns this folder and addresses it by path, so re-writing a path
   // replaces the file. Without this the host de-duplicates to source_2.png and
   // every re-save leaks a copy the plugin can never reach or delete.
-  assert.equal(overwriteRequests.at(-1), true, 'plugin writes ask the host to overwrite');
+  await call('files.write', { path: 'Gels/run1/source.png', dataBase64: 'bmV3' });
+  assert.equal(disk.size, 1);
+  assert.equal(disk.get('/root/Plugins/gel/Gels/run1/source.png'), 'bmV3');
 
   // The id is half the confining path. inspect-plugin-folder checks it at
   // install time, but a persisted record is re-hydrated without that check.
   const hostile = { replies: [], postMessage: (payload) => hostile.replies.push(payload) };
-  bridge.register(hostile, { id: '../..', permissions: ['files'] });
-  bridge.handleMessage({
+  bridge.register(hostile, { id: '../..', permissions: ['files'] }, PLUGIN_TEST_ORIGIN);
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: hostile,
     data: { hikari: 1, id: 'r', verb: 'files.read', params: { path: 'notebook.json' } }
   });
@@ -1396,23 +1419,23 @@ test('plugin system: app context events and user-mediated downloads stay permiss
   };
   const exporter = makeFrame();
   const reader = makeFrame();
-  bridge.register(exporter, { id: 'exporter', permissions: ['downloads'] });
-  bridge.register(reader, { id: 'reader', permissions: [] });
+  bridge.register(exporter, { id: 'exporter', permissions: ['downloads'] }, PLUGIN_TEST_ORIGIN);
+  bridge.register(reader, { id: 'reader', permissions: [] }, PLUGIN_TEST_ORIGIN);
 
   const info = (() => {
-    bridge.handleMessage({ source: exporter, data: { hikari: 1, id: 'info', verb: 'app.info', params: {} } });
+    bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN, source: exporter, data: { hikari: 1, id: 'info', verb: 'app.info', params: {} } });
     return exporter.replies.at(-1);
   })();
   assert.deepEqual(info.result.appearance, { mode: 'night', fontSize: 18 });
   assert.deepEqual(info.result.storage, { configured: true });
 
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: reader,
     data: { hikari: 1, id: 'denied', verb: 'downloads.save', params: { fileName: 'x.csv', dataBase64: 'eA==' } }
   });
   assert.equal(reader.replies.at(-1).ok, false);
 
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: exporter,
     data: { hikari: 1, id: 'invalid', verb: 'downloads.save', params: { fileName: 'x.csv', dataBase64: 'not base64' } }
   });
@@ -1421,7 +1444,7 @@ test('plugin system: app context events and user-mediated downloads stay permiss
   assert.match(exporter.replies.at(-1).error, /canonical base64/);
   assert.equal(exports.length, 0, 'invalid export bytes never reach native IPC');
 
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: exporter,
     data: { hikari: 1, id: 'save', verb: 'downloads.save', params: { fileName: 'gel.csv', dataBase64: 'Z2Vs' } }
   });
@@ -1450,10 +1473,10 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
         ? { ok: true, dataBase64: disk.get(filePath) }
         : { ok: false, error: 'ENOENT' };
     },
-    async storeImportedFile({ storagePath, targetFolder, fileName, dataBase64 }) {
-      const filePath = `${targetFolder}/${fileName}`;
+    async writePluginFile({ storagePath, pluginId, path: relative, dataBase64 }) {
+      const filePath = `${storagePath}/Plugins/${pluginId}/${relative}`;
       disk.set(filePath, dataBase64);
-      return { ok: true, relativePath: filePath.slice(`${storagePath}/`.length) };
+      return { ok: true, path: relative };
     }
   };
   const state = {
@@ -1473,8 +1496,8 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
     windowObject: { addEventListener() {} }
   });
   const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
-  bridge.register(frame, { id: 'gel', permissions: ['storage', 'files'], bundled: true, path: '@bundled/gel' });
-  bridge.handleMessage({
+  bridge.register(frame, { id: 'gel', permissions: ['storage', 'files'], bundled: true, path: '@bundled/gel' }, PLUGIN_TEST_ORIGIN);
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: frame,
     data: { hikari: 1, id: 'migrate', verb: 'migration.importLegacyGel', params: {} }
   });
@@ -1495,7 +1518,7 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
     name: 'Imported Gel',
     updatedAt: '2026-08-02T00:00:00.000Z'
   });
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: frame,
     data: {
       hikari: 1,
@@ -1520,7 +1543,7 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
     sourceImageRelativePath: 'Gels/old/source.png',
     updatedAt: '2026-08-03T00:00:00.000Z'
   }];
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: frame,
     data: { hikari: 1, id: 'moved', verb: 'migration.importLegacyGel', params: {} }
   });
@@ -1533,8 +1556,8 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
   state.settings.storagePath = '/root';
 
   const other = { replies: [], postMessage: (payload) => other.replies.push(payload) };
-  bridge.register(other, { id: 'other', permissions: [], bundled: true, path: '@bundled/other' });
-  bridge.handleMessage({
+  bridge.register(other, { id: 'other', permissions: [], bundled: true, path: '@bundled/other' }, PLUGIN_TEST_ORIGIN);
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: other,
     data: { hikari: 1, id: 'blocked', verb: 'migration.importLegacyGel', params: {} }
   });
@@ -1581,11 +1604,11 @@ test('plugin system: python.run is permission gated and hands back no host paths
   };
   const runner = makeFrame();
   const reader = makeFrame();
-  bridge.register(runner, { id: 'runner', permissions: ['python'] });
-  bridge.register(reader, { id: 'reader', permissions: ['files', 'storage'] });
+  bridge.register(runner, { id: 'runner', permissions: ['python'] }, PLUGIN_TEST_ORIGIN);
+  bridge.register(reader, { id: 'reader', permissions: ['files', 'storage'] }, PLUGIN_TEST_ORIGIN);
 
   // Holding files/storage is not holding python: a subprocess is its own grant.
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: reader,
     data: { hikari: 1, id: 'denied', verb: 'python.run', params: { code: 'print(1)' } }
   });
@@ -1594,7 +1617,7 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.match(reader.replies.at(-1).error, /did not declare the "python" permission/);
   assert.equal(runs.length, 0, 'a denied call never reaches the host runner');
 
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: runner,
     data: { hikari: 1, id: 'empty', verb: 'python.run', params: { code: '   ' } }
   });
@@ -1602,7 +1625,7 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.equal(runner.replies.at(-1).ok, false);
   assert.equal(runs.length, 0, 'blank code never reaches the host runner');
 
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: runner,
     data: {
       hikari: 1,
@@ -1630,7 +1653,7 @@ test('plugin system: python.run is permission gated and hands back no host paths
   assert.equal(runs.at(-1).timeout_ms, 5000);
 
   const repliesBeforeServiceMessage = runner.replies.length;
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: runner,
     data: { hikari: 1, call: 'convert:result', id: 'svc_1', ok: true, text: 'LOCUS ...' }
   });
@@ -1641,7 +1664,7 @@ test('plugin system: python.run is permission gated and hands back no host paths
   );
 
   // Oversized input is refused at the bridge rather than shipped to a subprocess.
-  bridge.handleMessage({
+  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: runner,
     data: {
       hikari: 1,
@@ -1733,8 +1756,8 @@ test('plugin system: a frame with unsaved work reaches the host quit guard', asy
     windowObject: { addEventListener() {}, setTimeout: () => 0 }
   });
   const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
-  bridge.register(frame, { id: 'gel', name: 'Gel Analysis', permissions: [] });
-  const push = (unsaved) => bridge.handleMessage({
+  bridge.register(frame, { id: 'gel', name: 'Gel Analysis', permissions: [] }, PLUGIN_TEST_ORIGIN);
+  const push = (unsaved) => bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: frame,
     data: { hikari: 1, id: 'u', verb: 'app.setUnsaved', params: { unsaved } }
   });

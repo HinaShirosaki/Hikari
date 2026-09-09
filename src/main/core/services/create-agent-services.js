@@ -22,7 +22,6 @@ const { createAgentSubAgentRuntime } = require('../../agent/tools/agent-sub-agen
 const { createAgentContainerRuntime } = require('../../agent/tools/agent-container.js');
 const { createAgentAssayTableRuntime } = require('../../agent/tools/agent-assay-table.js');
 const { createAgentPlotlyGraphRuntime } = require('../../agent/tools/agent-plotly-graph.js');
-const { createSequenceAgentRuntime } = require('../../agent/tools/agent-sequence-viewer.js');
 const { createAgentMemoryRuntime } = require('../../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../../agent/tools/agent-web-search.js');
@@ -327,10 +326,6 @@ function createMainAgentServices(deps = {}) {
     getSandboxRoot: getAgentPythonSandboxRoot
   });
   const plotlyGraphRuntime = createAgentPlotlyGraphRuntime({});
-  const sequenceAgentRuntime = createSequenceAgentRuntime({
-    BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null,
-    ipcMain: deps.ipcMain || deps.electron?.ipcMain || null
-  });
   const memoryRuntime = createAgentMemoryRuntime({
     ...sharedAgentLlmDeps,
     memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
@@ -409,7 +404,6 @@ function createMainAgentServices(deps = {}) {
     containerRuntime,
     assayTableRuntime,
     plotlyGraphRuntime,
-    sequenceAgentRuntime,
     memoryRuntime,
     paperDownloadRuntime,
     paperAnalysisRuntime,

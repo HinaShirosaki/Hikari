@@ -22,12 +22,8 @@ export function initHomeDashboard({
   persist,
   createId = () => '',
   safeText,
-  onOpenSampleSearch = () => {},
-  onOpenSamples = () => onOpenSampleSearch(''),
   onOpenNotebook = () => {},
-  onOpenWorkflow = () => {},
-  onOpenAssistant = () => {},
-  onSendQuickLogToAgent = () => false,
+  onSendQuickLogToAgent = async () => ({ ok: false, reason: 'unavailable' }),
   api = null
 }) {
   const passageElements = {
@@ -80,8 +76,7 @@ export function initHomeDashboard({
     quickLogInput: document.getElementById('dashboard-quick-log-input'),
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
-    quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
+    quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn')
   };
 
   const notebookElements = {
@@ -185,12 +180,7 @@ export function initHomeDashboard({
       state,
       persist,
       createId,
-      safeText,
       render: masterRender,
-      onOpenSamples,
-      onOpenNotebook,
-      onOpenWorkflow,
-      onOpenAssistant,
       onSendQuickLogToAgent,
       elements: quickLogElements
     })

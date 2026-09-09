@@ -1,6 +1,7 @@
 import { asArray } from '../lib/normalize.js';
 import { PLUGIN_SAVE_TIMEOUT_MS, PROTOCOL_MARKER, buildPluginAppContext, text } from './plugin-bridge/helpers.js';
 import { VERBS } from './plugin-bridge/verbs.js';
+import { pluginOrigin } from './plugin-origin.js';
 
 export function createPluginBridge({
   state,
@@ -11,14 +12,14 @@ export function createPluginBridge({
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
 } = {}) {
-  // contentWindow -> installed plugin record. Identity comes from the window
-  // the message actually arrived from, never from anything inside the payload,
-  // so a plugin cannot claim another plugin's id to borrow its permissions.
+  // WindowProxy identity survives navigation, so a grant also needs the
+  // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
 
-  function register(frameWindow, plugin) {
-    if (frameWindow && plugin) {
-      frames.set(frameWindow, plugin);
+  function register(frameWindow, plugin, baseUrl) {
+    const origin = pluginOrigin(baseUrl);
+    if (frameWindow && plugin && origin) {
+      frames.set(frameWindow, { plugin, origin });
     }
   }
 
@@ -27,12 +28,12 @@ export function createPluginBridge({
     if (!event) {
       return;
     }
-    frames.forEach((_plugin, frameWindow) => {
+    frames.forEach(({ origin }, frameWindow) => {
       frameWindow?.postMessage?.({
         hikari: PROTOCOL_MARKER,
         event,
         payload
-      }, '*');
+      }, origin);
     });
   }
 
@@ -67,7 +68,7 @@ export function createPluginBridge({
     if (!frameWindow || !frames.has(frameWindow)) {
       return false;
     }
-    frameWindow.postMessage?.({ hikari: PROTOCOL_MARKER, event, payload: {} }, '*');
+    frameWindow.postMessage?.({ hikari: PROTOCOL_MARKER, event, payload: {} }, frames.get(frameWindow).origin);
     return true;
   }
 
@@ -122,13 +123,28 @@ export function createPluginBridge({
       || request.call) {
       return;
     }
-    const plugin = frames.get(event.source);
-    const reply = (payload) => {
-      event.source?.postMessage?.({ hikari: PROTOCOL_MARKER, id: request.id, ...payload }, '*');
-    };
-    if (!plugin) {
+    const registration = frames.get(event.source);
+    if (!registration) {
       return;
     }
+    if (event.origin !== registration.origin) {
+      frames.delete(event.source);
+      frameHistory.delete(event.source);
+      onFrameHistoryChanged?.();
+      // The document that reported unsaved work is gone, so the host can no
+      // longer ask it to save. Withdraw the quit-guard source instead of
+      // blocking every future quit on a frame that can never answer.
+      pluginUnsaved(registration.plugin, false);
+      return;
+    }
+    const { plugin, origin } = registration;
+    const reply = (payload) => {
+      // An async read may finish after navigation or revocation. The browser
+      // checks the target origin again at delivery, even if no new call arrived.
+      if (frames.get(event.source) === registration) {
+        event.source?.postMessage?.({ hikari: PROTOCOL_MARKER, id: request.id, ...payload }, origin);
+      }
+    };
 
     const verb = VERBS[text(request.verb, 80)];
     if (!verb) {

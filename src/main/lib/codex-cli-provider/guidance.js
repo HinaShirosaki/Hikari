@@ -34,21 +34,36 @@ async function hasCodexProjectMemoryFile(cwd = '') {
   }
 }
 
-async function ensureCodexCliProjectSkillFolder(cwd = '') {
+function resolveSkillRequestContext(options = {}) {
+  const env = options.env && typeof options.env === 'object'
+    ? options.env
+    : (options.envOverrides && typeof options.envOverrides === 'object' ? options.envOverrides : {});
+  const serialized = env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
+    || env.HIKARI_CODEX_REQUEST_CONTEXT
+    || '';
+  try {
+    const parsed = JSON.parse(String(serialized || ''));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function ensureCodexCliProjectSkillFolder(cwd = '', options = {}) {
   const safeCwd = resolveWorkingDirectory(cwd);
   if (!safeCwd || isFilesystemRoot(safeCwd)) {
     return '';
   }
   const skillsPath = path.join(safeCwd, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME);
   await fs.mkdir(skillsPath, { recursive: true });
-  await releaseOfficialMcpSkills(skillsPath).catch(() => []);
+  await releaseOfficialMcpSkills(skillsPath, resolveSkillRequestContext(options)).catch(() => []);
   return skillsPath;
 }
 
-async function ensureCodexCliWorkingDirectoryGuidance(cwd = '') {
+async function ensureCodexCliWorkingDirectoryGuidance(cwd = '', options = {}) {
   const safeCwd = resolveWorkingDirectory(cwd);
   if (await hasCodexProjectMemoryFile(safeCwd)) {
-    await ensureCodexCliProjectSkillFolder(safeCwd).catch(() => '');
+    await ensureCodexCliProjectSkillFolder(safeCwd, options).catch(() => '');
     await removeHikariCodexAgentsFileIfOnlyManaged(safeCwd).catch(() => false);
     return '';
   }
@@ -69,5 +84,6 @@ module.exports = {
   ensureCodexCliGlobalAgentsFile,
   ensureCodexCliProjectSkillFolder,
   ensureCodexCliWorkingDirectoryGuidance,
-  hasCodexProjectMemoryFile
+  hasCodexProjectMemoryFile,
+  resolveSkillRequestContext
 };

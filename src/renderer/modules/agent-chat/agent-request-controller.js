@@ -102,6 +102,7 @@ export function createAgentRequestController(deps) {
   function collectTraceRows(request) {
     const progress = request?.liveAssistantMessage?.meta?.live_progress || {};
     return {
+      sequenceActions: request?.liveAssistantMessage?.meta?.sequence_actions || [],
       thinking: cloneLiveThinkingRows(progress.thinking_rows),
       activity: cloneLiveActivityRows(progress.activity_rows),
       codexCliDisplay: cloneLiveCodexCliDisplayRows(progress.codex_cli_display_rows)
@@ -132,17 +133,20 @@ export function createAgentRequestController(deps) {
     return true;
   }
 
-  async function sendMessage() {
+  async function sendMessage(options = {}) {
+    const onAccepted = typeof options?.onAccepted === 'function'
+      ? options.onAccepted
+      : null;
     if (runtime.inFlight || runtime.sendPending === true) {
-      return;
+      return { ok: false, reason: 'busy' };
     }
     const { rawMessageText, attachments, messageText, hiddenContexts } = payloadBuilder.getDraftRequest();
     if (!rawMessageText && !attachments.length) {
-      return;
+      return { ok: false, reason: 'empty' };
     }
     if (!api?.agentChat) {
       setStatus('Agent IPC is unavailable.');
-      return;
+      return { ok: false, reason: 'unavailable' };
     }
 
     ensureAgentState();
@@ -200,8 +204,9 @@ export function createAgentRequestController(deps) {
       syncRequestUiState();
       setStatus('Error.');
       showTransientNotice(String(error?.message || error || 'Failed to create chat session.'), { type: 'error' });
-      return;
+      return { ok: false, reason: 'session_error' };
     }
+    onAccepted?.({ clientRequestId, sessionId: requestSessionId });
     runtime.sendPending = false;
     syncRequestUiState();
     renderHistoryView({ forceScroll: true });
@@ -287,6 +292,7 @@ export function createAgentRequestController(deps) {
         renderHistoryView();
       }
     }
+    return { ok: true, clientRequestId, sessionId: requestSessionId };
   }
 
   async function stopMessage() {

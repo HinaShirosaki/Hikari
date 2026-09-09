@@ -4,6 +4,50 @@ const { ensureObject } = require('../../../lib/normalize.js');
 const { DEFAULT_MAX_RESULTS, PAPER_FINDING_RESULT_TYPE, PAPER_FINDING_TASK_TYPE } = require('./constants.js');
 const { cleanText, normalizeMaxResults, normalizePaperFindingFrequency, normalizePreferredJournals, normalizeProject } = require('./frequency-and-project.js');
 
+const WEEKDAY_NAMES = Object.freeze([
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+]);
+
+function normalizePaperFindingTiming(input = {}, frequency = {}) {
+  const source = ensureObject(input);
+  const timing = ensureObject(source.timing || source.calendar || source.calendar_schedule);
+  const timeOfDay = cleanText(
+    timing.time_of_day || timing.timeOfDay || timing.time || source.time_of_day || source.timeOfDay,
+    20
+  );
+  if (!timeOfDay) {
+    return null;
+  }
+  if (!['day', 'week', 'month'].includes(frequency.unit) || !Number.isInteger(frequency.value)) {
+    throw new Error('calendar paper finding schedules require a whole-number day, week, or month cadence.');
+  }
+  const dayOfWeek = Number(timing.day_of_week ?? timing.dayOfWeek ?? 1);
+  const dayOfMonth = Number(timing.day_of_month ?? timing.dayOfMonth ?? 1);
+  const timezone = cleanText(
+    timing.timezone || timing.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    120
+  );
+  return {
+    time_of_day: timeOfDay,
+    timezone,
+    ...(frequency.unit === 'week' ? { day_of_week: dayOfWeek } : {}),
+    ...(frequency.unit === 'month' ? { day_of_month: dayOfMonth } : {})
+  };
+}
+
+function calendarFrequencyLabel(frequency, timing) {
+  if (!timing) {
+    return frequency.label;
+  }
+  const base = frequency.value === 1
+    ? `Every ${frequency.unit}`
+    : frequency.label;
+  const detail = frequency.unit === 'week'
+    ? ` on ${WEEKDAY_NAMES[timing.day_of_week] || 'Monday'}`
+    : (frequency.unit === 'month' ? ` on day ${timing.day_of_month}` : '');
+  return `${base}${detail} at ${timing.time_of_day}`;
+}
+
 function buildPaperFindingPrompt({
   project,
   requirements = '',
@@ -76,6 +120,8 @@ function buildPaperFindingScheduledTaskInput(input = {}) {
   const source = ensureObject(input);
   const project = normalizeProject(source);
   const frequency = normalizePaperFindingFrequency(source);
+  const timing = normalizePaperFindingTiming(source, frequency);
+  const frequencyLabel = calendarFrequencyLabel(frequency, timing);
   const requirements = cleanText(source.requirements, 12_000);
   const preferredJournals = normalizePreferredJournals([
     source.preferred_journals,
@@ -95,7 +141,13 @@ function buildPaperFindingScheduledTaskInput(input = {}) {
     frequency_value: frequency.value,
     frequency_unit: frequency.unit,
     interval_minutes: frequency.interval_minutes,
-    frequency_label: frequency.label,
+    frequency_label: frequencyLabel,
+    ...(timing ? {
+      schedule_time: timing.time_of_day,
+      schedule_timezone: timing.timezone,
+      ...(frequency.unit === 'week' ? { schedule_day_of_week: timing.day_of_week } : {}),
+      ...(frequency.unit === 'month' ? { schedule_day_of_month: timing.day_of_month } : {})
+    } : {}),
     preferred_journals: preferredJournals,
     max_results: maxResults,
     result_delivery: 'home_dashboard_card',
@@ -109,7 +161,7 @@ function buildPaperFindingScheduledTaskInput(input = {}) {
       requirements,
       preferredJournals,
       maxResults,
-      frequencyLabel: frequency.label
+      frequencyLabel
     }),
     enabled: source.enabled !== false,
     task_type: PAPER_FINDING_TASK_TYPE,
@@ -117,13 +169,26 @@ function buildPaperFindingScheduledTaskInput(input = {}) {
       ...ensureObject(source.metadata),
       paper_finding: paperFindingMetadata
     },
-    schedule: {
-      kind: 'interval',
-      interval_minutes: frequency.interval_minutes,
-      ...(cleanText(source.anchor_at || source.anchorAt, 80)
-        ? { anchor_at: cleanText(source.anchor_at || source.anchorAt, 80) }
-        : {})
-    },
+    schedule: timing
+      ? {
+        kind: 'calendar',
+        interval_value: frequency.value,
+        interval_unit: frequency.unit,
+        time_of_day: timing.time_of_day,
+        timezone: timing.timezone,
+        ...(frequency.unit === 'week' ? { day_of_week: timing.day_of_week } : {}),
+        ...(frequency.unit === 'month' ? { day_of_month: timing.day_of_month } : {}),
+        ...(cleanText(source.anchor_at || source.anchorAt, 80)
+          ? { anchor_at: cleanText(source.anchor_at || source.anchorAt, 80) }
+          : {})
+      }
+      : {
+        kind: 'interval',
+        interval_minutes: frequency.interval_minutes,
+        ...(cleanText(source.anchor_at || source.anchorAt, 80)
+          ? { anchor_at: cleanText(source.anchor_at || source.anchorAt, 80) }
+          : {})
+      },
     project,
     execution: {
       model: cleanText(executionSource.model || source.model, 120),

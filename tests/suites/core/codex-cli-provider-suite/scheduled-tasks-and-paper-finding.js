@@ -175,6 +175,79 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       }
     });
 
+    test('scheduled task calendar cadence honors local weekdays, month days, and times', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-scheduled-calendar-'));
+      const configPath = path.join(tmpDir, 'scheduled-tasks.json');
+      const { createScheduledTaskService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-scheduled-task-service.js'
+      ));
+      let clockMs = Date.parse('2026-07-18T15:00:00.000Z');
+      const ids = ['weekly-task', 'monthly-task', 'daily-task', 'daily-run'];
+      const service = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => configPath,
+        now: () => clockMs,
+        createId: () => ids.shift(),
+        setTimer: () => ({ unref() {} }),
+        clearTimer: () => {},
+        runCodexTask: async () => ({ ok: true, text: 'unused' })
+      });
+
+      try {
+        const weekly = await service.createTask({
+          prompt: 'Weekly paper review.',
+          schedule: {
+            kind: 'calendar',
+            interval_value: 1,
+            interval_unit: 'week',
+            day_of_week: 1,
+            time_of_day: '09:00',
+            timezone: 'America/Chicago'
+          }
+        });
+        assert.equal(weekly.next_run_at, '2026-07-20T14:00:00.000Z');
+
+        clockMs = Date.parse('2026-01-31T16:00:00.000Z');
+        const monthly = await service.createTask({
+          prompt: 'Monthly paper review.',
+          schedule: {
+            kind: 'calendar',
+            interval_value: 1,
+            interval_unit: 'month',
+            day_of_month: 31,
+            time_of_day: '09:00',
+            timezone: 'America/Chicago'
+          }
+        });
+        assert.equal(monthly.next_run_at, '2026-02-28T15:00:00.000Z');
+
+        clockMs = Date.parse('2026-03-07T16:00:00.000Z');
+        const daily = await service.createTask({
+          prompt: 'Daily paper review.',
+          schedule: {
+            kind: 'calendar',
+            interval_value: 1,
+            interval_unit: 'day',
+            time_of_day: '09:00',
+            timezone: 'America/Chicago'
+          }
+        });
+        assert.equal(daily.next_run_at, '2026-03-08T14:00:00.000Z');
+        clockMs = Date.parse(daily.next_run_at);
+        const completed = await service.runTask(daily.id);
+        assert.equal(completed.task.next_run_at, '2026-03-09T14:00:00.000Z');
+      } finally {
+        await service.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
     test('scheduled task loading survives a malformed row and reconciles a stale run', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-scheduled-recovery-'));
       const configPath = path.join(tmpDir, 'scheduled-tasks.json');
@@ -470,6 +543,21 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       assert.match(daily.prompt, /metadata-only/);
       assert.match(daily.prompt, /Engineer ncAA-compatible translation systems/);
       assert.doesNotMatch(daily.prompt, /download_selected_papers/);
+
+      const weeklyTimed = buildPaperFindingScheduledTaskInput({
+        project: { id: 'project-1', name: 'Atlas' },
+        frequency: { value: 1, unit: 'week' },
+        timing: {
+          day_of_week: 3,
+          time_of_day: '08:30',
+          timezone: 'America/Chicago'
+        }
+      });
+      assert.equal(weeklyTimed.schedule.kind, 'calendar');
+      assert.equal(weeklyTimed.schedule.day_of_week, 3);
+      assert.equal(weeklyTimed.schedule.time_of_day, '08:30');
+      assert.equal(weeklyTimed.schedule.timezone, 'America/Chicago');
+      assert.equal(weeklyTimed.metadata.paper_finding.frequency_label, 'Every week on Wednesday at 08:30');
 
       assert.deepEqual(
         normalizePaperFindingFrequency({ frequency: { value: 1, unit: 'week' } }),
@@ -926,6 +1014,14 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
                 enabled: true,
                 next_run_at: '2026-07-31T12:00:00.000Z',
                 project: input.project,
+                schedule: {
+                  kind: 'calendar',
+                  interval_value: input.frequency.value,
+                  interval_unit: input.frequency.unit,
+                  time_of_day: input.timing.time_of_day,
+                  timezone: input.timing.timezone,
+                  day_of_month: input.timing.day_of_month
+                },
                 metadata: {
                   paper_finding: {
                     frequency_value: input.frequency.value,
@@ -942,15 +1038,29 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       await controller.load(projectState.projects[0]);
       const frequencyValue = host.querySelector('[data-paper-finder-frequency-value]');
       const frequencyUnit = host.querySelector('[data-paper-finder-frequency-unit]');
+      const weekdayField = host.querySelector('[data-paper-finder-weekday-field]');
+      const monthdayField = host.querySelector('[data-paper-finder-monthday-field]');
+      const monthday = host.querySelector('[data-paper-finder-monthday]');
+      const time = host.querySelector('[data-paper-finder-time]');
       const requirements = host.querySelector('[data-paper-finder-requirements]');
+      assert.equal(weekdayField.hidden, false);
+      assert.equal(monthdayField.hidden, true);
       frequencyValue.value = '1';
-      frequencyUnit.value = 'day';
+      frequencyUnit.value = 'month';
+      controller.syncScheduleFields();
+      assert.equal(weekdayField.hidden, true);
+      assert.equal(monthdayField.hidden, false);
+      monthday.value = '15';
+      time.value = '08:30';
       requirements.value = 'Prefer recent primary studies.';
       await controller.save({ preventDefault() {} });
 
       assert.equal(savedInputs.length, 1);
       assert.equal(savedInputs[0].frequency.value, 1);
-      assert.equal(savedInputs[0].frequency.unit, 'day');
+      assert.equal(savedInputs[0].frequency.unit, 'month');
+      assert.equal(savedInputs[0].timing.day_of_month, 15);
+      assert.equal(savedInputs[0].timing.time_of_day, '08:30');
+      assert.ok(savedInputs[0].timing.timezone);
       assert.equal(savedInputs[0].requirements, 'Prefer recent primary studies.');
       assert.equal(savedInputs[0].project.description, 'Engineer ncAA-compatible translation systems.');
       assert.equal(Array.from(savedInputs[0].preferred_journals).join('|'), 'Nature Chemical Biology');

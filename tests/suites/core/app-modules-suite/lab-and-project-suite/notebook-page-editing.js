@@ -520,7 +520,9 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
   assert.match(html, /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
   assert.match(html, /<label for="biology-notebook-result">Notes<\/label>/);
   assert.doesNotMatch(html, /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
-  assert.match(css, /\.biology-notebook-linked-toolbar:not\(:has\(> button:not\(\[hidden\]\)\)\),[\s\S]*?\.biology-notebook-linked-results:empty,[\s\S]*?\.biology-notebook-tool-calculations:empty\s*\{[^}]*display:\s*none;/s);
+  assert.doesNotMatch(html, /class="biology-notebook-linked-toolbar"/);
+  assert.match(html, /id="biology-notebook-table-context-menu"[^>]*role="menu"[\s\S]*?id="biology-notebook-add-table-row-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-add-table-column-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-remove-table-btn"[^>]*role="menuitem"/);
+  assert.match(css, /\.biology-notebook-linked-results:empty,[\s\S]*?\.biology-notebook-tool-calculations:empty\s*\{[^}]*display:\s*none;/s);
   assert.match(css, /\.biology-notebook-notes-composer\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*10px\s+12px\s+50px;/s);
   assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
@@ -1139,6 +1141,105 @@ test('biology-notebook result table repaints edited cells and recomputes formula
   grid.events.cellEdited();
   assert.equal(grid.renderCell(0, 2), '#ERROR', 'a broken formula reports instead of guessing');
   assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, false);
+});
+
+test('biology-notebook table context menu targets the table that was right-clicked', () => {
+  const document = createMockDocument([
+    'biology-notebook-result-table',
+    'biology-notebook-result-table-wrap',
+    'biology-notebook-result-table-status',
+    'biology-notebook-add-table-btn',
+    'biology-notebook-add-table-row-btn',
+    'biology-notebook-add-table-column-btn',
+    'biology-notebook-remove-table-btn',
+    'biology-notebook-table-context-menu'
+  ]);
+  const windowRef = {
+    innerWidth: 800,
+    innerHeight: 600,
+    addEventListener() {},
+    requestAnimationFrame(callback) {
+      callback();
+    }
+  };
+
+  class MockTabulator {
+    constructor(host, options = {}) {
+      this.data = options.data.map((row) => ({ ...row }));
+      this.columns = options.columns.map((column) => ({ ...column }));
+    }
+
+    destroy() {}
+    on() {}
+    addRow(row) { this.data.push({ ...row }); }
+    setHeight() {}
+    getData() { return this.data.map((row) => ({ ...row })); }
+    getColumns() {
+      return this.columns.map((column) => ({
+        getField: () => column.field,
+        getDefinition: () => ({ ...column })
+      }));
+    }
+  }
+
+  const resultTableModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'lib', 'spreadsheet-tables.js'),
+    { document, window: windowRef }
+  );
+  const host = document.getElementById('biology-notebook-result-table');
+  const menu = document.getElementById('biology-notebook-table-context-menu');
+  const controller = resultTableModule.createSpreadsheetTables({
+    host,
+    statusEl: document.getElementById('biology-notebook-result-table-status'),
+    wrapEl: document.getElementById('biology-notebook-result-table-wrap'),
+    addBtn: document.getElementById('biology-notebook-add-table-btn'),
+    addRowBtn: document.getElementById('biology-notebook-add-table-row-btn'),
+    addColBtn: document.getElementById('biology-notebook-add-table-column-btn'),
+    removeBtn: document.getElementById('biology-notebook-remove-table-btn'),
+    contextMenuEl: menu,
+    createId: (() => {
+      let index = 0;
+      return () => `menu-${index += 1}`;
+    })(),
+    TabulatorLib: MockTabulator
+  });
+
+  controller.onAdd();
+  controller.onAdd();
+  const before = controller.getCurrentTables().map((table) => table.rows.length);
+  const firstTableTarget = {
+    dataset: { resultTableEditor: '0' },
+    closest(selector) {
+      return selector === '[data-result-table-editor]' ? this : null;
+    },
+    getBoundingClientRect() {
+      return { left: 20, top: 30 };
+    },
+    focus() {}
+  };
+  let prevented = false;
+
+  trigger(host, 'contextmenu', {
+    target: firstTableTarget,
+    clientX: 144,
+    clientY: 188,
+    preventDefault() { prevented = true; }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(menu.hidden, false);
+  assert.equal(menu.style.left, '144px');
+  assert.equal(menu.style.top, '188px');
+  const tableEditors = host.querySelectorAll('[data-result-table-editor]');
+  assert.equal(tableEditors[0].classList.contains('is-active'), true);
+  assert.equal(tableEditors[1].classList.contains('is-active'), false);
+
+  controller.onAddRow();
+  const after = controller.getCurrentTables().map((table) => table.rows.length);
+  assert.equal(after.join(','), `${before[0] + 1},${before[1]}`);
+
+  trigger(menu, 'click');
+  assert.equal(menu.hidden, true);
 });
 
 test('biology-notebook placeholder context menu exposes only a plain Add Table action', () => {

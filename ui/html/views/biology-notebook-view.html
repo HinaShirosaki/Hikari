@@ -13,6 +13,12 @@
           </div>
         </aside>
 
+        <div id="biology-notebook-table-context-menu" class="biology-notebook-context-menu" role="menu" aria-label="Table actions" hidden>
+          <button id="biology-notebook-add-table-row-btn" class="biology-notebook-context-item" type="button" role="menuitem">Add Row</button>
+          <button id="biology-notebook-add-table-column-btn" class="biology-notebook-context-item" type="button" role="menuitem">Add Column</button>
+          <button id="biology-notebook-remove-table-btn" class="biology-notebook-context-item" type="button" role="menuitem">Remove Table</button>
+        </div>
+
         <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
           <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
             <span id="biology-notebook-page-starter-project"></span>
@@ -28,7 +34,7 @@
           <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
-                <input id="biology-notebook-experiment-name" class="biology-notebook-title-editor" type="text" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden />
+                <textarea id="biology-notebook-experiment-name" class="biology-notebook-title-editor" rows="1" spellcheck="false" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden></textarea>
                 <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
@@ -52,6 +58,14 @@
                     <path d="m17.5 6.5-11 11"></path>
                   </svg>
                   <span class="sr-only">Cancel page edit</span>
+                </button>
+                <button id="biology-notebook-take-into-plan-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Take Into Plan" data-hover-caption="Take Into Plan" hidden>
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <rect x="4" y="5.5" width="16" height="15" rx="2"></rect>
+                    <path d="M8 3.5v4M16 3.5v4M4 10h16"></path>
+                    <path d="m8.5 15 2.5 2.5 4.5-4.5"></path>
+                  </svg>
+                  <span class="sr-only">Take Into Plan</span>
                 </button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Executed" data-hover-caption="Executed" hidden>
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -117,11 +131,6 @@
                   <span>Notes / Results</span>
                 </div>
                 <div class="biology-notebook-viewer-section-body">
-                  <div class="biology-notebook-linked-toolbar">
-                    <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
-                    <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
-                    <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
-                  </div>
                   <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
                   <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
                   <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
@@ -143,9 +152,6 @@
                     <input id="biology-notebook-result-file" type="file" multiple />
                   </label>
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
-                  <div class="form-actions">
-                    <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
-                  </div>
                 </div>
               </section>
             </div>

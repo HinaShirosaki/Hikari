@@ -223,14 +223,25 @@ function buildPaperFindingInputFromTask(task = {}) {
   const source = ensureObject(task);
   const project = ensureObject(source.project);
   const config = ensureObject(ensureObject(source.metadata).paper_finding);
+  const schedule = ensureObject(source.schedule);
   const execution = ensureObject(source.execution);
   return {
     title: cleanText(source.title, 220),
     requirements: cleanText(config.requirements, 12_000),
     frequency: {
-      value: Number(config.frequency_value) || DEFAULT_FREQUENCY_VALUE,
-      unit: normalizeFrequencyUnit(config.frequency_unit) || DEFAULT_FREQUENCY_UNIT
+      value: Number(schedule.interval_value || config.frequency_value) || DEFAULT_FREQUENCY_VALUE,
+      unit: normalizeFrequencyUnit(schedule.interval_unit || config.frequency_unit) || DEFAULT_FREQUENCY_UNIT
     },
+    ...(schedule.kind === 'calendar' || cleanText(config.schedule_time, 20) ? {
+      timing: {
+        time_of_day: cleanText(schedule.time_of_day || config.schedule_time, 20) || '09:00',
+        timezone: cleanText(schedule.timezone || config.schedule_timezone, 120)
+          || Intl.DateTimeFormat().resolvedOptions().timeZone
+          || 'UTC',
+        day_of_week: Number(schedule.day_of_week ?? config.schedule_day_of_week ?? 1),
+        day_of_month: Number(schedule.day_of_month ?? config.schedule_day_of_month ?? 1)
+      }
+    } : {}),
     preferred_journals: normalizePreferredJournals(config.preferred_journals),
     max_results: normalizeMaxResults(config.max_results),
     enabled: source.enabled !== false,

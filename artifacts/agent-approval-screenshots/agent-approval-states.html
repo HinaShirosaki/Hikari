@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hikari approval-state screenshots</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #272722;
+        --muted: #75746d;
+        --rule: #e4e1da;
+        --paper: #faf9f6;
+        --panel: #fffefb;
+        --sage: #5c6e4d;
+        --sage-dark: #405337;
+        --sage-soft: #edf0e9;
+        --shadow: 0 18px 48px rgba(53, 49, 41, .14);
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #efeee9; color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .screen { width: 100vw; height: 100vh; min-height: 760px; overflow: hidden; background: var(--paper); }
+      .topbar { height: 92px; display: flex; align-items: center; gap: 34px; padding: 0 18px; border-bottom: 1px solid var(--rule); background: rgba(255,255,255,.45); }
+      .brand { width: 308px; font-weight: 700; font-size: 15px; }
+      .dock { display: flex; align-items: center; gap: 22px; color: #6b6b64; font-size: 17px; }
+      .dock span { width: 21px; height: 21px; display: grid; place-items: center; }
+      .dock .active { color: var(--sage-dark); background: #eeeae3; width: 42px; height: 42px; border-radius: 8px; box-shadow: inset 0 -2px 0 rgba(64,83,55,.22); }
+      .search { margin-left: auto; width: 275px; padding: 11px 14px; color: #8a8982; background: #fffdf9; border: 1px solid #dedbd3; border-radius: 9px; font-size: 14px; }
+      .agent-layout { display: grid; grid-template-columns: 343px minmax(0, 1fr); height: calc(100vh - 92px); min-height: 668px; }
+      .rail { border-right: 1px solid var(--rule); background: #fffefc; }
+      .new-chat { display: flex; align-items: center; gap: 10px; height: 74px; padding: 0 24px; border-bottom: 1px solid var(--rule); font-size: 15px; }
+      .folder { margin: 18px 14px 7px; padding: 9px 12px; border-radius: 7px; background: #f1eee7; font-weight: 650; font-size: 13px; }
+      .session { padding: 10px 25px; font-size: 14px; line-height: 1.32; }
+      .session.current { margin: 5px 14px; padding: 9px 12px; border-radius: 7px; background: #f3eee5; font-weight: 650; }
+      .chat { position: relative; padding: 36px 70px 0; overflow: hidden; }
+      .status { max-width: 900px; height: 34px; padding: 8px 10px; color: #79776f; border: 1px solid #dedbd3; border-radius: 18px; font-size: 13px; }
+      .message { max-width: 760px; margin: 36px auto 0; }
+      .message .who { font-weight: 700; font-size: 14px; }
+      .message p { margin: 9px 0; line-height: 1.55; font-size: 15px; }
+      .overlay { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; background: rgba(43, 42, 37, .28); }
+      .dialog { display: grid; grid-template-rows: auto minmax(0,1fr) auto; width: min(1120px, calc(100vw - 390px)); height: min(660px, calc(100vh - 130px)); min-width: 760px; padding: 20px; border: 1px solid #d9d4ca; border-radius: 14px; background: var(--panel); box-shadow: var(--shadow); }
+      .dialog-head { display: flex; justify-content: space-between; align-items: start; gap: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+      h1, h2, h3, h4, h5, p { margin-top: 0; }
+      .dialog h2 { margin: 0 0 5px; font-size: 20px; }
+      .dialog .subtle { margin: 0; color: var(--muted); font-size: 13px; }
+      .close { width: 31px; height: 31px; border: 0; border-radius: 7px; color: #68665f; background: #f5f3ee; font-size: 22px; }
+      .track { display: flex; gap: 18px; min-height: 0; padding: 14px 0; overflow: hidden; }
+      .review-card { display: grid; grid-template-rows: auto minmax(0,1fr) auto; flex: 1 0 0; min-width: 0; padding: 18px; border: 1px solid #ddd8cf; border-radius: 10px; background: #fffefb; }
+      .review-type { display: inline-flex; width: fit-content; padding: 4px 8px; border-radius: 100px; background: var(--sage-soft); color: var(--sage-dark); font-size: 11px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+      .review-card h3 { margin: 10px 0 0; font-size: 17px; line-height: 1.28; }
+      .review-card header p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+      .review-content { min-height: 0; margin-top: 14px; overflow: hidden; }
+      .review-content section { margin: 0 0 13px; }
+      .review-content h4 { margin: 0 0 6px; color: #55554f; font-size: 12px; letter-spacing: .03em; text-transform: uppercase; }
+      .review-content p, .review-content li { margin: 0; font-size: 13px; line-height: 1.45; }
+      .review-content ul, .review-content ol { margin: 0; padding-left: 20px; }
+      .review-content li + li { margin-top: 5px; }
+      .content-block { padding: 10px; border: 1px solid #e5e0d8; border-radius: 7px; background: #f9f7f2; color: #3d3d38; font-size: 12px; line-height: 1.45; }
+      .actions { display: flex; gap: 8px; padding-top: 14px; }
+      button { font: inherit; cursor: default; }
+      .primary { padding: 9px 15px; border: 1px solid var(--sage-dark); border-radius: 7px; color: #fff; background: var(--sage); font-size: 13px; font-weight: 650; }
+      .secondary { padding: 9px 15px; border: 1px solid #d7d3ca; border-radius: 7px; color: #4d4b45; background: #fffefb; font-size: 13px; }
+      .dialog-foot { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 13px; }
+      .dialog-foot .secondary { padding: 7px 12px; }
+
+      .protocol-layout { display: grid; grid-template-columns: 343px minmax(0, 1fr); height: calc(100vh - 92px); min-height: 668px; }
+      .protocol-rail { overflow: hidden; border-right: 1px solid var(--rule); background: #fffefc; }
+      .create-row { display: flex; align-items: center; gap: 12px; height: 74px; padding: 0 14px; border-bottom: 1px solid var(--rule); }
+      .create-icon { width: 31px; height: 31px; display: grid; place-items: center; border-radius: 6px; color: white; background: var(--sage); }
+      .protocol-item { padding: 13px 14px; border-bottom: 1px solid #ece8e1; font-size: 13px; font-weight: 650; line-height: 1.24; }
+      .protocol-item small { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; font-weight: 400; }
+      .protocol-item.selected { background: #f1ede5; }
+      .protocol-page { padding: 30px 28px 40px 18px; overflow: hidden; background: #fdfcf9; }
+      .eyebrow { display: inline-flex; margin-bottom: 12px; padding: 4px 10px; border-radius: 100px; color: #646057; background: #eeeae3; font-size: 11px; font-weight: 750; letter-spacing: .06em; }
+      .protocol-page h1 { max-width: 900px; margin-bottom: 28px; font-size: 21px; }
+      .protocol-page h2 { margin: 23px 0 8px; font-size: 16px; }
+      .protocol-page p, .protocol-page li { max-width: 1060px; font-size: 15px; line-height: 1.48; }
+      .protocol-page ul, .protocol-page ol { margin: 0; padding-left: 22px; }
+      .protocol-page li + li { margin-top: 6px; }
+      .hidden { display: none; }
+      @media (max-width: 1000px) { .dialog { min-width: 0; width: calc(100vw - 48px); } .brand { width: 180px; } .search { display: none; } }
+    </style>
+  </head>
+  <body>
+    <main id="agent-protocol" class="screen hidden">
+      <header class="topbar"><div class="brand">Agent</div><nav class="dock"><span>⌂</span><span>▣</span><span>▤</span><span>▱</span><span>⌑</span><span>⚗</span><span>⌁</span><span class="active">▣</span><span>⌘</span></nav><div class="search">Search modules or use sample&nbsp; ⌕</div></header>
+      <div class="agent-layout"><aside class="rail"><div class="new-chat">⊕ &nbsp; New Chat</div><div class="folder">⌄ &nbsp;▱ &nbsp;General</div><div class="session">New Chat</div><div class="session current">I want to test binding between my peptide with YEATS2-His...</div><div class="session">Find papers about pH dependent peptide binding...</div><div class="session">Can you check whether we have BL21(DE3)...</div></aside><section class="chat"><div class="status">Ready.</div><article class="message"><div class="who">Assistant</div><p>Generated protocol ready: BLI Binding of a Biotinylated Peptide to YEATS2-His on Streptavidin Sensors. Review it before adding it to Protocol Module.</p></article><div class="overlay"><section class="dialog" role="dialog" aria-label="Review Generated Drafts"><header class="dialog-head"><div><h2>Review Generated Drafts</h2><p class="subtle">Approve or reject generated protocol and notebook pages before they are added.</p></div><button class="close" aria-label="Close">×</button></header><div class="track"><article class="review-card"><header><span class="review-type">Protocol</span><h3>BLI Binding of a Biotinylated Peptide to YEATS2-His on Streptavidin Sensors</h3></header><div class="review-content"><section><h4>Purpose</h4><p>Measure binding using a biotinylated peptide on streptavidin biosensors and soluble YEATS2-His as analyte.</p></section><section><h4>Materials</h4><ul><li>N-terminally biotinylated test peptide</li><li>Purified YEATS2-His</li><li>SA or SAX biosensors</li><li>Kinetics buffer and matched controls</li></ul></section><section><h4>Steps</h4><ol><li>Hydrate sensors in kinetics buffer.</li><li>Load the peptide to a 0.2–0.8 nm target response.</li><li>Run 0.156–10 µM YEATS2-His with reference sensors.</li><li>Fit steady state first; use 1:1 kinetics only for clean curves.</li></ol></section></div><div class="actions"><button class="primary">Approve</button><button class="secondary">Reject</button></div></article></div><footer class="dialog-foot"><button class="secondary">Previous</button><span>1 / 1</span><button class="secondary" disabled>Next</button></footer></section></div></section></div>
+    </main>
+
+    <main id="agent-notebook" class="screen hidden">
+      <header class="topbar"><div class="brand">Agent</div><nav class="dock"><span>⌂</span><span>▣</span><span>▤</span><span>▱</span><span>⌑</span><span>⚗</span><span>⌁</span><span class="active">▣</span><span>⌘</span></nav><div class="search">Search modules or use sample&nbsp; ⌕</div></header>
+      <div class="agent-layout"><aside class="rail"><div class="new-chat">⊕ &nbsp; New Chat</div><div class="folder">⌄ &nbsp;▱ &nbsp;General</div><div class="session">New Chat</div><div class="session current">Research the complete hidden context for this active notebook page...</div><div class="session">Could you tell me what this paper found...</div></aside><section class="chat"><div class="status">Ready.</div><article class="message"><div class="who">Assistant</div><p>Notebook enrichment is ready for review: Reference Buffer And Traceability Notes.</p></article><div class="overlay"><section class="dialog" role="dialog" aria-label="Review Generated Drafts"><header class="dialog-head"><div><h2>Review Generated Drafts</h2><p class="subtle">Approve or reject generated protocol and notebook pages before they are added.</p></div><button class="close" aria-label="Close">×</button></header><div class="track"><article class="review-card"><header><span class="review-type">Notebook Append</span><h3>Reference Buffer And Traceability Notes</h3><p>Parallel IMAC of 7 cpGFP variants / cpGFP Calcium Biosensor Engineering / Ni-NTA IMAC Purification of His-Tagged Protein</p></header><div class="review-content"><section><h4>Why this is useful</h4><p>The page records imidazole concentrations and outcomes but not base-buffer composition, pooled-fraction provenance, or reuse identifiers.</p></section><section><h4>Content to append</h4><div class="content-block">Reference prep only, not a recorded stock: for 100 mL, prepare a phosphate/NaCl native Ni-NTA buffer then use 20, 40, or 250 mM imidazole as applicable. Verify pH 7.4 and use EDTA-free inhibitors. Record fraction IDs and A488/A280 before pooling.</div></section><section><h4>Sources used</h4><p>Thermo HisPur Ni-NTA Resin User Guide — native buffer recipe, chelator caution, downstream imidazole removal, and resin reuse guidance.</p></section></div><div class="actions"><button class="primary">Append to Page</button><button class="secondary">Reject</button></div></article></div><footer class="dialog-foot"><button class="secondary">Previous</button><span>1 / 1</span><button class="secondary" disabled>Next</button></footer></section></div></section></div>
+    </main>
+
+    <main id="protocol-library" class="screen hidden">
+      <header class="topbar"><div class="brand">Protocols</div><nav class="dock"><span>⌂</span><span class="active">▣</span><span>▤</span><span>▱</span><span>⌑</span><span>⚗</span><span>⌁</span><span>▣</span><span>⌘</span></nav><div class="search">Search modules or use sample&nbsp; ⌕</div></header>
+      <div class="protocol-layout"><aside class="protocol-rail"><div class="create-row"><span class="create-icon">▱</span><span>☷</span></div><div class="protocol-item">Soluble TEV Protease Expression in E. coli<small>Updated Apr 28, 2026</small></div><div class="protocol-item">Ni-NTA IMAC Purification of His-Tagged Protein<small>Updated May 31, 2026</small></div><div class="protocol-item">Calcium Titration of a Fluorescent Biosensor<small>Updated Jun 10, 2026</small></div><div class="protocol-item">PCR Thermocycle Program<small>Updated Aug 26, 2026</small></div><div class="protocol-item selected">BLI Binding of a Biotinylated Peptide to YEATS2-His on Streptavidin Sensors<small>Updated Sep 3, 2026</small></div></aside><article class="protocol-page"><span class="eyebrow">VIEWER</span><h1>BLI Binding of a Biotinylated Peptide to YEATS2-His on Streptavidin Sensors</h1><h2>Purpose</h2><p>Measure binding of a test peptide to purified YEATS2-His by biolayer interferometry using a biotinylated peptide immobilized on streptavidin biosensors and soluble YEATS2-His as the analyte.</p><h2>Materials</h2><ul><li>N-terminally biotinylated test peptide with a short spacer</li><li>Purified YEATS2-His</li><li>Streptavidin BLI biosensors such as SA or SAX</li><li>Kinetics buffer: 20 mM HEPES pH 7.4, 150 mM NaCl, 0.01% Tween-20, 0.1% BSA</li><li>Buffer-matched blank and unloaded-sensor controls</li></ul><h2>Steps</h2><ol><li>Hydrate the streptavidin biosensors in kinetics buffer for at least 10 minutes.</li><li>Prepare a peptide loading solution and adjust to a 0.2–0.8 nm target response.</li><li>Run a two-fold YEATS2-His dilution series from 0.156 to 10 µM with reference subtraction.</li><li>Inspect raw traces and fit steady state first; use 1:1 kinetic fitting only for clean, ordered curves.</li></ol></article></div>
+    </main>
+
+    <main id="protocol-generate" class="screen hidden">
+      <header class="topbar"><div class="brand">Protocols</div><nav class="dock"><span>⌂</span><span class="active">▣</span><span>▤</span><span>▱</span><span>⌑</span><span>⚗</span><span>⌁</span><span>▣</span><span>⌘</span></nav><div class="search">Search modules or use sample&nbsp; ⌕</div></header>
+      <div class="protocol-layout"><aside class="protocol-rail"><div class="create-row"><span class="create-icon">▱</span><span>☷</span></div><div class="protocol-item">Soluble TEV Protease Expression in E. coli<small>Updated Apr 28, 2026</small></div><div class="protocol-item">Ni-NTA IMAC Purification of His-Tagged Protein<small>Updated May 31, 2026</small></div><div class="protocol-item">Calcium Titration of a Fluorescent Biosensor<small>Updated Jun 10, 2026</small></div></aside><article class="protocol-page"><span class="eyebrow">EDITOR</span><h1>Protocol Editor</h1><h2>Protocol Name</h2><div class="content-block">Describe a protocol in the generation dialog to begin a new editable draft.</div><div class="overlay"><section class="dialog" role="dialog" aria-label="Generated Protocol" style="width:min(840px,calc(100vw - 420px));height:min(650px,calc(100vh - 130px));"><header class="dialog-head"><div><span class="review-type">Generate</span><h2 style="margin-top:8px">Generated Protocol</h2></div><button class="close" aria-label="Close">×</button></header><div class="track"><article class="review-card"><header><h3>BLI Binding of a Biotinylated Peptide to YEATS2-His on Streptavidin Sensors</h3></header><div class="review-content"><section><h4>Purpose</h4><p>Measure binding using a biotinylated peptide on streptavidin biosensors and soluble YEATS2-His as analyte.</p></section><section><h4>Materials</h4><ul><li>N-terminally biotinylated test peptide with a short spacer</li><li>Purified YEATS2-His</li><li>SA or SAX biosensors</li><li>Kinetics buffer and matched controls</li></ul></section><section><h4>Steps</h4><ol><li>Hydrate streptavidin biosensors for at least 10 minutes.</li><li>Load peptide to a 0.2–0.8 nm target response.</li><li>Run a 0.156–10 µM YEATS2-His series with reference controls.</li><li>Fit steady state first and report the reference-subtraction strategy.</li></ol></section></div></article></div><footer class="dialog-foot"><span>Review the generated draft, then add it to the editable Protocol form.</span><span class="actions" style="padding:0"><button class="primary">Use Generated Protocol</button><button class="secondary">Keep Editing</button></span></footer></section></div></article></div>
+    </main>
+
+    <main id="protocol-generate-input" class="screen hidden">
+      <header class="topbar"><div class="brand">Protocols</div><nav class="dock"><span>⌂</span><span class="active">▣</span><span>▤</span><span>▱</span><span>⌑</span><span>⚗</span><span>⌁</span><span>▣</span><span>⌘</span></nav><div class="search">Search modules or use sample&nbsp; ⌕</div></header>
+      <div class="protocol-layout"><aside class="protocol-rail"><div class="create-row"><span class="create-icon">▱</span><span>☷</span></div><div class="protocol-item">Soluble TEV Protease Expression in E. coli<small>Updated Apr 28, 2026</small></div><div class="protocol-item">Ni-NTA IMAC Purification of His-Tagged Protein<small>Updated May 31, 2026</small></div></aside><article class="protocol-page"><span class="eyebrow">EDITOR</span><h1>Protocol Editor</h1><div class="overlay"><section class="dialog" role="dialog" aria-label="Generate Protocol" style="width:min(720px,calc(100vw - 480px));height:auto;min-height:370px;"><header class="dialog-head"><div><span class="review-type">Generate</span><h2 style="margin-top:8px">Generate Protocol</h2></div><button class="close" aria-label="Close">×</button></header><div style="display:grid;align-content:center;gap:12px;padding:22px 0"><label style="display:grid;gap:8px;font-size:13px;font-weight:650">Message<textarea readonly style="min-height:112px;resize:none;padding:12px;border:1px solid #d9d4ca;border-radius:8px;background:#fffefb;color:#77756e;font:inherit;font-weight:400">Describe the protocol you want, or attach methods, notes, images, or a PDF.</textarea></label><div style="display:flex;justify-content:space-between;align-items:center"><button class="secondary" aria-label="Attach photos or files">+</button><button class="primary">Generate Protocol</button></div></div></section></div></article></div>
+    </main>
+    <script>
+      const target = location.hash.replace('#', '') || 'agent-protocol';
+      document.getElementById(target)?.classList.remove('hidden');
+    </script>
+  </body>
+</html>

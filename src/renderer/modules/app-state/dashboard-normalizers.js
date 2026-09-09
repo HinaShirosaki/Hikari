@@ -140,7 +140,7 @@ export function normalizeDashboardQuickLogEntries(rawValue) {
     return id && text && !Number.isNaN(Date.parse(createdAt))
       ? { id, text, createdAt, updatedAt }
       : null;
-  }).filter(Boolean).slice(-500);
+  }).filter(Boolean);
 }
 
 export function normalizeWorkflowProgressMap(rawValue) {

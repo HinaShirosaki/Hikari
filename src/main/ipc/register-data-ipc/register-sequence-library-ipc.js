@@ -50,9 +50,25 @@ function registerSequenceLibraryIpc(deps = {}) {
     return id;
   };
 
+  handle(SEQUENCE_LIBRARY.AGENT_ARTIFACT, async (payload) => {
+    const store = require('../../../renderer/modules/sequence-viewer/main-process/mcp/store');
+    const { withLibraryLock } = require('../../../renderer/modules/sequence-viewer/main-process/sequence-library/operation-lock');
+    const storagePath = requireStoragePath(payload);
+    return withLibraryLock(storagePath, async () => {
+      const value = payload.entryId ? await store.load(storagePath, payload.entryId) : null;
+      const construct = payload.constructId ? await store.artifact(storagePath, payload.constructId) : value?.metadata?.construct;
+      return { design: value?.metadata || null, construct: construct || null,
+        designCurrent: Boolean(value?.metadata?.primer_design && value.metadata.result_sequence_hash === store.hash(value.record.sequence) && value.metadata.source_record.topology === value.record.topology) };
+    });
+  });
+
   handle(SEQUENCE_LIBRARY.LIST, async (payload) => listSequenceEntries({
     storagePath: requireStoragePath(payload),
-    status: cleanText(payload?.status, 40)
+    status: cleanText(payload?.status, 40),
+    projects: (Array.isArray(payload?.projects) ? payload.projects : []).map((project) => ({
+      id: cleanText(project?.id, 200),
+      name: cleanText(project?.name, 320)
+    }))
   }));
 
   handle(SEQUENCE_LIBRARY.GET, async (payload) => getSequenceEntry({

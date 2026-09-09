@@ -4,6 +4,11 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { cloneJson, ensureObject } = require('../../lib/normalize.js');
+const {
+  getDisabledOfficialMcpSkillToolNames,
+  getOfficialMcpSkillId,
+  getOfficialMcpSkillToolRequirements
+} = require('../codex-agent/official-mcp-skills.js');
 const { collectSkillDirectories, commandExists, existingDirectory } = require('./skill-runtime/command-lookup.js');
 const { defaultAsArray, defaultCleanText, parseBoolean, sanitizeCommandName, splitCommandMessage, splitFrontmatter } = require('./skill-runtime/frontmatter.js');
 
@@ -65,7 +70,8 @@ function createAgentSkillRuntime(deps = {}) {
     ]);
     return {
       externalSkillsEnabled: explicitEnabled === undefined ? true : explicitEnabled !== false,
-      disabledSkillNames
+      disabledSkillNames,
+      mcpToolContext: source
     };
   }
 
@@ -166,18 +172,32 @@ function createAgentSkillRuntime(deps = {}) {
     }
     const skillNameKey = source.name.toLowerCase();
     const explicitlyDisabled = controls.disabledSkillNames?.has?.(skillNameKey) === true;
-    const settingsEnabled = controls.externalSkillsEnabled !== false && !explicitlyDisabled;
+    const officialMcpSkillId = getOfficialMcpSkillId(source.body);
+    const requiredMcpToolNames = getOfficialMcpSkillToolRequirements(officialMcpSkillId);
+    const disabledMcpToolNames = getDisabledOfficialMcpSkillToolNames(
+      officialMcpSkillId,
+      controls.mcpToolContext
+    );
+    const disabledByMcpTools = disabledMcpToolNames.length > 0;
+    const settingsEnabled = controls.externalSkillsEnabled !== false
+      && !explicitlyDisabled
+      && !disabledByMcpTools;
     const eligible = isSkillEligible(source);
     const disabledReason = controls.externalSkillsEnabled === false
       ? 'External skills are switched off in Settings.'
       : explicitlyDisabled
         ? 'Disabled in Settings.'
+        : disabledByMcpTools
+          ? `Required Hikari MCP ${disabledMcpToolNames.length === 1 ? 'tool is' : 'tools are'} switched off: ${disabledMcpToolNames.join(', ')}.`
         : eligible
           ? ''
           : 'Missing required binary, environment, or OS support.';
     return {
       ...source,
       external_skill: true,
+      official_mcp_skill: Boolean(officialMcpSkillId),
+      required_mcp_tool_names: requiredMcpToolNames,
+      disabled_mcp_tool_names: disabledMcpToolNames,
       settings_enabled: settingsEnabled,
       eligible,
       enabled: settingsEnabled && eligible,

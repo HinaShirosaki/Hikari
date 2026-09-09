@@ -1,0 +1,89 @@
+{
+  "tool_calls": 37,
+  "discovery_calls": 1,
+  "distinct_tools": [
+    "sequence_list",
+    "sequence_search",
+    "sequence_get",
+    "sequence_protein_get",
+    "sequence_protein_parts",
+    "sequence_protein_build",
+    "sequence_protein_edit",
+    "sequence_mutagenesis_primers",
+    "sequence_feature_edit"
+  ],
+  "unique_derivatives": 9,
+  "expected_rejections": [
+    {
+      "request_id": "agent-wrong-aa",
+      "status": "residue_mismatch"
+    },
+    {
+      "request_id": "agent-stale",
+      "status": "stale_revision"
+    },
+    {
+      "request_id": "agent-conflict",
+      "status": "invalid_arguments"
+    }
+  ],
+  "source_records_unchanged": true,
+  "server_restarts": 1,
+  "recommended_method": "whole-plasmid",
+  "mislabeled_templates": [
+    {
+      "method": "whole-plasmid",
+      "stage": 2,
+      "primer": "Target protein del6 F",
+      "template_id": "intermediate_1"
+    },
+    {
+      "method": "whole-plasmid",
+      "stage": 2,
+      "primer": "Target protein del6 R",
+      "template_id": "intermediate_1"
+    },
+    {
+      "method": "whole-plasmid",
+      "stage": 3,
+      "primer": "Target protein E45G F",
+      "template_id": "intermediate_2"
+    },
+    {
+      "method": "whole-plasmid",
+      "stage": 3,
+      "primer": "Target protein E45G R",
+      "template_id": "intermediate_2"
+    },
+    {
+      "method": "two-step-ligation",
+      "stage": 2,
+      "primer": "Target protein del6 F",
+      "template_id": "intermediate_1"
+    },
+    {
+      "method": "two-step-ligation",
+      "stage": 3,
+      "primer": "Target protein E45G F",
+      "template_id": "intermediate_2"
+    }
+  ],
+  "incorrect_default_names": [
+    {
+      "request_id": "agent-fusion-replace",
+      "name": "Training plasmid g.1delins"
+    },
+    {
+      "request_id": "agent-dna-replacement",
+      "name": "Training plasmid edited g.1delins"
+    },
+    {
+      "request_id": "agent-dna-delete",
+      "name": "Training plasmid edited g.1delins g.1delins"
+    },
+    {
+      "request_id": "agent-dna-insert",
+      "name": "Training plasmid g.1delins"
+    }
+  ]
+}

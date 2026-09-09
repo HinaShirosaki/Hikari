@@ -11,7 +11,8 @@ function createDraftCandidates({
   notebookApi
 } = {}) {
   function normalizeNotebookState(value) {
-    return cleanText(value, 40).toLowerCase() === 'planned' ? 'planned' : 'executed';
+    const status = cleanText(value, 40).toLowerCase();
+    return ['planned', 'suggested'].includes(status) ? status : 'executed';
   }
 
   function extractNotebookRuns(snapshot = {}) {
@@ -244,7 +245,7 @@ function createDraftCandidates({
   } = {}) {
     const protocolMap = buildProtocolMap(snapshot);
     const notebookRuns = extractNotebookRuns(snapshot);
-    const executedRuns = notebookRuns.filter((entry) => entry.notebook_state !== 'planned');
+    const executedRuns = notebookRuns.filter((entry) => entry.notebook_state === 'executed');
     const plannedRuns = notebookRuns.filter((entry) => entry.notebook_state === 'planned');
     const executedProtocolIds = new Set(
       executedRuns

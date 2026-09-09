@@ -19,8 +19,6 @@ function readPluginStorage(state, pluginId) {
   return asObject(asObject(state.settings).pluginStorage)[pluginId] ?? null;
 }
 
-// Every plugin file lives under <storage root>/Plugins/<plugin id>/.
-const PLUGIN_FILES_FOLDER = 'Plugins';
 const MAX_FILE_BASE64_CHARS = 24000000;
 
 // python.run bounds. The host runner enforces its own run time, stdout, and
@@ -44,11 +42,9 @@ function isCanonicalBase64(value) {
 }
 
 // Resolves a plugin-supplied relative path into the one folder that plugin may
-// touch. The validation has to happen *here*, not downstream: readFileBase64
-// reads whatever absolute path it is handed, and storeImportedFile confines
-// writes to the storage root but not to a subfolder of it — so neither would
-// stop a plugin from reaching the user's notebook files. The frame never gets
-// to supply an absolute path; this builds one from segments it has checked.
+// touch: <storage root>/Plugins/<plugin id>/. This gives callers an early
+// input error; the dedicated plugin-file
+// IPC repeats validation and rejects symlinks at the actual filesystem boundary.
 function resolvePluginFilePath(state, pluginId, rawPath) {
   const root = text(asObject(state.settings).storagePath, 2400).replace(/[\\/]+$/, '');
   if (!root) {
@@ -61,21 +57,18 @@ function resolvePluginFilePath(state, pluginId, rawPath) {
   if (!PLUGIN_ID_PATTERN.test(String(pluginId ?? ''))) {
     throw new Error(`Invalid plugin id "${text(pluginId, 200)}".`);
   }
-  const requested = String(rawPath ?? '').replace(/\\/g, '/').trim();
+  const requested = String(rawPath ?? '').trim();
   const segments = requested.split('/').filter((part) => part && part !== '.');
   const unsafe = requested.startsWith('/')
+    || requested.includes('\\')
     || /^[a-zA-Z]:/.test(requested)
     || segments.some((part) => part === '..' || part.includes('\0'));
   if (!segments.length || unsafe) {
     throw new Error(`Invalid plugin file path "${text(rawPath, 200)}".`);
   }
-  const base = `${root}/${PLUGIN_FILES_FOLDER}/${pluginId}`;
   return {
     root,
-    relative: segments.join('/'),
-    folder: [base, ...segments.slice(0, -1)].join('/'),
-    fileName: segments[segments.length - 1],
-    absolute: [base, ...segments].join('/')
+    relative: segments.join('/')
   };
 }
 
@@ -136,20 +129,16 @@ function safePluginFilePart(value, fallback = 'item') {
 
 async function writePluginFile({ state, plugin, api, path, dataBase64 }) {
   const target = resolvePluginFilePath(state, plugin.id, path);
-  const result = await api.storeImportedFile({
+  const result = await api.writePluginFile({
     storagePath: target.root,
-    targetFolder: target.folder,
-    fileName: target.fileName,
-    dataBase64,
-    overwrite: true
+    pluginId: plugin.id,
+    path: target.relative,
+    dataBase64
   });
-  if (!result?.ok && result?.ok !== undefined) {
+  if (!result?.ok) {
     throw new Error(text(result?.error, 400) || `Could not write "${target.relative}".`);
   }
-  const written = text(result?.relativePath, 2400)
-    || `${PLUGIN_FILES_FOLDER}/${plugin.id}/${target.relative}`;
-  const prefix = `${PLUGIN_FILES_FOLDER}/${plugin.id}/`;
-  return written.startsWith(prefix) ? written.slice(prefix.length) : target.relative;
+  return text(result.path, 2400) || target.relative;
 }
 
 // Every place a legacy artifact might be, most specific first. The absolute
@@ -192,7 +181,7 @@ async function migrateLegacyGelRecords({ state, plugin, api, skipIds = [] }) {
   if (plugin.id !== 'gel' || plugin.bundled !== true || plugin.path !== '@bundled/gel') {
     throw new Error('The Gel v1 migration is available only to the bundled Gel plugin.');
   }
-  if (typeof api?.storeImportedFile !== 'function' || typeof api?.readFileBase64 !== 'function') {
+  if (typeof api?.writePluginFile !== 'function' || typeof api?.readFileBase64 !== 'function') {
     throw new Error('Gel migration needs file storage access.');
   }
   if (!text(asObject(state.settings).storagePath, 2400)) {
@@ -300,7 +289,6 @@ export {
   MAX_PYTHON_INPUT_CHARS,
   MAX_PYTHON_INPUT_FILES,
   MAX_PYTHON_OUTPUT_CHARS,
-  PLUGIN_FILES_FOLDER,
   PLUGIN_SAVE_TIMEOUT_MS,
   PROTOCOL_MARKER,
   asObject,

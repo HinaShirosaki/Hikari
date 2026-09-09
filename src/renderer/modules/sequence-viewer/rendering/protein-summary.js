@@ -1,8 +1,9 @@
 import { escapeHtml } from '../../../lib/html.js';
+import { getCdsProteinProperties } from '../protein-properties.js';
 
 function formatDaltons(value) {
   const number = Number(value);
-  if (!Number.isFinite(number)) {
+  if (value == null || !Number.isFinite(number)) {
     return 'n/a';
   }
   if (number >= 1000) {
@@ -11,7 +12,7 @@ function formatDaltons(value) {
   return `${number.toFixed(2)} Da`;
 }
 
-function formatProteinPropertySummary(properties) {
+function formatProteinPropertySummary(properties, { includeDetails = true } = {}) {
   if (!properties) {
     return '';
   }
@@ -19,7 +20,7 @@ function formatProteinPropertySummary(properties) {
   const parts = [
     `${Math.max(0, Number(properties.length) || 0).toLocaleString()} aa`,
     `Monoisotopic MW ${formatDaltons(properties.monoisotopicMass)}`,
-    `pI ${Number.isFinite(Number(properties.pI)) ? Number(properties.pI).toFixed(2) : 'n/a'}`
+    `pI ${properties.pI != null && Number.isFinite(Number(properties.pI)) ? Number(properties.pI).toFixed(2) : 'n/a'}`
   ];
   const source = String(properties.source || '') === 'derived'
     ? 'derived from CDS DNA'
@@ -37,7 +38,7 @@ function formatProteinPropertySummary(properties) {
     invalidResidues.length
       ? `<p class="small-note">Protein properties require known residues only; unknown residue(s) ${escapeHtml(invalidResidues.join(', '))} prevent exact MW/pI calculation.</p>`
       : '',
-    sequence
+    includeDetails && sequence
       ? `<details class="sequence-viewer-protein-details">
         <summary>Protein details</summary>
         ${dnaLength ? `<p class="small-note">CDS length: ${dnaLength.toLocaleString()} nt</p>` : ''}
@@ -48,6 +49,14 @@ function formatProteinPropertySummary(properties) {
   ].join('');
 }
 
+function renderCdsProteinHoverSection(feature, recordSequence = '') {
+  const properties = getCdsProteinProperties(feature, recordSequence);
+  return properties
+    ? `<div class="sequence-viewer-protein-hover">${formatProteinPropertySummary(properties, { includeDetails: false })}</div>`
+    : '';
+}
+
 export {
-  formatProteinPropertySummary
+  formatProteinPropertySummary,
+  renderCdsProteinHoverSection
 };

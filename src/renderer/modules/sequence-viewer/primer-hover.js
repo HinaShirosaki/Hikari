@@ -8,7 +8,7 @@ import { normalizeSequenceText, reverseComplementIupac } from './shared.js';
 // imported primer_bind feature only has its footprint, so that gets read back
 // off the record.
 
-const HIDE_GRACE_MS = 260;
+const HIDE_GRACE_MS = 500;
 
 export function primerFeatureSequence(feature, recordSequence = '') {
   const stored = normalizeSequenceText(feature?.primerSequence || '');
@@ -30,6 +30,15 @@ export function primerFeatureSequence(feature, recordSequence = '') {
     .join('');
   const normalized = normalizeSequenceText(joined);
   return Number(feature?.strand) === -1 ? reverseComplementIupac(normalized) : normalized;
+}
+
+// The primer's name is what an order sheet or a lab notebook needs next to the
+// oligo, so it gets its own copy button, or '' for anything that is not a primer.
+export function renderPrimerNameCopyButton(feature) {
+  if (!isPrimerBindingFeature(feature?.type)) {
+    return '';
+  }
+  return renderPrimerCopyButton(feature?.name, 'name', 'primer name');
 }
 
 // The sequence plus its copy button, or '' for anything that is not a primer.

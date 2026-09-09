@@ -12,6 +12,7 @@ function createLibraryOpen({
   libraryPreviewDelayMs,
   getBridge,
   getStoragePath,
+  getProjects = () => [],
   setMode,
   setRecords,
   setStatus,
@@ -102,7 +103,9 @@ function createLibraryOpen({
     try {
       const response = await bridge.sequenceLibraryList({
         storagePath,
-        status: state.libraryFilter
+        status: state.libraryFilter,
+        // Main process mirrors these into rail folders and `Project/<Name>/Sequence`.
+        projects: getProjects().map((project) => ({ id: project?.id, name: project?.name }))
       });
       if (!response?.ok) {
         throw new Error(response?.error || 'Failed to list sequence entries.');

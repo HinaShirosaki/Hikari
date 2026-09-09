@@ -5,6 +5,7 @@ import { createExternalSkillsController } from './external-skills-controller.js'
 import { createGenomesController } from './genomes-controller.js';
 import { createPluginsController } from './plugins-controller.js';
 import { createLlmModelCatalog } from './llm-model-catalog.js';
+import { createMcpToolsController } from './mcp-tools-controller.js';
 import { getSettingsElements } from './dom.js';
 import { escapeHtml } from './html.js';
 import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
@@ -48,6 +49,7 @@ export function initSettings({
     clearCodexLoginBtn,
     copyCodexDesktopMcpPromptBtn,
     settingCodexDesktopMcpStatus,
+    settingMcpToolsList,
     settingAgentExternalSkillsEnabled,
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
@@ -76,6 +78,12 @@ export function initSettings({
   } = getSettingsElements(document);
   const llmModelCatalog = createLlmModelCatalog();
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
+  const mcpToolsController = createMcpToolsController({
+    state,
+    persist,
+    listElement: settingMcpToolsList,
+    escapeHtml
+  });
   const externalSkillsController = createExternalSkillsController({
     state,
     persist,
@@ -343,6 +351,7 @@ export function initSettings({
       settingAgentExternalSkillsEnabled.checked = state.settings?.agent?.externalSkillsEnabled !== false;
     }
     renderCodexStatus();
+    mcpToolsController.render();
     externalSkillsController.render();
     genomesController.render();
     pluginsController.render();

@@ -2,6 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { normalizeExperimentLogState, readExperimentLogSidecar } = require('./experiment-log-storage');
 const {
   hydrateProjectRootFromStoragePath,
   hydrateSamplesRootFromStoragePath,
@@ -183,13 +184,44 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
   const blockMap = new Map();
+  const quickLogMap = new Map();
+  let quickLogDraft = '';
+  let hasExperimentLogState = false;
   let lastLocationNumber = 0;
   let locationCodeMap = {};
   let locationCodeNextByLocation = {};
   const bundleSummaries = [];
 
+  function containsExperimentLogState(snapshot) {
+    const dashboard = ensureObject(ensureObject(snapshot).settings).dashboard;
+    return Boolean(
+      dashboard
+      && typeof dashboard === 'object'
+      && !Array.isArray(dashboard)
+      && (
+        Object.prototype.hasOwnProperty.call(dashboard, 'quickLogDraft')
+        || Object.prototype.hasOwnProperty.call(dashboard, 'quickLogEntries')
+      )
+    );
+  }
+
+  function mergeExperimentLogState(snapshot) {
+    if (!containsExperimentLogState(snapshot)) {
+      return;
+    }
+    const normalized = normalizeExperimentLogState(ensureObject(ensureObject(snapshot).settings).dashboard);
+    if (!hasExperimentLogState) {
+      quickLogDraft = normalized.quickLogDraft;
+    }
+    normalized.quickLogEntries.forEach((entry) => {
+      quickLogMap.set(entry.id, entry);
+    });
+    hasExperimentLogState = true;
+  }
+
   function mergeHydratedSnapshot(hydratedSnapshot) {
     const source = ensureObject(hydratedSnapshot);
+    mergeExperimentLogState(source);
     mergeByIdMap(projectMap, source.projects, 'project');
     mergeByIdMap(protocolMap, source.protocols, 'protocol');
     mergeByIdMap(notebookMap, source.notebookEntries, 'notebook');
@@ -230,7 +262,10 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
   });
   const rootHydratedSnapshot = ensureObject(rootHydrated.snapshot);
   const rootSummary = normalizeBundleSummary(rootHydratedSnapshot);
-  if (Object.values(rootSummary).some((value) => Number(value) > 0)) {
+  if (
+    Object.values(rootSummary).some((value) => Number(value) > 0)
+    || containsExperimentLogState(rootHydratedSnapshot)
+  ) {
     mergeHydratedSnapshot(rootHydratedSnapshot);
     bundleSummaries.push({
       bundle_type: 'storage_root',
@@ -311,6 +346,15 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
   mergeByIdMap(notebookMap, projectRoot.notebookEntries, 'notebook');
   const samplesRoot = await hydrateSamplesRootFromStoragePath({ storagePath: resolvedStoragePath });
   mergeByIdMap(sampleMap, samplesRoot.samples, 'sample');
+  const rootLayout = resolveStorageRootLayout({ storagePath: resolvedStoragePath });
+  const experimentLogRoot = await readExperimentLogSidecar(rootLayout.experimentLogPath);
+  if (experimentLogRoot.ok) {
+    mergeExperimentLogState({
+      settings: { dashboard: experimentLogRoot.data }
+    });
+  } else if (experimentLogRoot.exists && experimentLogRoot.error) {
+    warnings.push(experimentLogRoot.error);
+  }
 
   const mergedInventory = {};
   for (const [zone, zoneMap] of inventoryZoneMap.entries()) {
@@ -346,6 +390,14 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
     },
     inventory: mergedInventory
   };
+  if (hasExperimentLogState) {
+    statePatch.settings = {
+      dashboard: {
+        quickLogDraft,
+        quickLogEntries: [...quickLogMap.values()]
+      }
+    };
+  }
 
   const workflowRoot = await importWorkflowRoot({ storagePath: resolvedStoragePath });
   mergeByIdMap(workflowTemplateMap, workflowRoot?.statePatch?.workflowTemplates, 'workflow_template');
@@ -385,6 +437,7 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
     bundles: bundleSummaries.length,
     protocols: statePatch.protocols.length,
     notebookEntries: statePatch.notebookEntries.length,
+    quickLogEntries: quickLogMap.size,
     samples: statePatch.samples.length,
     workflowTemplates: statePatch.workflowTemplates.length,
     workflows: statePatch.workflows.length,

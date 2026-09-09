@@ -33,10 +33,9 @@ const entries = await hikari.call('notebook.list');
 await hikari.call('notebook.appendResult', { entryId: entries[0].id, text: 'done' });
 ```
 
-The client is intentionally a classic script, so the same copy works in both
-opaque-origin local plugins and loopback-served plugins. Local plugins cannot
-load relative ES modules; see
-[plugin-system.md §5.4](plugin-system.md#54-opaque-origins-cannot-load-es-modules).
+The client remains a classic script and works in all local and served plugins.
+Both kinds now use loopback delivery and may also load relative ES modules; see
+[plugin-system.md §5.4](plugin-system.md#54-loading-local-scripts).
 
 `hikari.call(verb, params)` resolves with the verb's result or rejects with an
 `Error` carrying the host's message. Calls time out after 10 s — the host
@@ -76,10 +75,10 @@ directions, so the channel coexists with any other `postMessage` traffic on the
 page. `id` is opaque to the host and echoed back verbatim — generate whatever
 you like, but make it unique per in-flight call.
 
-Replies are posted with `targetOrigin: '*'` because a local plugin's opaque
-origin serializes to `"null"` and cannot be targeted. The host therefore never
-puts anything in a reply that the plugin did not ask for and hold permission to
-read. Access control rests on frame identity (§4), not on the origin string.
+Replies and host events target the plugin's assigned loopback origin explicitly.
+Access control checks both `event.source` and `event.origin`; a message from a
+replacement origin revokes the frame grant. An in-flight reply cannot be
+delivered to another origin after navigation.
 
 ---
 
@@ -256,7 +255,7 @@ an answer. Keep durable state in the plugin UI or notebook instead.
 
 A headless service may call this verb if it declares `notifications`; Hikari,
 not the hidden service frame, renders the toast. This does not give the service
-a view. The reference `snapgene-dna` converter deliberately does not request
+a view. The reference `dna-importer` converter deliberately does not request
 the permission and emits no conversion-progress notification.
 
 ### `app.setUnsaved` — *no permission required*
@@ -370,6 +369,10 @@ they will look for later belong in the notebook, where the rest of the app can
 see them. It is also the wrong place for anything measured in megabytes; that
 is what `files.write` is for.
 
+If persisting `storage.set` fails (for example, the app-wide browser storage
+quota is exceeded), the previous plugin value is restored before the call
+rejects. A rejected deletion also retains the previous value.
+
 ### `files.write` / `files.read` — `files`
 
 A folder on disk, under the user's storage root, for data a capped JSON blob
@@ -391,11 +394,10 @@ const { dataBase64 } = await hikari.call('files.read', { path });
 - **The plugin never learns where its folder is.** Every path is relative and
   resolved by the host to `<storage root>/Plugins/<plugin id>/`. Absolute
   paths, `..` segments, drive letters, backslash separators, and null bytes are
-  rejected outright — the validation is in the bridge, because the underlying
-  host calls would happily read any absolute path they were handed.
-- **`files.write` returns the path that was actually written**, which may
-  differ from the one you asked for if a file of that name already existed.
-  Store what comes back and read with that.
+  rejected before I/O. Dedicated main-process plugin handlers also reject
+  symbolic links in every path component beneath the configured storage root.
+- **`files.write` returns the relative path that was written.** Writing the same
+  path atomically replaces that file. Store the returned path and read with it.
 - **The base64 must be canonical and the host write must succeed.** Invalid
   base64 is rejected before IPC, and disk or permission failures reject the
   promise. Never mark a record saved until this call resolves.
@@ -498,7 +500,7 @@ await hikari.call('notebook.appendResult', {
 | Param | Type | Notes |
 | --- | --- | --- |
 | `entryId` | string | Required. Must match an existing entry. |
-| `text` | string | Optional. Appended to `resultText` after a blank line, preserving what was there. |
+| `text` | string | Optional. Appended to the notebook record's `result` after a blank line, preserving the complete existing text. The read API exposes it as `resultText`. |
 | `table` | object | Optional. Appended to `resultTables`. |
 
 At least one of `text` / `table` must be present, otherwise the call is
@@ -528,7 +530,9 @@ Every request is checked in this order:
    `contentWindow` the message arrived from — in its registry of installed
    plugins. An unrecognized frame gets **no reply at all**, not even an error.
    Identity is never read from the payload, so a plugin cannot claim another
-   plugin's id to borrow its permissions.
+   plugin's id to borrow its permissions. The message origin must also match
+   the loopback origin assigned before loading; a mismatch revokes the grant
+   without replying.
 3. **Verb exists.** → `Unknown verb "X".`
 4. **Permission declared.** → `Plugin "X" did not declare the "Y" permission in
    plugin.json.` Remember that grants are snapshotted at install time: adding

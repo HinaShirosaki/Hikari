@@ -849,6 +849,17 @@
   margin-top: 2px;
 }
 
+.sequence-viewer-feature-hover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sequence-viewer-feature-hover-head + p {
+  margin-top: 2px;
+}
+
 .sequence-viewer-feature-hover-title {
   font-weight: 700;
 }

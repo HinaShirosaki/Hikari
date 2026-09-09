@@ -1,3 +1,4 @@
+import { normalizeNotebookState, notebookStateLabel } from '../entry/entry-helpers.js';
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 
 // Everything a project dashboard needs to gather: which notebook pages,
@@ -17,14 +18,6 @@ function createDashboardRecords({ state } = {}) {
 
   function getProjectById(projectId) {
     return asArray(state?.projects).find((project) => String(project?.id || '') === String(projectId || '')) || null;
-  }
-
-  function normalizeNotebookState(value) {
-    return cleanText(value).toLowerCase() === 'planned' ? 'planned' : 'executed';
-  }
-
-  function notebookStateLabel(entry) {
-    return normalizeNotebookState(entry?.notebookState) === 'planned' ? 'Planned' : 'Executed';
   }
 
   function getRecordProjectIds(record) {

@@ -1,9 +1,14 @@
 import { escapeHtml } from '../../lib/html.js';
 import { buildFeatureLocationText } from './feature-model.js';
 import { FEATURE_TOOLTIP_OFFSET_PX } from './constants.js';
-import { createHoverTooltipInteractivity, renderPrimerHoverSection } from './primer-hover.js';
+import {
+  createHoverTooltipInteractivity,
+  renderPrimerHoverSection,
+  renderPrimerNameCopyButton
+} from './primer-hover.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { renderCdsProteinHoverSection } from './rendering/protein-summary.js';
 
 function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
   const strand = feature?.strand === -1 ? '-' : '+';
@@ -16,11 +21,15 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
     .join(' | ');
 
   return `
-    <p class="sequence-viewer-feature-hover-title">${escapeHtml(feature?.name || '-')}</p>
+    <div class="sequence-viewer-feature-hover-head">
+      <p class="sequence-viewer-feature-hover-title">${escapeHtml(feature?.name || '-')}</p>
+      ${renderPrimerNameCopyButton(feature)}
+    </div>
     <p>${escapeHtml(feature?.type || '-')} | Strand ${strand}</p>
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
     ${renderPrimerHoverSection(feature, recordSequence)}
+    ${renderCdsProteinHoverSection(feature, recordSequence)}
   `;
 }
 
@@ -62,11 +71,13 @@ export function createSequenceHoverTooltipController(rootDocument) {
       if (!result.handled) {
         return;
       }
+      const label = result.kind === 'name' ? 'primer name' : 'primer sequence';
       showTransientNotice(
-        result.copied ? 'Copied primer sequence.' : 'Clipboard access is unavailable.',
+        result.copied ? `Copied ${label}.` : 'Clipboard access is unavailable.',
         { type: result.copied ? 'success' : 'error' }
       );
-      hideNow();
+      // Stays up: name and sequence are two buttons, and copying one is no
+      // reason to make the user re-hover for the other.
     })();
   });
 
@@ -77,7 +88,7 @@ export function createSequenceHoverTooltipController(rootDocument) {
 
     interactivity.cancelHide();
     tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
-    interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-hover'));
+    interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-copy-btn'));
     tooltip.hidden = false;
 
     const rawX = Number(event?.clientX);

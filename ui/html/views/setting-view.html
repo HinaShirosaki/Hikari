@@ -37,13 +37,16 @@
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="mcp-tools">
+              <span>Hikari MCP Tools</span>
+              <small>Individual agent tool access</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="skills">
               <span>External Skills</span>
               <small>Agent skill files</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="genomes">
               <span>Genomes</span>
-              <small>User plugin folders</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="plugins">
               <span>Plugins</span>
@@ -219,6 +222,15 @@
                 </div>
               </form>
             </section>
+
+          <section class="settings-section" data-settings-panel="mcp-tools" hidden>
+            <div class="settings-section-head">
+              <h3>Hikari MCP Tools</h3>
+              <p class="small-note">Choose which Hikari tools are available to the agent. Disabled tools are removed from new tool lists and rejected if called directly. An official skill that requires a disabled tool is also disabled.</p>
+            </div>
+            <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability"></div>
+            <p class="small-note">Connected MCP clients may need a tool refresh or restart before their visible list updates. Start a new chat to avoid references retained in an existing conversation.</p>
+          </section>
 
           <section class="settings-section" data-settings-panel="skills" hidden>
             <div class="settings-section-head">

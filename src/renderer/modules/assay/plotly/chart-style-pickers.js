@@ -20,7 +20,13 @@ function installGlobalListeners() {
     }
   });
   window.addEventListener('resize', () => openPicker && openPicker.close());
-  window.addEventListener('scroll', () => openPicker && openPicker.close(), true);
+  // Capture catches every scroll, so a fixed popup follows an ancestor scroll — but the menu
+  // scrolls its own long lists (fonts), and that must not close it.
+  window.addEventListener('scroll', (event) => {
+    if (!openPicker) return;
+    if (openPicker.popup && openPicker.popup.contains(event.target)) return;
+    openPicker.close();
+  }, true);
 }
 
 function svgEl(tag, attrs) {
@@ -214,7 +220,7 @@ function pickPreviewBuilders(kind) {
       return {
         renderOption: (opt) => frameStyleSvg(opt.value),
         renderTrigger: (opt) => frameStyleSvg(opt.value),
-        showLabelInTrigger: false,
+        showLabelInTrigger: true,
         showLabelInOption: true
       };
     default:
@@ -346,7 +352,7 @@ export function createChartStylePicker(mount, config) {
   function renderTrigger() {
     previewWrap.innerHTML = '';
     labelEl.textContent = '';
-    const opt = findOption(currentValue);
+    const opt = findOption(currentValue) || { value: currentValue, label: String(currentValue ?? '') };
     const stylePreset = pickPreviewBuilders(kind);
     const preview = buildTriggerPreview(opt);
     if (preview) {
@@ -371,6 +377,8 @@ export function createChartStylePicker(mount, config) {
       item.type = 'button';
       item.className = 'assay-chart-picker__option';
       item.setAttribute('role', 'option');
+      item.tabIndex = -1;
+      item.setAttribute('aria-selected', String(opt.value === currentValue));
       item.dataset.value = String(opt.value);
       if (opt.value === currentValue) {
         item.classList.add('is-selected');
@@ -382,7 +390,9 @@ export function createChartStylePicker(mount, config) {
       if (previewNode) optPreview.appendChild(previewNode);
       item.appendChild(optPreview);
 
-      const showLabel = stylePreset ? stylePreset.showLabelInOption : true;
+      // A caller that renders the option itself (the font list types each name in its own face)
+      // can suppress the plain label rather than showing the name twice.
+      const showLabel = config.showLabelInOption ?? (stylePreset ? stylePreset.showLabelInOption : true);
       if (showLabel) {
         const lbl = document.createElement('span');
         lbl.className = 'assay-chart-picker__option-label';
@@ -396,6 +406,7 @@ export function createChartStylePicker(mount, config) {
         setValue(opt.value);
         onChange(opt.value);
         close();
+        trigger.focus({ preventScroll: true });
       });
       popup.appendChild(item);
     });
@@ -445,6 +456,25 @@ export function createChartStylePicker(mount, config) {
     event.preventDefault();
     toggle();
   });
+  trigger.addEventListener('keydown', (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    open();
+    (popup.querySelector('[aria-selected="true"]') || popup.querySelector('[role="option"]'))?.focus();
+  });
+  popup.addEventListener('keydown', (event) => {
+    const items = [...popup.querySelectorAll('[role="option"]')];
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      close(); trigger.focus({ preventScroll: true });
+      if (event.key === 'Escape') event.preventDefault();
+      return;
+    }
+    const next = event.key === 'ArrowDown' ? (index + 1) % items.length
+      : event.key === 'ArrowUp' ? (index - 1 + items.length) % items.length
+        : event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : -1;
+    if (next >= 0) { event.preventDefault(); items[next]?.focus(); }
+  });
 
   const api = {
     root: mount,
@@ -478,8 +508,8 @@ export const LINE_STYLE_OPTIONS = [
   { value: 'dotted', label: 'Dotted' }
 ];
 export const FRAME_STYLE_OPTIONS = [
-  { value: 'offset', label: 'Offset' },
-  { value: 'box', label: 'Box' },
-  { value: 'l-shape', label: 'L-shape' },
-  { value: 'none', label: 'None' }
+  { value: 'offset', label: 'Offset axes' },
+  { value: 'box', label: 'Full box' },
+  { value: 'l-shape', label: 'Connected axes' },
+  { value: 'none', label: 'No frame' }
 ];

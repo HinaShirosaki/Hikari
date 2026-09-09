@@ -85,6 +85,7 @@ function createDashboardContributions({
     addContributionActivity(dayMap, project?.updatedAt || project?.createdAt, 'projectLogs');
 
     notebookEntries.forEach((entry) => {
+      if (entry?.notebookState === 'suggested') return;
       const entryTimestamp = entry?.updatedAt || entry?.executedAt || entry?.createdAt;
       addContributionActivity(dayMap, entryTimestamp, 'projectLogs');
 

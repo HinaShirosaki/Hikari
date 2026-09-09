@@ -112,6 +112,7 @@ function createNotebookPayloadBuilders({
         projectName: cleanText(project?.name, 220),
         protocolId: cleanText(selectedProtocol?.id, 120),
         protocolName: cleanText(selectedProtocol?.name, 220),
+        protocolSnapshot: JSON.parse(JSON.stringify(selectedProtocol)),
         values,
         result: notebookResult,
         updatedAt,

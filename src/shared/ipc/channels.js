@@ -15,6 +15,7 @@ const AGENT = Object.freeze({
   CHAT: 'agent:chat',
   CHAT_CANCEL: 'agent:chat:cancel',
   LIST_SKILLS: 'agent:list-skills',
+  SUGGEST_EXPERIMENT: 'agent:suggest-experiment',
   GENERATE_PROTOCOL: 'agent:generate-protocol',
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
@@ -54,6 +55,8 @@ const SYSTEM = Object.freeze({
 const PLUGINS = Object.freeze({
   INSPECT_FOLDER: 'plugins:inspect-folder',
   SERVE_FOLDER: 'plugins:serve-folder',
+  READ_FILE: 'plugins:read-file',
+  WRITE_FILE: 'plugins:write-file',
   EXPORT_FILE: 'plugins:export-file'
 });
 
@@ -80,6 +83,7 @@ const ASSAY = Object.freeze({
 const SEQUENCE_LIBRARY = Object.freeze({
   LIST: 'sequence-library:list',
   GET: 'sequence-library:get',
+  AGENT_ARTIFACT: 'sequence-library:agent-artifact',
   UPSERT: 'sequence-library:upsert',
   PROMOTE: 'sequence-library:promote',
   DELETE: 'sequence-library:delete',
@@ -91,11 +95,6 @@ const SEQUENCE_LIBRARY = Object.freeze({
   UPSERT_BACKBONE: 'sequence-library:upsert-backbone',
   ANNOTATE: 'sequence-library:annotate',
   RECOGNIZE_BACKBONE: 'sequence-library:recognize-backbone'
-});
-
-const SEQUENCE_AGENT = Object.freeze({
-  REQUEST: 'sequence-agent:request',
-  RESPONSE: 'sequence-agent:response'
 });
 
 const GENOME = Object.freeze({
@@ -139,7 +138,6 @@ module.exports = {
   INVENTORY,
   ASSAY,
   SEQUENCE_LIBRARY,
-  SEQUENCE_AGENT,
   SCHEDULED_TASK,
   GENOME,
   LLM

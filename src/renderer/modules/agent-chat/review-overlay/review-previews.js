@@ -105,44 +105,6 @@ function renderNotebookPreview(item, safeText) {
   `;
 }
 
-function renderSequenceEditPreview(item, safeText) {
-  const proposal = item.proposal || {};
-  const preview = proposal.preview || {};
-  const affected = asArray(proposal.affectedFeatures)
-    .map((feature) => trimText(`${feature?.name || feature?.id || 'feature'}${feature?.shift == null ? ' (overlaps edit)' : ` (${feature.shift >= 0 ? '+' : ''}${feature.shift} bp)`}`, 200))
-    .filter(Boolean);
-  const kindLabel = proposal.kind === 'annotation' ? 'Annotation' : 'Sequence Edit';
-  return `
-    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
-      <div class="agent-review-card-header">
-        <span class="agent-review-type">${safeText(kindLabel)}</span>
-        <h4>${safeText(proposal.summary || 'Proposed change')}</h4>
-      </div>
-      <div class="agent-review-content">
-        ${preview.before || preview.after ? `
-          <section class="agent-review-section">
-            <h5>Before</h5>
-            <p class="agent-review-mono">${safeText(preview.before || '')}</p>
-            <h5>After</h5>
-            <p class="agent-review-mono">${safeText(preview.after || '')}</p>
-            ${preview.newLength ? `<p class="agent-review-muted">New length: ${safeText(String(preview.newLength))} bp</p>` : ''}
-          </section>
-        ` : ''}
-        ${affected.length ? `
-          <section class="agent-review-section">
-            <h5>Affected Features</h5>
-            <ul>${affected.map((feature) => `<li>${safeText(feature)}</li>`).join('')}</ul>
-          </section>
-        ` : ''}
-      </div>
-      <div class="agent-review-actions">
-        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
-        <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
-      </div>
-    </article>
-  `;
-}
-
 function renderNotebookAppendPreview(item, safeText) {
   const append = item.append || {};
   const proposal = append.proposal || {};
@@ -192,6 +154,5 @@ function renderNotebookAppendPreview(item, safeText) {
 export {
   renderNotebookAppendPreview,
   renderNotebookPreview,
-  renderProtocolPreview,
-  renderSequenceEditPreview
+  renderProtocolPreview
 };

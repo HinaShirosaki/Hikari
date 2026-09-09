@@ -48,7 +48,9 @@ function resolveFeatureProteinPayload(feature, featureSequence) {
     };
   }
 
-  const derivedProteinSequence = translateFeatureSequenceToProtein(featureSequence);
+  const offset = Number(feature?.qualifiers?.codon_start || 1) - 1;
+  if (![0, 1, 2].includes(offset) || Number(feature?.qualifiers?.transl_table || 1) !== 1) return { proteinSequence: '', translationSource: '' };
+  const derivedProteinSequence = translateFeatureSequenceToProtein(featureSequence.slice(offset));
   if (derivedProteinSequence) {
     return {
       proteinSequence: derivedProteinSequence,

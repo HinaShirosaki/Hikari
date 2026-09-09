@@ -24,6 +24,7 @@ export function setupSequenceViewerControllers(ctx) {
     getBridge: actions.getBridge,
     getStoragePath: actions.getStoragePath,
     hasStoragePath: actions.hasStoragePath,
+    getProjects: () => (Array.isArray(options?.state?.projects) ? options.state.projects : []),
     setMode: actions.setMode,
     setInputComposerVisible: actions.setInputComposerVisible,
     setRecords: actions.setRecords,

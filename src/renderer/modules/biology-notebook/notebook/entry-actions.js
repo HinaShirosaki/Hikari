@@ -126,7 +126,6 @@ function createNotebookEntryActions({
       title: `Notebook - ${title}`,
       omitSelectors: [
         '.biology-notebook-viewer-actions',
-        '.biology-notebook-linked-toolbar',
         '.form-actions',
         '#biology-notebook-protocol-editor'
       ]

@@ -7,6 +7,8 @@ This is the reference example for **served plugins** — the kind Hikari deliver
 over `http://127.0.0.1:<port>` rather than `file://`, so the plugin gets a real
 origin with working storage. That is not a nicety here: CheerpJ keeps ImageJ's
 filesystem in IndexedDB, which an opaque `file://` origin denies outright.
+Current Hikari versions also use loopback delivery for local plugins without
+`serve: true`; the explicit flag remains compatible.
 
 ```json
 {

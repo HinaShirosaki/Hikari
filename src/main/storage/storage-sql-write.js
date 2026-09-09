@@ -306,7 +306,7 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
     const projectId = cleanText(entry.projectId, 220);
     const projectName = cleanText(entry.projectName, 320);
     const result = cleanText(entry.result, 12000);
-    const notebookState = cleanText(entry.notebookState, 40).toLowerCase() === 'planned' ? 'planned' : 'executed';
+    const notebookState = (['planned', 'suggested'].includes(cleanText(entry.notebookState, 40).toLowerCase()) ? cleanText(entry.notebookState, 40).toLowerCase() : 'executed');
     const executedAt = cleanText(entry.executedAt, 80);
     const agentDraftStatus = cleanText(entry.agentDraftStatus, 80);
     const workflowId = cleanText(entry?.agentDraftMeta?.workflowId, 120);

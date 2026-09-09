@@ -13,16 +13,13 @@ const {
 } = require('../../shared/ipc/channels');
 const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
 const { createPluginServerRegistry } = require('../lib/plugin-server');
+const { registerPluginFileIpc } = require('./register-plugin-file-ipc');
 const {
   registerSequenceLibraryIpc
 } = require('./register-data-ipc/register-sequence-library-ipc');
 
-// Loopback servers for `serve: true` views and headless service plugins.
-// Process-lifetime: they are torn down with the app, and reused across renderer
-// reloads so a reload does not leak listeners.
 const { createStorageFileHelpers } = require('./data-ipc/storage-files.js');
 
-const pluginServers = createPluginServerRegistry();
 const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
 const BUNDLED_PLUGIN_TOKEN_PATTERN = /^@bundled\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
 
@@ -55,6 +52,7 @@ function isCanonicalBase64(value) {
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
+  const session = deps.session;
   const dialog = deps.dialog;
   const shell = deps.shell;
   const fs = deps.fs;
@@ -192,6 +190,25 @@ function registerDataIpc(deps = {}) {
       return await inspectPluginFolder({ fs, folderPath: normalizedPayload?.path });
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  // Loopback servers for all folder views and headless service plugins.
+  // Process-lifetime: registration runs once per main process, so they are
+  // reused across renderer reloads and torn down with the app.
+  const pluginServers = createPluginServerRegistry({
+    // A plugin's origin is `127.0.0.1:<port>` and the OS hands out the port, so
+    // the same origin can belong to a different plugin from one run to the
+    // next — and localStorage/IndexedDB outlive the process, keyed by origin.
+    // Emptying the origin before its new owner loads is what stops a plugin
+    // inheriting whichever plugin held that port last time. Browser storage is
+    // documented as per-run for exactly this reason; durable plugin data goes
+    // through the `storage` and `files` verbs.
+    prepareOrigin: async (baseUrl) => {
+      if (!session?.defaultSession) {
+        throw new Error('Plugin origins cannot be isolated without an Electron session.');
+      }
+      await session.defaultSession.clearStorageData({ origin: new URL(baseUrl).origin });
     }
   });
 
@@ -454,6 +471,8 @@ function registerDataIpc(deps = {}) {
     }
   });
 
+  registerPluginFileIpc({ ipcMain });
+
   registerSequenceLibraryIpc({
     ipcMain,
     cleanText,
@@ -477,6 +496,5 @@ function registerDataIpc(deps = {}) {
 
 module.exports = {
   registerDataIpc,
-  pluginServers,
   resolvePluginServePath
 };

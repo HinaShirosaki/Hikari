@@ -61,29 +61,40 @@
   --sequence-viewer-builder-custom: var(--sequence-viewer-builder-palette-5);
   --sequence-viewer-builder-poi: var(--sequence-viewer-builder-palette-6);
   --sequence-viewer-builder-ink: #243126;
-  --sequence-viewer-night-border: rgba(186, 218, 255, 0.32);
-  --sequence-viewer-night-border-strong: rgba(186, 218, 255, 0.5);
-  --sequence-viewer-night-control: rgba(27, 40, 61, 0.62);
-  --sequence-viewer-night-control-strong: rgba(27, 40, 61, 0.72);
-  --sequence-viewer-night-muted: rgba(213, 234, 255, 0.82);
-  --sequence-viewer-night-text: rgba(236, 246, 255, 0.96);
-  --sequence-viewer-night-hover: rgba(171, 205, 245, 0.16);
-  --sequence-viewer-night-panel: rgba(20, 31, 48, 0.5);
-  --sequence-viewer-night-input: rgba(18, 30, 49, 0.9);
-  --sequence-viewer-night-overlay: rgba(3, 8, 18, 0.44);
-  --sequence-viewer-night-overlay-strong: rgba(3, 8, 18, 0.58);
-  --sequence-viewer-night-inset: rgba(255, 255, 255, 0.06);
-  --sequence-viewer-night-strong: rgba(199, 224, 255, 0.95);
-  --sequence-viewer-night-restriction-border: rgba(145, 186, 236, 0.92);
-  --sequence-viewer-night-restriction-bg: rgba(127, 178, 244, 0.15);
-  --sequence-viewer-night-restriction-line: rgba(174, 210, 255, 0.95);
-  --sequence-viewer-night-active-border: rgba(188, 218, 255, 0.98);
-  --sequence-viewer-night-active-bg: rgba(146, 198, 255, 0.28);
-  --sequence-viewer-night-feature-border: rgba(189, 220, 255, 0.78);
-  --sequence-viewer-night-feature-active-border: rgba(236, 248, 255, 0.98);
-  --sequence-viewer-night-feature-ring: rgba(198, 226, 255, 0.45);
-  --sequence-viewer-night-menu-item: rgba(39, 57, 92, 0.9);
-  --sequence-viewer-night-menu-hover: rgba(60, 85, 126, 0.96);
-  --sequence-viewer-night-shadow: rgba(12, 9, 7, 0.18);
-  --sequence-viewer-night-tooltip-base: #14110e;
+}
+
+/*
+ * Night values derive from the shared theme contract so the viewer keeps the
+ * app's identity (they were hardcoded steel-blue, which floated a blue panel
+ * stack on a sage page). They must be declared here rather than on :root:
+ * a custom property is substituted where it is DECLARED, so --theme-* inside
+ * a :root declaration resolves against the day palette and the night value
+ * inherits down as a light color.
+ */
+body.theme-night {
+  --sequence-viewer-night-border: var(--theme-border-soft);
+  --sequence-viewer-night-border-strong: var(--theme-border);
+  --sequence-viewer-night-control: var(--theme-control-background);
+  --sequence-viewer-night-control-strong: var(--theme-background);
+  --sequence-viewer-night-muted: var(--theme-text-muted);
+  --sequence-viewer-night-text: var(--theme-text);
+  --sequence-viewer-night-hover: var(--theme-surface-hover);
+  --sequence-viewer-night-panel: var(--theme-surface);
+  --sequence-viewer-night-input: var(--theme-control-background);
+  --sequence-viewer-night-overlay: var(--theme-overlay);
+  --sequence-viewer-night-overlay-strong: var(--theme-overlay-strong);
+  --sequence-viewer-night-inset: color-mix(in srgb, var(--theme-text) 8%, transparent);
+  --sequence-viewer-night-strong: var(--theme-text-strong);
+  --sequence-viewer-night-restriction-border: var(--theme-accent);
+  --sequence-viewer-night-restriction-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  --sequence-viewer-night-restriction-line: var(--theme-focus);
+  --sequence-viewer-night-active-border: var(--theme-focus);
+  --sequence-viewer-night-active-bg: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  --sequence-viewer-night-feature-border: color-mix(in srgb, var(--theme-border) 88%, var(--theme-accent));
+  --sequence-viewer-night-feature-active-border: var(--theme-text-strong);
+  --sequence-viewer-night-feature-ring: color-mix(in srgb, var(--theme-focus) 45%, transparent);
+  --sequence-viewer-night-menu-item: var(--theme-surface-elevated);
+  --sequence-viewer-night-menu-hover: var(--theme-surface-active);
+  --sequence-viewer-night-shadow: var(--theme-shadow-color);
+  --sequence-viewer-night-tooltip-base: var(--theme-background);
 }

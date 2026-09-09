@@ -9,11 +9,11 @@ const {
   buildHikariCodexAgentsBlock
 } = require('./agent-instructions.js');
 const {
-  HIKARI_MCP_TOOL_NAMES
-} = require('../mcp-contract/instructions.js');
-const {
   HIKARI_MCP_TOOL_TIMEOUT_SEC
 } = require('../mcp-contract/constants.js');
+const {
+  getEnabledHikariMcpToolNames
+} = require('../mcp-contract/tool-availability.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
@@ -204,6 +204,15 @@ function readFirstEnvValue(envSource = {}, keys = []) {
   return '';
 }
 
+function parseRequestContext(value = '') {
+  try {
+    const parsed = JSON.parse(cleanText(value));
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function buildHikariCodexMcpConfigBlock(options = {}) {
   const envEntries = {};
   const envSource = getMcpConfigEnvSource(options);
@@ -230,6 +239,8 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
   const codexRequestContext = readFirstEnvValue(envSource, [
     'HIKARI_CODEX_REQUEST_CONTEXT'
   ]) || agentRequestContext;
+  const requestContext = parseRequestContext(codexRequestContext || agentRequestContext);
+  const enabledToolNames = getEnabledHikariMcpToolNames(requestContext);
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_HOST', mcpHostUrl, 2400);
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_TOKEN', mcpToken, 4000);
   addEnvEntry(envEntries, 'HIKARI_CODEX_MCP_HOST', mcpHostUrl, 2400);
@@ -246,7 +257,7 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
     'required = true',
     `command = ${tomlString(commandPath)}`,
     `args = [${tomlString(resolveHikariCodexMcpServerPath())}]`,
-    `enabled_tools = ${tomlStringArray(HIKARI_MCP_TOOL_NAMES)}`,
+    `enabled_tools = ${tomlStringArray(enabledToolNames)}`,
     'default_tools_approval_mode = "approve"',
     'startup_timeout_sec = 30',
     `tool_timeout_sec = ${HIKARI_MCP_TOOL_TIMEOUT_SEC}`,

@@ -1,5 +1,52 @@
 /* sample-registry-view */
 
+label:has(> .sample-plasmid-suggestions) {
+  position: relative;
+}
+
+.sample-plasmid-suggestions {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0;
+  top: 100%;
+  display: grid;
+  min-width: 0;
+  max-height: 14rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 0.125rem;
+  border: 0.0625rem solid var(--theme-border);
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.sample-plasmid-suggestions[hidden] {
+  display: none;
+}
+
+.sample-plasmid-suggestions [role="option"],
+.sample-plasmid-suggestions-note {
+  display: block;
+  padding: 0.5rem 0.625rem;
+  overflow-wrap: anywhere;
+}
+
+.sample-plasmid-suggestions [role="option"] {
+  cursor: pointer;
+}
+
+.sample-plasmid-suggestions [role="option"]:hover,
+.sample-plasmid-suggestions [aria-selected="true"] {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+}
+
+.sample-plasmid-suggestions-note {
+  color: var(--theme-text-muted);
+}
+
 .left-rail-template.sample-layout {
   --left-rail-main-gap: 28px;
   display: grid;

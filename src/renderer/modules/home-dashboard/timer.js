@@ -3,7 +3,8 @@ import {
   formatTimerTemplateDuration,
   normalizeActiveTimerRecord,
   normalizeIncubationLocationValue,
-  normalizeTimerTemplateRecord
+  normalizeTimerTemplateRecord,
+  parseTimerDuration
 } from './utils.js';
 import { renderActiveTimer, renderFinishedTimer, updateActiveTimer } from './timer-rendering.js';
 
@@ -40,6 +41,7 @@ export function initTimerWidget({
   timerDialogCloseBtn.addEventListener('click', closeTimerDialog);
   timerDialogOverlay.addEventListener('click', onTimerDialogOverlayClick);
   timerDialogForm.addEventListener('submit', onTimerDialogSubmit);
+  timerMinutesInput.addEventListener('input', () => timerMinutesInput.setCustomValidity(''));
   timerTemplateList.addEventListener('click', onTimerTemplateListClick);
   timerActiveList.addEventListener('click', onTimerActiveListClick);
 
@@ -71,11 +73,14 @@ export function initTimerWidget({
   function onTimerDialogSubmit(event) {
     event.preventDefault();
     ensureDashboardState(state);
+    const durationMinutes = parseTimerDuration(timerMinutesInput.value);
+    timerMinutesInput.setCustomValidity(durationMinutes
+      ? ''
+      : 'Enter a duration such as "90 min", "1.5 h", or "1 h 30 min".');
     if (!timerDialogForm.reportValidity()) {
       return;
     }
     const name = normalizeIncubationLocationValue(timerNameInput.value);
-    const durationMinutes = Math.round(Number(timerMinutesInput.value));
     if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
       return;
     }

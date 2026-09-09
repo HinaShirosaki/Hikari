@@ -100,9 +100,9 @@ hydration cannot overwrite newer state.
 
 ## Why `serve: true`
 
-The workspace uses ES modules. A local opaque-origin frame cannot fetch relative
-module imports, so Hikari serves this bundled folder on a plugin-specific
-loopback origin. The server is process-local, rooted at this folder, and still
+The workspace uses ES modules and retains its explicit `serve: true` manifest
+flag for compatibility. Hikari now serves all installed local folders on their
+own loopback origins. The server is process-local, rooted at this folder, and still
 runs inside the plugin iframe sandbox.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the controller and analysis layout.

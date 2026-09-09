@@ -3,7 +3,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
-    const { releaseOfficialMcpSkillsForWorkspace } = require(path.join(
+    const { OFFICIAL_MCP_SKILLS, releaseOfficialMcpSkillsForWorkspace } = require(path.join(
       __dirname,
       'src',
       'main',
@@ -11,6 +11,12 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       'codex-agent',
       'official-mcp-skills.js'
     ));
+    const assertAssaySkillFiles = async (entrypoint) => {
+      const skill = OFFICIAL_MCP_SKILLS.find(item => item.id === 'assay-plotly');
+      for (const [file, content] of Object.entries({ 'SKILL.md': skill.content, ...skill.files })) {
+        assert.equal(await fsPromises.readFile(path.join(path.dirname(entrypoint), file), 'utf8'), content);
+      }
+    };
     const syncBundleWithOfficialSkills = (bundleHelpers, input = {}) => (
       bundleHelpers.syncBundleFromSnapshot({
         ...input,
@@ -95,6 +101,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
         assert.match(await fsPromises.readFile(projectContainerSkillPath, 'utf8'), /name: "hikari-container"/);
         assert.match(await fsPromises.readFile(projectAssayPlotlySkillPath, 'utf8'), /name: "hikari-assay-plotly"/);
+        await assertAssaySkillFiles(projectAssayPlotlySkillPath);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -364,7 +371,8 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.match(await fsPromises.readFile(rootContainerSkillPath, 'utf8'), /replace_range/);
         assert.match(await fsPromises.readFile(rootAssayPlotlySkillPath, 'utf8'), /`assay_table`/);
         assert.match(await fsPromises.readFile(rootAssayPlotlySkillPath, 'utf8'), /`plotly_graph`/);
-        assert.match(await fsPromises.readFile(rootAssayPlotlySkillPath, 'utf8'), /Common Plotly settings:/);
+        await assertAssaySkillFiles(rootAssayPlotlySkillPath);
+        await assertAssaySkillFiles(projectAssayPlotlySkillPath);
         assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
         assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
         assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
@@ -743,6 +751,19 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
             updatedAt: '2026-04-20T10:30:00.000Z'
           }]
         }, null, 2), 'utf8');
+        await fsPromises.mkdir(path.join(tempDir, 'Dashboard'), { recursive: true });
+        await fsPromises.writeFile(path.join(tempDir, 'Dashboard', 'experiment-log.json'), JSON.stringify({
+          schema_name: 'hikari_experiment_log',
+          schema_version: '1.0.0',
+          updated_at: '2026-04-20T10:30:00.000Z',
+          draft: 'Review transformation plate tomorrow.',
+          entries: [{
+            id: 'quick-log-folder-only',
+            text: 'Transformation plate has colonies.',
+            createdAt: '2026-04-20T10:30:00.000Z',
+            updatedAt: '2026-04-20T10:30:00.000Z'
+          }]
+        }, null, 2), 'utf8');
 
         const imported = await bundleHelpers.importStorageRoot({
           storagePath: tempDir,
@@ -756,7 +777,10 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(imported.statePatch.notebookEntries[0].storageFolder.includes(`${path.sep}Project${path.sep}Atlas${path.sep}Notebook${path.sep}`), true);
         assert.equal(imported.statePatch.samples.length, 1);
         assert.equal(imported.statePatch.samples[0].id, 'sample-1');
+        assert.equal(imported.statePatch.settings.dashboard.quickLogDraft, 'Review transformation plate tomorrow.');
+        assert.equal(imported.statePatch.settings.dashboard.quickLogEntries[0].id, 'quick-log-folder-only');
         assert.equal(imported.summary.notebookEntries, 1);
+        assert.equal(imported.summary.quickLogEntries, 1);
         assert.equal(imported.summary.samples, 1);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
@@ -814,7 +838,18 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           }],
           papers: [{ id: 'paper-1', title: 'Relevant Expression Paper', linkedType: 'project', linkedId: 'project-1', linkedName: 'Atlas', storedFilePath: '/tmp/original/paper.pdf', storedRelativePath: 'Project/Atlas/Papers/paper.pdf', pdfDataUrl: 'data:application/pdf;base64,QQ==', createdAt: '2026-04-10T10:00:00.000Z', updatedAt: '2026-04-10T10:06:00.000Z' }],
           paperExperimentLinks: [{ paperId: 'paper-1', entryId: 'note-1', projectId: 'project-1', note: 'Supports workflow step' }],
-          settings: { storagePath: tempDir }
+          settings: {
+            storagePath: tempDir,
+            dashboard: {
+              quickLogDraft: 'Draft observation',
+              quickLogEntries: [{
+                id: 'quick-log-1',
+                text: 'PCR yielded one clean band.',
+                createdAt: '2026-04-10T10:07:00.000Z',
+                updatedAt: '2026-04-10T10:07:00.000Z'
+              }]
+            }
+          }
         };
 
         await syncBundleWithOfficialSkills(bundleHelpers, { dataFilePath, snapshot });
@@ -831,6 +866,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
         await fsPromises.access(path.join(notebookFolder, 'page.json'));
         await fsPromises.access(path.join(folderLayout.workflowRootPath, 'workflow-status.sqlite'));
+        await fsPromises.access(path.join(tempDir, 'Dashboard', 'experiment-log.json'));
 
         const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
           dataFilePath,
@@ -841,6 +877,9 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(hydrated.snapshot.notebookEntries.length, 1);
         assert.equal(hydrated.snapshot.papers.length, 1);
         assert.equal(hydrated.snapshot.paperExperimentLinks.length, 1);
+        assert.equal(hydrated.snapshot.settings.dashboard.quickLogDraft, 'Draft observation');
+        assert.equal(hydrated.snapshot.settings.dashboard.quickLogEntries.length, 1);
+        assert.equal(hydrated.snapshot.settings.dashboard.quickLogEntries[0].text, 'PCR yielded one clean band.');
         assert.equal(hydrated.snapshot.workflows[0].entries[0].stepStates['block-a'].resultFileRecords[0].path, '');
         assert.equal(hydrated.snapshot.papers[0].pdfDataUrl, '');
         assert.equal(hydrated.snapshot.notebookEntries[0].storageFolder.includes(`${path.sep}Workflow${path.sep}`), true);
@@ -852,10 +891,13 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(imported.summary.workflowTemplates, 1);
         assert.equal(imported.summary.workflows, 1);
         assert.equal(imported.summary.papers, 1);
+        assert.equal(imported.summary.quickLogEntries, 1);
         assert.equal(imported.statePatch.workflowTemplates.length, 1);
         assert.equal(imported.statePatch.workflows.length, 1);
         assert.equal(imported.statePatch.notebookEntries.length, 1);
         assert.equal(imported.statePatch.papers.length, 1);
+        assert.equal(imported.statePatch.settings.dashboard.quickLogDraft, 'Draft observation');
+        assert.equal(imported.statePatch.settings.dashboard.quickLogEntries[0].id, 'quick-log-1');
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -895,6 +937,8 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
     });
     test('storage manifest classifies KnowledgeBase paper markdown folders', () => {
       const { detectManifestRole } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-manifest.js'));
+      assert.equal(detectManifestRole('Dashboard'), 'dashboard_root');
+      assert.equal(detectManifestRole('Dashboard/experiment-log.json'), 'experiment_log');
       assert.equal(detectManifestRole('KnowledgeBase'), 'knowledge_base_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md'), 'paper_markdown_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/paper.md'), 'paper_knowledge_markdown');

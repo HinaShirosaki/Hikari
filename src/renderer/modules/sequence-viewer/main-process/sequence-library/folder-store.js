@@ -9,6 +9,9 @@ const {
 } = require('./database');
 const {
   ensureLibraryDirectories,
+  ensureLibraryFolderDir,
+  isReservedLibraryFolderName,
+  removeLibraryFolderDirIfEmpty,
   resolveLibraryPaths
 } = require('./paths');
 const {
@@ -16,6 +19,7 @@ const {
   cleanText,
   normalizeName
 } = require('./utils');
+const { PROJECT_FOLDER_ID_PREFIX } = require('./constants');
 
 function normalizeFolderRow(row) {
   if (!row || typeof row !== 'object') {
@@ -28,6 +32,60 @@ function normalizeFolderRow(row) {
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };
+}
+
+function isProjectFolderId(folderId) {
+  return cleanText(folderId, 200).startsWith(PROJECT_FOLDER_ID_PREFIX);
+}
+
+function buildProjectFolderId(projectId) {
+  const safeProjectId = cleanText(projectId, 200);
+  return safeProjectId ? `${PROJECT_FOLDER_ID_PREFIX}${safeProjectId}` : '';
+}
+
+// Every project owns a sequence folder, so the rail lists one per project
+// without anyone creating it by hand. The row id is derived from the project
+// id, which keeps a renamed project pointing at the same folder (and its
+// sequences) instead of spawning a second one.
+function syncProjectFolderRows(db, projects) {
+  const now = new Date().toISOString();
+  let changed = false;
+  for (const project of (Array.isArray(projects) ? projects : [])) {
+    const folderId = buildProjectFolderId(project?.id);
+    const name = normalizeName(project?.name, '');
+    if (!folderId || !name) {
+      continue;
+    }
+    // A hand-made folder already using this name wins; overwriting it would
+    // break the UNIQUE(normalized_name) constraint.
+    const taken = readSingleRow(
+      db,
+      'SELECT id FROM sequence_folders WHERE normalized_name = ? AND id <> ? LIMIT 1',
+      [name.toLowerCase(), folderId]
+    );
+    if (taken) {
+      continue;
+    }
+    const existing = normalizeFolderRow(readSingleRow(
+      db,
+      'SELECT * FROM sequence_folders WHERE id = ? LIMIT 1',
+      [folderId]
+    ));
+    if (existing && existing.name === name) {
+      continue;
+    }
+    db.run(
+      `INSERT INTO sequence_folders (id, name, normalized_name, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         name = excluded.name,
+         normalized_name = excluded.normalized_name,
+         updated_at = excluded.updated_at`,
+      [folderId, name, name.toLowerCase(), existing?.createdAt || now, now]
+    );
+    changed = true;
+  }
+  return changed;
 }
 
 function listSequenceFoldersFromDb(db) {
@@ -60,6 +118,12 @@ async function upsertSequenceFolder(payload = {}) {
   if (!name) {
     throw new Error('Folder name is required.');
   }
+  if (isProjectFolderId(folderId)) {
+    throw new Error('A project folder is named after its project. Rename the project instead.');
+  }
+  if (isReservedLibraryFolderName(name)) {
+    throw new Error(`"${name}" is reserved by the sequence library. Pick another folder name.`);
+  }
 
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
@@ -88,6 +152,7 @@ async function upsertSequenceFolder(payload = {}) {
          updated_at = excluded.updated_at`,
       [folderId, name, name.toLowerCase(), existing?.createdAt || now, now]
     );
+    await ensureLibraryFolderDir(paths, name, existing?.name);
     await persistDatabase(paths.sqlitePath, db);
     return {
       rootPath: paths.libraryRoot,
@@ -109,16 +174,26 @@ async function deleteSequenceFolder(payload = {}) {
   if (!folderId) {
     throw new Error('Missing sequence folder id.');
   }
+  if (isProjectFolderId(folderId)) {
+    throw new Error('A project folder goes away with its project. Delete the project instead.');
+  }
 
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
+  let deletedName = '';
   try {
+    deletedName = normalizeFolderRow(readSingleRow(
+      db,
+      'SELECT * FROM sequence_folders WHERE id = ? LIMIT 1',
+      [folderId]
+    ))?.name || '';
     db.run("UPDATE sequence_entries SET folder_id = '' WHERE folder_id = ?", [folderId]);
     db.run('DELETE FROM sequence_folders WHERE id = ?', [folderId]);
     await persistDatabase(paths.sqlitePath, db);
   } finally {
     db.close();
   }
+  await removeLibraryFolderDirIfEmpty(paths, deletedName);
   return { ok: true, id: folderId };
 }
 
@@ -166,9 +241,11 @@ async function moveSequenceEntryToFolder(payload = {}) {
 
 module.exports = {
   deleteSequenceFolder,
+  isProjectFolderId,
   listSequenceFolders,
   listSequenceFoldersFromDb,
   moveSequenceEntryToFolder,
   normalizeFolderRow,
+  syncProjectFolderRows,
   upsertSequenceFolder
 };

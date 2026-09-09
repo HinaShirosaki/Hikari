@@ -1,8 +1,8 @@
-import { normalizeNotebookResultTable } from '../../lib/notebook-result-tables.js';
+import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../../lib/notebook-result-tables.js';
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
 import { setSharedLeftRailWidth } from '../shared-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
-import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, PLUGIN_FILES_FOLDER, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
+import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
 
 const MAX_NOTIFICATION_MESSAGE_CHARS = 1000;
 const DEFAULT_NOTIFICATION_DURATION_MS = 5000;
@@ -152,7 +152,7 @@ const VERBS = {
         experimentName: text(entry?.experimentName, 200),
         protocolId: text(entry?.protocolId, 200),
         projectId: text(entry?.projectId, 200),
-        savedAt: text(entry?.savedAt, 40)
+        savedAt: text(entry?.updatedAt || entry?.savedAt, 40)
       }))
   },
 
@@ -169,9 +169,9 @@ const VERBS = {
         experimentName: text(entry.experimentName, 200),
         protocolId: text(entry.protocolId, 200),
         projectId: text(entry.projectId, 200),
-        resultText: text(entry.resultText, 20000),
-        resultTables: asArray(entry.resultTables),
-        savedAt: text(entry.savedAt, 40)
+        resultText: text(entry.result ?? entry.resultText, 20000),
+        resultTables: normalizeNotebookResultTables(entry.resultTables, entry.resultTable),
+        savedAt: text(entry.updatedAt || entry.savedAt, 40)
       };
     }
   },
@@ -196,19 +196,29 @@ const VERBS = {
       }
 
       const entry = entries[index];
-      const previousText = text(entry.resultText, 20000);
-      entries[index] = {
+      // The API calls this resultText, but notebook records and the editor use
+      // result. Never apply the read-response length cap to existing content.
+      const previousText = String(entry.result ?? entry.resultText ?? '');
+      const tables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+      if (table) tables.push(table);
+      const nextEntries = entries.slice();
+      nextEntries[index] = {
         ...entry,
-        resultText: note
+        result: note
           ? [previousText, note].filter(Boolean).join('\n\n')
           : previousText,
-        resultTables: table
-          ? [...asArray(entry.resultTables), table]
-          : asArray(entry.resultTables)
+        resultTable: tables[0] || null,
+        resultTables: tables,
+        updatedAt: new Date().toISOString()
       };
 
-      state.notebookEntries = entries;
-      persist?.();
+      state.notebookEntries = nextEntries;
+      try {
+        persist?.();
+      } catch (error) {
+        state.notebookEntries = entries;
+        throw error;
+      }
       onNotebookEntriesChanged?.();
       return { id: entryId, appendedText: Boolean(note), appendedTable: Boolean(table) };
     }
@@ -243,6 +253,9 @@ const VERBS = {
       }
 
       const settings = asObject(state.settings);
+      const previousSettings = state.settings;
+      const hadStorage = Object.prototype.hasOwnProperty.call(settings, 'pluginStorage');
+      const previousStorage = settings.pluginStorage;
       const stored = { ...asObject(settings.pluginStorage) };
       if (value === null) {
         delete stored[plugin.id];
@@ -257,7 +270,14 @@ const VERBS = {
       // barrier: a plugin's blob is the index for files it already wrote to the
       // storage folder. Undoing across it would revert the index while the
       // files stay on disk, and the frame is never told the rollback happened.
-      persist?.({ barrier: true });
+      try {
+        persist?.({ barrier: true });
+      } catch (error) {
+        if (hadStorage) settings.pluginStorage = previousStorage;
+        else delete settings.pluginStorage;
+        state.settings = previousSettings;
+        throw error;
+      }
       return { bytes: size, limit: MAX_PLUGIN_STORAGE_CHARS };
     }
   },
@@ -279,26 +299,19 @@ const VERBS = {
       if (!isCanonicalBase64(dataBase64)) {
         throw new Error('files.write needs canonical base64 data.');
       }
-      if (typeof api?.storeImportedFile !== 'function') {
+      if (typeof api?.writePluginFile !== 'function') {
         throw new Error('File storage is unavailable in this environment.');
       }
-      const result = await api.storeImportedFile({
+      const result = await api.writePluginFile({
         storagePath: target.root,
-        targetFolder: target.folder,
-        fileName: target.fileName,
-        dataBase64,
-        // The plugin owns this folder and addresses it by path, so a write to
-        // the same path replaces the file instead of leaking a "_2" copy.
-        overwrite: true
+        pluginId: plugin.id,
+        path: target.relative,
+        dataBase64
       });
       if (!result?.ok) {
         throw new Error(text(result?.error, 400) || `Could not write "${target.relative}".`);
       }
-      // The path the plugin gets back is the one that was actually written.
-      const written = text(result?.relativePath, 2400)
-        || `${PLUGIN_FILES_FOLDER}/${plugin.id}/${target.relative}`;
-      const prefix = `${PLUGIN_FILES_FOLDER}/${plugin.id}/`;
-      return { path: written.startsWith(prefix) ? written.slice(prefix.length) : target.relative };
+      return { path: text(result.path, 2400) || target.relative };
     }
   },
 
@@ -306,11 +319,15 @@ const VERBS = {
     permission: 'files',
     handler: async (params, { state, plugin, api }) => {
       const target = resolvePluginFilePath(state, plugin.id, params?.path);
-      if (typeof api?.readFileBase64 !== 'function') {
+      if (typeof api?.readPluginFile !== 'function') {
         throw new Error('File storage is unavailable in this environment.');
       }
-      const result = await api.readFileBase64(target.absolute);
-      if (!result?.ok || !result.dataBase64) {
+      const result = await api.readPluginFile({
+        storagePath: target.root,
+        pluginId: plugin.id,
+        path: target.relative
+      });
+      if (!result?.ok || typeof result.dataBase64 !== 'string') {
         throw new Error(text(result?.error, 400) || `Could not read "${target.relative}".`);
       }
       return { path: target.relative, dataBase64: result.dataBase64 };

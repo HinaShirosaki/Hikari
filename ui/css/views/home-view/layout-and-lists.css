@@ -303,7 +303,7 @@
 }
 #home-view .home-tile button.home-notebook-row {
   width: 100%;
-  padding: 0.7rem 0;
+  padding: 0.7rem 0.6rem;
   border: 0;
   border-bottom: 1px solid var(--home-tile-line-soft);
   border-radius: 0;
@@ -314,7 +314,7 @@
   cursor: pointer;
 }
 #home-view .home-tile button.home-notebook-row:hover {
-  background: var(--theme-surface-subtle);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 45%, transparent);
 }
 #home-view .home-notebook-add {
   display: grid;

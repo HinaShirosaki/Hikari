@@ -71,6 +71,7 @@ const { createNpmUpdaterService } = require('./services/create-npm-updater-servi
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
 const { createGenomeService } = require('./services/create-genome-service');
+const { createNotebookSuggestionService } = require('./services/create-notebook-suggestion-service');
 const { createScheduledTaskService } = require('./services/create-scheduled-task-service');
 const { registerDataIpc } = require('../ipc/register-data-ipc');
 const { registerAgentIpc } = require('../ipc/register-agent-ipc');
@@ -94,6 +95,7 @@ function createMainServices(context = {}) {
     BrowserWindow,
     dialog,
     ipcMain,
+    session,
     shell,
     fs,
     path,
@@ -259,6 +261,7 @@ function createMainServices(context = {}) {
   // IPC registration (before app ready).
   registerDataIpc({
     ipcMain,
+    session,
     dialog,
     shell,
     fs,
@@ -298,6 +301,12 @@ function createMainServices(context = {}) {
   });
 
   registerAgentIpc({
+    notebookSuggestionService: createNotebookSuggestionService({
+      normalizeSnapshot: agents.agentToolRuntime.normalizeAgentSnapshot,
+      codexAgentRuntime: codex.codexAgentRuntime,
+      getWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
+      getDefaultDataFilePath: appPaths.getDefaultDataFilePath
+    }),
     ipcMain,
     LLM_PROVIDERS,
     cleanText,

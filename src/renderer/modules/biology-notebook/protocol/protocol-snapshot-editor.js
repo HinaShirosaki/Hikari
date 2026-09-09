@@ -14,6 +14,7 @@ export function createProtocolSnapshotEditor({
   exportBtn,
   printBtn,
   markExecutedBtn,
+  takeIntoPlanBtn,
   draftNameInput,
   draftStepsInput,
   createId
@@ -73,6 +74,9 @@ export function createProtocolSnapshotEditor({
     }
     if (printBtn) {
       printBtn.hidden = !entry || isEditing;
+    }
+    if (takeIntoPlanBtn) {
+      takeIntoPlanBtn.hidden = !entry || normalizeNotebookState(entry.notebookState) !== 'suggested' || isEditing;
     }
     if (markExecutedBtn) {
       markExecutedBtn.hidden = !entry

@@ -7,6 +7,8 @@
 // and APP_REGISTRY. Adding or removing a plugin therefore requires an app
 // reload (Settings > Plugins offers a Reload App button).
 
+import { pluginOrigin } from './plugin-origin.js';
+
 const PLUGIN_ICON_MARKUP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v4" /><path d="M15 4v4" /><path d="M7 8h10v4a5 5 0 0 1-10 0Z" /><path d="M12 17v3" /></svg>';
 
 const LOCAL_SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups';
@@ -57,14 +59,18 @@ async function startServedFrame({ frame, plugin, api, showError = true, beforeNa
   }
   try {
     const result = await serve(plugin.id, plugin.path);
-    if (!result?.ok || !isSameOriginSafeUrl(result.baseUrl)) {
+    if (!result?.ok || !pluginOrigin(result.baseUrl)) {
       throw new Error(result?.error || 'Plugin server returned an unusable address.');
     }
+    // about:blank/srcdoc inherits the host origin. Keep the frame opaque until
+    // a validated loopback destination is available.
+    frame.setAttribute('sandbox', REMOTE_SANDBOX);
     beforeNavigate?.(result.baseUrl);
     frame.src = result.baseUrl;
     return { ok: true, baseUrl: result.baseUrl };
   } catch (error) {
     const message = String(error?.message || error).replace(/[<&]/g, '');
+    frame.setAttribute('sandbox', LOCAL_SANDBOX);
     if (showError) {
       frame.srcdoc = `<p style="font:13px system-ui;padding:16px">Could not start this plugin: ${message}</p>`;
     }
@@ -82,12 +88,12 @@ async function startServedFrame({ frame, plugin, api, showError = true, beforeNa
 // string is the frame's accessible name and its tooltip. The disclosure that
 // gates trust was never the rail anyway — it is the permission list on the
 // plugin's row in Settings, shown before the plugin is enabled.
-function describePlugin(plugin, { isRemote, isServed }) {
-  const kind = isRemote ? 'Remote plugin' : (isServed ? 'Served plugin' : 'Local plugin');
+function describePlugin(plugin, { isRemote }) {
+  const kind = isRemote ? 'Remote plugin' : 'Local plugin';
   const permissions = Array.isArray(plugin.permissions) ? plugin.permissions : [];
   const origin = isRemote && plugin.embedUrl
     ? `loads ${plugin.embedUrl}`
-    : (isServed ? 'served locally over 127.0.0.1' : '');
+    : 'served locally over 127.0.0.1';
   return [
     `${plugin.name || plugin.id} — ${kind}`,
     origin,
@@ -112,11 +118,8 @@ function installServiceFrame({ documentObject, host, plugin, services, bridge, a
   frame.className = 'plugin-service-frame';
   frame.hidden = true;
   frame.setAttribute('aria-hidden', 'true');
-  frame.setAttribute('sandbox', REMOTE_SANDBOX);
+  frame.setAttribute('sandbox', LOCAL_SANDBOX);
   host.append(frame);
-  if (bridge && frame.contentWindow) {
-    bridge.register(frame.contentWindow, plugin);
-  }
   const registration = services?.register?.(frame, plugin);
   let serviceNavigationStarted = false;
   frame.addEventListener?.('load', () => {
@@ -132,7 +135,11 @@ function installServiceFrame({ documentObject, host, plugin, services, bridge, a
     plugin,
     api,
     showError: false,
-    beforeNavigate: () => { serviceNavigationStarted = true; }
+    beforeNavigate: (baseUrl) => {
+      registration?.setOrigin?.(baseUrl);
+      bridge?.register?.(frame.contentWindow, plugin, baseUrl);
+      serviceNavigationStarted = true;
+    }
   }).then((result) => {
     if (!result.ok) {
       registration?.fail?.(result.error);
@@ -170,30 +177,22 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
 
       // Re-checked here (not just at install) so a hand-edited settings record
       // cannot smuggle a file: URL into a same-origin frame.
+      // All folder plugins use loopback delivery regardless of `serve`, which
+      // is now a compatibility no-op: file: sandboxed documents cannot load
+      // even classic sibling scripts in Electron.
       const isRemote = isSameOriginSafeUrl(plugin.embedUrl);
-      // A served plugin has no URL yet — the loopback server is started
-      // asynchronously below and its src is assigned on arrival.
-      const isServed = !isRemote && plugin.serve === true;
 
       const frame = documentObject.createElement('iframe');
       frame.className = 'plugin-frame';
-      if (!isServed) {
-        frame.src = isRemote ? plugin.embedUrl : plugin.entryUrl;
+      if (isRemote) {
+        frame.src = plugin.embedUrl;
       }
-      const summary = describePlugin(plugin, { isRemote, isServed });
+      const summary = describePlugin(plugin, { isRemote });
       frame.title = summary;
       frame.setAttribute('aria-label', summary);
-      // Plain local plugins get no allow-same-origin, so they run as an opaque
-      // origin with no access to the host DOM, localStorage, or the preload
-      // bridge — and, as a consequence, no storage of their own either.
-      //
-      // Remote and served frames do get it, safely, because their origin is
-      // then their own (a remote host, or 127.0.0.1:port) and not the host's.
-      // Real apps need storage: an opaque origin denies IndexedDB outright, and
-      // a WebAssembly runtime cannot start without it. This flag would be
-      // catastrophic on a file:// entry, which is why it is gated on the origin
-      // check above and never on a manifest field alone.
-      frame.setAttribute('sandbox', (isRemote || isServed) ? REMOTE_SANDBOX : LOCAL_SANDBOX);
+      // Folder frames remain opaque while the server starts. startServedFrame
+      // grants their own origin only alongside a validated loopback URL.
+      frame.setAttribute('sandbox', isRemote ? REMOTE_SANDBOX : LOCAL_SANDBOX);
       if (isRemote) {
         frame.setAttribute('referrerpolicy', 'no-referrer');
       }
@@ -220,15 +219,11 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       // The section and registry entry must exist synchronously (the shell
       // snapshots both), but the src can arrive later — so the loopback server
       // is started off the critical path.
-      if (isServed) {
-        startServedFrame({ frame, plugin, api });
-      }
-
-      // contentWindow only exists once the frame is in the document. Register
-      // it so plugin-bridge.js can map inbound messages back to this record.
-      // Remote frames are never registered: third-party code gets no host API.
-      if (bridge && !isRemote && frame.contentWindow) {
-        bridge.register(frame.contentWindow, plugin);
+      if (!isRemote) {
+        void startServedFrame({
+          frame, plugin, api,
+          beforeNavigate: (baseUrl) => bridge?.register?.(frame.contentWindow, plugin, baseUrl)
+        });
       }
 
       appRegistry.push({

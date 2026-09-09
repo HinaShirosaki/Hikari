@@ -268,6 +268,28 @@
   display: none !important;
 }
 
+.vector-map__tooltip.has-protein-properties {
+  white-space: normal;
+}
+
+.sequence-viewer-protein-hover {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--theme-border);
+}
+
+.sequence-viewer-protein-hover p {
+  margin: 0;
+}
+
+.sequence-viewer-protein-hover p + p {
+  margin-top: 0.2rem;
+}
+
+.sequence-viewer-protein-hover .small-note {
+  font-size: inherit;
+}
+
 .sequence-viewer-primer-order-dialog {
   --app-dialog-width: 640px;
 }

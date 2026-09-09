@@ -92,7 +92,7 @@ function parseService(rawService) {
 // is declared, not inferred.
 //
 // Two kinds of plugin:
-//   local  - ships `index.html`; runs opaque-origin; may hold host permissions.
+//   local  - ships `index.html`; runs on private loopback; may hold host permissions.
 //   remote - declares `embed` (https URL); the folder is metadata only, and it
 //            may NOT hold host permissions because the code is third-party and
 //            not shipped in the folder the user reviewed.

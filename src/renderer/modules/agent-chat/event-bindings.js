@@ -181,6 +181,11 @@ export function bindAgentChatEvents({
       return;
     }
     request.liveAssistantMessage = applyLiveProgressEvent(request.liveAssistantMessage, payload);
+    if (payload?.meta?.sequence_actions?.length) {
+      const document = dom.input?.ownerDocument;
+      const EventClass = document?.defaultView?.CustomEvent;
+      if (EventClass) document.dispatchEvent(new EventClass('sequence-library-agent-changed'));
+    }
     const isVisible = trimText(request.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120);
     if (!isVisible) {
       return;

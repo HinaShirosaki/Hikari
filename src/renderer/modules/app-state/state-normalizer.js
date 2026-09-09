@@ -129,6 +129,9 @@ function normalizeSettings(source) {
   const rawDisabledExternalSkillNames = Array.isArray(rawAgent.disabledExternalSkillNames)
     ? rawAgent.disabledExternalSkillNames
     : (Array.isArray(rawAgent.disabled_external_skill_names) ? rawAgent.disabled_external_skill_names : null);
+  const rawDisabledMcpToolNames = Array.isArray(rawAgent.disabledMcpToolNames)
+    ? rawAgent.disabledMcpToolNames
+    : (Array.isArray(rawAgent.disabled_mcp_tool_names) ? rawAgent.disabled_mcp_tool_names : null);
   const preferredJournals = normalizePreferredJournals(rawSettings);
 
   return {
@@ -187,7 +190,10 @@ function normalizeSettings(source) {
         && rawAgent.external_skills_enabled !== false,
       disabledExternalSkillNames: rawDisabledExternalSkillNames
         ? rawDisabledExternalSkillNames.map((item) => String(item || '').trim()).filter(Boolean)
-        : defaultState.settings.agent.disabledExternalSkillNames
+        : defaultState.settings.agent.disabledExternalSkillNames,
+      disabledMcpToolNames: rawDisabledMcpToolNames
+        ? [...new Set(rawDisabledMcpToolNames.map((item) => String(item || '').trim()).filter(Boolean))]
+        : defaultState.settings.agent.disabledMcpToolNames
     },
     inventoryLocations: Array.isArray(rawSettings.inventoryLocations)
       ? rawSettings.inventoryLocations

@@ -126,6 +126,30 @@ function createRunLiteratureWorkflow({
       desiredSelectionCount,
       preferredJournal
     );
+    const taskContext = source.snapshot?.scheduled_task || source.snapshot?.scheduledTask;
+    if (taskContext?.task_type === 'notebook_suggestion' && taskContext.deny_paper_download === true) {
+      // Stop before PDF enrichment, acquisition, ingestion, or delegated reading,
+      // including when a caller supplies legacy auto-download flags.
+      return {
+        ...rawSearchResult,
+        status: 'completed',
+        query,
+        selected_papers: selectedCandidates.map(candidate => ({
+          paper_title: cleanText(candidate.title, 320),
+          source: cleanText(candidate.source, 80),
+          journal: cleanText(candidate.journal, 220),
+          summary: cleanText(candidate.summary || candidate.snippet, 1200),
+          url: cleanText(candidate.url, 1200),
+          doi: cleanText(candidate.doi, 180),
+          published_at: cleanText(candidate.published_at, 80),
+          download_status: 'not_requested'
+        })),
+        downloaded_papers: [],
+        loaded_context_blocks: [],
+        papers_read_count: 0,
+        summary: `Found ${selectedCandidates.length} paper metadata records for the experiment suggestion.`
+      };
+    }
     // Papers found for a project belong in that project's Papers folder; a
     // free-standing search gets its own collection folder under Papers/.
     const projectName = cleanText(copiedContext.project?.name, 220);

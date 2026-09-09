@@ -17,6 +17,10 @@ function projectNameForTask(task = {}) {
 
 function cadenceForTask(task = {}) {
   const config = paperFindingConfig(task);
+  const detailedLabel = cleanText(config.frequency_label);
+  if (detailedLabel) {
+    return detailedLabel;
+  }
   const value = Number(config.frequency_value);
   const unit = cleanText(config.frequency_unit).toLowerCase();
   if (Number.isFinite(value) && value > 0 && unit) {
@@ -35,11 +39,13 @@ function nextRunForTask(task = {}) {
   if (!raw || Number.isNaN(nextRun.getTime())) {
     return 'Scheduled';
   }
+  const timezone = cleanText(ensureObject(task.schedule).timezone);
   return `Next ${nextRun.toLocaleString([], {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    ...(timezone ? { timeZone: timezone, timeZoneName: 'short' } : {})
   })}`;
 }
 

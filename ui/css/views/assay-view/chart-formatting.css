@@ -87,43 +87,75 @@
 
 /* Format panel. */
 .assay-chart-style {
+  /* One compact control height keeps the panel dense at any rail width. */
+  --cc-control-height: 2.125rem;
   display: grid;
   gap: 10px;
 }
 
+.assay-chart-style input:not([type="checkbox"]):not([type="color"]),
+.assay-chart-style select,
+.assay-chart-style .assay-chart-picker__trigger {
+  block-size: var(--cc-control-height);
+  padding-block: 0;
+}
+
+/* Values are typed or pasted here; the spinners only steal width. */
+.assay-chart-style input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.assay-chart-style input[type="number"]::-webkit-outer-spin-button,
+.assay-chart-style input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Preset picker and the reset actions share the top row; the icons carry hover captions. */
 .assay-chart-style-presets {
-  display: grid;
-  gap: 6px;
-}
-
-.assay-chart-style-preset-actions {
-  justify-content: flex-start;
-  gap: 6px;
-}
-
-/* Five tabs in a narrow rail. The rail has vertical room and no horizontal room, so
-   they wrap onto a second line rather than clipping or scrolling out of reach. */
-.assay-chart-style-tabs {
   display: flex;
-  flex-wrap: wrap;
-  column-gap: 2px;
-  border-bottom: 1px solid var(--theme-border);
+  align-items: end;
+  gap: 6px;
+}
+
+.assay-chart-style-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.assay-chart-style-actions .row-action-icon-btn {
+  inline-size: var(--cc-control-height);
+  block-size: var(--cc-control-height);
+  border-radius: 6px;
+}
+
+/* One compact row at the existing rail width. */
+.assay-chart-style-tabs {
+  display: grid;
+  grid-template-columns: 1fr .8fr 1.65fr .8fr;
+  gap: 0;
+  border-bottom: thin solid var(--theme-border);
 }
 
 .assay-chart-style-tabs button {
+  min-width: 0;
   font: inherit;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  background: none;
+  font-size: .75rem;
+  background: transparent;
   border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  padding: 5px 7px 6px;
-  flex: 0 0 auto;
+  border-bottom: .125rem solid transparent;
+  padding: .5rem .2rem;
+  border-radius: 0;
+  box-shadow: none;
   white-space: nowrap;
   color: var(--theme-text-muted);
   cursor: pointer;
+}
+
+.assay-chart-style-tabs button:focus-visible {
+  outline: .125rem solid var(--theme-accent);
+  outline-offset: -.125rem;
 }
 
 .assay-chart-style-tabs button:hover {
@@ -138,7 +170,7 @@
 
 .assay-chart-style-panel {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .assay-chart-style-panel[hidden] {
@@ -147,7 +179,9 @@
 
 .assay-chart-style-panel label {
   display: grid;
-  gap: 4px;
+  /* A single shrinkable track: fields honour the label's width instead of overflowing it. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
   font-size: 0.85rem;
   color: var(--theme-text-strong);
 }
@@ -180,46 +214,6 @@
   color: var(--theme-text-muted);
 }
 
-/* X and Y side by side, so per-axis settings read as a pair. */
-.assay-chart-style-axis-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 3.6rem) minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 6px;
-}
-
-/* The rail is narrow; let the paired controls shrink instead of clipping. */
-.assay-chart-style-axis-grid select,
-.assay-chart-style-axis-grid input[type="number"] {
-  min-width: 0;
-  width: 100%;
-  font-size: 0.78rem;
-  padding: 3px 5px;
-}
-
-.assay-chart-style-axis-grid > [hidden] {
-  visibility: hidden;
-  display: revert;
-}
-
-.assay-chart-style-axis-head {
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--theme-accent);
-  text-align: center;
-}
-
-.assay-chart-style-axis-label {
-  font-size: 0.75rem;
-  color: var(--theme-text-muted);
-}
-
-.assay-chart-style-axis-grid input[type="checkbox"] {
-  justify-self: center;
-  width: auto;
-}
-
 .assay-chart-style-checkbox {
   flex-direction: row;
   display: flex !important;
@@ -237,49 +231,68 @@
 
 .assay-chart-style-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
 }
 
+/* X and Y axis controls sit side by side; identical fields keep the rows aligned. */
+.assay-chart-style-axis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.assay-chart-style-axis-column {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-inline-size: 0;
+}
+
+.assay-chart-style-axis-column[hidden] {
+  display: none;
+}
+
+/* Numeric fields fill their narrower column instead of the shared 5.5rem cap. */
+.assay-chart-style-axis-column .assay-chart-style-number {
+  inline-size: 100%;
+}
+
+.assay-chart-style-number {
+  inline-size: min(100%, 5.5rem);
+  white-space: nowrap;
+}
+
+/* A swatch reads as a chip the size of a numeric field, not a full-width slab. */
 .assay-chart-style-panel input[type="color"] {
-  width: 100%;
-  min-height: 32px;
-  padding: 2px;
+  inline-size: min(100%, 5.5rem);
+  block-size: var(--cc-control-height);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
 }
 
-.assay-chart-style-series {
-  display: grid;
-  gap: 6px;
+/* No box around the colour: the swatch fills the control and carries its own hairline,
+   which is what keeps a white value visible against the panel. */
+.assay-chart-style-panel input[type="color"]::-webkit-color-swatch-wrapper,
+.assay-chart-text-bar__color input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
 }
 
-.assay-chart-style-series-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.82rem;
+.assay-chart-style-panel input[type="color"]::-webkit-color-swatch,
+.assay-chart-text-bar__color input[type="color"]::-webkit-color-swatch {
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
 }
 
-.assay-chart-style-series-shape {
-  max-width: 104px;
-}
-
-.assay-chart-style-series-row input[type="color"] {
-  width: 44px;
-  min-height: 28px;
-  padding: 2px;
-}
-
-.assay-chart-style-series-empty {
-  font-size: 0.78rem;
-  color: var(--theme-text-muted);
-}
-
-.assay-chart-style-actions {
-  justify-content: flex-start;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--theme-border-soft);
+.assay-chart-style-panel input[type="color"]:focus-visible,
+.assay-chart-text-bar__color input[type="color"]:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
 }
 
 .assay-chart-picker-mount {
@@ -401,7 +414,9 @@
   flex: 1 1 auto;
 }
 
+/* One toolbar line that wraps at narrow rails; every control shares a height so it reads as a strip. */
 .assay-chart-text-bar {
+  --text-bar-control-height: var(--cc-control-height);
   display: grid;
   gap: 6px;
 }
@@ -411,6 +426,13 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.assay-chart-text-bar__toggle,
+.assay-chart-text-bar__size-mount input,
+.assay-chart-text-bar__color input[type="color"],
+.assay-chart-text-bar .assay-chart-picker__trigger {
+  block-size: var(--text-bar-control-height);
 }
 
 .assay-chart-text-bar__font {
@@ -429,31 +451,34 @@
 }
 
 .assay-chart-text-bar__size-mount {
-  flex: 0 0 70px;
+  flex: 0 0 4.75rem;
 }
 
 .assay-chart-text-bar__color {
   display: inline-flex;
   align-items: center;
-  flex: 0 0 38px;
+  flex: 0 0 2.5rem;
 }
 
 .assay-chart-text-bar__color input[type="color"] {
-  width: 38px;
-  min-height: 30px;
-  padding: 2px;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
-  background: var(--theme-surface);
+  inline-size: 2.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
+}
+
+.assay-chart-text-bar__color input[type="color"]::-webkit-color-swatch {
+  border-radius: 5px;
 }
 
 .assay-chart-text-bar__toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--text-bar-control-height);
   padding: 0;
   background: var(--theme-surface);
   color: var(--theme-text-strong);
@@ -493,4 +518,67 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 220px;
+}
+
+/* Native numeric fields accept exact values; formatting previews never round storage. */
+.assay-chart-style,
+.assay-chart-style-panel,
+.assay-chart-style-panel label,
+.assay-chart-style-panel input,
+.assay-chart-style-panel select {
+  min-width: 0;
+}
+
+.assay-chart-style-panel input:not([type="checkbox"]):not([type="color"]),
+.assay-chart-style-panel select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.assay-chart-style [hidden] {
+  display: none !important;
+}
+
+.assay-chart-style-subhead {
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 600;
+  font-size: .8rem;
+}
+
+.assay-chart-style details > summary {
+  cursor: pointer;
+  padding-bottom: .5rem;
+}
+
+.assay-chart-style-presets > label {
+  display: grid;
+  gap: .25rem;
+  font-size: .8rem;
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.assay-chart-style-validation {
+  margin: 0;
+  padding: .5rem 0;
+  color: var(--theme-text-strong);
+  font-size: .8rem;
+}
+
+.assay-chart-text-bar__size-mount input {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 4px 6px;
+}
+
+.assay-chart-text-bar__size-mount {
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+}
+
+.assay-chart-text-bar__unit {
+  color: var(--theme-text-muted);
+  font-size: .75rem;
 }

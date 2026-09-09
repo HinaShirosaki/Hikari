@@ -1,8 +1,7 @@
 import { trimText } from './shared.js';
-import { verifyAndApplySequenceProposal } from '../sequence-viewer/agent/bridge.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
-import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview, renderSequenceEditPreview } from './review-overlay/review-previews.js';
-import { markNotebookAppendReview, markProtocolReview, markSequenceEditReview } from './review-overlay/review-status.js';
+import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
+import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -57,9 +56,6 @@ export function createAgentReviewOverlayController({
     dom.reviewTrack.innerHTML = reviewItems.map((item) => {
       if (item.type === 'protocol') {
         return renderProtocolPreview(item, safeText);
-      }
-      if (item.type === 'sequence-edit') {
-        return renderSequenceEditPreview(item, safeText);
       }
       if (item.type === 'notebook-append') {
         return renderNotebookAppendPreview(item, safeText);
@@ -118,32 +114,6 @@ export function createAgentReviewOverlayController({
     removeItem(item.id);
   }
 
-  async function approveSequenceEdit(item) {
-    const result = await verifyAndApplySequenceProposal(item.proposal);
-    if (result?.error) {
-      const code = trimText(result.error.code, 60);
-      if (code === 'TARGET_CHANGED' || code === 'TARGET_NOT_FOUND') {
-        setStatus?.('The record changed since this proposal; ask the agent to re-read and re-propose.');
-      } else {
-        setStatus?.(trimText(result.error.message, 320) || 'The proposed change could not be applied.');
-      }
-      return;
-    }
-    markSequenceEditReview(state.agentChat?.messages, item.messageId, item.token, 'approved', 'Sequence change approved by user.');
-    persist();
-    renderHistoryView?.({ forceScroll: true });
-    setStatus?.(trimText(result?.summary, 320) || 'Sequence change applied.');
-    removeItem(item.id);
-  }
-
-  function rejectSequenceEdit(item) {
-    markSequenceEditReview(state.agentChat?.messages, item.messageId, item.token, 'rejected', 'Sequence change rejected by user.');
-    persist();
-    renderHistoryView?.({ forceScroll: true });
-    setStatus?.('Sequence change rejected.');
-    removeItem(item.id);
-  }
-
   async function approveNotebookAppend(item) {
     const result = await onAppendNotebookEntry(item.append?.proposal || {});
     if (result?.ok !== true) {
@@ -190,10 +160,6 @@ export function createAgentReviewOverlayController({
       approveProtocol(item);
       return;
     }
-    if (item.type === 'sequence-edit') {
-      void approveSequenceEdit(item);
-      return;
-    }
     if (item.type === 'notebook-append') {
       void approveNotebookAppend(item);
       return;
@@ -208,10 +174,6 @@ export function createAgentReviewOverlayController({
     }
     if (item.type === 'protocol') {
       rejectProtocol(item);
-      return;
-    }
-    if (item.type === 'sequence-edit') {
-      rejectSequenceEdit(item);
       return;
     }
     if (item.type === 'notebook-append') {

@@ -243,6 +243,7 @@ class MockElement {
     this._queryCache = new Map();
     this._inserted = [];
     this._submitButton = null;
+    this.validationMessage = '';
   }
 
   get innerHTML() {
@@ -295,6 +296,10 @@ class MockElement {
   focus() {}
 
   select() {}
+
+  setCustomValidity(message) {
+    this.validationMessage = String(message || '');
+  }
 
   // Enough of the live tree for helpers that swap a node in and out (see
   // startInlineRename); regex-scraped innerHTML covers everything else.

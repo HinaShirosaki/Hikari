@@ -44,6 +44,29 @@ function mergePaperFindingInput(task = {}, updates = {}) {
   };
 }
 
+function paperFindingSchedulesMatch(currentValue = {}, nextValue = {}) {
+  const current = ensureObject(currentValue);
+  const next = ensureObject(nextValue);
+  if (cleanText(current.kind, 40) !== cleanText(next.kind, 40)) {
+    return false;
+  }
+  if (next.kind === 'interval') {
+    return Number(current.interval_minutes) === Number(next.interval_minutes);
+  }
+  if (next.kind !== 'calendar') {
+    return false;
+  }
+  const keys = [
+    'interval_value',
+    'interval_unit',
+    'time_of_day',
+    'timezone',
+    ...(next.interval_unit === 'week' ? ['day_of_week'] : []),
+    ...(next.interval_unit === 'month' ? ['day_of_month'] : [])
+  ];
+  return keys.every((key) => String(current[key]) === String(next[key]));
+}
+
 function createScheduledTaskApi(ipcRenderer) {
   const listScheduledTasks = () => ipcRenderer.invoke(SCHEDULED_TASK.LIST);
   const getScheduledTask = (id) => ipcRenderer.invoke(SCHEDULED_TASK.GET, { id });
@@ -80,9 +103,7 @@ function createScheduledTaskApi(ipcRenderer) {
     const currentTask = currentResponse.task;
     const input = mergePaperFindingInput(currentTask, updates);
     const payload = buildPaperFindingScheduledTaskInput(input);
-    const currentInterval = Number(currentTask?.schedule?.interval_minutes);
-    const nextInterval = Number(payload?.schedule?.interval_minutes);
-    if (currentInterval === nextInterval) {
+    if (paperFindingSchedulesMatch(currentTask.schedule, payload.schedule)) {
       delete payload.schedule;
     }
     return updateScheduledTask(id, payload);

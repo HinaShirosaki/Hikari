@@ -103,6 +103,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     }
     const defaultRange = deriveDefaultInsertRange(record, source);
     designState.sourceKey = sourceKey;
+    designState.storedAgentDesign = null;
     designState.strategy = STRATEGY_WHOLE_PLASMID;
     designState.insertStart = defaultRange.start;
     designState.insertEnd = defaultRange.end;
@@ -230,22 +231,22 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   function syncControls() {
     const designState = getDesignState();
     const hasSource = hasDesignSource();
-    const usesRange = cloningStrategyUsesInsertRange(designState.strategy);
+    const usesRange = !designState.storedAgentDesign && cloningStrategyUsesInsertRange(designState.strategy);
     if (elements.cloningDesignRangePanel) {
       elements.cloningDesignRangePanel.hidden = !usesRange;
     }
     // Only insert routes amplify something that could come off another plasmid;
     // whole-plasmid and Q5/KLD are PCRs on this record by definition.
-    const usesDonor = cloningStrategyUsesDonor(designState.strategy);
+    const usesDonor = !designState.storedAgentDesign && cloningStrategyUsesDonor(designState.strategy);
     if (elements.cloningDesignDonorPanel) {
       elements.cloningDesignDonorPanel.hidden = !usesDonor;
     }
     if (elements.cloningDesignRunBtn) {
-      elements.cloningDesignRunBtn.disabled = !hasSource || isDonorHydrationPending() || confirmPending;
+      elements.cloningDesignRunBtn.disabled = Boolean(designState.storedAgentDesign) || !hasSource || isDonorHydrationPending() || confirmPending;
     }
     if (elements.cloningDesignConfirmBtn) {
       // Nothing to commit until a feasible plan with primers exists.
-      elements.cloningDesignConfirmBtn.disabled = confirmPending
+      elements.cloningDesignConfirmBtn.disabled = Boolean(designState.storedAgentDesign) || confirmPending
         || !hasSource
         || !isCloningDesignPlanActionable(designState.displayPlan);
       elements.cloningDesignConfirmBtn.textContent = confirmPending ? 'Confirming…' : 'Confirm Design';
@@ -370,6 +371,26 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     }
   }
 
+  function storedDisplayPlan(design, method) {
+    const route = design.routes?.find(r => r.method === method);
+    return {
+      strategy: method, feasible: Boolean(route?.feasible),
+      primers: (route?.stages || []).flatMap(stage => (stage.primers || []).map(p => ({ ...p, groupLabel: `Stage ${stage.stage}: ${p.groupLabel || ''}` }))),
+      plans: (route?.stages || []).flatMap(stage => stage.plans || []),
+      warnings: [...(design.warnings || []), ...(route?.stages || []).flatMap(stage => stage.warnings || []), ...(!route ? ['This route was not evaluated.'] : [])],
+      summary: route?.stages?.at(-1)?.summary || {}
+    };
+  }
+  function openStoredPlan(design) {
+    resetForSource();
+    const designState = getDesignState();
+    designState.storedAgentDesign = design;
+    designState.strategy = design.recommended_method || design.routes?.[0]?.method || STRATEGY_WHOLE_PLASMID;
+    designState.displayPlan = storedDisplayPlan(design, designState.strategy);
+    onNavigateCloningDesign();
+    render();
+    return true;
+  }
   function open() {
     if (!hasDesignSource()) {
       setStatus('Edit the active sequence before opening cloning design.', true);
@@ -402,7 +423,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       const designState = getDesignState();
       if (designState.strategy !== strategyId) {
         designState.strategy = strategyId;
-        designState.displayPlan = null;
+        designState.displayPlan = designState.storedAgentDesign ? storedDisplayPlan(designState.storedAgentDesign, strategyId) : null;
       }
       render();
     });
@@ -464,6 +485,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     confirmDesign,
     designPrimers,
     hasDesignSource,
+    openStoredPlan,
     isOpen: () => isVisibleElement(elements.cloningDesignWorkspace),
     open,
     render,

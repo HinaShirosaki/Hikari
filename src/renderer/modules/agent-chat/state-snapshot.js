@@ -166,6 +166,9 @@ export function buildStateSnapshot(state, projectId) {
         externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
         disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
           .map((item) => trimText(item, 160))
+          .filter(Boolean),
+        disabledMcpToolNames: asArray(state.settings?.agent?.disabledMcpToolNames)
+          .map((item) => trimText(item, 160))
           .filter(Boolean)
       }
     },
