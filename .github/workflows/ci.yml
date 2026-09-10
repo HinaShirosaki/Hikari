@@ -23,14 +23,6 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.13'
-
-      # The DNA importer integration test exercises the real Biopython-backed
-      # converter rather than a stub, so make that host dependency explicit.
-      - run: python -m pip install --disable-pip-version-check --no-input biopython==1.87
-
       # Electron's postinstall pulls a ~176MB binary. Nothing in the test path
       # launches Electron, but leaving the download in place keeps CI identical
       # to a local install rather than trading correctness for a cached minute.

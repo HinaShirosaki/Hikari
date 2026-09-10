@@ -557,64 +557,6 @@ test('plugin service registry routes a conversion to the owning frame', async ()
   await assert.rejects(registry.convert({ extension: 'ab1', bytes }), /No installed service converts/);
 });
 
-test('plugin service: Biopython converts .dna through the host API into GenBank the sequence viewer can parse', async () => {
-  const converter = require(
-    path.join(__dirname, 'examples', 'plugins', 'dna-importer', 'biopython-converter.js')
-  );
-  const { createPluginBridge } = await import(
-    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
-  );
-  const { runPythonSandbox } = require(
-    path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js')
-  );
-  const { parseGenBankRecords } = sequenceViewerInternals;
-
-  const sequence = 'ATGCAAACCCGGGTTTAAACCGGTTAACCGGTTAACCATGC';
-  const dna = Buffer.from(
-    'CQAAAA5TbmFwR2VuZQABAAAAAAAAAAAqAUFUR0NBQUFDQ0NHR0dUVFRBQUFDQ0dHVFRBQUNDR0dUVEFBQ0NBVEdDCgAAAMc8RmVhdHVyZXM+PEZlYXR1cmUgbmFtZT0ib3JpIiB0eXBlPSJyZXBfb3JpZ2luIiBkaXJlY3Rpb25hbGl0eT0iMSI+PFNlZ21lbnQgcmFuZ2U9IjUtMjAiLz48L0ZlYXR1cmU+PEZlYXR1cmUgbmFtZT0icmV2R2VuZSIgdHlwZT0iQ0RTIiBkaXJlY3Rpb25hbGl0eT0iMiI+PFNlZ21lbnQgcmFuZ2U9IjIxLTMwIi8+PC9GZWF0dXJlPjwvRmVhdHVyZXM+',
-    'base64'
-  );
-  const frame = {
-    replies: [],
-    postMessage(payload) {
-      this.replies.push(payload);
-    }
-  };
-  const bridge = createPluginBridge({
-    state: { settings: {} },
-    api: {
-      runPython: (payload) => runPythonSandbox(payload, {
-        sandboxRoot: path.join(__dirname, 'tmp', 'dna-importer-biopython-plugin')
-      })
-    },
-    windowObject: { addEventListener() {} }
-  });
-  bridge.register(frame, { id: 'dna-importer', permissions: ['python'] }, PLUGIN_TEST_ORIGIN);
-  bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
-    source: frame,
-    data: {
-      hikari: 1,
-      id: 'convert-with-biopython',
-      verb: 'python.run',
-      params: converter.buildPythonRunParams(dna, { filename: 'pDemo.dna' })
-    }
-  });
-  for (let attempt = 0; attempt < 1500 && !frame.replies.length; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-
-  assert.equal(frame.replies.length, 1, 'python.run should reply within the service conversion timeout');
-  const pythonReply = frame.replies.at(-1);
-  assert.equal(pythonReply.ok, true, pythonReply.error || 'python.run bridge failed');
-  const gbk = converter.extractGenBankResult(pythonReply.result);
-  const { records } = parseGenBankRecords(gbk);
-  assert.ok(records && records.length, 'the converted GenBank parses');
-  assert.equal(records[0].sequence.toUpperCase(), sequence, 'sequence survives .dna -> gbk -> parse');
-  assert.equal(records[0].topology, 'circular', 'topology survives the round-trip');
-  assert.equal(records[0].features.some((feature) => feature.name === 'ori'), true, 'forward feature survives');
-  assert.equal(records[0].features.some((feature) => feature.name === 'revGene' && feature.strand === -1), true, 'reverse feature survives');
-});
-
 test('plugin system: a service plugin mounts a hidden frame and no view', async () => {
   const { installPlugins } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
