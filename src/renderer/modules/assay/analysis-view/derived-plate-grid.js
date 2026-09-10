@@ -1,6 +1,8 @@
-import { layoutToMap, parseWellId, toRowLabel, wellIdFor } from '../plate-model.js';
+import { buildMappedWellSet, layoutToMap, parseWellId, toRowLabel, wellIdFor } from '../plate-model.js';
 import { parseFirstNumericToken, parseNumericResult } from '../shared.js';
 import { applyPlateTransform, isTransformActive, normalizeTransformSpec } from '../derived-plate.js';
+import { createSpreadsheetFillHandle } from '../../../lib/spreadsheet-tables/fill-handle.js';
+import { fillCellContent } from '../../../lib/notebook-table-formulas.js';
 import { createSpreadsheetReferencePicker } from '../../../lib/spreadsheet-reference-picker.js';
 
 // The Transformed Plate grid (Table2) and the numeric observations analyses are
@@ -24,11 +26,39 @@ function createDerivedPlateGrid({
 } = {}) {
   let derivedPlate = null;
   let transformFormulas = {};
+  let transformEnabled = false;
   let transformGrid = null;
   let transformGridSignature = '';
 
+  // Reuse the Notebook gesture with plate coordinates and a single batched commit.
+  const fillHandle = createSpreadsheetFillHandle({
+    host: assayDerivedPlateTable,
+    getGrids: () => [transformGrid],
+    getDraftTables: () => [{
+      columns: Array.from({ length: getCurrentDefinition().columns }, (_, index) => ({ field: `c${index + 1}` })),
+      rows: transformGrid?.getData?.() || []
+    }],
+    canFillCell: ({ columnIndex, rowIndex }) => (
+      buildMappedWellSet(runtime.currentLayout).has(wellIdFor(rowIndex, columnIndex))
+    ),
+    applyFill: ({ columnIndex, rowIndex, targets, source }) => {
+      targets.forEach((target) => {
+        const well = wellIdFor(target.rowIndex, target.columnIndex);
+        const value = fillCellContent(source, target.columnIndex - columnIndex, target.rowIndex - rowIndex, {
+          plateAddressing: true
+        }).trim();
+        if (value) transformFormulas[well] = value;
+        else delete transformFormulas[well];
+      });
+      onTransformChange();
+    }
+  });
+  assayDerivedPlateTable?.addEventListener?.('mousemove', fillHandle.onHostMouseMove);
+  assayDerivedPlateTable?.addEventListener?.('mouseleave', fillHandle.hideFillHandle);
+  assayDerivedPlateTable?.addEventListener?.('mousedown', fillHandle.onHostFillPointerDown, true);
+
   function getTransformSpec() {
-    return normalizeTransformSpec({ mode: 'cells', formulas: transformFormulas });
+    return normalizeTransformSpec({ mode: 'cells', enabled: transformEnabled, formulas: transformFormulas });
   }
 
   function setTransformSummary(text) {
@@ -38,6 +68,7 @@ function createDerivedPlateGrid({
   }
 
   function clearTransformGrid() {
+    fillHandle.cancelFillDrag();
     transformGrid?.destroy?.();
     transformGrid = null;
     transformGridSignature = '';
@@ -81,6 +112,7 @@ function createDerivedPlateGrid({
   createSpreadsheetReferencePicker({
     roots: [assayResultTable, assayDerivedPlateTable],
     findEditor: findTransformFormulaEditor,
+    shouldIgnore: (event) => fillHandle.pointerInFillZone(event),
     addressOfCell: ({ cellElement }) => qualifiedAddressOfPlateCell(cellElement)
   });
 
@@ -130,6 +162,7 @@ function createDerivedPlateGrid({
       clearTransformGrid();
       const host = document.createElement('div');
       host.className = 'assay-tabulator assay-transform-grid';
+      host.dataset.resultTableHost = '0';
       host.tabIndex = 0;
       host.setAttribute('role', 'grid');
       host.setAttribute('aria-label', 'Transformed assay plate spreadsheet');
@@ -264,6 +297,7 @@ function createDerivedPlateGrid({
   return {
     getDerivedPlate: () => derivedPlate,
     getTransformFormulas: () => transformFormulas,
+    setTransformEnabled: (enabled) => { transformEnabled = enabled === true; },
     redrawTransformGrid: () => transformGrid?.redraw?.(true),
     setTransformFormulas(next) {
       transformFormulas = next;

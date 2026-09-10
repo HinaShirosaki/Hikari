@@ -1,4 +1,4 @@
-import { STRATEGIES } from './strategies.js';
+import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES } from './strategies.js';
 
 function formatNumber(value, digits = 1) {
   const number = Number(value);
@@ -21,7 +21,7 @@ function formatPrimerRole(role) {
 }
 
 function formatStrategyLabel(strategyId) {
-  return STRATEGIES.find((strategy) => strategy.id === strategyId)?.shortLabel || 'Cloning design';
+  return [...STRATEGIES, RESTRICTION_LIGATION_STRATEGY].find((strategy) => strategy.id === strategyId)?.shortLabel || 'Cloning design';
 }
 
 function formatEditType(type) {

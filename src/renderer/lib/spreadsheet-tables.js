@@ -132,7 +132,7 @@ export function createSpreadsheetTables({
   }
 
   const {
-    hideFillArrows,
+    hideFillHandle,
     onHostMouseMove,
     pointerInFillZone,
     findOpenFormulaEditor,
@@ -299,7 +299,7 @@ export function createSpreadsheetTables({
       draftTables
     );
     destroyGrids();
-    hideFillArrows();
+    hideFillHandle();
     recomputeTables();
     syncControls(draftTables);
     setStatus(draftTables);
@@ -458,7 +458,7 @@ export function createSpreadsheetTables({
 
   host?.addEventListener?.('click', onHostClick);
   host?.addEventListener?.('mousemove', onHostMouseMove);
-  host?.addEventListener?.('mouseleave', hideFillArrows);
+  host?.addEventListener?.('mouseleave', hideFillHandle);
   host?.addEventListener?.('mousedown', onHostFillPointerDown, true);
 
   return {

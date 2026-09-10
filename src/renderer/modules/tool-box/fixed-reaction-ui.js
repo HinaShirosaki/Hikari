@@ -18,6 +18,12 @@ function setText(element, value) {
   }
 }
 
+function setPlaceholder(element, value) {
+  if (element) {
+    element.placeholder = String(value || '');
+  }
+}
+
 function inputValue(element) {
   return element?.value ?? '';
 }
@@ -69,7 +75,8 @@ export function initFixedReactionTool(options = {}) {
       `fixed-reaction-name-${index}`,
       `fixed-reaction-stock-${index}`,
       `fixed-reaction-final-${index}`,
-      `fixed-reaction-volume-${index}`
+      `fixed-reaction-volume-${index}`,
+      `fixed-reaction-note-${index}`
     ].forEach((id) => {
       const element = getElement(rootDocument, id);
       addListener(element, 'input', renderReaction);
@@ -121,14 +128,14 @@ export function initFixedReactionTool(options = {}) {
       `fixed-reaction-name-${index}`,
       `fixed-reaction-stock-${index}`,
       `fixed-reaction-final-${index}`,
-      `fixed-reaction-volume-${index}`
+      `fixed-reaction-volume-${index}`,
+      `fixed-reaction-note-${index}`
     ].forEach((id) => {
       const input = getElement(rootDocument, id);
       if (input) {
         input.value = '';
       }
     });
-    setText(getElement(rootDocument, `fixed-reaction-output-${index}`), '');
     row.hidden = true;
   }
 
@@ -143,24 +150,27 @@ export function initFixedReactionTool(options = {}) {
         name: inputValue(getElement(rootDocument, `fixed-reaction-name-${index}`)),
         stockConcentration: inputValue(getElement(rootDocument, `fixed-reaction-stock-${index}`)),
         finalConcentration: inputValue(getElement(rootDocument, `fixed-reaction-final-${index}`)),
-        manualVolumeValue: inputValue(getElement(rootDocument, `fixed-reaction-volume-${index}`))
+        manualVolumeValue: inputValue(getElement(rootDocument, `fixed-reaction-volume-${index}`)),
+        note: inputValue(getElement(rootDocument, `fixed-reaction-note-${index}`))
       });
     }
     return rows;
   }
 
+  // The calculated volume is the cell's placeholder, so a typed one replaces it
+  // on the same line instead of stacking a second row under it.
   function renderReactionTableResult(result) {
     for (let index = 1; index <= rowCount(); index += 1) {
-      setText(getElement(rootDocument, `fixed-reaction-output-${index}`), '');
+      setPlaceholder(getElement(rootDocument, `fixed-reaction-volume-${index}`), 'auto');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
       const rowIndex = Number(detail?.rowIndex) || 0;
-      const output = rowIndex ? getElement(rootDocument, `fixed-reaction-output-${rowIndex}`) : null;
-      if (!output) {
+      const volume = rowIndex ? getElement(rootDocument, `fixed-reaction-volume-${rowIndex}`) : null;
+      if (!volume || String(volume.value || '').trim()) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      setText(output, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
+      setPlaceholder(volume, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
     });
     setText(getElement(rootDocument, 'fixed-reaction-solvent-output'), result?.fill?.text || resultTextAfterName(result?.fill?.resultText || ''));
   }

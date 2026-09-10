@@ -34,7 +34,12 @@ export function normalizeFragment(fragment, index) {
     id: String(fragment?.id || buildStableFragmentId('fragment', index)),
     name: String(fragment?.name || fragment?.id || buildStableFragmentId('fragment', index)).trim() || buildStableFragmentId('fragment', index),
     type,
-    orientation,
+    // The reverse complement has already been taken, so the sequence now reads
+    // forward. Saying 'reverse' here made a second pass -- assembleCloningPlan
+    // normalizes, then the route evaluators normalize again -- flip it back,
+    // and junctions were then evaluated on the opposite strand from the one
+    // primer design used.
+    orientation: 'forward',
     metadata,
     sequence
   };

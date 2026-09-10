@@ -55,7 +55,9 @@ const notebook = notebookModule.initLabNotebook({
 });
 
 const rail = document.getElementById('biology-notebook-entry-list');
-const activeRows = () => (rail.innerHTML.match(/biology-notebook-page-row is-active/g) || []).length;
+const activeRows = () => (
+  rail.innerHTML.match(/class="[^"]*biology-notebook-page-row[^"]*\bis-active\b[^"]*"/g) || []
+).length;
 
 function addSample(name) {
   trigger(document.getElementById('biology-notebook-add-samples-btn'), 'click');

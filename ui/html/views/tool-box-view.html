@@ -188,7 +188,7 @@
                   </td>
                   <th scope="row">pH</th>
                   <td><input id="buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
-                  <td></td>
+                  <td colspan="2"></td>
                 </tr>
                 <tr class="tool-box-buffer-header-row">
                   <th scope="col">Chemical</th>
@@ -196,6 +196,7 @@
                   <th scope="col">Stock Conc.</th>
                   <th scope="col">Final Conc.</th>
                   <th scope="col">Mass/Volume</th>
+                  <th scope="col">Note</th>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-1">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -210,7 +211,8 @@
                   <td><input id="buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 1 molecular weight" /></td>
                   <td><input id="buffer-stock-1" placeholder="stock" aria-label="Ingredient 1 stock concentration" /></td>
                   <td><input id="buffer-final-1" placeholder="final" aria-label="Ingredient 1 final concentration" /></td>
-                  <td><output id="buffer-output-1" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-1" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 1" /></td>
+                  <td><input id="buffer-note-1" type="text" placeholder="lot, source" aria-label="Note for ingredient 1" /></td>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-2">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -225,7 +227,8 @@
                   <td><input id="buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
                   <td><input id="buffer-stock-2" placeholder="stock" aria-label="Ingredient 2 stock concentration" /></td>
                   <td><input id="buffer-final-2" placeholder="final" aria-label="Ingredient 2 final concentration" /></td>
-                  <td><output id="buffer-output-2" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-2" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 2" /></td>
+                  <td><input id="buffer-note-2" type="text" placeholder="lot, source" aria-label="Note for ingredient 2" /></td>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -240,7 +243,8 @@
                   <td><input id="buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
                   <td><input id="buffer-stock-3" placeholder="stock" aria-label="Ingredient 3 stock concentration" /></td>
                   <td><input id="buffer-final-3" placeholder="final" aria-label="Ingredient 3 final concentration" /></td>
-                  <td><output id="buffer-output-3" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-3" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 3" /></td>
+                  <td><input id="buffer-note-3" type="text" placeholder="lot, source" aria-label="Note for ingredient 3" /></td>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -255,7 +259,8 @@
                   <td><input id="buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
                   <td><input id="buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
                   <td><input id="buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
-                  <td><output id="buffer-output-4" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-4" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 4" /></td>
+                  <td><input id="buffer-note-4" type="text" placeholder="lot, source" aria-label="Note for ingredient 4" /></td>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -270,7 +275,8 @@
                   <td><input id="buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
                   <td><input id="buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
                   <td><input id="buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
-                  <td><output id="buffer-output-5" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-5" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 5" /></td>
+                  <td><input id="buffer-note-5" type="text" placeholder="lot, source" aria-label="Note for ingredient 5" /></td>
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
@@ -285,10 +291,11 @@
                   <td><input id="buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
                   <td><input id="buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
                   <td><input id="buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
-                  <td><output id="buffer-output-6" aria-live="polite"></output></td>
+                  <td><input id="buffer-amount-6" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 6" /></td>
+                  <td><input id="buffer-note-6" type="text" placeholder="lot, source" aria-label="Note for ingredient 6" /></td>
                 </tr>
                 <tr id="buffer-add-row" class="tool-box-sheet-add-row">
-                  <td colspan="5">
+                  <td colspan="6">
                     <button id="add-buffer-chemical-btn" type="button" class="tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
                   </td>
                 </tr>
@@ -298,6 +305,7 @@
                   <th scope="row">6 M NaOH <output id="buffer-naoh-output" aria-live="polite"></output></th>
                   <td></td>
                   <th scope="row">6 M HCl <output id="buffer-hcl-output" aria-live="polite"></output></th>
+                  <td></td>
                 </tr>
               </tbody>
             </table>
@@ -319,56 +327,64 @@
                 <col class="tool-box-reaction-stock-col" />
                 <col class="tool-box-reaction-final-col" />
                 <col class="tool-box-reaction-volume-col" />
+                <col class="tool-box-reaction-note-col" />
               </colgroup>
               <tbody id="fixed-reaction-rows">
                 <tr class="tool-box-reaction-meta-row">
                   <th scope="row">Total volume:</th>
-                  <td colspan="3"><input id="fixed-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
+                  <td colspan="4"><input id="fixed-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
                 </tr>
                 <tr class="tool-box-reaction-header-row">
                   <th scope="col">Item</th>
                   <th scope="col">Stock Conc.</th>
                   <th scope="col">Final Conc</th>
                   <th scope="col">Volume</th>
+                  <th scope="col">Note</th>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-1">
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
                   <td><input id="fixed-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="fixed-reaction-output-1" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /></td>
+                  <td><input id="fixed-reaction-note-1" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 1" /></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-2" hidden>
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
                   <td><input id="fixed-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="fixed-reaction-output-2" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /></td>
+                  <td><input id="fixed-reaction-note-2" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 2" /></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-3" hidden>
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
                   <td><input id="fixed-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="fixed-reaction-output-3" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /></td>
+                  <td><input id="fixed-reaction-note-3" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 3" /></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-4" hidden>
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
                   <td><input id="fixed-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="fixed-reaction-output-4" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /></td>
+                  <td><input id="fixed-reaction-note-4" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 4" /></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-5" hidden>
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
                   <td><input id="fixed-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="fixed-reaction-output-5" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /></td>
+                  <td><input id="fixed-reaction-note-5" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 5" /></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-6" hidden>
                   <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                   <td><input id="fixed-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
-                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="fixed-reaction-output-6" aria-live="polite"></output></td>
+                  <td><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /></td>
+                  <td><input id="fixed-reaction-note-6" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 6" /></td>
                 </tr>
                 <tr id="fixed-reaction-add-row" class="tool-box-sheet-add-row">
-                  <td colspan="4">
+                  <td colspan="5">
                     <button id="fixed-reaction-add-row-btn" type="button" class="tool-box-sheet-add-btn" aria-label="Add reagent" title="Add reagent">+</button>
                   </td>
                 </tr>
@@ -377,6 +393,7 @@
                   <td></td>
                   <td></td>
                   <td><output id="fixed-reaction-solvent-output" aria-live="polite"></output></td>
+                  <td></td>
                 </tr>
               </tbody>
             </table>

@@ -3,6 +3,7 @@ import { isPrimerBindingFeature } from './feature-types.js';
 import { withPrimerFeaturesInGenbankText } from './genbank-primer-splice.js';
 import { parseInputRecords } from './parsing.js';
 import { PRIMER_FEATURE_SOURCE, withPrimerBindFeatures } from './primer-annotation.js';
+import { assignPrimerTemplateEntries } from './primer-template-routing.js';
 import { LIBRARY_STATUS_TEMPORARY } from './runtime/config.js';
 import { cleanText, normalizeRecordName, normalizeTopology } from './shared.js';
 import { buildRecordGenbankText } from './storage.js';
@@ -119,17 +120,18 @@ async function upsertRecord(bridge, storagePath, record, {
 // list grows. A parent that cannot be read is reported rather than thrown, so a
 // missing or unsaved parent never costs the user the product file.
 async function annotateParentPlasmid({ bridge, storagePath, parentEntryId, primers, source, productFeatures }) {
-  if (!parentEntryId || !bridge?.sequenceLibraryGet) {
+  if (!parentEntryId) {
     return { entry: null, placed: 0, unplaced: [], error: '' };
   }
   try {
+    if (!bridge?.sequenceLibraryGet) throw new Error('Template sequence library API unavailable.');
     const stored = await bridge.sequenceLibraryGet({
       storagePath,
       id: parentEntryId,
       includeGbk: true,
       includeAlignments: true
     });
-    if (!stored?.ok || !stored?.entry) {
+    if (!stored?.ok || !stored?.entry || stored.entry.id !== parentEntryId) {
       throw new Error(stored?.error || 'The parent plasmid is no longer in the library.');
     }
     const parsed = parseInputRecords(String(stored.gbkText || ''));
@@ -137,11 +139,13 @@ async function annotateParentPlasmid({ bridge, storagePath, parentEntryId, prime
     if (!parentRecord?.sequence?.length) {
       throw new Error('The parent plasmid holds no readable sequence.');
     }
-    const annotated = withPrimerBindFeatures(withoutPrimerSitesNamed(parentRecord, primers), primers);
-    // Whatever could not be found by sequence is placed from the product instead.
-    const missingNames = new Set([...annotated.unplaced, ...annotated.ambiguous.map((entry) => entry.name)]
+    const annotated = withPrimerBindFeatures(withoutPrimerSitesNamed(parentRecord, primers), primers, { replaceAllDesigned: false });
+    // Only mutagenic primers deliberately mismatch this parent. Assembly
+    // primers missing from their assigned template must never be projected here.
+    const mutationNames = new Set(primers.filter((primer) => String(primer.role).startsWith('mutagenesis-')).map((primer) => cleanText(primer.name, 160).toLowerCase()));
+    const missingNames = new Set(annotated.unplaced
       .map((name) => cleanText(name, 160).toLowerCase())
-      .filter(Boolean));
+      .filter((name) => mutationNames.has(name)));
     const mapped = mapProductPrimersOntoParent({
       source,
       productFeatures,
@@ -150,8 +154,11 @@ async function annotateParentPlasmid({ bridge, storagePath, parentEntryId, prime
       usedIds: new Set(annotated.features.map((feature) => cleanText(feature?.id, 200)))
     });
     const added = [...annotated.added, ...mapped];
-    const unplaced = annotated.unplaced
+    const unplaced = [...annotated.unplaced, ...annotated.ambiguous.map((item) => item.name)]
       .filter((name) => !mapped.some((feature) => feature.name === name));
+    if (!added.length) {
+      return { entry: stored.entry, placed: 0, unplaced, error: '' };
+    }
     // The parent keeps its own file byte for byte apart from the primer sites.
     // If it is not a GenBank record the splice understands, the annotation is
     // skipped rather than silently rewriting the user's file.
@@ -186,15 +193,41 @@ async function annotateParentPlasmid({ bridge, storagePath, parentEntryId, prime
   }
 }
 
+// Group by the declared library identity, so one shared donor is updated once
+// and each template receives only the primers used in its PCR reactions.
+export async function annotateCloningTemplates({ bridge, storagePath, primers, source = {}, productFeatures = [] } = {}) {
+  const groups = new Map();
+  for (const primer of asArray(primers)) {
+    const id = cleanText(primer.templateEntryId, 200);
+    if (!id) continue;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(primer);
+  }
+  const results = [];
+  for (const [entryId, assigned] of groups) {
+    const result = await annotateParentPlasmid({
+      bridge, storagePath, parentEntryId: entryId, primers: assigned,
+      source: entryId === source.parentEntryId ? source : {}, productFeatures
+    });
+    results.push({ entryId, ...result });
+  }
+  return results;
+}
+
 export async function confirmCloningDesign({
   record,
   source,
   primers,
   bridge,
   storagePath,
-  productName = ''
+  productName = '',
+  donor = null,
+  fragments = []
 } = {}) {
-  const designedPrimers = asArray(primers);
+  const designedPrimers = assignPrimerTemplateEntries(primers, {
+    fragments, parentEntryId: source?.parentEntryId,
+    donorEntryId: donor?.id || source?.donorEntryId
+  });
   if (!record?.sequence?.length) {
     throw new Error('Load a sequence before confirming the design.');
   }
@@ -208,7 +241,7 @@ export async function confirmCloningDesign({
     throw new Error('Sequence library storage API unavailable.');
   }
 
-  const product = withPrimerBindFeatures(withoutPrimerSitesNamed(record, designedPrimers), designedPrimers);
+  const product = withPrimerBindFeatures(withoutPrimerSitesNamed(record, designedPrimers), designedPrimers, { target: 'product', replaceAllDesigned: false });
   const productRecord = {
     ...record,
     // The open record's own name wins: it is what the viewer shows, and it
@@ -224,21 +257,20 @@ export async function confirmCloningDesign({
     status: LIBRARY_STATUS_TEMPORARY
   });
 
-  const parent = await annotateParentPlasmid({
-    bridge,
-    storagePath,
-    parentEntryId: cleanText(source?.parentEntryId, 200),
-    primers: designedPrimers,
-    source,
-    productFeatures: product.added
+  const templates = await annotateCloningTemplates({
+    bridge, storagePath, primers: designedPrimers, source, productFeatures: product.added
   });
+  const parent = templates.find((item) => item.entryId === source?.parentEntryId)
+    || { entry: null, placed: 0, unplaced: [], error: '' };
 
   return {
     primerCount: designedPrimers.length,
     productEntry,
     productRecord,
     productPlaced: product.added.length,
-    productUnplaced: product.unplaced,
+    productUnplaced: [...product.unplaced, ...product.ambiguous.map((item) => item.name)],
+    templates,
+    parentEntryId: source?.parentEntryId,
     parentEntry: parent.entry,
     parentPlaced: parent.placed,
     parentUnplaced: parent.unplaced,
@@ -253,10 +285,17 @@ export function describeCloningDesignConfirmation(result = {}) {
     `Created ${productName} with ${result.productPlaced} of ${result.primerCount} primers annotated.`,
     'Use Save to keep it in the library.'
   ];
-  if (result.parentEntry) {
-    parts.push(`Annotated ${result.parentPlaced} on ${result.parentEntry.name}.`);
-  } else if (result.parentError) {
-    parts.push(`The parent plasmid was not updated: ${result.parentError}`);
+  const templates = Array.isArray(result.templates) ? result.templates : [{ entry: result.parentEntry, placed: result.parentPlaced, error: result.parentError }];
+  for (const template of templates) {
+    if (template.entry) {
+      parts.push(`Annotated ${template.placed} on ${template.entry.name}.`);
+    } else if (template.error) {
+      const label = template.entryId && template.entryId !== result.parentEntryId ? `Template ${template.entryId}` : 'The parent plasmid';
+      parts.push(`${label} was not updated: ${template.error}`);
+    }
+    if (template.unplaced?.length) {
+      parts.push(`No unique binding site on ${template.entry?.name || template.entryId} for ${template.unplaced.join(', ')}.`);
+    }
   }
   const unplaced = asArray(result.productUnplaced);
   if (unplaced.length) {

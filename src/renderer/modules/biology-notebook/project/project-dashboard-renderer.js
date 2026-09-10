@@ -207,7 +207,6 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
                   <select aria-label="Paper finding day of month" data-paper-finder-monthday>
                     ${monthDayOptions}
                   </select>
-                  <span class="small-note">Shorter months use their last day.</span>
                 </label>
                 <label class="project-paper-finder-calendar-field">
                   <span>At</span>

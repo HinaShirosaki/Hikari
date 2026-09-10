@@ -1,4 +1,3 @@
-import { createProteinBuilderCloningNotebookPage } from '../protein-builder-cloning-notebook.js';
 import {
   cleanText,
   normalizeSequenceText
@@ -9,7 +8,7 @@ import {
 } from './protein-builder-design-source.js';
 
 export function createProteinBuilderConfirmationActions(ctx) {
-  const { state, options, controllers, actions } = ctx;
+  const { state, controllers, actions } = ctx;
 
   function normalizeProteinBuilderConfirmation(payload) {
     const safePayload = payload && typeof payload === 'object' ? payload : null;
@@ -42,75 +41,43 @@ export function createProteinBuilderConfirmationActions(ctx) {
     controllers.detail?.renderActiveRecord?.();
   }
 
-  function createConfirmedProteinBuilderCloningNotebookPage(confirmation = {}) {
-    const designSource = confirmation?.cloningDesignSource;
-    if (!designSource) {
-      return null;
-    }
-
-    const currentRecord = actions.getSelectedRecord();
-    const sourceRecord = designSource.assembledRecord || {};
-    const assembledRecord = {
-      ...sourceRecord,
-      ...(currentRecord || {}),
-      name: cleanText(currentRecord?.name, 160)
-        || cleanText(sourceRecord?.name, 160)
-        || cleanText(confirmation?.recordName, 160)
-        || 'Protein Builder construct',
-      sequence: normalizeSequenceText(currentRecord?.sequence || sourceRecord?.sequence || '')
+  function openProteinBuilderCloningDesign(confirmation) {
+    const record = actions.getSelectedRecord();
+    const design = buildCurrentProteinBuilderDesignSource(confirmation.cloningDesignSource, record);
+    const insert = normalizeSequenceText(design.dnaConstruct.sequence);
+    const backbone = design.backbone;
+    const insertionStart = Number(record.features?.find((feature) => feature.id === 'protein_builder_insert')?.segments?.[0]?.start ?? backbone.insertionOffset);
+    const start = Math.max(0, Math.min(backbone.backboneSequence.length, Number.isFinite(insertionStart) ? insertionStart : backbone.backboneSequence.length));
+    const restriction = ['restriction', 'restriction-ligation'].includes(cleanText(backbone.variantMode || backbone.variant_mode, 80).toLowerCase());
+    state.sequenceEditDesignSource = {
+      recordName: record.name,
+      parentEntryId: cleanText(backbone.entryId || backbone.hostVectorId, 200),
+      originalSequence: backbone.templateSequence || backbone.backboneSequence,
+      editedSequence: record.sequence,
+      originalRange: { start, end: start },
+      editedRange: { start, end: start + insert.length },
+      editRequest: { type: 'insertion', start: start + 1, end: start, editedSequence: insert, originalSequence: '' },
+      defaultStrategy: restriction ? 'restriction-ligation' : 'gibson',
+      supportedStrategies: restriction ? ['restriction-ligation'] : ['gibson', 'in-fusion'],
+      proteinBuilderDesign: { ...design, constructName: confirmation.constructName },
+      notebookEntryId: confirmation.notebookEntryId
     };
-    if (!assembledRecord.sequence) {
-      return null;
-    }
-
-    const currentDesignSource = buildCurrentProteinBuilderDesignSource(designSource, assembledRecord);
-    return createProteinBuilderCloningNotebookPage({
-      state: options?.state,
-      persist: options?.persist,
-      createId: options?.createId,
-      onNotebookEntriesChanged: options?.onNotebookEntriesChanged,
-      entryId: confirmation?.notebookEntryId,
-      constructName: cleanText(confirmation?.constructName, 160)
-        || cleanText(designSource?.constructName, 160)
-        || cleanText(assembledRecord?.name, 160),
-      backbone: currentDesignSource.backbone,
-      dnaConstruct: currentDesignSource.dnaConstruct,
-      assembledRecord
-    });
+    state.cloningDesign = {};
+    setProteinBuilderConfirmation(null, { render: false });
+    controllers.cloningDesign.open();
   }
 
+  // Older review payloads also enter the shared cloning page rather than
+  // retaining a second primer-generation and confirmation path.
   function confirmProteinBuilderConstruct() {
-    if (!state.proteinBuilderConfirmation) {
-      return;
+    if (state.proteinBuilderConfirmation?.cloningDesignSource) {
+      openProteinBuilderCloningDesign(state.proteinBuilderConfirmation);
     }
-    const confirmation = state.proteinBuilderConfirmation;
-    let cloningNotebookResult = null;
-    let notebookWarning = '';
-    try {
-      cloningNotebookResult = createConfirmedProteinBuilderCloningNotebookPage(confirmation);
-    } catch (error) {
-      notebookWarning = error?.message || 'Failed to update the cloning notebook page.';
-    }
-
-    setProteinBuilderConfirmation(null);
-    actions.setInputComposerVisible(false);
-    if (cloningNotebookResult?.entry) {
-      const notebookTitle = cleanText(cloningNotebookResult.entry.experimentName, 220)
-        || cleanText(cloningNotebookResult.entry.protocolName, 220)
-        || 'Protein Builder Cloning Assembly';
-      const primerCount = Math.max(0, Number(cloningNotebookResult.entry?.proteinBuilderCloningDesign?.primerCount) || 0);
-      actions.setStatus(`Construct confirmed. Notebook page "${notebookTitle}" has the cloning plan, PCR program, and ${primerCount} primer${primerCount === 1 ? '' : 's'}. Save it to add it to Sequence Library.`);
-      return;
-    }
-    if (notebookWarning) {
-      actions.setStatus(`Construct confirmed, but the cloning notebook page was not updated: ${notebookWarning}`, true);
-      return;
-    }
-    actions.setStatus('Construct confirmed. Save it to add it to Sequence Library.');
   }
 
   return {
     normalizeProteinBuilderConfirmation,
+    openProteinBuilderCloningDesign,
     setProteinBuilderConfirmation,
     confirmProteinBuilderConstruct
   };

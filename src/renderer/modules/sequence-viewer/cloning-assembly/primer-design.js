@@ -4,6 +4,7 @@ import { normalizeEditRequest } from './edit-map.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designAssemblyPrimersForRoute, designRestrictionLigationPrimers } from './assembly-primers.js';
+import { evaluateFragmentAssembly } from './overlap-evaluation.js';
 import { designMutagenesisPrimers } from './mutagenesis.js';
 import { designWithThresholdFallback } from './strategy.js';
 
@@ -38,39 +39,30 @@ export function designCloningPrimers(args = {}) {
       };
     }
 
-    if (strategyName === 'gibson') {
-      const base = designAssemblyPrimersForRoute(
-        asArray(fragmentMap?.fragments),
-        routeEvaluations?.gibson?.junctions,
+    if (strategyName === 'gibson' || strategyName === 'overlap-pcr') {
+      const isGibson = strategyName === 'gibson';
+      const fragments = asArray(fragmentMap?.fragments).filter((fragment) => isGibson || fragment.role !== 'backbone');
+      const evaluation = evaluateFragmentAssembly(fragments, {
         thresholds,
-        config
-      );
+        preferences: config,
+        circular: isGibson && (Boolean(host) || asArray(routeEvaluations?.gibson?.junctions).some((junction) => junction.wrapAround)),
+        resultSequence: isGibson ? fragmentMap?.resultSequence : ''
+      });
+      if (!evaluation.feasible) {
+        return { feasible: false, primers: [], warnings: evaluation.warnings };
+      }
+      const base = designAssemblyPrimersForRoute(evaluation.fragments, evaluation.junctions, thresholds, config);
       if (!base.feasible) {
         return base;
       }
       return {
         ...base,
-        ...summarizePrimerPlan(base.primers, routeEvaluations?.gibson?.junctions)
-      };
-    }
-
-    if (strategyName === 'overlap-pcr') {
-      const insertFragments = asArray(fragmentMap?.fragments).filter((fragment) => fragment.role !== 'backbone');
-      const base = designAssemblyPrimersForRoute(
-        insertFragments,
-        routeEvaluations?.overlapPCR?.junctions,
-        thresholds,
-        config
-      );
-      if (!base.feasible) {
-        return base;
-      }
-      return {
-        ...base,
-        ...summarizePrimerPlan(base.primers, routeEvaluations?.overlapPCR?.junctions),
+        junctions: evaluation.junctions,
+        ...summarizePrimerPlan(base.primers, evaluation.junctions),
         warnings: [
           ...asArray(base.warnings),
-          args?.assembledVectorDesign?.downstreamAssemblyMethod
+          ...evaluation.warnings,
+          !isGibson && args?.assembledVectorDesign?.downstreamAssemblyMethod
             ? `Backbone insertion should proceed by ${args.assembledVectorDesign.downstreamAssemblyMethod} after insert fusion.`
             : ''
         ].filter(Boolean)

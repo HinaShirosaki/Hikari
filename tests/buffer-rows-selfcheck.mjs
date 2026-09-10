@@ -58,7 +58,7 @@ const doc = {
 };
 
 const row1 = doc.getElementById('buffer-row-1');
-['name', 'mw', 'stock', 'final', 'output', 'suggestions'].forEach((field) => {
+['name', 'mw', 'stock', 'final', 'amount', 'note', 'suggestions'].forEach((field) => {
   row1.children.push(doc.getElementById(`buffer-${field}-1`));
 });
 doc.getElementById('buffer-name-1').setAttribute('aria-controls', 'buffer-suggestions-1');
@@ -99,7 +99,7 @@ doc.getElementById('buffer-name-7').value = 'NaCl';
 doc.getElementById('buffer-mw-7').value = '58.44';
 doc.getElementById('buffer-final-7').value = '150 mM';
 doc.getElementById('buffer-final-7').fire('input');
-assert.match(doc.getElementById('buffer-output-7').textContent, /\d/);
+assert.match(doc.getElementById('buffer-amount-7').placeholder, /\d/);
 
 const bufferRemoveTarget = {
   closest(selector) {

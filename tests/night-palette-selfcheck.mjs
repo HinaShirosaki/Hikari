@@ -289,6 +289,11 @@ const FIXED_ACROSS_THEMES = new Set([
   '--gel-marker', '--gel-marker-solid', '--gel-marker-label', '--gel-divider',
   '--gel-band-positive', '--gel-path', '--gel-path-glow',
   '--papers-highlight',
+  // The Hikari action mark is a fixed brand spectrum in every theme.
+  '--theme-hikari-rainbow-red', '--theme-hikari-rainbow-orange',
+  '--theme-hikari-rainbow-yellow', '--theme-hikari-rainbow-green',
+  '--theme-hikari-rainbow-cyan', '--theme-hikari-rainbow-blue',
+  '--theme-hikari-rainbow-violet',
   // Fixed-value scientific canvases, per ui/css/Readme.md.
   '--tool-box-canvas-background', '--tool-box-canvas-border',
   // Self-consistent chips: each pins its own light fill AND its own dark ink.

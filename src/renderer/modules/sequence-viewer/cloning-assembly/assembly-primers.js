@@ -2,7 +2,7 @@ import { reverseComplementDna } from '../calculations/sequence.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
-import { buildPrimerRecord, resolveFragmentPrimerTemplate } from './primer-records.js';
+import { buildPrimerRecord, fragmentPrimerConfig, resolveFragmentPrimerTemplate } from './primer-records.js';
 import { resolveRestrictionRecognitionSequence } from './restriction-ligation.js';
 
 export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluation, thresholds, config) {
@@ -38,13 +38,7 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
   const reverseAddition = normalizeSequence(templateDesign.reverseAddedSequence);
   const forwardTail = `${clampSequence}${forwardSite}${forwardAddition}`;
   const reverseTail = `${clampSequence}${reverseSite}${reverseComplementDna(reverseAddition)}`;
-  const fragmentConfig = insert?.metadata?.specificitySequence
-    ? {
-        ...config,
-        specificitySequence: insert.metadata.specificitySequence,
-        specificityCircular: Boolean(insert.metadata.specificityCircular)
-      }
-    : config;
+  const fragmentConfig = fragmentPrimerConfig(insert, config);
   const forwardBinding = selectBindingWindow(
     templateDesign.templateSequence,
     'forward',
@@ -86,7 +80,6 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       ampliconLength: templateDesign.desiredSequence.length,
       templateId: insert.id,
       warnings: [
-        ...asArray(templateDesign.warnings),
         `Adds ${selectedSites[0].name || selectedSites[0].site} to the 5' end.`,
         forwardAddition ? `Adds ${forwardAddition.length} nt of desired insert sequence from the forward primer tail.` : ''
       ].filter(Boolean)
@@ -110,7 +103,13 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
   return {
     feasible: true,
     primers,
-    warnings: []
+    // What the stated template could not confirm belongs in the plan's warnings,
+    // not buried on one primer row: it used to block the route outright, so it
+    // has to stay just as visible now that it only advises.
+    warnings: (asArray(templateDesign.warnings).length
+      ? asArray(templateDesign.warnings)
+      : [forwardBinding.specificityWarning, reverseBinding.specificityWarning]
+    ).filter(Boolean)
   };
 }
 
@@ -118,7 +117,9 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
   const safeFragments = asArray(fragments);
   const safeJunctions = asArray(junctions);
   const primers = [];
-  const warnings = [];
+  // Blockers fail the route; notes ride along with a design that still works.
+  const blockers = [];
+  const notes = [];
 
   safeFragments.forEach((fragment, index) => {
     const nextJunction = safeJunctions.find((junction) => junction.leftFragmentId === fragment.id && !junction.wrapAround)
@@ -127,9 +128,11 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
       || safeJunctions.find((junction) => junction.rightFragmentId === fragment.id && junction.wrapAround);
     const templateDesign = resolveFragmentPrimerTemplate(fragment);
     if (templateDesign.feasible === false) {
-      warnings.push(...asArray(templateDesign.blockingWarnings || templateDesign.warnings));
+      blockers.push(...asArray(templateDesign.blockingWarnings || templateDesign.warnings));
       return;
     }
+    const templateNotes = asArray(templateDesign.warnings);
+    notes.push(...templateNotes);
     // Each seam is split between the two primers that meet at it, so this
     // fragment's forward primer carries the previous fragment's 3' end.
     const previousOverlap = previousJunction && previousJunction.mode === 'primer-introduced'
@@ -142,15 +145,7 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
       : '';
     const reverseTargetTail = `${normalizeSequence(templateDesign.reverseAddedSequence)}${nextOverlap}`;
     const reverseTail = reverseTargetTail ? reverseComplementDna(reverseTargetTail) : '';
-    // A fragment amplified from a donor plasmid carries its own specificity
-    // template; without one the window is only checked against itself.
-    const fragmentConfig = fragment?.metadata?.specificitySequence
-      ? {
-          ...config,
-          specificitySequence: fragment.metadata.specificitySequence,
-          specificityCircular: Boolean(fragment.metadata.specificityCircular)
-        }
-      : config;
+    const fragmentConfig = fragmentPrimerConfig(fragment, config);
     const forwardBinding = selectBindingWindow(templateDesign.templateSequence, 'forward', thresholds, forwardTail.length, fragmentConfig);
     const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, fragmentConfig);
 
@@ -163,12 +158,16 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         (missing === 'forward' ? forwardTail : reverseTail).length,
         fragmentConfig
       );
-      warnings.push(`Unable to find compatible binding windows for ${fragment.name}.${reason ? ` ${reason}` : ''}`);
+      blockers.push(`Unable to find compatible binding windows for ${fragment.name}.${reason ? ` ${reason}` : ''}`);
       return;
+    }
+    // The resolver's own note already names the template, so only speak up here
+    // when it had nothing to say.
+    if (!templateNotes.length) {
+      notes.push(forwardBinding.specificityWarning, reverseBinding.specificityWarning);
     }
 
     const forwardWarnings = [
-      ...asArray(templateDesign.warnings),
       templateForwardAddition
         ? `Adds ${templateForwardAddition.length} nt at the 5' end from the primer tail.`
         : '',
@@ -213,17 +212,17 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     );
   });
 
-  if (!primers.length || warnings.length) {
+  if (!primers.length || blockers.length) {
     return {
       feasible: false,
       primers,
-      warnings: warnings.length ? warnings : ['Unable to design a complete assembly primer set.']
+      warnings: blockers.length ? blockers : ['Unable to design a complete assembly primer set.']
     };
   }
 
   return {
     feasible: true,
     primers,
-    warnings: []
+    warnings: [...new Set(notes.filter(Boolean))]
   };
 }

@@ -119,6 +119,7 @@ export function installProteinBuilderAssemblyState(ctx) {
     const hydrated = {
       ...backbone,
       ...derived,
+      templateSequence: record.sequence,
       entryName: cleanText(response?.entry?.name, 160) || cleanText(backbone?.entryName, 160),
       entryStatus: cleanText(response?.entry?.status, 40) || cleanText(backbone?.entryStatus, 40),
       updatedAt: cleanText(response?.entry?.updatedAt, 120) || cleanText(backbone?.updatedAt, 120)

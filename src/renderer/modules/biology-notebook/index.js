@@ -83,8 +83,7 @@ export function initLabNotebook({
     onProtocolChange: (...args) => onProtocolChange(...args),
     showProjectDashboard: (...args) => showProjectDashboard(...args),
     ensureNotebookEntryForLinkedWork: (...args) => ensureNotebookEntryForLinkedWork(...args),
-    applyQuickSampleCapture: (...args) => applyQuickSampleCapture(...args),
-    appendNotebookResultLine: (...args) => appendNotebookResultLine(...args)
+    applyQuickSampleCapture: (...args) => applyQuickSampleCapture(...args)
   });
 
   const {

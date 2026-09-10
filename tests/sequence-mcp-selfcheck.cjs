@@ -251,8 +251,13 @@ test('all seven primer routes validate physical products; missing donors and cor
   const patch = { start: 350, end: 350, sequence: insert };
   const desired = model.applyPatches(original, [patch]).record;
   const absent = model.comparePrimerRoutes(original, desired, [patch], ['golden-gate', 'overlap-extension'], null);
+  // Naming no template only advises the interactive designer; the MCP contract
+  // still refuses the route, because it holds the templates and could not
+  // reconstruct the product or verify a binding site on any of them.
   assert.equal(absent.status, 'no_feasible_design');
-  assert.ok(absent.routes.every(r => r.stages[0].warnings.some(w => /physical PCR template/.test(w))));
+  assert.ok(absent.routes.every(r => !r.feasible
+    && r.stages[0].product_matches === false
+    && r.stages[0].warnings.some(w => /names no PCR template/.test(w))));
   const donor = { id: 'donor', name: 'Donor', sequence: randomDna(1780).slice(1680) + insert + randomDna(1880).slice(1780), topology: 'linear' };
   const designs = model.comparePrimerRoutes(original, desired, [patch], undefined, donor);
   for (const method of ['gibson', 'in-fusion', 'golden-gate', 'overlap-extension']) assert.equal(designs.routes.find(r => r.method === method).feasible, true, method);

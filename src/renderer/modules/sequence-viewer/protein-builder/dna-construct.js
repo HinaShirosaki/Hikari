@@ -19,6 +19,7 @@ export function buildDnaPartFromProtein(part, options = {}) {
       dnaSequence: alignedSequence,
       templateSequence: alignedSequence,
       templateName: cleanText(part?.sourceVectorName, 160),
+      templateEntryId: cleanText(part?.sourceVectorId, 200),
       templateHostSequence: normalizeSequenceText(part?.sourceVectorSequence || '')
     };
   }
@@ -156,6 +157,7 @@ export function buildDnaConstruct(payload = {}, options = {}) {
       dnaSequence: dnaPart.dnaSequence,
       templateSequence: normalizeSequenceText(dnaPart.templateSequence || ''),
       templateName: cleanText(dnaPart.templateName, 160),
+      templateEntryId: cleanText(dnaPart.templateEntryId, 200),
       templateHostSequence: normalizeSequenceText(dnaPart.templateHostSequence || ''),
       codonOptimized: dnaPart.codonOptimized === true,
       length: dnaPart.dnaSequence.length

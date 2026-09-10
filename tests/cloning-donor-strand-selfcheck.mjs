@@ -5,6 +5,7 @@
 // wrong donor and every insert route came back infeasible.
 import assert from 'node:assert/strict';
 import { resolveFragmentPrimerTemplate } from '../src/renderer/modules/sequence-viewer/cloning-assembly/primer-records.js';
+import { selectBindingWindow } from '../src/renderer/modules/sequence-viewer/cloning-assembly/overlap-windows.js';
 
 let seed = 20260909;
 function dna(length) {
@@ -42,13 +43,31 @@ assert.equal(flipped.feasible, true, 'minus-strand insert must amplify off the s
 assert.equal(flipped.templateSequence, reverseComplement(insert));
 assert.deepEqual(flipped.blockingWarnings, []);
 
-// A genuinely unrelated donor still has to be rejected.
+// The template is the user's declared choice, so an unrelated donor is named in
+// a warning and the design still proceeds off the assembled fragment.
 const wrongDonor = resolveFragmentPrimerTemplate({
   id: 'insert',
   name: 'Insert amplicon',
   sequence: insert,
   metadata: { source: 'donor_plasmid', templateName: 'pOther', templateSequence: dna(4000) }
 });
-assert.equal(wrongDonor.feasible, false, 'an unrelated donor must still be reported');
+assert.equal(wrongDonor.feasible, true, 'an unrelated donor must advise, not veto');
+assert.deepEqual(wrongDonor.blockingWarnings, []);
+assert.equal(wrongDonor.templateSequence, insert, 'primers fall back to the assembled fragment');
+assert.match(wrongDonor.warnings.join(' '), /pOther does not visibly carry this fragment/);
+
+// A window the donor carries twice is a second PCR product, not a stale record,
+// so it still fails the route -- no note makes it work.
+const repeatedDonor = `${insert}${dna(300)}${insert}`;
+const thresholds = { primerLength: { min: 18, max: 30 }, primerTm: { min: 45, max: 75 }, overlapTm: { min: 45, max: 75 } };
+assert.equal(
+  selectBindingWindow(insert, 'forward', thresholds, 0, { specificitySequence: repeatedDonor }),
+  null,
+  'a repeated template must still block'
+);
+// ...while one the donor does not carry at all designs, and says so.
+const absentWindow = selectBindingWindow(insert, 'forward', thresholds, 0, { specificitySequence: dna(2000) });
+assert.ok(absentWindow, 'an absent template must not block');
+assert.match(absentWindow.specificityWarning, /off the assembled sequence/);
 
 console.log('cloning-donor-strand-selfcheck: ok');

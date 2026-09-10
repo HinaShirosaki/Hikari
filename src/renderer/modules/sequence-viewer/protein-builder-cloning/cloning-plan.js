@@ -1,4 +1,5 @@
 import { assembleCloningPlan } from '../cloning-assembly.js';
+import { assignPrimerTemplateEntries } from '../primer-template-routing.js';
 import { PROTEIN_ASSEMBLY_TAGS } from '../protein-builder/assembly-model.js';
 import { renamePrimers } from '../primer-naming.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
@@ -60,6 +61,7 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
       sequence: normalizeSequenceText(part?.dnaSequence || ''),
       templateSequence: proteinPartTemplate(part),
       templateName: cleanText(part?.templateName, 160),
+      templateEntryId: cleanText(part?.templateEntryId, 200),
       templateHostSequence: normalizeSequenceText(part?.templateHostSequence || '')
     }))
     .filter((part) => part.sequence.length);
@@ -113,6 +115,7 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
           source: 'protein_builder_template',
           templateSequence: part.templateSequence,
           templateName: part.templateName,
+          templateEntryId: part.templateEntryId,
           specificitySequence: part.templateHostSequence || part.templateSequence,
           specificityCircular: Boolean(part.templateHostSequence)
         }
@@ -221,7 +224,9 @@ function buildProteinBuilderCloningPlan({
   backbone = {},
   dnaConstruct = {},
   assembledRecord = {},
-  constructName = ''
+  constructName = '',
+  strategy = '',
+  preferences = {}
 } = {}) {
   const rawBackboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
   const backboneSequence = linearizeBackboneAtInsertionOffset(rawBackboneSequence, backbone);
@@ -238,6 +243,7 @@ function buildProteinBuilderCloningPlan({
   const insertFragments = buildProteinInsertFragments(dnaConstruct, safeConstructName);
 
   const plan = assembleCloningPlan({
+    strategy,
     hostVectors: [
       {
         id: 'protein_builder_backbone',
@@ -249,11 +255,14 @@ function buildProteinBuilderCloningPlan({
     hostVectorId: 'protein_builder_backbone',
     fragments: insertFragments,
     resultSequence,
-    preferences: resolveBackboneCloningPreferences(backbone)
+    preferences: { ...resolveBackboneCloningPreferences(backbone), ...preferences }
   });
 
   if (plan?.primerOligoPlan?.primers) {
-    plan.primerOligoPlan.primers = renamePrimers(plan.primerOligoPlan.primers, {
+    plan.primerOligoPlan.primers = renamePrimers(assignPrimerTemplateEntries(plan.primerOligoPlan.primers, {
+      fragments: plan.orderedFragmentMap.fragments,
+      parentEntryId: backbone.entryId || backbone.hostVectorId
+    }), {
       targetLabel: safeConstructName,
       tags: terminalTagLabels(dnaConstruct),
       backboneNames: [backboneName]

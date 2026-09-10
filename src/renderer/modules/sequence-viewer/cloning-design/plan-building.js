@@ -1,4 +1,5 @@
 import { assembleCloningPlan } from '../cloning-assembly.js';
+import { assignPrimerTemplateEntries } from '../primer-template-routing.js';
 import { buildMegaprimerRestrictionPlan } from '../cloning-assembly/megaprimer-restriction.js';
 import { buildQ5KldPlan } from '../cloning-assembly/q5-kld-mutagenesis.js';
 import { buildGoldenGatePlan } from '../cloning-assembly/golden-gate.js';
@@ -6,7 +7,7 @@ import { buildOverlapExtensionLigationPlan } from '../cloning-assembly/overlap-e
 import { clamp, cleanText, normalizeSequenceText } from '../shared.js';
 import { describeEditTarget, renamePrimers } from '../primer-naming.js';
 import { asArray } from '../../../lib/normalize.js';
-import { buildProteinInsertFragments } from '../protein-builder-cloning/cloning-plan.js';
+import { buildProteinInsertFragments, buildProteinBuilderCloningPlan } from '../protein-builder-cloning/cloning-plan.js';
 import { buildLinearizedBackbone, extractOriginalTemplateForEditedRange } from './edit-ranges.js';
 import { IN_FUSION_PROCEDURE, STRATEGY_GIBSON, STRATEGY_GOLDEN_GATE, STRATEGY_IN_FUSION, STRATEGY_OVERLAP_EXTENSION, STRATEGY_Q5_KLD, STRATEGY_TWO_STEP_LIGATION, STRATEGY_WHOLE_PLASMID } from './strategies.js';
 
@@ -174,6 +175,35 @@ function firstEnzymeName(displayPlan = {}) {
 // record is known: "MPM2 A34J F", "BsaI vector R".
 function buildDisplayPlan(args = {}) {
   const { source, record } = args;
+  if (source?.proteinBuilderDesign) {
+    const inFusion = args.strategy === STRATEGY_IN_FUSION;
+    const plan = buildProteinBuilderCloningPlan({
+      ...source.proteinBuilderDesign,
+      assembledRecord: record,
+      strategy: inFusion ? STRATEGY_GIBSON : args.strategy,
+      preferences: inFusion ? {
+        allowRestrictionLigation: false,
+        minEngineeredOverlapLength: 15, maxEngineeredOverlapLength: 21,
+        overlapTmRange: { min: 45, max: 75 }, allowExistingTerminalOverlap: false
+      } : {}
+    });
+    if (plan && inFusion) {
+      plan.stepByStepProcedure = IN_FUSION_PROCEDURE;
+      plan.recommendedAssemblyStrategy = STRATEGY_IN_FUSION;
+    }
+    return {
+      strategy: args.strategy,
+      feasible: Boolean(plan?.feasible),
+      plans: [{ label: 'Protein Builder assembly', plan }],
+      primers: planPrimers(plan),
+      warnings: collectWarnings(plan),
+      summary: {
+        templateLength: source.originalSequence.length,
+        resultLength: record.sequence.length,
+        insertLength: source.proteinBuilderDesign.dnaConstruct.sequence.length
+      }
+    };
+  }
   const displayPlan = buildRoutePlan(args);
   const { gene, mutation } = describeEditTarget({
     record,
@@ -182,7 +212,11 @@ function buildDisplayPlan(args = {}) {
   });
   return {
     ...displayPlan,
-    primers: renamePrimers(displayPlan.primers, {
+    primers: renamePrimers(assignPrimerTemplateEntries(displayPlan.primers, {
+      fragments: asArray(displayPlan.plans).flatMap((entry) => asArray(entry?.plan?.orderedFragmentMap?.fragments)),
+      parentEntryId: source?.parentEntryId,
+      donorEntryId: args.donor?.id
+    }), {
       gene,
       mutation,
       targetLabel: gene,

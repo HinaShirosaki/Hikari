@@ -3,6 +3,7 @@ import { clamp, cleanText, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 import { annotatePrimersOnSelectedRecord } from './primer-annotation.js';
 import { createDonorSelection } from './cloning-design/donor-selection.js';
+import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
 import { createSequenceViewerCloningDesignNotebookPage } from './cloning-design-notebook.js';
 import { confirmCloningDesign, describeCloningDesignConfirmation } from './cloning-design-confirm.js';
 import { asArray } from '../../lib/normalize.js';
@@ -10,7 +11,7 @@ import { buildSourceKey, deriveDefaultInsertRange, getEditEndIndex, getEditStart
 import { formatEditType, formatStrategyLabel } from './cloning-design/formatting.js';
 import { buildDisplayPlan } from './cloning-design/plan-building.js';
 import { isVisibleElement, renderPlanSummary, renderPrimerTable, renderProcedure, renderRestrictionEnzymes, renderWarnings } from './cloning-design/plan-rendering.js';
-import { STRATEGIES, STRATEGY_WHOLE_PLASMID, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
+import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
 
 export function createSequenceViewerCloningDesignController(config = {}) {
   const elements = config?.elements || {};
@@ -49,14 +50,26 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   // Confirming writes two library entries, so the button stays down until both
   // have settled rather than letting a double click write the product twice.
   let confirmPending = false;
+  // Hydrating a seeded donor is a disk read. Designing before it lands templates
+  // the PCR off this record instead, so every insert route comes back
+  // infeasible -- and that stale plan stays on screen once the donor arrives,
+  // because a re-render does not re-run the design.
+  let donorReady = Promise.resolve();
 
+
+  function availableStrategies() {
+    const supported = getCloningDesignSource()?.supportedStrategies;
+    return Array.isArray(supported)
+      ? supported.map((id) => [...STRATEGIES, RESTRICTION_LIGATION_STRATEGY].find((strategy) => strategy.id === id)).filter(Boolean)
+      : STRATEGIES;
+  }
 
   function getDesignState() {
     if (!state.cloningDesign || typeof state.cloningDesign !== 'object') {
       state.cloningDesign = {};
     }
-    if (!STRATEGIES.some((strategy) => strategy.id === state.cloningDesign.strategy)) {
-      state.cloningDesign.strategy = STRATEGY_WHOLE_PLASMID;
+    if (!availableStrategies().some((strategy) => strategy.id === state.cloningDesign.strategy)) {
+      state.cloningDesign.strategy = getCloningDesignSource()?.defaultStrategy || STRATEGY_WHOLE_PLASMID;
     }
     return state.cloningDesign;
   }
@@ -104,7 +117,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     const defaultRange = deriveDefaultInsertRange(record, source);
     designState.sourceKey = sourceKey;
     designState.storedAgentDesign = null;
-    designState.strategy = STRATEGY_WHOLE_PLASMID;
+    designState.strategy = source?.defaultStrategy || STRATEGY_WHOLE_PLASMID;
     designState.insertStart = defaultRange.start;
     designState.insertEnd = defaultRange.end;
     // Vector Builder records which stored vector a replacement came from; that
@@ -112,11 +125,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     const seededDonorId = cleanText(source?.donorEntryId, 200);
     designState.donorEntryId = seededDonorId;
     resetDonor();
-    if (seededDonorId) {
-      void selectDonorEntry(seededDonorId, { silent: true });
-    }
+    donorReady = seededDonorId
+      ? selectDonorEntry(seededDonorId, { silent: true })
+      : Promise.resolve();
     designState.displayPlan = null;
-    designState.notebookEntryId = '';
+    designState.notebookEntryId = source?.notebookEntryId || '';
   }
 
   function hasDesignSource() {
@@ -132,7 +145,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       return;
     }
     const designState = getDesignState();
-    elements.cloningDesignStrategyList.innerHTML = STRATEGIES
+    elements.cloningDesignStrategyList.innerHTML = availableStrategies()
       .map((strategy) => `
         <button
           type="button"
@@ -231,13 +244,13 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   function syncControls() {
     const designState = getDesignState();
     const hasSource = hasDesignSource();
-    const usesRange = !designState.storedAgentDesign && cloningStrategyUsesInsertRange(designState.strategy);
+    const usesRange = !designState.storedAgentDesign && !getCloningDesignSource()?.proteinBuilderDesign && cloningStrategyUsesInsertRange(designState.strategy);
     if (elements.cloningDesignRangePanel) {
       elements.cloningDesignRangePanel.hidden = !usesRange;
     }
     // Only insert routes amplify something that could come off another plasmid;
     // whole-plasmid and Q5/KLD are PCRs on this record by definition.
-    const usesDonor = !designState.storedAgentDesign && cloningStrategyUsesDonor(designState.strategy);
+    const usesDonor = !designState.storedAgentDesign && !getCloningDesignSource()?.proteinBuilderDesign && cloningStrategyUsesDonor(designState.strategy);
     if (elements.cloningDesignDonorPanel) {
       elements.cloningDesignDonorPanel.hidden = !usesDonor;
     }
@@ -300,7 +313,13 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     let notebookResult = null;
     let notebookError = '';
     try {
-      notebookResult = createSequenceViewerCloningDesignNotebookPage({
+      notebookResult = source?.proteinBuilderDesign ? (displayPlan.feasible ? createProteinBuilderCloningNotebookPage({
+        state: appState, persist, createId, onNotebookEntriesChanged,
+        entryId: designState.notebookEntryId,
+        ...source.proteinBuilderDesign,
+        assembledRecord: record,
+        plan: displayPlan.plans[0]?.plan
+      }) : null) : createSequenceViewerCloningDesignNotebookPage({
         state: appState,
         persist,
         createId,
@@ -328,6 +347,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       void annotatePrimersOnSelectedRecord({
         state,
         primers,
+        target: 'product',
         persistFeatureMutation,
         label: `Annotated ${formatStrategyLabel(designState.strategy)} primers on the sequence.`
       });
@@ -343,14 +363,23 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     }
     confirmPending = true;
     syncControls();
+    const confirmedRecord = getSelectedRecord();
+    const confirmedSource = getCloningDesignSource();
+    const confirmedIndex = state.selectedRecordIndex;
     try {
       const result = await confirmCloningDesign({
-        record: getSelectedRecord(),
-        source: getCloningDesignSource(),
+        record: confirmedRecord,
+        source: confirmedSource,
         primers,
         bridge: getBridge(),
         storagePath: getStoragePath()
       });
+      // Disk writes may finish after the user has opened another record. The
+      // saved product must not replace that record or steal its library ID.
+      if (getSelectedRecord() !== confirmedRecord || state.selectedRecordIndex !== confirmedIndex
+        || getCloningDesignSource() !== confirmedSource) {
+        return result;
+      }
       // The product record came back carrying the primer annotations, so it
       // replaces the working copy before anything re-renders.
       const records = asArray(state.records);
@@ -360,7 +389,8 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         state.selectedFeatureIndex = -1;
       }
       await onDesignConfirmed(result);
-      setStatus(describeCloningDesignConfirmation(result), Boolean(result.parentError));
+      if (confirmedSource?.proteinBuilderDesign) onReturnToDetail();
+      setStatus(describeCloningDesignConfirmation(result), result.templates.some((template) => template.error || template.unplaced.length));
       return result;
     } catch (error) {
       setStatus(error?.message || 'Failed to confirm the design.', true);
@@ -400,9 +430,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     resetForSource();
     onNavigateCloningDesign();
     render();
-    if (!getDesignState().displayPlan) {
-      designPrimers();
-    }
+    void donorReady.then(() => {
+      if (!getDesignState().displayPlan) {
+        designPrimers();
+      }
+    });
     return true;
   }
 
@@ -417,7 +449,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         event?.target?.closest?.('[data-cloning-design-strategy]')?.dataset?.cloningDesignStrategy,
         80
       );
-      if (!STRATEGIES.some((strategy) => strategy.id === strategyId)) {
+      if (!availableStrategies().some((strategy) => strategy.id === strategyId)) {
         return;
       }
       const designState = getDesignState();

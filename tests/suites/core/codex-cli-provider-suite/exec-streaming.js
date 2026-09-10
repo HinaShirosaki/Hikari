@@ -300,8 +300,19 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           const assayPlotlySkillText = fs.readFileSync(assayPlotlySkillPath, 'utf8');
           assert.match(assayPlotlySkillText, /`assay_table`/);
           assert.match(assayPlotlySkillText, /`plotly_graph`/);
-          assert.match(assayPlotlySkillText, /Common Plotly settings:/);
-          assert.match(assayPlotlySkillText, /official Plotly\.js documentation/);
+          assert.match(assayPlotlySkillText, /references\/plotly-recipes\.md/);
+          const plotlyRecipesText = fs.readFileSync(path.join(
+            path.dirname(assayPlotlySkillPath),
+            'references',
+            'plotly-recipes.md'
+          ), 'utf8');
+          const plotlyInspectionText = fs.readFileSync(path.join(
+            path.dirname(assayPlotlySkillPath),
+            'references',
+            'inspection-and-errors.md'
+          ), 'utf8');
+          assert.match(plotlyRecipesText, /Dose-response means with SD/);
+          assert.match(plotlyInspectionText, /official Plotly\.js reference/);
           assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), false);
           assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
           assert.equal(captured.args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);

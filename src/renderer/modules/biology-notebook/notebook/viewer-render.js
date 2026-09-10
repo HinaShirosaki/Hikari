@@ -35,7 +35,6 @@ function createNotebookViewerRender({
   getActiveEntry,
   resolveViewerProtocol,
   renderLinkedPreviews,
-  getEditingEntryId,
   setEditingEntryId,
   setActiveProjectDashboardId,
   setSavedDraftSnapshot,

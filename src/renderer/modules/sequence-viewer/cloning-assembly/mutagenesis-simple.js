@@ -6,39 +6,6 @@ import { candidateScore } from './overlap-windows.js';
 import { buildPrimerRecord } from './primer-records.js';
 import { countPrimerBindingSites } from './primer-quality.js';
 
-export function findMutagenesisWindow(flankSequence, side, thresholds, targetBudget) {
-  const cleaned = normalizeSequence(flankSequence);
-  if (!cleaned.length) {
-    return null;
-  }
-
-  const minLength = Math.max(1, Number(thresholds?.primerLength?.min) || 1);
-  const maxLength = Math.min(cleaned.length, Math.max(minLength, targetBudget));
-  const preferredTm = createMidpoint(thresholds?.primerTm);
-  let best = null;
-
-  for (let length = minLength; length <= maxLength; length += 1) {
-    const sequence = side === 'left'
-      ? cleaned.slice(cleaned.length - length)
-      : cleaned.slice(0, length);
-    const tm = cloningPrimerTm(sequence);
-    if (tm < thresholds.primerTm.min || tm > thresholds.primerTm.max) {
-      continue;
-    }
-    const score = Math.abs(tm - preferredTm) + Math.abs(length - minLength) * 0.1;
-    if (!best || score < best.score) {
-      best = {
-        sequence,
-        tm,
-        length,
-        score
-      };
-    }
-  }
-
-  return best;
-}
-
 function scanSimpleMutagenesisPrimers(template, normalizedEdit, thresholds, config) {
   const circular = String(config?.topology || '').toLowerCase() !== 'linear';
   const flankBudget = Math.max(1, Number(config?.maxPrimerLength) || DEFAULT_CLONING_PREFERENCES.maxPrimerLength);
@@ -118,10 +85,6 @@ function scanSimpleMutagenesisPrimers(template, normalizedEdit, thresholds, conf
   return { best, evaluated, nonUnique };
 }
 
-export function selectSimpleMutagenesisPrimer(template, normalizedEdit, thresholds, config) {
-  return scanSimpleMutagenesisPrimers(template, normalizedEdit, thresholds, config).best;
-}
-
 // The 3' ends of a mutagenesis primer must each land on one site, so a repeated
 // flank rules the route out no matter how the thresholds move. Reads the scan the
 // caller already ran: this search is O(flank^2) with a template scan per candidate.
@@ -169,6 +132,7 @@ export function designSimpleMutagenesisPrimers(templateSequence, normalizedEdit,
 
   return {
     feasible: false,
+    primers: [],
     warnings: [
       'No simple mutagenesis primer pair satisfied the current threshold set.',
       describeSimpleMutagenesisFailure(scan)

@@ -3,7 +3,23 @@ import { volumeToL } from '../molarity.js';
 import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, findBufferPkaHint, formatBufferMassDual, formatBufferVolumeDual, formatBufferVolumeMl, parseBufferConcentration } from './buffer-concentration.js';
 import { BUFFER_PH_ADJUSTMENT_MOLARITY } from './constants.js';
 import { buildResult, collectMissing, describeRawValue, withLabel } from './result-format.js';
-import { cleanName, isPositive } from './units.js';
+import { cleanName, isPositive, normalizeBufferUnitText, parseBufferNumericPrefix } from './units.js';
+
+// What went on the balance or into the tube, typed over the calculated amount.
+// A volume still displaces solvent; a mass does not take any.
+function describeManualQuantity(value) {
+  const source = String(value ?? '').trim();
+  const parsed = source ? parseBufferNumericPrefix(source) : null;
+  if (!parsed || !isPositive(parsed.value)) {
+    return null;
+  }
+  const unit = normalizeBufferUnitText(parsed.unitText);
+  const volumeUnit = ['nL', 'uL', 'mL', 'L'].find((known) => known.toLowerCase() === unit.toLowerCase()) || '';
+  return {
+    text: source,
+    addVolumeMl: volumeUnit ? volumeToL(parsed.value, volumeUnit) * 1000 : 0
+  };
+}
 
 function calculateBufferIngredient({
   name,
@@ -12,6 +28,7 @@ function calculateBufferIngredient({
   stockConcentration,
   finalConcentration,
   concentrationValue,
+  manualQuantity,
   volumeMl
 } = {}) {
   const compound = resolveBufferCompound(name);
@@ -30,7 +47,8 @@ function calculateBufferIngredient({
     describeRawValue(molecularWeight || compound?.mw, 'g/mol', 'molecular weight'),
     'molecular weight'
   );
-  const missing = collectMissing(volume);
+  const manual = describeManualQuantity(manualQuantity);
+  const missing = manual ? [] : collectMissing(volume);
   let formulaText = '';
   let resultText = '';
   let quantityText = '';
@@ -38,7 +56,12 @@ function calculateBufferIngredient({
   let massG = 0;
   let status = '';
 
-  if (final.missing) {
+  if (manual) {
+    quantityText = manual.text;
+    addVolumeMl = manual.addVolumeMl;
+    formulaText = `${resolvedName} amount = entered ${manual.text}`;
+    resultText = `${resolvedName}: ${quantityText}.`;
+  } else if (final.missing) {
     formulaText = stock && !stock.missing
       ? `${resolvedName} stock volume = [final concentration] x ${volume.text} / ${stock.text}`
       : `${resolvedName} amount = [final concentration] x ${volume.text}`;
@@ -114,6 +137,7 @@ function calculateBufferIngredient({
       stockConcentration: stockRaw,
       finalConcentration: finalRaw,
       concentrationValue,
+      manualQuantity: manual ? manual.text : '',
       volumeMl
     },
     resultText,
@@ -151,6 +175,7 @@ function calculateBufferRecipe({
       || String(row.customName || '').trim()
       || String(row.stockConcentration || row.stockConcentrationValue || '').trim()
       || String(row.finalConcentration || row.finalConcentrationValue || row.concentrationValue || '').trim()
+      || String(row.manualQuantity || '').trim()
       || toNumber(row.molecularWeight) > 0
     ));
   const sourceRows = activeRows.length ? activeRows : [{}];
@@ -165,6 +190,7 @@ function calculateBufferRecipe({
       stockConcentration: row.stockConcentration ?? row.stockConcentrationValue,
       finalConcentration: row.finalConcentration ?? row.finalConcentrationValue,
       concentrationValue: row.concentrationValue,
+      manualQuantity: row.manualQuantity,
       volumeMl: targetVolumeMl
     });
     detail.rowIndex = row.rowIndex || index + 1;

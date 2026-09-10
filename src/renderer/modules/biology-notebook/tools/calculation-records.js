@@ -4,29 +4,17 @@ import {
   normalizeNotebookToolCalculations
 } from '../../../lib/notebook-tool-calculations.js';
 
-// Turning a bench-tool result into a saved calculation record (and its editable
-// table), and inserting that result into the notebook page's notes.
+// Turning a bench-tool result into the calculation record (and editable table)
+// the notebook page carries.
 function createCalculationRecords({
   createId,
-  notesInput,
-  onAppendNote,
   getToolCalculations,
   setToolCalculations,
   getCurrentResult,
   calculateActiveTool,
   resultTextAfterName,
-  renderSavedCalculations,
-  setStatus
+  renderSavedCalculations
 } = {}) {
-  function getCurrentLine() {
-    const result = getCurrentResult() || calculateActiveTool();
-    if (!result) {
-      return '';
-    }
-    const main = result.resultText || result.formulaText;
-    return `${result.title}: ${main}`.trim();
-  }
-
   function cleanCell(value) {
     return String(value ?? '').trim();
   }
@@ -50,18 +38,18 @@ function createCalculationRecords({
         cleanCell(detail.inputs?.molecularWeight || rowInput.molecularWeight),
         concentrationText(rowDetail?.stockConcentration, rowInput.stockConcentration),
         concentrationText(rowDetail?.finalConcentration, rowInput.finalConcentration),
-        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText))
+        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText)),
+        // What actually went on the balance -- the lot, which bottle it came from.
+        cleanCell(rowInput.note)
       ];
     }).filter((row) => row.some(Boolean));
-    if (!rows.length) {
-      return null;
-    }
     const footerRows = [[
       ['Solvent to add', cleanCell(result.solvent?.text)].filter(Boolean).join(' '),
       '',
       ['6 M NaOH', cleanCell(result.phAdjustment?.naohText)].filter(Boolean).join(' '),
       '',
-      ['6 M HCl', cleanCell(result.phAdjustment?.hclText)].filter(Boolean).join(' ')
+      ['6 M HCl', cleanCell(result.phAdjustment?.hclText)].filter(Boolean).join(' '),
+      ''
     ]];
     const volumeValue = cleanCell(result.inputs?.volumeValue ?? result.inputs?.volumeMl);
     const volumeUnit = cleanCell(result.inputs?.volumeUnit) || 'mL';
@@ -72,9 +60,10 @@ function createCalculationRecords({
         volumeValue ? `${volumeValue} ${volumeUnit}` : '',
         'pH',
         cleanCell(result.inputs?.pH),
+        '',
         ''
       ]],
-      headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume'],
+      headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume', 'Note'],
       rows,
       footerRows
     };
@@ -155,55 +144,45 @@ function createCalculationRecords({
     return true;
   }
 
-  function recordCurrentCalculation() {
+  // The table on the page is the tool's output, not a snapshot of it: opening a
+  // tool puts one there and every keystroke rewrites it in place, so there is
+  // nothing to press.
+  // ponytail: the sheet wins over cells edited on the page table while the tool
+  // is open. Carry those edits back if anyone works both ends at once.
+  function upsertToolCalculation(existingId = '') {
     const record = makeCalculationRecord();
     if (!record) {
-      setStatus('Enter a calculation or formula before recording.');
-      return null;
+      return String(existingId || '');
     }
-    setToolCalculations(normalizeNotebookToolCalculations(getToolCalculations().concat(record)));
+    const calculations = getToolCalculations();
+    const index = calculations.findIndex((item) => String(item?.id || '') === String(existingId || ''));
+    if (index < 0) {
+      setToolCalculations(normalizeNotebookToolCalculations(calculations.concat(record)));
+      return record.id;
+    }
+    const next = calculations.slice();
+    next[index] = { ...record, id: calculations[index].id, createdAt: calculations[index].createdAt || record.createdAt };
+    setToolCalculations(normalizeNotebookToolCalculations(next));
+    return next[index].id;
+  }
+
+  function removeToolCalculation(calculationId) {
+    const id = String(calculationId || '');
+    const remaining = getToolCalculations().filter((item) => String(item?.id || '') !== id);
+    if (remaining.length === getToolCalculations().length) {
+      return false;
+    }
+    setToolCalculations(normalizeNotebookToolCalculations(remaining));
     renderSavedCalculations();
-    setStatus('Calculation recorded. Save the notebook page to persist it.');
-    return record;
-  }
-
-  function appendToNotes(line) {
-    const cleanLine = String(line || '').trim();
-    if (!cleanLine) {
-      return;
-    }
-    if (typeof onAppendNote === 'function') {
-      onAppendNote(cleanLine);
-      return;
-    }
-    if (!notesInput) {
-      return;
-    }
-    const current = String(notesInput.value || '').trim();
-    notesInput.value = current ? `${current}\n${cleanLine}` : cleanLine;
-  }
-
-  function insertCurrentIntoNotes() {
-    const line = getCurrentLine();
-    if (!line) {
-      setStatus('Enter a calculation before inserting it.');
-      return;
-    }
-    appendToNotes(line);
-    const record = recordCurrentCalculation();
-    if (record) {
-      setStatus('Inserted into notes and recorded for the next save.');
-    }
+    return true;
   }
 
   return {
-    getCurrentLine,
     calculationTableForResult,
     makeCalculationRecord,
     applyCalculationEdit,
-    recordCurrentCalculation,
-    appendToNotes,
-    insertCurrentIntoNotes
+    upsertToolCalculation,
+    removeToolCalculation
   };
 }
 

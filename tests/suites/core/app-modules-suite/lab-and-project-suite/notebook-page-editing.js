@@ -170,7 +170,8 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
     'biology-notebook-view',
     'rail-and-projects.css'
   ), 'utf8');
-  assert.match(notebookShellCss, /\.biology-notebook-title-editor\s*\{[^}]*width:\s*min\(100%,\s*28rem\);[^}]*min-height:\s*34px;[^}]*padding:\s*4px 8px;[^}]*font-size:\s*1rem;/s);
+  assert.match(notebookShellCss, /\.biology-notebook-title-display,\s*\.biology-notebook-title-editor\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*0;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*font-size:\s*1\.17em;/s);
+  assert.match(notebookShellCss, /\.biology-notebook-title-editor\s*\{[^}]*overflow:\s*hidden;[^}]*resize:\s*none;[^}]*field-sizing:\s*content;/s);
 });
 test('biology-notebook page naming uses a small model once and skips generated or user-renamed names', async () => {
   const document = createMockDocument([
@@ -603,8 +604,9 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
   assert.match(css, /\.biology-notebook-molarity-icon\s*\{[^}]*width:\s*21px;[^}]*height:\s*21px;[^}]*font-style:\s*italic;[^}]*font-weight:\s*700;/s);
   assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
 });
-test('biology-notebook buffer preparer starts blank, has one insert-and-record action, and exposes compound pKa data', () => {
+test('biology-notebook buffer preparer starts blank, records without a button, and exposes compound pKa data', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'biology-notebook-view.html'), 'utf8');
+  const sheetCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'biology-notebook-view', 'rail-and-projects.css'), 'utf8');
   const toolSource = [
     fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'), 'utf8'),
     fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'buffer-suggestions.js'), 'utf8'),
@@ -617,12 +619,24 @@ test('biology-notebook buffer preparer starts blank, has one insert-and-record a
     html.indexOf('id="biology-notebook-tool-panel-reaction"')
   );
   assert.doesNotMatch(bufferSection, /value="100"|placeholder="(?:Tris Base|NaCl|Tween 20|Ingredient|MW|empty or 1 M|2000x|50 mM|150 mM|10% v\/v|0\.1% v\/v|stock|final|7\.4)"/);
-  assert.match(html, /id="biology-notebook-tool-insert-notes-btn"[^>]*>Insert &amp; Record<\/button>/);
-  assert.doesNotMatch(html, /biology-notebook-tool-use-placeholder-btn|biology-notebook-tool-record-btn/);
+  // Opening a tool records its table on the page, so there is nothing to press.
+  assert.doesNotMatch(html, /biology-notebook-tool-insert-notes-btn|biology-notebook-tool-use-placeholder-btn|biology-notebook-tool-record-btn/);
   assert.doesNotMatch(toolSource, /stepsHost|useForActivePlaceholder|recordBtn|usePlaceholderBtn/);
   assert.match(compounds, /name: 'Bis-Tris',[^\n]*pKa: 6\.5/);
   assert.match(compounds, /name: 'CAPS',[^\n]*pKa: 10\.4/);
   assert.match(calculations, /const compound = resolveBufferCompound\(source\);[\s\S]*?return \{ pKa, label: compound\.name \};/);
+
+  // Both sheets carry a note column, the amount is typed over rather than read
+  // off, and the volume cell holds one input instead of stacking a result row.
+  const reactionSection = html.slice(html.indexOf('id="biology-notebook-tool-panel-reaction"'));
+  assert.match(bufferSection, /id="biology-notebook-tool-buffer-amount-1"[^>]*type="text"/);
+  assert.match(bufferSection, /id="biology-notebook-tool-buffer-note-1"/);
+  assert.match(reactionSection, /id="biology-notebook-tool-reaction-note-1"/);
+  assert.doesNotMatch(html, /biology-notebook-tool-buffer-output-\d|biology-notebook-tool-reaction-output-\d/);
+  // The MW cell is too narrow to give up room to a spinner.
+  assert.match(sheetCss, /\.biology-notebook-buffer-sheet input\[type="number"\]::-webkit-inner-spin-button\s*\{[^}]*appearance:\s*none;/s);
+  // The sheets are the whole readout: no summary, formula or status line beside them.
+  assert.doesNotMatch(html, /biology-notebook-tool-output|biology-notebook-tool-formula|biology-notebook-tool-status/);
 });
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([
@@ -1442,8 +1456,9 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   document.getElementById('biology-notebook-tool-buffer-stock-1').value = '';
   document.getElementById('biology-notebook-tool-buffer-final-1').value = '150 mM';
   trigger(document.getElementById('biology-notebook-tool-buffer-final-1'), 'input');
-  assert.match(document.getElementById('biology-notebook-tool-buffer-output-1').textContent, /8766 mg/i);
-  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
+  assert.match(document.getElementById('biology-notebook-tool-buffer-amount-1').placeholder, /8766 mg/i);
+  document.getElementById('biology-notebook-tool-buffer-note-1').value = 'lot 22B, Sigma';
+  trigger(document.getElementById('biology-notebook-tool-buffer-note-1'), 'input');
 
   trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
   document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
@@ -1452,9 +1467,15 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
   document.getElementById('biology-notebook-tool-reaction-final-1').value = '1 mM';
   trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
-  assert.match(document.getElementById('biology-notebook-tool-reaction-output-1').textContent, /10 uL/i);
+  assert.match(document.getElementById('biology-notebook-tool-reaction-volume-1').placeholder, /10 uL/i);
   assert.match(document.getElementById('biology-notebook-tool-reaction-solvent-output').textContent, /90 uL/i);
-  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
+
+  // Each tool keeps rewriting the one table it opened, so typing again does not
+  // stack a near-identical copy under it.
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '20 mM';
+  trigger(document.getElementById('biology-notebook-tool-reaction-stock-1'), 'input');
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
+  trigger(document.getElementById('biology-notebook-tool-reaction-stock-1'), 'input');
 
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
   await flushAsync();
@@ -1463,23 +1484,31 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.equal(state.notebookEntries[0].toolCalculations.length, 2);
   assert.match(state.notebookEntries[0].toolCalculations[0].result, /NaCl: 8766 mg/i);
   assert.match(state.notebookEntries[0].toolCalculations[1].result, /Water: 90 uL/i);
-  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[0].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][0], 'NaCl');
   assert.match(state.notebookEntries[0].toolCalculations[0].table.rows[0][4], /8766 mg/i);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.metaRows[0][1], '1 L');
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[0].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume', 'Note']);
+  assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][5], 'lot 22B, Sigma');
   assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume', 'Note']);
   assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'ATP');
   assert.equal(state.notebookEntries[0].toolCalculations[1].table.footerRows[0][0], 'Water');
   assert.match(state.notebookEntries[0].toolCalculations[1].table.footerRows[0][3], /90 uL/i);
 
   notebook.openEntry(state.notebookEntries[0].id);
+  // The reaction sheet is still open on this page, so its table is standing
+  // aside; closing the tool brings it back.
   const calculationsHost = document.getElementById('biology-notebook-tool-calculations');
+  assert.doesNotMatch(calculationsHost.innerHTML, /Fixed Volume Reaction/);
+  trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
+  assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, true);
   const renderedCalculations = calculationsHost.innerHTML;
   assert.match(renderedCalculations, /Buffer Preparer/);
   assert.match(renderedCalculations, /Fixed Volume Reaction/);
   assert.match(renderedCalculations, /biology-notebook-tool-calculation-table/);
+  // A recorded calculation is its table and nothing else.
   assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
+  assert.doesNotMatch(renderedCalculations, /<p[\s>]/);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 2 calculations/i);
 
   // A recorded reaction is a starting point: its cells are editable, and one
@@ -1516,6 +1545,120 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.match(editedReaction.table.rows[0][3], /10 uL/);
   assert.equal(editedReaction.table.rows[0][4], '48 ng from tube A7');
   assert.match(editedReaction.table.footerRows[0][3], /90 uL/);
+
+  // The trash button on a table takes it off the page.
+  assert.match(calculationsHost.innerHTML, /data-tool-calculation-remove="/);
+  trigger(calculationsHost, 'click', { target: { dataset: { toolCalculationRemove: editedReaction.id } } });
+  assert.doesNotMatch(calculationsHost.innerHTML, /Fixed Volume Reaction/);
+  assert.match(calculationsHost.innerHTML, /Buffer Preparer/);
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 1);
+  assert.equal(state.notebookEntries[0].toolCalculations[0].table.caption, 'Buffer Preparer');
+});
+test('biology-notebook bench toolbox builds one table per tab click and reopens any of them', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'biology-notebook-layout',
+    'biology-notebook-tool-sidebar',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-collapse-btn',
+    'biology-notebook-tool-workspace',
+    'biology-notebook-tool-calculations',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+  document.querySelector = (selector) => (
+    selector === '[data-notebook-tool-sidebar]'
+      ? document.getElementById('biology-notebook-tool-sidebar')
+      : null
+  );
+  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
+  document.getElementById('biology-notebook-tool-reaction-fill-name').value = 'Solvent';
+
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [{ id: 'pr1', name: 'Bench Prep', steps: [{ id: 's1', text: 'Prepare reactions.', placeholders: [] }] }],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    settings: { storagePath: '' }
+  };
+  let idIndex = 0;
+  const notebookModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'),
+    { document, window: { hikariApi: {} } }
+  );
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => `generated-${idIndex += 1}`,
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  document.getElementById('biology-notebook-project-select').value = 'p1';
+  notebook.renderProtocolOptions('pr1');
+  document.getElementById('biology-notebook-protocol-select').value = 'pr1';
+  notebook.onProtocolChange();
+
+  const calculationsHost = document.getElementById('biology-notebook-tool-calculations');
+  const reactionTab = () => trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
+  const fillRow = (row, name, stock, final) => {
+    document.getElementById(`biology-notebook-tool-reaction-name-${row}`).value = name;
+    document.getElementById(`biology-notebook-tool-reaction-stock-${row}`).value = stock;
+    document.getElementById(`biology-notebook-tool-reaction-final-${row}`).value = final;
+    trigger(document.getElementById(`biology-notebook-tool-reaction-final-${row}`), 'input');
+  };
+  // Rows come from the module's own realm, so copy before comparing.
+  const reagentsOf = (calculation) => Array.from(calculation.table.rows || []).map((row) => row[0]);
+
+  // Each tab click is a new tube on the bench, not a second view of the last one.
+  reactionTab();
+  fillRow(1, 'ATP', '10 mM', '1 mM');
+  reactionTab();
+  reactionTab();
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-name-1').value, '');
+  fillRow(1, 'GTP', '10 mM', '2 mM');
+  reactionTab();
+
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  const [first, second] = state.notebookEntries[0].toolCalculations;
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 2);
+  assert.deepEqual(reagentsOf(first), ['ATP']);
+  assert.deepEqual(reagentsOf(second), ['GTP']);
+
+  // The edit button puts an earlier table back in the sheet, where it can still
+  // gain a row; the other table is left alone.
+  trigger(calculationsHost, 'click', { target: { dataset: { toolCalculationEdit: first.id } } });
+  assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, false);
+  assert.equal(document.getElementById('biology-notebook-tool-reaction-name-1').value, 'ATP');
+  trigger(document.getElementById('biology-notebook-tool-reaction-add-row'), 'click');
+  fillRow(2, 'MgCl2', '1 M', '2 mM');
+  reactionTab();
+
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  const saved = state.notebookEntries[0].toolCalculations;
+  assert.equal(saved.length, 2);
+  assert.deepEqual(reagentsOf(saved.find((item) => item.id === first.id)), ['ATP', 'MgCl2']);
+  assert.deepEqual(reagentsOf(saved.find((item) => item.id === second.id)), ['GTP']);
 });
 test('biology-notebook bench toolbox belongs to the open page, not to every page', async () => {
   const document = createMockDocument([
@@ -1606,7 +1749,6 @@ test('biology-notebook bench toolbox belongs to the open page, not to every page
   document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
   document.getElementById('biology-notebook-tool-reaction-final-1').value = '1 mM';
   trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
-  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
   // Half-typed into the other tool, never recorded.
   document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
   await save();
@@ -1631,7 +1773,6 @@ test('biology-notebook bench toolbox belongs to the open page, not to every page
   document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
   document.getElementById('biology-notebook-tool-reaction-final-1').value = '2 mM';
   trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
-  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
   await save();
 
   const savedA = state.notebookEntries.find((entry) => entry.id === pageA.id);

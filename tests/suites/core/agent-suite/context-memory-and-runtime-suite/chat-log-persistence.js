@@ -456,10 +456,27 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogPersis
         const chatLogDir = path.join(tempDir, 'chat_log');
         await fsPromises.mkdir(chatLogDir, { recursive: true });
         const sampleLogName = 'chat-mnwm38jq-9i28kt9x.log';
-        await fsPromises.copyFile(
-          path.join(__dirname, 'Testdata', 'chat_log', sampleLogName),
-          path.join(chatLogDir, sampleLogName)
-        );
+        await fsPromises.writeFile(path.join(chatLogDir, sampleLogName), [
+          {
+            type: 'agent-chat-request',
+            session_id: 'chat-mnwm38jq-9i28kt9x',
+            requestId: 'req-transform-fixture',
+            message: 'How can genetic code expansion support this experiment?'
+          },
+          {
+            type: 'agent-llm-trace',
+            session_id: 'chat-mnwm38jq-9i28kt9x',
+            requestId: 'req-transform-fixture',
+            stage: 'science_answer',
+            timestamp: '2026-03-22T16:00:00.000Z',
+            request_payload: {
+              system_prompt: 'Write a grounded final science answer.'
+            },
+            response_payload: {
+              answer: 'Genetic code expansion can install a defined noncanonical amino acid.'
+            }
+          }
+        ].map((row) => JSON.stringify(row)).join('\n') + '\n', 'utf8');
 
         const result = await runtime.scanStoragePath(tempDir);
         assert.equal(result.ok, true);

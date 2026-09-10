@@ -340,7 +340,7 @@ export function logNotebookPageEvent({
   summary = '',
   details = {}
 } = {}) {
-  const appendLog = window?.hikariApi?.appendNotebookPageLog;
+  const appendLog = globalThis.window?.hikariApi?.appendNotebookPageLog;
   if (typeof appendLog !== 'function') {
     return Promise.resolve(reportLogFailure('appendNotebookPageLog unavailable'));
   }

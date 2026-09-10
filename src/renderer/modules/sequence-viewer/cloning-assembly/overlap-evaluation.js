@@ -5,7 +5,7 @@ import {
   DEFAULT_GIBSON_MIN_FRAGMENT_COUNT,
   DEFAULT_OVERLAP_PCR_MIN_FRAGMENT_COUNT
 } from './constants.js';
-import { asArray, computeGcContent, describeAmbiguousDna } from './sequence-utils.js';
+import { asArray, computeGcContent, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { normalizeFragment } from './fragments.js';
 import {
   describeEngineeredOverlapFailure,
@@ -22,6 +22,19 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
     || rightFragment?.metadata?.sharedOverlapWithPrevious === true;
   const minDeliberateOverlap = config?.minEngineeredOverlapLength
     || DEFAULT_CLONING_PREFERENCES.minEngineeredOverlapLength;
+  // Extending an already shared region as though the fragments were disjoint
+  // duplicates that region in the product. Require new boundaries instead.
+  if (naturalOverlapIsDeclared && natural.length && (
+    natural.length < minDeliberateOverlap
+    || naturalTm < thresholds.overlapTm.min
+    || naturalTm > thresholds.overlapTm.max
+  )) {
+    return {
+      feasible: false, mode: 'weak-existing', overlapSequence: natural.sequence,
+      overlapLength: natural.length, overlapTm: naturalTm, overlapGcContent: naturalGc,
+      warnings: ['Declared shared overlap is outside the required length or Tm range. Adjust the fragment boundaries before primer design.']
+    };
+  }
   if (
     naturalOverlapIsDeclared
     && natural.length
@@ -45,9 +58,7 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
   const engineered = selectEngineeredOverlap(leftFragment, rightFragment, thresholds, config);
   if (engineered) {
     const warnings = [];
-    if (naturalOverlapIsDeclared && natural.length && (naturalTm < thresholds.overlapTm.min || naturalTm > thresholds.overlapTm.max)) {
-      warnings.push('Declared terminal overlap is outside the permitted Tm range; an engineered primer overlap is recommended.');
-    } else if (!naturalOverlapIsDeclared && natural.length >= minDeliberateOverlap) {
+    if (!naturalOverlapIsDeclared && natural.length >= minDeliberateOverlap) {
       // Only a match long enough to have been designed is worth reporting. Two
       // fragments cut from one sequence share their boundary base a quarter of
       // the time; saying so on every such junction is noise, not provenance.
@@ -63,7 +74,7 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
       overlapTm: engineered.tm,
       overlapGcContent: engineered.gcContent,
       leftBindingTm: engineered.leftBinding?.tm || 0,
-      // Half the seam goes on each flanking primer.
+      // Record the exact split used by the two flanking primers.
       leftReverseTail: engineered.leftReverseTail,
       rightForwardTail: engineered.rightForwardTail,
       warnings
@@ -88,7 +99,7 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
   };
 }
 
-export function buildJunctionPairs(fragments, circular = false) {
+function buildJunctionPairs(fragments, circular = false) {
   const list = asArray(fragments);
   const pairs = [];
   if (list.length < 2) {
@@ -132,6 +143,10 @@ export function evaluateFragmentAssembly(fragments, options = {}) {
     };
   }
   const normalizedFragments = asArray(fragments).map((fragment, index) => normalizeFragment(fragment, index));
+  if (normalizedFragments.some((fragment) => !fragment.sequence.length)
+    || new Set(normalizedFragments.map((fragment) => fragment.id)).size !== normalizedFragments.length) {
+    return { fragments: normalizedFragments, junctions: [], feasible: false, warnings: ['Each assembly fragment must have a nonempty sequence and a unique ID.'] };
+  }
   const circular = Boolean(options?.circular);
   const config = {
     ...DEFAULT_CLONING_PREFERENCES,
@@ -155,10 +170,25 @@ export function evaluateFragmentAssembly(fragments, options = {}) {
   });
 
   const warnings = junctions.flatMap((junction) => asArray(junction.warnings));
+  const resultSequence = normalizeSequence(options?.resultSequence);
+  let product = normalizedFragments.map((fragment, index) => {
+    const previous = junctions.find((junction) => junction.rightFragmentId === fragment.id && !junction.wrapAround);
+    return index && previous?.mode === 'existing' ? fragment.sequence.slice(previous.overlapLength) : fragment.sequence;
+  }).join('');
+  const closing = junctions.find((junction) => junction.wrapAround && junction.mode === 'existing');
+  if (closing) {
+    product = product.slice(0, product.length - closing.overlapLength);
+  }
+  const productMatches = !resultSequence || (product.length === resultSequence.length && (
+    circular ? `${product}${product}`.includes(resultSequence) : product === resultSequence
+  ));
+  if (!productMatches) {
+    warnings.push('The chosen fragment order does not reconstruct the assembled sequence. Check the fragment boundaries and orientation.');
+  }
   return {
     fragments: normalizedFragments,
     junctions,
-    feasible: junctions.length > 0 && junctions.every((junction) => junction.feasible),
+    feasible: productMatches && junctions.length > 0 && junctions.every((junction) => junction.feasible),
     warnings
   };
 }

@@ -37,6 +37,13 @@
   --theme-success: #166534;
   --theme-warning: #b25522;
   --theme-danger: #a74b3a;
+  --theme-hikari-rainbow-red: #f04f62;
+  --theme-hikari-rainbow-orange: #f28a38;
+  --theme-hikari-rainbow-yellow: #e9c83f;
+  --theme-hikari-rainbow-green: #48b96b;
+  --theme-hikari-rainbow-cyan: #32aec2;
+  --theme-hikari-rainbow-blue: #5478e6;
+  --theme-hikari-rainbow-violet: #9b5de5;
 
   /* Shared component states */
   --theme-panel: var(--theme-surface-elevated);

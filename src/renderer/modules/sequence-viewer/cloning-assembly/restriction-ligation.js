@@ -8,7 +8,7 @@ import { normalizeFragment, normalizeHostVector } from './fragments.js';
 // Count windows of `sequence` (concrete ACGT) that satisfy `site`. Recognition
 // sites may carry IUPAC ambiguity codes (e.g. GTMKAC, CACNNNGTG); normalizeSequence
 // would strip those codes and corrupt the motif, so match position-by-position.
-export function countSiteMatches(sequence, site, circular = false) {
+function countSiteMatches(sequence, site, circular = false) {
   const cleaned = normalizeSequence(sequence);
   const rawSite = String(site || '').toUpperCase().replace(/[^A-Z]/g, '');
   if (!cleaned.length || !rawSite.length) {
@@ -43,7 +43,7 @@ export function sequenceContainsSite(sequence, site, circular = false) {
   return countSiteMatches(reverseComplementDna(cleaned), site, circular) > 0;
 }
 
-export function circularDistance(totalLength, leftStart, rightStart) {
+function circularDistance(totalLength, leftStart, rightStart) {
   const safeLength = Math.max(1, Number(totalLength) || 1);
   const distance = Math.abs((Number(rightStart) || 0) - (Number(leftStart) || 0));
   return Math.min(distance, safeLength - distance);

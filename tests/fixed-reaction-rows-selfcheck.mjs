@@ -52,9 +52,9 @@ const doc = {
   }
 };
 
-// Row 1 acts as the clone template with its four inputs + output.
+// Row 1 acts as the clone template with its five inputs.
 const row1 = doc.getElementById('fixed-reaction-row-1');
-['name', 'stock', 'final', 'volume', 'output'].forEach((field) => {
+['name', 'stock', 'final', 'volume', 'note'].forEach((field) => {
   row1.children.push(doc.getElementById(`fixed-reaction-${field}-1`));
 });
 const fixedRows = doc.getElementById('fixed-reaction-rows');
@@ -92,7 +92,7 @@ doc.getElementById('fixed-reaction-stock-7').value = '1 mg/mL';
 doc.getElementById('fixed-reaction-final-7').value = '100 ng/uL';
 const input7 = doc.getElementById('fixed-reaction-final-7');
 input7.listeners.filter(([t]) => t === 'input').forEach(([, h]) => h());
-assert.match(doc.getElementById('fixed-reaction-output-7').textContent, /10/);
+assert.match(doc.getElementById('fixed-reaction-volume-7').placeholder, /10/);
 
 const removeTarget = {
   closest(selector) {

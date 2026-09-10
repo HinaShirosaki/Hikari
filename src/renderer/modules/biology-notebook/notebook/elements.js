@@ -51,8 +51,6 @@ function queryNotebookElements(doc = document) {
     notebookTableSizeForm: doc.getElementById('biology-notebook-table-size-form'),
     notebookTableSizeColumns: doc.getElementById('biology-notebook-table-size-columns'),
     notebookTableSizeRows: doc.getElementById('biology-notebook-table-size-rows'),
-    notebookTableSizeCloseBtn: doc.getElementById('biology-notebook-table-size-close-btn'),
-    notebookTableSizeCancelBtn: doc.getElementById('biology-notebook-table-size-cancel-btn'),
     notebookAddTableRowBtn: doc.getElementById('biology-notebook-add-table-row-btn'),
     notebookAddTableColumnBtn: doc.getElementById('biology-notebook-add-table-column-btn'),
     notebookRemoveTableBtn: doc.getElementById('biology-notebook-remove-table-btn'),

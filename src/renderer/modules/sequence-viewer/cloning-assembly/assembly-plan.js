@@ -17,9 +17,14 @@ const ROUTE_THRESHOLD_LEVELS = [
 ];
 
 function inputAmbiguityWarnings(payload) {
+  const hosts = asArray(payload?.hostVectors);
+  const selected = payload?.hostVectorId
+    ? hosts.find((host) => String(host?.id) === String(payload.hostVectorId).trim())
+    : hosts.length === 1 ? hosts[0] : null;
   const inputs = [
     ['Designed result', payload?.resultSequence],
-    ...asArray(payload?.hostVectors).map((host, index) => [`Host vector ${host?.name || index + 1}`, host?.sequence]),
+    ['Selected host vector', selected?.sequence],
+    ['Selected host PCR template', selected?.metadata?.specificitySequence],
     ...asArray(payload?.fragments).flatMap((fragment, index) => [
       [`Fragment ${fragment?.name || index + 1}`, fragment?.sequence],
       [`Template for ${fragment?.name || index + 1}`, fragment?.templateSequence || fragment?.metadata?.templateSequence],
@@ -33,12 +38,12 @@ function inputAmbiguityWarnings(payload) {
 
 // An empty payload already produces the plan shape every consumer expects, with
 // every route infeasible. Only the warnings and the one actionable step differ.
-function invalidInputPlan(warnings) {
+function invalidInputPlan(warnings, title = 'Resolve sequence ambiguity') {
   return {
     ...assembleCloningPlan({}),
-    stepByStepProcedure: [{ step: 1, title: 'Resolve sequence ambiguity', details: warnings.join(' '), inputs: [], expectedOutput: 'A concrete A/C/G/T sequence' }],
+    stepByStepProcedure: [{ step: 1, title, details: warnings.join(' '), inputs: [], expectedOutput: 'Valid cloning inputs' }],
     warnings,
-    alternateStrategyRecommendation: 'Resolve ambiguous bases before comparing cloning routes.'
+    alternateStrategyRecommendation: warnings.join(' ')
   };
 }
 
@@ -70,7 +75,10 @@ export function assembleCloningPlan(payload = {}) {
   };
   const normalizedResultSequence = normalizeSequence(payload?.resultSequence || '');
   const normalizedFragments = asArray(payload?.fragments).map((fragment, index) => normalizeFragment(fragment, index));
-  const selectedHost = findSelectedHostVector(payload?.hostVectors, normalizedResultSequence, payload?.hostVectorId);
+  const selectedHost = findSelectedHostVector(payload?.hostVectors, payload?.hostVectorId);
+  if (!selectedHost && (asArray(payload?.hostVectors).length || payload?.hostVectorId)) {
+    return invalidInputPlan(['Select one available host backbone explicitly before designing assembly primers.'], 'Select backbone');
+  }
   const normalizedEdit = normalizeEditRequest(payload?.editRequest, selectedHost?.sequence || normalizedResultSequence || '');
   const orderedFragmentMap = buildOrderedFragmentMap({
     host: selectedHost,
@@ -80,26 +88,15 @@ export function assembleCloningPlan(payload = {}) {
   });
 
   const insertFragments = normalizedFragments.filter((fragment) => fragment.type !== 'backbone');
-  const assemblyFragments = selectedHost
-    ? [
-        {
-          id: 'host_backbone',
-          name: selectedHost.name,
-          type: 'backbone',
-          sequence: selectedHost.sequence,
-          orientation: 'forward',
-          metadata: {}
-        },
-        ...insertFragments
-      ]
-    : insertFragments;
+  const assemblyFragments = orderedFragmentMap.fragments;
 
   const overlapPCR = evaluateRouteWithFallback(evaluateOverlapPcr, insertFragments, {
     preferences: config
   });
   const gibson = evaluateRouteWithFallback(evaluateGibsonAssembly, assemblyFragments, {
     preferences: config,
-    circular: Boolean(selectedHost)
+    circular: Boolean(selectedHost),
+    resultSequence: normalizedResultSequence
   });
   const restrictionLigation = config?.allowRestrictionLigation === false
     ? {
@@ -129,13 +126,18 @@ export function assembleCloningPlan(payload = {}) {
     siteDirectedMutagenesis
   };
 
-  const recommendedStrategy = chooseAssemblyStrategy({
+  const requestedRouteKey = { gibson: 'gibson', 'restriction-ligation': 'restrictionLigation' }[payload?.strategy];
+  const recommendedStrategy = payload?.strategy ? {
+    name: payload.strategy,
+    feasible: Boolean(requestedRouteKey && routeEvaluations[requestedRouteKey]?.feasible),
+    reason: 'Use the assembly method selected for this backbone.'
+  } : chooseAssemblyStrategy({
     fragmentMap: orderedFragmentMap,
     routeEvaluations,
     editRequest: normalizedEdit,
     config
   });
-  const assembledVectorDesign = buildAssemblyDesign(
+  let assembledVectorDesign = buildAssemblyDesign(
     recommendedStrategy,
     orderedFragmentMap,
     routeEvaluations,
@@ -152,6 +154,13 @@ export function assembleCloningPlan(payload = {}) {
     preferences: config,
     assembledVectorDesign
   });
+  if (primerOligoPlan.feasible && primerOligoPlan.junctions) {
+    const route = recommendedStrategy.name === 'gibson' ? gibson : overlapPCR;
+    route.junctions = primerOligoPlan.junctions;
+    route.thresholdLevel = primerOligoPlan.selectedThresholdLevel;
+    route.warnings = primerOligoPlan.warnings;
+    assembledVectorDesign = buildAssemblyDesign(recommendedStrategy, orderedFragmentMap, routeEvaluations, normalizedResultSequence);
+  }
   const stepByStepProcedure = buildProcedureSteps(
     recommendedStrategy?.name,
     assembledVectorDesign,
