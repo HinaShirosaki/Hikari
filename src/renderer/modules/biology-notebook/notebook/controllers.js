@@ -37,8 +37,7 @@ function createNotebookControllers({
   onProtocolChange,
   showProjectDashboard,
   ensureNotebookEntryForLinkedWork,
-  applyQuickSampleCapture,
-  appendNotebookResultLine
+  applyQuickSampleCapture
 } = {}) {
   const TabulatorLib = window.Tabulator || null;
 
@@ -172,6 +171,7 @@ function createNotebookControllers({
     getProtocols: () => state.protocols,
     getGelAnalyses: () => getGelAnalyses(state),
     getAssays: () => state.assays,
+    getPdfSettings: () => state.settings?.notebookPdf || {},
     previewImageLoader,
     resultFileAttachmentLoader,
     onCreateLinkedAssay
@@ -191,10 +191,8 @@ function createNotebookControllers({
     win: typeof window !== 'undefined' ? window : null,
     safeText,
     createId,
-    notesInput: elements.notebookResult,
     calculationsHost: elements.notebookToolCalculations,
-    getStoredCompounds: () => (Array.isArray(state.labInventory?.chemicals) ? state.labInventory.chemicals : []),
-    onAppendNote: (line) => appendNotebookResultLine(line)
+    getStoredCompounds: () => (Array.isArray(state.labInventory?.chemicals) ? state.labInventory.chemicals : [])
   });
 
   return {

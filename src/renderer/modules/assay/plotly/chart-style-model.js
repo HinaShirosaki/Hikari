@@ -1,5 +1,5 @@
 // Plotly defaults used by the Assay analysis view.
-// GraphPad Prism-style pastel palette (lavender / cyan / teal / coral / amber / green).
+// Publication-figure pastel palette (lavender / cyan / teal / coral / amber / green).
 export const DEFAULT_CHART_PALETTE = Object.freeze([
   '#9b87c9',
   '#1fc3e6',

@@ -72,6 +72,49 @@
  * inherits down as a light color.
  */
 body.theme-night {
+  /*
+   * Chrome that sits on a themed surface. The DNA base strokes and the protein
+   * builder's pastel blocks stay fixed: those encode data, and the builder
+   * blocks carry their own dark ink on a light chip in every theme.
+   */
+  --sequence-viewer-active-blue: var(--theme-focus);
+  --sequence-viewer-track-surface: var(--theme-surface);
+  --sequence-viewer-track-border: var(--theme-border-soft);
+  --sequence-viewer-track-grid: color-mix(in srgb, var(--theme-border) 45%, transparent);
+  --sequence-viewer-axis-muted: var(--theme-text-muted);
+  --sequence-viewer-active-ring: color-mix(in srgb, var(--theme-focus) 45%, transparent);
+  --sequence-viewer-control-surface: var(--theme-control-background);
+  --sequence-viewer-control-border: var(--theme-border);
+  --sequence-viewer-control-ink: var(--theme-text);
+  --sequence-viewer-control-muted: var(--theme-text-muted);
+  --sequence-viewer-blue-ink: var(--theme-text);
+  --sequence-viewer-blue-muted: var(--theme-text-muted);
+  --sequence-viewer-blue-border-strong: var(--theme-border);
+  --sequence-viewer-overlay: var(--theme-overlay);
+  --sequence-viewer-overlay-soft: var(--theme-overlay);
+  --sequence-viewer-overlay-shadow: var(--theme-shadow-color);
+  /* Mismatches are the point of an alignment: keep the ink light on dark. */
+  --sequence-viewer-mismatch-ink: var(--theme-danger);
+  --sequence-viewer-mismatch-bg: color-mix(in srgb, var(--theme-danger) 26%, transparent);
+  --sequence-viewer-mismatch-shadow: color-mix(in srgb, var(--theme-danger) 40%, transparent);
+  --sequence-viewer-alert-surface: color-mix(in srgb, var(--theme-danger) 14%, transparent);
+  --sequence-viewer-alert-ring: color-mix(in srgb, var(--theme-danger) 26%, transparent);
+  --sequence-viewer-alert-border: color-mix(in srgb, var(--theme-danger) 44%, transparent);
+  --sequence-viewer-aa-ink: var(--theme-text);
+  --sequence-viewer-aa-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  --sequence-viewer-aa-border: color-mix(in srgb, var(--theme-accent) 34%, transparent);
+  --sequence-viewer-line-feature-ink: var(--theme-text);
+  --sequence-viewer-line-feature-border: var(--theme-border);
+  --sequence-viewer-cursor: var(--theme-focus);
+  --sequence-viewer-restriction-border: var(--theme-accent);
+  --sequence-viewer-restriction-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  --sequence-viewer-restriction-line: var(--theme-focus);
+  --sequence-viewer-restriction-active-bg: color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  --sequence-viewer-restriction-active-ink: var(--theme-text-strong);
+  --sequence-viewer-restriction-active-line: var(--theme-focus);
+  --sequence-viewer-selection-highlight-light: color-mix(in srgb, var(--theme-focus) 24%, transparent);
+  --sequence-viewer-selection-highlight-strong: color-mix(in srgb, var(--theme-focus) 38%, transparent);
+
   --sequence-viewer-night-border: var(--theme-border-soft);
   --sequence-viewer-night-border-strong: var(--theme-border);
   --sequence-viewer-night-control: var(--theme-control-background);

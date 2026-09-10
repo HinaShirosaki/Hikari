@@ -118,10 +118,9 @@ export function buildGoldenGatePlan(payload = {}) {
   ) {
     return infeasible('The native 4 nt junction overhangs are identical, reverse-complementary, or self-complementary. Shift the insert boundaries before using Golden Gate.');
   }
-  if (!insertTemplateSequence.length) {
-    return infeasible('The Golden Gate insert has no physical PCR template. Choose a donor record or provide a synthesis fragment before designing primers.');
-  }
-
+  // A missing or mismatched insert template is reported by the resolver as a
+  // note on the primers; `insert` is already known to be non-empty here, so the
+  // resolver has no failing branch left to check.
   const insertTemplateDesign = resolveFragmentPrimerTemplate({
     name: 'Golden Gate insert',
     sequence: insert,
@@ -131,9 +130,6 @@ export function buildGoldenGatePlan(payload = {}) {
       templateName: insertTemplateName
     }
   });
-  if (insertTemplateDesign.feasible === false) {
-    return infeasible(insertTemplateDesign.blockingWarnings || insertTemplateDesign.warnings);
-  }
 
   const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
   const design = designWithThresholdFallback((thresholds) => {
@@ -209,7 +205,17 @@ export function buildGoldenGatePlan(payload = {}) {
         warnings: [`${enzyme.name} cut exposes the matched ${upstreamOverhang} junction overhang.`]
       })
     ];
-    return { feasible: true, primers, warnings: [], ...summarizePrimerPlan(primers) };
+    return {
+      feasible: true,
+      primers,
+      // What the stated insert template could not confirm advises the plan
+      // rather than blocking it, so it has to reach the plan's warnings.
+      warnings: (asArray(insertTemplateDesign.warnings).length
+        ? asArray(insertTemplateDesign.warnings)
+        : [insertForward.specificityWarning, insertReverse.specificityWarning]
+      ).filter(Boolean),
+      ...summarizePrimerPlan(primers)
+    };
   });
 
   if (!design.feasible) {

@@ -4,7 +4,7 @@ This document exports the provider-neutral MCP-facing contract for Hikari agents
 
 ## Background experiment suggestions
 
-`notebook_suggest` is a conditional tool available only to Hikari background experiment suggestion runs. It prepares a Suggested page with the notebook draft contract; paper downloads are blocked. See [Notebook suggestions](notebook-suggestions.md) for triggers, state transitions and access rules.
+`notebook_suggest` is a conditional tool available only to Hikari background experiment suggestion runs. It prepares zero to five Suggested pages with the notebook draft contract; paper downloads are blocked. See [Notebook suggestions](notebook-suggestions.md) for triggers, state transitions and access rules.
 
 ## Runtime config
 

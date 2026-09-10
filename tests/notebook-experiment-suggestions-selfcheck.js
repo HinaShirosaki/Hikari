@@ -129,6 +129,69 @@ async function run() {
   assert.equal(state.notebookEntries.length, 2, 'Accepting changes the existing entry');
   assert.equal(await controller.takeIntoPlan(), null, 'Acceptance is idempotent');
 
+  // Batch artifacts travel through the same stream envelope, including an explicit empty batch.
+  const { extractNotebookDraftArtifactFromToolEvent } = require('../src/main/agent/codex-agent/artifacts.js');
+  let batchSize = 5;
+  const batchService = createNotebookSuggestionService({ codexAgentRuntime: { run: async request => {
+    const context = { ...requestContext, snapshot: request.snapshot };
+    const result = await gateway.callGatewayTool('notebook_suggest', { suggestions: Array.from({length: batchSize}, (_, i) => ({
+      protocol_candidates: ['Measure growth'], title: 'Follow-up ' + i, rationale: 'Evidence for follow-up ' + i
+    })) }, context);
+    const artifact = extractNotebookDraftArtifactFromToolEvent({tool_name:'notebook_suggest', status:'completed', tool_result:result});
+    return {ok:true, notebook_draft:artifact};
+  } } });
+  const five = await batchService.suggest({projectId:'p', snapshot});
+  assert.equal(five.ok, true);
+  assert.equal(five.notebooks.length, 5);
+  batchSize = 0;
+  const zero = await batchService.suggest({projectId:'p', snapshot});
+  assert.equal(zero.ok, true);
+  assert.deepEqual(zero.notebooks, []);
+  batchSize = 6;
+  assert.equal((await batchService.suggest({projectId:'p', snapshot})).ok, false);
+  const batchState = JSON.parse(JSON.stringify(snapshot));
+  let batchCalls = 0, nextBatch = zero, sequence = 0, savedBatch;
+  const makeController = () => createExperimentSuggestions({state:batchState, createId:()=> 'batch-' + ++sequence,
+    persist:()=>{savedBatch=JSON.parse(JSON.stringify(batchState));},
+    api:{suggestNextExperiment:async()=>{batchCalls++;return nextBatch;}}
+  });
+  let batchController = makeController();
+  await batchController.suggest('p');
+  assert.equal(batchState.notebookEntries.length, 1, 'Zero creates no notebook pages');
+  assert.ok(savedBatch.settings.notebookSuggestionPauses.p);
+  batchState.settings = savedBatch.settings;
+  batchController = makeController();
+  await batchController.suggest('p');
+  await batchController.suggest('p', {automatic:true,completedEntry:batchState.notebookEntries[0]});
+  assert.equal(batchCalls,1,'Pause survives controller reload and blocks manual retry and old experiment completion');
+  const agentEntry={id:'accepted-agent',projectId:'p',notebookState:'executed',agentDraftMeta:{source:'agent_notebook_suggestion_v1'}};
+  batchState.notebookEntries.push(agentEntry);
+  await batchController.suggest('p',{automatic:true,completedEntry:agentEntry});
+  assert.equal(batchCalls,1,'Finishing an agent suggestion does not release the pause');
+  const manualEntry={id:'new-manual',projectId:'p',notebookState:'planned'};
+  batchState.notebookEntries.push(manualEntry);
+  await batchController.suggest('p',{automatic:true,completedEntry:manualEntry});
+  assert.equal(batchCalls,1,'A new manual experiment must be finished');
+  manualEntry.notebookState='executed';
+  nextBatch=five;
+  await batchController.suggest('p',{automatic:true,completedEntry:manualEntry});
+  assert.equal(batchCalls,2);
+  assert.equal(batchState.notebookEntries.filter(e=>e.notebookState==='suggested').length,5);
+  assert.equal(batchState.settings.notebookSuggestionPauses.p,undefined);
+  assert.equal(new Set(batchState.notebookEntries.map(e=>e.id)).size,batchState.notebookEntries.length);
+  const { normalizeState } = esm('modules/app-state/state-normalizer.js');
+  // Pause metadata is part of normalized settings, rather than ephemeral UI state.
+  assert.deepEqual(normalizeState({settings:{notebookSuggestionPauses:{p:{entryIds:['done']}}}}).settings.notebookSuggestionPauses, {p:{entryIds:['done']}});
+  const rollbackState=JSON.parse(JSON.stringify(snapshot));
+  const rollbackController=createExperimentSuggestions({state:rollbackState,createId:()=> 'rollback-' + ++sequence,
+    persist:()=>{throw new Error('Disk full');},api:{suggestNextExperiment:async()=>five}});
+  await rollbackController.suggest('p');
+  assert.equal(rollbackState.notebookEntries.length,1,'An entire batch rolls back on save failure');
+  const zeroFailure=createExperimentSuggestions({state:rollbackState,createId:()=> 'unused',
+    persist:()=>{throw new Error('Disk full');},api:{suggestNextExperiment:async()=>zero}});
+  await zeroFailure.suggest('p');
+  assert.equal(rollbackState.settings.notebookSuggestionPauses.p,undefined,'A failed save cannot leave the project paused');
+
   const rows = [];
   writeSqlNotebookIndex({ run: (_sql, args) => rows.push(args) }, { notebookEntries: [entry] }, '2026-09-08');
   assert.equal(rows[0][6], 'suggested', 'SQL writes retain Suggested');

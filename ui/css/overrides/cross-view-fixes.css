@@ -1,6 +1,11 @@
 /* Spacing and overlap fixes by view */
 
-:root {
+/*
+ * Declared on `body`, not `:root`: a custom property is substituted where it is
+ * DECLARED, so reading --theme-* from :root freezes the day palette and leaks
+ * those light colors into night mode. The theme class lives on body.
+ */
+body {
   --app-left-rail-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-background) 4%);
   --app-left-rail-divider: color-mix(in srgb, var(--theme-border-soft) 88%, var(--theme-text-strong) 12%);
 }

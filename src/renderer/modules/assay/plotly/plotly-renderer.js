@@ -1,13 +1,13 @@
 import { resolveAxisStyle, plotlyAxisRange } from './chart-style-targets.js';
 import { buildPlotlyTraces } from './plotly-traces.js';
 import {
-  PRISM_BAR_GAP,
-  PRISM_BAR_GROUP_GAP,
-  prismAxisDefaults,
-  prismFonts,
-  prismTextFont,
-  prismFrameShapes
-} from './prism-theme.js';
+  FIGURE_BAR_GAP,
+  FIGURE_BAR_GROUP_GAP,
+  figureAxisDefaults,
+  figureFonts,
+  figureTextFont,
+  figureFrameShapes
+} from './figure-theme.js';
 
 // Plotly log axes are positioned in log10; a log10-space dtick of log10(base) lands
 // ticks on consecutive powers of that base (Plotly's documented multi-base trick).
@@ -124,7 +124,7 @@ function serializeSvgToDataUrl(svgElement) {
 
 // Assay Plotly renderer: render(target, chartModel, style) -> { seriesLabels }.
 // chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?,points?}], markers? }] }
-// data[].points = the group's raw replicates, dotted over a single-series bar (Prism style).
+// data[].points = the group's raw replicates, dotted over a single-series bar (figure style).
 // Plotly is loaded as a window global by index.html.
 export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
   let chartHost = null;
@@ -175,10 +175,10 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // NaN and silently drops every point, which is what a bar -> line override used to do.
     const hasCategoryX = chartModel.series.some((series) => (series.data || [])
       .some((point) => point && !Number.isFinite(Number(point.x))));
-    const { font, tickFont } = prismFonts(st);
+    const { font, tickFont } = figureFonts(st);
     const axisColor = st.frameStroke || '#000000';
     const bgColor = st.backgroundColor || '#ffffff';
-    const traces = buildPlotlyTraces(chartModel, st, prismTextFont(st, 'barLabels'));
+    const traces = buildPlotlyTraces(chartModel, st, figureTextFont(st, 'barLabels'));
 
     // Everything below is sized in plot-area terms, and the margins are added back on
     // top at the end. Plotly's width/height are the whole figure, so sizing the figure
@@ -186,11 +186,11 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // The plot area follows the data: room per bar (or per point), and a height tied to
     // that width. A flat 420x280 floor left the axis running well past the last bar on a
     // two-group summary, and a flat 280 height turned a 24-category plot into a letterbox.
-    const yTickFont = prismTextFont(st, 'yTicks');
-    const xTitleFont = prismTextFont(st, 'xTitle');
-    const yTitleFont = prismTextFont(st, 'yTitle');
-    const legendFont = prismTextFont(st, 'legend');
-    const titleFont = prismTextFont(st, 'title');
+    const yTickFont = figureTextFont(st, 'yTicks');
+    const xTitleFont = figureTextFont(st, 'xTitle');
+    const yTitleFont = figureTextFont(st, 'yTitle');
+    const legendFont = figureTextFont(st, 'legend');
+    const titleFont = figureTextFont(st, 'title');
     const yValues = chartModel.series.flatMap((series) => [...(series.data || []), ...(series.markers || [])])
       .flatMap((point) => [point.y, point.y + (point.yVariance || 0)]).filter(Number.isFinite);
     if (Number.isFinite(st.yRange?.max)) yValues.push(st.yRange.max);
@@ -246,7 +246,7 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     const xScaleCfg = isBar || hasCategoryX ? { type: 'category', dtick: null } : scaleAxis(st.xScale);
     const yScaleCfg = scaleAxis(st.yScale);
 
-    // Prism writes category labels horizontally; only tilt them when they would collide.
+    // Category labels are written horizontally; only tilt them when they would collide.
     // Collision is label width against the slot each category actually gets, so 24 short
     // labels tilt for the same reason two long ones do.
     const longestCategory = !isBar && !hasCategoryX ? 0 : chartModel.series.reduce((max, series) => (series.data || [])
@@ -263,13 +263,13 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // An explicit axis title wins; otherwise the analysis names its own axes. Both are
     // drawn as annotations (see axisTitleAnnotation), so the axes themselves stay untitled.
     const axisTitles = [
-      axisTitleAnnotation(st.xTitle || chartModel.xLabel || '', prismTextFont(st, 'xTitle'),
+      axisTitleAnnotation(st.xTitle || chartModel.xLabel || '', figureTextFont(st, 'xTitle'),
         st.xTitlePos, xShift, false, plotAreaWidth, plotAreaHeight),
-      axisTitleAnnotation(st.yTitle || chartModel.yLabel || '', prismTextFont(st, 'yTitle'),
+      axisTitleAnnotation(st.yTitle || chartModel.yLabel || '', figureTextFont(st, 'yTitle'),
         st.yTitlePos, yShift, true, plotAreaWidth, plotAreaHeight)
     ];
     const xaxis = {
-      ...prismAxisDefaults(xStyle, prismTextFont(st, 'xTicks')),
+      ...figureAxisDefaults(xStyle, figureTextFont(st, 'xTicks')),
       // automargin grows the margin into the plot area, which would shrink the exact
       // size that was asked for. In auto mode it still guards against clipped labels.
       automargin: !exactSize,
@@ -279,9 +279,9 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
       tickangle: categoryTickAngle
     };
     const yaxis = {
-      ...prismAxisDefaults(yStyle, prismTextFont(st, 'yTicks')),
+      ...figureAxisDefaults(yStyle, figureTextFont(st, 'yTicks')),
       automargin: !exactSize,
-      title: { text: '', font: prismTextFont(st, 'yTitle') },
+      title: { text: '', font: figureTextFont(st, 'yTitle') },
       tickangle: yStyle.tickAngle ?? 0,
       type: yScaleCfg.type,
       showgrid: st.showHorizontalGrid === true
@@ -330,14 +330,14 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
       legend: { ...legendLayout(st.legendPosition, legendFont),
         ...(st.legendPosition === 'bottom' ? { y: -(xShift + xTitleFont.size + 12) / plotAreaHeight } : {}) },
       barmode: st.barMode || 'group',
-      // Prism bars sit apart with tight groups.
-      bargap: PRISM_BAR_GAP,
-      bargroupgap: PRISM_BAR_GROUP_GAP
+      // Bars sit apart with tight groups.
+      bargap: FIGURE_BAR_GAP,
+      bargroupgap: FIGURE_BAR_GROUP_GAP
     };
     layout.annotations = axisTitles;
-    const shapes = prismFrameShapes(st);
+    const shapes = figureFrameShapes(st);
     if (st.title) {
-      layout.title = { text: st.title, font: prismTextFont(st, 'title'), x: st.titlePos ?? 0.5, xanchor: 'center',
+      layout.title = { text: st.title, font: figureTextFont(st, 'title'), x: st.titlePos ?? 0.5, xanchor: 'center',
         yref: 'container', y: 1, yanchor: 'top', pad: { t: (st.titleOffset ?? 0) + Math.ceil(titleFont.size * 0.4) + 6 } };
     }
     // Shape endpoints use data units, including on log axes (unlike axis ranges).

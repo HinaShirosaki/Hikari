@@ -79,7 +79,21 @@ export function normalizeNotebookResultTable(rawTable) {
 
   // `solve` marks a table whose columns define one another (the molarity table), so a
   // loop between two empty ones means "not determined yet" rather than a mistake.
-  return source.solve ? { columns, rows, solve: true } : { columns, rows };
+  if (!source.solve) {
+    return { columns, rows };
+  }
+  // Solve tables used to keep their formula in every cell, which had to be typed over
+  // to enter a value. The formula lives in solveTableCellFormula now, so a stored copy
+  // of the generated one is dropped on the way in: the cell is a value or it is empty.
+  rows.forEach((row, rowIndex) => {
+    const generated = molarityRowFormulas(columns, rowIndex);
+    columns.forEach((column, index) => {
+      if (generated[index] && row[column.field] === generated[index]) {
+        row[column.field] = '';
+      }
+    });
+  });
+  return { columns, rows, solve: true };
 }
 
 export function cloneNotebookResultTable(rawTable) {
@@ -174,31 +188,33 @@ export function molarityRowFormulas(columns, rowIndex) {
   ];
 }
 
-// Molarity worksheet: one row is molarity = weight / (MW x volume), written out once
-// per column so any column can be the unknown. Fill three and the fourth computes;
-// fill two and the other two show the arithmetic that is left. Clearing a cell you
-// typed over drops that column's formula for good -- drag the fill handle from a
-// spare row to get it back.
+// The formula a solve table's cell falls back to when nothing is typed in it. It is
+// never stored in the cell, so a value goes straight into an empty editor and clearing
+// it brings the computed value back -- the formula belongs to the table, not the cell.
+export function solveTableCellFormula(table, columnIndex, rowIndex) {
+  if (!table?.solve) {
+    return '';
+  }
+  return molarityRowFormulas(table.columns, rowIndex)[columnIndex] || '';
+}
+
+// Molarity worksheet: one row is molarity = weight / (MW x volume), rearranged once per
+// column so any column can be the unknown. Cells start empty and stay values-only; fill
+// three and the fourth computes, fill two and the other two show the arithmetic left.
 export function createMolarityNotebookResultTable(createId, rowCount = MOLARITY_ROW_COUNT) {
   const columns = MOLARITY_COLUMN_TITLES.map((title, index) => ({
     field: buildFieldId(createId, 'molarity', index),
     title
   }));
-  const rows = Array.from({ length: rowCount }, (_unused, index) => {
-    const cells = molarityRowFormulas(columns, index);
-    const row = { id: buildFieldId(createId, 'row', index) };
-    columns.forEach((column, columnIndex) => {
-      row[column.field] = cells[columnIndex];
-    });
-    return row;
-  });
+  const rows = Array.from({ length: rowCount }, (_unused, index) => (
+    buildRow(columns, buildFieldId(createId, 'row', index))
+  ));
   return { columns, rows, solve: true };
 }
 
 // Switching a column's unit re-expresses what is already in it rather than changing
-// what the numbers mean: typed values are converted, and a solve table's generated
-// formulas are rebuilt around the new constant. A formula the user wrote or edited by
-// hand no longer matches the generated one, so it is left exactly as they left it.
+// what the numbers mean: typed values are converted, and a solve table's formulas are
+// derived from the column titles, so they follow the new constant on their own.
 export function setNotebookResultTableColumnUnit(rawTable, columnIndex, unit) {
   const table = normalizeNotebookResultTable(rawTable);
   const column = table?.columns?.[columnIndex];
@@ -208,21 +224,10 @@ export function setNotebookResultTableColumnUnit(rawTable, columnIndex, unit) {
     return table;
   }
 
-  const before = table.columns.map(({ title }) => ({ title }));
   column.title = retitleColumnUnit(column.title, next.unit);
   const ratio = previous.factor / next.factor;
-  table.rows.forEach((row, rowIndex) => {
+  table.rows.forEach((row) => {
     row[column.field] = rescaleCellValue(row[column.field], ratio);
-    if (!table.solve) {
-      return;
-    }
-    const stale = molarityRowFormulas(before, rowIndex);
-    const fresh = molarityRowFormulas(table.columns, rowIndex);
-    table.columns.forEach((each, index) => {
-      if (stale[index] && String(row[each.field] ?? '') === stale[index]) {
-        row[each.field] = fresh[index];
-      }
-    });
   });
   return table;
 }

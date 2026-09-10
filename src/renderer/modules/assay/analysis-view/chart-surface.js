@@ -1,5 +1,5 @@
 import { sanitizeFilePart } from '../shared.js';
-import { applyPrismDefaults } from '../plotly/prism-theme.js';
+import { applyFigureDefaults } from '../plotly/figure-theme.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 import { asArray, ensureObject } from '../../../lib/normalize.js';
 import { getPlotlyTitle, normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
@@ -206,9 +206,9 @@ function createChartSurface({
       return false;
     }
 
-    // Agent figures get the same Prism defaults as the built-in charts; anything the
+    // Agent figures get the same Figure defaults as the built-in charts; anything the
     // agent stated itself (colours, gridlines, its own frame) still wins.
-    const themed = applyPrismDefaults(normalized.figure, getChartStyle());
+    const themed = applyFigureDefaults(normalized.figure, getChartStyle());
     const layout = {
       autosize: true,
       height: Number(themed.layout?.height) || 360,

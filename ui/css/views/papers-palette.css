@@ -2,4 +2,13 @@
 
 :root {
   --papers-highlight: rgba(255, 224, 102, 0.5);
+  --papers-form-field-bg: rgba(0, 84, 220, 0.08);
+  --papers-form-field-border: rgba(0, 84, 220, 0.32);
+  --papers-form-field-focus: rgba(0, 84, 220, 0.6);
+}
+
+body.theme-night {
+  --papers-form-field-bg: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  --papers-form-field-border: color-mix(in srgb, var(--theme-accent) 42%, transparent);
+  --papers-form-field-focus: color-mix(in srgb, var(--theme-focus) 72%, transparent);
 }

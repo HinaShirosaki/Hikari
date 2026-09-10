@@ -192,6 +192,20 @@
   background: var(--theme-surface-subtle);
 }
 
+.tool-box-sheet-add-row td {
+  padding: 0;
+  border-left: 0;
+  border-right: 0;
+  background: transparent;
+}
+
+.tool-box-sheet-add-row .tool-box-sheet-add-btn {
+  width: 100%;
+  min-height: 34px;
+  border-radius: 0;
+  color: var(--theme-text-muted);
+}
+
 .tool-box-buffer-sheet-wrap,
 .tool-box-reaction-sheet-wrap {
   max-width: 100%;
@@ -199,10 +213,22 @@
   border-radius: 10px;
 }
 
+.tool-box-buffer-sheet input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.tool-box-buffer-sheet input[type="number"]::-webkit-outer-spin-button,
+.tool-box-buffer-sheet input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .tool-box-buffer-sheet,
 .tool-box-reaction-sheet {
   width: 100%;
-  min-width: 760px;
+  min-width: 880px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 0.86rem;
@@ -297,37 +323,43 @@
 
 .tool-box-buffer-sheet th:first-child,
 .tool-box-buffer-sheet td:first-child {
-  width: 25%;
+  width: 22%;
 }
 
 .tool-box-buffer-sheet th:nth-child(2),
 .tool-box-buffer-sheet td:nth-child(2) {
-  width: 15%;
+  width: 12%;
 }
 
 .tool-box-buffer-sheet th:nth-child(3),
 .tool-box-buffer-sheet td:nth-child(3),
 .tool-box-buffer-sheet th:nth-child(4),
 .tool-box-buffer-sheet td:nth-child(4) {
-  width: 20%;
+  width: 15%;
 }
 
 .tool-box-buffer-sheet th:nth-child(5),
-.tool-box-buffer-sheet td:nth-child(5) {
-  width: 20%;
+.tool-box-buffer-sheet td:nth-child(5),
+.tool-box-buffer-sheet th:nth-child(6),
+.tool-box-buffer-sheet td:nth-child(6) {
+  width: 18%;
 }
 
 .tool-box-reaction-item-col {
-  width: 30%;
+  width: 26%;
 }
 
 .tool-box-reaction-stock-col,
 .tool-box-reaction-final-col {
-  width: 22%;
+  width: 18%;
 }
 
 .tool-box-reaction-volume-col {
-  width: 26%;
+  width: 16%;
+}
+
+.tool-box-reaction-note-col {
+  width: 22%;
 }
 
 .tool-box-buffer-chemical-cell {
@@ -421,16 +453,6 @@
 .tool-box-buffer-suggestion span {
   color: var(--theme-text-muted);
   font-size: 0.76rem;
-}
-
-.tool-box-reaction-volume-cell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(82px, auto);
-  align-items: stretch;
-}
-
-.tool-box-reaction-volume-cell input {
-  border-right: 1px solid var(--theme-border-soft);
 }
 
 .result-card {
@@ -799,7 +821,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 /* Molarity calculator */
 .molarity-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -837,6 +859,10 @@ body.ui-neutral-compact input[id*="api-key"] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: end;
+}
+
+#tool-molarity-view #molarity-solver-form {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 
 #tool-molarity-view .molarity-form > label {
@@ -914,12 +940,6 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 #tool-molarity-view .molarity-output[data-state="warning"]::before {
   color: var(--theme-danger);
-}
-
-@media (max-width: 1200px) {
-  .molarity-card-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 760px) {

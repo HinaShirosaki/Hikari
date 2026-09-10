@@ -25,6 +25,12 @@ function setText(element, value) {
   }
 }
 
+function setPlaceholder(element, value) {
+  if (element) {
+    element.placeholder = String(value || '');
+  }
+}
+
 function inputValue(element) {
   return element?.value ?? '';
 }
@@ -93,12 +99,11 @@ export function initBufferTool(options = {}) {
   }
 
   function insertBufferRowBeforeAdjustment(row) {
-    const adjustmentRow = getElement(rootDocument, 'buffer-adjustment-row');
-    if (
-      adjustmentRow?.parentElement === bufferRows
-      && typeof bufferRows.insertBefore === 'function'
-    ) {
-      bufferRows.insertBefore(row, adjustmentRow);
+    const anchorRow = ['buffer-add-row', 'buffer-adjustment-row']
+      .map((id) => getElement(rootDocument, id))
+      .find((candidate) => candidate?.parentElement === bufferRows);
+    if (anchorRow && typeof bufferRows.insertBefore === 'function') {
+      bufferRows.insertBefore(row, anchorRow);
       return;
     }
     bufferRows.appendChild(row);
@@ -154,14 +159,15 @@ export function initBufferTool(options = {}) {
       `buffer-name-${index}`,
       `buffer-mw-${index}`,
       `buffer-stock-${index}`,
-      `buffer-final-${index}`
+      `buffer-final-${index}`,
+      `buffer-amount-${index}`,
+      `buffer-note-${index}`
     ].forEach((id) => {
       const input = getElement(rootDocument, id);
       if (input) {
         input.value = '';
       }
     });
-    setText(getElement(rootDocument, `buffer-output-${index}`), '');
     row.hidden = true;
   }
 
@@ -388,25 +394,29 @@ export function initBufferTool(options = {}) {
         form: bufferCandidateForm(name),
         molecularWeight: inputValue(getElement(rootDocument, `buffer-mw-${index}`)),
         stockConcentration: inputValue(getElement(rootDocument, `buffer-stock-${index}`)),
-        finalConcentration: inputValue(getElement(rootDocument, `buffer-final-${index}`))
+        finalConcentration: inputValue(getElement(rootDocument, `buffer-final-${index}`)),
+        manualQuantity: inputValue(getElement(rootDocument, `buffer-amount-${index}`)),
+        note: inputValue(getElement(rootDocument, `buffer-note-${index}`))
       });
     }
     return rows;
   }
 
+  // The calculated amount is the cell's placeholder, so a weighed-out value can
+  // be typed straight over it instead of sitting on a second line.
   function renderBufferTableResult(result) {
     for (let index = 1; index <= rowCount(); index += 1) {
-      setText(getElement(rootDocument, `buffer-output-${index}`), '');
+      setPlaceholder(getElement(rootDocument, `buffer-amount-${index}`), 'auto');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
       const rowIndex = Number(detail?.rowIndex) || 0;
-      const output = rowIndex ? getElement(rootDocument, `buffer-output-${rowIndex}`) : null;
-      if (!output) {
+      const amount = rowIndex ? getElement(rootDocument, `buffer-amount-${rowIndex}`) : null;
+      if (!amount || String(amount.value || '').trim()) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
       const suffix = detail.resultText && /\bstock\./i.test(detail.resultText) ? ' stock' : '';
-      setText(output, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
+      setPlaceholder(amount, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
     });
     setText(getElement(rootDocument, 'buffer-solvent-output'), result?.solvent?.text || '');
     setText(getElement(rootDocument, 'buffer-naoh-output'), result?.phAdjustment?.naohText || '');
@@ -453,7 +463,9 @@ export function initBufferTool(options = {}) {
     [
       `buffer-mw-${index}`,
       `buffer-stock-${index}`,
-      `buffer-final-${index}`
+      `buffer-final-${index}`,
+      `buffer-amount-${index}`,
+      `buffer-note-${index}`
     ].forEach((id) => {
       const element = getElement(rootDocument, id);
       addListener(element, 'input', renderBuffer);

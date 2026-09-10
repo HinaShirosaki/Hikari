@@ -251,6 +251,35 @@ test('[P1] normalizeState keeps startup defaults when settings.startup is missin
   assert.equal(normalized.settings.startup.defaultViewId, shared.defaultState.settings.startup.defaultViewId);
   assert.equal(normalized.settings.startup.rememberLastView, shared.defaultState.settings.startup.rememberLastView);
 });
+test('[P1] normalizeState keeps notebook PDF export defaults when settings are missing', () => {
+  const normalized = shared.normalizeState({ settings: {} });
+  assert.equal(normalized.settings.notebookPdf.pageSize, 'letter');
+  assert.equal(normalized.settings.notebookPdf.stapleEdge, 'none');
+});
+test('[P1] normalizeState preserves supported notebook PDF page and staple settings', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      notebookPdf: {
+        pageSize: 'A4',
+        stapleEdge: 'TOP'
+      }
+    }
+  });
+  assert.equal(normalized.settings.notebookPdf.pageSize, 'a4');
+  assert.equal(normalized.settings.notebookPdf.stapleEdge, 'top');
+});
+test('[P0] normalizeState resets unsupported notebook PDF settings to defaults', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      notebookPdf: {
+        pageSize: 'poster',
+        stapleEdge: 'right'
+      }
+    }
+  });
+  assert.equal(normalized.settings.notebookPdf.pageSize, 'letter');
+  assert.equal(normalized.settings.notebookPdf.stapleEdge, 'none');
+});
 test('[P0] normalizeState falls back to home-view for invalid startup defaultViewId', () => {
   const normalized = shared.normalizeState({
     settings: {

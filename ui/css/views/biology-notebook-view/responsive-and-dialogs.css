@@ -129,15 +129,46 @@
   }
 }
 
-/* Add Table asks for a size before creating the grid. */
-.biology-notebook-table-size-dialog {
-  width: min(340px, 92vw);
+/* Add Table asks for a size before creating the grid. The toolbox floats and
+   can be dragged anywhere, so the ask sits against its own button. */
+.biology-notebook-table-size-popover {
+  position: fixed;
+  z-index: 120;
+  display: grid;
+  gap: 8px;
+  width: 184px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 14px 28px var(--theme-shadow-color);
+}
+
+.biology-notebook-table-size-popover[hidden] {
+  display: none;
+}
+
+.biology-notebook-table-size-form {
+  display: grid;
+  gap: 8px;
 }
 
 .biology-notebook-table-size-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: 8px;
+}
+
+.biology-notebook-table-size-fields label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  font-size: 0.74rem;
+  color: var(--theme-text-muted);
+}
+
+.biology-notebook-table-size-fields input {
+  width: 100%;
+  min-width: 0;
 }
 
 /* Reaction cells are editable in place, so they read as table text until they

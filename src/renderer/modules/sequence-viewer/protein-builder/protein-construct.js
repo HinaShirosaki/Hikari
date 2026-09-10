@@ -41,7 +41,10 @@ export function buildConstruct(payload = {}) {
         label: sourceName,
         sequence: sourceSequence,
         note: sourceNote,
-        sourceDnaSequence
+        sourceDnaSequence,
+        sourceVectorId: cleanText(activeDnaSource.entryId, 200),
+        sourceVectorName: cleanText(activeDnaSource.recordName, 160),
+        sourceVectorSequence: normalizeSequenceText(activeDnaSource.recordSequence || '')
       });
       return;
     }
@@ -67,6 +70,7 @@ export function buildConstruct(payload = {}) {
       sourceFeatureId: cleanText(row?.sourceFeatureId, 200),
       sourceFeatureType: cleanText(row?.sourceFeatureType, 120),
       sourceVectorName: cleanText(row?.sourceVectorName, 160),
+      sourceVectorId: cleanText(row?.sourceVectorId, 200),
       sourceVectorSequence: normalizeSequenceText(row?.sourceVectorSequence || '')
     });
 

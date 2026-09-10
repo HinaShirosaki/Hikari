@@ -44,7 +44,7 @@ function setTextColor(ctx, color) {
 function refreshPageMetrics(ctx) {
   ctx.pageWidth = ctx.doc.internal.pageSize.getWidth();
   ctx.pageHeight = ctx.doc.internal.pageSize.getHeight();
-  ctx.maxWidth = ctx.pageWidth - (ctx.margin * 2);
+  ctx.maxWidth = ctx.pageWidth - ctx.marginLeft - ctx.marginRight;
 }
 
 function addPage(ctx, orientation = ctx.orientation) {
@@ -53,11 +53,11 @@ function addPage(ctx, orientation = ctx.orientation) {
   }
   ctx.orientation = orientation || ctx.orientation;
   refreshPageMetrics(ctx);
-  ctx.y = ctx.margin;
+  ctx.y = ctx.marginTop;
 }
 
 function contentBottom(ctx) {
-  return ctx.pageHeight - Math.max(ctx.margin, FOOTER_BASELINE + 24);
+  return ctx.pageHeight - Math.max(ctx.marginBottom, FOOTER_BASELINE + 24);
 }
 
 function ensureSpace(ctx, neededHeight) {

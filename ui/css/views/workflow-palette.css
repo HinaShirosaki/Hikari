@@ -20,6 +20,8 @@ body.theme-night {
   --workflow-node-selected-ring: color-mix(in srgb, var(--theme-focus) 34%, transparent);
   --workflow-port-border: var(--theme-border);
   --workflow-link: var(--theme-accent);
+  --workflow-link-hover: var(--theme-focus);
+  --workflow-link-preview: color-mix(in srgb, var(--theme-accent) 70%, transparent);
   --workflow-selection-border: var(--theme-focus);
   --workflow-selection-background: color-mix(in srgb, var(--theme-accent) 22%, transparent);
   --workflow-context-border: var(--theme-border);

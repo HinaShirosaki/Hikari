@@ -15,8 +15,19 @@ function searchableSequence(value) {
 // must not be annotated. Mutagenesis primers are the exception: they carry the
 // edit inside the oligo, so their binding half matches no template and the full
 // primer is what lands on the edited construct. Try the narrower one first.
-function bindingCandidates(primer) {
+function bindingCandidates(primer, target) {
   const clean = (value) => searchableSequence(value).replace(/[^A-Z]/g, '');
+  if (target === 'product') {
+    const sequence = clean(primer?.sequence);
+    const binding = clean(primer?.bindingSequence);
+    // Assembly overlaps belong on the result; non-retained enzyme/clamp bases
+    // can be trimmed from the 5' end while the complete oligo stays recorded.
+    const candidates = [sequence, binding];
+    for (let trim = 1; trim <= sequence.length - Math.max(8, binding.length); trim += 1) {
+      candidates.splice(candidates.length - 1, 0, sequence.slice(trim));
+    }
+    return [...new Set(candidates.filter((candidate) => candidate.length >= 8))];
+  }
   return [clean(primer?.bindingSequence), clean(primer?.sequence)]
     .filter((candidate, index, list) => candidate.length >= 8 && list.indexOf(candidate) === index);
 }
@@ -73,12 +84,12 @@ function describePrimer(primer, matchedLength) {
 
 // Returns the record's features with a primer_bind feature per placed primer.
 // Re-running a design replaces its own features instead of stacking duplicates.
-export function withPrimerBindFeatures(record, primers) {
+export function withPrimerBindFeatures(record, primers, options = {}) {
   const sequence = searchableSequence(record?.sequence || '');
   const isCircular = String(record?.topology || '').toLowerCase() !== 'linear';
   const existing = Array.isArray(record?.features) ? record.features : [];
   const safePrimers = Array.isArray(primers) ? primers : [];
-  const used = new Set();
+  const used = new Set(existing.map((feature) => feature.id));
   const added = [];
   const unplaced = [];
   const ambiguous = [];
@@ -87,22 +98,23 @@ export function withPrimerBindFeatures(record, primers) {
     const name = String(primer?.name || '').trim() || `Primer ${index + 1}`;
     let hit = null;
     let binding = '';
-    let ambiguousHit = false;
-    for (const candidate of (sequence.length ? bindingCandidates(primer) : [])) {
+    let ambiguousHit = null;
+    for (const candidate of (sequence.length ? bindingCandidates(primer, options.target) : [])) {
       hit = locateBinding(sequence, candidate, isCircular);
       binding = candidate;
       if (hit?.ambiguous) {
-        ambiguous.push({ name, count: hit.count });
-        ambiguousHit = true;
+        ambiguousHit = { name, count: hit.count };
         hit = null;
-        break;
+        continue;
       }
       if (hit) {
         break;
       }
     }
     if (!hit) {
-      if (!ambiguousHit) {
+      if (ambiguousHit) {
+        ambiguous.push(ambiguousHit);
+      } else {
         unplaced.push(name);
       }
       return;
@@ -128,7 +140,7 @@ export function withPrimerBindFeatures(record, primers) {
     // Drop every feature this module previously placed, not just the ids this run
     // happens to regenerate -- renaming a primer between designs would otherwise
     // leave the old annotation behind forever.
-    features: [...existing.filter((feature) => feature?.source !== PRIMER_FEATURE_SOURCE), ...added],
+    features: [...existing.filter((feature) => options.replaceAllDesigned === false || feature?.source !== PRIMER_FEATURE_SOURCE), ...added],
     added,
     unplaced,
     ambiguous
@@ -141,6 +153,7 @@ export async function annotatePrimersOnSelectedRecord({
   state,
   primers,
   persistFeatureMutation,
+  target,
   label = 'Added designed primers to the sequence.'
 } = {}) {
   const records = Array.isArray(state?.records) ? [...state.records] : [];
@@ -150,7 +163,7 @@ export async function annotatePrimersOnSelectedRecord({
     return 0;
   }
 
-  const { features, added } = withPrimerBindFeatures(record, primers);
+  const { features, added } = withPrimerBindFeatures(record, primers, { target });
   if (!added.length) {
     return 0;
   }

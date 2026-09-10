@@ -218,6 +218,9 @@ function registerDataIpc(deps = {}) {
   ipcMain.handle(PLUGINS.SERVE_FOLDER, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     try {
+      if (!session?.defaultSession) {
+        throw new Error('Plugin origins cannot be isolated without an Electron session.');
+      }
       const pluginId = cleanText(normalizedPayload?.id, 80);
       const requestedPath = cleanText(normalizedPayload?.path, 2400);
       const resolvedPath = resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath });

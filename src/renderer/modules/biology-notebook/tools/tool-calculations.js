@@ -8,11 +8,7 @@ function createToolCalculations({
   inputValue,
   isHidden,
   setText,
-  setStatus,
-  REACTION_ROW_COUNT,
-  outputEl,
-  formulaEl,
-  toolOutput,
+  reactionRowCount,
   getActiveTool,
   getCurrentResult,
   setCurrentResult,
@@ -20,6 +16,12 @@ function createToolCalculations({
   bufferCandidateForm,
   findBufferCandidate
 } = {}) {
+  function setPlaceholder(element, value) {
+    if (element) {
+      element.placeholder = String(value || '');
+    }
+  }
+
   function syncBufferCompound(index, { overwriteMw = false } = {}) {
     const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
     const mwInput = getElement(doc, `biology-notebook-tool-buffer-mw-${index}`);
@@ -46,7 +48,9 @@ function createToolCalculations({
         form: bufferCandidateForm(name),
         molecularWeight: inputValue(getElement(doc, `biology-notebook-tool-buffer-mw-${index}`)),
         stockConcentration: inputValue(getElement(doc, `biology-notebook-tool-buffer-stock-${index}`)),
-        finalConcentration: inputValue(getElement(doc, `biology-notebook-tool-buffer-final-${index}`))
+        finalConcentration: inputValue(getElement(doc, `biology-notebook-tool-buffer-final-${index}`)),
+        manualQuantity: inputValue(getElement(doc, `biology-notebook-tool-buffer-amount-${index}`)),
+        note: inputValue(getElement(doc, `biology-notebook-tool-buffer-note-${index}`))
       });
     }
     return rows;
@@ -63,7 +67,7 @@ function createToolCalculations({
 
   function collectReactionRows() {
     const rows = [];
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
       if (isHidden(getElement(doc, `biology-notebook-tool-reaction-row-${index}`))) {
         continue;
       }
@@ -72,7 +76,8 @@ function createToolCalculations({
         name: inputValue(getElement(doc, `biology-notebook-tool-reaction-name-${index}`)),
         stockConcentration: inputValue(getElement(doc, `biology-notebook-tool-reaction-stock-${index}`)),
         finalConcentration: inputValue(getElement(doc, `biology-notebook-tool-reaction-final-${index}`)),
-        manualVolumeValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-volume-${index}`))
+        manualVolumeValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-volume-${index}`)),
+        note: inputValue(getElement(doc, `biology-notebook-tool-reaction-note-${index}`))
       });
     }
     return rows;
@@ -99,17 +104,17 @@ function createToolCalculations({
 
   function renderBufferTableResult(result) {
     for (let index = 1; index <= bufferRowCount(); index += 1) {
-      setText(getElement(doc, `biology-notebook-tool-buffer-output-${index}`), '');
+      setPlaceholder(getElement(doc, `biology-notebook-tool-buffer-amount-${index}`), 'auto');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
       const rowIndex = Number(detail?.rowIndex) || 0;
-      const output = rowIndex ? getElement(doc, `biology-notebook-tool-buffer-output-${rowIndex}`) : null;
-      if (!output) {
+      const amount = rowIndex ? getElement(doc, `biology-notebook-tool-buffer-amount-${rowIndex}`) : null;
+      if (!amount || String(amount.value || '').trim()) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
       const suffix = detail.resultText && /\bstock\./i.test(detail.resultText) ? ' stock' : '';
-      setText(output, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
+      setPlaceholder(amount, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
     });
     setText(getElement(doc, 'biology-notebook-tool-buffer-solvent-output'), result?.solvent?.text || '');
     setText(getElement(doc, 'biology-notebook-tool-buffer-naoh-output'), result?.phAdjustment?.naohText || '');
@@ -117,46 +122,30 @@ function createToolCalculations({
   }
 
   function renderReactionTableResult(result) {
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
-      setText(getElement(doc, `biology-notebook-tool-reaction-output-${index}`), '');
+    for (let index = 1; index <= reactionRowCount(); index += 1) {
+      setPlaceholder(getElement(doc, `biology-notebook-tool-reaction-volume-${index}`), 'auto');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
       const rowIndex = Number(detail?.rowIndex) || 0;
-      const output = rowIndex ? getElement(doc, `biology-notebook-tool-reaction-output-${rowIndex}`) : null;
-      if (!output) {
+      const volume = rowIndex ? getElement(doc, `biology-notebook-tool-reaction-volume-${rowIndex}`) : null;
+      // A typed volume is the value; only an empty cell shows the calculated one.
+      if (!volume || String(volume.value || '').trim()) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      setText(output, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
+      setPlaceholder(volume, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
     });
     setText(getElement(doc, 'biology-notebook-tool-reaction-solvent-output'), result?.fill?.text || resultTextAfterName(result?.fill?.resultText || ''));
   }
 
+  // The sheet is the whole readout: every number lands in a cell, so there is
+  // no summary line, formula line or status line to keep in step with it.
   function renderCurrentTool() {
     setCurrentResult(calculateActiveTool());
     if (getActiveTool() === 'reaction') {
       renderReactionTableResult(getCurrentResult());
     } else {
       renderBufferTableResult(getCurrentResult());
-    }
-    const hideSummaryOutput = getActiveTool() !== 'reaction';
-    if (toolOutput) {
-      toolOutput.hidden = hideSummaryOutput;
-    }
-    if (hideSummaryOutput) {
-      setText(outputEl, '');
-      setText(formulaEl, '');
-    } else {
-      const output = getCurrentResult()?.resultText || 'Use the formula below with bench values.';
-      setText(outputEl, output);
-      setText(formulaEl, getCurrentResult()?.formulaText || '');
-    }
-    if (getCurrentResult()?.status === 'warning') {
-      setStatus(getCurrentResult().resultText || 'Check the input values.');
-    } else if (getCurrentResult()?.missing?.length) {
-      setStatus(`Formula shown for: ${getCurrentResult().missing.join(', ')}.`);
-    } else {
-      setStatus('');
     }
   }
 

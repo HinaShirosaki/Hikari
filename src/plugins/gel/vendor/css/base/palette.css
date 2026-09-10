@@ -37,10 +37,18 @@
   --theme-success: #166534;
   --theme-warning: #b25522;
   --theme-danger: #a74b3a;
+  --theme-hikari-rainbow-red: #f04f62;
+  --theme-hikari-rainbow-orange: #f28a38;
+  --theme-hikari-rainbow-yellow: #e9c83f;
+  --theme-hikari-rainbow-green: #48b96b;
+  --theme-hikari-rainbow-cyan: #32aec2;
+  --theme-hikari-rainbow-blue: #5478e6;
+  --theme-hikari-rainbow-violet: #9b5de5;
 
   /* Shared component states */
   --theme-panel: var(--theme-surface-elevated);
-  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
+  /* Preserve the original near-white textbox treatment in day mode. */
+  --theme-control-background: var(--theme-surface);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
 
@@ -97,9 +105,9 @@ body.theme-night {
   --theme-danger: #f3947f;
 
   --theme-panel: var(--theme-surface-elevated);
-  /* Fields recede into the page; the border does the identifying work. */
-  --theme-control-background: var(--theme-background);
-  --theme-control-background-hover: color-mix(in srgb, var(--theme-background) 82%, var(--theme-accent) 18%);
+  /* Keep fields visibly lifted from the page instead of reading as dark cutouts. */
+  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
 
   --theme-loading-background: #12150f;

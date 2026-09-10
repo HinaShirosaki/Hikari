@@ -13,6 +13,7 @@ export function createLinkedWorkActions({
   getProtocols,
   getGelAnalyses,
   getAssays,
+  getPdfSettings,
   previewImageLoader,
   resultFileAttachmentLoader,
   onCreateLinkedAssay
@@ -54,7 +55,8 @@ export function createLinkedWorkActions({
       linkedGelPreviewImage,
       linkedAssay,
       linkedAssayPlotImage,
-      resultFileImages
+      resultFileImages,
+      pdfSettings: getPdfSettings?.() || {}
     });
   }
 
@@ -124,7 +126,8 @@ export function createLinkedWorkActions({
       linkedGelPreviewImagesByEntryId,
       linkedAssayByEntryId,
       linkedAssayPlotImagesByEntryId,
-      resultFileImagesByEntryId
+      resultFileImagesByEntryId,
+      pdfSettings: getPdfSettings?.() || {}
     });
   }
 

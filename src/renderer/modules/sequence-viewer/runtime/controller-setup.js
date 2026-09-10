@@ -177,6 +177,7 @@ export function setupSequenceViewerControllers(ctx) {
     getBridge: actions.getBridge,
     getStoragePath: actions.getStoragePath,
     getSelectedRecord: actions.getSelectedRecord,
+    getSelectedEntryId: () => state.activeEntryId,
     getSelectedFeature: () => getSelectedVisibleFeature(ctx),
     hasStoragePath: actions.hasStoragePath,
     setStatus: actions.setStatus,

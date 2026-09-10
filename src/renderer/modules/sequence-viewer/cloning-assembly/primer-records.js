@@ -41,11 +41,10 @@ export function buildPrimerRecord({
 }
 
 const TEMPLATE_SEED_LENGTH = 18;
-// A repeat-heavy pair can offer the same seed from dozens of places, and every
-// one of them would be extended.
-// ponytail: 4 hits per seed caps that; raise it if a real donor ever loses its
-// core to a repeat.
-const MAX_SEED_HITS = 4;
+// Only terminal additions that can fit on primers may be inferred from the
+// chosen template. Searching arbitrary internal shared blocks turned unrelated
+// stock similarity into hundreds of bases of invented primer tail.
+const MAX_TERMINAL_ADDITION = 60;
 
 export function findTemplateCoreInDesiredSequence(desiredSequence, templateSequence) {
   const desired = normalizeSequence(desiredSequence);
@@ -53,76 +52,39 @@ export function findTemplateCoreInDesiredSequence(desiredSequence, templateSeque
   if (!desired.length || !template.length) {
     return null;
   }
-
   const exactIndex = desired.indexOf(template);
   if (exactIndex >= 0) {
-    return {
-      desiredStart: exactIndex,
-      templateStart: 0,
-      length: template.length
-    };
+    return { desiredStart: exactIndex, templateStart: 0, length: template.length };
   }
-
-  // The donor case: the whole fragment sits somewhere inside a much larger
-  // plasmid. One native scan, rather than the seed walk below.
-  const donorIndex = template.indexOf(desired);
-  if (donorIndex >= 0) {
-    return {
-      desiredStart: 0,
-      templateStart: donorIndex,
-      length: desired.length
-    };
-  }
-
-  // Longest shared stretch, found by extending shared seeds. Re-scanning every
-  // candidate length instead cost ~20 s of frozen UI whenever nothing matched
-  // (1.5 kb insert against a 10 kb plasmid) -- and nothing matching is exactly
-  // the wrong-donor case the caller exists to warn about.
-  const seedLength = Math.min(TEMPLATE_SEED_LENGTH, desired.length, template.length);
-  const seeds = new Map();
-  for (let index = 0; index + seedLength <= desired.length; index += 1) {
-    const seed = desired.slice(index, index + seedLength);
-    const hits = seeds.get(seed);
-    if (!hits) {
-      seeds.set(seed, [index]);
-    } else if (hits.length < MAX_SEED_HITS) {
-      hits.push(index);
+  const maxTrim = Math.min(2 * MAX_TERMINAL_ADDITION, desired.length - TEMPLATE_SEED_LENGTH);
+  for (let trimmed = 0; trimmed <= maxTrim; trimmed += 1) {
+    for (let left = Math.max(0, trimmed - MAX_TERMINAL_ADDITION); left <= Math.min(trimmed, MAX_TERMINAL_ADDITION); left += 1) {
+      const length = desired.length - trimmed;
+      const templateStart = template.indexOf(desired.slice(left, left + length));
+      if (templateStart >= 0) {
+        return { desiredStart: left, templateStart, length };
+      }
     }
   }
+  return null;
+}
 
-  let best = null;
-  for (let templateStart = 0; templateStart + seedLength <= template.length; templateStart += 1) {
-    const hits = seeds.get(template.slice(templateStart, templateStart + seedLength));
-    if (!hits) {
-      continue;
+// A PCR template is double-stranded. A feature stored from (or dropped onto) a
+// minus-strand site reads as the reverse complement of the donor's plus strand,
+// and scanning only the plus strand called that "wrong donor" -- every insert
+// route came back infeasible for a swap that is perfectly amplifiable.
+function findTemplateCoreOnEitherStrand(desiredSequence, templateSequence, circular = false) {
+  let best = { core: null, templateSequence };
+  for (const strand of [templateSequence, reverseComplementDna(templateSequence)]) {
+    const searchSequence = circular ? `${strand}${strand}` : strand;
+    const core = findTemplateCoreInDesiredSequence(desiredSequence, searchSequence);
+    if (core && core.length <= strand.length && core.templateStart < strand.length && core.length > (best.core?.length || 0)) {
+      best = { core, templateSequence: searchSequence };
     }
-    hits.forEach((desiredStart) => {
-      let left = 0;
-      while (
-        desiredStart - left > 0
-        && templateStart - left > 0
-        && desired[desiredStart - left - 1] === template[templateStart - left - 1]
-      ) {
-        left += 1;
-      }
-      let right = seedLength;
-      while (
-        desiredStart + right < desired.length
-        && templateStart + right < template.length
-        && desired[desiredStart + right] === template[templateStart + right]
-      ) {
-        right += 1;
-      }
-      if (!best || left + right > best.length) {
-        best = {
-          desiredStart: desiredStart - left,
-          templateStart: templateStart - left,
-          length: left + right
-        };
-      }
-    });
+    if (best.core?.length === normalizeSequence(desiredSequence).length) {
+      break;
+    }
   }
-
   return best;
 }
 
@@ -135,6 +97,24 @@ function blockedTemplate(desiredSequence, warning) {
     reverseAddedSequence: '',
     warnings: [warning],
     blockingWarnings: [warning]
+  };
+}
+
+// Primers designed off the assembled fragment itself, with whatever the stored
+// template could not confirm reported as a note. The template is the user's
+// declared choice -- Vector Builder and Protein Builder both make them pick it
+// -- so a library copy that does not visibly carry the fragment is a stale or
+// oppositely-annotated record far more often than a wrong tube, and it must not
+// veto a design the bench can run.
+function untemplatedDesign(desiredSequence, warnings) {
+  return {
+    feasible: true,
+    desiredSequence,
+    templateSequence: desiredSequence,
+    forwardAddedSequence: '',
+    reverseAddedSequence: '',
+    warnings: warnings.filter(Boolean),
+    blockingWarnings: []
   };
 }
 
@@ -160,42 +140,33 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
   }
 
   if (!templateSequence.length) {
-    const canUseDesiredAsPhysicalTemplate = !source
+    const isDeclaredPhysicalFragment = !source
       || source === 'provided_fragment'
       || source === 'physical_fragment'
       || source === 'synthesis'
       || String(fragment?.role || fragment?.type || '').toLowerCase() === 'backbone';
-    if (!canUseDesiredAsPhysicalTemplate) {
-      return blockedTemplate(
-        desiredSequence,
-        `${fragment?.name || 'Insert'} has no physical PCR template. Choose a donor record or mark the fragment for DNA synthesis before designing primers.`
-      );
-    }
-    return {
-      feasible: true,
-      desiredSequence,
-      templateSequence: desiredSequence,
-      forwardAddedSequence: '',
-      reverseAddedSequence: '',
-      warnings: source === 'synthesis'
-        ? [`${fragment?.name || 'Insert'} must be ordered as synthetic DNA before assembly; the listed primers assume that synthesized fragment is available.`]
-        : [],
-      blockingWarnings: []
-    };
+    return untemplatedDesign(desiredSequence, [
+      source === 'synthesis'
+        ? `${fragment?.name || 'Insert'} must be ordered as synthetic DNA before assembly; the listed primers assume that synthesized fragment is available.`
+        : '',
+      isDeclaredPhysicalFragment
+        ? ''
+        : `${fragment?.name || 'Insert'} names no PCR template, so its primers were designed off the assembled sequence. Confirm what goes in the tube, or order the fragment by synthesis.`
+    ]);
   }
 
-  const core = findTemplateCoreInDesiredSequence(desiredSequence, templateSequence);
-  // A one- or two-base accidental match is not a PCR template. Requiring one
-  // full primer-sized seed also turns a de-novo insertion (whose mapped
-  // pre-edit range can retain a shared boundary base) into the actionable
-  // donor/synthesis error instead of a misleading Tm failure.
+  // A one- or two-base accidental match is no template at all -- a de-novo
+  // insertion's mapped pre-edit range can retain a shared boundary base -- so a
+  // core has to be at least one primer seed long to be worth binding to.
+  const { core, templateSequence: strandTemplate } =
+    findTemplateCoreOnEitherStrand(desiredSequence, templateSequence, Boolean(fragment?.metadata?.specificityCircular));
   if (!core || core.length < TEMPLATE_SEED_LENGTH) {
-    return blockedTemplate(desiredSequence, templateName
-      ? `${templateName} does not contain this insert, so it cannot be the PCR template. Choose the correct donor plasmid or change the amplicon range.`
-      : 'The stated PCR template does not contain the desired fragment. Provide the correct physical template or order the fragment by synthesis.');
+    return untemplatedDesign(desiredSequence, [
+      `${templateName || 'The stated template'} does not visibly carry this fragment; its primers were designed off the assembled sequence. Confirm the template before ordering.`
+    ]);
   }
 
-  const templateCore = templateSequence.slice(core.templateStart, core.templateStart + core.length);
+  const templateCore = strandTemplate.slice(core.templateStart, core.templateStart + core.length);
   return {
     feasible: true,
     desiredSequence,
@@ -205,6 +176,13 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
     warnings: [],
     blockingWarnings: []
   };
+}
+
+export function fragmentPrimerConfig(fragment, config = {}) {
+  const metadata = fragment?.metadata || {};
+  return metadata.specificitySequence
+    ? { ...config, specificitySequence: metadata.specificitySequence, specificityCircular: Boolean(metadata.specificityCircular) }
+    : config;
 }
 
 // Group primers into forward/reverse pairs by their shared `<base> F` / `<base> R`

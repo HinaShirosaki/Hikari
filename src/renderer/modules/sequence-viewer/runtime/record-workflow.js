@@ -124,9 +124,13 @@ export function createRecordWorkflowActions(ctx) {
     actions.setProteinBuilderConfirmation(confirmation, { render: false });
     actions.setInputComposerVisible(!hasSequence);
     if (hasSequence) {
-      controllers.home?.navigateToDetail();
-      controllers.detail?.renderActiveRecord?.();
-      actions.setStatus(confirmation ? 'Review the assembled plasmid and confirm the construct.' : `Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
+      if (confirmation?.cloningDesignSource) {
+        actions.openProteinBuilderCloningDesign(confirmation);
+      } else {
+        controllers.home?.navigateToDetail();
+        controllers.detail?.renderActiveRecord?.();
+        actions.setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
+      }
     }
   }
 

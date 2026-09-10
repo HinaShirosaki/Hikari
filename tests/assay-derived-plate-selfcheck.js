@@ -35,6 +35,11 @@ assert.equal(
 );
 assert.equal(isTransformActive({ mode: 'cells', formulas: { A1: '=A1' } }), true, 'one cell formula activates the transformed plate');
 assert.equal(isTransformActive({ mode: 'cells', formulas: {} }), false, 'an empty transformed plate is inactive');
+assert.equal(isTransformActive({ mode: 'cells', enabled: true, formulas: {} }), true, 'an explicitly created empty plate stays active');
+const emptySpec = normalizeTransformSpec(JSON.parse(JSON.stringify({ mode: 'cells', enabled: true, formulas: {} })));
+assert.equal(emptySpec.enabled, true, 'empty plate existence survives saved spec normalization');
+assert.equal(Object.keys(applyPlateTransform({ results: { A1: '42' }, spec: emptySpec, definition: DEF }).numericResults).length, 0, 'empty plate does not copy source values');
+
 
 // --- reference grammar ---
 assert.equal(resolveReferenceWells('A1', DEF, NO_GROUPS).wells.join('|'), 'A1', 'a single well');

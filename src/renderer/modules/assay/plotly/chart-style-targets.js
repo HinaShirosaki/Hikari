@@ -63,7 +63,7 @@ export function plotlyAxisRange(scale, range) {
   return scale === 'linear' ? [range.min, range.max] : [Math.log10(range.min), Math.log10(range.max)];
 }
 
-export function prismClassicPatch() {
+export function figureClassicPatch() {
   const defaults = createDefaultChartStyle();
   const keys = [
     'frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',

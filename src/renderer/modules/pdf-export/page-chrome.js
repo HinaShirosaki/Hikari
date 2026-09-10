@@ -20,6 +20,7 @@ import {
   writeWrappedLines,
   estimateTextWidth
 } from './doc-context.js';
+import { drawHikariPdfCornerIcon } from './branding.js';
 
 function createContext({
   title,
@@ -30,6 +31,8 @@ function createContext({
   orientation = 'p',
   format = 'letter',
   margin = PAGE_MARGIN,
+  margins = null,
+  cornerIconDataUrl = '',
   serif = false
 }) {
   const JsPdf = getJsPdfCtor();
@@ -45,17 +48,30 @@ function createContext({
   });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
+  const pageMargins = margins && typeof margins === 'object'
+    ? {
+      top: Number.isFinite(Number(margins.top)) ? Number(margins.top) : margin,
+      right: Number.isFinite(Number(margins.right)) ? Number(margins.right) : margin,
+      bottom: Number.isFinite(Number(margins.bottom)) ? Number(margins.bottom) : margin,
+      left: Number.isFinite(Number(margins.left)) ? Number(margins.left) : margin
+    }
+    : { top: margin, right: margin, bottom: margin, left: margin };
 
   const ctx = {
     doc,
     pageWidth,
     pageHeight,
-    maxWidth: pageWidth - (margin * 2),
-    margin,
+    maxWidth: pageWidth - pageMargins.left - pageMargins.right,
+    margin: pageMargins.left,
+    marginTop: pageMargins.top,
+    marginRight: pageMargins.right,
+    marginBottom: pageMargins.bottom,
+    marginLeft: pageMargins.left,
     orientation,
     format,
-    y: margin,
+    y: pageMargins.top,
     serif,
+    cornerIconDataUrl: String(cornerIconDataUrl || ''),
     footerLabel: String(footerLabel || title || ''),
     sectionCount: 0
   };
@@ -123,7 +139,7 @@ function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }
   ctx.doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
   ctx.doc.rect(0, 0, ctx.pageWidth, 5, 'F');
 
-  ctx.y = ctx.margin;
+  ctx.y = ctx.marginTop;
   const eyebrowText = String(eyebrow || '').trim();
   if (eyebrowText) {
     font(ctx, 'bold');
@@ -159,8 +175,8 @@ function writeFooters(ctx) {
     doc.setPage(page);
     const width = doc.internal.pageSize.getWidth();
     const height = doc.internal.pageSize.getHeight();
-    const left = ctx.margin;
-    const right = width - ctx.margin;
+    const left = ctx.marginLeft;
+    const right = width - ctx.marginRight;
     doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
     doc.setLineWidth(0.5);
     doc.line(left, height - FOOTER_BASELINE - 10, right, height - FOOTER_BASELINE - 10);
@@ -170,6 +186,7 @@ function writeFooters(ctx) {
     const label = doc.splitTextToSize(ctx.footerLabel, ctx.maxWidth - 90)[0] || '';
     doc.text(label, left, height - FOOTER_BASELINE);
     doc.text(`Page ${page} of ${total}`, right, height - FOOTER_BASELINE, { align: 'right' });
+    drawHikariPdfCornerIcon(ctx, width, height);
     doc.setTextColor(0, 0, 0);
   }
 }

@@ -71,9 +71,6 @@ export function buildGelFigurePlan({
   const height = positiveInteger(imageHeight);
   const overrides = normalizeManualOverrides(manualOverrides);
   const rows = Array.isArray(overrides.laneTable?.rows) ? overrides.laneTable.rows : [];
-  if (!rows.length) {
-    throw new Error('Add at least one table row before generating an image.');
-  }
 
   const lanes = buildLanesFromManualSegmentation(overrides, width, height) || [];
   if (!lanes.length) {
@@ -104,10 +101,13 @@ export function buildGelFigurePlan({
   });
   const gelWidth = rawSlices.reduce((sum, slice) => sum + slice.sourceWidth, 0);
   const typography = resolveFigureTypography(gelWidth, visibleLanes.length);
-  const tableGap = Math.max(12, Math.round(typography.rowHeight * 0.32));
+  // Without a lane table there is nothing to label, so the header strip and the
+  // label column collapse and the figure is the bare gel.
+  const labelWidth = rows.length ? typography.labelWidth : 0;
+  const tableGap = rows.length ? Math.max(12, Math.round(typography.rowHeight * 0.32)) : 0;
   const tableHeight = (rows.length * typography.rowHeight) + tableGap;
   const crop = resolveVerticalCrop(overrides.laneSegmentation, height);
-  const canvasWidth = typography.labelWidth + gelWidth;
+  const canvasWidth = labelWidth + gelWidth;
   const canvasHeight = tableHeight + crop.sourceHeight;
 
   if (
@@ -120,7 +120,7 @@ export function buildGelFigurePlan({
 
   let gelOffset = 0;
   const slices = rawSlices.map((slice) => {
-    const outputX = typography.labelWidth + gelOffset;
+    const outputX = labelWidth + gelOffset;
     gelOffset += slice.sourceWidth;
     return {
       ...slice,
@@ -136,7 +136,7 @@ export function buildGelFigurePlan({
     sourceBottom: crop.sourceBottom,
     sourceHeight: crop.sourceHeight,
     croppedToBandLines: crop.croppedToBandLines,
-    labelWidth: typography.labelWidth,
+    labelWidth,
     fontSize: typography.fontSize,
     rowHeight: typography.rowHeight,
     tableGap,

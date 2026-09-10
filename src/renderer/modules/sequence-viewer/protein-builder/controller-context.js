@@ -51,6 +51,7 @@ export function createProteinBuilderContext(config = {}) {
     getBridge: config?.getBridge || (() => null),
     getStoragePath: config?.getStoragePath || (() => ''),
     getSelectedRecord: config?.getSelectedRecord || (() => null),
+    getSelectedEntryId: config?.getSelectedEntryId || (() => ''),
     getSelectedFeature: config?.getSelectedFeature || (() => null),
     hasStoragePath: config?.hasStoragePath || (() => false),
     setStatus: config?.setStatus || (() => {}),
@@ -201,7 +202,13 @@ export function createProteinBuilderContext(config = {}) {
   };
 
   ctx.getCurrentDnaSource = function getCurrentDnaSource() {
-    return resolvePoiSourceFromRecord(ctx.getSelectedRecord(), ctx.getSelectedFeature());
+    const record = ctx.getSelectedRecord();
+    return {
+      ...resolvePoiSourceFromRecord(record, ctx.getSelectedFeature()),
+      entryId: ctx.getSelectedEntryId(),
+      recordName: record?.name,
+      recordSequence: record?.sequence
+    };
   };
 
   ctx.getSuggestedConstructName = function getSuggestedConstructName() {

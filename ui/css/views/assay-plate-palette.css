@@ -7,7 +7,6 @@
   --assay-plate-shadow: rgba(27, 20, 14, 0.14);
   --assay-plate-pure-white: #ffffff;
   --assay-plate-ink: #1f3b66;
-  --assay-plate-meta: var(--theme-text-muted);
   --assay-plate-danger: #9f1c1c;
   --assay-plate-line-soft: rgba(53, 99, 153, 0.14);
   --assay-plate-line: rgba(53, 99, 153, 0.22);
@@ -24,10 +23,6 @@
   --assay-plate-well-number: rgba(20, 57, 84, 0.78);
   --assay-plate-sample-fallback: #718096;
   --assay-plate-sample-count-bg: rgba(18, 49, 73, 0.88);
-  --assay-plate-analysis-group-1: var(--theme-accent);
-  --assay-plate-analysis-group-2: var(--theme-success);
-  --assay-plate-analysis-group-3: var(--theme-warning);
-  --assay-plate-analysis-group-4: var(--theme-danger);
   --assay-plate-labware-cap-start: #3f8ecb;
   --assay-plate-labware-cap-end: #1f5f95;
   --assay-plate-labware-shadow: rgba(10, 27, 48, 0.16);
@@ -37,7 +32,40 @@
   --assay-plate-labware-mark: rgba(102, 115, 130, 0.5);
 }
 
+/*
+ * Declared on `body`, not `:root`: a custom property is substituted where it is
+ * DECLARED, so reading --theme-* from :root freezes the day palette and leaks
+ * those light colors into night mode. The theme class lives on body.
+ */
+body {
+  --assay-plate-meta: var(--theme-text-muted);
+  --assay-plate-analysis-group-1: var(--theme-accent);
+  --assay-plate-analysis-group-2: var(--theme-success);
+  --assay-plate-analysis-group-3: var(--theme-warning);
+  --assay-plate-analysis-group-4: var(--theme-danger);
+}
+
 body.theme-night {
+  /*
+   * Plate/table CHROME follows the theme. The labware illustration below it
+   * (cap, glass, highlight, pure white) is a drawing of a physical tube and
+   * stays light in every theme, as do the fixed sample colors.
+   */
   --assay-plate-danger: var(--theme-danger);
   --assay-plate-line: var(--theme-border-soft);
+  --assay-plate-line-soft: color-mix(in srgb, var(--theme-border-soft) 60%, transparent);
+  --assay-plate-grid-line: var(--theme-border);
+  --assay-plate-header-soft: var(--theme-surface-muted);
+  --assay-plate-header: var(--theme-surface-subtle);
+  --assay-plate-header-solid: var(--theme-surface-subtle);
+  --assay-plate-surface-soft: var(--theme-surface);
+  --assay-plate-surface: var(--theme-surface-elevated);
+  --assay-plate-surface-strong: var(--theme-surface-subtle);
+  --assay-plate-disabled-bg: var(--theme-surface-muted);
+  --assay-plate-overlay: var(--theme-overlay);
+  --assay-plate-ink: var(--theme-text);
+  --assay-plate-label: var(--theme-text-muted);
+  --assay-plate-well-number: var(--theme-text-muted);
+  --assay-plate-sample-count-bg: var(--theme-surface-subtle);
+  --assay-plate-shadow: var(--theme-shadow-color);
 }

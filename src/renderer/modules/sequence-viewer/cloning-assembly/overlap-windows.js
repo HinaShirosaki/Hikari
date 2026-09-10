@@ -7,6 +7,7 @@ import {
 } from './constants.js';
 import { computeGcContent, createMidpoint, normalizeSequence } from './sequence-utils.js';
 import { countPrimerBindingSites } from './primer-quality.js';
+import { fragmentPrimerConfig, resolveFragmentPrimerTemplate } from './primer-records.js';
 
 export function longestTerminalOverlap(leftSequence, rightSequence, maxLength = Number.POSITIVE_INFINITY) {
   const left = normalizeSequence(leftSequence);
@@ -105,7 +106,27 @@ function scanBindingCandidates(sequence, direction, thresholds, tailLength = 0, 
 }
 
 export function selectBindingWindow(sequence, direction, thresholds, tailLength = 0, config = DEFAULT_CLONING_PREFERENCES) {
-  return scanBindingCandidates(sequence, direction, thresholds, tailLength, config).best;
+  const scan = scanBindingCandidates(sequence, direction, thresholds, tailLength, config);
+  // `absent` can only be non-zero when the window was checked against a template
+  // the caller declared -- the donor plasmid the user picked in Vector Builder or
+  // Protein Builder. That copy going stale, or carrying the feature annotated on
+  // the other strand, must not veto a design the bench can run, so the design
+  // proceeds off the assembled sequence and says what the check found. A purely
+  // repeated template is left blocking: it really would give two PCR products,
+  // and no note makes that work.
+  if (scan.best || !scan.absent) {
+    return scan.best;
+  }
+  const relaxed = scanBindingCandidates(sequence, direction, thresholds, tailLength, {
+    ...config,
+    requireUniqueBinding: false
+  });
+  return relaxed.best
+    ? {
+        ...relaxed.best,
+        specificityWarning: 'No primer window for this fragment occurs on the stated PCR template, so the primers were designed off the assembled sequence. Confirm the template really carries it before ordering.'
+      }
+    : null;
 }
 
 // Why no window matched. A repeated or wrong template is the one cause the
@@ -138,87 +159,74 @@ function engineeredOverlapLengths(leftSequence, rightSequence, thresholds, confi
   );
   return {
     maxTotalLength,
-    minLength: Math.min(
-      maxTotalLength,
-      Math.max(1, Number(config?.minEngineeredOverlapLength) || DEFAULT_MIN_ENGINEERED_OVERLAP_LENGTH)
-    )
+    minLength: Math.max(1, Number(config?.minEngineeredOverlapLength) || DEFAULT_MIN_ENGINEERED_OVERLAP_LENGTH)
   };
 }
 
 // An engineered overlap needs a binding window on both fragments, so a repeated
 // flank blocks the junction before any primer is designed.
 export function describeEngineeredOverlapFailure(leftFragment, rightFragment, thresholds, config = DEFAULT_CLONING_PREFERENCES) {
-  const leftSequence = normalizeSequence(leftFragment?.sequence || '');
-  const rightSequence = normalizeSequence(rightFragment?.sequence || '');
-  const { minLength } = engineeredOverlapLengths(leftSequence, rightSequence, thresholds, config);
-  const share = Math.max(1, Math.floor(minLength / 2));
-  return describeBindingWindowFailure(leftSequence, 'reverse', thresholds, share, config)
-    || describeBindingWindowFailure(rightSequence, 'forward', thresholds, share, config);
+  const left = resolveFragmentPrimerTemplate(leftFragment);
+  const right = resolveFragmentPrimerTemplate(rightFragment);
+  return describeBindingWindowFailure(left.templateSequence, 'reverse', thresholds, left.reverseAddedSequence.length, fragmentPrimerConfig(leftFragment, config))
+    || describeBindingWindowFailure(right.templateSequence, 'forward', thresholds, right.forwardAddedSequence.length, fragmentPrimerConfig(rightFragment, config));
 }
 
-// A seam that has to be built by primers is normally hung on one primer: the
-// left fragment's reverse primer carries the right fragment's start. That fails
-// at an AT-rich junction, where the seam needs 35-40 nt to reach Tm and the
-// flank needs a 34 nt binding window -- past any orderable oligo, and the
-// junction was then reported as having no possible overlap at all. The seam is
-// shared by both amplicons, so it can instead be split: part of it is the left
-// fragment's own 3' end (added by the right fragment's forward primer) and part
-// is the right fragment's 5' start (added by the left fragment's reverse
-// primer). One-sided is still tried first, so a junction that already worked
-// keeps exactly the primers it had.
+// Search junctions in the intended product. Template cores only determine the
+// annealing windows and how much of each oligo is already occupied by additions.
 export function selectEngineeredOverlap(leftFragment, rightFragment, thresholds, config = DEFAULT_CLONING_PREFERENCES) {
   const leftSequence = normalizeSequence(leftFragment?.sequence || '');
   const rightSequence = normalizeSequence(rightFragment?.sequence || '');
-  // The seam sits at the fragment boundary: these are two stretches of one
-  // intended construct, so an accidental terminal identity is not a region to
-  // merge -- collapsing it would delete those bases from the product.
+  const leftTemplate = resolveFragmentPrimerTemplate(leftFragment);
+  const rightTemplate = resolveFragmentPrimerTemplate(rightFragment);
+  const leftConfig = fragmentPrimerConfig(leftFragment, config);
+  const rightConfig = fragmentPrimerConfig(rightFragment, config);
   const { minLength, maxTotalLength } = engineeredOverlapLengths(leftSequence, rightSequence, thresholds, config);
   const preferredTm = createMidpoint(thresholds?.overlapTm);
-
-  const search = (splitShare) => {
+  // Cache by added-tail length: the same PCR window serves many candidate seams.
+  const leftBindings = new Map();
+  const rightBindings = new Map();
+  const binding = (cache, template, direction, added, fragmentConfig) => {
+    if (!cache.has(added)) {
+      const nativeAddition = direction === 'reverse' ? template.reverseAddedSequence : template.forwardAddedSequence;
+      cache.set(added, selectBindingWindow(template.templateSequence, direction, thresholds, added + nativeAddition.length, fragmentConfig));
+    }
+    return cache.get(added);
+  };
+  const search = (oneSided) => {
     let best = null;
-    for (let added = minLength; added <= maxTotalLength; added += 1) {
-      const leftShare = Math.min(leftSequence.length, splitShare(added));
-      const rightShare = added - leftShare;
-      if (rightShare < 0 || rightShare > rightSequence.length) {
-        continue;
-      }
-      const leftPart = leftSequence.slice(leftSequence.length - leftShare);
-      const rightPart = rightSequence.slice(0, rightShare);
-      const overlapSequence = `${leftPart}${rightPart}`;
-      const overlapTm = cloningPrimerTm(overlapSequence);
-      if (overlapTm < thresholds.overlapTm.min || overlapTm > thresholds.overlapTm.max) {
-        continue;
-      }
-      const leftBinding = selectBindingWindow(leftSequence, 'reverse', thresholds, rightShare, config);
-      if (!leftBinding) {
-        continue;
-      }
-      const rightBinding = leftShare
-        ? selectBindingWindow(rightSequence, 'forward', thresholds, leftShare, config)
-        : null;
-      if (leftShare && !rightBinding) {
-        continue;
-      }
-      const score = Math.abs(overlapTm - preferredTm) + Math.abs(added - minLength) * 0.1;
-      if (!best || score < best.score) {
-        best = {
-          sequence: overlapSequence,
-          length: overlapSequence.length,
-          tm: overlapTm,
-          gcContent: computeGcContent(overlapSequence),
-          leftBinding,
-          rightBinding,
-          // What each neighbour's primer has to add for the two amplicons to end
-          // up sharing this seam.
-          leftReverseTail: rightPart,
-          rightForwardTail: leftPart,
-          score
-        };
+    for (let length = minLength; length <= maxTotalLength; length += 1) {
+      const maxLeft = oneSided ? 0 : Math.min(leftSequence.length, length);
+      for (let leftShare = oneSided ? 0 : 1; leftShare <= maxLeft; leftShare += 1) {
+        const rightShare = length - leftShare;
+        if (rightShare > rightSequence.length) {
+          continue;
+        }
+        const leftPart = leftSequence.slice(leftSequence.length - leftShare);
+        const rightPart = rightSequence.slice(0, rightShare);
+        const sequence = `${leftPart}${rightPart}`;
+        const tm = cloningPrimerTm(sequence);
+        if (tm < thresholds.overlapTm.min || tm > thresholds.overlapTm.max) {
+          continue;
+        }
+        const leftBinding = binding(leftBindings, leftTemplate, 'reverse', rightShare, leftConfig);
+        const rightBinding = binding(rightBindings, rightTemplate, 'forward', leftShare, rightConfig);
+        if (!leftBinding || !rightBinding) {
+          continue;
+        }
+        const score = Math.abs(tm - preferredTm) + (length - minLength) * 0.1;
+        if (!best || score < best.score) {
+          best = {
+            sequence, length, tm, gcContent: computeGcContent(sequence),
+            leftBinding, rightBinding, leftReverseTail: rightPart,
+            rightForwardTail: leftPart, score
+          };
+        }
       }
     }
     return best;
   };
-
-  return search(() => 0) || search((added) => Math.ceil(added / 2));
+  // Preserve a working one-sided design, then try every split (including a
+  // complete tail on the other primer), not just an arbitrary 50/50 split.
+  return search(true) || search(false);
 }

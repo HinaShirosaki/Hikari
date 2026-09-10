@@ -103,6 +103,6 @@ Read the graph first. A layout-only patch preserves traces; this example changes
 
 For trace changes, resend the full desired `data` list, including unchanged traces. See [tool-reference.md](tool-reference.md) for merge/replacement behavior and category preservation. Do not send Assay's native style-model keys or preset names as Plotly properties.
 
-In the active Assay rail, graph artifacts can replace the visible analysis chart. The renderer applies Hikari's Prism defaults to unspecified styling while retaining explicit figure choices. The stored MCP figure may therefore omit defaults visible on screen; inspect the rendered output when exact appearance matters.
+In the active Assay rail, graph artifacts can replace the visible analysis chart. The renderer applies Hikari's figure defaults to unspecified styling while retaining explicit figure choices. The stored MCP figure may therefore omit defaults visible on screen; inspect the rendered output when exact appearance matters.
 
 Choose readable axis titles, visible contrast, concise legends, and enough margin for labels. Follow the user's formatting request. Configuring the modebar or an image filename only configures rendering/export controls; it does not create a file. For an exported PNG/SVG, use an available actual render/export path and verify that artifact separately.

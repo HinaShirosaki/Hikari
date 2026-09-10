@@ -7,6 +7,9 @@ const STRATEGY_GOLDEN_GATE = 'golden-gate';
 const STRATEGY_GIBSON = 'gibson';
 const STRATEGY_IN_FUSION = 'in-fusion';
 const STRATEGY_OVERLAP_EXTENSION = 'overlap-extension';
+const RESTRICTION_LIGATION_STRATEGY = Object.freeze({
+  id: 'restriction-ligation', label: 'Restriction Digestion + Ligation', shortLabel: 'Restriction-ligation'
+});
 
 function cloningStrategyUsesInsertRange(strategy) {
   return [
@@ -17,9 +20,10 @@ function cloningStrategyUsesInsertRange(strategy) {
   ].includes(strategy);
 }
 
-function cloningStrategyUsesDonor(strategy) {
-  return cloningStrategyUsesInsertRange(strategy);
-}
+// The same predicate under the name the donor panel reads it by: only an insert
+// route has a fragment that could come off another plasmid, so the range and the
+// donor picker appear together.
+const cloningStrategyUsesDonor = cloningStrategyUsesInsertRange;
 
 function isCloningDesignPlanActionable(displayPlan) {
   return Boolean(displayPlan?.feasible && asArray(displayPlan?.primers).length);
@@ -71,6 +75,7 @@ const STRATEGIES = Object.freeze([
 ]);
 
 export {
+  RESTRICTION_LIGATION_STRATEGY,
   IN_FUSION_PROCEDURE,
   STRATEGIES,
   STRATEGY_GIBSON,

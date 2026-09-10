@@ -87,13 +87,16 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
         String(markdown || '').matchAll(/`(\{[^\n`]*"action"[^\n`]*\})`/gu),
         (match) => JSON.parse(match[1])
       );
+      const extractWrappedActionExamples = (skill = {}) => Array.from(
+        [skill.content, ...Object.values(skill.files || {})].join('\n').matchAll(/```json\s*([\s\S]*?)```/gu),
+        (match) => JSON.parse(match[1])
+      ).filter((example) => example?.tool && example?.arguments?.action);
       const containerSkill = OFFICIAL_MCP_SKILLS.find((skill) => skill.id === 'container');
       const assayPlotlySkill = OFFICIAL_MCP_SKILLS.find((skill) => skill.id === 'assay-plotly');
-      const plotlySectionIndex = assayPlotlySkill?.content?.indexOf('Plotly workflow:') ?? -1;
 
       assert.ok(containerSkill);
       assert.ok(assayPlotlySkill);
-      assert.notEqual(plotlySectionIndex, -1);
+      const assayPlotlyExamples = extractWrappedActionExamples(assayPlotlySkill);
 
       const groups = [
         {
@@ -105,14 +108,18 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
         {
           directTool: 'assay_table',
           appTool: 'assay-table',
-          examples: extractActionExamples(assayPlotlySkill.content.slice(0, plotlySectionIndex)),
-          expectedCount: 2
+          examples: assayPlotlyExamples
+            .filter((example) => example.tool === 'assay_table')
+            .map((example) => example.arguments),
+          expectedCount: 6
         },
         {
           directTool: 'plotly_graph',
           appTool: 'plotly-graph',
-          examples: extractActionExamples(assayPlotlySkill.content.slice(plotlySectionIndex)),
-          expectedCount: 1
+          examples: assayPlotlyExamples
+            .filter((example) => example.tool === 'plotly_graph')
+            .map((example) => example.arguments),
+          expectedCount: 6
         }
       ];
 
@@ -139,7 +146,7 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
         groups[2].examples.some((example) => Object.prototype.hasOwnProperty.call(example, 'traces')),
         false
       );
-      assert.equal(groups[2].examples[0].config?.responsive, true);
+      assert.equal(groups[2].examples.some((example) => example.config?.responsive === true), true);
 
       const validCallCount = executedCalls.length;
       const deprecatedAssayAlias = await router.callTool('assay_table', {

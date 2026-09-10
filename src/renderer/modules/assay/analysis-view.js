@@ -78,8 +78,8 @@ export function createAssayAnalysisView({
     getTransformFormulas,
     redrawTransformGrid,
     setTransformFormulas,
+    setTransformEnabled,
     getTransformSpec,
-    setTransformSummary,
     clearTransformGrid,
     refreshDerivedPlate,
     collectNumericObservations,
@@ -391,6 +391,7 @@ export function createAssayAnalysisView({
   // formula constants until the user edits them.
   function loadTransformSpec(spec) {
     const normalized = normalizeTransformSpec(spec);
+    setTransformEnabled(isTransformActive(normalized));
     setTransformFormulas({});
     if (normalized.mode === 'cells') {
       setTransformFormulas({ ...normalized.formulas });
@@ -418,17 +419,9 @@ export function createAssayAnalysisView({
 
   function createTransformPlate() {
     syncCurrentResultsFromGrid();
-    if (!Object.keys(getTransformFormulas()).length) {
-      Object.entries(runtime.currentResults || {}).forEach(([well, raw]) => {
-        if (Number.isFinite(parseNumericResult(raw)) && isValidWellForDefinition(well, getCurrentDefinition())) {
-          getTransformFormulas()[well] = `=Table1:${well}`;
-        }
-      });
-    }
-    if (!Object.keys(getTransformFormulas()).length) {
-      setTransformSummary('Add at least one numeric result before creating a transformed plate.');
-      return false;
-    }
+    // An empty plate is a saved workspace in its own right. Only user edits or
+    // drag-to-fill should populate its cells.
+    setTransformEnabled(true);
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
       assayDerivedPlatePanel.open = true;
@@ -451,6 +444,7 @@ export function createAssayAnalysisView({
   }
 
   function clearTransform() {
+    setTransformEnabled(false);
     setTransformFormulas({});
     onTransformChange();
   }

@@ -4,6 +4,7 @@ const path = require('node:path');
 
 const { createDownloadError } = require('./http-response.js');
 const { buildRelativePath } = require('./storage-paths.js');
+const { attachPaperDownloadNotice } = require('./browser-notice.js');
 
 // Electron-driven fallback: drive a real BrowserWindow when a publisher blocks
 // the direct fetch. Injected so tests can swap in their own session starter.
@@ -61,6 +62,8 @@ function createBrowserDownloadSession({
       const webContents = browserWindow.webContents;
       const sessionObject = webContents?.session;
       const childWindows = new Set();
+
+      attachPaperDownloadNotice(webContents);
 
       function hasOpenChildWindow() {
         return Array.from(childWindows).some((childWindow) => !childWindow?.isDestroyed?.());
@@ -185,6 +188,7 @@ function createBrowserDownloadSession({
           return;
         }
         childWindows.add(childWindow);
+        attachPaperDownloadNotice(childWindow.webContents);
         childWindow.show?.();
         childWindow.on?.('closed', () => {
           childWindows.delete(childWindow);

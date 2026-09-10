@@ -37,6 +37,23 @@ async function loadEmbeddedPdfMetadata(pdfDocument) {
   }
 }
 
+// pdf.js field-object types that carry no user-fillable value.
+const NON_FILLABLE_FIELD_TYPES = new Set(['button', 'signature']);
+
+async function loadFillableFieldPresence(pdfDocument) {
+  if (typeof pdfDocument?.getFieldObjects !== 'function') {
+    return false;
+  }
+  try {
+    const fields = await pdfDocument.getFieldObjects();
+    return Object.values(fields || {}).some((group) => (
+      Array.isArray(group) && group.some((field) => !NON_FILLABLE_FIELD_TYPES.has(field?.type))
+    ));
+  } catch {
+    return false;
+  }
+}
+
 function safePageCleanup(page) {
   if (typeof page?.cleanup === 'function') {
     try {
@@ -63,6 +80,29 @@ function normalizeHttpUrl(value) {
   } catch {
     return '';
   }
+}
+
+async function loadDisplayAnnotations(page) {
+  if (typeof page?.getAnnotations !== 'function') {
+    return [];
+  }
+  try {
+    return await page.getAnnotations({ intent: 'display' });
+  } catch {
+    return [];
+  }
+}
+
+// Push buttons are excluded on purpose: pdf.js renders them through its link
+// element, which needs a link service this viewer does not run.
+function isFillableWidgetAnnotation(annotation = {}, widgetAnnotationType = 0) {
+  if (annotation.annotationType !== widgetAnnotationType) {
+    return false;
+  }
+  if (annotation.fieldType === 'Tx' || annotation.fieldType === 'Ch') {
+    return true;
+  }
+  return annotation.fieldType === 'Btn' && Boolean(annotation.checkBox || annotation.radioButton);
 }
 
 function getLinkAnnotationUrl(annotation = {}) {
@@ -97,6 +137,7 @@ async function renderPageLinkLayer({
   page,
   viewport,
   record,
+  annotations = null,
   onExternalLink,
   onDestination,
   onNamedAction,
@@ -114,16 +155,7 @@ async function renderPageLinkLayer({
   record.linkLayer.style.height = `${cssHeight}px`;
   record.renderedLinkScale = getViewportScale(viewport);
 
-  if (typeof page.getAnnotations !== 'function') {
-    return;
-  }
-
-  let annotations = [];
-  try {
-    annotations = await page.getAnnotations({ intent: 'display' });
-  } catch {
-    return;
-  }
+  const pageAnnotations = annotations || await loadDisplayAnnotations(page);
   if (isStale()) {
     return;
   }
@@ -134,7 +166,7 @@ async function renderPageLinkLayer({
   }
 
   const fragment = doc.createDocumentFragment();
-  annotations
+  pageAnnotations
     .filter(hasPdfLinkTarget)
     .forEach((annotation) => {
       const rect = getLinkAnnotationRect(annotation, viewport);
@@ -174,6 +206,52 @@ async function renderPageLinkLayer({
     });
 
   record.linkLayer.replaceChildren(fragment);
+}
+
+async function renderPageFormLayer({
+  pdfDocument,
+  page,
+  viewport,
+  record,
+  annotations = null,
+  isStale = () => false
+} = {}) {
+  if (!record?.formLayer || !page) {
+    return;
+  }
+
+  const pdfjsLib = await loadPdfJsModule();
+  const pageAnnotations = annotations || await loadDisplayAnnotations(page);
+  if (isStale()) {
+    return;
+  }
+
+  record.formLayer.replaceChildren();
+  record.renderedForms = true;
+  const widgets = pageAnnotations.filter(
+    (annotation) => isFillableWidgetAnnotation(annotation, pdfjsLib.AnnotationType.WIDGET)
+  );
+  if (!widgets.length) {
+    return;
+  }
+
+  // Widget positions are percentages of the layer, which is sized from
+  // --total-scale-factor, so the filled fields follow zoom without a re-render.
+  const annotationLayer = new pdfjsLib.AnnotationLayer({
+    div: record.formLayer,
+    page,
+    viewport: viewport.clone({ dontFlip: true }),
+    annotationStorage: pdfDocument?.annotationStorage
+  });
+  try {
+    await annotationLayer.render({ annotations: widgets, renderForms: true });
+  } catch {
+    record.formLayer.replaceChildren();
+    return;
+  }
+  if (isStale()) {
+    record.formLayer.replaceChildren();
+  }
 }
 
 async function renderPageCanvasToOffscreen({
@@ -216,9 +294,11 @@ async function renderPageCanvasToOffscreen({
     throw new Error('Canvas context is unavailable.');
   }
 
+  const pdfjsLib = await loadPdfJsModule();
   const renderTask = page.render({
     canvasContext: offscreenContext,
     viewport,
+    annotationMode: pdfjsLib.AnnotationMode.ENABLE_FORMS,
     transform: effectiveOutputScale === 1 ? null : [effectiveOutputScale, 0, 0, effectiveOutputScale, 0, 0]
   });
   record.renderTask = renderTask;
@@ -362,7 +442,8 @@ async function renderPageRecord({
       );
     const needsLinkLayer = record.linkLayer
       && (record.renderedLinkScale !== scale || record.linkLayer.childElementCount === 0);
-    if (needsTextLayer || needsLinkLayer) {
+    const needsFormLayer = Boolean(record.formLayer) && !record.renderedForms;
+    if (needsTextLayer || needsLinkLayer || needsFormLayer) {
       const page = await pdfDocument.getPage(record.pageNumber);
       if (isStale()) {
         safePageCleanup(page);
@@ -373,17 +454,24 @@ async function renderPageRecord({
         if (needsTextLayer) {
           await renderPageTextLayer({ page, viewport, record, isStale });
         }
+        const annotations = needsLinkLayer || needsFormLayer
+          ? await loadDisplayAnnotations(page)
+          : null;
         if (needsLinkLayer) {
           await renderPageLinkLayer({
             page,
             viewport,
             record,
+            annotations,
             onExternalLink,
             onDestination,
             onNamedAction,
             isLinkActivationEnabled,
             isStale
           });
+        }
+        if (needsFormLayer) {
+          await renderPageFormLayer({ pdfDocument, page, viewport, record, annotations, isStale });
         }
       } finally {
         safePageCleanup(page);
@@ -415,16 +503,21 @@ async function renderPageRecord({
 
   try {
     await renderPageTextLayer({ page, viewport, record, isStale });
+    const annotations = await loadDisplayAnnotations(page);
     await renderPageLinkLayer({
       page,
       viewport,
       record,
+      annotations,
       onExternalLink,
       onDestination,
       onNamedAction,
       isLinkActivationEnabled,
       isStale
     });
+    if (!record.renderedForms) {
+      await renderPageFormLayer({ pdfDocument, page, viewport, record, annotations, isStale });
+    }
   } finally {
     record.renderedScale = scale;
     safePageCleanup(page);
@@ -432,11 +525,14 @@ async function renderPageRecord({
 }
 
 export {
+  isFillableWidgetAnnotation,
+  loadFillableFieldPresence,
   loadPageMetrics,
   loadEmbeddedPdfMetadata,
   renderPageRecord,
   renderPageCanvasToOffscreen,
   commitOffscreenToVisibleCanvas,
   renderPageTextLayerRecord,
-  renderPageLinkLayer
+  renderPageLinkLayer,
+  renderPageFormLayer
 };

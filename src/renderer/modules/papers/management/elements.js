@@ -52,6 +52,7 @@ function getPapersElements(doc = null) {
     paperViewerZoomLabel: getById('paper-viewer-zoom-label'),
     paperViewerOpenExternalBtn: getById('paper-viewer-open-btn'),
     paperViewerPrintBtn: getById('paper-viewer-print-btn'),
+    paperViewerSaveFormBtn: getById('paper-viewer-save-form-btn'),
     paperSelectionMenu: getById('paper-selection-menu'),
     paperSelectionCommentBtn: getById('paper-selection-comment-btn'),
     paperSelectionHighlightBtn: getById('paper-selection-highlight-btn'),

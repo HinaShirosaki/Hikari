@@ -122,6 +122,7 @@ const contrast = (a, b) => {
 
 /* ---------- the night contract ---------- */
 
+const day = readBlock(palette, ':root');
 const night = readBlock(palette, 'body.theme-night');
 const token = (name, backdrop) => {
   const color = resolve(`var(${name})`, night);
@@ -150,6 +151,13 @@ const atLeast = (label, fg, bg, min) => {
 const text = token('--theme-text');
 const textMuted = token('--theme-text-muted');
 const border = token('--theme-border', surface);
+const controlBackground = token('--theme-control-background', surface);
+
+assert.deepEqual(
+  resolve('var(--theme-control-background)', day),
+  resolve('var(--theme-surface)', day),
+  'day fields must keep the historical near-white page surface'
+);
 
 for (const [name, panel] of [['surface', surface], ['subtle', subtle], ['elevated', elevated]]) {
   atLeast(`night text on ${name}`, text, panel, 4.5);
@@ -164,7 +172,11 @@ for (const [name, panel] of [['surface', surface], ['subtle', subtle], ['elevate
 }
 
 atLeast('night ink on accent', token('--theme-text-on-accent'), token('--theme-accent'), 4.5);
-atLeast('night text inside a field', text, token('--theme-control-background', surface), 4.5);
+atLeast('night text on themed control surfaces', text, controlBackground, 4.5);
+assert.ok(
+  luminance(controlBackground) >= luminance(subtle),
+  'night control fill must be at least as bright as the subtle surface'
+);
 
 // Status chips must mix toward the light, not toward the surface they sit on.
 for (const status of ['success', 'warning', 'danger']) {
@@ -192,24 +204,44 @@ function nightDeclarations(css) {
   return found;
 }
 
-// A custom property is substituted where it is DECLARED, so a --*-night-*
-// property written on :root resolves --theme-* against the day palette and
-// inherits a light value into night mode. It must be night-scoped.
-function rootBlockBody(css) {
-  const start = css.indexOf(':root {');
-  return start === -1 ? '' : css.slice(start, css.indexOf('\n}', start));
+/*
+ * A custom property is substituted where it is DECLARED, so a property written
+ * on :root that reads --theme-* freezes the day palette and inherits those
+ * light colors into night mode. (This is what painted the left rail near-white
+ * in night mode: --app-left-rail-surface resolved --theme-surface-elevated
+ * against :root, where it is #ffffff.)
+ *
+ * Such a property is only safe if it is re-declared per theme. Declaring it on
+ * `body` instead is the one-line fix: the theme class lives there, so a single
+ * declaration resolves correctly in every theme.
+ */
+function declarationsUnder(css, selector) {
+  const found = new Map();
+  const pattern = new RegExp(`(^|\\})\\s*${selector}\\s*\\{([^}]*)\\}`, 'g');
+  for (const match of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(pattern)) {
+    for (const [, property, value] of match[2].matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
+      found.set(property, value.trim());
+    }
+  }
+  return found;
 }
 
-for (const [name, css] of [
-  ['sequence-viewer-palette.css', sequenceViewerPalette],
-  ['workflow-palette.css', workflowPalette],
-  ['assay-plate-palette.css', assayPalette],
-  ['gel-palette.css', gelViewPalette]
-]) {
-  for (const [, property, value] of rootBlockBody(css).matchAll(/(--[\w-]*-night-[\w-]+)\s*:\s*([^;]+);/g)) {
+const themedStylesheets = await Promise.all(
+  ['ui/css', 'src/plugins'].map(async (dir) => {
+    const { globSync } = await import('node:fs');
+    return globSync(`${dir}/**/*.css`, { cwd: new URL('..', import.meta.url) });
+  })
+);
+
+for (const relativePath of themedStylesheets.flat()) {
+  const css = await read(relativePath);
+  const root = declarationsUnder(css, ':root');
+  const night = declarationsUnder(css, 'body\\.theme-night');
+  for (const [property, value] of root) {
+    if (!value.includes('var(--theme-')) continue;
     assert.ok(
-      !value.includes('var(--theme-'),
-      `${name}: ${property} reads a theme token from :root, where it resolves against the day palette; declare it under body.theme-night`
+      night.has(property),
+      `${relativePath}: ${property} reads a theme token from :root, where it freezes the day palette and leaks into night mode; declare it on \`body\` (or re-declare it per theme)`
     );
   }
 }
@@ -232,11 +264,67 @@ for (const [name, css] of [
   }
 }
 
-// The fix for invisible fields lives in the shared rule, not per view.
+/*
+ * Every raw color a palette declares for day must either be re-declared for
+ * night, or be listed here as deliberately fixed. Anything else renders its day
+ * color on a dark page — a white table cell under light text, or near-black
+ * plate labels on a dark surface.
+ *
+ * Fixed colors are ones that do not describe chrome: measurements, data
+ * encodings, and drawings of physical objects.
+ */
+const FIXED_ACROSS_THEMES = new Set([
+  // Drawings of physical labware: a Falcon tube is white plastic in any theme.
+  '--assay-plate-pure-white', '--assay-plate-highlight', '--assay-plate-highlight-faint',
+  '--assay-plate-labware-cap-start', '--assay-plate-labware-cap-end',
+  '--assay-plate-labware-shadow', '--assay-plate-labware-glass-border',
+  '--assay-plate-labware-glass-start', '--assay-plate-labware-glass-end',
+  '--assay-plate-labware-mark', '--assay-plate-sample-fallback',
+  // Data encodings.
+  '--sequence-viewer-base-a-stroke', '--sequence-viewer-base-c-stroke',
+  '--sequence-viewer-base-t-stroke', '--sequence-viewer-builder-ink',
+  // Categorical fills for protein-builder blocks; each carries the dark
+  // --sequence-viewer-builder-ink above, so the chip is readable in any theme.
+  ...Array.from({ length: 12 }, (_, i) => `--sequence-viewer-builder-palette-${i + 1}`),
+  '--gel-marker', '--gel-marker-solid', '--gel-marker-label', '--gel-divider',
+  '--gel-band-positive', '--gel-path', '--gel-path-glow',
+  '--papers-highlight',
+  // The Hikari action mark is a fixed brand spectrum in every theme.
+  '--theme-hikari-rainbow-red', '--theme-hikari-rainbow-orange',
+  '--theme-hikari-rainbow-yellow', '--theme-hikari-rainbow-green',
+  '--theme-hikari-rainbow-cyan', '--theme-hikari-rainbow-blue',
+  '--theme-hikari-rainbow-violet',
+  // Fixed-value scientific canvases, per ui/css/Readme.md.
+  '--tool-box-canvas-background', '--tool-box-canvas-border',
+  // Self-consistent chips: each pins its own light fill AND its own dark ink.
+  '--biology-notebook-suggestion-ink', '--biology-notebook-suggestion-violet',
+  '--biology-notebook-suggestion-blue', '--biology-notebook-suggestion-green',
+  '--biology-notebook-suggestion-yellow', '--biology-notebook-suggestion-orange',
+  '--biology-notebook-suggestion-red'
+]);
+
+const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\s*\(|hsla?\s*\(/;
+
+for (const relativePath of themedStylesheets.flat()) {
+  if (!relativePath.includes('palette')) continue;
+  const css = await read(relativePath);
+  const day = declarationsUnder(css, ':root');
+  const night = declarationsUnder(css, 'body\\.theme-night');
+  for (const [property, value] of day) {
+    if (!RAW_COLOR.test(value)) continue;
+    if (FIXED_ACROSS_THEMES.has(property)) continue;
+    assert.ok(
+      night.has(property),
+      `${relativePath}: ${property} is a raw day color with no night value, so it paints its light/dark day color on a dark page; give it a night value or add it to FIXED_ACROSS_THEMES with a reason`
+    );
+  }
+}
+
+// The field fill lives in the shared rule, while each theme owns its token.
 // Gel's core.css diverges from the host on fonts, so only the field rule is
 // asserted to match rather than the whole stylesheet.
 const FIELD_RULE = /input,\s*\n\s*textarea,\s*\n\s*select \{[^}]*background: var\(--theme-control-background\)/s;
-assert.match(core, FIELD_RULE, 'shared field rule must use the control fill, not the page surface');
+assert.match(core, FIELD_RULE, 'shared field rule must use the theme control fill');
 assert.match(gelCore, FIELD_RULE, 'gel must carry the same field fill rule as the host');
 
 console.log('night-palette-selfcheck: ok');

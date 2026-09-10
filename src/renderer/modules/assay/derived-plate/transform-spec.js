@@ -47,6 +47,7 @@ function normalizeTransformSpec(input) {
   const arithmeticValue = rawArithmetic ? Number(rawArithmetic) : NaN;
   return {
     mode: pick(source.mode, TRANSFORM_MODES, 'steps'),
+    enabled: source.enabled === true,
     formulas: cleanFormulaCells(source.formulas),
     formula: String(source.formula || '').slice(0, 500),
     blank: cleanReference(source.blank),
@@ -61,7 +62,7 @@ function normalizeTransformSpec(input) {
 function isTransformActive(spec) {
   const normalized = normalizeTransformSpec(spec);
   if (normalized.mode === 'cells') {
-    return Boolean(Object.keys(normalized.formulas).length);
+    return normalized.enabled || Boolean(Object.keys(normalized.formulas).length);
   }
   if (normalized.mode === 'formula') {
     return Boolean(normalized.formula.trim());

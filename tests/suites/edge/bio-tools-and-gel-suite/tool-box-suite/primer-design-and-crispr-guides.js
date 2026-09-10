@@ -64,26 +64,13 @@ test('[EDGE] sequence-viewer designCloningPrimers rejects non-annealing same-str
   assert.equal(primerPlan.primers.length, 0);
   assert.match(primerPlan.warnings.join(' '), /Q5\/KLD split-tail primers/);
 });
-test('[EDGE] sequence-viewer designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
-  const fragmentMap = {
-    fragments: [
-      { id: 'frag-1', name: 'Frag1', role: 'insert', sequence: deterministicDna(100, 1) },
-      { id: 'frag-2', name: 'Frag2', role: 'insert', sequence: deterministicDna(100, 101) }
-    ]
-  };
-  const planWithOverlapTms = (leftTm, rightTm) => sequenceViewerInternals.designCloningPrimers({
-    strategy: 'overlap-pcr',
-    preferences: { requireUniqueBinding: false },
-    fragmentMap,
-    routeEvaluations: {
-      overlapPCR: {
-        junctions: [
-          { leftFragmentId: 'frag-1', rightFragmentId: 'frag-2', rightFragmentName: 'Frag2', mode: 'primer-introduced', overlapSequence: 'GCAGCAGCAGGTGCAG', overlapLength: 16, overlapTm: leftTm, wrapAround: false },
-          { leftFragmentId: 'frag-2', rightFragmentId: 'frag-1', rightFragmentName: 'Frag1', mode: 'primer-introduced', overlapSequence: 'GCAGCAGCAGGTGCAG', overlapLength: 16, overlapTm: rightTm, wrapAround: false }
-        ]
-      }
-    }
-  });
+test('[EDGE] sequence-viewer primer fallback enforces the per-level overlap Tm-difference cap', () => {
+  const strategy = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly', 'strategy.js'));
+  const planWithOverlapTms = (leftTm, rightTm) => strategy.designWithThresholdFallback(() => ({
+    feasible: true,
+    primers: [{ name: 'fragment_F', tm: 60 }, { name: 'fragment_R', tm: 60 }],
+    overlapSummary: [{ overlapTm: leftTm }, { overlapTm: rightTm }]
+  }));
 
   // Spread of 2 degC clears the strict cap (3).
   const balanced = planWithOverlapTms(64, 66);
@@ -286,14 +273,15 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
       `buffer-mw-${index}`,
       `buffer-stock-${index}`,
       `buffer-final-${index}`,
-      `buffer-output-${index}`,
+      `buffer-amount-${index}`,
+      `buffer-note-${index}`,
       `buffer-suggestions-${index}`,
       `fixed-reaction-row-${index}`,
       `fixed-reaction-name-${index}`,
       `fixed-reaction-stock-${index}`,
       `fixed-reaction-final-${index}`,
       `fixed-reaction-volume-${index}`,
-      `fixed-reaction-output-${index}`
+      `fixed-reaction-note-${index}`
     );
   }
   const document = createMockDocument(ids);
@@ -326,15 +314,22 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   });
   reactionUi.initFixedReactionTool({ document });
 
-  assert.match(document.getElementById('buffer-output-1').textContent, /8766 mg/i);
-  assert.match(document.getElementById('buffer-output-2').textContent, /0\.5 mL/i);
+  assert.match(document.getElementById('buffer-amount-1').placeholder, /8766 mg/i);
+  assert.match(document.getElementById('buffer-amount-2').placeholder, /0\.5 mL/i);
   assert.match(document.getElementById('buffer-solvent-output').textContent, /999\.5 mL/i);
-  assert.match(document.getElementById('fixed-reaction-output-1').textContent, /10 uL/i);
+  assert.match(document.getElementById('fixed-reaction-volume-1').placeholder, /10 uL/i);
   assert.match(document.getElementById('fixed-reaction-solvent-output').textContent, /90 uL/i);
+
+  // A weighed-out amount is typed straight over the calculated one.
+  document.getElementById('buffer-amount-1').value = '8.8 g';
+  trigger(document.getElementById('buffer-amount-1'), 'input');
+  assert.match(document.getElementById('buffer-solvent-output').textContent, /999\.5 mL/i);
+  document.getElementById('buffer-amount-1').value = '';
+  trigger(document.getElementById('buffer-amount-1'), 'input');
 
   document.getElementById('buffer-volume-unit').value = 'uL';
   trigger(document.getElementById('buffer-volume-unit'), 'change');
-  assert.match(document.getElementById('buffer-output-1').textContent, /8\.766 mg/i);
+  assert.match(document.getElementById('buffer-amount-1').placeholder, /8\.766 mg/i);
 
   document.getElementById('buffer-name-1').value = 'Stored';
   trigger(document.getElementById('buffer-name-1'), 'input');

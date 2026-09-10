@@ -904,10 +904,36 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
     });
     test('storage root importer reads supported Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
-      const fixtureRoot = path.join(__dirname, 'Testdata');
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
       try {
-        await fsPromises.cp(fixtureRoot, tempDir, { recursive: true });
+        await syncBundleWithOfficialSkills(bundleHelpers, {
+          snapshot: {
+            projects: [{ id: 'project-fixture', name: 'Fixture Project' }],
+            protocols: [{ id: 'protocol-fixture', name: 'Fixture Protocol', steps: ['Run fixture'] }],
+            notebookEntries: [{
+              id: 'notebook-fixture',
+              projectId: 'project-fixture',
+              projectName: 'Fixture Project',
+              protocolId: 'protocol-fixture',
+              protocolName: 'Fixture Protocol',
+              result: 'Fixture complete.'
+            }],
+            inventory: {
+              Freezer: [{ id: 'container-fixture', name: 'Fixture Box', type: 'box81' }]
+            },
+            settings: { storagePath: tempDir }
+          }
+        });
+        await sequenceLibrary.upsertSequenceEntry({
+          storagePath: tempDir,
+          name: 'Fixture Vector',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'circular',
+          sequenceLength: 12,
+          featureCount: 0,
+          gbkText: 'LOCUS       Fixture_Vector     12 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n'
+        });
         const result = await bundleHelpers.importStorageRoot({
           storagePath: tempDir,
           transformPaperRecordsToMarkdown: paperMarkdownImport.transformPaperRecordsToMarkdown

@@ -4,6 +4,7 @@ import {
   DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
   DEFAULT_SAMPLE_TYPE_LABELS
 } from '../../lib/inventory-settings.js';
+import { DEFAULT_NOTEBOOK_PDF_SETTINGS } from '../../lib/notebook-pdf-settings.js';
 import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 
 export const STARTUP_DEFAULT_VIEW_IDS = new Set([
@@ -79,6 +80,7 @@ export const defaultState = {
       uiStyle: 'neutral-compact'
     },
     storagePath: '',
+    notebookPdf: { ...DEFAULT_NOTEBOOK_PDF_SETTINGS },
     pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',

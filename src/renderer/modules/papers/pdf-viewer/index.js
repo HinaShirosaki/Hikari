@@ -80,6 +80,10 @@ export function createPapersPdfViewer(elements = {}) {
       return ctx.state.pageNumber;
     },
     hasActiveDocument: ctx.hasActiveDocument,
+    hasFillableForm() {
+      return Boolean(ctx.state.hasFormFields);
+    },
+    getFilledPdfBytes: ctx.getFilledPdfBytes,
     startPaperScreenshotSelection: ctx.startPaperScreenshotSelection,
     goToPage: ctx.goToPage,
     openExternalUrl: ctx.openExternalLink,

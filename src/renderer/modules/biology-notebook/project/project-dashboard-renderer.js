@@ -207,7 +207,6 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
                   <select aria-label="Paper finding day of month" data-paper-finder-monthday>
                     ${monthDayOptions}
                   </select>
-                  <span class="small-note">Shorter months use their last day.</span>
                 </label>
                 <label class="project-paper-finder-calendar-field">
                   <span>At</span>
@@ -369,7 +368,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
           <h2>${escapeText(heading)}</h2>
         </div>
         <div class="project-experiment-suggestions">
-          <button type="button" class="ghost-btn" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
+          <button type="button" class="ghost-btn hikari-agent-action" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
           <span class="small-note" role="status" aria-live="polite" data-experiment-suggestion-status></span>
         </div>
         ${includeEditAction ? `

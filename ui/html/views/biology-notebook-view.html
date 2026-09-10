@@ -127,9 +127,6 @@
               </details>
 
               <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
-                <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
-                  <span>Notes / Results</span>
-                </div>
                 <div class="biology-notebook-viewer-section-body">
                   <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
                   <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
@@ -144,7 +141,7 @@
                     <label for="biology-notebook-result">Notes</label>
                     <div class="biology-notebook-notes-composer">
                       <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn hikari-agent-action" type="button">Clarify and Save</button>
                     </div>
                   </div>
                   <label>
@@ -233,7 +230,7 @@
                       </td>
                       <th scope="row">pH</th>
                       <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH" /></td>
-                      <td></td>
+                      <td colspan="2"></td>
                     </tr>
                     <tr class="biology-notebook-buffer-header-row">
                       <th scope="col">Chemical</th>
@@ -241,6 +238,7 @@
                       <th scope="col">Stock Conc.</th>
                       <th scope="col">Final Conc.</th>
                       <th scope="col">Mass/Volume</th>
+                      <th scope="col">Note</th>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -252,7 +250,8 @@
                       <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-1" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-1" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 1" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-1" type="text" placeholder="lot, source" aria-label="Note for ingredient 1" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -264,7 +263,8 @@
                       <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-2" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-2" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 2" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-2" type="text" placeholder="lot, source" aria-label="Note for ingredient 2" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -276,7 +276,8 @@
                       <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-3" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-3" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 3" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-3" type="text" placeholder="lot, source" aria-label="Note for ingredient 3" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -288,7 +289,8 @@
                       <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-4" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-4" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 4" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-4" type="text" placeholder="lot, source" aria-label="Note for ingredient 4" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -300,7 +302,8 @@
                       <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-5" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-5" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 5" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-5" type="text" placeholder="lot, source" aria-label="Note for ingredient 5" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
@@ -312,10 +315,11 @@
                       <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight" /></td>
                       <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration" /></td>
                       <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
-                      <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-6" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 6" /></td>
+                      <td><input id="biology-notebook-tool-buffer-note-6" type="text" placeholder="lot, source" aria-label="Note for ingredient 6" /></td>
                     </tr>
-                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-buffer-add-row">
-                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-buffer-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
+                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-sheet-add-row">
+                      <td colspan="6"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
                     </tr>
                     <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
                       <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
@@ -323,6 +327,7 @@
                       <th scope="row">6 M NaOH <output id="biology-notebook-tool-buffer-naoh-output" aria-live="polite"></output></th>
                       <td></td>
                       <th scope="row">6 M HCl <output id="biology-notebook-tool-buffer-hcl-output" aria-live="polite"></output></th>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
@@ -330,9 +335,6 @@
             </section>
 
             <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
-              <div class="form-actions">
-                <button id="biology-notebook-tool-reaction-add-row" class="ghost-btn" type="button">Add Reagent</button>
-              </div>
               <div class="biology-notebook-reaction-sheet-wrap">
                 <table class="biology-notebook-reaction-sheet" aria-label="Fixed volume reaction preparer">
                   <colgroup>
@@ -340,104 +342,96 @@
                     <col class="biology-notebook-reaction-stock-col" />
                     <col class="biology-notebook-reaction-final-col" />
                     <col class="biology-notebook-reaction-volume-col" />
+                    <col class="biology-notebook-reaction-note-col" />
                   </colgroup>
                   <tbody>
                     <tr class="biology-notebook-reaction-meta-row">
                       <th scope="row">Total volume:</th>
-                      <td colspan="3"><input id="biology-notebook-tool-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
+                      <td colspan="4"><input id="biology-notebook-tool-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
                     </tr>
                     <tr class="biology-notebook-reaction-header-row">
                       <th scope="col">Item</th>
                       <th scope="col">Stock Conc.</th>
                       <th scope="col">Final Conc</th>
                       <th scope="col">Volume</th>
+                      <th scope="col">Note</th>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
                       <td><input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="biology-notebook-tool-reaction-output-1" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-1" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 1" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
                       <td><input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="biology-notebook-tool-reaction-output-2" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-2" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 2" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
                       <td><input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="biology-notebook-tool-reaction-output-3" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-3" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 3" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
                       <td><input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="biology-notebook-tool-reaction-output-4" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-4" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 4" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-5" hidden>
                       <td><input id="biology-notebook-tool-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="biology-notebook-tool-reaction-output-5" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-5" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 5" /></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-6" hidden>
                       <td><input id="biology-notebook-tool-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /></td>
                       <td><input id="biology-notebook-tool-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                       <td><input id="biology-notebook-tool-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
-                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="biology-notebook-tool-reaction-output-6" aria-live="polite"></output></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /></td>
+                      <td><input id="biology-notebook-tool-reaction-note-6" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 6" /></td>
+                    </tr>
+                    <tr id="biology-notebook-tool-reaction-add-row-anchor" class="biology-notebook-sheet-add-row">
+                      <td colspan="5"><button id="biology-notebook-tool-reaction-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add reagent" title="Add reagent">+</button></td>
                     </tr>
                     <tr class="biology-notebook-reaction-solvent-row">
                       <th scope="row"><input id="biology-notebook-tool-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>
                       <td></td>
                       <td></td>
                       <td><output id="biology-notebook-tool-reaction-solvent-output" aria-live="polite"></output></td>
+                      <td></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </section>
 
-            <div class="biology-notebook-tool-output" aria-live="polite">
-              <p id="biology-notebook-tool-output">Enter values to calculate or show a bench formula.</p>
-              <p id="biology-notebook-tool-formula" class="small-note"></p>
-            </div>
-            <div class="form-actions biology-notebook-tool-actions">
-              <button id="biology-notebook-tool-insert-notes-btn" class="primary-btn" type="button">Insert &amp; Record</button>
-            </div>
-              <p id="biology-notebook-tool-status" class="small-note"></p>
             </div>
           </div>
         </aside>
       </div>
 
-      <div id="biology-notebook-table-size-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
-        <div class="biology-notebook-table-size-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-table-size-title">
-          <div class="app-dialog-head">
-            <div>
-              <h3 id="biology-notebook-table-size-title">Add Table</h3>
-              <p class="small-note">Rows and columns can be added later.</p>
-            </div>
-            <button id="biology-notebook-table-size-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add table dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+      <div id="biology-notebook-table-size-overlay" class="biology-notebook-table-size-popover" role="dialog" aria-label="Add table" hidden>
+        <form id="biology-notebook-table-size-form" class="biology-notebook-table-size-form">
+          <div class="biology-notebook-table-size-fields">
+            <label>
+              Columns
+              <input id="biology-notebook-table-size-columns" type="number" min="1" max="50" step="1" value="3" />
+            </label>
+            <label>
+              Rows
+              <input id="biology-notebook-table-size-rows" type="number" min="1" max="500" step="1" value="3" />
+            </label>
           </div>
-          <form id="biology-notebook-table-size-form" class="stack-form biology-notebook-table-size-form">
-            <div class="biology-notebook-table-size-fields">
-              <label>
-                Columns
-                <input id="biology-notebook-table-size-columns" type="number" min="1" max="50" step="1" value="3" />
-              </label>
-              <label>
-                Rows
-                <input id="biology-notebook-table-size-rows" type="number" min="1" max="500" step="1" value="3" />
-              </label>
-            </div>
-            <div class="form-actions">
-              <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit">Add Table</button>
-              <button id="biology-notebook-table-size-cancel-btn" class="ghost-btn" type="button">Cancel</button>
-            </div>
-          </form>
-        </div>
+          <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit">Add Table</button>
+        </form>
       </div>
       <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">

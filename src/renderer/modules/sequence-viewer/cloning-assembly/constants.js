@@ -7,7 +7,7 @@ export const SUPPORTED_EDIT_TYPES = new Set([
   'replacement'
 ]);
 
-export const DEFAULT_VENDOR_FILTER = Object.freeze({
+const DEFAULT_VENDOR_FILTER = Object.freeze({
   neb: true,
   thermo: true
 });

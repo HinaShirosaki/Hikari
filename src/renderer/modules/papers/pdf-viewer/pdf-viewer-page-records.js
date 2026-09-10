@@ -34,7 +34,8 @@ export function cancelAllRenderTasks(pageRecords = []) {
 
 export function clearPageRecordRender(record, {
   clearText = true,
-  clearLinks = true
+  clearLinks = true,
+  clearForms = true
 } = {}) {
   if (!record) {
     return;
@@ -52,6 +53,12 @@ export function clearPageRecordRender(record, {
   if (clearLinks && record.linkLayer) {
     record.linkLayer.innerHTML = '';
     record.renderedLinkScale = 0;
+  }
+  // Typed values live in the document's annotationStorage, so dropping the
+  // inputs here is safe: re-rendering the layer restores what the user filled.
+  if (clearForms && record.formLayer) {
+    record.formLayer.innerHTML = '';
+    record.renderedForms = false;
   }
 }
 
@@ -77,7 +84,7 @@ export function releasePageRecords({ pageLayer, pageRecords = [] } = {}) {
   }
 }
 
-export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
+export function buildPageRecords({ doc, pageMetrics = [], onCanvasContextLost = null } = {}) {
   if (!doc?.createElement) {
     return [];
   }
@@ -116,6 +123,13 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
     linkLayer.dataset.pageHeight = String(pageHeight);
     linkLayer.setAttribute('aria-label', `Paper page ${pageNumber} links`);
 
+    const formLayer = doc.createElement('div');
+    formLayer.className = 'papers-viewer-form-layer';
+    formLayer.dataset.pageNumber = String(pageNumber);
+    formLayer.dataset.pageWidth = String(pageWidth);
+    formLayer.dataset.pageHeight = String(pageHeight);
+    formLayer.setAttribute('aria-label', `Paper page ${pageNumber} form fields`);
+
     const overlay = doc.createElement('div');
     overlay.className = 'papers-viewer-overlay';
     overlay.dataset.pageNumber = String(pageNumber);
@@ -123,9 +137,9 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
     overlay.dataset.pageHeight = String(pageHeight);
     overlay.setAttribute('aria-label', `Paper page ${pageNumber} comment pins`);
 
-    pageElement.append(canvas, highlightLayer, textLayer, linkLayer, overlay);
+    pageElement.append(canvas, highlightLayer, textLayer, linkLayer, formLayer, overlay);
 
-    return {
+    const record = {
       pageNumber,
       metric,
       element: pageElement,
@@ -133,14 +147,27 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
       highlightLayer,
       textLayer,
       linkLayer,
+      formLayer,
       overlay,
       renderTask: null,
       textLayerBuilder: null,
       textSelectionCleanup: null,
       renderedScale: 0,
       renderedTextScale: 0,
-      renderedLinkScale: 0
+      renderedLinkScale: 0,
+      renderedForms: false
     };
+
+    // The browser can drop a 2D canvas backing store under memory pressure. The
+    // canvas keeps its size, so the "already rendered" check would skip it, and
+    // an alpha:false canvas paints solid black until something redraws it.
+    if (typeof onCanvasContextLost === 'function') {
+      const handleContextLoss = () => onCanvasContextLost(record);
+      canvas.addEventListener('contextlost', handleContextLoss);
+      canvas.addEventListener('contextrestored', handleContextLoss);
+    }
+
+    return record;
   });
 }
 

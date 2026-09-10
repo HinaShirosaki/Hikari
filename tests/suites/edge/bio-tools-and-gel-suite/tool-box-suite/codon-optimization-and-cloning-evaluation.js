@@ -342,8 +342,8 @@ test('[EDGE] sequence-viewer evaluateOverlapPcr recognizes strong existing termi
 });
 test('[EDGE] sequence-viewer evaluateOverlapPcr can propose primer-introduced overlaps', () => {
   const result = sequenceViewerInternals.evaluateOverlapPcr([
-    { id: 'frag-a', name: 'Fragment A', sequence: 'ATATATATATATGGGGGGGGGGGGGGAAAA' },
-    { id: 'frag-b', name: 'Fragment B', sequence: 'GCGCGCGCGCGCGCGCGTTTAAAATTTAAA' }
+    { id: 'frag-a', name: 'Fragment A', sequence: 'ATGCGTACGATCTAGCCATGACTGACCTAGGCTACGTTGATCAGTTCGAGATCGACCTAGCATGCGTCAAGTACCGATGCTAGCTTACGAGTCAGGATCGA' },
+    { id: 'frag-b', name: 'Fragment B', sequence: 'GCTACAGTTCGATGACCTGATCGTAGCTAGACGTTACGCTAGCATGACTCGATACCTGAGCTTGACGATCGTACAGTCGATGCTACCGATGAGCTACGATC' }
   ]);
 
   assert.equal(result.feasible, true);

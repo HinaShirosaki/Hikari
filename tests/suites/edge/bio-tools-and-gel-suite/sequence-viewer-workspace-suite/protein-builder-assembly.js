@@ -10,6 +10,10 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
+    'sequence-viewer-cloning-design-workspace',
+    'sequence-viewer-cloning-design-strategy-list',
+    'sequence-viewer-cloning-design-back-btn',
+    'sequence-viewer-cloning-design-confirm-btn',
     'sequence-viewer-vector-builder-btn',
     'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
@@ -148,7 +152,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   const assemblyList = document.getElementById('sequence-viewer-protein-builder-assembly-list');
   const assemblySummary = document.getElementById('sequence-viewer-protein-builder-assembly-summary');
   const confirmationBanner = document.getElementById('sequence-viewer-protein-builder-confirmation');
-  const confirmationSummary = document.getElementById('sequence-viewer-protein-builder-confirmation-summary');
   const textarea = document.getElementById('sequence-viewer-textarea');
   const loadBtn = document.getElementById('sequence-viewer-load-btn');
   const pastePanel = document.getElementById('sequence-viewer-paste-panel');
@@ -171,43 +174,36 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   await flushAsync();
   await flushAsync();
 
-  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
-  assert.equal(Boolean(confirmationBanner.hidden), false);
-  assert.equal(confirmationSummary.innerHTML.includes('HostVector'), true);
-  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
+  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), true);
+  assert.equal(Boolean(document.getElementById('sequence-viewer-cloning-design-workspace').hidden), false);
+  assert.equal(Boolean(confirmationBanner.hidden), true);
+  assert.match(document.getElementById('sequence-viewer-cloning-design-strategy-list').innerHTML, /data-cloning-design-strategy="restriction-ligation"/);
+  assert.doesNotMatch(document.getElementById('sequence-viewer-cloning-design-strategy-list').innerHTML, /data-cloning-design-strategy="whole-plasmid"/);
   assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
   assert.equal(Boolean(loadBtn.hidden), true);
   assert.equal(Boolean(pastePanel.hidden), true);
   assert.equal(Boolean(modePasteBtn.hidden), true);
   assert.equal(Boolean(modeFileBtn.hidden), true);
   assert.equal(textarea.value, '');
-  // The PCR page, plus the assembly reaction the route ends in.
-  assert.equal(appState.notebookEntries.length, 2);
-  const notebookEntryId = appState.notebookEntries[0].id;
-
-  trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
-  await flushAsync();
-
-  assert.equal(Boolean(confirmationBanner.hidden), true);
-  assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Construct confirmed.*cloning plan.*PCR program/i);
-  assert.equal(persisted, true);
-  assert.equal(notebookChangedCount >= 2, true);
-  // Re-confirming refreshes the same PCR page and its assembly page.
-  assert.equal(appState.notebookEntries.length, 2);
-  assert.equal(appState.notebookEntries[0].id, notebookEntryId);
-  assert.match(appState.notebookEntries[0].result, /Protein Builder cloning assembly design/i);
-  assert.match(appState.notebookEntries[0].result, /PCR program/i);
-  assert.match(appState.notebookEntries[0].result, /Primers/i);
-  assert.ok(
-    appState.notebookEntries[0].resultTable?.rows?.length > 0,
-    JSON.stringify(appState.notebookEntries[0].proteinBuilderCloningDesign)
-  );
+  // This fixture has no compatible restriction sites. Stay on its supported
+  // route instead of silently falling back to Gibson or saving an invalid plan.
+  assert.equal(Boolean(document.getElementById('sequence-viewer-cloning-design-confirm-btn').disabled), true);
+  assert.equal(appState.notebookEntries.length, 0);
+  assert.equal(persisted, false);
+  assert.equal(notebookChangedCount, 0);
+  trigger(document.getElementById('sequence-viewer-cloning-design-back-btn'), 'click', { preventDefault() {} });
+  assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
+  assert.equal(Boolean(document.getElementById('sequence-viewer-cloning-design-workspace').hidden), true);
 });
 test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence for cloning primers', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
+    'sequence-viewer-cloning-design-workspace',
+    'sequence-viewer-cloning-design-strategy-list',
+    'sequence-viewer-cloning-design-back-btn',
+    'sequence-viewer-cloning-design-confirm-btn',
     'sequence-viewer-protein-builder-confirmation',
     'sequence-viewer-protein-builder-confirmation-summary',
     'sequence-viewer-protein-builder-confirmation-back-btn',
@@ -332,8 +328,9 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
     proteinBuilderConfirmation: confirmation
   });
 
-  trigger(document.getElementById('sequence-viewer-protein-builder-confirmation-confirm-btn'), 'click');
   await flushAsync();
+  assert.equal(Boolean(document.getElementById('sequence-viewer-cloning-design-workspace').hidden), false);
+  assert.match(document.getElementById('sequence-viewer-cloning-design-strategy-list').innerHTML, /data-cloning-design-strategy="gibson"/);
 
   assert.equal(persisted, true);
   assert.equal(changedCount, 1);

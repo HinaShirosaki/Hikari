@@ -35,6 +35,15 @@ export const installPdfViewerDataController = (ctx) => {
     ctx.paintPins();
   }
 
+  // pdf.js bakes the annotationStorage values into the saved bytes, so this is
+  // the filled copy of whatever the user typed into the form fields.
+  async function getFilledPdfBytes() {
+    if (typeof state.pdfDocument?.saveDocument !== 'function') {
+      return null;
+    }
+    return state.pdfDocument.saveDocument();
+  }
+
   function handleOverlayClick(event) {
     if (!state.placementMode || !ctx.hasActiveDocument() || typeof state.onPlacement !== 'function') {
       return;
@@ -98,6 +107,7 @@ export const installPdfViewerDataController = (ctx) => {
     setHighlights,
     setSelectedCommentId,
     setPlacementMode,
+    getFilledPdfBytes,
     handleOverlayClick,
     handleResize,
     handleStageScroll

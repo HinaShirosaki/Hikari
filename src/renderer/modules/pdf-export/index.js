@@ -1,5 +1,9 @@
 import { resolveNotebookResultTablesValues } from '../../lib/notebook-table-formulas.js';
 import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
+import {
+  normalizeNotebookPdfSettings,
+  resolveNotebookPdfMargins
+} from '../../lib/notebook-pdf-settings.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import {
   safeValue,
@@ -37,6 +41,7 @@ import {
   resolveAssayDefinition,
   renderAssayPlot
 } from './figures.js';
+import { loadHikariPdfIconDataUrl } from './branding.js';
 
 export function exportProtocolPdf(protocol) {
   if (!protocol) {
@@ -254,6 +259,9 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
     const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
     const useWideLayout = hasWideNotebookResultTable(resultTables);
+    const pdfSettings = normalizeNotebookPdfSettings(params.pdfSettings);
+    const baseMargin = useWideLayout ? 54 : 72;
+    const cornerIconDataUrl = await loadHikariPdfIconDataUrl();
     const ctx = createContext({
       title,
       eyebrow: 'Notebook page',
@@ -261,8 +269,10 @@ export const exportNotebookEntryPdf = async (params = {}) => {
       footerLabel: `${safeValue(entry.projectName)} · ${title}`,
       meta: notebookEntryMeta(entry),
       orientation: useWideLayout ? 'l' : 'p',
-      format: 'letter',
-      margin: useWideLayout ? 54 : 72
+      format: pdfSettings.pageSize,
+      margin: baseMargin,
+      margins: resolveNotebookPdfMargins(pdfSettings, baseMargin),
+      cornerIconDataUrl
     });
     if (!ctx) {
       return false;
@@ -287,7 +297,8 @@ export const exportProjectNotebookEntriesPdf = async ({
   linkedGelPreviewImagesByEntryId = new Map(),
   linkedAssayByEntryId = new Map(),
   linkedAssayPlotImagesByEntryId = new Map(),
-  resultFileImagesByEntryId = new Map()
+  resultFileImagesByEntryId = new Map(),
+  pdfSettings: rawPdfSettings = {}
 } = {}) => {
   try {
     if (!project) {
@@ -300,6 +311,8 @@ export const exportProjectNotebookEntriesPdf = async ({
     }
 
     const projectName = safeValue(project.name, 'Untitled Project');
+    const pdfSettings = normalizeNotebookPdfSettings(rawPdfSettings);
+    const cornerIconDataUrl = await loadHikariPdfIconDataUrl();
     const ctx = createContext({
       title: projectName,
       eyebrow: 'Project notebook',
@@ -309,8 +322,10 @@ export const exportProjectNotebookEntriesPdf = async ({
         { label: 'Exported', value: formatTimestamp(new Date().toISOString()) }
       ],
       orientation: 'p',
-      format: 'letter',
-      margin: 72
+      format: pdfSettings.pageSize,
+      margin: 72,
+      margins: resolveNotebookPdfMargins(pdfSettings, 72),
+      cornerIconDataUrl
     });
     if (!ctx) {
       return false;

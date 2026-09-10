@@ -6,6 +6,7 @@ import {
 import { cancelAllRenderTasks, releasePageRecords } from './pdf-viewer-page-records.js';
 import {
   loadEmbeddedPdfMetadata,
+  loadFillableFieldPresence,
   loadPageMetrics
 } from './pdf-viewer-rendering.js';
 import { DEFAULT_ZOOM } from './pdf-viewer-constants.js';
@@ -83,9 +84,10 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
       state.loadingTask = null;
       ctx.setStatus('Preparing pages...');
 
-      const [embeddedMetadata, pageMetrics] = await Promise.all([
+      const [embeddedMetadata, pageMetrics, hasFormFields] = await Promise.all([
         loadEmbeddedPdfMetadata(pdfDocument),
-        loadPageMetrics(pdfDocument)
+        loadPageMetrics(pdfDocument),
+        loadFillableFieldPresence(pdfDocument)
       ]);
       if (activeLoadToken !== state.loadToken) {
         await ctx.destroyPdfDocument(pdfDocument);
@@ -97,6 +99,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
       state.pageCount = Number(pdfDocument.numPages) || 1;
       state.pageMetrics = pageMetrics.metrics;
       state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
+      state.hasFormFields = hasFormFields;
       state.zoom = DEFAULT_ZOOM;
       state.fitWidth = true;
       state.bookmarks = await ctx.loadPdfBookmarks(pdfDocument);

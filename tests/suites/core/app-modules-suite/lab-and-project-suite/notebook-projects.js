@@ -130,7 +130,12 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
     'biology-notebook-result',
     'biology-notebook-result-file',
     'save-biology-notebook-btn',
-    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-new-experiment-btn',
+    'biology-notebook-experiment-dialog-overlay',
+    'biology-notebook-experiment-form',
+    'biology-notebook-experiment-start-btn',
+    'biology-notebook-experiment-dialog-status',
+    'biology-notebook-protocol-search-results',
     'biology-notebook-entry-list'
   ]);
 
@@ -241,7 +246,10 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
   assert.equal(state.notebookEntries.find((entry) => entry.id === 'n1').result, 'Updated executed notes.');
   assert.equal(state.notebookEntries.find((entry) => entry.id === 'n1').agentDraftMeta.proposalId, 'proposal-1');
 
-  trigger(document.getElementById('cancel-biology-notebook-edit-btn'), 'click');
+  notebook.openExperimentDialog();
+  document.getElementById('biology-notebook-project-select').value = 'p1';
+  document.getElementById('biology-notebook-protocol-select').value = 'pr1';
+  trigger(document.getElementById('biology-notebook-experiment-form'), 'submit');
   document.getElementById('biology-notebook-result').value = 'Fresh manual page.';
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
   await flushAsync();

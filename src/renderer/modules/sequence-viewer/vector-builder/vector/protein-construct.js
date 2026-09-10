@@ -103,7 +103,12 @@ function createVectorProteinConstruct({
         sourceKind: 'vector_builder',
         backboneName,
         constructName: label,
-        proteinInputAaLength
+        proteinInputAaLength,
+        // The blocks carry their own physical templates (a Feature DB block names
+        // the vector it was taken from), so the cloning design can PCR each one
+        // off the right plasmid instead of guessing one template for the lot.
+        insertSequence,
+        insertParts: Array.isArray(dnaConstruct?.parts) ? dnaConstruct.parts : []
       };
     }
 

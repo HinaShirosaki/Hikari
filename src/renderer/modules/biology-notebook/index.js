@@ -83,8 +83,7 @@ export function initLabNotebook({
     onProtocolChange: (...args) => onProtocolChange(...args),
     showProjectDashboard: (...args) => showProjectDashboard(...args),
     ensureNotebookEntryForLinkedWork: (...args) => ensureNotebookEntryForLinkedWork(...args),
-    applyQuickSampleCapture: (...args) => applyQuickSampleCapture(...args),
-    appendNotebookResultLine: (...args) => appendNotebookResultLine(...args)
+    applyQuickSampleCapture: (...args) => applyQuickSampleCapture(...args)
   });
 
   const {
@@ -276,7 +275,7 @@ export function initLabNotebook({
   });
 
   const { saveEntry, clarifyAndSaveEntry } = createNotebookSaveEntry({
-    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true }); },
+    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true, completedEntry: entry }); },
     resultTableController,
     toolSidebarController,
     clearPendingNotebookResultFiles: (...args) => clearPendingNotebookResultFiles(...args),
@@ -307,7 +306,7 @@ export function initLabNotebook({
     persistActiveEntrySampleLinks,
     applyQuickSampleCapture
   } = createNotebookSampleLinks({
-    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true }); },
+    onEntryExecuted: (entry) => { void experimentSuggestions.suggest(entry.projectId, { automatic: true, completedEntry: entry }); },
     resultTableController,
     toolSidebarController,
     getActiveEntry: (...args) => getActiveEntry(...args),

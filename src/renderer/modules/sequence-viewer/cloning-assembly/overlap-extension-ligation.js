@@ -192,10 +192,10 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
     return infeasible(describeMissingSite(upstreamRanked, 'upstream'));
   }
 
+  // No template named is a note on the insert primers, not a blocked route: the
+  // user picks the template in Vector Builder / Protein Builder, and the design
+  // proceeds off the assembled sequence either way.
   const insertTemplate = donorSequence || normalizeSequence(payload?.insertTemplate || '');
-  if (!insertTemplate.length) {
-    return infeasible('The overlap-extension insert has no physical PCR template. Choose a donor record or provide a synthesis fragment before designing primers.');
-  }
 
   const clamp = normalizeSequence(config.primerClampSequence || DEFAULT_CLONING_PREFERENCES.primerClampSequence);
   const upstreamFlank = backbone.slice(upstream.start);
@@ -252,8 +252,10 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
       return base;
     }
     // A primer-introduced overlap is the point of this route, so the junction
-    // notes that say so are not warnings here.
-    return { ...base, warnings: [], ...summarizePrimerPlan(base.primers, overlapPcr.junctions) };
+    // notes that say so are not warnings here -- but what the stated insert
+    // template could not confirm still is, and `base.warnings` now carries only
+    // those.
+    return { ...base, ...summarizePrimerPlan(base.primers, overlapPcr.junctions) };
   });
 
   if (!design.feasible) {

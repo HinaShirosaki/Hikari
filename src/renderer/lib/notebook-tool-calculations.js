@@ -261,24 +261,41 @@ export function buildNotebookToolCalculationsHtml({
     const edit = calculation.type === 'fixed-reaction' && calculation.mode === 'reaction'
       ? { calculationId: calculation.id }
       : null;
+    // The table is the record. A result line and a formula line under it only
+    // repeat what its cells already say.
     const table = calculation.table
       ? buildCalculationTableHtml(calculation.table, escapeText, edit)
-      : '';
-    const result = calculation.result && !table
-      ? `<p>${escapeText(calculation.result)}</p>`
-      : '';
-    const formula = calculation.formula && !table
-      ? `<p class="small-note biology-notebook-tool-calculation-formula">${escapeText(calculation.formula)}</p>`
       : '';
     return `
       <article class="biology-notebook-tool-calculation" data-tool-calculation-id="${escapeText(calculation.id)}">
         <div class="biology-notebook-tool-calculation-head">
           <h5>${escapeText(calculation.title)}</h5>
           <span>${escapeText(calculation.type)}</span>
+          <button
+            type="button"
+            class="ghost-btn biology-notebook-tool-calculation-edit"
+            data-tool-calculation-edit="${escapeText(calculation.id)}"
+            aria-label="Edit ${escapeText(calculation.title)}"
+            title="Edit in the toolbox"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"></path>
+              <path d="M14.5 7.5 16.5 9.5"></path>
+            </svg>
+          </button>
+          <button
+            type="button"
+            class="ghost-btn biology-notebook-tool-calculation-remove"
+            data-tool-calculation-remove="${escapeText(calculation.id)}"
+            aria-label="Remove ${escapeText(calculation.title)}"
+            title="Remove table"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <path d="M4 7h16M10 4h4M9 7v12M15 7v12M6 7l1 13h10l1-13"></path>
+            </svg>
+          </button>
         </div>
         ${table}
-        ${result}
-        ${formula}
       </article>
     `;
   }).join('');

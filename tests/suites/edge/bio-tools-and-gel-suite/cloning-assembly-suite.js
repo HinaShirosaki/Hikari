@@ -390,13 +390,13 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(cloningDesign.isCloningDesignPlanActionable({ feasible: true, primers: [{ name: 'complete' }] }), true);
     });
 
-    test('[EDGE] Golden Gate blocks a de novo insert when no physical donor is chosen', () => {
+    test('[EDGE] Golden Gate names the missing donor instead of blocking a de novo insert', () => {
       const cloningDesign = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design.js')
       );
-      // A real insertion edit: the pre-edit vector cannot carry the insert, so
-      // checking insert specificity against it rejects every window and the
-      // route reports a threshold failure it can never recover from.
+      // A real insertion edit: the pre-edit vector cannot carry the insert. The
+      // template is the user's declared choice, so the route still designs off
+      // the assembled sequence and says what it could not confirm.
       const planFor = (seed) => {
         const gene = filler(240, (seed * 7) + 1);
         const vector = filler(900, (seed * 13) + 5);
@@ -420,14 +420,13 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       let fixture = null;
       for (let seed = 1; seed <= 40 && !fixture; seed += 1) {
         const candidate = planFor(seed);
-        if (/does not contain this insert|no physical PCR template/i.test(candidate.plan.warnings?.join(' ') || '')) {
+        if (candidate.plan.feasible) {
           fixture = candidate;
         }
       }
       assert.ok(fixture, 'expected a fixture with a usable Type IIS enzyme');
-      assert.equal(fixture.plan.feasible, false);
-      assert.equal(fixture.plan.primers.length, 0);
-      assert.match(fixture.plan.warnings.join(' '), /does not contain this insert|no physical PCR template/i);
+      assert.equal(fixture.plan.primers.length, 4);
+      assert.match(fixture.plan.warnings.join(' '), /names no PCR template|off the assembled sequence/i);
     });
 
     test('[EDGE] an AT-rich Gibson seam splits its overlap across both primers', () => {
@@ -545,14 +544,12 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(core.templateStart, 800);
       assert.equal(core.length, insert.length);
 
-      // And so does one that shares only part of it.
+      // An arbitrary internal match must not redefine the PCR fragment.
       const partial = primerRecords.findTemplateCoreInDesiredSequence(
         insert,
         `${filler(600, 41)}${insert.slice(200, 900)}${filler(600, 43)}`
       );
-      assert.equal(partial.length, 700);
-      assert.equal(partial.desiredStart, 200);
-      assert.equal(partial.templateStart, 600);
+      assert.equal(partial, null);
     });
 
     test('[EDGE] a vector picked in Vector Builder arrives as the cloning design donor', async () => {
@@ -1147,14 +1144,17 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(resolved.reverseAddedSequence, '');
       assert.equal(resolved.warnings.length, 0);
 
-      // Picking a plasmid that does not carry the gene has to say so by name.
+      // Picking a plasmid that does not carry the gene has to say so by name --
+      // but the template is the user's declared choice, so the design still
+      // proceeds off the assembled sequence rather than failing the route.
       const wrong = primerRecords2.resolveFragmentPrimerTemplate({
         sequence: `${tag}${gene}`,
         metadata: { templateSequence: rand(900, 29), templateName: 'pWrongDonor' }
       });
-      assert.match(wrong.warnings[0], /pWrongDonor does not contain this insert/);
-      assert.equal(wrong.feasible, false);
-      assert.equal(wrong.templateSequence, '');
+      assert.match(wrong.warnings[0], /pWrongDonor does not visibly carry this fragment/);
+      assert.equal(wrong.feasible, true);
+      assert.equal(wrong.blockingWarnings.length, 0);
+      assert.equal(wrong.templateSequence, `${tag}${gene}`);
     });
 
     test('[EDGE] donor primers are checked for specificity across the whole donor', () => {
@@ -1627,7 +1627,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(restriction.restrictionEndsAreCrossCompatible(bamHI, bglII), true);
     });
 
-    test('[EDGE] restriction primers require and anneal to the stated physical insert template', () => {
+    test('[EDGE] restriction primers anneal to the stated insert template and flag its absence', () => {
       const assemblyPrimers = loadEsmStyleModule(path.join(cloningAssemblyPath, 'assembly-primers.js'));
       const hostSequence = 'AAAAGAATTCCCCCCCCGGATCCTTTT';
       const ecoStart = hostSequence.indexOf('GAATTC');
@@ -1657,9 +1657,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         thresholds,
         config
       );
-      assert.equal(missingTemplate.feasible, false);
-      assert.equal(missingTemplate.primers.length, 0);
-      assert.match(missingTemplate.warnings.join(' '), /no physical PCR template/i);
+      assert.equal(missingTemplate.feasible, true);
+      assert.equal(missingTemplate.primers.length, 2);
+      assert.match(missingTemplate.warnings.join(' '), /names no PCR template/i);
 
       const donorBacked = assemblyPrimers.designRestrictionLigationPrimers(
         fragmentMap({
@@ -1947,6 +1947,69 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       );
       assert.equal(fragments[0].metadata.templateSequence, first);
       assert.equal(fragments[1].metadata.templateSequence, second);
+    });
+
+    test('[EDGE] a Protein Builder insert is amplified per block, not as one amplicon', () => {
+      const helpers = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
+      ));
+      const planBuilding = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design', 'plan-building.js'
+      ));
+      const vector = filler(3000, 4007);
+      const gene = filler(600, 4101);
+      // Tags and linker are reverse translated, so they exist only as ordered DNA;
+      // the gene came off pDonor. One template for the lot cannot prime the 5' end.
+      const tags = 'ATGCATCATCATCATCATCAC';
+      const linker = 'GGCGGAGGCGGTTCTGGCGGAGGCGGTTCT';
+      const insert = `${tags}${linker}${gene}TAA`;
+      const at = 1200;
+      const edited = `${vector.slice(0, at)}${insert}${vector.slice(at)}`;
+      const base = helpers.buildSequenceEditDesignSource({
+        record: { name: 'pVector' },
+        originalSequence: vector,
+        nextSequence: edited,
+        baseName: 'pVector'
+      });
+      const planFor = (source) => planBuilding.buildDisplayPlan({
+        strategy: 'gibson',
+        record: { name: 'pVector (POI-His)', topology: 'circular', sequence: edited },
+        source,
+        range: { start: at, end: at + insert.length },
+        donor: null
+      });
+
+      // Without the block list there is no template for the untemplated 5' blocks,
+      // which the plan has to say even though it no longer refuses to design.
+      const flat = planFor(base);
+      assert.equal(flat.warnings.some((warning) => /names no PCR template/.test(warning)), true);
+
+      const split = planFor({
+        ...base,
+        sourceKind: 'vector_builder',
+        constructName: 'POI-His',
+        insertSequence: insert,
+        insertParts: [
+          { label: '6xHis', kind: 'library', dnaSequence: tags },
+          { label: 'GS linker', kind: 'library', dnaSequence: linker },
+          {
+            label: 'POI',
+            kind: 'feature',
+            dnaSequence: gene,
+            templateSequence: gene,
+            templateName: 'pDonor',
+            templateHostSequence: `${filler(400, 4555)}${gene}${filler(500, 4777)}`
+          }
+        ]
+      });
+      assert.equal(split.feasible, true);
+      assert.equal(split.warnings.some((warning) => /names no PCR template/.test(warning)), false);
+      // The gene is amplified off pDonor; the tags/linker become an ordered block.
+      const templates = split.plans[0].plan.orderedFragmentMap.fragments
+        .filter((fragment) => (fragment.role || fragment.type) !== 'backbone')
+        .map((fragment) => fragment.name);
+      assert.equal(templates.length, 2);
+      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['Synthetic block', 'POI']);
     });
 
     test('[EDGE] cloning UI keeps all seven supported methods available', () => {

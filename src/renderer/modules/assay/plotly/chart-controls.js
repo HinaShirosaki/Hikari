@@ -1,10 +1,10 @@
 import { createChartStylePicker, SHAPE_OPTIONS, LINE_STYLE_OPTIONS, FRAME_STYLE_OPTIONS } from './chart-style-pickers.js';
 import { createChartTextControls } from './chart-text-controls.js';
-import { deleteChartPreset, getChartPreset, listChartPresets, sanitizePresetName, saveChartPreset, PRISM_CLASSIC_PRESET } from './chart-presets.js';
+import { deleteChartPreset, getChartPreset, listChartPresets, sanitizePresetName, saveChartPreset, FIGURE_CLASSIC_PRESET } from './chart-presets.js';
 import { PANEL_HTML, TABS, TAB_KEYS } from './chart-controls-markup.js';
 import { createChartControlsForm, GLOBAL_FIELDS, SERIES_FIELDS, POINT_FIELDS, AXIS_FIELDS, axisStyleKey } from './chart-controls-form.js';
 import { pointsToPixels } from './chart-style-model.js';
-import { axisStylePatch, seriesStylePatch, validateAxisRange, prismClassicPatch } from './chart-style-targets.js';
+import { axisStylePatch, seriesStylePatch, validateAxisRange, figureClassicPatch } from './chart-style-targets.js';
 
 export function mountChartControls(container, { store, promptForName } = {}) {
   if (!container || !store) return { refresh() {}, destroy() {} };
@@ -61,10 +61,10 @@ export function mountChartControls(container, { store, promptForName } = {}) {
     container.querySelectorAll('[data-cc-panel]').forEach((panel) => { panel.hidden = panel.dataset.ccPanel !== activeTab; });
   }
   function refreshPresets(selected = '') {
-    form.options('presetSelect', [['', 'Custom'], [PRISM_CLASSIC_PRESET, 'Prism Classic'],
-      ...listChartPresets().map((name) => [`saved:${name}`, name === 'Prism Classic' ? `${name} (saved)` : name])]);
+    form.options('presetSelect', [['', 'Custom'], [FIGURE_CLASSIC_PRESET, 'Figure Classic'],
+      ...listChartPresets().map((name) => [`saved:${name}`, name === 'Figure Classic' ? `${name} (saved)` : name])]);
     q('presetSelect').value = selected;
-    q('presetDeleteBtn').disabled = !selected || selected === PRISM_CLASSIC_PRESET;
+    q('presetDeleteBtn').disabled = !selected || selected === FIGURE_CLASSIC_PRESET;
   }
   function read(key) {
     const input = q(key);
@@ -137,7 +137,7 @@ export function mountChartControls(container, { store, promptForName } = {}) {
     }
     if (key === 'presetSelect') {
       const name = read(key);
-      const preset = name === PRISM_CLASSIC_PRESET ? prismClassicPatch() : name && getChartPreset(name.slice(6));
+      const preset = name === FIGURE_CLASSIC_PRESET ? figureClassicPatch() : name && getChartPreset(name.slice(6));
       if (preset) apply(preset);
       refreshPresets(name);
     }
