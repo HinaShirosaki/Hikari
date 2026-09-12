@@ -183,6 +183,8 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-comment-panel',
     'paper-comment-toggle-btn',
     'paper-comment-sidebar',
+    'paper-details-sidebar',
+    'paper-details-toggle-btn',
     'paper-summary-section',
     'paper-summary-toggle-btn',
     'paper-summary-content',
@@ -496,18 +498,13 @@ test('papers PDF pages keep square edges between stacked pages', () => {
   assert.match(viewerCss, /\.papers-viewer-page\s*\{[^}]*border-radius:\s*0;/s);
   assert.match(shellCss, /#papers-view \.papers-viewer-canvas\s*\{[^}]*border-radius:\s*0;/s);
 });
-test('papers detail rail fold highlights cover their complete controls', () => {
+test('papers outline panel scrolls independently and gives back its collapsed space', () => {
   const css = readPapersCss();
 
-  assert.match(css, /\.papers-section-toggle\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*32px;[^}]*padding:\s*5px 6px;/s);
-  assert.match(css, /\.papers-section-toggle:hover,\s*\.papers-section-toggle:focus-visible\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--theme-accent-soft\) 70%, transparent\);/s);
-  assert.match(css, /\.papers-stage\s*\{[^}]*grid-template-columns:[^;}]+;[^}]*gap:\s*8px;/s);
-  assert.match(css, /\.papers-comment-panel\s*\{[^}]*grid-template-areas:\s*'sidebar toggle';[^}]*grid-template-columns:\s*minmax\(0, 1fr\) 28px;[^}]*grid-template-rows:\s*minmax\(0, 1fr\);[^}]*gap:\s*0;[^}]*height:\s*100%;/s);
-  assert.match(css, /\.papers-comment-toggle\s*\{[^}]*width:\s*28px;[^}]*height:\s*32px;[^}]*top:\s*18px;[^}]*grid-area:\s*toggle;/s);
-  assert.match(css, /\.papers-layout\.is-comments-collapsed \.papers-comment-panel\s*\{[^}]*grid-template-areas:\s*'toggle';[^}]*grid-template-columns:\s*28px;/s);
-  assert.match(css, /\.papers-comment-sidebar\s*\{[^}]*grid-area:\s*sidebar;[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s);
-  assert.match(css, /\.papers-right-column\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\);[^}]*align-content:\s*stretch;[^}]*overflow:\s*hidden;[^}]*scrollbar-gutter:\s*auto;[^}]*padding-right:\s*0;/s);
-  assert.match(css, /\.papers-comment-toggle:hover,\s*\.papers-comment-toggle:focus-visible\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--theme-accent-soft\) 70%, transparent\);/s);
+  assert.doesNotMatch(css, /\.papers-section-toggle-icon/);
+  assert.match(css, /\.papers-layout\.is-comments-collapsed \.papers-stage\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\);/s);
+  assert.match(css, /\.papers-layout\.is-comments-collapsed \.papers-right-column\s*\{[^}]*display:\s*none;/s);
+  assert.match(css, /\.papers-comment-sidebar\s*\{[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s);
 });
 test('papers selection search popover dismisses on outside document pointer down', () => {
   const searchUiSource = fs.readFileSync(
@@ -750,9 +747,9 @@ test('papers module exposes selected text paper search to the PDF viewer', async
 
   assert.equal(harness.viewerFactory.controller.activePaperId, 'paper-2');
 });
-test('papers module renders embedded PDF metadata in the right-rail summary section', async () => {
+test('papers module displays all saved bibliographic fields in Paper details', async () => {
   const harness = buildPapersManagementHarness();
-  harness.state.papers[0].pdfMetadata = {
+  const metadata = {
     title: 'The hidden biology of cells',
     author: 'Ada Lovelace, Grace Hopper',
     year: '2024',
@@ -760,35 +757,23 @@ test('papers module renders embedded PDF metadata in the right-rail summary sect
     doi: '10.1000/example-doi',
     url: 'https://doi.org/10.1000/example-doi'
   };
-  const summaryList = harness.document.getElementById('paper-summary-list');
+  harness.state.papers[0].pdfMetadata = { ...metadata };
 
   await openPaperInHarness(harness);
 
-  assert.match(summaryList.innerHTML, /The hidden biology of cells/);
-  assert.match(summaryList.innerHTML, /Ada Lovelace, Grace Hopper/);
-  assert.match(summaryList.innerHTML, /Nature/);
-  assert.match(summaryList.innerHTML, /10\.1000\/example-doi/);
-  assert.match(summaryList.innerHTML, /https:\/\/doi\.org\/10\.1000\/example-doi/);
-});
-test('papers module folds and unfolds the summary section above comments', async () => {
-  const harness = buildPapersManagementHarness();
-  const toggleBtn = harness.document.getElementById('paper-summary-toggle-btn');
-  const summaryContent = harness.document.getElementById('paper-summary-content');
-
-  await openPaperInHarness(harness);
-
-  assert.equal(summaryContent.hidden, false);
-  assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
-
-  trigger(toggleBtn, 'click');
-
-  assert.equal(summaryContent.hidden, true);
-  assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
-
-  trigger(toggleBtn, 'click');
-
-  assert.equal(summaryContent.hidden, false);
-  assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
+  for (const [key, value] of Object.entries(metadata)) {
+    assert.equal(harness.state.papers[0].pdfMetadata[key], value);
+    assert.ok(harness.document.getElementById('paper-summary-list').innerHTML.includes(value));
+  }
+  const button = harness.document.getElementById('paper-details-toggle-btn');
+  const sidebar = harness.document.getElementById('paper-details-sidebar');
+  assert.equal(sidebar.hidden, true);
+  trigger(button, 'click');
+  assert.equal(sidebar.hidden, false);
+  assert.equal(button.getAttribute('aria-expanded'), 'true');
+  assert.equal(harness.document.getElementById('paper-comment-sidebar').hidden, true);
+  trigger(button, 'click');
+  assert.equal(sidebar.hidden, true);
 });
 test('papers module promotes embedded PDF titles into the left rail after opening a paper', async () => {
   const harness = buildPapersManagementHarness();
@@ -806,20 +791,39 @@ test('papers module promotes embedded PDF titles into the left rail after openin
 
   assert.equal(harness.state.papers[0].title, 'Embedded Metadata Title');
   assert.match(journalClubList.innerHTML, /Embedded Metadata Title/);
+  const details = harness.document.getElementById('paper-summary-list').innerHTML;
+  for (const value of Object.values(harness.viewerFactory.controller.metadataOnOpen)) {
+    assert.ok(details.includes(value), `extracted field is displayed: ${value}`);
+  }
 });
-test('papers module folds and unfolds the comment sidebar from the right rail', () => {
+test('papers details use library metadata as fallback and clear fields when the paper closes', async () => {
+  const harness = buildPapersManagementHarness();
+  Object.assign(harness.state.papers[0], {
+    title: 'Saved title', authors: ['First Author', 'Second Author'], doi: '10.1000/saved', journal: 'Saved journal', year: '2023'
+  });
+  await openPaperInHarness(harness);
+  const list = harness.document.getElementById('paper-summary-list');
+  assert.match(list.innerHTML, /Saved title/);
+  assert.match(list.innerHTML, /First Author, Second Author/);
+  assert.match(list.innerHTML, /10.1000\/saved/);
+  harness.viewerFactory.controller.callbacks.onMetadataResolved({
+    paperId: 'paper-1', metadata: { title: '<b>Embedded title</b>', author: 'PDF Author' }
+  });
+  assert.match(list.innerHTML, /&lt;b&gt;Embedded title&lt;\/b&gt;/);
+  assert.match(list.innerHTML, /PDF Author/);
+  assert.match(list.innerHTML, /10.1000\/saved/);
+  harness.viewerFactory.controller.activePaperId = '';
+  harness.viewerFactory.controller.callbacks.onClose();
+  assert.match(list.innerHTML, /Open a PDF/);
+  assert.doesNotMatch(list.innerHTML, /PDF Author|10.1000/);
+});
+test('papers module opens and closes the initially collapsed outline from the right rail', () => {
   const harness = buildPapersManagementHarness();
   const layout = harness.document.getElementById('papers-layout');
   const toggleBtn = harness.document.getElementById('paper-comment-toggle-btn');
   const sidebar = harness.document.getElementById('paper-comment-sidebar');
 
-  assert.equal(layout.classList.contains('is-comments-collapsed'), false);
-  assert.equal(sidebar.hidden, false);
-
-  trigger(toggleBtn, 'click');
-
   assert.equal(layout.classList.contains('is-comments-collapsed'), true);
-  assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
   assert.equal(sidebar.hidden, true);
 
   trigger(toggleBtn, 'click');
@@ -827,6 +831,12 @@ test('papers module folds and unfolds the comment sidebar from the right rail', 
   assert.equal(layout.classList.contains('is-comments-collapsed'), false);
   assert.equal(toggleBtn.classList.contains('is-collapsed'), false);
   assert.equal(sidebar.hidden, false);
+
+  trigger(toggleBtn, 'click');
+
+  assert.equal(layout.classList.contains('is-comments-collapsed'), true);
+  assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
+  assert.equal(sidebar.hidden, true);
 });
   }
 };

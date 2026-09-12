@@ -6,6 +6,45 @@ export function formatCountdown(ms) {
   return `${hours ? `${String(hours).padStart(2, '0')}:` : ''}${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+export function updateTopbarTimer({
+  topbarTimer,
+  topbarTimerTime,
+  topbarTimerProgress
+} = {}, timer = null) {
+  if (!topbarTimer || !topbarTimerTime || !topbarTimerProgress) {
+    return;
+  }
+  if (!timer) {
+    topbarTimer.hidden = true;
+    topbarTimerTime.textContent = '--:--';
+    topbarTimerProgress.style.strokeDasharray = '0 100';
+    topbarTimerProgress.style.transform = 'rotate(-90deg)';
+    topbarTimer.setAttribute('aria-valuenow', '0');
+    topbarTimer.removeAttribute('aria-valuetext');
+    topbarTimer.classList.remove('is-warn', 'is-paused');
+    return;
+  }
+
+  const timeLeft = formatCountdown(timer.remainingMs);
+  const remainingPct = Math.min(100, Math.max(0, Number(timer.remainingPct) || 0));
+  const roundedPct = Math.round(remainingPct);
+  const stateLabel = timer.isPaused ? 'Paused timer' : 'Timer';
+  const accessibleText = `${stateLabel} ${timer.name}: ${timeLeft} left, ${roundedPct}% remaining`;
+
+  topbarTimer.hidden = false;
+  topbarTimer.dataset.timeLength = timeLeft.length > 5 ? 'long' : 'short';
+  topbarTimerTime.textContent = timeLeft;
+  topbarTimerProgress.style.strokeDasharray = `${remainingPct.toFixed(1)} 100`;
+  // Center the unfilled portion at six o'clock, matching the open-ring reference.
+  topbarTimerProgress.style.transform = `rotate(${(-90 - (remainingPct * 1.8)).toFixed(1)}deg)`;
+  topbarTimer.setAttribute('aria-valuenow', String(roundedPct));
+  topbarTimer.setAttribute('aria-valuetext', `${roundedPct}% remaining, ${timeLeft} left`);
+  topbarTimer.setAttribute('aria-label', accessibleText);
+  topbarTimer.title = accessibleText;
+  topbarTimer.classList.toggle('is-warn', timer.isWarn && !timer.isPaused);
+  topbarTimer.classList.toggle('is-paused', timer.isPaused);
+}
+
 function endLabel(timer) {
   if (timer.isPaused) {
     return 'Paused';

@@ -66,6 +66,7 @@ export function initGelAnalysis({
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
     originalImage: null,
+    originalFile: null,
     pendingNotebookLink: null,
     persist,
     preprocessedCache: null,

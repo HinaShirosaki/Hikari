@@ -7,7 +7,9 @@ const ROOT_DIR = process.cwd();
 const CSS_DIR = path.join(ROOT_DIR, 'ui', 'css');
 const CSS_ORDER_PATH = path.join(ROOT_DIR, 'ui', 'config', 'css-order.json');
 const COLOR_LITERAL_PATTERN = /#[0-9a-f]{3,8}\b|rgba?\s*\(|hsla?\s*\(/i;
-const CUSTOM_PROPERTY_PATTERN = /(--[a-zA-Z0-9_-]+)\s*:/g;
+// A declaration starts at the beginning of a line (after whitespace); a BEM
+// modifier such as `.rail--pinned:has(...)` inside a selector must not match.
+const CUSTOM_PROPERTY_PATTERN = /^\s*(--[a-zA-Z0-9_-]+)\s*:/gm;
 const CUSTOM_PROPERTY_VAR_PATTERN = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
 const CUSTOM_PROPERTY_SCRIPT_PATTERN = /(?:setProperty|getPropertyValue)\(\s*['"](--[a-zA-Z0-9_-]+)['"]/g;
 

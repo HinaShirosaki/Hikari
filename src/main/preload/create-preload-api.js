@@ -14,6 +14,7 @@ const { createSystemApi } = require('./api/system-api');
 
 function createPreloadApi(ipcRenderer, deps = {}) {
   return {
+    platform: process.platform,
     ...createStorageApi(ipcRenderer),
     ...createSystemApi(ipcRenderer, deps),
     ...createAssayApi(ipcRenderer),

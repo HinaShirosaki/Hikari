@@ -86,6 +86,8 @@ function toStoredRecord(record) {
     recordJsonRelativePath: record.recordJsonRelativePath || '',
     sourceImagePath: record.sourceImagePath || '',
     sourceImageRelativePath: record.sourceImageRelativePath || '',
+    originalImagePath: record.originalImagePath || '',
+    originalImageRelativePath: record.originalImageRelativePath || '',
     previewImagePath: record.previewImagePath || '',
     previewImageRelativePath: record.previewImageRelativePath || '',
     previewImageIsSource: Boolean(record.previewImageIsSource)

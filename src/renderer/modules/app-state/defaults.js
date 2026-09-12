@@ -84,7 +84,6 @@ export const defaultState = {
     pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',
-      manifestPath: '',
       summary: {
         bundles: 0,
         protocols: 0,

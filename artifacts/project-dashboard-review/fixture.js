@@ -1,0 +1,17 @@
+import { initLabNotebook } from '/src/renderer/modules/biology-notebook/index.js';
+import { createNavigationShell } from '/src/renderer/app/navigation-shell.js';
+import { initSharedLeftRailResizers } from '/src/renderer/app/shared-left-rail.js';
+import { VIEWS, TITLES } from '/src/renderer/modules/views.js';
+const registry = await (await fetch('/ui/config/app-registry.json')).json();
+const project = {id:'review-project',name:'CalB Lipase Thermostability',description:'Directed evolution of Candida antarctica lipase B for thermostability. NNK libraries at the two flexible loops, activity screen on pNP-butyrate and Tm ranking by SYPRO Orange DSF.'};
+const names=['CalB round-1 hits · IPTG induction','Purity of the CalB DSF panel','CalB round-1 hits · SDS-PAGE analysis','Thermal shift ranking of round-1 hits','CalB round-1 hits · Thermal shift assay','CalB round-1 hits · Ni-NTA purification','Purify CalB WT and D223G/L278M','Confirmation screen of the 11 candidates','CalB NNK library round 1 · Plating','Primary activity screen, 88 library variants','CalB NNK library round 1 · Colony PCR'];
+const state={projects:[project,{id:'other',name:'CD19 CAR Binder Optimization'}],protocols:[],notebookEntries:names.map((name,i)=>({id:'entry-'+i,notebookType:'biology',projectId:project.id,projectName:project.name,protocolName:name,notebookState:'executed',values:{},result:'',resultFiles:[],updatedAt:new Date(Date.now()-i*4*86400000).toISOString(),executedAt:new Date(Date.now()-i*4*86400000).toISOString()})),assays:[{id:'a1',projectId:project.id},{id:'a2',projectId:project.id}],gelAnalyses:[{id:'g1',projectId:project.id},{id:'g2',projectId:project.id}],workflows:[{id:'w1',projectId:project.id},{id:'w2',projectId:project.id}],papers:[{id:'p1',linkedType:'project',linkedId:project.id}],samples:[],paperExperimentLinks:[],settings:{storagePath:''}};
+window.hikariApi={async listPaperFindingTasks(){return {ok:true,tasks:[]};}};
+let saves=0;
+const notebook=initLabNotebook({state,persist(){saves++;},createId:()=>crypto.randomUUID(),safeText:value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),onNotebookEntriesChanged(){},onProjectsChanged(){}});
+const sharedLeftRailRuntime=initSharedLeftRailResizers({document,windowObject:window});
+const navigation=createNavigationShell({VIEWS,TITLES,APP_DOCK_ORDER:registry.dockOrder,APP_REGISTRY:registry.apps,moduleRuntime:{renderView(){},renderAgentChatRail(){}},sharedLeftRailRuntime,executeTopbarSearch(){},documentObject:document,windowObject:window});
+navigation.initNavigation();navigation.showView(VIEWS.BIOLOGY_NOTEBOOK);
+notebook.renderProjectOptions();notebook.renderEntries();notebook.openProjectDashboard(project.id);
+document.getElementById('app-loading-cover')?.remove();document.body.classList.remove('app-is-loading');
+window.review={state,notebook,navigation,get saves(){return saves;},ready:true};

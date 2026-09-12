@@ -219,7 +219,10 @@ export function selectEngineeredOverlap(leftFragment, rightFragment, thresholds,
           best = {
             sequence, length, tm, gcContent: computeGcContent(sequence),
             leftBinding, rightBinding, leftReverseTail: rightPart,
-            rightForwardTail: leftPart, score
+            rightForwardTail: leftPart,
+            leftReverseTargetTail: `${leftTemplate.reverseAddedSequence}${rightPart}`,
+            rightForwardTargetTail: `${leftPart}${rightTemplate.forwardAddedSequence}`,
+            score
           };
         }
       }
@@ -228,5 +231,69 @@ export function selectEngineeredOverlap(leftFragment, rightFragment, thresholds,
   };
   // Preserve a working one-sided design, then try every split (including a
   // complete tail on the other primer), not just an arbitrary 50/50 split.
-  return search(true) || search(false);
+  const anchored = search(true) || search(false);
+  if (anchored) {
+    return anchored;
+  }
+
+  // The desired-fragment boundary is not a physical PCR boundary when it
+  // falls in added DNA. Search the whole gap between the two template cores:
+  // one primer can supply its prefix and the other its suffix, with a shared
+  // window in between. Keeping the entire addition on its original fragment
+  // can exceed that primer's budget even though these two tails fit together.
+  const flank = `${leftTemplate.reverseAddedSequence}${rightTemplate.forwardAddedSequence}`;
+  const maxPrimerLength = Number(config.maxPrimerLength) || DEFAULT_CLONING_PREFERENCES.maxPrimerLength;
+  const maxTailLength = maxPrimerLength - thresholds.primerLength.min;
+  if (!flank.length || flank.length + minLength > 2 * maxTailLength) {
+    return null;
+  }
+  const leftCore = leftTemplate.templateSequence.slice(-maxTotalLength);
+  const rightCore = rightTemplate.templateSequence.slice(0, maxTotalLength);
+  const context = `${leftCore}${flank}${rightCore}`;
+  const flankStart = leftCore.length;
+  const flankEnd = flankStart + flank.length;
+  const originalBoundary = flankStart + leftTemplate.reverseAddedSequence.length;
+  // The existing cache accounts for original additions; shifted tails need
+  // their complete lengths instead.
+  leftBindings.clear();
+  rightBindings.clear();
+  const shiftedBinding = (cache, template, direction, tail, fragmentConfig) => {
+    if (!cache.has(tail.length)) {
+      cache.set(tail.length, selectBindingWindow(template.templateSequence, direction, thresholds, tail.length, fragmentConfig));
+    }
+    return cache.get(tail.length);
+  };
+  let best = null;
+  for (let length = minLength; length <= maxTotalLength; length += 1) {
+    for (let start = Math.max(0, flankStart - length); start <= Math.min(flankEnd, context.length - length); start += 1) {
+      const end = start + length;
+      const leftTail = context.slice(flankStart, Math.max(flankStart, end));
+      const rightTail = context.slice(Math.min(start, flankEnd), flankEnd);
+      if (leftTail.length > maxTailLength || rightTail.length > maxTailLength) {
+        continue;
+      }
+      const sequence = context.slice(start, end);
+      const tm = cloningPrimerTm(sequence);
+      if (tm < thresholds.overlapTm.min || tm > thresholds.overlapTm.max) {
+        continue;
+      }
+      const leftBinding = shiftedBinding(leftBindings, leftTemplate, 'reverse', leftTail, leftConfig);
+      const rightBinding = shiftedBinding(rightBindings, rightTemplate, 'forward', rightTail, rightConfig);
+      if (!leftBinding || !rightBinding) {
+        continue;
+      }
+      const score = Math.abs(tm - preferredTm) + (length - minLength) * 0.1
+        + Math.max(leftTail.length + leftBinding.length, rightTail.length + rightBinding.length) * 0.05;
+      if (!best || score < best.score) {
+        const split = Math.max(start, Math.min(end, originalBoundary));
+        best = {
+          sequence, length, tm, gcContent: computeGcContent(sequence), leftBinding, rightBinding,
+          leftReverseTail: context.slice(split, end), rightForwardTail: context.slice(start, split),
+          leftReverseTargetTail: leftTail, rightForwardTargetTail: rightTail,
+          redistributedFlankLength: flank.length, score
+        };
+      }
+    }
+  }
+  return best;
 }

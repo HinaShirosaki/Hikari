@@ -377,7 +377,6 @@ function createAgentControllerCore({
         projectId,
         projectName,
         skillPromptPayload,
-        selectionInsight: payload?.agent?.selectionInsight || payload?.selectionInsight || null,
         agent: payload?.agent && typeof payload.agent === 'object' ? payload.agent : {},
         chatSessionId: cleanText(runtime?.chatSessionId, 120),
         codexSessionId: cleanText(runtime?.codexSessionId || runtime?.codex_session_id, 240),

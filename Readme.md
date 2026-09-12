@@ -35,7 +35,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 
 - Local desktop app built with Electron — your data stays on your machine.
 - Twelve dock workspaces: `Home`, `Protocols`, `Notebook`, `Papers`, `Samples`, `Chemicals`, `Workflows`, `Agent`, `Sequence Viewer`, `Assay`, `Tools`, and `Settings`.
-- One storage root holds every heavy file — notebook attachments, papers, assay artifacts, gels, and sequence assets — next to a single `.json`/`.ena` snapshot.
+- One storage root holds every heavy file — notebook attachments, papers, assay artifacts, gels, and sequence assets — next to a single `.json` snapshot.
 - Modules cross-link: a notebook entry can pull in a protocol, a sample, an assay plate, a gel record, and a paper without leaving the page.
 - Optional LLM-backed features for `Papers`, `Protocols`, and `Agent`, all through the signed-in `codex` CLI.
 - Sandboxed plugins for extra workspaces — `Gel` ships as an internal bundled plugin ([src/plugins/gel](src/plugins/gel/)).
@@ -85,7 +85,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 - **Structured editor** — name, purpose, materials, numbered steps, and troubleshooting notes as separate fields.
 - **Interactive bars** — parameterize a step (volume, temperature, time) so the value can be set per run instead of edited into the text.
-- **Import / export** — read and write protocol JSON (`.json`, `.ena`); share a protocol as a file.
+- **Import / export** — read and write protocol JSON; share a protocol as a file.
 - **Generate Protocol** — draft a protocol from a description, pasted methods, notes, images, or a PDF.
 - **Polish Protocol** — clean up an existing draft while showing your original input side by side.
 - **Notebook placeholders** — leave fields for the experimenter to fill in when the protocol is used in a record.
@@ -335,14 +335,14 @@ Hikari keeps state in three layers:
 | Layer | Where | What lives there |
 | --- | --- | --- |
 | Renderer state | `localStorage` key `hikari_state_v1` | Fast UI state, loaded on boot |
-| Snapshot | `hikari-data.json` (or `.ena`) in the storage root | The saved record set |
+| Snapshot | `hikari-data.json` in the storage root | The saved record set |
 | Storage root | The folder you set in `Settings > Storage` | Every heavy file, in named subfolders |
 
 Inside the storage root you will find `Papers/` and `papers.md/`, `Assays/`, `Gels/`, `Samples/`, `Protocol/`, and `KnowledgeBase/`, alongside the snapshot file and the SQLite search indexes for chemicals and protocols.
 
 Notes:
 
-- Supported snapshot extensions are `.json` and `.ena`; the default filename is `hikari-data.json`.
+- The snapshot is a `.json` file; the default filename is `hikari-data.json`.
 - Auto-save runs whenever a storage path is set. Without one, nothing is written to disk.
 
 Backup suggestions:

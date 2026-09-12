@@ -36,7 +36,9 @@ function linearizeBackboneAtInsertionOffset(backboneSequence, backbone = {}) {
   return `${sequence.slice(insertionOffset)}${sequence.slice(0, insertionOffset)}`;
 }
 
-const MAX_PRIMER_ENCODED_PART_LENGTH = 40;
+// The shared assembly designer can distribute this gap over two neighboring
+// primers. Their annealing windows and overlap still have to fit its budgets.
+const MAX_PRIMER_ENCODED_PART_LENGTH = 60;
 
 function proteinPartTemplate(part = {}) {
   return normalizeSequenceText(
@@ -182,11 +184,14 @@ function resolveBackboneCloningPreferences(backbone = {}) {
 
 function resolvePcrTargets(plan = {}) {
   const strategy = cleanText(plan?.recommendedAssemblyStrategy, 80).toLowerCase();
+  const primerLengths = new Map(asArray(plan?.primerOligoPlan?.primers)
+    .filter((primer) => primer.templateId && primer.ampliconLength)
+    .map((primer) => [primer.templateId, primer.ampliconLength]));
   const fragments = asArray(plan?.orderedFragmentMap?.fragments)
     .map((fragment) => ({
       name: cleanText(fragment?.name, 160) || cleanText(fragment?.id, 120) || 'Fragment',
       role: cleanText(fragment?.role || fragment?.type, 80).toLowerCase(),
-      length: Math.max(0, Number(fragment?.sequence?.length || fragment?.length) || 0)
+      length: Math.max(0, Number(primerLengths.get(fragment.id) || fragment?.sequence?.length || fragment?.length) || 0)
     }))
     .filter((fragment) => fragment.length > 0);
 

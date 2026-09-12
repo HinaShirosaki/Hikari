@@ -447,10 +447,10 @@ test('[P1] createId returns non-empty token containing "-" separator', () => {
 [
   ['a.json', true],
   ['a.JSON', true],
-  ['a.ena', true],
-  ['a.ENA', true],
+  ['a.ena', false],
+  ['a.ENA', false],
   ['a.json ', true],
-  [' a.ena', true],
+  [' a.ena', false],
   ['a.txt', false],
   ['a.json.bak', false],
   ['json', false],
@@ -465,11 +465,11 @@ test('[P1] createId returns non-empty token containing "-" separator', () => {
   ['/tmp/a', '/tmp/fallback.json', '/tmp/a.json'],
   ['', '/tmp/fallback.json', '/tmp/fallback.json'],
   ['', '/tmp/fallback', '/tmp/fallback.json'],
-  ['/tmp/a.ena', '', '/tmp/a.ena'],
+  ['/tmp/a.ena', '', '/tmp/a.ena.json'],
   ['/tmp/a.JSON', '', '/tmp/a.JSON'],
   ['  /tmp/a  ', '', '/tmp/a.json'],
   ['', '', ''],
-  [null, '/tmp/fallback.ena', '/tmp/fallback.ena'],
+  [null, '/tmp/fallback.ena', '/tmp/fallback.ena.json'],
   [undefined, '/tmp/fallback', '/tmp/fallback.json']
 ].forEach(([preferred, fallback, expected], idx) => {
   test(`[P0] normalizeDataFilePath case ${idx + 1}`, () => {

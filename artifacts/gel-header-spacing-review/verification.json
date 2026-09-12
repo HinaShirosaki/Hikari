@@ -1,0 +1,89 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "width": 800,
+      "mode": "day",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 142.1953125,
+      "viewTop": 142.1953125,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 142.1953125,
+      "inset": 0,
+      "scrollWidth": 800,
+      "clientWidth": 800
+    },
+    {
+      "width": 800,
+      "mode": "night",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 142.1953125,
+      "viewTop": 142.1953125,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 142.1953125,
+      "inset": 0,
+      "scrollWidth": 800,
+      "clientWidth": 800
+    },
+    {
+      "width": 1280,
+      "mode": "day",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 65,
+      "viewTop": 65,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 65,
+      "inset": 0,
+      "scrollWidth": 1280,
+      "clientWidth": 1280
+    },
+    {
+      "width": 1280,
+      "mode": "night",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 65,
+      "viewTop": 65,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 65,
+      "inset": 0,
+      "scrollWidth": 1280,
+      "clientWidth": 1280
+    },
+    {
+      "width": 1440,
+      "mode": "day",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 65,
+      "viewTop": 65,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 65,
+      "inset": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    },
+    {
+      "width": 1440,
+      "mode": "night",
+      "view": "plugin-gel-view",
+      "tool": null,
+      "headerBottom": 65,
+      "viewTop": 65,
+      "viewBottom": 900,
+      "viewport": 900,
+      "firstControl": 65,
+      "inset": 0,
+      "scrollWidth": 1440,
+      "clientWidth": 1440
+    }
+  ]
+}

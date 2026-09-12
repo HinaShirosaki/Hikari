@@ -94,8 +94,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
                   }
                 },
                 summary: { protocols: 1, quickLogEntries: 1 },
-                warnings: [],
-                manifestPath: '/new/root/hikari-storage-manifest.json'
+                warnings: []
               };
             }
           }
@@ -156,8 +155,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
                 projects: [{ id: 'project-1', name: 'Atlas' }]
               },
               summary: { bundles: 1 },
-              warnings: [],
-              manifestPath: '/existing/root/hikari-storage-manifest.json'
+              warnings: []
             }),
             autoSaveDataFile: async (data, filePath) => {
               autoSavedPayload = {
@@ -201,8 +199,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
                 ok: true,
                 statePatch: { gelAnalyses: [{ id: 'gel-1', name: 'Saved Gel' }] },
                 summary: {},
-                warnings: [],
-                manifestPath: ''
+                warnings: []
               };
             },
             autoSaveDataFile: async () => ({ ok: true, filePath: '', sidecarPaths: {} })

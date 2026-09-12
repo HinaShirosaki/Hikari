@@ -1,5 +1,7 @@
 import { resolveEntryExperimentName } from '../entry/entry-helpers.js';
 import { buildProtocolStepsHtml, buildViewerMeta } from '../entry/viewer-renderer.js';
+import { buildPlaceholderPrefill } from '../protocol/placeholder-prefill.js';
+import { resolveSampleTypeForPlaceholder } from '../samples/sample-helpers.js';
 
 // Rendering the notebook page viewer and the project dashboard that replaces it,
 // plus the save-button states those two views drive.
@@ -96,6 +98,12 @@ function createNotebookViewerRender({
     notebookSteps.innerHTML = buildProtocolStepsHtml({
       protocol,
       values: entry?.values || {},
+      // Only a fresh page gets suggestions; an existing page shows what was recorded.
+      prefill: entry ? {} : buildPlaceholderPrefill({
+        protocol,
+        entries: state.notebookEntries,
+        resolveType: (name) => resolveSampleTypeForPlaceholder(name, SAMPLE_PLACEHOLDER_TYPE_ALIASES)
+      }),
       safeText,
       settings: state.settings || {},
       samplePlaceholderTypeAliases: SAMPLE_PLACEHOLDER_TYPE_ALIASES,

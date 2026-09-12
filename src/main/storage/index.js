@@ -1,6 +1,5 @@
 'use strict';
 
-const { STORAGE_MANIFEST_FILE_NAME } = require('./storage-manifest');
 const { getBundlePaths, getBundlePathsFromSqlitePath } = require('./storage-paths');
 const { discoverPapersFromStorageRoot } = require('./paper-discovery');
 const { syncBundleFromSnapshot, syncSqliteBundleFromSnapshot } = require('./storage-sidecars');
@@ -13,7 +12,6 @@ const {
 } = require('./workflow-storage');
 
 module.exports = {
-  STORAGE_MANIFEST_FILE_NAME,
   discoverPapersFromStorageRoot,
   getBundlePaths,
   getBundlePathsFromSqlitePath,

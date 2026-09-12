@@ -13,9 +13,7 @@ export const SHARED_LEFT_RAIL_CHANGED_EVENT = 'hikari:left-rail-width-changed';
 function foldToggleIconMarkup() {
   return `
     <svg class="app-left-rail-fold-toggle__icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-      <rect x="4.5" y="4.5" width="15" height="15" rx="2.25"></rect>
-      <path d="M9 4.5v15"></path>
-      <path class="app-left-rail-fold-toggle__chevron" d="m15 9-3 3 3 3"></path>
+      <path class="app-left-rail-fold-toggle__chevron" d="m16 4-8 8 8 8"></path>
     </svg>
   `;
 }

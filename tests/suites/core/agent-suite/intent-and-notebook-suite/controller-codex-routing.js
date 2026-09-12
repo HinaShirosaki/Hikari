@@ -43,13 +43,7 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
               }
             ],
             entries: []
-          }),
-          requestText: async () => {
-            throw new Error('Selection insight text path should be skipped for Codex-owned lifecycle.');
-          },
-          requestWebSearch: async () => {
-            throw new Error('Selection insight web-search path should be skipped for Codex-owned lifecycle.');
-          }
+          })
         },
         observability: {
           recordLifecycleEvent: (_recorder, event = {}) => {
@@ -169,11 +163,7 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
             paperId: 'paper-1',
             paperTitle: 'Atlas Uploaded Paper',
             pageNumber: 3
-          }],
-          selectionInsight: {
-            actionType: 'what_is_it',
-            selectedText: 'SUMO1'
-          }
+          }]
         },
         stateSnapshot: {
           settings: {
@@ -202,7 +192,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
       assert.match(codexRunInput.message, /not visible in the user composer/);
       assert.match(codexRunInput.message, /SUMO1 signal is weak in the selected paragraph/);
       assert.match(codexRunInput.message, /User question:\nWhy was SUMO1 weak\?/);
-      assert.equal(codexRunInput.selectionInsight.selectedText, 'SUMO1');
       assert.equal(codexRunInput.attachments[0].name, 'atlas.pdf');
       assert.deepEqual(codexRunInput.recoveryConversation, [
         { role: 'user', text: 'Open Atlas.' }

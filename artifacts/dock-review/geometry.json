@@ -1,0 +1,562 @@
+[
+  {
+    "width": 1600,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 704.640625,
+    "icons": 13
+  },
+  {
+    "width": 1600,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 753.078125,
+    "icons": 13
+  },
+  {
+    "width": 1600,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 681.84375,
+    "icons": 13
+  },
+  {
+    "width": 1600,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 702.765625,
+    "icons": 13
+  },
+  {
+    "width": 1440,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 623.640625,
+    "icons": 10
+  },
+  {
+    "width": 1440,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 624.078125,
+    "icons": 9
+  },
+  {
+    "width": 1440,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 648.84375,
+    "icons": 11
+  },
+  {
+    "width": 1440,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 621.765625,
+    "icons": 10
+  },
+  {
+    "width": 1280,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 527.640625,
+    "icons": 8
+  },
+  {
+    "width": 1280,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 528.078125,
+    "icons": 7
+  },
+  {
+    "width": 1280,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 504.84375,
+    "icons": 8
+  },
+  {
+    "width": 1280,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 525.765625,
+    "icons": 8
+  },
+  {
+    "width": 1181,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 479.640625,
+    "icons": 7
+  },
+  {
+    "width": 1181,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 480.078125,
+    "icons": 6
+  },
+  {
+    "width": 1181,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 456.84375,
+    "icons": 7
+  },
+  {
+    "width": 1181,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 477.765625,
+    "icons": 7
+  },
+  {
+    "width": 1180,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 630,
+    "icons": 13
+  },
+  {
+    "width": 1180,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 630,
+    "icons": 13
+  },
+  {
+    "width": 1180,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 630,
+    "icons": 13
+  },
+  {
+    "width": 1180,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 630,
+    "icons": 13
+  },
+  {
+    "width": 1024,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 549,
+    "icons": 10
+  },
+  {
+    "width": 1024,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 549,
+    "icons": 10
+  },
+  {
+    "width": 1024,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 549,
+    "icons": 10
+  },
+  {
+    "width": 1024,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 549,
+    "icons": 10
+  },
+  {
+    "width": 960,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 720,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 720,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 720,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 720,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 594,
+    "icons": 13
+  },
+  {
+    "width": 375,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 331,
+    "icons": 6
+  },
+  {
+    "width": 375,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 331,
+    "icons": 6
+  },
+  {
+    "width": 375,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 331,
+    "icons": 6
+  },
+  {
+    "width": 375,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 331,
+    "icons": 6
+  },
+  {
+    "width": 320,
+    "fontSize": 16,
+    "view": "biology-notebook-view",
+    "dockWidth": 285,
+    "icons": 5
+  },
+  {
+    "width": 320,
+    "fontSize": 16,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 285,
+    "icons": 5
+  },
+  {
+    "width": 320,
+    "fontSize": 16,
+    "view": "assay-view",
+    "dockWidth": 285,
+    "icons": 5
+  },
+  {
+    "width": 320,
+    "fontSize": 16,
+    "view": "protocol-management-view",
+    "dockWidth": 285,
+    "icons": 5
+  },
+  {
+    "width": 1600,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 772.921875,
+    "icons": 10
+  },
+  {
+    "width": 1600,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 772.875,
+    "icons": 9
+  },
+  {
+    "width": 1600,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 804.578125,
+    "icons": 11
+  },
+  {
+    "width": 1600,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 770.515625,
+    "icons": 10
+  },
+  {
+    "width": 1440,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 652.921875,
+    "icons": 8
+  },
+  {
+    "width": 1440,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 652.875,
+    "icons": 7
+  },
+  {
+    "width": 1440,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 624.578125,
+    "icons": 8
+  },
+  {
+    "width": 1440,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 650.515625,
+    "icons": 8
+  },
+  {
+    "width": 1280,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 532.921875,
+    "icons": 6
+  },
+  {
+    "width": 1280,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 532.875,
+    "icons": 5
+  },
+  {
+    "width": 1280,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 504.578125,
+    "icons": 6
+  },
+  {
+    "width": 1280,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 530.515625,
+    "icons": 6
+  },
+  {
+    "width": 1181,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 472.921875,
+    "icons": 5
+  },
+  {
+    "width": 1181,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 472.875,
+    "icons": 4
+  },
+  {
+    "width": 1181,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 444.578125,
+    "icons": 5
+  },
+  {
+    "width": 1181,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 470.515625,
+    "icons": 5
+  },
+  {
+    "width": 1180,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 626.25,
+    "icons": 9
+  },
+  {
+    "width": 1180,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 626.25,
+    "icons": 9
+  },
+  {
+    "width": 1180,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 626.25,
+    "icons": 9
+  },
+  {
+    "width": 1180,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 626.25,
+    "icons": 9
+  },
+  {
+    "width": 1024,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 566.25,
+    "icons": 8
+  },
+  {
+    "width": 1024,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 566.25,
+    "icons": 8
+  },
+  {
+    "width": 1024,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 566.25,
+    "icons": 8
+  },
+  {
+    "width": 1024,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 566.25,
+    "icons": 8
+  },
+  {
+    "width": 960,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 742.5,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 742.5,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 742.5,
+    "icons": 13
+  },
+  {
+    "width": 960,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 742.5,
+    "icons": 13
+  },
+  {
+    "width": 720,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 643.75,
+    "icons": 10
+  },
+  {
+    "width": 720,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 643.75,
+    "icons": 10
+  },
+  {
+    "width": 720,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 643.75,
+    "icons": 10
+  },
+  {
+    "width": 720,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 643.75,
+    "icons": 10
+  },
+  {
+    "width": 375,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 298.75,
+    "icons": 4
+  },
+  {
+    "width": 375,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 298.75,
+    "icons": 4
+  },
+  {
+    "width": 375,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 298.75,
+    "icons": 4
+  },
+  {
+    "width": 375,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 298.75,
+    "icons": 4
+  },
+  {
+    "width": 320,
+    "fontSize": 20,
+    "view": "biology-notebook-view",
+    "dockWidth": 241.25,
+    "icons": 3
+  },
+  {
+    "width": 320,
+    "fontSize": 20,
+    "view": "sequence-viewer-detail-view",
+    "dockWidth": 241.25,
+    "icons": 3
+  },
+  {
+    "width": 320,
+    "fontSize": 20,
+    "view": "assay-view",
+    "dockWidth": 241.25,
+    "icons": 3
+  },
+  {
+    "width": 320,
+    "fontSize": 20,
+    "view": "protocol-management-view",
+    "dockWidth": 241.25,
+    "icons": 3
+  }
+]

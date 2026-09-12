@@ -80,7 +80,7 @@ Examples:
 
 The renderer core owns two important shell-level helpers:
 
-- `persist()`: records an undo checkpoint, normalizes storage paths, writes local storage, and optionally auto-saves the `.ena` file through `window.hikariApi.autoSaveDataFile(...)`
+- `persist()`: records an undo checkpoint, normalizes storage paths, writes local storage, and optionally auto-saves the `.json` snapshot through `window.hikariApi.autoSaveDataFile(...)`
 
 That means feature modules usually mutate shared state directly and then call the shared `persist()` callback instead of owning their own storage layer.
 

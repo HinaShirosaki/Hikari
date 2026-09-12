@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, crashReporter, dialog, ipcMain, session, shell } = require('electron');
 const path = require('path');
 const fs = require('node:fs/promises');
 
@@ -28,6 +28,7 @@ function startMainApp() {
   const mainServices = createMainServices({
     app,
     BrowserWindow,
+    crashReporter,
     dialog,
     ipcMain,
     session,

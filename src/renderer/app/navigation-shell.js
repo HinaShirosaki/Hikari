@@ -1,6 +1,7 @@
 import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
 import { createAppDock } from './navigation-shell/app-dock.js';
 import { createSearchSuggestions } from './navigation-shell/search-suggestions.js';
+import { runSearchInput } from '../lib/search-field-lens.js';
 
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 
@@ -58,12 +59,10 @@ export function createNavigationShell({
 
   const pageTitle = documentObject.getElementById('page-title');
   const pageSubtitle = documentObject.getElementById('page-subtitle');
-  const topbarViewActions = documentObject.getElementById('topbar-view-actions');
-  const topbarAssayModeSwitch = documentObject.getElementById('topbar-assay-mode-switch');
-  const topbarAssayModeNote = documentObject.getElementById('assay-mode-note');
-  const topbarNotebookAddProjectBtn = documentObject.getElementById('biology-notebook-header-add-project-btn');
   const exitBtn = documentObject.getElementById('exit-btn');
   const topbarSearchInput = documentObject.getElementById('topbar-search');
+  const topbarSearchToggle = documentObject.getElementById('topbar-search-toggle');
+  const topbarSearchShell = documentObject.querySelector('.topbar-search-shell');
   const topbarSearchSuggestions = documentObject.getElementById('topbar-search-suggestions');
   const dockNav = documentObject.getElementById('app-dock-nav');
   const appDockDivider = documentObject.querySelector('.app-dock-divider');
@@ -71,6 +70,9 @@ export function createNavigationShell({
   const moreMenu = documentObject.getElementById('app-more-menu');
   const agentChatRail = documentObject.getElementById('universal-agent-chat-rail');
   const agentChatRailToggleBtn = documentObject.getElementById('agent-chat-rail-toggle-btn');
+  const paperDetailsToggleBtn = documentObject.getElementById('paper-details-toggle-btn');
+  const paperBriefToggleBtn = documentObject.getElementById('paper-brief-toggle-btn');
+  const paperOutlineToggleBtn = documentObject.getElementById('paper-comment-toggle-btn');
   const views = [...documentObject.querySelectorAll('.view')];
 
   let lastViewPersistenceEnabled = false;
@@ -125,7 +127,15 @@ export function createNavigationShell({
     return app?.agentChatRail === true;
   }
 
-  function agentChatRailToggleIcon(expanded) {
+  function agentChatRailToggleIcon(expanded, isPapers = false) {
+    if (isPapers) {
+      return `
+        <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path>
+          <path d="M20 2v4m-2-2h4"></path>
+        </svg>
+      `;
+    }
     if (expanded) {
       return `
         <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -145,6 +155,8 @@ export function createNavigationShell({
 
   function syncAgentChatRailExpansion(enabled) {
     const expanded = enabled && agentChatRailExpanded;
+    const viewId = getActiveViewId();
+    const isPapers = viewId === VIEWS.PAPERS;
     documentObject.body.classList.toggle('has-agent-chat-rail-expanded', expanded);
     if (agentChatRail) {
       agentChatRail.classList.toggle('is-expanded', expanded);
@@ -152,11 +164,22 @@ export function createNavigationShell({
       agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
     }
     if (agentChatRailToggleBtn) {
-      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded);
+      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded, isPapers);
       agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
-      const label = expanded ? 'Fold agent chat rail' : 'Open agent chat rail';
+      const label = isPapers
+        ? (expanded ? 'Close Hikari' : 'Ask Hikari')
+        : (expanded ? 'Fold agent chat rail' : 'Open agent chat rail');
       agentChatRailToggleBtn.setAttribute('aria-label', label);
-      agentChatRailToggleBtn.title = expanded ? 'Fold chat' : 'Open chat';
+      agentChatRailToggleBtn.title = isPapers ? label : (expanded ? 'Fold chat' : 'Open chat');
+    }
+    if (paperOutlineToggleBtn) paperOutlineToggleBtn.hidden = !isPapers || !enabled;
+    if (paperBriefToggleBtn) paperBriefToggleBtn.hidden = !isPapers || !enabled;
+    if (paperDetailsToggleBtn) paperDetailsToggleBtn.hidden = !isPapers || !enabled;
+    const EventCtor = documentObject.defaultView?.CustomEvent;
+    if (typeof EventCtor === 'function') {
+      documentObject.dispatchEvent(new EventCtor('hikari:agent-chat-rail-state', {
+        detail: { expanded, viewId }
+      }));
     }
     return expanded;
   }
@@ -187,10 +210,9 @@ export function createNavigationShell({
 
 
   const {
-    getRenderedDockApps,
-    getDockCapacity,
     closeMoreMenu,
     toggleMoreMenu,
+    handleMoreMenuKeydown,
     renderAppNavigation,
     syncNavigationState
   } = createAppDock({
@@ -203,8 +225,6 @@ export function createNavigationShell({
     moreMenu,
     pageTitle,
     pageSubtitle,
-    dockApps,
-    moreApps,
     expandedDockApps,
     normalize,
     getActiveViewId,
@@ -226,6 +246,25 @@ export function createNavigationShell({
     getSearchSuggestions,
     applySearchSuggestion
   });
+
+  function setSearchExpanded(expanded, { restoreFocus = false } = {}) {
+    if (!topbarSearchShell || !topbarSearchInput || !topbarSearchToggle) {
+      return;
+    }
+    topbarSearchShell.classList.toggle('is-expanded', expanded);
+    topbarSearchToggle.setAttribute('aria-expanded', String(expanded));
+    topbarSearchToggle.setAttribute('aria-label', expanded ? 'Search' : 'Open search');
+    topbarSearchInput.inert = !expanded;
+    topbarSearchInput.setAttribute('aria-hidden', String(!expanded));
+    if (expanded) {
+      topbarSearchInput.focus({ preventScroll: true });
+    } else {
+      closeSearchSuggestions();
+      if (restoreFocus) {
+        topbarSearchToggle.focus({ preventScroll: true });
+      }
+    }
+  }
 
   function setSearchInputValue(inputId, value) {
     const input = documentObject.getElementById(inputId);
@@ -279,36 +318,17 @@ export function createNavigationShell({
     });
 
     const activeNavView = resolveNavigationViewId(nextView);
-    const activeApp = getAppForView(activeNavView);
     const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
-    const dockCapacity = getDockCapacity();
-    const activeVisibleInDock = Boolean(activeApp && getRenderedDockApps().some((app) => app.id === activeApp.id));
-    if (activeApp && APP_DOCK_ORDER.includes(activeApp.id) && !activeVisibleInDock && dockCapacity < dockApps.length) {
-      renderAppNavigation();
-    }
-    syncNavigationState(activeNavView);
 
     const subtitleView = activeNavView;
-    if (pageTitle) {
-      pageTitle.textContent = activeApp?.label || 'Home';
+    if (pageTitle && !pageTitle.classList?.contains?.('topbar-timer')) {
+      pageTitle.textContent = 'Hikari';
     }
     if (pageSubtitle) {
       pageSubtitle.textContent = TITLES[subtitleView] || '';
     }
-    if (topbarViewActions) {
-      const isAssay = nextView === VIEWS.ASSAY;
-      const isNotebook = nextView === VIEWS.BIOLOGY_NOTEBOOK;
-      topbarViewActions.hidden = !isAssay && !isNotebook;
-      if (topbarAssayModeSwitch) {
-        topbarAssayModeSwitch.hidden = !isAssay;
-      }
-      if (topbarAssayModeNote) {
-        topbarAssayModeNote.hidden = !isAssay;
-      }
-      if (topbarNotebookAddProjectBtn) {
-        topbarNotebookAddProjectBtn.hidden = !isNotebook;
-      }
-    }
+    renderAppNavigation(activeNavView);
+    syncNavigationState(activeNavView);
     closeMoreMenu();
     moduleRuntime.renderView(nextView);
     if (agentChatRailEnabled) {
@@ -324,19 +344,31 @@ export function createNavigationShell({
       const target = event.target;
       const button = target instanceof Element ? target.closest('.app-nav-btn[data-view]') : null;
       if (button instanceof HTMLElement) {
+        const fromMenu = moreMenu?.contains(button);
         showView(button.dataset.view);
+        if (fromMenu) {
+          (dockNav?.querySelector('.is-active') || moreBtn)?.focus();
+        }
       }
     };
     dockNav?.addEventListener('click', handleNavClick);
     moreMenu?.addEventListener('click', handleNavClick);
+    moreMenu?.addEventListener('keydown', handleMoreMenuKeydown);
     moreBtn?.addEventListener('click', (event) => {
       event.stopPropagation();
       toggleMoreMenu();
+    });
+    moreBtn?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        toggleMoreMenu(true);
+      }
     });
     agentChatRailToggleBtn?.addEventListener('click', () => {
       setAgentChatRailExpanded(!agentChatRailExpanded);
     });
     documentObject.addEventListener('hikari:open-agent-chat-rail', openAgentChatRail);
+    documentObject.addEventListener('hikari:close-agent-chat-rail', () => setAgentChatRailExpanded(false));
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');
@@ -345,6 +377,25 @@ export function createNavigationShell({
       topbarSearchInput.setAttribute('aria-controls', 'topbar-search-suggestions');
       topbarSearchInput.setAttribute('autocomplete', 'off');
     }
+    topbarSearchToggle?.addEventListener('click', () => {
+      if (!topbarSearchShell?.classList.contains('is-expanded')) {
+        closeMoreMenu();
+        setSearchExpanded(true);
+      } else {
+        runSearchInput(topbarSearchInput);
+      }
+    });
+    topbarSearchShell?.addEventListener('focusout', (event) => {
+      if (event.relatedTarget && !topbarSearchShell.contains(event.relatedTarget)) {
+        setSearchExpanded(false);
+      }
+    });
+    topbarSearchShell?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && topbarSearchShell.classList.contains('is-expanded')) {
+        event.preventDefault();
+        setSearchExpanded(false, { restoreFocus: true });
+      }
+    });
     topbarSearchInput?.addEventListener('input', () => {
       refreshSearchSuggestions();
     });
@@ -380,15 +431,6 @@ export function createNavigationShell({
         executeTopbarSearch(topbarSearchInput.value);
         return;
       }
-      if (event.key === 'Escape') {
-        if (getSuggestionsState().open) {
-          closeSearchSuggestions();
-          event.preventDefault();
-          return;
-        }
-        topbarSearchInput.value = '';
-        topbarSearchInput.title = 'Search cleared.';
-      }
     });
     topbarSearchSuggestions?.addEventListener('mousedown', (event) => {
       const item = event.target instanceof Element
@@ -417,9 +459,12 @@ export function createNavigationShell({
     });
     documentObject.addEventListener('click', (event) => {
       const target = event.target;
+      if (target instanceof Node && !topbarSearchShell?.contains(target)) {
+        setSearchExpanded(false);
+      }
       if (getSuggestionsState().open) {
         const insideSuggestions = target instanceof Node
-          && (topbarSearchSuggestions?.contains(target) || topbarSearchInput?.contains(target));
+          && topbarSearchShell?.contains(target);
         if (!insideSuggestions) {
           closeSearchSuggestions();
         }
@@ -433,8 +478,9 @@ export function createNavigationShell({
       closeMoreMenu();
     });
     documentObject.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') {
-        closeMoreMenu();
+      if (event.key === 'Escape' && moreMenu?.hidden === false) {
+        event.preventDefault();
+        closeMoreMenu({ restoreFocus: true });
       }
     });
 

@@ -10,15 +10,24 @@ export function createNotebookProjectController({
   contextMenuEl,
   addProjectBtn,
   headerAddProjectBtn,
+  experimentAddProjectBtn,
+  experimentDialogOverlay,
   dialogOverlay,
   dialogForm,
   projectNameInput,
   projectDescriptionInput,
+  projectDetails,
+  dialogStatus,
+  dialogCreateBtn,
   dialogCloseBtn,
   dialogCancelBtn,
   windowRef = typeof window !== 'undefined' ? window : null,
   documentRef = typeof document !== 'undefined' ? document : null
 } = {}) {
+  let returnFocusEl = null;
+  let returnToExperiment = false;
+  let creating = false;
+
   function cleanText(value) {
     return String(value || '').trim();
   }
@@ -38,13 +47,28 @@ export function createNotebookProjectController({
     contextMenuEl.hidden = false;
   }
 
-  function openProjectDialog() {
+  function setDialogError(message = '') {
+    if (dialogStatus) {
+      dialogStatus.textContent = message;
+      dialogStatus.hidden = !message;
+    }
+    projectNameInput?.setAttribute?.('aria-invalid', String(Boolean(message)));
+  }
+
+  function openProjectDialog(event) {
+    if (creating || (dialogOverlay && !dialogOverlay.hidden)) return;
+    returnFocusEl = event?.currentTarget || documentRef?.activeElement || headerAddProjectBtn;
+    if (returnFocusEl === addProjectBtn) returnFocusEl = headerAddProjectBtn || railEl;
+    returnToExperiment = Boolean(experimentDialogOverlay && !experimentDialogOverlay.hidden);
+    if (returnToExperiment) experimentDialogOverlay.hidden = true;
     hideContextMenu();
     dialogForm?.reset?.();
+    if (projectDetails) projectDetails.open = false;
+    setDialogError();
     if (dialogOverlay) {
       dialogOverlay.hidden = false;
     }
-    const focusName = () => projectNameInput?.focus?.();
+    const focusName = () => { if (!dialogOverlay?.hidden) projectNameInput?.focus?.(); };
     if (typeof windowRef?.requestAnimationFrame === 'function') {
       windowRef.requestAnimationFrame(focusName);
     } else {
@@ -53,10 +77,16 @@ export function createNotebookProjectController({
   }
 
   function closeProjectDialog() {
+    if (creating || !dialogOverlay || dialogOverlay.hidden) return;
     if (dialogOverlay) {
       dialogOverlay.hidden = true;
     }
     dialogForm?.reset?.();
+    setDialogError();
+    if (returnToExperiment && experimentDialogOverlay) experimentDialogOverlay.hidden = false;
+    returnToExperiment = false;
+    returnFocusEl?.focus?.();
+    returnFocusEl = null;
   }
 
   function sanitizeFolderName(value) {
@@ -88,11 +118,19 @@ export function createNotebookProjectController({
   }
 
   async function createProject() {
+    if (creating) return null;
     const name = cleanText(projectNameInput?.value);
     if (!name) {
+      setDialogError('Enter a project name.');
       projectNameInput?.focus?.();
       return null;
     }
+    if (state.projects?.some((project) => cleanText(project.name).toLowerCase() === name.toLowerCase())) {
+      setDialogError('A project with this name already exists. Choose a different name.');
+      projectNameInput?.focus?.();
+      return null;
+    }
+    setDialogError();
 
     const now = new Date().toISOString();
     const project = {
@@ -106,13 +144,29 @@ export function createNotebookProjectController({
     if (!Array.isArray(state.projects)) {
       state.projects = [];
     }
-    state.projects.push(project);
-    persist();
-    await ensureProjectDirectory(project.name);
-    onProjectsChanged?.();
-    closeProjectDialog();
-    onProjectCreated?.(project);
-    return project;
+    const fromExperiment = returnToExperiment;
+    creating = true;
+    if (dialogCreateBtn) {
+      dialogCreateBtn.disabled = true;
+      dialogCreateBtn.textContent = 'Creating…';
+    }
+    try {
+      state.projects.push(project);
+      persist();
+      await ensureProjectDirectory(project.name);
+      // Experiment setup owns its selections and the page behind the dialog.
+      onProjectsChanged?.({ refreshNotebook: !fromExperiment });
+      creating = false;
+      closeProjectDialog();
+      onProjectCreated?.(project, { fromExperiment });
+      return project;
+    } finally {
+      creating = false;
+      if (dialogCreateBtn) {
+        dialogCreateBtn.disabled = false;
+        dialogCreateBtn.textContent = 'Create project';
+      }
+    }
   }
 
   function onRailContextMenu(event) {
@@ -122,7 +176,9 @@ export function createNotebookProjectController({
 
   function onDialogSubmit(event) {
     event?.preventDefault?.();
-    void createProject();
+    void createProject().catch((error) => {
+      showTransientNotice(String(error?.message || 'Could not create the project.'), { type: 'error' });
+    });
   }
 
   function onDocumentClick(event) {
@@ -145,14 +201,38 @@ export function createNotebookProjectController({
     }
   }
 
+  function onDialogKeydown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeProjectDialog();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = [...(dialogOverlay?.querySelectorAll?.('button, input, textarea, summary') || [])]
+      .filter((element) => !element.disabled && element.getClientRects().length);
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && documentRef?.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && documentRef?.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  }
+
   railEl?.addEventListener?.('contextmenu', onRailContextMenu);
   contextMenuEl?.addEventListener?.('click', (event) => event?.stopPropagation?.());
   addProjectBtn?.addEventListener?.('click', openProjectDialog);
   headerAddProjectBtn?.addEventListener?.('click', openProjectDialog);
+  experimentAddProjectBtn?.addEventListener?.('click', openProjectDialog);
+  projectNameInput?.addEventListener?.('input', () => setDialogError());
   dialogForm?.addEventListener?.('submit', onDialogSubmit);
   dialogCloseBtn?.addEventListener?.('click', closeProjectDialog);
   dialogCancelBtn?.addEventListener?.('click', closeProjectDialog);
   dialogOverlay?.addEventListener?.('click', onDialogOverlayClick);
+  dialogOverlay?.addEventListener?.('keydown', onDialogKeydown);
   documentRef?.addEventListener?.('click', onDocumentClick);
   documentRef?.addEventListener?.('keydown', onDocumentKeydown);
   windowRef?.addEventListener?.('resize', hideContextMenu);

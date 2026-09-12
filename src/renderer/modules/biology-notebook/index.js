@@ -82,6 +82,11 @@ export function initLabNotebook({
     syncPageStarterProject: (...args) => syncPageStarterProject(...args),
     onProtocolChange: (...args) => onProtocolChange(...args),
     showProjectDashboard: (...args) => showProjectDashboard(...args),
+    onExperimentProjectCreated: () => {
+      renderExperimentProtocolResults();
+      syncExperimentDialogControls();
+      elements.notebookProtocolSearchInput?.focus?.();
+    },
     ensureNotebookEntryForLinkedWork: (...args) => ensureNotebookEntryForLinkedWork(...args),
     applyQuickSampleCapture: (...args) => applyQuickSampleCapture(...args)
   });
@@ -193,6 +198,7 @@ export function initLabNotebook({
 
   const {
     collectNotebookValues,
+    collectCarriedOverKeys,
     getAgentChatContext,
     notifyActiveNotebookPageChanged,
     getCurrentDraftSnapshot,
@@ -292,6 +298,7 @@ export function initLabNotebook({
     protocolEditor,
     onNotebookEntriesChanged,
     collectNotebookValues: () => collectNotebookValues(),
+    collectCarriedOverKeys: () => collectCarriedOverKeys(),
     collectNotebookSampleLinks: (...args) => collectNotebookSampleLinks(...args),
     getSelectedNotebookResultFiles: () => getSelectedNotebookResultFiles(),
     resolveViewerProject: (...args) => resolveViewerProject(...args),
@@ -456,6 +463,8 @@ export function initLabNotebook({
     controller: selectionInsightsController,
     hostEl: elements.notebookSteps,
     isViewerHidden: () => elements.notebookProtocolArea.hidden,
+    getActiveEntry,
+    getStoragePath: () => state.settings?.storagePath,
     resolveProject: resolveViewerProject,
     resolveProtocol: resolveViewerProtocol,
     saveEntry,

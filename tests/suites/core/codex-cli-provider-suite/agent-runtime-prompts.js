@@ -414,10 +414,6 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
         ],
         projectId: 'proj-1',
         projectName: 'Atlas SUMO1',
-        selectionInsight: {
-          actionType: 'what_is_it',
-          selectedText: 'weak conjugation'
-        },
         snapshot: {
           data_file_path: '/tmp/hikari-data.json',
           settings: {
@@ -478,7 +474,6 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       assert.doesNotMatch(calls[0].prompt, /initially visible tool list/);
       assert.doesNotMatch(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);
-      assert.match(calls[0].prompt, /Selection insight context:/);
       assert.match(calls[0].prompt, /Paper agent session:/);
       assert.match(calls[0].prompt, /Read the transformed markdown before answering paper-specific questions/);
       assert.match(calls[0].prompt, /\/tmp\/hikari-storage\/KnowledgeBase\/papers\.md\/atlas-sumo1\/paper\.md/);

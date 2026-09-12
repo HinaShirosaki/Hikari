@@ -79,7 +79,7 @@ module.exports = {
 
       // Local scratch / personal / test material
       /^\/Book3\.xlsx$/,
-      /^\/hikari-data(?:\.ena)?\.json$/,
+      /^\/hikari-data\.json$/,
       /^\/enana-data(?:\.ena)?\.json$/,
       /^\/Exported Standard Features($|\/)/,
       /^\/Testdata($|\/)/,

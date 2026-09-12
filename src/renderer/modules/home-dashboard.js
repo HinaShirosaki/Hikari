@@ -103,6 +103,11 @@ export function initHomeDashboard({
     timerMinutesInput: document.getElementById('dashboard-timer-minutes-input'),
     timerTemplateList: document.getElementById('dashboard-timer-template-list')
   };
+  const topbarTimerElements = {
+    topbarTimer: document.getElementById('page-title'),
+    topbarTimerTime: document.getElementById('topbar-timer-time'),
+    topbarTimerProgress: document.getElementById('topbar-timer-progress')
+  };
 
   const requiredElements = [
     ...Object.values(passageElements),
@@ -174,7 +179,7 @@ export function initHomeDashboard({
       persist,
       safeText,
       render: masterRender,
-      elements: timerElements
+      elements: { ...timerElements, ...topbarTimerElements }
     }),
     quickLog: initQuickLogWidget({
       state,

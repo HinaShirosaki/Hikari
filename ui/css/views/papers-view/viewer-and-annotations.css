@@ -1,7 +1,7 @@
 .papers-viewer-panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  gap: 0;
   height: 100%;
   min-width: 0;
   min-height: 0;
@@ -11,7 +11,7 @@
 
 .papers-viewer-head {
   display: grid;
-  gap: 8px;
+  gap: 0;
   align-content: start;
 }
 
@@ -29,30 +29,48 @@
 
 .papers-viewer-toolbar {
   display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  justify-content: center;
-  min-height: 32px;
-  font-size: 0.92rem;
+  gap: .6rem;
+  justify-content: flex-start;
+  width: 100%;
+  min-width: 0;
+  padding: 0 0 .6rem;
+  border-bottom: .0625rem solid var(--theme-border-soft);
+  background: var(--theme-surface);
+  font-size: .82rem;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.papers-viewer-page-cluster {
+.papers-viewer-page-cluster,
+.papers-viewer-zoom-cluster,
+.papers-viewer-action-cluster {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  gap: .125rem;
   flex-wrap: nowrap;
+}
+
+.papers-viewer-zoom-cluster {
+  border-top: .0625rem solid var(--theme-border-soft);
+  padding-top: .6rem;
+}
+
+.papers-viewer-action-cluster {
+  border-top: .0625rem solid var(--theme-border-soft);
+  padding-top: .6rem;
 }
 
 .papers-viewer-page-nav-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  min-width: 24px;
-  height: 30px;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
   padding: 0;
   border: 0;
   font-size: 0.98rem;
@@ -69,10 +87,12 @@
 
 .papers-viewer-page-field input {
   appearance: textfield;
-  width: 48px;
-  height: 30px;
-  padding: 0 6px;
-  border-radius: 6px;
+  width: 2.125rem;
+  height: 2rem;
+  padding: 0 .25rem;
+  border: 0;
+  border-radius: .375rem;
+  background: transparent;
   min-width: 0;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -86,21 +106,28 @@
 
 #paper-viewer-page-count {
   display: inline-block;
-  min-width: 4ch;
-  text-align: left;
-  white-space: nowrap;
+  width: 2.125rem;
+  text-align: center;
+  font-size: .7rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 #paper-viewer-zoom-label {
   display: inline-block;
-  min-width: 6.5ch;
+  width: 2.125rem;
   text-align: center;
-  white-space: nowrap;
+  font-size: .7rem;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 #paper-viewer-zoom-reset-btn {
-  height: 30px;
-  padding: 0 9px;
+  height: 2rem;
+  width: 2.125rem;
+  padding: 0;
+  font-size: .7rem;
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -112,12 +139,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 30px;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
+  flex: 0 0 2rem;
+  width: 2rem;
+  min-width: 2rem;
+  height: 2rem;
   padding: 0;
-  border-radius: 6px;
+  border-radius: .375rem;
   line-height: 1;
 }
 
@@ -135,6 +162,12 @@
 .papers-viewer-zoom-step-btn:hover,
 .papers-viewer-zoom-step-btn:focus-visible {
   background: var(--theme-surface-subtle);
+}
+
+.papers-viewer-toolbar button:focus-visible,
+.papers-viewer-page-field input:focus-visible {
+  outline: .125rem solid var(--theme-focus);
+  outline-offset: .125rem;
 }
 
 .papers-viewer-toolbar-icon-btn {

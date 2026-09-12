@@ -135,6 +135,21 @@ export function normalizePaperPdfMetadata(source = {}) {
   };
 }
 
+// Prefer embedded PDF metadata, filling only missing values from the saved
+// library record (which may already carry bibliographic discovery metadata).
+export function getPaperDetailsMetadata(paper = {}) {
+  const embedded = normalizePaperPdfMetadata(paper?.pdfMetadata);
+  const saved = normalizePaperPdfMetadata({
+    title: paper?.title || paper?.fileName,
+    author: paper?.authors || paper?.author || paper?.paperAuthors,
+    year: paper?.year || paper?.publishedAt || paper?.published_at,
+    journal: paper?.journal,
+    doi: paper?.doi,
+    url: paper?.url || paper?.paperUrl || paper?.paper_url
+  });
+  return Object.fromEntries(SUMMARY_FIELDS.map(key => [key, embedded[key] || saved[key]]));
+}
+
 export function hasPaperPdfMetadata(source = {}) {
   const metadata = normalizePaperPdfMetadata(source);
   return SUMMARY_FIELDS.some((field) => Boolean(metadata[field]));

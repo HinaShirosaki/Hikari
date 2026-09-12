@@ -162,7 +162,6 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const attachmentText = summarizeAttachments(cleanText, input.attachments);
   const projectId = cleanText(input.projectId, 120);
   const projectName = cleanText(input.projectName, 220);
-  const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
   const scopedAgentSessionPrompt = paperAgentSessionBlock
     ? ''
@@ -192,9 +191,6 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
       : 'Selected project: none',
     '',
-    selectionInsight.actionType || selectionInsight.selectedText
-      ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
-      : '',
     savedSettingsBlock,
     scopedAgentSessionPrompt ? `Active Hikari view instructions:\n${scopedAgentSessionPrompt}` : '',
     paperAgentSessionBlock,

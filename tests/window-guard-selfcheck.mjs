@@ -14,10 +14,11 @@ const require = createRequire(import.meta.url);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { createMainWindow } = require(path.join(projectRoot, 'src/main/windows/create-main-window.js'));
 
-function harness() {
+function harness(platform = process.platform) {
   const opened = [];
   const listeners = new Map();
   let permissionHandler = null;
+  let windowOptions = null;
 
   const webContents = {
     setWindowOpenHandler(fn) { webContents.openHandler = fn; },
@@ -30,7 +31,8 @@ function harness() {
   const window = { webContents, loadFile() {}, on() {} };
 
   createMainWindow({
-    BrowserWindow: function BrowserWindowStub() { return window; },
+    BrowserWindow: function BrowserWindowStub(options) { windowOptions = options; return window; },
+    platform,
     shell: { openExternal: (url) => opened.push(url) },
     path,
     projectRoot: '/app',
@@ -40,6 +42,7 @@ function harness() {
 
   return {
     opened,
+    windowOptions,
     open: (url) => webContents.openHandler({ url }),
     navigate: (url) => {
       let prevented = false;
@@ -94,5 +97,16 @@ function harness() {
 
 // No feature asks for camera/mic/geolocation.
 assert.equal(harness().permission(), false, 'permission requests must be refused');
+
+// Only macOS puts native window controls inside the app's header row.
+const macWindow = harness('darwin').windowOptions;
+assert.equal(macWindow.titleBarStyle, 'hidden');
+assert.deepEqual(macWindow.trafficLightPosition, { x: 16, y: 24 });
+assert.notEqual(macWindow.frame, false, 'retain native window controls and window behavior');
+for (const platform of ['win32', 'linux']) {
+  const options = harness(platform).windowOptions;
+  assert.equal(options.titleBarStyle, undefined);
+  assert.equal(options.trafficLightPosition, undefined);
+}
 
 console.log('PASS window-guard: popup, navigation, and permission guards');

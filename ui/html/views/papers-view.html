@@ -1,22 +1,16 @@
 <section id="papers-view" class="view">
-      <div id="papers-layout" class="papers-layout left-rail-template left-rail-template--preserve-columns-on-narrow" data-left-rail-foldable="true">
+      <div id="papers-layout" class="papers-layout is-comments-collapsed left-rail-template left-rail-template--preserve-columns-on-narrow" data-left-rail-foldable="true">
         <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="papers-library-pinned left-rail-template__pinned">
-            <div class="papers-library-topbar">
-              <h2>Papers</h2>
-              <div class="papers-library-actions">
-                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M12 16V4"></path>
-                    <path d="m7 9 5-5 5 5"></path>
-                    <path d="M5 14v5h14v-5"></path>
-                  </svg>
-                  <span class="sr-only">Upload PDF</span>
-                </button>
-              </div>
+            <div class="papers-library-upload-section">
+              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 15V4m-4 4 4-4 4 4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"></path>
+                </svg>
+                <span>Upload PDF</span>
+              </button>
             </div>
             <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
-            <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
           </div>
           <div class="papers-library-scroll left-rail-template__scroll">
             <div id="journal-club-list" class="papers-thread-list folder-tree-template"></div>
@@ -56,62 +50,6 @@
             <div class="papers-center-column">
               <div class="panel papers-viewer-panel">
                 <div class="papers-viewer-head">
-                  <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
-                    <div class="papers-viewer-page-cluster">
-                      <button
-                        type="button"
-                        id="paper-viewer-prev-btn"
-                        class="ghost-btn papers-viewer-page-nav-btn"
-                        aria-label="Previous page"
-                        title="Previous page"
-                      >
-                        <span aria-hidden="true">&lt;</span>
-                      </button>
-                      <label class="papers-viewer-page-field">
-                        <input id="paper-viewer-page-input" type="number" min="1" value="1" aria-label="Page number" />
-                      </label>
-                      <span id="paper-viewer-page-count" class="small-note">/ 0</span>
-                      <button
-                        type="button"
-                        id="paper-viewer-next-btn"
-                        class="ghost-btn papers-viewer-page-nav-btn"
-                        aria-label="Next page"
-                        title="Next page"
-                      >
-                        <span aria-hidden="true">&gt;</span>
-                      </button>
-                    </div>
-                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out">-</button>
-                    <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in">+</button>
-                    <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width">
-                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                        <rect x="4.5" y="6" width="15" height="12" rx="1.5"></rect>
-                        <path d="M8 12h8"></path>
-                        <path d="m10 9-3 3 3 3"></path>
-                        <path d="m14 9 3 3-3 3"></path>
-                      </svg>
-                      <span class="sr-only">Fit width</span>
-                    </button>
-                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print">
-                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                        <path d="M7 8V4.75h10V8"></path>
-                        <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
-                        <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
-                        <path d="M8.25 16.5h7.5"></path>
-                      </svg>
-                      <span class="sr-only">Print</span>
-                    </button>
-                    <button type="button" id="paper-viewer-save-form-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Save filled form" title="Save filled form" hidden>
-                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                        <path d="M5.25 5.25h9.25L18.75 9.5v9.25H5.25z"></path>
-                        <path d="M8.5 5.25v4h6"></path>
-                        <rect x="8.5" y="12.75" width="7" height="6"></rect>
-                      </svg>
-                      <span class="sr-only">Save filled form</span>
-                    </button>
-                  </div>
                   <div class="papers-viewer-summary" hidden>
                     <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
                     <p id="paper-viewer-meta" class="small-note"></p>
@@ -212,52 +150,19 @@
 
             <div id="papers-right-column" class="papers-right-column">
               <div id="paper-comment-panel" class="papers-comment-panel">
-                <button
-                  type="button"
-                  id="paper-comment-toggle-btn"
-                  class="papers-comment-toggle"
-                  aria-controls="paper-comment-sidebar"
-                  aria-expanded="true"
-                  aria-label="Fold paper details panel to the right"
-                  title="Fold paper details panel to the right"
-                >
-                  <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
-                </button>
-                <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+                <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar" aria-label="Outline &amp; bookmarks" hidden>
                   <section id="paper-bookmark-section" class="papers-bookmark-section">
-                    <button
-                      type="button"
-                      id="paper-bookmark-toggle-btn"
-                      class="papers-section-toggle"
-                      aria-controls="paper-bookmark-content"
-                      aria-expanded="true"
-                      aria-label="Hide PDF bookmarks"
-                      title="Hide PDF bookmarks"
-                    >
-                      <span class="papers-section-toggle-icon" aria-hidden="true"></span>
-                      <span>Bookmarks</span>
-                    </button>
-                    <div id="paper-bookmark-content" class="papers-bookmark-content">
-                      <div id="paper-bookmark-list" class="papers-bookmark-list"></div>
-                    </div>
+                    <header class="papers-brief-header"><h2>Outline &amp; bookmarks</h2></header>
+                    <div id="paper-bookmark-list" class="papers-bookmark-list"></div>
                   </section>
-                  <section id="paper-summary-section" class="papers-summary-section">
-                    <button
-                      type="button"
-                      id="paper-summary-toggle-btn"
-                      class="papers-section-toggle"
-                      aria-controls="paper-summary-content"
-                      aria-expanded="true"
-                      aria-label="Hide paper summary"
-                      title="Hide paper summary"
-                    >
-                      <span class="papers-section-toggle-icon" aria-hidden="true"></span>
-                      <span>Summary</span>
-                    </button>
-                    <div id="paper-summary-content" class="papers-summary-content">
-                      <dl id="paper-summary-list" class="papers-summary-list"></dl>
-                    </div>
-                  </section>
+                </aside>
+                <aside id="paper-details-sidebar" class="panel papers-comment-sidebar papers-details-sidebar" aria-label="Paper details" hidden>
+                  <header class="papers-brief-header"><h2>Paper details</h2></header>
+                  <dl id="paper-summary-list" class="papers-summary-list" aria-live="polite"></dl>
+                </aside>
+                <aside id="paper-research-brief" class="panel papers-comment-sidebar papers-research-brief" aria-label="Research brief" hidden>
+                  <header class="papers-brief-header"><h2>Research brief</h2><span>From saved analysis</span></header>
+                  <div id="paper-brief-content" class="papers-brief-content" aria-live="polite"></div>
                 </aside>
               </div>
             </div>

@@ -52,8 +52,9 @@ function createAssayFormAndList({
     }
     elements.assayModeCreateBtn?.classList.toggle('calendar-view-active', isCreate);
     elements.assayModeResultsBtn?.classList.toggle('calendar-view-active', !isCreate);
-    if (elements.assayModeNote) {
-      elements.assayModeNote.textContent = '';
+    // One switch element, pinned at the top of whichever rail is showing.
+    if (elements.assayModeSwitch) {
+      (isCreate ? elements.assayCreateRail : elements.assayResultsRail)?.prepend(elements.assayModeSwitch);
     }
     if (isCreate) {
       layoutManager.renderPlateDefinition();

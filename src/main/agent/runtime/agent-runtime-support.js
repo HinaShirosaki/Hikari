@@ -295,6 +295,9 @@ function createAgentRuntimeSupport(deps = {}) {
       // Scheduled-task policy has to survive normalization: the paper-download
       // executor reads deny_paper_download off the normalized snapshot.
       ...(scheduledTaskSource ? { scheduled_task: scheduledTaskSource } : {}),
+      ...(snapshot.literature_research?.id
+        ? { literature_research: { id: cleanText(snapshot.literature_research.id, 160) } }
+        : {}),
       data_file_path: cleanText(snapshot.data_file_path || snapshot.dataFilePath, 1600),
       timestamp: cleanText(snapshot.timestamp, 80)
     };

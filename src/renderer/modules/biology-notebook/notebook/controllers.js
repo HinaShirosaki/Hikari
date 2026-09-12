@@ -36,6 +36,7 @@ function createNotebookControllers({
   syncPageStarterProject,
   onProtocolChange,
   showProjectDashboard,
+  onExperimentProjectCreated,
   ensureNotebookEntryForLinkedWork,
   applyQuickSampleCapture
 } = {}) {
@@ -135,6 +136,7 @@ function createNotebookControllers({
     safeText,
     getProjects: () => state.projects,
     getProtocols: () => state.protocols,
+    getNotebookEntries: () => state.notebookEntries,
     onAfterRender: () => syncPageStarterProject(),
     onProtocolChange: () => onProtocolChange()
   });
@@ -148,15 +150,26 @@ function createNotebookControllers({
     contextMenuEl: elements.notebookProjectContextMenu,
     addProjectBtn: elements.notebookAddProjectBtn,
     headerAddProjectBtn: elements.notebookHeaderAddProjectBtn,
+    experimentAddProjectBtn: elements.notebookExperimentAddProjectBtn,
+    experimentDialogOverlay: elements.notebookExperimentDialogOverlay,
     dialogOverlay: elements.notebookProjectDialogOverlay,
     dialogForm: elements.notebookProjectForm,
     projectNameInput: elements.notebookProjectNameInput,
     projectDescriptionInput: elements.notebookProjectDescriptionInput,
+    projectDetails: elements.notebookProjectDetails,
+    dialogStatus: elements.notebookProjectFormStatus,
+    dialogCreateBtn: elements.notebookProjectCreateBtn,
     dialogCloseBtn: elements.notebookProjectDialogCloseBtn,
     dialogCancelBtn: elements.notebookProjectCancelBtn,
-    onProjectCreated: (project) => {
+    onProjectCreated: (project, { fromExperiment = false } = {}) => {
       dropdownRenderer.renderProjectOptions();
       elements.notebookProjectSelect.value = project.id;
+      if (fromExperiment) {
+        dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+        entryListRenderer.renderEntries();
+        onExperimentProjectCreated?.();
+        return;
+      }
       dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
       syncPageStarterProject();
       entryListRenderer.renderEntries();

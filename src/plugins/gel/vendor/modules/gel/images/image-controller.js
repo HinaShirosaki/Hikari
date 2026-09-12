@@ -111,6 +111,9 @@ export function createImageController({ runtime, elements, deps }) {
     try {
       setCurrentImage(await decodeImageFile(file));
       runtime.originalImage = copyNormalizedImage(runtime.currentImage);
+      // The decoded image is downscaled and re-encoded on save; the File itself
+      // is what gets written next to it, byte for byte.
+      runtime.originalFile = file;
       runtime.cropApplied = false;
       runtime.currentReport = null;
       runtime.manualOverrides = createEmptyManualOverrides();
@@ -129,6 +132,7 @@ export function createImageController({ runtime, elements, deps }) {
     } catch (error) {
       setCurrentImage(null);
       runtime.originalImage = null;
+      runtime.originalFile = null;
       runtime.cropApplied = false;
       runtime.currentReport = null;
       runtime.manualOverrides = createEmptyManualOverrides();

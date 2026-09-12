@@ -173,14 +173,14 @@ test('agent-chat sends settings API key to main process and stores assistant res
         autoSaveCalls.push({ data, filePath });
         return {
           ok: true,
-          filePath: '/tmp/hikari-data.ena.json',
+          filePath: '/tmp/hikari-data.json',
           sidecarPaths: {
             protocolsPath: '/tmp/Protocol',
             notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           },
           bundlePaths: {
-            dataFilePath: '/tmp/hikari-data.ena.json',
+            dataFilePath: '/tmp/hikari-data.json',
             protocolsPath: '/tmp/Protocol',
             notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
@@ -310,7 +310,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(Object.hasOwn(payloadSeen.agent, 'deepResearchEnabled'), false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
-  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.ena.json');
+  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.json');
   assert.equal(payloadSeen.stateSnapshot.protocols.length, 1);
   assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);

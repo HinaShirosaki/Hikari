@@ -70,6 +70,14 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
   if (!toast.hidden && toast.textContent === text) {
     return;
   }
+  if (type === 'error') {
+    // Every recoverable failure the user sees also lands in the error log.
+    try {
+      getWindow()?.hikariApi?.reportError?.({ source: 'renderer:notice', message: text });
+    } catch {
+      // No bridge here (tests, plugin sandboxes).
+    }
+  }
   toast.textContent = text;
   toast.style.background = type === 'error'
     ? 'rgba(156, 54, 48, 0.96)'

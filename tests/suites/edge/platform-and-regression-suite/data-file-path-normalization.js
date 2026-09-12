@@ -33,7 +33,7 @@ const normalizedArrayKeys = [
 [
   ['/tmp/name.', '/tmp/fallback.json', '/tmp/name..json'],
   ['/tmp/.hidden', '/tmp/fallback.json', '/tmp/.hidden.json'],
-  ['/tmp/valid.ENA', '/tmp/fallback.json', '/tmp/valid.ENA'],
+  ['/tmp/valid.ENA', '/tmp/fallback.json', '/tmp/valid.ENA.json'],
   ['/tmp/valid.Json', '/tmp/fallback.json', '/tmp/valid.Json'],
   ['/tmp/with spaces', '/tmp/fallback.ena', '/tmp/with spaces.json'],
   ['/tmp/multi.part.name', '/tmp/fallback.ena', '/tmp/multi.part.name.json'],

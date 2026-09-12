@@ -160,7 +160,6 @@ function normalizeSettings(source) {
         ? rawStorageImport.warnings
         : defaultState.settings.storageImport.warnings,
       lastImportedAt: String(rawStorageImport.lastImportedAt || ''),
-      manifestPath: String(rawStorageImport.manifestPath || ''),
       error: String(rawStorageImport.error || '')
     },
     dashboard: {

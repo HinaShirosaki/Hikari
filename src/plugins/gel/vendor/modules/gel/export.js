@@ -124,7 +124,7 @@ export async function downloadDataUrlFile({ dataUrl, fileName }) {
   return { saved: true, fileName };
 }
 
-function bytesToBase64(bytes) {
+export function bytesToBase64(bytes) {
   const source = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
   const chunks = [];
   for (let offset = 0; offset < source.length; offset += 0x8000) {

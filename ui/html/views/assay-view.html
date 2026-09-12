@@ -1,6 +1,12 @@
 <section id="assay-view" class="view">
       <div class="assay-create-layout left-rail-template">
         <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div id="assay-mode-switch" class="assay-rail-mode-switch">
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
+              <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Setup</button>
+              <button type="button" id="assay-mode-results-btn" class="ghost-btn">Analyze</button>
+            </div>
+          </div>
           <form id="assay-form" class="form-grid assay-form-grid assay-create-sidebar-pinned left-rail-template__pinned">
             <input type="hidden" id="assay-id" />
             <div class="form-actions assay-form-actions" aria-label="Assay actions">

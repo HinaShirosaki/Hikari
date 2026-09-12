@@ -29,7 +29,7 @@ The non-agent application data API. Channels come from the `STORAGE`, `SEQUENCE_
 - `storage:append-notebook-page-log`, `storage:discover-papers`
 - `storage:protocol-record-saved` (main → renderer notification)
 
-`storage:import-root` calls `importStorageRoot(...)` from `storage/`, producing a merged summary plus a `hikari-storage-manifest.json` for an existing storage directory.
+`storage:import-root` calls `importStorageRoot(...)` from `storage/`, producing a merged summary plus a `recognized` flag (whether the folder already has Hikari's layout) and `lastSavedAt` (newest snapshot's mtime).
 
 **Import parsers:**
 

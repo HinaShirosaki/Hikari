@@ -13,22 +13,6 @@ export function buildStoredBackboneDisplayName(backbone = {}) {
     || 'Stored backbone';
 }
 
-export function formatStoredBackboneDate(value) {
-  const timestamp = Date.parse(String(value || ''));
-  if (!Number.isFinite(timestamp)) {
-    return '';
-  }
-  try {
-    return new Date(timestamp).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  } catch {
-    return String(value || '').slice(0, 10);
-  }
-}
-
 export function buildAssembledPlasmidPayload(backbone = {}, dnaConstruct = {}, options = {}) {
   const backboneSequence = normalizeSequenceText(backbone?.backboneSequence || '');
   const insertSequence = normalizeSequenceText(dnaConstruct?.sequence || '');

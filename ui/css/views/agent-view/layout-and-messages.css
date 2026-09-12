@@ -74,25 +74,30 @@ body.agent-view-fixed-scroll .workspace-main {
   display: none;
 }
 
-.agent-new-chat-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text);
-  font: inherit;
-  text-align: left;
-  flex: 0 0 auto;
+.left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail.left-rail-template__rail--pinned:has(#agent-session-status:empty) {
+  grid-template-rows: minmax(0, 1fr);
 }
 
-.agent-new-chat-btn:hover,
-.agent-new-chat-btn:focus-visible {
+.agent-session-toolbar:not(:has(#agent-session-status:not(:empty))) {
+  display: none;
+}
+
+.agent-session-folder-row .agent-new-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.75rem;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--theme-text);
+}
+
+.agent-session-folder-row .agent-new-chat-btn:hover,
+.agent-session-folder-row .agent-new-chat-btn:focus-visible {
   background: var(--hikari-left-rail-list-hover);
   color: var(--theme-text-strong);
 }

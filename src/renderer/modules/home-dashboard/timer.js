@@ -6,7 +6,12 @@ import {
   normalizeTimerTemplateRecord,
   parseTimerDuration
 } from './utils.js';
-import { renderActiveTimer, renderFinishedTimer, updateActiveTimer } from './timer-rendering.js';
+import {
+  renderActiveTimer,
+  renderFinishedTimer,
+  updateActiveTimer,
+  updateTopbarTimer
+} from './timer-rendering.js';
 
 // Timer + clock widget. Owns a running local clock plus reusable named
 // countdowns: a dialog manages a list of timer templates the bench user
@@ -30,7 +35,10 @@ export function initTimerWidget({
     timerDialogForm,
     timerNameInput,
     timerMinutesInput,
-    timerTemplateList
+    timerTemplateList,
+    topbarTimer,
+    topbarTimerTime,
+    topbarTimerProgress
   } = elements;
 
   let timerTickHandle = 0;
@@ -253,6 +261,7 @@ export function initTimerWidget({
         const isAlert = remainingMs <= 0;
         const totalMs = Math.max(1, normalized.durationMinutes * 60 * 1000);
         const pct = Math.min(100, Math.max(0, (1 - remainingMs / totalMs) * 100));
+        const remainingPct = Math.min(100, Math.max(0, (remainingMs / totalMs) * 100));
         const isWarn = !isAlert && remainingMs <= 5 * 60 * 1000; // ponytail: fixed 5-min amber threshold
         return {
           sourceIndex: index,
@@ -260,6 +269,7 @@ export function initTimerWidget({
           durationMinutes: normalized.durationMinutes,
           remainingMs,
           pct,
+          remainingPct,
           isWarn,
           isAlert,
           isPaused: normalized.isPaused,
@@ -286,6 +296,7 @@ export function initTimerWidget({
     const running = activeTimers.filter((timer) => !timer.isAlert);
     const tickingCount = running.filter((timer) => !timer.isPaused).length;
     const finished = activeTimers.filter((timer) => timer.isAlert);
+    updateTopbarTimer({ topbarTimer, topbarTimerTime, topbarTimerProgress }, running[0] || null);
     timerStatus.textContent = activeTimers.length ? String(activeTimers.length) : '';
     timerStatus.hidden = !activeTimers.length;
     timerStatus.setAttribute('aria-label', `${tickingCount} running, ${running.length - tickingCount} paused, ${finished.length} finished`);

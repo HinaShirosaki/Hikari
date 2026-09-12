@@ -276,12 +276,10 @@ function createMainCodexService({
   async function runSubAgentTurn(turnInput = {}) {
     const turnMetadata = ensurePlainObject(turnInput.metadata);
     const agentMetadata = ensurePlainObject(turnInput?.agent?.metadata);
-    const timeoutMs = Number(
-      turnMetadata.timeout_ms
-        ?? turnMetadata.timeoutMs
-        ?? agentMetadata.timeout_ms
-        ?? agentMetadata.timeoutMs
-    );
+    // Explicit null disables the CLI deadline; absent values keep the helper default.
+    const requestedTimeout = [turnMetadata.timeout_ms, turnMetadata.timeoutMs,
+      agentMetadata.timeout_ms, agentMetadata.timeoutMs].find((value) => value !== undefined);
+    const timeoutMs = Number(requestedTimeout);
     const cwd = cleanText(
       turnMetadata.cwd || agentMetadata.cwd || getCodexCliWorkingDirectory(),
       2400
@@ -386,7 +384,7 @@ function createMainCodexService({
         || turnMetadata.enableWebSearch === true
         || agentMetadata.enable_web_search === true
         || agentMetadata.enableWebSearch === true,
-      timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 180000,
+      timeoutMs: requestedTimeout === null ? null : (Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 180000),
       resumeSessionId: cleanText(
         agentMetadata.codex_session_id
           || agentMetadata.codexSessionId

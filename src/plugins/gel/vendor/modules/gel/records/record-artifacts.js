@@ -1,3 +1,4 @@
+import { bytesToBase64 } from '../export.js';
 import { safeFilePart } from '../shared.js';
 
 // Where a saved gel's files live on disk, and the notebook links and preview
@@ -56,8 +57,22 @@ function createGelRecordArtifacts({
   }
 
   async function persistDataUrlArtifact({ targetFolder, fileName, dataUrl }) {
+    return persistBase64Artifact({ targetFolder, fileName, dataBase64: encodeDataUrlPayload(dataUrl) });
+  }
+
+  // The imported file as uploaded (TIFF, JPEG, ...), untouched: source.png is a
+  // downscaled re-encode the analysis coordinates depend on, not an archive.
+  async function persistOriginalFileArtifact({ targetFolder, file }) {
+    const extension = String(file.name || '').match(/\.[a-zA-Z0-9]+$/)?.[0]?.toLowerCase() || '';
+    return persistBase64Artifact({
+      targetFolder,
+      fileName: `original${extension}`,
+      dataBase64: bytesToBase64(await file.arrayBuffer())
+    });
+  }
+
+  async function persistBase64Artifact({ targetFolder, fileName, dataBase64 }) {
     const storageRoot = getStorageRoot();
-    const dataBase64 = encodeDataUrlPayload(dataUrl);
     if (!storageRoot || !targetFolder || !dataBase64 || !window.hikariApi?.storeImportedFile) {
       return null;
     }
@@ -179,11 +194,14 @@ function createGelRecordArtifacts({
       ? deps.imageDataToDataUrl(runtime.currentImage.imageData)
       : String(existingRecord?.sourceImageDataUrl || '').trim();
 
+    const originalFile = runtime.originalFile || null;
+
     let reportResult = null;
     let metadataResult = null;
     let sourceImageResult = null;
+    let originalFileResult = null;
     try {
-      [reportResult, metadataResult, sourceImageResult] = await Promise.all([
+      [reportResult, metadataResult, sourceImageResult, originalFileResult] = await Promise.all([
         window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
@@ -215,6 +233,9 @@ function createGelRecordArtifacts({
               fileName: 'source.png',
               dataUrl: sourceImageDataUrl
             })
+          : Promise.resolve(null),
+        originalFile
+          ? persistOriginalFileArtifact({ targetFolder, file: originalFile })
           : Promise.resolve(null)
       ]);
     } catch (error) {
@@ -228,7 +249,10 @@ function createGelRecordArtifacts({
     if (sourceImageDataUrl && !sourceImageResult) {
       throw new Error('Could not save gel artifacts: the source image could not be encoded.');
     }
-    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null]
+    if (originalFile && !originalFileResult) {
+      throw new Error('Could not save gel artifacts: the original image file could not be stored.');
+    }
+    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null, originalFileResult]
       .find((result) => result && result.ok !== true);
     if (failedResult) {
       throw new Error(`Could not save gel artifacts: ${failedResult.error || 'the host did not confirm the write.'}`);
@@ -245,7 +269,11 @@ function createGelRecordArtifacts({
       recordJsonRelativePath: metadataResult?.ok ? metadataResult.relativePath || '' : '',
       sourceImagePath: sourceImageResult?.filePath || '',
       sourceImageRelativePath: sourceImageResult?.relativePath || '',
-      sourceImageDataUrl: ''
+      sourceImageDataUrl: '',
+      // A re-save of an opened record has no File in memory; the one written
+      // at import stays the original.
+      originalImagePath: originalFileResult?.filePath || existingRecord?.originalImagePath || '',
+      originalImageRelativePath: originalFileResult?.relativePath || existingRecord?.originalImageRelativePath || ''
     };
   }
 

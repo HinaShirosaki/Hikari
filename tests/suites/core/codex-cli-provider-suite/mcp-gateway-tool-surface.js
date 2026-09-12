@@ -450,7 +450,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.deepEqual(Object.keys(literatureSearchDefinition.inputSchema.properties).sort(), [
-        'allow_unfiltered_fallback', 'journals', 'prefer_recent', 'query', 'sources'
+        'allow_unfiltered_fallback', 'journals', 'message', 'prefer_recent', 'query', 'research_id', 'sources'
       ]);
       assert.equal(literatureSearchDefinition.inputSchema.properties.source, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.limit, undefined);

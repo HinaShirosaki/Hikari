@@ -1,5 +1,5 @@
 function hasSupportedDataExtension(filePath) {
-  return /\.(?:json|ena)$/i.test(String(filePath || '').trim());
+  return /\.json$/i.test(String(filePath || '').trim());
 }
 
 function normalizeDataFilePath(filePath, fallbackPath = '') {

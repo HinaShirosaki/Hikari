@@ -607,6 +607,13 @@
   color: var(--theme-text);
 }
 
+/* Ghost text: a value offered from previous runs, not yet accepted. */
+.inline-placeholder-token.is-suggested {
+  color: var(--theme-text-muted);
+  font-style: italic;
+  border-style: dashed;
+}
+
 .inline-placeholder-editor {
   width: auto;
   min-width: 0;

@@ -6,7 +6,6 @@ import {
 import { buildAminoAcidSubstitution } from '../amino-acid-substitution.js';
 import { buildEditedSequenceName } from '../sequence-naming.js';
 import { PROTEIN_DIRECT_CLONING_MAX_AA } from '../protein-builder/constants.js';
-import { LIBRARY_STATUS_SAVED } from './config.js';
 import {
   adjustFeatureSegmentsForSequenceEdit,
   buildSequenceEditDesignSource,
@@ -170,12 +169,11 @@ export function createSequenceEditActions(ctx) {
       donorEntryId: cleanText(donorEntryId, 200),
       donorName: cleanText(donorName, 160)
     };
-    // Editing a saved library entry creates a local derived sequence. The Save
-    // action will allocate a new entry instead of overwriting the parent.
-    if (state.activeEntryStatus === LIBRARY_STATUS_SAVED) {
-      state.activeEntryId = '';
-      state.activeEntryStatus = '';
-    }
+    // Editing a library entry (saved or unsaved) creates a local derived
+    // sequence. The Save action will allocate a new entry instead of
+    // overwriting the parent, which stays intact as the cloning PCR template.
+    state.activeEntryId = '';
+    state.activeEntryStatus = '';
     state.cloningDesign = {};
     if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {
       nextRecord.quality = '';

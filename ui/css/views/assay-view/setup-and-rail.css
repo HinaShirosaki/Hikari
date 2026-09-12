@@ -139,7 +139,7 @@
 
 .left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
   align-content: stretch;
   gap: 0;
   height: 100%;
@@ -149,6 +149,11 @@
   overflow: hidden !important;
   scrollbar-gutter: auto !important;
   background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.assay-rail-mode-switch {
+  padding: 12px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
 }
 
 .assay-create-sidebar > .assay-create-sidebar-pinned.left-rail-template__pinned {
@@ -322,10 +327,10 @@
   gap: 0;
 }
 
-/* Analyze rail: a single scroller of foldable sections, nothing pinned. */
+/* Analyze rail: the pinned mode switch over a single scroller of foldable sections. */
 .left-rail-template.assay-results-layout > .assay-results-controls-panel.app-left-rail {
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: stretch;
   height: 100%;
   min-height: 0;

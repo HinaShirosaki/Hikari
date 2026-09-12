@@ -268,6 +268,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     deps.setCurrentImage(null);
     runtime.originalImage = null;
+    runtime.originalFile = null;
     runtime.currentReport = null;
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.cropApplied = false;
@@ -327,6 +328,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.setCurrentImage(null);
     const clearedImageRevision = runtime.imageRevision;
     runtime.originalImage = null;
+    runtime.originalFile = null;
     runtime.cropApplied = false;
     deps.leaveCropMode();
     deps.renderManualProgress();

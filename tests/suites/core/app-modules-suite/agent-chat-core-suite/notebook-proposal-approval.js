@@ -70,7 +70,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/hikari-data.ena.json'
+        filePath: '/tmp/hikari-data.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -704,8 +704,10 @@ test('agent-chat delegates notebook and protocol domain records to owner adapter
   assert.doesNotMatch(historySource, /state\.notebookEntries\s*=|state\.notebookEntries\.push/);
   assert.match(agentIndexSource, /biology-notebook\/agent\/index\.js/);
   assert.match(agentIndexSource, /protocol\/agent\/index\.js/);
-  assert.match(selectionContextSource, /from '\.\.\/agent-chat\/public-api\.js'/);
-  assert.doesNotMatch(selectionContextSource, /agent-chat\/state-snapshot\.js/);
+  // Selection insights is a one-shot direct-LLM feature, not a chat turn: it
+  // must not depend on agent-chat at all, public API included.
+  assert.doesNotMatch(selectionContextSource, /agent-chat\//);
+  assert.match(selectionContextSource, /from '\.\.\/\.\.\/services\/direct-llm\.js'/);
 });
   }
 };

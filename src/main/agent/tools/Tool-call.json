@@ -1001,7 +1001,7 @@
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search. Use `journals` to scope the search to named journals; a scope that matches nothing widens to an unfiltered search automatically, so set `allow_unfiltered_fallback` to false only when the user wants those journals or no results at all.",
+    "description": "Delegate paper research to a sub-agent. Pass a compact initial query and the complete research objective in message, including evidence needed and constraints. The sub-agent can refine literature searches, use native web search, download relevant papers with paper_download, and read their extracted Markdown until it has sufficient evidence or cannot fill remaining gaps. Returns validated source line ranges, exact source lines, relevance comments, download results, and gaps. In a delegated research session, this same tool returns database candidates directly for repeated discovery. Metadata-only scheduled tasks remain discovery-only. Saved preferred journals are soft preferences; journals is a hard filter that relaxes on no matches unless allow_unfiltered_fallback is false. If status is running, call again with the returned research_id to wait for the same job; these waits do not start new research. There is no overall research deadline.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -1029,6 +1029,16 @@
         },
         "prefer_recent": {
           "type": "boolean"
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 12000,
+          "description": "Complete research objective from the main agent: questions to answer, evidence needed, and constraints."
+        },
+        "research_id": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "When a prior call returns status running, pass its research_id alone to wait for the same research job. Continue until it completes; do not restart."
         }
       }
     }

@@ -22,7 +22,8 @@ function createMainWindow({
   appIconPath,
   preloadPath,
   onCloseRequested,
-  onClosed
+  onClosed,
+  platform = process.platform
 }) {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -31,6 +32,10 @@ function createMainWindow({
     minHeight: 800,
     title: 'Hikari',
     icon: appIconPath,
+    ...(platform === 'darwin' ? {
+      titleBarStyle: 'hidden',
+      trafficLightPosition: { x: 16, y: 24 }
+    } : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

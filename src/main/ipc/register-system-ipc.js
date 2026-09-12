@@ -21,6 +21,7 @@ function registerSystemIpc(deps = {}) {
     : (() => '');
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = deps.getCodexCliWorkingDirectory;
+  const errorReporting = deps.errorReporting || null;
   const getCodexDesktopMcpSetupPrompt = typeof deps.getCodexDesktopMcpSetupPrompt === 'function'
     ? deps.getCodexDesktopMcpSetupPrompt
     : null;
@@ -258,6 +259,21 @@ function registerSystemIpc(deps = {}) {
         error: cleanText(error?.message || error, 2400) || 'Direct LLM request failed.'
       };
     }
+  });
+
+  ipcMain.on(SYSTEM.REPORT_ERROR, (_event, payload) => {
+    errorReporting?.reportFromRenderer?.(normalizeJsonPayload(payload, {}));
+  });
+
+  ipcMain.handle(SYSTEM.OPEN_LOGS_FOLDER, async () => {
+    const logPath = cleanText(errorReporting?.logPath, 2400);
+    if (!logPath || !shell || typeof shell.openPath !== 'function') {
+      return { ok: false, error: 'Logs folder is unavailable.' };
+    }
+    const folder = require('node:path').dirname(logPath);
+    await require('node:fs/promises').mkdir(folder, { recursive: true }).catch(() => {});
+    const error = await shell.openPath(folder);
+    return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: folder };
   });
 
   ipcMain.handle(SYSTEM.OPEN_EXTERNAL_URL, async (_event, payload) => {

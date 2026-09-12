@@ -2644,5 +2644,47 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   assert.equal(exportCsvButton.hasAttribute('aria-busy'), false);
   assert.match(statuses.at(-1), /Exported/);
 });
+
+test('[EDGE] gel-analysis save keeps the imported file byte for byte next to source.png', async () => {
+  const writes = new Map();
+  const windowObject = {
+    hikariApi: {
+      async storeImportedFile({ targetFolder, fileName, dataBase64 }) {
+        writes.set(fileName, dataBase64);
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      },
+      async writeJsonFile({ targetFolder, fileName }) {
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      }
+    }
+  };
+  const { createGelRecordArtifacts } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records', 'record-artifacts.js'),
+    { window: windowObject, btoa: (value) => Buffer.from(value, 'binary').toString('base64') }
+  );
+  const tiffBytes = Uint8Array.from([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0xff, 0xfe]);
+  const runtime = {
+    originalFile: { name: 'Blot_01.TIF', arrayBuffer: async () => tiffBytes.buffer },
+    currentImage: { name: 'Blot_01.TIF', imageData: { width: 4, height: 4 } },
+    state: { settings: { storagePath: '/root' }, notebookEntries: [] }
+  };
+  const artifacts = createGelRecordArtifacts({
+    runtime,
+    elements: {},
+    deps: { imageDataToDataUrl: () => 'data:image/png;base64,cG5n' }
+  });
+
+  const saved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' });
+  assert.equal(saved.originalImagePath, '/root/Gels/Blot__gel-1/original.tif');
+  assert.equal(Buffer.from(writes.get('original.tif'), 'base64').equals(Buffer.from(tiffBytes)), true);
+  assert.equal(writes.get('source.png'), 'cG5n');
+
+  // Reopening a record leaves no File in memory; a re-save must not lose the path.
+  runtime.originalFile = null;
+  writes.clear();
+  const resaved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' }, saved);
+  assert.equal(resaved.originalImagePath, saved.originalImagePath);
+  assert.equal(writes.has('original.tif'), false);
+});
   }
 };

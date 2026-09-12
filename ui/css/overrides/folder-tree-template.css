@@ -57,7 +57,11 @@
   cursor: pointer;
 }
 
-.folder-tree-template__disclosure:hover,
+/* The row owns the hover fill; suppress the global button hover inside it. */
+.folder-tree-template__disclosure:hover {
+  background: transparent;
+}
+
 .folder-tree-template__disclosure:focus-visible {
   background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
   color: var(--theme-text-strong);

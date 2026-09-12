@@ -17,8 +17,7 @@
 }
 
 .left-rail-template.papers-layout {
-  --papers-comments-width: 336px;
-  --papers-comments-collapsed-width: 28px;
+  --papers-comments-width: 17.5rem;
   --left-rail-main-gap: 22px;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
@@ -54,8 +53,8 @@
 
 .papers-stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(248px, var(--papers-comments-width));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(15.5rem, var(--papers-comments-width));
+  gap: 0;
   align-items: stretch;
   min-width: 0;
   min-height: 0;
@@ -64,7 +63,11 @@
 }
 
 .papers-layout.is-comments-collapsed .papers-stage {
-  grid-template-columns: minmax(0, 1fr) var(--papers-comments-collapsed-width);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.papers-layout.is-comments-collapsed .papers-right-column {
+  display: none;
 }
 
 .papers-center-column {
@@ -107,9 +110,9 @@
 
 .left-rail-template.papers-layout > .papers-library-rail > .papers-library-pinned.left-rail-template__pinned {
   display: grid;
-  gap: 8px;
+  gap: 0;
   align-content: start;
-  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  padding: .75rem var(--app-left-rail-padding-inline, 1rem);
   border-bottom: 1px solid var(--app-left-rail-divider);
 }
 
@@ -118,56 +121,64 @@
   scrollbar-gutter: stable;
 }
 
-.papers-library-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 2px 8px 0;
-}
-
-.papers-library-topbar h2 {
-  margin: 0;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.papers-library-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.papers-library-upload-section {
+  display: grid;
+  gap: .5rem;
+  min-width: 0;
 }
 
 .papers-library-upload-btn.ghost-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 34px;
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
+  gap: .5rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.25rem;
+  margin: 0;
+  padding: .5rem .75rem;
+  border: .0625rem solid var(--theme-border-soft);
+  border-radius: .5rem;
   background: transparent;
-  color: var(--theme-text-muted);
+  color: var(--theme-text);
+  font-size: .8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  cursor: pointer;
 }
 
-.papers-library-upload-btn.ghost-btn:hover,
+.papers-library-upload-btn.ghost-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-accent-soft) 40%, transparent);
+  border-color: var(--theme-border);
+}
+
 .papers-library-upload-btn.ghost-btn:focus-visible {
-  background: var(--theme-surface-subtle);
-  color: var(--theme-text-strong);
+  outline: .125rem solid var(--theme-accent);
+  outline-offset: .1875rem;
+}
+
+.papers-library-upload-btn.ghost-btn:disabled {
+  color: var(--theme-text-muted);
+  background: transparent;
+  cursor: default;
+  opacity: .65;
 }
 
 .papers-library-upload-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 1rem;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.papers-library-rail.is-file-drop-active .papers-library-upload-btn:not(:disabled) {
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
 }
 
 .papers-library-status {

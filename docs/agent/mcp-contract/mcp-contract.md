@@ -234,6 +234,14 @@ Input schema:
 
 `action` defaults to `search`. Search requires `query` or at least one scope filter. `get` requires `entry_id` and returns `detail: "full"`. Permission failures return `status: "partial"` or `status: "permission_denied"`, with recovery guidance in `access.user_action`.
 
+### `literature_search`
+
+For interactive Codex research, the main agent sends one compact `query` and the complete research objective in `message` (up to 12,000 characters). A research sub-agent then refines searches, uses native web search, calls `paper_download`, and reads extracted Markdown until the evidence is sufficient or remaining gaps cannot be resolved. Its searches return database candidates directly without recursively creating another researcher.
+
+The app passes a private research-session ID through the MCP snapshot. Only an active session bypasses the host's one-search-per-turn guard. Downloads retain the original project or collection, reuse existing local Markdown, and are recorded by the app. The sub-agent returns paper paths, physical line ranges, and relevance comments; the app accepts paths only from successful tool results in that session and hydrates exact source lines. Responses include `loaded_context_blocks`, `analysis_comments`, `downloaded_papers`, and unresolved `notes`. The main agent does not download the returned papers again.
+
+There is no fixed search-round limit or overall research deadline. The delegated CLI receives `timeout_ms: null`. Each MCP call waits at most 45 seconds for the same research job, then returns `status: running` and a `research_id`; the main agent keeps calling `literature_search` with that ID until completion. Each wait fits inside the transport timeout without stopping the researcher. Final evidence remains capped at 50 blocks. Runtime failures preserve completed download results. Metadata-only scheduled tasks with `deny_paper_download: true` remain discovery-only. The separate single-paper `paper_analysis` workflow is unchanged.
+
 ### `protocol_lookup`
 
 Direct MCP convenience wrapper for local Hikari protocol records. It calls `protocol-matching` with the query as the protocol candidate and returns ranked protocol matches plus the selected protocol when available.

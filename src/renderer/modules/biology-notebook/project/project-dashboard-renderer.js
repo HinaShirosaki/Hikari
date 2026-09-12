@@ -66,7 +66,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
       });
     });
     return labels.map((label) => `
-      <span class="project-contribution-month-label" style="grid-column: ${label.column} / span 3;">${escapeText(label.label)}</span>
+      <span class="project-contribution-month-label" style="grid-column: ${label.column} / span ${Math.min(3, CONTRIBUTION_WEEK_COUNT - label.column + 1)}; grid-row: 1;">${escapeText(label.label)}</span>
     `).join('');
   }
 
@@ -136,7 +136,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         <textarea
           class="project-description-input"
           data-project-description="${escapeText(project?.id || '')}"
-          rows="8"
+          rows="6"
           aria-label="Project description"
           placeholder="Add project notes, goals, or context"
         >${escapeText(project?.description || '')}</textarea>
@@ -224,7 +224,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
             <label class="project-paper-finder-requirements">
               <span>Requirements <span class="small-note">(optional)</span></span>
               <textarea
-                rows="5"
+                rows="3"
                 maxlength="12000"
                 data-paper-finder-requirements
                 placeholder="e.g. recent primary research on delivery efficiency and off-target effects"
@@ -367,15 +367,15 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
           <span class="project-eyebrow">Project Activity</span>
           <h2>${escapeText(heading)}</h2>
         </div>
-        <div class="project-experiment-suggestions">
-          <button type="button" class="ghost-btn hikari-agent-action" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
-          <span class="small-note" role="status" aria-live="polite" data-experiment-suggestion-status></span>
-        </div>
-        ${includeEditAction ? `
-          <div class="project-dashboard-actions">
-            <button type="button" class="ghost-btn" data-project-edit="${escapeText(project.id)}">Edit Project</button>
+        <div class="project-dashboard-actions">
+          <div class="project-experiment-suggestions">
+            <button type="button" class="ghost-btn hikari-agent-action" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
           </div>
-        ` : ''}
+          ${includeEditAction ? `
+            <button type="button" class="ghost-btn" data-project-edit="${escapeText(project.id)}">Edit Project</button>
+          ` : ''}
+        </div>
+        <span class="small-note project-experiment-suggestion-status" role="status" aria-live="polite" data-experiment-suggestion-status></span>
       </section>
       ${renderStats(summary)}
       ${renderProjectOverview(project, summary, { headingId: contributionHeadingId })}

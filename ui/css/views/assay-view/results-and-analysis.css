@@ -29,7 +29,8 @@
   align-content: stretch;
 }
 
-.assay-axis-switch .assay-mode-switch {
+.assay-axis-switch .assay-mode-switch,
+.assay-rail-mode-switch .assay-mode-switch {
   justify-self: stretch;
   width: 100%;
   box-sizing: border-box;
@@ -38,7 +39,8 @@
   border-radius: 10px;
 }
 
-.assay-axis-switch .assay-mode-switch > button {
+.assay-axis-switch .assay-mode-switch > button,
+.assay-rail-mode-switch .assay-mode-switch > button {
   flex: 1 1 0;
   min-width: 0;
   box-sizing: border-box;
@@ -843,7 +845,7 @@
   }
 
   .left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     align-self: start;
     height: auto;
     min-height: auto;
@@ -852,7 +854,7 @@
   }
 
   .left-rail-template.assay-results-layout > .assay-results-controls-panel {
-    grid-template-rows: auto;
+    grid-template-rows: auto auto;
     align-self: start;
     height: auto;
     min-height: auto;

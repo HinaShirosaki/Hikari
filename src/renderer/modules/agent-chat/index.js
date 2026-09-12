@@ -1,3 +1,4 @@
+import { trimText } from './shared.js';
 import { createAgentChatSessionManager } from './session-manager.js';
 import { createAgentChatShellController } from './shell-controller.js';
 import { createAgentPayloadBuilder } from './payload-builder.js';
@@ -114,6 +115,9 @@ export function initAgentChat({
     persist,
     createId,
     safeText,
+    isNewChatDisabled: () => runtime.sendPending === true
+      || runtime.sessionTransitionPending === true
+      || (runtime.inFlight && !trimText(state.agentChat?.currentSessionId, 120)),
     sessionRail: dom.sessionRail,
     sessionList: dom.sessionList,
     sessionContextMenu: dom.sessionContextMenu,

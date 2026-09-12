@@ -630,43 +630,30 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-color: var(--theme-accent);
 }
 
-.sequence-viewer-cloning-design-edit-summary {
-  margin-top: 10px;
-}
-
-.sequence-viewer-cloning-design-edit-grid,
 .sequence-viewer-cloning-design-summary-grid {
   display: grid;
   gap: 8px;
 }
 
-.sequence-viewer-cloning-design-edit-grid div,
 .sequence-viewer-cloning-design-summary-grid div {
   display: grid;
   gap: 3px;
 }
 
-.sequence-viewer-cloning-design-edit-grid strong,
 .sequence-viewer-cloning-design-summary-grid strong {
   color: var(--theme-text-strong);
   font-size: 0.75rem;
 }
 
-.sequence-viewer-cloning-design-edit-grid span,
 .sequence-viewer-cloning-design-summary-grid span {
   color: var(--theme-text);
   font-size: 0.86rem;
 }
 
-.sequence-viewer-cloning-design-seq,
 .sequence-viewer-cloning-design-primer-seq {
   font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
   letter-spacing: 0;
   word-break: break-all;
-}
-
-.sequence-viewer-cloning-design-range-grid {
-  margin-top: 10px;
 }
 
 .sequence-viewer-cloning-design-result {

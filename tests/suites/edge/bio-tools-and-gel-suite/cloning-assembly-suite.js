@@ -1428,7 +1428,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(assembled.name, 'pET28a · 6xHis–TEV–MDM2(E45G)');
     });
 
-    test('[EDGE] editing a saved sequence creates a named local derivative instead of overwriting its entry', async () => {
+    for (const activeEntryStatus of ['saved', 'temporary']) test(`[EDGE] editing a ${activeEntryStatus} sequence creates a named local derivative instead of overwriting its entry`, async () => {
       const workflow = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-workflow.js')
       );
@@ -1445,7 +1445,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         selectedRecordIndex: 0,
         selectedFeatureIndex: -1,
         activeEntryId: 'saved_mdm2',
-        activeEntryStatus: 'saved',
+        activeEntryStatus,
         sequenceEditDesignSource: null,
         cloningDesign: {},
         warnings: []
@@ -1958,8 +1958,8 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       ));
       const vector = filler(3000, 4007);
       const gene = filler(600, 4101);
-      // Tags and linker are reverse translated, so they exist only as ordered DNA;
-      // the gene came off pDonor. One template for the lot cannot prime the 5' end.
+      // The gene came off pDonor; reverse-translated tags/linkers are additions
+      // shared by the gene and vector primers, not template-binding sequence.
       const tags = 'ATGCATCATCATCATCATCAC';
       const linker = 'GGCGGAGGCGGTTCTGGCGGAGGCGGTTCT';
       const insert = `${tags}${linker}${gene}TAA`;
@@ -2004,12 +2004,15 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       });
       assert.equal(split.feasible, true);
       assert.equal(split.warnings.some((warning) => /names no PCR template/.test(warning)), false);
-      // The gene is amplified off pDonor; the tags/linker become an ordered block.
+      // The gene is amplified off pDonor; the short tags/linker use primer tails.
       const templates = split.plans[0].plan.orderedFragmentMap.fragments
         .filter((fragment) => (fragment.role || fragment.type) !== 'backbone')
         .map((fragment) => fragment.name);
-      assert.equal(templates.length, 2);
-      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['Synthetic block', 'POI']);
+      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['POI']);
+      assert.equal(split.primers.length, 4);
+      assert.equal(split.primers.every((primer) => primer.length <= 60), true);
+      assert.equal(split.warnings.some((warning) => /must be ordered as synthetic DNA/.test(warning)), false);
+      assert.equal(split.plans[0].plan.expectedJunctionLogic.some((junction) => junction.redistributedFlankLength > 0), true);
     });
 
     test('[EDGE] cloning UI keeps all seven supported methods available', () => {

@@ -40,6 +40,15 @@ const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
     ]
   },
   {
+    id: 'selection-insights',
+    label: 'Selection insights',
+    description: 'Right-click answers for selected protocol or notebook text.',
+    tasks: [
+      { id: 'what-is-it', label: 'What is it', requestKind: 'text' },
+      { id: 'where-to-buy', label: 'Where to buy it', requestKind: 'text', expectJson: true, enableWebSearch: true }
+    ]
+  },
+  {
     id: 'inventory',
     label: 'Inventory',
     description: 'Inventory import and mapping assistance.',

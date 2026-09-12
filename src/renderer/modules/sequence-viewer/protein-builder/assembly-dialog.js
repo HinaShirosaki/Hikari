@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../lib/html.js';
 import { cleanText } from '../shared.js';
-import { buildStoredBackboneDisplayName, formatStoredBackboneDate } from './assembly-payload.js';
+import { buildStoredBackboneDisplayName } from './assembly-payload.js';
 import { escapeAttribute } from './row-factory.js';
 
 export function installProteinBuilderAssemblyDialog(ctx) {
@@ -24,35 +24,22 @@ export function installProteinBuilderAssemblyDialog(ctx) {
       } else {
         elements.proteinBuilderAssemblyList.innerHTML = state.storedBackbones.map((backbone) => {
           const isActive = cleanText(backbone?.id, 400) === cleanText(state.selectedBackboneId, 400);
-          const variantLabel = backbone?.variantMode === 'restriction' ? 'Restriction' : 'Gibson / HR';
-          const updatedLabel = formatStoredBackboneDate(backbone?.updatedAt);
-          const metaParts = [
-            `${Math.max(0, Number(backbone?.backboneLength) || 0).toLocaleString()} bp backbone`,
-            Math.max(0, Number(backbone?.insertLength) || 0)
-              ? `${Math.max(0, Number(backbone?.insertLength) || 0).toLocaleString()} bp prior insert`
-              : '',
-            cleanText(backbone?.sourceKind, 120) === 'library_entry'
-              ? `${Math.max(0, Number(backbone?.featureCount) || 0).toLocaleString()} feature${Math.max(0, Number(backbone?.featureCount) || 0) === 1 ? '' : 's'}`
-              : '',
-            variantLabel,
-            updatedLabel ? `Updated ${updatedLabel}` : ''
-          ].filter(Boolean);
-          const noteParts = [
-            cleanText(backbone?.sourceKind, 120) === 'library_entry'
-              ? 'Saved Sequence Library entry'
-              : 'Recognized Protein Builder backbone',
-            cleanText(backbone?.sourceRecordName, 160) ? `Source: ${cleanText(backbone?.sourceRecordName, 160)}` : '',
-            cleanText(backbone?.promoterName, 160) ? `Promoter: ${cleanText(backbone?.promoterName, 160)}` : ''
-          ].filter(Boolean);
+          const name = buildStoredBackboneDisplayName(backbone);
+          const source = cleanText(backbone?.sourceRecordName, 160);
+          const meta = [
+            `${Math.max(0, Number(backbone?.backboneLength) || 0).toLocaleString()} bp`,
+            backbone?.variantMode === 'restriction' ? 'Restriction' : 'Gibson / HR',
+            cleanText(backbone?.promoterName, 160),
+            source && !name.includes(source) ? `from ${source}` : ''
+          ].filter(Boolean).join(' \u00b7 ');
           return `
             <button
               type="button"
               class="sequence-viewer-backbone-dialog-candidate${isActive ? ' sequence-viewer-backbone-dialog-candidate-active' : ''}"
               data-protein-builder-backbone-id="${escapeAttribute(backbone?.id || '')}"
             >
-              <span class="sequence-viewer-backbone-dialog-candidate-name">${escapeHtml(buildStoredBackboneDisplayName(backbone))}</span>
-              <span class="sequence-viewer-backbone-dialog-candidate-meta">${escapeHtml(metaParts.join(' | '))}</span>
-              <span class="sequence-viewer-backbone-dialog-candidate-note">${escapeHtml(noteParts.join(' | ') || 'Stored Protein Builder backbone.')}</span>
+              <span class="sequence-viewer-backbone-dialog-candidate-name">${escapeHtml(name)}</span>
+              <span class="sequence-viewer-backbone-dialog-candidate-meta">${escapeHtml(meta)}</span>
             </button>
           `;
         }).join('');

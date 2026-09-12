@@ -52,14 +52,21 @@
         <h1 class="sr-only">Hikari</h1>
         <div class="topbar-context">
           <div class="topbar-heading-row">
-            <p id="page-title" class="topbar-page-title">Home</p>
-            <div id="topbar-view-actions" class="topbar-view-actions" hidden>
-              <div id="topbar-assay-mode-switch" class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
-                <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Setup</button>
-                <button type="button" id="assay-mode-results-btn" class="ghost-btn">Analyze</button>
-              </div>
-              <p id="assay-mode-note" class="small-note" aria-live="polite"></p>
-              <button type="button" id="biology-notebook-header-add-project-btn" class="ghost-btn biology-notebook-add-project-btn" aria-label="Add a project" title="Add a project">+</button>
+            <div
+              id="page-title"
+              class="topbar-timer"
+              role="progressbar"
+              aria-label="Active timer"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              hidden
+            >
+              <svg class="topbar-timer__ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+                <circle class="topbar-timer__track" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+                <circle id="topbar-timer-progress" class="topbar-timer__progress" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+              </svg>
+              <span id="topbar-timer-time" class="topbar-timer__time" aria-hidden="true">--:--</span>
             </div>
           </div>
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
@@ -68,17 +75,18 @@
       <nav class="app-dock" aria-label="Primary navigation">
         <div id="app-dock-nav" class="app-dock-nav"></div>
         <div class="app-dock-divider" aria-hidden="true"></div>
-        <button id="app-more-btn" class="app-dock-btn app-dock-btn-more" type="button" aria-label="More apps" title="More apps" aria-haspopup="menu" aria-expanded="false" aria-controls="app-more-menu">
+        <button id="app-more-btn" class="app-dock-btn app-dock-btn-more" type="button" aria-label="More modules" title="More modules" aria-haspopup="menu" aria-expanded="false" aria-controls="app-more-menu">
           <span class="app-nav-icon" aria-hidden="true">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="6.5" cy="12" r="1.7" />
-              <circle cx="12" cy="12" r="1.7" />
-              <circle cx="17.5" cy="12" r="1.7" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="14" rx="1" />
+              <rect width="7" height="7" x="3" y="14" rx="1" />
             </svg>
           </span>
-          <span class="sr-only">More apps</span>
+          <span class="sr-only">More modules</span>
         </button>
-        <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
+        <div id="app-more-menu" class="app-more-menu" role="menu" aria-label="More modules" hidden></div>
       </nav>
       <div class="topbar-tools">
         <div class="topbar-history-controls" role="group" aria-label="Undo and redo">
@@ -96,7 +104,15 @@
           </button>
         </div>
         <div class="topbar-search-shell">
-          <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+          <span class="search-field topbar-search-field">
+            <input id="topbar-search" type="search" aria-label="Search modules and records" aria-hidden="true" inert />
+            <button id="topbar-search-toggle" class="search-field__lens" type="button" aria-label="Open search" title="Search" aria-expanded="false" aria-controls="topbar-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <circle cx="10.5" cy="10.5" r="6.5"></circle>
+                <path d="m15.4 15.4 4.6 4.6"></path>
+              </svg>
+            </button>
+          </span>
           <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
         </div>
       </div>
