@@ -53,11 +53,17 @@
               </div>
               <div class="form-actions">
                 <button type="button" id="protocol-editor-back-btn" class="ghost-btn" hidden>Back to List</button>
-                <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
               </div>
             </div>
             <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
-              <button type="button" id="open-protocol-json-import-btn" class="ghost-btn">Import Protocol JSON</button>
+              <button type="button" id="open-protocol-json-import-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Import Protocol JSON" aria-haspopup="dialog" aria-controls="protocol-json-import-overlay" title="Import Protocol JSON">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 3v11"></path>
+                  <path d="m8 10 4 4 4-4"></path>
+                  <path d="M5 15v4h14v-4"></path>
+                </svg>
+                <span class="sr-only">Import Protocol JSON</span>
+              </button>
             </div>
             <form id="protocol-form" class="stack-form">
               <label>
@@ -77,10 +83,18 @@
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
                   <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="sample" aria-pressed="false">sample</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid" aria-pressed="false">plasmid</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein" aria-pressed="false">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="compound" aria-pressed="false">compound</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="cell line" aria-pressed="false">cell line</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="strain" aria-pressed="false">strain</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="antibody" aria-pressed="false">antibody</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="enzyme" aria-pressed="false">enzyme</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="reagent" aria-pressed="false">reagent</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume" aria-pressed="false">volume</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer" aria-pressed="false">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="concentration" aria-pressed="false">concentration</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature" aria-pressed="false">temperature</button>
                     <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time" aria-pressed="false">time</button>
                   </div>

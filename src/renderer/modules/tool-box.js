@@ -4,10 +4,8 @@ import { initPeptideTool } from './sequence-viewer/calculations/ui/peptide-tool.
 import { initTranslationTool } from './sequence-viewer/calculations/ui/translation-tool.js';
 import { initOligoTool } from './sequence-viewer/calculations/ui/oligo-tool.js';
 import { initExtinctionTool } from './sequence-viewer/calculations/ui/extinction-tool.js';
-import { initQpcrTool } from './tool-box/qpcr-ui.js';
 import { initBufferTool } from './tool-box/buffer-ui.js';
 import { initFixedReactionTool } from './tool-box/fixed-reaction-ui.js';
-import { initCrisprTool } from './sequence-viewer/calculations/ui/crispr-tool.js';
 import { toNumber } from './tool-box/common.js';
 import {
   concentrationToM,
@@ -131,10 +129,8 @@ export function initToolBox(options = {}) {
   initTranslationTool(sharedOptions);
   initOligoTool(sharedOptions);
   initExtinctionTool(sharedOptions);
-  initQpcrTool(sharedOptions);
   initBufferTool(sharedOptions);
   initFixedReactionTool(sharedOptions);
-  initCrisprTool(sharedOptions);
 
   return viewManager;
 }

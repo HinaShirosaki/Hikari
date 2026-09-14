@@ -5,7 +5,6 @@ import {
 import { normalizePaperAgentChatSessions } from './agent-chat-normalizer.js';
 import {
   normalizeSampleInventoryLocations,
-  normalizeSampleTypeHidden,
   normalizeSampleTypeLabels
 } from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
@@ -202,7 +201,6 @@ function normalizeSettings(source) {
       : defaultState.settings.inventoryLocations,
     sampleInventoryLocations: normalizeSampleInventoryLocations(rawSettings.sampleInventoryLocations),
     sampleTypeLabels: normalizeSampleTypeLabels(rawSettings.sampleTypeLabels),
-    sampleTypeHidden: normalizeSampleTypeHidden(rawSettings.sampleTypeHidden),
     preferredJournals,
     preferredJournal: preferredJournals.join('; '),
     plugins: mergeBundledPluginEntries(normalizePluginEntries(rawSettings.plugins)),

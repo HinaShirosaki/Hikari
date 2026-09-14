@@ -103,7 +103,6 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
   const list = new MockElement('passage-list');
   const panelList = new MockElement('passage-panel-list');
   const addBtn = new MockElement('passage-add');
-  const openBtn = new MockElement('passage-open');
   const closeBtn = new MockElement('passage-close');
   const dialogOverlay = new MockElement('passage-overlay');
   const dialogForm = new MockElement('passage-form');
@@ -133,7 +132,6 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
       list,
       panelList,
       addBtn,
-      openBtn,
       closeBtn,
       dialogOverlay,
       dialogForm,

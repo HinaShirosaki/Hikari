@@ -52,7 +52,8 @@ const SYSTEM = Object.freeze({
   APP_CLOSE_REQUESTED: 'system:app-close-requested',
   APP_CLOSE_RESPONSE: 'system:app-close-response',
   REPORT_ERROR: 'system:report-error',
-  OPEN_LOGS_FOLDER: 'system:open-logs-folder'
+  OPEN_LOGS_FOLDER: 'system:open-logs-folder',
+  OPEN_THIRD_PARTY_NOTICES: 'system:open-third-party-notices'
 });
 
 const PLUGINS = Object.freeze({

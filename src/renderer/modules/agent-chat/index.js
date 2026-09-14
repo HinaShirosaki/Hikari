@@ -241,7 +241,7 @@ export function initAgentChat({
     return true;
   }
 
-  async function submitExternalMessage(message) {
+  async function submitExternalMessage(message, options = {}) {
     const text = String(message || '').trim();
     if (!text) {
       return { ok: false, reason: 'empty' };
@@ -278,12 +278,12 @@ export function initAgentChat({
       const request = requestController.sendMessage({
         onAccepted: (details) => {
           accepted = true;
-          resolve({ ok: true, ...details });
+          if (!options.waitForCompletion) resolve({ ok: true, ...details });
         }
       });
       Promise.resolve(request)
         .then((result) => {
-          if (!accepted) {
+          if (!accepted || options.waitForCompletion) {
             clearInjectedDraft();
             resolve(result?.ok ? result : {
               ok: false,
@@ -293,7 +293,7 @@ export function initAgentChat({
         })
         .catch((error) => {
           console.warn('External Agent message could not be submitted:', error);
-          if (!accepted) {
+          if (!accepted || options.waitForCompletion) {
             clearInjectedDraft();
             resolve({ ok: false, reason: 'session_error' });
           }

@@ -112,7 +112,6 @@ export const defaultState = {
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     sampleInventoryLocations: [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS],
     sampleTypeLabels: { ...DEFAULT_SAMPLE_TYPE_LABELS },
-    sampleTypeHidden: [],
     preferredJournals: [],
     preferredJournal: '',
     dashboard: {

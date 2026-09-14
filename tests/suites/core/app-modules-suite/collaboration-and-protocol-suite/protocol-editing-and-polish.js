@@ -16,6 +16,25 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
     false,
     'preset buttons must not be descendants of a label that forwards distant clicks'
   );
+
+  const presetNames = [...viewSource.matchAll(/data-protocol-placeholder-preset="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(presetNames, [
+    'sample',
+    'plasmid',
+    'protein',
+    'compound',
+    'cell line',
+    'strain',
+    'antibody',
+    'enzyme',
+    'reagent',
+    'volume',
+    'buffer',
+    'concentration',
+    'temperature',
+    'time'
+  ]);
 });
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([
@@ -24,7 +43,6 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
     'protocol-view-panel',
     'create-protocol-btn',
     'protocol-editor-back-btn',
-    'protocol-cancel-btn',
     'protocol-view-back-btn',
     'protocol-editor-heading',
     'protocol-view-title',

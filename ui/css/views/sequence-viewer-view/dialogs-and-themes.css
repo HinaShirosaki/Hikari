@@ -320,8 +320,7 @@
 body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-cloning-design-toolbar,
 body.theme-night .sequence-viewer-protein-builder-panel,
-body.theme-night .sequence-viewer-cloning-design-result-section,
-body.theme-night .sequence-viewer-alignment-panel {
+body.theme-night .sequence-viewer-cloning-design-result-section {
   border-color: var(--sequence-viewer-night-border);
   background: var(--theme-surface);
 }

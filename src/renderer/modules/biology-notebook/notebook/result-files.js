@@ -109,35 +109,6 @@ function createNotebookResultFiles({
     notebookResult.value = current ? `${current}\n${cleanLine}` : cleanLine;
   }
 
-  function normalizeNotebookTargetText(value) {
-    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
-  }
-
-  function buildAgentAppendText(proposal = {}) {
-    const sectionTitle = String(proposal.section_title || proposal.sectionTitle || '').trim();
-    const content = String(proposal.content_markdown || proposal.contentMarkdown || '').trim();
-    if (!content) {
-      return '';
-    }
-    const sourceLines = (Array.isArray(proposal.sources) ? proposal.sources : [])
-      .map((source) => {
-        const payload = source && typeof source === 'object' ? source : {};
-        const label = String(payload.label || payload.record_id || payload.recordId || payload.url || '').trim();
-        const recordId = String(payload.record_id || payload.recordId || '').trim();
-        const detail = String(payload.detail || '').trim();
-        const url = String(payload.url || '').trim();
-        const identity = [label, recordId && recordId !== label ? `record ${recordId}` : ''].filter(Boolean).join(' — ');
-        return [identity, detail, url].filter(Boolean).join(' — ');
-      })
-      .filter(Boolean);
-    return [
-      sectionTitle ? `## ${sectionTitle}` : '',
-      content,
-      sourceLines.length ? '### Sources' : '',
-      ...sourceLines.map((line) => `- ${line}`)
-    ].filter(Boolean).join('\n');
-  }
-
   // Overlapping appends both read notebookResult.value before either writes it,
   // so a double-click duplicates the text and two proposals lose one of the two.
   // Queued, the second run sees the saved agentAppendProposalIds and no-ops.
@@ -163,3 +134,32 @@ function createNotebookResultFiles({
 }
 
 export { createNotebookResultFiles };
+
+export function normalizeNotebookTargetText(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+export function buildAgentAppendText(proposal = {}) {
+    const sectionTitle = String(proposal.section_title || proposal.sectionTitle || '').trim();
+    const content = String(proposal.content_markdown || proposal.contentMarkdown || '').trim();
+    if (!content) {
+      return '';
+    }
+    const sourceLines = (Array.isArray(proposal.sources) ? proposal.sources : [])
+      .map((source) => {
+        const payload = source && typeof source === 'object' ? source : {};
+        const label = String(payload.label || payload.record_id || payload.recordId || payload.url || '').trim();
+        const recordId = String(payload.record_id || payload.recordId || '').trim();
+        const detail = String(payload.detail || '').trim();
+        const url = String(payload.url || '').trim();
+        const identity = [label, recordId && recordId !== label ? `record ${recordId}` : ''].filter(Boolean).join(' — ');
+        return [identity, detail, url].filter(Boolean).join(' — ');
+      })
+      .filter(Boolean);
+    return [
+      sectionTitle ? `## ${sectionTitle}` : '',
+      content,
+      sourceLines.length ? '### Sources' : '',
+      ...sourceLines.map((line) => `- ${line}`)
+    ].filter(Boolean).join('\n');
+  }

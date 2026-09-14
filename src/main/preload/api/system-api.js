@@ -60,6 +60,7 @@ function createSystemApi(ipcRenderer, deps = {}) {
     },
     reportError: (payload) => ipcRenderer.send(SYSTEM.REPORT_ERROR, payload),
     openLogsFolder: () => ipcRenderer.invoke(SYSTEM.OPEN_LOGS_FOLDER),
+    openThirdPartyNotices: () => ipcRenderer.invoke(SYSTEM.OPEN_THIRD_PARTY_NOTICES),
     writeTextToClipboard: (value) => writeTextToClipboard(deps.clipboard, value),
     readChemicalClipboard: () => readChemicalClipboard(deps.clipboard, deps.nativeImage)
   };

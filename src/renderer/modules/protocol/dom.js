@@ -10,7 +10,6 @@ export function getProtocolDom(documentRef = document) {
     createProtocolBtn: doc.getElementById('create-protocol-btn'),
     emptyCreateProtocolBtn: doc.querySelector?.('[data-protocol-empty-create]') || null,
     protocolEditorBackBtn: doc.getElementById('protocol-editor-back-btn'),
-    protocolCancelBtn: doc.getElementById('protocol-cancel-btn'),
     protocolViewBackBtn: doc.getElementById('protocol-view-back-btn'),
     protocolViewEditBtn: doc.getElementById('protocol-view-edit-btn'),
     protocolExportPdfBtn: doc.getElementById('protocol-export-pdf-btn'),

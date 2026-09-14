@@ -65,7 +65,7 @@ export function createSequenceEditActions(ctx) {
       donorEntryId: payload?.donorEntryId,
       donorName: payload?.donorName
     });
-    renderAfterEdit();
+    renderAfterEdit({ preserveScroll: true });
     await actions.persistFeatureMutation(nextRecord, buildSequenceEditStatus(edit.mode, { start: edit.start, end: edit.end }, edit.replacement.length));
   }
 

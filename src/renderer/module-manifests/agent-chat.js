@@ -1,3 +1,4 @@
+import { createSavedNotebookAppend } from '../modules/biology-notebook/agent/saved-append.js';
 import { initAgentChat } from '../modules/agent-chat/index.js';
 
 function createAgentChatOptions({
@@ -24,6 +25,8 @@ function createAgentChatOptions({
       rendererServices.protocol.handleProtocolsChanged();
       modules.protocol?.renderList?.();
     },
+    onAppendNotebookEntry: createSavedNotebookAppend({ state, persist,
+      onChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged }),
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

@@ -213,6 +213,6 @@ assert.equal(quickLogState.settings.dashboard.quickLogDraft, '');
 assert.equal(quickLogElements.quickLogInput.value, '');
 assert.equal(quickLogPersists, 2);
 assert.equal(quickLogRenders, 1);
-assert.equal(quickLogElements.quickLogStatus.textContent, 'Logged and sent to Assistant.');
+assert.equal(quickLogElements.quickLogStatus.textContent, 'Experiment logged. Continue notebook review in the Home conversation.');
 
 console.log('home dashboard interaction selfcheck OK');

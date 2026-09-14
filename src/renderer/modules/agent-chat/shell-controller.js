@@ -21,6 +21,7 @@ const QUICK_PROMPT_PRESETS = {
       }
     ]
   },
+  home: { ariaLabel: 'Notebook experiment', placeholder: 'Add experiment details…', prompts: [] },
   paper: {
     ariaLabel: 'Common paper prompts',
     placeholder: 'Ask Hikari about this paper.',
@@ -251,7 +252,7 @@ export function createAgentChatShellController({
       ? state.agentChatContext
       : {};
     const scopeType = trimText(context.scopeType, 80);
-    if (scopeType === 'notebook' || scopeType === 'paper' || scopeType === 'assay') {
+    if (scopeType === 'home' || scopeType === 'notebook' || scopeType === 'paper' || scopeType === 'assay') {
       return scopeType;
     }
     return 'workspace';

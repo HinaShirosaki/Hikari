@@ -1,3 +1,4 @@
+import { createHomeNotebookAgent } from '../modules/home-dashboard/notebook-agent.js';
 import { initHomeDashboard } from '../modules/home-dashboard.js';
 
 export const homeDashboardManifest = {
@@ -13,7 +14,10 @@ export const homeDashboardManifest = {
     showView,
     views,
     modules,
-    apiBridge
+    apiBridge,
+    rootDocument,
+    windowObject,
+    rendererServices
   }) => ({
     state,
     persist,
@@ -21,21 +25,9 @@ export const homeDashboardManifest = {
     safeText,
     onOpenNotebook: () => showView(views.BIOLOGY_NOTEBOOK),
     api: apiBridge,
-    onSendQuickLogToAgent: async (message) => {
-      const draft = String(message || '').trim();
-      if (!draft) {
-        return { ok: false, reason: 'empty' };
-      }
-      const submitExternalMessage = modules.agentChat?.submitExternalMessage;
-      if (typeof submitExternalMessage !== 'function') {
-        return { ok: false, reason: 'unavailable' };
-      }
-      const result = await submitExternalMessage(draft);
-      if (result?.ok) {
-        showView(views.AGENT);
-      }
-      return result;
-    }
+    onSendQuickLogToAgent: createHomeNotebookAgent({
+      state, persist, createId, safeText, rootDocument, windowObject, rendererServices, modules
+    })
   }),
   render: ({ modules }) => modules.homeDashboard?.render()
 };

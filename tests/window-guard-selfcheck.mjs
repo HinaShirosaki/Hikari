@@ -49,9 +49,9 @@ function harness(platform = process.platform) {
       listeners.get('will-navigate')({ preventDefault() { prevented = true; } }, url);
       return prevented;
     },
-    permission: () => {
+    permission: (name = 'media') => {
       let allowed = null;
-      permissionHandler({}, 'media', (value) => { allowed = value; });
+      permissionHandler({}, name, (value) => { allowed = value; });
       return allowed;
     }
   };
@@ -95,8 +95,10 @@ function harness(platform = process.platform) {
   assert.equal(h.navigate('file:///other.html'), true, 'sideways file navigation must be blocked');
 }
 
-// No feature asks for camera/mic/geolocation.
+// No feature asks for camera/mic/geolocation; copy buttons need the sanitized clipboard write.
 assert.equal(harness().permission(), false, 'permission requests must be refused');
+assert.equal(harness().permission('clipboard-read'), false, 'clipboard read must stay refused');
+assert.equal(harness().permission('clipboard-sanitized-write'), true, 'navigator.clipboard.writeText must be allowed');
 
 // Only macOS puts native window controls inside the app's header row.
 const macWindow = harness('darwin').windowOptions;

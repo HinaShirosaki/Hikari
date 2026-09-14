@@ -5,6 +5,7 @@ const DRAFT_SAVE_DELAY_MS = 400;
 
 function handoffErrorMessage(result) {
   const reason = String(result?.reason || '').trim();
+  if (reason === 'request_error') return 'Notebook preparation failed. Your experiment draft was kept.';
   if (reason === 'busy') {
     return 'Assistant is busy in this chat. Your experiment draft was kept.';
   }
@@ -188,7 +189,7 @@ export function initQuickLogWidget({
     }
     handoffPending = true;
     syncControls();
-    setStatus('Sending to Assistant…');
+    setStatus('Preparing notebook page…');
     let result;
     try {
       result = await onSendQuickLogToAgent(value);
@@ -208,7 +209,7 @@ export function initQuickLogWidget({
       return;
     }
     render();
-    setStatus('Logged and sent to Assistant.');
+    setStatus('Experiment logged. Continue notebook review in the Home conversation.');
   }
 
   function onKeydown(event) {

@@ -372,7 +372,10 @@ function createMainServices(context = {}) {
     getCodexDesktopMcpSetupPrompt: codex.getCodexDesktopMcpSetupPrompt,
     directLlmRegistry: agents.directLlmRegistry,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
-    errorReporting
+    errorReporting,
+    // Packaged builds ship the notices as an extraResource (see forge.config.js);
+    // shell.openPath cannot open a file that lives inside app.asar.
+    thirdPartyNoticesPath: path.join(app.isPackaged ? processObject.resourcesPath : projectRoot, 'THIRD-PARTY-NOTICES.md')
   });
 
   // Every startup step below is best-effort: a failed integration is logged

@@ -217,6 +217,19 @@ function normalizeAssayAgentContext(context = {}) {
 
 function normalizeScopeContext(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
+  if (scopeType === 'home') {
+    return {
+      scopeType: 'home',
+      sessionPrompt: [
+        'This is the Home Experiment log. The user clicked Prepare notebook page: interpret their observation as a request to record an experiment in Biology Notebook.',
+        'Use agent judgment to match the experiment to saved protocols and the selected project. Use protocol_lookup and notebook_draft to prepare a structured page for review. Ask a focused question if the project or protocol is ambiguous.',
+        'If the user explicitly names an existing notebook page, use notebook_lookup then notebook_append to prepare an append proposal for that page.',
+        'Do not redirect to inventory or ask whether to make a notebook entry; that intent is already established. Do not claim a page was saved until the application confirms it.',
+        'Preserve exactly what the user reports. Never invent performed steps, conditions, dates, measurements, or outcomes. Protocol defaults describe planned steps, not evidence of completed work. Leave unknown experimental facts unresolved and ask for necessary details.',
+        'Use the available notebook tools to produce actual reviewable proposals, not just prose saying a proposal is ready.'
+      ].join('\n')
+    };
+  }
   if (scopeType === 'notebook') {
     return normalizeNotebookAgentContext(context);
   }

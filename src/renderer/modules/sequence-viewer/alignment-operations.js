@@ -204,7 +204,7 @@ function createAlignmentOperations({
     state.query = createEmptySourceState('query');
     state.result = null;
     state.isRunning = false;
-    state.statusMessage = 'Paste a sequence or choose a file to align against the current record.';
+    state.statusMessage = '';
     state.statusIsError = false;
     if (elements.alignmentQueryInput) {
       elements.alignmentQueryInput.value = '';

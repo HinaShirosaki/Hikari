@@ -214,17 +214,17 @@ test('[P1] normalizeState merges sample type label overrides', () => {
   assert.equal(normalized.settings.sampleTypeLabels.plasmid, 'Construct');
   assert.equal(normalized.settings.sampleTypeLabels.cell_line, shared.defaultState.settings.sampleTypeLabels.cell_line);
 });
-test('[P1] normalizeState preserves custom sample types and hidden defaults', () => {
+test('[P1] normalizeState preserves custom sample types and drops the legacy hidden list', () => {
   const normalized = shared.normalizeState({
     settings: {
       sampleTypeLabels: {
         custom_tissue: 'Tissue'
       },
-      sampleTypeHidden: ['antibody', 'invalid', 'antibody']
+      sampleTypeHidden: ['antibody']
     }
   });
   assert.equal(normalized.settings.sampleTypeLabels.custom_tissue, 'Tissue');
-  assert.deepEqual(Array.from(normalized.settings.sampleTypeHidden), ['antibody']);
+  assert.equal(normalized.settings.sampleTypeHidden, undefined);
 });
 test('[P1] normalizeState preserves the Hatsune Miku appearance theme', () => {
   const normalized = shared.normalizeState({

@@ -139,7 +139,7 @@
                   <span>Show Alignment</span>
                 </label>
                 <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference.">
-                  <span>Saved Alignment</span>
+                  <span>Saved</span>
                   <select id="sequence-viewer-alignment-session-select">
                     <option value="">No saved alignments</option>
                   </select>
@@ -594,7 +594,7 @@
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
           <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
 
-          <section class="result-card sequence-viewer-alignment-panel">
+          <section class="sequence-viewer-alignment-panel">
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
               <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Align Copied Sequence</button>
               <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button">Align With File</button>
@@ -622,14 +622,14 @@
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
 
-            <span id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</span>
-            <span id="sequence-viewer-alignment-query-status" class="small-note"></span>
+            <span id="sequence-viewer-alignment-query-summary" class="small-note" hidden></span>
+            <span id="sequence-viewer-alignment-query-status" class="small-note" hidden></span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
             <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset</button>
-            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note"></span>
+            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note" hidden></span>
           </div>
 
         </div>

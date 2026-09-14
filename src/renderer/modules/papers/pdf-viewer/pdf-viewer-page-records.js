@@ -1,12 +1,20 @@
+// The selection binding belongs to the text layer's DOM, not to a render task.
+// Only call this where the spans themselves go away: dropping the binding while
+// they survive makes renderPageRecord believe the layer still needs building, and
+// the rebuild wipes the spans a live selection is anchored in.
+function releaseTextSelectionBinding(record) {
+  if (typeof record?.textSelectionCleanup !== 'function') {
+    return;
+  }
+  try {
+    record.textSelectionCleanup();
+  } catch {}
+  record.textSelectionCleanup = null;
+}
+
 function cancelPageRecordRenderTasks(record) {
   if (!record) {
     return;
-  }
-  if (typeof record?.textSelectionCleanup === 'function') {
-    try {
-      record.textSelectionCleanup();
-    } catch {}
-    record.textSelectionCleanup = null;
   }
   if (!record?.renderTask || typeof record.renderTask.cancel !== 'function') {
     record.renderTask = null;
@@ -47,6 +55,7 @@ export function clearPageRecordRender(record, {
   }
   record.renderedScale = 0;
   if (clearText && record.textLayer) {
+    releaseTextSelectionBinding(record);
     record.textLayer.innerHTML = '';
     record.renderedTextScale = 0;
   }
@@ -79,6 +88,7 @@ export function clearPageRecordsOutsideRange({
 
 export function releasePageRecords({ pageLayer, pageRecords = [] } = {}) {
   cancelAllRenderTasks(pageRecords);
+  pageRecords.forEach(releaseTextSelectionBinding);
   if (pageLayer) {
     pageLayer.innerHTML = '';
   }

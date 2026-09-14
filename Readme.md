@@ -27,7 +27,7 @@
 
 ![Hikari Home dashboard](docs/screenshots/home.png)
 
-<sub>Home dashboard shown with fictional biology demo data. No private project records are included.</sub>
+<sub>Current interface shown with fictional teaching-lab data: yeast growth, GFP standards, common buffers, and synthetic sequences and gels. No private project records are included.</sub>
 
 Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
@@ -44,7 +44,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 
 Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces live behind the **More** button at the end of the dock.
 
-> **Screenshots:** `docs/screenshots/home.png` is the only image checked in so far. Each module section carries a `<!-- SCREENSHOT: ... -->` comment naming the file to add and what it should show. Drop the PNG in `docs/screenshots/` and replace the comment with a normal image tag.
+> **Screenshots:** Each workspace below is shown with neutral demonstration data in an isolated browser preview of the app. The example conversation, teaching handout, sequence, assay values, and gel image are synthetic; they are not research results. [Capture notes](docs/screenshots/README.md).
 
 ### Module index
 
@@ -77,7 +77,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Overnight incubation** — record what is incubating and where, against your configured location list.
 - **Scheduled paper finding** — recurring literature sweep against your preferred journals (see [`Papers`](#papers)).
 
-<!-- SCREENSHOT: docs/screenshots/home-widgets.png — close-up of the timer, cell-passage, and contribution-heatmap widgets -->
+![Hikari Home dashboard with teaching-lab reminders](docs/screenshots/home.png)
 
 ### Protocols
 
@@ -90,8 +90,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Polish Protocol** — clean up an existing draft while showing your original input side by side.
 - **Notebook placeholders** — leave fields for the experimenter to fill in when the protocol is used in a record.
 
-<!-- SCREENSHOT: docs/screenshots/protocols-editor.png — protocol editor with steps and an interactive bar -->
-<!-- SCREENSHOT: docs/screenshots/protocols-generate.png — the Generate Protocol dialog with a generated draft -->
+![Protocols editor with a fictional yeast growth protocol](docs/screenshots/protocols-editor.png)
 
 ### Notebook
 
@@ -107,8 +106,9 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **PDF export** — export an entry, with its tables and previews, as a PDF.
 - **Agent rail** — a project-scoped assistant panel docked beside the entry.
 
-<!-- SCREENSHOT: docs/screenshots/notebook-entry.png — an experiment entry with a snapshotted protocol and a result table -->
-<!-- SCREENSHOT: docs/screenshots/notebook-project-dashboard.png — project dashboard listing entries -->
+![Notebook entry with a yeast growth protocol and observations](docs/screenshots/notebook-entry.png)
+
+![Project dashboard for a fictional yeast growth practical](docs/screenshots/notebook-project-dashboard.png)
 
 ### Papers
 
@@ -123,8 +123,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Scheduled finding** — recurring searches against the journals configured in `Settings > Preferred Journals`, surfaced on `Home`.
 - **Agent rail** — the assistant panel, scoped to the open paper and project.
 
-<!-- SCREENSHOT: docs/screenshots/papers-viewer.png — PDF viewer with the library rail and an anchored comment -->
-<!-- SCREENSHOT: docs/screenshots/papers-summary.png — generated summary and extracted methods panel -->
+![Papers PDF viewer showing a fictional yeast growth teaching handout](docs/screenshots/papers-viewer.png)
 
 ### Samples
 
@@ -137,7 +136,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Cell passage tracking** — passage records that feed the `Home` reminder widget.
 - **Notebook capture** — push a sample into the open notebook entry, or create one from an entry.
 
-<!-- SCREENSHOT: docs/screenshots/samples-registry.png — container grid beside the sample detail panel -->
+![Samples container with a fictional GFP fluorescence standard](docs/screenshots/samples-registry.png)
 
 ### Chemicals
 
@@ -148,7 +147,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Activity history** — a record of stock changes over time.
 - **Fast lookup** — indexed on disk (`hikari-chemicals.index.sqlite`) so search stays quick on large inventories.
 
-<!-- SCREENSHOT: docs/screenshots/chemicals-list.png — chemical list with the detail panel open -->
+![Chemical inventory with common teaching-lab reagents](docs/screenshots/chemicals-list.png)
 
 ### Workflows
 
@@ -160,8 +159,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Assignees and next steps** — default-assignee resolution and next-step planning.
 - **Project linkage** — attach a workflow to a project; progress shows on `Home`.
 
-<!-- SCREENSHOT: docs/screenshots/workflows-graph.png — graph editor with a branching workflow -->
-<!-- SCREENSHOT: docs/screenshots/workflows-templates.png — template library -->
+![Branching workflow for a fictional yeast growth practical](docs/screenshots/workflows-graph.png)
 
 ### Agent
 
@@ -175,8 +173,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 Backend details are in [`docs/agent/README.md`](./docs/agent/README.md).
 
-<!-- SCREENSHOT: docs/screenshots/agent-session.png — chat session with a grounded answer citing records -->
-<!-- SCREENSHOT: docs/screenshots/agent-review-card.png — the Review Generated Drafts overlay -->
+![Agent workspace with a scripted teaching-lab example conversation](docs/screenshots/agent-chat.png)
 
 ### Sequence Viewer
 
@@ -191,9 +188,7 @@ Backend details are in [`docs/agent/README.md`](./docs/agent/README.md).
 - **Protein Builder** — assemble a protein from blocks and build the DNA sequence back out.
 - **Cloning design** — plan a Gibson/HR assembly or a vector insert, design primers, and export IDT bulk-input blocks or CSV.
 
-<!-- SCREENSHOT: docs/screenshots/sequence-library.png — sequence library with folders -->
-<!-- SCREENSHOT: docs/screenshots/sequence-detail.png — detail view with annotated features and a translation overlay -->
-<!-- SCREENSHOT: docs/screenshots/sequence-cloning.png — cloning design step with designed primers -->
+![Annotated synthetic classroom reporter sequence](docs/screenshots/sequence-detail.png)
 
 ### Assay
 
@@ -209,8 +204,7 @@ Backend details are in [`docs/agent/README.md`](./docs/agent/README.md).
 - **Artifacts** — analysis JSON, chart SVG, and attached result files stored under the storage root.
 - **Agent rail** — the assistant panel, scoped to the open plate.
 
-<!-- SCREENSHOT: docs/screenshots/assay-layout.png — plate layout editor with concentration fill -->
-<!-- SCREENSHOT: docs/screenshots/assay-analysis.png — dose-response curve fit with the grouped summary table -->
+![Assay plate mapped with synthetic BSA standard concentrations](docs/screenshots/assay-layout.png)
 
 ### Tools
 
@@ -230,8 +224,7 @@ Backend details are in [`docs/agent/README.md`](./docs/agent/README.md).
 | Extinction Coefficient Calculator | extinction coefficient from sequence |
 | Colony Counter | image-based colony counting with annotated output (loaded on demand) |
 
-<!-- SCREENSHOT: docs/screenshots/tools-molarity.png — the tool rail with the molarity calculator open -->
-<!-- SCREENSHOT: docs/screenshots/tools-colony-counter.png — colony counter with annotated colonies -->
+![Molarity and dilution calculators with a Tris buffer example](docs/screenshots/tools-molarity.png)
 
 ### Settings
 
@@ -250,7 +243,7 @@ Backend details are in [`docs/agent/README.md`](./docs/agent/README.md).
 | Genomes | Connect local genome files and refresh the connected list. |
 | Plugins | User plugin folders; enable or disable plugin workspaces. |
 
-<!-- SCREENSHOT: docs/screenshots/settings-storage.png — Settings with the storage root configured -->
+![Settings appearance controls with the day theme selected](docs/screenshots/settings-appearance.png)
 
 ## Plugins
 
@@ -267,7 +260,7 @@ Plugin workspaces run in a sandboxed iframe with a declared permission list, and
 
 It requests only `storage`, `files`, `downloads`, and `layout` — it has no notebook, project, sample, or protocol access. `Notebook` and `Agent` can still *display* saved gel records by reading the plugin's persisted index; that one-way read does not grant the iframe anything.
 
-<!-- SCREENSHOT: docs/screenshots/gel-analysis.png — lane segmentation with a quantified band table -->
+![Gel workspace with a synthetic teaching gel and detected lanes](docs/screenshots/gel-analysis.png)
 
 ## Quick Start
 
@@ -413,6 +406,7 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 - `src/plugins/`: bundled plugin workspaces.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/app-registry.json`: source-of-truth dock order, labels, aliases, and search wiring.
+- `vendor/` and `src/plugins/gel/vendor/`: unmodified third-party builds. Licences are listed in [`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md), also reachable from **Settings → Startup → Diagnostics → Third-Party Notices**.
 - `config/codex-models.json`: Codex model catalog used to generate renderer and main-process model metadata modules.
 - `docs/`: internal walkthroughs for renderer, main helpers, plugins, and the agent backend.
 

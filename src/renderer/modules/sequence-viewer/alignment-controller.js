@@ -7,6 +7,7 @@ import {
 } from './alignment-input.js';
 import { getAlignmentSessionsForRecord } from './detail-alignment.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { createAlignmentOperations } from './alignment-operations.js';
 import { buildReferenceSignature } from './alignment-session-match.js';
 
@@ -37,7 +38,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     query: createEmptySourceState('query'),
     result: null,
     isRunning: false,
-    statusMessage: 'Paste a sequence or choose a file to align against the current record.',
+    statusMessage: '',
     statusIsError: false,
     queryMode: 'paste',
     referenceAutoLoaded: true,
@@ -79,6 +80,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
       return;
     }
     elements.alignmentStatus.textContent = state.statusMessage;
+    elements.alignmentStatus.hidden = !state.statusMessage;
     elements.alignmentStatus.classList.toggle('is-error', Boolean(state.statusIsError));
   }
 
@@ -86,7 +88,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (isError && message) {
       showTransientNotice(message, { type: 'error' });
     }
-    state.statusMessage = String(message || '').trim() || 'Idle';
+    state.statusMessage = String(message || '').trim();
     state.statusIsError = isError === true;
     applyAlignmentStatus();
   }
@@ -166,9 +168,6 @@ export function createSequenceViewerAlignmentController(config = {}) {
     state.referenceAutoLoaded = true;
     state.referenceSignature = nextSignature;
     state.result = null;
-    if (!options.silent) {
-      setAlignmentStatus(`Reference ready: ${describeSelectedRecord(record)}`);
-    }
   }
 
   function syncButtons() {
@@ -192,7 +191,8 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (elements.alignmentQuerySummary) {
       elements.alignmentQuerySummary.textContent = state.query.records.length
         ? describeSelectedRecord(getSelectedRecord('query'))
-        : 'No query loaded.';
+        : '';
+      elements.alignmentQuerySummary.hidden = !state.query.records.length;
     }
 
     if (elements.alignmentQueryRecordWrap) {
@@ -221,10 +221,9 @@ export function createSequenceViewerAlignmentController(config = {}) {
         const sourceFormat = String(state.query.format || state.query.records[0]?.sourceFormat || 'unknown').toUpperCase();
         elements.alignmentQueryStatus.textContent = `Loaded ${state.query.records.length} ${sourceFormat} record${state.query.records.length === 1 ? '' : 's'}.`;
       } else {
-        elements.alignmentQueryStatus.textContent = state.queryMode === 'paste'
-          ? 'Paste a query sequence, then run alignment.'
-          : 'Query parser idle.';
+        elements.alignmentQueryStatus.textContent = '';
       }
+      elements.alignmentQueryStatus.hidden = !String(elements.alignmentQueryStatus.textContent || '').trim();
       elements.alignmentQueryStatus.classList.toggle('is-error', state.query.errors.length > 0);
     }
   }
@@ -312,6 +311,24 @@ export function createSequenceViewerAlignmentController(config = {}) {
         });
       } finally {
         elements.alignmentQueryInput.value = '';
+      }
+    });
+
+    bindFileDropTarget({
+      target: elements.alignmentWorkspace,
+      accept: elements.alignmentQueryInput?.accept
+        || elements.alignmentQueryInput?.getAttribute?.('accept')
+        || '.ab1,.abi,.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.txt,.seq',
+      multiple: false,
+      onFiles: async ([file]) => {
+        await loadSequencingAlignmentQuery({
+          file,
+          name: file.name,
+          sourceKind: 'file'
+        });
+      },
+      onRejected: () => {
+        setAlignmentStatus('Drop an AB1, FASTA, GenBank, or plain-text sequence file.', true);
       }
     });
 

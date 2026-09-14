@@ -1620,6 +1620,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   overflow: auto;
 }
 
+.sequence-viewer-alignment-workspace {
+  background: var(--theme-overlay-strong);
+  backdrop-filter: blur(2px);
+}
+
 .sequence-viewer-backbone-dialog-overlay[hidden],
 .sequence-viewer-alignment-workspace[hidden] {
   display: none !important;
@@ -1749,7 +1754,34 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-alignment-panel {
   margin: 0;
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.sequence-viewer-alignment-panel textarea {
+  min-height: clamp(220px, 38vh, 340px);
+  box-sizing: border-box;
+  border-color: var(--theme-control-border);
+  background: var(--theme-control-background);
+}
+
+.sequence-viewer-alignment-workspace.is-file-drop-active .sequence-viewer-alignment-dialog::after {
+  content: 'Drop sequence file to align';
+  position: absolute;
+  inset: 10px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--theme-accent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 88%, var(--theme-accent) 12%);
+  color: var(--theme-text-strong);
+  font-size: 0.88rem;
+  font-weight: 700;
+  pointer-events: none;
 }
 
 .sequence-viewer-alignment-record-wrap {

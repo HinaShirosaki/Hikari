@@ -285,6 +285,7 @@ export function createAgentRequestController(deps) {
       persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
       setRequestStatus(request, 'Error.');
       showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
+      return { ok: false, reason: 'request_error' };
     } finally {
       const requestWasVisible = isRequestVisible(request);
       runtime.sendPending = false;

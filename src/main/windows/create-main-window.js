@@ -86,8 +86,9 @@ function createMainWindow({
   });
 
   // Nothing in the app requests camera, mic, geolocation, or notifications.
-  mainWindow.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
-    callback(false);
+  // navigator.clipboard.writeText (copy buttons) needs clipboard-sanitized-write.
+  mainWindow.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === 'clipboard-sanitized-write');
   });
 
   mainWindow.loadFile(path.join(projectRoot, 'index.html'));

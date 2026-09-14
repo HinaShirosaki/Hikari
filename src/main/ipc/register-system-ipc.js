@@ -37,6 +37,7 @@ function registerSystemIpc(deps = {}) {
       }
       return text;
     });
+  const thirdPartyNoticesPath = cleanText(deps.thirdPartyNoticesPath, 2400);
 
   function normalizeJsonPayload(payload, fallback = {}) {
     if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
@@ -274,6 +275,14 @@ function registerSystemIpc(deps = {}) {
     await require('node:fs/promises').mkdir(folder, { recursive: true }).catch(() => {});
     const error = await shell.openPath(folder);
     return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: folder };
+  });
+
+  ipcMain.handle(SYSTEM.OPEN_THIRD_PARTY_NOTICES, async () => {
+    if (!thirdPartyNoticesPath || !shell || typeof shell.openPath !== 'function') {
+      return { ok: false, error: 'Third-party notices are unavailable.' };
+    }
+    const error = await shell.openPath(thirdPartyNoticesPath);
+    return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: thirdPartyNoticesPath };
   });
 
   ipcMain.handle(SYSTEM.OPEN_EXTERNAL_URL, async (_event, payload) => {

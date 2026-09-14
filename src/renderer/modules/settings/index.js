@@ -40,6 +40,7 @@ export function initSettings({
     selectStoragePathBtn,
     startupForm,
     openLogsFolderBtn,
+    openThirdPartyNoticesBtn,
     settingStartupDefaultView,
     settingStartupRememberLastView,
     notebookPdfForm,
@@ -183,6 +184,12 @@ export function initSettings({
     const result = await window.hikariApi?.openLogsFolder?.();
     if (result && result.ok === false) {
       showTransientNotice(result.error || 'Could not open the logs folder.', { type: 'error' });
+    }
+  });
+  openThirdPartyNoticesBtn?.addEventListener('click', async () => {
+    const result = await window.hikariApi?.openThirdPartyNotices?.();
+    if (result && result.ok === false) {
+      showTransientNotice(result.error || 'Could not open the third-party notices.', { type: 'error' });
     }
   });
   notebookPdfForm?.addEventListener('submit', notebookPdfController.save);
