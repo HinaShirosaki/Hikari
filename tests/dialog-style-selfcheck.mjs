@@ -33,7 +33,7 @@ assert.match(dialogCss, /\.app-dialog-head > button\.app-dialog-close-btn[\s\S]*
 assert.match(dialogCss, /\.unsaved-changes-dialog\.app-dialog-surface\s*\{[^}]*--app-dialog-width:\s*440px/s);
 assert.match(dialogCss, /\.unsaved-changes-list li\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent/s);
 
-assert.match(agentHtml, /class="agent-review-dialog app-dialog-surface"/);
+assert.match(agentHtml, /class="(?=[^"]*\bagent-review-dialog\b)(?=[^"]*\bapp-dialog-surface\b)[^"]*"/);
 assert.match(agentHtml, /class="agent-review-dialog-header app-dialog-head"/);
 assert.match(gelHtml, /id="gel-peak-editor-overlay"[^>]*app-dialog-overlay app-dialog-overlay--center/);
 assert.match(gelHtml, /class="gel-peak-editor-dialog app-dialog-surface"/);
