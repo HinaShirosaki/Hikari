@@ -40,6 +40,7 @@ export function getGelAnalyses(state) {
     ...record,
     previewImagePath: toHostPath(storageRoot, record?.previewImagePath),
     sourceImagePath: toHostPath(storageRoot, record?.sourceImagePath),
+    originalImagePath: toHostPath(storageRoot, record?.originalImagePath),
     analysisResultPath: toHostPath(storageRoot, record?.analysisResultPath),
     recordJsonPath: toHostPath(storageRoot, record?.recordJsonPath)
   }));

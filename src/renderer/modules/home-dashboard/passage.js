@@ -21,7 +21,6 @@ export function initPassageWidget({
     list,
     panelList,
     addBtn,
-    openBtn,
     closeBtn,
     dialogOverlay,
     dialogForm,
@@ -33,7 +32,6 @@ export function initPassageWidget({
   list.addEventListener('click', onPassageListClick);
   panelList.addEventListener('click', onPassageListClick);
   addBtn.addEventListener('click', () => openPassageDialog(true));
-  openBtn.addEventListener('click', () => openPassageDialog(false));
   closeBtn.addEventListener('click', closePassageDialog);
   dialogForm.addEventListener('submit', onPassageDialogSubmit);
   dialogOverlay.addEventListener('click', onPassageDialogOverlayClick);

@@ -112,9 +112,12 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
   assert.equal(editTextarea.value, 'C');
 
   editTextarea.value = 'TT';
+  // Edits re-render the sequence; the viewport must not jump back to the top.
+  sequenceHost.scrollTop = 120;
   trigger(editForm, 'submit');
   await flushAsync();
 
+  assert.equal(sequenceHost.scrollTop, 120);
   assert.equal(statLength.textContent, '14');
   assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('ACGTTTACGTACGT'), true);
 
@@ -126,10 +129,13 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
   assert.equal(Boolean(editOverlay.hidden), false);
   assert.equal(editTitle.textContent, 'Delete Bases');
   assert.equal(Boolean(deleteMessage.hidden), false);
+  assert.equal(stripHtmlTags(deleteMessage.innerHTML), 'Delete 4 bp?');
 
+  sequenceHost.scrollTop = 120;
   trigger(editForm, 'submit');
   await flushAsync();
 
+  assert.equal(sequenceHost.scrollTop, 120);
   assert.equal(Boolean(editOverlay.hidden), true);
   assert.equal(statLength.textContent, '10');
   assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('ATACGTACGT'), true);

@@ -485,7 +485,8 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         assert.match(firstContent, /literature_search/);
         assert.match(firstContent, /paper_download/);
         assert.match(firstContent, /Interactive paper-search download policy/);
-        assert.match(firstContent, /MUST call `paper_download` once for every distinct selected paper before answering/);
+        assert.match(firstContent, /research sub-agent may freely use `paper_download`/);
+        assert.match(firstContent, /main agent must not download the same papers again/);
         assert.match(firstContent, /pass its title as `paper_title`/);
         assert.match(firstContent, /original `literature_search\.query` as `collection_name`/);
         assert.doesNotMatch(firstContent, /use its title as `linked_name`/);

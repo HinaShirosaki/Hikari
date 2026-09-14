@@ -53,7 +53,7 @@
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. [\"Nature\", \"Cell\"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches."
+    "description": "Delegate paper research: pass a compact query and complete research objective in message. The sub-agent can repeatedly search, download relevant papers, and read extracted Markdown until evidence is sufficient; returns exact line-backed context and relevance comments. Metadata-only scheduled tasks remain discovery-only. Within the research sub-agent, literature_search returns candidates without recursive delegation. Respect explicit source and journal filters; saved preferred journals remain soft preferences. Research has no overall deadline. For status running, call again with its research_id until the same job finishes."
   },
   {
     "name": "purchase-recommendation",

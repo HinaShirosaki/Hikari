@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="390 185 475 865" fill="currentColor">
-  <!-- Cropped presentation asset for small Hikari marks inside model-action buttons. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="390 185 475 865" fill="currentColor" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Cropped, optically thickened asset for small Hikari marks inside model-action buttons. -->
   <path d="M628 209
     C626 209 625 231 624 252
     L613 487 473 366

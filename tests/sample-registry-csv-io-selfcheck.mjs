@@ -11,12 +11,14 @@ const box = { id: 'cont-1', name: 'Box A', type: 'box81', wells: Array.from({ le
 const inventory = { '-80 Freezer #1': [box] };
 const samples = [
   { code: 'C-1', name: 'Alpha', type: 'plasmid', lot: 'A1', concentration: '2 mg/mL', notes: 'has, comma and "quote"', inventoryLink: { section: '-80 Freezer #1', containerId: 'cont-1', wellIndex: 4 } },
-  { code: 'C-2', name: 'Beta', type: 'cell_line', notes: 'line\nbreak', inventoryLink: null }
+  { code: 'C-2', name: 'Beta', type: 'cell_line', notes: 'line\nbreak', inventoryLink: null },
+  { code: 'P-1', name: 'GFP-F', type: 'primer', details: { sequence: 'ATGGTG', direction: 'Forward', tm: '62' } }
 ];
 
 // Round-trip: export -> parse preserves flat columns AND container placement.
 const parsed = parseSamplesCsv(toSamplesCsv(samples, inventory));
-assert.equal(parsed.length, 2);
+assert.equal(parsed.length, 3);
+assert.equal(parsed[2].sequence, 'ATGGTG'); // type-specific detail column
 assert.equal(parsed[0].notes, 'has, comma and "quote"');
 assert.equal(parsed[0].section, '-80 Freezer #1');
 assert.equal(parsed[0].container, 'Box A');
@@ -29,7 +31,15 @@ const fresh = { samples: [], inventory: {} };
 let n = 0;
 const makeId = () => `t${(n += 1)}`;
 const result = mergeSamplesFromCsv(fresh, parsed, makeId);
-assert.equal(result.created, 2);
+assert.equal(result.created, 3);
+const primer = fresh.samples.find((s) => s.code === 'P-1');
+assert.deepEqual(primer.details, { sequence: 'ATGGTG', direction: 'Forward', tm: '62' });
+assert.equal(fresh.samples.find((s) => s.code === 'C-1').details, null); // no plasmid columns filled
+// A CSV without detail columns keeps stored details; a present-but-blank column clears it.
+mergeSamplesFromCsv(fresh, [{ code: 'P-1', name: 'GFP-F', type: 'primer' }], makeId);
+assert.equal(primer.details.sequence, 'ATGGTG');
+mergeSamplesFromCsv(fresh, [{ code: 'P-1', name: 'GFP-F', type: 'primer', tm: '' }], makeId);
+assert.deepEqual(fresh.samples.find((s) => s.code === 'P-1').details, { sequence: 'ATGGTG', direction: 'Forward' });
 const box2 = fresh.inventory['-80 Freezer #1'][0];
 assert.equal(box2.name, 'Box A');
 assert.equal(box2.type, 'box81');
@@ -42,7 +52,7 @@ assert.equal(fresh.samples.find((s) => s.code === 'C-2').inventoryLink, null);
 
 // Re-import reuses the same container (matched by name) and updates in place — no duplicates.
 const again = mergeSamplesFromCsv(fresh, parsed, makeId);
-assert.equal(again.updated, 2);
+assert.equal(again.updated, 3);
 assert.equal(again.created, 0);
 assert.equal(fresh.inventory['-80 Freezer #1'].length, 1);
 

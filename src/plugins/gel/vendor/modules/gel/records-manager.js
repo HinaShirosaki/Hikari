@@ -148,6 +148,14 @@ export function createRecordsManager({ runtime, elements, deps }) {
     return record;
   }
 
+  function setActionLabel(button, label) {
+    if (!button) return;
+    const labelNode = button.querySelector?.('[data-gel-action-label]');
+    (labelNode || button).textContent = label;
+    button.setAttribute('aria-label', label);
+    button.setAttribute('title', label);
+  }
+
   function setSaveBusy(isBusy) {
     if (isBusy) {
       saveLockedControls = Array.from(
@@ -164,7 +172,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
     if (elements.gelSaveBtn) {
       elements.gelSaveBtn.disabled = isBusy;
-      elements.gelSaveBtn.textContent = isBusy ? 'Saving…' : 'Save Analysis';
+      setActionLabel(elements.gelSaveBtn, isBusy ? 'Saving…' : 'Save');
       elements.gelSaveBtn.setAttribute('aria-busy', String(isBusy));
     }
     elements.gelForm?.setAttribute('aria-busy', String(isBusy));
@@ -188,7 +196,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (exportPromise) {
       return exportPromise;
     }
-    const originalLabel = activeButton?.textContent || '';
+    const originalLabel = activeButton?.getAttribute('aria-label') || activeButton?.textContent || '';
     // Restore what each button was, not an assumed "enabled": these live inside
     // #gel-form, so a save running concurrently snapshots them and restores its
     // own copy afterwards. Forcing false here loses that race and leaves both
@@ -201,7 +209,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       button.setAttribute('aria-busy', 'true');
     });
     if (activeButton) {
-      activeButton.textContent = 'Exporting…';
+      setActionLabel(activeButton, 'Exporting…');
     }
     exportPromise = Promise.resolve()
       .then(action)
@@ -211,7 +219,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
           button.removeAttribute('aria-busy');
         });
         if (activeButton) {
-          activeButton.textContent = originalLabel;
+          setActionLabel(activeButton, originalLabel);
         }
         exportPromise = null;
       });
@@ -268,6 +276,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     deps.setCurrentImage(null);
     runtime.originalImage = null;
+    runtime.originalFile = null;
     runtime.currentReport = null;
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.cropApplied = false;
@@ -327,6 +336,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.setCurrentImage(null);
     const clearedImageRevision = runtime.imageRevision;
     runtime.originalImage = null;
+    runtime.originalFile = null;
     runtime.cropApplied = false;
     deps.leaveCropMode();
     deps.renderManualProgress();

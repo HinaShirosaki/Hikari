@@ -54,37 +54,16 @@ export function buildPendingAnswer(actionType, nowIso) {
 }
 
 export function buildCompletedAnswer(actionType, response) {
-  if (actionType === ACTION_WHERE_TO_BUY) {
-    return {
-      actionType,
-      status: 'completed',
-      requestedAt: '',
-      answeredAt: new Date().toISOString(),
-      text: '',
-      summary: cleanText(
-        response?.purchaseRecommendation?.summary
-          || (response?.purchaseRecommendation?.query
-            ? response.assistantText
-            : response?.assistantText),
-        12000
-      ),
-      payload: cloneJson(response?.purchaseRecommendation, null),
-      error: ''
-    };
-  }
+  const isPurchase = actionType === ACTION_WHERE_TO_BUY;
+  const payload = response?.payload && typeof response.payload === 'object' ? response.payload : null;
   return {
     actionType,
     status: 'completed',
     requestedAt: '',
     answeredAt: new Date().toISOString(),
-    text: cleanText(response?.assistantText, 12000),
-    summary: '',
-    payload: cloneJson(
-      response?.generalScienceQuestion
-        || response?.projectScienceQuestion
-        || response?.resultAnalysis,
-      null
-    ),
+    text: isPurchase ? '' : cleanText(response?.text, 12000),
+    summary: isPurchase ? cleanText(payload?.summary, 12000) : '',
+    payload: isPurchase ? cloneJson(payload, null) : null,
     error: ''
   };
 }

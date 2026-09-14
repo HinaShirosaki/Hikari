@@ -2,6 +2,7 @@
 
 const { toIntegerInRange } = require('../../../data/value-utils.js');
 const { ensureObject } = require('../../../lib/normalize.js');
+const { getLiteratureResearchSession, recordLiteratureResearchDownload } = require('../../../papers/workflow/literature-research-session.js');
 const {
   resolveToolParserPayload,
   hasOwn,
@@ -80,7 +81,7 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
       defer_web_search_to_codex: context?.agentMcp === true
         && cleanText(context?.provider, 80).toLowerCase() === 'codex',
       query: cleanText(args?.query, 600),
-      message: cleanText(args?.message || context?.message, 1200),
+      message: cleanText(args?.message || context?.message, 12000),
       snapshot,
       project,
       storage_path: storagePath,
@@ -117,6 +118,21 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
       };
     }
     const resolved = resolvePaperDownloadContext(args, context);
+    const research = getLiteratureResearchSession(context?.snapshot);
+    if (context?.snapshot?.literature_research && !research) {
+      return { ok: false, status: 'error', error: 'Paper research session is no longer active.' };
+    }
+    if (research) {
+      resolved.linked_name = research.input.project?.name || research.input.query;
+      resolved.linked_type = research.input.project?.name ? 'project' : 'literature-search';
+      const previous = research.downloads.find((paper) => paper.ok && paper.knowledge_markdown_path
+        && args.doi && String(paper.doi).toLowerCase() === String(args.doi).toLowerCase());
+      const reused = previous || await research.findLocalPaper?.(args);
+      if (reused) {
+        recordLiteratureResearchDownload(context?.snapshot, args, reused);
+        return { ...reused, summary: `Reused extracted paper Markdown for ${args.paper_title || args.doi}.` };
+      }
+    }
     const result = await paperDownloadRuntime.downloadPaper({
       ...args,
       page_url: cleanText(args?.page_url || args?.pageUrl || context?.pageUrl, 2000),
@@ -131,6 +147,8 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
       status: 'error',
       error: cleanText(error?.message || error, 1200) || 'Paper download failed.'
     }));
+
+    recordLiteratureResearchDownload(context?.snapshot, args, result);
 
     return {
       ...result,

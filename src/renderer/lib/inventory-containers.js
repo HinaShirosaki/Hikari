@@ -7,7 +7,7 @@ export const GRID_BOX_LAYOUTS = Object.freeze({
   box25: { rows: 5, cols: 5, label: '25-well grid box' },
   box49: { rows: 7, cols: 7, label: '49-well grid box' },
   box64: { rows: 8, cols: 8, label: '64-well grid box' },
-  box81: { rows: 9, cols: 9, label: '81-well cube box' },
+  box81: { rows: 9, cols: 9, label: '81-well grid box' },
   box100: { rows: 10, cols: 10, label: '100-well grid box' }
 });
 

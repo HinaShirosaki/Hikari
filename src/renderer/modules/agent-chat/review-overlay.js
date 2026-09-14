@@ -37,10 +37,10 @@ export function createAgentReviewOverlayController({
     if (!dom.reviewTrack?.querySelectorAll) {
       return;
     }
-    const card = dom.reviewTrack.querySelectorAll('[data-agent-review-card]')?.[activeIndex];
-    if (card?.scrollIntoView) {
-      card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-    }
+    // One readable document at a time; inactive drafts must not receive focus.
+    dom.reviewTrack.querySelectorAll('[data-agent-review-card]').forEach((card, index) => {
+      card.hidden = index !== activeIndex;
+    });
   }
 
   function render() {
@@ -233,6 +233,17 @@ export function createAgentReviewOverlayController({
 
   return {
     close,
+    reviewInline(messageId, itemId, decision) {
+      // Resolve from current state on every click, so a stale approval control
+      // cannot apply a protocol twice or approve an already rejected draft.
+      const message = state.agentChat?.messages?.find(item => item.id === messageId);
+      const item = collectReviewItemsForMessage(message, {
+        notebookDraftAdapter, protocolReviewAdapter, notebookEntries: state.notebookEntries
+      }).find(candidate => candidate.id === itemId);
+      if (item?.type !== 'protocol') return;
+      if (decision === 'approve') approveProtocol(item);
+      else if (decision === 'reject') rejectProtocol(item);
+    },
     openForMessage,
     render,
     approveItem,

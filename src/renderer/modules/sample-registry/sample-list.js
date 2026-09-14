@@ -8,6 +8,7 @@ import { renderCompoundPreviewMarkup } from './compound-preview.js';
 import { formatChemicalLinks, formatInventoryLink } from './inventory-links.js';
 import { formatLocation } from './location-fields.js';
 import { ensureSampleState, escapeHtml, formatSampleTypeLabel } from './sample-utils.js';
+import { formatTypeFieldItems } from './type-fields.js';
 
 export function onListClick(ctx, event) {
   const openBtn = event.target.closest('[data-sample-open]');
@@ -34,7 +35,8 @@ export function matchesSearch(ctx, sample, term) {
     formatLocation(sample.location),
     formatInventoryLink(ctx, sample.inventoryLink),
     sample.notes,
-    sample.compoundStructure?.smiles
+    sample.compoundStructure?.smiles,
+    ...Object.values(sample.details || {})
   ].join(' ').toLowerCase();
   return haystack.includes(term);
 }
@@ -120,6 +122,7 @@ export function renderSampleDetail(ctx) {
     { label: 'Inventory Link', value: formatInventoryLink(ctx, selected.inventoryLink) },
     { label: 'Related Chemicals', value: formatChemicalLinks(ctx, selected.chemicalLinks), wide: true }
   ];
+  detailItems.push(...formatTypeFieldItems(selected.type, selected.details));
   if (selected.type === 'cell_line') {
     detailItems.push({ label: 'Passage', value: formatCellPassage(selected.cellPassage), wide: true });
   }

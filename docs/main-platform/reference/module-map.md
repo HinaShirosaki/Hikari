@@ -27,7 +27,7 @@ Sidecar-path derivation, bundle sync, hydration, storage-root import, and SQLite
 | `storage/index.js` | Main path | re-export surface: `getBundlePaths`, `syncBundleFromSnapshot`, `hydrateSnapshotFromBundle`, `importStorageRoot`, `discoverPapersFromStorageRoot`, workflow-root sync |
 | `storage/storage-paths.js` | Support | sidecar/bundle path derivation |
 | `storage/storage-sidecars.js` | Support | sidecar JSON read/write; agent-owned skill release is injected by `main-services.js` |
-| `storage/storage-manifest.js` | Support | manifest generation (`STORAGE_MANIFEST_FILE_NAME`) |
+| `storage/storage-discovery.js` | Support | snapshot/bundle candidate detection and per-bundle summaries |
 | `storage/storage-memory.js` | Support | project-scoped Codex memory record collection and Markdown generation |
 | `storage/storage-hydration.js` | Main path | snapshot hydration from a bundle |
 | `storage/storage-import.js` | Main path | storage-root import |

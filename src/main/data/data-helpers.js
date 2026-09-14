@@ -18,9 +18,21 @@ function createMainDataHelpers(deps = {}) {
   const normalizeDataFilePath = typeof deps.normalizeDataFilePath === 'function'
     ? deps.normalizeDataFilePath
     : ((filePath) => String(filePath || ''));
+  const serializeSnapshot = typeof deps.serializeSnapshot === 'function'
+    ? deps.serializeSnapshot
+    : ((snapshot) => JSON.stringify(snapshot, null, 2));
+  // Write beside, then rename: a crash or power loss mid-write leaves the old
+  // snapshot intact instead of a truncated .json. rename() replaces atomically
+  // on the same filesystem (Windows included). `.tmp` keeps the partial file
+  // outside the .json extension filter.
+  async function writeSnapshotAtomically(filePath, snapshot) {
+    const tempPath = `${filePath}.tmp`;
+    await fs.writeFile(tempPath, serializeSnapshot(snapshot), 'utf8');
+    await fs.rename(tempPath, filePath);
+  }
   const writeSnapshot = typeof deps.writeSnapshot === 'function'
     ? deps.writeSnapshot
-    : (async () => {});
+    : writeSnapshotAtomically;
   const syncBundleFromSnapshot = typeof deps.syncBundleFromSnapshot === 'function'
     ? deps.syncBundleFromSnapshot
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));

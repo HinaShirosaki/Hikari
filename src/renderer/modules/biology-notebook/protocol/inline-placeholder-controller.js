@@ -61,8 +61,10 @@ export function createInlinePlaceholderController({
     const name = wrap.dataset.placeholderName || 'value';
     const cleanValue = hiddenValue.value || '';
     const sampleLink = key ? getSampleLink(key) : null;
-    token.textContent = cleanValue || `[${name}]`;
+    const suggestion = cleanValue ? '' : (wrap.dataset.suggestedValue || '');
+    token.textContent = cleanValue || suggestion || `[${name}]`;
     token.classList.toggle('is-empty', !cleanValue);
+    token.classList.toggle('is-suggested', Boolean(suggestion));
     token.classList.toggle('is-linked-sample', Boolean(sampleLink?.sampleId));
     token.title = sampleLink?.sampleId
       ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Click and type to replace.`
@@ -124,6 +126,9 @@ export function createInlinePlaceholderController({
         removedSampleLink = true;
       }
       hiddenValue.value = cleanValue;
+      if (wrap.dataset.carriedOver && cleanValue !== wrap.dataset.suggestedValue) {
+        delete wrap.dataset.carriedOver;
+      }
       closeEditor(editor);
       if (removedSampleLink || selectedLink) {
         onPersistSampleLinks?.();
@@ -206,6 +211,20 @@ export function createInlinePlaceholderController({
       event.preventDefault();
       commitEditor(editor);
       return;
+    }
+
+    if (event.key === 'Tab' && !event.shiftKey && !editor.value.trim()) {
+      const wrap = editor.closest('[data-inline-placeholder]');
+      const suggestion = wrap?.dataset.suggestedValue || '';
+      if (suggestion) {
+        // Accepting ghost text is the one way a value enters without being
+        // typed; the mark survives to the saved page as provenance.
+        event.preventDefault();
+        editor.value = suggestion;
+        wrap.dataset.carriedOver = '1';
+        commitEditor(editor);
+        return;
+      }
     }
 
     if (event.key === 'Escape') {

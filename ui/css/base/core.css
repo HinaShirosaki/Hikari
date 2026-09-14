@@ -14,13 +14,46 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../../../assets/fonts/IBMPlexSans-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../../../assets/fonts/IBMPlexSans-Italic.woff2") format("woff2");
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../../../assets/fonts/IBMPlexSans-SemiBold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("../../../assets/fonts/IBMPlexSans-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   --app-font-size: 16px;
   --font-app: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-chat: "IBM Plex Sans", var(--font-app);
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
-  --shared-left-rail-folded-width: 28px;
+  --shared-left-rail-folded-width: 1.5rem;
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
@@ -178,7 +211,7 @@ div {
   align-items: center;
   gap: 14px;
   padding: 8px 20px 6px;
-  border-bottom: 0;
+  border-bottom: 0.0625rem solid color-mix(in srgb, var(--theme-border) 45%, transparent);
   background: var(--theme-background);
   overflow: visible;
 }
@@ -188,6 +221,22 @@ div {
   gap: 0;
   min-width: 0;
   justify-self: start;
+}
+
+/* Share the native macOS title-bar row while leaving the traffic lights clear. */
+html[data-window-chrome='mac'] .topbar {
+  padding-inline-start: max(6rem, 96px);
+  min-height: 4rem;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+html[data-window-chrome='mac'] .topbar :is(button, input, textarea, select, a, [contenteditable], [role='menu'], [role='listbox']) {
+  -webkit-app-region: no-drag;
+}
+
+html[data-window-chrome='mac'] .topbar :is(input, textarea, [contenteditable]) {
+  user-select: text;
 }
 
 .topbar h1 {
@@ -218,6 +267,90 @@ div {
   font-weight: 650;
 }
 
+.topbar-timekeeping {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.topbar-clock {
+  color: var(--theme-text-strong);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.topbar-timer {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: 3rem;
+  block-size: 3rem;
+  flex: 0 0 3rem;
+  color: var(--theme-text-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.topbar-timer__ring {
+  position: absolute;
+  inset: 0;
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.topbar-timer__track,
+.topbar-timer__progress {
+  fill: none;
+  stroke-width: 1.8;
+}
+
+.topbar-timer__track {
+  stroke: color-mix(in srgb, var(--theme-border) 42%, transparent);
+}
+
+.topbar-timer__progress {
+  stroke: var(--theme-accent);
+  stroke-linecap: round;
+  stroke-dasharray: 0 100;
+  transform: rotate(-90deg);
+  transform-origin: center;
+  transition: stroke-dasharray 500ms linear, transform 500ms linear, stroke 160ms ease;
+}
+
+.topbar-timer.is-warn .topbar-timer__progress {
+  stroke: var(--theme-warning);
+}
+
+.topbar-timer.is-paused .topbar-timer__progress {
+  stroke: var(--theme-text-muted);
+}
+
+.topbar-timer__time {
+  position: relative;
+  z-index: 1;
+  font-size: 0.625rem;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  white-space: nowrap;
+}
+
+.topbar-timer[data-time-length='long'] .topbar-timer__time {
+  font-size: 0.5rem;
+  letter-spacing: -0.04em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-timer__progress {
+    transition: none;
+  }
+}
+
 .topbar-view-actions {
   display: inline-flex;
   align-items: center;
@@ -232,13 +365,14 @@ div {
 }
 
 .topbar-tools {
-  width: clamp(250px, 26vw, 360px);
+  width: min(100%, clamp(250px, 26vw, 360px));
   min-width: 0;
   justify-self: end;
   position: relative;
   z-index: 5;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -280,13 +414,52 @@ div {
 
 .topbar-search-shell {
   position: relative;
-  flex: 1 1 180px;
+  flex: 0 1 auto;
+  width: 2.125rem;
   min-width: 0;
+  transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.topbar-search-shell.is-expanded {
+  width: calc(100% - 80px);
 }
 
 #topbar-search {
   width: 100%;
   min-width: 0;
+  height: 2.125rem;
+  padding-block: 0.375rem;
+  border-radius: 0.4375rem;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.topbar-search-shell.is-expanded #topbar-search {
+  visibility: visible;
+  opacity: 1;
+}
+
+.topbar-search-field .search-field__lens {
+  inset-inline-end: 0;
+  width: 2.125rem;
+  height: 2.125rem;
+}
+
+.topbar-search-field .search-field__lens svg {
+  stroke-width: 1.5;
+}
+
+.topbar-search-field .search-field__lens,
+.topbar-search-field .search-field__lens:hover {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-search-shell,
+  #topbar-search {
+    transition: none;
+  }
 }
 
 /* Shared search-box shape: the field plus a magnifier on the right that runs
@@ -465,13 +638,15 @@ body.has-shared-left-rail-view .workspace-shell::before {
   inset: 0 auto 0 0;
   width: var(--app-left-rail-track-width);
   background: var(--app-left-rail-surface, var(--theme-surface));
+  box-shadow: inset -1px 0 0 var(--app-left-rail-divider);
   pointer-events: none;
   z-index: 0;
 }
 
 body.has-shared-left-rail-view.has-folded-shared-left-rail .workspace-shell::before {
   width: var(--shared-left-rail-folded-width);
-  box-shadow: inset -1px 0 0 var(--app-left-rail-divider);
+  background: var(--theme-background);
+  box-shadow: inset -.0625rem 0 0 var(--theme-border-soft);
 }
 
 .workspace-main {
@@ -479,12 +654,18 @@ body.has-shared-left-rail-view.has-folded-shared-left-rail .workspace-shell::bef
   min-height: 0;
   height: 100%;
   overflow: auto;
-  padding: 0;
+  /* Keep workspace controls clear of the header divider. */
+  padding: 0.875rem 0 0;
   font-size: var(--app-font-size);
 }
 
 body.has-shared-left-rail-view .workspace-main {
   overflow: hidden;
+}
+
+/* Gel supplies its own control spacing inside the frame. */
+.workspace-main:has(> #plugin-gel-view.is-active) {
+  padding-top: 0;
 }
 
 .universal-agent-chat-rail {
@@ -718,11 +899,11 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0.375rem;
   width: max-content;
   min-width: 0;
   max-width: min(100%, calc(100vw - 32px));
-  padding: 7px 9px;
+  padding: 0.375rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -737,7 +918,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 0.375rem;
   min-width: 0;
   overflow: visible;
   padding-bottom: 0;
@@ -745,9 +926,10 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-divider {
-  flex: 0 0 1px;
+  flex: 0 0 0.0625rem;
   align-self: center;
-  height: 26px;
+  height: 1.25rem;
+  margin-inline: 0.25rem;
   background: var(--theme-border);
 }
 
@@ -755,10 +937,29 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 2.625rem;
+  min-width: 2.625rem;
+  height: 2.375rem;
+  flex: 0 0 auto;
+  gap: 0.5rem;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 0.4375rem;
+}
+
+.app-dock-label {
+  display: none;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.app-dock-btn.is-active:has(.app-dock-label) {
+  width: auto;
+  padding-inline: 0.75rem;
+}
+
+.app-dock-btn.is-active .app-dock-label {
+  display: inline;
 }
 
 .app-dock-btn,
@@ -776,12 +977,23 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-btn:hover,
-.app-dock-btn:focus-visible,
-.app-dock-btn.is-active {
+.app-dock-btn:focus-visible {
   z-index: 2;
   color: var(--theme-text-strong);
   background: var(--theme-surface-subtle);
-  border-color: var(--theme-border);
+  border-color: transparent;
+}
+
+.app-dock-btn.is-active {
+  color: var(--theme-text-strong);
+  background: var(--theme-accent-soft);
+  border-color: transparent;
+}
+
+.app-dock-btn:focus-visible,
+.app-more-menu .app-more-item:focus-visible {
+  outline: 0.125rem solid var(--theme-accent);
+  outline-offset: -0.125rem;
 }
 
 .app-dock-btn::before {
@@ -812,22 +1024,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-btn-more::before {
-  content: 'More';
-}
-
-.app-dock-btn.is-active::after {
-  content: '';
-  position: absolute;
-  left: 11px;
-  right: 11px;
-  bottom: 4px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--theme-accent);
-}
-
-.app-dock-btn-more {
-  width: 36px;
+  content: 'More modules';
 }
 
 .app-dock-btn-more.is-open {
@@ -836,13 +1033,20 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   color: var(--theme-text-strong);
 }
 
+.app-dock-btn-more.is-open::before {
+  display: none;
+}
+
 .app-more-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 10px);
   bottom: auto;
   z-index: 6;
-  min-width: 260px;
+  width: min(17rem, calc(100vw - 2rem));
+  max-height: min(30rem, 60svh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 6px;
   border-radius: 8px;
   border: 1px solid var(--theme-border);
@@ -876,6 +1080,24 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   font-size: 0.9rem;
   font-weight: 500;
   text-align: left;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1180px) {
+  .app-dock-btn.is-active:has(.app-dock-label) {
+    width: 2.625rem;
+    padding-inline: 0;
+  }
+
+  .app-dock-btn.is-active .app-dock-label {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-dock-btn::before {
+    transition: none;
+  }
 }
 
 .app-nav-icon {
@@ -926,7 +1148,7 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   height: 100%;
 }
 
-/* A plugin view is its frame and nothing else — no host rail, no gutter, no
+/* A plugin view is its frame and nothing else — no host rail, no side gutter, no
    host scroll. The plugin page lays out and scrolls itself, and if it wants a
    left rail it draws one, the same way a built-in view does.
 
@@ -1482,7 +1704,7 @@ button:disabled {
   }
 
   .topbar-search-shell {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
   }
 
   .topbar-heading-row {
@@ -1494,22 +1716,18 @@ button:disabled {
   }
 
   .app-dock-nav {
-    gap: 6px;
+    gap: 0.25rem;
   }
 
   .app-dock {
     width: max-content;
     min-width: 0;
     max-width: calc(100vw - 28px);
-    padding: 7px 8px;
+    padding: 0.25rem 0;
+    gap: 0.25rem;
   }
 
   .app-dock-btn {
-    width: 42px;
-    height: 42px;
-  }
-
-  .app-dock-btn-more {
-    width: 34px;
+    height: 2.625rem;
   }
 }

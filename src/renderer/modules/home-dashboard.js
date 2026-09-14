@@ -31,7 +31,6 @@ export function initHomeDashboard({
     list: document.getElementById('dashboard-passage-list'),
     panelList: document.getElementById('dashboard-passage-panel-list'),
     addBtn: document.getElementById('dashboard-passage-add-btn'),
-    openBtn: document.getElementById('dashboard-passage-open-btn'),
     closeBtn: document.getElementById('dashboard-passage-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-passage-dialog-overlay'),
     dialogForm: document.getElementById('dashboard-passage-dialog-form'),
@@ -64,7 +63,6 @@ export function initHomeDashboard({
     list: document.getElementById('dashboard-incubation-list'),
     panelList: document.getElementById('dashboard-incubation-panel-list'),
     addBtn: document.getElementById('dashboard-incubation-add-btn'),
-    openBtn: document.getElementById('dashboard-incubation-open-btn'),
     closeBtn: document.getElementById('dashboard-incubation-dialog-close-btn'),
     dialogOverlay: document.getElementById('dashboard-incubation-dialog-overlay'),
     locationList: document.getElementById('dashboard-incubation-location-list'),
@@ -102,6 +100,12 @@ export function initHomeDashboard({
     timerNameInput: document.getElementById('dashboard-timer-name-input'),
     timerMinutesInput: document.getElementById('dashboard-timer-minutes-input'),
     timerTemplateList: document.getElementById('dashboard-timer-template-list')
+  };
+  const topbarTimerElements = {
+    topbarLocalTime: document.getElementById('topbar-local-time'),
+    topbarTimer: document.getElementById('topbar-active-timer'),
+    topbarTimerTime: document.getElementById('topbar-timer-time'),
+    topbarTimerProgress: document.getElementById('topbar-timer-progress')
   };
 
   const requiredElements = [
@@ -174,7 +178,7 @@ export function initHomeDashboard({
       persist,
       safeText,
       render: masterRender,
-      elements: timerElements
+      elements: { ...timerElements, ...topbarTimerElements }
     }),
     quickLog: initQuickLogWidget({
       state,

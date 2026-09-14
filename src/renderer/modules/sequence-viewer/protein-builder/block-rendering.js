@@ -57,6 +57,7 @@ export function installProteinBuilderBlockRendering(ctx) {
       return;
     }
 
+    ctx.renderFeatureSourcePanel();
     const query = cleanText(state.featureSearchQuery, 600);
     const results = Array.isArray(state.featureSearchResults) ? state.featureSearchResults : [];
     // Below the 2-character minimum no search has run, so the panel stays quiet
@@ -85,7 +86,11 @@ export function installProteinBuilderBlockRendering(ctx) {
           <div class="sequence-viewer-protein-builder-feature-head">
             <div>
               <strong>${escapeHtml(feature?.name || 'feature')}</strong>
-              <p class="small-note">${escapeHtml(feature?.type || 'feature')} | ${escapeHtml(meta.lengthText)} | ${escapeHtml(meta.hostText)}</p>
+              <p class="small-note sequence-viewer-protein-picker-meta">
+                <span class="sequence-viewer-protein-picker-type">${escapeHtml(feature?.type || 'feature')}</span>
+                <span>${escapeHtml(meta.lengthText)}</span>
+                <span>${escapeHtml(meta.hostText)}</span>
+              </p>
             </div>
           </div>
           <p class="sequence-viewer-protein-builder-feature-sequence">${escapeHtml(previewSequence(meta.sequence || feature?.sequence || ''))}</p>
@@ -95,12 +100,14 @@ export function installProteinBuilderBlockRendering(ctx) {
         </article>
       `;
     }).join('');
-    ctx.renderFeatureSourcePanel();
   };
 
   // The picked feature's source vectors, and the plasmid the chosen one sits in.
   ctx.renderFeatureSourcePanel = function renderFeatureSourcePanel() {
     const feature = ctx.getSelectedSearchFeature();
+    if (elements.proteinBuilderFeatureSummary) {
+      elements.proteinBuilderFeatureSummary.textContent = feature?.name || (feature ? 'Selected protein' : 'Select protein');
+    }
     if (elements.proteinBuilderFeatureSource) {
       elements.proteinBuilderFeatureSource.hidden = !feature;
     }
@@ -123,7 +130,7 @@ export function installProteinBuilderBlockRendering(ctx) {
               aria-pressed="${selected ? 'true' : 'false'}"
               data-protein-builder-feature-host-id="${escapeAttribute(hostId)}"
             >
-              <strong>${escapeHtml(cleanText(entry?.hostVectorName, 160) || 'stored vector')}</strong>
+              <strong class="sequence-viewer-protein-picker-host-name">${escapeHtml(cleanText(entry?.hostVectorName, 160) || 'stored vector')}</strong>
               <span class="small-note">${length.toLocaleString()} bp | ${escapeHtml(cleanText(entry?.topology, 40) || 'circular')} | ${copies} copy${copies === 1 ? '' : ' sites'}</span>
             </button>
           `;

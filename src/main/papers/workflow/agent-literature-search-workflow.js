@@ -13,6 +13,9 @@ const { createSearchContext } = require('./literature-workflow/search-context.js
 const { createPaperAcquisition } = require('./literature-workflow/paper-acquisition.js');
 const { createPaperReading } = require('./literature-workflow/paper-reading.js');
 const { createRunLiteratureWorkflow } = require('./literature-workflow/run-workflow.js');
+const { runCodexLiteratureResearch } = require('./codex-literature-research-workflow.js');
+const { getLiteratureResearchSession } = require('./literature-research-session.js');
+const { startLiteratureResearchJob, waitForLiteratureResearch } = require('./literature-research-jobs.js');
 
 function createLiteratureSearchWorkflowRuntime(deps = {}) {
   const {
@@ -91,6 +94,9 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
 
   async function execute(input = {}) {
     const source = defaultEnsureObject(input);
+    if (source.research_id) {
+      return waitForLiteratureResearch(source.research_id, deps.researchPollWaitMs);
+    }
     const query = cleanText(
       source.query
       || (literatureSearchRuntime && typeof literatureSearchRuntime.buildLiteratureQuery === 'function'
@@ -109,9 +115,47 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     }
 
     const copiedContext = buildCopiedContext(source, query);
+    if (source.snapshot?.literature_research) {
+      const session = getLiteratureResearchSession(source.snapshot);
+      const search = getCandidateSearchRuntime();
+      if (!session || !search) {
+        return { ok: false, status: 'error', error: 'Paper research session is no longer active.' };
+      }
+      const initial = session.input;
+      const result = await search({
+        ...initial,
+        ...source,
+        query,
+        ...(initial.journals?.length ? { journals: initial.journals } : {}),
+        ...(initial.sources?.length ? { sources: initial.sources } : {}),
+        ...(initial.allow_unfiltered_fallback === false ? { allow_unfiltered_fallback: false } : {}),
+        defer_web_search_to_codex: true
+      });
+      session.searches.push(result);
+      return {
+        ...result,
+        selected_papers: selectPaperCandidates(asArray(result.items), query, 0, copiedContext.preferred_journals).map((paper) => ({
+          ...paper,
+          paper_title: paper.title,
+          download_status: 'not_requested'
+        })),
+        downloaded_papers: [],
+        loaded_context_blocks: [],
+        papers_read_count: 0
+      };
+    }
     const useCodexPaperContext = Boolean(codexSubAgentRuntime)
       && shouldUseCodexPaperContextWorkflow(source);
     const taskContext = source.snapshot?.scheduled_task || source.snapshot?.scheduledTask;
+    const denyDownloads = taskContext?.deny_paper_download === true || taskContext?.denyPaperDownload === true;
+    if (useCodexPaperContext && !denyDownloads) {
+      return startLiteratureResearchJob(query, () => runCodexLiteratureResearch({ ...source, query, project: copiedContext.project }, copiedContext, codexSubAgentRuntime, {
+        findLocalPaper: async (args) => {
+          const { reused } = await partitionByLocalKnowledge([{ ...args, title: args.paper_title }], copiedContext.storage_path, source);
+          return reused[0] || null;
+        }
+      }), deps.researchPollWaitMs);
+    }
     const isExperimentSuggestion = taskContext?.task_type === 'notebook_suggestion'
       && taskContext.deny_paper_download === true;
     if (useCodexPaperContext || isExperimentSuggestion) {

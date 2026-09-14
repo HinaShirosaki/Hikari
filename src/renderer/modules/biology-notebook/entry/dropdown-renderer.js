@@ -1,3 +1,25 @@
+// Most-used protocols first, most recently used breaking ties, then by name —
+// so the protocol a student runs every week is at the top of the list.
+export function rankProtocolsByUsage(protocols = [], entries = []) {
+  const usage = new Map();
+  for (const entry of entries) {
+    const id = String(entry?.protocolId || '').trim();
+    if (!id) {
+      continue;
+    }
+    const current = usage.get(id) || { count: 0, lastUsed: '' };
+    const used = String(entry.executedAt || entry.updatedAt || entry.createdAt || '');
+    usage.set(id, { count: current.count + 1, lastUsed: used > current.lastUsed ? used : current.lastUsed });
+  }
+  return [...protocols].sort((a, b) => {
+    const ua = usage.get(a.id) || { count: 0, lastUsed: '' };
+    const ub = usage.get(b.id) || { count: 0, lastUsed: '' };
+    return (ub.count - ua.count)
+      || ub.lastUsed.localeCompare(ua.lastUsed)
+      || String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}
+
 export function createDropdownRenderer({
   projectSelect,
   protocolSelect,
@@ -5,6 +27,7 @@ export function createDropdownRenderer({
   safeText,
   getProjects,
   getProtocols,
+  getNotebookEntries = () => [],
   onAfterRender,
   onProtocolChange
 } = {}) {
@@ -45,7 +68,8 @@ export function createDropdownRenderer({
     const optionMarkup = ['<option value="">Select protocol</option>'];
     const selectedProtocol = protocols.find((item) => item.id === selected) || null;
     const filteredProtocols = hasProject
-      ? protocols.filter((protocol) => String(protocol.name || '').toLowerCase().includes(searchTerm))
+      ? rankProtocolsByUsage(protocols, getNotebookEntries() || [])
+        .filter((protocol) => String(protocol.name || '').toLowerCase().includes(searchTerm))
       : [];
 
     if (

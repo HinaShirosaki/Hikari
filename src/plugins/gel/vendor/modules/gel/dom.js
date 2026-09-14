@@ -26,6 +26,7 @@ export function getGelElements(root = document) {
     gelCancelBtn: root.getElementById('gel-cancel-btn'),
     gelExportCsvBtn: root.getElementById('gel-export-csv-btn'),
     gelToolDividersBtn: root.getElementById('gel-tool-dividers-btn'),
+    gelFinishDividersBtn: root.getElementById('gel-finish-dividers-btn'),
     gelToolLadderLaneBtn: root.getElementById('gel-tool-ladder-lane-btn'),
     gelToolLaneVerticesBtn: root.getElementById('gel-tool-lane-vertices-btn'),
     gelToolBandTopBtn: root.getElementById('gel-tool-band-top-btn'),

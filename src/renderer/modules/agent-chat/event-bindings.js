@@ -50,7 +50,7 @@ export function bindAgentChatEvents({
     void requestController.stopMessage();
   });
 
-  dom.newChatBtn?.addEventListener('click', async () => {
+  async function startNewChat() {
     const didStart = await sessionManager.startNewChatSession();
     if (!didStart) {
       return;
@@ -59,6 +59,18 @@ export function bindAgentChatEvents({
     attachmentsController.reset();
     payloadBuilder.consumeHiddenContexts?.();
     shell.syncComposerHeight();
+  }
+
+  dom.newChatBtn?.addEventListener('click', startNewChat);
+  dom.sessionList?.addEventListener('click', (event) => {
+    const button = event?.target?.closest?.('[data-agent-new-chat-folder]');
+    if (!button || button.disabled || runtime.sendPending || runtime.sessionTransitionPending
+      || (runtime.inFlight && !trimText(state.agentChat?.currentSessionId, 120))) {
+      return;
+    }
+    if (sessionManager.selectFolder(button.dataset.agentNewChatFolder, { toggle: false })) {
+      void startNewChat();
+    }
   });
 
   dom.historyNode.addEventListener('click', (event) => {

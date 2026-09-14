@@ -77,6 +77,9 @@ export function evaluateJunction(leftFragment, rightFragment, thresholds, config
       // Record the exact split used by the two flanking primers.
       leftReverseTail: engineered.leftReverseTail,
       rightForwardTail: engineered.rightForwardTail,
+      leftReverseTargetTail: engineered.leftReverseTargetTail,
+      rightForwardTargetTail: engineered.rightForwardTargetTail,
+      redistributedFlankLength: engineered.redistributedFlankLength || 0,
       warnings
     };
   }

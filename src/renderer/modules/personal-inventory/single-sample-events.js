@@ -1,3 +1,5 @@
+import { readTypeFieldsFrom } from '../sample-registry/type-fields.js';
+
 export function bindSingleSampleEvents(ctx) {
   const { helpers, persist, state, uiState } = ctx;
   const { inventorySections } = ctx.elements;
@@ -57,6 +59,7 @@ export function bindSingleSampleEvents(ctx) {
       sample.lot = String(lotInput?.value || '').trim();
       sample.concentration = String(concentrationInput?.value || '').trim();
       sample.notes = String(notesInput?.value || '').trim();
+      sample.details = readTypeFieldsFrom(inventorySections.querySelector('[data-sample-type-fields]'), sample.type);
       sample.inventoryLink = { section, containerId, wellIndex: null };
       sample.location = helpers.isLocationEmpty(sample.location) ? helpers.buildAutoLocationFromLink(section, container, null) : sample.location;
       sample.updatedAt = new Date().toISOString();
@@ -124,6 +127,7 @@ export function bindSingleSampleEvents(ctx) {
         lot: String(lotInput?.value || '').trim(),
         concentration: String(concentrationInput?.value || '').trim(),
         notes: String(notesInput?.value || '').trim(),
+        details: readTypeFieldsFrom(inventorySections.querySelector('[data-sample-type-fields]'), typeInput?.value),
         location: helpers.buildAutoLocationFromLink(section, container, null),
         inventoryLink: { section, containerId, wellIndex: null },
         chemicalLinks: [],

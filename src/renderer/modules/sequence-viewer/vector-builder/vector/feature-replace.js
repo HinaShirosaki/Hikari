@@ -398,14 +398,15 @@ function createVectorFeatureReplace({
     const sourceHost = getSelectedHost();
     const sourceVectorName = cleanText(sourceHost?.hostVectorName, 160);
     try {
-      // Rewrite the bases through the shared edit action, which resizes the
-      // feature's own span and feeds the Cloning Design handoff. The chosen
-      // vector rides along as the donor, since that is the plasmid this
+      // Rewrite the bases through the shared edit action, which drops the old
+      // feature, truncates neighbours and feeds the Cloning Design handoff. The
+      // chosen vector rides along as the donor, since that is the plasmid this
       // fragment has to be amplified from.
       await onApplySequenceEdit({
         mode: 'replace',
         range,
         sequence: replacement,
+        replacedFeature: target,
         donorEntryId: cleanText(sourceHost?.hostVectorId, 200),
         donorName: sourceVectorName
       });
@@ -416,39 +417,34 @@ function createVectorFeatureReplace({
 
     const editedRecord = getSelectedRecord();
     const features = Array.isArray(editedRecord?.features) ? [...editedRecord.features] : [];
-    if (features[targetIndex]) {
-      features[targetIndex] = {
-        ...features[targetIndex],
-        name: nextName,
-        type: normalizeFeatureType(cleanText(stored.type, 120)),
-        strand,
-        locationText: '',
-        source: 'vector_builder',
-        description: sourceVectorName
-          ? `Replaced from ${sourceVectorName} (${storedSequence.length} bp).`
-          : `Replaced from the stored feature database (${storedSequence.length} bp).`,
-        segments: [{ start: range.start, end: range.start + replacement.length }]
-      };
-      const records = [...state.records];
-      const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, records.length - 1));
-      const nextRecord = { ...records[selectedIndex], features };
-      records[selectedIndex] = nextRecord;
-      state.records = records;
+    features.splice(Math.min(targetIndex, features.length), 0, {
+      ...target,
+      name: nextName,
+      type: normalizeFeatureType(cleanText(stored.type, 120)),
+      strand,
+      locationText: '',
+      source: 'vector_builder',
+      description: sourceVectorName
+        ? `Replaced from ${sourceVectorName} (${storedSequence.length} bp).`
+        : `Replaced from the stored feature database (${storedSequence.length} bp).`,
+      segments: [{ start: range.start, end: range.start + replacement.length }]
+    });
+    const records = [...state.records];
+    const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, records.length - 1));
+    const nextRecord = { ...records[selectedIndex], features };
+    records[selectedIndex] = nextRecord;
+    state.records = records;
 
-      hideFeatureReplaceDialog();
-      clearSelection();
-      vb().selectedFeatureIndex = -1;
-      render();
+    hideFeatureReplaceDialog();
+    clearSelection();
+    vb().selectedFeatureIndex = -1;
+    render();
 
-      try {
-        await persistFeatureMutation(nextRecord, `Replaced ${previousName} with ${nextName}.`);
-      } catch (error) {
-        setStatus(error?.message || 'Replaced the feature but failed to save it.', true);
-        return;
-      }
-    } else {
-      hideFeatureReplaceDialog();
-      render();
+    try {
+      await persistFeatureMutation(nextRecord, `Replaced ${previousName} with ${nextName}.`);
+    } catch (error) {
+      setStatus(error?.message || 'Replaced the feature but failed to save it.', true);
+      return;
     }
     setStatus(`Replaced ${previousName} with stored feature ${nextName} (${replacement.length.toLocaleString()} bp).`);
   }

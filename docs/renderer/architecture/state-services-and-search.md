@@ -48,7 +48,7 @@ There are two persistence layers to keep in mind:
    - creates an undo checkpoint through `undoService`
    - normalizes persisted storage paths
    - writes local storage
-   - optionally auto-saves the `.ena` data file through the main-process bridge
+   - optionally auto-saves the `.json` snapshot through the main-process bridge
 
 The second one is the important runtime callback. Feature modules receive `persist()` and treat it as the canonical "commit local changes" operation.
 

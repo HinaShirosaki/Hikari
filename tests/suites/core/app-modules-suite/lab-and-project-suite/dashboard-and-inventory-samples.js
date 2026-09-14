@@ -103,7 +103,6 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
   const list = new MockElement('passage-list');
   const panelList = new MockElement('passage-panel-list');
   const addBtn = new MockElement('passage-add');
-  const openBtn = new MockElement('passage-open');
   const closeBtn = new MockElement('passage-close');
   const dialogOverlay = new MockElement('passage-overlay');
   const dialogForm = new MockElement('passage-form');
@@ -133,7 +132,6 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
       list,
       panelList,
       addBtn,
-      openBtn,
       closeBtn,
       dialogOverlay,
       dialogForm,
@@ -589,7 +587,7 @@ test('personal-inventory keeps folders nestable while physical containers remain
   assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-node="folder-child"/);
   assert.match(inventoryLocationNav.innerHTML, /folder-tree-template__children/);
   assert.match(inventoryLocationNav.innerHTML, /inventory-container-glyph-box81/);
-  assert.match(inventoryLocationNav.innerHTML, /81-well cube box/);
+  assert.match(inventoryLocationNav.innerHTML, /81-well grid box/);
   assert.equal((inventoryLocationNav.innerHTML.match(/left-rail-folder-glyph/g) || []).length, 2);
   const contextContainerMarkup = inventoryLocationNav.innerHTML.match(/<button\s+type="button"\s+class="inventory-container-btn[^"]*"[\s\S]*?data-container-open="box-context"[\s\S]*?<\/button>/)?.[0] || '';
   assert.ok(contextContainerMarkup);

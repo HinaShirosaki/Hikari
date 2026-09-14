@@ -69,7 +69,14 @@ export function createProtocolPreviewHelpers({
 
     const sections = [];
 
-    if (includeNameSection) {
+    if (options.reviewDocument === true) {
+      sections.push(`
+        <header class="draft-review-heading">
+          <span class="draft-review-kind">Protocol · Draft</span>
+          <h4 data-selection-segment-id="protocol:name" data-selection-segment-label="Protocol Name">${safeText(name || 'Untitled protocol')}</h4>
+        </header>
+      `);
+    } else if (includeNameSection) {
       sections.push(`
         <section class="protocol-view-section">
           <h4>Protocol Name</h4>

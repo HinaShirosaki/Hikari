@@ -1,3 +1,6 @@
+import { renderAgentHtml, mountAgentHtml } from './html-artifacts.js';
+import { updateHistoryKeepingHtmlFrames } from './html-history.js';
+import { renderAgentImages } from './image-artifacts.js';
 import { renderSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
 import { renderMarkdown } from './markdown.js';
 import { renderUserAttachments } from './rendering-attachments.js';
@@ -7,6 +10,8 @@ import { renderAssistantGeneratedTrace } from './rendering-trace.js';
 import { renderUserQuestionCard } from './rendering-question-card.js';
 import { formatTime } from './rendering-time.js';
 import { asArray, trimText } from './shared.js';
+
+export { updateHistoryKeepingHtmlFrames };
 
 function getLiveStreamText(message) {
   const liveProgress = message?.meta?.live_progress && typeof message.meta.live_progress === 'object'
@@ -72,6 +77,8 @@ export function renderHistory({
   state,
   safeText,
   notebookDraftAdapter,
+  protocolReviewAdapter,
+  api = historyNode?.ownerDocument?.defaultView?.hikariApi,
   showUserQuestions = true
 }) {
   const safeMessages = asArray(messages);
@@ -80,9 +87,9 @@ export function renderHistory({
     return;
   }
 
-  historyNode.innerHTML = safeMessages.map((message, index) => {
+  const markup = safeMessages.map((message, index) => {
     const role = message.role === 'assistant' ? 'assistant' : 'user';
-    const headerLabel = role === 'assistant' ? 'Assistant' : 'You';
+    const headerLabel = role === 'assistant' ? 'Hikari' : 'You';
     const cardClass = role === 'assistant' ? 'agent-chat-item-assistant' : 'agent-chat-item-user';
     const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
     const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
@@ -94,6 +101,7 @@ export function renderHistory({
       ? renderAssistantMeta(message.meta, message.id, {
         safeText,
         notebookDraftAdapter,
+        protocolReviewAdapter,
         notebookEntries: state.notebookEntries,
         canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user'),
         showUserQuestion: showUserQuestions
@@ -103,29 +111,32 @@ export function renderHistory({
       ? renderAssistantMessageBody(message, safeText, { hasLiveProgress })
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
-      <div class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
-        <div class="agent-chat-identity" aria-hidden="true">
-          <span class="agent-chat-avatar agent-chat-avatar-${role}">${role === 'assistant' ? 'AI' : 'You'}</span>
-        </div>
-        <article class="agent-chat-item ${cardClass}">
-          <header class="agent-chat-header">
+      <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${index}:${message.meta?.html_artifacts?.[0]?.id || message.id || ''}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
+        <article class="agent-chat-item ${cardClass}${message.meta?.parser?.clarification_reason === 'agent_error' ? ' is-error' : ''}" aria-label="${role === 'assistant' ? 'Hikari response' : 'Your message'}">
+          <header class="agent-chat-header${role === 'user' ? ' sr-only' : ''}">
             <div class="agent-chat-header-copy">
               <strong>${headerLabel}</strong>
-              ${hasLiveProgress ? '<span class="agent-live-pill">Working</span>' : ''}
             </div>
-            <span>${safeText(timestamp)}</span>
+            <time class="agent-chat-time">${safeText(timestamp)}</time>
           </header>
           ${assistantGeneratedTrace}
           ${messageBody}
+          ${role === 'assistant' ? renderAgentImages(message.meta, safeText) : ''}
+          ${role === 'assistant' ? renderAgentHtml(message.meta, safeText) : ''}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}
           ${role === 'assistant' ? renderSequenceActions(message.meta, safeText) : ''}
+          ${role === 'assistant' && !hasLiveProgress && trimText(message.text) && message.id ? `
+            <footer class="agent-message-actions">
+              <button type="button" class="ghost-btn agent-message-copy" data-agent-copy-message="${safeText(message.id)}" aria-label="Copy response" title="Copy response">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>
+              </button>
+            </footer>` : ''}
         </article>
       </div>
     `;
   }).join('');
+  updateHistoryKeepingHtmlFrames(historyNode, markup);
+  mountAgentHtml(historyNode, safeMessages, api);
 
-  historyNode.querySelectorAll('details[data-agent-generated-trace="true"]').forEach((traceNode) => {
-    traceNode.open = traceNode?.dataset?.agentTraceOpen === 'true';
-  });
 }

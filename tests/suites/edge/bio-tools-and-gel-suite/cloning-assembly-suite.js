@@ -1428,7 +1428,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(assembled.name, 'pET28a · 6xHis–TEV–MDM2(E45G)');
     });
 
-    test('[EDGE] editing a saved sequence creates a named local derivative instead of overwriting its entry', async () => {
+    for (const activeEntryStatus of ['saved', 'temporary']) test(`[EDGE] editing a ${activeEntryStatus} sequence creates a named local derivative instead of overwriting its entry`, async () => {
       const workflow = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-workflow.js')
       );
@@ -1445,7 +1445,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         selectedRecordIndex: 0,
         selectedFeatureIndex: -1,
         activeEntryId: 'saved_mdm2',
-        activeEntryStatus: 'saved',
+        activeEntryStatus,
         sequenceEditDesignSource: null,
         cloningDesign: {},
         warnings: []
@@ -1949,6 +1949,44 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(fragments[1].metadata.templateSequence, second);
     });
 
+    test('[EDGE] deleting or replacing bases truncates overlapping features; same-length substitutions keep them', () => {
+      const helpers = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
+      ));
+      const segs = (features) => features.map((feature) => [feature.name, ...feature.segments.map((s) => [s.start, s.end])]);
+      const features = [
+        { name: 'cds', segments: [{ start: 0, end: 100 }] },
+        { name: 'tag', segments: [{ start: 40, end: 60 }] },
+        { name: 'head', segments: [{ start: 30, end: 50 }] },
+        { name: 'tail', segments: [{ start: 50, end: 70 }] },
+        { name: 'after', segments: [{ start: 80, end: 90 }] }
+      ];
+      // Replace 40..60 with 5 bp: the tag is gone, flanks are trimmed, enclosing CDS shrinks.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 5, 85)), [
+        ['cds', [0, 85]],
+        ['head', [30, 40]],
+        ['tail', [45, 55]],
+        ['after', [65, 75]]
+      ]);
+      // Delete 40..60: same, with a zero-length replacement.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 0, 80)), [
+        ['cds', [0, 80]],
+        ['head', [30, 40]],
+        ['tail', [40, 50]],
+        ['after', [60, 70]]
+      ]);
+      // Codon mutagenesis (same length) rewrites bases, not annotations.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 20, 100)), segs(features));
+      // A pure insertion grows whatever spans it and shifts what follows.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 50, end: 50 }, 10, 110)), [
+        ['cds', [0, 110]],
+        ['tag', [40, 70]],
+        ['head', [30, 50]],
+        ['tail', [60, 80]],
+        ['after', [90, 100]]
+      ]);
+    });
+
     test('[EDGE] a Protein Builder insert is amplified per block, not as one amplicon', () => {
       const helpers = loadEsmStyleModule(path.join(
         __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
@@ -1958,8 +1996,8 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       ));
       const vector = filler(3000, 4007);
       const gene = filler(600, 4101);
-      // Tags and linker are reverse translated, so they exist only as ordered DNA;
-      // the gene came off pDonor. One template for the lot cannot prime the 5' end.
+      // The gene came off pDonor; reverse-translated tags/linkers are additions
+      // shared by the gene and vector primers, not template-binding sequence.
       const tags = 'ATGCATCATCATCATCATCAC';
       const linker = 'GGCGGAGGCGGTTCTGGCGGAGGCGGTTCT';
       const insert = `${tags}${linker}${gene}TAA`;
@@ -2004,12 +2042,15 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       });
       assert.equal(split.feasible, true);
       assert.equal(split.warnings.some((warning) => /names no PCR template/.test(warning)), false);
-      // The gene is amplified off pDonor; the tags/linker become an ordered block.
+      // The gene is amplified off pDonor; the short tags/linker use primer tails.
       const templates = split.plans[0].plan.orderedFragmentMap.fragments
         .filter((fragment) => (fragment.role || fragment.type) !== 'backbone')
         .map((fragment) => fragment.name);
-      assert.equal(templates.length, 2);
-      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['Synthetic block', 'POI']);
+      assert.deepEqual(JSON.parse(JSON.stringify(templates)), ['POI']);
+      assert.equal(split.primers.length, 4);
+      assert.equal(split.primers.every((primer) => primer.length <= 60), true);
+      assert.equal(split.warnings.some((warning) => /must be ordered as synthetic DNA/.test(warning)), false);
+      assert.equal(split.plans[0].plan.expectedJunctionLogic.some((junction) => junction.redistributedFlankLength > 0), true);
     });
 
     test('[EDGE] cloning UI keeps all seven supported methods available', () => {
@@ -2057,6 +2098,28 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       });
       assert.equal(none, 0);
       assert.equal(saved.length, 1);
+    });
+
+    test('[EDGE] designed primers survive a GenBank round-trip as designed, so re-designing replaces them', () => {
+      const primerAnnotation = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
+      );
+      const storage = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'storage.js')
+      );
+      const parsing = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'parsing.js')
+      );
+      const sequence = filler(200, 311);
+      const primer = { name: 'sel_F', role: 'pcr-forward', sequence: sequence.slice(12, 34), bindingSequence: sequence.slice(12, 34) };
+      // A foreign primer_bind (no oligo qualifier) must be left alone.
+      const imported = { name: 'M13 fwd', type: 'primer_bind', strand: 1, segments: [{ start: 100, end: 118 }] };
+      const first = primerAnnotation.withPrimerBindFeatures({ sequence, features: [imported] }, [primer]);
+
+      const reopened = parsing.parseInputRecords(storage.buildRecordGenbankText({ name: 'p1', sequence, features: first.features })).records[0];
+      const again = primerAnnotation.withPrimerBindFeatures(reopened, [{ ...primer, name: 'sel_F_v2' }]);
+
+      assert.equal(again.features.map((feature) => feature.name).join(','), 'M13 fwd,sel_F_v2');
     });
   }
 };

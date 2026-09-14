@@ -1,12 +1,14 @@
 'use strict';
 
-const { app, BrowserWindow, dialog, ipcMain, session, shell } = require('electron');
+const { app, BrowserWindow, crashReporter, dialog, ipcMain, protocol, session, shell } = require('electron');
 const path = require('path');
 const fs = require('node:fs/promises');
 
 const { createMainWindow } = require('../windows/create-main-window');
 const { createMainServices } = require('../core/main-services');
 const { SYSTEM } = require('../../shared/ipc/channels');
+
+const { registerHtmlPreviewScheme, installHtmlPreviewService, guardHtmlPreviewNavigation } = require('../agent/html-output/preview-service');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
@@ -20,6 +22,7 @@ function startMainApp() {
     return;
   }
 
+  registerHtmlPreviewScheme(protocol);
   let mainWindow = null;
   let allowWindowClose = false;
   let closeRequestPending = false;
@@ -28,6 +31,7 @@ function startMainApp() {
   const mainServices = createMainServices({
     app,
     BrowserWindow,
+    crashReporter,
     dialog,
     ipcMain,
     session,
@@ -105,6 +109,7 @@ function startMainApp() {
         mainWindow = null;
       }
     });
+    guardHtmlPreviewNavigation(mainWindow.webContents);
   }
 
   ipcMain.on(SYSTEM.APP_CLOSE_RESPONSE, (event, payload = {}) => {
@@ -135,6 +140,7 @@ function startMainApp() {
         app.dock.setIcon(mainServices.appIconPath);
       }
 
+      installHtmlPreviewService({ protocol, ipcMain, getMainWindow: () => mainWindow });
       createWindow();
       await mainServices.start();
 

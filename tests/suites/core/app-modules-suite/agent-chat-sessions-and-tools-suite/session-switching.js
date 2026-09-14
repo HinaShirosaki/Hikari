@@ -430,12 +430,18 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   agent.render();
   assert.deepEqual([...state.agentChat.expandedFolderIds], []);
 
-  const projectFolder = sessionList.querySelectorAll('[data-agent-folder-id]')
-    .find((item) => item.dataset.agentFolderId === 'project:p1');
-  projectFolder.closest = (selector) => selector === '[data-agent-folder-id]' ? projectFolder : null;
-  trigger(sessionList, 'click', { target: projectFolder });
-
-  trigger(document.getElementById('agent-new-chat-btn'), 'click');
+  assert.match(sessionList.innerHTML, /data-agent-new-chat-folder="project:p1"/);
+  const newChatButton = {
+    dataset: { agentNewChatFolder: 'project:p1' },
+    disabled: true
+  };
+  const iconTarget = {
+    closest: (selector) => selector === '[data-agent-new-chat-folder]' ? newChatButton : null
+  };
+  trigger(sessionList, 'click', { target: iconTarget });
+  assert.equal(createPayload, null);
+  newChatButton.disabled = false;
+  trigger(sessionList, 'click', { target: iconTarget });
   await flushAsync();
   await flushAsync();
   assert.equal(createPayload.projectId, 'p1');

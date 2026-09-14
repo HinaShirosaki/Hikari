@@ -1,4 +1,5 @@
 import { normalizeFeatureType } from '../feature-types.js';
+import { PRIMER_FEATURE_SOURCE } from '../primer-annotation.js';
 import { clamp, normalizeRecordName, normalizeSequenceText } from '../shared.js';
 
 function splitTopLevelArguments(raw) {
@@ -243,7 +244,9 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
       );
       const translation = normalizeProteinTranslation(entry.qualifiers.translation || '');
       // A primer_bind written by this app carries the oligo it was designed as,
-      // which is not always what the template says at that position.
+      // which is not always what the template says at that position. Only
+      // primer design writes that qualifier, so it also marks the feature as
+      // ours: the next design run replaces it instead of stacking a duplicate.
       const primerSequence = String(entry.qualifiers.primer_sequence || '')
         .toUpperCase()
         .replace(/[^A-Z]/g, '');
@@ -256,7 +259,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         description,
         ...(translation ? { translation } : {}),
         ...(primerSequence ? { primerSequence } : {}),
-        source: 'genbank',
+        source: primerSequence ? PRIMER_FEATURE_SOURCE : 'genbank',
         locationText: entry.location,
         qualifiers: { ...entry.qualifiers },
         segments

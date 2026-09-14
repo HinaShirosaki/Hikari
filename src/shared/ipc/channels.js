@@ -13,6 +13,7 @@
 
 const AGENT = Object.freeze({
   CHAT: 'agent:chat',
+  HTML_PREVIEW: 'agent:html-preview',
   CHAT_CANCEL: 'agent:chat:cancel',
   LIST_SKILLS: 'agent:list-skills',
   SUGGEST_EXPERIMENT: 'agent:suggest-experiment',
@@ -49,7 +50,10 @@ const STORAGE = Object.freeze({
 const SYSTEM = Object.freeze({
   OPEN_EXTERNAL_URL: 'system:open-external-url',
   APP_CLOSE_REQUESTED: 'system:app-close-requested',
-  APP_CLOSE_RESPONSE: 'system:app-close-response'
+  APP_CLOSE_RESPONSE: 'system:app-close-response',
+  REPORT_ERROR: 'system:report-error',
+  OPEN_LOGS_FOLDER: 'system:open-logs-folder',
+  OPEN_THIRD_PARTY_NOTICES: 'system:open-third-party-notices'
 });
 
 const PLUGINS = Object.freeze({

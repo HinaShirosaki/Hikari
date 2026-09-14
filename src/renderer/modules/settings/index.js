@@ -8,6 +8,7 @@ import { createLlmModelCatalog } from './llm-model-catalog.js';
 import { createMcpToolsController } from './mcp-tools-controller.js';
 import { getSettingsElements } from './dom.js';
 import { escapeHtml } from './html.js';
+import { showTransientNotice } from '../../lib/notify.js';
 import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
 import {
   applyAppearanceToDocument,
@@ -38,6 +39,8 @@ export function initSettings({
     settingStoragePath,
     selectStoragePathBtn,
     startupForm,
+    openLogsFolderBtn,
+    openThirdPartyNoticesBtn,
     settingStartupDefaultView,
     settingStartupRememberLastView,
     notebookPdfForm,
@@ -177,6 +180,18 @@ export function initSettings({
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
   startupForm?.addEventListener('submit', onSaveStartupSettings);
+  openLogsFolderBtn?.addEventListener('click', async () => {
+    const result = await window.hikariApi?.openLogsFolder?.();
+    if (result && result.ok === false) {
+      showTransientNotice(result.error || 'Could not open the logs folder.', { type: 'error' });
+    }
+  });
+  openThirdPartyNoticesBtn?.addEventListener('click', async () => {
+    const result = await window.hikariApi?.openThirdPartyNotices?.();
+    if (result && result.ok === false) {
+      showTransientNotice(result.error || 'Could not open the third-party notices.', { type: 'error' });
+    }
+  });
   notebookPdfForm?.addEventListener('submit', notebookPdfController.save);
   llmForm.addEventListener('submit', onSaveLlmSettings);
   settingModel?.addEventListener('input', onModelChanged);

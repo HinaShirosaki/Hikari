@@ -10,6 +10,8 @@ export function getSettingsElements(rootDocument = globalThis?.document || null)
     settingStoragePath: getById('setting-storage-path'),
     selectStoragePathBtn: getById('select-storage-path-btn'),
     startupForm: getById('startup-form'),
+    openLogsFolderBtn: getById('open-logs-folder-btn'),
+    openThirdPartyNoticesBtn: getById('open-third-party-notices-btn'),
     settingStartupDefaultView: getById('setting-startup-default-view'),
     settingStartupRememberLastView: getById('setting-startup-remember-last-view'),
     notebookPdfForm: getById('notebook-pdf-form'),

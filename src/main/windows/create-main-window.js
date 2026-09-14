@@ -22,7 +22,8 @@ function createMainWindow({
   appIconPath,
   preloadPath,
   onCloseRequested,
-  onClosed
+  onClosed,
+  platform = process.platform
 }) {
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -31,6 +32,10 @@ function createMainWindow({
     minHeight: 800,
     title: 'Hikari',
     icon: appIconPath,
+    ...(platform === 'darwin' ? {
+      titleBarStyle: 'hidden',
+      trafficLightPosition: { x: 16, y: 24 }
+    } : {}),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -81,8 +86,9 @@ function createMainWindow({
   });
 
   // Nothing in the app requests camera, mic, geolocation, or notifications.
-  mainWindow.webContents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
-    callback(false);
+  // navigator.clipboard.writeText (copy buttons) needs clipboard-sanitized-write.
+  mainWindow.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(permission === 'clipboard-sanitized-write');
   });
 
   mainWindow.loadFile(path.join(projectRoot, 'index.html'));

@@ -5,6 +5,7 @@ const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels');
 function createAgentApi(ipcRenderer) {
   return {
     suggestNextExperiment: (payload) => ipcRenderer.invoke(AGENT.SUGGEST_EXPERIMENT, payload),
+    agentHtmlPreview: (payload) => ipcRenderer.invoke(AGENT.HTML_PREVIEW, payload),
     agentChat: (payload) => ipcRenderer.invoke(AGENT.CHAT, payload),
     agentChatCancel: (payload) => ipcRenderer.invoke(AGENT.CHAT_CANCEL, payload),
     listAgentSkills: (payload) => ipcRenderer.invoke(AGENT.LIST_SKILLS, payload),

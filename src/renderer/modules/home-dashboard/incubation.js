@@ -21,7 +21,6 @@ export function initIncubationWidget({
     list,
     panelList,
     addBtn,
-    openBtn,
     closeBtn,
     dialogOverlay,
     locationList,
@@ -30,7 +29,6 @@ export function initIncubationWidget({
   } = elements;
 
   addBtn.addEventListener('click', () => openIncubationDialog(true));
-  openBtn.addEventListener('click', () => openIncubationDialog(false));
   closeBtn.addEventListener('click', closeIncubationDialog);
   list.addEventListener('click', onIncubationListClick);
   panelList.addEventListener('click', onIncubationListClick);

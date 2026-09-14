@@ -239,6 +239,6 @@ If your feature introduces a brand new top-level state slice (say `state.experim
 1. Add the default to `defaultState` in `app-state/defaults.js`.
 2. Extend `normalizeState()` to coerce missing/legacy values.
 3. Represent cross-feature links with stable record IDs and update each owning reader/search mapper that resolves those IDs; the renderer does not persist a second relationship graph.
-4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/storage/](../../src/main/storage/).
+4. If the slice should round-trip to the on-disk storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/storage/](../../src/main/storage/).
 
 Most modules do not need this. Reuse existing slices when you can.

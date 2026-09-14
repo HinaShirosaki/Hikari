@@ -66,6 +66,7 @@ export function initGelAnalysis({
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
     originalImage: null,
+    originalFile: null,
     pendingNotebookLink: null,
     persist,
     preprocessedCache: null,
@@ -254,6 +255,7 @@ export function initGelAnalysis({
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
+  elements.gelFinishDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderMwBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder-mw'));
   elements.gelDetectLadderBtn?.addEventListener('click', manualWorkflow.onDetectLadderBands);
   if (elements.gelLadderPresetSelect && !elements.gelLadderPresetSelect.options.length) {

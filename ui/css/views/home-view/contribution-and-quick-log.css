@@ -164,10 +164,6 @@
 #home-view .home-tile .home-quicklog-input::placeholder {
   color: var(--home-tile-muted);
 }
-#home-view .home-tile .home-quicklog-input:focus-visible {
-  outline: 2px solid var(--theme-accent);
-  outline-offset: 2px;
-}
 #home-view .home-quicklog-actions {
   display: flex;
   align-items: center;

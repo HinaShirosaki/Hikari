@@ -24,7 +24,7 @@ Direct Hikari MCP tools:
 - `protocol_lookup`: search local protocols through Hikari protocol matching.
 - `protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.
 - `notebook_draft`: select a protocol from candidates, fill known placeholder values, and prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.
-- `literature_search`: find papers, rank selected candidates, return download-ready metadata, and load bounded paper context blocks from abstracts or already-ingested paper markdown without starting new PDF downloads automatically.
+- `literature_search`: delegate paper research to a sub-agent that searches, downloads, and reads until evidence is sufficient, returning exact source lines and relevance comments.
 - `paper_download`: download a paper PDF into Hikari storage.
 - `paper_analysis`: read a specific local paper through one Codex sub-agent command and return exact line-backed context plus related local comments.
 - `paper_intake_search_summaries`: search one-sentence summaries in the paper-intake knowledge base.
@@ -33,6 +33,8 @@ Direct Hikari MCP tools:
 - `purchase_recommendation`: search and rank purchasable products.
 - `container`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.
 - `assay_table`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.
+- `html_output`: display self-contained interactive HTML in Agent Chat; use the hikari-html-output skill for authoring and the preview constraints.
+- `image_output`: display saved analysis images inline in Agent Chat and preserve them in chat history.
 - `plotly_graph`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.
 - `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.
 
@@ -41,15 +43,16 @@ Tool-use rules:
 - Do not use local lookup tools for active Assay plate/result rows; if assay rows are missing from the hidden TSV, treat it as missing UI context and ask for or await refreshed context.
 - Use `notebook_lookup` to discover notebook pages by text, project, protocol, or state. Treat `access.complete: false` as incomplete evidence, follow `access.user_action` for permission recovery, and never turn a partial lookup into a definitive no-match claim.
 - Use `literature_search` for finding papers, references, recent literature, or external scientific evidence.
-- `literature_search` is search-first: do not expect it to open publisher pages or download new PDFs. The user can click the paper download button, or you can use `paper_download` only when the user explicitly asks to download a paper.
+- Pass the complete main-agent research objective in `message`, with a compact initial `query`, evidence requirements, and constraints. The research sub-agent may freely use `paper_download` and read its returned Markdown paths. Do not download the same papers again after delegated research returns. Metadata-only scheduled tasks with `deny_paper_download: true` remain discovery-only.
 - For `literature_search`, saved Preferred Journals from the current Hikari settings are already available in the request context. Treat them as soft ranking preferences even when the user says "from my preferred journals" or asks to use saved preferences, and do not pass a hard `journals` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.
-- For a normal paper-discovery request, make at most one `literature_search` call. When the request also needs Codex/web discovery, use Hikari API sources (`pubmed`, `crossref`, and `europe_pmc`) in that call and use native Codex web search separately; do not include Hikari's `web` source because it would re-enter Codex CLI from inside the active MCP request. Use the returned structured result to answer; do not launch follow-up title or DOI searches through `literature_search` just to compensate for weak candidates unless the user explicitly asks to refine or repeat the search.
+- The main agent starts at most one `literature_search` delegation per turn. If status is `running`, call again with only its `research_id` until the same job completes; do not start another researcher or return a final answer yet. Research has no overall deadline. Inside an active `literature_research` session, the sub-agent may repeatedly call `literature_search` for database candidates without recursive delegation, and use native web search. Continue until evidence is sufficient or available sources cannot fill material gaps; report unresolved gaps honestly.
 - Use `paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.
 - Use `paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text. Call it once, answer from `loaded_context_blocks.source_lines`, and treat `related_comments` as local user annotations rather than paper evidence.
 - Use `paper_intake_search_summaries` or `paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.
 - Use `paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.
 - Use `container` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.
 - Use `assay_table` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.
+- For image-producing analysis, save the PNG, JPEG, or WebP file inside Hikari storage (at most 5 MiB), then call `image_output` with `path`, descriptive `alt`, and optional `title` and `caption`. Check success before claiming it was displayed; do not paste base64 or rely on Markdown file paths.
 - Use `plotly_graph` when the user asks for a graph, chart, or custom visualization; call `inspect` after create/update and adjust the Plotly figure before answering when inspection reports issues.
 - Use direct `protocol_generation` only after complete protocol JSON already exists.
 - When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `protocol_generation` with `save: true`, then summarize the review-ready protocol.

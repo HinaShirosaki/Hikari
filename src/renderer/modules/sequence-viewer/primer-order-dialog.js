@@ -4,7 +4,6 @@ import { asArray } from '../../lib/normalize.js';
 import {
   DEFAULT_PRIMER_ORDER_PURIFICATION,
   DEFAULT_PRIMER_ORDER_SCALE,
-  IDT_BULK_INPUT_URL,
   PRIMER_ORDER_PURIFICATIONS,
   PRIMER_ORDER_SCALES,
   buildIdtBulkInput,
@@ -42,7 +41,7 @@ export function createPrimerOrderController(config = {}) {
       const warnings = buildPrimerOrderWarnings(primers, options);
       elements.primerOrderWarnings.innerHTML = warnings.length
         ? warnings.map((warning) => `<p class="small-note sequence-viewer-primer-order-warning">${escapeHtml(warning)}</p>`).join('')
-        : `<p class="small-note">${primers.length.toLocaleString()} primer${primers.length === 1 ? '' : 's'} ready to order.</p>`;
+        : '';
     }
   }
 
@@ -114,14 +113,6 @@ export function createPrimerOrderController(config = {}) {
     });
     elements.primerOrderCopyCsvBtn?.addEventListener('click', () => {
       void copy(buildPrimerOrderCsv(primers, { scale, purification }), 'order CSV');
-    });
-    elements.primerOrderOpenIdtBtn?.addEventListener('click', () => {
-      const bridge = getBridge();
-      if (typeof bridge?.openExternalUrl !== 'function') {
-        setStatus(`Open ${IDT_BULK_INPUT_URL} to paste the block.`, true);
-        return;
-      }
-      void bridge.openExternalUrl(IDT_BULK_INPUT_URL);
     });
   }
 

@@ -139,7 +139,7 @@ Common methods (full surface in [docs/main-platform/](../main-platform/)):
 | Method | Purpose |
 | --- | --- |
 | `autoSaveDataFile(state, manifestPath?)` | autosave the state bundle (called from the renderer core's `persist`) |
-| `loadDataFile()` / `saveDataFile(state)` | manual import/export of `.ena.json` |
+| `loadDataFile()` / `saveDataFile(state)` | manual import/export of the `.json` snapshot |
 | `runScript(name, payload)` | invoke a registered main-process script (used by tool-box, agent) |
 | `openExternalUrl(url)` | shell-open a URL |
 | `selectStorageRoot()` | open the directory picker for `Settings → Storage Path` |

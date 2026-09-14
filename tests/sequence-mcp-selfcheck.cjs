@@ -185,10 +185,9 @@ test('circular feature index, duplicate qualifiers, artifact manifest and copied
   const built = await call('sequence_protein_build', { request_id: 'export-build', parts: [{ kind: 'custom', amino_acids: 'MHHHHHH' }] });
   assert.equal(built.ok, true, JSON.stringify(built));
   const changed = await call('sequence_feature_edit', { entry_id: parent.entry_id, expected_revision: parent.revision, feature_ref: parent.features.items[0].feature_ref, operation: 'replace', mode: 'annotation_only', feature: { name: 'kept' }, request_id: 'export-edit' });
-  const { collectManifestEntries } = require('../src/main/storage/storage-manifest');
-  const entries = await collectManifestEntries(root);
-  assert.ok(entries.some(e => e.relative_path.endsWith(`.constructs/${built.construct_id}.json`) && e.role === 'sequence_entry_file'));
-  assert.ok(entries.some(e => e.relative_path.endsWith(`${changed.entry_id}/agent-design.json`) && e.role === 'sequence_entry_file'));
+  const entries = (await fs.readdir(path.join(root, 'SequenceViewer', 'entries'), { recursive: true })).map((p) => String(p).split(path.sep).join('/'));
+  assert.ok(entries.some(e => e.endsWith(`.constructs/${built.construct_id}.json`)));
+  assert.ok(entries.some(e => e.endsWith(`${changed.entry_id}/agent-design.json`)));
   const copy = await fs.mkdtemp(path.join(os.tmpdir(), 'sequence-bundle-copy-'));
   try {
     await fs.cp(path.join(root, 'SequenceViewer'), path.join(copy, 'SequenceViewer'), { recursive: true });

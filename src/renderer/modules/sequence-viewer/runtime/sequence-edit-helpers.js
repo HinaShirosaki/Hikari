@@ -147,7 +147,19 @@ function adjustSegmentForEdit(segment, editStart, editEnd, delta, insertLength) 
   if (start >= editEnd) {
     return { start: start + delta, end: end + delta };
   }
-  const nextStart = start < editStart ? start : editStart;
-  const nextEnd = end > editEnd ? end + delta : editStart + insertLength;
-  return nextEnd > nextStart ? { start: nextStart, end: nextEnd } : null;
+  // A same-length substitution (codon mutagenesis) changes bases but removes
+  // none, and a segment enclosing the edit still contains it: both keep one
+  // contiguous span that only grows or shrinks with the edit.
+  if (delta === 0 || (start < editStart && end > editEnd)) {
+    return { start, end: end + delta };
+  }
+  // Otherwise the edited bases are gone: keep only the flank that survives
+  // rather than remapping the feature onto the replacement.
+  if (start < editStart) {
+    return { start, end: editStart };
+  }
+  if (end > editEnd) {
+    return { start: editStart + insertLength, end: end + delta };
+  }
+  return null;
 }

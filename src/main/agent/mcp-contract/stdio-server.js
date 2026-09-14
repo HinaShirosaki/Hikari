@@ -9,6 +9,23 @@ const {
   ListToolsRequestSchema
 } = require('@modelcontextprotocol/sdk/types.js');
 
+function loadOptionalResponseBuilder(modulePath, exportName) {
+  try {
+    const builder = require(modulePath)?.[exportName];
+    return typeof builder === 'function' ? builder : null;
+  } catch {
+    return null;
+  }
+}
+
+const buildHtmlOutputMcpResponse = loadOptionalResponseBuilder(
+  './direct-tools/html-output.js',
+  'buildHtmlOutputMcpResponse'
+);
+const buildImageOutputMcpResponse = loadOptionalResponseBuilder(
+  './direct-tools/image-output.js',
+  'buildImageOutputMcpResponse'
+);
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
@@ -345,6 +362,20 @@ function getToolResultPayload(result = {}) {
 function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
   const source = ensureObject(result);
   const output = getToolResultPayload(source);
+  if (output.delegated_research === true) {
+    return {
+      ...buildPaperAnalysisModelPayload(toolName, result),
+      app_tool: 'literature-search',
+      delegated_research: true,
+      research_id: output.research_id,
+      search_count: output.search_count,
+      downloaded_papers: asArray(output.downloaded_papers).map(compactDownloadedPaper),
+      source_errors: ensureObject(output.source_errors),
+      model_note: output.status === 'running'
+        ? 'Call literature_search again with only this research_id to wait for the same researcher. Do not return a final answer or start another delegation while it is running.'
+        : 'Answer from verified loaded_context_blocks.source_lines. analysis_comments explain relevance; related_comments are saved user annotations. Report notes, failed downloads, and remaining gaps. Do not download these papers again.'
+    };
+  }
   const selectedPapers = asArray(output.selected_papers);
   const downloadedPapers = asArray(output.downloaded_papers);
   const loadedContextBlocks = asArray(output.loaded_context_blocks);
@@ -483,7 +514,7 @@ function buildMcpToolResponseContent(toolName = '', result = {}) {
       ? buildLiteratureSearchModelPayload(toolName, result)
       : ensureObject(result));
   const text = JSON.stringify(payload, null, 2);
-  if (paperAnalysisResult) {
+  if (paperAnalysisResult || payload.delegated_research === true) {
     return text;
   }
   if (text.length <= MAX_MODEL_TEXT_CHARS) {
@@ -538,7 +569,10 @@ function createAgentMcpStdioServer(deps = {}) {
     const toolName = cleanText(params.name, 160);
     const requestContext = getRequestContextFromEnv(env);
     const turnKey = cleanText(requestContext.traceRequestId || requestContext.codexSessionId, 240);
-    if (toolName === 'literature_search' && !claimLiteratureSearchCall(turnKey)) {
+    if (toolName === 'literature_search'
+      && !ensureObject(params.arguments).research_id
+      && !requestContext.snapshot?.literature_research?.id
+      && !claimLiteratureSearchCall(turnKey)) {
       const result = {
         ok: false,
         status: 'rejected',
@@ -563,6 +597,16 @@ function createAgentMcpStdioServer(deps = {}) {
         mcpRequest: request
       }
     );
+    if (toolName === 'html_output'
+      && typeof buildHtmlOutputMcpResponse === 'function'
+      && result?.ok === true
+      && result.html_artifact?.html) return buildHtmlOutputMcpResponse(result);
+    if (toolName === 'image_output'
+      && typeof buildImageOutputMcpResponse === 'function'
+      && result?.ok === true
+      && result.image_artifact?.data_url) {
+      return buildImageOutputMcpResponse(result);
+    }
     const response = {
       content: [{
         type: 'text',

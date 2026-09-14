@@ -26,12 +26,6 @@
             <button class="tile tool-tile" data-tool-view="tool-extinction-view" role="tab" aria-controls="tool-extinction-view">
               <span class="label">Extinction Coefficient</span>
             </button>
-            <button class="tile tool-tile" data-tool-view="tool-qpcr-view" role="tab" aria-controls="tool-qpcr-view">
-              <span class="label">qPCR Efficiency</span>
-            </button>
-            <button class="tile tool-tile" data-tool-view="tool-crispr-view" role="tab" aria-controls="tool-crispr-view">
-              <span class="label">CRISPR sgRNA Designer</span>
-            </button>
             <button class="tile tool-tile" data-tool-view="tool-colony-counter-view" role="tab" aria-controls="tool-colony-counter-view">
               <span class="label">Colony Counter</span>
             </button>
@@ -525,113 +519,6 @@
           </label>
         </form>
         <div id="extinction-result" class="calc-output tool-calculation-output"></div>
-      </div>
-
-      <div id="tool-qpcr-view" class="panel tool-subview" hidden>
-        <header class="tool-head">
-          <h3>qPCR Efficiency Calculator</h3>
-          <p class="tool-head-note">Amplification efficiency from a slope or standard curve.</p>
-        </header>
-        <form id="qpcr-form" class="stack-form" autocomplete="off">
-          <label>
-            Slope (optional; from standard curve)
-            <input id="qpcr-slope" type="number" step="0.000001" placeholder="e.g. -3.32" />
-          </label>
-          <label>
-            Standard Curve Points (optional)
-            <textarea id="qpcr-points" rows="5" placeholder="quantity, Ct per line&#10;1, 18.0&#10;0.1, 21.3&#10;0.01, 24.7"></textarea>
-          </label>
-        </form>
-        <div id="qpcr-result" class="calc-output"></div>
-      </div>
-
-      <div id="tool-crispr-view" class="panel tool-subview" hidden>
-        <header class="tool-head">
-          <h3>CRISPR sgRNA Designer</h3>
-          <p class="tool-head-note">Rank candidate guides across the sequences you submit.</p>
-        </header>
-
-        <div class="crispr-designer-shell">
-          <form id="crispr-form" class="stack-form" autocomplete="off">
-            <div class="form-grid">
-              <label>
-                PAM Pattern
-                <select id="crispr-pam-pattern">
-                  <option value="NGG" selected>SpCas9 (NGG)</option>
-                  <option value="NAG">SpCas9 (NAG, permissive)</option>
-                </select>
-              </label>
-              <label>
-                Guide Length (nt)
-                <input id="crispr-guide-length" type="number" min="18" max="24" step="1" value="20" />
-              </label>
-              <label>
-                Return Top Candidates
-                <input id="crispr-top-count" type="number" min="1" max="100" step="1" value="12" />
-              </label>
-              <label>
-                Min GC (%)
-                <input id="crispr-min-gc" type="number" min="0" max="100" step="1" value="35" />
-              </label>
-              <label>
-                Max GC (%)
-                <input id="crispr-max-gc" type="number" min="0" max="100" step="1" value="75" />
-              </label>
-            </div>
-            <p class="small-note">Off-target counts cover only the sequences submitted below. No reference genome is searched.</p>
-            <label>
-              Target Sequences (FASTA recommended)
-              <textarea id="crispr-target-input" rows="8" placeholder=">Target_A&#10;GAGTCCGAGCAGAAGAAGAAGGG...&#10;>Target_B&#10;ACTG..." spellcheck="false"></textarea>
-            </label>
-
-            <div class="crispr-target-grid">
-              <label>
-                Targets to Process
-                <select id="crispr-target-select" class="crispr-target-select" multiple size="6"></select>
-              </label>
-              <div id="crispr-selection-summary" class="calc-output crispr-selection-box">
-                Add target sequences to begin.
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="submit" id="crispr-run-btn" class="primary-btn">Design sgRNAs</button>
-              <button type="button" id="crispr-copy-tsv-btn" class="ghost-btn" disabled>Copy Results (TSV)</button>
-              <button type="button" id="crispr-select-all-btn" class="ghost-btn">Select All Targets</button>
-              <button type="button" id="crispr-clear-btn" class="ghost-btn">Clear</button>
-            </div>
-          </form>
-
-          <div id="crispr-result-summary" class="calc-output">
-            Enter target sequences and run design to view candidate guides.
-          </div>
-
-          <div class="result-table-wrap crispr-table-wrap">
-            <table class="result-table crispr-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Target</th>
-                  <th>Position</th>
-                  <th>Strand</th>
-                  <th>Guide (5'-3')</th>
-                  <th>PAM</th>
-                  <th>GC%</th>
-                  <th>On-target</th>
-                  <th>Off-target rate (submitted seqs)</th>
-                  <th>Score</th>
-                  <th>Near-matches in submitted seqs (0/1/2/3 mm)</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody id="crispr-table-body">
-                <tr>
-                  <td colspan="12" class="small-note">No sgRNA candidates yet.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>

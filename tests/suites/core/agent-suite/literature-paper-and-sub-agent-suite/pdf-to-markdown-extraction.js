@@ -868,6 +868,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
     test('packaged literature workflow soft-prefers any configured preferred journal', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-preferred-journals-'));
       const downloadCalls = [];
+      let discoveredPapers = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
           createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
@@ -934,8 +935,18 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
             }
           },
           subAgentRuntime: {
-            createSubAgent: async () => {
-              throw new Error('No extracted markdown should require a Codex paper context turn.');
+            createSubAgent: async (input) => {
+              assert.match(input.system_prompt, /soft ranking preferences/);
+              assert.match(input.message, /Nature Biotechnology/);
+              const discovery = await runtime.execute({
+                query: 'kinase inhibitor resistance',
+                provider: 'codex',
+                snapshot: input.metadata.snapshot
+              });
+              discoveredPapers = discovery.selected_papers;
+              return { ok: true, agent: { last_response: { assistant_message: JSON.stringify({
+                ok: true, papers: [], notes: ['Candidate metadata only; no full text selected.']
+              }) } } };
             }
           }
         });
@@ -953,11 +964,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         });
 
         assert.equal(result.ok, true);
-        assert.equal(result.codex_paper_context, false);
-        assert.equal(result.selected_papers.length, 2);
-        assert.equal(result.selected_papers[0].paper_title, 'Kinase inhibitor resistance mechanisms');
-        assert.equal(result.selected_papers[0].doi, '10.1000/cell');
-        assert.equal(result.selected_papers[1].doi, '10.1000/other');
+        assert.equal(result.delegated_research, true);
+        assert.equal(discoveredPapers.length, 2);
+        assert.equal(discoveredPapers[0].paper_title, 'Kinase inhibitor resistance mechanisms');
+        assert.equal(discoveredPapers[0].doi, '10.1000/cell');
+        assert.equal(discoveredPapers[1].doi, '10.1000/other');
         assert.deepEqual(
           result.sub_agent_context.preferred_journals,
           ['Nature Biotechnology', 'Cell']

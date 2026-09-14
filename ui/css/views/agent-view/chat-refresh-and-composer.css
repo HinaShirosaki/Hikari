@@ -220,6 +220,7 @@
   resize: none;
   background: transparent;
   font: inherit;
+  font-family: var(--font-chat);
   font-size: 1rem;
   line-height: 1.58;
   color: var(--theme-text-strong);
@@ -634,4 +635,76 @@
 
 .agent-chat-row.is-live .agent-chat-avatar-assistant {
   animation: agent-chat-pulse 1.8s ease-in-out infinite;
+}
+
+
+.agent-output-images {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.agent-output-image {
+  margin: 0;
+  min-width: 0;
+}
+
+.agent-output-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 40rem;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.agent-output-image-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.agent-output-image figcaption {
+  margin-top: 0.5rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+
+.agent-output-htmls {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.agent-output-html {
+  min-width: 0;
+}
+
+.agent-output-html-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.agent-output-html-frame {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  resize: vertical;
+  min-height: 16rem;
+  max-height: 64rem;
+}
+
+.agent-output-html-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--theme-surface);
+}
+
+.agent-output-html-caption {
+  margin: 0.5rem 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

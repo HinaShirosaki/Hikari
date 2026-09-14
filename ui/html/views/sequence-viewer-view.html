@@ -125,33 +125,37 @@
                   </div>
                 </section>
 
-                <section class="sequence-viewer-protein-builder-panel">
+                <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-picker">
                   <div class="result-card-head">
                     <h4>Feature Database</h4>
                   </div>
-                  <div class="sequence-viewer-protein-builder-feature-controls">
-                    <input
-                      id="sequence-viewer-protein-builder-feature-search-input"
-                      type="search"
-                      placeholder="Search stored features"
-                      autocomplete="off"
-                    />
-                  </div>
-                  <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note"></span>
-                  <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results"></div>
+                  <details id="sequence-viewer-protein-builder-feature-picker" class="sequence-viewer-protein-picker-fold" open>
+                    <summary><span id="sequence-viewer-protein-builder-feature-summary">Select protein</span></summary>
+                    <div class="sequence-viewer-protein-builder-feature-controls">
+                      <input
+                        id="sequence-viewer-protein-builder-feature-search-input"
+                        type="search"
+                        placeholder="Search proteins or features"
+                        aria-label="Search stored proteins and features"
+                        autocomplete="off"
+                      />
+                    </div>
+                    <span id="sequence-viewer-protein-builder-feature-search-status" class="small-note"></span>
+                    <div id="sequence-viewer-protein-builder-feature-search-results" class="sequence-viewer-protein-builder-feature-search-results"></div>
+                  </details>
 
                   <div id="sequence-viewer-protein-builder-feature-source" class="sequence-viewer-feature-source" hidden>
-                    <h5>Source vector</h5>
-                    <div id="sequence-viewer-protein-builder-feature-hosts" class="sequence-viewer-feature-source-list"></div>
-                    <h5>Plasmid preview</h5>
-                    <div id="sequence-viewer-protein-builder-feature-preview" class="sequence-viewer-feature-source-preview"></div>
-                    <label class="sequence-viewer-inline-toggle" title="Replace the stored coding DNA with a reverse-translated sequence using the selected codon-usage table.">
-                      <input id="sequence-viewer-protein-builder-feature-codon-optimize" type="checkbox" />
-                      <span>Codon-optimize</span>
-                    </label>
+                    <details id="sequence-viewer-protein-builder-feature-hosts-fold" class="sequence-viewer-protein-picker-fold" open>
+                      <summary>Source vector</summary>
+                      <div id="sequence-viewer-protein-builder-feature-hosts" class="sequence-viewer-feature-source-list"></div>
+                    </details>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-feature-add-btn" type="button" class="primary-btn" disabled>Add Block</button>
                     </div>
+                    <details id="sequence-viewer-protein-builder-feature-preview-fold" class="sequence-viewer-protein-picker-map" open>
+                      <summary>Plasmid preview</summary>
+                      <div id="sequence-viewer-protein-builder-feature-preview" class="sequence-viewer-feature-source-preview"></div>
+                    </details>
                   </div>
                 </section>
                 </div>
@@ -217,6 +221,10 @@
                         <span>Codon usage</span>
                         <select id="sequence-viewer-protein-builder-codon-usage" aria-label="Codon usage table"></select>
                       </label>
+                      <label class="sequence-viewer-inline-toggle" title="Replace the stored coding DNA with a reverse-translated sequence using the selected codon-usage table.">
+                        <input id="sequence-viewer-protein-builder-feature-codon-optimize" type="checkbox" />
+                        <span>Codon-optimize</span>
+                      </label>
                     </div>
                     <div class="sequence-viewer-protein-builder-sequence-head-actions">
                       <button id="sequence-viewer-protein-builder-build-dna-btn" type="button" class="ghost-btn">Build DNA Sequence</button>
@@ -269,7 +277,7 @@
               </div>
 
               <div class="sequence-viewer-backbone-dialog-grid">
-                <section class="result-card sequence-viewer-backbone-dialog-panel">
+                <section class="sequence-viewer-backbone-dialog-panel">
                   <div class="result-card-head">
                     <h4>Stored Backbones</h4>
                   </div>
@@ -278,7 +286,7 @@
                   </div>
                 </section>
 
-                <section class="result-card sequence-viewer-backbone-dialog-panel sequence-viewer-protein-builder-assembly-summary-panel">
+                <section class="sequence-viewer-backbone-dialog-panel sequence-viewer-protein-builder-assembly-summary-panel">
                   <div class="result-card-head">
                     <h4>Assembly Summary</h4>
                   </div>

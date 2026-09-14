@@ -4,6 +4,7 @@ import {
   isChemicalStructureSampleType
 } from './compound-model.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { renderTypeFields } from './type-fields.js';
 
 export function setCompoundStatus(ctx, message, isError) {
   if (isError && message) {
@@ -50,6 +51,7 @@ export function renderCompoundFields(ctx) {
 }
 
 export function onSampleTypeChange(ctx) {
+  renderTypeFields(ctx, null);
   ctx.renderCellPassageFields();
   if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
     ctx.compoundStructureDraft = emptyCompoundStructureDraft();

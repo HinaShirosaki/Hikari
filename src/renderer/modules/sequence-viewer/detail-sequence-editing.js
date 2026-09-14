@@ -5,16 +5,6 @@ function normalizeEditableSequence(raw) {
   return normalizeSequenceText(raw).replace(/\*/g, '');
 }
 
-function formatBaseRangeLabel(range) {
-  const start = Math.max(0, Number(range?.start) || 0);
-  const end = Math.max(start, Number(range?.end) || start);
-  const length = Math.max(0, end - start);
-  if (!length) {
-    return '-';
-  }
-  return `${(start + 1).toLocaleString()}..${end.toLocaleString()} (${length.toLocaleString()} bp)`;
-}
-
 function formatInsertionPointLabel(index, sequenceLength) {
   const safeLength = Math.max(0, Number(sequenceLength) || 0);
   const safeIndex = clamp(Math.round(Number(index) || 0), 0, safeLength);
@@ -139,20 +129,12 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
         : (mode === 'replace' ? 'Replace Bases' : 'Insert Bases');
     }
     if (elements.sequenceEditNote) {
-      if (mode === 'replace') {
-        elements.sequenceEditNote.innerHTML = '';
-      } else {
-        const note = mode === 'insert'
-          ? `Insert at ${formatInsertionPointLabel(range.start, record.sequence.length)}.`
-          : `Delete ${formatBaseRangeLabel(range)}.`;
-        elements.sequenceEditNote.innerHTML = `${escapeHtml(note)}${mode === 'insert' ? ' Type the bases to apply.' : ''}`;
-      }
+      elements.sequenceEditNote.innerHTML = mode === 'insert'
+        ? `${escapeHtml(`Insert at ${formatInsertionPointLabel(range.start, record.sequence.length)}.`)} Type the bases to apply.`
+        : '';
     }
     if (elements.sequenceEditDeleteMessage) {
-      elements.sequenceEditDeleteMessage.innerHTML = `
-        <p><strong>${selectedLength.toLocaleString()} bp selected.</strong></p>
-        <p class="small-note">Confirm to remove bases ${escapeHtml(formatBaseRangeLabel(range))} from the active sequence.</p>
-      `;
+      elements.sequenceEditDeleteMessage.innerHTML = `<p>Delete ${selectedLength.toLocaleString()} bp?</p>`;
     }
     if (elements.sequenceEditTextarea) {
       elements.sequenceEditTextarea.value = mode === 'delete'

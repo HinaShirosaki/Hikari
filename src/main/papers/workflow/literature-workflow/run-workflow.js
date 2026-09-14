@@ -127,7 +127,7 @@ function createRunLiteratureWorkflow({
       preferredJournal
     );
     const taskContext = source.snapshot?.scheduled_task || source.snapshot?.scheduledTask;
-    if (taskContext?.task_type === 'notebook_suggestion' && taskContext.deny_paper_download === true) {
+    if (taskContext?.deny_paper_download === true || taskContext?.denyPaperDownload === true) {
       // Stop before PDF enrichment, acquisition, ingestion, or delegated reading,
       // including when a caller supplies legacy auto-download flags.
       return {

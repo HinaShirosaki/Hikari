@@ -107,6 +107,103 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         capturePath
       };
     }
+    test('direct MCP tool load and handler failures stay isolated', async () => {
+      const directToolDir = path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'direct-tools'
+      );
+      const {
+        createDirectMcpToolRouter,
+        loadDirectMcpTools
+      } = require(path.join(directToolDir, 'index.js'));
+      const loadErrors = [];
+      const toolsWithoutSequence = loadDirectMcpTools({
+        loadModule(modulePath) {
+          if (modulePath === './sequence-tools.js') {
+            throw new Error('simulated missing sequence dependency');
+          }
+          return require(path.resolve(directToolDir, modulePath));
+        },
+        onLoadError: (failure) => loadErrors.push(failure)
+      });
+
+      assert.equal(loadErrors.length, 1);
+      assert.equal(loadErrors[0].modulePath, './sequence-tools.js');
+      assert.equal(toolsWithoutSequence.some((tool) => tool.definition.name === 'sequence_search'), false);
+      assert.equal(toolsWithoutSequence.some((tool) => tool.definition.name === 'inventory_lookup'), true);
+      assert.equal(toolsWithoutSequence.some((tool) => tool.definition.name === 'ask_user'), true);
+
+      const malformedErrors = [];
+      const toolsWithoutMalformedDefinition = loadDirectMcpTools({
+        loadModule(modulePath) {
+          const loaded = require(path.resolve(directToolDir, modulePath));
+          if (modulePath !== './sequence-tools.js') return loaded;
+          return {
+            ...loaded,
+            SEQUENCE_MCP_TOOLS: [
+              { definition: { name: '' }, handler() {} },
+              ...loaded.SEQUENCE_MCP_TOOLS.slice(1)
+            ]
+          };
+        },
+        onLoadError: (failure) => malformedErrors.push(failure)
+      });
+      assert.equal(malformedErrors.length, 1);
+      assert.equal(toolsWithoutMalformedDefinition.some((tool) => tool.definition.name === 'sequence_get'), true);
+
+      const isolatedTools = [
+        {
+          definition: { name: 'inventory_lookup', inputSchema: { type: 'object' } },
+          async handler() { throw new Error('simulated tool failure'); }
+        },
+        {
+          definition: { name: 'chemical_lookup', inputSchema: { type: 'object' } },
+          async handler() { return { ok: true, status: 'ok' }; }
+        }
+      ];
+      const router = createDirectMcpToolRouter({ directMcpTools: isolatedTools });
+      const broken = await router.callTool('inventory_lookup');
+      assert.equal(broken.ok, false);
+      assert.equal(broken.status, 'tool_error');
+      assert.match(broken.error, /simulated tool failure/);
+      assert.deepEqual(await router.callTool('chemical_lookup'), { ok: true, status: 'ok' });
+
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+      const { createAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ));
+      const server = createAgentMcpStdioServer({
+        env: {},
+        gateway: {
+          callGatewayTool: (...args) => router.callTool(...args)
+        }
+      });
+      const client = new Client({ name: 'tool-isolation-test', version: '1' });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      try {
+        await server.connect(serverTransport);
+        await client.connect(clientTransport);
+        const failedResponse = await client.callTool({ name: 'inventory_lookup', arguments: {} });
+        assert.equal(failedResponse.isError, true);
+        assert.equal(failedResponse.structuredContent.status, 'tool_error');
+        const healthyResponse = await client.callTool({ name: 'chemical_lookup', arguments: {} });
+        assert.equal(healthyResponse.isError, false);
+        assert.equal(healthyResponse.structuredContent.status, 'ok');
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    });
     test('agent MCP gateway exposes direct Hikari tools only', async () => {
       const { createAgentMcpGateway } = require(path.join(
         __dirname,
@@ -450,7 +547,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.deepEqual(Object.keys(literatureSearchDefinition.inputSchema.properties).sort(), [
-        'allow_unfiltered_fallback', 'journals', 'prefer_recent', 'query', 'sources'
+        'allow_unfiltered_fallback', 'journals', 'message', 'prefer_recent', 'query', 'research_id', 'sources'
       ]);
       assert.equal(literatureSearchDefinition.inputSchema.properties.source, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.limit, undefined);

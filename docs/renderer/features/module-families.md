@@ -19,7 +19,7 @@ Whatever the shape, feature modules follow the same house style:
 4. call the shared `persist()` callback after mutations (the renderer core owns undo checkpoints and storage — see [boot-and-shell.md](../architecture/boot-and-shell.md))
 5. expose a compact API such as `render()` / `renderList()`
 
-Modules do **not** own their own persistence; `persist()` records undo state, normalizes storage paths, writes local storage, and optionally auto-saves the `.ena` file.
+Modules do **not** own their own persistence; `persist()` records undo state, normalizes storage paths, writes local storage, and optionally auto-saves the `.json` snapshot.
 
 ## Manifest families
 

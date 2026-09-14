@@ -17,6 +17,8 @@ export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['container', 'Container', 'Create and edit temporary exact-value containers.', 'hikari-container'],
   ['assay_table', 'Assay table', 'Create and transform scratch assay tables.', 'hikari-assay-plotly'],
   ['plotly_graph', 'Plotly graph', 'Create and inspect scratch Plotly figures.', 'hikari-assay-plotly'],
+  ['image_output', 'Analysis images', 'Display saved analysis images in Agent Chat.', ''],
+  ['html_output', 'Interactive HTML', 'Display interactive HTML in Agent Chat.', 'hikari-html-output'],
   ['sequence_list', 'Sequence list', 'List entries in the Sequence Viewer library.', 'hikari-sequence-viewer'],
   ['sequence_search', 'Sequence search', 'Search sequence names, DNA, proteins, and features.', 'hikari-sequence-viewer'],
   ['sequence_get', 'Sequence get', 'Read a sequence entry and its features.', 'hikari-sequence-viewer'],

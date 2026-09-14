@@ -48,6 +48,7 @@ export function buildViewerMeta({
 export function buildProtocolStepsHtml({
   protocol,
   values,
+  prefill = {},
   safeText,
   settings = {},
   samplePlaceholderTypeAliases,
@@ -56,6 +57,7 @@ export function buildProtocolStepsHtml({
   const helpers = {
     safeText,
     getSampleLink,
+    getSuggestion: (key) => String(prefill?.[key]?.suggestion || ''),
     resolveType: (name) => resolveSampleTypeForPlaceholder(name, samplePlaceholderTypeAliases),
     getSampleLabel: (type) => getSampleTypeLabel(type, settings),
     formatLinkValue: formatSampleLinkValue

@@ -29,6 +29,7 @@ const {
 const { defaultCleanText } = require('../lib/llm/runtime-helpers.js');
 const { appendLogWithRotation } = require('../agent/shared/agent-observability');
 const { createMainAppPaths } = require('../lib/app-paths.js');
+const { createErrorReporting } = require('../lib/error-reporting.js');
 const { createMainAgentServices } = require('./services/create-agent-services.js');
 const { createMainDataHelpers } = require('../data/data-helpers');
 const {
@@ -93,6 +94,7 @@ function createMainServices(context = {}) {
   const {
     app,
     BrowserWindow,
+    crashReporter,
     dialog,
     ipcMain,
     session,
@@ -116,6 +118,18 @@ function createMainServices(context = {}) {
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
   const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
+
+  // First, so everything constructed below is already covered.
+  const errorReporting = createErrorReporting({
+    app,
+    crashReporter,
+    processObject,
+    logPath: appPaths.getErrorLogPath(),
+    appendLog: appendLogWithRotation,
+    getMainWindow,
+    dialog
+  });
+  errorReporting.install();
   let requestProjectMemoryConclusion = null;
   const syncBundleFromSnapshot = (input = {}) => syncBundleFromSnapshotBase({
     ...input,
@@ -132,13 +146,7 @@ function createMainServices(context = {}) {
     normalizeDataFilePath,
     syncBundleFromSnapshot,
     hydrateSnapshotFromBundle,
-    writeSnapshot: async (filePath, snapshot) => {
-      await fs.writeFile(
-        filePath,
-        JSON.stringify(buildCompactIndexedSnapshot(snapshot), null, 2),
-        'utf8'
-      );
-    },
+    serializeSnapshot: (snapshot) => JSON.stringify(buildCompactIndexedSnapshot(snapshot), null, 2),
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath
   });
 
@@ -363,7 +371,11 @@ function createMainServices(context = {}) {
     requestCodexCliText,
     getCodexDesktopMcpSetupPrompt: codex.getCodexDesktopMcpSetupPrompt,
     directLlmRegistry: agents.directLlmRegistry,
-    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory
+    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
+    errorReporting,
+    // Packaged builds ship the notices as an extraResource (see forge.config.js);
+    // shell.openPath cannot open a file that lives inside app.asar.
+    thirdPartyNoticesPath: path.join(app.isPackaged ? processObject.resourcesPath : projectRoot, 'THIRD-PARTY-NOTICES.md')
   });
 
   // Every startup step below is best-effort: a failed integration is logged

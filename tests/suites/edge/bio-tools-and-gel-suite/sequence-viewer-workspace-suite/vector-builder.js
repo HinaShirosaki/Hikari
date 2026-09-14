@@ -220,7 +220,7 @@ test('[EDGE] protein builder reports 2A peptides as multiple products', () => {
   assert.equal(twoSkips.productCount, 3);
 });
 
-test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset control', () => {
+test('[EDGE] sequence-viewer alignment workspace stays quiet until input needs feedback', () => {
   // These elements were referenced by the alignment controller but absent from
   // the markup, so query parsing, run status and Reset were all inert.
   const ids = [
@@ -252,10 +252,11 @@ test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset c
 
   viewer.openSequencingAlignmentWorkspace();
 
-  // Opening reports through the alignment status line, and Reset starts
-  // disabled because there is nothing loaded to clear yet.
+  // Opening leaves its status area quiet, and Reset starts disabled because
+  // there is nothing loaded to clear yet.
   assert.equal(document.getElementById('sequence-viewer-alignment-workspace').hidden, false);
-  assert.match(document.getElementById('sequence-viewer-alignment-status').textContent, /\S/);
+  assert.equal(document.getElementById('sequence-viewer-alignment-status').textContent, '');
+  assert.equal(document.getElementById('sequence-viewer-alignment-status').hidden, true);
   assert.equal(document.getElementById('sequence-viewer-alignment-reset-btn').disabled, true);
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-file-name').textContent,
@@ -263,13 +264,76 @@ test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset c
   );
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-summary').textContent,
-    'No query loaded.'
+    ''
   );
-  assert.match(document.getElementById('sequence-viewer-alignment-query-status').textContent, /\S/);
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-summary').hidden, true);
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-status').textContent, '');
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-status').hidden, true);
 });
 
-test('[EDGE] sequence-viewer opens Vector Builder without redundant success status', () => {
-  const document = createMockDocument([...VECTOR_BUILDER_IDS, 'sequence-viewer-vector-builder-status-note']);
+test('[EDGE] sequence-viewer accepts an alignment file dropped over the paste panel', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-alignment-workspace',
+    'sequence-viewer-alignment-query-mode-paste',
+    'sequence-viewer-alignment-query-mode-file',
+    'sequence-viewer-alignment-query-paste-panel',
+    'sequence-viewer-alignment-query-file-panel',
+    'sequence-viewer-alignment-query-input',
+    'sequence-viewer-alignment-query-textarea',
+    'sequence-viewer-alignment-query-file-name',
+    'sequence-viewer-alignment-query-summary',
+    'sequence-viewer-alignment-query-status',
+    'sequence-viewer-alignment-query-record-wrap',
+    'sequence-viewer-alignment-query-record-select',
+    'sequence-viewer-alignment-run-btn',
+    'sequence-viewer-alignment-reset-btn',
+    'sequence-viewer-alignment-status',
+    'sequence-viewer-status',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = viewerModule.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'reference',
+    sequence: 'ATGGCGCATCATCATCATCATCATTAAGGCCTTAACC',
+    topology: 'circular',
+    source: 'external',
+    features: []
+  });
+  viewer.openSequencingAlignmentWorkspace();
+
+  const workspace = document.getElementById('sequence-viewer-alignment-workspace');
+  const pastePanel = document.getElementById('sequence-viewer-alignment-query-paste-panel');
+  const droppedFile = {
+    name: 'dropped-read.fa',
+    text: async () => '>dropped_read\nATGGCGCATCATCATCATCATCATTAAGGCCTTAACC\n'
+  };
+  const dataTransfer = { files: [droppedFile], types: ['Files'] };
+
+  trigger(workspace, 'dragenter', { dataTransfer, target: pastePanel });
+  assert.equal(workspace.classList.contains('is-file-drop-active'), true);
+  trigger(workspace, 'drop', { dataTransfer, target: pastePanel });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(workspace.classList.contains('is-file-drop-active'), false);
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-paste-panel').hidden, true);
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-file-panel').hidden, false);
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-file-name').textContent, 'dropped-read.fa');
+  assert.match(document.getElementById('sequence-viewer-alignment-query-summary').textContent, /dropped_read/);
+});
+
+test('[EDGE] sequence-viewer opens Vector Builder without an inline status surface or redundant success toast', () => {
+  const markup = readSource('ui/html/views/sequence-viewer-detail-view.html');
+  assert.doesNotMatch(markup, /sequence-viewer-vector-builder-status-note/);
+
+  const document = createMockDocument(VECTOR_BUILDER_IDS);
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
@@ -283,14 +347,12 @@ test('[EDGE] sequence-viewer opens Vector Builder without redundant success stat
     features: [{ name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] }]
   });
 
-  const vectorStatus = document.getElementById('sequence-viewer-vector-builder-status-note');
   const importToast = document.querySelector('[data-hikari-transient-toast]');
   const importToastText = importToast.textContent;
 
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
   assert.equal(document.querySelector('[data-hikari-transient-toast]'), importToast);
   assert.equal(importToast.textContent, importToastText);
-  assert.equal(vectorStatus.textContent, '');
 });
 
 test('[EDGE] sequence-viewer home Vector Builder button opens the previewed library entry', async () => {

@@ -208,7 +208,6 @@ function buildStorageImportSummary(payload) {
   const summary = source.summary && typeof source.summary === 'object' ? source.summary : {};
   return {
     lastImportedAt: new Date().toISOString(),
-    manifestPath: String(source.manifestPath || '').trim(),
     summary: {
       bundles: Number(summary.bundles) || 0,
       protocols: Number(summary.protocols) || 0,
@@ -232,7 +231,6 @@ function buildStorageImportError(previous, message) {
   return {
     ...previous,
     lastImportedAt: previous.lastImportedAt || '',
-    manifestPath: previous.manifestPath || '',
     summary: previous.summary && typeof previous.summary === 'object'
       ? previous.summary
       : {
@@ -252,6 +250,31 @@ function buildStorageImportError(previous, message) {
     warnings: Array.isArray(previous.warnings) ? previous.warnings : [],
     error: String(message || '').trim()
   };
+}
+
+
+function describeOpenedRoot(result = {}) {
+  const summary = result.summary || {};
+  const counts = [
+    [summary.protocols, 'protocol'],
+    [summary.notebookEntries, 'notebook entry'],
+    [summary.papers, 'paper'],
+    [summary.samples, 'sample'],
+    [summary.chemicals, 'chemical'],
+    [summary.sequenceEntries, 'sequence']
+  ]
+    .filter(([count]) => Number(count) > 0)
+    .map(([count, noun]) => `${count} ${noun}${Number(count) === 1 ? '' : 's'}`);
+  if (!result.recognized) {
+    return counts.length
+      ? `Set up a new Hikari folder and imported ${counts.join(', ')}.`
+      : 'Set up a new Hikari folder.';
+  }
+  const when = result.lastSavedAt ? new Date(result.lastSavedAt) : null;
+  const saved = when && !Number.isNaN(when.getTime()) ? ` (last saved ${when.toLocaleDateString()})` : '';
+  return counts.length
+    ? `Opened Hikari folder${saved}: ${counts.join(', ')}.`
+    : `Opened Hikari folder${saved}.`;
 }
 
 export function createStorageImportController({
@@ -412,12 +435,16 @@ export function createStorageImportController({
       if (syncSidecars) {
         sidecarSync = await syncStateSidecarsFromStorageRoot();
       }
+      // User just picked the folder: tell them what Hikari found there.
+      if (persistMergedState) {
+        showTransientNotice(describeOpenedRoot(result), { durationMs: 8000 });
+      }
       return {
         ok: true,
         refreshed: resetWorkspace,
         summary: result.summary || {},
         warnings: result.warnings || [],
-        manifestPath: result.manifestPath || '',
+        recognized: result.recognized === true,
         sidecarSync
       };
     } catch (error) {

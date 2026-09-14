@@ -8,7 +8,7 @@ import { createSequenceViewerCloningDesignNotebookPage } from './cloning-design-
 import { confirmCloningDesign, describeCloningDesignConfirmation } from './cloning-design-confirm.js';
 import { asArray } from '../../lib/normalize.js';
 import { buildSourceKey, deriveDefaultInsertRange, getEditEndIndex, getEditStartIndex } from './cloning-design/edit-ranges.js';
-import { formatEditType, formatStrategyLabel } from './cloning-design/formatting.js';
+import { formatStrategyLabel } from './cloning-design/formatting.js';
 import { buildDisplayPlan } from './cloning-design/plan-building.js';
 import { isVisibleElement, renderPlanSummary, renderPrimerTable, renderProcedure, renderRestrictionEnzymes, renderWarnings } from './cloning-design/plan-rendering.js';
 import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
@@ -151,35 +151,12 @@ export function createSequenceViewerCloningDesignController(config = {}) {
           type="button"
           class="sequence-viewer-mode-btn${designState.strategy === strategy.id ? ' sequence-viewer-mode-btn-active' : ''}"
           data-cloning-design-strategy="${escapeHtml(strategy.id)}"
+          aria-pressed="${designState.strategy === strategy.id}"
         >
           ${escapeHtml(strategy.label)}
         </button>
       `)
       .join('');
-  }
-
-  function renderEditSummary() {
-    if (!elements.cloningDesignEditSummary) {
-      return;
-    }
-    const source = getCloningDesignSource();
-    if (!hasDesignSource()) {
-      elements.cloningDesignEditSummary.innerHTML = '<p class="small-note">Edit the active sequence to start a cloning design.</p>';
-      return;
-    }
-    const edit = source?.editRequest || {};
-    const original = normalizeSequenceText(edit.originalSequence || '');
-    const edited = normalizeSequenceText(edit.editedSequence || '');
-    const start = Math.max(1, Number(edit.start) || 1);
-    const end = Math.max(start, Number(edit.end) || start);
-    elements.cloningDesignEditSummary.innerHTML = `
-      <div class="sequence-viewer-cloning-design-edit-grid">
-        <div><strong>Type</strong><span>${escapeHtml(formatEditType(edit.type))}</span></div>
-        <div><strong>Range</strong><span>${start.toLocaleString()}..${end.toLocaleString()}</span></div>
-        <div><strong>Original</strong><span class="sequence-viewer-cloning-design-seq">${escapeHtml(original || '-')}</span></div>
-        <div><strong>Edited</strong><span class="sequence-viewer-cloning-design-seq">${escapeHtml(edited || '-')}</span></div>
-      </div>
-    `;
   }
 
   function renderPlanResult() {
@@ -217,27 +194,27 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         </div>
         ${restrictionEnzymesHtml}
       </section>` : ''}
-      <section class="sequence-viewer-cloning-design-result-section">
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
-          <h4>Primers</h4>
+          <h4>Primers <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
           ${isCloningDesignPlanActionable(displayPlan)
             ? '<button type="button" class="ghost-btn" data-cloning-design-action="order-primers">Order Primers</button>'
             : ''}
         </div>
         ${renderPrimerTable(asArray(displayPlan.primers))}
       </section>
-      <section class="sequence-viewer-cloning-design-result-section">
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
           <h4>Procedure</h4>
         </div>
         ${renderProcedure(displayPlan)}
       </section>
-      <section class="sequence-viewer-cloning-design-result-section">
-        <div class="result-card-head">
-          <h4>Warnings</h4>
-        </div>
+      ${asArray(displayPlan.warnings).length ? `
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-warnings" aria-label="Design warnings">
+        <div class="result-card-head"><h4>Warnings</h4></div>
         ${renderWarnings(asArray(displayPlan.warnings))}
-      </section>
+      </section>` : ''}
+
     `;
   }
 
@@ -275,7 +252,6 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   function render() {
     if (!hasDesignSource()) {
       renderStrategyButtons();
-      renderEditSummary();
       renderDonorPanel();
       syncControls();
       renderPlanResult();
@@ -284,7 +260,6 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     resetForSource();
     normalizeRangeForCurrentSource();
     renderStrategyButtons();
-    renderEditSummary();
     renderDonorPanel();
     syncControls();
     renderPlanResult();

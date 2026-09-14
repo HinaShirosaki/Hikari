@@ -43,6 +43,7 @@ function createNotebookSaveEntry({
   onNotebookEntriesChanged,
   onEntryExecuted = () => {},
   collectNotebookValues,
+  collectCarriedOverKeys = () => [],
   collectNotebookSampleLinks,
   getSelectedNotebookResultFiles,
   clearPendingNotebookResultFiles,
@@ -79,6 +80,8 @@ function createNotebookSaveEntry({
       mergeNotebookValues(editingEntry?.values, collectNotebookValues()),
       protocol
     );
+    // Values accepted from a previous run (Tab on ghost text), kept as provenance.
+    const carriedOver = collectCarriedOverKeys().filter((key) => values[key]);
     await maybeGenerateNotebookPageName({ protocol, values });
     const entryId = editingEntry?.id || createId();
     const selectedResultFiles = getSelectedNotebookResultFiles();
@@ -143,6 +146,7 @@ function createNotebookSaveEntry({
     const experimentNameSource = normalizeNotebookExperimentNameSource(getExperimentNameSourceDraft()) || 'protocol';
     const entry = {
       ...baseEntry,
+      ...(carriedOver.length ? { carriedOver } : {}),
       experimentNameSource,
       experimentNameGeneratedAt: experimentNameSource === 'generated' ? getExperimentNameGeneratedAtDraft() : '',
       experimentNameGeneratedModel: experimentNameSource === 'generated' ? getExperimentNameGeneratedModelDraft() : '',
@@ -194,6 +198,7 @@ function createNotebookSaveEntry({
         summary: `Created notebook page${persistedEntry.experimentName ? ` "${persistedEntry.experimentName}"` : ''}`,
         details: {
           notebookType,
+          carriedOver,
           projectName: persistedEntry.projectName || '',
           protocolName: persistedEntry.protocolName || '',
           experimentName: persistedEntry.experimentName || '',

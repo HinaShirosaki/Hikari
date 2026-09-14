@@ -240,11 +240,7 @@ export function createSpreadsheetTables({
 
     draftTables = draftTables.map((draftTable, tableIndex) => {
       const grid = grids[tableIndex];
-      if (!grid) {
-        return cloneNotebookResultTable(draftTable);
-      }
-
-      const columns = typeof grid.getColumns === 'function'
+      const columns = typeof grid?.getColumns === 'function'
         ? grid.getColumns()
           .map((component, index) => {
             const field = String(component?.getField?.() || '').trim();
@@ -259,6 +255,12 @@ export function createSpreadsheetTables({
           })
           .filter(Boolean)
         : [];
+      // Tabulator builds a grid on a setTimeout after `new Tabulator`, so a read in the
+      // same tick as renderEditor finds no columns yet. The model never holds a table
+      // without columns, so an empty read means "not built": the draft is the truth.
+      if (!columns.length) {
+        return cloneNotebookResultTable(draftTable);
+      }
       const rows = typeof grid.getData === 'function'
         ? grid.getData().map((rawRow, index) => {
           const row = {

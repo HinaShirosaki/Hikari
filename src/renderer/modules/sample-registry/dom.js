@@ -13,6 +13,7 @@ export function getSampleRegistryDom(rootDocument = document) {
     sampleLinkChemicalsInput: rootDocument.getElementById('sample-link-chemicals'),
     sampleLocationFields: rootDocument.getElementById('sample-location-fields'),
     sampleNotesInput: rootDocument.getElementById('sample-notes'),
+    sampleTypeFields: rootDocument.getElementById('sample-type-fields'),
     sampleCellPassageFields: rootDocument.getElementById('sample-cell-passage-fields'),
     samplePassageLastDateInput: rootDocument.getElementById('sample-passage-last-date'),
     samplePassageIntervalDaysInput: rootDocument.getElementById('sample-passage-interval-days'),

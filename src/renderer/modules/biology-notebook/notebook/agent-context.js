@@ -54,6 +54,13 @@ function createNotebookAgentContext({
     return values;
   }
 
+  // Placeholders whose value was accepted from a previous run rather than typed.
+  function collectCarriedOverKeys() {
+    return [...notebookSteps.querySelectorAll('[data-inline-placeholder][data-carried-over]')]
+      .map((wrap) => String(wrap.querySelector('[data-nb-key]')?.dataset.nbKey || '').trim())
+      .filter(Boolean);
+  }
+
   function compactContextLine(value, maxLength = 900) {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     if (!text) {
@@ -239,6 +246,7 @@ function createNotebookAgentContext({
 
   return {
     collectNotebookValues,
+    collectCarriedOverKeys,
     compactContextLine,
     compactContextBlock,
     getProtocolStepText,

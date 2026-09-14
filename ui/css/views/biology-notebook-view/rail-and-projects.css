@@ -1,13 +1,36 @@
 /* biology-notebook-view */
 
 .biology-notebook-add-project-btn {
-  min-height: 32px;
-  min-width: 32px;
-  padding: 0 10px;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2rem;
+  padding: 0.375rem 0.5rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
   line-height: 1;
+}
+
+.biology-notebook-add-project-btn:hover {
+  background: var(--hikari-left-rail-list-hover);
+  color: var(--theme-text-strong);
+}
+
+.biology-notebook-add-project-btn svg,
+.biology-notebook-new-experiment-btn svg {
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 #biology-notebook-view.view.is-active {
@@ -91,8 +114,9 @@
 .left-rail-template.biology-notebook-layout > .biology-notebook-rail > .left-rail-template__pinned {
   display: grid;
   align-content: start;
-  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
-  border-bottom: 1px solid var(--app-left-rail-divider);
+  gap: 1rem;
+  padding: 0.875rem calc(var(--app-left-rail-padding-inline, 1rem) + var(--theme-scrollbar-size, 0.5rem)) 0 var(--app-left-rail-padding-inline, 1rem);
+  border-bottom: 0;
 }
 
 .left-rail-template.biology-notebook-layout > .biology-notebook-rail > .biology-notebook-page-list.left-rail-template__scroll {
@@ -103,28 +127,47 @@
 .biology-notebook-new-experiment-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: center;
+  gap: 0.5rem;
   width: 100%;
-  min-height: 36px;
-  padding: 8px 10px;
+  min-height: 2.5rem;
+  padding: 0.625rem 0.75rem;
   border: 0;
-  border-radius: 8px;
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text);
+  border-radius: 0.625rem;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
   font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
   text-align: left;
 }
 
-.biology-notebook-new-experiment-btn:hover,
-.biology-notebook-new-experiment-btn:focus-visible {
-  background: var(--hikari-left-rail-list-hover);
-  color: var(--theme-text-strong);
+.biology-notebook-new-experiment-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong));
+  color: var(--theme-text-on-accent);
 }
 
-.biology-notebook-new-experiment-btn > :first-child {
-  font-size: 1.1rem;
-  line-height: 1;
+.biology-notebook-project-list-head,
+.biology-notebook-experiment-project-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.biology-notebook-project-list-head h2 {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--theme-text-muted);
+}
+
+.biology-notebook-add-project-btn:focus-visible,
+.biology-notebook-new-experiment-btn:focus-visible,
+.biology-notebook-project-details summary:focus-visible {
+  outline: 0.125rem solid var(--theme-focus);
+  outline-offset: 0.125rem;
 }
 
 .biology-notebook-folder {
@@ -284,16 +327,83 @@
   display: none;
 }
 
-.biology-notebook-project-dialog {
-  --app-dialog-width: 480px;
+.biology-notebook-project-dialog.app-dialog-surface {
+  --app-dialog-width: 28rem;
+  --app-dialog-padding: 1.5rem;
+  --app-dialog-gap: 1.5rem;
 }
 
-.biology-notebook-experiment-dialog {
-  --app-dialog-width: 520px;
+.biology-notebook-project-form {
+  gap: 1.25rem;
+}
+
+.biology-notebook-project-form > label,
+.biology-notebook-experiment-project-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.biology-notebook-project-form input,
+.biology-notebook-project-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.biology-notebook-project-form input {
+  min-height: 2.75rem;
+}
+
+.biology-notebook-project-form .is-error {
+  margin: -0.625rem 0 0;
+  color: var(--theme-danger);
+}
+
+.biology-notebook-project-details summary {
+  width: fit-content;
+  color: var(--theme-text-muted);
+  font-size: 0.875rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+}
+
+.biology-notebook-project-details summary span {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.biology-notebook-project-details textarea {
+  margin-top: 0.75rem;
+  resize: vertical;
+}
+
+.biology-notebook-project-form .form-actions {
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.biology-notebook-project-form .form-actions button {
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+}
+
+.biology-notebook-experiment-project-head label {
+  margin: 0;
+}
+
+.biology-notebook-experiment-dialog.app-dialog-surface {
+  --app-dialog-width: 32.5rem;
 }
 
 .biology-notebook-experiment-form {
   gap: 14px;
+}
+
+.biology-notebook-experiment-form .form-actions {
+  justify-content: flex-end;
+}
+
+#biology-notebook-experiment-dialog-status:empty {
+  display: none;
 }
 
 .biology-notebook-experiment-form > label {
@@ -1048,18 +1158,20 @@
 }
 
 .biology-notebook-project-dashboard {
-  --project-contribution-cell-size: 11px;
-  --project-contribution-cell-gap: 4px;
+  --project-contribution-cell-size: 0.75rem;
+  --project-contribution-cell-gap: 0.25rem;
   display: grid;
-  gap: 18px;
+  container: project-dashboard / inline-size;
+  gap: 1.75rem;
   min-width: 0;
+  padding: 0.5rem 0 1.5rem;
 }
 
 .project-panel-copy,
 .project-panel-head,
 .project-dashboard-title {
   display: grid;
-  gap: 5px;
+  gap: 0.375rem;
 }
 
 .project-panel-copy h3,
@@ -1069,13 +1181,14 @@
 
 .project-dashboard-hero {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .project-dashboard-title h2 {
-  font-size: clamp(1.45rem, 2.2vw, 2.05rem);
+  font-size: clamp(1.5rem, 2.5cqi, 1.875rem);
   line-height: 1.08;
 }
 
@@ -1089,21 +1202,24 @@
 .project-dashboard-actions {
   display: flex;
   justify-content: flex-end;
-  flex: 0 0 auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  min-width: 0;
 }
 
 .project-stat-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
 }
 
 .project-stat-card {
   display: grid;
-  gap: 8px;
-  min-height: 118px;
+  gap: 0.5rem;
+  min-width: 0;
   align-content: start;
-  padding: 14px;
+  padding: 1rem;
   border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
   background: color-mix(in srgb, var(--theme-surface-elevated) 86%, var(--theme-surface-subtle));
@@ -1117,20 +1233,22 @@
 
 .project-stat-card strong {
   color: var(--theme-text-strong);
-  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .project-stat-card p {
   margin: 0;
   color: var(--theme-text-muted);
-  font-size: 0.88rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
 }
 
 .project-overview-grid {
   display: grid;
-  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.5rem;
   align-items: stretch;
   min-width: 0;
 }
@@ -1143,7 +1261,11 @@
 }
 
 .project-description-input {
-  min-height: 152px;
+  width: 100%;
+  min-width: 0;
+  min-height: 10.5rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
   resize: vertical;
 }
 
@@ -1155,7 +1277,7 @@
 
 .project-paper-finder-head {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
 }
@@ -1169,8 +1291,8 @@
 
 .project-paper-finder-form {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 1rem;
+  padding: 1rem;
   border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
   background: color-mix(in srgb, var(--theme-surface-elevated) 86%, var(--theme-surface-subtle));
@@ -1178,7 +1300,7 @@
 
 .project-paper-finder-fields {
   display: grid;
-  grid-template-columns: minmax(320px, 1.15fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1211,14 +1333,14 @@
 
 .project-paper-finder-schedule-grid {
   display: grid;
-  grid-template-columns: minmax(142px, 1.25fr) repeat(2, minmax(104px, 1fr));
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
   align-items: end;
 }
 
 .project-paper-finder-frequency-controls {
   display: grid;
-  grid-template-columns: minmax(72px, 0.56fr) minmax(96px, 1fr);
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr);
   gap: 8px;
 }
 
@@ -1231,11 +1353,15 @@
 }
 
 .project-paper-finder-timezone {
-  justify-self: end;
+  justify-self: start;
+  margin: 0;
 }
 
 .project-paper-finder-requirements textarea {
-  min-height: 88px;
+  min-height: 6.5rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
   resize: vertical;
 }
 
@@ -1290,22 +1416,25 @@
 
 .project-contribution-panel {
   display: grid;
-  gap: 14px;
+  gap: 0.875rem;
+  align-content: start;
   min-width: 0;
 }
 
 .project-contribution-map {
   display: grid;
   gap: 8px;
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 0.25rem 0.125rem;
 }
 
 .project-contribution-months {
   display: grid;
   column-gap: var(--project-contribution-cell-gap);
-  padding-left: 36px;
+  padding-left: 2.25rem;
   min-width: max-content;
   color: var(--theme-text-muted);
   font-size: 0.78rem;
@@ -1318,7 +1447,7 @@
 
 .project-contribution-body {
   display: grid;
-  grid-template-columns: 28px max-content;
+  grid-template-columns: 1.75rem max-content;
   gap: 8px;
   align-items: start;
   min-width: max-content;
@@ -1398,7 +1527,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 5px;
+  gap: 0.375rem;
   min-width: max-content;
   color: var(--theme-text-muted);
   font-size: 0.78rem;
@@ -1407,10 +1536,51 @@
 #biology-notebook-view .biology-notebook-project-dashboard .panel,
 #biology-notebook-view .biology-notebook-project-dashboard .card,
 #biology-notebook-view .biology-notebook-project-dashboard .cards {
+  margin: 0;
+  padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.project-dashboard .project-panel-copy h3 {
+  font-size: 1.0625rem;
+  line-height: 1.4;
+}
+
+.project-dashboard .project-panel-copy .small-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.project-dashboard-actions .ghost-btn {
+  min-height: 2.5rem;
+  font-size: 0.875rem;
+}
+
+.project-experiment-suggestion-status {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.project-experiment-suggestion-status:empty {
+  display: none;
+}
+
+.project-paper-finder-schedule legend {
+  margin-bottom: 0.625rem;
+  padding: 0;
+}
+
+.project-paper-finder-schedule-grid input,
+.project-paper-finder-schedule-grid select {
+  min-width: 0;
+  min-height: 2.5rem;
+  height: 2.5rem;
+  padding: 0.5rem;
+  font-size: 0.8125rem;
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-stat-card {
@@ -1456,33 +1626,62 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   margin: 0;
 }
 
-@media (max-width: 860px) {
-  .project-dashboard-hero {
-    display: grid;
+/* Keep the unmoved bench toolbox clear of dashboard content. Dragged tools
+   retain their existing anchor and positioning behavior. */
+#biology-notebook-view .biology-notebook-layout:has(.project-dashboard:not([hidden])):has(.biology-notebook-tool-sidebar:not([data-notebook-toolbox-moved="true"])) .project-dashboard-hero {
+  padding-inline-end: 3.5rem;
+}
+
+#biology-notebook-view .biology-notebook-layout:has(.project-dashboard:not([hidden])) .biology-notebook-tool-sidebar:not([data-notebook-toolbox-moved="true"]) {
+  top: 1rem;
+}
+
+@media (max-width: 980px) {
+  .biology-notebook-layout:has(.project-dashboard:not([hidden])):has(.biology-notebook-tool-sidebar:not([data-notebook-toolbox-moved="true"])) .biology-notebook-new-experiment-btn {
+    width: calc(100% - 3.5rem);
   }
 
+  .biology-notebook-project-dashboard {
+    padding-inline: 1rem;
+  }
+}
+
+/* Respond to the dashboard's available space, including resized side rails. */
+@container project-dashboard (max-width: 56rem) {
+  .project-paper-finder-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .project-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container project-dashboard (max-width: 36rem) {
   .project-dashboard-actions {
     justify-content: flex-start;
   }
 
-  .project-overview-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .project-paper-finder-head,
-  .project-paper-finder-fields {
-    display: grid;
-    grid-template-columns: 1fr;
+  .project-stat-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 560px) {
+@container project-dashboard (max-width: 28rem) {
+  .project-stat-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .project-paper-finder-schedule-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .project-paper-finder-frequency {
     grid-column: 1 / -1;
+  }
+
+  .project-paper-finder-head {
+    flex-wrap: wrap;
   }
 }
 

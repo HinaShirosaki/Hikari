@@ -1,0 +1,100 @@
+{
+  "checks": [
+    {
+      "width": 1440,
+      "theme": "day",
+      "readerWidth": 1078,
+      "toolbarControls": 8
+    },
+    {
+      "width": 1440,
+      "theme": "night",
+      "readerWidth": 1078,
+      "toolbarControls": 8
+    },
+    {
+      "width": 1024,
+      "theme": "day",
+      "readerWidth": 662,
+      "toolbarControls": 8
+    },
+    {
+      "width": 1024,
+      "theme": "night",
+      "readerWidth": 662,
+      "toolbarControls": 8
+    },
+    {
+      "width": 800,
+      "theme": "day",
+      "readerWidth": 438,
+      "toolbarControls": 8
+    },
+    {
+      "width": 800,
+      "theme": "night",
+      "readerWidth": 438,
+      "toolbarControls": 8
+    }
+  ],
+  "foldChecks": [
+    {
+      "label": "papers",
+      "theme": "day",
+      "viewport": 1440,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    },
+    {
+      "label": "papers",
+      "theme": "night",
+      "viewport": 1440,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    },
+    {
+      "label": "papers",
+      "theme": "day",
+      "viewport": 1024,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    },
+    {
+      "label": "papers",
+      "theme": "night",
+      "viewport": 1024,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    },
+    {
+      "label": "agent",
+      "theme": "day",
+      "viewport": 1440,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    },
+    {
+      "label": "agent",
+      "theme": "night",
+      "viewport": 1440,
+      "columnWidth": 24,
+      "buttonWidth": 24,
+      "restored": true,
+      "keyboardFocus": true
+    }
+  ],
+  "zoomed": "84%",
+  "errors": [],
+  "actualPdf": true,
+  "chatBackend": "not invoked"
+}

@@ -85,6 +85,66 @@ test('biology-notebook project context menu creates a project', async () => {
   assert.equal(projectsChangedCalls, 1);
 });
 
+test('biology-notebook project creation resumes experiment setup and prevents duplicate submissions', async () => {
+  const document = createMockDocument([
+    'project-overlay', 'experiment-overlay', 'form', 'name', 'description',
+    'create', 'new-project', 'status', 'details'
+  ]);
+  const get = (id) => document.getElementById(id);
+  const state = { projects: [{ id: 'existing', name: 'Atlas' }], settings: { storagePath: '/lab' } };
+  const created = [];
+  let finishDirectory;
+  let saves = 0;
+  get('project-overlay').hidden = true;
+  get('experiment-overlay').hidden = false;
+  wireFormReset(get('form'), [get('name'), get('description')]);
+  const { createNotebookProjectController } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'project', 'project-controller.js'
+  ));
+  const controller = createNotebookProjectController({
+    state, createId: () => 'new-project', persist: () => { saves += 1; },
+    onProjectCreated: (project, origin) => created.push({ project, origin }),
+    dialogOverlay: get('project-overlay'), experimentDialogOverlay: get('experiment-overlay'),
+    dialogForm: get('form'), projectNameInput: get('name'), projectDescriptionInput: get('description'),
+    dialogCreateBtn: get('create'), dialogStatus: get('status'), projectDetails: get('details'),
+    experimentAddProjectBtn: get('new-project'), documentRef: document,
+    windowRef: { hikariApi: { ensureStorageDirectory: () => new Promise((resolve) => { finishDirectory = resolve; }) } }
+  });
+  trigger(get('new-project'), 'click', { currentTarget: get('new-project') });
+  assert.equal(get('experiment-overlay').hidden, true);
+  assert.equal(get('project-overlay').hidden, false);
+  get('name').value = '  ';
+  assert.equal(await controller.createProject(), null);
+  assert.match(get('status').textContent, /Enter a project name/);
+  get('name').value = ' atlas ';
+  assert.equal(await controller.createProject(), null);
+  assert.match(get('status').textContent, /already exists/);
+  assert.equal(saves, 0);
+
+  get('name').value = '  Protein stability  ';
+  get('description').value = 'Screen temperature tolerance.';
+  const pending = controller.createProject();
+  assert.equal(get('create').disabled, true);
+  assert.equal(await controller.createProject(), null);
+  controller.closeProjectDialog();
+  assert.equal(get('project-overlay').hidden, false);
+  finishDirectory({ ok: true });
+  await pending;
+  assert.equal(saves, 1);
+  assert.equal(state.projects.length, 2);
+  assert.equal(created[0].project.name, 'Protein stability');
+  assert.equal(created[0].project.description, 'Screen temperature tolerance.');
+  assert.equal(created[0].origin.fromExperiment, true);
+  assert.equal(get('experiment-overlay').hidden, false);
+  assert.equal(get('project-overlay').hidden, true);
+  assert.equal(get('create').disabled, false);
+
+  controller.openProjectDialog({ currentTarget: get('new-project') });
+  controller.closeProjectDialog();
+  assert.equal(get('experiment-overlay').hidden, false);
+  assert.equal(state.projects.length, 2);
+});
+
 test('biology-notebook project tree renders projects before they have pages', () => {
   const document = createMockDocument([
     'biology-notebook-entry-list'

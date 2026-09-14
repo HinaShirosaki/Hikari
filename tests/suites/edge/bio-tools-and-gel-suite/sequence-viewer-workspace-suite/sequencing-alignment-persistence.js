@@ -227,6 +227,18 @@ test('[EDGE] sequence-viewer detail view no longer includes the standalone align
   assert.doesNotMatch(detailViewSource, /sequence-viewer-alignment-trace-host/);
   assert.doesNotMatch(publicApiSource, /renderAlignmentTracePanelHtml/);
 });
+test('[EDGE] primer-order dialog keeps only the copy workflow and material warnings', () => {
+  const detailViewSource = readSource('ui/html/views/sequence-viewer-detail-view.html');
+  const dialogSource = readSource('src/renderer/modules/sequence-viewer/primer-order-dialog.js');
+  const domSource = readSource('src/renderer/modules/sequence-viewer/dom.js');
+
+  assert.doesNotMatch(detailViewSource, /Paste the block into IDT Bulk Input/);
+  assert.doesNotMatch(detailViewSource, /Open IDT Bulk Input/);
+  assert.doesNotMatch(detailViewSource, /sequence-viewer-primer-order-open-idt/);
+  assert.doesNotMatch(dialogSource, /ready to order/);
+  assert.doesNotMatch(dialogSource, /IDT_BULK_INPUT_URL/);
+  assert.doesNotMatch(domSource, /primerOrderOpenIdtBtn/);
+});
 test('[EDGE] sequence-viewer shows the AB1 chromatogram inline for an active sequencing alignment', async () => {
   const document = createMockDocument();
   const moduleWithDom = loadEsmStyleModule(

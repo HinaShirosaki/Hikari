@@ -123,7 +123,6 @@ export function initProtocolManagement({
     showViewPanel,
     renderProtocolView,
     syncSelectionAfterMutation,
-    onCancelEditor,
     openEditorWithDraft,
     onCreateProtocol,
     editProtocol,
@@ -244,7 +243,6 @@ export function initProtocolManagement({
   ui.createProtocolBtn?.addEventListener('click', onCreateProtocol);
   ui.emptyCreateProtocolBtn?.addEventListener('click', onCreateProtocol);
   ui.protocolEditorBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: true }));
-  ui.protocolCancelBtn?.addEventListener('click', onCancelEditor);
   ui.protocolViewBackBtn?.addEventListener('click', () => showEmptyPanel({ resetEditor: false }));
   ui.protocolGenerateBtn?.addEventListener('click', generationController.openProtocolGenerateInputOverlay);
   ui.protocolGenerateCloseBtn?.addEventListener('click', () => generationController.closeProtocolGenerateInputOverlay({ resetComposer: false }));

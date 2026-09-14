@@ -1,4 +1,5 @@
 import { asArray, trimText } from '../shared.js';
+import { renderMarkdown } from '../markdown.js';
 
 function renderList(items, safeText, emptyText = '') {
   const values = asArray(items).map((item) => trimText(item, 260)).filter(Boolean);
@@ -8,12 +9,12 @@ function renderList(items, safeText, emptyText = '') {
   return `<ul>${values.map((item) => `<li>${safeText(item)}</li>`).join('')}</ul>`;
 }
 
-function renderProtocolPreview(item, safeText) {
+function renderProtocolPreview(item, safeText, { actions = null, inline = false } = {}) {
   const protocol = item.protocol;
   return `
-    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
-      <div class="agent-review-card-header">
-        <span class="agent-review-type">Protocol</span>
+    <article class="agent-review-card draft-review-document${inline ? ' agent-inline-review' : ''}" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header draft-review-heading">
+        <span class="agent-review-type draft-review-kind">Protocol · Draft</span>
         <h4>${safeText(protocol.name)}</h4>
       </div>
       <div class="agent-review-content">
@@ -29,7 +30,7 @@ function renderProtocolPreview(item, safeText) {
         </section>
         <section class="agent-review-section">
           <h5>Steps</h5>
-          <ol>${protocol.steps.map((step) => `<li>${safeText(step.text)}</li>`).join('')}</ol>
+          <ol>${asArray(protocol.steps).map((step) => `<li>${safeText(step.text)}</li>`).join('')}</ol>
         </section>
         ${protocol.troubleshooting ? `
           <section class="agent-review-section">
@@ -38,15 +39,17 @@ function renderProtocolPreview(item, safeText) {
           </section>
         ` : ''}
       </div>
-      <div class="agent-review-actions">
-        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
+      <div class="agent-review-actions draft-review-actions">
+        ${actions ?? `
         <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
+        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
+        `}
       </div>
     </article>
   `;
 }
 
-function renderNotebookPreview(item, safeText) {
+function renderNotebookPreview(item, safeText, { actions = null, inline = false } = {}) {
   const draft = item.draft;
   const proposal = draft.proposal || {};
   const title = trimText(proposal.title || draft.entry_template?.result || 'Notebook draft', 220);
@@ -55,9 +58,9 @@ function renderNotebookPreview(item, safeText) {
     trimText(draft.protocol?.name || draft.entry_template?.protocolName, 220)
   ].filter(Boolean);
   return `
-    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
-      <div class="agent-review-card-header">
-        <span class="agent-review-type">Notebook Page</span>
+    <article class="agent-review-card draft-review-document${inline ? ' agent-inline-review' : ''}" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header draft-review-heading">
+        <span class="agent-review-type draft-review-kind">Notebook page · Draft</span>
         <h4>${safeText(title)}</h4>
         ${metaParts.length ? `<p>${safeText(metaParts.join(' / '))}</p>` : ''}
       </div>
@@ -80,32 +83,34 @@ function renderNotebookPreview(item, safeText) {
         </section>
         <section class="agent-review-section">
           <h5>Planned Steps</h5>
-          ${draft.rendered_steps.length
+          ${asArray(draft.rendered_steps).length
             ? `<ol>${draft.rendered_steps.map((step) => `<li>${safeText(step)}</li>`).join('')}</ol>`
             : '<p class="agent-review-muted">No rendered steps were supplied.</p>'}
         </section>
-        ${draft.unresolved_placeholders.length ? `
-          <section class="agent-review-section">
+        ${asArray(draft.unresolved_placeholders).length ? `
+          <section class="agent-review-section draft-review-attention">
             <h5>Needs Attention</h5>
             <ul>${draft.unresolved_placeholders.map((placeholder) => `<li>${safeText(placeholder.display || placeholder.placeholder_key || placeholder.reason)}</li>`).join('')}</ul>
           </section>
         ` : ''}
-        ${proposal.checkpoints.length ? `
+        ${asArray(proposal.checkpoints).length ? `
           <section class="agent-review-section">
             <h5>Checkpoints</h5>
             ${renderList(proposal.checkpoints, safeText)}
           </section>
         ` : ''}
       </div>
-      <div class="agent-review-actions">
-        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
+      <div class="agent-review-actions draft-review-actions">
+        ${actions ?? `
         <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
+        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
+        `}
       </div>
     </article>
   `;
 }
 
-function renderNotebookAppendPreview(item, safeText) {
+function renderNotebookAppendPreview(item, safeText, { actions = null, inline = false } = {}) {
   const append = item.append || {};
   const proposal = append.proposal || {};
   const sourceLabels = asArray(proposal.sources).map((source) => {
@@ -119,9 +124,9 @@ function renderNotebookAppendPreview(item, safeText) {
     trimText(proposal.protocol_name, 220)
   ].filter(Boolean);
   return `
-    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
-      <div class="agent-review-card-header">
-        <span class="agent-review-type">Notebook Append</span>
+    <article class="agent-review-card draft-review-document${inline ? ' agent-inline-review' : ''}" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header draft-review-heading">
+        <span class="agent-review-type draft-review-kind">Notebook append · Draft</span>
         <h4>${safeText(trimText(proposal.section_title, 220) || 'Suggested enrichment')}</h4>
         ${target.length ? `<p>${safeText(target.join(' / '))}</p>` : ''}
       </div>
@@ -134,7 +139,7 @@ function renderNotebookAppendPreview(item, safeText) {
         ` : ''}
         <section class="agent-review-section">
           <h5>Content to append</h5>
-          <p class="agent-review-append-text">${safeText(proposal.content_markdown)}</p>
+          <div class="agent-chat-body agent-chat-markdown">${renderMarkdown(proposal.content_markdown, safeText)}</div>
         </section>
         ${sourceLabels.length ? `
           <section class="agent-review-section">
@@ -143,9 +148,11 @@ function renderNotebookAppendPreview(item, safeText) {
           </section>
         ` : ''}
       </div>
-      <div class="agent-review-actions">
-        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Append to Page</button>
+      <div class="agent-review-actions draft-review-actions">
+        ${actions ?? `
         <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
+        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Append to Page</button>
+        `}
       </div>
     </article>
   `;

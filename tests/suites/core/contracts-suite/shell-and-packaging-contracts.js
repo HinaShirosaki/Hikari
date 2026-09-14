@@ -70,6 +70,8 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
         /src\/main\/agent/,
         /src\/main\/storage/,
         /src\/main\/lib/,
+        /src\/renderer\/lib/,
+        /src\/renderer\/modules\/sequence-viewer/,
         /vendor\/sqljs/,
         /node_modules\/@modelcontextprotocol\/sdk/
       ].forEach((pattern) => assert.match(unpackDir, pattern));
@@ -80,7 +82,7 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.match(ignoreAsText, /\\\/output\(\$\|\\\/\)/);
       assert.match(ignoreAsText, /\\\/tmp\(\$\|\\\/\)/);
       assert.match(ignoreAsText, /\.DS_Store/);
-      assert.match(ignoreAsText, /hikari-data\(\?:\\\.ena\)\?\\\.json/);
+      assert.match(ignoreAsText, /hikari-data\\\.json/);
       assert.match(ignoreAsText, /TestData6/);
       assert.match(ignoreAsText, /TestData7/);
       assert.match(ignoreAsText, /artifacts/);

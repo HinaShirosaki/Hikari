@@ -30,6 +30,7 @@ assert.match(coreCss, /\.hikari-agent-action::before\s*\{/);
 assert.match(coreCss, /linear-gradient\(/);
 assert.match(coreCss, /assets\/icons\/hikari-button\.svg/);
 assert.match(buttonIcon, /viewBox="390 185 475 865"/);
+assert.match(buttonIcon, /stroke-width="30"/, 'the button-specific Hikari mark should remain optically thick at small sizes');
 assert.doesNotMatch(buttonIcon, /<(?:image|script|foreignObject)\b/i);
 
 for (const id of [

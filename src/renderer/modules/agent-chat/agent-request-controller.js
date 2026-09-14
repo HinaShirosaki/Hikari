@@ -102,6 +102,8 @@ export function createAgentRequestController(deps) {
   function collectTraceRows(request) {
     const progress = request?.liveAssistantMessage?.meta?.live_progress || {};
     return {
+      htmlArtifacts: request?.liveAssistantMessage?.meta?.html_artifacts || [],
+      imageArtifacts: request?.liveAssistantMessage?.meta?.image_artifacts || [],
       sequenceActions: request?.liveAssistantMessage?.meta?.sequence_actions || [],
       thinking: cloneLiveThinkingRows(progress.thinking_rows),
       activity: cloneLiveActivityRows(progress.activity_rows),
@@ -110,11 +112,16 @@ export function createAgentRequestController(deps) {
   }
 
   function appendStoppedAssistantMessage(request, requestText, message = 'Agent request stopped.') {
+    const htmlArtifacts = request?.liveAssistantMessage?.meta?.html_artifacts || [];
+    const imageArtifacts = request?.liveAssistantMessage?.meta?.image_artifacts || [];
     clearLiveAssistantState(request);
     if (!isRequestVisible(request)) {
       return false;
     }
-    state.agentChat.messages.push(buildStoppedAssistantMessage(requestText, message, createId));
+    const stoppedMessage = buildStoppedAssistantMessage(requestText, message, createId);
+    stoppedMessage.meta.html_artifacts = htmlArtifacts;
+    stoppedMessage.meta.image_artifacts = imageArtifacts;
+    state.agentChat.messages.push(stoppedMessage);
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     sessionManager.renderSessionList();
@@ -278,6 +285,7 @@ export function createAgentRequestController(deps) {
       persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
       setRequestStatus(request, 'Error.');
       showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
+      return { ok: false, reason: 'request_error' };
     } finally {
       const requestWasVisible = isRequestVisible(request);
       runtime.sendPending = false;

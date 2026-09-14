@@ -997,7 +997,7 @@ body.ui-neutral-compact input[id*="api-key"] {
   padding: 6px;
   border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-surface);
   overflow-y: auto;
 }
 

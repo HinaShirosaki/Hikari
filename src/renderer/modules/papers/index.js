@@ -14,6 +14,8 @@ import { createStoredPaperDiscovery } from './management/discover-stored.js';
 import { createExternalLinkOpener } from './management/external-links.js';
 import { getPapersElements } from './management/elements.js';
 import { searchPaperDatabaseForSelectedText } from './management/paper-search-text.js';
+import { createPaperResearchBrief } from './research-brief.js';
+import { createPapersWorkspaceControls } from './workspace-controls.js';
 
 export function initPapersManagement({
   state,
@@ -45,8 +47,8 @@ export function initPapersManagement({
     paperId: ''
   };
   const uiState = {
-    commentsCollapsed: false,
-    bookmarksCollapsed: false,
+    commentsCollapsed: true,
+    contextPanel: 'outline',
     summaryCollapsed: false
   };
 
@@ -104,17 +106,6 @@ export function initPapersManagement({
     },
     toggleSummaryCollapsed() {
       context.setSummaryCollapsed(!uiState.summaryCollapsed);
-    },
-    setBookmarksCollapsed(collapsed) {
-      const nextValue = Boolean(collapsed);
-      if (uiState.bookmarksCollapsed === nextValue) {
-        return;
-      }
-      uiState.bookmarksCollapsed = nextValue;
-      context.comments?.renderBookmarkSection?.();
-    },
-    toggleBookmarksCollapsed() {
-      context.setBookmarksCollapsed(!uiState.bookmarksCollapsed);
     },
     getPaperById(paperId) {
       return (state.papers || []).find((paper) => paper.id === paperId) || null;
@@ -395,20 +386,40 @@ export function initPapersManagement({
   };
   context.renderCommentPanelState = () => {
     const collapsed = Boolean(uiState.commentsCollapsed);
+    const briefOpen = !collapsed && uiState.contextPanel === 'brief';
+    const detailsOpen = !collapsed && uiState.contextPanel === 'details';
+    const outlineOpen = !collapsed && (uiState.contextPanel || 'outline') === 'outline';
     elements.papersLayout?.classList?.toggle('is-comments-collapsed', collapsed);
     elements.papersRightColumn?.classList?.toggle('is-collapsed', collapsed);
     if (elements.paperCommentSidebar) {
-      elements.paperCommentSidebar.hidden = collapsed;
+      elements.paperCommentSidebar.hidden = !outlineOpen;
     }
     if (elements.paperCommentToggleBtn) {
-      const label = collapsed
-        ? 'Unfold paper details panel from the right'
-        : 'Fold paper details panel to the right';
-      elements.paperCommentToggleBtn.classList?.toggle('is-collapsed', collapsed);
-      elements.paperCommentToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
+      const label = !outlineOpen
+        ? 'Open outline & bookmarks'
+        : 'Close outline & bookmarks';
+      elements.paperCommentToggleBtn.classList?.toggle('is-collapsed', !outlineOpen);
+      elements.paperCommentToggleBtn.setAttribute?.('aria-expanded', String(outlineOpen));
       elements.paperCommentToggleBtn.setAttribute?.('aria-label', label);
       elements.paperCommentToggleBtn.title = label;
     }
+    if (elements.paperDetailsSidebar) elements.paperDetailsSidebar.hidden = !detailsOpen;
+    if (elements.paperDetailsToggleBtn) {
+      const label = detailsOpen ? 'Close paper details' : 'Open paper details';
+      elements.paperDetailsToggleBtn.setAttribute('aria-expanded', String(detailsOpen));
+      elements.paperDetailsToggleBtn.setAttribute('aria-label', label);
+      elements.paperDetailsToggleBtn.title = label;
+    }
+    if (detailsOpen) context.renderSummarySection();
+    if (elements.paperResearchBrief) elements.paperResearchBrief.hidden = !briefOpen;
+    if (elements.paperBriefToggleBtn) {
+      const label = briefOpen ? 'Close research brief' : 'Open research brief';
+      elements.paperBriefToggleBtn.setAttribute('aria-expanded', String(briefOpen));
+      elements.paperBriefToggleBtn.setAttribute('aria-label', label);
+      elements.paperBriefToggleBtn.title = label;
+    }
+    context.renderResearchBrief?.();
+    context.syncWorkspaceControls?.();
   };
   context.render = () => {
     context.renderCommentPanelState();
@@ -419,9 +430,8 @@ export function initPapersManagement({
     void maybeDiscoverStoredPapers();
   };
 
-  elements.paperCommentToggleBtn?.addEventListener('click', () => {
-    context.toggleCommentsCollapsed();
-  });
+  context.renderResearchBrief = createPaperResearchBrief(context).render;
+  createPapersWorkspaceControls(context);
 
   elements.paperViewerPrintBtn?.addEventListener('click', async () => {
     const activePaper = context.getActivePaper?.() || null;

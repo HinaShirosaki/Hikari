@@ -122,13 +122,6 @@ export function createCustomSampleTypeId(label = '', existingTypes = []) {
   return candidate;
 }
 
-export function normalizeSampleTypeHidden(rawValue) {
-  const source = Array.isArray(rawValue) ? rawValue : [];
-  return Array.from(new Set(source
-    .map((type) => normalizeSampleType(type))
-    .filter((type) => type !== 'other' && Object.prototype.hasOwnProperty.call(DEFAULT_SAMPLE_TYPE_LABELS, type))));
-}
-
 export function normalizeSampleTypeLabels(rawValue) {
   const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
     ? rawValue
@@ -168,9 +161,9 @@ export function normalizeConfiguredSampleType(type = '') {
 
 export function getEditableSampleTypeEntries(settings = {}) {
   const labels = getSampleTypeLabels(settings);
-  const hiddenTypes = new Set(normalizeSampleTypeHidden(settings?.sampleTypeHidden));
+  // Built-in types are permanent (renameable, never removed); only custom_ types can be deleted.
   const configuredTypes = SAMPLE_TYPE_ORDER
-    .filter((type) => type !== 'other' && !hiddenTypes.has(type))
+    .filter((type) => type !== 'other')
     .map((type) => ({
       type,
       label: labels[type] || DEFAULT_SAMPLE_TYPE_LABELS[type],

@@ -39,7 +39,7 @@ The key detail is that persistence is not “write one JSON file and stop.” A 
 
 ## `storage/` is the persistence engine
 
-This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-manifest.js`, `storage-hydration.js`, `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage/index.js`.
+This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-discovery.js`, `storage-hydration.js`, `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage/index.js`.
 
 Given a base data file, it derives:
 
@@ -48,9 +48,9 @@ Given a base data file, it derives:
 - `*.index.sqlite`
 - `Samples/samples.json`
 
-`getBundlePaths(...)` is the shared path builder used throughout the folder. The manifest helper exports `STORAGE_MANIFEST_FILE_NAME` (`hikari-storage-manifest.json`), and the layout has grown additional sidecars such as `protocol/protocol.index.sqlite` and a `knowledgebase/knowledge.index.sqlite`. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
+`getBundlePaths(...)` is the shared path builder used throughout the folder. The layout has grown additional sidecars such as `protocol/protocol.index.sqlite` and a `knowledgebase/knowledge.index.sqlite`. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
 
-For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. 
+For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.json`. 
 
 ## Write path
 
@@ -93,10 +93,14 @@ It:
 
 - scans a storage root for bundle candidate files
 - also recognizes standalone `*.index.sqlite` bundle indexes when no base data file exists
+- decides whether the folder is one Hikari has used before by looking at the folder itself — any of `Protocol/`, `Project/`, `Samples/`, `Workflow/`, `SequenceViewer/`, `KnowledgeBase/`, or a snapshot `.json` — and reports that as `recognized`
 - hydrates each discovered bundle
 - merges protocols, notebook entries, chemicals, and inventory across bundles
 - summarizes the `SequenceViewer` SQLite library
-- writes a `hikari-storage-manifest.json` manifest into the storage root
+
+There is no marker or manifest file: the layout Hikari writes is the layout it reads. A `hikari-storage-manifest.json` left behind by builds before September 2026 is skipped during discovery and otherwise ignored.
+
+Imports are serialised: boot hydration and "Save Storage Path" cannot interleave their writes.
 
 This is best thought of as a discovery and migration helper, not part of the routine save/load loop.
 

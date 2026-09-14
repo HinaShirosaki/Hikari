@@ -1,9 +1,11 @@
-import {
-  buildStateSnapshot,
-  normalizeAgentResponse
-} from '../agent-chat/public-api.js';
+import { requestDirectLlm } from '../../services/direct-llm.js';
+import { ACTION_WHERE_TO_BUY } from './constants.js';
 import { normalizeInsights } from './insight-model.js';
-import { createSelectionInsightPrompt } from './prompt.js';
+import {
+  SELECTION_INSIGHT_SYSTEM_PROMPT,
+  WHERE_TO_BUY_SCHEMA,
+  createSelectionInsightPrompt
+} from './prompt.js';
 import { cleanText } from './text-utils.js';
 
 export function getHostRegistration(ctx, hostKey) {
@@ -31,85 +33,24 @@ export function getCurrentContext(ctx, hostKey) {
   };
 }
 
-export async function buildAgentSnapshot(ctx, projectId) {
-  let syncResult = null;
-  const storagePath = cleanText(ctx.state?.settings?.storagePath, 1200);
-  if (ctx.api?.autoSaveDataFile && storagePath) {
-    syncResult = await ctx.api.autoSaveDataFile(ctx.state, '');
-    if (!syncResult?.ok) {
-      throw new Error(syncResult?.error || 'Failed to sync state before running the answer request.');
-    }
-  }
-  const snapshot = buildStateSnapshot(ctx.state, cleanText(projectId, 120));
-  if (!snapshot.data_file_path) {
-    snapshot.data_file_path = cleanText(syncResult?.filePath, 1600);
-  }
-  return snapshot;
-}
-
-export async function requestInsightAnswer(ctx, context, selectionContext, actionType) {
-  if (!ctx.api?.agentChat) {
-    throw new Error('Agent IPC is unavailable in this build.');
-  }
-  const stateSnapshot = await buildAgentSnapshot(ctx, context?.projectId);
-  const message = createSelectionInsightPrompt({
-    actionType,
-    selectedText: selectionContext.selectedText,
-    segmentText: selectionContext.segmentText,
-    context: {
-      ...context,
-      segmentLabel: selectionContext.segmentLabel
-    }
-  });
-  const result = await ctx.api.agentChat({
-    clientRequestId: `selection-insight-${cleanText(ctx.createId?.(), 120) || Date.now().toString(36)}`,
-    message,
-    attachments: [],
-    chatSessionId: '',
-    projectId: cleanText(context?.projectId, 120),
-    projectName: cleanText(context?.projectName || context?.record?.projectName, 220),
-    conversation: [],
-    stateSnapshot,
-    llm: {
-      provider: cleanText(ctx.state?.settings?.llm?.provider, 80),
-      model: cleanText(ctx.state?.settings?.llm?.model, 160),
-      reasoningEffort: cleanText(ctx.state?.settings?.llm?.reasoningEffort, 40).toLowerCase(),
-      apiEndpoint: cleanText(ctx.state?.settings?.llm?.provider, 80) === 'codex'
-        ? ''
-        : cleanText(ctx.state?.settings?.llm?.apiEndpoint, 1200),
-      apiKey: cleanText(ctx.state?.settings?.llm?.provider, 80) === 'codex'
-        ? ''
-        : cleanText(ctx.state?.settings?.llm?.apiKey, 4000)
-    },
-    agent: {
-      externalSkillsEnabled: ctx.state?.settings?.agent?.externalSkillsEnabled !== false,
-      disabledExternalSkillNames: Array.isArray(ctx.state?.settings?.agent?.disabledExternalSkillNames)
-        ? ctx.state.settings.agent.disabledExternalSkillNames.map((item) => cleanText(item, 160)).filter(Boolean)
-        : [],
-      disabledMcpToolNames: Array.isArray(ctx.state?.settings?.agent?.disabledMcpToolNames)
-        ? ctx.state.settings.agent.disabledMcpToolNames.map((item) => cleanText(item, 160)).filter(Boolean)
-        : [],
-      selectionInsight: {
-        actionType,
-        selectedText: selectionContext.selectedText,
-        contextText: selectionContext.segmentText,
-        segmentLabel: selectionContext.segmentLabel,
-        recordName: cleanText(
-          context?.record?.name
-            || context?.record?.protocolName
-            || context?.label,
-          220
-        ),
-        projectName: cleanText(
-          context?.projectName
-            || context?.record?.projectName,
-          220
-        )
+// One-shot direct LLM task (same path as page naming / note clarify), not a
+// chat turn: no chat session is created and no state snapshot is synced.
+export function requestInsightAnswer(ctx, context, selectionContext, actionType) {
+  const isPurchase = actionType === ACTION_WHERE_TO_BUY;
+  return requestDirectLlm({
+    llm: ctx.state?.settings?.llm,
+    moduleId: 'selection-insights',
+    task: isPurchase ? 'where-to-buy' : 'what-is-it',
+    systemPrompt: SELECTION_INSIGHT_SYSTEM_PROMPT,
+    prompt: createSelectionInsightPrompt({
+      actionType,
+      selectedText: selectionContext.selectedText,
+      segmentText: selectionContext.segmentText,
+      context: {
+        ...context,
+        segmentLabel: selectionContext.segmentLabel
       }
-    }
+    }),
+    ...(isPurchase ? { expectJson: true, schema: WHERE_TO_BUY_SCHEMA } : {})
   });
-  if (!result?.ok) {
-    throw new Error(result?.error || 'The selection insight request failed.');
-  }
-  return normalizeAgentResponse(result);
 }

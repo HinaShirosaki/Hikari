@@ -1,4 +1,5 @@
 import { showTransientNotice } from '../../lib/notify.js';
+import { renderTypeFieldsMarkup } from '../sample-registry/type-fields.js';
 
 export function bindStructureButtons(ctx) {
   const { inventorySections } = ctx.elements;
@@ -14,6 +15,12 @@ export function bindStructureButtons(ctx) {
   ].forEach((selector) => {
     inventorySections.querySelectorAll(selector).forEach((select) => {
       select.addEventListener('change', syncStructureButtons);
+      select.addEventListener('change', () => {
+        const fields = select.closest('.well-inline-editor')?.querySelector('[data-sample-type-fields]');
+        if (fields) {
+          fields.innerHTML = renderTypeFieldsMarkup(select.value);
+        }
+      });
     });
   });
 

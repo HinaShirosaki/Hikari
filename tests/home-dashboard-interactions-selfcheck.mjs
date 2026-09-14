@@ -42,7 +42,8 @@ assert.equal(parseTimerDuration('1 hour nonsense'), null, 'unrecognized duration
 const timerElements = elementsFor([
   'localTimeDisplay', 'localDateDisplay', 'timerStatus', 'timerActiveList',
   'timerOpenBtn', 'timerDialogOverlay', 'timerDialogCloseBtn', 'timerDialogForm',
-  'timerNameInput', 'timerMinutesInput', 'timerTemplateList'
+  'timerNameInput', 'timerMinutesInput', 'timerTemplateList', 'topbarLocalTime', 'topbarTimer',
+  'topbarTimerTime', 'topbarTimerProgress'
 ]);
 timerElements.timerDialogOverlay.hidden = true;
 timerElements.timerDialogForm.reportValidity = () => true;
@@ -66,6 +67,12 @@ let timerPersists = 0;
 let timer;
 timer = load('timer.js').initTimerWidget({ state: timerState, safeText, persist: () => { timerPersists += 1; }, render: () => timer.render(), elements: timerElements });
 timer.render();
+assert.equal(timerElements.topbarLocalTime.textContent, timerElements.localTimeDisplay.textContent);
+assert.match(timerElements.topbarLocalTime.getAttribute('aria-label'), /^Current local time /);
+assert.equal(timerElements.topbarTimer.hidden, false);
+assert.equal(timerElements.topbarTimerTime.textContent, '10:00');
+assert.equal(timerElements.topbarTimerProgress.style.strokeDasharray, '100.0 100');
+assert.equal(timerElements.topbarTimer.getAttribute('aria-valuenow'), '100');
 const initialReplacements = replacements;
 now += 1000;
 [...intervals.values()].forEach((callback) => callback());
@@ -98,14 +105,29 @@ now += 1_300_000;
 [...intervals.values()].forEach((callback) => callback());
 assert.match(timerElements.timerActiveList.innerHTML, /Dismiss finished timer First &lt;timer&gt;/);
 assert.doesNotMatch(timerElements.timerActiveList.innerHTML, /data-dashboard-toggle-active-timer/);
+assert.equal(timerElements.topbarTimer.hidden, true, 'the header timer hides when no countdown remains active');
 
-const { updateActiveTimer, formatCountdown } = load('timer-rendering.js');
+const { updateActiveTimer, updateTopbarTimer, formatCountdown } = load('timer-rendering.js');
 const children = new Map(['.home-timer-count', '.home-timer-fill', '.home-timer-track'].map((selector) => [selector, new MockElement(selector)]));
 updateActiveTimer({ querySelector: (selector) => children.get(selector) }, { remainingMs: 61_000, pct: 80.5, isWarn: true, isPaused: false });
 assert.equal(children.get('.home-timer-count').textContent, '01:01');
 assert.equal(children.get('.home-timer-fill').style.width, '80.5%');
 assert.equal(children.get('.home-timer-track').getAttribute('aria-valuenow'), '81');
 assert.equal(formatCountdown(3_661_000), '01:01:01');
+const topbarElements = elementsFor(['topbarTimer', 'topbarTimerTime', 'topbarTimerProgress']);
+updateTopbarTimer(topbarElements, {
+  name: 'PCR extension',
+  remainingMs: 61_000,
+  remainingPct: 37.5,
+  isWarn: true,
+  isPaused: false
+});
+assert.equal(topbarElements.topbarTimerTime.textContent, '01:01');
+assert.equal(topbarElements.topbarTimerProgress.style.strokeDasharray, '37.5 100');
+assert.equal(topbarElements.topbarTimerProgress.style.transform, 'rotate(-157.5deg)');
+assert.equal(topbarElements.topbarTimer.getAttribute('aria-valuenow'), '38');
+assert.equal(topbarElements.topbarTimer.getAttribute('aria-valuetext'), '38% remaining, 01:01 left');
+assert.equal(topbarElements.topbarTimer.classList.contains('is-warn'), true);
 
 // Project grouping keeps the page ID bound to the existing note overlay and
 // saves only to the page the user selected.
@@ -191,6 +213,6 @@ assert.equal(quickLogState.settings.dashboard.quickLogDraft, '');
 assert.equal(quickLogElements.quickLogInput.value, '');
 assert.equal(quickLogPersists, 2);
 assert.equal(quickLogRenders, 1);
-assert.equal(quickLogElements.quickLogStatus.textContent, 'Logged and sent to Assistant.');
+assert.equal(quickLogElements.quickLogStatus.textContent, 'Experiment logged. Continue notebook review in the Home conversation.');
 
 console.log('home dashboard interaction selfcheck OK');

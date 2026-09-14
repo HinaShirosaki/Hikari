@@ -20,21 +20,11 @@ const SAMPLES_ROOT_FOLDER_NAME = 'Samples';
 const SAMPLES_FILE_NAME = 'samples.json';
 
 function hasSupportedDataExtension(filePath) {
-  return /\.(?:json|ena)$/i.test(String(filePath || '').trim());
+  return /\.json$/i.test(String(filePath || '').trim());
 }
 
 function stripDataFileSuffix(filePath) {
-  const raw = String(filePath || '');
-  if (/\.ena\.json$/i.test(raw)) {
-    return raw.replace(/\.ena\.json$/i, '');
-  }
-  if (/\.json$/i.test(raw)) {
-    return raw.replace(/\.json$/i, '');
-  }
-  if (/\.ena$/i.test(raw)) {
-    return raw.replace(/\.ena$/i, '');
-  }
-  return raw;
+  return String(filePath || '').replace(/\.json$/i, '');
 }
 
 function stripSqliteBundleSuffix(filePath) {

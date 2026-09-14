@@ -6,6 +6,8 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
 const { ensureObject } = require('../../lib/normalize.js');
+const { getLiteratureResearchSession } = require('../../papers/workflow/literature-research-session.js');
+const { hasLiteratureResearchJob } = require('../../papers/workflow/literature-research-jobs.js');
 const {
   HIKARI_MCP_HEADERS_TIMEOUT_MS,
   HIKARI_MCP_KEEP_ALIVE_TIMEOUT_MS,
@@ -153,7 +155,10 @@ function createAgentMcpHost(deps = {}) {
         ? providedSnapshot
         : ensureObject(getSnapshot());
       const normalizedToolId = cleanText(toolId, 160);
-      if (normalizedToolId === 'literature-search' && !claimLiteratureSearchRequest(mergedContext)) {
+      if (normalizedToolId === 'literature-search'
+        && !hasLiteratureResearchJob(args.research_id)
+        && !getLiteratureResearchSession(liveSnapshot)
+        && !claimLiteratureSearchRequest(mergedContext)) {
         return toolResult({
           ok: false,
           status: 'rejected',

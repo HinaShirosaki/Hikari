@@ -95,6 +95,10 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Config', 'last-storage-root.json');
   }
 
+  function getErrorLogPath() {
+    return path.join(getDefaultAppDataRoot(), 'Logs', 'errors.log');
+  }
+
   function getAgentChatLogPath() {
     const override = String(processObject.env.HIKARI_AGENT_CHAT_LOG_PATH || '').trim();
     if (override) {
@@ -140,6 +144,7 @@ function createMainAppPaths(deps = {}) {
     getScheduledTasksPath,
     getGenomeLibraryPath,
     getAgentChatLogPath,
+    getErrorLogPath,
     getAgentPythonSandboxRoot,
     getAgentMemoryFilePath,
     getAgentChatSessionStoragePath

@@ -338,13 +338,14 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
   assert.equal(appState.notebookEntries[1].cloningReactionStep.stepId, 'gibson');
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.insertLength, editedInsert.length);
   assert.equal(appState.notebookEntries[0].proteinBuilderCloningDesign.assembledLength, editedSequence.length);
-  // The edited 42 nt tag no longer fits safely beside a binding region and a
-  // Gibson overlap, so it becomes an explicit synthesis fragment instead of an
-  // overlong primer tail.
+  // The edited 42 nt tag is shared across the vector and insert primers while
+  // both annealing regions stay on the selected physical templates.
   const forwardPrimer = appState.notebookEntries[0].resultTable.rows.find((row) => row.name === '6xHis Tagged-POI F');
   assert.equal(Boolean(forwardPrimer), true);
+  assert.equal(appState.notebookEntries[0].resultTable.rows.length, 4);
   assert.equal(appState.notebookEntries[0].resultTable.rows.every((row) => Number(row.length) <= 60), true);
-  assert.match(appState.notebookEntries[0].result, /Synthetic block must be ordered as synthetic DNA/i);
+  assert.match(appState.notebookEntries[0].result, /Shares introduction of the 42 nt added flank/i);
+  assert.doesNotMatch(appState.notebookEntries[0].result, /must be ordered as synthetic DNA/i);
 });
   }
 };

@@ -8,11 +8,11 @@ const {
   hydrateSamplesRootFromStoragePath,
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
-const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
-const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
+const { isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary } = require('./storage-discovery');
+const { getBundlePaths, getBundlePathsFromSqlitePath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PROJECT_ROOT_FOLDER_NAME, PROTOCOL_ROOT_FOLDER_NAME, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
-const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
-const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
+const { importWorkflowRoot } = require('./workflow-storage');
+const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile, toPosixRelative } = require('./storage-utils');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -107,7 +107,16 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
   };
 }
 
-async function importStorageRoot({ storagePath = '', transformPaperRecordsToMarkdown = null } = {}) {
+const HIKARI_ROOT_FOLDER_NAMES = new Set([
+  PROTOCOL_ROOT_FOLDER_NAME,
+  PROJECT_ROOT_FOLDER_NAME,
+  SAMPLES_ROOT_FOLDER_NAME,
+  KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
+  'Workflow',
+  'SequenceViewer'
+]);
+
+async function importStorageRootUnlocked({ storagePath = '', transformPaperRecordsToMarkdown = null } = {}) {
   const resolvedStoragePath = path.resolve(cleanText(storagePath, 2400));
   if (!resolvedStoragePath) {
     throw new Error('Missing storage path.');
@@ -116,13 +125,20 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
   if (!storageStat.isDirectory()) {
     throw new Error('Storage path must be a directory.');
   }
+  // Look before creating anything: a folder Hikari has used before has at least
+  // one of its folders or a snapshot in it. The layout itself is the marker.
+  const dirEntries = await fs.readdir(resolvedStoragePath, { withFileTypes: true });
+  const recognized = dirEntries.some((entry) => (
+    (entry.isDirectory() && HIKARI_ROOT_FOLDER_NAMES.has(entry.name))
+    || (entry.isFile() && isBundleCandidateName(entry.name))
+  ));
+
   const storageLayout = resolveStorageRootLayout({ storagePath: resolvedStoragePath });
   if (storageLayout.paperMarkdownRootPath) {
     await fs.mkdir(storageLayout.paperMarkdownRootPath, { recursive: true });
   }
 
   const warnings = [];
-  const dirEntries = await fs.readdir(resolvedStoragePath, { withFileTypes: true });
   const candidateFiles = [];
   const discoveredBundleBases = new Set();
 
@@ -425,9 +441,6 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
     : { ok: false, status: 'unavailable', warnings: [] };
 
   const sequenceLibrary = await summarizeSequenceLibrary(resolvedStoragePath);
-  const workflowPaths = resolveWorkflowStoragePaths(resolvedStoragePath);
-  const samplesRootPath = path.join(resolvedStoragePath, SAMPLES_ROOT_FOLDER_NAME);
-  const samplesJsonPath = path.join(samplesRootPath, SAMPLES_FILE_NAME);
   const allWarnings = warnings
     .concat(asArray(projectRoot?.warnings))
     .concat(asArray(samplesRoot?.warnings))
@@ -453,57 +466,27 @@ async function importStorageRoot({ storagePath = '', transformPaperRecordsToMark
     paperMarkdownFailed: Number(paperMarkdown?.failed) || 0
   };
 
-  const discoveredFiles = await collectManifestEntries(resolvedStoragePath, 3);
-  const manifest = {
-    schema_name: 'hikari_storage_manifest',
-    schema_version: '1.0.0',
-    generated_at: new Date().toISOString(),
-    root_path: resolvedStoragePath,
-    discovered_files: discoveredFiles,
-    bundles: bundleSummaries,
-    protocol_storage: {
-      relative_root_path: toPosixRelative(resolvedStoragePath, protocolRoot.protocolRootPath),
-      relative_index_sqlite_path: toPosixRelative(resolvedStoragePath, protocolRoot.sqlitePath),
-      protocols: statePatch.protocols.length
-    },
-    workflow_storage: {
-      relative_root_path: toPosixRelative(resolvedStoragePath, workflowPaths.workflowRootPath),
-      relative_status_sqlite_path: toPosixRelative(resolvedStoragePath, workflowPaths.sqlitePath),
-      workflow_templates: statePatch.workflowTemplates.length,
-      workflows: statePatch.workflows.length,
-      papers: statePatch.papers.length
-    },
-    sample_storage: {
-      relative_root_path: toPosixRelative(resolvedStoragePath, samplesRootPath),
-      relative_samples_json_path: toPosixRelative(resolvedStoragePath, samplesJsonPath),
-      samples: statePatch.samples.length
-    },
-    paper_markdown_storage: {
-      relative_root_path: 'KnowledgeBase/papers.md',
-      transformed: Number(paperMarkdown?.transformed) || 0,
-      skipped: Number(paperMarkdown?.skipped) || 0,
-      failed: Number(paperMarkdown?.failed) || 0
-    },
-    sequence_library: {
-      relative_path: toPosixRelative(resolvedStoragePath, sequenceLibrary.path),
-      exists: sequenceLibrary.exists,
-      entry_count: sequenceLibrary.entryCount,
-      status_counts: sequenceLibrary.statusCounts
-    },
-    summary,
-    warnings: allWarnings
-  };
-  const manifestPath = path.join(resolvedStoragePath, STORAGE_MANIFEST_FILE_NAME);
-  await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
-
+  const newestSnapshot = candidateFiles[candidateFiles.length - 1];
   return {
     statePatch,
     summary,
-    manifestPath,
+    recognized,
+    lastSavedAt: newestSnapshot?.modifiedAt ? new Date(newestSnapshot.modifiedAt).toISOString() : '',
     warnings: allWarnings,
     bundles: bundleSummaries,
     sequenceLibrary
   };
+}
+
+// Boot hydration and "Save Storage Path" can overlap; two imports interleaving
+// their writes is how a sidecar ends up as two JSON documents in one file.
+// ponytail: one global chain — imports are rare and seconds long.
+let importChain = Promise.resolve();
+function importStorageRoot(input) {
+  const run = () => importStorageRootUnlocked(input);
+  const result = importChain.then(run, run);
+  importChain = result.catch(() => {});
+  return result;
 }
 
 module.exports = {

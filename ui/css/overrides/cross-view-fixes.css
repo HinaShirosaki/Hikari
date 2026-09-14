@@ -109,50 +109,47 @@ body {
   appearance: none;
   -webkit-appearance: none;
   position: absolute;
-  top: 14px;
+  top: .5rem;
   left: var(--app-left-rail-track-width);
   display: inline-grid;
   place-items: center;
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: var(--shared-left-rail-folded-width);
+  min-width: var(--shared-left-rail-folded-width);
+  height: 2rem;
+  min-height: 2rem;
   padding: 0;
-  border: 1px solid var(--app-left-rail-divider);
-  border-radius: 7px;
-  background: var(--app-left-rail-surface, var(--theme-surface));
+  border: 0;
+  border-radius: .25rem;
+  background: transparent;
   color: var(--theme-text-muted);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-shadow-color) 72%, transparent);
+  box-shadow: none;
   cursor: pointer;
-  transform: translateX(-50%);
+  transform: none;
   transition:
-    left 140ms ease,
     color 140ms ease,
-    background-color 140ms ease,
-    transform 140ms ease;
+    background-color 140ms ease;
   z-index: 6;
 }
 
 .app-left-rail-fold-toggle:hover,
 .app-left-rail-fold-toggle:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-accent) 38%, var(--app-left-rail-divider));
-  background: var(--theme-surface-elevated);
+  background: var(--theme-surface-subtle);
   color: var(--theme-text-strong);
   outline: none;
 }
 
 .app-left-rail-fold-toggle:focus-visible {
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--theme-accent) 22%, transparent),
-    0 2px 8px color-mix(in srgb, var(--theme-shadow-color) 72%, transparent);
+  outline: .125rem solid var(--theme-focus);
+  outline-offset: -.125rem;
+  box-shadow: none;
 }
 
 .app-left-rail-fold-toggle__icon {
-  width: 17px;
-  height: 17px;
+  width: 1.125rem;
+  height: 1.125rem;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.6;
+  stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -164,19 +161,18 @@ body {
 }
 
 .app-left-rail-fold-toggle.is-folded {
-  left: var(--shared-left-rail-folded-width);
-  transform: translateX(-50%);
+  left: 0;
 }
 
 .app-left-rail-fold-toggle.is-folded .app-left-rail-fold-toggle__chevron {
   transform: rotate(180deg);
 }
 
-body.shared-left-rail-resizing .app-left-rail-fold-toggle {
-  transition:
-    color 140ms ease,
-    background-color 140ms ease,
-    transform 140ms ease;
+@media (prefers-reduced-motion: reduce) {
+  .app-left-rail-fold-toggle,
+  .app-left-rail-fold-toggle__chevron {
+    transition: none;
+  }
 }
 
 body.shared-left-rail-resizing,

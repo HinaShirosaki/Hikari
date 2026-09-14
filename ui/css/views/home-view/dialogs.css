@@ -288,3 +288,24 @@
     justify-self: end;
   }
 }
+
+/* Home retains its own notebook conversation, questions, and draft review. */
+.home-agent-dialog {
+  width: min(56rem, calc(100vw - 2rem));
+  height: min(48rem, calc(100dvh - 2rem));
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.home-agent-dialog > .agent-chat-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-agent-dialog .agent-chat-stage,
+.home-agent-dialog .agent-conversation-shell {
+  height: 100%;
+  min-height: 0;
+}
+.home-agent-dialog .agent-history-viewport { min-height: 0; }
+.home-agent-dialog > .small-note { margin: 0; }

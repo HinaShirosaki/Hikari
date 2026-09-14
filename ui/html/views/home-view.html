@@ -33,6 +33,7 @@
           <div class="home-tile-head">
             <div class="home-tile-titles">
               <h2 id="dashboard-quicklog-heading">Experiment log</h2>
+              <button type="button" id="home-agent-reopen-btn" class="home-link-btn" hidden>Continue notebook review</button>
             </div>
           </div>
           <div class="home-quicklog-body">
@@ -60,8 +61,8 @@
                 type="button"
                 id="dashboard-quick-log-agent-btn"
                 class="home-icon-btn home-icon-btn-send hikari-agent-action hikari-agent-action-icon"
-                aria-label="Save experiment and send to Assistant"
-                title="Save and send to Assistant (⌘/Ctrl + Enter)"
+                aria-label="Prepare notebook page"
+                title="Prepare notebook page (⌘/Ctrl + Enter)"
               >
               </button>
             </div>
@@ -119,9 +120,6 @@
               <h2 id="dashboard-passage-heading">Cell passage <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
             </div>
             <div class="home-tile-head-actions">
-              <button type="button" id="dashboard-passage-open-btn" class="home-add-btn" aria-label="View all cell passage reminders" title="View all">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-              </button>
               <button
                 type="button"
                 id="dashboard-passage-add-btn"
@@ -143,9 +141,6 @@
               <p id="dashboard-incubation-summary" class="sr-only"></p>
             </div>
             <div class="home-tile-head-actions">
-              <button type="button" id="dashboard-incubation-open-btn" class="home-add-btn" aria-label="View all overnight incubations" title="View all">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-              </button>
               <button
                 type="button"
                 id="dashboard-incubation-add-btn"
@@ -361,4 +356,72 @@
           </div>
         </div>
       </div>
-    </section>
+
+      <div id="home-agent-overlay" class="home-agent-overlay app-dialog-overlay" hidden>
+        <section class="home-agent-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="home-agent-title">
+          <header class="app-dialog-head">
+            <h3 id="home-agent-title">Prepare notebook page</h3>
+            <button type="button" id="home-agent-close-btn" class="app-dialog-close-btn" aria-label="Close notebook conversation">×</button>
+          </header>
+        <div class="panel agent-chat-panel">
+          <div class="agent-chat-stage">
+            <div class="agent-conversation-shell is-empty-chat">
+              <div class="agent-history-viewport">
+                <div id="home-agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
+                <button type="button" id="home-agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Jump to Latest</button>
+              </div>
+              <div class="agent-composer-shell">
+                <div id="home-agent-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
+                <div class="stack-form agent-composer-card">
+                  <input id="home-agent-attachment-input" type="file" multiple hidden />
+                  <label class="agent-composer-label">
+                    <span class="sr-only">Message</span>
+                    <textarea id="home-agent-message-input" rows="3" placeholder="Add experiment details…"></textarea>
+                  </label>
+                  <div id="home-agent-attachment-list" class="agent-attachment-list" hidden></div>
+                  <div class="agent-composer-toolbar">
+                    <div class="agent-composer-toolbar-start">
+                      <button type="button" id="home-agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <label class="agent-composer-project agent-composer-project-inline">
+                        <span class="sr-only">Project Scope</span>
+                        <select id="home-agent-project-select" aria-label="Project Scope">
+                          <option value="">All projects</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="form-actions agent-composer-actions">
+                      <button type="button" id="home-agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                        <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M12 19V5"></path>
+                          <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
+                        </svg>
+                        <span class="sr-only">Send message</span>
+                      </button>
+                      <button type="button" id="home-agent-stop-btn" class="danger-btn" hidden>Stop</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div id="home-agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+              <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="home-agent-review-title">
+                <header class="agent-review-dialog-header app-dialog-head">
+                  <div>
+                    <h3 id="home-agent-review-title">Review generated drafts</h3>
+                  </div>
+                  <button type="button" id="home-agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+                </header>
+                <div id="home-agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
+                <footer class="agent-review-footer">
+                  <button type="button" id="home-agent-review-prev-btn" class="ghost-btn" aria-label="Previous generated draft">Previous</button>
+                  <span id="home-agent-review-page-label" class="small-note">1 / 1</span>
+                  <button type="button" id="home-agent-review-next-btn" class="ghost-btn" aria-label="Next generated draft">Next</button>
+                </footer>
+              </section>
+            </div>
+          </div>
+        </div>
+          <p id="home-agent-status" class="small-note" aria-live="polite"></p>
+        </section>
+      </div>
+</section>

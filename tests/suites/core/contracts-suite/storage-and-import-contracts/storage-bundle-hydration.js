@@ -331,7 +331,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
     test('storage bundle writes project memory and codex skill folders for project records', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));
-      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      const dataFilePath = path.join(tempDir, 'example.json');
       try {
         await syncBundleWithOfficialSkills(bundleHelpers, {
           dataFilePath,
@@ -501,7 +501,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       const { createAgentInventoryLookupRuntime } = require(agentPath('tools', 'agent-inventory-lookup.js'));
       const { createAgentNotebookLookupRuntime } = require(agentPath('tools', 'agent-notebook-lookup.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-bundle-roundtrip-'));
-      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      const dataFilePath = path.join(tempDir, 'example.json');
       try {
         const sourceSnapshot = {
           protocols: [{ id: 'protocol-1', name: 'Protein Purification', purpose: 'Affinity purification flow.', steps: ['Bind sample', 'Wash', 'Elute'], materials: ['Buffer A'] }],
@@ -646,7 +646,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
     test('storage hydration restores project notebook pages from page folders when the notebook sidecar is missing', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-notebook-folder-hydration-'));
-      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      const dataFilePath = path.join(tempDir, 'example.json');
       try {
         const sourceSnapshot = {
           projects: [{ id: 'project-1', name: 'Atlas' }],
@@ -790,7 +790,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const workflowStorage = require(path.join(__dirname, 'src', 'main', 'storage', 'workflow-storage.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'workflow-root-storage-'));
-      const dataFilePath = path.join(tempDir, 'workflow-example.ena.json');
+      const dataFilePath = path.join(tempDir, 'workflow-example.json');
       try {
         const snapshot = {
           projects: [{ id: 'project-1', name: 'Atlas' }],
@@ -944,37 +944,52 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(result.summary.personalInventoryContainers > 0, true);
         assert.equal(Array.isArray(result.statePatch?.protocols), true);
         assert.equal(result.statePatch.protocols.length > 0, true);
-        const manifestPath = path.join(tempDir, 'hikari-storage-manifest.json');
-        const manifestRaw = await fsPromises.readFile(manifestPath, 'utf8');
-        const manifest = JSON.parse(manifestRaw);
-        assert.equal(manifest.summary.sequenceEntries > 0, true);
-        assert.equal(Array.isArray(manifest.discovered_files), true);
-        assert.equal(manifest.discovered_files.length > 0, true);
-        assert.equal(
-          manifest.discovered_files.some((entry) => (
-            entry.relative_path === 'KnowledgeBase/papers.md'
-            && entry.role === 'paper_markdown_root'
-          )),
-          true
-        );
+        // A populated folder is recognised as Hikari's own; nothing else is written to mark it.
+        assert.equal(result.recognized, true);
+        assert.equal((await fsPromises.readdir(tempDir)).includes('hikari-storage-manifest.json'), false);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-    test('storage manifest classifies KnowledgeBase paper markdown folders', () => {
-      const { detectManifestRole } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-manifest.js'));
-      assert.equal(detectManifestRole('Dashboard'), 'dashboard_root');
-      assert.equal(detectManifestRole('Dashboard/experiment-log.json'), 'experiment_log');
-      assert.equal(detectManifestRole('KnowledgeBase'), 'knowledge_base_root');
-      assert.equal(detectManifestRole('KnowledgeBase/papers.md'), 'paper_markdown_root');
-      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/paper.md'), 'paper_knowledge_markdown');
-      assert.equal(
-        detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/Engineered_MAPK_Study.md'),
-        'paper_knowledge_markdown'
-      );
-      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/extracted.txt'), 'paper_knowledge_extracted_text');
-      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/meta.json'), 'paper_knowledge_metadata');
-      assert.equal(detectManifestRole('KnowledgeBase/knowledge.index.sqlite'), 'paper_knowledge_index');
+    test('storage import recognises a Hikari folder by its layout, not a marker file', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'hikari-recognise-'));
+      try {
+        // Empty folder: new. (Import creates KnowledgeBase/, which must not count next time.)
+        const fresh = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.equal(fresh.recognized, false);
+        assert.equal(fresh.lastSavedAt, '');
+        assert.equal((await fsPromises.readdir(tempDir)).includes('hikari-storage-manifest.json'), false);
+
+        // Any Hikari folder or snapshot makes it recognised.
+        await fsPromises.mkdir(path.join(tempDir, 'Protocol'));
+        assert.equal((await bundleHelpers.importStorageRoot({ storagePath: tempDir })).recognized, true);
+        await fsPromises.rm(path.join(tempDir, 'Protocol'), { recursive: true });
+        await fsPromises.writeFile(path.join(tempDir, 'hikari-data.json'), JSON.stringify({ protocols: [], settings: {} }), 'utf8');
+        const withSnapshot = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.equal(withSnapshot.recognized, true);
+        assert.match(withSnapshot.lastSavedAt, /^\d{4}-\d{2}-\d{2}T/);
+
+        // A leftover manifest from an older build is ignored, not mistaken for a snapshot.
+        const legacyDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'hikari-legacy-manifest-'));
+        try {
+          await fsPromises.writeFile(path.join(legacyDir, 'hikari-storage-manifest.json'), '{"schema_name":"hikari_storage_manifest"}\n}', 'utf8');
+          const legacy = await bundleHelpers.importStorageRoot({ storagePath: legacyDir });
+          assert.equal(legacy.recognized, false);
+          assert.deepEqual(legacy.warnings, []);
+        } finally {
+          await fsPromises.rm(legacyDir, { recursive: true, force: true });
+        }
+
+        // Overlapping imports serialise rather than interleave.
+        const both = await Promise.all([
+          bundleHelpers.importStorageRoot({ storagePath: tempDir }),
+          bundleHelpers.importStorageRoot({ storagePath: tempDir })
+        ]);
+        assert.equal(both.length, 2);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
     });
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
       const preloadSource = readPreloadStorageSource();
@@ -984,7 +999,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
       assert.match(chemicalSqliteSyncSource, /window\.hikariApi\?\.syncSqliteBundle/);
       assert.match(chemicalSqliteSyncSource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
-      assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.ena.json'), false);
+      assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.json'), false);
     });
   }
 };

@@ -17,6 +17,22 @@
                 </svg>
                 <span class="sr-only">Back to Home</span>
               </button>
+              <span class="workflow-editor-title">Template</span>
+              <div class="form-actions workflow-template-actions">
+                <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" title="Save Current Graph">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5 4h12l2 2v14H5Z"></path>
+                    <path d="M8 4v6h8V4M8 16h8"></path>
+                  </svg>
+                  <span class="sr-only">Save Current Graph</span>
+                </button>
+                <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" title="Cancel">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M6 6l12 12M18 6 6 18"></path>
+                  </svg>
+                  <span class="sr-only">Cancel</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -32,28 +48,13 @@
 
           <div class="workflow-template-editor-panel app-left-rail-section" hidden>
             <label>
-              Template Name
-              <input id="workflow-template-name" placeholder="e.g. Clone screening template" />
+              Template name
+              <input id="workflow-template-name" placeholder="Name your template" />
             </label>
             <label>
               Description
-              <textarea id="workflow-template-description" rows="3" placeholder="Optional notes about this template"></textarea>
+              <textarea id="workflow-template-description" rows="2" placeholder="Optional notes"></textarea>
             </label>
-            <div class="form-actions workflow-template-actions">
-              <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" title="Save Current Graph">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M5 4h12l2 2v14H5Z"></path>
-                  <path d="M8 4v6h8V4M8 16h8"></path>
-                </svg>
-                <span class="sr-only">Save Current Graph</span>
-              </button>
-              <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" title="Cancel">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M6 6l12 12M18 6 6 18"></path>
-                </svg>
-                <span class="sr-only">Cancel</span>
-              </button>
-            </div>
           </div>
 
           <div class="workflow-template-list-panel app-left-rail-section" hidden>
@@ -64,7 +65,7 @@
           <div class="workflow-block-composer-panel app-left-rail-section" hidden>
             <div class="form-grid workflow-grid workflow-block-grid">
               <fieldset id="workflow-block-type" class="workflow-block-type-switch">
-                <legend>Block Type</legend>
+                <legend class="sr-only">Block Type</legend>
                 <div class="workflow-block-type-options">
                   <label class="workflow-block-type-option">
                     <input type="radio" name="workflow-block-type-option" value="protocol" checked />
@@ -78,7 +79,7 @@
               </fieldset>
               <div id="workflow-block-protocol-field" class="workflow-block-protocol-picker">
                 <label id="workflow-block-protocol-search-field">
-                  Search &amp; Select Protocol
+                  <span class="sr-only">Search &amp; Select Protocol</span>
                   <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="workflow-block-protocol-search-results" />
                 </label>
                 <div id="workflow-block-protocol-search-results" class="workflow-block-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
@@ -91,7 +92,7 @@
                 <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
               </label>
               <div class="form-actions workflow-inline-actions">
-                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+                <button type="button" id="workflow-block-add-btn" class="primary-btn">Add Protocol Block</button>
               </div>
             </div>
           </div>

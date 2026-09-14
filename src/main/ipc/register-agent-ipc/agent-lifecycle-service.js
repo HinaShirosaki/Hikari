@@ -1,5 +1,8 @@
 'use strict';
 
+const { extractHtmlArtifactFromToolEvent } = require('../../agent/runtime/tool-artifacts/html-output.js');
+const { extractImageArtifactFromToolEvent } = require('../../agent/runtime/tool-artifacts/image-output.js');
+
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const {
   extractPlotlyGraphArtifactFromToolOutput
@@ -42,6 +45,10 @@ function createAgentLifecycleService({
     const toolName = cleanText(source.tool_name, 120);
     const status = cleanText(source.status, 20) || 'ok';
     const meta = source.meta && typeof source.meta === 'object' ? { ...source.meta } : {};
+    const htmlArtifact = extractHtmlArtifactFromToolEvent(source);
+    if (htmlArtifact) meta.html_artifact = htmlArtifact;
+    const imageArtifact = extractImageArtifactFromToolEvent(source);
+    if (imageArtifact) meta.image_artifact = imageArtifact;
     const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, source.tool_output, { status });
     if (plotlyGraphArtifact?.figure?.data?.length) {
       meta.plotly_graph_artifact = plotlyGraphArtifact;

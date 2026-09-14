@@ -139,7 +139,7 @@
                   <span>Show Alignment</span>
                 </label>
                 <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference.">
-                  <span>Saved Alignment</span>
+                  <span>Saved</span>
                   <select id="sequence-viewer-alignment-session-select">
                     <option value="">No saved alignments</option>
                   </select>
@@ -365,7 +365,7 @@
             </div>
 
             <div class="sequence-viewer-backbone-dialog-grid">
-              <section class="result-card sequence-viewer-backbone-dialog-panel">
+              <section class="sequence-viewer-backbone-dialog-panel">
                 <div class="result-card-head">
                   <h4>Candidate List</h4>
                 </div>
@@ -374,7 +374,7 @@
                 </div>
               </section>
 
-              <section class="result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+              <section class="sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
                 <div class="result-card-head">
                   <h4>Preview</h4>
                 </div>
@@ -420,7 +420,6 @@
             <h4 id="sequence-viewer-primer-order-title">Order Primers</h4>
             <button id="sequence-viewer-primer-order-close" type="button" class="app-dialog-close-btn" aria-label="Close order primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
-          <p class="small-note">Paste the block into IDT Bulk Input, or paste the CSV into a Sigma, Thermo, or Eurofins order template.</p>
           <div class="sequence-viewer-primer-order-controls">
             <label>
               Scale
@@ -439,7 +438,6 @@
           <div class="form-actions sequence-viewer-primer-order-actions">
             <button id="sequence-viewer-primer-order-copy-idt" type="button" class="primary-btn">Copy IDT Block</button>
             <button id="sequence-viewer-primer-order-copy-csv" type="button" class="ghost-btn">Copy CSV</button>
-            <button id="sequence-viewer-primer-order-open-idt" type="button" class="ghost-btn">Open IDT Bulk Input</button>
           </div>
         </section>
       </div>
@@ -454,7 +452,6 @@
               <span class="sr-only">Back to Sequence Viewer</span>
             </button>
             <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
-            <span id="sequence-viewer-vector-builder-status-note" class="small-note sequence-viewer-status-note"></span>
           </div>
           <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
             <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
@@ -581,43 +578,7 @@
               <div class="result-card-head">
                 <h4>Route</h4>
               </div>
-              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
-            </section>
-
-            <section class="sequence-viewer-cloning-design-panel">
-              <div class="result-card-head">
-                <h4>Sequence Edit</h4>
-              </div>
-              <div id="sequence-viewer-cloning-design-edit-summary" class="sequence-viewer-cloning-design-edit-summary calc-output">
-                <p class="small-note">Edit summary will appear here.</p>
-              </div>
-            </section>
-
-            <section id="sequence-viewer-cloning-design-donor-panel" class="sequence-viewer-cloning-design-panel" hidden>
-              <div class="result-card-head">
-                <h4>Amplification Template</h4>
-              </div>
-              <label class="sequence-viewer-cloning-design-donor-field">
-                PCR template
-                <select id="sequence-viewer-cloning-design-donor-select"></select>
-              </label>
-              <p id="sequence-viewer-cloning-design-donor-note" class="small-note">The insert is amplified from this record.</p>
-            </section>
-
-            <section id="sequence-viewer-cloning-design-range-panel" class="sequence-viewer-cloning-design-panel" hidden>
-              <div class="result-card-head">
-                <h4>Amplicon</h4>
-              </div>
-              <div class="form-grid sequence-viewer-cloning-design-range-grid">
-                <label>
-                  Start
-                  <input id="sequence-viewer-cloning-design-insert-start" type="number" min="1" step="1" />
-                </label>
-                <label>
-                  End
-                  <input id="sequence-viewer-cloning-design-insert-end" type="number" min="1" step="1" />
-                </label>
-              </div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="group" aria-label="Cloning design route"></div>
             </section>
           </aside>
 
@@ -633,7 +594,7 @@
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
           <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
 
-          <section class="result-card sequence-viewer-alignment-panel">
+          <section class="sequence-viewer-alignment-panel">
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
               <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Align Copied Sequence</button>
               <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button">Align With File</button>
@@ -661,14 +622,14 @@
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
 
-            <span id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</span>
-            <span id="sequence-viewer-alignment-query-status" class="small-note"></span>
+            <span id="sequence-viewer-alignment-query-summary" class="small-note" hidden></span>
+            <span id="sequence-viewer-alignment-query-status" class="small-note" hidden></span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
             <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset</button>
-            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note"></span>
+            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note" hidden></span>
           </div>
 
         </div>

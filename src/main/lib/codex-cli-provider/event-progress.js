@@ -1,5 +1,8 @@
 'use strict';
 
+const { extractHtmlArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/html-output.js');
+const { extractImageArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/image-output.js');
+
 const {
   getCodexJsonEventDescriptor,
   isCodexThinkingEvent,
@@ -138,6 +141,8 @@ function extractCodexJsonEventToolCall(event = {}) {
     outputText,
     directText: detailText
   });
+  const htmlArtifact = extractHtmlArtifactFromToolOutput(toolName, outputValue);
+  const imageArtifact = extractImageArtifactFromToolOutput(toolName, outputValue);
   const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, outputValue, { status });
   return {
     type: 'codex_tool_call',
@@ -147,6 +152,8 @@ function extractCodexJsonEventToolCall(event = {}) {
     call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
     tool_output_text: outputText,
+    ...(htmlArtifact ? { html_artifact: htmlArtifact } : {}),
+    ...(imageArtifact ? { image_artifact: imageArtifact } : {}),
     ...(plotlyGraphArtifact ? { plotly_graph_artifact: plotlyGraphArtifact } : {})
   };
 }

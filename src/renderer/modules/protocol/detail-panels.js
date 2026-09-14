@@ -96,16 +96,6 @@ function createProtocolDetailPanels({
     showEmptyPanel({ resetEditor: localState.protocolDetailMode === 'edit' });
   }
 
-  function onCancelEditor() {
-    const selectedProtocol = getSelectedProtocol();
-    if (selectedProtocol) {
-      renderProtocolView(selectedProtocol);
-      showViewPanel();
-      return;
-    }
-    showEmptyPanel({ resetEditor: true });
-  }
-
   function openEditorWithDraft(protocol, headingText, options = {}) {
     localState.isCreateEditorMode = options.isCreateMode !== false;
     localState.currentProtocolDraft = draftHelpers.cloneDraftFromProtocol(protocol);
@@ -272,7 +262,6 @@ function createProtocolDetailPanels({
     showViewPanel,
     renderProtocolView,
     syncSelectionAfterMutation,
-    onCancelEditor,
     openEditorWithDraft,
     onCreateProtocol,
     editProtocol,

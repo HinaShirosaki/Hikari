@@ -79,6 +79,10 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
     'sequence-viewer-protein-builder-common-blocks',
+    'sequence-viewer-protein-builder-feature-picker',
+    'sequence-viewer-protein-builder-feature-summary',
+    'sequence-viewer-protein-builder-feature-hosts-fold',
+    'sequence-viewer-protein-builder-feature-preview-fold',
     'sequence-viewer-protein-builder-feature-search-input',
     'sequence-viewer-protein-builder-feature-search-status',
     'sequence-viewer-protein-builder-feature-search-results',
@@ -198,6 +202,14 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     }
   });
   assert.equal(keyboardDefaultPrevented, true);
+  const picker = document.getElementById('sequence-viewer-protein-builder-feature-picker');
+  const hostsFold = document.getElementById('sequence-viewer-protein-builder-feature-hosts-fold');
+  const previewFold = document.getElementById('sequence-viewer-protein-builder-feature-preview-fold');
+  assert.equal(picker.open, false);
+  assert.equal(hostsFold.open, true);
+  assert.equal(previewFold.open, true);
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-summary').textContent, 'stored_affinity_tag');
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-source').hidden, false);
   // Search results carry feature metadata, not the source plasmid sequence.
   // The block cannot be added until that plasmid has finished loading.
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, true);
@@ -216,7 +228,18 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, false);
   assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-codon-optimize').checked, false);
 
-  // Choosing the other vector previews that one instead.
+  // Reopening and choosing the same protein repeats the disclosure flow.
+  picker.open = true;
+  hostsFold.open = false;
+  previewFold.open = false;
+  trigger(document.getElementById('sequence-viewer-protein-builder-feature-search-results'), 'click', { target: selectFeatureTarget });
+  assert.equal(picker.open, false);
+  assert.equal(hostsFold.open, true);
+  assert.equal(previewFold.open, true);
+  assert.equal(getCalls.length, 1);
+
+  // Choosing the other vector also reveals a previously collapsed preview.
+  previewFold.open = false;
   trigger(document.getElementById('sequence-viewer-protein-builder-feature-hosts'), 'click', {
     target: {
       closest(selector) {
@@ -230,6 +253,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   await flushAsync();
   await flushAsync();
   assert.equal(getCalls.map((call) => call.id).join(','), 'entry_tag_a,entry_tag_b');
+  assert.equal(previewFold.open, true);
 
   // Nothing joins the chain until Add Block.
   assert.equal(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML.includes('stored_affinity_tag'), false);
@@ -245,6 +269,16 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(workflowHtml.includes('Codon optimization enabled'), true);
   assert.equal(workflowHtml.includes('sequence-viewer-protein-builder-palette-1'), true);
   assert.equal(assembledSequence.value.includes('MAE'), true);
+
+  // Clearing the search returns to protein selection without a stale source.
+  picker.open = true;
+  searchInput.value = '';
+  trigger(searchInput, 'keydown', { key: 'Enter', preventDefault() {} });
+  await flushAsync();
+  assert.equal(picker.open, true);
+  assert.equal(sourcePanel.hidden, true);
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-summary').textContent, 'Select protein');
+  assert.equal(document.getElementById('sequence-viewer-protein-builder-feature-add-btn').disabled, true);
 });
 test('[EDGE] sequence-viewer protein builder can build DNA from the active vector source', async () => {
   const ids = [
@@ -489,8 +523,13 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   );
   assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*>\+Protein<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-add-protein-form"[^>]*role="dialog"[^>]*aria-modal="true"/);
-  assert.match(html, /id="sequence-viewer-protein-builder-codon-usage"/);
-  assert.match(html, /id="sequence-viewer-protein-builder-feature-codon-optimize"[^>]*type="checkbox"/);
+  const dnaBuildTitleStart = html.indexOf('class="sequence-viewer-protein-builder-dna-title"');
+  const codonUsageStart = html.indexOf('id="sequence-viewer-protein-builder-codon-usage"');
+  const codonOptimizeStart = html.indexOf('id="sequence-viewer-protein-builder-feature-codon-optimize"');
+  assert.ok(dnaBuildTitleStart >= 0);
+  assert.ok(codonUsageStart > dnaBuildTitleStart);
+  assert.ok(codonOptimizeStart > codonUsageStart);
+  assert.match(html.slice(codonOptimizeStart), /^id="sequence-viewer-protein-builder-feature-codon-optimize"[^>]*type="checkbox"/);
   assert.match(html, /id="sequence-viewer-protein-builder-copy-protein-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy protein sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy protein sequence<\/span>[\s\S]*?<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-protein-sequence-highlight"[^>]*role="button"[^>]*tabindex="0"/);

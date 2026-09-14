@@ -12,7 +12,6 @@ The original file mixed together several separate concerns:
 - sidecar file generation
 - snapshot hydration
 - storage-root import and merge logic
-- manifest generation
 - sequence library summary
 
 Splitting those pieces makes the storage pipeline easier to navigate and safer to extend.
@@ -36,9 +35,9 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `storage-hydration.js`
   - Snapshot hydration from protocol folders, notebook folders, sample JSON, SQLite fallback data, and legacy sidecars.
 - `storage-import.js`
-  - Storage-root import flow, merge helpers, bundle summarization, and manifest writing.
-- `storage-manifest.js`
-  - Manifest constants, file-role detection, discovered-file collection, and snapshot summary helpers.
+  - Storage-root import flow (serialised), merge helpers, bundle summarization, and folder recognition.
+- `storage-discovery.js`
+  - Snapshot/bundle candidate detection (`isBundleCandidateName`, `looksLikeHikariSnapshot`) and per-bundle summaries. Skips the `hikari-storage-manifest.json` older builds left behind.
 - `sequence-library-summary.js`
   - Sequence library aggregation used during storage import.
 
@@ -46,7 +45,6 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 
 - `index.js` is the canonical package entry. Node callers may require either the folder or `index.js`.
 - The public exports are:
-  - `STORAGE_MANIFEST_FILE_NAME`
   - `getBundlePaths`
   - `syncBundleFromSnapshot`
   - `hydrateSnapshotFromBundle`

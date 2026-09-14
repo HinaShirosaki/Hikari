@@ -1,3 +1,5 @@
+import { mergeAgentHtmlArtifacts } from './html-artifacts.js';
+import { mergeAgentImageArtifacts } from './image-artifacts.js';
 import { mergeSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
 import { asArray, trimText } from './shared.js';
 import {
@@ -277,6 +279,8 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
     text: summaryText,
     meta: {
       ...liveAssistantMessage.meta,
+      html_artifacts: mergeAgentHtmlArtifacts(liveAssistantMessage.meta?.html_artifacts, [eventPayload.meta?.html_artifact || eventPayload.html_artifact]),
+      image_artifacts: mergeAgentImageArtifacts(liveAssistantMessage.meta?.image_artifacts, [eventPayload.meta?.image_artifact || eventPayload.image_artifact]),
       sequence_actions: mergeSequenceActions(liveAssistantMessage.meta?.sequence_actions, eventPayload.meta?.sequence_actions),
       live_progress: {
         ...currentMeta,

@@ -57,18 +57,13 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
     }
   }
 
-  // Transient feedback belongs in the app notification system. The Vector
-  // Builder retains its local note because it is a separate workspace.
+  // Status feedback belongs in the app notification system so it does not
+  // reserve space inside individual workspaces.
   function setStatus(message, isError = false) {
     const text = String(message || '').trim();
     if (text) {
       showTransientNotice(text, { type: isError ? 'error' : 'success' });
     }
-    if (!elements.vectorBuilderStatusNote) {
-      return;
-    }
-    elements.vectorBuilderStatusNote.textContent = text;
-    elements.vectorBuilderStatusNote.classList.toggle('is-error', Boolean(isError));
   }
 
   function updateMessages() {

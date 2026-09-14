@@ -1,9 +1,9 @@
 import { ensurePaperComments } from './model.js';
-import { normalizePaperPdfMetadata } from './pdf-metadata.js';
+import { getPaperDetailsMetadata } from './pdf-metadata.js';
 
 const PAPER_SUMMARY_FIELDS = [
   { key: 'title', label: 'Title' },
-  { key: 'author', label: 'Author' },
+  { key: 'author', label: 'Authors' },
   { key: 'year', label: 'Year' },
   { key: 'journal', label: 'Journal' },
   { key: 'doi', label: 'DOI' },
@@ -37,7 +37,7 @@ export function createPapersCommentController(context) {
 
   function renderSummarySection() {
     const activePaper = getActivePaper();
-    const summary = normalizePaperPdfMetadata(activePaper?.pdfMetadata || null);
+    const summary = getPaperDetailsMetadata(activePaper);
     const collapsed = Boolean(uiState.summaryCollapsed);
 
     if (elements.paperSummarySection) {
@@ -57,12 +57,17 @@ export function createPapersCommentController(context) {
       return;
     }
 
+    if (!activePaper) {
+      elements.paperSummaryList.innerHTML = '<div class="papers-summary-row"><dt>Paper</dt><dd>Open a PDF to see its details.</dd></div>';
+      return;
+    }
+
     elements.paperSummaryList.innerHTML = PAPER_SUMMARY_FIELDS.map(({ key, label }) => {
       const value = String(summary[key] || '').trim();
       return `
         <div class="papers-summary-row">
           <dt>${safeText(label)}</dt>
-          <dd class="papers-summary-value${value ? '' : ' is-empty'}">${safeText(value)}</dd>
+          <dd class="papers-summary-value${value ? '' : ' is-empty'}">${safeText(value || 'Not available')}</dd>
         </div>
       `;
     }).join('');
@@ -94,21 +99,10 @@ export function createPapersCommentController(context) {
 
   function renderBookmarkSection() {
     const activePaper = getActivePaper();
-    const collapsed = Boolean(uiState.bookmarksCollapsed);
     const bookmarks = Array.isArray(activePaper?.pdfBookmarks) ? activePaper.pdfBookmarks : [];
 
     if (elements.paperBookmarkSection) {
       elements.paperBookmarkSection.classList.toggle('is-disabled', !activePaper);
-    }
-    if (elements.paperBookmarkContent) {
-      elements.paperBookmarkContent.hidden = collapsed;
-    }
-    if (elements.paperBookmarkToggleBtn) {
-      const label = collapsed ? 'Show PDF bookmarks' : 'Hide PDF bookmarks';
-      elements.paperBookmarkToggleBtn.classList.toggle('is-collapsed', collapsed);
-      elements.paperBookmarkToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
-      elements.paperBookmarkToggleBtn.setAttribute?.('aria-label', label);
-      elements.paperBookmarkToggleBtn.title = label;
     }
     if (!elements.paperBookmarkList) {
       return;
@@ -132,6 +126,7 @@ export function createPapersCommentController(context) {
     elements.paperCommentSidebar?.classList?.toggle('is-disabled', !getActivePaper());
     renderBookmarkSection();
     renderSummarySection();
+    context.renderResearchBrief?.();
   }
 
   function resetCommentComposer() {
@@ -176,9 +171,6 @@ export function createPapersCommentController(context) {
   }
 
   function bindEvents() {
-    elements.paperBookmarkToggleBtn?.addEventListener('click', () => {
-      context.toggleBookmarksCollapsed?.();
-    });
     elements.paperBookmarkList?.addEventListener('click', onBookmarkListClick);
     elements.paperSummaryToggleBtn?.addEventListener('click', () => {
       context.toggleSummaryCollapsed?.();

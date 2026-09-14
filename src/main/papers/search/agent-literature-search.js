@@ -197,6 +197,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
 
     const shouldTryWebFallback = requestedSource !== LITERATURE_SOURCES.WEB
+      && !shouldDeferWebSearchToCodex(source)
       && !resolvedSources.includes(LITERATURE_SOURCES.WEB)
       && source.allow_web_fallback !== false
       && results.length === 0;

@@ -132,5 +132,8 @@ function initLoadingCover() {
   }, MAX_LOADING_COVER_MS);
 }
 
+// Only the native macOS window overlays its controls on the app header.
+// Browser previews and other desktop platforms keep their normal chrome.
+document.documentElement.dataset.windowChrome = globalThis.hikariApi?.platform === 'darwin' ? 'mac' : 'native';
 applyShellAppearance();
 initLoadingCover();

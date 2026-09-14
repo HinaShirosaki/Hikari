@@ -84,7 +84,6 @@ export const defaultState = {
     pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',
-      manifestPath: '',
       summary: {
         bundles: 0,
         protocols: 0,
@@ -113,7 +112,6 @@ export const defaultState = {
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     sampleInventoryLocations: [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS],
     sampleTypeLabels: { ...DEFAULT_SAMPLE_TYPE_LABELS },
-    sampleTypeHidden: [],
     preferredJournals: [],
     preferredJournal: '',
     dashboard: {

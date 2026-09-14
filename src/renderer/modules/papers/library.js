@@ -118,7 +118,9 @@ export function createPapersLibraryController(context) {
 
     const viewportWidth = Number(windowRef?.innerWidth) || 0;
     const leftEdge = sidebarVisible && workspaceRect ? workspaceRect.left : 0;
-    const rightEdge = sidebarVisible && workspaceRect
+    // The workspace already excludes the agent rail, even with the top dock.
+    // Bleeding to the viewport edge would place PDF controls underneath it.
+    const rightEdge = workspaceRect
       ? workspaceRect.right
       : (viewportWidth > 0 ? viewportWidth : (workspaceRect?.right || rect.right));
 
@@ -273,20 +275,8 @@ export function createPapersLibraryController(context) {
         ? `${selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project'}: ${selectedFolder.name}`
         : 'No folder selected';
     }
-    if (!elements.paperUploadTargetLabel) {
-      return;
-    }
-    if (!selectedFolder) {
-      elements.paperUploadTargetLabel.textContent = 'Select a folder to file new papers.';
-      if (elements.paperUploadTrigger) {
-        elements.paperUploadTrigger.disabled = true;
-      }
-      return;
-    }
-    const prefix = selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project';
-    elements.paperUploadTargetLabel.textContent = `New uploads go to ${prefix}: ${selectedFolder.name}`;
     if (elements.paperUploadTrigger) {
-      elements.paperUploadTrigger.disabled = false;
+      elements.paperUploadTrigger.disabled = !selectedFolder;
     }
   }
 

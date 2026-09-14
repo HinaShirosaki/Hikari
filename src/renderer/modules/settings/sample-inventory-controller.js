@@ -4,7 +4,6 @@ import {
   getSampleInventoryLocationNames,
   normalizeSampleInventoryLocations,
   normalizeSampleType,
-  normalizeSampleTypeHidden,
   normalizeSampleTypeLabels
 } from '../../lib/inventory-settings.js';
 
@@ -168,15 +167,15 @@ export function createSampleInventorySettingsController({
     const entries = getEditableSampleTypeEntries(state.settings);
     sampleTypeLabelList.innerHTML = entries.map((entry) => {
       const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === entry.type).length;
-      const cannotDelete = sampleCount > 0 || entries.length <= 1;
-      const deleteTitle = sampleCount > 0
-        ? 'Reassign samples before removing this type.'
-        : (entries.length <= 1 ? 'Keep at least one sample type.' : 'Remove sample type');
+      const deleteTitle = sampleCount > 0 ? 'Reassign samples before removing this type.' : 'Remove sample type';
+      const removeButton = entry.isCustom
+        ? `<button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${sampleCount > 0 ? ' disabled' : ''}>&times;</button>`
+        : '<span class="settings-sample-type-remove" aria-hidden="true"></span>';
       return `
       <li class="settings-sample-type-label-row">
         <span class="settings-sample-type-label-bullet" aria-hidden="true"></span>
         <input class="settings-sample-type-label-input" data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" aria-label="Sample type name: ${escapeHtml(entry.defaultLabel)}" />
-        <button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${cannotDelete ? ' disabled' : ''}>&times;</button>
+        ${removeButton}
       </li>
     `;
     }).join('');
@@ -208,20 +207,13 @@ export function createSampleInventorySettingsController({
     const type = String(rawType || '').trim().toLowerCase();
     const entries = getEditableSampleTypeEntries(state.settings);
     const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === type).length;
-    if (!entries.some((entry) => entry.type === type) || sampleCount > 0 || entries.length <= 1) {
+    if (!entries.some((entry) => entry.type === type && entry.isCustom) || sampleCount > 0) {
       renderSampleTypeLabelList();
       return;
     }
-    if (type.startsWith('custom_')) {
-      const labels = { ...normalizeSampleTypeLabels(state.settings.sampleTypeLabels) };
-      delete labels[type];
-      state.settings.sampleTypeLabels = normalizeSampleTypeLabels(labels);
-    } else {
-      state.settings.sampleTypeHidden = normalizeSampleTypeHidden([
-        ...(state.settings.sampleTypeHidden || []),
-        type
-      ]);
-    }
+    const labels = { ...normalizeSampleTypeLabels(state.settings.sampleTypeLabels) };
+    delete labels[type];
+    state.settings.sampleTypeLabels = normalizeSampleTypeLabels(labels);
     persist();
     renderSettings();
     notifyChanged();
@@ -233,19 +225,13 @@ export function createSampleInventorySettingsController({
       return;
     }
     const labels = normalizeSampleTypeLabels(state.settings.sampleTypeLabels);
-    const matchingType = Object.keys(labels).find((type) => labels[type].toLowerCase() === label.toLowerCase());
-    if (matchingType) {
-      const hiddenTypes = normalizeSampleTypeHidden(state.settings.sampleTypeHidden);
-      if (!hiddenTypes.includes(matchingType)) {
-        sampleTypeAddInput?.setCustomValidity('A sample type with this name already exists.');
-        sampleTypeAddInput?.reportValidity();
-        return;
-      }
-      state.settings.sampleTypeHidden = hiddenTypes.filter((type) => type !== matchingType);
-    } else {
-      const type = createCustomSampleTypeId(label, Object.keys(labels));
-      state.settings.sampleTypeLabels = normalizeSampleTypeLabels({ ...labels, [type]: label });
+    if (Object.values(labels).some((existing) => existing.toLowerCase() === label.toLowerCase())) {
+      sampleTypeAddInput?.setCustomValidity('A sample type with this name already exists.');
+      sampleTypeAddInput?.reportValidity();
+      return;
     }
+    const type = createCustomSampleTypeId(label, Object.keys(labels));
+    state.settings.sampleTypeLabels = normalizeSampleTypeLabels({ ...labels, [type]: label });
     if (sampleTypeAddInput) {
       sampleTypeAddInput.value = '';
       sampleTypeAddInput.setCustomValidity('');

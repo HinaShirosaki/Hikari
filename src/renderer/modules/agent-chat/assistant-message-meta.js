@@ -1,3 +1,6 @@
+import { mergeAgentHtmlArtifacts } from './html-artifacts.js';
+import { mergeAgentImageArtifacts } from './image-artifacts.js';
+
 export function buildAssistantResponseMessage({
   createId,
   response,
@@ -27,6 +30,8 @@ export function buildAssistantResponseMessage({
       result_analysis: response.resultAnalysis,
       thinking_trace: response.thinkingTrace,
       notebookDraft: notebookDraft || null,
+      html_artifacts: mergeAgentHtmlArtifacts(traceRows.htmlArtifacts, response.htmlArtifacts),
+      image_artifacts: mergeAgentImageArtifacts(traceRows.imageArtifacts, response.imageArtifacts),
       sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,
@@ -75,6 +80,8 @@ export function buildAssistantErrorMessage({
       result_analysis: null,
       thinking_trace: null,
       notebookDraft: null,
+      html_artifacts: traceRows.htmlArtifacts || [],
+      image_artifacts: traceRows.imageArtifacts || [],
       sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,

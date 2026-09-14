@@ -133,18 +133,24 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     }
     const templateNotes = asArray(templateDesign.warnings);
     notes.push(...templateNotes);
-    // Each seam is split between the two primers that meet at it, so this
-    // fragment's forward primer carries the previous fragment's 3' end.
+    // Use complete target-strand tails from junction selection: an added flank
+    // can move between the neighboring PCRs without moving either template core.
     const previousOverlap = previousJunction && previousJunction.mode === 'primer-introduced'
       ? normalizeSequence(previousJunction.rightForwardTail)
       : '';
     const templateForwardAddition = normalizeSequence(templateDesign.forwardAddedSequence);
-    const forwardTail = `${previousOverlap}${templateForwardAddition}`;
+    const forwardTail = previousJunction?.mode === 'primer-introduced'
+      ? normalizeSequence(previousJunction.rightForwardTargetTail ?? `${previousOverlap}${templateForwardAddition}`)
+      : templateForwardAddition;
     const nextOverlap = nextJunction && nextJunction.mode === 'primer-introduced'
       ? normalizeSequence(nextJunction.leftReverseTail)
       : '';
-    const reverseTargetTail = `${normalizeSequence(templateDesign.reverseAddedSequence)}${nextOverlap}`;
+    const templateReverseAddition = normalizeSequence(templateDesign.reverseAddedSequence);
+    const reverseTargetTail = nextJunction?.mode === 'primer-introduced'
+      ? normalizeSequence(nextJunction.leftReverseTargetTail ?? `${templateReverseAddition}${nextOverlap}`)
+      : templateReverseAddition;
     const reverseTail = reverseTargetTail ? reverseComplementDna(reverseTargetTail) : '';
+    const ampliconLength = templateDesign.templateSequence.length + forwardTail.length + reverseTail.length;
     const fragmentConfig = fragmentPrimerConfig(fragment, config);
     const forwardBinding = selectBindingWindow(templateDesign.templateSequence, 'forward', thresholds, forwardTail.length, fragmentConfig);
     const reverseBinding = selectBindingWindow(templateDesign.templateSequence, 'reverse', thresholds, reverseTail.length, fragmentConfig);
@@ -168,19 +174,25 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     }
 
     const forwardWarnings = [
-      templateForwardAddition
-        ? `Adds ${templateForwardAddition.length} nt at the 5' end from the primer tail.`
+      forwardTail
+        ? `Adds ${forwardTail.length} nt at the 5' end from the primer tail.`
         : '',
-      previousOverlap
-        ? `Carries ${previousOverlap.length} nt of the ${previousJunction.overlapLength} nt overlap with ${previousJunction.leftFragmentName}.`
+      previousJunction?.mode === 'primer-introduced'
+        ? `Creates a ${previousJunction.overlapLength} nt overlap with ${previousJunction.leftFragmentName}.`
+        : '',
+      previousJunction?.redistributedFlankLength
+        ? `Shares introduction of the ${previousJunction.redistributedFlankLength} nt added flank with the neighboring fragment's reverse primer.`
         : ''
     ].filter(Boolean);
     const reverseWarnings = [
-      normalizeSequence(templateDesign.reverseAddedSequence)
-        ? `Adds ${normalizeSequence(templateDesign.reverseAddedSequence).length} nt at the 3' end from the primer tail.`
+      reverseTargetTail
+        ? `Adds ${reverseTargetTail.length} nt at the 3' end from the primer tail.`
         : '',
-      nextOverlap
-        ? `Carries ${nextOverlap.length} nt of the ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`
+      nextJunction?.mode === 'primer-introduced'
+        ? `Creates a ${nextJunction.overlapLength} nt overlap into ${nextJunction.rightFragmentName}.`
+        : '',
+      nextJunction?.redistributedFlankLength
+        ? `Shares introduction of the ${nextJunction.redistributedFlankLength} nt added flank with the neighboring fragment's forward primer.`
         : ''
     ].filter(Boolean);
 
@@ -192,7 +204,7 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         tailSequence: forwardTail,
         bindingSequence: forwardBinding.bindingSequence,
         groupLabel: `${fragment.name} PCR`,
-        ampliconLength: templateDesign.desiredSequence.length,
+        ampliconLength,
         templateId: fragment.id,
         warnings: forwardWarnings
       })
@@ -205,7 +217,7 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         tailSequence: reverseTail,
         bindingSequence: reverseBinding.bindingSequence,
         groupLabel: `${fragment.name} PCR`,
-        ampliconLength: templateDesign.desiredSequence.length,
+        ampliconLength,
         templateId: fragment.id,
         warnings: reverseWarnings
       })

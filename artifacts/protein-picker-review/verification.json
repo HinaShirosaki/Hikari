@@ -1,0 +1,25 @@
+{
+  "metrics": {
+    "selected": "true",
+    "buttonAboveMap": true,
+    "proteinFolded": true,
+    "hostsOpen": true,
+    "previewOpen": true,
+    "sourceShadow": "none",
+    "overflow": false,
+    "buttonVisible": true
+  },
+  "checks": [
+    "keyboard feature selection",
+    "source hydration enables Add Block",
+    "action above preview",
+    "no picker horizontal overflow",
+    "map disclosure",
+    "long names at 240 CSS pixels",
+    "protein folds and source plus preview open",
+    "same protein reselection",
+    "keyboard focus moves to source",
+    "clear search hides stale source",
+    "no green edge"
+  ]
+}

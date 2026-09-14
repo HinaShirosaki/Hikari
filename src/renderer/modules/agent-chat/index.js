@@ -1,3 +1,4 @@
+import { trimText } from './shared.js';
 import { createAgentChatSessionManager } from './session-manager.js';
 import { createAgentChatShellController } from './shell-controller.js';
 import { createAgentPayloadBuilder } from './payload-builder.js';
@@ -61,6 +62,7 @@ export function initAgentChat({
     safeText,
     runtime,
     notebookDraftAdapter,
+    protocolReviewAdapter,
     hasImageCapture: typeof captureImageAttachment === 'function'
   });
   let requestController = null;
@@ -114,6 +116,9 @@ export function initAgentChat({
     persist,
     createId,
     safeText,
+    isNewChatDisabled: () => runtime.sendPending === true
+      || runtime.sessionTransitionPending === true
+      || (runtime.inFlight && !trimText(state.agentChat?.currentSessionId, 120)),
     sessionRail: dom.sessionRail,
     sessionList: dom.sessionList,
     sessionContextMenu: dom.sessionContextMenu,
@@ -169,6 +174,7 @@ export function initAgentChat({
     notebookDraftAdapter,
     onOpenNotebookEntry,
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message),
+    reviewInline: (messageId, itemId, decision) => reviewController?.reviewInline?.(messageId, itemId, decision),
     onAppendNotebookEntry
   });
 
@@ -204,8 +210,7 @@ export function initAgentChat({
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     syncActiveRequestState: shell.syncActiveRequestState,
-    notebookDraftAdapter,
-    openReviewForMessage: reviewController.openForMessage
+    notebookDraftAdapter
   });
 
   const render = () => {
@@ -236,7 +241,7 @@ export function initAgentChat({
     return true;
   }
 
-  async function submitExternalMessage(message) {
+  async function submitExternalMessage(message, options = {}) {
     const text = String(message || '').trim();
     if (!text) {
       return { ok: false, reason: 'empty' };
@@ -273,12 +278,12 @@ export function initAgentChat({
       const request = requestController.sendMessage({
         onAccepted: (details) => {
           accepted = true;
-          resolve({ ok: true, ...details });
+          if (!options.waitForCompletion) resolve({ ok: true, ...details });
         }
       });
       Promise.resolve(request)
         .then((result) => {
-          if (!accepted) {
+          if (!accepted || options.waitForCompletion) {
             clearInjectedDraft();
             resolve(result?.ok ? result : {
               ok: false,
@@ -288,7 +293,7 @@ export function initAgentChat({
         })
         .catch((error) => {
           console.warn('External Agent message could not be submitted:', error);
-          if (!accepted) {
+          if (!accepted || options.waitForCompletion) {
             clearInjectedDraft();
             resolve({ ok: false, reason: 'session_error' });
           }

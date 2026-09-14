@@ -996,6 +996,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   const elements = {
     gelCanvas,
     gelToolDividersBtn: new MockElement('gel-tool-dividers-btn'),
+    gelFinishDividersBtn: new MockElement('gel-finish-dividers-btn'),
     gelManualNextBtn: new MockElement('gel-manual-next-btn'),
     gelOverrideStatus: new MockElement('gel-override-status')
   };
@@ -1014,6 +1015,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(controller.getManualStep(), 'dividers');
   controller.renderManualProgress();
   assert.equal(elements.gelManualNextBtn.hidden, true);
+  assert.equal(elements.gelFinishDividersBtn.hidden, true, 'finish button showed before divider mode started');
 
   controller.onCanvasClick({ clientX: 40, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, null, 'inactive divider tool accepted a canvas click');
@@ -1023,6 +1025,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), true);
   assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'true');
   assert.equal(elements.gelManualNextBtn.hidden, true);
+  assert.equal(elements.gelFinishDividersBtn.hidden, false, 'finish button stayed hidden in divider mode');
 
   controller.onCanvasClick({ clientX: 60, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 60);
@@ -1049,6 +1052,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(runtime.selectedViewerTool, '');
   assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), false);
   assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(elements.gelFinishDividersBtn.hidden, true, 'finish button lingered after dividers finished');
   assert.equal(elements.gelManualNextBtn.hidden, true);
   assert.equal(controller.getManualStep(), 'ladder');
   assert.match(statuses[statuses.length - 1], /dividers finished/i);
@@ -2555,10 +2559,19 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
     { window: windowObject }
   );
   const form = new MockElement('gel-form');
-  const saveButton = new MockElement('gel-save-btn');
-  saveButton.textContent = 'Save Analysis';
-  const exportCsvButton = new MockElement('gel-export-csv-btn');
-  exportCsvButton.textContent = 'Export CSV';
+  function iconButton(id, label) {
+    const button = new MockElement(id);
+    const labelNode = { textContent: label };
+    button.querySelector = (selector) => selector === '[data-gel-action-label]' ? labelNode : null;
+    button.setAttribute('aria-label', label);
+    Object.defineProperty(button, 'textContent', {
+      get: () => labelNode.textContent,
+      set: () => { throw new Error('Busy labels must not replace the button SVG'); }
+    });
+    return button;
+  }
+  const saveButton = iconButton('gel-save-btn', 'Save');
+  const exportCsvButton = iconButton('gel-export-csv-btn', 'Export CSV');
   const canvas = new MockElement('gel-canvas');
   canvas.width = 100;
   canvas.height = 80;
@@ -2612,6 +2625,7 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   assert.equal(first, second, 'both submits share one in-flight save');
   assert.equal(saveButton.disabled, true);
   assert.equal(saveButton.textContent, 'Saving…');
+  assert.equal(saveButton.getAttribute('aria-label'), 'Saving…');
   assert.equal(form.getAttribute('aria-busy'), 'true');
   manager.resetForm();
   assert.equal(elements.gelNameInput.value, 'Concurrent save', 'cancel cannot clear a form during persistence');
@@ -2625,7 +2639,7 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   assert.equal(runtime.state.gelAnalyses.length, 1);
   assert.equal(writes.length, 4);
   assert.equal(saveButton.disabled, false);
-  assert.equal(saveButton.textContent, 'Save Analysis');
+  assert.equal(saveButton.textContent, 'Save');
   assert.equal(form.getAttribute('aria-busy'), 'false');
   assert.match(statuses.at(-1), /Saved gel draft/);
 
@@ -2641,8 +2655,51 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   await Promise.all([firstExport, secondExport]);
   assert.equal(exportCsvButton.disabled, false);
   assert.equal(exportCsvButton.textContent, 'Export CSV');
+  assert.equal(exportCsvButton.getAttribute('title'), 'Export CSV');
   assert.equal(exportCsvButton.hasAttribute('aria-busy'), false);
   assert.match(statuses.at(-1), /Exported/);
+});
+
+test('[EDGE] gel-analysis save keeps the imported file byte for byte next to source.png', async () => {
+  const writes = new Map();
+  const windowObject = {
+    hikariApi: {
+      async storeImportedFile({ targetFolder, fileName, dataBase64 }) {
+        writes.set(fileName, dataBase64);
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      },
+      async writeJsonFile({ targetFolder, fileName }) {
+        return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+      }
+    }
+  };
+  const { createGelRecordArtifacts } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'modules', 'gel', 'records', 'record-artifacts.js'),
+    { window: windowObject, btoa: (value) => Buffer.from(value, 'binary').toString('base64') }
+  );
+  const tiffBytes = Uint8Array.from([0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0xff, 0xfe]);
+  const runtime = {
+    originalFile: { name: 'Blot_01.TIF', arrayBuffer: async () => tiffBytes.buffer },
+    currentImage: { name: 'Blot_01.TIF', imageData: { width: 4, height: 4 } },
+    state: { settings: { storagePath: '/root' }, notebookEntries: [] }
+  };
+  const artifacts = createGelRecordArtifacts({
+    runtime,
+    elements: {},
+    deps: { imageDataToDataUrl: () => 'data:image/png;base64,cG5n' }
+  });
+
+  const saved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' });
+  assert.equal(saved.originalImagePath, '/root/Gels/Blot__gel-1/original.tif');
+  assert.equal(Buffer.from(writes.get('original.tif'), 'base64').equals(Buffer.from(tiffBytes)), true);
+  assert.equal(writes.get('source.png'), 'cG5n');
+
+  // Reopening a record leaves no File in memory; a re-save must not lose the path.
+  runtime.originalFile = null;
+  writes.clear();
+  const resaved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' }, saved);
+  assert.equal(resaved.originalImagePath, saved.originalImagePath);
+  assert.equal(writes.has('original.tif'), false);
 });
   }
 };
