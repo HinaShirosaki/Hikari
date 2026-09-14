@@ -26,8 +26,8 @@
                 <div class="stack-form agent-composer-card">
                   <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
-                    <span>Message</span>
-                    <textarea id="agent-message-input" rows="3" placeholder="Ask for protocol guidance, inventory checks, literature-grounded suggestions, or planning support."></textarea>
+                    <span class="sr-only">Message</span>
+                    <textarea id="agent-message-input" rows="3" placeholder="Ask Hikari…"></textarea>
                   </label>
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
@@ -55,11 +55,10 @@
               </div>
             </div>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
-              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+              <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
                 <header class="agent-review-dialog-header app-dialog-head">
                   <div>
-                    <h3 id="agent-review-title">Review Generated Drafts</h3>
-                    <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>
+                    <h3 id="agent-review-title">Review generated drafts</h3>
                   </div>
                   <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </header>

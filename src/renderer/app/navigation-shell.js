@@ -321,7 +321,7 @@ export function createNavigationShell({
     const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
 
     const subtitleView = activeNavView;
-    if (pageTitle && !pageTitle.classList?.contains?.('topbar-timer')) {
+    if (pageTitle && !pageTitle.classList?.contains?.('topbar-timekeeping')) {
       pageTitle.textContent = 'Hikari';
     }
     if (pageSubtitle) {

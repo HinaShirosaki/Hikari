@@ -268,8 +268,11 @@ test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset c
   assert.match(document.getElementById('sequence-viewer-alignment-query-status').textContent, /\S/);
 });
 
-test('[EDGE] sequence-viewer opens Vector Builder without redundant success status', () => {
-  const document = createMockDocument([...VECTOR_BUILDER_IDS, 'sequence-viewer-vector-builder-status-note']);
+test('[EDGE] sequence-viewer opens Vector Builder without an inline status surface or redundant success toast', () => {
+  const markup = readSource('ui/html/views/sequence-viewer-detail-view.html');
+  assert.doesNotMatch(markup, /sequence-viewer-vector-builder-status-note/);
+
+  const document = createMockDocument(VECTOR_BUILDER_IDS);
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
@@ -283,14 +286,12 @@ test('[EDGE] sequence-viewer opens Vector Builder without redundant success stat
     features: [{ name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] }]
   });
 
-  const vectorStatus = document.getElementById('sequence-viewer-vector-builder-status-note');
   const importToast = document.querySelector('[data-hikari-transient-toast]');
   const importToastText = importToast.textContent;
 
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
   assert.equal(document.querySelector('[data-hikari-transient-toast]'), importToast);
   assert.equal(importToast.textContent, importToastText);
-  assert.equal(vectorStatus.textContent, '');
 });
 
 test('[EDGE] sequence-viewer home Vector Builder button opens the previewed library entry', async () => {

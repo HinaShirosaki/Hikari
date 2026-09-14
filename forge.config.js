@@ -35,7 +35,7 @@ module.exports = {
     // Native exports of assets/icon.svg; Packager selects .icns or .ico.
     icon: './assets/icon',
     asar: {
-      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
+      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
     },
     prune: true,
     ignore: [

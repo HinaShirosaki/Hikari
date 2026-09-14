@@ -325,6 +325,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-chat-body {
+  font-family: var(--font-chat);
   line-height: 1.5;
 }
 

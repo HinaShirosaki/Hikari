@@ -12,7 +12,7 @@ function renderCollapsibleThinkingTrace(title, rows, safeText, { open = false } 
       data-agent-trace-open="${open ? 'true' : 'false'}"
       aria-label="${safeText(title)}"
     >
-      <summary class="agent-thinking-trace-summary">${safeText(title)}</summary>
+      <summary class="agent-thinking-trace-summary">Activity <span class="agent-activity-count">· ${rows.length} ${rows.length === 1 ? 'update' : 'updates'}</span></summary>
       <ul class="agent-thinking-trace-list">
         ${rows.map((row) => `<li class="agent-thinking-trace-item">${safeText(row)}</li>`).join('')}
       </ul>

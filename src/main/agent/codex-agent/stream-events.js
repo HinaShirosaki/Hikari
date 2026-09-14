@@ -1,5 +1,8 @@
 'use strict';
 
+const { extractHtmlArtifactFromToolEvent } = require('../runtime/tool-artifacts/html-output.js');
+const { extractImageArtifactFromToolEvent } = require('../runtime/tool-artifacts/image-output.js');
+
 const { extractSequenceActions } = require('../../../renderer/modules/sequence-viewer/main-process/mcp/artifact-events');
 const {
   extractAskUserPayloadFromToolEvent
@@ -137,8 +140,12 @@ function createCodexStreamProgressHandler({
         ? 'failed'
         : (rawStatus === 'completed' || rawStatus === 'done' || rawStatus === 'ok' ? 'completed' : 'started');
       const sequenceActions = extractSequenceActions(streamEvent);
+      const htmlArtifact = extractHtmlArtifactFromToolEvent(streamEvent);
+      const imageArtifact = extractImageArtifactFromToolEvent(streamEvent);
       const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolEvent(streamEvent);
       const meta = {
+        ...(htmlArtifact ? { html_artifact: htmlArtifact } : {}),
+        ...(imageArtifact ? { image_artifact: imageArtifact } : {}),
         sequence_actions: sequenceActions,
         tool_call_text: toolCallText,
         thinking_trace: toolCallText,

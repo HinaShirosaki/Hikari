@@ -1,3 +1,5 @@
+import { readTypeFieldsFrom } from '../sample-registry/type-fields.js';
+
 // CSV columns: well,code,name,type,lot,concentration,notes (header required, "well" matches the well label e.g. A1 or W3)
 function importContainerCsv(ctx, section, container, csvText) {
   const { helpers, persist, state } = ctx;
@@ -241,6 +243,7 @@ export function bindWellSampleEvents(ctx) {
       sample.lot = String(lotInput?.value || '').trim();
       sample.concentration = String(concentrationInput?.value || '').trim();
       sample.notes = String(notesInput?.value || '').trim();
+      sample.details = readTypeFieldsFrom(inventorySections.querySelector('[data-sample-type-fields]'), sample.type);
       sample.inventoryLink = { section, containerId, wellIndex: index };
       sample.location = helpers.isLocationEmpty(sample.location) ? helpers.buildAutoLocationFromLink(section, container, index) : sample.location;
       sample.updatedAt = new Date().toISOString();
@@ -365,6 +368,7 @@ export function bindWellSampleEvents(ctx) {
         lot: String(lotInput?.value || '').trim(),
         concentration: String(concentrationInput?.value || '').trim(),
         notes: String(notesInput?.value || '').trim(),
+        details: readTypeFieldsFrom(inventorySections.querySelector('[data-sample-type-fields]'), typeInput?.value),
         location: helpers.buildAutoLocationFromLink(section, container, index),
         inventoryLink: { section, containerId, wellIndex: index },
         chemicalLinks: [],

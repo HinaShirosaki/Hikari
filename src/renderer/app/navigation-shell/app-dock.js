@@ -245,7 +245,7 @@ function createAppDock({
       moreBtn.title = label;
     }
     documentObject.body.dataset.activeView = activeNavView;
-    if (pageTitle && !pageTitle.classList?.contains?.('topbar-timer')) {
+    if (pageTitle && !pageTitle.classList?.contains?.('topbar-timekeeping')) {
       pageTitle.textContent = 'Hikari';
     }
     if (pageSubtitle) {

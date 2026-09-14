@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Cloning design — sample review</title><link rel="stylesheet" href="../../styles.css"><style>body {margin:0;} .workspace-shell {min-height:100vh;} #sequence-viewer-detail-view {display:block;}</style></head><body class="ui-neutral-compact has-shared-left-rail-view"><div class="workspace-shell"><main class="workspace-main"><section id="sequence-viewer-detail-view" class="view is-active">      <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace">
+        <div class="sequence-viewer-cloning-design-toolbar">
+          <div class="sequence-viewer-cloning-design-toolbar-nav">
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Sequence" title="Back to Sequence">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                <path d="M19 12H5M11 6l-6 6 6 6"></path>
+              </svg>
+              <span class="sr-only">Back to Sequence</span>
+            </button>
+          </div>
+          <div class="sequence-viewer-cloning-design-toolbar-main">
+            <div class="sequence-viewer-cloning-design-toolbar-copy">
+              <h2>Cloning Design</h2>
+              <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+            </div>
+            <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
+              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="ghost-btn">Design Primers</button>
+              <button id="sequence-viewer-cloning-design-confirm-btn" type="button" class="primary-btn" disabled>Confirm Design</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-cloning-design-grid left-rail-template">
+          <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <section class="sequence-viewer-cloning-design-panel">
+              <div class="result-card-head">
+                <h4>Route</h4>
+              </div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="group" aria-label="Cloning design route"></div>
+            </section>
+          </aside>
+
+          <div class="sequence-viewer-cloning-design-main left-rail-template__main">
+            <div id="sequence-viewer-cloning-design-result" class="sequence-viewer-cloning-design-result">
+              <p class="small-note">Choose a route, then design primers.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+</section></main></div><script type="module" src="./fixture.js"></script></body></html>

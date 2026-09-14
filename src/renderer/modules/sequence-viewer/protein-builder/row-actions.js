@@ -57,14 +57,35 @@ export function installProteinBuilderRowActions(ctx) {
     state.featureSelectedId = '';
     state.featureHostId = '';
     state.featureHostRequestId += 1;
+    if (elements.proteinBuilderFeaturePicker) {
+      elements.proteinBuilderFeaturePicker.open = true;
+    }
     if (elements.proteinBuilderFeatureCodonOptimize) {
       elements.proteinBuilderFeatureCodonOptimize.checked = false;
     }
   };
 
+  function revealFeatureSource() {
+    if (elements.proteinBuilderFeaturePicker) {
+      elements.proteinBuilderFeaturePicker.open = false;
+    }
+    if (elements.proteinBuilderFeatureHostsFold) {
+      elements.proteinBuilderFeatureHostsFold.open = true;
+    }
+    if (elements.proteinBuilderFeaturePreviewFold) {
+      elements.proteinBuilderFeaturePreviewFold.open = true;
+    }
+    // Selection removes the focused result from view; continue at the next step.
+    elements.proteinBuilderFeatureHostsFold?.querySelector?.('summary')?.focus?.();
+  }
+
   ctx.selectSearchFeature = function selectSearchFeature(featureId) {
     const safeId = cleanText(featureId, 200);
-    if (!safeId || safeId === cleanText(state.featureSelectedId, 200)) {
+    if (!safeId || !(state.featureSearchResults || []).some((feature) => cleanText(feature?.id, 200) === safeId)) {
+      return;
+    }
+    if (safeId === cleanText(state.featureSelectedId, 200)) {
+      revealFeatureSource();
       return;
     }
     state.featureSelectedId = safeId;
@@ -80,6 +101,7 @@ export function installProteinBuilderRowActions(ctx) {
       200
     );
     ctx.renderFeatureSearchResults();
+    revealFeatureSource();
     void ctx.loadFeatureSourcePreview();
   };
 
@@ -89,6 +111,9 @@ export function installProteinBuilderRowActions(ctx) {
       return;
     }
     state.featureHostId = safeId;
+    if (elements.proteinBuilderFeaturePreviewFold) {
+      elements.proteinBuilderFeaturePreviewFold.open = true;
+    }
     ctx.renderFeatureSourcePanel();
     void ctx.loadFeatureSourcePreview();
   };

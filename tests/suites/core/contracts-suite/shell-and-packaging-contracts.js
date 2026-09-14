@@ -70,6 +70,8 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
         /src\/main\/agent/,
         /src\/main\/storage/,
         /src\/main\/lib/,
+        /src\/renderer\/lib/,
+        /src\/renderer\/modules\/sequence-viewer/,
         /vendor\/sqljs/,
         /node_modules\/@modelcontextprotocol\/sdk/
       ].forEach((pattern) => assert.match(unpackDir, pattern));

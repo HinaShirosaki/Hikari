@@ -1,3 +1,5 @@
+import { renderTypeFieldsMarkup } from '../sample-registry/type-fields.js';
+
 export function createSingleContainerEditorRenderer({
   safeText,
   uiState,
@@ -69,6 +71,7 @@ export function createSingleContainerEditorRenderer({
           Type
           <select data-single-sample-type>${renderSampleTypeOptions(activeSample.type || 'plasmid')}</select>
         </label>
+        <div data-sample-type-fields>${renderTypeFieldsMarkup(activeSample.type, activeSample.details)}</div>
         ${renderStructureAction({ mode: 'single-existing', sample: activeSample })}
         <label>
           Lot / Batch
@@ -111,6 +114,7 @@ export function createSingleContainerEditorRenderer({
           Type
           <select data-single-sample-new-type>${renderSampleTypeOptions('plasmid')}</select>
         </label>
+        <div data-sample-type-fields>${renderTypeFieldsMarkup('plasmid')}</div>
         ${renderStructureAction({ mode: 'single-new' })}
         <label>
           Lot / Batch

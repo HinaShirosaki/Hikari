@@ -42,7 +42,7 @@ assert.equal(parseTimerDuration('1 hour nonsense'), null, 'unrecognized duration
 const timerElements = elementsFor([
   'localTimeDisplay', 'localDateDisplay', 'timerStatus', 'timerActiveList',
   'timerOpenBtn', 'timerDialogOverlay', 'timerDialogCloseBtn', 'timerDialogForm',
-  'timerNameInput', 'timerMinutesInput', 'timerTemplateList', 'topbarTimer',
+  'timerNameInput', 'timerMinutesInput', 'timerTemplateList', 'topbarLocalTime', 'topbarTimer',
   'topbarTimerTime', 'topbarTimerProgress'
 ]);
 timerElements.timerDialogOverlay.hidden = true;
@@ -67,6 +67,8 @@ let timerPersists = 0;
 let timer;
 timer = load('timer.js').initTimerWidget({ state: timerState, safeText, persist: () => { timerPersists += 1; }, render: () => timer.render(), elements: timerElements });
 timer.render();
+assert.equal(timerElements.topbarLocalTime.textContent, timerElements.localTimeDisplay.textContent);
+assert.match(timerElements.topbarLocalTime.getAttribute('aria-label'), /^Current local time /);
 assert.equal(timerElements.topbarTimer.hidden, false);
 assert.equal(timerElements.topbarTimerTime.textContent, '10:00');
 assert.equal(timerElements.topbarTimerProgress.style.strokeDasharray, '100.0 100');

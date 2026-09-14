@@ -1,0 +1,36 @@
+{
+  "storagePath": "/Users/shiyifan/Projects/Enana/TestData3",
+  "existingSessionsPreserved": 140,
+  "demos": [
+    {
+      "id": "rendering-demo-20260913-01",
+      "title": "Rendering 1 · Answers & tables",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-01.log"
+    },
+    {
+      "id": "rendering-demo-20260913-02",
+      "title": "Rendering 2 · Notebook review",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-02.log"
+    },
+    {
+      "id": "rendering-demo-20260913-03",
+      "title": "Rendering 3 · Protocol review",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-03.log"
+    },
+    {
+      "id": "rendering-demo-20260913-04",
+      "title": "Rendering 4 · Interactive output",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-04.log"
+    },
+    {
+      "id": "rendering-demo-20260913-05",
+      "title": "Rendering 5 · Clarification",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-05.log"
+    },
+    {
+      "id": "rendering-demo-20260913-06",
+      "title": "Rendering 6 · Error state",
+      "log": "/Users/shiyifan/Projects/Enana/TestData3/chat_log/rendering-demo-20260913-06.log"
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import { startNotebookSampleCapture } from './notebook-workflow.js';
 import { renderList } from './sample-list.js';
 import { onSubmit } from './sample-form.js';
 import { ensureSampleState, renderSampleTypeOptions } from './sample-utils.js';
+import { renderTypeFields } from './type-fields.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
@@ -55,6 +56,9 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     renderChemicalLinkOptions(ctx);
     if (!ctx.dom.sampleLocationFields.innerHTML.trim()) {
       renderLocationFields(ctx);
+    }
+    if (!ctx.dom.sampleTypeFields?.innerHTML.trim()) {
+      renderTypeFields(ctx, null);
     }
     renderCellPassageFields(ctx);
     renderCompoundFields(ctx);

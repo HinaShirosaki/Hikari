@@ -518,8 +518,8 @@ test('workflow protocol picker matches the Biology Notebook search-result patter
   assert.match(viewSource, /id="workflow-block-protocol-search"[^>]*autocomplete="off"[^>]*aria-controls="workflow-block-protocol-search-results"/);
   assert.match(viewSource, /id="workflow-block-protocol-search-results"[^>]*role="listbox"[^>]*aria-label="Matching protocols"/);
   assert.match(viewSource, /id="workflow-block-protocol" hidden aria-hidden="true" tabindex="-1"/);
-  assert.match(viewCss, /\.workflow-block-protocol-search-results \{[\s\S]*?gap: 6px;[\s\S]*?max-height: min\(34vh, 240px\);[\s\S]*?overflow-y: auto;/);
-  assert.match(viewCss, /\.workflow-block-protocol-search-result,[\s\S]*?\.workflow-block-protocol-search-empty \{[\s\S]*?min-height: 40px;[\s\S]*?padding: 10px;[\s\S]*?line-height: 1\.4;[\s\S]*?overflow-wrap: anywhere;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-results \{[\s\S]*?gap: 0\.125rem;[\s\S]*?max-height: min\(34vh, 240px\);[\s\S]*?overflow-y: auto;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-result,[\s\S]*?\.workflow-block-protocol-search-empty \{[\s\S]*?min-height: 2\.25rem;[\s\S]*?padding: 0\.375rem 0\.5rem;[\s\S]*?line-height: 1\.4;[\s\S]*?overflow-wrap: anywhere;/);
   assert.match(viewCss, /\.workflow-block-protocol-search-result:hover,[\s\S]*?\.workflow-block-protocol-search-result\.is-selected \{/);
 
   const optionListsModule = loadEsmStyleModule(

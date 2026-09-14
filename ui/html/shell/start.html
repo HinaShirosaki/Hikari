@@ -27,7 +27,7 @@
     img-src 'self' data: blob:;
     font-src 'self' data:;
     connect-src 'self' data: blob:;
-    frame-src 'self' blob: http://127.0.0.1:*;
+    frame-src 'self' blob: http://127.0.0.1:* hikari-html:;
     object-src 'none';
     base-uri 'none';
     form-action 'none';
@@ -52,21 +52,24 @@
         <h1 class="sr-only">Hikari</h1>
         <div class="topbar-context">
           <div class="topbar-heading-row">
-            <div
-              id="page-title"
-              class="topbar-timer"
-              role="progressbar"
-              aria-label="Active timer"
-              aria-valuemin="0"
-              aria-valuemax="100"
-              aria-valuenow="0"
-              hidden
-            >
-              <svg class="topbar-timer__ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
-                <circle class="topbar-timer__track" cx="18" cy="18" r="15.5" pathLength="100"></circle>
-                <circle id="topbar-timer-progress" class="topbar-timer__progress" cx="18" cy="18" r="15.5" pathLength="100"></circle>
-              </svg>
-              <span id="topbar-timer-time" class="topbar-timer__time" aria-hidden="true">--:--</span>
+            <div id="page-title" class="topbar-timekeeping">
+              <time id="topbar-local-time" class="topbar-clock" aria-label="Current local time">--:--</time>
+              <div
+                id="topbar-active-timer"
+                class="topbar-timer"
+                role="progressbar"
+                aria-label="Active timer"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="0"
+                hidden
+              >
+                <svg class="topbar-timer__ring" viewBox="0 0 36 36" aria-hidden="true" focusable="false">
+                  <circle class="topbar-timer__track" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+                  <circle id="topbar-timer-progress" class="topbar-timer__progress" cx="18" cy="18" r="15.5" pathLength="100"></circle>
+                </svg>
+                <span id="topbar-timer-time" class="topbar-timer__time" aria-hidden="true">--:--</span>
+              </div>
             </div>
           </div>
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>

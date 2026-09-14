@@ -104,7 +104,8 @@ export function initHomeDashboard({
     timerTemplateList: document.getElementById('dashboard-timer-template-list')
   };
   const topbarTimerElements = {
-    topbarTimer: document.getElementById('page-title'),
+    topbarLocalTime: document.getElementById('topbar-local-time'),
+    topbarTimer: document.getElementById('topbar-active-timer'),
     topbarTimerTime: document.getElementById('topbar-timer-time'),
     topbarTimerProgress: document.getElementById('topbar-timer-progress')
   };

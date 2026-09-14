@@ -44,6 +44,8 @@ enabled_tools = [
   "container",
   "assay_table",
   "plotly_graph",
+  "image_output",
+  "html_output",
   "ask_user"
 ]
 default_tools_approval_mode = "approve"
@@ -149,6 +151,8 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `container`
 - `assay_table`
 - `plotly_graph`
+- `image_output`
+- `html_output`
 - `ask_user`
 
 Codex-facing instructions, skills, and examples use these same raw tool names.
@@ -513,3 +517,32 @@ See `mcp-contract.json` next to this file for the exact generated MCP tool defin
 ## Sequence Viewer
 
 The nine `sequence_*` tools provide plasmid discovery, feature editing, Protein Builder assembly, residue-level mutations, and persisted primer comparisons. See [Sequence Viewer tool contract](sequence-tools.md) for coordinates, retry behavior, examples, and limitations.
+
+## Analysis image output
+
+Use `image_output` after an analysis script saves an image inside Hikari's storage workspace:
+
+```json
+{
+  "path": "analysis/dose-response.png",
+  "title": "Dose response",
+  "alt": "Response increases with dose and reaches a plateau.",
+  "caption": "Mean response across three replicates; error bars show standard deviation."
+}
+```
+
+`path` and `alt` are required. Paths may be absolute within storage or relative to its root. The tool resolves symlinks and rejects paths outside storage, missing files, non-image content, and files larger than 5 MiB. Supported formats are PNG, JPEG, and WebP; export SVG or PDF figures to a supported raster format first.
+
+A successful call returns `ok: true`, `status: "completed"`, and `image_artifact` metadata (`type`, stable `id`, `title`, `alt`, `caption`, `mime_type`, `byte_length`). The MCP response includes a native `{type: "image", mimeType, data}` base64 content block. JSON text and structured metadata omit the binary bytes. Hikari internally carries an immutable `data_url` with that artifact to the live assistant message and saved chat history. Repeated identical results are deduplicated; multiple distinct images are displayed in order. Captions and alt text are plain text. Removing the source file later does not remove the saved image.
+
+The tool publishes an existing image; it does not execute analysis or generate artwork. Check `ok` before claiming display succeeded. Do not embed base64 or local image paths in assistant prose. The tool can be disabled in Settings like other Hikari MCP tools and is unavailable to background notebook suggestion runs.
+
+## Interactive HTML output
+
+Call `html_output` with required `title` and `html` (a complete self-contained document), optional `caption`, and optional integer `height` in rem (16–64; default 32). HTML is limited to 512 KiB UTF-8; title to 220 characters and caption to 2,000. The tool accepts source HTML directly, not a path or URL.
+
+The MCP response contains short JSON metadata and a native embedded resource with `mimeType: "text/html"`, its original source in `text`, and a content-derived `hikari-html-artifact://<id>` URI. `html_artifact` includes `type`, `id`, `title`, `caption`, and `height`. Hikari carries the HTML source internally through progress, final response, and saved history. Duplicate identical outputs are deduplicated. Revised HTML produces a new artifact.
+
+Hikari displays the document in an opaque sandboxed iframe served through a dedicated local protocol. Inline JavaScript/CSS, canvas, inline SVG, and data-URL images/fonts work. Network access, local file loading, external dependencies, Hikari APIs, persistent browser storage, nested frames, popups, navigation, and downloads are unavailable. The main application script policy remains unchanged. Preview controls update only the embedded document; they do not mutate Hikari records. Routine chat updates keep an existing frame connected. Reopening a saved chat reconstructs the source document and resets its controls to their initial state.
+
+The bundled [hikari-html-output skill](../../../src/main/agent/codex-agent/official-skills/hikari-html-output/SKILL.md) contains exact arguments, troubleshooting, and a working threshold explorer. It is released to root and project `.agents/skills` folders through the official skill publisher and follows the `html_output` Settings switch.

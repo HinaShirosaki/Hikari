@@ -94,6 +94,8 @@ export function normalizeAgentResponse(result) {
           || 'Intent parsing completed.')));
 
   return {
+    htmlArtifacts: asArray(result?.html_artifacts),
+    imageArtifacts: asArray(result?.image_artifacts),
     parser,
     protocolWorkflow,
     notebookDraftWorkflow,

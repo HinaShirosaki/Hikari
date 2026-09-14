@@ -1949,6 +1949,44 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(fragments[1].metadata.templateSequence, second);
     });
 
+    test('[EDGE] deleting or replacing bases truncates overlapping features; same-length substitutions keep them', () => {
+      const helpers = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
+      ));
+      const segs = (features) => features.map((feature) => [feature.name, ...feature.segments.map((s) => [s.start, s.end])]);
+      const features = [
+        { name: 'cds', segments: [{ start: 0, end: 100 }] },
+        { name: 'tag', segments: [{ start: 40, end: 60 }] },
+        { name: 'head', segments: [{ start: 30, end: 50 }] },
+        { name: 'tail', segments: [{ start: 50, end: 70 }] },
+        { name: 'after', segments: [{ start: 80, end: 90 }] }
+      ];
+      // Replace 40..60 with 5 bp: the tag is gone, flanks are trimmed, enclosing CDS shrinks.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 5, 85)), [
+        ['cds', [0, 85]],
+        ['head', [30, 40]],
+        ['tail', [45, 55]],
+        ['after', [65, 75]]
+      ]);
+      // Delete 40..60: same, with a zero-length replacement.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 0, 80)), [
+        ['cds', [0, 80]],
+        ['head', [30, 40]],
+        ['tail', [40, 50]],
+        ['after', [60, 70]]
+      ]);
+      // Codon mutagenesis (same length) rewrites bases, not annotations.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 40, end: 60 }, 20, 100)), segs(features));
+      // A pure insertion grows whatever spans it and shifts what follows.
+      assert.deepEqual(segs(helpers.adjustFeatureSegmentsForSequenceEdit(features, { start: 50, end: 50 }, 10, 110)), [
+        ['cds', [0, 110]],
+        ['tag', [40, 70]],
+        ['head', [30, 50]],
+        ['tail', [60, 80]],
+        ['after', [90, 100]]
+      ]);
+    });
+
     test('[EDGE] a Protein Builder insert is amplified per block, not as one amplicon', () => {
       const helpers = loadEsmStyleModule(path.join(
         __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'sequence-edit-helpers.js'
@@ -2060,6 +2098,28 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       });
       assert.equal(none, 0);
       assert.equal(saved.length, 1);
+    });
+
+    test('[EDGE] designed primers survive a GenBank round-trip as designed, so re-designing replaces them', () => {
+      const primerAnnotation = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'primer-annotation.js')
+      );
+      const storage = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'storage.js')
+      );
+      const parsing = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'parsing.js')
+      );
+      const sequence = filler(200, 311);
+      const primer = { name: 'sel_F', role: 'pcr-forward', sequence: sequence.slice(12, 34), bindingSequence: sequence.slice(12, 34) };
+      // A foreign primer_bind (no oligo qualifier) must be left alone.
+      const imported = { name: 'M13 fwd', type: 'primer_bind', strand: 1, segments: [{ start: 100, end: 118 }] };
+      const first = primerAnnotation.withPrimerBindFeatures({ sequence, features: [imported] }, [primer]);
+
+      const reopened = parsing.parseInputRecords(storage.buildRecordGenbankText({ name: 'p1', sequence, features: first.features })).records[0];
+      const again = primerAnnotation.withPrimerBindFeatures(reopened, [{ ...primer, name: 'sel_F_v2' }]);
+
+      assert.equal(again.features.map((feature) => feature.name).join(','), 'M13 fwd,sel_F_v2');
     });
   }
 };

@@ -33,7 +33,7 @@ function renderPlanSummary(displayPlan = {}, source = {}, range = {}) {
         <div><strong>Template</strong><span>${escapeHtml(formatBp(summary.templateLength))}</span></div>
         <div><strong>Final</strong><span>${escapeHtml(formatBp(summary.resultLength))}</span></div>
         <div><strong>Amplicon</strong><span>${escapeHtml(rangeText)}</span></div>
-        <div><strong>Status</strong><span>${displayPlan.feasible ? 'Feasible' : 'Needs review'}</span></div>
+        <div><strong>Status</strong><span class="sequence-viewer-cloning-design-feasibility${displayPlan.feasible ? '' : ' is-review'}">${displayPlan.feasible ? 'Feasible' : 'Needs review'}</span></div>
       </div>
       ${planRows ? `<div class="sequence-viewer-cloning-design-summary-rows">${planRows}</div>` : ''}
     </div>
@@ -50,29 +50,30 @@ function renderPrimerTable(primers = []) {
       <table class="sequence-viewer-cloning-design-primer-table">
         <thead>
           <tr>
-            <th>Step</th>
-            <th>Primer</th>
-            <th>Role</th>
-            <th>Sequence</th>
-            <th>Length</th>
-            <th>Tm</th>
-            <th>GC</th>
+            <th scope="col">Primer / role</th>
+            <th scope="col">Sequence <span class="sequence-viewer-cloning-design-direction">5′ → 3′</span></th>
+            <th scope="col">Length</th>
+            <th scope="col">Tm</th>
+            <th scope="col">GC</th>
           </tr>
         </thead>
-        <tbody>
           ${primers.map((primer, index) => {
             const sequence = normalizeSequenceText(primer?.sequence || '');
             const primerName = cleanText(primer?.name, 160) || `Primer ${index + 1}`;
             return `
+              ${index === 0 || primer?.groupLabel !== primers[index - 1]?.groupLabel ? `
+                <tbody>
+                <tr class="sequence-viewer-cloning-design-primer-group">
+                  <th colspan="5" scope="rowgroup">${escapeHtml(cleanText(primer?.groupLabel, 120) || 'Primers')}</th>
+                </tr>` : ''}
               <tr>
-                <td>${escapeHtml(cleanText(primer?.groupLabel, 120) || '-')}</td>
                 <td>
                   <div class="sequence-viewer-primer-copy-cell">
                     <span class="sequence-viewer-primer-copy-value">${escapeHtml(primerName)}</span>
                     ${renderPrimerCopyButton(primerName, 'name', 'primer name')}
                   </div>
+                  <span class="sequence-viewer-cloning-design-primer-role">${escapeHtml(formatPrimerRole(primer?.role))}</span>
                 </td>
-                <td>${escapeHtml(formatPrimerRole(primer?.role))}</td>
                 <td class="sequence-viewer-cloning-design-primer-seq">
                   <div class="sequence-viewer-primer-copy-cell sequence-viewer-primer-copy-cell-sequence">
                     <span class="sequence-viewer-primer-copy-value">${escapeHtml(sequence || '-')}</span>
@@ -80,12 +81,12 @@ function renderPrimerTable(primers = []) {
                   </div>
                 </td>
                 <td>${Math.max(0, Number(primer?.length) || sequence.length).toLocaleString()} nt</td>
-                <td>${escapeHtml(formatNumber(primer?.tm, 1))} C</td>
+                <td>${escapeHtml(formatNumber(primer?.tm, 1))} °C</td>
                 <td>${escapeHtml(formatNumber(primer?.gcContent, 1))}%</td>
               </tr>
+              ${index === primers.length - 1 || primer?.groupLabel !== primers[index + 1]?.groupLabel ? '</tbody>' : ''}
             `;
           }).join('')}
-        </tbody>
       </table>
     </div>
   `;

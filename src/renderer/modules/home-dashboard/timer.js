@@ -36,6 +36,7 @@ export function initTimerWidget({
     timerNameInput,
     timerMinutesInput,
     timerTemplateList,
+    topbarLocalTime,
     topbarTimer,
     topbarTimerTime,
     topbarTimerProgress
@@ -222,12 +223,18 @@ export function initTimerWidget({
     const now = new Date();
     const weekday = now.toLocaleDateString([], { weekday: 'short' });
     const month = now.toLocaleDateString([], { month: 'short' });
-    localTimeDisplay.textContent = now.toLocaleTimeString([], {
+    const localTime = now.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
+    localTimeDisplay.textContent = localTime;
     localDateDisplay.textContent = `Local · ${weekday} ${now.getDate()} ${month}`;
+    if (topbarLocalTime) {
+      topbarLocalTime.textContent = localTime;
+      topbarLocalTime.setAttribute('datetime', now.toTimeString().slice(0, 5));
+      topbarLocalTime.setAttribute('aria-label', `Current local time ${localTime}`);
+    }
   }
 
   function stopTimerTick() {

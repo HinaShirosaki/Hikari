@@ -1,5 +1,8 @@
 'use strict';
 
+const { extractHtmlArtifactFromToolEvent, mergeHtmlArtifacts } = require('../../agent/runtime/tool-artifacts/html-output.js');
+const { extractImageArtifactFromToolEvent, mergeImageArtifacts } = require('../../agent/runtime/tool-artifacts/image-output.js');
+
 const { createAgentSessionService } = require('./agent-session-service');
 const {
   createAgentRequestAbortError,
@@ -162,7 +165,13 @@ function registerAgentChatHandler({
     const progressSender = event?.sender && typeof event.sender.send === 'function'
       ? event.sender.send.bind(event.sender)
       : null;
+    let htmlArtifacts = [];
+    let imageArtifacts = [];
     const emitAgentProgress = (lifecycleEvent) => {
+      const html = extractHtmlArtifactFromToolEvent(lifecycleEvent);
+      if (html) htmlArtifacts = mergeHtmlArtifacts(htmlArtifacts, [html]);
+      const image = extractImageArtifactFromToolEvent(lifecycleEvent);
+      if (image) imageArtifacts = mergeImageArtifacts(imageArtifacts, [image]);
       if (!progressSender) {
         return;
       }
@@ -323,9 +332,11 @@ function registerAgentChatHandler({
           });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
+              ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -362,12 +373,16 @@ function registerAgentChatHandler({
         return sessionService.getSession()
           ? {
             ...result,
+            html_artifacts: htmlArtifacts,
+            image_artifacts: imageArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId,
             chat_session: sessionService.getSession()
           }
           : {
             ...result,
+            html_artifacts: htmlArtifacts,
+            image_artifacts: imageArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId
           };
@@ -413,9 +428,11 @@ function registerAgentChatHandler({
             });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
+              ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -453,6 +470,8 @@ function registerAgentChatHandler({
           ? {
             ok: false,
             canceled,
+            html_artifacts: htmlArtifacts,
+            image_artifacts: imageArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId,
@@ -461,6 +480,8 @@ function registerAgentChatHandler({
           : {
             ok: false,
             canceled,
+            html_artifacts: htmlArtifacts,
+            image_artifacts: imageArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId

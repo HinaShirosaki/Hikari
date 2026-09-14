@@ -589,7 +589,7 @@ test('personal-inventory keeps folders nestable while physical containers remain
   assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-node="folder-child"/);
   assert.match(inventoryLocationNav.innerHTML, /folder-tree-template__children/);
   assert.match(inventoryLocationNav.innerHTML, /inventory-container-glyph-box81/);
-  assert.match(inventoryLocationNav.innerHTML, /81-well cube box/);
+  assert.match(inventoryLocationNav.innerHTML, /81-well grid box/);
   assert.equal((inventoryLocationNav.innerHTML.match(/left-rail-folder-glyph/g) || []).length, 2);
   const contextContainerMarkup = inventoryLocationNav.innerHTML.match(/<button\s+type="button"\s+class="inventory-container-btn[^"]*"[\s\S]*?data-container-open="box-context"[\s\S]*?<\/button>/)?.[0] || '';
   assert.ok(contextContainerMarkup);

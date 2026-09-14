@@ -271,8 +271,8 @@
   }
 
   .sequence-viewer-cloning-design-toolbar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
   }
 
 .sequence-viewer-protein-builder-toolbar-nav,
@@ -295,8 +295,12 @@
     justify-self: start;
   }
 
+  .sequence-viewer-cloning-design-toolbar-main {
+    grid-column: 2;
+  }
+
   .sequence-viewer-cloning-design-summary-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .sequence-viewer-protein-builder-block-actions {
@@ -316,11 +320,45 @@
 body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-cloning-design-toolbar,
 body.theme-night .sequence-viewer-protein-builder-panel,
-body.theme-night .sequence-viewer-cloning-design-panel,
 body.theme-night .sequence-viewer-cloning-design-result-section,
 body.theme-night .sequence-viewer-alignment-panel {
   border-color: var(--sequence-viewer-night-border);
   background: var(--theme-surface);
+}
+
+/* Keep the assembly chooser calm in night mode: the modal stays lifted from
+   the dimmed workspace, its read-only summary has a restrained inset, and a
+   selected backbone reads as the active choice rather than a warning. */
+body.theme-night .sequence-viewer-backbone-dialog {
+  border-color: color-mix(in srgb, var(--theme-border) 74%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-text-strong) 8%),
+    var(--theme-surface-elevated) 54%,
+    color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-accent) 6%)
+  );
+}
+
+body.theme-night .sequence-viewer-backbone-dialog-candidate {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
+}
+
+body.theme-night .sequence-viewer-backbone-dialog-candidate:hover {
+  border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border-soft));
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+}
+
+body.theme-night .sequence-viewer-backbone-dialog-candidate-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 64%, var(--theme-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-accent) 24%);
+}
+
+body.theme-night .sequence-viewer-backbone-dialog-summary {
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 18%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text-strong) 5%, transparent);
 }
 
 body.theme-night .sequence-viewer-library-switch {
@@ -537,6 +575,11 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
 }
 
 @media (max-width: 980px) {
+  .sequence-viewer-cloning-design-strategy-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+
   .sequence-viewer-home-layout,
 .sequence-viewer-protein-builder-grid,
 .sequence-viewer-cloning-design-grid {

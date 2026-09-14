@@ -62,6 +62,7 @@ export function initAgentChat({
     safeText,
     runtime,
     notebookDraftAdapter,
+    protocolReviewAdapter,
     hasImageCapture: typeof captureImageAttachment === 'function'
   });
   let requestController = null;
@@ -173,6 +174,7 @@ export function initAgentChat({
     notebookDraftAdapter,
     onOpenNotebookEntry,
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message),
+    reviewInline: (messageId, itemId, decision) => reviewController?.reviewInline?.(messageId, itemId, decision),
     onAppendNotebookEntry
   });
 
@@ -208,8 +210,7 @@ export function initAgentChat({
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     syncActiveRequestState: shell.syncActiveRequestState,
-    notebookDraftAdapter,
-    openReviewForMessage: reviewController.openForMessage
+    notebookDraftAdapter
   });
 
   const render = () => {

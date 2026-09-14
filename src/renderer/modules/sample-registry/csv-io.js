@@ -1,12 +1,14 @@
 import { escapeCsv } from '../../lib/csv.js';
 import { createDefaultWells, isMultiWellContainer, isSupportedContainerType } from '../../lib/inventory-containers.js';
 import { buildLocationFromInventoryLink } from './inventory-links.js';
+import { DETAIL_KEYS, normalizeSampleDetails } from './type-fields.js';
 
 // Flat sample columns + container placement, so a whole box round-trips.
 // ponytail: chemical structure / chemical links are still not round-tripped.
 export const CSV_COLUMNS = [
   'code', 'name', 'type', 'lot', 'concentration', 'notes',
-  'section', 'container', 'container_type', 'well'
+  'section', 'container', 'container_type', 'well',
+  ...DETAIL_KEYS
 ];
 
 export function toSamplesCsv(samples, inventory = {}) {
@@ -19,7 +21,8 @@ export function toSamplesCsv(samples, inventory = {}) {
       lot: sample?.lot,
       concentration: sample?.concentration,
       notes: sample?.notes,
-      ...placement
+      ...placement,
+      ...sample?.details
     };
     return CSV_COLUMNS.map((key) => escapeCsv(values[key])).join(',');
   });
@@ -197,6 +200,8 @@ export function mergeSamplesFromCsv(state, rows, makeId = defaultMakeId) {
       lot: String(row.lot || '').trim(),
       concentration: String(row.concentration || '').trim(),
       notes: String(row.notes || '').trim(),
+      // Columns absent from the CSV keep their stored value; present ones win.
+      details: normalizeSampleDetails(type, { ...base.details, ...row }),
       updatedAt: new Date().toISOString()
     };
     applyContainerPlacement(state, row, record, makeId);

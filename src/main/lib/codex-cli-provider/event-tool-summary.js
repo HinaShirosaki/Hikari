@@ -104,6 +104,8 @@ const CODEX_TOOL_LABELS = {
   memory: (a) => `Memory ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['query', 'key', 'project_name']))}`,
   container: (a) => `Container ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'id']))}`,
   assay_table: (a) => `Assay table ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'table_id', 'id']))}`,
+  html_output: (a) => `Display interactive HTML${quotedDetail(firstArgValue(a, ['title']))}`,
+  image_output: (a) => `Display image${quotedDetail(firstArgValue(a, ['title', 'path']))}`,
   plotly_graph: (a) => `Plot ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'graph_id', 'id']))}`,
   ask_user: (a) => `Asking you${quotedDetail(firstArgValue(a, ['question']))}`
 };

@@ -399,7 +399,7 @@ export function createProtocolGenerationController({
       }
 
       localState.generatedProtocolDraft = generatedDraft;
-      renderProtocolPreviewInto(ui.protocolGenerateResultPreview, localState.generatedProtocolDraft, { includeNameSection: true });
+      renderProtocolPreviewInto(ui.protocolGenerateResultPreview, localState.generatedProtocolDraft, { includeNameSection: true, reviewDocument: true });
       setProtocolGenerateStatus('');
     } catch (error) {
       if (requestToken !== localState.protocolGenerationRequestToken || ui.protocolGenerateResultOverlay?.hidden) {

@@ -9,6 +9,23 @@ const {
   ListToolsRequestSchema
 } = require('@modelcontextprotocol/sdk/types.js');
 
+function loadOptionalResponseBuilder(modulePath, exportName) {
+  try {
+    const builder = require(modulePath)?.[exportName];
+    return typeof builder === 'function' ? builder : null;
+  } catch {
+    return null;
+  }
+}
+
+const buildHtmlOutputMcpResponse = loadOptionalResponseBuilder(
+  './direct-tools/html-output.js',
+  'buildHtmlOutputMcpResponse'
+);
+const buildImageOutputMcpResponse = loadOptionalResponseBuilder(
+  './direct-tools/image-output.js',
+  'buildImageOutputMcpResponse'
+);
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
@@ -580,6 +597,16 @@ function createAgentMcpStdioServer(deps = {}) {
         mcpRequest: request
       }
     );
+    if (toolName === 'html_output'
+      && typeof buildHtmlOutputMcpResponse === 'function'
+      && result?.ok === true
+      && result.html_artifact?.html) return buildHtmlOutputMcpResponse(result);
+    if (toolName === 'image_output'
+      && typeof buildImageOutputMcpResponse === 'function'
+      && result?.ok === true
+      && result.image_artifact?.data_url) {
+      return buildImageOutputMcpResponse(result);
+    }
     const response = {
       content: [{
         type: 'text',

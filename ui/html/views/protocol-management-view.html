@@ -202,22 +202,20 @@
 
           <div id="protocol-generate-result-overlay" class="protocol-generate-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
             <div class="protocol-generate-result-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-generate-title">
-              <section class="protocol-polish-dialog protocol-generate-result-dialog app-dialog-surface" aria-labelledby="protocol-generate-title">
+              <section class="protocol-polish-dialog protocol-generate-result-dialog app-dialog-surface draft-review-dialog" aria-labelledby="protocol-generate-title">
                 <div class="protocol-polish-dialog-head app-dialog-head">
                   <div>
-                    <span class="protocol-detail-mode">Generate</span>
-                    <h3 id="protocol-generate-title">Generated Protocol</h3>
+                    <h3 id="protocol-generate-title">Review generated protocol</h3>
                   </div>
                   <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form"></div>
+                <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form draft-review-document"></div>
                 <p id="protocol-generate-status" class="small-note" hidden></p>
-              </section>
-
-              <div class="form-actions protocol-polish-actions">
-                <button type="button" id="protocol-generate-apply-btn" class="primary-btn" disabled>Use Generated Protocol</button>
+              <div class="form-actions draft-review-actions">
                 <button type="button" id="protocol-generate-back-btn" class="ghost-btn">Keep Editing</button>
+                <button type="button" id="protocol-generate-apply-btn" class="primary-btn" disabled>Use Generated Protocol</button>
               </div>
+              </section>
             </div>
           </div>
 

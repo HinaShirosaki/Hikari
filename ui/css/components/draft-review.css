@@ -1,0 +1,193 @@
+/* Shared reading surface for Agent Chat drafts and Protocol generation results. */
+.draft-review-dialog.app-dialog-surface {
+  --app-dialog-width: 51.25rem;
+  --app-dialog-max-height: 47.5rem;
+  width: min(var(--app-dialog-width), 100%);
+  height: min(47.5rem, var(--app-dialog-available-height));
+  min-height: 0;
+  padding: 1.25rem;
+  gap: 1rem;
+  border-radius: 1rem;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 1.5rem 3.5rem var(--theme-overlay);
+}
+
+.draft-review-dialog .app-dialog-head {
+  padding-bottom: .85rem;
+  border-bottom: .0625rem solid var(--theme-border);
+}
+
+.draft-review-dialog .app-dialog-head h3 {
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--theme-text-muted);
+}
+
+.protocol-generate-result-shell {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.protocol-generate-result-dialog.draft-review-dialog {
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+}
+
+.draft-review-dialog .agent-review-track {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.agent-review-track .agent-review-card {
+  flex: 0 0 100%;
+  max-width: none;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.agent-review-track .agent-review-card[hidden] {
+  display: none;
+}
+
+.draft-review-document .draft-review-heading {
+  display: grid;
+  gap: .5rem;
+  padding-block: .25rem .75rem;
+}
+
+.draft-review-document .draft-review-kind {
+  width: fit-content;
+  font-size: .6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.draft-review-document .draft-review-heading h4 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -.025em;
+  color: var(--theme-text-strong);
+  overflow-wrap: anywhere;
+}
+
+.draft-review-document .draft-review-heading p {
+  font-size: .8125rem;
+  color: var(--theme-text-muted);
+}
+
+.draft-review-document.protocol-polish-preview,
+.draft-review-document .agent-review-content {
+  gap: 1.5rem;
+  padding-inline-end: .75rem;
+  scrollbar-gutter: stable;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) {
+  display: grid;
+  gap: .65rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > :is(h4, h5) {
+  margin: 0;
+  font-size: .8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--theme-text-strong);
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > :is(p, ul, ol) {
+  margin: 0;
+  font-size: .875rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > p {
+  white-space: pre-line;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) li {
+  line-height: 1.65;
+}
+
+.agent-inline-review .draft-review-heading:not(:has(p)) {
+  display: none;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > ul {
+  display: grid;
+  gap: .4rem;
+  padding-inline-start: 1.15rem;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > ol {
+  display: grid;
+  gap: .75rem;
+  padding-inline-start: 2rem;
+}
+
+.draft-review-document :is(.agent-review-section, .protocol-view-section) > ol > li {
+  padding: .65rem .85rem;
+  border-radius: .5rem;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 65%, transparent);
+  line-height: 1.65;
+}
+
+.draft-review-document ol > li::marker {
+  font-weight: 600;
+  color: var(--theme-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.draft-review-document .draft-review-attention {
+  padding: .85rem 1rem;
+  border-inline-start: .1875rem solid var(--theme-accent);
+  border-radius: .25rem;
+  background: color-mix(in srgb, var(--theme-accent) 7%, transparent);
+}
+
+.draft-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: .625rem;
+  margin: 0;
+  padding-top: 1rem;
+  border-top: .0625rem solid var(--theme-border);
+}
+
+.draft-review-dialog .agent-review-footer {
+  padding: 0;
+  gap: .75rem;
+}
+
+.draft-review-dialog .agent-review-footer:has(button:disabled + span + button:disabled) {
+  display: none;
+}
+
+@media (max-width: 45rem) {
+  .draft-review-dialog.app-dialog-surface {
+    padding: 1rem;
+    gap: .75rem;
+  }
+
+  .draft-review-document .draft-review-heading h4 {
+    font-size: 1.25rem;
+  }
+
+  .draft-review-actions > button {
+    flex: 1 1 auto;
+  }
+}

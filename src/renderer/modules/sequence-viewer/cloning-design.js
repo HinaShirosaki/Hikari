@@ -151,6 +151,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
           type="button"
           class="sequence-viewer-mode-btn${designState.strategy === strategy.id ? ' sequence-viewer-mode-btn-active' : ''}"
           data-cloning-design-strategy="${escapeHtml(strategy.id)}"
+          aria-pressed="${designState.strategy === strategy.id}"
         >
           ${escapeHtml(strategy.label)}
         </button>
@@ -193,27 +194,27 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         </div>
         ${restrictionEnzymesHtml}
       </section>` : ''}
-      <section class="sequence-viewer-cloning-design-result-section">
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
-          <h4>Primers</h4>
+          <h4>Primers <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
           ${isCloningDesignPlanActionable(displayPlan)
             ? '<button type="button" class="ghost-btn" data-cloning-design-action="order-primers">Order Primers</button>'
             : ''}
         </div>
         ${renderPrimerTable(asArray(displayPlan.primers))}
       </section>
-      <section class="sequence-viewer-cloning-design-result-section">
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
           <h4>Procedure</h4>
         </div>
         ${renderProcedure(displayPlan)}
       </section>
-      <section class="sequence-viewer-cloning-design-result-section">
-        <div class="result-card-head">
-          <h4>Warnings</h4>
-        </div>
+      ${asArray(displayPlan.warnings).length ? `
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-warnings" aria-label="Design warnings">
+        <div class="result-card-head"><h4>Warnings</h4></div>
         ${renderWarnings(asArray(displayPlan.warnings))}
-      </section>
+      </section>` : ''}
+
     `;
   }
 

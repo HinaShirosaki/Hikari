@@ -356,7 +356,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.match(state.agentChat.messages[1].text, /Notebook draft completed for Cell Prep\./);
   assert.equal(state.notebookEntries.length, 3);
   assert.equal(notebookChangedCalls, 1);
-  assert.match(history.innerHTML, /Assistant/);
+  assert.match(history.innerHTML, /<strong>Hikari<\/strong>/);
   assert.match(history.innerHTML, /Notebook draft completed for Cell Prep\./);
   assert.doesNotMatch(history.innerHTML, /Intent Parser/);
   assert.doesNotMatch(history.innerHTML, /Protocol Workflow/);

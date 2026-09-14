@@ -1,0 +1,230 @@
+[
+  {
+    "kind": "notebook",
+    "theme": "day",
+    "width": 1100,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 703.609375,
+      "bottom": 761.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "protocol",
+    "theme": "day",
+    "width": 1100,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 703.609375,
+      "bottom": 761.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "generation",
+    "theme": "day",
+    "width": 1100,
+    "visibleCards": 0,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 744.8046875,
+      "bottom": 803
+    },
+    "overflow": false
+  },
+  {
+    "kind": "notebook",
+    "theme": "day",
+    "width": 390,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 559.609375,
+      "bottom": 617.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "protocol",
+    "theme": "day",
+    "width": 390,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 559.609375,
+      "bottom": 617.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "generation",
+    "theme": "day",
+    "width": 390,
+    "visibleCards": 0,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 549.609375,
+      "bottom": 659
+    },
+    "overflow": false
+  },
+  {
+    "kind": "notebook",
+    "theme": "night",
+    "width": 1100,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 703.609375,
+      "bottom": 761.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "protocol",
+    "theme": "night",
+    "width": 1100,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 703.609375,
+      "bottom": 761.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "generation",
+    "theme": "night",
+    "width": 1100,
+    "visibleCards": 0,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "24px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 140,
+      "right": 960,
+      "bottom": 840
+    },
+    "actions": {
+      "top": 744.8046875,
+      "bottom": 803
+    },
+    "overflow": false
+  },
+  {
+    "kind": "notebook",
+    "theme": "night",
+    "width": 390,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 559.609375,
+      "bottom": 617.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "protocol",
+    "theme": "night",
+    "width": 390,
+    "visibleCards": 1,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 559.609375,
+      "bottom": 617.8046875
+    },
+    "overflow": false
+  },
+  {
+    "kind": "generation",
+    "theme": "night",
+    "width": 390,
+    "visibleCards": 0,
+    "heading": "Fluorescence assay preparation",
+    "titleSize": "20px",
+    "sectionSize": "13px",
+    "surface": {
+      "left": 12,
+      "right": 378,
+      "bottom": 688
+    },
+    "actions": {
+      "top": 549.609375,
+      "bottom": 659
+    },
+    "overflow": false
+  }
+]

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Threshold explorer</title>
+<style>
+:root { color-scheme: light dark; font: 1rem/1.5 system-ui, sans-serif; }
+body { margin: 0; padding: 1.25rem; }
+main { max-width: 48rem; margin: auto; }
+h1 { font-size: 1.35rem; margin: 0 0 .5rem; }
+input { width: 100%; accent-color: #527ee6; }
+label { display: block; font-weight: 600; margin-top: 1.25rem; }
+output { font-variant-numeric: tabular-nums; }
+svg { display: block; width: 100%; height: auto; margin: 1rem 0; }
+text { fill: currentColor; font: .9rem system-ui; }
+button { font: inherit; padding: .4rem .8rem; cursor: pointer; }
+.summary { font-size: 1.2rem; font-weight: 600; }
+</style>
+</head>
+<body><main>
+<h1>Threshold explorer</h1>
+<p>Illustrative measurements in arbitrary units. Move the threshold to see which samples remain.</p>
+<label for="threshold">Minimum value: <output id="value" for="threshold">0.5</output></label>
+<input type="range" id="threshold" min="0" max="1" value="0.5" step="0.1">
+<svg id="chart" viewBox="0 0 480 210" role="img" aria-label="Sample values and threshold selection"></svg>
+<p class="summary" id="summary" aria-live="polite"></p>
+<button type="button" id="reset">Reset</button>
+<script>
+const samples = [{name:'A',value:.2},{name:'B',value:.5},{name:'C',value:.7},{name:'D',value:.9}];
+const input = document.querySelector('#threshold');
+const chart = document.querySelector('#chart');
+function draw() {
+  const threshold = Number(input.value);
+  document.querySelector('#value').textContent = threshold.toFixed(1);
+  const kept = samples.filter(sample => sample.value >= threshold);
+  document.querySelector('#summary').textContent = `${kept.length} of ${samples.length} samples meet the threshold.`;
+  chart.replaceChildren();
+  samples.forEach((sample, i) => {
+    const bar = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    bar.setAttribute('x', i * 120 + 25); bar.setAttribute('y', 170 - sample.value * 150);
+    bar.setAttribute('width', 70); bar.setAttribute('height', sample.value * 150);
+    bar.setAttribute('fill', sample.value >= threshold ? '#527ee6' : '#a6adb8');
+    chart.append(bar);
+    const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+    label.setAttribute('x', i * 120 + 60); label.setAttribute('y', 195); label.setAttribute('text-anchor','middle');
+    label.textContent = `${sample.name}: ${sample.value.toFixed(1)}`; chart.append(label);
+  });
+}
+input.addEventListener('input', draw);
+document.querySelector('#reset').addEventListener('click', () => { input.value = '.5'; draw(); });
+draw();
+</script>
+</main></body></html>

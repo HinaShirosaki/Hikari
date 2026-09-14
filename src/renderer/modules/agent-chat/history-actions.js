@@ -46,6 +46,7 @@ export function createHistoryActionController({
   notebookDraftAdapter,
   onOpenNotebookEntry,
   openReviewForMessage = () => {},
+  reviewInline = () => {},
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   const notebookActions = createNotebookHistoryActions({
@@ -118,6 +119,31 @@ export function createHistoryActionController({
   }
 
   async function onHistoryClick(event) {
+    const copyButton = event?.target?.closest?.('[data-agent-copy-message]');
+    if (copyButton) {
+      const text = findMessage(copyButton.dataset.agentCopyMessage)?.text || '';
+      try {
+        const result = await api?.writeTextToClipboard?.(text);
+        if (result?.ok !== true) throw new Error(result?.error || 'Text clipboard is unavailable.');
+        copyButton.setAttribute('aria-label', 'Response copied');
+        copyButton.setAttribute('title', 'Response copied');
+      } catch (error) {
+        setStatus(trimText(error?.message, 320) || 'Could not copy response.');
+      }
+      return;
+    }
+    const inlineButton = event?.target?.closest?.('[data-agent-inline-approve], [data-agent-inline-reject]');
+    if (inlineButton) {
+      const messageId = inlineButton.closest('[data-agent-review-message-id]')?.dataset.agentReviewMessageId;
+      const approve = Boolean(inlineButton.dataset.agentInlineApprove);
+      reviewInline(messageId, inlineButton.dataset.agentInlineApprove || inlineButton.dataset.agentInlineReject, approve ? 'approve' : 'reject');
+      return;
+    }
+    const rejectDraftButton = event?.target?.closest?.('[data-agent-reject-planned-page]');
+    if (rejectDraftButton) {
+      notebookActions.rejectPlannedPage(rejectDraftButton.dataset.agentRejectPlannedPage);
+      return;
+    }
     const reviewMessageButton = event?.target?.closest?.('[data-agent-review-message]')
       || (event?.target?.dataset?.agentReviewMessage ? event.target : null);
     if (reviewMessageButton) {

@@ -88,6 +88,7 @@ export function createAgentChatShellController({
   safeText,
   runtime,
   notebookDraftAdapter,
+  protocolReviewAdapter,
   hasImageCapture = false
 }) {
   let sessionManager = null;
@@ -176,8 +177,9 @@ export function createAgentChatShellController({
       const value = Number.parseFloat(computedStyle?.getPropertyValue?.(name) || '');
       return Number.isFinite(value) && value > 0 ? value : fallback;
     };
-    const minHeight = readHeight('--agent-composer-min-height', 92);
-    const maxHeight = readHeight('--agent-composer-max-height', 220);
+    // Computed dimensions are pixels even when the theme uses rem or calc().
+    const minHeight = readHeight('min-height', 92);
+    const maxHeight = readHeight('max-height', 220);
     dom.input.style.height = 'auto';
     const nextHeight = Math.min(Math.max(dom.input.scrollHeight, minHeight), maxHeight);
     dom.input.style.height = `${nextHeight}px`;
@@ -200,7 +202,7 @@ export function createAgentChatShellController({
       || isHistoryNearBottom();
     if (dom.questionDock) {
       const questionHtml = renderingModule.renderActiveUserQuestion(visibleMessages, safeText);
-      dom.questionDock.innerHTML = questionHtml;
+      renderingModule.updateHistoryKeepingHtmlFrames(dom.questionDock, questionHtml);
       dom.questionDock.hidden = !questionHtml;
     }
     renderingModule.renderHistory({
@@ -209,6 +211,7 @@ export function createAgentChatShellController({
       state,
       safeText,
       notebookDraftAdapter,
+      protocolReviewAdapter,
       showUserQuestions: !dom.questionDock
     });
     if (shouldStickToBottom) {

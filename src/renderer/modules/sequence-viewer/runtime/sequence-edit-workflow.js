@@ -45,10 +45,13 @@ export function createSequenceEditActions(ctx) {
     const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
     const nextRecords = [...state.records];
     const current = nextRecords[selectedIndex];
+    // A feature the caller is swapping out wholesale is dropped, not truncated.
+    const keptFeatures = (Array.isArray(current?.features) ? current.features : [])
+      .filter((feature) => feature !== payload?.replacedFeature);
     const nextRecord = {
       ...current,
       sequence: nextSequence,
-      features: adjustFeatureSegmentsForSequenceEdit(current?.features, { start: edit.start, end: edit.end }, edit.replacement.length, nextSequence.length)
+      features: adjustFeatureSegmentsForSequenceEdit(keptFeatures, { start: edit.start, end: edit.end }, edit.replacement.length, nextSequence.length)
     };
     updateEditState({
       current,

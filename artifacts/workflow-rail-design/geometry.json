@@ -1,0 +1,232 @@
+[
+  {
+    "viewport": [
+      1512,
+      982
+    ],
+    "rail": {
+      "top": 79,
+      "bottom": 982,
+      "height": 903,
+      "width": 280,
+      "client": 903,
+      "scroll": 903
+    },
+    "scroll": {
+      "top": 135,
+      "bottom": 982,
+      "height": 847,
+      "width": 279,
+      "client": 847,
+      "scroll": 847
+    },
+    "list": {
+      "top": 421.6875,
+      "bottom": 913,
+      "height": 491.3125,
+      "width": 247,
+      "client": 491,
+      "scroll": 2514
+    },
+    "add": {
+      "top": 934,
+      "bottom": 974,
+      "height": 40,
+      "width": 247,
+      "client": 38,
+      "scroll": 38
+    },
+    "description": {
+      "top": 237.6875,
+      "bottom": 301.6875,
+      "height": 64,
+      "width": 247,
+      "client": 62,
+      "scroll": 62
+    }
+  },
+  {
+    "viewport": [
+      1280,
+      800
+    ],
+    "rail": {
+      "top": 79,
+      "bottom": 800,
+      "height": 721,
+      "width": 280,
+      "client": 721,
+      "scroll": 721
+    },
+    "scroll": {
+      "top": 135,
+      "bottom": 800,
+      "height": 665,
+      "width": 279,
+      "client": 665,
+      "scroll": 665
+    },
+    "list": {
+      "top": 421.6875,
+      "bottom": 731,
+      "height": 309.3125,
+      "width": 247,
+      "client": 309,
+      "scroll": 2514
+    },
+    "add": {
+      "top": 752,
+      "bottom": 792,
+      "height": 40,
+      "width": 247,
+      "client": 38,
+      "scroll": 38
+    },
+    "description": {
+      "top": 237.6875,
+      "bottom": 301.6875,
+      "height": 64,
+      "width": 247,
+      "client": 62,
+      "scroll": 62
+    }
+  },
+  {
+    "viewport": [
+      1440,
+      700
+    ],
+    "rail": {
+      "top": 79,
+      "bottom": 700,
+      "height": 621,
+      "width": 280,
+      "client": 621,
+      "scroll": 621
+    },
+    "scroll": {
+      "top": 135,
+      "bottom": 700,
+      "height": 565,
+      "width": 279,
+      "client": 565,
+      "scroll": 565
+    },
+    "list": {
+      "top": 421.6875,
+      "bottom": 631,
+      "height": 209.3125,
+      "width": 247,
+      "client": 209,
+      "scroll": 2514
+    },
+    "add": {
+      "top": 652,
+      "bottom": 692,
+      "height": 40,
+      "width": 247,
+      "client": 38,
+      "scroll": 38
+    },
+    "description": {
+      "top": 237.6875,
+      "bottom": 301.6875,
+      "height": 64,
+      "width": 247,
+      "client": 62,
+      "scroll": 62
+    }
+  },
+  {
+    "viewport": [
+      1280,
+      560
+    ],
+    "rail": {
+      "top": 79,
+      "bottom": 560,
+      "height": 481,
+      "width": 280,
+      "client": 481,
+      "scroll": 481
+    },
+    "scroll": {
+      "top": 135,
+      "bottom": 560,
+      "height": 425,
+      "width": 279,
+      "client": 425,
+      "scroll": 475
+    },
+    "list": {
+      "top": 421.6875,
+      "bottom": 540.6875,
+      "height": 119,
+      "width": 236,
+      "client": 119,
+      "scroll": 2514
+    },
+    "add": {
+      "top": 561.6875,
+      "bottom": 601.6875,
+      "height": 40,
+      "width": 236,
+      "client": 38,
+      "scroll": 38
+    },
+    "description": {
+      "top": 237.6875,
+      "bottom": 301.6875,
+      "height": 64,
+      "width": 236,
+      "client": 62,
+      "scroll": 62
+    }
+  },
+  {
+    "viewport": [
+      900,
+      700
+    ],
+    "rail": {
+      "top": 149,
+      "bottom": 409.5,
+      "height": 260.5,
+      "width": 900,
+      "client": 260,
+      "scroll": 302
+    },
+    "scroll": {
+      "top": 205,
+      "bottom": 408.5,
+      "height": 203.5,
+      "width": 900,
+      "client": 204,
+      "scroll": 598
+    },
+    "list": {
+      "top": 446.1875,
+      "bottom": 684.1875,
+      "height": 238,
+      "width": 857,
+      "client": 238,
+      "scroll": 1906
+    },
+    "add": {
+      "top": 705.1875,
+      "bottom": 745.1875,
+      "height": 40,
+      "width": 857,
+      "client": 38,
+      "scroll": 38
+    },
+    "description": {
+      "top": 258.1875,
+      "bottom": 322.1875,
+      "height": 64,
+      "width": 857,
+      "client": 62,
+      "scroll": 62
+    }
+  }
+]

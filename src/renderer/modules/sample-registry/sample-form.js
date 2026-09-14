@@ -16,6 +16,7 @@ import {
 import { fillLocation, isEmptyLocation, readLocation, renderLocationFields } from './location-fields.js';
 import { appendPendingNotebookSampleCapture } from './notebook-capture.js';
 import { renderList } from './sample-list.js';
+import { readTypeFields, renderTypeFields } from './type-fields.js';
 import {
   ensureSampleState,
   makeDefaultCode,
@@ -76,6 +77,7 @@ export async function onSubmit(ctx, event) {
     concentration: sampleConcentrationInput.value.trim(),
     notes: sampleNotesInput.value.trim(),
     cellPassage: isCellLine ? readCellPassage(ctx, existing?.cellPassage) : null,
+    details: readTypeFields(ctx),
     location: isEmptyLocation(manualLocation) && autoLocation ? autoLocation : manualLocation,
     inventoryLink: linkedContainer
       ? {
@@ -123,6 +125,7 @@ export function resetForm(ctx) {
     sampleLinkPositionInput.value = '';
   }
   renderLocationFields(ctx);
+  renderTypeFields(ctx, null);
   fillCellPassage(ctx, null);
   renderCellPassageFields(ctx);
   renderCompoundFields(ctx);
@@ -162,6 +165,7 @@ export function editSample(ctx, sampleId) {
   }
   setMultiSelectValues(sampleLinkChemicalsInput, sample.chemicalLinks || []);
   fillLocation(ctx, sample.location || {});
+  renderTypeFields(ctx, sample.details);
   fillCellPassage(ctx, sample.cellPassage);
   renderCellPassageFields(ctx);
   renderCompoundFields(ctx);

@@ -1,6 +1,7 @@
 /* Late-load Sample Registry field-group refinements. */
 
 #sample-registry-view .sample-compound-fields,
+#sample-registry-view .sample-type-fields,
 #sample-registry-view .sample-cell-passage-fields {
   border: 1px solid var(--theme-border);
   border-radius: 8px;

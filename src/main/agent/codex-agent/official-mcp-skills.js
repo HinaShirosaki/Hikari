@@ -14,6 +14,7 @@ const OFFICIAL_SKILLS_ROOT = path.join(__dirname, 'official-skills');
 const OFFICIAL_MCP_SKILL_TOOL_REQUIREMENTS = Object.freeze({
   'assay-plotly': Object.freeze(['assay_table', 'plotly_graph']),
   container: Object.freeze(['container']),
+  'html-output': Object.freeze(['html_output']),
   'notebook-draft': Object.freeze(['notebook_draft']),
   'paper-retrieval': Object.freeze([
     'paper_intake_search_summaries',

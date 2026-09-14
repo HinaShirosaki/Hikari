@@ -1,3 +1,5 @@
+import { renderTypeFieldsMarkup } from '../sample-registry/type-fields.js';
+
 export function createWellEditorRenderer({
   safeText,
   uiState,
@@ -80,6 +82,7 @@ export function createWellEditorRenderer({
             ${renderSampleTypeOptions(activeSample.type || 'plasmid')}
           </select>
         </label>
+        <div data-sample-type-fields>${renderTypeFieldsMarkup(activeSample.type, activeSample.details)}</div>
         ${renderStructureAction({ mode: 'well-existing', sample: activeSample })}
         <label>
           Lot / Batch
@@ -124,6 +127,7 @@ export function createWellEditorRenderer({
             ${renderSampleTypeOptions('plasmid')}
           </select>
         </label>
+        <div data-sample-type-fields>${renderTypeFieldsMarkup('plasmid')}</div>
         ${renderStructureAction({ mode: 'well-new' })}
         <label>
           Lot / Batch

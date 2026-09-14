@@ -8,7 +8,7 @@
             </summary>
             <div class="gel-browser-body">
               <label>
-                Search Gels
+                <span class="sr-only">Search Gels</span>
                 <input id="gel-search" type="search" placeholder="Search saved gels" />
               </label>
               <div id="gel-list" class="gel-browser-list"></div>
@@ -16,48 +16,56 @@
           </details>
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
-            <label>
-              Gel Name
-              <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
-            </label>
-            <label>
-              Analysis Type
-              <select id="gel-type">
-                <option value="sds-page">SDS-PAGE</option>
-                <option value="western">Western Blot</option>
-                <option value="agarose">DNA/RNA Agarose</option>
-              </select>
-            </label>
-            <label>
-              Gel Image
-              <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
-            </label>
-            <label>
-              Ladder Preset
-              <select id="gel-ladder-preset"></select>
-            </label>
-            <div class="form-actions gel-process-row">
-              <button type="button" id="gel-process-image-btn" class="ghost-btn gel-compact-btn">Process Image</button>
-            </div>
-            <label class="gel-slider-field">
-              <span class="gel-slider-label">Denoise Strength</span>
-              <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
-              <span id="gel-denoise-strength-value" class="small-note">35%</span>
-            </label>
-            <label class="gel-slider-field">
-              <span class="gel-slider-label">Contrast Boost</span>
-              <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
-              <span id="gel-contrast-strength-value" class="small-note">100%</span>
-            </label>
-            <div class="form-actions">
-              <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
-              <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+            <div class="gel-form-fields">
+              <section class="gel-setup-group" aria-labelledby="gel-setup-title">
+                <h3 id="gel-setup-title" class="gel-setup-heading">Gel setup</h3>
+                <label>
+                  Gel Name
+                  <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+                </label>
+                <label>
+                  Gel Image
+                  <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
+                </label>
+                <label>
+                  Analysis Type
+                  <select id="gel-type">
+                    <option value="sds-page">SDS-PAGE</option>
+                    <option value="western">Western Blot</option>
+                    <option value="agarose">DNA/RNA Agarose</option>
+                  </select>
+                </label>
+                <label>
+                  Ladder Preset
+                  <select id="gel-ladder-preset"></select>
+                </label>
+              </section>
+              <section class="gel-setup-group" aria-labelledby="gel-processing-title">
+                <h3 id="gel-processing-title" class="gel-setup-heading">Image processing</h3>
+                <label class="gel-slider-field">
+                  <span class="gel-slider-label">Denoise Strength</span>
+                  <span id="gel-denoise-strength-value" class="small-note">35%</span>
+                  <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+                </label>
+                <label class="gel-slider-field">
+                  <span class="gel-slider-label">Contrast Boost</span>
+                  <span id="gel-contrast-strength-value" class="small-note">100%</span>
+                  <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+                </label>
+                <div class="form-actions gel-process-row">
+                  <button type="button" id="gel-process-image-btn" class="ghost-btn gel-compact-btn">Process Image</button>
+                </div>
+              </section>
+              <div class="form-actions gel-override-actions">
+                <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
+                <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+              </div>
             </div>
             <div id="gel-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
-            <div class="form-actions">
-              <button type="submit" id="gel-save-btn" class="primary-btn gel-compact-btn">Save</button>
-              <button type="button" id="gel-cancel-btn" class="ghost-btn gel-compact-btn">Cancel</button>
-              <button type="button" id="gel-export-csv-btn" class="ghost-btn gel-compact-btn">Export CSV</button>
+            <div class="form-actions gel-record-actions">
+              <button type="submit" id="gel-save-btn" class="primary-btn gel-record-btn">Save</button>
+              <button type="button" id="gel-cancel-btn" class="ghost-btn gel-record-btn">Cancel</button>
+              <button type="button" id="gel-export-csv-btn" class="ghost-btn gel-record-btn">Export CSV</button>
             </div>
           </form>
         </div>
