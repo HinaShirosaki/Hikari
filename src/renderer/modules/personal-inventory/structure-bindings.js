@@ -16,7 +16,7 @@ export function bindStructureButtons(ctx) {
     inventorySections.querySelectorAll(selector).forEach((select) => {
       select.addEventListener('change', syncStructureButtons);
       select.addEventListener('change', () => {
-        const fields = select.closest('.well-inline-editor')?.querySelector('[data-sample-type-fields]');
+        const fields = select.closest?.('.well-inline-editor')?.querySelector('[data-sample-type-fields]');
         if (fields) {
           fields.innerHTML = renderTypeFieldsMarkup(select.value);
         }
