@@ -56,11 +56,7 @@ data/Config/codex-cli-home/auth.json
 /enana-data.ena.json
 /Exported Standard Features/
 /Testdata/
-/TestData2/
-/TestData3/
-/TestData5/
-/TestData6/
-/TestData7/
+/TestData*/
 /idea/
 /reports/
 /colony-counter/
@@ -68,3 +64,8 @@ data/Config/codex-cli-home/auth.json
 # Stray local biology samples dropped into data/
 /data/*.gb
 /data/*.gbk
+
+# Local website, examples, and generated artifacts
+/website/
+/examples/
+/artifacts/
