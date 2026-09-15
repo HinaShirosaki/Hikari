@@ -82,22 +82,7 @@
                 <label for="protocol-steps">Steps (start each step with a bullet point)</label>
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
-                  <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="sample" aria-pressed="false">sample</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid" aria-pressed="false">plasmid</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein" aria-pressed="false">protein</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="compound" aria-pressed="false">compound</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="cell line" aria-pressed="false">cell line</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="strain" aria-pressed="false">strain</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="antibody" aria-pressed="false">antibody</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="enzyme" aria-pressed="false">enzyme</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="reagent" aria-pressed="false">reagent</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume" aria-pressed="false">volume</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer" aria-pressed="false">buffer</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="concentration" aria-pressed="false">concentration</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature" aria-pressed="false">temperature</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time" aria-pressed="false">time</button>
-                  </div>
+                  <div id="protocol-placeholder-presets" class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets"></div>
                 </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
               </div>
@@ -201,7 +186,7 @@
                     </label>
                     <div id="protocol-generate-attachment-list" class="agent-attachment-list" hidden></div>
                     <div class="agent-composer-toolbar">
-                      <button type="button" id="protocol-generate-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <button type="button" id="protocol-generate-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <div class="form-actions agent-composer-actions">
                         <button type="button" id="protocol-generate-send-btn" class="primary-btn hikari-agent-action">Generate Protocol</button>
                       </div>

@@ -5,6 +5,7 @@ const { AGENT } = require('../../../shared/ipc/channels');
 function registerAgentLogHandlers({
   ipcMain,
   cleanText,
+  getStorageRoot = () => '',
   observability,
   agentChatLogRuntime,
   getAgentChatLogPath,
@@ -53,7 +54,7 @@ function registerAgentLogHandlers({
   ipcMain.handle(AGENT.LIST_SKILLS, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const rawSnapshot = normalizeJsonPayload(normalizedPayload?.stateSnapshot, {});
-    const workspaceDir = process.cwd();
+    const workspaceDir = getStorageRoot() || process.cwd();
     if (!agentToolRuntime || typeof agentToolRuntime.listSkills !== 'function') {
       return {
         ok: false,

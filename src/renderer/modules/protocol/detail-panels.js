@@ -18,6 +18,7 @@ function createProtocolDetailPanels({
   getImportController,
   getPolishController,
   getGenerationController,
+  renderPlaceholderPresets,
   state,
   persist,
   safeText,
@@ -56,6 +57,7 @@ function createProtocolDetailPanels({
   }
 
   function showEditorPanel() {
+    renderPlaceholderPresets?.();
     applyDetailMode('edit');
     getImportController()?.syncProtocolImportPanelVisibility();
   }

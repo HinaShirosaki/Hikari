@@ -176,7 +176,12 @@ export function createUnsavedChangesService({
     }
     if (!showDialog(sources)) {
       respondToClose('cancel');
+      return;
     }
+    // Main gives us 3s to answer before it assumes the window hung. The user
+    // deciding in our dialog takes longer than that, so tell main we're alive
+    // and waiting; the real answer follows when they click.
+    api?.respondToAppClose?.('pending');
   }
 
   async function saveAndQuit() {

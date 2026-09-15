@@ -12,6 +12,7 @@ import { createProtocolEditorHelpers } from './editor-utils.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 import { createProtocolDetailPanels } from './detail-panels.js';
 import { createProtocolEditorActions } from './editor-actions.js';
+import { renderProtocolPlaceholderPresetButtons } from './placeholder-presets.js';
 
 export function initProtocolManagement({
   state,
@@ -115,6 +116,14 @@ export function initProtocolManagement({
     return state.protocols.find((item) => String(item?.id || '') === localState.activeProtocolId) || null;
   }
 
+  function renderPlaceholderPresets() {
+    return renderProtocolPlaceholderPresetButtons(
+      ui.protocolPlaceholderPresets,
+      state.settings,
+      safeText,
+      localState.activePlaceholderPreset
+    );
+  }
 
   const {
     applyDetailMode,
@@ -146,6 +155,7 @@ export function initProtocolManagement({
     getImportController: () => importController,
     getPolishController: () => polishController,
     getGenerationController: () => generationController,
+    renderPlaceholderPresets,
     state,
     persist,
     safeText,
@@ -308,14 +318,13 @@ export function initProtocolManagement({
   ui.protocolStepsInput?.addEventListener('keydown', editorHelpers.onBulletTextareaKeydown);
   ui.protocolStepsInput?.addEventListener('blur', () => editorHelpers.normalizeBulletTextarea(ui.protocolStepsInput));
   ui.addPlaceholderBtn?.addEventListener('click', addInteractivePlaceholderToken);
-  ui.placeholderPresetButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const placeholder = String(button.dataset.protocolPlaceholderPreset || '').trim();
-      if (placeholder) {
-        setActivePlaceholderPreset(placeholder);
-        addInteractivePlaceholderToken(placeholder);
-      }
-    });
+  ui.protocolPlaceholderPresets?.addEventListener('click', (event) => {
+    const button = event.target?.closest?.('[data-protocol-placeholder-preset]') || event.target;
+    const placeholder = String(button?.dataset?.protocolPlaceholderPreset || '').trim();
+    if (placeholder) {
+      setActivePlaceholderPreset(placeholder);
+      addInteractivePlaceholderToken(placeholder);
+    }
   });
   function closeProtocolSortMenu() {
     if (ui.protocolSortMenu) {
@@ -376,6 +385,7 @@ export function initProtocolManagement({
 
   listController.updateSortButtonLabels();
   generationController.syncProtocolGenerateButtonVisibility();
+  renderPlaceholderPresets();
   applyDetailMode('empty');
   selectionInsightsController?.registerHost?.({
     key: 'protocol-view',
@@ -450,6 +460,7 @@ export function initProtocolManagement({
     ),
     importProtocolsFromJson: importController.importProtocolsFromJson,
     renderList: listController.renderList,
+    renderPlaceholderPresets,
     saveUnsavedChanges: async () => {
       const protocol = onProtocolSubmit({ preventDefault() {} });
       return Boolean(protocol) && localState.protocolDetailMode !== 'edit';

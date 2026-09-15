@@ -52,7 +52,7 @@ export function getProtocolDom(documentRef = document) {
     protocolPolishStatus: doc.getElementById('protocol-polish-status'),
     addPlaceholderBtn: doc.getElementById('add-placeholder-btn'),
     placeholderNameInput: doc.getElementById('placeholder-name'),
-    placeholderPresetButtons: [...(doc.querySelectorAll?.('[data-protocol-placeholder-preset]') || [])],
+    protocolPlaceholderPresets: doc.getElementById('protocol-placeholder-presets'),
     protocolList: doc.getElementById('protocol-list'),
     protocolSortMenuBtn: doc.getElementById('protocol-sort-menu-btn'),
     protocolSortMenu: doc.getElementById('protocol-sort-menu'),

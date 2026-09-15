@@ -184,6 +184,7 @@ test('protocol-management opens JSON import in an overlay on create and hides th
     'protocol-view-title',
     'protocol-view-content',
     'protocol-form',
+    'protocol-placeholder-presets',
     'protocol-json-import-panel',
     'open-protocol-json-import-btn',
     'protocol-json-import-overlay',
@@ -251,6 +252,15 @@ test('protocol-management opens JSON import in an overlay on create and hides th
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, false);
   assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-btn').hidden, false);
+
+  const presetToolbar = document.getElementById('protocol-placeholder-presets');
+  state.settings.sampleTypeLabels = { custom_lysate: 'Lysate' };
+  protocol.renderPlaceholderPresets();
+  const lysatePreset = presetToolbar.querySelectorAll('[data-protocol-placeholder-preset]')
+    .find((button) => button.dataset.protocolPlaceholderPreset === 'Lysate');
+  assert.ok(lysatePreset, 'configured custom sample types appear as Protocol interactive bars');
+  trigger(presetToolbar, 'click', { target: lysatePreset });
+  assert.equal(document.getElementById('protocol-steps').value, '[Lysate]');
 
   trigger(document.getElementById('open-protocol-json-import-btn'), 'click');
   assert.equal(document.getElementById('protocol-json-import-overlay').hidden, false);

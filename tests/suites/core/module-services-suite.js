@@ -451,7 +451,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
 
       elements.get('unsaved-changes-close-btn').click();
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
-      assert.deepEqual(responses, ['cancel']);
+      assert.deepEqual(responses, ['pending', 'cancel']);
 
       service.handleCloseRequested();
       assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
@@ -459,7 +459,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       await service.saveAndQuit();
 
       assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
-      assert.deepEqual(responses, ['cancel', 'quit']);
+      assert.deepEqual(responses, ['pending', 'cancel', 'pending', 'quit']);
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
 
       // Unchecked editors stay dirty: the app quits and drops their work.
@@ -478,7 +478,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
 
       assert.deepEqual(savedKeys, ['sampleRegistry']);
       assert.equal(dirty.get('protocol'), true);
-      assert.deepEqual(responses, ['cancel', 'quit', 'quit']);
+      assert.deepEqual(responses, ['pending', 'cancel', 'pending', 'quit', 'pending', 'quit']);
 
       // Nothing checked leaves the primary action unavailable.
       dirty.set('sampleRegistry', true);

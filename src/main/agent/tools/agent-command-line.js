@@ -82,7 +82,10 @@ function looksMutatingCommand(command = '') {
 function createAgentCommandLineRuntime(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const outputLimit = clampInteger(deps.outputLimit, DEFAULT_OUTPUT_LIMIT, 2000, 40000);
-  const defaultCwd = cleanText(deps.defaultCwd, 1200) || process.cwd();
+  const resolveDefaultCwd = () => cleanText(
+    typeof deps.defaultCwd === 'function' ? deps.defaultCwd() : deps.defaultCwd,
+    1200
+  ) || process.cwd();
   const defaultShell = process.platform === 'win32'
     ? (process.env.ComSpec || 'cmd.exe')
     : (process.env.SHELL || '/bin/zsh');
@@ -95,6 +98,7 @@ function createAgentCommandLineRuntime(deps = {}) {
 
   async function execute(input = {}, context = {}) {
     const command = cleanText(input.command || input.cmd, 12000);
+    const defaultCwd = resolveDefaultCwd();
     const cwd = resolveWorkingDirectory(
       input.cwd
       || input.working_directory

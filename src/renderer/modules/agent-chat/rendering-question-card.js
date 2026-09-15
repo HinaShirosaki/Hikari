@@ -1,4 +1,5 @@
 import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
+import { renderAgentChatIcon } from './icons.js';
 
 export function renderUserQuestionCard(meta, messageId = '', safeText, { disabled = false } = {}) {
   const explicitUserQuestion = meta?.user_question
@@ -76,10 +77,7 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
             title="${safeText(question.submit_label)}"
             ${disabledAttr}
           >
-            <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-              <path d="M12 19V5"></path>
-              <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
-            </svg>
+            ${renderAgentChatIcon('send', { className: 'agent-send-icon' })}
             <span class="sr-only">${safeText(question.submit_label)}</span>
           </button>
         </div>

@@ -32,7 +32,7 @@
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <label class="agent-composer-project agent-composer-project-inline">
                         <span class="sr-only">Project Scope</span>
                         <select id="agent-project-select" aria-label="Project Scope">
@@ -42,10 +42,7 @@
                     </div>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
-                        <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                          <path d="M12 19V5"></path>
-                          <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
-                        </svg>
+                        <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
                         <span class="sr-only">Send message</span>
                       </button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
@@ -60,7 +57,7 @@
                   <div>
                     <h3 id="agent-review-title">Review generated drafts</h3>
                   </div>
-                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
                 </header>
                 <div id="agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
                 <footer class="agent-review-footer">

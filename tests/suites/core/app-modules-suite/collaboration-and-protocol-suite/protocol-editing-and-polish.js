@@ -4,6 +4,7 @@ module.exports = function registerAppCollaborationAndProtocolSuiteProtocolEditin
   with (scope) {
 test('protocol-management keeps interactive-bar presets outside the Steps label hit area', () => {
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'protocol-management-view.html'), 'utf8');
+  const presetModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'placeholder-presets.js'));
   const labelBodies = [...viewSource.matchAll(/<label(?:\s[^>]*)?>([\s\S]*?)<\/label>/g)]
     .map((match) => match[1]);
 
@@ -16,25 +17,12 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
     false,
     'preset buttons must not be descendants of a label that forwards distant clicks'
   );
-
-  const presetNames = [...viewSource.matchAll(/data-protocol-placeholder-preset="([^"]+)"/g)]
-    .map((match) => match[1]);
-  assert.deepEqual(presetNames, [
-    'sample',
-    'plasmid',
-    'protein',
-    'compound',
-    'cell line',
-    'strain',
-    'antibody',
-    'enzyme',
-    'reagent',
-    'volume',
-    'buffer',
-    'concentration',
-    'temperature',
-    'time'
-  ]);
+  assert.match(viewSource, /id="protocol-placeholder-presets"/);
+  assert.deepEqual(
+    presetModule.getProtocolPlaceholderPresetEntries({ sampleTypeLabels: { custom_lysate: 'Lysate' } })
+      .map((entry) => entry.name),
+    ['Plasmid', 'Cell Line', 'Strain', 'Antibody', 'Protein', 'Chemical', 'Primer', 'Lysate', 'volume', 'buffer', 'concentration', 'temperature', 'time']
+  );
 });
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([

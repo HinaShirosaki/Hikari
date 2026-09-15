@@ -10,6 +10,7 @@ import { renderAssistantGeneratedTrace } from './rendering-trace.js';
 import { renderUserQuestionCard } from './rendering-question-card.js';
 import { formatTime } from './rendering-time.js';
 import { asArray, trimText } from './shared.js';
+import { renderAgentChatIcon } from './icons.js';
 
 export { updateHistoryKeepingHtmlFrames };
 
@@ -129,7 +130,7 @@ export function renderHistory({
           ${role === 'assistant' && !hasLiveProgress && trimText(message.text) && message.id ? `
             <footer class="agent-message-actions">
               <button type="button" class="ghost-btn agent-message-copy" data-agent-copy-message="${safeText(message.id)}" aria-label="Copy response" title="Copy response">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg>
+                ${renderAgentChatIcon('copy', { className: 'agent-message-copy-icon' })}
               </button>
             </footer>` : ''}
         </article>

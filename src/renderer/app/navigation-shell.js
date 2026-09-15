@@ -2,6 +2,7 @@ import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
 import { createAppDock } from './navigation-shell/app-dock.js';
 import { createSearchSuggestions } from './navigation-shell/search-suggestions.js';
 import { runSearchInput } from '../lib/search-field-lens.js';
+import { renderAgentChatIcon } from '../modules/agent-chat/icons.js';
 
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 
@@ -127,30 +128,10 @@ export function createNavigationShell({
     return app?.agentChatRail === true;
   }
 
-  function agentChatRailToggleIcon(expanded, isPapers = false) {
-    if (isPapers) {
-      return `
-        <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-          <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"></path>
-          <path d="M20 2v4m-2-2h4"></path>
-        </svg>
-      `;
-    }
-    if (expanded) {
-      return `
-        <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-          <rect x="3.5" y="4.5" width="17" height="15" rx="2.5"></rect>
-          <path d="M14.5 4.5v15"></path>
-          <path d="m7.25 9.5 2.5 2.5-2.5 2.5"></path>
-        </svg>
-      `;
-    }
-    return `
-      <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-        <path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"></path>
-        <path d="M8.5 10h.01M12 10h.01M15.5 10h.01"></path>
-      </svg>
-    `;
+  function agentChatRailToggleIcon(expanded) {
+    return renderAgentChatIcon(expanded ? 'rail-collapse' : 'chat', {
+      className: 'universal-agent-chat-rail__toggle-icon'
+    });
   }
 
   function syncAgentChatRailExpansion(enabled) {
@@ -164,7 +145,7 @@ export function createNavigationShell({
       agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
     }
     if (agentChatRailToggleBtn) {
-      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded, isPapers);
+      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded);
       agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
       const label = isPapers
         ? (expanded ? 'Close Hikari' : 'Ask Hikari')

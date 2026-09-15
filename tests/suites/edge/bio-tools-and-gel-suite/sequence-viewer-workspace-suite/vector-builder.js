@@ -260,8 +260,9 @@ test('[EDGE] sequence-viewer alignment workspace stays quiet until input needs f
   assert.equal(document.getElementById('sequence-viewer-alignment-reset-btn').disabled, true);
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-file-name').textContent,
-    'No query file selected'
+    ''
   );
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-file-name').hidden, true);
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-summary').textContent,
     ''

@@ -704,7 +704,7 @@ body.has-shared-left-rail-view .workspace-main {
   height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.75;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -791,106 +791,6 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 .universal-agent-chat-rail .agent-chat-item-user {
   padding: 8px 10px;
   background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
-}
-
-.universal-agent-chat-rail .agent-composer-shell,
-.universal-agent-chat-rail .agent-conversation-shell.is-empty-chat .agent-composer-shell {
-  padding: 0;
-}
-
-.universal-agent-chat-rail .agent-composer-card {
-  width: 100%;
-  gap: 10px;
-  padding: 10px;
-  border-radius: 14px;
-}
-
-.universal-agent-chat-rail .agent-question-dock {
-  width: 100%;
-  max-height: min(42vh, 360px);
-  border-radius: 14px;
-}
-
-.universal-agent-chat-rail .agent-user-question-card {
-  gap: 10px;
-  padding: 12px;
-  border-radius: 14px;
-}
-
-.universal-agent-chat-rail .agent-send-icon-btn {
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
-}
-
-.universal-agent-chat-rail .agent-composer-card textarea {
-  --agent-composer-min-height: 54px;
-  --agent-composer-max-height: 150px;
-  min-height: var(--agent-composer-min-height);
-  max-height: var(--agent-composer-max-height);
-  font-size: 0.94rem;
-  line-height: 1.45;
-}
-
-.universal-agent-chat-rail .agent-composer-label {
-  gap: 6px;
-}
-
-.agent-rail-quick-prompts {
-  display: flex;
-  gap: 6px;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0 0 2px;
-  scrollbar-width: none;
-}
-
-.agent-rail-quick-prompts::-webkit-scrollbar {
-  display: none;
-}
-
-.agent-rail-quick-prompt {
-  flex: 0 0 auto;
-  min-height: 28px;
-  border: 0;
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 74%, transparent);
-  color: var(--theme-text-muted);
-  font-size: 0.76rem;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.agent-rail-quick-prompt:hover,
-.agent-rail-quick-prompt:focus-visible {
-  color: var(--theme-text-strong);
-  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
-  outline: none;
-}
-
-.universal-agent-chat-rail .agent-composer-toolbar {
-  align-items: center;
-  flex-direction: row;
-  flex-wrap: nowrap;
-}
-
-.universal-agent-chat-rail .agent-composer-toolbar-start {
-  flex: 0 0 auto;
-}
-
-.universal-agent-chat-rail .agent-composer-actions {
-  width: auto;
-  margin-left: auto;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.universal-agent-chat-rail .agent-composer-actions.form-actions {
-  width: auto;
-  margin-left: auto;
-  justify-content: flex-end;
 }
 
 .app-dock {

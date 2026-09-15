@@ -1,13 +1,14 @@
 import { asArray, trimText } from './shared.js';
+import { renderAgentChatIcon } from './icons.js';
 import { getProtocolReviewStatus, resolveNotebookAppendReviewState } from './review-overlay/review-status.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 
 function renderCard({ key, title, kind, status, preview, className = '' }, safeText) {
   return `<details class="agent-output-card agent-draft-card ${className}" data-agent-card-key="${safeText(key)}">
     <summary class="agent-output-summary">
-      <span class="agent-output-icon" aria-hidden="true"></span>
+      <span class="agent-output-icon" aria-hidden="true">${renderAgentChatIcon('draft', { className: 'agent-output-icon-glyph' })}</span>
       <span class="agent-output-copy"><strong>${safeText(title)}</strong><span>${safeText(kind)} · ${safeText(status)}</span></span>
-      <span class="agent-output-toggle"><span class="agent-output-show">Review draft</span><span class="agent-output-hide">Close preview</span><span class="agent-output-disclosure" aria-hidden="true"></span></span>
+      <span class="agent-output-toggle"><span class="agent-output-show">Review draft</span><span class="agent-output-hide">Close preview</span><span class="agent-output-disclosure" aria-hidden="true">${renderAgentChatIcon('chevron-right')}</span></span>
     </summary>
     ${preview}
   </details>`;

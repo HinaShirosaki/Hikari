@@ -85,6 +85,7 @@ function createMainAgentServices(deps = {}) {
   const requestCodexCliText = typeof deps.requestCodexCliText === 'function'
     ? deps.requestCodexCliText
     : (async () => '');
+  const getStorageRoot = typeof deps.getStorageRoot === 'function' ? deps.getStorageRoot : (() => '');
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
@@ -328,7 +329,7 @@ function createMainAgentServices(deps = {}) {
   const plotlyGraphRuntime = createAgentPlotlyGraphRuntime({});
   const memoryRuntime = createAgentMemoryRuntime({
     ...sharedAgentLlmDeps,
-    memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
+    memoryFilePath: getAgentMemoryFilePath
   });
 
   const pdfTextExtractionRuntime = createPdfTextExtractionRuntime({
@@ -383,7 +384,7 @@ function createMainAgentServices(deps = {}) {
   });
   const commandLineToolRuntime = createAgentCommandLineRuntime({
     cleanText,
-    defaultCwd: process.cwd()
+    defaultCwd: getStorageRoot
   });
 
   registerAgentToolExecutors({

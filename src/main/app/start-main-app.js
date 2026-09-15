@@ -121,6 +121,11 @@ function startMainApp() {
       closeResponseTimer = null;
     }
     const action = String(payload?.action || '').trim().toLowerCase();
+    if (action === 'pending') {
+      // Renderer is showing its own unsaved-changes dialog; keep waiting for
+      // the user's answer without the hung-window fallback.
+      return;
+    }
     closeRequestPending = false;
     if (action !== 'quit') {
       appQuitPending = false;

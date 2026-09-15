@@ -192,7 +192,7 @@ function createAgentControllerCore({
       1600
     );
     const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
-    const workspaceDir = process.cwd();
+    const workspaceDir = deps.getStorageRoot?.() || process.cwd();
     const skillRuntimeInput = {
       workspaceDir,
       settings: rawSnapshot?.settings || {},

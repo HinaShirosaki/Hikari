@@ -380,11 +380,21 @@ function createScheduledTaskService({
     await writeQueue.catch(() => {});
   }
 
+  // Re-read from getScheduledTasksPath(), e.g. after the storage root moves.
+  async function reload() {
+    const wasStarted = started;
+    await stop();
+    loaded = false;
+    tasks.clear();
+    return wasStarted ? start() : ensureLoaded();
+  }
+
   return {
     createTask,
     deleteTask,
     getTask,
     listTasks,
+    reload,
     runTask,
     start,
     stop,

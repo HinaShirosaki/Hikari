@@ -31,7 +31,8 @@ function createProtocolEditorActions({
 
   function setActivePlaceholderPreset(placeholderName = '') {
     localState.activePlaceholderPreset = String(placeholderName || '').trim();
-    ui.placeholderPresetButtons.forEach((button) => {
+    const buttons = ui.protocolPlaceholderPresets?.querySelectorAll?.('[data-protocol-placeholder-preset]') || [];
+    buttons.forEach((button) => {
       const isActive = String(button.dataset.protocolPlaceholderPreset || '').trim() === localState.activePlaceholderPreset;
       button.classList.toggle('is-active', isActive);
       button.setAttribute('aria-pressed', String(isActive));

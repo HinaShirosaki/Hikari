@@ -25,9 +25,12 @@ function createAgentMemoryRuntime(deps = {}) {
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const createId = typeof deps.createId === 'function' ? deps.createId : createMemoryId;
   const fsModule = deps.fs && typeof deps.fs.readFile === 'function' ? deps.fs : fs;
-  const memoryFilePath = cleanText(deps.memoryFilePath, 2400);
+  // A getter lets the file follow the storage root when it moves at runtime.
+  const resolveMemoryFilePath = typeof deps.memoryFilePath === 'function'
+    ? () => cleanText(deps.memoryFilePath(), 2400)
+    : () => cleanText(deps.memoryFilePath, 2400);
   const store = deps.store instanceof Map ? deps.store : new Map();
-  let hasLoaded = memoryFilePath ? false : true;
+  let loadedPath = null;
 
   function normalizeAction(value) {
     const normalized = cleanText(value, 40).toLowerCase();
@@ -89,10 +92,17 @@ function createAgentMemoryRuntime(deps = {}) {
   }
 
   async function ensureLoaded() {
-    if (hasLoaded || !memoryFilePath) {
+    const memoryFilePath = resolveMemoryFilePath();
+    if (loadedPath === memoryFilePath) {
       return;
     }
-    hasLoaded = true;
+    if (loadedPath) {
+      store.clear();
+    }
+    loadedPath = memoryFilePath;
+    if (!memoryFilePath) {
+      return;
+    }
     try {
       const raw = await fsModule.readFile(memoryFilePath, 'utf8');
       const parsed = JSON.parse(String(raw || '{}'));
@@ -115,6 +125,7 @@ function createAgentMemoryRuntime(deps = {}) {
   }
 
   async function persist() {
+    const memoryFilePath = resolveMemoryFilePath();
     if (!memoryFilePath) {
       return;
     }

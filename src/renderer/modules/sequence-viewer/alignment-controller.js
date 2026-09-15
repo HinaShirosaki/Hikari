@@ -185,7 +185,8 @@ export function createSequenceViewerAlignmentController(config = {}) {
 
   function renderQuerySource() {
     if (elements.alignmentQueryFileName) {
-      elements.alignmentQueryFileName.textContent = state.query.fileName || 'No query file selected';
+      elements.alignmentQueryFileName.textContent = state.query.fileName || '';
+      elements.alignmentQueryFileName.hidden = !state.query.fileName;
     }
 
     if (elements.alignmentQuerySummary) {

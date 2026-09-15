@@ -72,14 +72,9 @@ function registerDataIpc(deps = {}) {
   const getStorageRootPointerPath = typeof deps.getStorageRootPointerPath === 'function'
     ? deps.getStorageRootPointerPath
     : (() => '');
-  const getUserDataPath = typeof deps.getUserDataPath === 'function' ? deps.getUserDataPath : (() => '');
   const getBundledPluginPath = typeof deps.getBundledPluginPath === 'function'
     ? deps.getBundledPluginPath
     : (() => '');
-  const legacyUserDataFilePath = () => {
-    const userDataPath = cleanText(getUserDataPath(), 2400);
-    return userDataPath ? path.join(userDataPath, 'enana-data.json') : '';
-  };
   const importStorageRoot = deps.importStorageRoot;
   const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
   const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
@@ -115,6 +110,7 @@ function registerDataIpc(deps = {}) {
     fs,
     cleanText,
     getStorageRootPointerPath,
+    setStorageRoot: deps.setStorageRoot,
     paperKnowledgeDatabaseRuntime
   });
 
@@ -138,8 +134,7 @@ function registerDataIpc(deps = {}) {
     }
     // ponytail: pre-pointer installs only recorded the root inside a saved
     // snapshot, so fall back to those. Drop once no one is upgrading from them.
-    const snapshotRoot = await readStorageRootFrom(getDefaultDataFilePath(), 'snapshot')
-      || await readStorageRootFrom(legacyUserDataFilePath(), 'snapshot');
+    const snapshotRoot = await readStorageRootFrom(getDefaultDataFilePath(), 'snapshot');
     return { ok: Boolean(snapshotRoot), storagePath: snapshotRoot };
   });
 
