@@ -2,6 +2,7 @@
 
 const fsPromises = require('node:fs/promises');
 const { Buffer } = require('node:buffer');
+const { pathToFileURL } = require('node:url');
 
 const { joinTextItems } = require('../pdf-text-layout.js');
 const { ensureObject } = require('../../../lib/normalize.js');
@@ -29,7 +30,7 @@ function createPdfDocumentLoading({
     if (!pdfJsModulePromise) {
       const moduleUrl = vendorPdfJsPath.startsWith('file:')
         ? vendorPdfJsPath
-        : `file://${vendorPdfJsPath}`;
+        : pathToFileURL(vendorPdfJsPath).href;
       pdfJsModulePromise = Promise.resolve(dynamicImport(moduleUrl)).catch((error) => {
         pdfJsModulePromise = null;
         throw error;

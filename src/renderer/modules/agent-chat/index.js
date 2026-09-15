@@ -161,10 +161,8 @@ export function initAgentChat({
   const historyController = createHistoryActionController({
     api,
     state,
-    input: dom.input,
     persist,
     setStatus: shell.setStatus,
-    syncComposerHeight: shell.syncComposerHeight,
     renderContextSummary: shell.renderContextSummary,
     renderHistoryView: shell.renderHistoryView,
     answerAssistantQuestion: questionController.answerAssistantQuestion,

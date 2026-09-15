@@ -13,6 +13,7 @@ import {
   getJsPdfCtor,
   safeValue,
   sanitizeFileName,
+  sanitizeDocText,
   font,
   setTextColor,
   addPage,
@@ -21,6 +22,7 @@ import {
   estimateTextWidth
 } from './doc-context.js';
 import { drawHikariPdfCornerIcon } from './branding.js';
+import { printPdfBytes } from '../print/index.js';
 
 function createContext({
   title,
@@ -41,11 +43,11 @@ function createContext({
     return null;
   }
 
-  const doc = new JsPdf({
+  const doc = sanitizeDocText(new JsPdf({
     orientation,
     unit: 'pt',
     format
-  });
+  }));
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageMargins = margins && typeof margins === 'object'
@@ -191,8 +193,14 @@ function writeFooters(ctx) {
   }
 }
 
-function finishAndSave(ctx, fileNameBase) {
+// print: true sends the same PDF to the print dialog instead of saving it,
+// so the printed page and the exported PDF are always identical.
+function finishAndSave(ctx, fileNameBase, { print = false } = {}) {
   writeFooters(ctx);
+  if (print) {
+    printPdfBytes(ctx.doc.output('arraybuffer'), { title: ctx.footerLabel || 'Print' });
+    return;
+  }
   ctx.doc.save(`${sanitizeFileName(fileNameBase, 'export')}.pdf`);
 }
 

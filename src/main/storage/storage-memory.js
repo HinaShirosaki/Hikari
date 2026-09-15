@@ -16,7 +16,8 @@ async function writeProjectMemoryFile({
   folderPath,
   snapshot,
   projectRecord,
-  requestNotebookConclusion
+  requestNotebookConclusion,
+  regenerateConclusions = false
 } = {}) {
   const filePath = path.join(folderPath, MEMORY_FILE_NAME);
   const input = buildProjectMemoryInput({
@@ -29,7 +30,7 @@ async function writeProjectMemoryFile({
   });
   latestProjectMemoryInputs.set(input.projectKey, input);
   const rendered = await enqueueProjectMemoryWork(input.projectKey, () => (
-    renderProjectMemoryInput(input, { writePrunedCache: true })
+    renderProjectMemoryInput(input, { writePrunedCache: true, resetConclusions: regenerateConclusions })
   ));
   const pending = rendered.misses;
   if (pending.length) {

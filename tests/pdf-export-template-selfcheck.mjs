@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 // Stub jsPDF: records the text/shape calls so we can assert on the rendered template.
-const calls = { text: [], images: [], pages: 1, saved: '', documents: [] };
+const calls = { text: [], images: [], pages: 1, saved: '', output: '', documents: [] };
 
 class FakeDoc {
   constructor(options = {}) {
@@ -27,7 +27,14 @@ class FakeDoc {
 
   setFont() {}
 
-  setFontSize() {}
+  // Glyph width scales with the active font size so wrap-before-font-set bugs surface.
+  setFontSize(size) {
+    this.fontSize = Number(size) || 10;
+  }
+
+  charWidth() {
+    return (this.fontSize || 10) * 0.5;
+  }
 
   setTextColor() {}
 
@@ -48,12 +55,12 @@ class FakeDoc {
   }
 
   getTextWidth(text) {
-    return String(text || '').length * 5;
+    return String(text || '').length * this.charWidth();
   }
 
   splitTextToSize(text, maxWidth) {
     const words = String(text ?? '').split(/\s+/).filter(Boolean);
-    const perLine = Math.max(1, Math.floor(maxWidth / 5));
+    const perLine = Math.max(1, Math.floor(maxWidth / this.charWidth()));
     const lines = [];
     let current = '';
     words.forEach((word) => {
@@ -88,6 +95,11 @@ class FakeDoc {
 
   save(name) {
     calls.saved = name;
+  }
+
+  output(type) {
+    calls.output = type;
+    return new ArrayBuffer(8);
   }
 }
 
@@ -148,6 +160,7 @@ const {
   exportProjectNotebookEntriesPdf,
   exportProtocolPdf
 } = await import('../src/renderer/modules/pdf-export/index.js');
+const { resolveTableColumnWidths } = await import('../src/renderer/modules/pdf-export/tables.js');
 
 const ok = exportProtocolPdf({
   name: 'Plasmid mini-prep',
@@ -235,6 +248,28 @@ assert.ok(calls.text.some((item) => item.text.includes('3.5 uM')), 'linked plate
 calls.text.length = 0;
 calls.images.length = 0;
 calls.pages = 1;
+const wideOk = await exportNotebookEntryPdf({
+  entry: {
+    id: 'entry-wide',
+    projectName: 'Atlas',
+    protocolName: 'Imaging',
+    experimentName: 'Wide table',
+    resultTables: [{
+      columns: ['a', 'b', 'c', 'd', 'e', 'f'].map((field) => ({ field, title: field.toUpperCase() })),
+      rows: [{ a: 'x'.repeat(80), b: '1', c: '2', d: '3', e: '4', f: '5' }]
+    }],
+    values: {}
+  },
+  protocol: { steps: [] },
+  pdfSettings: { pageSize: 'a4', stapleEdge: 'none' }
+});
+assert.equal(wideOk, true, 'wide-table notebook export should report success');
+assert.equal(calls.documents.at(-1).options.orientation, 'p', 'wide result tables never flip the page to landscape');
+assert.equal(calls.documents.at(-1).options.format, 'a4', 'wide result tables keep the selected page size');
+
+calls.text.length = 0;
+calls.images.length = 0;
+calls.pages = 1;
 calls.saved = '';
 const projectNotebookOk = await exportProjectNotebookEntriesPdf({
   project: { id: 'atlas', name: 'Atlas' },
@@ -277,5 +312,51 @@ assert.equal(projectFigures.length, 1, 'attached images are embedded in whole-pr
 assert.equal(projectCornerIcons.length, calls.pages, 'the Hikari icon is repeated on every project notebook PDF page');
 assert.ok(calls.text.some((item) => item.text.includes('Project PDF Sample')), 'project notebook PDFs retain linked plate sample labels');
 assert.ok(calls.text.some((item) => item.text.includes('7 uM')), 'project notebook PDFs retain linked plate concentration labels');
+
+// Print reuses the exact same PDF builder: bytes go to the print dialog, nothing is saved.
+calls.saved = '';
+calls.output = '';
+exportProtocolPdf({ name: 'Print me', steps: [] }, { print: true });
+assert.equal(calls.saved, '', 'print mode never saves a file');
+assert.equal(calls.output, 'arraybuffer', 'print mode hands the rendered PDF bytes to the print dialog');
+
+// Built-in Helvetica is WinAnsi-only: Greek mu becomes the micro sign, and hard-wrapped
+// generator text flows like the on-screen view (blank lines still break paragraphs).
+calls.text.length = 0;
+calls.pages = 1;
+exportProtocolPdf({
+  name: 'Encoding',
+  purpose: 'Line one\nline two\n\nSecond paragraph',
+  steps: [{ id: 's1', text: 'Add 5 \u03bcL at \u2265 4 \u00b0C\nthen mix.' }],
+  troubleshooting: 'Check \u03b1-tubulin \u2192 signal'
+});
+const drawn = calls.text.map((item) => item.text);
+assert.ok(drawn.includes('Add 5 \u00b5L at >= 4 \u00b0C then mix.'), `mu/>= substituted and newline flowed, got ${JSON.stringify(drawn)}`);
+assert.ok(drawn.includes('Line one line two'), 'single newline in purpose flows into one line');
+assert.ok(drawn.includes('Second paragraph'), 'blank line keeps the paragraph break');
+assert.ok(drawn.includes('Check alpha-tubulin -> signal'), 'other non-WinAnsi symbols get readable substitutes');
+assert.ok(drawn.every((line) => !/[^\u0000-\u00ff\u2018-\u2022\u2013\u2014\u2026\u2122]/.test(line)), 'nothing outside WinAnsi reaches jsPDF');
+
+// The first step after a heading must wrap with the body font, not the heading font.
+calls.text.length = 0;
+calls.pages = 1;
+const longStep = 'Prepare complete medium and maintain cells under validated culture conditions and confirm they are healthy and free of contamination before seeding.';
+exportProtocolPdf({ name: 'Wrap', materials: [longStep], steps: [{ id: 'a', text: longStep }, { id: 'b', text: longStep }] });
+const stepLines = calls.text.filter((item) => item.x === 72 + 22).map((item) => item.text);
+assert.ok(stepLines.length >= 2, 'both steps rendered');
+assert.equal(stepLines[0], stepLines[stepLines.length / 2], 'first step wraps identically to a later step');
+const bulletLines = calls.text.filter((item) => item.x === 72 + 14).map((item) => item.text);
+assert.equal(bulletLines[0], stepLines[0].slice(0, bulletLines[0].length), 'first bullet wraps with the body font too');
+
+// Many columns: narrow ones sit at the floor, the rest absorb it — the table never exceeds the margin.
+{
+  const doc = new FakeDoc({ format: 'letter' });
+  doc.setFontSize(8.5);
+  const headers = ['#', 'Step', 'Primer', 'Role', 'Sequence', 'Len', 'Tm', 'GC%', 'Notes'];
+  const rows = [['1', 'Upstream vector backbone PCR', 'F1', 'Assembly', 'A'.repeat(60), '25', '62.1', '48', 'x'.repeat(80)]];
+  const widths = resolveTableColumnWidths({ doc, maxWidth: 468 }, headers, rows);
+  const total = widths.reduce((sum, width) => sum + width, 0);
+  assert.ok(Math.abs(total - 468) < 0.01, `column widths fill the content width exactly, got ${total}`);
+}
 
 console.log('pdf-export template selfcheck passed');

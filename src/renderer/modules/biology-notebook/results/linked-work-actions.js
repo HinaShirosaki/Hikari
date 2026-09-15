@@ -34,7 +34,7 @@ export function createLinkedWorkActions({
     });
   }
 
-  async function exportEntryPdf(entryId) {
+  async function exportEntryPdf(entryId, { print = false } = {}) {
     const entries = getNotebookEntries() || [];
     const entry = entries.find((item) => item.id === entryId && matchesType(item));
     if (!entry) {
@@ -56,7 +56,8 @@ export function createLinkedWorkActions({
       linkedAssay,
       linkedAssayPlotImage,
       resultFileImages,
-      pdfSettings: getPdfSettings?.() || {}
+      pdfSettings: getPdfSettings?.() || {},
+      print
     });
   }
 

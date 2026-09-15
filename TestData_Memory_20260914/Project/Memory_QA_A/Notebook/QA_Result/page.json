@@ -1,0 +1,13 @@
+{
+  "notebookEntry": {
+    "id": "qa-notebook",
+    "notebookType": "biology",
+    "notebookState": "executed",
+    "projectId": "memory-qa-a",
+    "projectName": "Memory QA A",
+    "experimentName": "Synthetic QA result",
+    "protocolName": "Memory verification",
+    "result": "QA sample A yielded 12 mg. QA sample B yielded 9 mg. These are synthetic test values.",
+    "storageFolder": "/Users/shiyifan/Projects/Enana/TestData_Memory_20260914/Project/Memory_QA_A/Notebook/QA_Result"
+  }
+}

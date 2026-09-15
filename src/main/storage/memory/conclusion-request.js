@@ -39,7 +39,11 @@ function validateNotebookConclusionResult(result, source) {
     return null;
   }
   return {
-    conclusion,
+    // Quote membership proves the excerpt, not the model's interpretation.
+    // Publish evidence; retain the proposed summary separately for inspection.
+    conclusion: truncateInline(quotes.join(' '), 800),
+    proposedConclusion: conclusion,
+    quotes,
     model: cleanText(result?.model || payload.model, 120)
   };
 }

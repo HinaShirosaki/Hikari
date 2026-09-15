@@ -3,7 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { asArray, cleanText, ensureObject } = require('../storage-utils');
-const { atomicWriteFile, buildFallbackCacheEntry, pruneNotebookConclusionCache, readJsonObject, readNotebookConclusionCache, stableJson, writeNotebookConclusionCache } = require('./conclusion-cache.js');
+const { atomicWriteFile, buildFallbackCacheEntry, shouldGenerateConclusion, pruneNotebookConclusionCache, readJsonObject, readNotebookConclusionCache, stableJson, writeNotebookConclusionCache } = require('./conclusion-cache.js');
 const { buildNotebookConclusionRequest, validateNotebookConclusionResult } = require('./conclusion-request.js');
 const { PAPER_SUMMARY_PENDING } = require('./constants.js');
 const { buildProjectMemoryGeneratedBlock, mergeProjectMemoryMarkdown, readExistingText } = require('./memory-markdown.js');
@@ -93,22 +93,22 @@ function buildProjectMemoryInput({
   };
 }
 
-async function renderProjectMemoryInput(input, { writePrunedCache = false } = {}) {
+async function renderProjectMemoryInput(input, { writePrunedCache = false, resetConclusions = false } = {}) {
   const [paperEntries, loadedCache] = await Promise.all([
     loadProjectPaperEntries(input.storageRootPath, input.paperSources),
     readNotebookConclusionCache(input.folderPath)
   ]);
-  const cache = pruneNotebookConclusionCache(loadedCache, input.notebooks);
+  const cache = resetConclusions ? {} : pruneNotebookConclusionCache(loadedCache, input.notebooks);
   if (writePrunedCache && stableJson(cache) !== stableJson(loadedCache)) {
     await writeNotebookConclusionCache(input.folderPath, cache);
   }
   const misses = [];
   const notebookEntries = input.notebooks.map((source) => {
     const cached = cache[source.key];
-    if (!cached || cached.hash !== source.hash) {
+    if (shouldGenerateConclusion(cached, source)) {
       misses.push(source);
     }
-    const conclusion = cached && cached.hash === source.hash
+    const conclusion = cached && cached.hash === source.hash && cached.status === 'evidence'
       ? cached
       : buildFallbackCacheEntry(source, '');
     return {
@@ -163,7 +163,7 @@ async function generateAndCacheNotebookConclusion(projectKey, requestedSource) {
     await readNotebookConclusionCache(input.folderPath),
     input.notebooks
   );
-  if (cache[requestedSource.key]?.hash === requestedSource.hash) {
+  if (!shouldGenerateConclusion(cache[requestedSource.key], requestedSource)) {
     return;
   }
 
@@ -199,25 +199,38 @@ async function generateAndCacheNotebookConclusion(projectKey, requestedSource) {
   }
 
   // Unverifiable falls through to the verbatim extract below: still never publish
-  // a conclusion we could not confirm against the saved page, but do record that
-  // we are done asking, or this repeats on every save forever.
+  // a conclusion we could not confirm against the saved page. Record a bounded
+  // retry with backoff instead of paying again on every save.
   const validated = verified ? validateNotebookConclusionResult(result, currentSource) : null;
   // Only the read-modify-write needs the file queue; the model call above must
   // stay outside it or every save queues behind the whole batch.
   await enqueueProjectMemoryWork(projectKey, async () => {
+    const newestInput = latestProjectMemoryInputs.get(projectKey);
+    const newestSource = newestInput?.notebooks.find((source) => source.key === requestedSource.key);
+    if (!newestSource || newestSource.hash !== requestedSource.hash) return;
     const nextCache = pruneNotebookConclusionCache(
-      await readNotebookConclusionCache(currentInput.folderPath),
-      currentInput.notebooks
+      await readNotebookConclusionCache(newestInput.folderPath),
+      newestInput.notebooks
     );
     nextCache[requestedSource.key] = validated
       ? {
           hash: requestedSource.hash,
           conclusion: validated.conclusion,
           generatedAt: new Date().toISOString(),
-          model: validated.model || 'generated'
+          model: validated.model || 'generated',
+          status: 'evidence',
+          proposedConclusion: validated.proposedConclusion,
+          quotes: validated.quotes,
+          sourceRelativePath: requestedSource.sourceRelativePath,
+          attempts: 0,
+          retryAfter: ''
         }
-      : buildFallbackCacheEntry(requestedSource);
-    await writeNotebookConclusionCache(currentInput.folderPath, nextCache);
+      : {
+          ...buildFallbackCacheEntry(requestedSource),
+          attempts: (cache[requestedSource.key]?.attempts || 0) + 1,
+          retryAfter: new Date(Date.now() + 5 * 60 * 1000 * (2 ** (cache[requestedSource.key]?.attempts || 0))).toISOString()
+        };
+    await writeNotebookConclusionCache(newestInput.folderPath, nextCache);
   });
 }
 

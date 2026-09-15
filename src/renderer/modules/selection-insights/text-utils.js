@@ -68,9 +68,9 @@ export function formatAnswerText(value) {
 
 export function normalizeActionLabel(actionType) {
   if (actionType === ACTION_WHERE_TO_BUY) {
-    return 'Where to buy it';
+    return 'Find suppliers';
   }
-  return 'What is it';
+  return 'Explain selection';
 }
 
 export { asArray };

@@ -84,9 +84,6 @@ export function buildPanelHtml(insight) {
     <div class="selection-insight-panel-head">
       <span class="selection-insight-panel-kicker">Saved Answer</span>
       <h4>${escapeHtml(cleanText(insight.selectedText, 220) || 'Selected text')}</h4>
-      ${cleanText(insight.segmentLabel, 120)
-        ? `<p class="selection-insight-panel-meta">${escapeHtml(cleanText(insight.segmentLabel, 120))}</p>`
-        : ''}
     </div>
     ${pendingAction ? `
       <div class="selection-insight-answer-block is-pending">

@@ -5,19 +5,19 @@ import {
   buildCompletedAnswer,
   buildErroredAnswer,
   buildPendingAnswer,
+  findInsightForSelection,
   updateInsightAnswers
 } from './insight-model.js';
 import { persistInsightSidecar } from './storage.js';
 
-async function persistForUpdatedRecord(ctx, hostKey, updatedRecord, insights) {
-  const refreshedContext = getCurrentContext(ctx, hostKey);
-  if (!updatedRecord || !refreshedContext) {
+async function persistForUpdatedRecord(ctx, context, updatedRecord, insights) {
+  if (!updatedRecord) {
     return;
   }
   await persistInsightSidecar({
     api: ctx.api,
     context: {
-      ...refreshedContext,
+      ...context,
       record: updatedRecord
     },
     insights
@@ -44,6 +44,17 @@ export async function runInsightAction(ctx, hostKey, selectionContext, actionTyp
     }
   }
 
+  // Answers are saved per selection, so re-running the action on a selection
+  // that already has one just reopens it instead of paying for the model again.
+  const savedInsight = findInsightForSelection(context.insights, selectionContext);
+  if (savedInsight?.answers?.[actionType]?.status === 'completed') {
+    openPanelByInsightId(ctx, hostKey, savedInsight.id, {
+      pinned: true,
+      fallbackRect: selectionContext.selectionRect
+    });
+    return;
+  }
+
   const pendingResult = updateInsightAnswers(
     context.insights,
     selectionContext,
@@ -56,7 +67,7 @@ export async function runInsightAction(ctx, hostKey, selectionContext, actionTyp
     selectionInsights: pendingResult.insights
   })) || null;
 
-  await persistForUpdatedRecord(ctx, hostKey, updatedPendingRecord, pendingResult.insights);
+  await persistForUpdatedRecord(ctx, context, updatedPendingRecord, pendingResult.insights);
   refreshHost(ctx, hostKey);
   openPanelByInsightId(ctx, hostKey, pendingResult.insight.id, {
     pinned: true,
@@ -65,54 +76,49 @@ export async function runInsightAction(ctx, hostKey, selectionContext, actionTyp
 
   try {
     const response = await requestInsightAnswer(ctx, context, selectionContext, actionType);
-    const completedResult = updateInsightAnswers(
-      getCurrentContext(ctx, hostKey)?.insights || pendingResult.insights,
-      {
-        ...selectionContext,
-        existingInsightId: pendingResult.insight.id
-      },
-      actionType,
-      () => {
-        const answer = buildCompletedAnswer(actionType, response);
-        const pendingAnswer = pendingResult.insight.answers?.[actionType];
-        if (pendingAnswer?.requestedAt) {
-          answer.requestedAt = pendingAnswer.requestedAt;
-        }
-        return answer;
-      },
-      ctx.createId
-    );
-    const updatedRecord = getCurrentContext(ctx, hostKey)?.updateRecord?.((record) => ({
-      ...record,
-      selectionInsights: completedResult.insights
-    })) || null;
+    const updatedRecord = context.updateRecord?.((record) => {
+      const completedResult = updateInsightAnswers(
+        record.selectionInsights,
+        { ...selectionContext, existingInsightId: pendingResult.insight.id },
+        actionType,
+        () => {
+          const answer = buildCompletedAnswer(actionType, response);
+          answer.requestedAt = pendingResult.insight.answers?.[actionType]?.requestedAt || '';
+          return answer;
+        },
+        ctx.createId
+      );
+      return { ...record, selectionInsights: completedResult.insights };
+    }) || null;
 
-    await persistForUpdatedRecord(ctx, hostKey, updatedRecord, completedResult.insights);
+    await persistForUpdatedRecord(ctx, context, updatedRecord, updatedRecord?.selectionInsights);
+    if (getCurrentContext(ctx, hostKey)?.record?.id !== context.record.id) {
+      return;
+    }
     refreshHost(ctx, hostKey);
-    openPanelByInsightId(ctx, hostKey, completedResult.insight.id, {
+    openPanelByInsightId(ctx, hostKey, pendingResult.insight.id, {
       pinned: true,
       fallbackRect: selectionContext.selectionRect
     });
   } catch (error) {
     const errorMessage = String(error?.message || error);
-    const erroredResult = updateInsightAnswers(
-      getCurrentContext(ctx, hostKey)?.insights || pendingResult.insights,
-      {
-        ...selectionContext,
-        existingInsightId: pendingResult.insight.id
-      },
-      actionType,
-      (pendingAnswer) => buildErroredAnswer(actionType, errorMessage, pendingAnswer),
-      ctx.createId
-    );
-    const updatedRecord = getCurrentContext(ctx, hostKey)?.updateRecord?.((record) => ({
-      ...record,
-      selectionInsights: erroredResult.insights
-    })) || null;
+    const updatedRecord = context.updateRecord?.((record) => {
+      const erroredResult = updateInsightAnswers(
+        record.selectionInsights,
+        { ...selectionContext, existingInsightId: pendingResult.insight.id },
+        actionType,
+        (pendingAnswer) => buildErroredAnswer(actionType, errorMessage, pendingAnswer),
+        ctx.createId
+      );
+      return { ...record, selectionInsights: erroredResult.insights };
+    }) || null;
 
-    await persistForUpdatedRecord(ctx, hostKey, updatedRecord, erroredResult.insights);
+    await persistForUpdatedRecord(ctx, context, updatedRecord, updatedRecord?.selectionInsights);
+    if (getCurrentContext(ctx, hostKey)?.record?.id !== context.record.id) {
+      return;
+    }
     refreshHost(ctx, hostKey);
-    openPanelByInsightId(ctx, hostKey, erroredResult.insight.id, {
+    openPanelByInsightId(ctx, hostKey, pendingResult.insight.id, {
       pinned: true,
       fallbackRect: selectionContext.selectionRect
     });

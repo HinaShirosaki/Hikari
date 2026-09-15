@@ -1,7 +1,5 @@
-import {
-  normalizeNotebookResultTable,
-  normalizeNotebookResultTables
-} from '../../lib/notebook-result-tables.js';
+import { normalizeNotebookResultTable } from '../../lib/notebook-result-tables.js';
+import { notebookTableColumnLetter } from '../../lib/notebook-table-formulas.js';
 import {
   TABLE_FONT_SIZE,
   TABLE_LINE_HEIGHT,
@@ -19,22 +17,9 @@ import {
   contentBottom,
   ensureSpace,
   splitWrappedLines,
-  estimateTextWidth,
-  splitLongToken
+  estimateTextWidth
 } from './doc-context.js';
 import { writeParagraph } from './text-blocks.js';
-
-function prepareTableCellText(value, columnWidth, fallback = '') {
-  const text = safeValue(value, fallback);
-  const maxChars = Math.max(
-    6,
-    Math.floor((columnWidth - (TABLE_CELL_PADDING * 2)) / (TABLE_FONT_SIZE * 0.52))
-  );
-  return text
-    .split(/(\s+)/)
-    .map((part) => (/^\s+$/.test(part) ? part : splitLongToken(part, maxChars)))
-    .join('');
-}
 
 function resolveTableColumnWidths(ctx, headers, rows) {
   const columnCount = headers.length;
@@ -61,8 +46,13 @@ function resolveTableColumnWidths(ctx, headers, rows) {
     return Array.from({ length: columnCount }, () => ctx.maxWidth / columnCount);
   }
   if (desiredTotal >= ctx.maxWidth) {
-    const scale = ctx.maxWidth / desiredTotal;
-    return desiredWidths.map((width) => Math.max(minWidth * 0.8, width * scale));
+    const floor = minWidth * 0.8;
+    const scaled = desiredWidths.map((width) => Math.max(floor, width * (ctx.maxWidth / desiredTotal)));
+    // Columns held at the floor push the sum past maxWidth; take that excess from the rest.
+    const floored = scaled.reduce((sum, width) => sum + (width <= floor ? width : 0), 0);
+    const flexible = scaled.reduce((sum, width) => sum + (width > floor ? width : 0), 0);
+    const squeeze = flexible > 0 ? Math.max(0, ctx.maxWidth - floored) / flexible : 1;
+    return scaled.map((width) => (width > floor ? width * squeeze : width));
   }
   const extra = ctx.maxWidth - desiredTotal;
   return desiredWidths.map((width) => width + (extra * (width / desiredTotal)));
@@ -71,7 +61,8 @@ function resolveTableColumnWidths(ctx, headers, rows) {
 function splitTableCells(ctx, cells, widths, { fallback = '' } = {}) {
   return cells.map((cell, index) => {
     const width = Math.max(12, widths[index] - (TABLE_CELL_PADDING * 2));
-    return splitWrappedLines(ctx.doc, prepareTableCellText(cell, widths[index], fallback), width);
+    // jsPDF breaks over-long tokens (sequences, URLs) at the measured width itself.
+    return splitWrappedLines(ctx.doc, safeValue(cell, fallback), width);
   });
 }
 
@@ -131,9 +122,11 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
     return;
   }
 
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
+  // Wrap with the font each row is drawn in: headers are bold, body rows normal.
+  font(ctx, 'normal');
   ctx.doc.setFontSize(TABLE_FONT_SIZE);
   const widths = resolveTableColumnWidths(ctx, safeHeaders, safeRows);
+  font(ctx, 'bold');
   const headerLines = splitTableCells(ctx, safeHeaders, widths, { fallback: '-' });
   const headerHeight = getTableRowHeight(headerLines);
 
@@ -145,6 +138,7 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
   writeHeader();
   safeRows.forEach((cells, rowIndex) => {
     const rowCells = safeHeaders.map((_header, index) => String(cells[index] ?? '').trim());
+    font(ctx, 'normal');
     const rowLines = splitTableCells(ctx, rowCells, widths);
     const rowHeight = getTableRowHeight(rowLines);
     if (ctx.y + rowHeight > contentBottom(ctx)) {
@@ -166,9 +160,13 @@ function writeNotebookResultTable(ctx, table) {
     writeParagraph(ctx, '-');
     return;
   }
-  const headers = normalized.columns.map((column) => column.title);
-  const rows = normalized.rows.map((row) => (
-    normalized.columns.map((column) => row[column.field] || '')
+  // Same furniture as the on-screen grid: column letters and row numbers, so a
+  // formula like C2/(B2*D2) written in the notebook still reads in the export.
+  const headers = ['#', ...normalized.columns.map((column, index) => (
+    `${notebookTableColumnLetter(index)} · ${column.title}`
+  ))];
+  const rows = normalized.rows.map((row, rowIndex) => (
+    [String(rowIndex + 1), ...normalized.columns.map((column) => row[column.field] || '')]
   ));
   writePdfTable(ctx, headers, rows);
 }
@@ -191,25 +189,7 @@ function writeNotebookToolCalculationTable(ctx, table) {
   writePdfTable(ctx, headers, rows);
 }
 
-function isWideNotebookResultTable(table) {
-  const normalized = normalizeNotebookResultTable(table);
-  if (!normalized) {
-    return false;
-  }
-  const maxCellLength = normalized.rows.reduce((max, row) => (
-    normalized.columns.reduce((cellMax, column) => (
-      Math.max(cellMax, String(row[column.field] || '').trim().length)
-    ), max)
-  ), 0);
-  return normalized.columns.length > 4 || maxCellLength > 48;
-}
-
-function hasWideNotebookResultTable(tables) {
-  return normalizeNotebookResultTables(tables).some((table) => isWideNotebookResultTable(table));
-}
-
 export {
-  prepareTableCellText,
   resolveTableColumnWidths,
   splitTableCells,
   getTableRowHeight,
@@ -217,7 +197,5 @@ export {
   writePdfTable,
   writeSimpleTable,
   writeNotebookResultTable,
-  writeNotebookToolCalculationTable,
-  isWideNotebookResultTable,
-  hasWideNotebookResultTable
+  writeNotebookToolCalculationTable
 };

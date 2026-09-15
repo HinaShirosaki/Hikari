@@ -2,6 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 const {
   defaultAsArray,
@@ -31,6 +32,25 @@ function createAgentMemoryRuntime(deps = {}) {
     : () => cleanText(deps.memoryFilePath, 2400);
   const store = deps.store instanceof Map ? deps.store : new Map();
   let loadedPath = null;
+  let queue = Promise.resolve();
+
+  // Capture the destination before queueing so a root switch cannot redirect a write.
+  function transaction(work, input = {}) {
+    const destination = resolveMemoryFilePath();
+    const pending = queue.then(async () => {
+      await ensureLoaded(destination);
+      const previous = new Map(store);
+      try {
+        return await work(input);
+      } catch (error) {
+        store.clear();
+        previous.forEach((record, id) => store.set(id, record));
+        throw error;
+      }
+    });
+    queue = pending.catch(() => {});
+    return pending;
+  }
 
   function normalizeAction(value) {
     const normalized = cleanText(value, 40).toLowerCase();
@@ -77,7 +97,9 @@ function createAgentMemoryRuntime(deps = {}) {
       key: cleanText(raw.key, 220),
       summary: cleanText(raw.summary, 600),
       value: normalizeValue(raw.value),
-      project_name: cleanText(raw.project_name || raw.projectName, 220),
+      scope: raw.scope === 'global' ? 'global' : ((raw.project_id || raw.project_name || raw.projectName || raw.scope === 'project') ? 'project' : 'global'),
+      project_id: raw.scope === 'global' ? '' : cleanText(raw.project_id, 220),
+      project_name: raw.scope === 'global' ? '' : cleanText(raw.project_name || raw.projectName, 220),
       tags: normalizeTags(raw.tags),
       source: cleanText(raw.source, 120),
       created_at: cleanText(raw.created_at || raw.createdAt, 80),
@@ -91,53 +113,42 @@ function createAgentMemoryRuntime(deps = {}) {
       .sort((left, right) => String(left.updated_at || left.created_at).localeCompare(String(right.updated_at || right.created_at)));
   }
 
-  async function ensureLoaded() {
-    const memoryFilePath = resolveMemoryFilePath();
-    if (loadedPath === memoryFilePath) {
-      return;
-    }
-    if (loadedPath) {
-      store.clear();
-    }
-    loadedPath = memoryFilePath;
-    if (!memoryFilePath) {
-      return;
-    }
-    try {
-      const raw = await fsModule.readFile(memoryFilePath, 'utf8');
-      const parsed = JSON.parse(String(raw || '{}'));
-      const records = Array.isArray(parsed)
-        ? parsed
-        : (Array.isArray(parsed?.items) ? parsed.items : []);
-      store.clear();
-      records.forEach((record) => {
-        const normalized = normalizeMemoryRecord(record);
-        if (normalized.id) {
-          store.set(normalized.id, normalized);
+  async function ensureLoaded(memoryFilePath) {
+    if (loadedPath === memoryFilePath) return;
+    let records = [];
+    if (memoryFilePath) {
+      try {
+        const parsed = JSON.parse(await fsModule.readFile(memoryFilePath, 'utf8'));
+        if (!Array.isArray(parsed) && !Array.isArray(parsed?.items)) {
+          throw new Error('Invalid agent memory file: expected an items array.');
         }
-      });
-    } catch (error) {
-      if (error?.code === 'ENOENT') {
-        return;
+        records = Array.isArray(parsed) ? parsed : parsed.items;
+      } catch (error) {
+        if (error?.code !== 'ENOENT') throw error;
       }
-      throw error;
+    } else if (loadedPath === null) {
+      records = [...store.values()];
     }
+    const normalized = records.map((record) => normalizeMemoryRecord(record));
+    store.clear();
+    normalized.forEach((record) => store.set(record.id, record));
+    loadedPath = memoryFilePath;
   }
 
   async function persist() {
-    const memoryFilePath = resolveMemoryFilePath();
-    if (!memoryFilePath) {
-      return;
-    }
+    const memoryFilePath = loadedPath;
+    if (!memoryFilePath) return;
     await fsModule.mkdir(path.dirname(memoryFilePath), { recursive: true });
-    await fsModule.writeFile(
-      memoryFilePath,
-      JSON.stringify({
-        schema_version: '1.0.0',
-        items: serializeRecords()
-      }, null, 2),
-      'utf8'
-    );
+    const temporaryPath = `${memoryFilePath}.${randomUUID()}.tmp`;
+    try {
+      await fsModule.writeFile(temporaryPath, JSON.stringify({
+        schema_version: '1.1.0', items: serializeRecords()
+      }, null, 2), 'utf8');
+      await fsModule.rename(temporaryPath, memoryFilePath);
+    } catch (error) {
+      await fsModule.rm(temporaryPath, { force: true }).catch(() => {});
+      throw error;
+    }
   }
 
   function buildLookupTokens(record) {
@@ -174,14 +185,20 @@ function createAgentMemoryRuntime(deps = {}) {
     if (category && source.category.toLowerCase() !== category) {
       return false;
     }
-    if (projectName && source.project_name.toLowerCase() !== projectName) {
-      return false;
+    const projectId = cleanText(input.project_id, 220);
+    if (input.scope === 'global' && source.scope !== 'global') return false;
+    if (input.scope === 'project' && source.scope !== 'project' && !input.include_global) return false;
+    if (input.scope !== 'global' && (projectId || projectName)) {
+      const projectMatch = projectId
+        ? (source.project_id === projectId || (!source.project_id && projectName && source.project_name.toLowerCase() === projectName))
+        : source.project_name.toLowerCase() === projectName;
+      if (!projectMatch && !(input.include_global && source.scope === 'global')) return false;
     }
     if (tags.length && !tags.every((tag) => source.tags.includes(tag))) {
       return false;
     }
     if (query) {
-      return buildLookupTokens(source).includes(query);
+      return queryScore(source, query) > 0;
     }
     return true;
   }
@@ -195,28 +212,22 @@ function createAgentMemoryRuntime(deps = {}) {
       const candidate = normalizeMemoryRecord(existing);
       return candidate.key.toLowerCase() === normalized.key.toLowerCase()
         && candidate.category.toLowerCase() === normalized.category.toLowerCase()
-        && candidate.project_name.toLowerCase() === normalized.project_name.toLowerCase();
+        && candidate.scope === normalized.scope
+        && (candidate.project_id && normalized.project_id
+          ? candidate.project_id === normalized.project_id
+          : candidate.project_name.toLowerCase() === normalized.project_name.toLowerCase());
     }) || null;
   }
 
   async function remember(input = {}) {
-    await ensureLoaded();
     const source = {
       ...ensureObject(input.record),
       ...ensureObject(input)
     };
-    const candidate = normalizeMemoryRecord({
-      id: source.id,
-      category: source.category,
-      key: source.key,
-      summary: source.summary,
-      value: source.value,
-      project_name: source.project_name,
-      tags: source.tags,
-      source: source.source,
-      created_at: source.created_at,
-      updated_at: source.updated_at
-    });
+    const candidate = normalizeMemoryRecord(source);
+    if (candidate.scope === 'project' && !candidate.project_id && !candidate.project_name) {
+      return { ok: false, status: 'error', error: 'Project memory requires project_id or project_name.' };
+    }
     if (!candidate.key) {
       return {
         ok: false,
@@ -233,12 +244,16 @@ function createAgentMemoryRuntime(deps = {}) {
     }
 
     const existing = findByStableKey(candidate);
+    if (store.has(candidate.id) && existing?.id !== candidate.id) {
+      return { ok: false, status: 'error', error: 'Memory id belongs to a different key or scope.' };
+    }
     const timestamp = now();
     const nextRecord = existing
       ? {
         ...normalizeMemoryRecord(existing),
         ...candidate,
         id: normalizeMemoryRecord(existing).id,
+        project_id: candidate.project_id || existing.project_id || '',
         created_at: normalizeMemoryRecord(existing).created_at || timestamp,
         updated_at: timestamp
       }
@@ -260,13 +275,25 @@ function createAgentMemoryRuntime(deps = {}) {
     };
   }
 
+  function queryScore(record, query) {
+    const text = buildLookupTokens(record);
+    const words = query.match(/[\p{L}\p{N}_-]+/gu) || [];
+    if (!words.length) return text.includes(query) ? 1 : 0;
+    if (!words.every((word) => text.includes(word))) return 0;
+    const title = `${record.key} ${record.summary}`.toLowerCase();
+    return (text.includes(query) ? 10 : 0) + words.reduce((score, word) => score + (title.includes(word) ? 2 : 1), 0);
+  }
+
   async function recall(input = {}) {
-    await ensureLoaded();
     const limit = Math.max(1, Math.min(50, Number.isFinite(Number(input.limit)) ? Number(input.limit) : 10));
     const items = serializeRecords()
       .filter((record) => matchesFilters(record, input))
-      .slice(-limit)
-      .reverse();
+      .reverse()
+      .sort((a, b) => {
+        const query = cleanText(input.query, 320).toLowerCase();
+        return query ? queryScore(b, query) - queryScore(a, query) : 0;
+      })
+      .slice(0, limit);
     return {
       ok: true,
       status: items.length ? 'matched' : 'empty',
@@ -285,7 +312,10 @@ function createAgentMemoryRuntime(deps = {}) {
   }
 
   async function forget(input = {}) {
-    await ensureLoaded();
+    if (!cleanText(input.id, 160) && !cleanText(input.key, 220)) {
+      return { ok: false, status: 'error', error: 'forget requires an exact id or key; bulk deletion is not supported.' };
+    }
+    input = { ...input, include_global: false };
     const matches = serializeRecords().filter((record) => matchesFilters(record, input));
     matches.forEach((record) => {
       store.delete(record.id);
@@ -324,11 +354,11 @@ function createAgentMemoryRuntime(deps = {}) {
   }
 
   return {
-    remember,
-    recall,
-    forget,
-    list,
-    execute
+    remember: (input) => transaction(remember, input),
+    recall: (input) => transaction(recall, input),
+    forget: (input) => transaction(forget, input),
+    list: (input) => transaction(list, input),
+    execute: (input) => transaction(execute, input)
   };
 }
 

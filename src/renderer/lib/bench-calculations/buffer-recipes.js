@@ -1,8 +1,8 @@
 import { formatSigFig, toNumber } from '../numbers.js';
 import { volumeToL } from '../molarity.js';
-import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, findBufferPkaHint, formatBufferMassDual, formatBufferVolumeDual, formatBufferVolumeMl, parseBufferConcentration } from './buffer-concentration.js';
+import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, findBufferPkaHint, formatBufferVolumeDual, formatBufferVolumeMl, parseBufferConcentration } from './buffer-concentration.js';
 import { BUFFER_PH_ADJUSTMENT_MOLARITY } from './constants.js';
-import { buildResult, collectMissing, describeRawValue, withLabel } from './result-format.js';
+import { buildResult, collectMissing, describeRawValue, formatAdaptiveMass, withLabel } from './result-format.js';
 import { cleanName, isPositive, normalizeBufferUnitText, parseBufferNumericPrefix } from './units.js';
 
 // What went on the balance or into the tube, typed over the calculated amount.
@@ -93,7 +93,7 @@ function calculateBufferIngredient({
     formulaText = `${resolvedName} mass = ${final.text} x ${volumeLText} x ${mw.text}`;
     if (!missing.length) {
       massG = final.value * (volume.value / 1000) * mw.value;
-      quantityText = formatBufferMassDual(massG);
+      quantityText = formatAdaptiveMass(massG);
       resultText = `${resolvedName}: ${quantityText}.`;
     }
   } else if (final.kind === 'massVolume') {
@@ -101,7 +101,7 @@ function calculateBufferIngredient({
     formulaText = `${resolvedName} mass = ${final.text} x ${volumeLText}`;
     if (!missing.length) {
       massG = final.value * (volume.value / 1000);
-      quantityText = formatBufferMassDual(massG);
+      quantityText = formatAdaptiveMass(massG);
       resultText = `${resolvedName}: ${quantityText}.`;
     }
   } else if (final.kind === 'percent' && final.percentKind === 'volume') {
@@ -115,7 +115,7 @@ function calculateBufferIngredient({
     formulaText = `${resolvedName} mass = ${final.text} x ${volume.text}`;
     if (!missing.length) {
       massG = (final.value * volume.value) / 100;
-      quantityText = formatBufferMassDual(massG);
+      quantityText = formatAdaptiveMass(massG);
       resultText = `${resolvedName}: ${quantityText}.`;
     }
   } else if (final.kind === 'percent' && final.percentKind === 'massMass') {

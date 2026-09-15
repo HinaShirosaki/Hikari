@@ -206,7 +206,7 @@ test('[EDGE] bench tool calculations return instant results and substituted form
       { name: 'NaCl', form: 'solid', molecularWeight: 58.44, concentrationValue: 150 }
     ]
   });
-  assert.match(bufferResult.resultText, /NaCl: 8766 mg/i);
+  assert.match(bufferResult.resultText, /NaCl: 8\.766 g\./i);
   assert.match(bufferResult.formulaText, /150 mM x 1 L x 58\.44 g\/mol/i);
 
   const microliterBufferResult = toolBox.calculateBufferRecipe({
@@ -258,6 +258,20 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(typedReactionResult.resultText, /Enzyme: 0\.05 uL/i);
   assert.match(typedReactionResult.resultText, /Carrier: 10 uL/i);
   assert.match(typedReactionResult.resultText, /Solvent: 89\.95 uL/i);
+
+  // A NanoDrop reads ng/uL, so a bare number (or "ng") in Stock Conc. against
+  // a ng/uL final is that unit too, not the millimolar default.
+  const templateResult = toolBox.calculateFixedReaction({
+    totalVolumeValue: '50 uL',
+    reagents: [
+      { name: 'Template', stockConcentration: '50', finalConcentration: '0.2 ng/uL' },
+      { name: 'Template ng', stockConcentration: '50 ng', finalConcentration: '0.2 ng/uL' }
+    ]
+  });
+  assert.match(templateResult.resultText, /Template: 0\.2 uL/i);
+  assert.match(templateResult.resultText, /Template ng: 0\.2 uL/i);
+  assert.match(templateResult.formulaText, /Template volume = 0\.2 ng\/uL x 50 uL \/ 50 ng\/uL/i);
+  assert.doesNotMatch(templateResult.resultText, /matching unit types/i);
 });
 test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () => {
   const ids = [
@@ -314,7 +328,7 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   });
   reactionUi.initFixedReactionTool({ document });
 
-  assert.match(document.getElementById('buffer-amount-1').placeholder, /8766 mg/i);
+  assert.match(document.getElementById('buffer-amount-1').placeholder, /8\.766 g/i);
   assert.match(document.getElementById('buffer-amount-2').placeholder, /0\.5 mL/i);
   assert.match(document.getElementById('buffer-solvent-output').textContent, /999\.5 mL/i);
   assert.match(document.getElementById('fixed-reaction-volume-1').placeholder, /10 uL/i);

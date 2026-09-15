@@ -3,30 +3,15 @@
         <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="protocol-list-pinned left-rail-template__pinned">
             <div class="protocol-list-head">
-              <div class="inline-row protocol-sort-controls">
-                <button type="button" id="create-protocol-btn" class="primary-btn protocol-create-icon-btn" aria-label="Create protocol" title="Create protocol">
-                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                    <path d="M7 3h7l4 4v14H7z"></path>
-                    <path d="M14 3v5h5"></path>
-                    <path d="M12.5 11v6"></path>
-                    <path d="M9.5 14h6"></path>
-                  </svg>
-                  <span class="sr-only">Create protocol</span>
+              <div class="protocol-library-toolbar">
+                <button type="button" id="create-protocol-btn" class="primary-btn protocol-create-btn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>
+                  <span>Add protocol</span>
                 </button>
-                <div class="protocol-sort-menu">
-                  <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
-                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                      <path d="M4 7h10M4 12h16M4 17h7"></path>
-                      <path d="m17 5 2 2-2 2M14 15l2 2 2-2"></path>
-                    </svg>
-                  </button>
-                  <div id="protocol-sort-menu" class="protocol-sort-menu-popup" role="menu" hidden>
-                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="true" data-protocol-sort="time:asc">Time: Low to High</button>
-                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="time:desc">Time: High to Low</button>
-                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:asc">Name: Low to High</button>
-                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:desc">Name: High to Low</button>
-                  </div>
-                </div>
+                <label class="protocol-search-field">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+                  <input type="search" id="protocol-search" placeholder="Search protocols" aria-label="Search protocols by name or purpose" aria-controls="protocol-list" autocomplete="off" />
+                </label>
               </div>
             </div>
           </div>

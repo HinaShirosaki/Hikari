@@ -31,115 +31,78 @@
 /* Extracted from ui/css/base/core.css */
 
 
-.protocol-sort-controls {
-  margin-left: 0;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 #protocol-generate-btn,
 #protocol-polish-btn {
   min-height: 36px;
 }
 
-.protocol-create-icon-btn.primary-btn {
-  display: inline-grid;
-  place-items: center;
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
-  padding: 0;
-}
-
-.protocol-create-icon-btn svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.protocol-sort-menu {
-  position: relative;
-  display: inline-flex;
-}
-
-.protocol-sort-menu-btn.ghost-btn {
-  display: grid;
-  width: 36px;
-  min-height: 36px;
-  padding: 0;
-  place-items: center;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--theme-text-strong);
-}
-
-.protocol-sort-menu-btn.ghost-btn:hover,
-.protocol-sort-menu-btn.ghost-btn[aria-expanded="true"] {
-  background: var(--theme-surface-subtle);
-}
-
-.protocol-sort-menu-btn.ghost-btn:focus-visible {
-  outline: 2px solid var(--theme-focus);
-  outline-offset: 2px;
-}
-
-.protocol-sort-menu-btn svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
-}
-
-.protocol-sort-menu-popup {
-  position: absolute;
-  z-index: 70;
-  top: calc(100% + 8px);
-  left: 0;
-  display: grid;
-  min-width: 208px;
-  gap: 2px;
-  padding: 6px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--theme-surface-raised, var(--theme-surface));
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-text-strong) 16%, transparent);
-}
-
-.protocol-sort-menu-popup[hidden] {
-  display: none;
-}
-
-.protocol-sort-menu-option {
+.protocol-library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  padding: 8px 10px;
+  min-width: 0;
+}
+
+.protocol-create-btn.primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.protocol-create-btn svg,
+.protocol-search-field svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.protocol-search-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 150px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-text-muted);
+}
+
+.protocol-search-field:focus-within {
+  border-color: var(--theme-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 15%, transparent);
+}
+
+#protocol-search {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: var(--theme-text-strong);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.protocol-sort-menu-option:hover,
-.protocol-sort-menu-option.is-active {
-  background: var(--theme-surface-subtle);
-}
-
-.protocol-sort-menu-option:focus-visible {
-  outline: 2px solid var(--theme-focus);
-  outline-offset: -2px;
+  font-size: 13px;
+  outline: none;
+  box-shadow: none;
 }
 
 .left-rail-template.protocol-workspace > .protocol-list-panel.left-rail-template__rail--pinned {
@@ -760,11 +723,6 @@
   .protocol-list-head {
     justify-content: flex-start;
     flex-wrap: wrap;
-  }
-
-  .protocol-sort-menu-popup {
-    left: auto;
-    right: 0;
   }
 
   .protocol-empty-panel {

@@ -33,10 +33,6 @@ const QUICK_PROMPT_PRESETS = {
       {
         label: 'Summarize',
         prompt: 'Summarize the main finding, evidence, and limitations of this paper.'
-      },
-      {
-        label: 'Extract methods',
-        prompt: 'Extract the methods that are directly reusable for my experiment.'
       }
     ]
   },
@@ -46,7 +42,7 @@ const QUICK_PROMPT_PRESETS = {
     prompts: [
       {
         label: 'Research & append',
-        prompt: 'Research the complete hidden context for this active notebook page and propose only new information that makes this experiment more executable or traceable. Follow the notebook enrichment policy for local-first lookup, clearly labeled reference preparations, safety-critical uncertainty, concise bench-ready formatting, and compact provenance. Use the exact active page identity and Updated at timestamp supplied in context. Call notebook_append once only when there is useful content for review; do not create a new page, replace existing notes, repeat the page, or claim the append was saved.'
+        prompt: 'Research this notebook page and propose an append with only new, useful information.'
       },
       {
         label: 'Summarize page',

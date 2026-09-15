@@ -1,0 +1,16 @@
+{
+  "notebook:qa-notebook": {
+    "hash": "3fbcb95e7d42f1fb8bd6ac2a615b2ec8c742b7711fd86fda972b34f97cb3e8df",
+    "conclusion": "QA sample A yielded 12 mg.",
+    "generatedAt": "2026-09-15T03:35:41.894Z",
+    "model": "deterministic-qa",
+    "status": "evidence",
+    "proposedConclusion": "A deliberately unsupported claim.",
+    "quotes": [
+      "QA sample A yielded 12 mg."
+    ],
+    "sourceRelativePath": "Project/Memory_QA_A/Notebook/QA_Result/page.json",
+    "attempts": 0,
+    "retryAfter": ""
+  }
+}

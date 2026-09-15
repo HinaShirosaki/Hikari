@@ -23,7 +23,13 @@ function normalizeNotebookConclusionCache(rawCache = {}) {
       hash,
       conclusion,
       generatedAt: cleanText(value.generatedAt, 80),
-      model: cleanText(value.model, 120)
+      model: cleanText(value.model, 120),
+      status: cleanText(value.status, 40) || (value.model === NOTEBOOK_MEMORY_MODEL_FALLBACK ? 'fallback' : 'legacy'),
+      proposedConclusion: truncateInline(value.proposedConclusion, 800),
+      quotes: Array.isArray(value.quotes) ? value.quotes.map((quote) => String(quote)).slice(0, 3) : [],
+      sourceRelativePath: cleanText(value.sourceRelativePath, 2400),
+      attempts: Math.max(0, Number(value.attempts) || 0),
+      retryAfter: cleanText(value.retryAfter, 80)
     };
   });
   return cache;
@@ -91,11 +97,24 @@ function buildFallbackCacheEntry(source, generatedAt = new Date().toISOString())
     hash: source.hash,
     conclusion: source.fallbackConclusion,
     generatedAt,
-    model: NOTEBOOK_MEMORY_MODEL_FALLBACK
+    model: NOTEBOOK_MEMORY_MODEL_FALLBACK,
+    status: 'fallback',
+    sourceRelativePath: source.sourceRelativePath,
+    quotes: [],
+    proposedConclusion: '',
+    attempts: 0,
+    retryAfter: ''
   };
 }
 
+function shouldGenerateConclusion(entry, source, timestamp = Date.now()) {
+  if (!entry || entry.hash !== source.hash || entry.status === 'legacy') return true;
+  if (entry.status !== 'fallback') return false;
+  return entry.attempts < 3 && (!entry.retryAfter || Date.parse(entry.retryAfter) <= timestamp);
+}
+
 module.exports = {
+  shouldGenerateConclusion,
   atomicWriteFile,
   buildFallbackCacheEntry,
   pruneNotebookConclusionCache,

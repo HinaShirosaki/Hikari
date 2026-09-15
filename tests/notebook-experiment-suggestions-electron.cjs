@@ -28,7 +28,7 @@ if (!process.versions.electron) {
       const {initLabNotebook} = await import(${JSON.stringify(url('src/renderer/modules/biology-notebook/index.js'))});
       const protocol = {id:'prot',name:'Growth measurement',steps:[{id:'step',text:'Compare the treatment with the control.',placeholders:[]}]};
       const makeEntry = (id,status,title) => ({id,notebookType:'biology',projectId:'p',projectName:'Growth study',protocolId:'prot',protocolName:protocol.name,protocolSnapshot:protocol,experimentName:title,experimentNameSource:'user',notebookState:status,updatedAt:'2026-09-08T01:00:00Z',values:{},result:'',resultFiles:[],resultFileRecords:[]});
-      window.state = JSON.parse(localStorage.getItem('qa-state') || 'null') || {projects:[{id:'p',name:'Growth study',description:'Compare the effect of growth conditions.'}],protocols:[protocol],notebookEntries:[makeEntry('done','executed','Completed control'),makeEntry('planned','planned','Planned comparison')],samples:[],assays:[],workflows:[],settings:{storagePath:''}};
+      window.state = JSON.parse(localStorage.getItem('qa-state') || 'null') || {projects:[{id:'p',name:'Growth study',description:'Compare the effect of growth conditions.'}],protocols:[protocol],notebookEntries:[makeEntry('done','executed','Completed control'),makeEntry('planned','planned','Planned comparison'),makeEntry('long','executed','A deliberately very long experiment name that overflows the rail and gets clipped')],samples:[],assays:[],workflows:[],settings:{storagePath:''}};
       window.requestCount = 0;
       window.pendingResponse = null;
       window.hikariApi = {
@@ -77,6 +77,12 @@ if (!process.versions.electron) {
         check(reasonBox.getBoundingClientRect().right<=window.innerWidth,'Reason textbox fits the viewport');
         document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
         check(reasonBox.hidden,'Escape dismisses the reason');
+        const longRow=document.querySelector('[data-notebook-entry-id="long"]');
+        longRow.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+        check(!reasonBox.hidden && reasonBox.textContent.startsWith('A deliberately very long experiment name'),'Hovering a clipped name shows the full name');
+        document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+        document.querySelector('[data-notebook-entry-id="done"]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
+        check(reasonBox.hidden,'Short unclipped names show no textbox');
         row.blur();
         row.focus();
         row.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));
@@ -92,6 +98,8 @@ if (!process.versions.electron) {
       fs.writeFileSync(path.join(artifacts, 'suggested.png'), (await win.webContents.capturePage()).toPNG());
       await win.webContents.executeJavaScript(`document.querySelector('[data-suggestion-reason]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));`);
       fs.writeFileSync(path.join(artifacts, 'suggestion-reason.png'), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript(`document.querySelector('[data-notebook-entry-id="long"]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));`);
+      fs.writeFileSync(path.join(artifacts, 'long-name.png'), (await win.webContents.capturePage()).toPNG());
       await win.reload();
       await new Promise(resolve => win.webContents.once('did-finish-load', resolve));
       await win.webContents.executeJavaScript(bootstrap);

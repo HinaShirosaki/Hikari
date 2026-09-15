@@ -725,17 +725,6 @@
   stroke-linejoin: round;
 }
 
-.biology-notebook-molarity-icon {
-  display: inline-grid;
-  width: 21px;
-  height: 21px;
-  place-items: center;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 0.95rem;
-  font-style: italic;
-  font-weight: 700;
-  line-height: 1;
-}
 
 .biology-notebook-tool-tab.is-active {
   color: var(--theme-text-strong);

@@ -59,27 +59,26 @@ function registerSystemToolExecutors(genericAgentToolRuntime, context = {}) {
       };
     }
     const project = resolveContextProject(args, context);
-    const projectName = cleanText(
-      args?.project_name
-      || args?.projectName
-      || args?.record?.project_name
-      || args?.record?.projectName
-      || project?.name
-      || project?.projectName,
-      220
-    );
-    const record = args?.record && typeof args.record === 'object'
-      ? {
-        ...args.record,
-        ...(projectName && !cleanText(args.record.project_name || args.record.projectName, 220)
-          ? { project_name: projectName }
-          : {})
-      }
-      : undefined;
+    const source = { ...args?.record, ...args };
+    const read = ['recall', 'list'].includes(source.action);
+    const explicitProject = Boolean(source.project_id || source.project_name || source.projectName);
+    const scope = source.scope || (explicitProject || (read && (project?.id || project?.projectId || project?.name || project?.projectName)) ? 'project' : 'global');
+    const selectedName = cleanText(project?.name || project?.projectName, 220).toLowerCase();
+    const requestedName = cleanText(source.project_name || source.projectName, 220).toLowerCase();
+    const useSelectedId = !explicitProject || (requestedName && requestedName === selectedName);
+    const projectId = scope === 'project'
+      ? cleanText(source.project_id || (useSelectedId ? (project?.id || project?.projectId) : ''), 220) : '';
+    const projectName = scope === 'project'
+      ? cleanText(source.project_name || source.projectName || (!explicitProject ? (project?.name || project?.projectName) : ''), 220) : '';
+    if (scope === 'project' && !projectId && !projectName) {
+      return { ok: false, status: 'error', error: 'Project memory requires a selected project or project selector.' };
+    }
     const result = await memoryRuntime.execute({
-      ...args,
-      ...(projectName && !cleanText(args?.project_name || args?.projectName, 220) ? { project_name: projectName } : {}),
-      ...(record ? { record } : {})
+      ...source,
+      scope,
+      project_id: projectId,
+      project_name: projectName,
+      include_global: read && scope === 'project' && source.include_global !== false
     });
     return {
       ...result,

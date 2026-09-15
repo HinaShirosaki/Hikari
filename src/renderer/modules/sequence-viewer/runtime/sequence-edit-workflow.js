@@ -188,6 +188,11 @@ export function createSequenceEditActions(ctx) {
     nextRecords[selectedIndex] = nextRecord;
     state.records = nextRecords;
     state.selectedFeatureIndex = -1;
+    // Feature indices shift with the bases; a stale Vector Builder selection
+    // would land on the next feature and make a repeated Delete remove it.
+    if (state.vectorBuilder) {
+      state.vectorBuilder.selectedFeatureIndex = -1;
+    }
     state.sequenceCursorBase = clamp(
       Number.isFinite(Number(cursorBase)) ? Number(cursorBase) : edit.start + edit.replacement.length,
       0,

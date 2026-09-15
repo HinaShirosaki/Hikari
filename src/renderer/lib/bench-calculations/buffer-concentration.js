@@ -18,7 +18,6 @@ function parseBufferConcentration(value, options = {}) {
   const compactUnit = normalizeBufferUnitText(unitText);
   const compactLower = compactUnit.toLowerCase();
   const defaultKind = options.defaultKind || 'molar';
-  const explicitUnit = Boolean(compactUnit);
 
   if (/[x×]$/i.test(compactLower) || compactLower === 'fold') {
     return buildParsedBufferConcentration({
@@ -63,6 +62,11 @@ function parseBufferConcentration(value, options = {}) {
       explicitUnit: true
     });
   }
+
+  // Past the fold / percent / mass-per-volume forms, only a molarity counts as
+  // a unit; text we cannot read ("50 ng") is treated as no unit at all so the
+  // caller's defaults decide, rather than silently becoming millimolar.
+  const explicitUnit = Boolean(normalizeMolarityUnit(unitText, ''));
 
   if (!explicitUnit && defaultKind === 'fold') {
     return buildParsedBufferConcentration({
@@ -190,22 +194,6 @@ function formatBufferVolumeDual(valueMl) {
   return `${formatSigFig(value)} mL (${formatSigFig(value * 1000)} uL)`;
 }
 
-function formatBufferMassDual(valueG) {
-  const grams = Number(valueG);
-  if (!Number.isFinite(grams) || grams <= 0) {
-    return '0 mg (0 g)';
-  }
-  const milligrams = grams * 1000;
-  if (milligrams >= 0.001) {
-    return `${formatSigFig(milligrams)} mg (${formatSigFig(grams)} g)`;
-  }
-  const micrograms = grams * 1e6;
-  if (micrograms >= 0.001) {
-    return `${formatSigFig(micrograms)} ug`;
-  }
-  return `${formatSigFig(grams * 1e9)} ng`;
-}
-
 function resolveBufferCompound(name) {
   const clean = String(name || '').trim();
   return BUFFER_COMPOUNDS.find((compound) => compound.name === clean) || null;
@@ -228,7 +216,6 @@ export {
   bufferConcentrationsCompatible,
   bufferDefaultsForForm,
   findBufferPkaHint,
-  formatBufferMassDual,
   formatBufferVolumeDual,
   formatBufferVolumeMl,
   parseBufferConcentration

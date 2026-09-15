@@ -2,7 +2,7 @@ import { ACTION_WHAT_IS_IT, ACTION_WHERE_TO_BUY } from './constants.js';
 import { getCurrentContext, getHostRegistration } from './controller-context.js';
 import { buildPanelHtml } from './panel-rendering.js';
 import { setFixedPosition } from './selection-dom.js';
-import { cleanText, clamp } from './text-utils.js';
+import { cleanText, clamp, normalizeActionLabel } from './text-utils.js';
 
 export function ensureUi(ctx) {
   if (!ctx.rootDocument?.body) {
@@ -13,8 +13,18 @@ export function ensureUi(ctx) {
     ctx.menuNode.className = 'selection-insight-menu';
     ctx.menuNode.hidden = true;
     ctx.menuNode.innerHTML = `
-      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHAT_IS_IT}">What is it</button>
-      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHERE_TO_BUY}">Where to buy it</button>
+      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHAT_IS_IT}">
+        <span class="selection-insight-menu-copy">
+          <span class="selection-insight-menu-label">${normalizeActionLabel(ACTION_WHAT_IS_IT)}</span>
+          <span class="selection-insight-menu-description">Understand its meaning and role</span>
+        </span>
+      </button>
+      <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHERE_TO_BUY}">
+        <span class="selection-insight-menu-copy">
+          <span class="selection-insight-menu-label">${normalizeActionLabel(ACTION_WHERE_TO_BUY)}</span>
+          <span class="selection-insight-menu-description">Explore products and where to buy</span>
+        </span>
+      </button>
     `;
     ctx.rootDocument.body.appendChild(ctx.menuNode);
     ctx.menuNode.addEventListener('click', (event) => {

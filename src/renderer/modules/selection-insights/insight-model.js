@@ -81,15 +81,21 @@ export function buildErroredAnswer(actionType, errorMessage, pendingAnswer = nul
   };
 }
 
+export function findInsightForSelection(insights, selectionContext) {
+  const records = normalizeInsights(insights);
+  if (selectionContext?.existingInsightId) {
+    return records.find((item) => item.id === selectionContext.existingInsightId) || null;
+  }
+  return records.find((item) => (
+    item.segmentId === selectionContext?.segmentId
+    && item.selectedText === selectionContext?.selectedText
+    && Math.max(1, Number(item.occurrenceIndex) || 1) === Math.max(1, Number(selectionContext?.occurrenceIndex) || 1)
+  )) || null;
+}
+
 export function updateInsightAnswers(insights, selectionContext, actionType, answerUpdater, createId) {
   const nextInsights = normalizeInsights(insights);
-  const existingInsight = selectionContext?.existingInsightId
-    ? nextInsights.find((item) => item.id === selectionContext.existingInsightId)
-    : nextInsights.find((item) => (
-      item.segmentId === selectionContext.segmentId
-      && item.selectedText === selectionContext.selectedText
-      && Math.max(1, Number(item.occurrenceIndex) || 1) === Math.max(1, Number(selectionContext.occurrenceIndex) || 1)
-    ));
+  const existingInsight = findInsightForSelection(nextInsights, selectionContext);
 
   const nowIso = new Date().toISOString();
   const nextInsight = existingInsight

@@ -24,8 +24,12 @@ export function createEntryListRenderer({
   let reasonBox, hideTimer;
   function hideReason() { clearTimeout(hideTimer); if (reasonBox) reasonBox.hidden = true; }
   function showReason(event) {
-    const row = event.target?.closest?.('[data-suggestion-reason]');
+    const row = event.target?.closest?.('[data-notebook-entry-id]');
     if (!row || !listEl.contains(row)) return;
+    const name = row.querySelector('.biology-notebook-page-name');
+    const clippedName = name && name.scrollWidth > name.clientWidth ? name.textContent : '';
+    const text = [clippedName, row.dataset.suggestionReason].filter(Boolean).join('\n\n');
+    if (!text) return;
     clearTimeout(hideTimer);
     const doc = listEl.ownerDocument;
     if (!reasonBox) {
@@ -36,7 +40,7 @@ export function createEntryListRenderer({
       reasonBox.addEventListener('mouseenter', () => clearTimeout(hideTimer));
       doc.body.append(reasonBox);
     }
-    reasonBox.textContent = row.dataset.suggestionReason;
+    reasonBox.textContent = text;
     reasonBox.hidden = false;
     const bounds = row.getBoundingClientRect();
     const view = doc.defaultView;
@@ -48,7 +52,7 @@ export function createEntryListRenderer({
   listEl?.addEventListener?.('mouseover', showReason);
   listEl?.addEventListener?.('focusin', showReason);
   listEl?.addEventListener?.('mouseout', event => {
-    if (!reasonBox?.contains(event.relatedTarget) && !event.target?.closest?.('[data-suggestion-reason]')?.contains(event.relatedTarget)) hideTimer = setTimeout(hideReason, 150);
+    if (!reasonBox?.contains(event.relatedTarget) && !event.target?.closest?.('[data-notebook-entry-id]')?.contains(event.relatedTarget)) hideTimer = setTimeout(hideReason, 150);
   });
   listEl?.addEventListener?.('focusout', hideReason);
   listEl?.addEventListener?.('scroll', hideReason);

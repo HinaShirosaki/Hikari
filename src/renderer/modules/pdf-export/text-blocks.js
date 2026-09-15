@@ -43,6 +43,10 @@ function writeParagraph(ctx, text) {
 function writeNumberedItem(ctx, index, text) {
   const gutter = 22;
   const bodyWidth = ctx.maxWidth - gutter;
+  // Set the body font before wrapping: splitTextToSize measures with the current
+  // font, and the heading font that precedes the first item is wider.
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
   const lines = splitWrappedLines(ctx.doc, text, bodyWidth);
   lines.forEach((line, lineIndex) => {
     ensureSpace(ctx, LINE_HEIGHT);
@@ -52,9 +56,9 @@ function writeNumberedItem(ctx, index, text) {
       setTextColor(ctx, ACCENT);
       ctx.doc.text(`${index}`, ctx.margin, ctx.y);
       setTextColor(ctx, [0, 0, 0]);
+      font(ctx, 'normal');
+      ctx.doc.setFontSize(BODY_FONT_SIZE);
     }
-    font(ctx, 'normal');
-    ctx.doc.setFontSize(BODY_FONT_SIZE);
     ctx.doc.text(String(line || ''), ctx.margin + gutter, ctx.y);
     ctx.y += LINE_HEIGHT;
   });
@@ -84,13 +88,13 @@ function writeBulletLines(ctx, lines) {
     writeParagraph(ctx, '-');
     return;
   }
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
   values.forEach((line) => {
     const gutter = 14;
     const lines = splitWrappedLines(ctx.doc, String(line || '').trim(), ctx.maxWidth - gutter);
     lines.forEach((part, index) => {
       ensureSpace(ctx, LINE_HEIGHT);
-      font(ctx, 'normal');
-      ctx.doc.setFontSize(BODY_FONT_SIZE);
       if (index === 0) {
         setTextColor(ctx, ACCENT);
         ctx.doc.text('•', ctx.margin + 3, ctx.y);

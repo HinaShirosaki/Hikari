@@ -97,12 +97,14 @@ function calculateFixedReactionReagent({
 } = {}) {
   const resolvedName = cleanName(name, 'Reagent');
   const total = withLabel(describeReactionVolume(totalVolumeValue, totalVolumeUnit, 'total volume'), 'total volume');
-  const stock = withLabel(describeReactionConcentration({
+  const describeStock = (defaults = {}) => withLabel(describeReactionConcentration({
     concentration: stockConcentration,
     value: stockValue,
     unit: stockUnit,
-    label: 'stock concentration'
+    label: 'stock concentration',
+    defaults
   }), 'stock concentration');
+  let stock = describeStock();
   const final = withLabel(describeReactionConcentration({
     concentration: finalConcentration,
     value: finalValue,
@@ -110,6 +112,11 @@ function calculateFixedReactionReagent({
     label: 'final concentration',
     defaults: stock.missing ? {} : bufferConcentrationDefaultsFrom(stock, { defaultKind: 'molar', defaultUnit: finalUnit })
   }), 'final concentration');
+  // Whichever side carries the unit sets it for both: a bare "50" typed against
+  // a 0.2 ng/uL template is 50 ng/uL, not 50 mM.
+  if (!stock.missing && !stock.explicitUnit && !final.missing && final.explicitUnit) {
+    stock = describeStock(bufferConcentrationDefaultsFrom(final));
+  }
   const manualVolume = describeReactionVolume(manualVolumeValue, manualVolumeUnit, 'manual volume');
 
   if (!manualVolume.missing) {

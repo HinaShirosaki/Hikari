@@ -6,7 +6,7 @@ import {
   unwrapInsightAnchors,
   wrapInsightOccurrence
 } from './selection-dom.js';
-import { asArray, cleanText, clamp } from './text-utils.js';
+import { cleanText, clamp } from './text-utils.js';
 
 export function getSelectionContext(ctx, hostKey) {
   const registration = getHostRegistration(ctx, hostKey);
@@ -113,7 +113,7 @@ export function refreshHost(ctx, hostKey) {
   }
 
   const segmentMap = new Map();
-  asArray(host.querySelectorAll('[data-selection-segment-id]')).forEach((segment) => {
+  Array.from(host.querySelectorAll('[data-selection-segment-id]')).forEach((segment) => {
     segmentMap.set(cleanText(segment.dataset.selectionSegmentId, 240), segment);
   });
 

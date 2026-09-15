@@ -7,6 +7,7 @@ import {
 import { showTransientNotice } from '../../lib/notify.js';
 import {
   safeValue,
+  flowText,
   formatTimestamp
 } from './doc-context.js';
 import {
@@ -25,8 +26,7 @@ import {
 import {
   writeSimpleTable,
   writeNotebookResultTable,
-  writeNotebookToolCalculationTable,
-  hasWideNotebookResultTable
+  writeNotebookToolCalculationTable
 } from './tables.js';
 import {
   notebookEntryMeta,
@@ -43,7 +43,7 @@ import {
 } from './figures.js';
 import { loadHikariPdfIconDataUrl } from './branding.js';
 
-export function exportProtocolPdf(protocol) {
+export function exportProtocolPdf(protocol, { print = false } = {}) {
   if (!protocol) {
     return false;
   }
@@ -69,7 +69,7 @@ export function exportProtocolPdf(protocol) {
   }
 
   writeHeading(ctx, 'Purpose');
-  writeParagraph(ctx, safeValue(protocol.purpose));
+  writeParagraph(ctx, safeValue(flowText(protocol.purpose)));
 
   writeHeading(ctx, 'Materials');
   writeBulletLines(ctx, Array.isArray(protocol.materials) ? protocol.materials : []);
@@ -84,9 +84,9 @@ export function exportProtocolPdf(protocol) {
   }
 
   writeHeading(ctx, 'Troubleshooting');
-  writeParagraph(ctx, safeValue(protocol.troubleshooting));
+  writeParagraph(ctx, safeValue(flowText(protocol.troubleshooting)));
 
-  finishAndSave(ctx, `protocol-${protocol.name || protocol.id || 'export'}`);
+  finishAndSave(ctx, `protocol-${protocol.name || protocol.id || 'export'}`, { print });
   return true;
 }
 
@@ -257,10 +257,8 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     }
 
     const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
-    const resultTables = resolveNotebookResultTablesValues(entry.resultTables, entry.resultTable);
-    const useWideLayout = hasWideNotebookResultTable(resultTables);
     const pdfSettings = normalizeNotebookPdfSettings(params.pdfSettings);
-    const baseMargin = useWideLayout ? 54 : 72;
+    const baseMargin = 72;
     const cornerIconDataUrl = await loadHikariPdfIconDataUrl();
     const ctx = createContext({
       title,
@@ -268,7 +266,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
       badge: notebookStateLabel(entry),
       footerLabel: `${safeValue(entry.projectName)} · ${title}`,
       meta: notebookEntryMeta(entry),
-      orientation: useWideLayout ? 'l' : 'p',
+      orientation: 'p',
       format: pdfSettings.pageSize,
       margin: baseMargin,
       margins: resolveNotebookPdfMargins(pdfSettings, baseMargin),
@@ -280,7 +278,11 @@ export const exportNotebookEntryPdf = async (params = {}) => {
 
     await writeNotebookEntryBody(ctx, params);
 
-    finishAndSave(ctx, `notebook-${entry.projectName || 'project'}-${entry.experimentName || entry.protocolName || entry.id || 'entry'}`);
+    finishAndSave(
+      ctx,
+      `notebook-${entry.projectName || 'project'}-${entry.experimentName || entry.protocolName || entry.id || 'entry'}`,
+      { print: Boolean(params.print) }
+    );
     return true;
   } catch (error) {
     console.error('Failed to export notebook PDF:', error);

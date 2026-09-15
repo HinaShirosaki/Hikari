@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "paper_id": "acschembio.8b00171",
+  "doc_type": "research_paper",
+  "title": "cb8b00171 1..8",
+  "doi": "10.1021/acschembio.8b00171",
+  "one_sentence_summary": "This study engineered pH-responsive M2pep analogues for acidic M2-macrophage targeting using amino acid substitution and solid-phase synthesis, titration, serum-stability testing, and flow-cytometric binding assays, finding that 3,5-diiodotyrosine and tetrafluorophenol substitutions enabled stronger low-pH-selective binding—with improved serum stability and reversible pH-dependent elution—although disubstituted analogues showed greater high-concentration toxicity.",
+  "project_ids": [],
+  "experiments": [
+    {
+      "id": "e1",
+      "title": "3,5-Diiodotyrosine-engineered M2pep pH-dependent binding",
+      "technique": "3,5-Diiodotyrosine mutagenesis and target-cell binding comparison",
+      "variables": "Engineered M2pep binding to M2 macrophages at pH 6 versus pH 7.4",
+      "figure_ref": "",
+      "outcome": "The engineered peptide showed greater selectivity for M2 macrophages under acidic conditions than at physiological pH.",
+      "evidence": "Our engineered pH-responsive M2pep (Ac-Y-I-Î ) binds target M2 macrophages more selectively at pH 6 than̂ at pH 7.4."
+    },
+    {
+      "id": "e2",
+      "title": "Serum stability of 3,5-diiodotyrosine-substituted peptide",
+      "technique": "Serum stability assessment",
+      "variables": "3,5-Diiodotyrosine-substituted peptide stability in serum",
+      "figure_ref": "",
+      "outcome": "The substitutions improved peptide serum stability.",
+      "evidence": "In addition, 3,5-diiodotyrosine substitutions also improve serum stability of the peptide."
+    },
+    {
+      "id": "e3",
+      "title": "Effect of histidine and 3,5-diiodotyrosine substitutions on M2pep pH-dependent binding",
+      "technique": "Amino acid substitution of M2pep followed by pH-dependent binding assessment",
+      "variables": "Histidine and 3,5-diiodotyrosine substitution variants and their pH-dependent binding activity",
+      "figure_ref": "",
+      "outcome": "The study tested whether these substitutions confer pH-dependent binding; no result is reported on this page.",
+      "evidence": "we investigate, in this study, the effect of histidine and 3,5-diiodotyrosine substitution(s) in an M2 macrophage-targeting peptide (M2pep) on pH-dependent binding activity."
+    },
+    {
+      "id": "e4",
+      "title": "pH-dependent binding of M2pepBiotin and AcM2pep(RY)Biotin to polarized macrophages",
+      "technique": "Concentration-dependent peptide-binding assay on M1 and M2 macrophages",
+      "variables": "M2pepBiotin versus AcM2pep(RY)Biotin; M1 control versus M2 macrophages; pH 6 versus pH 7.4; peptide concentration",
+      "figure_ref": "Figure 2",
+      "outcome": "Both peptides retained M2-over-M1 selectivity at both pH values; M2pepBiotin favored pH 7.4, whereas AcM2pep(RY)Biotin showed a weaker, concentration-dependent tendency toward greater binding at pH 6.",
+      "evidence": "Both M2pepBiotin and AcM2pep(RY)Biotin bind to M2 macrophages with good selectivity over M1 macrophages at both pH 6 and 7.4, whereas M2pepBiotin binds to M2 macrophages with higher affinity at pH 7.4 than at pH 6; the effect of pH on binding activity of AcM2pep(RY)Biotin is less consistent and appears to be concentration-dependent, slightly favoring binding at pH 6 as the peptide concentration is increased (Figure 2)."
+    },
+    {
+      "id": "e5",
+      "title": "Effect of the K9H substitution on M2pep pH-dependent binding",
+      "technique": "Comparative peptide-binding assay on M2 macrophages",
+      "variables": "M2pep(H9)Biotin versus original M2pepBiotin; pH 6 versus pH 7.4",
+      "figure_ref": "Figure 3",
+      "outcome": "K9H reversed the pH preference so that binding was stronger at pH 6, but the difference was marginal and overall affinity was reduced relative to the original peptide.",
+      "evidence": "Indeed, a reverse trend in binding activity of M2pep(H9)Biotin on M2 macrophages was observed where the peptide binds more strongly at pH 6 than at 7.4 (Figure 3). Nonetheless, the difference in binding activities at these pH values is relatively marginal, and the overall binding affinity of the peptide is reduced compared to that of the original M2pepBiotin."
+    },
+    {
+      "id": "e6",
+      "title": "3,5-Diiodotyrosine substitution engineering of low-pH-selective M2pep binding",
+      "technique": "3,5-Diiodotyrosine substitution by Fmoc/tBu solid-phase peptide synthesis followed by pH-dependent M2-macrophage binding assessment",
+      "variables": "Tyrosine substitution position and pH-dependent binding to M2 macrophages",
+      "figure_ref": "",
+      "outcome": "Appropriate tyrosine-to-3,5-diiodotyrosine substitutions produced engineered M2pep variants with low-pH-selective binding to M2 macrophages.",
+      "evidence": "Specific to M2pep, we found that appropriate substitutions of tyrosine with 3,5-diiodotyrosine resulted in desirable low pH-selective binding activity of the engineered M2pep to target M2 macrophages."
+    },
+    {
+      "id": "e7",
+      "title": "pH-dependent binding of disubstituted M2pep(R9) analogues",
+      "technique": "M2 macrophage peptide-binding assay",
+      "variables": "Dual 3,5-diiodotyrosine substitutions at positions 1 and 12 or positions 10 and 12; pH 6 versus pH 7.4; disubstituted versus monosubstituted analogues",
+      "figure_ref": "Figure 4B",
+      "outcome": "Both disubstituted analogues further increased binding while retaining low-pH selectivity.",
+      "evidence": "Botĥ disubstituted analogues show further enhancement in binding activity over the monosubstituted ones while also retaining good low-pH selectivity (Figure 4B)."
+    },
+    {
+      "id": "e8",
+      "title": "High-concentration toxicity assessment of substituted M2pep(R9) analogues",
+      "technique": "Toxicity observation during peptide binding-curve measurements",
+      "variables": "Peptide concentration; monosubstituted versus disubstituted analogues",
+      "figure_ref": "Data not shown",
+      "outcome": "Toxicity at higher concentrations prevented accurate binding-curve and pH-selectivity determination, and disubstituted analogues were more toxic.",
+      "evidence": "Toxicity of these peptides was observed at higher concentrations, preventing us from accurately constructing the binding curves to determine KD,7.4/ KD,6 for quantitative comparison of pH selectivity of each analogue (data not shown)."
+    },
+    {
+      "id": "e9",
+      "title": "Effect of N-terminal acetylation on macrophage binding and M2-to-M1 selectivity",
+      "technique": "Peptide-binding assay with M1 and M2 macrophages",
+      "variables": "Free versus acetylated N-terminus; M1 versus M2 macrophages; pH 6 versus pH 7.4",
+      "figure_ref": "Figure 5A",
+      "outcome": "Acetylation did not noticeably alter binding; low pH increased M1 binding, but binding remained substantially lower than on M2 macrophages.",
+      "evidence": "For both peptides, an increase in binding activity on M1 macrophages is observed at pH 6, but the extent of binding remains substantially lower compared to that on M2 macrophages."
+    },
+    {
+      "id": "e10",
+      "title": "Synthesis of a tetrafluorophenol-substituted M2pep analogue",
+      "technique": "Peptide synthesis with 2,3,5,6-tetrafluoro-4-hydroxybenzoic acid-functionalized 2,3-diaminopropionic acid",
+      "variables": "Replacement of the terminal tyrosine with the tetrafluorophenol-functionalized residue",
+      "figure_ref": "Figure 6A",
+      "outcome": "A tetrafluorophenol-bearing analogue was synthesized to test an alternative physiologically ionizable tyrosine mimic.",
+      "evidence": "we synthesized Ac-Y-Y-- , where the last tyrosine residue was replaced with 2,3,5,6-tetrafluoro-4-hydroxybenzoic acid-functionalized 2,3-diaminopropionic acid (- ) (Figure 6A)."
+    },
+    {
+      "id": "e11",
+      "title": "Acid titration of the tetrafluorophenol-substituted analogue",
+      "technique": "Experimental acid titration",
+      "variables": "Tetrafluorophenol group in Ac-Y-Y-- versus 3,5-diiodotyrosine in Ac-Y-I-I",
+      "figure_ref": "Figure S1",
+      "outcome": "The tetrafluorophenol group had an estimated pKa comparable to the 3,5-diiodotyrosine group, approximately 7.5–8.",
+      "evidence": "A pKa value of - on Ac-Y-Y-- was estimated from an experimental acid titration curve and was found to be comparable to I ̂ on Ac-Y-I -Î ̂ (7.5−8) (Figure S1)."
+    },
+    {
+      "id": "e12",
+      "title": "pH-dependent binding of the tetrafluorophenol-substituted analogue",
+      "technique": "M2 macrophage peptide-binding assay",
+      "variables": "Ac-Y-Y-- versus AcM2pep(RY)Biotin; pH 6 versus pH 7.4",
+      "figure_ref": "Figure 6B",
+      "outcome": "The tetrafluorophenol analogue bound M2 macrophages more strongly at pH 6 and showed enhanced affinity relative to AcM2pep(RY)Biotin.",
+      "evidence": "Ac-Y-Y-̂ - binds to M2 macrophages more strongly at pH 6 compared to its binding activity at pH 7.4 (Figure 6B)."
+    },
+    {
+      "id": "e13",
+      "title": "Reversible pH-dependent elution of bound Ac-Y-I-Î",
+      "technique": "Postbinding peptide-elution assay on M2 macrophages with median fluorescence intensity readout",
+      "variables": "Initial binding in PBSA at pH 6 followed by post-treatment incubation at pH 6, 7.4, or 8.5",
+      "figure_ref": "Figure 7",
+      "outcome": "Median fluorescence intensity decreased as post-treatment pH increased, indicating pH-dependent elution of bound peptide.",
+      "evidence": "Indeed, we observed a reduction in median fluorescence intensity read-out as a function of increasing pH, which indicates the pH-dependent elution of the bound peptides off the target (Figure 7B)."
+    },
+    {
+      "id": "e14",
+      "title": "Synthesis and molecular-weight confirmation of peptide analogues",
+      "technique": "Fmoc/tBu solid-phase peptide synthesis, HPLC purification, and MALDI-ToF mass spectrometry",
+      "variables": "Peptide sequence and chemical modification, including 3,5-diiodotyrosine-containing and acetylated analogues",
+      "figure_ref": "Not specified",
+      "outcome": "The synthesized peptides were purified and their molecular weights were confirmed.",
+      "evidence": "Molecular weights of the synthesized peptides were confirmed by MALDI-ToF MS."
+    },
+    {
+      "id": "e15",
+      "title": "Peptide binding to polarized primary macrophages at pH 6 and 7.4",
+      "technique": "Streptavidin-Alexa Fluor 647 flow-cytometric binding assay",
+      "variables": "M1 versus M2 macrophage polarization; binding and wash-buffer pH 6 versus 7.4; peptide treatment",
+      "figure_ref": "Not specified",
+      "outcome": "Peptide binding was measured by flow cytometry after incubating polarized macrophages under the investigated pH conditions.",
+      "evidence": "All washing steps and incubations were performed in buffers at the desired pH under investigation (pH 6 or 7.4)."
+    },
+    {
+      "id": "e16",
+      "title": "Cell-viability control during flow-cytometric binding studies",
+      "technique": "Propidium iodide viability staining",
+      "variables": "Each peptide-binding sample",
+      "figure_ref": "Not specified",
+      "outcome": "Cell viability was assessed before flow-cytometric analysis of every sample.",
+      "evidence": "Propidium iodide was added prior to running of each sample to assess for cell viability."
+    },
+    {
+      "id": "e17",
+      "title": "Peptide serum-stability time course",
+      "technique": "Incubation in normal mouse serum followed by peptide extraction and MALDI-ToF mass spectrometry",
+      "variables": "Incubation time in normal mouse serum",
+      "figure_ref": "Not specified",
+      "outcome": "Peptide degradation patterns were analyzed at multiple time points.",
+      "evidence": "At different time points, an aliquot (40 μL) was drawn, mixed with an equal volume of ACN to precipitate serum proteins, and centrifuged at 10,000 rpm for 5 min."
+    },
+    {
+      "id": "e18",
+      "title": "Supplementary titration curves of Ac-Y-Y-- and Ac-Y-I-Î",
+      "technique": "Titration-curve analysis",
+      "variables": "Ac-Y-Y-- versus Ac-Y-I-Î peptide analogue",
+      "figure_ref": "Supporting Information",
+      "outcome": "Titration curves for both peptide analogues were provided in the Supporting Information.",
+      "evidence": "Titration curves of Ac-Y-Y-- and Ac-Y-I -Î ̂"
+    },
+    {
+      "id": "e19",
+      "title": "Supplementary competition binding of M2pep-displayed M13 phages",
+      "technique": "Competition binding assay",
+      "variables": "M2pep analogues used in competition with M2pep-displayed M13 phages",
+      "figure_ref": "Supporting Information",
+      "outcome": "Competition binding between M2pep-displayed phages and M2pep analogues was evaluated in the Supporting Information.",
+      "evidence": "competition binding study of M2pep-displayed M13 phages with M2pep analogues"
+    }
+  ],
+  "structure_outline": [],
+  "notable_claims": [],
+  "source_paths": {
+    "paper_md": "KnowledgeBase/papers.md/acschembio.8b00171/cb8b00171_1..8.md",
+    "figures_dir": "KnowledgeBase/papers.md/acschembio.8b00171/figures",
+    "pdf_path": "Papers/Reversibly_Switchable,_pH-Dependent_Peptide_Ligand_Binding_via_3,5-Diiodotyrosine_Substitutions/acschembio.8b00171.pdf"
+  },
+  "created_at": "2026-08-22T01:26:39.672Z",
+  "updated_at": "2026-09-11T01:38:46.773Z"
+}
