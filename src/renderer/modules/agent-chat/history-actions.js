@@ -36,10 +36,8 @@ function markNotebookAppendMessage(message, status, reason = '') {
 export function createHistoryActionController({
   api,
   state,
-  input,
   persist,
   setStatus,
-  syncComposerHeight,
   renderContextSummary,
   renderHistoryView,
   answerAssistantQuestion,
@@ -166,20 +164,6 @@ export function createHistoryActionController({
       || (event?.target?.dataset?.agentRejectNotebookAppend ? event.target : null);
     if (rejectNotebookAppendButton) {
       rejectNotebookAppend(rejectNotebookAppendButton.dataset.agentRejectNotebookAppend);
-      return;
-    }
-
-    const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
-      || (event?.target?.dataset?.agentSuggestPrompt ? event.target : null);
-    if (suggestedPromptButton) {
-      const prompt = trimText(suggestedPromptButton.dataset.agentSuggestPrompt, 3000);
-      if (!prompt) {
-        return;
-      }
-      input.value = prompt;
-      syncComposerHeight();
-      input.focus();
-      setStatus('Prompt ready.');
       return;
     }
 

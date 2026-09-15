@@ -1,0 +1,61 @@
+{
+  "schema_version": "1.1.0",
+  "items": [
+    {
+      "id": "memory-1789443341819-b58c6fe1",
+      "category": "",
+      "key": "report_format",
+      "summary": "Use concise tables for memory QA.",
+      "value": null,
+      "scope": "global",
+      "project_id": "",
+      "project_name": "",
+      "tags": [],
+      "source": "",
+      "created_at": "2026-09-15T03:35:41.819Z",
+      "updated_at": "2026-09-15T03:35:41.819Z"
+    },
+    {
+      "id": "memory-1789443341827-e5cad395",
+      "category": "",
+      "key": "qa_marker",
+      "summary": "Amber paperclip 73.",
+      "value": null,
+      "scope": "project",
+      "project_id": "memory-qa-a",
+      "project_name": "Memory QA A",
+      "tags": [],
+      "source": "",
+      "created_at": "2026-09-15T03:35:41.827Z",
+      "updated_at": "2026-09-15T03:35:41.827Z"
+    },
+    {
+      "id": "memory-1789443341845-fea16fe0",
+      "category": "",
+      "key": "qa_marker",
+      "summary": "Blue notebook 29.",
+      "value": null,
+      "scope": "project",
+      "project_id": "memory-qa-b",
+      "project_name": "Memory QA B",
+      "tags": [],
+      "source": "",
+      "created_at": "2026-09-15T03:35:41.845Z",
+      "updated_at": "2026-09-15T03:35:41.845Z"
+    },
+    {
+      "id": "memory-1789443341865-278fb3e5",
+      "category": "",
+      "key": "phrase",
+      "summary": "binder optimization",
+      "value": null,
+      "scope": "global",
+      "project_id": "",
+      "project_name": "",
+      "tags": [],
+      "source": "",
+      "created_at": "2026-09-15T03:35:41.865Z",
+      "updated_at": "2026-09-15T03:35:41.865Z"
+    }
+  ]
+}

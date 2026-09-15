@@ -108,6 +108,12 @@ function contextActionTarget(action) {
 
 function bootVectorBuilder(features, options = {}, recordOverrides = {}) {
   const document = createMockDocument(VECTOR_BUILDER_IDS);
+  // The mock document drops listeners; keep the document-level ones (keyboard
+  // editing) so tests can fire them.
+  const documentListeners = {};
+  document.addEventListener = (type, listener) => {
+    documentListeners[type] = [...(documentListeners[type] || []), listener];
+  };
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
@@ -122,7 +128,7 @@ function bootVectorBuilder(features, options = {}, recordOverrides = {}) {
     ...recordOverrides
   });
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
-  return { document, viewer };
+  return { document, viewer, documentListeners };
 }
 
 test('[EDGE] protein builder common blocks are unique and buildable into DNA', () => {
@@ -260,8 +266,9 @@ test('[EDGE] sequence-viewer alignment workspace stays quiet until input needs f
   assert.equal(document.getElementById('sequence-viewer-alignment-reset-btn').disabled, true);
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-file-name').textContent,
-    'No query file selected'
+    ''
   );
+  assert.equal(document.getElementById('sequence-viewer-alignment-query-file-name').hidden, true);
   assert.equal(
     document.getElementById('sequence-viewer-alignment-query-summary').textContent,
     ''
@@ -481,6 +488,50 @@ test('[EDGE] sequence-viewer vector builder deletes a feature and its bases from
   // The derived sequence title may retain His6 as the deleted target; the
   // feature label itself must be gone from the map.
   assert.equal(/vector-map__label-text[^>]*>His6<\/text>/.test(map.innerHTML), false);
+});
+
+test('[EDGE] sequence-viewer vector builder edits bases from the keyboard in its own dialog', async () => {
+  const { document, documentListeners } = bootVectorBuilder([
+    { name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
+    { name: 'Terminator', type: 'terminator', strand: -1, source: 'external', segments: [{ start: 30, end: 50 }] }
+  ]);
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const overlay = document.getElementById('sequence-viewer-vector-builder-sequence-edit-overlay');
+  const detailOverlay = document.getElementById('sequence-viewer-sequence-edit-overlay');
+  const editForm = document.getElementById('sequence-viewer-vector-builder-sequence-edit-form');
+  const editTitle = document.getElementById('sequence-viewer-vector-builder-sequence-edit-title');
+  const editTextarea = document.getElementById('sequence-viewer-vector-builder-sequence-edit-textarea');
+  const pressKey = (key) => (documentListeners.keydown || []).forEach((listener) => listener({
+    key, target: {}, preventDefault() {}, stopPropagation() {}
+  }));
+
+  // Typing over a selected feature replaces its span in the Vector Builder's
+  // dialog; the detail workspace's dialog (hidden with that workspace) stays shut.
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  pressKey('g');
+  assert.equal(overlay.hidden, false);
+  assert.equal(Boolean(detailOverlay.hidden), true);
+  assert.equal(editTitle.textContent, 'Replace Bases');
+  assert.equal(editTextarea.value, 'G');
+  editTextarea.value = 'GGGCCC';
+  trigger(editForm, 'submit', { preventDefault() {} });
+  await flushAsync();
+  assert.match(map.innerHTML, /49 bp/);
+  // The edit shifted feature indices, so nothing stays selected.
+  assert.equal(/vector-map__feature--active/.test(map.innerHTML), false);
+
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  pressKey('Delete');
+  assert.equal(editTitle.textContent, 'Delete Bases');
+  trigger(editForm, 'submit', { preventDefault() {} });
+  await flushAsync();
+  assert.match(map.innerHTML, /29 bp/);
+  // A second Delete with nothing selected is a no-op, not another deletion.
+  pressKey('Delete');
+  assert.equal(overlay.hidden, true);
+
+  pressKey('Escape');
+  assert.equal(overlay.hidden, true);
 });
 
 test('[EDGE] sequence-viewer Vector Builder cloning design sends the shared thermocycle page to Notebook', async () => {

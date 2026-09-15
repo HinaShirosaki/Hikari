@@ -164,7 +164,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
       return;
     }
 
-    if (hasOpenSequenceEditDialog()) {
+    // Other workspaces (Vector Builder, Protein Builder) own their keys while
+    // they are showing; opening this dialog inside the hidden detail workspace
+    // would leave an invisible dialog swallowing every later keystroke.
+    const mode = state.localWorkspaceMode;
+    if (hasOpenSequenceEditDialog() || (mode && mode !== 'detail' && mode !== 'alignment')) {
       return;
     }
 

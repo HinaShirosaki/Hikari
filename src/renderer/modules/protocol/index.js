@@ -12,6 +12,7 @@ import { createProtocolEditorHelpers } from './editor-utils.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 import { createProtocolDetailPanels } from './detail-panels.js';
 import { createProtocolEditorActions } from './editor-actions.js';
+import { renderProtocolPlaceholderPresetButtons } from './placeholder-presets.js';
 
 export function initProtocolManagement({
   state,
@@ -115,6 +116,14 @@ export function initProtocolManagement({
     return state.protocols.find((item) => String(item?.id || '') === localState.activeProtocolId) || null;
   }
 
+  function renderPlaceholderPresets() {
+    return renderProtocolPlaceholderPresetButtons(
+      ui.protocolPlaceholderPresets,
+      state.settings,
+      safeText,
+      localState.activePlaceholderPreset
+    );
+  }
 
   const {
     applyDetailMode,
@@ -134,7 +143,6 @@ export function initProtocolManagement({
     deleteProtocol
   } = createProtocolDetailPanels({
     ui,
-    documentRef,
     localState,
     draftHelpers,
     previewHelpers,
@@ -146,9 +154,9 @@ export function initProtocolManagement({
     getImportController: () => importController,
     getPolishController: () => polishController,
     getGenerationController: () => generationController,
+    renderPlaceholderPresets,
     state,
     persist,
-    safeText,
     onProtocolsChanged,
     selectionInsightsController
   });
@@ -308,58 +316,23 @@ export function initProtocolManagement({
   ui.protocolStepsInput?.addEventListener('keydown', editorHelpers.onBulletTextareaKeydown);
   ui.protocolStepsInput?.addEventListener('blur', () => editorHelpers.normalizeBulletTextarea(ui.protocolStepsInput));
   ui.addPlaceholderBtn?.addEventListener('click', addInteractivePlaceholderToken);
-  ui.placeholderPresetButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const placeholder = String(button.dataset.protocolPlaceholderPreset || '').trim();
-      if (placeholder) {
-        setActivePlaceholderPreset(placeholder);
-        addInteractivePlaceholderToken(placeholder);
-      }
-    });
+  ui.protocolPlaceholderPresets?.addEventListener('click', (event) => {
+    const button = event.target?.closest?.('[data-protocol-placeholder-preset]') || event.target;
+    const placeholder = String(button?.dataset?.protocolPlaceholderPreset || '').trim();
+    if (placeholder) {
+      setActivePlaceholderPreset(placeholder);
+      addInteractivePlaceholderToken(placeholder);
+    }
   });
-  function closeProtocolSortMenu() {
-    if (ui.protocolSortMenu) {
-      ui.protocolSortMenu.hidden = true;
-    }
-    ui.protocolSortMenuBtn?.setAttribute('aria-expanded', 'false');
-  }
-
-  function applyProtocolSort(sortValue) {
-    const [field, order] = String(sortValue || '').split(':');
-    if (!['time', 'name'].includes(field) || !['asc', 'desc'].includes(order)) {
-      return;
-    }
-
-    localState.protocolSortField = field;
-    localState.protocolSortOrder = order;
-    closeProtocolSortMenu();
+  ui.protocolSearch?.addEventListener('input', () => {
+    localState.activeMenuProtocolId = '';
     listController.renderList();
-  }
-
-  ui.protocolSortMenuBtn?.addEventListener('click', () => {
-    if (!ui.protocolSortMenu) {
-      return;
-    }
-    const willOpen = ui.protocolSortMenu.hidden;
-    ui.protocolSortMenu.hidden = !willOpen;
-    ui.protocolSortMenuBtn.setAttribute('aria-expanded', String(willOpen));
   });
-  ui.protocolSortMenu?.addEventListener('click', (event) => {
-    const option = event.target?.closest?.('[data-protocol-sort]') || event.target;
-    applyProtocolSort(option?.dataset?.protocolSort);
-  });
-  documentRef?.addEventListener?.('click', (event) => {
-    if (ui.protocolSortMenu?.hidden) {
-      return;
-    }
-    if (ui.protocolSortMenu?.contains?.(event.target) || ui.protocolSortMenuBtn?.contains?.(event.target)) {
-      return;
-    }
-    closeProtocolSortMenu();
-  });
-  documentRef?.addEventListener?.('keydown', (event) => {
+  ui.protocolSearch?.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      closeProtocolSortMenu();
+      event.preventDefault();
+      ui.protocolSearch.value = '';
+      listController.renderList();
     }
   });
   ui.protocolViewEditBtn?.addEventListener('click', onEditViewedProtocol);
@@ -374,8 +347,8 @@ export function initProtocolManagement({
     }
   });
 
-  listController.updateSortButtonLabels();
   generationController.syncProtocolGenerateButtonVisibility();
+  renderPlaceholderPresets();
   applyDetailMode('empty');
   selectionInsightsController?.registerHost?.({
     key: 'protocol-view',
@@ -450,6 +423,7 @@ export function initProtocolManagement({
     ),
     importProtocolsFromJson: importController.importProtocolsFromJson,
     renderList: listController.renderList,
+    renderPlaceholderPresets,
     saveUnsavedChanges: async () => {
       const protocol = onProtocolSubmit({ preventDefault() {} });
       return Boolean(protocol) && localState.protocolDetailMode !== 'edit';

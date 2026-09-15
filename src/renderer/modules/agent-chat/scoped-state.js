@@ -43,14 +43,6 @@ function buildNotebookAgentSessionPrompt(context = {}) {
   }
   const lines = [
     'You are in a Biology Notebook right-rail chat session. Treat the active notebook page as the default subject when the user says "this page", "this notebook page", or "my current experiment".',
-    'Read the complete hidden notebook-page context before answering or using lookup tools. It is the current page content and may include unsaved placeholder values, notes, tables, calculations, result files, linked samples, and linked result summaries.',
-    'When asked to enrich the page, search only for information that is directly useful to this experiment. Use inventory_lookup with exact linked sample or protein ids or codes, and chemical_lookup for local reagent stock. Use native web search for authoritative preparation guidance when needed; reserve literature_search for claims that require research-paper evidence.',
-    'A failed local lookup means only that no saved stock record was found. When a required material is a standard, independently preparable laboratory solution and its identity is sufficiently defined, provide a clearly labeled reference preparation that is not represented as an inventory record. State the assumed chemical form, purity when relevant, target concentration, final volume, solvent, calculation, preparation steps, handling or sterilization, storage, stability, and safety-critical uncertainty.',
-    'Make each reference preparation executable from materials recorded on the page, found locally, or available in an ordinary source form. Do not stop at diluting an unverified stock or undefined base solution: include the missing stock or base formula with mass or volume arithmetic and any molecular-weight, density, or purity assumption needed, or identify it as a missing prerequisite and ask one focused question. Prefer one complete formulation over several partial recipes.',
-    'Never present an assumption, calculated recipe, or external reference as locally recorded data. If chemical form, concentration, compatibility, or another safety-critical parameter could materially change the preparation, state the assumption or ask one focused blocking question. Do not improvise preparations for proprietary mixtures, biological materials, or insufficiently identified substances.',
-    'Make content_markdown concise and bench-ready: include only new actionable information, do not repeat the page title or existing protocol steps, and do not repeat section_title as a heading. Use at most three short subsections and six bullets, with no tables, nested lists, tool names, search queries, failed-lookup transcripts, internal reasoning, or Sources heading. Keep it under about 180 words unless additional safety information is necessary.',
-    'Put decision-relevant lookup gaps in rationale as one short sentence. Pass one to three unique, useful local records or authoritative URLs in sources; do not use failed searches or hidden page context as sources, and keep source labels and details compact.',
-    'Use notebook_append once only when useful new content is ready for explicit review. Use the active entry id, page title, project, protocol, and Updated at timestamp from hidden context. If nothing safe and useful can be added, explain that briefly in chat without proposing an append. Do not create a new page, replace existing notes, or claim the append was saved before Hikari confirms it.',
     'Do not claim that saved notebook data contains unsaved edits unless those edits were supplied in the hidden page context.'
   ];
   if (pageTitle) {
@@ -77,11 +69,7 @@ function buildAssayAgentSessionPrompt(context = {}) {
     return '';
   }
   const lines = [
-    'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".',
-    'Use the hidden assay context supplied with each user question as the current assay state. It may include unsaved plate mappings, pasted result values, analysis settings, latest summaries, and an `Assay plate data (TSV...)` block.',
-    'To retrieve active assay data, parse the TSV rows in that hidden context after the header `well\trow\tcolumn\tsample\tconcentration\tresult`, then create an `assay_table` from those rows for calculations or graphing.',
-    'Do not use local lookup tools for active assay plate/result data; they are not the source for the current assay.',
-    'For derived tables and custom graphs, prefer the Hikari assay table and Plotly graph MCP tools when available.'
+    'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".'
   ];
   if (assayName) {
     lines.push(`Active assay name: ${assayName}`);

@@ -361,7 +361,7 @@
         <section class="home-agent-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="home-agent-title">
           <header class="app-dialog-head">
             <h3 id="home-agent-title">Prepare notebook page</h3>
-            <button type="button" id="home-agent-close-btn" class="app-dialog-close-btn" aria-label="Close notebook conversation">×</button>
+            <button type="button" id="home-agent-close-btn" class="app-dialog-close-btn" aria-label="Close notebook conversation"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
           </header>
         <div class="panel agent-chat-panel">
           <div class="agent-chat-stage">
@@ -381,7 +381,7 @@
                   <div id="home-agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="home-agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                      <button type="button" id="home-agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <label class="agent-composer-project agent-composer-project-inline">
                         <span class="sr-only">Project Scope</span>
                         <select id="home-agent-project-select" aria-label="Project Scope">
@@ -391,10 +391,7 @@
                     </div>
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="home-agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
-                        <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                          <path d="M12 19V5"></path>
-                          <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
-                        </svg>
+                        <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
                         <span class="sr-only">Send message</span>
                       </button>
                       <button type="button" id="home-agent-stop-btn" class="danger-btn" hidden>Stop</button>

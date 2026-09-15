@@ -11,8 +11,13 @@
       "userWidth": 456.1875,
       "historyBottom": 853.8125,
       "composerTop": 853.8125,
-      "titleWidth": 643.5625,
-      "headerHidden": true
+      "titleWidth": 633.9609375,
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "day",
@@ -25,8 +30,13 @@
       "userWidth": 456.1875,
       "historyBottom": 835.8125,
       "composerTop": 835.8125,
-      "titleWidth": 528.5625,
-      "headerHidden": true
+      "titleWidth": 518.9609375,
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "day",
@@ -40,7 +50,12 @@
       "historyBottom": 657.03125,
       "composerTop": 657.03125,
       "titleWidth": 262.8125,
-      "headerHidden": true
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "day",
@@ -54,7 +69,12 @@
       "historyBottom": 680.125,
       "composerTop": 680.125,
       "titleWidth": 192.8125,
-      "headerHidden": true
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "night",
@@ -67,8 +87,13 @@
       "userWidth": 456.1875,
       "historyBottom": 853.8125,
       "composerTop": 853.8125,
-      "titleWidth": 643.5625,
-      "headerHidden": true
+      "titleWidth": 633.9609375,
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "night",
@@ -81,8 +106,13 @@
       "userWidth": 456.1875,
       "historyBottom": 835.8125,
       "composerTop": 835.8125,
-      "titleWidth": 528.5625,
-      "headerHidden": true
+      "titleWidth": 518.9609375,
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "night",
@@ -96,7 +126,12 @@
       "historyBottom": 657.03125,
       "composerTop": 657.03125,
       "titleWidth": 262.8125,
-      "headerHidden": true
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     },
     {
       "theme": "night",
@@ -110,7 +145,12 @@
       "historyBottom": 680.125,
       "composerTop": 680.125,
       "titleWidth": 192.8125,
-      "headerHidden": true
+      "headerHidden": true,
+      "composerControlHeights": {
+        "attach": 36,
+        "project": 36
+      },
+      "composerControlsShareRow": true
     }
   ],
   "checks": [

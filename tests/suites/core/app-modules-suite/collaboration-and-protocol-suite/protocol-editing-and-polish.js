@@ -4,6 +4,7 @@ module.exports = function registerAppCollaborationAndProtocolSuiteProtocolEditin
   with (scope) {
 test('protocol-management keeps interactive-bar presets outside the Steps label hit area', () => {
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'protocol-management-view.html'), 'utf8');
+  const presetModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'placeholder-presets.js'));
   const labelBodies = [...viewSource.matchAll(/<label(?:\s[^>]*)?>([\s\S]*?)<\/label>/g)]
     .map((match) => match[1]);
 
@@ -16,25 +17,12 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
     false,
     'preset buttons must not be descendants of a label that forwards distant clicks'
   );
-
-  const presetNames = [...viewSource.matchAll(/data-protocol-placeholder-preset="([^"]+)"/g)]
-    .map((match) => match[1]);
-  assert.deepEqual(presetNames, [
-    'sample',
-    'plasmid',
-    'protein',
-    'compound',
-    'cell line',
-    'strain',
-    'antibody',
-    'enzyme',
-    'reagent',
-    'volume',
-    'buffer',
-    'concentration',
-    'temperature',
-    'time'
-  ]);
+  assert.match(viewSource, /id="protocol-placeholder-presets"/);
+  assert.deepEqual(
+    presetModule.getProtocolPlaceholderPresetEntries({ sampleTypeLabels: { custom_lysate: 'Lysate' } })
+      .map((entry) => entry.name),
+    ['Plasmid', 'Cell Line', 'Strain', 'Antibody', 'Protein', 'Chemical', 'Primer', 'Lysate', 'volume', 'buffer', 'concentration', 'temperature', 'time']
+  );
 });
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([
@@ -56,8 +44,7 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
     'add-placeholder-btn',
     'placeholder-name',
     'protocol-list',
-    'protocol-sort-menu-btn',
-    'protocol-sort-menu'
+    'protocol-search'
   ]);
   const protocolForm = document.getElementById('protocol-form');
   const protocolName = document.getElementById('protocol-name');
@@ -125,14 +112,11 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
   trigger(viewBtn, 'click');
   assert.match(document.getElementById('protocol-view-content').innerHTML, /Add buffer/);
 });
-test('protocol-management applies a selected combined sort option from the icon menu', () => {
+test('protocol-management filters by name and purpose and clears search', () => {
   const document = createMockDocument([
     'protocol-list',
-    'protocol-sort-menu-btn',
-    'protocol-sort-menu'
+    'protocol-search'
   ]);
-  const protocolSortMenu = document.getElementById('protocol-sort-menu');
-  protocolSortMenu.hidden = true;
   const state = {
     protocols: [
       {
@@ -179,25 +163,27 @@ test('protocol-management applies a selected combined sort option from the icon 
     trackGrowthEvent: () => {}
   });
 
-  const sortMenuBtn = document.getElementById('protocol-sort-menu-btn');
-  trigger(sortMenuBtn, 'click');
-  assert.equal(protocolSortMenu.hidden, false);
-  assert.equal(sortMenuBtn.getAttribute('aria-expanded'), 'true');
-
-  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'name:asc' } } });
+  const search = document.getElementById('protocol-search');
   const protocolList = document.getElementById('protocol-list');
-  assert.ok(protocolList.innerHTML.indexOf('Alpha Protocol') < protocolList.innerHTML.indexOf('Zulu Protocol'));
-  assert.equal(protocolSortMenu.hidden, true);
-  assert.equal(sortMenuBtn.getAttribute('aria-expanded'), 'false');
+  protocol.renderList();
+  search.value = '  ALPHA  ';
+  trigger(search, 'input');
+  assert.match(protocolList.innerHTML, /Alpha Protocol/);
+  assert.doesNotMatch(protocolList.innerHTML, /Zulu Protocol/);
+  state.protocols[0].purpose = 'Isolate nuclei';
+  search.value = 'nuclei';
+  trigger(search, 'input');
+  assert.match(protocolList.innerHTML, /Zulu Protocol/);
+  assert.doesNotMatch(protocolList.innerHTML, /Alpha Protocol/);
+  search.value = 'missing';
+  trigger(search, 'input');
+  assert.match(protocolList.innerHTML, /No matching protocols/);
+  assert.equal(state.protocols.length, 2);
+  trigger(search, 'keydown', { key: 'Escape', preventDefault() {} });
+  assert.equal(search.value, '');
+  assert.match(protocolList.innerHTML, /Alpha Protocol/);
+  assert.match(protocolList.innerHTML, /Zulu Protocol/);
 
-  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'time:desc' } } });
-  assert.ok(protocolList.innerHTML.indexOf('Alpha Protocol') < protocolList.innerHTML.indexOf('Zulu Protocol'));
-
-  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'time:asc' } } });
-  assert.ok(protocolList.innerHTML.indexOf('Zulu Protocol') < protocolList.innerHTML.indexOf('Alpha Protocol'));
-
-  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'name:desc' } } });
-  assert.ok(protocolList.innerHTML.indexOf('Zulu Protocol') < protocolList.innerHTML.indexOf('Alpha Protocol'));
 });
 test('protocol polish sends sectioned draft text to the LLM instead of a protocol JSON envelope', async () => {
   const polishModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'polish.js'));

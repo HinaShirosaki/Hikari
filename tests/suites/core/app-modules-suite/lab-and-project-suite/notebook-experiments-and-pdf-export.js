@@ -486,6 +486,9 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
   assert.ok(pdf.textCalls.every((call) => call.y <= 188), 'Expected text baselines to stay inside the visible page body.');
   assert.ok(pdf.rectCalls.length >= 6, 'Expected result table cells to be drawn as bordered rectangles.');
   assert.doesNotMatch(allText, /Sample \| Reading/);
+  // The export carries the grid's spreadsheet furniture so A1 references still read.
+  assert.match(allText, /A · Sample/);
+  assert.match(allText, /B · Reading/);
   assert.match(allText, /Clone 12/);
   assert.match(allText, /Table 2/);
   assert.match(allText, /Accepted/);

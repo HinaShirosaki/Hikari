@@ -15,9 +15,17 @@ The `messages` projection contains what the UI needs. Raw rows retain request, r
 
 ## `context/agent-memory.js`
 
-The memory runtime persists sparse records and exposes `remember`, `recall`, `forget`, and `list`. Records are normalized and deduplicated by category, key, and project name. The storage file is optional, so tests can inject an in-memory map.
+The memory runtime persists sparse records and exposes `remember`, `recall`, `forget`, and `list`. Records are normalized and deduplicated by category, key, and scope. Project records use stable project IDs where available, with name fallback for legacy records. The storage file is optional, so tests can inject an in-memory map.
 
-Memory is registered as an internal Agent tool. It is distinct from the project-scoped Codex `MEMORY.md` files prepared by the Codex service.
+Memory is available through the direct `memory` MCP tool and its internal Agent executor. It persists in `<storage root>/.hikari/agent-memory.json`. Writes default to global; pass `scope: "project"` for project facts. Project recall/list includes global preferences unless `include_global: false`; `scope: "global"` reads only global records. Prefer `project_id` over a mutable project name. Name-only legacy records acquire the stable ID when updated with one.
+
+All operations on a runtime instance are serialized. The storage destination is captured when the operation starts. Loads publish only after successful parsing; writes use temporary files and atomic rename, with rollback on failure. The app service owns this store; simultaneous external writers are unsupported. `forget` requires an exact ID or key and never includes global records as an implicit addition to project scope. No bulk-clear operation is exposed.
+
+Recall requires every query word to match, regardless of order, and ranks exact phrases and key/summary matches ahead of other matches. Recency breaks ties. This is local lexical retrieval, without embeddings.
+
+Project `MEMORY.md` remains a separate derived view. Notebook lines contain source excerpts, not unverified model interpretations. The `.hikari/research-memory.json` sidecar preserves source paths, hashes, supporting quotes, and proposed model conclusions separately. Quote membership establishes that text was recorded; it does not establish that a generated interpretation follows from it. Legacy summaries are replaced by source extracts until refreshed.
+
+Fallback generation is retried on a later save after backoff (5 minutes, then 10 minutes), at most three attempts per source hash. Source edits reset eligibility. The storage API `writeProjectMemoryFile({ ..., regenerateConclusions: true })` explicitly clears the project's conclusion cache and schedules regeneration without editing notebook records. No retry timer or settings UI is added.
 
 ## Request context
 

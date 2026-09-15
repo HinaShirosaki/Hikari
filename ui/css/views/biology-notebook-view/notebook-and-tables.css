@@ -233,6 +233,25 @@
   border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
 }
 
+/* Sits under the grid as a quiet text button: the row it adds goes right above it. */
+.spreadsheet-table-add-row {
+  justify-self: start;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font: inherit;
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.spreadsheet-table-add-row:hover,
+.spreadsheet-table-add-row:focus-visible {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+}
+
 .spreadsheet-table-editor-head {
   display: flex;
   flex-wrap: wrap;
@@ -270,6 +289,8 @@
    it is part of the label, not a control competing with the data below it. */
 .spreadsheet-head-unit {
   flex: 0 0 auto;
+  /* The base select stretches to 100%, which here swallows the column name. */
+  width: auto;
   padding: 0 2px;
   border: 1px solid transparent;
   border-radius: 4px;

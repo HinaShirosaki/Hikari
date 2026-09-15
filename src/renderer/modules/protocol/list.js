@@ -12,24 +12,6 @@ export function createProtocolListController({
   onExportProtocol,
   syncSelectionAfterMutation
 }) {
-  function updateSortButtonLabels() {
-    const fieldLabel = localState.protocolSortField === 'time' ? 'Time' : 'Name';
-    const orderLabel = localState.protocolSortOrder === 'asc' ? 'Low to High' : 'High to Low';
-    const activeSort = `${localState.protocolSortField}:${localState.protocolSortOrder}`;
-
-    if (ui.protocolSortMenuBtn) {
-      const label = `Sort protocols: ${fieldLabel}, ${orderLabel}`;
-      ui.protocolSortMenuBtn.setAttribute('aria-label', label);
-      ui.protocolSortMenuBtn.title = label;
-    }
-
-    ui.protocolSortMenu?.querySelectorAll?.('[data-protocol-sort]').forEach((option) => {
-      const isActive = option.dataset.protocolSort === activeSort;
-      option.classList.toggle('is-active', isActive);
-      option.setAttribute('aria-checked', String(isActive));
-    });
-  }
-
   function ensureProtocolTimestamps() {
     if (!Array.isArray(state.protocols) || !state.protocols.length) {
       return;
@@ -107,7 +89,6 @@ export function createProtocolListController({
     }
 
     ensureProtocolTimestamps();
-    updateSortButtonLabels();
 
     if (!state.protocols.length) {
       ui.protocolList.innerHTML = '<p class="small-note">No saved protocols yet.</p>';
@@ -115,7 +96,14 @@ export function createProtocolListController({
       return;
     }
 
-    const sortedProtocols = [...state.protocols].sort(compareProtocols);
+    const query = String(ui.protocolSearch?.value || '').trim().toLocaleLowerCase();
+    const sortedProtocols = state.protocols.filter((protocol) =>
+      !query || `${protocol.name || ''} ${protocol.purpose || ''}`.toLocaleLowerCase().includes(query)
+    ).sort(compareProtocols);
+    if (!sortedProtocols.length) {
+      ui.protocolList.innerHTML = '<p class="small-note" role="status">No matching protocols. Try another search.</p>';
+      return;
+    }
     ui.protocolList.innerHTML = sortedProtocols.map((protocol) => `
       <article
         class="list-row protocol-list-row${localState.activeMenuProtocolId === protocol.id ? ' protocol-list-row-menu-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
@@ -232,7 +220,6 @@ export function createProtocolListController({
   }
 
   return {
-    updateSortButtonLabels,
     ensureProtocolTimestamps,
     getProtocolSortTimestamp,
     compareProtocols,

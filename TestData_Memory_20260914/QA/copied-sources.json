@@ -1,0 +1,17 @@
+[
+  {
+    "source": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/acschembio.8b00171/intake.json",
+    "destination": "/Users/shiyifan/Projects/Enana/TestData_Memory_20260914/KnowledgeBase/papers.md/acschembio.8b00171/intake.json",
+    "sha256": "1bb91f331ad11dc3096ab170699523c07b8366c467c1e10d1d48975919b30250"
+  },
+  {
+    "source": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/acschembio.8b00171/cb8b00171_1..8.md",
+    "destination": "/Users/shiyifan/Projects/Enana/TestData_Memory_20260914/KnowledgeBase/papers.md/acschembio.8b00171/cb8b00171_1..8.md",
+    "sha256": "f316f3a744cd556f5165f5bdd26328042959be9fbdeb75c0168320da04f82f68"
+  },
+  {
+    "source": "/Users/shiyifan/Projects/Enana/TestData3/Papers/Reversibly_Switchable,_pH-Dependent_Peptide_Ligand_Binding_via_3,5-Diiodotyrosine_Substitutions/acschembio.8b00171.pdf",
+    "destination": "/Users/shiyifan/Projects/Enana/TestData_Memory_20260914/Papers/Reversibly_Switchable,_pH-Dependent_Peptide_Ligand_Binding_via_3,5-Diiodotyrosine_Substitutions/acschembio.8b00171.pdf",
+    "sha256": "2ad4e183814b410e7517c0b4252a1f644d3e1c7dbd3fc7fa9e93ed7531f88d61"
+  }
+]

@@ -1126,6 +1126,63 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       assert.ok(!results.innerHTML.includes('javascript:alert'));
     });
 
+    test('scheduled tasks and genome library follow the storage root and reload when it moves', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-storage-root-'));
+      const userData = path.join(tmpDir, 'userData');
+      const rootA = path.join(tmpDir, 'rootA');
+      const rootB = path.join(tmpDir, 'rootB');
+      fs.mkdirSync(path.join(userData, 'Config'), { recursive: true });
+      fs.writeFileSync(
+        path.join(userData, 'Config', 'last-storage-root.json'),
+        JSON.stringify({ storagePath: rootA })
+      );
+      const { createMainAppPaths } = require(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'));
+      const appPaths = createMainAppPaths({
+        app: { getPath: () => userData },
+        path,
+        processObject: { env: {}, cwd: () => tmpDir }
+      });
+      assert.equal(appPaths.getStorageRoot(), rootA, 'seeded from the pointer file');
+      assert.equal(appPaths.getScheduledTasksPath(), path.join(rootA, 'Config', 'scheduled-tasks.json'));
+      assert.equal(appPaths.getGenomeLibraryPath(), path.join(rootA, 'Config', 'genome-library.json'));
+      assert.equal(appPaths.getAgentMemoryFilePath(), path.join(rootA, '.hikari', 'agent-memory.json'));
+      assert.equal(appPaths.getStorageRootPointerPath(), path.join(userData, 'Config', 'last-storage-root.json'));
+
+      const { createScheduledTaskService } = require(path.join(
+        __dirname, 'src', 'main', 'core', 'services', 'create-scheduled-task-service.js'
+      ));
+      const service = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: appPaths.getScheduledTasksPath,
+        runCodexTask: async () => ({ text: '' }),
+        setTimer: () => ({ unref() {} }),
+        clearTimer: () => {}
+      });
+      await service.start();
+      await service.createTask({ name: 'In root A', prompt: 'a', schedule: { kind: 'interval', interval_minutes: 60 } });
+      assert.equal((await service.listTasks()).length, 1);
+      assert.ok(fs.existsSync(path.join(rootA, 'Config', 'scheduled-tasks.json')));
+
+      assert.equal(appPaths.setStorageRoot(rootA), false, 'same root is a no-op');
+      assert.equal(appPaths.setStorageRoot(rootB), true);
+      await service.reload();
+      assert.equal((await service.listTasks()).length, 0, 'root B starts empty');
+      await service.createTask({ name: 'In root B', prompt: 'b', schedule: { kind: 'interval', interval_minutes: 60 } });
+      assert.ok(fs.existsSync(path.join(rootB, 'Config', 'scheduled-tasks.json')));
+      assert.equal(JSON.parse(fs.readFileSync(path.join(rootA, 'Config', 'scheduled-tasks.json'), 'utf8')).tasks.length, 1, 'root A untouched');
+      await service.stop();
+
+      const { createAgentMemoryRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-memory.js'));
+      const memory = createAgentMemoryRuntime({ memoryFilePath: appPaths.getAgentMemoryFilePath });
+      await memory.execute({ action: 'remember', key: 'fact', summary: 'root B fact' });
+      assert.ok(fs.existsSync(path.join(rootB, '.hikari', 'agent-memory.json')));
+      appPaths.setStorageRoot(rootA);
+      assert.equal((await memory.execute({ action: 'list' })).items.length, 0, 'memory follows the root');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
     test('main Codex service maps scheduled task settings to the project-scoped CLI runtime', async () => {
       const { createMainCodexService } = require(path.join(
         __dirname,

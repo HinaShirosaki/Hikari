@@ -22,6 +22,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['../../../papers/store/intake/mcp/search-experiments.js', 'SEARCH_EXPERIMENTS_DEFINITION', 'callSearchExperiments'],
   ['../../../papers/store/intake/mcp/list-summaries.js', 'LIST_PROJECT_SUMMARIES_DEFINITION', 'callListProjectSummaries'],
   ['./purchase-recommendation.js', 'PURCHASE_RECOMMENDATION_MCP_TOOL', 'callPurchaseRecommendation'],
+  ['./memory.js', 'MEMORY_MCP_TOOL', 'callMemory'],
   ['./container.js', 'CONTAINER_MCP_TOOL', 'callContainer'],
   ['./assay-table.js', 'ASSAY_TABLE_MCP_TOOL', 'callAssayTable'],
   ['./plotly-graph.js', 'PLOTLY_GRAPH_MCP_TOOL', 'callPlotlyGraph'],

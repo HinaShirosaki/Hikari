@@ -11,7 +11,7 @@ Mirrors the on-disk layout the app hydrates from:
 import json, os, random, shutil, sqlite3, hashlib, math, textwrap
 from datetime import datetime, timedelta, timezone
 
-REPO = "/Users/shiyifan/Projects/Enana"
+REPO = os.environ.get("HIKARI_REPO", os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 ROOT = os.path.join(REPO, "TestData7")
 SRC = os.path.join(REPO, "TestData3")          # only for .agents/skills copy
 RNG = random.Random(20260827)

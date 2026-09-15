@@ -10,6 +10,7 @@ function createStorageFileHelpers({
   fs: fsApi,
   cleanText,
   getStorageRootPointerPath,
+  setStorageRoot = () => {},
   paperKnowledgeDatabaseRuntime
 } = {}) {
   const fs = fsApi;
@@ -338,6 +339,7 @@ function createStorageFileHelpers({
     if (!nextPath || !pointerPath || nextPath === mirroredStorageRoot) {
       return;
     }
+    await setStorageRoot(nextPath);
     try {
       await fs.mkdir(path.dirname(pointerPath), { recursive: true });
       await fs.writeFile(pointerPath, `${JSON.stringify({ storagePath: nextPath }, null, 2)}\n`, 'utf8');

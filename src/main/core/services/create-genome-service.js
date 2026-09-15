@@ -192,6 +192,10 @@ function createGenomeService({
     return cache;
   }
 
+  function reload() {
+    cache = null;
+  }
+
   async function writeLibrary(library) {
     cache = library;
     const target = getGenomeLibraryPath();
@@ -415,7 +419,8 @@ function createGenomeService({
     addGenome,
     registerGenomePath,
     removeGenome,
-    readRegion
+    readRegion,
+    reload
   };
 }
 

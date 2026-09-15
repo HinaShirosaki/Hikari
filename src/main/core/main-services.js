@@ -180,6 +180,7 @@ function createMainServices(context = {}) {
     appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
+    getStorageRoot: appPaths.getStorageRoot,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     BrowserWindow,
     ipcMain,
@@ -240,7 +241,8 @@ function createMainServices(context = {}) {
   });
 
   const genomes = createGenomeService({
-    fs,
+    // The service uses fs.promises.*, so it needs the sync module, not fs/promises.
+    fs: require('node:fs'),
     path,
     cleanText,
     getGenomeLibraryPath: appPaths.getGenomeLibraryPath,
@@ -279,7 +281,16 @@ function createMainServices(context = {}) {
     mainDataHelpers,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
-    getUserDataPath: appPaths.getUserDataPath,
+    setStorageRoot: async (root) => {
+      if (!appPaths.setStorageRoot(root)) {
+        return;
+      }
+      chatLogTransformMonitor.trackStoragePath(root);
+      genomes.reload();
+      await scheduledTasks.reload().catch((error) => {
+        console.error('Failed to reload scheduled tasks from the new storage root:', error);
+      });
+    },
     getBundledPluginPath: (pluginId) => (
       pluginId === 'gel' ? path.join(projectRoot, 'src', 'plugins', 'gel') : ''
     ),
@@ -327,6 +338,7 @@ function createMainServices(context = {}) {
     agentChatLogRuntime: agents.agentChatLogRuntime,
     protocolGenerationRuntime: agents.protocolGenerationRuntime,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
+    getStorageRoot: appPaths.getStorageRoot,
     getAgentChatLogPath: appPaths.getAgentChatLogPath,
     getAgentChatSessionStoragePath,
     appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry
@@ -391,9 +403,9 @@ function createMainServices(context = {}) {
   async function start() {
     await bestEffort('agent-logging', async () => {
       await agentLogService.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
-      const defaultDataFilePath = cleanText(appPaths.getDefaultDataFilePath(), 2400);
+      const storageRoot = appPaths.getStorageRoot();
       chatLogTransformMonitor.start({
-        storagePaths: defaultDataFilePath ? [path.dirname(defaultDataFilePath)] : []
+        storagePaths: storageRoot ? [storageRoot] : []
       });
     });
     await bestEffort('npm-updater', () => npmUpdater.start());

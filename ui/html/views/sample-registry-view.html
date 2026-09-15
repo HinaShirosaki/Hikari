@@ -53,8 +53,8 @@
                 <span class="small-note">Paste SMILES or MOL/SDF structure data</span>
               </div>
               <div class="form-actions">
-                <button id="sample-compound-paste-btn" type="button" class="ghost-btn">Paste Structure</button>
-                <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
+                <button id="sample-compound-paste-btn" type="button" class="ghost-btn" title="Read a SMILES or MOL/SDF structure from the clipboard">Paste Structure</button>
+                <button id="sample-compound-clear-btn" type="button" class="ghost-btn" title="Remove the captured structure from this sample">Clear Structure</button>
               </div>
               <label>
                 Captured Structure
@@ -104,8 +104,8 @@
               <textarea id="sample-notes" rows="2"></textarea>
             </label>
             <div class="form-actions">
-              <button type="submit" class="primary-btn">Save Sample</button>
-              <button type="button" id="sample-cancel-btn" class="ghost-btn">Cancel Edit</button>
+              <button type="submit" class="primary-btn" title="Save this sample to the registry">Save Sample</button>
+              <button type="button" id="sample-cancel-btn" class="ghost-btn" title="Discard changes and clear the form">Cancel Edit</button>
             </div>
           </form>
         </div>
@@ -119,8 +119,8 @@
                   <p id="sample-results-summary" class="small-note">Showing 0 samples.</p>
                 </div>
                 <div class="form-actions">
-                  <button type="button" id="sample-export-csv-btn" class="ghost-btn">Export CSV</button>
-                  <button type="button" id="sample-import-csv-btn" class="ghost-btn">Import CSV</button>
+                  <button type="button" id="sample-export-csv-btn" class="ghost-btn" title="Download all samples as a CSV file">Export CSV</button>
+                  <button type="button" id="sample-import-csv-btn" class="ghost-btn" title="Add samples from a CSV file">Import CSV</button>
                   <input id="sample-import-csv-file" type="file" accept=".csv,text/csv" hidden />
                 </div>
               </div>
@@ -132,8 +132,8 @@
               <h3 id="sample-detail-title">Sample Details</h3>
               <div id="sample-detail-content" class="stack-form"></div>
               <div class="card-actions">
-                <button type="button" id="sample-detail-edit-btn" class="ghost-btn">Edit</button>
-                <button type="button" id="sample-detail-delete-btn" class="danger-btn">Delete</button>
+                <button type="button" id="sample-detail-edit-btn" class="ghost-btn" title="Load this sample into the form for editing">Edit</button>
+                <button type="button" id="sample-detail-delete-btn" class="danger-btn" title="Permanently delete this sample">Delete</button>
               </div>
             </div>
           </div>

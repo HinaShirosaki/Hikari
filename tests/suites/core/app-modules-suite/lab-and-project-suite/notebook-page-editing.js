@@ -599,9 +599,8 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
   assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
   const molarityButtonStart = html.indexOf('<button id="biology-notebook-add-molarity-btn"');
   const molarityButton = html.slice(molarityButtonStart, html.indexOf('</button>', molarityButtonStart) + 9);
-  assert.match(molarityButton, /aria-label="Add molarity table"[\s\S]*?<span class="biology-notebook-molarity-icon" aria-hidden="true">Mw<\/span>[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
-  assert.doesNotMatch(molarityButton, /<svg/);
-  assert.match(css, /\.biology-notebook-molarity-icon\s*\{[^}]*width:\s*21px;[^}]*height:\s*21px;[^}]*font-style:\s*italic;[^}]*font-weight:\s*700;/s);
+  assert.match(molarityButton, /aria-label="Add molarity table"[\s\S]*?<svg[^>]*aria-hidden="true"[^>]*focusable="false"[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
+  assert.doesNotMatch(molarityButton, /biology-notebook-molarity-icon/);
   assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
 });
 test('biology-notebook buffer preparer starts blank, records without a button, and exposes compound pKa data', () => {
@@ -1456,7 +1455,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   document.getElementById('biology-notebook-tool-buffer-stock-1').value = '';
   document.getElementById('biology-notebook-tool-buffer-final-1').value = '150 mM';
   trigger(document.getElementById('biology-notebook-tool-buffer-final-1'), 'input');
-  assert.match(document.getElementById('biology-notebook-tool-buffer-amount-1').placeholder, /8766 mg/i);
+  assert.match(document.getElementById('biology-notebook-tool-buffer-amount-1').placeholder, /8\.766 g/i);
   document.getElementById('biology-notebook-tool-buffer-note-1').value = 'lot 22B, Sigma';
   trigger(document.getElementById('biology-notebook-tool-buffer-note-1'), 'input');
 
@@ -1482,10 +1481,10 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
 
   assert.equal(state.notebookEntries.length, 1);
   assert.equal(state.notebookEntries[0].toolCalculations.length, 2);
-  assert.match(state.notebookEntries[0].toolCalculations[0].result, /NaCl: 8766 mg/i);
+  assert.match(state.notebookEntries[0].toolCalculations[0].result, /NaCl: 8\.766 g/i);
   assert.match(state.notebookEntries[0].toolCalculations[1].result, /Water: 90 uL/i);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][0], 'NaCl');
-  assert.match(state.notebookEntries[0].toolCalculations[0].table.rows[0][4], /8766 mg/i);
+  assert.match(state.notebookEntries[0].toolCalculations[0].table.rows[0][4], /8\.766 g/i);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.metaRows[0][1], '1 L');
   assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[0].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume', 'Note']);
   assert.equal(state.notebookEntries[0].toolCalculations[0].table.rows[0][5], 'lot 22B, Sigma');
@@ -1506,7 +1505,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.match(renderedCalculations, /Fixed Volume Reaction/);
   assert.match(renderedCalculations, /biology-notebook-tool-calculation-table/);
   // A recorded calculation is its table and nothing else.
-  assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
+  assert.doesNotMatch(renderedCalculations, /NaCl: 8\.766 g/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.doesNotMatch(renderedCalculations, /<p[\s>]/);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 2 calculations/i);

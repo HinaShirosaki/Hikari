@@ -1,0 +1,52 @@
+{
+  "testedAt": "2026-09-15T03:37:56.902Z",
+  "archive": "/Users/shiyifan/Projects/Enana/out/Hikari-darwin-arm64/Hikari.app/Contents/Resources/app.asar",
+  "archiveModified": "2026-09-15T03:33:48.014Z",
+  "packageFilesMatch": true,
+  "freshWorkspace": "/Users/shiyifan/Projects/Enana/TestData_Memory_20260914",
+  "packagedRuntimeChecks": 27,
+  "checks": [
+    "Packaged stdio server advertises memory",
+    "Fresh workspace starts empty",
+    "Global preference persisted through app host",
+    "Selected project stable ID is persisted",
+    "Second project memory persisted",
+    "Project recall contains project plus global",
+    "Project B does not leak into project A",
+    "Unfiltered forget rejected through full MCP chain",
+    "Healthy call after rejected deletion",
+    "Ranked recall uses words in either order",
+    "Exact-key forget removes only selected record",
+    "App path resolves inside isolated storage",
+    "Disk contains four intended records",
+    "Packaged notebook generation pipeline executed",
+    "Manual project note preserved",
+    "Existing paper intake summary enters project memory",
+    "Notebook publishes recorded evidence",
+    "Unsupported model interpretation is not published",
+    "Provenance saved",
+    "Proposed summary retained separately",
+    "Packaged stdio server advertises memory",
+    "Project A persists after complete process restart",
+    "Global preferences persist after process restart",
+    "Deleted record stays deleted after restart",
+    "Project B persists independently",
+    "Evidence cache reused after process restart",
+    "Project memory remains grounded after restart"
+  ],
+  "packagedSelfchecks": [
+    "agent memory safety selfcheck OK",
+    "project research memory selfcheck OK"
+  ],
+  "originalFilesUnchanged": true,
+  "liveAgent": {
+    "status": "approval_required",
+    "reason": "Automatic review rejected temporary credential copy and external Codex request; no live request executed."
+  },
+  "limits": [
+    "Packaged modules loaded directly from app.asar using Electron 40.7.0; desktop UI not exercised.",
+    "MCP host and stdio processes restarted; interactive desktop app was not restarted.",
+    "Existing PDF and intake reused; PDF was not re-analyzed.",
+    "Notebook generation was deterministic; live model test requires approval."
+  ]
+}

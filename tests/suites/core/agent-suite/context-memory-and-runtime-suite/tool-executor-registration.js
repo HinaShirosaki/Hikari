@@ -230,7 +230,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteToolExecutorR
         context: {
           provider: 'codex',
           model: 'gpt-5.4-mini',
-          cwd: '/Users/shiyifan/Projects/Hikari',
+          cwd: '/tmp/hikari-project',
           message: 'Find ncAA papers.',
           project: {
             id: 'project-1',
@@ -257,7 +257,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteToolExecutorR
       assert.equal(calls.length, 1);
       assert.equal(calls[0].provider, 'codex');
       assert.equal(calls[0].model, 'gpt-5.4-mini');
-      assert.equal(calls[0].cwd, '/Users/shiyifan/Projects/Hikari');
+      assert.equal(calls[0].cwd, '/tmp/hikari-project');
       assert.equal(calls[0].project.name, 'Atlas');
       assert.equal(calls[0].storage_path, '/tmp/hikari-storage');
       assert.equal(calls[0].storagePath, '/tmp/hikari-storage');

@@ -1,4 +1,5 @@
 import { trimText } from './shared.js';
+import { hydrateAgentChatIcons, renderAgentChatIcon } from './icons.js';
 import { createAgentChatSessionManager } from './session-manager.js';
 import { createAgentChatShellController } from './shell-controller.js';
 import { createAgentPayloadBuilder } from './payload-builder.js';
@@ -36,6 +37,7 @@ export function initAgentChat({
   captureImageAttachment = null,
   onPlotlyGraphArtifact = () => {}
 }) {
+  hydrateAgentChatIcons(rootDocument);
   const api = windowObject?.hikariApi || null;
   const dom = collectAgentChatDom(rootDocument, { idPrefix });
   if (!hasRequiredAgentChatDom(dom)) {
@@ -98,14 +100,9 @@ export function initAgentChat({
     dom.hiddenContextList.hidden = false;
     dom.hiddenContextList.innerHTML = `
       <span class="agent-attachment-pill agent-hidden-context-pill" title="Selected text will be included with the next message">
-        <svg class="agent-hidden-context-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-          <path d="M6 3h8l4 4v14H6z"></path>
-          <path d="M14 3v5h5"></path>
-          <path d="M9 12h6"></path>
-          <path d="M9 16h6"></path>
-        </svg>
+        ${renderAgentChatIcon('context', { className: 'agent-hidden-context-icon' })}
         <span>Text</span>
-        <button type="button" data-agent-remove-hidden-context aria-label="Remove selected text context">&times;</button>
+        <button type="button" data-agent-remove-hidden-context aria-label="Remove selected text context">${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
       </span>
     `;
   }
@@ -164,10 +161,8 @@ export function initAgentChat({
   const historyController = createHistoryActionController({
     api,
     state,
-    input: dom.input,
     persist,
     setStatus: shell.setStatus,
-    syncComposerHeight: shell.syncComposerHeight,
     renderContextSummary: shell.renderContextSummary,
     renderHistoryView: shell.renderHistoryView,
     answerAssistantQuestion: questionController.answerAssistantQuestion,

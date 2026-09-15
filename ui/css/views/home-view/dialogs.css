@@ -151,10 +151,6 @@
 
 #home-view .home-dialog-context {
   margin: 0;
-  padding: 0.65rem 0.85rem;
-  border-inline-start: 2px solid var(--theme-accent);
-  border-radius: 0 0.4rem 0.4rem 0;
-  background: var(--theme-surface-subtle);
   color: var(--home-tile-text);
   font-size: 0.85rem;
   line-height: 1.5;

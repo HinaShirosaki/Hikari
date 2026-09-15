@@ -4,7 +4,6 @@ import {
   buildLinkedAssayPreviewHtml,
   buildLinkedGelPreviewHtml
 } from '../results/linked-previews-renderer.js';
-import { printElement } from '../../print/index.js';
 
 // Linked assay/gel previews under Results, the entry-list click routing, and
 // opening a saved page back into the editor (plus export and print).
@@ -35,7 +34,6 @@ function createNotebookEntryActions({
   const {
     notebookProjectSelect,
     notebookProtocolArea,
-    notebookProtocolTitle,
     notebookLinkedResults
   } = elements;
 
@@ -118,18 +116,10 @@ function createNotebookEntryActions({
   }
 
   function onPrintButtonClick() {
-    if (!getEditingEntryId() || !notebookProtocolArea) {
+    if (!getEditingEntryId()) {
       return;
     }
-    const title = String(notebookProtocolTitle?.textContent || '').trim() || 'Notebook Page';
-    printElement(notebookProtocolArea, {
-      title: `Notebook - ${title}`,
-      omitSelectors: [
-        '.biology-notebook-viewer-actions',
-        '.form-actions',
-        '#biology-notebook-protocol-editor'
-      ]
-    });
+    void linkedWorkActions.exportEntryPdf(getEditingEntryId(), { print: true });
   }
 
   function editEntry(entryId) {

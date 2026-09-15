@@ -61,6 +61,7 @@ function registerAgentIpc(deps = {}) {
   registerAgentLogHandlers({
     ipcMain: deps.ipcMain,
     cleanText,
+    getStorageRoot: deps.getStorageRoot,
     observability: deps.observability || {},
     agentChatLogRuntime: deps.agentChatLogRuntime,
     getAgentChatLogPath: deps.getAgentChatLogPath,

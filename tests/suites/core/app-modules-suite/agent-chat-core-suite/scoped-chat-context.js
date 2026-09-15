@@ -479,15 +479,9 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.equal(scopedState.agentChat.projectId, 'p1');
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'notebook:note-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Biology Notebook right-rail/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /notebook_append/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /inventory_lookup/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /reference preparation/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not stop at diluting an unverified stock/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Prefer one complete formulation/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /at most three short subsections and six bullets/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /failed-lookup transcripts/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /one to three unique/i);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /without proposing an append/i);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /unsaved edits/);
+  // Enrichment policy lives in mcp-contract/instructions.js, not the per-turn rail prompt.
+  assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /reference preparation|inventory_lookup/i);
   assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /PBS|ampicillin/i);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'notebook-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].notebookEntryId, 'note-1');
@@ -548,9 +542,8 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
   assert.equal(scopedState.agentChat.projectId, 'p1');
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'assay:assay-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Assay right-rail/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /parse the TSV rows in that hidden context after the header/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not use local lookup tools for active assay plate\/result data/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Hikari assay table and Plotly graph MCP tools/);
+  // TSV handoff rules live in codex-agent/prompts.js, not the per-turn rail prompt.
+  assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /TSV|lookup tools/);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'assay-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].assayId, 'assay-1');
   assert.match(scopedState.agentChatContext.hiddenContexts[0].text, /D8\tD\t8\tD\t3000\t0\.320/);
@@ -948,11 +941,7 @@ test('notebook rail quick prompts initialize notebook composer and load page pro
   assert.equal(messageInput.placeholder, 'Ask Hikari about this notebook page.');
   assert.equal(quickPrompts.getAttribute('aria-label'), 'Common notebook prompts');
   assert.equal(buttons[0].textContent, 'Research & append');
-  assert.match(prompt, /complete hidden context/);
-  assert.match(prompt, /notebook_append/);
-  assert.match(prompt, /local-first lookup/);
-  assert.match(prompt, /reference preparations/);
-  assert.match(prompt, /only when there is useful content/);
+  assert.match(prompt, /propose an append/);
   assert.doesNotMatch(prompt, /PBS|ampicillin/i);
   assert.doesNotMatch(prompt, /this paper/i);
   assert.equal(paperScreenshotBtn.hidden, true);

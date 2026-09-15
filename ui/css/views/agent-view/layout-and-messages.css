@@ -102,7 +102,7 @@ body.agent-view-fixed-scroll .workspace-main {
   color: var(--theme-text-strong);
 }
 
-.agent-new-chat-btn svg {
+.agent-new-chat-btn .agent-chat-icon {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;

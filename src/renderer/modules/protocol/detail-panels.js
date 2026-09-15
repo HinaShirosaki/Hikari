@@ -1,12 +1,10 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
-import { printElement } from '../print/index.js';
 import { logNotebookPageEvent } from '../biology-notebook/storage/page-log.js';
 
 // Switching the protocol detail column between empty / editor / view, plus the
 // create, edit, view, export, print, and delete actions those panels drive.
 function createProtocolDetailPanels({
   ui,
-  documentRef,
   localState,
   draftHelpers,
   previewHelpers,
@@ -18,9 +16,9 @@ function createProtocolDetailPanels({
   getImportController,
   getPolishController,
   getGenerationController,
+  renderPlaceholderPresets,
   state,
   persist,
-  safeText,
   onProtocolsChanged,
   selectionInsightsController
 } = {}) {
@@ -56,6 +54,7 @@ function createProtocolDetailPanels({
   }
 
   function showEditorPanel() {
+    renderPlaceholderPresets?.();
     applyDetailMode('edit');
     getImportController()?.syncProtocolImportPanelVisibility();
   }
@@ -164,20 +163,9 @@ function createProtocolDetailPanels({
 
   function onPrintViewedProtocol() {
     const protocol = getSelectedProtocol();
-    if (!protocol || !ui.protocolViewContent) {
-      return;
+    if (protocol) {
+      exportProtocolPdf(protocol, { print: true });
     }
-    const name = String(protocol.name || 'Protocol').trim() || 'Protocol';
-    const header = `<h1>${safeText(name)}</h1>`;
-    const body = `${header}${ui.protocolViewContent.innerHTML}`;
-    printElement(
-      (() => {
-        const wrapper = documentRef.createElement('div');
-        wrapper.innerHTML = body;
-        return wrapper;
-      })(),
-      { title: `Protocol - ${name}` }
-    );
   }
 
   function deleteProtocol(protocolId) {

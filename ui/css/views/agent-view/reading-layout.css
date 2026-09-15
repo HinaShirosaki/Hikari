@@ -144,12 +144,9 @@
   background: transparent;
   color: var(--theme-text-muted);
 }
-.agent-message-copy svg {
+.agent-message-copy .agent-chat-icon {
   width: 1rem;
   height: 1rem;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  fill: none;
 }
 .agent-message-copy:hover { background: var(--theme-surface-subtle); color: var(--theme-text-strong); }
 
@@ -178,36 +175,31 @@
 .agent-output-copy strong { font-size: .875rem; font-weight: 600; overflow-wrap: anywhere; }
 .agent-output-copy > span { color: var(--theme-text-muted); font-size: .75rem; font-weight: 400; }
 .agent-output-icon {
-  display: block;
+  display: grid;
+  place-items: center;
   width: 2.35rem;
   height: 2.6rem;
   flex-shrink: 0;
   border-radius: .4rem;
   background: var(--theme-accent-soft);
-  position: relative;
 }
-.agent-output-icon::after {
-  content: '';
-  position: absolute;
-  inset: .6rem .7rem;
-  border: .1rem solid var(--theme-accent);
-  border-radius: .15rem;
-  border-left-width: .22rem;
+.agent-output-icon .agent-chat-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--theme-accent);
 }
 .agent-output-toggle { display: flex; gap: .65rem; align-items: center; font-size: .75rem; color: var(--theme-text-muted); }
 .agent-output-hide { display: none; }
 .agent-output-card[open] > summary .agent-output-hide { display: inline; }
 .agent-output-card[open] > summary .agent-output-show { display: none; }
 .agent-output-disclosure {
-  width: .4rem;
-  height: .4rem;
+  display: block;
+  width: 1rem;
+  height: 1rem;
   flex: 0 0 auto;
   margin-right: .25rem;
-  border-top: .1rem solid currentColor;
-  border-right: .1rem solid currentColor;
-  transform: rotate(45deg);
 }
-.agent-output-card[open] > summary .agent-output-disclosure { transform: rotate(135deg); }
+.agent-output-card[open] > summary .agent-output-disclosure { transform: rotate(90deg); }
 .agent-output-card > .agent-output-html-frame { border-top: .0625rem solid var(--theme-border); }
 .agent-output-card > .agent-output-html-caption { margin: 0; padding: .6rem 1rem; font-size: .8125rem; color: var(--theme-text-muted); }
 .agent-output-images, .agent-output-htmls { margin-top: 1rem; }
@@ -253,9 +245,11 @@
 .agent-conversation-shell .agent-composer-toolbar { flex-direction: row; align-items: center; gap: .5rem; }
 .agent-conversation-shell .agent-composer-toolbar-start { flex: 1 1 8rem; width: auto; gap: .4rem; }
 .agent-conversation-shell .agent-composer-project-inline { width: auto; max-width: 16rem; flex: 1 1 auto; }
-.agent-conversation-shell .agent-composer-project-inline select { min-height: 2rem; padding: .3rem .5rem; border: 0; border-radius: .4rem; background: transparent; font-size: .8125rem; }
+.agent-conversation-shell .agent-composer-project-inline select { min-height: 2.25rem; padding: .3rem .5rem; border: 0; border-radius: .4rem; background: transparent; font-size: .8125rem; }
 .agent-conversation-shell .agent-composer-actions.form-actions { width: auto; margin-left: auto; }
 .agent-conversation-shell .agent-attach-btn { width: 2.25rem; min-width: 2.25rem; height: 2.25rem; background: transparent; border: 0; }
+.agent-review-dialog .app-dialog-close-btn .agent-chat-icon,
+.home-agent-dialog .app-dialog-close-btn .agent-chat-icon { width: 1rem; height: 1rem; }
 .agent-conversation-shell .agent-user-question-card { gap: .75rem; padding: 1rem; border-radius: .8rem; }
 .agent-conversation-shell .agent-user-question-option { background: var(--theme-surface-subtle); border-radius: .45rem; }
 .agent-conversation-shell .agent-user-question-options { gap: .4rem; }

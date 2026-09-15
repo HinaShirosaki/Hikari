@@ -208,7 +208,7 @@ try {
   assert.equal(generatedNotebookLines.length, 1, 'each notebook page occupies one MEMORY.md line');
   assert.equal(
     generatedNotebookLines[0],
-    'Protein Yield Run; Purification produced a recorded yield of 42 mg.'
+    'Protein Yield Run; Yield increased to 42 mg after purification.'
   );
 
   const changedEntry = {
@@ -248,9 +248,36 @@ try {
   assert.equal(modelCalls, 2);
   assert.equal(cache['notebook:note-1'].model, NOTEBOOK_MEMORY_MODEL_FALLBACK);
   assert.equal(cache['notebook:note-1'].conclusion, 'Observed 3 colonies after selection.');
-  assert.equal(Object.prototype.hasOwnProperty.call(cache['notebook:note-1'], 'quotes'), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(cache['notebook:note-1'], 'status'), false);
+  assert.deepEqual(cache['notebook:note-1'].quotes, []);
+  assert.equal(cache['notebook:note-1'].status, 'fallback');
   assert.equal(Object.prototype.hasOwnProperty.call(cache['notebook:note-1'], 'error'), false);
+
+  // A provider recovery retries unchanged source after backoff; explicit
+  // regeneration also works without altering canonical notebook content.
+  const cachePath = path.join(projectFolder, '.hikari', 'research-memory.json');
+  cache['notebook:note-1'].retryAfter = new Date(0).toISOString();
+  await fs.writeFile(cachePath, JSON.stringify(cache));
+  let recoveryCalls = 0;
+  const recoveryGenerator = async () => {
+    recoveryCalls += 1;
+    return { payload: { conclusion: 'A proposed interpretation.', quotes: ['Observed 3 colonies after selection.'] } };
+  };
+  const recoveryInput = {
+    storageRootPath: tempDir, folderPath: projectFolder, snapshot: changedSnapshot,
+    projectRecord: collectProjectMemoryRecords(changedSnapshot)[0], requestNotebookConclusion: recoveryGenerator
+  };
+  await writeProjectMemoryFile(recoveryInput);
+  await waitForProjectMemoryQueue(projectFolder);
+  assert.equal(recoveryCalls, 1);
+  const recovered = JSON.parse(await fs.readFile(cachePath, 'utf8'))['notebook:note-1'];
+  assert.equal(recovered.status, 'evidence');
+  assert.deepEqual(recovered.quotes, ['Observed 3 colonies after selection.']);
+  assert.equal(recovered.proposedConclusion, 'A proposed interpretation.');
+  assert.ok(recovered.sourceRelativePath.endsWith('page.json'));
+  assert.equal((await fs.readFile(memoryPath, 'utf8')).includes('A proposed interpretation.'), false);
+  await writeProjectMemoryFile({ ...recoveryInput, regenerateConclusions: true });
+  await waitForProjectMemoryQueue(projectFolder);
+  assert.equal(recoveryCalls, 2);
 
   const staleEntry = {
     ...entry,

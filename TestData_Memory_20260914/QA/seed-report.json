@@ -1,0 +1,500 @@
+{
+  "phase": "seed",
+  "archive": "/Users/shiyifan/Projects/Enana/out/Hikari-darwin-arm64/Hikari.app/Contents/Resources/app.asar",
+  "electron": "40.7.0",
+  "checks": [
+    "Packaged stdio server advertises memory",
+    "Fresh workspace starts empty",
+    "Global preference persisted through app host",
+    "Selected project stable ID is persisted",
+    "Second project memory persisted",
+    "Project recall contains project plus global",
+    "Project B does not leak into project A",
+    "Unfiltered forget rejected through full MCP chain",
+    "Healthy call after rejected deletion",
+    "Ranked recall uses words in either order",
+    "Exact-key forget removes only selected record",
+    "App path resolves inside isolated storage",
+    "Disk contains four intended records",
+    "Packaged notebook generation pipeline executed",
+    "Manual project note preserved",
+    "Existing paper intake summary enters project memory",
+    "Notebook publishes recorded evidence",
+    "Unsupported model interpretation is not published",
+    "Provenance saved",
+    "Proposed summary retained separately"
+  ],
+  "calls": [
+    {
+      "args": {
+        "action": "list",
+        "scope": "global"
+      },
+      "result": {
+        "ok": true,
+        "status": "empty",
+        "items": [],
+        "summary": "No matching long-term memory items were found.",
+        "citations": []
+      }
+    },
+    {
+      "args": {
+        "action": "remember",
+        "key": "report_format",
+        "summary": "Use concise tables for memory QA."
+      },
+      "result": {
+        "ok": true,
+        "status": "stored",
+        "item": {
+          "id": "memory-1789443341819-b58c6fe1",
+          "category": "",
+          "key": "report_format",
+          "summary": "Use concise tables for memory QA.",
+          "value": null,
+          "scope": "global",
+          "project_id": "",
+          "project_name": "",
+          "tags": [],
+          "source": "",
+          "created_at": "2026-09-15T03:35:41.819Z",
+          "updated_at": "2026-09-15T03:35:41.819Z"
+        },
+        "items": [
+          {
+            "id": "memory-1789443341819-b58c6fe1",
+            "category": "",
+            "key": "report_format",
+            "summary": "Use concise tables for memory QA.",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.819Z",
+            "updated_at": "2026-09-15T03:35:41.819Z"
+          }
+        ],
+        "summary": "Stored memory for report_format.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341819-b58c6fe1",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "remember",
+        "scope": "project",
+        "key": "qa_marker",
+        "summary": "Amber paperclip 73."
+      },
+      "result": {
+        "ok": true,
+        "status": "stored",
+        "item": {
+          "id": "memory-1789443341827-e5cad395",
+          "category": "",
+          "key": "qa_marker",
+          "summary": "Amber paperclip 73.",
+          "value": null,
+          "scope": "project",
+          "project_id": "memory-qa-a",
+          "project_name": "Memory QA A",
+          "tags": [],
+          "source": "",
+          "created_at": "2026-09-15T03:35:41.827Z",
+          "updated_at": "2026-09-15T03:35:41.827Z"
+        },
+        "items": [
+          {
+            "id": "memory-1789443341827-e5cad395",
+            "category": "",
+            "key": "qa_marker",
+            "summary": "Amber paperclip 73.",
+            "value": null,
+            "scope": "project",
+            "project_id": "memory-qa-a",
+            "project_name": "Memory QA A",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.827Z",
+            "updated_at": "2026-09-15T03:35:41.827Z"
+          }
+        ],
+        "summary": "Stored memory for qa_marker.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341827-e5cad395",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "remember",
+        "scope": "project",
+        "project_id": "memory-qa-b",
+        "project_name": "Memory QA B",
+        "key": "qa_marker",
+        "summary": "Blue notebook 29."
+      },
+      "result": {
+        "ok": true,
+        "status": "stored",
+        "item": {
+          "id": "memory-1789443341845-fea16fe0",
+          "category": "",
+          "key": "qa_marker",
+          "summary": "Blue notebook 29.",
+          "value": null,
+          "scope": "project",
+          "project_id": "memory-qa-b",
+          "project_name": "Memory QA B",
+          "tags": [],
+          "source": "",
+          "created_at": "2026-09-15T03:35:41.845Z",
+          "updated_at": "2026-09-15T03:35:41.845Z"
+        },
+        "items": [
+          {
+            "id": "memory-1789443341845-fea16fe0",
+            "category": "",
+            "key": "qa_marker",
+            "summary": "Blue notebook 29.",
+            "value": null,
+            "scope": "project",
+            "project_id": "memory-qa-b",
+            "project_name": "Memory QA B",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.845Z",
+            "updated_at": "2026-09-15T03:35:41.845Z"
+          }
+        ],
+        "summary": "Stored memory for qa_marker.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341845-fea16fe0",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "recall"
+      },
+      "result": {
+        "ok": true,
+        "status": "matched",
+        "items": [
+          {
+            "id": "memory-1789443341827-e5cad395",
+            "category": "",
+            "key": "qa_marker",
+            "summary": "Amber paperclip 73.",
+            "value": null,
+            "scope": "project",
+            "project_id": "memory-qa-a",
+            "project_name": "Memory QA A",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.827Z",
+            "updated_at": "2026-09-15T03:35:41.827Z"
+          },
+          {
+            "id": "memory-1789443341819-b58c6fe1",
+            "category": "",
+            "key": "report_format",
+            "summary": "Use concise tables for memory QA.",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.819Z",
+            "updated_at": "2026-09-15T03:35:41.819Z"
+          }
+        ],
+        "summary": "Recalled 2 memory items.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341827-e5cad395",
+            "reason": "Matched long-term agent memory records."
+          },
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341819-b58c6fe1",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "forget"
+      },
+      "result": {
+        "ok": false,
+        "status": "error",
+        "error": "forget requires an exact id or key; bulk deletion is not supported.",
+        "citations": [],
+        "summary": "memory returned no matches."
+      }
+    },
+    {
+      "args": {
+        "action": "recall"
+      },
+      "result": {
+        "ok": true,
+        "status": "matched",
+        "items": [
+          {
+            "id": "memory-1789443341827-e5cad395",
+            "category": "",
+            "key": "qa_marker",
+            "summary": "Amber paperclip 73.",
+            "value": null,
+            "scope": "project",
+            "project_id": "memory-qa-a",
+            "project_name": "Memory QA A",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.827Z",
+            "updated_at": "2026-09-15T03:35:41.827Z"
+          },
+          {
+            "id": "memory-1789443341819-b58c6fe1",
+            "category": "",
+            "key": "report_format",
+            "summary": "Use concise tables for memory QA.",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.819Z",
+            "updated_at": "2026-09-15T03:35:41.819Z"
+          }
+        ],
+        "summary": "Recalled 2 memory items.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341827-e5cad395",
+            "reason": "Matched long-term agent memory records."
+          },
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341819-b58c6fe1",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "remember",
+        "scope": "global",
+        "key": "phrase",
+        "summary": "binder optimization"
+      },
+      "result": {
+        "ok": true,
+        "status": "stored",
+        "item": {
+          "id": "memory-1789443341865-278fb3e5",
+          "category": "",
+          "key": "phrase",
+          "summary": "binder optimization",
+          "value": null,
+          "scope": "global",
+          "project_id": "",
+          "project_name": "",
+          "tags": [],
+          "source": "",
+          "created_at": "2026-09-15T03:35:41.865Z",
+          "updated_at": "2026-09-15T03:35:41.865Z"
+        },
+        "items": [
+          {
+            "id": "memory-1789443341865-278fb3e5",
+            "category": "",
+            "key": "phrase",
+            "summary": "binder optimization",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.865Z",
+            "updated_at": "2026-09-15T03:35:41.865Z"
+          }
+        ],
+        "summary": "Stored memory for phrase.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341865-278fb3e5",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "remember",
+        "scope": "global",
+        "key": "scattered",
+        "summary": "optimization of a binder"
+      },
+      "result": {
+        "ok": true,
+        "status": "stored",
+        "item": {
+          "id": "memory-1789443341869-f006db92",
+          "category": "",
+          "key": "scattered",
+          "summary": "optimization of a binder",
+          "value": null,
+          "scope": "global",
+          "project_id": "",
+          "project_name": "",
+          "tags": [],
+          "source": "",
+          "created_at": "2026-09-15T03:35:41.869Z",
+          "updated_at": "2026-09-15T03:35:41.869Z"
+        },
+        "items": [
+          {
+            "id": "memory-1789443341869-f006db92",
+            "category": "",
+            "key": "scattered",
+            "summary": "optimization of a binder",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.869Z",
+            "updated_at": "2026-09-15T03:35:41.869Z"
+          }
+        ],
+        "summary": "Stored memory for scattered.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341869-f006db92",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "recall",
+        "scope": "global",
+        "query": "binder optimization"
+      },
+      "result": {
+        "ok": true,
+        "status": "matched",
+        "items": [
+          {
+            "id": "memory-1789443341865-278fb3e5",
+            "category": "",
+            "key": "phrase",
+            "summary": "binder optimization",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.865Z",
+            "updated_at": "2026-09-15T03:35:41.865Z"
+          },
+          {
+            "id": "memory-1789443341869-f006db92",
+            "category": "",
+            "key": "scattered",
+            "summary": "optimization of a binder",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.869Z",
+            "updated_at": "2026-09-15T03:35:41.869Z"
+          }
+        ],
+        "summary": "Recalled 2 memory items.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341865-278fb3e5",
+            "reason": "Matched long-term agent memory records."
+          },
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341869-f006db92",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    },
+    {
+      "args": {
+        "action": "forget",
+        "scope": "global",
+        "key": "scattered"
+      },
+      "result": {
+        "ok": true,
+        "status": "forgotten",
+        "removed_count": 1,
+        "items": [
+          {
+            "id": "memory-1789443341869-f006db92",
+            "category": "",
+            "key": "scattered",
+            "summary": "optimization of a binder",
+            "value": null,
+            "scope": "global",
+            "project_id": "",
+            "project_name": "",
+            "tags": [],
+            "source": "",
+            "created_at": "2026-09-15T03:35:41.869Z",
+            "updated_at": "2026-09-15T03:35:41.869Z"
+          }
+        ],
+        "summary": "Forgot 1 memory item.",
+        "citations": [
+          {
+            "source": "memory",
+            "pointer": "memory-1789443341869-f006db92",
+            "reason": "Matched long-term agent memory records."
+          }
+        ]
+      }
+    }
+  ],
+  "ok": true
+}

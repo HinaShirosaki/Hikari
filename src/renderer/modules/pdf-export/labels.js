@@ -1,5 +1,5 @@
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
-import { formatTimestamp } from './doc-context.js';
+import { formatTimestamp, flowText } from './doc-context.js';
 
 function notebookEntryMeta(entry) {
   return [
@@ -49,7 +49,7 @@ function hasSerialDilutionContent(summary) {
 }
 
 function renderStepText(step, values = null) {
-  const source = String(step?.text || '');
+  const source = flowText(step?.text);
   const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
   const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
 

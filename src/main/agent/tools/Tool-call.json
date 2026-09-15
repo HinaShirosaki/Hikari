@@ -236,6 +236,18 @@
         "source": {
           "type": "string",
           "maxLength": 120
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "global",
+            "project"
+          ],
+          "description": "Global is the default for writes. Use project explicitly for project facts."
+        },
+        "project_id": {
+          "type": "string",
+          "maxLength": 220
         }
       }
     },
@@ -688,7 +700,7 @@
     }
   },
   "memory": {
-    "description": "Use this tool to manage sparse long-term user memory across sessions. `recall` searches previously stored preferences, project names, workflow habits, or other stable context. `remember` stores or updates a structured memory record with `key`, `summary`, and optional `value`. `forget` removes matching memory entries. `list` enumerates stored memory, optionally filtered by category, project, or tags. Use it only for durable facts or preferences, not for replaying whole conversations.",
+    "description": "Use this tool to manage sparse long-term user memory across sessions. `recall` searches previously stored preferences, project names, workflow habits, or other stable context. `remember` stores or updates a structured memory record with `key`, `summary`, and optional `value`. `forget` removes matching memory entries. `list` enumerates stored memory, optionally filtered by category, project, or tags. Use it only for durable facts or preferences, not for replaying whole conversations. Writes default to global unless project scope or a project selector is supplied. Recall in a selected project includes global preferences by default. Prefer stable project_id. Forget requires an exact id or key. Query words may occur in any order; results rank phrase and summary matches first.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -769,6 +781,22 @@
         },
         "record": {
           "$ref": "#/$defs/memory_record"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "global",
+            "project"
+          ],
+          "description": "Global is the default for writes. Use project explicitly for project facts."
+        },
+        "project_id": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "include_global": {
+          "type": "boolean",
+          "description": "Include global preferences with project recall/list; defaults to true in project context."
         }
       }
     }
@@ -1131,7 +1159,7 @@
     }
   },
   "paper-search": {
-    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet — prefer this over re-reading the full PDF when answering a focused question.",
+    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet \u2014 prefer this over re-reading the full PDF when answering a focused question.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { renderAgentChatIcon } from './icons.js';
 import {
   GENERAL_CHAT_FOLDER_ID,
   getAgentChatFolders,
@@ -210,12 +211,7 @@ export function createAgentChatSessionManager(deps = {}) {
         label: folder.name,
         meta: String(folderSessions.length),
         childrenHtml: children,
-        actionHtml: `<button type="button" class="ghost-btn agent-new-chat-btn" data-agent-new-chat-folder="${safeText(folder.id)}" aria-label="${safeText(`New chat in ${folder.name}`)}" title="${safeText(`New chat in ${folder.name}`)}"${isNewChatDisabled() ? ' disabled' : ''}>
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6"/>
-            <path d="m16 3 5 5M9 15l4-1 9-9a2.8 2.8 0 0 0-4-4l-9 9-1 5Z"/>
-          </svg>
-        </button>`,
+        actionHtml: `<button type="button" class="ghost-btn agent-new-chat-btn" data-agent-new-chat-folder="${safeText(folder.id)}" aria-label="${safeText(`New chat in ${folder.name}`)}" title="${safeText(`New chat in ${folder.name}`)}"${isNewChatDisabled() ? ' disabled' : ''}>${renderAgentChatIcon('new-chat', { className: 'agent-new-chat-icon' })}</button>`,
         nodeClass: folderClasses,
         rowClass: 'agent-session-folder-row',
         disclosureClass: 'agent-session-folder-toggle',

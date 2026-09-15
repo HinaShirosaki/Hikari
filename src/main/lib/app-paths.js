@@ -11,6 +11,7 @@ function defaultCleanText(value) {
 function createMainAppPaths(deps = {}) {
   const app = deps.app;
   const path = deps.path;
+  const fs = deps.fs || require('node:fs');
   const processObject = deps.processObject || process;
   const projectRoot = String(deps.projectRoot || processObject.cwd() || '').trim();
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
@@ -28,26 +29,16 @@ function createMainAppPaths(deps = {}) {
     }
   }
 
-  function getDocumentsPath() {
-    try {
-      return app?.getPath('documents') || '';
-    } catch {
-      return '';
-    }
-  }
-
+  // App-owned config, logs, tmp and the storage-root pointer live in Electron's
+  // userData (AppData / Application Support). User content lives in the
+  // storage root the user picks in Settings.
   function getDefaultAppDataRoot() {
     const override = String(processObject.env.HIKARI_APP_DATA_ROOT || '').trim();
     if (override) {
       return path.resolve(override);
     }
 
-    const documentsPath = getDocumentsPath();
-    if (documentsPath) {
-      return path.join(documentsPath, 'Hikari');
-    }
-
-    return path.join(projectRoot || processObject.cwd(), 'data');
+    return getUserDataPath() || path.join(projectRoot || processObject.cwd(), 'data');
   }
 
   function getCodexCliHomePath() {
@@ -56,24 +47,48 @@ function createMainAppPaths(deps = {}) {
       return path.resolve(override);
     }
 
-    const userDataPath = getUserDataPath();
-    if (userDataPath) {
-      return path.join(userDataPath, 'Config', 'codex-cli-home');
-    }
-
     return path.join(getDefaultAppDataRoot(), 'Config', 'codex-cli-home');
   }
 
   function getCodexCliWorkingDirectory() {
-    const userDataPath = getUserDataPath();
-    if (userDataPath) {
-      return userDataPath;
-    }
-    return getDefaultAppDataRoot() || processObject.cwd();
+    return getDefaultAppDataRoot();
   }
 
   function getDefaultDataFilePath() {
     return path.join(getDefaultAppDataRoot(), defaultDataFileName);
+  }
+
+  // The user's storage root, seeded from the pointer file so services that
+  // start before the renderer reports it already resolve the right folder.
+  let storageRoot = null;
+
+  function getStorageRoot() {
+    if (storageRoot === null) {
+      try {
+        const pointer = JSON.parse(fs.readFileSync(getStorageRootPointerPath(), 'utf8'));
+        storageRoot = cleanText(pointer?.storagePath, 2400);
+      } catch {
+        storageRoot = '';
+      }
+    }
+    return storageRoot;
+  }
+
+  // Returns true when the root actually changed so callers can reload.
+  function setStorageRoot(value) {
+    const next = cleanText(value, 2400);
+    if (next === getStorageRoot()) {
+      return false;
+    }
+    storageRoot = next;
+    return true;
+  }
+
+  // Scheduled tasks, the genome library and agent memory travel with the
+  // storage root. ponytail: before a root is chosen they sit in userData and
+  // stay there.
+  function getStorageDataRoot() {
+    return getStorageRoot() || getDefaultAppDataRoot();
   }
 
   function getScheduledTasksPath() {
@@ -81,11 +96,11 @@ function createMainAppPaths(deps = {}) {
     if (override) {
       return path.resolve(override);
     }
-    return path.join(getDefaultAppDataRoot(), 'Config', scheduledTasksFileName);
+    return path.join(getStorageDataRoot(), 'Config', scheduledTasksFileName);
   }
 
   function getGenomeLibraryPath() {
-    return path.join(getDefaultAppDataRoot(), 'Config', genomeLibraryFileName);
+    return path.join(getStorageDataRoot(), 'Config', genomeLibraryFileName);
   }
 
   // The workspace root otherwise lives only in renderer localStorage, which the
@@ -123,7 +138,8 @@ function createMainAppPaths(deps = {}) {
       return path.resolve(override);
     }
 
-    return path.join(getDefaultAppDataRoot(), 'Agent', 'memory.json');
+    // Same hidden folder the per-project research memory cache uses.
+    return path.join(getStorageDataRoot(), '.hikari', 'agent-memory.json');
   }
 
   function getAgentChatSessionStoragePath(payload) {
@@ -140,7 +156,8 @@ function createMainAppPaths(deps = {}) {
     getCodexCliWorkingDirectory,
     getDefaultDataFilePath,
     getStorageRootPointerPath,
-    getUserDataPath,
+    getStorageRoot,
+    setStorageRoot,
     getScheduledTasksPath,
     getGenomeLibraryPath,
     getAgentChatLogPath,

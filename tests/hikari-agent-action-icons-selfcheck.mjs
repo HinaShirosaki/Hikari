@@ -50,7 +50,7 @@ for (const id of [
 
 assert.match(generatedActions, /class="ghost-btn hikari-agent-action" data-suggest-experiment/);
 assert.match(generatedActions, /class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action/);
-assert.match(generatedActions, /class="primary-btn agent-send-icon-btn"[\s\S]*?<svg class="agent-send-icon"/);
+assert.match(generatedActions, /class="primary-btn agent-send-icon-btn"[\s\S]*?renderAgentChatIcon\('send'/);
 assert.doesNotMatch(generatedActions, /agent-send-icon-btn hikari-agent-action/);
 
 // Local-only and review/apply actions must not imply that clicking them starts a model call.
@@ -68,7 +68,7 @@ for (const id of [
   );
 }
 
-assert.match(sourceMarkup, /id="agent-send-btn"[\s\S]*?<svg class="agent-send-icon"/);
-assert.match(sourceMarkup, /id="agent-rail-send-btn"[\s\S]*?<svg class="agent-send-icon"/);
+assert.match(sourceMarkup, /id="agent-send-btn"[\s\S]*?data-agent-chat-icon="send"/);
+assert.match(sourceMarkup, /id="agent-rail-send-btn"[\s\S]*?data-agent-chat-icon="send"/);
 
 console.log('Hikari agent action icon self-check passed.');

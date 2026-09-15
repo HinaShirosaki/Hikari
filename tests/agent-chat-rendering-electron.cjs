@@ -40,6 +40,7 @@ async function main() {
   };
   await run(`(async () => {
     const base = ${JSON.stringify(url('src/renderer/modules/agent-chat') + '/')};
+    const { hydrateAgentChatIcons } = await import(base + 'icons.js');
     const { createAgentChatShellController } = await import(base + 'shell-controller.js');
     const { createHistoryActionController } = await import(base + 'history-actions.js');
     const { createAgentReviewOverlayController } = await import(base + 'review-overlay.js');
@@ -62,6 +63,7 @@ async function main() {
       }
     };
     const protocolReviewAdapter = { collectReviewProtocols: meta => meta.protocols || [], approveGeneratedProtocol: value => { protocolsAdded.push(value); return value; } };
+    hydrateAgentChatIcons(document);
     window.dom = collectAgentChatDom(document, { idPrefix: 'agent' });
     window.shell = createAgentChatShellController({ dom, state, runtime, safeText, persist: () => {}, notebookDraftAdapter, protocolReviewAdapter });
     let review;
@@ -78,6 +80,8 @@ async function main() {
     shell.renderProjectOptions(); shell.renderHistoryView(); shell.syncComposerHeight();
     window.redraw = () => shell.renderHistoryView();
   })()`);
+  assert.equal(await run('document.querySelectorAll("span[data-agent-chat-icon]").length'), 0);
+  assert.ok(await run('document.querySelectorAll("svg.agent-chat-icon[data-agent-chat-icon]").length >= 6'));
   await run(`document.querySelector('.agent-draft-card').open = true; document.querySelector('.agent-thinking-trace').open = true; window.retainedDraft = document.querySelector('.agent-draft-card');`);
   // Unrelated streamed text must preserve open cards and selected old text.
   await run(`window.retainedText = document.querySelector('.agent-chat-markdown p').firstChild;
@@ -108,11 +112,14 @@ async function main() {
         const assistant = document.querySelector('.agent-chat-item-assistant');
         const user = document.querySelector('.agent-chat-item-user');
         const history = dom.historyNode.getBoundingClientRect(); const composer = document.querySelector('.agent-composer-card').getBoundingClientRect();
+        const attach = document.querySelector('#agent-attach-btn').getBoundingClientRect(); const project = document.querySelector('#agent-project-select').getBoundingClientRect();
         return { viewport: innerWidth, documentOverflow: document.documentElement.scrollWidth > innerWidth,
           historyOverflow: dom.historyNode.scrollWidth > dom.historyNode.clientWidth, background: getComputedStyle(assistant).backgroundColor,
           assistantWidth: assistant.getBoundingClientRect().width, userWidth: user.getBoundingClientRect().width,
           historyBottom: history.bottom, composerTop: composer.top, titleWidth: document.querySelector('.agent-output-copy').getBoundingClientRect().width,
-          headerHidden: getComputedStyle(user.querySelector('header')).position === 'absolute' };
+          headerHidden: getComputedStyle(user.querySelector('header')).position === 'absolute',
+          composerControlHeights: { attach: attach.height, project: project.height },
+          composerControlsShareRow: Math.abs(attach.top - project.top) < 1 };
       })()`);
       assert.equal(metrics.documentOverflow, false, JSON.stringify(metrics));
       assert.equal(metrics.historyOverflow, false, JSON.stringify(metrics));
@@ -121,6 +128,8 @@ async function main() {
       assert.ok(metrics.historyBottom <= metrics.composerTop + 1);
       assert.ok(metrics.titleWidth >= 90, JSON.stringify(metrics));
       assert.equal(metrics.headerHidden, true);
+      assert.equal(metrics.composerControlHeights.attach, metrics.composerControlHeights.project, JSON.stringify(metrics));
+      if (width >= 720) assert.equal(metrics.composerControlsShareRow, true, JSON.stringify(metrics));
       measurements.push({ theme, width, ...metrics });
       await new Promise(resolve => setTimeout(resolve, 100));
       if ([1100, 390].includes(width)) fs.writeFileSync(path.join(out, `${theme}-${width}.png`), (await win.webContents.capturePage()).toPNG());

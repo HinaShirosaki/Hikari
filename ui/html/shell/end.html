@@ -70,12 +70,7 @@
           <button type="button" id="paper-brief-toggle-btn" class="papers-context-toggle" aria-controls="paper-research-brief" aria-expanded="false" aria-label="Open research brief" title="Research brief" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 12h8M8 16h5"/></svg>
           </button>
-          <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">
-            <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-              <path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z"></path>
-              <path d="M8.5 10h.01M12 10h.01M15.5 10h.01"></path>
-            </svg>
-          </button>
+          <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat"><span class="agent-chat-icon universal-agent-chat-rail__toggle-icon" data-agent-chat-icon="chat" aria-hidden="true"></span></button>
         </div>
         <div class="universal-agent-chat-rail__content">
           <header class="universal-agent-chat-rail__header">
@@ -90,17 +85,22 @@
             </div>
             <div class="agent-composer-shell universal-agent-chat-rail__composer">
               <div id="agent-rail-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
+              <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts">
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the current workspace context and call out useful next actions.">Summarize context</button>
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Suggest practical next steps from the current workspace context.">Plan next step</button>
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Flag missing details or follow-up questions from the current workspace context.">Find gaps</button>
+              </div>
               <div class="stack-form agent-composer-card">
                 <input id="agent-rail-attachment-input" type="file" multiple hidden />
-                <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts">
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the current workspace context and call out useful next actions.">Summarize context</button>
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Suggest practical next steps from the current workspace context.">Plan next step</button>
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Flag missing details or follow-up questions from the current workspace context.">Find gaps</button>
+                <label for="agent-rail-message-input" class="sr-only">Message</label>
+                <div class="agent-composer-input-wrap">
+                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this workspace."></textarea>
                 </div>
-                <label class="agent-composer-label">
-                  <span>Message</span>
-                  <span class="agent-composer-input-wrap">
-                    <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this workspace."></textarea>
+                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" aria-live="polite" hidden></div>
+                <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
+                <div class="agent-composer-toolbar">
+                  <div class="agent-composer-toolbar-start">
+                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                     <button
                       type="button"
                       id="agent-rail-paper-screenshot-btn"
@@ -109,28 +109,12 @@
                       aria-pressed="false"
                       title="Select area from paper"
                     >
-                      <svg class="agent-paper-screenshot-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                        <path d="M7 3.75H4.75a1 1 0 0 0-1 1V7"></path>
-                        <path d="M17 3.75h2.25a1 1 0 0 1 1 1V7"></path>
-                        <path d="M20.25 17v2.25a1 1 0 0 1-1 1H17"></path>
-                        <path d="M7 20.25H4.75a1 1 0 0 1-1-1V17"></path>
-                        <rect x="8" y="8" width="8" height="8" rx="1.25"></rect>
-                      </svg>
+                      <span class="agent-chat-icon agent-paper-screenshot-icon" data-agent-chat-icon="screenshot" aria-hidden="true"></span>
                     </button>
-                  </span>
-                </label>
-                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" aria-live="polite" hidden></div>
-                <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
-                <div class="agent-composer-toolbar">
-                  <div class="agent-composer-toolbar-start">
-                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
                   </div>
                   <div class="form-actions agent-composer-actions">
                     <button type="button" id="agent-rail-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
-                      <svg class="agent-send-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                        <path d="M12 19V5"></path>
-                        <path d="m6.5 10.5 5.5-5.5 5.5 5.5"></path>
-                      </svg>
+                      <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
                       <span class="sr-only">Send message</span>
                     </button>
                     <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>

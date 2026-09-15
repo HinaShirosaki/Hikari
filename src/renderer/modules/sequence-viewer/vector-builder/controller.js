@@ -20,7 +20,9 @@ const EDITING_ELEMENT_MAP = {
   sequenceEditInputWrap: 'vectorBuilderSequenceEditInputWrap',
   sequenceEditTextarea: 'vectorBuilderSequenceEditTextarea',
   sequenceEditDeleteMessage: 'vectorBuilderSequenceEditDeleteMessage',
-  sequenceEditConfirmBtn: 'vectorBuilderSequenceEditConfirm'
+  sequenceEditConfirmBtn: 'vectorBuilderSequenceEditConfirm',
+  // Typing must not open the base editor over the Replace Feature dialog.
+  featureEditorOverlay: 'vectorBuilderFeatureReplaceOverlay'
 };
 
 function positionFloatingMenu(element, clientX, clientY) {
@@ -134,7 +136,12 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     elements: editingElements,
     state: editingState,
     getSelectedRecord,
-    getSequenceSelectionRange: getSelectionRange,
+    // Keyboard edits target what the right-click menu would: a drag selection,
+    // else the selected feature's span, else nothing (insert at the caret).
+    getSequenceSelectionRange: (record) => {
+      const range = getActionRange(record);
+      return range && range.end > range.start ? range : null;
+    },
     clearSequenceSelection: clearSelection,
     hideFeatureContextMenu: () => hideContextMenu(),
     renderSequence: () => render(),
@@ -177,6 +184,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   const {
     getFeatureRange,
+    getActionRange,
     renderContextMenu,
     runContextAction
   } = createVectorContextActions({
@@ -470,6 +478,22 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     });
     elements.vectorBuilderSequenceEditClose?.addEventListener('click', () => sequenceEditing.hideSequenceEditDialog());
     elements.vectorBuilderSequenceEditCancel?.addEventListener('click', () => sequenceEditing.hideSequenceEditDialog());
+
+    // Same keyboard editing as the detail workspace: type to insert at the
+    // caret or replace the selection, Delete/Backspace to remove it.
+    rootDocument?.addEventListener?.('keydown', (event) => {
+      if (state.localWorkspaceMode !== 'vector') {
+        return;
+      }
+      if (String(event?.key || '') === 'Escape') {
+        hideContextMenu();
+        hideOverlays();
+        return;
+      }
+      if (sequenceEditing.openSequenceEditFromKeyboardEvent(event)) {
+        hideContextMenu();
+      }
+    });
 
     rootDocument?.addEventListener?.('click', (event) => {
       if (elements.vectorBuilderContextMenu?.hidden !== false) {

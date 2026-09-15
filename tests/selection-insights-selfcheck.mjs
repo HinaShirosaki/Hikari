@@ -52,4 +52,37 @@ assert.equal(whereToBuy.summary, 'Buy from Sigma.');
 assert.equal(whereToBuy.payload.items[0].vendor, 'Sigma');
 assert.equal(whereToBuy.text, '');
 
+// A completed answer is reused: runInsightAction must not call the model again.
+const { runInsightAction } = await import(path.join(root, 'src/renderer/modules/selection-insights/controller-actions.js'));
+const savedSelection = {
+  segmentId: 'step-2',
+  segmentLabel: 'Step 2',
+  segmentText: 'Add 1 mM DTT.',
+  selectedText: 'DTT',
+  occurrenceIndex: 1
+};
+const savedRecord = {
+  id: 'protocol-1',
+  name: 'Lysis',
+  selectionInsights: [{
+    id: 'insight-1',
+    ...savedSelection,
+    contextText: savedSelection.segmentText,
+    answers: { where_to_buy: whereToBuy }
+  }]
+};
+const savedCtx = {
+  ...ctx,
+  hosts: new Map([['protocol-view', {
+    key: 'protocol-view',
+    host: null,
+    getContext: () => ({ kind: 'protocol', record: savedRecord, insights: savedRecord.selectionInsights })
+  }]])
+};
+const callsBefore = calls.length;
+await runInsightAction(savedCtx, 'protocol-view', savedSelection, 'where_to_buy');
+assert.equal(calls.length, callsBefore, 'saved where-to-buy answer is reused without a new request');
+await runInsightAction(savedCtx, 'protocol-view', savedSelection, 'what_is_it');
+assert.equal(calls.length, callsBefore + 1, 'a missing answer still runs');
+
 console.log('selection-insights selfcheck passed');

@@ -490,7 +490,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(mcpToolNames.includes('python_sandbox'), false);
       assert.equal(mcpToolNames.includes('command_line'), false);
       assert.equal(mcpToolNames.includes('sub_agent'), false);
-      assert.equal(mcpToolNames.includes('memory'), false);
+      assert.equal(mcpToolNames.includes('memory'), true);
       assert.equal(mcpToolNames.includes('container'), true);
       assert.equal(mcpToolNames.includes('assay_table'), true);
       assert.equal(mcpToolNames.includes('plotly_graph'), true);
@@ -561,6 +561,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       ));
       const checkedLiteratureSearch = checkedContract.mcp.tools.find((tool) => tool.name === 'literature_search');
       const checkedContainer = checkedContract.mcp.tools.find((tool) => tool.name === 'container');
+      assert.deepEqual(checkedContract.mcp.tools.find((tool) => tool.name === 'memory'), mcpTools.find((tool) => tool.name === 'memory'));
       const checkedPlotlyGraph = checkedContract.mcp.tools.find((tool) => tool.name === 'plotly_graph');
       assert.equal(checkedLiteratureSearch.description, literatureSearchDefinition.description);
       assert.deepEqual(

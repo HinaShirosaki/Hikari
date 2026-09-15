@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { renderAgentChatIcon } from './icons.js';
 
 function sanitizeAttachmentName(fileName = '', fallback = 'attachment') {
   return trimText(String(fileName || '').replace(/\s+/g, ' ').trim(), 180) || fallback;
@@ -116,7 +117,7 @@ export function createComposerAttachmentsController({
             <span>${safeText(trimText(attachment?.name, 180))}</span>
             ${size ? `<span>${safeText(size)}</span>` : ''}
           </span>
-          <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">&times;</button>
+          <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
         </span>
       `;
     }).join('');

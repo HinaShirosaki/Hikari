@@ -110,8 +110,10 @@ export function createSpreadsheetTables({
     }
     draftTables = tables;
     activeTableIndex = targetIndex;
-    apply(grid, tables[targetIndex]);
+    // Computed before the grid draws the new row, or a solve table's fresh row is
+    // formatted against the old results and comes up blank instead of pending.
     recomputeTables();
+    apply(grid, tables[targetIndex]);
     setStatus(tables);
   }
 
@@ -326,6 +328,7 @@ export function createSpreadsheetTables({
           </div>
         ` : ''}
         <div class="spreadsheet-table" data-result-table-host="${index}" aria-label="${label} ${index + 1}"></div>
+        <button class="spreadsheet-table-add-row" type="button" data-result-table-add-row="${index}">+ Add row</button>
       </section>
     `).join('');
 
@@ -445,6 +448,13 @@ export function createSpreadsheetTables({
   }
 
   function onHostClick(event) {
+    const addRow = event?.target?.closest?.('[data-result-table-add-row]');
+    if (addRow) {
+      event?.preventDefault?.();
+      activeTableIndex = Number(addRow.dataset.resultTableAddRow);
+      onAddRow();
+      return;
+    }
     const select = event?.target?.closest?.('[data-result-table-select]')
       || (event?.target?.dataset?.resultTableSelect !== undefined ? event.target : null);
     if (!select) {
