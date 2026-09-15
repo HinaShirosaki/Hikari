@@ -1,0 +1,10 @@
+{
+  "id": "notebook-results",
+  "name": "Notebook Results Import",
+  "version": "1.0.0",
+  "description": "Paste an ImageJ-style measurement table and attach it to a notebook entry as a result table.",
+  "permissions": [
+    "notebook:read",
+    "notebook:write"
+  ]
+}

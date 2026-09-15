@@ -1,0 +1,7 @@
+{
+  "id": "imagej",
+  "name": "ImageJ",
+  "version": "1.0.0",
+  "description": "ImageJ running locally as a Hikari workspace.",
+  "serve": true
+}

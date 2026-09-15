@@ -1,0 +1,12 @@
+{
+  "id": "dna-importer",
+  "name": ".dna importer",
+  "version": "1.1.0",
+  "description": "Uses Biopython to convert .dna files to GenBank so the Sequence Viewer can open them.",
+  "permissions": ["python"],
+  "service": {
+    "fileConversions": [
+      { "from": "dna", "to": "gbk" }
+    ]
+  }
+}
