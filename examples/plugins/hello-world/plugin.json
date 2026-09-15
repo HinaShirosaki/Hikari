@@ -1,7 +1,0 @@
-{
-  "id": "hello-world",
-  "name": "Hello World",
-  "version": "1.0.0",
-  "description": "Minimal example plugin: one HTML page with its own CSS and JS.",
-  "permissions": []
-}

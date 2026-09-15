@@ -145,6 +145,7 @@ export function createHistoryActionController({
     const reviewMessageButton = event?.target?.closest?.('[data-agent-review-message]')
       || (event?.target?.dataset?.agentReviewMessage ? event.target : null);
     if (reviewMessageButton) {
+      event?.preventDefault?.();
       const messageId = trimText(reviewMessageButton.dataset.agentReviewMessage, 120);
       const message = state.agentChat?.messages?.find?.((item) => trimText(item?.id, 120) === messageId) || null;
       if (message) {

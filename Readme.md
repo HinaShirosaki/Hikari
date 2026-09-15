@@ -20,8 +20,7 @@
 <a href="#plugins">Plugins</a> ·
 <a href="#ai-and-agent-setup">AI Setup</a> ·
 <a href="#data-and-storage">Data</a> ·
-<a href="#development">Development</a> ·
-<a href="#troubleshooting">Troubleshooting</a>
+<a href="#development">Development</a>
 
 </div>
 
@@ -37,8 +36,51 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 - Twelve dock workspaces: `Home`, `Protocols`, `Notebook`, `Papers`, `Samples`, `Chemicals`, `Workflows`, `Agent`, `Sequence Viewer`, `Assay`, `Tools`, and `Settings`.
 - One storage root holds every heavy file — notebook attachments, papers, assay artifacts, gels, and sequence assets — next to a single `.json` snapshot.
 - Modules cross-link: a notebook entry can pull in a protocol, a sample, an assay plate, a gel record, and a paper without leaving the page.
-- Optional LLM-backed features for `Papers`, `Protocols`, and `Agent`, all through the signed-in `codex` CLI.
+- Optional LLM-backed features for `Papers`, `Protocols`, and `Agent`, all through the signed-in `codex` CLI — covered by a ChatGPT subscription, no separate LLM API key to buy.
 - Sandboxed plugins for extra workspaces — `Gel` ships as an internal bundled plugin ([src/plugins/gel](src/plugins/gel/)).
+
+## Quick Start
+
+New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting-started/first-experiment.md)** to configure storage and carry one fictional experiment from sample registration through a saved notebook result.
+
+### Install Hikari with an agent
+
+Copy and paste this prompt into a coding agent that has terminal access:
+
+```text
+Download and install Hikari from its official repository:
+https://github.com/HinaShirosaki/Enana
+
+Please complete the installation for me:
+
+1. Detect my operating system and CPU architecture.
+2. Confirm that Git, Node.js 20 or newer, and npm are available. If a prerequisite is missing, explain what is needed and ask before installing system software or requesting administrator privileges.
+3. Clone the repository into a sensible user-owned location. If the private repository requires authentication, ask me to sign in through GitHub's normal login flow; never ask me to paste a token into the chat or print credentials.
+4. In the cloned repository, install the locked dependencies with `npm ci`, then build the native distribution with `npm run dist`.
+5. Find the artifact for my platform under `out/` and install Hikari using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
+6. Launch Hikari once and confirm that it opens. Report the repository path, build artifact, installed application path, and any step I still need to complete.
+
+Preserve any existing Hikari application data. Do not choose or change the Hikari storage root, and do not sign in to Codex on my behalf.
+```
+
+### Prerequisites
+
+- Node.js 20+
+- npm
+
+### Install and run
+
+```bash
+npm install
+npm run start
+```
+
+### First launch checklist
+
+1. Open `Settings > Storage` and set the **Root Folder Path**. Do this before anything else — notebook attachments, papers, assay artifacts, gels, and sequence assets all live under it, and auto-save is off until it is set.
+2. In `Settings > Startup`, pick a default module or enable "remember last opened module".
+3. In `Settings > Samples` and `Settings > Inventory Locations`, set your storage locations and sample type names — the inventory modules read these.
+4. Sign in to the Codex CLI if you want `Agent`, paper summaries, or protocol generation (see [AI and Agent Setup](#ai-and-agent-setup)). A ChatGPT subscription is enough — you do not need an LLM API key.
 
 ## App Surface
 
@@ -262,49 +304,6 @@ It requests only `storage`, `files`, `downloads`, and `layout` — it has no not
 
 ![Gel workspace with a synthetic teaching gel and detected lanes](docs/screenshots/gel-analysis.png)
 
-## Quick Start
-
-New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting-started/first-experiment.md)** to configure storage and carry one fictional experiment from sample registration through a saved notebook result.
-
-### Install Hikari with an agent
-
-Copy and paste this prompt into a coding agent that has terminal access:
-
-```text
-Download and install Hikari from its official repository:
-https://github.com/HinaShirosaki/Enana
-
-Please complete the installation for me:
-
-1. Detect my operating system and CPU architecture.
-2. Confirm that Git, Node.js 20 or newer, and npm are available. If a prerequisite is missing, explain what is needed and ask before installing system software or requesting administrator privileges.
-3. Clone the repository into a sensible user-owned location. If the private repository requires authentication, ask me to sign in through GitHub's normal login flow; never ask me to paste a token into the chat or print credentials.
-4. In the cloned repository, install the locked dependencies with `npm ci`, then build the native distribution with `npm run dist`.
-5. Find the artifact for my platform under `out/` and install Hikari using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
-6. Launch Hikari once and confirm that it opens. Report the repository path, build artifact, installed application path, and any step I still need to complete.
-
-Preserve any existing Hikari application data. Do not choose or change the Hikari storage root, and do not sign in to Codex on my behalf.
-```
-
-### Prerequisites
-
-- Node.js 20+
-- npm
-
-### Install and run
-
-```bash
-npm install
-npm run start
-```
-
-### First launch checklist
-
-1. Open `Settings > Storage` and set the **Root Folder Path**. Do this before anything else — notebook attachments, papers, assay artifacts, gels, and sequence assets all live under it, and auto-save is off until it is set.
-2. In `Settings > Startup`, pick a default module or enable "remember last opened module".
-3. In `Settings > Samples` and `Settings > Inventory Locations`, set your storage locations and sample type names — the inventory modules read these.
-4. Sign in to the Codex CLI if you want `Agent`, paper summaries, or protocol generation (see below).
-
 ## AI and Agent Setup
 
 Configure AI features in `Settings > Codex Model & Access`.
@@ -314,6 +313,12 @@ The Agent workspace uses:
 - `Codex Agent (CLI)`
 
 The model catalog is [`config/codex-models.json`](./config/codex-models.json). All LLM-backed features use the signed-in `codex` CLI; no API endpoint or API key is stored by the app.
+
+### No LLM API key required
+
+Hikari never calls a model provider directly. Every request goes through the `codex` CLI, and Codex is included with a ChatGPT subscription — so you sign in once with your ChatGPT account and the AI features work with no per-token billing, no API key to buy, and nothing secret to paste into the app. Usage counts against your subscription's Codex allowance instead of a separate API bill.
+
+If you prefer usage-based billing, `codex login --api-key` still works, but it is optional.
 
 ### Codex Agent Setup
 
@@ -421,52 +426,3 @@ If you are onboarding to the codebase, start with the docs index and then the ar
 - [`docs/plugins/plugin-system.md`](./docs/plugins/plugin-system.md) — plugin format, install flow, and sandboxing
 - [`docs/module-development/README.md`](./docs/module-development/README.md) — how to add a new module
 - [`tests/README.md`](./tests/README.md)
-
-## Troubleshooting
-
-<details>
-<summary><strong>The app opens but my data is missing</strong></summary>
-
-- Open `Settings > Storage` and confirm the root folder path points at the folder you expect.
-- Nothing is written to disk until a storage path is set.
-
-</details>
-
-<details>
-<summary><strong>Papers or Agent says Codex is unavailable</strong></summary>
-
-- Sign in with `codex login` and reopen `Settings > Codex Model & Access` to refresh the status.
-
-</details>
-
-<details>
-<summary><strong>Codex mode is selected but nothing responds</strong></summary>
-
-- Confirm `codex` is installed and available on `PATH`.
-- Run `codex login`.
-
-</details>
-
-<details>
-<summary><strong>File imports or paper uploads fail with path-related errors</strong></summary>
-
-- Make sure the storage root is set in `Settings > Storage`.
-- Re-open the relevant module after saving the path.
-
-</details>
-
-<details>
-<summary><strong>A plugin workspace is missing from the dock</strong></summary>
-
-- Plugin workspaces live behind the **More** button at the end of the dock.
-- Check that it is enabled in `Settings > Plugins`.
-
-</details>
-
-<details>
-<summary><strong>Packaging fails</strong></summary>
-
-- Re-run `npm install`.
-- Confirm Electron Forge dependencies are present for your platform.
-
-</details>

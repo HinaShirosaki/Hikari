@@ -9,15 +9,15 @@ module.exports = function registerManifestContracts(context = {}) {
       assert.match(mainEntrySource, /require\(['"]\.\/app\/start-main-app['"]\)/);
       assert.match(mainEntrySource, /startMainApp\(\)/);
 
-      // The gate builds the UI, runs the static checks, then the test runner.
-      assert.match(packageManifest.scripts.test, /^npm run build:ui/);
-      assert.match(packageManifest.scripts.test, /npm run test:checks/);
-      assert.match(packageManifest.scripts.test, /node test\.js/);
-      assert.match(packageManifest.scripts['test:checks'], /check:css-colors[\s\S]*check:dom-ids[\s\S]*check:source-layout[\s\S]*check:selfchecks/);
-      // Neither level may && past a failure: one broken check must not silently
-      // skip every check after it, nor the whole suite run.
-      assert.doesNotMatch(packageManifest.scripts.test, /test:checks\s*&&/);
-      assert.doesNotMatch(packageManifest.scripts['test:checks'], /&&/);
+      // The gate builds the UI, then one runner covers lint, the static checks,
+      // the selfchecks and the suites through a single reporter.
+      assert.equal(packageManifest.scripts.test, 'npm run build:ui && node test.js');
+      const runnerSource = fs.readFileSync(path.join(__dirname, 'test.js'), 'utf8');
+      for (const check of ['lint', 'css-colors', 'dom-ids', 'source-layout']) assert.match(runnerSource, new RegExp(`'${check}'`));
+      assert.ok(runnerSource.includes('/-selfcheck\\.(c?js|mjs)$/'));
+      // A failing test records the exit code and moves on: one broken check must
+      // not silently skip everything after it.
+      assert.match(runnerSource, /catch \(error\) \{[\s\S]{0,300}?process\.exitCode = 1;\s*\}/);
     });
   }
 };

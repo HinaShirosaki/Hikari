@@ -2,20 +2,29 @@ module.exports = function registerAppAgentChatCoreSuiteNotebookProposalApproval(
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('agent-chat keeps notebook-draft proposals confirm-first and creates one planned page on click', async () => {
+test('agent-chat keeps the notebook draft card and opens its approval overlay automatically', async () => {
   const document = createMockDocument([
     'agent-project-select',
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
     'agent-clear-btn',
-    'agent-status'
+    'agent-status',
+    'agent-review-overlay',
+    'agent-review-track',
+    'agent-review-close-btn',
+    'agent-review-prev-btn',
+    'agent-review-next-btn',
+    'agent-review-page-label'
   ]);
   const projectSelect = document.getElementById('agent-project-select');
   const history = document.getElementById('agent-chat-history');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
   const status = document.getElementById('agent-status');
+  const reviewOverlay = document.getElementById('agent-review-overlay');
+  const reviewTrack = document.getElementById('agent-review-track');
+  reviewOverlay.hidden = true;
   let openedNotebookEntryId = '';
 
   const state = {
@@ -238,6 +247,18 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
               workflowId: 'w1'
             }
           }
+        },
+        protocol_generation: {
+          status: 'completed',
+          protocol: {
+            name: 'Atlas Viability Validation',
+            purpose: 'Confirm the viability assay conditions before the next run.',
+            materials: ['Prepared cells', 'Viability plate'],
+            steps: [
+              { id: 'generated-step-1', text: 'Load the prepared cells into the viability plate.' },
+              { id: 'generated-step-2', text: 'Record the viability measurement.' }
+            ]
+          }
         }
       })
     }
@@ -274,11 +295,28 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(state.agentChat.messages[1].meta.notebook_draft.status, 'proposal_ready');
   assert.equal(state.notebookEntries.length, 0);
   assert.match(history.innerHTML, /Create Planned Page/);
+  assert.equal(
+    history.innerHTML.includes(`data-agent-review-message="${state.agentChat.messages[1].id}"`),
+    true
+  );
   assert.match(history.innerHTML, /Planned notebook draft ready: Viability Assay After Cell Prep/);
+  assert.equal(reviewOverlay.hidden, false);
+  assert.match(reviewTrack.innerHTML, /Viability Assay After Cell Prep/);
+  assert.match(reviewTrack.innerHTML, /Atlas Viability Validation/);
+  assert.equal(document.getElementById('agent-review-page-label').textContent, '1 / 2');
+  assert.match(reviewTrack.innerHTML, /data-agent-review-approve=/);
 
-  const createButtons = history.querySelectorAll('[data-agent-create-planned-page]');
-  assert.equal(createButtons.length, 1);
-  trigger(history, 'click', { target: createButtons[0] });
+  trigger(document.getElementById('agent-review-close-btn'), 'click');
+  assert.equal(reviewOverlay.hidden, true);
+  const reviewMessageButtons = history.querySelectorAll('[data-agent-review-message]');
+  assert.equal(reviewMessageButtons.length, 2);
+  trigger(history, 'click', { target: reviewMessageButtons[0] });
+  assert.equal(reviewOverlay.hidden, false);
+  assert.equal(document.getElementById('agent-review-page-label').textContent, '1 / 2');
+
+  const approveButtons = reviewTrack.querySelectorAll('[data-agent-review-approve]');
+  assert.equal(approveButtons.length, 2);
+  trigger(reviewTrack, 'click', { target: approveButtons[0] });
 
   assert.equal(state.notebookEntries.length, 1);
   assert.equal(state.notebookEntries[0].notebookState, 'planned');
@@ -286,7 +324,17 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(state.notebookEntries[0].agentDraftMeta.proposalId, 'proposal-1');
   assert.equal(openedNotebookEntryId, state.notebookEntries[0].id);
   assert.match(history.innerHTML, /Open Planned Page/);
+  assert.equal(reviewOverlay.hidden, false);
+  assert.match(reviewTrack.innerHTML, /Atlas Viability Validation/);
   assert.equal(status.textContent, 'Planned notebook page created.');
+
+  const protocolApproveButtons = reviewTrack.querySelectorAll('[data-agent-review-approve]');
+  assert.equal(protocolApproveButtons.length, 1);
+  trigger(reviewTrack, 'click', { target: protocolApproveButtons[0] });
+  assert.equal(state.protocols.length, 2);
+  assert.equal(state.protocols[1].name, 'Atlas Viability Validation');
+  assert.equal(reviewOverlay.hidden, true);
+  assert.equal(status.textContent, 'Generated protocol added to Protocol Module.');
 
   openedNotebookEntryId = '';
   const openButtons = history.querySelectorAll('[data-agent-open-notebook-page]');

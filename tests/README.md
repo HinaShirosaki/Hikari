@@ -11,12 +11,18 @@ directory tree is the category list. No manual tagging.
 node test.js --list           # groups and test counts
 node test.js '^core/'         # run one branch (npm run test:core)
 node test.js '^edge/'         # npm run test:edge
+node test.js '^check'         # lint + the scripts/check-*.mjs static checks
+node test.js '^selfcheck'     # tests/*-selfcheck.* (npm run check:selfchecks)
 node test.js sequence-viewer  # any regex, matched against "<group> <test name>"
-npm test                      # build:ui + static checks + everything
-npm run test:checks           # only the static check:* scripts
+npm test                      # build:ui + everything
+npm run test:checks           # checks + selfchecks, no suites
 ```
 
-The full run prints a `SLOW` list of the ten slowest tests at the end.
+Every test reports as one `PASS [group] name` or `FAIL [group] name` line,
+followed by a `passed/total` summary and a `SLOW` list of the ten slowest. The
+`check` and `selfcheck` groups run each script in its own process; a script's
+own output is shown only when it fails. Any `tests/*-selfcheck.{js,cjs,mjs}`
+file is picked up automatically.
 
 Suites are organized by domain under `tests/suites/`:
 

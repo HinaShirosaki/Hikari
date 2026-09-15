@@ -205,7 +205,8 @@ export function initAgentChat({
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     syncActiveRequestState: shell.syncActiveRequestState,
-    notebookDraftAdapter
+    notebookDraftAdapter,
+    openReviewForMessage: (message) => reviewController?.openForMessage?.(message)
   });
 
   const render = () => {
