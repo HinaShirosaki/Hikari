@@ -7,6 +7,7 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { TextEncoder } = require('node:util');
 const vm = require('node:vm');
+const { spawn } = require('node:child_process');
 
 const {
   createMemoryStorage,
@@ -276,6 +277,32 @@ const suiteScope = {
   readSource,
   assertClose
 };
+
+// Static checks and tests/*-selfcheck.* each run in their own process (they
+// swap console methods, use node:test, or read the built index.html) and report
+// through the same PASS/FAIL lines as everything else. Their own output is
+// only shown when they fail.
+function processTest(group, name, args) {
+  tests.push({ group, name, fn: () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', ...args], {
+      cwd: __dirname, stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let output = '';
+    child.stdout.on('data', (chunk) => { output += chunk; });
+    child.stderr.on('data', (chunk) => { output += chunk; });
+    child.on('close', (code) => {
+      if (code === 0) return resolve();
+      const error = new Error(`exit ${code}\n${output.trim()}`);
+      error.stack = error.message; // the child's output is the trace
+      reject(error);
+    });
+  }) });
+}
+processTest('check', 'lint', ['node_modules/eslint/bin/eslint.js', 'src', 'scripts', 'eslint.config.mjs']);
+for (const name of ['css-colors', 'dom-ids', 'source-layout']) processTest('check', name, [`scripts/check-${name}.mjs`]);
+for (const file of fs.readdirSync(path.join(__dirname, 'tests')).filter((f) => /-selfcheck\.(c?js|mjs)$/.test(f)).sort()) {
+  processTest('selfcheck', file.replace(/-selfcheck\.\w+$/, ''), [path.join('tests', file)]);
+}
 
 registerCoreSuite({ __dirname, scope: suiteScope });
 registerEdgeSuite({ __dirname, scope: suiteScope });
@@ -1751,7 +1778,7 @@ async function run() {
     try {
       await item.fn();
       passed += 1;
-      console.log(`PASS ${item.name}`);
+      console.log(`PASS [${item.group}] ${item.name}`);
     } catch (error) {
       console.error(`FAIL [${item.group}] ${item.name}`);
       console.error(error && error.stack ? error.stack : error);

@@ -28,8 +28,8 @@ jobs:
       # to a local install rather than trading correctness for a cached minute.
       - run: npm ci
 
-      # `npm test` is the whole gate: it runs build:ui, then test:checks
-      # (lint + css-colors + dom-ids + source-layout + selfchecks), then the
-      # ~1360-test suite. Generated files are not committed, so the build must
-      # run before the checks that read index.html and styles.css.
+      # `npm test` is the whole gate: it runs build:ui, then test.js, which
+      # covers lint, the static checks, the selfchecks and the ~1000-test
+      # suite. Generated files are not committed, so the build must run before
+      # the checks that read index.html and styles.css.
       - run: npm test
