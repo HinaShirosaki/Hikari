@@ -231,6 +231,26 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(stockBufferResult.resultText, /BSA: 100 mg/i);
   assert.match(stockBufferResult.resultText, /Solvent to add: 999\.5 mL/i);
 
+  // Tris base is titrated from the free base, not from the pKa midpoint:
+  // 50 mM x 1 L x (1 - 0.4655) = 26.7 mmol HCl -> 4.45 mL of 6 M.
+  const trisBufferResult = toolBox.calculateBufferRecipe({
+    volumeMl: 1000,
+    pH: 8,
+    rows: [
+      { name: 'Tris Base', finalConcentration: '50 mM' },
+      { name: 'NaCl', finalConcentration: '150 mM' }
+    ]
+  });
+  assert.match(trisBufferResult.phAdjustment.hclText, /^4\.45\d mL estimated from Tris Base pKa 8\.06$/);
+  assert.equal(trisBufferResult.phAdjustment.naohText, '0 uL');
+  const trisStockResult = toolBox.calculateBufferRecipe({
+    volumeMl: 1000,
+    pH: 8,
+    rows: [{ name: 'tris-hcl', stockConcentration: '1 M', finalConcentration: '50 mM' }]
+  });
+  assert.equal(trisStockResult.phAdjustment.hclText, '0 uL');
+  assert.equal(trisStockResult.phAdjustment.naohText, '0 uL');
+
   assert.equal(toolBox.parseBufferConcentration('2000x').kind, 'fold');
   assert.equal(toolBox.parseBufferConcentration('100 ng/uL').kind, 'massVolume');
   assert.equal(toolBox.parseBufferConcentration('0.1% m/v').percentKind, 'massVolume');

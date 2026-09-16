@@ -31,6 +31,8 @@ if (process.platform === 'linux') {
 }
 
 module.exports = {
+  // Set by bin/hikari.js so `npx hikari-lab` writes next to the caller, not into the npx cache.
+  outDir: process.env.HIKARI_OUT_DIR,
   packagerConfig: {
     // Native exports of assets/icon.svg; Packager selects .icns or .ico.
     icon: './assets/icon',
@@ -83,7 +85,6 @@ module.exports = {
       /^\/Book3\.xlsx$/,
       /^\/hikari-data\.json$/,
       /^\/enana-data(?:\.ena)?\.json$/,
-      /^\/Exported Standard Features($|\/)/,
       /^\/Testdata($|\/)/,
       /^\/TestData2($|\/)/,
       /^\/TestData3($|\/)/,

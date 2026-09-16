@@ -2,7 +2,6 @@ import {
   DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER
 } from '../codex-model-catalog.generated.js';
 import { createExternalSkillsController } from './external-skills-controller.js';
-import { createGenomesController } from './genomes-controller.js';
 import { createPluginsController } from './plugins-controller.js';
 import { createLlmModelCatalog } from './llm-model-catalog.js';
 import { createMcpToolsController } from './mcp-tools-controller.js';
@@ -60,10 +59,6 @@ export function initSettings({
     settingAgentExternalSkillsEnabled,
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
-    genomesAddBtn,
-    genomesRefreshBtn,
-    genomesStatus,
-    genomesList,
     pluginsAddBtn,
     pluginsReloadBtn,
     pluginsStatus,
@@ -103,12 +98,6 @@ export function initSettings({
     api: window.hikariApi || null,
     enabledInput: settingAgentExternalSkillsEnabled,
     listElement: settingExternalSkillsList,
-    escapeHtml
-  });
-  const genomesController = createGenomesController({
-    api: window.hikariApi || null,
-    statusElement: genomesStatus,
-    listElement: genomesList,
     escapeHtml
   });
   const pluginsController = createPluginsController({
@@ -205,12 +194,6 @@ export function initSettings({
   settingExternalSkillsRefreshBtn?.addEventListener('click', () => {
     void externalSkillsController.refresh();
   });
-  genomesAddBtn?.addEventListener('click', () => {
-    void genomesController.onAddGenome();
-  });
-  genomesRefreshBtn?.addEventListener('click', () => {
-    void genomesController.refresh();
-  });
   pluginsAddBtn?.addEventListener('click', () => {
     void pluginsController.onAddPlugin();
   });
@@ -256,9 +239,6 @@ export function initSettings({
 
     if (activeSettingsPanel === 'llm') {
       void refreshCodexLoginStatus();
-    }
-    if (activeSettingsPanel === 'genomes') {
-      void genomesController.refresh();
     }
     if (
       activeSettingsPanel === 'skills'
@@ -380,7 +360,6 @@ export function initSettings({
     renderCodexStatus();
     mcpToolsController.render();
     externalSkillsController.render();
-    genomesController.render();
     pluginsController.render();
     sampleInventoryController.renderLocationList();
     sampleInventoryController.renderSampleInventoryLocationList();

@@ -11,7 +11,6 @@ import {
 } from './plotly/chart-style-model.js';
 import { createChartStyleStore } from './plotly/chart-style-store.js';
 import { mountChartControls } from './plotly/chart-controls.js';
-import { mountChartToolbar } from './plotly/chart-toolbar.js';
 import { createAssayPlotlyRenderer } from './plotly/plotly-renderer.js';
 import { buildAnalysisChartModel, numericAnalysisHeaders } from './analysis-chart-model.js';
 import {
@@ -62,7 +61,6 @@ export function createAssayAnalysisView({
     assayAnalysisXAxisField,
     assayAnalysisXAxisInput,
     assayChartStyleMount,
-    assayChartToolbarMount,
     assayChartFormatPanel,
     assayTransformSummary,
     assayResultTable,
@@ -149,28 +147,6 @@ export function createAssayAnalysisView({
     })
     : null;
   let chartSurface = null;
-  const chartToolbar = assayChartToolbarMount
-    ? mountChartToolbar(assayChartToolbarMount, {
-      store: chartStyleStore,
-      // Error bars belong to the analysis spec, so the toolbar drives the existing
-      // checkbox rather than holding a second copy of the state.
-      errorBars: {
-        isApplicable: () => Boolean(assayAnalysisErrorBarsField && !assayAnalysisErrorBarsField.hidden),
-        get: () => Boolean(assayAnalysisErrorBarsInput?.checked),
-        toggle: () => {
-          if (!assayAnalysisErrorBarsInput) {
-            return;
-          }
-          assayAnalysisErrorBarsInput.checked = !assayAnalysisErrorBarsInput.checked;
-          onAnalysisConfigChange();
-        }
-      },
-      // Keep this late-bound so constructing the toolbar cannot read chartSurface
-      // while it is still in its temporal dead zone.
-      onExport: (format) => chartSurface?.exportChartImage(format)
-    })
-    : null;
-
   // Every analysis ships its own chartModel, which is what "auto" means. The moment a
   // column is overridden that model no longer answers the question, so it has to be
   // rebuilt from the result table -- otherwise the Data Series mapping does nothing.
@@ -179,22 +155,20 @@ export function createAssayAnalysisView({
     runtime,
     chartStyleStore,
     chartControls,
-    chartToolbar,
     plotlyRenderer,
     assayAnalysisSummary,
     assayAnalysisTable,
-    assayChartFormatPanel,
-    assayChartToolbarMount
+    assayChartFormatPanel
   });
   const {
     getAnalysisContext,
     setAnalysisContext,
     setChartContext,
     openChartFormat,
-    setToolbarVisible,
     applyChartContext,
     unmountAnalysisChart,
     renderAnalysisChart,
+    exportChartImage,
     getChartStyle,
     loadChartStyle,
     refreshChartControls,
@@ -252,7 +226,6 @@ export function createAssayAnalysisView({
     lastSpec = null;
     lastModel = null;
     lastRecordedSummary = '';
-    setToolbarVisible(false);
     refreshDerivedPlate();
     setAnalysisContext({
       headers: [],
@@ -483,6 +456,7 @@ export function createAssayAnalysisView({
     redrawTransformGrid,
     onSourceResultsChanged,
     openChartFormat,
+    exportChartImage,
     getChartStyle,
     loadChartStyle,
     refreshChartControls,
@@ -492,7 +466,6 @@ export function createAssayAnalysisView({
         clearTimeout(previewSaveTimer);
         previewSaveTimer = null;
       }
-      chartToolbar?.destroy();
       chartControls?.destroy();
       clearTransformGrid();
       unmountAnalysisChart();

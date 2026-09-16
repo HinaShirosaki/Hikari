@@ -87,6 +87,7 @@ const PANEL_HTML = `<div class="assay-chart-style">
       + number('refLineValue', 'Value', null, null, 'any', 'Off'))}
   `)}
   ${panel('series', `
+    ${select('chartType', 'Chart type', [['auto', 'Auto'], ['line', 'Line'], ['bar', 'Bar']])}
     ${select('seriesTarget', 'Data series', [['', 'All series']])}
     ${row(color('color', 'Series color') + number('opacity', 'Opacity', 0.1, 1, 0.1))}
     <div class="form-actions"><button type="button" data-cc="seriesDefaults" class="ghost-btn">Use defaults</button></div>

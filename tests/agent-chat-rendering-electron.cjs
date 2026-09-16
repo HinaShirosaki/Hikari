@@ -153,6 +153,10 @@ async function main() {
   // Long histories should not drag a reader back to the latest message.
   await run(`state.agentChat.messages=Array.from({length:40},(_,i)=>({id:'long-'+i,role:i%2?'assistant':'user',text:'Example message '+i})); redraw(); dom.historyNode.scrollTop=100; state.agentChat.messages.push({id:'last',role:'assistant',text:'New message'}); redraw();`);
   assert.equal(await run('dom.historyNode.scrollTop'), 100);
+  // Opening a saved session deliberately anchors its latest content after the
+  // layout is final, rather than leaving a partially visible first message.
+  await run(`shell.renderHistoryView({ forceScroll: true }); new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
+  assert.equal(await run('dom.historyNode.scrollHeight - dom.historyNode.scrollTop - dom.historyNode.clientHeight <= 1'), true);
   await run('state.agentChat.messages=[]; redraw();');
   assert.equal(await run('dom.conversationShell.classList.contains("is-empty-chat")'), true);
   fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements, checks: ['selection during streaming', 'stable disclosures', 'copy', 'inline notebook approval', 'protocol approval idempotency', 'clarification focus and custom answer', 'scroll anchoring', 'empty conversation'] }, null, 2));

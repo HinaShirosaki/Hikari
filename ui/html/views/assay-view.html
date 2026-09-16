@@ -318,6 +318,11 @@
                       <input id="assay-analysis-error-bars" type="checkbox" checked />
                       Show SD error bars
                     </label>
+                    <div class="form-actions assay-chart-export-actions">
+                      <span class="small-note">Export chart</span>
+                      <button type="button" id="assay-chart-export-png-btn" class="ghost-btn">PNG</button>
+                      <button type="button" id="assay-chart-export-svg-btn" class="ghost-btn">SVG</button>
+                    </div>
                     <div id="assay-analysis-summary" class="small-note"></div>
                   </div>
                 </details>
@@ -365,7 +370,6 @@
             </details>
           </div>
           <div class="assay-results-output-stage">
-            <div id="assay-chart-toolbar" class="assay-chart-toolbar" hidden></div>
             <div id="assay-analysis-table" class="list-table"></div>
           </div>
         </div>

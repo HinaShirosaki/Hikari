@@ -612,7 +612,6 @@ test('biology-notebook buffer preparer starts blank, records without a button, a
     fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'toolbox-drag.js'), 'utf8')
   ].join('\n');
   const compounds = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'chemistry', 'buffer-compounds.js'), 'utf8');
-  const calculations = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'bench-calculations', 'buffer-concentration.js'), 'utf8');
   const bufferSection = html.slice(
     html.indexOf('id="biology-notebook-tool-panel-buffer"'),
     html.indexOf('id="biology-notebook-tool-panel-reaction"')
@@ -623,7 +622,8 @@ test('biology-notebook buffer preparer starts blank, records without a button, a
   assert.doesNotMatch(toolSource, /stepsHost|useForActivePlaceholder|recordBtn|usePlaceholderBtn/);
   assert.match(compounds, /name: 'Bis-Tris',[^\n]*pKa: 6\.5/);
   assert.match(compounds, /name: 'CAPS',[^\n]*pKa: 10\.4/);
-  assert.match(calculations, /const compound = resolveBufferCompound\(source\);[\s\S]*?return \{ pKa, label: compound\.name \};/);
+  assert.match(compounds, /name: 'Tris Base',[^\n]*startForm: 'base'/);
+  assert.match(compounds, /name: 'Tris-HCl',[^\n]*startForm: 'acid'/);
 
   // Both sheets carry a note column, the amount is typed over rather than read
   // off, and the volume cell holds one input instead of stacking a result row.

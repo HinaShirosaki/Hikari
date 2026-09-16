@@ -80,9 +80,7 @@ function buildPluginAppContext(state, changed = '', windowObject = globalThis.wi
   const settings = asObject(state?.settings);
   const appearance = asObject(settings.appearance);
   const requestedMode = text(appearance.mode, 20).toLowerCase();
-  const mode = requestedMode === 'night' || requestedMode === 'miku'
-    ? requestedMode
-    : 'day';
+  const mode = requestedMode === 'night' ? 'night' : 'day';
   const context = {
     appearance: {
       mode,

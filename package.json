@@ -1,10 +1,26 @@
 {
-  "name": "hikari",
+  "name": "hikari-lab",
   "productName": "Hikari",
   "version": "1.0.0",
-  "private": true,
   "description": "Electron shell for Hikari sub-app launcher",
+  "license": "Apache-2.0",
+  "repository": "github:HinaShirosaki/Hikari",
   "main": "src/main/main.js",
+  "bin": {
+    "hikari": "bin/hikari.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "ui",
+    "vendor",
+    "assets",
+    "config",
+    "scripts/build-ui.mjs",
+    "scripts/build-ui",
+    "forge.config.js",
+    "THIRD-PARTY-NOTICES.md"
+  ],
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
     "check:css-colors": "node scripts/check-css-colors.mjs",
@@ -13,7 +29,6 @@
     "lint": "eslint src scripts eslint.config.mjs",
     "lint:tests": "eslint tests test.js",
     "check:selfchecks": "node test.js '^selfcheck'",
-    "extract:standard-features": "node scripts/extract-standard-features.mjs",
     "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
     "test:checks": "node test.js '^(check|selfcheck)'",

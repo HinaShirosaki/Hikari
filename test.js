@@ -1343,10 +1343,10 @@ test('plugin system: app context events and user-mediated downloads stay permiss
   assert.equal(exporter.replies.at(-1).result.saved, true);
   assert.equal(exports[0].fileName, 'gel.csv');
 
-  state.settings.appearance = { mode: 'miku', fontSize: 15 };
+  state.settings.appearance = { mode: 'night', fontSize: 15 };
   bridge.broadcastAppContext('appearance');
   assert.equal(exporter.replies.at(-1).event, 'app.context');
-  assert.deepEqual(exporter.replies.at(-1).payload.appearance, { mode: 'miku', fontSize: 15 });
+  assert.deepEqual(exporter.replies.at(-1).payload.appearance, { mode: 'night', fontSize: 15 });
   assert.equal(exporter.replies.at(-1).payload.changed, 'appearance');
 });
 

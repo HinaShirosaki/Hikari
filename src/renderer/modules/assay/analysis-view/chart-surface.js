@@ -5,18 +5,16 @@ import { asArray, ensureObject } from '../../../lib/normalize.js';
 import { getPlotlyTitle, normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
 
 // Owns the Plotly surface: the analysis chart, the agent-supplied graph that can
-// replace it, and the context the style store and toolbar read.
+// replace it, and the context the style store and controls read.
 function createChartSurface({
   safeText,
   runtime,
   chartStyleStore,
   chartControls,
-  chartToolbar,
   plotlyRenderer,
   assayAnalysisSummary,
   assayAnalysisTable,
-  assayChartFormatPanel,
-  assayChartToolbarMount
+  assayChartFormatPanel
 } = {}) {
   let lastAnalysisContext = {
     headers: [],
@@ -43,12 +41,6 @@ function createChartSurface({
     assayChartFormatPanel.open = true;
     chartControls?.refresh();
     assayChartFormatPanel.scrollIntoView({ block: 'nearest' });
-  }
-
-  function setToolbarVisible(visible) {
-    if (assayChartToolbarMount) {
-      assayChartToolbarMount.hidden = !visible;
-    }
   }
 
   // Rebuilding the controls mid-drag tears out the colour input under the cursor, so
@@ -82,7 +74,6 @@ function createChartSurface({
     } else {
       setChartContext(lastAnalysisContext);
     }
-    chartToolbar?.refresh();
   }
 
   function unmountAnalysisChart() {
@@ -95,7 +86,7 @@ function createChartSurface({
 
   // The chart-type override applies to plain category/series models. A fitted curve is
   // a densely sampled line plus its observed markers, so drawing it as bars would be
-  // meaningless and the override is ignored (and disabled in the toolbar).
+  // meaningless and the override is ignored (and disabled in the Data Series tab).
   function applyChartTypeOverride(model, style) {
     if (!model || style.chartType === 'auto' || hasFittedCurve(model)) {
       return model;
@@ -106,12 +97,10 @@ function createChartSurface({
   function renderAnalysisChart(model) {
     const target = assayAnalysisTable?.querySelector('[data-assay-analysis-chart]');
     if (!target || !model) {
-      setToolbarVisible(false);
       return { seriesLabels: [] };
     }
     const style = chartStyleStore.getStyle();
     const info = plotlyRenderer.render(target, applyChartTypeOverride(model, style), style);
-    setToolbarVisible(Boolean(info.seriesLabels?.length));
     return { ...info, hasFittedCurve: hasFittedCurve(model) };
   }
 
@@ -266,7 +255,6 @@ function createChartSurface({
     },
     setChartContext,
     openChartFormat,
-    setToolbarVisible,
     applyChartContext,
     unmountAnalysisChart,
     hasFittedCurve,

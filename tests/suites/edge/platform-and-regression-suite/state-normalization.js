@@ -226,16 +226,6 @@ test('[P1] normalizeState preserves custom sample types and drops the legacy hid
   assert.equal(normalized.settings.sampleTypeLabels.custom_tissue, 'Tissue');
   assert.equal(normalized.settings.sampleTypeHidden, undefined);
 });
-test('[P1] normalizeState preserves the Hatsune Miku appearance theme', () => {
-  const normalized = shared.normalizeState({
-    settings: {
-      appearance: {
-        mode: 'miku'
-      }
-    }
-  });
-  assert.equal(normalized.settings.appearance.mode, 'miku');
-});
 test('[P0] normalizeState resets unsupported appearance themes to day', () => {
   const normalized = shared.normalizeState({
     settings: {

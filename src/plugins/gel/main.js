@@ -126,15 +126,12 @@ async function persist() {
 
 function applyHostContext(context = {}, { snapshot = false } = {}) {
   const storageWasConfigured = Boolean(state.settings.storagePath);
-  const mode = context.appearance?.mode === 'night' || context.appearance?.mode === 'miku'
-    ? context.appearance.mode
-    : 'day';
+  const mode = context.appearance?.mode === 'night' ? 'night' : 'day';
   const fontSize = Math.max(10, Math.min(32, Number(context.appearance?.fontSize) || 16));
   document.documentElement.style.setProperty('--app-font-size', `${fontSize}px`);
   document.documentElement.style.setProperty('font-size', `${fontSize}px`);
   document.body.classList.add('ui-neutral-compact');
   document.body.classList.toggle('theme-night', mode === 'night');
-  document.body.classList.toggle('theme-miku', mode === 'miku');
   document.body.dataset.appearanceMode = mode;
   state.settings.storagePath = context.storage?.configured ? PLUGIN_STORAGE_ROOT : '';
   if (context.layout?.leftRail) {

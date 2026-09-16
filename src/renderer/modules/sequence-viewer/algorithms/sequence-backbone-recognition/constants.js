@@ -21,14 +21,14 @@ const RESTRICTION_ANALYSIS_PATH = path.join(
   'algorithms',
   'restriction-features.js'
 );
-const EXPORTED_STANDARD_FEATURES_PATH = path.join(
+const COMMON_PROMOTERS_PATH = path.join(
   PROJECT_ROOT,
   'src',
   'renderer',
   'modules',
   'sequence-viewer',
   'data',
-  'exported-standard-features.js'
+  'common-promoters.js'
 );
 
 const MIN_QUERY_LENGTH = 12;
@@ -43,7 +43,7 @@ module.exports = {
   DEFAULT_MAX_PROMOTER_SELECTIONS,
   DEFAULT_PROMOTER_TO_ORF_MAX_GAP,
   DEFAULT_RESTRICTION_FLANK_MAX_GAP,
-  EXPORTED_STANDARD_FEATURES_PATH,
+  COMMON_PROMOTERS_PATH,
   MIN_BACKBONE_SHARED_LENGTH,
   MIN_HOST_COVERAGE,
   MIN_ORF_LENGTH,

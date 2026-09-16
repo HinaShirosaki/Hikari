@@ -1,7 +1,6 @@
 export const APPEARANCE_MODES = Object.freeze({
   DAY: 'day',
-  NIGHT: 'night',
-  MIKU: 'miku'
+  NIGHT: 'night'
 });
 
 const SUPPORTED_APPEARANCE_MODES = new Set(Object.values(APPEARANCE_MODES));
@@ -34,7 +33,6 @@ export function applyAppearanceToDocument(
   root.style.setProperty('--app-font-size', `${fontSize}px`);
   root.style.setProperty('font-size', `${fontSize}px`);
   body.classList.toggle('theme-night', mode === APPEARANCE_MODES.NIGHT);
-  body.classList.toggle('theme-miku', mode === APPEARANCE_MODES.MIKU);
   body.classList.add('ui-neutral-compact');
   if (body.dataset) {
     body.dataset.appearanceMode = mode;

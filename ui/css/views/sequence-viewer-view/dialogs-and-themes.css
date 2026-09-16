@@ -201,6 +201,10 @@
   margin: 0;
 }
 
+.sequence-viewer-sequence-edit-delete-message p {
+  margin: 0;
+}
+
 @media (max-width: 1260px) {
   .sequence-viewer-results {
     grid-template-columns: 1fr;

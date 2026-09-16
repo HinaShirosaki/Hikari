@@ -4,7 +4,6 @@
 
 - `dom.js`: typed DOM lookup bundle.
 - `external-skills-controller.js`: external skill catalog loading, rendering, and enable/disable state.
-- `genomes-controller.js`: connect and disconnect local reference genome FASTA files. The registry and all file access live in `src/main/core/services/create-genome-service.js`; this controller only ever holds genome ids.
 - `llm-model-catalog.js`: provider/Codex model and reasoning-option normalization.
 - `sample-inventory-controller.js`: location and sample-type vocabulary settings, including location migration.
 - `html.js`: local markup escaping.

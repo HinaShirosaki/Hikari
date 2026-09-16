@@ -36,7 +36,6 @@ src/renderer/
   services/                # cross-module fan-out (registry + services)
 scripts/
   build-ui.mjs             # produces index.html, styles.css, generated JS
-  extract-standard-features.mjs
   check-dom-ids.mjs
 ```
 

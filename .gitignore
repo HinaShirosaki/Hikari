@@ -70,3 +70,4 @@ data/Config/codex-cli-home/auth.json
 /artifacts/
 /examples/plugins/dna-importer/
 /examples/plugins/imagej/
+hikari-out/
