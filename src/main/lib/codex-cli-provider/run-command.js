@@ -12,7 +12,11 @@ const { DEFAULT_TIMEOUT_MS } = require('./constants');
 const { summarizeCodexCommandFailure } = require('./event-failure');
 const { looksLikeJsonLine } = require('./event-values');
 const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
-const { resolveCodexInvocation, resolveWorkingDirectory } = require('./paths');
+const {
+  createCodexCliNotFoundError,
+  resolveCodexInvocation,
+  resolveWorkingDirectory
+} = require('./paths');
 const { cleanText, safeParseJson } = require('./utils');
 
 function normalizeCodexCommandTimeoutMs(timeoutMs = DEFAULT_TIMEOUT_MS) {
@@ -154,7 +158,7 @@ async function runCodexCommand({
     });
 
     child.on('error', (error) => {
-      finishReject(error);
+      finishReject(error?.code === 'ENOENT' ? createCodexCliNotFoundError(error) : error);
     });
 
     child.on('close', (code, signal) => {

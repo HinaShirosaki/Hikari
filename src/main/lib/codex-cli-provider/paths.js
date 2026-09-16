@@ -78,11 +78,24 @@ function resolveCodexBinary() {
     candidates.push(
       '/Applications/Codex.app/Contents/Resources/codex',
       path.join(os.homedir(), 'Applications', 'Codex.app', 'Contents', 'Resources', 'codex'),
+      // The standalone Codex installer defaults here. Finder-launched Electron
+      // apps do not normally inherit the user's shell PATH, so probe it
+      // explicitly instead of assuming `codex` can be resolved by spawn().
+      path.join(os.homedir(), '.local', 'bin', 'codex'),
       '/opt/homebrew/bin/codex',
       '/usr/local/bin/codex'
     );
   } else if (process.platform === 'linux') {
-    candidates.push('/usr/local/bin/codex', '/usr/bin/codex');
+    candidates.push(
+      path.join(os.homedir(), '.local', 'bin', 'codex'),
+      '/usr/local/bin/codex',
+      '/usr/bin/codex'
+    );
+  } else if (process.platform === 'win32') {
+    const localAppData = String(process.env.LOCALAPPDATA || '').trim();
+    if (localAppData) {
+      candidates.push(path.join(localAppData, 'Programs', 'OpenAI', 'Codex', 'bin', 'codex.exe'));
+    }
   }
 
   if (process.resourcesPath) {
@@ -107,6 +120,17 @@ function resolveCodexBinary() {
   }
 
   return explicit || 'codex';
+}
+
+function createCodexCliNotFoundError(cause = null) {
+  const error = new Error(
+    'Codex CLI was not found. Install Codex CLI, reopen Hikari, then sign in from Settings > Codex Model & Access.'
+  );
+  error.code = 'ENOENT';
+  if (cause) {
+    error.cause = cause;
+  }
+  return error;
 }
 
 function executableUsesEnvNode(candidatePath = '') {
@@ -284,6 +308,7 @@ module.exports = {
   getCodexCliCandidateHomeDirectories,
   getCodexCliHomeDirectory,
   getNativeCodexCliHomeDirectory,
+  createCodexCliNotFoundError,
   isFilesystemRoot,
   resolveCodexBinary,
   resolveCodexInvocation,

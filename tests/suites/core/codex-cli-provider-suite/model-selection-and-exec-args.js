@@ -474,6 +474,66 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         fs.rmSync(fixtureDir, { recursive: true, force: true });
       }
     });
+    test('codex cli launch finds the standalone installer when the GUI PATH omits it', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const fixtureHome = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-standalone-home-'));
+      const previousHome = process.env.HOME;
+      const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+      const previousCodexBin = process.env.HIKARI_CODEX_BIN;
+      try {
+        const standaloneBin = path.join(fixtureHome, '.local', 'bin', 'codex');
+        fs.mkdirSync(path.dirname(standaloneBin), { recursive: true });
+        fs.writeFileSync(standaloneBin, '#!/bin/sh\n', 'utf8');
+        fs.chmodSync(standaloneBin, 0o755);
+        process.env.HOME = fixtureHome;
+        delete process.env.HIKARI_CODEX_CLI;
+        delete process.env.HIKARI_CODEX_BIN;
+        const { resolveCodexBinary } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'lib',
+          'codex-cli-provider',
+          'paths.js'
+        ));
+        assert.equal(resolveCodexBinary(), standaloneBin);
+      } finally {
+        if (typeof previousHome === 'string') {
+          process.env.HOME = previousHome;
+        } else {
+          delete process.env.HOME;
+        }
+        if (typeof previousCodexCli === 'string') {
+          process.env.HIKARI_CODEX_CLI = previousCodexCli;
+        } else {
+          delete process.env.HIKARI_CODEX_CLI;
+        }
+        if (typeof previousCodexBin === 'string') {
+          process.env.HIKARI_CODEX_BIN = previousCodexBin;
+        } else {
+          delete process.env.HIKARI_CODEX_BIN;
+        }
+        fs.rmSync(fixtureHome, { recursive: true, force: true });
+      }
+    });
+    test('codex cli launch turns a missing executable into an actionable setup error', () => {
+      const { createCodexCliNotFoundError } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'lib',
+        'codex-cli-provider',
+        'paths.js'
+      ));
+      const cause = Object.assign(new Error('spawn codex ENOENT'), { code: 'ENOENT' });
+      const error = createCodexCliNotFoundError(cause);
+      assert.equal(error.code, 'ENOENT');
+      assert.match(error.message, /Codex CLI was not found/);
+      assert.match(error.message, /Settings > Codex Model & Access/);
+      assert.equal(error.cause, cause);
+    });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-agents-'));
       try {

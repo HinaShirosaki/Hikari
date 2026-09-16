@@ -10,7 +10,11 @@ const {
   invalidateCodexLoginStatusCache,
   setActiveCodexLogin
 } = require('./login-state');
-const { resolveCodexInvocation, resolveWorkingDirectory } = require('./paths');
+const {
+  createCodexCliNotFoundError,
+  resolveCodexInvocation,
+  resolveWorkingDirectory
+} = require('./paths');
 const { buildCodexCommandEnv } = require('./runtime-home');
 const { cleanText } = require('./utils');
 
@@ -121,7 +125,7 @@ function waitForLoginUrl(child, loginState) {
     child.stderr.on('data', checkForUrl);
     child.once('error', (error) => {
       clearTimeout(launchTimer);
-      finishReject(error);
+      finishReject(error?.code === 'ENOENT' ? createCodexCliNotFoundError(error) : error);
     });
     child.once('close', (code, signal) => {
       if (settled) {
