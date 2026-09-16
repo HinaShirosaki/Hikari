@@ -341,12 +341,20 @@ export function normalizeManualOverrides(raw) {
   normalized.ladderLane = Number.isFinite(ladderLaneValue) && ladderLaneValue >= 1
     ? Math.floor(ladderLaneValue)
     : null;
+  const seenLadderMws = new Set();
   normalized.ladderBands = (Array.isArray(input.ladderBands) ? input.ladderBands : [])
     .map((item) => ({
       pixelY: Math.max(0, Math.floor(Number(item?.pixelY) || 0)),
       mw: Number(item?.mw)
     }))
     .filter((item) => Number.isFinite(item.mw) && item.mw > 0)
+    .filter((item) => {
+      if (seenLadderMws.has(item.mw)) {
+        return false;
+      }
+      seenLadderMws.add(item.mw);
+      return true;
+    })
     .sort((a, b) => a.pixelY - b.pixelY);
   normalized.ladderBandsDone = Boolean(input.ladderBandsDone);
   normalized.peakIntegrations = normalizePeakIntegrations(input.peakIntegrations);

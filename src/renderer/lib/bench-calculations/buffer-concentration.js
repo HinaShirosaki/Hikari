@@ -1,7 +1,7 @@
 import { BUFFER_COMPOUNDS } from '../chemistry/buffer-compounds.js';
 import { formatSigFig } from '../numbers.js';
 import { concentrationToM } from '../molarity.js';
-import { BUFFER_MASS_FACTORS_G, BUFFER_PKA_HINTS, BUFFER_VOLUME_FACTORS_L } from './constants.js';
+import { BUFFER_MASS_FACTORS_G, BUFFER_VOLUME_FACTORS_L } from './constants.js';
 import { buildParsedBufferConcentration, formatPercentUnit, inferPercentKind, normalizeBufferUnitText, normalizeMassVolumeUnit, normalizeMolarityUnit, parseBufferNumericPrefix } from './units.js';
 
 function parseBufferConcentration(value, options = {}) {
@@ -195,18 +195,8 @@ function formatBufferVolumeDual(valueMl) {
 }
 
 function resolveBufferCompound(name) {
-  const clean = String(name || '').trim();
-  return BUFFER_COMPOUNDS.find((compound) => compound.name === clean) || null;
-}
-
-function findBufferPkaHint(name) {
-  const source = String(name || '').trim();
-  const compound = resolveBufferCompound(source);
-  const pKa = Number(compound?.pKa);
-  if (Number.isFinite(pKa)) {
-    return { pKa, label: compound.name };
-  }
-  return BUFFER_PKA_HINTS.find((hint) => hint.pattern.test(source)) || null;
+  const clean = String(name || '').trim().toLowerCase();
+  return (clean && BUFFER_COMPOUNDS.find((compound) => compound.name.toLowerCase() === clean)) || null;
 }
 
 export {
@@ -215,7 +205,6 @@ export {
   bufferConcentrationDefaultsFrom,
   bufferConcentrationsCompatible,
   bufferDefaultsForForm,
-  findBufferPkaHint,
   formatBufferVolumeDual,
   formatBufferVolumeMl,
   parseBufferConcentration

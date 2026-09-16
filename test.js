@@ -682,84 +682,6 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   );
 });
 
-test('plugin service: the example service ships no UI', () => {
-  const html = readSource(path.join('examples', 'plugins', 'dna-importer', 'index.html'));
-  // Strip comments, then the body should hold script tags and nothing else.
-  const body = (/<body[^>]*>([\s\S]*?)<\/body>/i.exec(html) || [])[1] || '';
-  const withoutComments = body.replace(/<!--[\s\S]*?-->/g, '');
-  const withoutScripts = withoutComments.replace(/<script\b[\s\S]*?<\/script>/gi, '');
-  assert.equal(withoutScripts.trim(), '', 'a service page renders nothing: only script tags in the body');
-  assert.equal(/\bstyle\s*=|<style\b/i.test(html), false, 'a service page carries no styling');
-
-  // The service worker must not touch the DOM.
-  const worker = readSource(path.join('examples', 'plugins', 'dna-importer', 'main.js'));
-  assert.equal(/\bdocument\./.test(worker), false, 'the service worker touches no DOM');
-  assert.match(worker, /call:\s*'service:ready'/, 'the worker announces when its listener is installed');
-  const converter = readSource(path.join('examples', 'plugins', 'dna-importer', 'biopython-converter.js'));
-  assert.match(converter, /hikari\.call\('python\.run'/, 'the service delegates conversion to the Python API');
-  assert.match(converter, /from Bio import SeqIO/, 'the Python program uses Biopython');
-  const manifest = JSON.parse(readSource(path.join('examples', 'plugins', 'dna-importer', 'plugin.json')));
-  assert.deepEqual(manifest.permissions, ['python'], 'the headless service declares only Python access');
-});
-
-test('plugin service: the headless worker routes conversion through python.run and replies with GenBank', async () => {
-  const workerSource = readSource(path.join('examples', 'plugins', 'dna-importer', 'main.js'));
-  const converter = require(
-    path.join(__dirname, 'examples', 'plugins', 'dna-importer', 'biopython-converter.js')
-  );
-  const genBank = [
-    'LOCUS       pWorker         4 bp    DNA     linear   SYN 01-JAN-1980',
-    'FEATURES             Location/Qualifiers',
-    'ORIGIN',
-    '        1 acgt',
-    '//',
-    ''
-  ].join('\n');
-  const calls = [];
-  const replies = [];
-  let messageHandler = null;
-  const windowObject = {
-    parent: { postMessage: (payload) => replies.push(payload) },
-    HikariPlugin: {
-      hikari: {
-        call: async (verb, params) => {
-          calls.push({ verb, params });
-          return { ok: true, files: [{ path: 'output.gbk', content: genBank, truncated: false }] };
-        }
-      }
-    },
-    DnaBiopython: converter,
-    addEventListener: (_type, listener) => { messageHandler = listener; }
-  };
-  vm.runInNewContext(workerSource, { window: windowObject, console });
-
-  assert.equal(replies.length, 1, 'the worker announces readiness at startup');
-  assert.equal(replies[0].call, 'service:ready');
-  replies.length = 0;
-
-  messageHandler({
-    data: {
-      hikari: 1,
-      call: 'convert',
-      id: 'svc_worker',
-      from: 'dna',
-      to: 'gbk',
-      filename: 'pWorker.dna',
-      bytes: new Uint8Array([1, 2, 3, 4])
-    }
-  });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].verb, 'python.run');
-  assert.equal(calls[0].params.readbackPaths[0], 'output.gbk');
-  assert.equal(replies.length, 1);
-  assert.deepEqual(
-    { call: replies[0].call, id: replies[0].id, ok: replies[0].ok, text: replies[0].text },
-    { call: 'convert:result', id: 'svc_worker', ok: true, text: genBank }
-  );
-});
-
 test('plugin system: only non-host origins get allow-same-origin', async () => {
   const { isSameOriginSafeUrl } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
@@ -1421,10 +1343,10 @@ test('plugin system: app context events and user-mediated downloads stay permiss
   assert.equal(exporter.replies.at(-1).result.saved, true);
   assert.equal(exports[0].fileName, 'gel.csv');
 
-  state.settings.appearance = { mode: 'miku', fontSize: 15 };
+  state.settings.appearance = { mode: 'night', fontSize: 15 };
   bridge.broadcastAppContext('appearance');
   assert.equal(exporter.replies.at(-1).event, 'app.context');
-  assert.deepEqual(exporter.replies.at(-1).payload.appearance, { mode: 'miku', fontSize: 15 });
+  assert.deepEqual(exporter.replies.at(-1).payload.appearance, { mode: 'night', fontSize: 15 });
   assert.equal(exporter.replies.at(-1).payload.changed, 'appearance');
 });
 

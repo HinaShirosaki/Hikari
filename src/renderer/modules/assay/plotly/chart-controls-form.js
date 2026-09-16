@@ -10,7 +10,7 @@ export const AXIS_STYLE_SUFFIXES = ['TickDir', 'TickLen', 'MinorTicks', 'TickFor
 export const axisStyleKey = (suffix) => suffix[0].toLowerCase() + suffix.slice(1);
 export const GLOBAL_FIELDS = ['frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
   'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight',
-  'refLineAxis', 'refLineValue', 'barMode', 'barLabels', 'barCornerRadius', 'legendPosition',
+  'refLineAxis', 'refLineValue', 'chartType', 'barMode', 'barLabels', 'barCornerRadius', 'legendPosition',
   'xColumn', 'yColumn', 'seriesColumn'];
 export const SERIES_FIELDS = ['color', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'mode',
   'lineStyle', 'lineWidth', 'barOutlineColor', 'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'];
@@ -101,6 +101,8 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
       if (pickers[key]) pickers[key].setValue(value);
       else set(key, POINT_FIELDS.has(key) ? pixelsToPoints(value) : value);
     });
+    // A fitted curve is a sampled line plus its markers; bars would be meaningless.
+    q('chartType').disabled = context.chartType === 'line' && context.hasFittedCurve;
     q('symbolFields').hidden = context.chartType === 'bar' && !context.hasReplicates;
     q('errorFields').hidden = !context.hasErrorBars;
     q('columnFields').hidden = context.hasFittedCurve;

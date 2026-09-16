@@ -4,7 +4,7 @@ const { annotateCircularPlasmidSequenceSync } = require('../circular-plasmid-ann
 const { MIN_QUERY_LENGTH } = require('./constants');
 const {
   extractRecordFromGbkText,
-  loadExportedStandardPromoters,
+  loadCommonPromoters,
   loadSequenceViewerAnalysisModules
 } = require('./assets');
 const {
@@ -79,9 +79,9 @@ async function buildPromoterCandidates({ normalizeSequenceText, reverseComplemen
     buildOrfFeatures,
     buildCommercialRestrictionFeatures
   } = await loadSequenceViewerAnalysisModules();
-  const exportedPromoters = await loadExportedStandardPromoters(normalizeSequenceText);
-  const promoterAnnotation = exportedPromoters.length
-    ? annotateCircularPlasmidSequenceSync(querySequence, exportedPromoters, {
+  const commonPromoters = await loadCommonPromoters(normalizeSequenceText);
+  const promoterAnnotation = commonPromoters.length
+    ? annotateCircularPlasmidSequenceSync(querySequence, commonPromoters, {
       maxWorkers: 1,
       maxHitsPerRecord: 16,
       minRecordLength: MIN_QUERY_LENGTH

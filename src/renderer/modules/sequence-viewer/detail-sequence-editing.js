@@ -1,20 +1,7 @@
-import { escapeHtml } from '../../lib/html.js';
 import { clamp, normalizeSequenceText } from './shared.js';
 
 function normalizeEditableSequence(raw) {
   return normalizeSequenceText(raw).replace(/\*/g, '');
-}
-
-function formatInsertionPointLabel(index, sequenceLength) {
-  const safeLength = Math.max(0, Number(sequenceLength) || 0);
-  const safeIndex = clamp(Math.round(Number(index) || 0), 0, safeLength);
-  if (safeIndex <= 0) {
-    return 'before base 1';
-  }
-  if (safeIndex >= safeLength) {
-    return `after base ${safeLength.toLocaleString()}`;
-  }
-  return `between bases ${safeIndex.toLocaleString()} and ${(safeIndex + 1).toLocaleString()}`;
 }
 
 function isInteractiveKeyboardTarget(target) {
@@ -129,9 +116,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
         : (mode === 'replace' ? 'Replace Bases' : 'Insert Bases');
     }
     if (elements.sequenceEditNote) {
-      elements.sequenceEditNote.innerHTML = mode === 'insert'
-        ? `${escapeHtml(`Insert at ${formatInsertionPointLabel(range.start, record.sequence.length)}.`)} Type the bases to apply.`
-        : '';
+      elements.sequenceEditNote.innerHTML = '';
     }
     if (elements.sequenceEditDeleteMessage) {
       elements.sequenceEditDeleteMessage.innerHTML = `<p>Delete ${selectedLength.toLocaleString()} bp?</p>`;

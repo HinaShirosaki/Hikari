@@ -2,7 +2,7 @@
 
 const { pathToFileURL } = require('url');
 const {
-  EXPORTED_STANDARD_FEATURES_PATH,
+  COMMON_PROMOTERS_PATH,
   MIN_QUERY_LENGTH,
   ORF_ANALYSIS_PATH,
   RESTRICTION_ANALYSIS_PATH
@@ -10,7 +10,7 @@ const {
 const { normalizeDisplayName } = require('./segment-utils');
 
 let sequenceViewerAnalysisPromise = null;
-let exportedStandardPromotersPromise = null;
+let commonPromotersPromise = null;
 
 function extractSequenceFromGbkText(normalizeSequenceText, gbkText) {
   const raw = String(gbkText || '');
@@ -33,21 +33,21 @@ function extractRecordFromGbkText(normalizeSequenceText, gbkText) {
   };
 }
 
-async function loadExportedStandardPromoters(normalizeSequenceText) {
-  if (!exportedStandardPromotersPromise) {
-    exportedStandardPromotersPromise = import(pathToFileURL(EXPORTED_STANDARD_FEATURES_PATH).href)
+async function loadCommonPromoters(normalizeSequenceText) {
+  if (!commonPromotersPromise) {
+    commonPromotersPromise = import(pathToFileURL(COMMON_PROMOTERS_PATH).href)
       .then((module) => {
-        const records = Array.isArray(module?.EXPORTED_STANDARD_FEATURES)
-          ? module.EXPORTED_STANDARD_FEATURES
+        const records = Array.isArray(module?.COMMON_PROMOTERS)
+          ? module.COMMON_PROMOTERS
           : [];
         const seen = new Set();
         return records
           .map((record, index) => ({
-            id: `exported_promoter_${index + 1}`,
+            id: `common_promoter_${index + 1}`,
             label: normalizeDisplayName(record?.label, ''),
             sequence: normalizeSequenceText(record?.sequence),
             type: 'promoter',
-            source: 'exported_standard_features'
+            source: 'common_promoters'
           }))
           .filter((record) => record.label && record.sequence.length >= MIN_QUERY_LENGTH)
           .filter((record) => {
@@ -61,7 +61,7 @@ async function loadExportedStandardPromoters(normalizeSequenceText) {
       })
       .catch(() => []);
   }
-  return exportedStandardPromotersPromise;
+  return commonPromotersPromise;
 }
 
 async function loadSequenceViewerAnalysisModules() {
@@ -88,6 +88,6 @@ async function loadSequenceViewerAnalysisModules() {
 
 module.exports = {
   extractRecordFromGbkText,
-  loadExportedStandardPromoters,
+  loadCommonPromoters,
   loadSequenceViewerAnalysisModules
 };

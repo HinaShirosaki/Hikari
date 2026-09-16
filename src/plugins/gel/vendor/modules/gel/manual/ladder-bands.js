@@ -18,7 +18,9 @@ function createManualLadderBands({
   function upsertLadderBandMw(pixelY, mw) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
     const points = normalized.ladderBands
-      .filter((item) => Math.abs(item.pixelY - pixelY) > 8);
+      // A molecular weight identifies one ladder band. Re-clicking with the
+      // same MW moves that calibration point instead of creating a duplicate.
+      .filter((item) => item.mw !== mw && Math.abs(item.pixelY - pixelY) > 8);
     points.push({
       pixelY: clamp(Math.round(pixelY), 0, Math.max(0, runtime.currentImage.height - 1)),
       mw

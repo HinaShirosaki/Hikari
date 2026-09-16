@@ -439,8 +439,7 @@
   min-width: 0;
 }
 
-.gel-setup-group + .gel-setup-group,
-#gel-form .gel-override-actions {
+.gel-setup-group + .gel-setup-group {
   border-top: 1px solid var(--theme-border-soft);
   padding-top: 0.875rem;
 }
@@ -507,11 +506,6 @@
 #gel-form .gel-process-row > button {
   width: 100%;
   min-height: 2rem;
-}
-
-#gel-form .gel-override-actions > button {
-  padding: 0.375rem 0;
-  font-size: 0.75rem;
 }
 
 @media (max-width: 720px) {

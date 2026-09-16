@@ -39,7 +39,7 @@ Then run `npm run build:ui` and start the app. The full recipe with snippets is 
 These are loaded through their own paths and are out of scope here:
 
 - **Agent skills** under `skills/` — read at runtime by `src/main/agent/skills/agent-skill-runtime.js`. Excluded from the Electron bundle (`forge.config.js`).
-- **Exported standard features** (`src/renderer/modules/sequence-viewer/data/exported-standard-features.js`) — pre-built data file generated from `Exported Standard Features/` by `npm run extract:standard-features`. It is data, not a UI module.
+- **Common promoters** (`src/renderer/modules/sequence-viewer/data/common-promoters.js`) — a small, hand-curated data file used by Sequence Viewer backbone recognition. It is data, not a UI module.
 - **Codex model catalog** (`src/renderer/modules/codex-model-catalog.generated.js`) — generated from `config/codex-models.json` by the same `build:ui` step.
 
 If you need to extend any of those, see the corresponding generator script under `scripts/`.

@@ -1676,8 +1676,16 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
   assert.equal(analysisRuns, 1);
   assert.match(statuses[statuses.length - 1], /MW=75/);
 
+  // Reusing a MW updates its calibration point instead of duplicating the band.
+  controller.onCanvasClick({ clientX: 25, clientY: 45, preventDefault() {} });
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 45, mw: 75 }
+  ]));
+  assert.equal(analysisRuns, 2);
+
   // Pressing on an existing band drags it instead of adding another one.
-  controller.onCanvasMouseDown({ clientX: 25, clientY: 31, preventDefault() {} });
+  controller.onCanvasMouseDown({ clientX: 25, clientY: 46, preventDefault() {} });
   assert.equal(runtime.ladderBandDrag.mw, 75);
   controller.onCanvasMouseMove({ clientX: 25, clientY: 44, preventDefault() {} });
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
@@ -1690,12 +1698,12 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     { pixelY: 12, mw: 50 },
     { pixelY: 60, mw: 75 }
   ]));
-  assert.equal(analysisRuns, 2);
+  assert.equal(analysisRuns, 3);
 
   // The click that ends the drag must not drop a second band at the same row.
   controller.onCanvasClick({ clientX: 25, clientY: 60, preventDefault() {} });
   assert.equal(runtime.manualOverrides.ladderBands.length, 2);
-  assert.equal(analysisRuns, 2);
+  assert.equal(analysisRuns, 3);
 });
 
 test('[EDGE] gel-analysis normalizes and scans tilted lane vertices', () => {
@@ -2054,7 +2062,12 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       },
       addedBands: [{ laneIndex: '2', pixelY: '33.2' }, { laneIndex: -1, pixelY: 5 }],
       ladderLane: '3',
-      ladderBands: [{ pixelY: 80.2, mw: 50 }, { pixelY: 10.2, mw: 150 }, { pixelY: 2, mw: 0 }],
+      ladderBands: [
+        { pixelY: 80.2, mw: 50 },
+        { pixelY: 10.2, mw: 150 },
+        { pixelY: 99.2, mw: 50 },
+        { pixelY: 2, mw: 0 }
+      ],
       ladderBandsDone: 1,
       peakIntegrations: [
         {
@@ -2085,6 +2098,7 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       assert.equal(value.addedBands.length, 2);
       assert.equal(value.ladderLane, 3);
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.mw)), JSON.stringify([150, 50]));
+      assert.equal(JSON.stringify(value.ladderBands.map((item) => item.pixelY)), JSON.stringify([10, 80]));
       assert.equal(value.ladderBandsDone, true);
       assert.equal(JSON.stringify(value.peakIntegrations), JSON.stringify([
         {

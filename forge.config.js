@@ -13,7 +13,7 @@ if (process.platform === 'darwin') {
 if (process.platform === 'win32') {
   makers.push({
     name: '@electron-forge/maker-squirrel',
-    config: {}
+    config: { name: 'hikari' } // nupkg id; the scoped npm name has a '/'
   });
 }
 
@@ -21,16 +21,18 @@ if (process.platform === 'linux') {
   makers.push(
     {
       name: '@electron-forge/maker-deb',
-      config: {}
+      config: { options: { name: 'hikari' } }
     },
     {
       name: '@electron-forge/maker-rpm',
-      config: {}
+      config: { options: { name: 'hikari' } }
     }
   );
 }
 
 module.exports = {
+  // Set by bin/hikari.js so `npx @hinashirosaki/hikari` writes next to the caller, not into the npx cache.
+  outDir: process.env.HIKARI_OUT_DIR,
   packagerConfig: {
     // Native exports of assets/icon.svg; Packager selects .icns or .ico.
     icon: './assets/icon',
@@ -83,7 +85,6 @@ module.exports = {
       /^\/Book3\.xlsx$/,
       /^\/hikari-data\.json$/,
       /^\/enana-data(?:\.ena)?\.json$/,
-      /^\/Exported Standard Features($|\/)/,
       /^\/Testdata($|\/)/,
       /^\/TestData2($|\/)/,
       /^\/TestData3($|\/)/,

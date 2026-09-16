@@ -67,6 +67,8 @@ export function bindAssayEvents({
   elements.assayAnalysisRowGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisColumnGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisErrorBarsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayChartExportPngBtn?.addEventListener('click', () => analysisView.exportChartImage('png'));
+  elements.assayChartExportSvgBtn?.addEventListener('click', () => analysisView.exportChartImage('svg'));
   elements.assayTransformOpenBtn?.addEventListener('click', analysisView.createTransformPlate);
   elements.assayTransformClearBtn?.addEventListener('click', analysisView.clearTransform);
   elements.assayDerivedPlatePanel?.addEventListener('toggle', () => {

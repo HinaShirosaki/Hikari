@@ -235,7 +235,7 @@ function createManualCanvasInteraction({
       upsertLadderBandMw(rowY, mw);
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Added ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
+      deps.setStatus(`Set ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
       deps.onRunAnalysis();
       return;
     }

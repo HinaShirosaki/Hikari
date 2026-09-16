@@ -11,8 +11,8 @@ easy-to-read, product-wide semantic variables such as:
 - `--theme-success`
 - `--theme-danger`
 
-The default light theme is declared on `:root`. Night and Hatsune Miku override
-the same contract on `body.theme-night` and `body.theme-miku`. A future theme
+The default light theme is declared on `:root`. Night overrides the same
+contract on `body.theme-night`. A future theme
 should do the same instead of introducing a second vocabulary:
 
 ```css

@@ -26,8 +26,6 @@
 
 ![Hikari Home dashboard](docs/screenshots/home.png)
 
-<sub>Current interface shown with fictional teaching-lab data: yeast growth, GFP standards, common buffers, and synthetic sequences and gels. No private project records are included.</sub>
-
 Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
 ## Highlights
@@ -43,22 +41,23 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 
 New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting-started/first-experiment.md)** to configure storage and carry one fictional experiment from sample registration through a saved notebook result.
 
-### Install Hikari with an agent
+### Install Hikari
 
-Copy and paste this prompt into a coding agent that has terminal access:
+```bash
+npx @hinashirosaki/hikari
+```
+
+This downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes the installer to `./hikari-out/make/` (`.zip` on macOS, Squirrel `.exe` on Windows, `.deb`/`.rpm` on Linux). Install it the normal way for your platform. Set `HIKARI_OUT_DIR` to build somewhere else.
+
+Or paste this into a coding agent that has terminal access:
 
 ```text
-Download and install Hikari from its official repository:
-https://github.com/HinaShirosaki/Enana
+Install Hikari (https://github.com/HinaShirosaki/Hikari) for me:
 
-Please complete the installation for me:
-
-1. Detect my operating system and CPU architecture.
-2. Confirm that Git, Node.js 20 or newer, and npm are available. If a prerequisite is missing, explain what is needed and ask before installing system software or requesting administrator privileges.
-3. Clone the repository into a sensible user-owned location. If the private repository requires authentication, ask me to sign in through GitHub's normal login flow; never ask me to paste a token into the chat or print credentials.
-4. In the cloned repository, install the locked dependencies with `npm ci`, then build the native distribution with `npm run dist`.
-5. Find the artifact for my platform under `out/` and install Hikari using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
-6. Launch Hikari once and confirm that it opens. Report the repository path, build artifact, installed application path, and any step I still need to complete.
+1. Confirm Node.js 20 or newer and npm are available. If missing, explain what is needed and ask before installing system software or requesting administrator privileges.
+2. Run `npx @hinashirosaki/hikari` in a user-owned folder. It builds the native app for my OS and CPU and writes the installer under `hikari-out/make/`.
+3. Install Hikari from that artifact using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
+4. Launch Hikari once and confirm that it opens. Report the build artifact, installed application path, and any step I still need to complete.
 
 Preserve any existing Hikari application data. Do not choose or change the Hikari storage root, and do not sign in to Codex on my behalf.
 ```
@@ -67,13 +66,17 @@ Preserve any existing Hikari application data. Do not choose or change the Hikar
 
 - Node.js 20+
 - npm
+- Linux only: `dpkg` + `fakeroot` (for `.deb`) and `rpm` (for `.rpm`)
 
-### Install and run
+### Run from source
 
 ```bash
+git clone https://github.com/HinaShirosaki/Hikari && cd Hikari
 npm install
 npm run start
 ```
+
+`npm run dist` builds the same installers as `npx @hinashirosaki/hikari`, into `out/make/`.
 
 ### First launch checklist
 

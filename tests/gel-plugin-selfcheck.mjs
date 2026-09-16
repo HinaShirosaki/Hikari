@@ -230,6 +230,24 @@ async function checkAdapterContract() {
   await fs.access(path.join(pluginDir, 'vendor/pptxgenjs/LICENSE'));
   assert.match(htmlSource, /<script src="\.\/hikari\.js"><\/script>/, 'the classic host client loads before the module adapter');
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');
+  [
+    ['gel-save-btn', 'Save'],
+    ['gel-cancel-btn', 'Cancel'],
+    ['gel-export-csv-btn', 'Export CSV'],
+    ['gel-reset-overrides-btn', 'Reset manual overrides']
+  ].forEach(([id, caption]) => {
+    assert.match(
+      viewSource,
+      new RegExp(`id="${id}"[^>]*aria-label="${caption}"[^>]*title="${caption}"`),
+      `${caption} must have an accessible hover caption`
+    );
+  });
+  assert.match(
+    viewSource,
+    /<div class="form-actions gel-record-actions">[\s\S]*id="gel-save-btn"[\s\S]*id="gel-cancel-btn"[\s\S]*id="gel-export-csv-btn"[\s\S]*id="gel-reset-overrides-btn"[\s\S]*<\/div>/,
+    'resetting manual overrides stays beside the record actions at the bottom of the Gel rail'
+  );
+  assert.doesNotMatch(viewSource, /gel-override-actions/, 'manual-override reset is no longer duplicated in the scrolling form fields');
   assert.match(viewSource, /id="gel-ladder-preset"/, 'the ladder preset select is present for records-manager to read');
   assert.match(viewSource, /id="gel-ladder-band-mw"[^>]+list="gel-ladder-band-mw-options"/, 'the ladder MW field offers the preset sizes');
   assert.match(viewSource, /id="gel-status"[^>]+aria-live="polite"/, 'workspace status updates are announced');

@@ -822,24 +822,24 @@ test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in stran
 
   // Forward feature: 5' is the low coordinate (base 7), 3' the high one (24).
   trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
-  assert.match(note.innerHTML, /\b7\b/);
+  assert.equal(note.innerHTML, '');
   trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
 
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
   trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
-  assert.match(note.innerHTML, /\b25\b/);
+  assert.equal(note.innerHTML, '');
   trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
 
   // Reverse feature: the sides swap, because 5' sits at the higher coordinate.
   trigger(map, 'mousedown', { button: 0, target: featureTarget(1) });
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
   trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
-  assert.match(note.innerHTML, /\b51\b/);
+  assert.equal(note.innerHTML, '');
   trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
 
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
   trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
-  assert.match(note.innerHTML, /\b31\b/);
+  assert.equal(note.innerHTML, '');
 });
 
 test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and keeps both boxes in step', () => {

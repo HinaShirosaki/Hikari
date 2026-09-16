@@ -43,18 +43,17 @@ if (!process.versions.electron) {
       <summary class="foldable-section__summary">Chart Format</summary><div class="foldable-section__body">
       <div id="controls"></div></div></details></aside>
       <section id="workspace"><p class="qa-heading">Assay analysis · dose response</p>
-      <div id="toolbar" class="assay-chart-toolbar"></div><div id="chart"></div></section></main>
+      <div id="chart"></div></section></main>
     <script type="module">
       import {createDefaultChartStyle} from '${moduleUrl('chart-style-model')}';
       import {createChartStyleStore} from '${moduleUrl('chart-style-store')}';
       import {mountChartControls} from '${moduleUrl('chart-controls')}';
-      import {mountChartToolbar} from '${moduleUrl('chart-toolbar')}';
       import {createAssayPlotlyRenderer} from '${moduleUrl('plotly-renderer')}';
       const realReact = Plotly.react.bind(Plotly);
       let pending = Promise.resolve();
       Plotly.react = (...args) => pending = realReact(...args);
       const host = document.getElementById('chart');
-      let controls, toolbar;
+      let controls;
       const fitted = {chartType:'line', xLabel:'Concentration (nM)', yLabel:'Response (%)', showErrorBars:true, series:[
         {label:'Compound A',data:[{x:1,y:96},{x:10,y:81},{x:100,y:34},{x:1000,y:8}],markers:[{x:1,y:95,yVariance:3},{x:10,y:80,yVariance:5},{x:100,y:35,yVariance:4},{x:1000,y:9,yVariance:2}]},
         {label:'Compound B',data:[{x:1,y:98},{x:10,y:94},{x:100,y:75},{x:1000,y:23}],markers:[{x:1,y:99,yVariance:2},{x:10,y:92,yVariance:4},{x:100,y:76,yVariance:5},{x:1000,y:22,yVariance:3}]}]};
@@ -72,11 +71,10 @@ if (!process.versions.electron) {
       function render() {
         const info=renderer.render(host,model,store.getStyle());
         store.setContext({...info,hasFittedCurve:model===fitted,headers:['Treatment','Mean'],numericHeaders:['Mean']});
-        controls?.refresh(); toolbar?.refresh();
+        controls?.refresh();
       }
       render();
       controls=mountChartControls(document.getElementById('controls'),{store,promptForName:()=> 'QA style'});
-      toolbar=mountChartToolbar(document.getElementById('toolbar'),{store,errorBars:{isApplicable:()=>true,get:()=>model.showErrorBars,toggle:()=>{model.showErrorBars=!model.showErrorBars;render();}},onExport:()=>{}});
       const q=key=>document.querySelector('[data-cc="'+key+'"]');
       window.qa={store,renderer,host,controls,assay,
         ready:()=>pending,
@@ -123,9 +121,8 @@ if (!process.versions.electron) {
         assert.equal(await js('qa.module.hasUnsavedChanges()'),false,'formatting does not dirty the plate data');
         assert.equal(await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))'),dataBefore,'formatting preserves plotted scientific data');
         assert.equal(await js("document.querySelector('#assay-analysis-table table')?.textContent"),tableBefore,'formatting preserves analysis results');
-        await js("document.querySelector('[data-tb-y-scale=log10]').click()");await settle();
-        await js("qa.tab('axis')");
-        assert.equal(await js("document.querySelector('[data-cc=yScale]').value"),'log10','toolbar and Axis panel stay synchronized');
+        await js("qa.tab('series')");
+        assert.equal(await js("document.querySelector('[data-cc=chartType]').disabled"),true,'chart type is locked for a fitted curve');
         await shot('08-assay-workspace');
         fs.writeFileSync(path.join(temp,'workspace-expected.json'),JSON.stringify(await js('qa.getStyle()')));
       } else {
