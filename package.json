@@ -4,7 +4,10 @@
   "version": "1.0.2",
   "description": "Electron shell for Hikari sub-app launcher",
   "license": "Apache-2.0",
-  "repository": "github:HinaShirosaki/Hikari",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HinaShirosaki/Hikari.git"
+  },
   "main": "src/main/main.js",
   "bin": {
     "hikari": "bin/hikari.js"

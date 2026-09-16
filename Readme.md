@@ -92,6 +92,16 @@ npm run start
 
 `npm run dist` builds the same installers as `npx @hinashirosaki/hikari`, into `out/make/`.
 
+### Install from GitHub Packages
+
+The same package is also published to [GitHub Packages](https://github.com/HinaShirosaki/Hikari/packages). Unlike npmjs, that registry always needs a GitHub token (`read:packages`), so point the `@hinashirosaki` scope at it once and sign in:
+
+```bash
+npm config set @hinashirosaki:registry https://npm.pkg.github.com
+npm login --scope=@hinashirosaki --auth-type=legacy --registry=https://npm.pkg.github.com
+npx @hinashirosaki/hikari
+```
+
 ### First launch checklist
 
 1. Open `Settings > Storage` and set the **Root Folder Path**. Do this before anything else — notebook attachments, papers, assay artifacts, gels, and sequence assets all live under it, and auto-save is off until it is set.
