@@ -14,6 +14,7 @@ const {
 const {
   getEnabledHikariMcpToolNames
 } = require('../mcp-contract/tool-availability.js');
+const { HIKARI_PRIVATE_NODE_PATH } = require('../../lib/codex-cli-provider/paths.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
@@ -155,6 +156,7 @@ function resolveHikariCodexMcpCommandPath(options = {}) {
   const commonNodePaths = Array.isArray(options.commonNodePaths)
     ? options.commonNodePaths
     : [
+      HIKARI_PRIVATE_NODE_PATH,
       '/opt/homebrew/bin/node',
       '/usr/local/bin/node',
       '/usr/bin/node',

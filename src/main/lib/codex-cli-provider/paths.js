@@ -7,6 +7,12 @@ const {
   CODEX_RUNTIME_HOME_DIR_NAME
 } = require('./constants');
 
+// install.sh / install.ps1 drop a private Node here when no Node 20+ is on PATH.
+// Finder/Explorer-launched Electron apps inherit no shell PATH, so probe it directly.
+const HIKARI_PRIVATE_NODE_PATH = process.platform === 'win32'
+  ? path.join(String(process.env.LOCALAPPDATA || ''), 'Hikari', 'node', 'node.exe')
+  : path.join(os.homedir(), '.hikari', 'node', 'bin', 'node');
+
 function looksLikePath(value) {
   const text = String(value || '');
   if (!text) {
@@ -171,8 +177,8 @@ function resolveCodexNodeBinary(codexBinary = '', env = process.env, options = {
   const commonNodePaths = Array.isArray(options.commonNodePaths)
     ? options.commonNodePaths
     : process.platform === 'darwin'
-      ? ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/opt/local/bin/node', '/usr/bin/node']
-      : ['/usr/local/bin/node', '/usr/bin/node'];
+      ? [HIKARI_PRIVATE_NODE_PATH, '/opt/homebrew/bin/node', '/usr/local/bin/node', '/opt/local/bin/node', '/usr/bin/node']
+      : [HIKARI_PRIVATE_NODE_PATH, '/usr/local/bin/node', '/usr/bin/node'];
   const candidates = [];
 
   if (explicit) {
@@ -304,6 +310,7 @@ function resolveCodexCliRuntimeHomeDirectory(cwd = '') {
 }
 
 module.exports = {
+  HIKARI_PRIVATE_NODE_PATH,
   getCodexCliAuthFilePath,
   getCodexCliCandidateHomeDirectories,
   getCodexCliHomeDirectory,

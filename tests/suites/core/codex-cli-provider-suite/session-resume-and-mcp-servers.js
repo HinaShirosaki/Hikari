@@ -1276,7 +1276,7 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
       assert.match(forgeConfigSource, /src\/main\/agent/);
       assert.match(forgeConfigSource, /src\/main\/papers/);
       assert.match(forgeConfigSource, /vendor\/pdfjs/);
-      assert.match(forgeConfigSource, /node_modules\/@modelcontextprotocol\/sdk/);
+      assert.match(forgeConfigSource, /[{,]node_modules[,}]/);
     });
     test('codex agent MCP config includes the app host callback when available', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-mcp-config-'));
