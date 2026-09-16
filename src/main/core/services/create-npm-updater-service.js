@@ -3,13 +3,8 @@
 const DEFAULT_STARTUP_DELAY_MS = 5000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 
-// ╔══════════════════════════════════════════════════════════════════════════╗
-// ║  REQUIRED BEFORE NPM UPDATES CAN RUN                                    ║
-// ║                                                                          ║
-// ║  PASTE THE EXACT NPM REGISTRY METADATA URL BETWEEN THE QUOTES BELOW.     ║
-// ║  Expected shape: https://registry.npmjs.org/<package-name>               ║
-// ╚══════════════════════════════════════════════════════════════════════════╝
-const NPM_UPDATE_METADATA_URL = '';
+// Registry metadata for the published package (scoped name, so the '/' is encoded).
+const NPM_UPDATE_METADATA_URL = 'https://registry.npmjs.org/@hinashirosaki%2fhikari';
 
 function normalizeVersion(value) {
   return String(value || '').trim().replace(/^v(?=\d)/i, '');
@@ -106,11 +101,13 @@ function resolveNpmReleaseMetadata(metadata = {}) {
     ? taggedRelease
     : source;
   const version = normalizeVersion(release.version || latestTag || source.version);
+  const packageName = String(release.name || source.name || '').trim();
   const releaseUrl = normalizeHttpsUrl(
-    release.dist?.tarball
-      || source.dist?.tarball
+    (packageName && `https://www.npmjs.com/package/${packageName}`)
       || release.homepage
       || source.homepage
+      || release.dist?.tarball
+      || source.dist?.tarball
   );
   const releaseNotes = String(
     release.hikariReleaseNotes
