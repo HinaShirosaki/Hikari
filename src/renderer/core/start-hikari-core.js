@@ -366,6 +366,13 @@ export function startHikariCore({
     navigationShell.initNavigation();
     renderAll();
     navigationShell.enableLastViewPersistence();
+    // First launch (or a machine with no pointer file): land on Settings >
+    // Storage so the root gets picked before anything tries to write under it.
+    if (!String(state.settings?.storagePath || '').trim()) {
+      moduleRuntime.modules.settings?.activateSettingsPanel?.('storage');
+      navigationShell.showView(VIEWS.SETTING);
+      return;
+    }
     navigationShell.showView(navigationShell.resolveStartupViewId(state));
   }
 
