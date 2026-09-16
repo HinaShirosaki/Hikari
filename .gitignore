@@ -65,6 +65,8 @@ data/Config/codex-cli-home/auth.json
 /data/*.gb
 /data/*.gbk
 
-# Local website and generated artifacts
+# Local website, generated artifacts, and unshipped example plugins
 /website/
 /artifacts/
+/examples/plugins/dna-importer/
+/examples/plugins/imagej/
