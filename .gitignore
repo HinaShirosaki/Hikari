@@ -65,7 +65,6 @@ data/Config/codex-cli-home/auth.json
 /data/*.gb
 /data/*.gbk
 
-# Local website, examples, and generated artifacts
+# Local website and generated artifacts
 /website/
-/examples/
 /artifacts/

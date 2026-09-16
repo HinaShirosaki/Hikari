@@ -1,0 +1,75 @@
+/* Plugins render in their own opaque-origin frame and inherit nothing from the
+   host, so a plugin ships all of its own styling. `color-scheme` keeps the
+   default form controls readable when the host is in dark mode. */
+:root {
+  color-scheme: light dark;
+  --border: color-mix(in srgb, currentColor 20%, transparent);
+}
+
+body {
+  margin: 0;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+h1 { font-size: 20px; margin: 0 0 4px; }
+.lede { margin: 0 0 20px; opacity: 0.75; }
+
+label {
+  display: block;
+  margin: 16px 0 6px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+select, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+
+.row { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+
+button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: default; }
+button.secondary { background: transparent; }
+button:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.status { min-height: 1.5em; font-size: 13px; opacity: 0.8; }
+.status.ok { color: #2e7d32; opacity: 1; }
+.status.error { color: #c62828; opacity: 1; }
+
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 5px 8px;
+  text-align: left;
+}
+th { font-weight: 600; }
