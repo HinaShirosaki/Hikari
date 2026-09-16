@@ -44,7 +44,7 @@ New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting
 ### Install Hikari
 
 ```bash
-npx hikari-lab
+npx @hinashirosaki/hikari
 ```
 
 This downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes the installer to `./hikari-out/make/` (`.zip` on macOS, Squirrel `.exe` on Windows, `.deb`/`.rpm` on Linux). Install it the normal way for your platform. Set `HIKARI_OUT_DIR` to build somewhere else.
@@ -55,7 +55,7 @@ Or paste this into a coding agent that has terminal access:
 Install Hikari (https://github.com/HinaShirosaki/Hikari) for me:
 
 1. Confirm Node.js 20 or newer and npm are available. If missing, explain what is needed and ask before installing system software or requesting administrator privileges.
-2. Run `npx hikari-lab` in a user-owned folder. It builds the native app for my OS and CPU and writes the installer under `hikari-out/make/`.
+2. Run `npx @hinashirosaki/hikari` in a user-owned folder. It builds the native app for my OS and CPU and writes the installer under `hikari-out/make/`.
 3. Install Hikari from that artifact using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
 4. Launch Hikari once and confirm that it opens. Report the build artifact, installed application path, and any step I still need to complete.
 
@@ -76,7 +76,7 @@ npm install
 npm run start
 ```
 
-`npm run dist` builds the same installers as `npx hikari-lab`, into `out/make/`.
+`npm run dist` builds the same installers as `npx @hinashirosaki/hikari`, into `out/make/`.
 
 ### First launch checklist
 

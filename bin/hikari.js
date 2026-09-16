@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `npx hikari-lab` — builds the native Hikari installer on this machine.
+// `npx @hinashirosaki/hikari` — builds the native Hikari installer on this machine.
 // electron + electron-forge stay devDependencies so the packaged app doesn't
 // bundle them; install them here, then run the same `dist` script as a dev checkout.
 const { execSync } = require('node:child_process');
