@@ -10,7 +10,7 @@ import { escapeHtml } from '../../lib/html.js';
 import { primerFeatureSequence } from './primer-hover.js';
 import { reverseComplementIupac } from './shared.js';
 
-export const OLIGO_PRIMER_STYLE = 1;
+export const OLIGO_PRIMER_STYLE = 0;
 
 const ROW_HEIGHT_PX = 15;
 const LABEL_HEIGHT_PX = 12;

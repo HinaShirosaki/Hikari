@@ -43,11 +43,25 @@ New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting
 
 ### Install Hikari
 
+**macOS / Linux**
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
+```
+
+**Windows (PowerShell)**
+
+```powershell
+iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
+```
+
+No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS/Linux) or `%LOCALAPPDATA%\Hikari\node` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
+
 ```bash
 npx @hinashirosaki/hikari
 ```
 
-This downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes the installer to `./hikari-out/make/` (`.zip` on macOS, Squirrel `.exe` on Windows, `.deb`/`.rpm` on Linux). Install it the normal way for your platform. Set `HIKARI_OUT_DIR` to build somewhere else.
+Either way this downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes the installer to `./hikari-out/make/` (`.zip` on macOS, Squirrel `.exe` on Windows, `.deb`/`.rpm` on Linux). Install it the normal way for your platform. Set `HIKARI_OUT_DIR` to build somewhere else.
 
 Or paste this into a coding agent that has terminal access:
 
