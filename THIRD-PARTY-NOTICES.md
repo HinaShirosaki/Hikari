@@ -194,6 +194,5 @@ trademark of Takara Bio Inc.; TOPO® is a registered trademark of Thermo Fisher
 Scientific Inc.; QuikChange® is a registered trademark of Agilent Technologies,
 Inc.; Precision Plus Protein™ and Kaleidoscope™ are trademarks of Bio-Rad
 Laboratories, Inc.; PageRuler™, GeneRuler™, RiboRuler™, and Spectra™ are
-trademarks of Thermo Fisher Scientific Inc.; SnapGene® is a registered trademark
-of GraphPad Software, LLC. Hikari is not affiliated with or endorsed by any of
-these companies.
+trademarks of Thermo Fisher Scientific Inc. Hikari is not affiliated with or endorsed by
+any of these companies.

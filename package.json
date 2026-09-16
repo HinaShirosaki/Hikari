@@ -1,7 +1,7 @@
 {
   "name": "@hinashirosaki/hikari",
   "productName": "Hikari",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Electron shell for Hikari sub-app launcher",
   "license": "Apache-2.0",
   "repository": "github:HinaShirosaki/Hikari",
@@ -10,6 +10,8 @@
     "hikari": "bin/hikari.js"
   },
   "files": [
+    "install.sh",
+    "install.ps1",
     "bin",
     "src",
     "ui",
