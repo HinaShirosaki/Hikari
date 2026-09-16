@@ -443,5 +443,5 @@ export function initSettings({
     persist();
   }
 
-  return { renderForms, applyAppearance };
+  return { renderForms, applyAppearance, activateSettingsPanel };
 }
