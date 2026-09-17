@@ -1,43 +1,19 @@
 'use strict';
 
-const {
-  buildHikariAgentMcpInstructionBodyLines,
-  buildHikariMcpToolName
-} = require('../mcp-contract/instructions.js');
-
 const HIKARI_AGENTS_BLOCK_START = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->';
 const HIKARI_AGENTS_BLOCK_END = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->';
 
+// The full tool contract is served once by the `hikari` MCP server's
+// `instructions` field; only Codex-specific rules live here.
 function buildHikariCodexAgentsInstructions() {
-  const sharedMcpContractLines = buildHikariAgentMcpInstructionBodyLines();
-  const toolName = buildHikariMcpToolName;
   return [
     '# Hikari Codex Agent Instructions',
     '',
-    'You are Hikari\'s Codex reasoning agent. For whole-turn agent-chat requests, own the run: clarify the goal, gather missing evidence, call direct Hikari MCP tools with validated JSON, and stop when evidence is sufficient.',
+    'You are Hikari\'s Codex reasoning agent. For agent-chat turns, own the run: clarify the goal, gather missing evidence, call Hikari MCP tools with validated JSON, stop when evidence is sufficient, and answer in normal assistant prose. Direct utility calls (protocol polish, JSON normalization, paper reading) follow the caller prompt and schema instead; JSON-only prompts get JSON-only replies.',
     '',
-    'For whole-turn agent-chat requests, return normal assistant prose. ',
-    'Scope guard: direct Codex utility calls, such as protocol polish, protocol JSON normalization, paper reading, or other one-off LLM prompts, follow the caller prompt and schema. Protocol creation launched through the Hikari agent controller is a whole-turn agent request, not a direct utility call.',
+    'The `hikari` MCP server\'s instructions are the app tool contract. Use its tools over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.',
     '',
-    'Codex runtime rules:',
-    '- Use the shared Hikari MCP contract below.',
-    '- Use direct Hikari MCP tools for app evidence, routing, inventory, protocols, notebook drafts, and structured app state.',
-    `- Call direct Hikari MCP tools by their raw names, such as \`${toolName('inventory_lookup')}\`, \`${toolName('protocol_generation')}\`, \`${toolName('notebook_draft')}\`, and \`${toolName('notebook_append')}\`.`,
-    '- JSON-only prompts require JSON-only replies.',
-    '',
-    'Shared Hikari MCP contract:',
-    ...sharedMcpContractLines,
-    '',
-    'Codex tool choice rules:',
-    '- Preserve requested schemas and canonical Hikari intent/tool names when a prompt explicitly asks for structured routing.',
-    '- If the user goal is ambiguous, ask one blocking clarification instead of choosing a tool-heavy path.',
-    '',
-    'Codex-specific paper rules:',
-    '- In a Codex paper-context sub-agent, read the exact title-named Markdown paths provided under `KnowledgeBase/papers.md/.../` and return the requested context JSON. Legacy records may still use `paper.md`.',
-    '- Claim downloads, full text, figures, or chunks only when a tool result proves them.',
-    '',
-    'Keep tool calls small and targeted. Use the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.',
-    'For external web evidence, use native Codex search.'
+    'Paper-context sub-agent: read the exact title-named Markdown paths under `KnowledgeBase/papers.md/.../` (legacy records may use `paper.md`) and return the requested context JSON.'
   ].join('\n');
 }
 

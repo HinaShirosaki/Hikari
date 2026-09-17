@@ -180,6 +180,26 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=medium');
       });
     });
+    test('codex cli provider omits -m on a fresh machine with no models cache unless the user chose a model', () => {
+      withCodexHome({ modelsCache: { models: [] }, configToml: '' }, () => {
+        const provider = loadProvider();
+        provider.setCodexCliModel('');
+        // The agent layer passes the app's static default; it may be retired upstream.
+        const args = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          model: 'gpt-5.4'
+        });
+        assert.equal(args.includes('-m'), false);
+
+        provider.setCodexCliModel('gpt-5.5');
+        const chosen = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          model: 'gpt-5.4'
+        });
+        assert.equal(chosen[chosen.indexOf('-m') + 1], 'gpt-5.5');
+        provider.setCodexCliModel('');
+      });
+    });
     test('codex cli provider can enable web search as a global codex flag before exec', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
@@ -542,19 +562,33 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         const firstContent = fs.readFileSync(agentsPath, 'utf8');
         assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
         assert.match(firstContent, /HIKARI_CODEX_AGENT_INSTRUCTIONS_START/);
-        assert.match(firstContent, /literature_search/);
-        assert.match(firstContent, /paper_download/);
-        assert.match(firstContent, /Interactive paper-search download policy/);
-        assert.match(firstContent, /research sub-agent may freely use `paper_download`/);
-        assert.match(firstContent, /main agent must not download the same papers again/);
-        assert.match(firstContent, /pass its title as `paper_title`/);
-        assert.match(firstContent, /original `literature_search\.query` as `collection_name`/);
-        assert.doesNotMatch(firstContent, /use its title as `linked_name`/);
-        assert.match(firstContent, /deny_paper_download: true/);
-        assert.match(firstContent, /load bounded paper context blocks/);
-        assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
-        assert.match(firstContent, /Do not use local lookup tools for active Assay plate\/result rows/);
+        assert.match(firstContent, /`hikari` MCP server's instructions are the app tool contract/);
+        assert.match(firstContent, /KnowledgeBase\/papers\.md/);
+        assert.doesNotMatch(firstContent, /Interactive paper-search download policy/);
         assert.doesNotMatch(firstContent, /mcp__[a-z0-9-]+__/i);
+
+        const { buildHikariAgentMcpInstructions } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'agent',
+          'mcp-contract',
+          'instructions.js'
+        ));
+        const mcpInstructions = buildHikariAgentMcpInstructions();
+        assert.match(mcpInstructions, /literature_search/);
+        assert.match(mcpInstructions, /paper_download/);
+        assert.match(mcpInstructions, /Interactive paper-search download policy/);
+        assert.match(mcpInstructions, /research sub-agent may freely use `paper_download`/);
+        assert.match(mcpInstructions, /main agent must not download the same papers again/);
+        assert.match(mcpInstructions, /pass its title as `paper_title`/);
+        assert.match(mcpInstructions, /original `literature_search\.query` as `collection_name`/);
+        assert.doesNotMatch(mcpInstructions, /use its title as `linked_name`/);
+        assert.match(mcpInstructions, /deny_paper_download: true/);
+        assert.match(mcpInstructions, /load bounded paper context blocks/);
+        assert.match(mcpInstructions, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
+        assert.match(mcpInstructions, /Do not use local lookup tools for active Assay plate\/result rows/);
+        assert.doesNotMatch(mcpInstructions, /mcp__[a-z0-9-]+__/i);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

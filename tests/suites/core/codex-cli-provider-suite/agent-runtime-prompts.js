@@ -459,11 +459,6 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       assert.match(calls[0].prompt, /Protocol and notebook handoff:/);
       assert.match(calls[0].prompt, /call `protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
-      assert.match(calls[0].prompt, /Generated protocols must be executable starting protocols, not questionnaires/);
-      assert.match(calls[0].prompt, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
-      assert.match(calls[0].prompt, /accepts only `project_name`, `protocol_candidates`, `pending_values`, and optional `step_edits`/);
-      assert.match(calls[0].prompt, /placeholder_key` in `<step-id>:<placeholder-id>` form/);
-      assert.match(calls[0].prompt, /never use uncertainty text such as "not specified"/);
       assert.match(calls[0].prompt, /`protocol_generation`/);
       assert.match(calls[0].prompt, /Assay context handoff:/);
       assert.match(calls[0].prompt, /Assay plate data \(TSV/);
