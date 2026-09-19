@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { registerPythonIpc } = require(path.join(projectRoot, 'src/main/ipc/register-python-ipc.js'));
 const { PYTHON } = require(path.join(projectRoot, 'src/shared/ipc/channels.js'));
-const { runPythonSandbox, resolvePythonExecutable } = require(
+const { developerToolsMissing, runPythonSandbox, resolvePythonExecutable } = require(
   path.join(projectRoot, 'src/main/agent/tools/agent-python-sandbox/runner.js')
 );
 
@@ -64,6 +64,10 @@ function harness(deps = {}) {
   assert.equal(result.status, 'error');
   assert.match(result.error, /no sandbox root/);
 }
+
+// Only macOS has the /usr/bin/python3 stub; elsewhere bare `python3` is always probed.
+assert.strictEqual(await developerToolsMissing('linux'), false);
+assert.strictEqual(await developerToolsMissing('win32'), false);
 
 // End to end: the renderer payload actually executes Python and reads a file back.
 {

@@ -9,7 +9,10 @@ const root = path.join(__dirname, '..');
 process.env.HIKARI_OUT_DIR ||= path.resolve('hikari-out');
 
 const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
-run('npm install --include=dev --no-audit --no-fund');
+// npm 12 refuses git dependencies by default; @electron/rebuild pulls
+// @electron/node-gyp from GitHub. Install scripts are allowed via package.json
+// "allowScripts". Older npm ignores the flag.
+run('npm install --include=dev --no-audit --no-fund --allow-git=all');
 run('npm run dist');
 
 console.log(`\nHikari installer(s): ${path.join(process.env.HIKARI_OUT_DIR, 'make')}`);
