@@ -4,6 +4,7 @@ import {
   buildDirectionMaps,
   notebookEntryLabel
 } from '../presentation.js';
+import { buildWorkflowExecutionLayout, computeEntryProgress } from '../execution.js';
 
 // The select options and rail lists the workflow editor renders: projects,
 // notebooks, protocols, blocks, templates, and the workflow runs under one template.
@@ -262,13 +263,34 @@ function createWorkflowOptionLists({
 
     elements.workflowList.innerHTML = `
       <div class="workflow-template-name-list">
-        ${templates.map((template) => `
+        ${templates.map((template) => {
+          const runs = getWorkflowsForTemplate(template.id);
+          const progress = runs
+            .map((workflow) => (workflow.entries[0] ? computeEntryProgress(workflow.entries[0], buildWorkflowExecutionLayout(workflow)) : null))
+            .filter(Boolean);
+          const active = progress.filter((item) => !item.complete && item.completedSteps > 0).length;
+          const failed = runs.filter((workflow) => Object.values(workflow.entries[0]?.stepStates || {})
+            .some((stepState) => stepState?.status === 'failed')).length;
+          const percent = progress.length
+            ? Math.round(progress.reduce((sum, item) => sum + item.percentComplete, 0) / progress.length)
+            : 0;
+          return `
           <button
             type="button"
             class="workflow-template-name-item${template.id === activeTemplate?.id ? ' is-active' : ''}"
             data-workflow-template-open="${safeText(template.id)}"
-          >${safeText(template.name || 'Untitled template')}</button>
-        `).join('')}
+          >
+            <span class="workflow-template-name-label">${safeText(template.name || 'Untitled template')}</span>
+            <span class="workflow-template-name-summary">
+              <span>${runs.length} run${runs.length === 1 ? '' : 's'}</span>
+              <span>${active} active</span>
+              ${failed ? `<span class="is-failed">${failed} failed</span>` : ''}
+              <span class="workflow-template-name-steps">${buildWorkflowExecutionLayout(template).mainPathIds.length} steps</span>
+            </span>
+            <span class="workflow-template-name-bar" aria-hidden="true"><i style="width: ${percent}%;"></i></span>
+          </button>
+        `;
+        }).join('')}
       </div>
     `;
   }

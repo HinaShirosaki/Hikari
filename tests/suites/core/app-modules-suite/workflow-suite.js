@@ -245,27 +245,14 @@ test('workflow execution blocks later steps and closes quick fill on blank board
   assert.equal(renderCount, 2);
 });
 
-test('workflow execution renderer keeps the active step editor inside the workflow board', () => {
+test('workflow execution renderer lists runs as a ledger and opens the selected run in a drawer', () => {
   const rendererModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js'),
-    {
-      window: {
-        requestAnimationFrame(callback) {
-          if (typeof callback === 'function') {
-            callback();
-          }
-        }
-      }
-    }
+    { window: {} }
   );
   const { createWorkflowRenderer } = rendererModule;
 
-  const board = {
-    innerHTML: '',
-    querySelector() {
-      return null;
-    }
-  };
+  const board = { innerHTML: '' };
   const elements = {
     workflowExecutionBoard: board,
     workflowExecutionTitle: { textContent: '' },
@@ -273,8 +260,18 @@ test('workflow execution renderer keeps the active step editor inside the workfl
     workflowDeleteRunBtn: { disabled: false },
     workflowSearchInput: { value: '' }
   };
+  const blocks = [
+    { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
+    { id: 'block-b', type: 'text', text: 'Record purification yield', x: 240, y: 40 },
+    { id: 'block-c', type: 'text', text: 'Review final yield', x: 440, y: 40 }
+  ];
+  const links = [
+    { fromBlockId: 'block-a', toBlockId: 'block-b' },
+    { fromBlockId: 'block-b', toBlockId: 'block-c' }
+  ];
   const renderer = createWorkflowRenderer({
     state: {
+      projects: [{ id: 'project-1', name: 'GFP reporter panel' }],
       protocols: [
         {
           id: 'protocol-a',
@@ -284,57 +281,37 @@ test('workflow execution renderer keeps the active step editor inside the workfl
               id: 'step-1',
               text: 'Load {{ph:amount}} of clarified lysate onto the column.',
               placeholders: [{ id: 'amount-1', name: 'amount' }]
-            },
-            {
-              id: 'step-2',
-              text: 'Elute with {{ph:volume}} of buffer.',
-              placeholders: [{ id: 'volume-1', name: 'volume' }]
             }
           ]
         }
       ],
-      workflowTemplates: [
-        {
-          id: 'template-1',
-          name: 'NiNTA',
-          blocks: [
-            { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
-            { id: 'block-b', type: 'text', text: 'Record purification yield', x: 240, y: 40 },
-            { id: 'block-c', type: 'text', text: 'Review final yield', x: 440, y: 40 }
-          ],
-          links: [
-            { fromBlockId: 'block-a', toBlockId: 'block-b' },
-            { fromBlockId: 'block-b', toBlockId: 'block-c' }
-          ]
-        }
-      ],
+      workflowTemplates: [{ id: 'template-1', name: 'NiNTA', blocks, links }],
       workflows: [
         {
           id: 'workflow-1',
           templateId: 'template-1',
           name: 'NiNTA 1',
-          blocks: [
-            { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
-            { id: 'block-b', type: 'text', text: 'Record purification yield', x: 240, y: 40 },
-            { id: 'block-c', type: 'text', text: 'Review final yield', x: 440, y: 40 }
-          ],
-          links: [
-            { fromBlockId: 'block-a', toBlockId: 'block-b' },
-            { fromBlockId: 'block-b', toBlockId: 'block-c' }
-          ],
+          projectId: 'project-1',
+          blocks,
+          links,
           entries: [
             {
               id: 'entry-1',
               name: 'NiNTA 1',
               stepStates: {
-                'block-a': {
-                  status: 'completed',
-                  values: { 'step-1:amount-1': '10 mL' }
-                },
+                'block-a': { status: 'completed', values: { 'step-1:amount-1': '10 mL' } },
                 'block-b': { status: 'pending' }
               }
             }
           ]
+        },
+        {
+          id: 'workflow-2',
+          templateId: 'template-1',
+          name: 'NiNTA 2',
+          blocks,
+          links,
+          entries: [{ id: 'entry-2', name: 'NiNTA 2', stepStates: {} }]
         }
       ]
     },
@@ -342,51 +319,60 @@ test('workflow execution renderer keeps the active step editor inside the workfl
       activeTemplateId: 'template-1',
       activeWorkflowId: 'workflow-1',
       activeEntryId: 'entry-1',
-      activeBlockId: 'block-a'
+      activeBlockId: ''
     },
     elements,
     safeText: (value) => String(value || ''),
     getBlockType: (block) => String(block?.type || (block?.protocolId ? 'protocol' : '')),
-    uniqueStrings: (values) => Array.from(new Set(values || []))
+    uniqueStrings: (values) => Array.from(new Set(values || [])),
+    parseTimestamp: (value) => Date.parse(String(value || '')) || 0,
+    formatTimestamp: (value) => String(value || '-')
   });
 
   renderer.renderExecutionBoard();
 
   assert.equal(elements.workflowExecutionTitle.textContent, 'NiNTA');
-  assert.match(board.innerHTML, /workflow-execution-shell/);
-  assert.match(board.innerHTML, /workflow-progress-track-line/);
-  assert.doesNotMatch(board.innerHTML, /workflow-progress-connector/);
-  assert.match(board.innerHTML, /data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
-  assert.match(board.innerHTML, /data-workflow-step-popover="true"/);
-  assert.match(board.innerHTML, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>/);
-  assert.match(board.innerHTML, /workflow-placeholder-table[\s\S]*value="10 mL"[\s\S]*placeholder="Enter value"/);
-  assert.match(board.innerHTML, /aria-label="Workflow name"[\s\S]*data-workflow-run-name="workflow-1"/);
-  assert.doesNotMatch(board.innerHTML, /% complete/);
-  assert.doesNotMatch(board.innerHTML, /workflow-placeholder-field-context|workflow-step-editor-header|workflow-step-status-picker/);
-  assert.doesNotMatch(board.innerHTML, /workflow-step-detail-panel/);
+  assert.match(board.innerHTML, /<table class="workflow-ledger">/);
+  assert.match(board.innerHTML, /<th>Run<\/th>\s*<th>Progress<\/th>\s*<th>Next step<\/th>\s*<th>Updated<\/th>/);
+  assert.doesNotMatch(board.innerHTML, /Entity|workflow-progress-track|data-workflow-step-popover/);
+  // Every run is one row; the selected run is highlighted and its name is not an inline input.
+  assert.match(board.innerHTML, /workflow-ledger-row is-selected" data-workflow-run-open="workflow-1"[\s\S]*workflow-ledger-name">NiNTA 1<\/div>[\s\S]*workflow-ledger-project">GFP reporter panel/);
+  assert.match(board.innerHTML, /workflow-ledger-row" data-workflow-run-open="workflow-2"/);
+  const ledger = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside class="workflow-drawer"'));
+  assert.doesNotMatch(ledger, /data-workflow-run-name=/);
+  // Stepper: done, next (pending), locked.
+  assert.match(board.innerHTML, /workflow-stepper-node is-finished"[\s\S]*data-workflow-step-open="block-a"/);
+  assert.match(board.innerHTML, /workflow-stepper-node is-pending"[\s\S]*data-workflow-step-open="block-b"/);
+  assert.match(board.innerHTML, /workflow-stepper-node is-empty is-locked"[\s\S]*data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
+  assert.match(board.innerHTML, /workflow-ledger-count">1\/3</);
+  assert.match(board.innerHTML, /workflow-ledger-next">Record purification yield<\/span> <span class="workflow-ledger-chip is-warn">In progress/);
+  assert.match(board.innerHTML, /data-workflow-run-open="workflow-2"[\s\S]*workflow-ledger-count">0\/3<[\s\S]*workflow-ledger-next">Ni-NTA Purification<\/span><\/td>/);
+  // Drawer for the selected run, with the step that is due unfolded and its controls restored.
+  const drawer = board.innerHTML.slice(board.innerHTML.indexOf('<aside class="workflow-drawer"'));
+  assert.match(drawer, /aria-label="Workflow name" value="NiNTA 1" data-workflow-run-name="workflow-1"/);
+  assert.match(drawer, /data-workflow-drawer-close="true"/);
+  assert.match(drawer, /workflow-drawer-progress-bar"><i style="width: 33%;">/);
+  assert.match(drawer, /<details class="workflow-drawer-details" >\s*<summary data-workflow-drawer-toggle="block-a"[\s\S]*Ni-NTA Purification/);
+  assert.match(drawer, /<details class="workflow-drawer-details" open>\s*<summary data-workflow-drawer-toggle="block-b"/);
+  assert.match(drawer, /<details class="workflow-drawer-details" >\s*<summary >[\s\S]*Review final yield/);
+  assert.match(drawer, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>[\s\S]*data-workflow-step-value="step-1:amount-1"[\s\S]*value="10 mL"/);
+  assert.match(drawer, /data-workflow-step-status="not_done" data-workflow-block-id="block-a"[\s\S]*>Reopen</);
+  assert.match(drawer, /class="primary-btn" data-workflow-step-status="completed" data-workflow-block-id="block-b" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" >Mark complete</);
+  assert.match(drawer, /data-workflow-step-status="failed" data-workflow-block-id="block-b"/);
+  assert.match(drawer, /data-workflow-step-result-field="block-b"/);
+  assert.match(drawer, /type="file" multiple data-workflow-step-files="block-b"/);
+  assert.match(drawer, /data-workflow-step-open-notebook="block-b"[\s\S]*data-workflow-step-create-assay="block-b"/);
+  assert.match(drawer, /data-workflow-step-status="completed" data-workflow-block-id="block-c" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" disabled/);
 });
 
-test('workflow execution renderer places branch protocols on a bottom lane anchored to the parent dot', () => {
+test('workflow execution renderer shows branches inline as squares and inactive branches as a fork', () => {
   const rendererModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js'),
-    {
-      window: {
-        requestAnimationFrame(callback) {
-          if (typeof callback === 'function') {
-            callback();
-          }
-        }
-      }
-    }
+    { window: {} }
   );
   const { createWorkflowRenderer } = rendererModule;
 
-  const board = {
-    innerHTML: '',
-    querySelector() {
-      return null;
-    }
-  };
+  const board = { innerHTML: '' };
   const blocks = [
     { id: 'block-a', protocolId: 'protocol-a', x: 40, y: 40 },
     { id: 'block-b', protocolId: 'protocol-b', x: 240, y: 40 },
@@ -407,6 +393,21 @@ test('workflow execution renderer places branch protocols on a bottom lane ancho
     workflowDeleteRunBtn: { disabled: false },
     workflowSearchInput: { value: '' }
   };
+  const runtime = {
+    activeTemplateId: 'template-branch',
+    activeWorkflowId: 'workflow-make',
+    activeEntryId: 'entry-make',
+    activeBlockId: ''
+  };
+  const entry = {
+    id: 'entry-make',
+    name: 'Make',
+    activeBranchRootIds: [],
+    stepStates: {
+      'block-a': { status: 'completed' },
+      'block-b': { status: 'completed' }
+    }
+  };
   const renderer = createWorkflowRenderer({
     state: {
       protocols: [
@@ -416,59 +417,38 @@ test('workflow execution renderer places branch protocols on a bottom lane ancho
         { id: 'protocol-d', name: 'Branch Root' },
         { id: 'protocol-e', name: 'Branch Follow-up' }
       ],
-      workflowTemplates: [
-        {
-          id: 'template-branch',
-          name: 'Make',
-          blocks,
-          links
-        }
-      ],
-      workflows: [
-        {
-          id: 'workflow-make',
-          templateId: 'template-branch',
-          name: 'Make',
-          blocks,
-          links,
-          entries: [
-            {
-              id: 'entry-make',
-              name: 'Make',
-              activeBranchRootIds: [],
-              stepStates: {
-                'block-a': { status: 'completed' },
-                'block-b': { status: 'completed' }
-              }
-            }
-          ]
-        }
-      ]
+      workflowTemplates: [{ id: 'template-branch', name: 'Make', blocks, links }],
+      workflows: [{ id: 'workflow-make', templateId: 'template-branch', name: 'Make', blocks, links, entries: [entry] }]
     },
-    runtime: {
-      activeTemplateId: 'template-branch',
-      activeWorkflowId: 'workflow-make',
-      activeEntryId: 'entry-make',
-      activeBlockId: ''
-    },
+    runtime,
     elements,
     safeText: (value) => String(value || ''),
     getBlockType: (block) => String(block?.type || (block?.protocolId ? 'protocol' : '')),
-    uniqueStrings: (values) => Array.from(new Set(values || []))
+    uniqueStrings: (values) => Array.from(new Set(values || [])),
+    parseTimestamp: () => 0,
+    formatTimestamp: () => '-'
   });
 
   renderer.renderExecutionBoard();
 
-  assert.match(board.innerHTML, /workflow-progress-track-grid/);
-  assert.match(board.innerHTML, /--workflow-step-count: 3; --workflow-track-row-count: 2;/);
-  assert.match(board.innerHTML, /class="workflow-progress-track-line"[\s\S]*--workflow-track-segment-width: 66\.666/);
-  assert.match(board.innerHTML, /workflow-progress-main-cell[\s\S]*style="grid-column: 2; grid-row: 1;"[\s\S]*data-workflow-step-open="block-b"/);
-  assert.match(board.innerHTML, /workflow-progress-branch-track-line is-inactive/);
-  assert.match(board.innerHTML, /class="workflow-progress-cell workflow-progress-branch-cell is-branch-root is-branch-inactive"[\s\S]*style="grid-column: 2; grid-row: 2; --workflow-branch-row-offset: 1;"[\s\S]*data-workflow-branch-parent="block-b"/);
-  assert.match(board.innerHTML, /workflow-progress-branch-label">Branch Root<\/span>/);
-  assert.match(board.innerHTML, /workflow-progress-branch-label">Branch Follow-up<\/span>/);
-  assert.match(board.innerHTML, /data-workflow-branch-toggle="block-d"/);
-  assert.match(board.innerHTML, /style="grid-column: 3; grid-row: 2; --workflow-branch-row-offset: 1;"[\s\S]*data-workflow-step-open="block-e"[\s\S]*disabled aria-disabled="true"/);
+  // Inactive branch: the row keeps the main path only, plus one fork mark after its anchor.
+  const forkRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
+  assert.match(forkRow, /data-workflow-step-open="block-b"[\s\S]*workflow-stepper-fork"[^>]*aria-label="Optional branch: Branch Root → Branch Follow-up"[\s\S]*data-workflow-step-open="block-c"/);
+  assert.doesNotMatch(forkRow, /data-workflow-step-open="block-d"/);
+  assert.match(forkRow, /workflow-ledger-count">2\/3</);
+  // Drawer offers the branch as a card at the fork point.
+  assert.match(board.innerHTML, /workflow-drawer-fork-card">[\s\S]*Optional branch[\s\S]*<strong>Branch Root → Branch Follow-up<\/strong>[\s\S]*data-workflow-branch-toggle="block-d"[\s\S]*>Activate</);
+
+  entry.activeBranchRootIds = ['block-d'];
+  renderer.renderExecutionBoard();
+
+  // Active branch: its steps sit inline after the anchor as square nodes, and a dotted link leads into them.
+  const activeRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
+  assert.match(activeRow, /data-workflow-step-open="block-b"[\s\S]*workflow-stepper-link is-branch"[\s\S]*workflow-stepper-node is-pending is-branch"[\s\S]*data-workflow-step-open="block-d"[\s\S]*workflow-stepper-node is-empty is-branch is-locked"[\s\S]*data-workflow-step-open="block-e"[\s\S]*data-workflow-step-open="block-c"/);
+  assert.match(activeRow, /workflow-ledger-count">2\/5</);
+  assert.doesNotMatch(activeRow, /workflow-stepper-fork/);
+  // The untouched branch root can be skipped again from the drawer.
+  assert.match(board.innerHTML, /workflow-step-dot is-pending is-branch"[\s\S]*data-workflow-branch-toggle="block-d"[^>]*>Skip branch</);
 });
 
 test('workflow template navigation and graph actions use compact accessible icons', () => {
