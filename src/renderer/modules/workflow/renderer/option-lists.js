@@ -257,7 +257,7 @@ function createWorkflowOptionLists({
     const activeTemplate = ensureActiveTemplate(templates);
 
     if (!templates.length) {
-      elements.workflowList.innerHTML = '<p class="small-note">No workflow templates match the current search.</p>';
+      elements.workflowList.innerHTML = '';
       return;
     }
 

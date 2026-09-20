@@ -1,7 +1,7 @@
 module.exports = function registerAppWorkflowSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, loadEsmStyleModule, MockElement, test } = scope;
 test('workflow model normalizes execution entries and prunes invalid step state links', () => {
   let nextId = 0;
   const workflowModel = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'model.js'));
@@ -645,5 +645,4 @@ test('workflow block type switch synchronizes protocol and plain-text composer f
   assert.equal(elements.workflowBlockAddBtn.textContent, 'Add Text Block');
 });
 
-  }
 };

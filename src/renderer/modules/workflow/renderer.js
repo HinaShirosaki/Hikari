@@ -275,7 +275,7 @@ export function createWorkflowRenderer(config = {}) {
 
     if (!activeTemplate) {
       elements.workflowExecutionTitle.textContent = 'Select a workflow template';
-      elements.workflowExecutionBoard.innerHTML = '<p class="small-note">No workflow template selected.</p>';
+      elements.workflowExecutionBoard.innerHTML = '';
       return;
     }
 

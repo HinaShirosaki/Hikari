@@ -37,6 +37,106 @@
   display: none;
 }
 
+.workflow-navigation-title {
+  display: none;
+}
+
+/* Keep the library heading and search in view while templates scroll below. */
+#workflow-management-view .workflow-entry-panel:has(> .workflow-entry-template-icon-btn:not([hidden])) {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#workflow-management-view .workflow-entry-panel:has(> .workflow-entry-template-icon-btn:not([hidden])) .workflow-navigation-title {
+  display: block;
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+#workflow-management-view .workflow-entry-template-icon-btn {
+  border-color: transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-muted);
+}
+
+#workflow-management-view .workflow-entry-template-icon-btn:hover,
+#workflow-management-view .workflow-entry-template-icon-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+#workflow-management-view #workflow-entry-template-btn::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+#workflow-management-view .workflow-navigation-search label {
+  display: block;
+}
+
+#workflow-management-view #workflow-search {
+  min-height: 36px;
+  padding: 0.4375rem 38px 0.4375rem 0.625rem;
+  border-color: var(--theme-border-soft);
+  border-radius: 8px;
+  background: var(--theme-surface-subtle);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+#workflow-management-view button[data-hover-caption] {
+  position: relative;
+}
+
+#workflow-management-view button[data-hover-caption]::after {
+  content: attr(data-hover-caption);
+  position: absolute;
+  z-index: 3200;
+  top: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 7px 18px var(--theme-shadow-color-strong);
+  color: var(--theme-text-strong);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+#workflow-management-view button[data-hover-caption]:hover::after,
+#workflow-management-view button[data-hover-caption]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 180ms;
+}
+
+#workflow-management-view .workflow-entry-panel > button[data-hover-caption]::after,
+#workflow-management-view .workflow-template-actions > button[data-hover-caption]:first-child::after {
+  left: 0;
+  transform: none;
+}
+
+#workflow-management-view .workflow-template-actions > button[data-hover-caption]:last-child::after,
+#workflow-management-view .workflow-execution-actions > button[data-hover-caption]:last-child::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
 .workflow-editor-sidebar:has(.workflow-template-editor-panel:not([hidden])) .workflow-editor-title {
   display: block;
   font-size: 0.875rem;
@@ -169,6 +269,19 @@
   align-content: start;
   padding: 8px var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
+}
+
+#workflow-management-view .left-rail-template.workflow-editor-layout > .workflow-editor-sidebar > .workflow-editor-sidebar-pinned.left-rail-template__pinned:has(> .workflow-navigation-search:not([hidden])) {
+  gap: 10px;
+  padding-top: 12px;
+  padding-right: var(--app-left-rail-padding-inline, 16px);
+  padding-bottom: 10px;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+
+#workflow-management-view .left-rail-template.workflow-editor-layout > .workflow-editor-sidebar > .workflow-editor-sidebar-scroll.left-rail-template__scroll:has(> .workflow-list-panel:not([hidden])) {
+  padding-top: 0;
 }
 
 #workflow-management-view .workflow-editor-main:has(> .workflow-list-panel:not([hidden])) {
@@ -337,14 +450,16 @@
 }
 
 .workflow-template-name-item {
+  position: relative;
+  min-width: 0;
   width: 100%;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border: 0;
-  border-left: 2px solid transparent;
   background: transparent;
   text-align: left;
   color: var(--theme-text);
   font: inherit;
+  overflow-wrap: anywhere;
 }
 
 .workflow-template-name-item:hover {
@@ -352,7 +467,6 @@
 }
 
 .workflow-template-name-item.is-active {
-  border-left-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border));
   background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
   color: var(--theme-primary);
 }
