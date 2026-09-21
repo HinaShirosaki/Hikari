@@ -2,8 +2,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuiteToolCallDispatch
   const scope = context.scope || {};
   const toolLoading = scope.agentToolLoading || {};
   const toolExecution = scope.agentToolExecution || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test } = scope;
     test('agent tool-call normalizes selection and arguments payloads and rejects invalid input', () => {
       const selection = toolLoading.normalizeToolSelectionPayload({
         tool_calls: [
@@ -240,5 +239,4 @@ module.exports = function registerAgentRetrievalAndToolCallSuiteToolCallDispatch
       assert.equal(result.tool_name, 'python-sandbox');
       assert.match(String(result.error || ''), /No tool executor is registered/i);
     });
-  }
 };

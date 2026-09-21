@@ -49,7 +49,6 @@ export function createSequenceViewerHomeController(config = {}) {
   let activeFolderDropTarget = null;
 
   const {
-    compactElementList,
     getLibraryListElements,
     getLibrarySavedFilterButtons,
     getLibraryTemporaryFilterButtons,
@@ -84,14 +83,11 @@ export function createSequenceViewerHomeController(config = {}) {
     libraryPreviewTimer = null;
   }
 
+  // Errors surface as a transient toast; informational messages are dropped so the rail stays quiet.
   function setHomeStatus(message, isError = false) {
     if (isError && message) {
       showTransientNotice(message, { type: 'error' });
     }
-    compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
-      statusNode.textContent = message;
-      statusNode.classList.toggle('is-error', Boolean(isError));
-    });
   }
 
 
@@ -297,7 +293,7 @@ export function createSequenceViewerHomeController(config = {}) {
       button.addEventListener('click', () => {
         clearLibraryPreviewTimer();
         setLibraryFilter(libraryStatusSaved);
-        void refreshLibraryEntries({ silent: true });
+        void refreshLibraryEntries();
       });
     });
 
@@ -305,7 +301,7 @@ export function createSequenceViewerHomeController(config = {}) {
       button.addEventListener('click', () => {
         clearLibraryPreviewTimer();
         setLibraryFilter(libraryStatusTemporary);
-        void refreshLibraryEntries({ silent: true });
+        void refreshLibraryEntries();
       });
     });
 

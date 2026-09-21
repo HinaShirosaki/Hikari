@@ -438,7 +438,6 @@ export function createWorkflowActions(config = {}) {
     elements.workflowDeleteRunBtn?.addEventListener('click', onDeleteWorkflow);
     elements.workflowExecutionBoard?.addEventListener('click', onExecutionBoardClick);
     elements.workflowExecutionBoard?.addEventListener('change', onExecutionBoardChange);
-    window.addEventListener('resize', renderer.syncExecutionPopoverPosition);
 
     graphController.bindEvents?.();
   }

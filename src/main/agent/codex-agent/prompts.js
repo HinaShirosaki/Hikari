@@ -7,10 +7,7 @@ const {
   defaultCleanText,
   ensureObject
 } = require('./runtime-utils.js');
-const {
-  buildHikariMcpToolName,
-  buildProtocolNotebookHandoffInstructionLines
-} = require('../mcp-contract/instructions.js');
+const { buildHikariMcpToolName } = require('../mcp-contract/instructions.js');
 const {
   buildCodexSessionRecoveryBlock
 } = require('./session-recovery.js');
@@ -171,7 +168,6 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const protocolGenerationTool = buildHikariMcpToolName('protocol_generation');
   const assayTableTool = buildHikariMcpToolName('assay_table');
   const plotlyGraphTool = buildHikariMcpToolName('plotly_graph');
-  const protocolNotebookHandoff = buildProtocolNotebookHandoffInstructionLines().join('\n');
   const blocks = [
     '# Hikari Codex Chat Turn',
     '',
@@ -183,7 +179,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'For a normal paper-discovery request, make at most one `literature_search` call. When a paper request needs both literature APIs and Codex web discovery, use API sources only (`pubmed`, `crossref`, and `europe_pmc`) in that Hikari call, then use native Codex web search separately. Do not include `web` in the Hikari call: that source would start a nested Codex CLI request and stall the current turn.',
     '',
-    `Protocol and notebook handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.\n${protocolNotebookHandoff}`,
+    `Protocol and notebook handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.`,
     '',
     `Assay context handoff: when this chat turn contains hidden assay context, retrieve the active assay data by reading the \`Assay plate data (TSV...)\` block inside this same prompt. Parse the TSV lines after the header \`well\\trow\\tcolumn\\tsample\\tconcentration\\tresult\` into explicit row objects, then call \`${assayTableTool}\` with \`action: "create"\` when calculations, regression, derived tables, or graphing are needed. Do not use local lookup tools for active assay plate data. If the TSV title says rows exist but the body rows are absent, report that the assay context was supplied without row data instead of trying lookup fallback paths. Use \`${plotlyGraphTool}\` only after the table or calculation data exists.`,
     '',

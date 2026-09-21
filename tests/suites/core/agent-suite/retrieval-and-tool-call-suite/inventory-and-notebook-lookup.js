@@ -1,9 +1,8 @@
 module.exports = function registerAgentRetrievalAndToolCallSuiteInventoryAndNotebookLookup(context = {}) {
   const scope = context.scope || {};
   const toolLoading = scope.agentToolLoading || {};
-  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, fsPromises, path, test, agentInventoryLookup } = scope;
     test('inventory lookup runtime is reusable with fallback snapshot search', async () => {
       const runtime = agentInventoryLookup.createAgentInventoryLookupRuntime();
       const result = await runtime.executeInventoryLookup({
@@ -566,5 +565,4 @@ Workspace body
         fs.rmSync(tempRoot, { recursive: true, force: true });
       }
     });
-  }
 };

@@ -67,8 +67,31 @@ function createWorkflowExecutionBoard({
       upsertNotebookEntryForStep(workflow, entry, block, { executed: nextStatus === 'completed' });
       runtime.activeWorkflowId = workflow.id;
       runtime.activeEntryId = entry.id;
-      runtime.activeBlockId = blockId;
+      runtime.activeBlockId = nextStatus === 'completed'
+        ? getPreferredWorkflowBlockId(workflow, entry, blockId)
+        : blockId;
       persistWorkflowChanges();
+      renderWorkflowViews();
+      return;
+    }
+
+    // A drawer step header folds and unfolds its editor; the native <details>
+    // toggle is suppressed so a re-render keeps the same step open.
+    const drawerToggle = event.target.closest('[data-workflow-drawer-toggle]');
+    if (drawerToggle) {
+      event.preventDefault();
+      const blockId = String(drawerToggle.dataset.workflowDrawerToggle || '').trim();
+      runtime.activeWorkflowId = String(drawerToggle.dataset.workflowWorkflowId || '').trim();
+      runtime.activeEntryId = String(drawerToggle.dataset.workflowEntryId || '').trim();
+      runtime.activeBlockId = runtime.activeBlockId === blockId ? '' : blockId;
+      renderWorkflowViews();
+      return;
+    }
+
+    if (event.target.closest('[data-workflow-drawer-close]')) {
+      runtime.activeWorkflowId = '';
+      runtime.activeEntryId = '';
+      runtime.activeBlockId = '';
       renderWorkflowViews();
       return;
     }
@@ -187,7 +210,7 @@ function createWorkflowExecutionBoard({
       return;
     }
 
-    if (event.target.closest('.workflow-step-inline') || event.target.closest('input, textarea, select')) {
+    if (event.target.closest('.workflow-drawer') || event.target.closest('input, textarea, select')) {
       return;
     }
 
@@ -198,7 +221,7 @@ function createWorkflowExecutionBoard({
       const entry = getPrimaryWorkflowEntry(workflow);
       runtime.activeWorkflowId = workflowId;
       runtime.activeEntryId = entry?.id || '';
-      runtime.activeBlockId = '';
+      runtime.activeBlockId = workflow && entry ? getPreferredWorkflowBlockId(workflow, entry) : '';
       renderWorkflowViews();
       return;
     }

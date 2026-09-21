@@ -1,7 +1,17 @@
 module.exports = function registerAppPapersSuitePaperLibraryFolders(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 function buildFakePapersViewerFactory() {
   const controller = {
     activePaperId: '',
@@ -251,25 +261,6 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
   };
 }
 
-async function openPaperInHarness(harness) {
-  const journalClubList = harness.document.getElementById('journal-club-list');
-  trigger(journalClubList, 'click', {
-    target: {
-      closest(selector) {
-        if (selector === '[data-paper-view]') {
-          return {
-            dataset: {
-              paperView: 'paper-1'
-            }
-          };
-        }
-        return null;
-      }
-    }
-  });
-  await flushAsync();
-  await flushAsync();
-}
 test('papers module renders folder rows with nested paper titles in the library list', () => {
   const harness = buildPapersManagementHarness({
     comments: [
@@ -658,5 +649,4 @@ test('papers module drags a paper between folders and moves the stored PDF', asy
   assert.equal(paper.storedRelativePath, 'Papers/Reading_Club/atlas.pdf');
   assert.match(harness.document.getElementById('journal-club-list').innerHTML, /Reading Club/);
 });
-  }
 };

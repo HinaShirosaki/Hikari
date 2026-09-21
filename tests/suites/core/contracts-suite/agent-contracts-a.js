@@ -2,7 +2,7 @@ module.exports = function registerAgentContractsA(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const agentPath = (...parts) => path.join(__dirname, 'src', 'main', 'agent', ...parts);
     const readCatalog = (fileName) => JSON.parse(fs.readFileSync(agentPath('tools', fileName), 'utf8'));
 
@@ -83,5 +83,4 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(executionSource, /function registerToolExecutor\(toolName, executor\)/);
       assert.match(executionSource, /function getToolExecutor\(toolName\)/);
     });
-  }
 };

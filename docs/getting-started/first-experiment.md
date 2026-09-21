@@ -29,11 +29,11 @@ If you are evaluating Hikari, create an empty folder named `Hikari Tutorial` som
 
 Hikari needs a storage root before it can write records and attachments to disk.
 
-1. Open **Settings** from the dock.
-2. Select **Storage** in the left rail.
-3. Click **Select Folder** and choose your `Hikari Tutorial` folder or real workspace folder.
-4. Click **Save Storage Path**.
-5. Confirm that the chosen path appears under **Root Folder Path**.
+1. On first launch, click **Choose Folder** on the welcome page.
+2. Choose your `Hikari Tutorial` folder or an existing Hikari workspace. You can create a folder in the picker.
+3. Wait for Hikari to open the workspace. If the folder cannot be opened or saved, the page shows an error so you can retry.
+
+To change folders later, open **Settings > Storage**, click **Select Folder**, and choose the new folder. The chosen path appears under **Root Folder Path**.
 
 Do not move or rename the folder while Hikari is running. For real work, back up the entire folder rather than only the `hikari-data.json` snapshot; attachments and module artifacts live beside it.
 

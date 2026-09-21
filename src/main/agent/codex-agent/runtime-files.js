@@ -1,6 +1,5 @@
 'use strict';
 
-const fsSync = require('node:fs');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
@@ -14,6 +13,7 @@ const {
 const {
   getEnabledHikariMcpToolNames
 } = require('../mcp-contract/tool-availability.js');
+const { resolveCodexBinary, resolveCodexNodeBinary } = require('../../lib/codex-cli-provider/paths.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
@@ -70,10 +70,7 @@ function removeManagedBlock(existing = '', start = '', end = '') {
 
 function resolveUnpackedAsarPath(filePath = '') {
   const targetPath = cleanText(filePath);
-  if (targetPath.includes(`${path.sep}app.asar${path.sep}`)) {
-    return targetPath.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
-  }
-  return targetPath;
+  return targetPath.replace(/([/\\])app\.asar([/\\])/u, '$1app.asar.unpacked$2');
 }
 
 function resolveHikariAgentMcpServerPath() {
@@ -81,86 +78,43 @@ function resolveHikariAgentMcpServerPath() {
   return resolveUnpackedAsarPath(serverPath);
 }
 
-function fileIsExecutable(filePath = '') {
-  const target = cleanText(filePath);
-  if (!target) {
-    return false;
-  }
-  try {
-    fsSync.accessSync(target, fsSync.constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
+function resolveHikariCodexMcpInvocation(options = {}) {
+  const configured = cleanText(options.mcpCommandPath || options.commandPath || options.nodeCommand).trim();
+  const serverPath = options.serverPath || resolveHikariAgentMcpServerPath();
+  if (configured) return { command: configured, args: [serverPath] };
 
-function commandLooksLikeNode(commandPath = '') {
-  return /^node(?:\.exe)?$/iu.test(path.basename(cleanText(commandPath)));
-}
+  // Prefer the tested bundled runtime over an unrelated, possibly old Node.
+  const electronVersion = options.electronVersion ?? process.versions.electron;
+  const executable = options.processExecPath ?? process.execPath;
+  const defaultApp = options.defaultApp ?? process.defaultApp;
+  if (electronVersion && executable && !defaultApp) {
+    return { command: executable, args: ['--hikari-mcp-stdio'] };
+  }
 
-function findExecutableOnPath(commandName = 'node', envPath = process.env.PATH) {
-  const command = cleanText(commandName);
-  if (!command) {
-    return '';
+  const env = { ...process.env, ...getMcpConfigEnvSource(options) };
+  if (options.envPath !== undefined) {
+    Object.keys(env).filter((key) => key.toLowerCase() === 'path').forEach((key) => delete env[key]);
+    env.PATH = options.envPath;
   }
-  if (command.includes(path.sep) && fileIsExecutable(command)) {
-    return command;
+  const node = resolveCodexNodeBinary('', env, options)
+    || resolveCodexNodeBinary(resolveCodexBinary(env, options), env, options);
+  if (node) return { command: node, args: [serverPath] };
+
+  // Standalone Codex does not install Node. Packaged Hikari can run its own
+  // MCP-only entry point using Electron's embedded Node, with RunAsNode still
+  // disabled. No UI, app services, or single-instance lock are started.
+  if (electronVersion && executable) {
+    const appPath = options.appPath || path.resolve(__dirname, '..', '..', '..', '..');
+    return {
+      command: executable,
+      args: [...(defaultApp ? [appPath] : []), '--hikari-mcp-stdio']
+    };
   }
-  const pathText = cleanText(envPath);
-  if (!pathText) {
-    return '';
-  }
-  const pathExts = process.platform === 'win32'
-    ? cleanText(process.env.PATHEXT).split(path.delimiter).filter(Boolean)
-    : [''];
-  for (const dir of pathText.split(path.delimiter)) {
-    const cleanDir = cleanText(dir);
-    if (!cleanDir) {
-      continue;
-    }
-    for (const ext of pathExts) {
-      const candidate = path.join(cleanDir, `${command}${ext}`);
-      if (fileIsExecutable(candidate)) {
-        return candidate;
-      }
-    }
-  }
-  return '';
+  throw new Error('Hikari MCP could not find a Node.js runtime. Install Node.js or set HIKARI_NODE_PATH to its executable, then restart Hikari.');
 }
 
 function resolveHikariCodexMcpCommandPath(options = {}) {
-  const configured = cleanText(
-    options.mcpCommandPath
-      || options.commandPath
-      || options.nodeCommand);
-  if (configured) {
-    return configured;
-  }
-  const envNodeCommand = cleanText(
-    process.env.HIKARI_CODEX_NODE_PATH
-      || process.env.HIKARI_NODE_PATH);
-  if (envNodeCommand) {
-    return envNodeCommand;
-  }
-  const processExecPath = Object.prototype.hasOwnProperty.call(options, 'processExecPath')
-    ? cleanText(options.processExecPath)
-    : process.execPath;
-  if (processExecPath && commandLooksLikeNode(processExecPath)) {
-    return processExecPath;
-  }
-  const pathNode = findExecutableOnPath('node', options.envPath ?? process.env.PATH);
-  if (pathNode) {
-    return pathNode;
-  }
-  const commonNodePaths = Array.isArray(options.commonNodePaths)
-    ? options.commonNodePaths
-    : [
-      '/opt/homebrew/bin/node',
-      '/usr/local/bin/node',
-      '/usr/bin/node',
-      '/opt/local/bin/node'
-    ];
-  return commonNodePaths.find(fileIsExecutable) || 'node';
+  return resolveHikariCodexMcpInvocation(options).command;
 }
 
 function resolveHikariCodexMcpServerPath() {
@@ -216,7 +170,7 @@ function parseRequestContext(value = '') {
 function buildHikariCodexMcpConfigBlock(options = {}) {
   const envEntries = {};
   const envSource = getMcpConfigEnvSource(options);
-  const commandPath = resolveHikariCodexMcpCommandPath(options);
+  const invocation = resolveHikariCodexMcpInvocation(options);
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP', '1', 40);
   addEnvEntry(envEntries, 'HIKARI_CODEX_MCP', '1', 40);
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_WORKSPACE', options.workspace, 2400);
@@ -255,8 +209,8 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
     '[mcp_servers.hikari]',
     'enabled = true',
     'required = true',
-    `command = ${tomlString(commandPath)}`,
-    `args = [${tomlString(resolveHikariCodexMcpServerPath())}]`,
+    `command = ${tomlString(invocation.command)}`,
+    `args = ${tomlStringArray(invocation.args)}`,
     `enabled_tools = ${tomlStringArray(enabledToolNames)}`,
     'default_tools_approval_mode = "approve"',
     'startup_timeout_sec = 30',
@@ -364,6 +318,7 @@ module.exports = {
   resolveUnpackedAsarPath,
   resolveHikariAgentMcpServerPath,
   resolveHikariCodexMcpCommandPath,
+  resolveHikariCodexMcpInvocation,
   resolveHikariCodexMcpServerPath,
   buildHikariCodexMcpConfigBlock,
   ensureHikariCodexAgentsFile,

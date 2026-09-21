@@ -1,7 +1,16 @@
 module.exports = function registerAppAssaySuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    MockElement,
+    createMockDocument,
+    test,
+    assayAnalysis
+  } = scope;
 function buildStandardCurveObservations({
   sampleId = 'Std',
   concentrations = [0.1, 0.3, 1, 3, 10, 30],
@@ -647,5 +656,4 @@ test('assay analysis accepts agent Plotly graph artifacts for workspace renderin
   assert.equal(artifact.figure.layout.title.text, 'Filled assay plate');
 });
 
-  }
 };

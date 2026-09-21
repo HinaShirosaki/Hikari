@@ -2,7 +2,7 @@ module.exports = function registerManifestContracts(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fs, path, test, packageManifest } = scope;
     test('the test gate runs every check and never stops at the first failure', () => {
       assert.equal(packageManifest.main, 'src/main/main.js');
       const mainEntrySource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'main.js'), 'utf8');
@@ -19,5 +19,4 @@ module.exports = function registerManifestContracts(context = {}) {
       // not silently skip everything after it.
       assert.match(runnerSource, /catch \(error\) \{[\s\S]{0,300}?process\.exitCode = 1;\s*\}/);
     });
-  }
 };

@@ -1,7 +1,16 @@
 module.exports = function registerAppAgentChatSessionsAndToolsSuiteLookupResultRendering(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -396,5 +405,4 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
   assert.deepEqual(openedUrls, ['https://vendor.example/item-1']);
   assert.equal(status.textContent, 'Opened product page.');
 });
-  }
 };

@@ -1,7 +1,6 @@
 module.exports = function registerEdgeSequenceViewerFoundationsSuiteFeatureBuildingAndRendering(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, sequenceViewerInternals } = scope;
 function stripHtmlTags(html) {
   return String(html || '').replace(/<[^>]*>/g, '');
 }
@@ -93,6 +92,76 @@ test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs in the same 
     JSON.stringify([{ start: 0, end: 12 }])
   );
   assert.equal(plusFrameOne[0].orfLengthAa, 3);
+});
+test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs that cross the origin of a non-multiple-of-3 circle', () => {
+  // 13 bp circle: ATG at 11 wraps the origin, passes an inner ATG at 1 (a different linear frame), stops at 4.
+  const features = sequenceViewerInternals.buildOrfFeatures('GATGTAGCCCCAT', 'circular', { minAaLength: 1 });
+  const plus = features.filter((feature) => feature.strand === 1);
+
+  assert.equal(plus.length, 1);
+  assert.equal(plus[0].orfLengthNt, 9);
+  assert.equal(
+    JSON.stringify(plus[0].segments),
+    JSON.stringify([{ start: 11, end: 13 }, { start: 0, end: 7 }])
+  );
+});
+test('[EDGE] sequence-viewer buildOrfFeatures on a circular sequence is independent of where the origin sits', () => {
+  let seed = 7;
+  const sequence = Array.from({ length: 301 }, () => 'ACGT'[((seed = (seed * 1103515245 + 12345) & 0x7fffffff) >> 16) & 3]).join('');
+  const length = sequence.length;
+  const canonical = (feature, offset) => {
+    const segments = feature.segments;
+    const fivePrime = feature.strand === 1 ? segments[0].start : segments[segments.length - 1].end;
+    return `${feature.strand}|${(fivePrime + offset) % length}|${feature.orfLengthNt}`;
+  };
+  const expected = sequenceViewerInternals.buildOrfFeatures(sequence, 'circular', { minAaLength: 5 })
+    .map((feature) => canonical(feature, 0)).sort();
+
+  assert.equal(expected.length > 0, true);
+  for (let offset = 1; offset < length; offset += 1) {
+    const rotated = sequence.slice(offset) + sequence.slice(0, offset);
+    const actual = sequenceViewerInternals.buildOrfFeatures(rotated, 'circular', { minAaLength: 5 })
+      .map((feature) => canonical(feature, offset)).sort();
+    assert.deepEqual(actual, expected, `ORF set changed when origin moved by ${offset}`);
+  }
+});
+test('[EDGE] sequence-viewer circular nested ORFs and translation survive every origin on both strands', () => {
+  const codingSequence = 'ATGAAAATGCCCTAA';
+  const complement = { A: 'T', T: 'A', C: 'G', G: 'C' };
+  // Include full-circle ORFs, all length remainders modulo three, and origins
+  // inside either start/stop codon as well as outside the coding sequence.
+  for (let padding = 0; padding < 6; padding += 1) {
+    const forward = codingSequence + 'C'.repeat(padding);
+    for (const strand of [1, -1]) {
+      const sequence = strand === 1 ? forward : [...forward].reverse().map((base) => complement[base]).join('');
+      for (let offset = 0; offset < sequence.length; offset += 1) {
+        const rotated = sequence.slice(offset) + sequence.slice(0, offset);
+        const hits = sequenceViewerInternals.buildOrfFeatures(rotated, 'circular', { minAaLength: 1 })
+          .filter((feature) => feature.strand === strand);
+        const label = `padding=${padding}, strand=${strand}, origin=${offset}`;
+        assert.equal(hits.length, 1, label);
+        const feature = hits[0];
+        assert.equal(feature.orfLengthNt, codingSequence.length, label);
+        assert.equal(feature.orfLengthAa, 4, label);
+        assert.equal(feature.stopCodon, 'TAA', label);
+        const genomicDna = feature.segments.map(({ start, end }) => rotated.slice(start, end)).join('');
+        const dna = strand === 1 ? genomicDna : [...genomicDna].reverse().map((base) => complement[base]).join('');
+        assert.equal(dna, codingSequence, label);
+
+        const translation = sequenceViewerInternals.buildSelectedOrfTranslationContext(rotated, feature);
+        const codingStart = strand === 1 ? 0 : sequence.length - 1;
+        const anchors = Array.from(translation.anchors).sort((left, right) => {
+          const distance = (anchor) => {
+            const originalPosition = (anchor.codonPositions[0] + offset) % sequence.length;
+            return ((originalPosition - codingStart) * strand + sequence.length) % sequence.length;
+          };
+          return distance(left) - distance(right);
+        });
+        assert.equal(anchors.map((anchor) => anchor.aa).join(''), 'MKMP', label);
+        assert.equal(anchors.map((anchor) => anchor.codon).join(''), codingSequence.slice(0, -3), label);
+      }
+    }
+  }
 });
 test('[EDGE] sequence-viewer buildOrfFeatures updates when active ORF stop codons change', () => {
   const sequence = 'ATGAAATGACCCTAA';
@@ -645,5 +714,4 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
   assert.match(html, /99.12%/);
   assert.match(html, /87.56%/);
 });
-  }
 };

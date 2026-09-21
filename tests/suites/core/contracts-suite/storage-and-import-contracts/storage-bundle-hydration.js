@@ -2,7 +2,16 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const {
+    assert,
+    fs,
+    fsPromises,
+    path,
+    test,
+    paperMarkdownImport,
+    sequenceLibrary,
+    mainUtils
+  } = scope;
     const { OFFICIAL_MCP_SKILLS, releaseOfficialMcpSkillsForWorkspace } = require(path.join(
       __dirname,
       'src',
@@ -24,23 +33,10 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       })
     );
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
-    const readMainProcessSource = () => [
-      readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'main-services.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
-    ].join('\n');
     const readPreloadStorageSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
       readLocalSource('src', 'main', 'preload', 'create-preload-api.js'),
       readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
-    ].join('\n');
-    const readRendererStorageSource = () => [
-      readLocalSource('src', 'renderer', 'renderer.js'),
-      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
-      readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
       const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'data', 'data-helpers.js'));
@@ -532,7 +528,8 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
             locationCodeMap: { shelf4: 'D' },
             locationCodeNextByLocation: { shelf4: 8 }
           },
-          inventory: { 'Room Temp': [{ id: 'box-1', name: 'Plasmid Box', type: 'box81' }] },
+          inventory: { 'Room Temp': [{ id: 'box-1', name: 'Plasmid Box', type: 'box81', folderId: 'folder-1' }] },
+          inventoryFolders: { 'Room Temp': [{ id: 'folder-1', name: 'Shelf A', parentFolderId: '' }] },
           samples: [{
             id: 'sample-1',
             code: 'S-001',
@@ -561,6 +558,8 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));
         assert.equal(samplesPayload.samples.length, 1);
         assert.equal(samplesPayload.samples[0].id, 'sample-1');
+        assert.equal(samplesPayload.inventory['Room Temp'][0].id, 'box-1');
+        assert.equal(samplesPayload.inventoryFolders['Room Temp'][0].id, 'folder-1');
         await assert.rejects(
           fsPromises.access(path.join(tempDir, 'example.ena.notebook-pages.json'))
         );
@@ -587,6 +586,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(hydrated.snapshot.samples.length, 1);
         assert.equal(hydrated.snapshot.samples[0].id, 'sample-1');
         assert.equal(hydrated.migration.applied.includes('samples_folder'), true);
+        assert.equal(hydrated.snapshot.inventoryFolders['Room Temp'][0].name, 'Shelf A');
         assert.equal(hydrated.snapshot?.settings?.appearance?.uiStyle, 'classic');
 
         const lookupSupport = createAgentLookupSupport({
@@ -1001,5 +1001,4 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       assert.match(chemicalSqliteSyncSource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
       assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.json'), false);
     });
-  }
 };

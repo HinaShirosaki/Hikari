@@ -1,7 +1,16 @@
 module.exports = function registerAppAgentChatCoreSuiteRequestFailureHandling(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('agent-chat replaces the live placeholder with a persisted error response on failure', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -111,5 +120,4 @@ test('agent-chat replaces the live placeholder with a persisted error response o
   // a status the user never sees.
   assert.equal(status.hidden, false, 'a status message must make the pill visible');
 });
-  }
 };

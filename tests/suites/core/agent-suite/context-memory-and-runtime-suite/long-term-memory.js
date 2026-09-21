@@ -1,7 +1,7 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteLongTermMemory(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fsPromises, path, test, agentMemory } = scope;
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
       const runtime = agentMemory.createAgentMemoryRuntime({
         now: (() => {
@@ -116,5 +116,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteLongTermMemor
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-  }
 };

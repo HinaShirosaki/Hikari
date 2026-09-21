@@ -1,7 +1,6 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiteratureSearchRuntime(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, agentLiteratureSearch, agentPaperContextLoader } = scope;
     test('literature search runtime aggregates scholarly sources and builds query from parser payload', async () => {
       const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
         fetch: async (url) => {
@@ -633,5 +632,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiterature
       assert.equal(fallbackPaper.sections[0].label, 'Summary');
       assert.match(String(fallbackPaper.sections[0]?.text || ''), /Search result summary/i);
     });
-  }
 };

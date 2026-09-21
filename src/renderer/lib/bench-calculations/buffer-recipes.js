@@ -1,7 +1,7 @@
 import { formatSigFig, toNumber } from '../numbers.js';
 import { volumeToL } from '../molarity.js';
-import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, formatBufferVolumeDual, formatBufferVolumeMl, parseBufferConcentration } from './buffer-concentration.js';
-import { BUFFER_MASS_FACTORS_G, BUFFER_PH_ADJUSTMENT_MOLARITY } from './constants.js';
+import { resolveBufferCompound, bufferConcentrationBaseValue, bufferConcentrationDefaultsFrom, bufferConcentrationsCompatible, bufferDefaultsForForm, formatBufferVolumeDual, parseBufferConcentration } from './buffer-concentration.js';
+import { BUFFER_MASS_FACTORS_G } from './constants.js';
 import { buildResult, collectMissing, describeRawValue, formatAdaptiveMass, withLabel } from './result-format.js';
 import { cleanName, isPositive, normalizeBufferUnitText, parseBufferNumericPrefix } from './units.js';
 
@@ -204,22 +204,16 @@ function calculateBufferRecipe({
     const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
     return sum + (Number(rowDetail?.addVolumeMl) || 0);
   }, 0);
-  const phAdjustment = estimateBufferPhAdjustment({ details, pH });
   const solventMl = isPositive(targetVolumeMl)
-    ? Math.max(0, targetVolumeMl - additiveVolumeMl - phAdjustment.naohMl - phAdjustment.hclMl)
+    ? Math.max(0, targetVolumeMl - additiveVolumeMl)
     : 0;
   const solventLabel = cleanName(solventName, 'Solvent');
   const solventText = isPositive(targetVolumeMl)
     ? `${solventLabel} to add: ${formatBufferVolumeDual(solventMl)}.`
     : '';
-  const naohText = phAdjustment.naohText ? `6 M NaOH: ${phAdjustment.naohText}.` : '';
-  const hclText = phAdjustment.hclText ? `6 M HCl: ${phAdjustment.hclText}.` : '';
   const resultLines = details.map((detail) => detail.resultText).filter(Boolean);
   const formulaLines = details.map((detail) => detail.formulaText).filter(Boolean);
   const missing = details.flatMap((detail) => detail.missing || []);
-  if (phAdjustment.missing) {
-    missing.push(phAdjustment.missing);
-  }
   const result = buildResult({
     type: 'buffer',
     mode: 'recipe',
@@ -232,11 +226,10 @@ function calculateBufferRecipe({
       solventName: solventLabel,
       rows: activeRows
     },
-    resultText: [...resultLines, solventText, naohText, hclText].filter(Boolean).join('\n'),
+    resultText: [...resultLines, solventText].filter(Boolean).join('\n'),
     formulaText: [
       ...formulaLines,
-      isPositive(targetVolumeMl) ? `${solventLabel} = final volume - stock/liquid additions - pH adjustment` : '',
-      phAdjustment.formulaText
+      isPositive(targetVolumeMl) ? `${solventLabel} = final volume - stock/liquid additions` : ''
     ].filter(Boolean).join('\n'),
     details,
     missing,
@@ -247,66 +240,7 @@ function calculateBufferRecipe({
     volumeMl: solventMl,
     text: isPositive(targetVolumeMl) ? formatBufferVolumeDual(solventMl) : ''
   };
-  result.phAdjustment = phAdjustment;
   return result;
-}
-
-function estimateBufferPhAdjustment({ details = [], pH } = {}) {
-  const targetPh = toNumber(pH);
-  if (!isPositive(targetPh)) {
-    return {
-      naohMl: 0,
-      hclMl: 0,
-      naohText: '',
-      hclText: '',
-      formulaText: ''
-    };
-  }
-
-  // Henderson-Hasselbalch per buffering ingredient: the bottle sits fully on
-  // one side of its pKa (startForm), and strong acid/base moves that whole
-  // amount to the base fraction the target pH demands. Moles come from the
-  // weighed mass, so an ingredient pipetted from an already-pH'd stock adds 0.
-  // ponytail: single pKa, no activity/temperature correction -- a starting
-  // point for the pH meter, not a substitute for it.
-  const buffers = (Array.isArray(details) ? details : []).map((detail) => {
-    const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-    const compound = resolveBufferCompound(rowDetail?.name);
-    const mw = toNumber(detail.inputs?.molecularWeight || compound?.mw);
-    if (!isPositive(Number(compound?.pKa)) || !compound.startForm) {
-      return null;
-    }
-    const targetBaseFraction = 1 / (1 + (10 ** (compound.pKa - targetPh)));
-    const startBaseFraction = compound.startForm === 'base' ? 1 : 0;
-    const moles = isPositive(rowDetail?.massG) && isPositive(mw) ? rowDetail.massG / mw : 0;
-    return {
-      label: `${compound.name} pKa ${compound.pKa}`,
-      deltaMoles: (targetBaseFraction - startBaseFraction) * moles
-    };
-  }).filter(Boolean);
-
-  if (!buffers.length) {
-    return {
-      naohMl: 0,
-      hclMl: 0,
-      naohText: 'estimate needs a buffer with known pKa',
-      hclText: 'estimate needs a buffer with known pKa',
-      formulaText: 'pH adjustment estimate needs a recognized buffering ingredient and target pH',
-      missing: 'buffer pKa'
-    };
-  }
-
-  const deltaMoles = buffers.reduce((sum, buffer) => sum + buffer.deltaMoles, 0);
-  const adjustmentMl = Math.abs(deltaMoles / BUFFER_PH_ADJUSTMENT_MOLARITY) * 1000;
-  const labels = [...new Set(buffers.map((buffer) => buffer.label))].join(', ');
-  const label = `${formatBufferVolumeMl(adjustmentMl)} estimated from ${labels}`;
-  return {
-    naohMl: deltaMoles > 0 ? adjustmentMl : 0,
-    hclMl: deltaMoles < 0 ? adjustmentMl : 0,
-    naohText: deltaMoles > 0 ? label : '0 uL',
-    hclText: deltaMoles < 0 ? label : '0 uL',
-    formulaText: `pH adjustment estimate uses ${labels} and 6 M acid/base`
-  };
 }
 
 export {

@@ -1,7 +1,16 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkdownExtraction(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fsPromises,
+    path,
+    test,
+    agentSubAgent,
+    agentLiteratureSearchWorkflow,
+    agentPaperDownload,
+    agentPaperKnowledgeDatabase
+  } = scope;
     test('pdf text extraction prefers the embedded PDF title metadata used for Markdown naming', () => {
       const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
       const metadata = new Map([
@@ -1106,5 +1115,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-  }
 };

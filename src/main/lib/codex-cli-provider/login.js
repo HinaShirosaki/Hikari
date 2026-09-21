@@ -15,6 +15,7 @@ const {
   launchCodexCliLogin
 } = require('./login-launch');
 const {
+  getCodexCliAvailability,
   getCodexCliAuthFilePath,
   getCodexCliCandidateHomeDirectories,
   resolveCodexCliRuntimeHomeDirectory
@@ -61,7 +62,13 @@ async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
   };
 }
 
-async function getCodexLoginStatus({ forceRefresh = false } = {}) {
+async function getCodexLoginStatus(options = {}) {
+  const status = await readCodexLoginStatus(options);
+  // Do not cache discovery: an install or removal must be reflected immediately.
+  return { ...status, ...getCodexCliAvailability() };
+}
+
+async function readCodexLoginStatus({ forceRefresh = false } = {}) {
   const now = Date.now();
   const cached = getLoginStatusCache();
   if (!forceRefresh && cached && now - cached.cachedAt < LOGIN_STATUS_CACHE_TTL_MS) {

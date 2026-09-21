@@ -12,6 +12,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  runtime-startup:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: node test.js '^core/codex-cli-provider-suite/(cli-discovery|mcp-startup)'
+      - run: node tests/hikari-mcp-launch-selfcheck.js
+      - name: Embedded Electron MCP startup
+        if: runner.os != 'Linux'
+        run: node -e "require('node:child_process').execFileSync(process.execPath, ['tests/hikari-mcp-launch-selfcheck.js', '.', require('electron'), process.cwd()], {stdio:'inherit'})"
+      - name: Embedded Electron MCP startup (Linux display)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a node -e "require('node:child_process').execFileSync(process.execPath, ['tests/hikari-mcp-launch-selfcheck.js', '.', require('electron'), process.cwd()], {stdio:'inherit'})"
+
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20

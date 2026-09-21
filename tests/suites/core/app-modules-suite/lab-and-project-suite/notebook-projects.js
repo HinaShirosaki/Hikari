@@ -1,7 +1,17 @@
 module.exports = function registerAppLabAndProjectSuiteNotebookProjects(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('biology-notebook project context menu creates a project', async () => {
   const document = createMockDocument([
     'biology-notebook-rail',
@@ -640,5 +650,4 @@ test('biology-notebook project folder click renders the project dashboard in pla
     1
   );
 });
-  }
 };

@@ -3,7 +3,8 @@
         <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="workflow-editor-sidebar-pinned left-rail-template__pinned">
             <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-              <button type="button" id="workflow-entry-template-btn" class="ghost-btn workflow-entry-template-icon-btn" aria-label="Template editor" title="Template editor">
+              <h3 class="workflow-navigation-title">Workflow Templates</h3>
+              <button type="button" id="workflow-entry-template-btn" class="ghost-btn workflow-entry-template-icon-btn" aria-label="Template editor" data-hover-caption="Template editor">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M6 3.75h8l4 4v12.5H6Z"></path>
                   <path d="M14 3.75v4h4"></path>
@@ -11,7 +12,7 @@
                 </svg>
                 <span class="sr-only">Template editor</span>
               </button>
-              <button type="button" id="workflow-entry-back-btn" class="workflow-entry-back-icon-btn" aria-label="Back to Home" title="Back to Home" hidden>
+              <button type="button" id="workflow-entry-back-btn" class="workflow-entry-back-icon-btn" aria-label="Back to Home" data-hover-caption="Back to Home" hidden>
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M19 12H5M11 6l-6 6 6 6"></path>
                 </svg>
@@ -19,14 +20,14 @@
               </button>
               <span class="workflow-editor-title">Template</span>
               <div class="form-actions workflow-template-actions">
-                <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" title="Save Current Graph">
+                <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" data-hover-caption="Save current graph">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M5 4h12l2 2v14H5Z"></path>
                     <path d="M8 4v6h8V4M8 16h8"></path>
                   </svg>
                   <span class="sr-only">Save Current Graph</span>
                 </button>
-                <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" title="Cancel">
+                <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" data-hover-caption="Cancel">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M6 6l12 12M18 6 6 18"></path>
                   </svg>
@@ -34,15 +35,16 @@
                 </button>
               </div>
             </div>
+            <div class="workflow-list-panel workflow-navigation-search" hidden>
+              <label>
+                <span class="sr-only">Search workflow templates</span>
+                <input id="workflow-search" type="search" placeholder="Search templates..." aria-controls="workflow-list" />
+              </label>
+            </div>
           </div>
 
           <div class="workflow-editor-sidebar-scroll left-rail-template__scroll">
           <div class="workflow-list-panel app-left-rail-section" hidden>
-            <h3>Workflow Templates</h3>
-            <label>
-              Search
-              <input id="workflow-search" type="search" placeholder="Search templates..." />
-            </label>
             <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
@@ -134,13 +136,13 @@
                 <h3 id="workflow-execution-title">Select a workflow template</h3>
               </div>
               <div class="workflow-execution-actions">
-                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="Add workflow" title="Add workflow">
+                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="Add workflow" data-hover-caption="Add workflow">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M12 5v14M5 12h14"></path>
                   </svg>
                   <span class="sr-only">Add workflow</span>
                 </button>
-                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete workflow" title="Delete workflow">
+                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete workflow" data-hover-caption="Delete workflow">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 7h15M9 3.5h6l1 3.5H8zM7 7l.75 13.5h8.5L17 7M10 10.5v6M14 10.5v6"></path>
                   </svg>

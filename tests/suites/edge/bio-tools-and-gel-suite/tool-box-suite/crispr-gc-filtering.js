@@ -1,7 +1,6 @@
 module.exports = function registerEdgeToolBoxSuiteCrisprGcFiltering(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, toolBox } = scope;
 test('[EDGE] tool-box designCrisprGuides respects GC filtering', () => {
   const selectedTargets = [{
     id: 'target-1',
@@ -21,5 +20,4 @@ test('[EDGE] tool-box designCrisprGuides respects GC filtering', () => {
   assert.equal(result.filteredCandidateCount, 0);
   assert.equal(result.candidates.length, 0);
 });
-  }
 };

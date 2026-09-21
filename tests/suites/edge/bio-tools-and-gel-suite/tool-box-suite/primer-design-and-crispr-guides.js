@@ -1,7 +1,17 @@
 module.exports = function registerEdgeToolBoxSuitePrimerDesignAndCrisprGuides(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    test,
+    toolBox,
+    sequenceViewerInternals,
+    assertClose
+  } = scope;
 function deterministicDna(length, seed) {
   let state = seed >>> 0;
   let result = '';
@@ -231,25 +241,15 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(stockBufferResult.resultText, /BSA: 100 mg/i);
   assert.match(stockBufferResult.resultText, /Solvent to add: 999\.5 mL/i);
 
-  // Tris base is titrated from the free base, not from the pKa midpoint:
-  // 50 mM x 1 L x (1 - 0.4655) = 26.7 mmol HCl -> 4.45 mL of 6 M.
+  // No acid/base estimate: the pH meter decides, not the calculator.
   const trisBufferResult = toolBox.calculateBufferRecipe({
     volumeMl: 1000,
     pH: 8,
-    rows: [
-      { name: 'Tris Base', finalConcentration: '50 mM' },
-      { name: 'NaCl', finalConcentration: '150 mM' }
-    ]
+    rows: [{ name: 'Tris Base', finalConcentration: '50 mM' }]
   });
-  assert.match(trisBufferResult.phAdjustment.hclText, /^4\.45\d mL estimated from Tris Base pKa 8\.06$/);
-  assert.equal(trisBufferResult.phAdjustment.naohText, '0 uL');
-  const trisStockResult = toolBox.calculateBufferRecipe({
-    volumeMl: 1000,
-    pH: 8,
-    rows: [{ name: 'tris-hcl', stockConcentration: '1 M', finalConcentration: '50 mM' }]
-  });
-  assert.equal(trisStockResult.phAdjustment.hclText, '0 uL');
-  assert.equal(trisStockResult.phAdjustment.naohText, '0 uL');
+  assert.equal(trisBufferResult.phAdjustment, undefined);
+  assert.doesNotMatch(trisBufferResult.resultText, /NaOH|HCl/);
+  assert.match(trisBufferResult.resultText, /Solvent to add: 1000 mL/);
 
   assert.equal(toolBox.parseBufferConcentration('2000x').kind, 'fold');
   assert.equal(toolBox.parseBufferConcentration('100 ng/uL').kind, 'massVolume');
@@ -296,7 +296,7 @@ test('[EDGE] bench tool calculations return instant results and substituted form
 test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () => {
   const ids = [
     'buffer-volume-ml', 'buffer-volume-unit', 'buffer-ph', 'buffer-rows', 'add-buffer-chemical-btn', 'buffer-total-result',
-    'buffer-solvent-output', 'buffer-naoh-output', 'buffer-hcl-output',
+    'buffer-solvent-output',
     'fixed-reaction-rows', 'fixed-reaction-add-row-btn', 'fixed-reaction-fill-name',
     'fixed-reaction-total-volume', 'fixed-reaction-solvent-output'
   ];
@@ -963,5 +963,4 @@ test('[EDGE] tool-box designCrisprGuides returns ranked sgRNA candidates', () =>
   assertClose(result.candidates[0].offTargetRate, 0, 1e-9);
   assertClose(result.candidates[0].specificityScore, 100, 1e-9);
 });
-  }
 };

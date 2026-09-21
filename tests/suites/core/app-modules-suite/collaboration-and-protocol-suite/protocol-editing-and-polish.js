@@ -1,7 +1,18 @@
 module.exports = function registerAppCollaborationAndProtocolSuiteProtocolEditingAndPolish(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    btoaPolyfill,
+    test,
+    shared
+  } = scope;
 test('protocol-management keeps interactive-bar presets outside the Steps label hit area', () => {
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'protocol-management-view.html'), 'utf8');
   const presetModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'placeholder-presets.js'));
@@ -312,5 +323,4 @@ test('protocol-owned agent adapter normalizes and persists approved generated pr
   assert.equal(state.protocols[1], savedProtocol);
   assert.equal(protocolsChanged, 1);
 });
-  }
 };

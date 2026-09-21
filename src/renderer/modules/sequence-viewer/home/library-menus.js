@@ -144,8 +144,7 @@ function createLibraryMenus({
     }
     try {
       if (type === 'folder') {
-        const renamed = await onRenameLibraryFolder(id, nextName);
-        setHomeStatus(`Renamed folder to ${renamed?.name || nextName}.`);
+        await onRenameLibraryFolder(id, nextName);
       } else {
         await onRenameLibraryEntry(id, nextName);
       }
@@ -160,7 +159,6 @@ function createLibraryMenus({
     const nextName = buildDefaultLibraryFolderName();
     try {
       const folder = await onCreateLibraryFolder(nextName);
-      setHomeStatus(`Created folder: ${folder?.name || nextName}.`);
       beginLibraryRename('folder', folder?.id, libraryList);
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to create sequence folder.', true);
@@ -181,7 +179,6 @@ function createLibraryMenus({
     }
     try {
       await onDeleteLibraryFolder(folderId);
-      setHomeStatus(`Deleted folder ${folder.name}. Its sequences are now unfiled.`);
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to delete sequence folder.', true);
     }
@@ -227,14 +224,12 @@ function createLibraryMenus({
   async function moveLibraryEntry(entryId, folderId) {
     try {
       await onMoveLibraryEntry(entryId, folderId);
-      setHomeStatus('');
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to move sequence entry.', true);
     }
   }
 
   return {
-    compactElementList,
     getLibraryListElements,
     getLibrarySavedFilterButtons,
     getLibraryTemporaryFilterButtons,

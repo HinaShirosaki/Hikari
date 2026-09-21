@@ -1,7 +1,7 @@
 module.exports = function registerModuleServicesSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, loadEsmStyleModule, MockElement, test } = scope;
     function loadServicesModule() {
       return loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'services', 'index.js'));
     }
@@ -490,5 +490,4 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       });
       assert.equal(elements.get('unsaved-changes-save-btn').disabled, true);
     });
-  }
 };

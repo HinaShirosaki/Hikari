@@ -13,6 +13,11 @@ function createCodexAccountSettings({
   renderForms,
   renderReasoningEffortOptions,
   settingCodexStatus,
+  settingCodexInstall,
+  settingCodexInstallCommand,
+  settingCodexInstallHelp,
+  copyCodexInstallCommandBtn,
+  checkCodexCliBtn,
   settingCodexAuthControls,
   settingCodexDesktopMcpStatus,
   settingModel,
@@ -51,10 +56,22 @@ function createCodexAccountSettings({
     }
     settingCodexAuthControls.hidden = false;
     if (startCodexLoginBtn) {
-      startCodexLoginBtn.disabled = false;
+      startCodexLoginBtn.disabled = codexLoginConfig.cliAvailable === false;
     }
     if (clearCodexLoginBtn) {
       clearCodexLoginBtn.disabled = false;
+    }
+
+    const cliMissing = codexLoginConfig.cliAvailable === false;
+    if (settingCodexInstall) settingCodexInstall.hidden = !cliMissing;
+    if (settingCodexInstallCommand) settingCodexInstallCommand.value = codexLoginConfig.cliInstallCommand || '';
+    if (copyCodexInstallCommandBtn) copyCodexInstallCommandBtn.disabled = !codexLoginConfig.cliInstallCommand;
+    if (settingCodexInstallHelp) {
+      settingCodexInstallHelp.textContent = `Run this command in ${codexLoginConfig.cliInstallShell || 'your terminal'} to install Codex CLI. Then click Check again and sign in with OpenAI. For a custom install location, restart Hikari after updating PATH or set HIKARI_CODEX_CLI to the executable path.`;
+    }
+    if (cliMissing) {
+      settingCodexStatus.textContent = codexLoginConfig.cliMessage || 'Codex CLI was not found on this computer.';
+      return;
     }
 
     const override = String(overrideMessage || '').trim();
@@ -94,6 +111,7 @@ function createCodexAccountSettings({
       showTransientNotice('Codex login is unavailable.', { type: 'error' });
       return codexLoginConfig;
     }
+    if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
     try {
       const result = await window.hikariApi.getCodexLlmStatus();
       codexLoginConfig = normalizeCodexLoginStatus(result);
@@ -103,10 +121,14 @@ function createCodexAccountSettings({
       renderCodexStatus('Failed to load Codex login status.');
       showTransientNotice('Failed to load Codex login status.', { type: 'error' });
       return codexLoginConfig;
+    } finally {
+      if (checkCodexCliBtn) checkCodexCliBtn.disabled = false;
     }
   }
 
   async function startCodexLoginFlow() {
+    const status = await refreshCodexLoginStatus();
+    if (status.cliAvailable === false) return { ok: false };
     if (!window.hikariApi?.loginCodexLlm) {
       renderCodexStatus('Codex login is unavailable.');
       showTransientNotice('Codex login is unavailable.', { type: 'error' });
@@ -179,6 +201,15 @@ function createCodexAccountSettings({
     return true;
   }
 
+  async function onCopyCodexInstallCommand() {
+    try {
+      const copied = await copyTextToClipboard(codexLoginConfig.cliInstallCommand);
+      showTransientNotice(copied ? 'Install command copied.' : 'Could not copy the install command. Select and copy it manually.', { type: copied ? 'success' : 'error' });
+    } catch {
+      showTransientNotice('Could not copy the install command. Select and copy it manually.', { type: 'error' });
+    }
+  }
+
   async function onCopyCodexDesktopMcpPrompt() {
     if (!copyCodexDesktopMcpPromptBtn) {
       return;
@@ -240,7 +271,7 @@ function createCodexAccountSettings({
           : Promise.resolve()
       ]);
       const status = await refreshCodexLoginStatus();
-      if (status.loggedIn !== true) {
+      if (status.loggedIn !== true && status.cliAvailable !== false) {
         await startCodexLoginFlow();
       }
     } catch {
@@ -278,6 +309,7 @@ function createCodexAccountSettings({
     onClearCodexLogin,
     renderCodexDesktopMcpStatus,
     onCopyCodexDesktopMcpPrompt,
+    onCopyCodexInstallCommand,
     onSaveLlmSettings,
     onModelChanged,
     refreshCodexCatalog

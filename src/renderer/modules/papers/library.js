@@ -234,7 +234,7 @@ export function createPapersLibraryController(context) {
         : 'No folder selected';
     }
     if (!folders.length) {
-      elements.journalClubList.innerHTML = '<p class="papers-library-empty">No project or journal club folders yet.</p>';
+      elements.journalClubList.innerHTML = '';
       return;
     }
 

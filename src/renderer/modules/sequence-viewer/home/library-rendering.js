@@ -33,7 +33,7 @@ function createLibraryRendering({
       return;
     }
     if (!record?.sequence?.length) {
-      elements.previewHost.innerHTML = '<p class="small-note">Select a sequence in the library to preview.</p>';
+      elements.previewHost.innerHTML = '';
       return;
     }
     elements.previewHost.innerHTML = buildSequenceMapSvg(record, {

@@ -28,6 +28,10 @@ export function normalizeCodexLoginStatus(rawStatus) {
     source: String(source.source || '').trim().toLowerCase() || 'none',
     expired: source.expired === true,
     sourcePath: String(source.sourcePath || '').trim(),
+    cliAvailable: typeof source.cliAvailable === 'boolean' ? source.cliAvailable : null,
+    cliMessage: String(source.cliMessage || '').trim(),
+    cliInstallCommand: String(source.cliInstallCommand || '').trim(),
+    cliInstallShell: String(source.cliInstallShell || '').trim(),
     message: String(source.message || '').trim()
   };
 }

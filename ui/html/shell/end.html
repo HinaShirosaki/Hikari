@@ -155,6 +155,11 @@
           aria-describedby="sequence-viewer-new-description sequence-viewer-new-status"
         ></textarea>
       </label>
+      <fieldset class="sequence-viewer-new-field sequence-viewer-new-topology">
+        <legend>Topology</legend>
+        <label><input type="radio" name="sequence-viewer-new-topology" value="linear" checked /> Linear</label>
+        <label><input type="radio" name="sequence-viewer-new-topology" value="circular" /> Circular</label>
+      </fieldset>
       <p id="sequence-viewer-new-status" class="small-note sequence-viewer-new-status" role="status" aria-live="polite" hidden></p>
       <div class="form-actions sequence-viewer-new-actions">
         <button id="sequence-viewer-new-cancel-btn" type="button" class="ghost-btn">Cancel</button>

@@ -54,15 +54,33 @@ function platformPythonCandidates(platform = process.platform) {
   return [];
 }
 
+// Without Xcode Command Line Tools, /usr/bin/python3 is a stub that exits 1
+// and pops the "Install Command Line Developer Tools?" dialog on the user's
+// screen. Probing it would surface that dialog on every sandbox run.
+async function developerToolsMissing(platform = process.platform) {
+  if (platform !== 'darwin') {
+    return false;
+  }
+  try {
+    await execFileAsync('xcode-select', ['-p'], { timeout: 2000, maxBuffer: 1024 * 64 });
+    return false;
+  } catch {
+    return true;
+  }
+}
+
 async function resolvePythonExecutable(explicit = '', preferred = '') {
+  // ponytail: a Finder-launched app only sees /usr/bin on PATH, so bare
+  // `python3` is the stub whenever CLT is absent; add ~/.pyenv/shims etc.
+  // to platformPythonCandidates if users report a missing interpreter.
+  const bareCommands = await developerToolsMissing() ? [] : ['python3', 'python'];
   const candidates = [
     cleanText(explicit, 240),
     cleanText(preferred, 240),
     cleanText(process.env.HIKARI_AGENT_PYTHON_EXECUTABLE, 240),
     cleanText(process.env.HIKARI_AGENT_PYTHON_BIN, 240),
     ...platformPythonCandidates(),
-    'python3',
-    'python'
+    ...bareCommands
   ].filter(Boolean);
 
   for (const candidate of candidates) {
@@ -449,6 +467,7 @@ async function runPythonSandbox(input, options = {}) {
 }
 
 module.exports = {
+  developerToolsMissing,
   platformPythonCandidates,
   resolvePythonExecutable,
   runPythonSandbox

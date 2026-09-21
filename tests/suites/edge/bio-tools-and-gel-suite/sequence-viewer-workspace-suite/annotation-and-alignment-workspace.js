@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteAnnotationAndAlignmentWorkspace(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artifact without annotating the original sequence', async () => {
   const ids = [
     'sequence-viewer-recognize-backbone-btn',
@@ -535,5 +543,4 @@ ACGTACGT
   assert.equal(document.getElementById('sequence-viewer-alignment-toggle').checked, true);
   assert.equal(document.getElementById('sequence-viewer-alignment-active-note').textContent, '');
 });
-  }
 };

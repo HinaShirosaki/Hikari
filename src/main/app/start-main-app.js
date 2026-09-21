@@ -142,7 +142,12 @@ function startMainApp() {
   app.whenReady()
     .then(async () => {
       if (process.platform === 'darwin' && app.dock) {
-        app.dock.setIcon(mainServices.appIconPath);
+        // A missing icon asset is cosmetic; it must not abort startup.
+        try {
+          app.dock.setIcon(mainServices.appIconPath);
+        } catch (error) {
+          console.warn('Failed to set dock icon:', error);
+        }
       }
 
       installHtmlPreviewService({ protocol, ipcMain, getMainWindow: () => mainWindow });

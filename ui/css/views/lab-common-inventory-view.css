@@ -56,6 +56,53 @@
   gap: 6px;
 }
 
+#lab-common-inventory-view button[data-hover-caption] {
+  position: relative;
+}
+
+#lab-common-inventory-view button[data-hover-caption]::after {
+  content: attr(data-hover-caption);
+  position: absolute;
+  z-index: 3200;
+  top: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-raised, var(--theme-surface));
+  box-shadow: 0 7px 18px color-mix(in srgb, #000 18%, transparent);
+  color: var(--theme-text-strong);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+#lab-common-inventory-view button[data-hover-caption]:hover::after,
+#lab-common-inventory-view button[data-hover-caption]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 180ms;
+}
+
+#lab-common-inventory-view .chemical-quick-actions > button[data-hover-caption]:first-child::after {
+  left: 0;
+  transform: none;
+}
+
+#lab-common-inventory-view .chemical-quick-actions > button[data-hover-caption]:last-child::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
 .chemical-action-icon-btn {
   display: inline-grid;
   place-items: center;

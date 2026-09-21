@@ -456,8 +456,11 @@ function createMainCodexService({
         ...(dataFilePath ? { data_file_path: dataFilePath } : {})
       }
     });
+    if (initialization?.ok !== true) {
+      return { ok: false, error: initialization?.error || 'Hikari could not initialize its Codex MCP connection.' };
+    }
     const runtimeHome = cleanText(
-      initialization?.runtime_home || processObject.env.HIKARI_CODEX_HOME,
+      initialization.runtime_home,
       2400
     );
     const managedConfigPath = runtimeHome ? path.join(runtimeHome, CODEX_CONFIG_FILE) : '';

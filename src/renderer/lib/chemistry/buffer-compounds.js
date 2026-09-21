@@ -1,7 +1,6 @@
 // startForm: which side of the listed pKa the bottle holds -- 'acid' for the
 // protonated form (Tris-HCl, HEPES free acid, NaH2PO4), 'base' for the
-// deprotonated one (Tris base, Na2HPO4, sodium acetate). The pH estimate
-// titrates from there; entries without a pKa do not take part.
+// deprotonated one (Tris base, Na2HPO4, sodium acetate).
 export const BUFFER_COMPOUNDS = [
   { name: 'Tris Base', mw: 121.14, category: 'Good buffer', pKa: 8.06, startForm: 'base' },
   { name: 'Tris-HCl', mw: 157.6, category: 'Good buffer', pKa: 8.06, startForm: 'acid' },

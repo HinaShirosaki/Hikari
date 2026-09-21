@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerInteractionsSuiteTrackTogglesAndSelectionMenu(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer ORF clicks control the persistent translation row', () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -391,5 +399,4 @@ test('[EDGE] sequence-viewer drag selection context menu can add a feature', asy
   assert.match(featureDetail.innerHTML, /Manual_A/);
   assert.match(featureDetail.innerHTML, /promoter/);
 });
-  }
 };

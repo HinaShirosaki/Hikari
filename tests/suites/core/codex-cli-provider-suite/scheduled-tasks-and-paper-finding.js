@@ -1,7 +1,16 @@
 module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFinding(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    fsPromises,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    test,
+    shared
+  } = scope;
     const os = require('node:os');
 
     test('scheduled task service persists CRUD state and runs tasks through Codex', async () => {
@@ -1269,5 +1278,4 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       assert.equal(syncCallCount, 0);
       assert.equal(processObject.env.HIKARI_CODEX_HOME, '/tmp/hikari-codex-home');
     });
-  }
 };

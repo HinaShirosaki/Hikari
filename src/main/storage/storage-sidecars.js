@@ -57,7 +57,9 @@ function buildSamplesSidecar(snapshot, updatedAt) {
     schema_name: SAMPLE_SIDECAR_SCHEMA,
     schema_version: SIDECAR_SCHEMA_VERSION,
     updated_at: updatedAt,
-    samples: asArray(snapshot.samples)
+    samples: asArray(snapshot.samples),
+    inventory: ensureObject(snapshot.inventory),
+    inventoryFolders: ensureObject(snapshot.inventoryFolders)
   };
 }
 

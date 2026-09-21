@@ -47,6 +47,34 @@
   border-color: var(--theme-accent);
 }
 
+.sequence-viewer-new-topology {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sequence-viewer-new-topology legend {
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.sequence-viewer-new-topology label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  color: var(--theme-text);
+}
+
+.sequence-viewer-new-topology .small-note {
+  flex-basis: 100%;
+  font-weight: 400;
+}
+
 .sequence-viewer-new-status {
   margin: 0;
 }

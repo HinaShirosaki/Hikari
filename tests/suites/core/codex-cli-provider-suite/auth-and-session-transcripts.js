@@ -1,7 +1,7 @@
 module.exports = function registerCodexCliProviderSuiteAuthAndSessionTranscripts(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const os = require('node:os');
     const providerPath = path.join(__dirname, 'src', 'main', 'lib', 'codex-cli-provider.js');
     const loadProvider = () => {
@@ -457,5 +457,4 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
     });
-  }
 };

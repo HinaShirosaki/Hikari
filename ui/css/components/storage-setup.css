@@ -1,0 +1,67 @@
+.storage-setup[hidden],
+.app-shell[hidden] {
+  display: none;
+}
+
+.storage-setup {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: 4rem 2rem;
+  background: var(--theme-background);
+  color: var(--theme-text);
+}
+
+.storage-setup__content {
+  width: min(100%, 30rem);
+}
+
+.storage-setup::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3rem;
+  -webkit-app-region: drag;
+}
+
+.storage-setup__icon {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.theme-night .storage-setup__icon {
+  filter: invert(1);
+}
+
+.storage-setup h1 {
+  margin: 0 0 1rem;
+  font-size: 2rem;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.storage-setup p {
+  color: var(--theme-text-muted);
+  line-height: 1.6;
+}
+
+.storage-setup__actions {
+  margin-top: 1.75rem;
+}
+
+.storage-setup__path {
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}
+
+.storage-setup__status {
+  min-height: 1.6em;
+  font-size: 0.875rem;
+}
+
+.storage-setup__status[data-error="true"] {
+  color: var(--theme-danger);
+}

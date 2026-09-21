@@ -169,7 +169,15 @@ function resolvePaperDownloadContext(args = {}, context = {}) {
     ? context.project
     : {};
   const message = cleanTextValue(args?.message || context?.message, 12000);
-  const projectName = cleanTextValue(project?.name || project?.id, 220);
+  // A project id with no name (stale chat scope, deleted project) must not
+  // become a folder name; look it up in the snapshot, else treat as no project.
+  const projectId = cleanTextValue(project?.id, 120);
+  const projectName = cleanTextValue(project?.name, 220)
+    || cleanTextValue(
+      (Array.isArray(snapshot.projects) ? snapshot.projects : [])
+        .find((item) => projectId && cleanTextValue(item?.id, 120) === projectId)?.name,
+      220
+    );
   const hasProjectContext = Boolean(projectName);
   const collectionName = [
     args?.collection_name,

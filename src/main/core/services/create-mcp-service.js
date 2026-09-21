@@ -25,8 +25,8 @@ function createMainMcpService({
     const hostUrl = String(host?.url || mcpHost.getHostUrl?.() || '').trim();
     const token = String(host?.token || mcpHost.getToken?.() || '').trim();
     lastInitialization = {
-      ok: Boolean(hostUrl),
-      status: 'initialized',
+      ok: Boolean(hostUrl && token),
+      status: hostUrl && token ? 'initialized' : 'failed',
       host_url: hostUrl,
       has_token: Boolean(token)
     };

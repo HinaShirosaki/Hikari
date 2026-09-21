@@ -97,31 +97,6 @@ export function createWorkflowRenderer(config = {}) {
     };
   }
 
-  function getWorkflowTrackColumnCount(layout) {
-    const mainCount = Math.max(1, layout?.mainPath?.length || 0);
-    return Math.max(
-      mainCount,
-      ...((layout?.branches || []).map((branch) => (
-        (Number(branch.anchorIndex) || 0) + (branch.blockIds?.length || 0)
-      )))
-    );
-  }
-
-  function workflowTrackSegmentStyle(startIndex, widthColumns, rowOffset, trackColumnCount) {
-    const safeColumnCount = Math.max(1, Number(trackColumnCount) || 1);
-    const left = ((Number(startIndex) || 0) + 0.5) / safeColumnCount * 100;
-    const width = Math.max(0, Number(widthColumns) || 0) / safeColumnCount * 100;
-    return [
-      `--workflow-track-segment-left: ${left}%;`,
-      `--workflow-track-segment-width: ${width}%;`,
-      `--workflow-track-row-offset: ${Math.max(0, Number(rowOffset) || 0)};`
-    ].join(' ');
-  }
-
-  function workflowTrackCellStyle(columnIndex, rowIndex) {
-    return `grid-column: ${Math.max(1, Number(columnIndex) || 1)}; grid-row: ${Math.max(1, Number(rowIndex) || 1)};`;
-  }
-
   function templateSearchText(template) {
     return [
       template?.name,
@@ -251,7 +226,6 @@ export function createWorkflowRenderer(config = {}) {
   });
 
 
-
   const {
     buildTemplateWorkflowTableMarkup
   } = createWorkflowTableMarkup({
@@ -262,41 +236,10 @@ export function createWorkflowRenderer(config = {}) {
     titleForBlock: (...args) => titleForBlock(...args),
     classifyWorkflowDot: (...args) => classifyWorkflowDot(...args),
     collectProtocolPlaceholderFields: (...args) => collectProtocolPlaceholderFields(...args),
-    getWorkflowTrackColumnCount: (...args) => getWorkflowTrackColumnCount(...args),
-    workflowTrackSegmentStyle: (...args) => workflowTrackSegmentStyle(...args),
-    workflowTrackCellStyle: (...args) => workflowTrackCellStyle(...args)
+    parseTimestamp,
+    formatTimestamp
   });
 
-
-
-  function syncExecutionPopoverPosition() {
-    if (!elements.workflowExecutionBoard) {
-      return;
-    }
-
-    const scrollRegion = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
-    const popover = elements.workflowExecutionBoard.querySelector('[data-workflow-step-popover]');
-    const anchor = elements.workflowExecutionBoard.querySelector('[data-workflow-step-anchor="true"]');
-    if (!scrollRegion || !popover || !anchor) {
-      if (popover) {
-        popover.classList.remove('is-positioned');
-      }
-      return;
-    }
-
-    const scrollRect = scrollRegion.getBoundingClientRect();
-    const anchorRect = anchor.getBoundingClientRect();
-    const baseLeft = (anchorRect.left - scrollRect.left) + scrollRegion.scrollLeft + (anchorRect.width / 2);
-    const baseTop = (anchorRect.bottom - scrollRect.top) + scrollRegion.scrollTop + 8;
-    const popoverWidth = popover.offsetWidth || 300;
-    const minLeft = scrollRegion.scrollLeft + (popoverWidth / 2) + 12;
-    const maxLeft = scrollRegion.scrollLeft + scrollRegion.clientWidth - (popoverWidth / 2) - 12;
-    const clampedLeft = Math.min(Math.max(baseLeft, minLeft), Math.max(minLeft, maxLeft));
-
-    popover.style.setProperty('--workflow-step-popover-left', `${Math.round(clampedLeft)}px`);
-    popover.style.setProperty('--workflow-step-popover-top', `${Math.round(baseTop)}px`);
-    popover.classList.add('is-positioned');
-  }
 
   function renderExecutionBoard() {
     if (!elements.workflowExecutionBoard || !elements.workflowExecutionTitle) {
@@ -332,17 +275,12 @@ export function createWorkflowRenderer(config = {}) {
 
     if (!activeTemplate) {
       elements.workflowExecutionTitle.textContent = 'Select a workflow template';
-      elements.workflowExecutionBoard.innerHTML = '<p class="small-note">No workflow template selected.</p>';
+      elements.workflowExecutionBoard.innerHTML = '';
       return;
     }
 
     elements.workflowExecutionTitle.textContent = activeTemplate.name || 'Untitled template';
     elements.workflowExecutionBoard.innerHTML = buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow);
-    const executionScroll = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
-    if (executionScroll && elements.workflowExecutionBoard.querySelector('[data-workflow-step-popover]')) {
-      executionScroll.addEventListener('scroll', syncExecutionPopoverPosition, { passive: true });
-      window.requestAnimationFrame(syncExecutionPopoverPosition);
-    }
   }
 
   function updateSubmitButtonLabel() {
@@ -462,7 +400,6 @@ export function createWorkflowRenderer(config = {}) {
     renderWorkflowList,
     setSelectedValues,
     setWorkflowEntryMode,
-    syncExecutionPopoverPosition,
     syncBlockComposerFields,
     titleForBlock,
     updateSubmitButtonLabel

@@ -1,7 +1,7 @@
 module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const os = require('node:os');
     const providerPath = path.join(__dirname, 'src', 'main', 'lib', 'codex-cli-provider.js');
     const loadProvider = () => {
@@ -32,11 +32,6 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         }
       ]
     };
-
-    function buildJwt(payload = {}) {
-      const encode = (value) => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-      return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(payload)}.signature`;
-    }
 
     function withCodexHome({
       modelsCache = defaultModelsCache,
@@ -81,32 +76,6 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
       }
     }
 
-    function createFakeCodexBinary(workspaceDir) {
-      const fakePath = path.join(workspaceDir, 'fake-codex.js');
-      const capturePath = path.join(workspaceDir, 'fake-codex-call.json');
-      fs.writeFileSync(fakePath, [
-        '#!/usr/bin/env node',
-        "const fs = require('node:fs');",
-        'const args = process.argv.slice(2);',
-        'let stdin = "";',
-        "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
-        "process.stdin.on('end', () => {",
-        "  const outputIndex = args.indexOf('--output-last-message');",
-        "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
-        "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
-        "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
-        "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
-        "  if (exitCode) { process.exit(exitCode); }",
-        "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
-        '});'
-      ].join('\n'), 'utf8');
-      fs.chmodSync(fakePath, 0o755);
-      return {
-        fakePath,
-        capturePath
-      };
-    }
     test('codex cli provider stores and clears the configured model', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
@@ -178,6 +147,26 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
 
         assert.equal(args[args.indexOf('-m') + 1], 'gpt-5.1-codex-mini');
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=medium');
+      });
+    });
+    test('codex cli provider omits -m on a fresh machine with no models cache unless the user chose a model', () => {
+      withCodexHome({ modelsCache: { models: [] }, configToml: '' }, () => {
+        const provider = loadProvider();
+        provider.setCodexCliModel('');
+        // The agent layer passes the app's static default; it may be retired upstream.
+        const args = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          model: 'gpt-5.4'
+        });
+        assert.equal(args.includes('-m'), false);
+
+        provider.setCodexCliModel('gpt-5.5');
+        const chosen = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          model: 'gpt-5.4'
+        });
+        assert.equal(chosen[chosen.indexOf('-m') + 1], 'gpt-5.5');
+        provider.setCodexCliModel('');
       });
     });
     test('codex cli provider can enable web search as a global codex flag before exec', () => {
@@ -542,19 +531,33 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         const firstContent = fs.readFileSync(agentsPath, 'utf8');
         assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
         assert.match(firstContent, /HIKARI_CODEX_AGENT_INSTRUCTIONS_START/);
-        assert.match(firstContent, /literature_search/);
-        assert.match(firstContent, /paper_download/);
-        assert.match(firstContent, /Interactive paper-search download policy/);
-        assert.match(firstContent, /research sub-agent may freely use `paper_download`/);
-        assert.match(firstContent, /main agent must not download the same papers again/);
-        assert.match(firstContent, /pass its title as `paper_title`/);
-        assert.match(firstContent, /original `literature_search\.query` as `collection_name`/);
-        assert.doesNotMatch(firstContent, /use its title as `linked_name`/);
-        assert.match(firstContent, /deny_paper_download: true/);
-        assert.match(firstContent, /load bounded paper context blocks/);
-        assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
-        assert.match(firstContent, /Do not use local lookup tools for active Assay plate\/result rows/);
+        assert.match(firstContent, /`hikari` MCP server's instructions are the app tool contract/);
+        assert.match(firstContent, /KnowledgeBase\/papers\.md/);
+        assert.doesNotMatch(firstContent, /Interactive paper-search download policy/);
         assert.doesNotMatch(firstContent, /mcp__[a-z0-9-]+__/i);
+
+        const { buildHikariAgentMcpInstructions } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'agent',
+          'mcp-contract',
+          'instructions.js'
+        ));
+        const mcpInstructions = buildHikariAgentMcpInstructions();
+        assert.match(mcpInstructions, /literature_search/);
+        assert.match(mcpInstructions, /paper_download/);
+        assert.match(mcpInstructions, /Interactive paper-search download policy/);
+        assert.match(mcpInstructions, /research sub-agent may freely use `paper_download`/);
+        assert.match(mcpInstructions, /main agent must not download the same papers again/);
+        assert.match(mcpInstructions, /pass its title as `paper_title`/);
+        assert.match(mcpInstructions, /original `literature_search\.query` as `collection_name`/);
+        assert.doesNotMatch(mcpInstructions, /use its title as `linked_name`/);
+        assert.match(mcpInstructions, /deny_paper_download: true/);
+        assert.match(mcpInstructions, /load bounded paper context blocks/);
+        assert.match(mcpInstructions, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
+        assert.match(mcpInstructions, /Do not use local lookup tools for active Assay plate\/result rows/);
+        assert.doesNotMatch(mcpInstructions, /mcp__[a-z0-9-]+__/i);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);
@@ -586,5 +589,4 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         }
       });
     });
-  }
 };

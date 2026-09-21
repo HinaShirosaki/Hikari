@@ -1,7 +1,14 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperDownloadAndKnowledgeDatabase(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fsPromises,
+    path,
+    test,
+    agentPaperDownload,
+    agentPaperKnowledgeDatabase
+  } = scope;
     test('paper download runtime extracts PDF candidates and streams direct download progress into paper storage', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-direct-'));
       const progressEvents = [];
@@ -924,5 +931,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperDownl
         await fsPromises.rm(outputDir, { recursive: true, force: true });
       }
     });
-  }
 };

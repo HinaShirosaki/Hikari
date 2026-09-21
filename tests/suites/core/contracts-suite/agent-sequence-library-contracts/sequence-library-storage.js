@@ -2,7 +2,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fsPromises, path, test, sequenceLibrary } = scope;
     test('sequence library helper creates storage folder, sqlite db, and status-filtered entries', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-'));
       try {
@@ -640,5 +640,4 @@ ORIGIN
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-  }
 };

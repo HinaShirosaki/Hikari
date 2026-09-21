@@ -1,7 +1,16 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteProteinBuilderBlocks(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer library search filters the library list by name', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -534,5 +543,4 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-protein-sequence-highlight"[^>]*role="button"[^>]*tabindex="0"/);
 });
-  }
 };

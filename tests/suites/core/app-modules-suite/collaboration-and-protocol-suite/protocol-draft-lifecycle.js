@@ -1,7 +1,18 @@
 module.exports = function registerAppCollaborationAndProtocolSuiteProtocolDraftLifecycle(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    btoaPolyfill,
+    test,
+    shared
+  } = scope;
 test('protocol-management supports draft creation and delete cascades without dead share actions', () => {
   const document = createMockDocument([
     'protocol-list-panel',
@@ -287,5 +298,4 @@ test('protocol-management opens JSON import in an overlay on create and hides th
   assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-btn').hidden, true);
 });
-  }
 };

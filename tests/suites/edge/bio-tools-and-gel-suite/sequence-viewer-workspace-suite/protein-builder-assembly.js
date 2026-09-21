@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteProteinBuilderAssembly(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from a stored backbone', async () => {
   const storedBackboneSequence = 'GCTAAAGACAATTACATAACATACACGTCAGCACGAAACTTGTTGGCCCAGTGTGAATCGCTTAAGGG'
     + 'TTAAGTAAGTGTGATGCATACGCCTTTACTTGCTGTGTCCACCCCATCGGACTGGCATTTTTATTACA'
@@ -347,5 +355,4 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
   assert.match(appState.notebookEntries[0].result, /Shares introduction of the 42 nt added flank/i);
   assert.doesNotMatch(appState.notebookEntries[0].result, /must be ordered as synthetic DNA/i);
 });
-  }
 };

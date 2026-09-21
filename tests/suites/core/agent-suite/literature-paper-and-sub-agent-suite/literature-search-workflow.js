@@ -1,7 +1,15 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiteratureSearchWorkflow(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fsPromises,
+    path,
+    test,
+    agentSubAgent,
+    agentLiteratureSearchWorkflow,
+    agentPaperDownload
+  } = scope;
     test('literature search workflow delegates to a sub-agent, batches paper reads, and leaves downloads for user action', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-'));
       const searchCalls = [];
@@ -471,6 +479,16 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiterature
 
       assert.equal(folder, path.join('/tmp/hikari-storage', 'Papers', 'Atlas'));
     });
+    test('paper download context resolves an id-only project by snapshot lookup and drops a stale id', () => {
+      const { resolvePaperDownloadContext } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'tool-executors', 'shared.js'));
+      const snapshot = { settings: { storagePath: '/tmp/hikari-storage' }, projects: [{ id: 'project-atlas', name: 'Atlas' }] };
+
+      const found = resolvePaperDownloadContext({ collection_name: 'MAPK' }, { project: { id: 'project-atlas', name: '' }, snapshot });
+      assert.deepEqual([found.linked_type, found.linked_name], ['project', 'Atlas']);
+
+      const stale = resolvePaperDownloadContext({ collection_name: 'MAPK' }, { project: { id: 'project-gone', name: '' }, snapshot });
+      assert.deepEqual([stale.linked_type, stale.linked_name], ['literature-search', 'MAPK']);
+    });
     test('literature search workflow routes project downloads into the project folder and keeps collection names raw', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-routing-'));
       const downloadCalls = [];
@@ -534,5 +552,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuiteLiterature
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-  }
 };

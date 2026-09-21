@@ -2,7 +2,7 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, path, test, agentProtocolGeneration } = scope;
     test('protocol generation runtime normalizes import-ready protocol JSON without an llm call', async () => {
       let createIdCounter = 0;
       const requestOptions = [];
@@ -152,5 +152,4 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.equal(controllerPayload.allowWriteTools, true);
       assert.equal(controllerPayload.attachments[0].name, 'methods.pdf');
     });
-  }
 };

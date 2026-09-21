@@ -102,9 +102,9 @@ function renderChemicalList() {
   if (!allChemicals.length) {
     ctx.selectedChemicalId = '';
     if (chemicalResultsSummary) {
-      chemicalResultsSummary.textContent = 'No chemicals recorded yet.';
+      chemicalResultsSummary.textContent = '';
     }
-    chemicalList.innerHTML = '<p class="small-note">No chemicals recorded.</p>';
+    chemicalList.innerHTML = '';
     renderChemicalDetail();
     return;
   }

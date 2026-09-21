@@ -1,7 +1,7 @@
 {
   "name": "@hinashirosaki/hikari",
   "productName": "Hikari",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Electron shell for Hikari sub-app launcher",
   "license": "Apache-2.0",
   "repository": {
@@ -31,8 +31,7 @@
     "check:css-colors": "node scripts/check-css-colors.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
     "check:source-layout": "node scripts/check-source-layout.mjs",
-    "lint": "eslint src scripts eslint.config.mjs",
-    "lint:tests": "eslint tests test.js",
+    "lint": "eslint src scripts tests test.js eslint.config.mjs",
     "check:selfchecks": "node test.js '^selfcheck'",
     "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
@@ -42,9 +41,9 @@
     "test:edge": "node test.js '^edge/'",
     "test:only": "node test.js",
     "test": "npm run build:ui && node test.js",
-    "dist": "npm run build:ui && electron-forge make",
+    "dist": "npm run build:ui && node bin/dist.js",
     "package:app": "npm run build:ui && electron-forge package",
-    "make": "npm run build:ui && electron-forge make"
+    "make": "npm run dist"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
@@ -62,5 +61,9 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "electron-squirrel-startup": "^1.0.1",
     "zod": "^3.25.0"
+  },
+  "allowScripts": {
+    "electron": true,
+    "electron-winstaller": true
   }
 }

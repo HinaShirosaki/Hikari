@@ -1,7 +1,18 @@
 module.exports = function registerAppCollaborationAndProtocolSuiteProtocolGenerationAndImport(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    btoaPolyfill,
+    test,
+    shared
+  } = scope;
 test('protocol-management keeps saved protocols unselected until the user opens one', () => {
   const document = createMockDocument([
     'protocol-detail-panel',
@@ -372,5 +383,4 @@ test('protocol-management import accepts external title/action schema without id
   assert.equal(imported.steps[1].placeholders[1].name, 'volume');
   assert.match(imported.troubleshooting, /Problem: Potential issue/);
 });
-  }
 };

@@ -14,6 +14,8 @@ async function hydrateSamplesRootFromStoragePath({
     return {
       exists: false,
       samples: [],
+      inventory: {},
+      inventoryFolders: {},
       warnings: []
     };
   }
@@ -24,6 +26,8 @@ async function hydrateSamplesRootFromStoragePath({
     return {
       exists: false,
       samples: [],
+      inventory: {},
+      inventoryFolders: {},
       warnings: payload.exists && payload.error ? [payload.error] : []
     };
   }
@@ -32,6 +36,8 @@ async function hydrateSamplesRootFromStoragePath({
   return {
     exists: true,
     samples: hasOwn(source, 'samples') ? asArray(source.samples) : [],
+    inventory: ensureObject(source.inventory),
+    inventoryFolders: ensureObject(source.inventoryFolders),
     warnings: []
   };
 }

@@ -1,9 +1,7 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePurchaseRecommendationExtraction(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading || {};
-  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('purchase recommendation runtime extracts JSON-LD products and ranks cheaper matches first', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const pages = {
@@ -96,7 +94,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePurchaseRecommen
             reasoning: 'Provider-layer search'
           };
         },
-        fetch: async (url) => ({
+        fetch: async () => ({
           ok: true,
           text: async () => `
             <html>
@@ -463,5 +461,4 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePurchaseRecommen
       assert.match(String(result.summary || ''), /could not retrieve vendor product pages/i);
       assert.equal(result.diagnostics.fetch_failure_count, 1);
     });
-  }
 };

@@ -225,6 +225,9 @@ function createCodexWorkspaceInitializer(deps = {}) {
       : {};
     const hostUrl = cleanText(host?.url || mcpHost?.getHostUrl?.(), 2400);
     const token = cleanText(host?.token || mcpHost?.getToken?.(), 4000);
+    if (!hostUrl || !token) {
+      throw new Error('Hikari MCP host is unavailable. Restart Hikari and try again.');
+    }
     const snapshot = await loadSnapshot({
       ...input,
       snapshot: snapshotSeed
@@ -256,7 +259,8 @@ function createCodexWorkspaceInitializer(deps = {}) {
       storagePath,
       mcpHostUrl: hostUrl,
       mcpToken: token
-    }).catch(() => '');
+    });
+    if (!runtimeHome) throw new Error('Hikari could not create its Codex MCP configuration.');
     const workspacePaths = collectCodexWorkspacePaths({
       cwd,
       snapshot,
@@ -271,7 +275,7 @@ function createCodexWorkspaceInitializer(deps = {}) {
     );
     const result = {
       ok: Boolean(runtimeHome) && skillReleases.every((release) => release.ok !== false),
-      status: 'initialized',
+      status: skillReleases.every((release) => release.ok !== false) ? 'initialized' : 'failed',
       host_url: hostUrl,
       has_token: Boolean(token),
       runtime_home: runtimeHome,
@@ -288,7 +292,10 @@ function createCodexWorkspaceInitializer(deps = {}) {
     if (activeInitialization && input.force !== true) {
       return activeInitialization;
     }
-    activeInitialization = runInitialization(input).finally(() => {
+    activeInitialization = runInitialization(input).catch((error) => {
+      lastResult = { ok: false, status: 'failed', error: String(error?.message || error) };
+      throw error;
+    }).finally(() => {
       activeInitialization = null;
     });
     return activeInitialization;

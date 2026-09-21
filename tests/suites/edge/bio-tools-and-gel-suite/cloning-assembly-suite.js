@@ -1,7 +1,7 @@
 module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, loadEsmStyleModule, flushAsync, test } = scope;
     const cloningAssemblyPath = path.join(
       __dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly'
     );
@@ -2121,5 +2121,4 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
 
       assert.equal(again.features.map((feature) => feature.name).join(','), 'M13 fwd,sel_F_v2');
     });
-  }
 };

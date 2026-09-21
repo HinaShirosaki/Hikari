@@ -1,7 +1,7 @@
 module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRouting(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'agent', 'runtime', 'agent-runtime-support.js'));
@@ -282,5 +282,4 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
       assert.match(result.error, /Codex agent only/);
       assert.equal(lifecycleStages.includes('controller_api_agent_disabled'), true);
     });
-  }
 };

@@ -13,7 +13,18 @@ module.exports = function registerAppPapersSuitePdfViewerHighlightsAndSearch(con
     'papers-view',
     fileName
   ), 'utf8')).join('\n');
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('paper storage treats literature-search collections like journal-club folders', () => {
   const storageModule = loadEsmStyleModule(path.join(
     __dirname,
@@ -838,5 +849,4 @@ test('papers module opens and closes the initially collapsed outline from the ri
   assert.equal(toggleBtn.classList.contains('is-collapsed'), true);
   assert.equal(sidebar.hidden, true);
 });
-  }
 };

@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteHomeAndDetailNavigation(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspace hidden by default', () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -53,12 +61,10 @@ test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspa
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
   const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
   const openBtn = document.getElementById('sequence-viewer-home-open-btn');
-  const homeStatus = document.getElementById('sequence-viewer-home-status');
 
   assert.equal(Boolean(homeWorkspace.hidden), false);
   assert.equal(Boolean(detailWorkspace.hidden), true);
   assert.equal(Boolean(openBtn.disabled), false);
-  assert.match(homeStatus.textContent, /New or Open|Storage Folder Path|storage path|storage/i);
   assert.equal(document.querySelector('[data-hikari-transient-toast]'), null);
 });
 test('[EDGE] sequence-viewer refreshes the library from the live storage root after a folder switch', async () => {
@@ -550,5 +556,4 @@ ORIGIN
   await flushAsync();
   assert.equal(transitions.length, 1);
 });
-  }
 };

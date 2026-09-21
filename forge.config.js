@@ -1,5 +1,7 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 
 const makers = [];
 
@@ -13,7 +15,7 @@ if (process.platform === 'darwin') {
 if (process.platform === 'win32') {
   makers.push({
     name: '@electron-forge/maker-squirrel',
-    config: { name: 'hikari' } // nupkg id; the scoped npm name has a '/'
+    config: { name: 'hikari', setupExe: 'HikariSetup.exe' } // nupkg id; the scoped npm name has a '/'
   });
 }
 
@@ -31,6 +33,16 @@ if (process.platform === 'linux') {
 }
 
 module.exports = {
+  hooks: {
+    async packageAfterExtract(_config, buildPath, _electronVersion, platform) {
+      if (platform !== 'darwin') return;
+      // Keep Electron's notices in the bundle, before packaging/signing it.
+      const resources = path.join(buildPath, 'Electron.app', 'Contents', 'Resources');
+      for (const name of ['LICENSE', 'LICENSES.chromium.html', 'version']) {
+        await fs.rename(path.join(buildPath, name), path.join(resources, name));
+      }
+    }
+  },
   // Set by bin/hikari.js so `npx @hinashirosaki/hikari` writes next to the caller, not into the npx cache.
   outDir: process.env.HIKARI_OUT_DIR,
   packagerConfig: {
@@ -39,7 +51,10 @@ module.exports = {
     // Shipped outside app.asar so Settings can open it with the system viewer.
     extraResource: ['./THIRD-PARTY-NOTICES.md'],
     asar: {
-      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
+      // node_modules is unpacked whole: the MCP stdio server runs under an external
+      // Node that cannot read app.asar, and a hand-picked package list kept missing
+      // transitive SDK deps (fast-uri, pkce-challenge, @hono/node-server, ...).
+      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules}'
     },
     prune: true,
     ignore: [

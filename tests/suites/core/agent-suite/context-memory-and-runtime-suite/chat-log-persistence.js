@@ -1,7 +1,7 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogPersistence(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fsPromises, path, test, agentChatLog } = scope;
     test('agent chat log runtime creates session files, updates index summaries, and reconstructs renderer messages', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-'));
       try {
@@ -509,5 +509,37 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogPersis
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-  }
+    test('chat log index survives concurrent session and transform writers and salvages a torn file', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'chat-log-index-race-'));
+      try {
+        const { createChatLogTransformRuntime } = require(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'chat-log-transformer.js'));
+        const chatLog = agentChatLog.createAgentChatLogRuntime();
+        const transformer = createChatLogTransformRuntime();
+        const indexPath = path.join(tempDir, 'chat_log', 'index.json');
+
+        await chatLog.createSession({ storagePath: tempDir, sessionId: 'chat-seed' });
+        await chatLog.appendUserMessage({ storagePath: tempDir, sessionId: 'chat-seed', text: 'seed message' });
+        // Interleave the two index writers the way the IPC handler + transform monitor do.
+        await Promise.all([
+          chatLog.createSession({ storagePath: tempDir, sessionId: 'chat-race' }),
+          transformer.scanStoragePath(tempDir),
+          chatLog.appendUserMessage({ storagePath: tempDir, sessionId: 'chat-race', text: 'race message' }),
+          transformer.scanStoragePath(tempDir)
+        ]);
+        const index = JSON.parse(await fsPromises.readFile(indexPath, 'utf8'));
+        assert.deepEqual(index.sessions.map((item) => item.id).sort(), ['chat-race', 'chat-seed']);
+        assert.equal(index.transforms.files['chat-seed.log'].status, 'complete');
+
+        // A file torn by the old non-atomic writes: a complete document followed by a longer one's tail.
+        const raw = await fsPromises.readFile(indexPath, 'utf8');
+        await fsPromises.writeFile(indexPath, `${raw}   "output_file": "transformed/x.json"\n  }\n}\n`, 'utf8');
+        const listed = await chatLog.listSessions({ storagePath: tempDir });
+        assert.equal(listed.ok, true);
+        assert.equal(listed.items.length, 2);
+        await chatLog.createSession({ storagePath: tempDir, sessionId: 'chat-after-salvage' });
+        assert.equal(JSON.parse(await fsPromises.readFile(indexPath, 'utf8')).sessions.length, 3);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
 };

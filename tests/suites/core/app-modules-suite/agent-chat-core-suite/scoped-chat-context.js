@@ -1,7 +1,16 @@
 module.exports = function registerAppAgentChatCoreSuiteScopedChatContext(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('agent-chat sends settings API key to main process and stores assistant response', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -1055,5 +1064,4 @@ test('unscoped session prompts do not masquerade as paper sessions', () => {
   assert.equal(agentFlags.paperSessionPrompt, undefined);
   assert.equal(agentFlags.paperSession, undefined);
 });
-  }
 };
