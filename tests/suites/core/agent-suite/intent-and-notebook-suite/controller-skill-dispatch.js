@@ -1,7 +1,7 @@
 module.exports = function registerAgentIntentAndNotebookSuiteControllerSkillDispatch(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('controller core dispatches direct skill commands before LLM setup', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let toolCallCount = 0;
@@ -114,5 +114,4 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerSkillDisp
       assert.equal(result.skill_command.tool_name, 'command-line');
       assert.match(String(result.skill_command.summary || ''), /completed successfully/i);
     });
-  }
 };

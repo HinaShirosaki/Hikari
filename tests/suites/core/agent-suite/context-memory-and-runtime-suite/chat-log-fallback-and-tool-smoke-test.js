@@ -1,7 +1,6 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogFallbackAndToolSmokeTest(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, agentChatLog, agentToolSmokeTest } = scope;
     test('agent chat log runtime builds fallback assistant message for controller errors', () => {
       const runtime = agentChatLog.createAgentChatLogRuntime();
       const assistantMessage = runtime.buildAssistantMessageFromError({
@@ -33,5 +32,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogFallba
       assert.equal(result.items.some((item) => item.tool_name === 'paper-search' && /Methods/i.test(String(item.preview || ''))), true);
       assert.match(String(result.summary || ''), /tools passed/i);
     });
-  }
 };

@@ -24,6 +24,7 @@ import {
   normalizeViewId
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
+import { createStorageSetup } from '../app/storage-setup.js';
 import { installPlugins } from '../app/plugin-loader.js';
 import { createPluginBridge } from '../app/plugin-bridge.js';
 import { createPluginServiceRegistry } from '../app/plugin-services.js';
@@ -340,6 +341,33 @@ export function startHikariCore({
   let hydrationComplete = false;
   const pendingProtocolRecordEvents = [];
 
+  function openStartupView() {
+    const viewId = navigationShell.resolveStartupViewId(state);
+    navigationShell.enableLastViewPersistence();
+    navigationShell.showView(viewId);
+  }
+
+  const storageSetup = createStorageSetup({
+    documentObject,
+    windowObject,
+    state,
+    openStorageRoot: async (storagePath) => {
+      const result = await storageImportController.runStorageRootImport(storagePath, {
+        resetWorkspace: storagePath !== state.settings?.storagePath,
+        syncSidecars: true
+      });
+      if (!result.ok) return result;
+      if (result.sidecarSync?.ok !== true) {
+        return { ok: false, error: result.sidecarSync?.error || 'Could not save this workspace. Please try again.' };
+      }
+      undoService.reset();
+      renderAll();
+      windowObject.dispatchEvent(new windowObject.CustomEvent('hikari:storage-changed'));
+      return result;
+    },
+    onComplete: openStartupView
+  });
+
   windowObject.hikariApi?.onProtocolRecordSaved?.((payload) => {
     if (hydrationComplete) {
       rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
@@ -349,7 +377,13 @@ export function startHikariCore({
   });
 
   async function initApp() {
-    await storageImportController.hydrateStateFromStorageRoot();
+    // Under Electron the preload bridge is mandatory. Without this check a build
+    // that lost its preload (packaging omission, corrupt install) boots into a
+    // shell that reports ready while every IPC call throws.
+    if (!windowObject.hikariApi && /\bElectron\//.test(windowObject.navigator?.userAgent || '')) {
+      throw new Error('hikariApi bridge is missing: the preload script did not load');
+    }
+    const hydration = await storageImportController.hydrateStateFromStorageRoot();
     hydrationComplete = true;
     while (pendingProtocolRecordEvents.length) {
       const payload = pendingProtocolRecordEvents.shift();
@@ -365,15 +399,15 @@ export function startHikariCore({
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
     renderAll();
-    navigationShell.enableLastViewPersistence();
-    // First launch (or a machine with no pointer file): land on Settings >
-    // Storage so the root gets picked before anything tries to write under it.
-    if (!String(state.settings?.storagePath || '').trim()) {
-      moduleRuntime.modules.settings?.activateSettingsPanel?.('storage');
-      navigationShell.showView(VIEWS.SETTING);
+    // Keep workspace setup outside module navigation and last-view history.
+    const storageError = state.settings?.storageImport?.error
+      || (hydration?.sidecarSync?.ok === false
+        ? hydration.sidecarSync.error || 'Could not save the workspace.' : '');
+    if (!String(state.settings?.storagePath || '').trim() || storageError) {
+      storageSetup.show(storageError);
       return;
     }
-    navigationShell.showView(navigationShell.resolveStartupViewId(state));
+    openStartupView();
   }
 
   let resolveReady;

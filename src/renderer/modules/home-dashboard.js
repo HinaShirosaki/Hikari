@@ -50,6 +50,7 @@ export function initHomeDashboard({
     summary: document.getElementById('dashboard-paper-finding-summary'),
     list: document.getElementById('dashboard-paper-finding-list'),
     openBtn: document.getElementById('dashboard-paper-finding-open-btn'),
+    runBtn: document.getElementById('dashboard-paper-finding-run-btn'),
     nextRun: document.getElementById('dashboard-paper-finding-next-run')
   };
 

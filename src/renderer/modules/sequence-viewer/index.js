@@ -73,6 +73,5 @@ function initializeSequenceViewerRuntime(ctx) {
   ctx.actions.setMode('paste');
   ctx.actions.setInputComposerVisible(true);
   ctx.actions.setStatus('');
-  ctx.controllers.home.setHomeStatus('');
   ctx.actions.render();
 }

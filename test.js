@@ -298,7 +298,7 @@ function processTest(group, name, args) {
     });
   }) });
 }
-processTest('check', 'lint', ['node_modules/eslint/bin/eslint.js', 'src', 'scripts', 'eslint.config.mjs']);
+processTest('check', 'lint', ['node_modules/eslint/bin/eslint.js', 'src', 'scripts', 'tests', 'test.js', 'eslint.config.mjs']);
 for (const name of ['css-colors', 'dom-ids', 'source-layout']) processTest('check', name, [`scripts/check-${name}.mjs`]);
 for (const file of fs.readdirSync(path.join(__dirname, 'tests')).filter((f) => /-selfcheck\.(c?js|mjs)$/.test(f)).sort()) {
   processTest('selfcheck', file.replace(/-selfcheck\.\w+$/, ''), [path.join('tests', file)]);

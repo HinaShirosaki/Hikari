@@ -127,7 +127,6 @@
               <div class="settings-section-head">
                 <h3>Diagnostics</h3>
               </div>
-              <p class="small-note">Errors and crash reports are kept on this machine only. If something goes wrong, send the newest <code>errors.log</code> from this folder.</p>
               <div class="form-actions">
                 <button type="button" id="open-logs-folder-btn" class="ghost-btn">Open Logs Folder</button>
                 <button type="button" id="open-third-party-notices-btn" class="ghost-btn">Third-Party Notices</button>
@@ -137,7 +136,6 @@
             <section class="settings-section" data-settings-panel="notebook-pdf" hidden>
               <div class="settings-section-head">
                 <h3>Notebook PDF</h3>
-                <p class="small-note">These settings apply to individual notebook pages and whole-project PDF exports.</p>
               </div>
               <form id="notebook-pdf-form" class="stack-form">
                 <label class="settings-choice-field settings-choice-field--medium">
@@ -157,7 +155,6 @@
                     <option value="top">Top edge</option>
                   </select>
                 </label>
-                <p class="small-note">Left or top reserves an extra 0.5 inch of blank space for stapling or binding.</p>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Notebook PDF Settings</button>
                 </div>
@@ -233,7 +230,16 @@
                   <select id="setting-reasoning-effort"></select>
                 </label>
                 <div id="setting-codex-auth-controls" class="stack-form">
-                  <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
+                  <p id="setting-codex-status" class="small-note" aria-live="polite">Codex login: checking...</p>
+                  <div id="setting-codex-install" class="settings-subsection" hidden>
+                    <label for="setting-codex-install-command">Install Codex CLI</label>
+                    <textarea id="setting-codex-install-command" rows="3" readonly spellcheck="false" aria-describedby="setting-codex-install-help"></textarea>
+                    <p id="setting-codex-install-help" class="small-note"></p>
+                    <div class="form-actions">
+                      <button type="button" id="copy-codex-install-command-btn" class="ghost-btn">Copy install command</button>
+                      <button type="button" id="check-codex-cli-btn" class="ghost-btn">Check again</button>
+                    </div>
+                  </div>
                   <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
                   <div class="form-actions">
                     <button type="button" id="start-codex-login-btn" class="ghost-btn">Login with OpenAI</button>
@@ -258,10 +264,8 @@
           <section class="settings-section" data-settings-panel="mcp-tools" hidden>
             <div class="settings-section-head">
               <h3>Hikari MCP Tools</h3>
-              <p class="small-note">Choose which Hikari tools are available to the agent. Disabled tools are removed from new tool lists and rejected if called directly. An official skill that requires a disabled tool is also disabled.</p>
             </div>
             <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability"></div>
-            <p class="small-note">Connected MCP clients may need a tool refresh or restart before their visible list updates. Start a new chat to avoid references retained in an existing conversation.</p>
           </section>
 
           <section class="settings-section" data-settings-panel="skills" hidden>

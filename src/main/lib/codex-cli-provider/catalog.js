@@ -178,7 +178,14 @@ function resolveCodexCliModel(model = '', catalog = null) {
   if (configuredConfig?.id) {
     return configuredConfig.id;
   }
-  return normalizeCodexCliModel(resolvedCatalog.defaultModel) || explicitModel || configuredCodexModel || 'gpt-5.4';
+  if (!Array.isArray(resolvedCatalog.models) || !resolvedCatalog.models.length) {
+    // No models_cache.json yet (fresh machine). A static name such as the app's
+    // catalog seed can already be retired for ChatGPT accounts, so pass only a
+    // model the user chose; without -m the CLI picks its own current default
+    // and writes the cache for the next call.
+    return configuredCodexModel;
+  }
+  return normalizeCodexCliModel(resolvedCatalog.defaultModel) || explicitModel || configuredCodexModel;
 }
 
 function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalog = null) {

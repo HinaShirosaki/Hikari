@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerInteractionsSuiteFeatureEditingAndPrimerDesign(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 function stripHtmlTags(html) {
   return String(html || '').replace(/<[^>]*>/g, '');
 }
@@ -406,5 +414,4 @@ test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence 
   assert.equal(statLength.textContent, '10');
   assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('AGGCGTACGT'), true);
 });
-  }
 };

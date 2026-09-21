@@ -1,7 +1,6 @@
 module.exports = function registerAgentIntentAndNotebookSuiteProtocolMatching(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, agentProtocolMatching } = scope;
     test('protocol matching runtime selects exact match deterministically', async () => {
       const runtime = agentProtocolMatching.createProtocolMatchingRuntime();
       const selection = await runtime.selectProtocol({
@@ -64,5 +63,4 @@ module.exports = function registerAgentIntentAndNotebookSuiteProtocolMatching(co
       assert.equal(result.selection_method, 'deterministic_fallback');
       assert.equal(result.selected.name, 'Protocol A');
     });
-  }
 };

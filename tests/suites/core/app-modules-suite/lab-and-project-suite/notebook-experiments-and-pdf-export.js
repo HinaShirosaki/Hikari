@@ -1,7 +1,7 @@
 module.exports = function registerAppLabAndProjectSuiteNotebookExperimentsAndPdfExport(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, loadEsmStyleModule, createMockDocument, trigger, test, shared } = scope;
 test('biology-notebook New Experiment keeps the workspace project and starts only after protocol selection', () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
@@ -248,7 +248,7 @@ test('notebook pdf export includes linked page content and omits notebook type p
           metaRows: [['Volume', '1000 mL', 'pH', '7.4', '']],
           headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume'],
           rows: [['NaCl', '58.44', '', '150 mM', '8766 mg (8.766 g)']],
-          footerRows: [['Solvent to add 1000 mL (1.000e+6 uL)', '', '6 M NaOH 0 uL', '', '6 M HCl 0 uL']]
+          footerRows: [['Solvent to add 1000 mL (1.000e+6 uL)', '', '', '', '']]
         }
       }],
       resultFiles: ['gel.png', 'assay.csv'],
@@ -591,5 +591,4 @@ test('workflow presentation labels include notebook execution state', () => {
   }, () => 'Mar 1');
   assert.equal(label, 'Biology | Planned | Viability Assay | Mar 1');
 });
-  }
 };

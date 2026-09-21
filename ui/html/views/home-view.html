@@ -104,9 +104,14 @@
               <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
               <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
             </div>
-            <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-            </button>
+            <div class="home-tile-head-actions">
+              <button type="button" id="dashboard-paper-finding-run-btn" class="home-add-btn" aria-label="Find papers now" title="Find papers now" hidden>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+              </button>
+              <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+              </button>
+            </div>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-paper-finding-list" class="dashboard-list"></div>

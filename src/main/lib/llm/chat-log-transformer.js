@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { asArray } = require('../normalize.js');
+const { withFileLock, writeFileAtomic, parseJsonSalvagingTornTail } = require('../shared-json-file.js');
 const { CHAT_LOG_FOLDER_NAME, CHAT_LOG_INDEX_FILE_NAME, DEFAULT_SCAN_INTERVAL_MS, TRANSFORMED_CHAT_LOG_FOLDER_NAME } = require('./chat-log-transform/constants.js');
 const { defaultCleanText, normalizeIndexPayload, normalizeTransformFileStatus, normalizeTransformState, sanitizeFilePart } = require('./chat-log-transform/normalizing.js');
 const { buildRequestContextMap, normalizeStoragePath, transformTraceRow } = require('./chat-log-transform/prompt-sections.js');
@@ -34,7 +35,7 @@ function createChatLogTransformRuntime(deps = {}) {
   async function readIndex(paths) {
     try {
       const raw = await runtimeFs.readFile(paths.indexPath, 'utf8');
-      return normalizeIndexPayload(JSON.parse(raw));
+      return normalizeIndexPayload(parseJsonSalvagingTornTail(raw));
     } catch (error) {
       if (error?.code === 'ENOENT') {
         return normalizeIndexPayload({});
@@ -46,6 +47,10 @@ function createChatLogTransformRuntime(deps = {}) {
   async function writeTransformStatus(storagePath, sourceFile, patch = {}) {
     const paths = resolvePaths(storagePath);
     await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
+    return withFileLock(paths.indexPath, () => writeTransformStatusLocked(paths, sourceFile, patch));
+  }
+
+  async function writeTransformStatusLocked(paths, sourceFile, patch) {
     const index = await readIndex(paths);
     const existing = normalizeTransformFileStatus(index.transforms.files[sourceFile]) || {
       source_file: sourceFile,
@@ -75,7 +80,7 @@ function createChatLogTransformRuntime(deps = {}) {
       updated_at: nextTransforms.updated_at,
       transforms: nextTransforms
     });
-    await runtimeFs.writeFile(paths.indexPath, JSON.stringify(nextIndex, null, 2), 'utf8');
+    await writeFileAtomic(runtimeFs, paths.indexPath, JSON.stringify(nextIndex, null, 2));
     return nextIndex;
   }
 

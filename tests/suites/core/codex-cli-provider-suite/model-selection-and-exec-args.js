@@ -1,7 +1,7 @@
 module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const os = require('node:os');
     const providerPath = path.join(__dirname, 'src', 'main', 'lib', 'codex-cli-provider.js');
     const loadProvider = () => {
@@ -32,11 +32,6 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         }
       ]
     };
-
-    function buildJwt(payload = {}) {
-      const encode = (value) => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
-      return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(payload)}.signature`;
-    }
 
     function withCodexHome({
       modelsCache = defaultModelsCache,
@@ -81,32 +76,6 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
       }
     }
 
-    function createFakeCodexBinary(workspaceDir) {
-      const fakePath = path.join(workspaceDir, 'fake-codex.js');
-      const capturePath = path.join(workspaceDir, 'fake-codex-call.json');
-      fs.writeFileSync(fakePath, [
-        '#!/usr/bin/env node',
-        "const fs = require('node:fs');",
-        'const args = process.argv.slice(2);',
-        'let stdin = "";',
-        "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
-        "process.stdin.on('end', () => {",
-        "  const outputIndex = args.indexOf('--output-last-message');",
-        "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
-        "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
-        "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
-        "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
-        "  if (exitCode) { process.exit(exitCode); }",
-        "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
-        '});'
-      ].join('\n'), 'utf8');
-      fs.chmodSync(fakePath, 0o755);
-      return {
-        fakePath,
-        capturePath
-      };
-    }
     test('codex cli provider stores and clears the configured model', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
@@ -620,5 +589,4 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         }
       });
     });
-  }
 };

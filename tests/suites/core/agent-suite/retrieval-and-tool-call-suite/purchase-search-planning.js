@@ -1,9 +1,8 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePurchaseSearchPlanning(context = {}) {
   const scope = context.scope || {};
   const toolLoading = scope.agentToolLoading || {};
-  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('purchase recommendation runtime retries shopping-oriented search variants when the first query is weak', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const searchQueries = [];
@@ -497,5 +496,4 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePurchaseSearchPl
         /unknown tool "made-up-tool"/i
       );
     });
-  }
 };

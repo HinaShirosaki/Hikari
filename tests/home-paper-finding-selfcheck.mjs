@@ -167,4 +167,46 @@ await new Promise((resolve) => setImmediate(resolve));
 assert.equal(pollingSummary.textContent, '1 paper found · 1 active schedule');
 assert.match(pollingList.innerHTML, /Newly found paper/);
 
+const runSummary = new Element();
+const runList = new Element();
+const runBtn = new Element();
+const ranIds = [];
+let runListCalls = 0;
+initPaperFindingWidget({
+  api: {
+    listPaperFindingTasks: async () => {
+      runListCalls += 1;
+      return {
+        ok: true,
+        tasks: [
+          { id: 'task-a', enabled: true, project: { name: 'A' }, metadata: { paper_finding: {} } },
+          { id: 'task-paused', enabled: false, project: { name: 'B' }, metadata: { paper_finding: {} } },
+          ...(ranIds.length
+            ? [{ id: 'task-c', enabled: true, project: { name: 'C' }, metadata: { paper_finding: {} }, last_run: { result: { papers: [{ title: 'Fresh paper' }] } } }]
+            : [])
+        ]
+      };
+    },
+    runPaperFindingTask: async (id) => {
+      ranIds.push(id);
+      assert.equal(runSummary.textContent, 'Finding papers…');
+      assert.equal(runBtn.disabled, true);
+      return { ok: true };
+    }
+  },
+  elements: { summary: runSummary, list: runList, runBtn }
+}).render();
+assert.equal(runBtn.hidden, true);
+await Promise.resolve();
+await Promise.resolve();
+assert.equal(runBtn.hidden, false);
+assert.equal(runBtn.disabled, false);
+runBtn.click();
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.deepEqual(ranIds, ['task-a']);
+assert.equal(runListCalls, 2);
+assert.equal(runBtn.disabled, false);
+assert.equal(runSummary.textContent, '1 paper found · 2 active schedules');
+assert.match(runList.innerHTML, /Fresh paper/);
+
 console.log('home paper-finding selfcheck OK');

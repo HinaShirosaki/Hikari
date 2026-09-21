@@ -43,7 +43,8 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
     locationCodeNextByLocation: ensureObject(sqliteData.inventoryMeta?.lab_location_code_next_by_location)
   };
 
-  if (hasSqlPersonal) {
+  const hasContainers = Object.values(ensureObject(nextSnapshot.inventory)).some((list) => asArray(list).length > 0);
+  if (!hasContainers && hasSqlPersonal) {
     nextSnapshot.inventory = inventoryPersonalMap;
   }
   if ((!Array.isArray(nextSnapshot.samples) || !nextSnapshot.samples.length) && hasSqlSamples) {
@@ -100,6 +101,14 @@ function mergeSamplesSidecarIntoSnapshot(nextSnapshot, payload) {
   let applied = false;
   if (hasOwn(payload, 'samples')) {
     nextSnapshot.samples = asArray(payload.samples);
+    applied = true;
+  }
+  if (hasOwn(payload, 'inventory')) {
+    nextSnapshot.inventory = ensureObject(payload.inventory);
+    applied = true;
+  }
+  if (hasOwn(payload, 'inventoryFolders')) {
+    nextSnapshot.inventoryFolders = ensureObject(payload.inventoryFolders);
     applied = true;
   }
   return applied;

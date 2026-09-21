@@ -31,11 +31,20 @@ function parseRawSequenceRecord(rawInput) {
   };
 }
 
+// Raw and FASTA input carry no topology; the caller (e.g. the New DNA Sequence dialog) may supply one.
+function applyTopologyOption(parsed, options) {
+  if (options?.topology) {
+    const topology = normalizeTopology(options.topology);
+    parsed.records.forEach((record) => { record.topology = topology; });
+  }
+  return parsed;
+}
+
 export function parseInputRecords(rawInput, options = {}) {
   const text = String(rawInput || '');
   const format = detectSequenceFormat(text);
   if (format === 'fasta') {
-    return parseFastaRecords(text, options);
+    return applyTopologyOption(parseFastaRecords(text, options), options);
   }
   if (format === 'fastq') {
     return parseFastqRecords(text, options);
@@ -44,7 +53,7 @@ export function parseInputRecords(rawInput, options = {}) {
     return parseGenBankRecords(text, options);
   }
   if (format === 'raw') {
-    return parseRawSequenceRecord(text);
+    return applyTopologyOption(parseRawSequenceRecord(text), options);
   }
   return {
     format: 'empty',

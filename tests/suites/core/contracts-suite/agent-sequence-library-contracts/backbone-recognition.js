@@ -2,7 +2,7 @@ module.exports = function registerAgentSequenceLibraryContractsBackboneRecogniti
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fsPromises, path, test, sequenceLibrary } = scope;
     test('sequence library helper upserts recognized backbones into the SequenceViewer JSON store', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-store-'));
       try {
@@ -150,5 +150,4 @@ ORIGIN
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-  }
 };

@@ -151,7 +151,7 @@ export function createEntryListRenderer({
       });
 
     if (!entries.length && !projects.length) {
-      listEl.innerHTML = '<p class="biology-notebook-page-list-empty">No notebook pages saved yet.</p>';
+      listEl.innerHTML = '';
       return;
     }
 

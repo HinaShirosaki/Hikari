@@ -1,7 +1,6 @@
 module.exports = function registerAgentIntentAndNotebookSuiteNotebookDraftRuntime(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, agentNotebookDraft } = scope;
     test('notebook draft runtime accepts explicit project names without a hydrated project record', async () => {
       const runtime = agentNotebookDraft.createNotebookDraftRuntime({
         requestStructuredJsonPayload: async (options = {}) => {
@@ -313,5 +312,4 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookDraftRuntim
       assert.equal(result.proposal.title, 'API Draft');
       assert.equal(result.notebook.save.status, 'awaiting_user_confirmation');
     });
-  }
 };

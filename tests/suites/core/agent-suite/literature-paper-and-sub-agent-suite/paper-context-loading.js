@@ -1,7 +1,7 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperContextLoading(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fsPromises, path, test, agentLiteratureSearch, agentPaperContextLoader } = scope;
     test('paper context loader caps reads, ranks chunks, and reviews figures only for selected papers', async () => {
       const figureReviewCalls = [];
       const runtime = agentPaperContextLoader.createPaperContextLoaderRuntime({
@@ -424,5 +424,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperConte
       assert.equal(result.papers_read_count, 0);
       assert.match(String(result.summary || ''), /Found 2 literature result/i);
     });
-  }
 };

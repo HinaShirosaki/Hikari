@@ -419,8 +419,6 @@ export function initBufferTool(options = {}) {
       setPlaceholder(amount, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
     });
     setText(getElement(rootDocument, 'buffer-solvent-output'), result?.solvent?.text || '');
-    setText(getElement(rootDocument, 'buffer-naoh-output'), result?.phAdjustment?.naohText || '');
-    setText(getElement(rootDocument, 'buffer-hcl-output'), result?.phAdjustment?.hclText || '');
   }
 
   function renderBuffer() {

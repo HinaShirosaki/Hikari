@@ -1,10 +1,6 @@
 module.exports = function registerEdgeSequenceViewerFoundationsSuiteSequenceParsingAndAlignment(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
-function stripHtmlTags(html) {
-  return String(html || '').replace(/<[^>]*>/g, '');
-}
+  const { assert, test, sequenceViewerInternals } = scope;
 test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () => {
   [
     'normalizeSequenceText',
@@ -165,6 +161,15 @@ ttggcc
   assert.equal(parsed.records[0].sequence, 'ACGTNN');
   assert.equal(parsed.records[1].name, 'beta');
   assert.equal(parsed.records[1].sequence, 'TTGGCC');
+});
+test('[EDGE] sequence-viewer parseInputRecords applies a topology option to raw and FASTA input only', () => {
+  const { parseInputRecords } = sequenceViewerInternals;
+  const genbank = 'LOCUS       demo 12 bp DNA linear SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n';
+
+  assert.equal(parseInputRecords('ACGTACGT').records[0].topology, 'linear');
+  assert.equal(parseInputRecords('ACGTACGT', { topology: 'circular' }).records[0].topology, 'circular');
+  assert.equal(parseInputRecords('>plasmid\nACGTACGT', { topology: 'circular' }).records[0].topology, 'circular');
+  assert.equal(parseInputRecords(genbank, { topology: 'circular' }).records[0].topology, 'linear');
 });
 test('[EDGE] sequence-viewer parseFastqRecords parses reads and validates quality length', () => {
   const parsed = sequenceViewerInternals.parseFastqRecords(`
@@ -577,5 +582,4 @@ ORIGIN
   assert.equal(parsed.records[0].features[0].type, 'primer_bind');
   assert.equal(parsed.records[0].features[0].strand, -1);
 });
-  }
 };

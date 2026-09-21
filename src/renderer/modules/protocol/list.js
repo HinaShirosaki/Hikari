@@ -91,7 +91,7 @@ export function createProtocolListController({
     ensureProtocolTimestamps();
 
     if (!state.protocols.length) {
-      ui.protocolList.innerHTML = '<p class="small-note">No saved protocols yet.</p>';
+      ui.protocolList.innerHTML = '';
       syncSelectionAfterMutation?.();
       return;
     }

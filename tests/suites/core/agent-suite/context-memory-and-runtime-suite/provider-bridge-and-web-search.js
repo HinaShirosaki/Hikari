@@ -1,7 +1,7 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteProviderBridgeAndWebSearch(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('python sandbox executor forwards continuation and llm context into the managed runtime', async () => {
       const { registerAgentToolExecutors } = require(path.join(
         __dirname,
@@ -412,5 +412,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteProviderBridg
       assert.equal(calls[0].message, 'Find recent protein folding benchmark results.');
       assert.equal(result.summary, 'Found 1 web result.');
     });
-  }
 };

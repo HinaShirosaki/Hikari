@@ -45,11 +45,7 @@ function createCalculationRecords({
     }).filter((row) => row.some(Boolean));
     const footerRows = [[
       ['Solvent to add', cleanCell(result.solvent?.text)].filter(Boolean).join(' '),
-      '',
-      ['6 M NaOH', cleanCell(result.phAdjustment?.naohText)].filter(Boolean).join(' '),
-      '',
-      ['6 M HCl', cleanCell(result.phAdjustment?.hclText)].filter(Boolean).join(' '),
-      ''
+      '', '', '', '', ''
     ]];
     const volumeValue = cleanCell(result.inputs?.volumeValue ?? result.inputs?.volumeMl);
     const volumeUnit = cleanCell(result.inputs?.volumeUnit) || 'mL';

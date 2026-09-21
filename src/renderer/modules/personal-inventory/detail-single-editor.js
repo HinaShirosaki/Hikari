@@ -38,7 +38,7 @@ export function createSingleContainerEditorRenderer({
             <strong>Set Samples</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="primary-btn inventory-sample-editor-icon-btn" data-single-sample-save="${safeText(activeSample.id)}" aria-label="Save Sample" title="Save Sample">
+            <button type="button" class="primary-btn inventory-sample-editor-icon-btn" data-single-sample-save="${safeText(activeSample.id)}" aria-label="Save Sample" data-hover-caption="Save sample">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M5 3h12l3 3v15H4V3Z"></path>
                 <path d="M8 3v6h8V3"></path>
@@ -46,7 +46,7 @@ export function createSingleContainerEditorRenderer({
               </svg>
               <span class="sr-only">Save Sample</span>
             </button>
-            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-unlink="${safeText(activeSample.id)}" aria-label="Delete Sample" title="Delete Sample">
+            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-unlink="${safeText(activeSample.id)}" aria-label="Delete Sample" data-hover-caption="Delete sample">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M3 6h18"></path>
                 <path d="M8 6V4h8v2"></path>
@@ -93,7 +93,7 @@ export function createSingleContainerEditorRenderer({
             <strong>Set Samples</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="primary-btn inventory-add-sample-icon-btn" data-single-sample-create="true" aria-label="Add Sample" title="Add Sample">
+            <button type="button" class="primary-btn inventory-add-sample-icon-btn" data-single-sample-create="true" aria-label="Add Sample" data-hover-caption="Add sample">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4"></path>
                 <path d="M14 14.5h6M17 11.5v6"></path>

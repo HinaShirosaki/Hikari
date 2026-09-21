@@ -2,7 +2,7 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fs, path, test, shared, forgeConfig } = scope;
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
 
     test('view constants, index sections, and app registry stay in sync', () => {
@@ -121,5 +121,4 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       }).finally(() => child.kill());
       assert.equal(reply.result?.serverInfo?.name, 'hikari-agent-mcp');
     });
-  }
 };

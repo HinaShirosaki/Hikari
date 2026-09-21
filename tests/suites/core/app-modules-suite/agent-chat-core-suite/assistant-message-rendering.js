@@ -1,7 +1,17 @@
 module.exports = function registerAppAgentChatCoreSuiteAssistantMessageRendering(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared,
+    assertClose
+  } = scope;
 test('agent-chat live progress keeps tool display JSON out of assistant text', () => {
   const liveProgressModule = loadEsmStyleModule(path.join(
     __dirname,
@@ -587,5 +597,4 @@ test('agent-chat renders completed science thinking trace details in assistant m
     true
   );
 });
-  }
 };

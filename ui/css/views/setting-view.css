@@ -59,9 +59,6 @@
   display: grid;
   gap: 14px;
   margin-top: 0;
-  padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
-  background: color-mix(in srgb, var(--theme-panel) 94%, transparent);
 }
 
 #setting-view .settings-section[hidden] {

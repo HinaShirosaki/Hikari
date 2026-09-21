@@ -1,7 +1,7 @@
 module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperAnalysisAndSubAgents(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fsPromises, path, test, agentSubAgent, agentPaperAnalysis } = scope;
     test('paper analysis runtime summarizes a paper and extracts a protocol candidate', async () => {
       const runtime = agentPaperAnalysis.createPaperAnalysisRuntime({
         requestStructuredJsonPayload: async () => ({
@@ -564,5 +564,4 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperAnaly
       assert.equal(dead.agent.liveness.state, 'dead');
       assert.equal(dead.agent.liveness.reason, 'process_exited');
     });
-  }
 };

@@ -1,7 +1,17 @@
 module.exports = function registerAppAgentChatSessionsAndToolsSuiteSessionSwitching(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('agent-chat loads saved sessions from chat logs and switches sessions from the sidebar', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -992,5 +1002,4 @@ test('agent-chat external submission removes its injected draft when session cre
   assert.equal(document.getElementById('agent-message-input').value, '');
   assert.equal(state.agentChat.messages.length, 0);
 });
-  }
 };

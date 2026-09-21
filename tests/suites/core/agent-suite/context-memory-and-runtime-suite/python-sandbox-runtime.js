@@ -1,7 +1,15 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandboxRuntime(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fsPromises,
+    path,
+    test,
+    agentToolSmokeTest,
+    agentObservability,
+    agentPython
+  } = scope;
     test('agent tool smoke-test runtime supports single-tool manual messages with inspectable raw output', async () => {
       const runtime = agentToolSmokeTest.createAgentToolSmokeTestRuntime();
       const result = await runtime.runTool({
@@ -458,5 +466,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       assert.match(String(failure.debug?.assistant_message || ''), /Suggested next step/i);
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
     });
-  }
 };

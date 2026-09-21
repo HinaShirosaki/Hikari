@@ -1,7 +1,17 @@
 module.exports = function registerAppLabAndProjectSuiteNotebookPageEditing(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('biology-notebook derives legacy Protein Builder protocols from the stored thermocycle program', () => {
   const entryHelpers = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-helpers.js')
@@ -1916,5 +1926,4 @@ test('biology-notebook toolbox starts without a sticky tool highlight and clears
   assert.equal(bufferTab.getAttribute('aria-selected'), 'false');
   assert.equal(workspace.hidden, true);
 });
-  }
 };

@@ -1,7 +1,7 @@
 module.exports = function registerAppAgentChatCoreSuiteSandboxAndPurchaseRendering(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, loadEsmStyleModule, createMockDocument, test, shared } = scope;
 test('agent-chat renders python sandbox text and image outputs inline from result analysis metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
   const document = createMockDocument(['agent-chat-history']);
@@ -136,5 +136,4 @@ test('agent-chat renders purchase recommendation tiles with unified image stage 
   assert.equal(titleIndex < priceIndex, true);
   assert.equal(priceIndex < vendorIndex, true);
 });
-  }
 };

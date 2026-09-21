@@ -202,7 +202,7 @@ async function buildCodexCommandEnv(cwd = '', options = {}) {
   };
   const runtimeHome = await ensureCodexCliRuntimeHome(cwd, {
     envOverrides: options.envOverrides
-  }).catch(() => '');
+  });
   if (runtimeHome) {
     env.CODEX_HOME = runtimeHome;
   }

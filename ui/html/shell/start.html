@@ -46,6 +46,19 @@
       <img class="app-loading-cover__icon app-loading-cover__icon--lit" src="./assets/icons/hikari.svg" alt="" />
     </div>
   </div>
+  <main id="storage-setup-page" class="storage-setup" aria-labelledby="storage-setup-title" hidden>
+    <div class="storage-setup__content">
+      <img class="storage-setup__icon" src="./assets/icons/hikari.svg" alt="Hikari" />
+      <h1 id="storage-setup-title">A home for your research</h1>
+      <p>Choose a workspace folder for your notebooks, papers, samples, and experiment files.</p>
+      <p>Start with an empty folder, or open an existing Hikari workspace. You can change this later in Settings.</p>
+      <div class="storage-setup__actions">
+        <button id="storage-setup-choose" class="primary-btn" type="button">Choose Folder</button>
+      </div>
+      <p id="storage-setup-path" class="storage-setup__path" hidden></p>
+      <p id="storage-setup-status" class="storage-setup__status" role="status" aria-live="polite"></p>
+    </div>
+  </main>
   <main class="app-shell">
     <header class="topbar">
       <div class="topbar-brand">

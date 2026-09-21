@@ -3,7 +3,18 @@
 module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    vm,
+    loadEsmStyleModule,
+    MockElement,
+    test,
+    gelAnalysisInternals,
+    gelLaneTableInternals,
+    assertClose
+  } = scope;
 test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => {
   [
     'selectViewerBaseImageData',
@@ -2715,5 +2726,4 @@ test('[EDGE] gel-analysis save keeps the imported file byte for byte next to sou
   assert.equal(resaved.originalImagePath, saved.originalImagePath);
   assert.equal(writes.has('original.tif'), false);
 });
-  }
 };

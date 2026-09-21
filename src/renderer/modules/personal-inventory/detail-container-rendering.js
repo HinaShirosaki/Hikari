@@ -103,7 +103,6 @@ export function createContainerDetailRenderer({
       : [];
     const activeSample = activeWellSamples.find((item) => item.id === uiState.editingSampleId) || activeWellSamples[0] || null;
     const isFillingWells = activeSample && uiState.cloningSampleId === activeSample.id;
-    const fillWellsLabel = isFillingWells ? 'Filling Wells' : 'Fill Wells';
     const fillWellsTitle = isFillingWells
       ? 'Click to stop filling wells with this sample.'
       : 'Fill more wells with the selected sample.';
@@ -119,23 +118,22 @@ export function createContainerDetailRenderer({
             <div class="container-detail-toolbar">
               ${activeSample
                 ? `
-                  <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" aria-label="${safeText(fillWellsTitle)}" title="${safeText(fillWellsTitle)}">
+                  <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" aria-label="${safeText(fillWellsTitle)}" aria-pressed="${isFillingWells ? 'true' : 'false'}" data-hover-caption="${safeText(fillWellsTitle)}">
                     <svg class="inventory-fill-wells-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <rect x="8" y="8" width="11" height="11" rx="2"></rect>
                       <path d="M5 16V7a2 2 0 0 1 2-2h9"></path>
                     </svg>
-                    <span>${safeText(fillWellsLabel)}</span>
                   </button>
                 `
                 : ''}
-              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Import CSV" title="Import CSV">
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Import CSV" data-hover-caption="Import CSV">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 15V3"></path>
                   <path d="m7 8 5-5 5 5"></path>
                   <path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"></path>
                 </svg>
               </button>
-              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Export CSV" title="Export CSV">
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Export CSV" data-hover-caption="Export CSV">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 3v12"></path>
                   <path d="m7 10 5 5 5-5"></path>

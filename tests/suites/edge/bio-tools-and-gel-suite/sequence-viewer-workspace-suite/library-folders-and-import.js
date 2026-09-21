@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteLibraryFoldersAndImport(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer library rows render only sequence names in the left rail', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -532,5 +540,4 @@ ORIGIN
   assert.equal(listCalls.includes('temporary'), true);
   assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /plain_gbk/i);
 });
-  }
 };

@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteProteinBuilderBackboneSelection(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 test('[EDGE] sequence-viewer protein builder only lists recognized backbone selections for plasmid assembly', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -338,5 +346,4 @@ ORIGIN
   assert.equal(sequenceLibraryListCalls.length, sequenceLibraryListCallsBeforeAssembly);
   assert.equal(sequenceLibraryGetCalls.length, sequenceLibraryGetCallsBeforeAssembly);
 });
-  }
 };

@@ -1,7 +1,16 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteVectorBuilder(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    readSource
+  } = scope;
 
 const VECTOR_BUILDER_IDS = [
   'sequence-viewer-home-workspace',
@@ -982,5 +991,4 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   assert.equal(document.getElementById('sequence-viewer-cloning-design-btn').hidden, true);
 });
 
-  }
 };

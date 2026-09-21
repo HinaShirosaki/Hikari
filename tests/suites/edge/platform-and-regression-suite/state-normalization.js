@@ -1,15 +1,6 @@
 module.exports = function registerPlatformAndRegressionSuiteStateNormalization(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
-const sourceCache = new Map();
-function readSource(relativePath) {
-  const filePath = path.join(__dirname, relativePath);
-  if (!sourceCache.has(filePath)) {
-    sourceCache.set(filePath, fs.readFileSync(filePath, 'utf8'));
-  }
-  return sourceCache.get(filePath);
-}
+  const { assert, test, shared, papersPdfViewerInternals, mainUtils } = scope;
 
 function assertClose(actual, expected, epsilon = 1e-6) {
   assert.equal(Number.isFinite(actual), true, `Expected finite number, got ${actual}`);
@@ -466,5 +457,4 @@ test('[P1] createId returns non-empty token containing "-" separator', () => {
     assert.equal(mainUtils.normalizeDataFilePath(preferred, fallback), expected);
   });
 });
-  }
 };

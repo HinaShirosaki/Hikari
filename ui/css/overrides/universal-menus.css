@@ -23,12 +23,6 @@ body.theme-night {
 }
 
 .app-more-menu,
-.selection-insight-menu,
-.papers-context-menu,
-.biology-notebook-context-menu,
-.workflow-context-menu,
-.sequence-viewer-context-menu,
-.personal-inventory-context-menu,
 .protocol-action-menu {
   padding: 8px !important;
   border: 1px solid var(--hikari-menu-border) !important;
@@ -38,20 +32,29 @@ body.theme-night {
   backdrop-filter: blur(18px) saturate(1.04);
 }
 
-.selection-insight-menu,
+/*
+ * Right-click menus are intentionally flatter than searchable/action menus.
+ * Keep this as the single visual owner so module-local menu shells do not
+ * drift back into rounded cards with stacked shadows.
+ */
+.papers-context-menu,
+.biology-notebook-context-menu,
+.biology-notebook-sample-link-menu,
 .workflow-context-menu,
-.sequence-viewer-context-menu,
-.personal-inventory-context-menu {
-  gap: 4px;
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu),
+.personal-inventory-context-menu,
+.agent-session-context-menu,
+.selection-insight-menu {
+  gap: 0;
+  padding: 4px 0 !important;
+  border: 1px solid var(--hikari-menu-border) !important;
+  border-radius: 0 !important;
+  background: var(--hikari-menu-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
 }
 
 .app-more-item,
-.selection-insight-menu-item,
-.papers-context-item,
-.biology-notebook-context-item,
-.workflow-context-item,
-.sequence-viewer-context-item,
-.personal-inventory-context-item,
 .protocol-action-item {
   min-height: 40px;
   width: 100%;
@@ -73,21 +76,37 @@ body.theme-night {
   cursor: pointer;
 }
 
+.papers-context-item,
+.biology-notebook-context-item,
+.biology-notebook-placeholder-table-action,
+.workflow-context-item,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item,
+.personal-inventory-context-item,
+.agent-session-context-item,
+.selection-insight-menu-item {
+  min-height: 36px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
 .app-more-item:hover,
 .app-more-item:focus-visible,
 .app-more-item.is-active,
-.selection-insight-menu-item:hover,
-.selection-insight-menu-item:focus-visible,
-.papers-context-item:hover,
-.papers-context-item:focus-visible,
-.biology-notebook-context-item:hover,
-.biology-notebook-context-item:focus-visible,
-.workflow-context-item:hover,
-.workflow-context-item:focus-visible,
-.sequence-viewer-context-item:hover:not(:disabled),
-.sequence-viewer-context-item:focus-visible:not(:disabled),
-.personal-inventory-context-item:hover:not(:disabled),
-.personal-inventory-context-item:focus-visible:not(:disabled),
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
   background: var(--hikari-menu-hover) !important;
@@ -95,18 +114,44 @@ body.theme-night {
   outline: none;
 }
 
+.papers-context-item:hover,
+.papers-context-item:focus-visible,
+.biology-notebook-context-item:hover,
+.biology-notebook-context-item:focus-visible,
+.biology-notebook-placeholder-table-action:hover,
+.biology-notebook-placeholder-table-action:focus-visible,
+.workflow-context-item:hover,
+.workflow-context-item:focus-visible,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:hover:not(:disabled),
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:focus-visible:not(:disabled),
+.personal-inventory-context-item:hover:not(:disabled),
+.personal-inventory-context-item:focus-visible:not(:disabled),
+.agent-session-context-item:hover,
+.agent-session-context-item:focus-visible,
+.selection-insight-menu-item:hover,
+.selection-insight-menu-item:focus-visible {
+  background: var(--hikari-menu-hover) !important;
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
 .app-more-item:active,
-.selection-insight-menu-item:active,
-.papers-context-item:active,
-.biology-notebook-context-item:active,
-.workflow-context-item:active,
-.sequence-viewer-context-item:active:not(:disabled),
-.personal-inventory-context-item:active:not(:disabled),
 .protocol-action-item:active {
   background: var(--hikari-menu-pressed) !important;
 }
 
-.sequence-viewer-context-item:disabled,
+.papers-context-item:active,
+.biology-notebook-context-item:active,
+.biology-notebook-placeholder-table-action:active,
+.workflow-context-item:active,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:active:not(:disabled),
+.personal-inventory-context-item:active:not(:disabled),
+.agent-session-context-item:active,
+.selection-insight-menu-item:active {
+  background: var(--hikari-menu-pressed) !important;
+}
+
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:disabled,
 .personal-inventory-context-item:disabled {
   cursor: not-allowed;
   opacity: 0.52;
@@ -114,6 +159,7 @@ body.theme-night {
 
 .papers-context-item-danger,
 .personal-inventory-context-item-danger,
+.agent-session-context-item-danger,
 .protocol-action-item-danger {
   color: var(--theme-danger);
 }
@@ -122,6 +168,8 @@ body.theme-night {
 .papers-context-item-danger:focus-visible,
 .personal-inventory-context-item-danger:hover:not(:disabled),
 .personal-inventory-context-item-danger:focus-visible:not(:disabled),
+.agent-session-context-item-danger:hover,
+.agent-session-context-item-danger:focus-visible,
 .protocol-action-item-danger:hover,
 .protocol-action-item-danger:focus-visible {
   color: var(--theme-danger);
@@ -135,10 +183,10 @@ body.theme-night {
   gap: 0 !important;
   padding: 0 !important;
   border: 1px solid var(--hikari-menu-border) !important;
-  border-radius: var(--hikari-menu-radius) !important;
+  border-radius: 0 !important;
   background: var(--hikari-menu-surface) !important;
-  box-shadow: var(--hikari-menu-shadow) !important;
-  backdrop-filter: blur(18px) saturate(1.04);
+  box-shadow: none !important;
+  backdrop-filter: none;
 }
 
 .assay-sample-picker-head {
@@ -226,7 +274,7 @@ body.theme-night .assay-sample-picker-search-input {
   gap: 2px;
   padding: 9px 10px;
   border: 0 !important;
-  border-radius: var(--hikari-menu-item-radius);
+  border-radius: 0;
   background: transparent !important;
   color: var(--theme-text);
   text-align: left;

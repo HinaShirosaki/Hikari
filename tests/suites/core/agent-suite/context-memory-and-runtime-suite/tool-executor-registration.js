@@ -1,7 +1,7 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteToolExecutorRegistration(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test } = scope;
     test('registerAgentToolExecutors wires every catalog tool through the shared runtime', async () => {
       const { AGENT_TOOL_CATALOG } = require(path.join(
         __dirname,
@@ -318,5 +318,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteToolExecutorR
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'limit'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'max_per_source'), false);
     });
-  }
 };

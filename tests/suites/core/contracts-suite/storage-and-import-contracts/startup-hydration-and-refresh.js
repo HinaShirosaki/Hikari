@@ -2,7 +2,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fs, path, loadEsmStyleModule, test, shared } = scope;
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
@@ -11,11 +11,6 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
-    ].join('\n');
-    const readPreloadStorageSource = () => [
-      readLocalSource('src', 'main', 'preload.js'),
-      readLocalSource('src', 'main', 'preload', 'create-preload-api.js'),
-      readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
     ].join('\n');
     const readRendererStorageSource = () => [
       readLocalSource('src', 'renderer', 'renderer.js'),
@@ -253,7 +248,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.match(rendererSource, /syncStateSidecarsFromStorageRoot/);
       assert.match(rendererSource, /autoSaveDataFile\(state,\s*''\)/);
       assert.match(rendererSource, /syncSidecars:\s*true/);
-      assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await storageImportController\.hydrateStateFromStorageRoot\(\);/);
+      assert.match(rendererSource, /async function initApp\(\)\s*\{[\s\S]*?await storageImportController\.hydrateStateFromStorageRoot\(\);/);
       assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);
       assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
       assert.equal(/state\.settings\s*=\s*result\.statePatch\.settings/.test(rendererSource), false);
@@ -291,5 +286,4 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.match(agentChatHandlerSource, /type: 'agent-chat-result'/);
       assert.match(agentChatHandlerSource, /type: 'agent-chat-error'/);
     });
-  }
 };

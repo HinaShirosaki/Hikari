@@ -152,7 +152,7 @@ export function installSectionNavigation(ctx) {
       const containerMarkup = section === activeSection
         ? `
           <div class="inventory-container-nav">
-            ${itemCount ? `<div class="inventory-container-tree folder-tree-template">${treeMarkup}</div>` : '<p class="small-note inventory-container-nav-empty">No folders or containers in this section yet.</p>'}
+            ${itemCount ? `<div class="inventory-container-tree folder-tree-template">${treeMarkup}</div>` : ''}
           </div>
         `
         : '';

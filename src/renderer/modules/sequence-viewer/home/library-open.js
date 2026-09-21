@@ -90,7 +90,6 @@ function createLibraryOpen({
       state.selectedLibraryEntryId = '';
       renderLibraryList();
       renderPreview(null);
-      setHomeStatus('Use New or Open to continue. Set Storage Folder Path in Settings to enable the saved/unsaved library.');
       return;
     }
 
@@ -142,9 +141,6 @@ function createLibraryOpen({
 
       renderLibraryList();
       await loadSelectedLibraryPreview();
-      if (!options.silent) {
-        setHomeStatus(`Loaded ${entries.length} ${state.libraryFilter} sequence entr${entries.length === 1 ? 'y' : 'ies'}.`);
-      }
     } catch (error) {
       state.libraryEntries = [];
       state.libraryFolders = [];

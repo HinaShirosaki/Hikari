@@ -1,7 +1,16 @@
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteSequencingAlignmentPersistence(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    readSource
+  } = scope;
 test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads the current reference, and persists pasted alignments with that reference', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -313,5 +322,4 @@ test('[EDGE] sequence-viewer shows the AB1 chromatogram inline for an active seq
   const queryIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-query-row');
   assert.equal(topIndex < traceIndex && traceIndex < referenceIndex && referenceIndex < guideIndex && guideIndex < queryIndex, true);
 });
-  }
 };

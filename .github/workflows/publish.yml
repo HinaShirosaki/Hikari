@@ -10,6 +10,39 @@ on:
   workflow_dispatch:
 
 jobs:
+  windows-distribution:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run dist
+      - name: Verify single installer output
+        shell: pwsh
+        run: |
+          $files = @(Get-ChildItem out -Recurse -File)
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'HikariSetup.exe' -or $files[0].Length -eq 0) {
+            throw 'Expected only one nonempty HikariSetup.exe in out'
+          }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hikari-Windows-x64
+          path: out/Hikari-win32-x64/HikariSetup.exe
+          if-no-files-found: error
+      - name: Attach Windows installer to published release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$env:RELEASE_TAG" out/Hikari-win32-x64/HikariSetup.exe --clobber
+
   npmjs:
     runs-on: ubuntu-latest
     timeout-minutes: 10

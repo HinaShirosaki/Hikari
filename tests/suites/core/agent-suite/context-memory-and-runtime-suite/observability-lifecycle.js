@@ -1,7 +1,7 @@
 module.exports = function registerAgentContextMemoryAndRuntimeSuiteObservabilityLifecycle(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, path, test, agentObservability } = scope;
     test('agent observability lifecycle recorder invokes onEvent immediately with normalized events', () => {
       const seen = [];
       const recorder = agentObservability.createLifecycleRecorder({
@@ -113,5 +113,4 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteObservability
       assert.equal(receivedCall.options.project.name, 'Atlas');
       assert.equal(receivedCall.options.requestId, 'req-lifecycle-1');
     });
-  }
 };

@@ -21,7 +21,8 @@ const WORKSPACE_STATE_KEYS = [
   'gelAnalyses',
   'samples',
   'labInventory',
-  'inventory'
+  'inventory',
+  'inventoryFolders'
 ];
 
 const WORKSPACE_SETTINGS_KEYS = [
@@ -257,7 +258,7 @@ function describeOpenedRoot(result = {}) {
   const summary = result.summary || {};
   const counts = [
     [summary.protocols, 'protocol'],
-    [summary.notebookEntries, 'notebook entry'],
+    [summary.notebookEntries, 'notebook page'],
     [summary.papers, 'paper'],
     [summary.samples, 'sample'],
     [summary.chemicals, 'chemical'],
@@ -336,6 +337,7 @@ export function createStorageImportController({
       : {};
     state.labInventory = mergeLabInventory(existingLabInventory, importedLabInventory);
     state.inventory = mergeInventoryMap(state.inventory, patch.inventory);
+    state.inventoryFolders = mergeInventoryMap(state.inventoryFolders, patch.inventoryFolders);
     migrateProteinBuilderCloningNotebookState(state);
   }
 

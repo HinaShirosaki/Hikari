@@ -1,7 +1,15 @@
 module.exports = function registerEdgeSequenceViewerInteractionsSuiteKeyboardEditingAndCloningNotebook(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test
+  } = scope;
 function stripHtmlTags(html) {
   return String(html || '').replace(/<[^>]*>/g, '');
 }
@@ -779,5 +787,4 @@ test('[EDGE] sequence-viewer Q5 notebook program uses Tm plus 3 and 25 cycles', 
   assert.equal(programs[0].steps.find((step) => step.label === 'Annealing (Ta)').cycles, '25');
   assert.match(programs[0].notes[0], /plus 3 C/);
 });
-  }
 };

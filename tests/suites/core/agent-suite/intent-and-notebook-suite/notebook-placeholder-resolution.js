@@ -1,7 +1,6 @@
 module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholderResolution(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, test, agentNotebookGeneration, agentNotebookDraft } = scope;
     test('notebook generation runtime extracts token and inline placeholders', () => {
       const runtime = agentNotebookGeneration.createNotebookGenerationRuntime();
       const rows = runtime.buildProtocolPlaceholderRows({
@@ -296,5 +295,4 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
       assert.equal(result.missing_placeholders.length, 1);
       assert.equal(result.notebook.unresolved_placeholders.length, 1);
     });
-  }
 };

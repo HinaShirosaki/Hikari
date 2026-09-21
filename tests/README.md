@@ -18,6 +18,18 @@ npm test                      # build:ui + everything
 npm run test:checks           # checks + selfchecks, no suites
 ```
 
+The first-launch workspace page has a desktop integration check:
+
+```
+npm run build:ui
+node node_modules/electron/cli.js tests/storage-setup-electron.cjs
+```
+
+It uses an isolated temporary profile and real storage IPC/import/save handlers,
+with a simulated folder picker. It covers cancellation, failures, retry, saving,
+and recovery after clearing renderer storage. Set `HIKARI_TEST_APP_ROOT` to a
+packaged `app.asar` path to exercise packaged sources instead.
+
 Every test reports as one `PASS [group] name` or `FAIL [group] name` line,
 followed by a `passed/total` summary and a `SLOW` list of the ten slowest. The
 `check` and `selfcheck` groups run each script in its own process; a script's
@@ -50,3 +62,7 @@ Guidelines:
 - Keep each file scoped to a single domain.
 - Add new tests to the closest domain suite; avoid creating another monolithic file.
 - Prefer pure helper functions near the tests that use them unless broadly shared.
+- Each suite exports `function (context)` and destructures what it uses from
+  `context.scope` (`const { assert, test, path } = scope;`). The scope keys are
+  the `suiteScope` object in `test.js`. `no-undef` is on for `tests/`, so a
+  helper you forgot to destructure fails `npm run lint`, not the test run.

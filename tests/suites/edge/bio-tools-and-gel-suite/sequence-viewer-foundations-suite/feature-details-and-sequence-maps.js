@@ -1,10 +1,6 @@
 module.exports = function registerEdgeSequenceViewerFoundationsSuiteFeatureDetailsAndSequenceMaps(context = {}) {
   const scope = context.scope || {};
-  const __dirname = context.__dirname || process.cwd();
-  with (scope) {
-function stripHtmlTags(html) {
-  return String(html || '').replace(/<[^>]*>/g, '');
-}
+  const { assert, test, sequenceViewerInternals } = scope;
 test('[EDGE] sequence-viewer feature detail formatter shows grouped restriction-site enzymes and cut patterns', () => {
   const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
     name: 'AatII',
@@ -244,5 +240,4 @@ test('[EDGE] sequence-viewer resolveBaseFromPoint inverts pointer positions for 
   assert.equal(sequenceViewerInternals.resolveBaseFromPoint(rect, atBase(1000), 450, length, 'linear'), 1000);
   assert.equal(sequenceViewerInternals.resolveBaseFromPoint(rect, atBase(length), 450, length, 'linear'), length);
 });
-  }
 };

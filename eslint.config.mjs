@@ -2,16 +2,15 @@
 // is ~186k lines with no formatting history, so anything that reflows code would
 // bury real findings under a rewrite.
 //
-// `no-undef` is off because it needs a full globals map for three environments
-// (Node main, browser renderer, worker) to be useful rather than noisy; the test
-// suite catches undefined identifiers quickly anyway. `no-unused-vars` is the
-// rule that earns its keep here -- it finds dead code that tests cannot see.
-//
-// Scope: `npm run lint` gates src/ and scripts/ and is clean, so CI can fail on
-// it. `npm run lint:tests` covers tests/ and test.js and is NOT gating -- it
-// still reports ~51 unused bindings left behind when the suites were split into
-// per-domain files (dead `__dirname` boilerplate and orphaned helpers). Clean
-// those up and fold `lint:tests` into `lint`.
+// `no-undef` is off for src/ because it needs a full globals map for three
+// environments (Node main, browser renderer, worker) to be useful rather than
+// noisy; the test suite catches undefined identifiers quickly anyway. It is on
+// for tests/, which are plain Node: each suite destructures what it needs from
+// the harness `scope`, so a missing binding is a lint error, not a runtime
+// ReferenceError. `no-unused-vars` is the rule that earns its keep here -- it
+// finds dead code that tests cannot see.
+
+import globals from 'globals';
 
 const rules = {
   'no-unused-vars': ['error', {
@@ -60,12 +59,11 @@ export default [
     rules
   },
   {
-    // Test suites and Node scripts are CommonJS. The suite files wrap bodies in
-    // `with (scope) { ... }`, which is only legal in sloppy-mode scripts.
+    // Test suites and the harness are CommonJS Node scripts.
     files: ['tests/**/*.js', 'test.js'],
-    languageOptions: { ecmaVersion: 2024, sourceType: 'commonjs' },
+    languageOptions: { ecmaVersion: 2024, sourceType: 'commonjs', globals: globals.node },
     linterOptions: { reportUnusedDisableDirectives: 'off' },
-    rules
+    rules: { ...rules, 'no-undef': ['error', { typeof: true }] }
   },
   {
     // Main process, shared, and the Sequence Viewer's Node-only half are CommonJS.

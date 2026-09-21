@@ -1,7 +1,19 @@
 module.exports = function registerAppLabAndProjectSuiteDashboardAndInventorySamples(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    MockElement,
+    createMockDocument,
+    wireFormReset,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('home dashboard passage reminders persist outside the sample registry', () => {
   const normalized = shared.normalizeState({
     settings: {
@@ -920,5 +932,4 @@ test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and i
   assert.equal(nativeClipboard.candidates.some((candidate) => candidate.format === 'com.cambridgesoft.chemdraw'), true);
   assert.equal(nativeClipboard.candidates.some((candidate) => candidate.format === 'public.tiff' && candidate.imageDataUrl.includes('CONVERTEDTIFF')), true);
 });
-  }
 };

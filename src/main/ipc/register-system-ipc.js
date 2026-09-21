@@ -75,7 +75,12 @@ function registerSystemIpc(deps = {}) {
       source: cleanText(status.source, 80) || 'none',
       expired: status.expired === true,
       sourcePath: cleanText(status.sourcePath, 2400),
-      message: status.message || ''
+      message: status.message || '',
+      cliAvailable: status.cliAvailable,
+      cliPath: cleanText(status.cliPath, 2400),
+      cliMessage: cleanText(status.cliMessage, 2400),
+      cliInstallCommand: cleanText(status.cliInstallCommand, 2400),
+      cliInstallShell: cleanText(status.cliInstallShell, 80)
     };
   });
 

@@ -113,7 +113,8 @@ function createHomeFileOpen({
       return false;
     }
 
-    const parsed = parseInputRecords(rawText, { maxRecords: DEFAULT_MAX_RECORDS });
+    const topology = elements.newSequenceForm?.querySelector?.('input[name="sequence-viewer-new-topology"]:checked')?.value;
+    const parsed = parseInputRecords(rawText, { maxRecords: DEFAULT_MAX_RECORDS, topology });
     if (!Array.isArray(parsed?.records) || !parsed.records.length) {
       setNewSequenceDialogStatus(parsed?.errors?.[0] || 'No valid DNA sequence was found.', true);
       elements.newSequenceTextarea?.focus?.();

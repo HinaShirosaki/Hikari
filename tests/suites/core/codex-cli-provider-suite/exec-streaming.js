@@ -1,7 +1,7 @@
 module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const os = require('node:os');
     const providerPath = path.join(__dirname, 'src', 'main', 'lib', 'codex-cli-provider.js');
     const loadProvider = () => {
@@ -788,5 +788,4 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         }
       });
     });
-  }
 };

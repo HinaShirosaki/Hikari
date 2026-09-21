@@ -199,6 +199,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   const gelAnalysisMap = new Map();
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
+  const inventoryFolderMap = new Map();
   const blockMap = new Map();
   const quickLogMap = new Map();
   let quickLogDraft = '';
@@ -250,6 +251,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     mergeByIdMap(gelAnalysisMap, source.gelAnalyses, 'gel');
     mergeByIdMap(chemicalMap, ensureObject(source.labInventory).chemicals, 'chemical');
     mergeInventoryMap(inventoryZoneMap, source.inventory);
+    mergeInventoryMap(inventoryFolderMap, source.inventoryFolders);
 
     asArray(ensureObject(source.labInventory).blocks).forEach((block, index) => {
       const normalizedBlock = ensureObject(block);
@@ -362,6 +364,8 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   mergeByIdMap(notebookMap, projectRoot.notebookEntries, 'notebook');
   const samplesRoot = await hydrateSamplesRootFromStoragePath({ storagePath: resolvedStoragePath });
   mergeByIdMap(sampleMap, samplesRoot.samples, 'sample');
+  mergeInventoryMap(inventoryZoneMap, samplesRoot.inventory);
+  mergeInventoryMap(inventoryFolderMap, samplesRoot.inventoryFolders);
   const rootLayout = resolveStorageRootLayout({ storagePath: resolvedStoragePath });
   const experimentLogRoot = await readExperimentLogSidecar(rootLayout.experimentLogPath);
   if (experimentLogRoot.ok) {
@@ -375,6 +379,10 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   const mergedInventory = {};
   for (const [zone, zoneMap] of inventoryZoneMap.entries()) {
     mergedInventory[zone] = [...zoneMap.values()];
+  }
+  const mergedInventoryFolders = {};
+  for (const [zone, zoneMap] of inventoryFolderMap.entries()) {
+    mergedInventoryFolders[zone] = [...zoneMap.values()];
   }
 
   const mergedBlocks = [...blockMap.values()].sort((left, right) => {
@@ -404,7 +412,8 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
       locationCodeMap,
       locationCodeNextByLocation
     },
-    inventory: mergedInventory
+    inventory: mergedInventory,
+    inventoryFolders: mergedInventoryFolders
   };
   if (hasExperimentLogState) {
     statePatch.settings = {

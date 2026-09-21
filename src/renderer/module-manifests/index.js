@@ -1,49 +1,51 @@
-import { biologyNotebookManifest } from './biology-notebook.js';
-import { protocolManifest } from './protocol.js';
-import { agentChatManifest } from './agent-chat.js';
-import { agentChatRailManifest } from './agent-chat-rail.js';
-import { workflowManagementManifest } from './workflow.js';
-import { papersManifest } from './papers.js';
-import { labCommonInventoryManifest } from './lab-common-inventory.js';
-import { personalInventoryManifest } from './personal-inventory.js';
-import { sampleRegistryManifest } from './sample-registry.js';
-import { assayManifest } from './assay.js';
-import { sequenceViewerManifest } from './sequence-viewer.js';
-import { toolBoxManifest } from './tool-box.js';
-import { settingsManifest } from './settings.js';
-import { homeDashboardManifest } from './home-dashboard.js';
+// Each manifest is imported on its own so a module that fails to load (missing
+// file, syntax error) is reported and skipped instead of failing the whole
+// renderer module graph. runtime.js fences init/render the same way; this
+// extends that isolation to load time. Loads are sequential to keep evaluation
+// order identical to the former static imports.
+async function loadManifests(entries) {
+  const manifests = [];
+  for (const [specifier, exportName] of entries) {
+    try {
+      manifests.push((await import(specifier))[exportName]);
+    } catch (error) {
+      console.error(`Module manifest "${specifier}" failed to load:`, error);
+    }
+  }
+  return manifests;
+}
 
-export const foundationModuleManifests = [
-  biologyNotebookManifest,
-  protocolManifest
-];
+export const foundationModuleManifests = await loadManifests([
+  ['./biology-notebook.js', 'biologyNotebookManifest'],
+  ['./protocol.js', 'protocolManifest']
+]);
 
-export const collaborationModuleManifests = [
-  agentChatManifest,
-  agentChatRailManifest,
-  workflowManagementManifest,
-  papersManifest
-];
+export const collaborationModuleManifests = await loadManifests([
+  ['./agent-chat.js', 'agentChatManifest'],
+  ['./agent-chat-rail.js', 'agentChatRailManifest'],
+  ['./workflow.js', 'workflowManagementManifest'],
+  ['./papers.js', 'papersManifest']
+]);
 
-export const inventoryModuleManifests = [
-  labCommonInventoryManifest,
-  personalInventoryManifest,
-  sampleRegistryManifest
-];
+export const inventoryModuleManifests = await loadManifests([
+  ['./lab-common-inventory.js', 'labCommonInventoryManifest'],
+  ['./personal-inventory.js', 'personalInventoryManifest'],
+  ['./sample-registry.js', 'sampleRegistryManifest']
+]);
 
-export const analysisModuleManifests = [
-  assayManifest
-];
+export const analysisModuleManifests = await loadManifests([
+  ['./assay.js', 'assayManifest']
+]);
 
-export const sequenceModuleManifests = [
-  sequenceViewerManifest
-];
+export const sequenceModuleManifests = await loadManifests([
+  ['./sequence-viewer.js', 'sequenceViewerManifest']
+]);
 
-export const utilityModuleManifests = [
-  toolBoxManifest,
-  settingsManifest,
-  homeDashboardManifest
-];
+export const utilityModuleManifests = await loadManifests([
+  ['./tool-box.js', 'toolBoxManifest'],
+  ['./settings.js', 'settingsManifest'],
+  ['./home-dashboard.js', 'homeDashboardManifest']
+]);
 
 export const rendererModuleManifests = [
   ...foundationModuleManifests,

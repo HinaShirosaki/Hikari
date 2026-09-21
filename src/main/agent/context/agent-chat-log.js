@@ -9,6 +9,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { asArray, cloneJson } = require('../../lib/normalize.js');
+const { withFileLock, writeFileAtomic, parseJsonSalvagingTornTail } = require('../../lib/shared-json-file.js');
 const {
   CHAT_LOG_FOLDER_NAME,
   CHAT_LOG_INDEX_FILE_NAME,
@@ -125,7 +126,7 @@ function createAgentChatLogRuntime(deps = {}) {
       const raw = await runtimeFs.readFile(paths.indexPath, 'utf8');
       return {
         paths,
-        index: normalizeIndexPayload(JSON.parse(raw))
+        index: normalizeIndexPayload(parseJsonSalvagingTornTail(raw))
       };
     } catch (error) {
       if (error?.code === 'ENOENT') {
@@ -139,24 +140,26 @@ function createAgentChatLogRuntime(deps = {}) {
   }
 
   // Persist the normalized index back to disk after session metadata changes.
-  async function writeIndex(paths, index) {
-    let existingTransforms = normalizeTransformIndex({});
-    try {
-      const existingRaw = await runtimeFs.readFile(paths.indexPath, 'utf8');
-      existingTransforms = normalizeIndexPayload(JSON.parse(existingRaw)).transforms;
-    } catch (error) {
-      if (error?.code !== 'ENOENT') {
-        throw error;
+  function writeIndex(paths, index) {
+    return withFileLock(paths.indexPath, async () => {
+      let existingTransforms = normalizeTransformIndex({});
+      try {
+        const existingRaw = await runtimeFs.readFile(paths.indexPath, 'utf8');
+        existingTransforms = normalizeIndexPayload(parseJsonSalvagingTornTail(existingRaw)).transforms;
+      } catch (error) {
+        if (error?.code !== 'ENOENT') {
+          throw error;
+        }
       }
-    }
-    const normalized = normalizeIndexPayload({
-      ...index,
-      transforms: mergeTransformIndexes(index?.transforms, existingTransforms)
+      const normalized = normalizeIndexPayload({
+        ...index,
+        transforms: mergeTransformIndexes(index?.transforms, existingTransforms)
+      });
+      normalized.updated_at = cleanText(normalized.updated_at) || now();
+      await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
+      await writeFileAtomic(runtimeFs, paths.indexPath, JSON.stringify(normalized, null, 2));
+      return normalized;
     });
-    normalized.updated_at = cleanText(normalized.updated_at) || now();
-    await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
-    await runtimeFs.writeFile(paths.indexPath, JSON.stringify(normalized, null, 2), 'utf8');
-    return normalized;
   }
 
   // Append one or more normalized rows to a session log and refresh the summary index.

@@ -1,7 +1,17 @@
 module.exports = function registerEdgeToolBoxSuiteCodonOptimizationAndCloningEvaluation(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    test,
+    toolBox,
+    sequenceViewerInternals,
+    assertClose
+  } = scope;
 [
   ['0', 0],
   ['1', 1],
@@ -509,5 +519,4 @@ test('[EDGE] sequence-viewer designCloningPrimers preserves insertion boundaries
   assert.equal(leftArm, template.slice(insertAt - leftArm.length, insertAt));
   assert.equal(rightArm, template.slice(insertAt, insertAt + rightArm.length));
 });
-  }
 };

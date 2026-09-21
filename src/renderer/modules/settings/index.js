@@ -51,6 +51,11 @@ export function initSettings({
     settingReasoningEffort,
     settingCodexAuthControls,
     settingCodexStatus,
+    settingCodexInstall,
+    settingCodexInstallCommand,
+    settingCodexInstallHelp,
+    copyCodexInstallCommandBtn,
+    checkCodexCliBtn,
     startCodexLoginBtn,
     clearCodexLoginBtn,
     copyCodexDesktopMcpPromptBtn,
@@ -129,6 +134,7 @@ export function initSettings({
     onStartCodexLogin,
     onClearCodexLogin,
     onCopyCodexDesktopMcpPrompt,
+    onCopyCodexInstallCommand,
     onSaveLlmSettings,
     onModelChanged,
     refreshCodexCatalog
@@ -139,6 +145,11 @@ export function initSettings({
     renderForms: () => renderForms(),
     renderReasoningEffortOptions: (...args) => renderReasoningEffortOptions(...args),
     settingCodexStatus,
+    settingCodexInstall,
+    settingCodexInstallCommand,
+    settingCodexInstallHelp,
+    copyCodexInstallCommandBtn,
+    checkCodexCliBtn,
     settingCodexAuthControls,
     settingCodexDesktopMcpStatus,
     settingModel,
@@ -186,6 +197,8 @@ export function initSettings({
   settingModel?.addEventListener('input', onModelChanged);
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
+  copyCodexInstallCommandBtn?.addEventListener('click', onCopyCodexInstallCommand);
+  checkCodexCliBtn?.addEventListener('click', () => { void refreshCodexLoginStatus(); });
   clearCodexLoginBtn?.addEventListener('click', onClearCodexLogin);
   copyCodexDesktopMcpPromptBtn?.addEventListener('click', () => {
     void onCopyCodexDesktopMcpPrompt();

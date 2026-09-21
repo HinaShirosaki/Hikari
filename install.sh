@@ -1,7 +1,7 @@
 #!/bin/sh
 # Hikari installer for macOS / Linux:
 #   curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
-# Builds the native Hikari app on this machine and writes the installer to ./hikari-out/make/.
+# Builds the native Hikari app on this machine and writes Hikari.app to ./hikari-out/Hikari-darwin-<arch>/ on macOS (Linux installers: ./hikari-out/make/).
 # Without Node.js 20+ on PATH it downloads a private copy to ~/.hikari/node; nothing system-wide changes.
 set -e
 

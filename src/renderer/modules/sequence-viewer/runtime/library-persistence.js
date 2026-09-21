@@ -164,7 +164,6 @@ export function createLibraryPersistenceActions(ctx) {
       silent: true
     });
     actions.setStatus(`Renamed sequence to ${response.entry.name}.`);
-    controllers.home?.setHomeStatus(`Renamed sequence entry: ${response.entry.name}.`);
     return response.entry;
   }
 

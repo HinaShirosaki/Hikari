@@ -2,7 +2,7 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
 
-  with (scope) {
+  const { assert, fs, path, test } = scope;
     const agentDir = path.join(__dirname, 'src', 'main', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
 
@@ -329,5 +329,4 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
       assert.equal(notebookSearch.source, 'fallback_json');
       assert.equal(notebookSearch.items[0]?.record_type, 'notebook');
     });
-  }
 };

@@ -1,7 +1,7 @@
 module.exports = function registerPlatformAndRegressionSuiteModuleBoundaryGuards(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const { assert, fs, path, loadEsmStyleModule, test } = scope;
 function listJavaScriptFiles(rootPath) {
   return fs.readdirSync(rootPath, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = path.join(rootPath, entry.name);
@@ -81,5 +81,4 @@ test('[P0] main-process modules do not import renderer UI or controller implemen
   assert.deepEqual(violations, []);
 });
 
-  }
 };

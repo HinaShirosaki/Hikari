@@ -29,7 +29,7 @@ function renderSections() {
 
   inventorySections.innerHTML = activeContainer
     ? `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}${ctx.renderContainerDetail(activeSection, activeContainer)}</section>`
-    : `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}<p class="small-note inventory-empty-state">Select a container from the left panel to open its box view.</p></section>`;
+    : `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}</section>`;
 
   inventorySections.querySelectorAll('[data-container-open]').forEach((button) => {
     button.addEventListener('click', () => {

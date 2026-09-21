@@ -127,7 +127,7 @@ export function initPaperFindingWidget({
   onOpenNotebook = () => {},
   elements = {}
 } = {}) {
-  const { summary, list, openBtn, nextRun } = elements;
+  const { summary, list, openBtn, runBtn, nextRun } = elements;
   if (!summary || !list) {
     return { render: () => {} };
   }
@@ -139,8 +139,10 @@ export function initPaperFindingWidget({
   let lastMarkup = null;
   let availabilityMessage = '';
   let hasLoadError = false;
+  let running = false;
 
   openBtn?.addEventListener?.('click', () => onOpenNotebook());
+  runBtn?.addEventListener?.('click', () => { void runNow(); });
   list.addEventListener('click', (event) => {
     if (event.target.closest?.('[data-paper-finding-setup]')) {
       onOpenNotebook();
@@ -217,6 +219,15 @@ export function initPaperFindingWidget({
 
   function renderTasks() {
     summary.classList?.toggle('is-error', hasLoadError);
+    if (runBtn) {
+      const runnable = Array.isArray(tasks) && tasks.some((task) => task?.enabled !== false && task?.id);
+      runBtn.hidden = !runnable || typeof api?.runPaperFindingTask !== 'function';
+      runBtn.disabled = running;
+    }
+    if (running) {
+      summary.textContent = 'Finding papers…';
+      return;
+    }
     if (availabilityMessage) {
       summary.textContent = availabilityMessage;
       renderScheduleFooter([]);
@@ -297,6 +308,38 @@ export function initPaperFindingWidget({
         request = null;
       });
     return request;
+  }
+
+  async function runNow() {
+    if (running || typeof api?.runPaperFindingTask !== 'function') {
+      return;
+    }
+    const ids = asArray(tasks).filter((task) => task?.enabled !== false && task?.id).map((task) => task.id);
+    if (!ids.length) {
+      return;
+    }
+    running = true;
+    renderTasks();
+    const failures = [];
+    // ponytail: runs schedules one after another; main already rejects a task that is mid-run.
+    for (const id of ids) {
+      try {
+        const response = await api.runPaperFindingTask(id);
+        if (response?.ok !== true) {
+          failures.push(cleanText(response?.error) || 'Paper finding failed.');
+        }
+      } catch (error) {
+        failures.push(cleanText(error?.message) || 'Paper finding failed.');
+      }
+    }
+    running = false;
+    if (request) {
+      await request;
+    }
+    await refresh();
+    if (failures.length) {
+      showTransientNotice(failures[0], { type: 'error' });
+    }
   }
 
   function renderWidget() {

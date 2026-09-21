@@ -1,7 +1,17 @@
 module.exports = function registerAppAgentChatCoreSuiteNotebookProposalApproval(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
-  with (scope) {
+  const {
+    assert,
+    fs,
+    path,
+    loadEsmStyleModule,
+    createMockDocument,
+    trigger,
+    flushAsync,
+    test,
+    shared
+  } = scope;
 test('agent-chat keeps the notebook draft card and opens its approval overlay automatically', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -757,5 +767,4 @@ test('agent-chat delegates notebook and protocol domain records to owner adapter
   assert.doesNotMatch(selectionContextSource, /agent-chat\//);
   assert.match(selectionContextSource, /from '\.\.\/\.\.\/services\/direct-llm\.js'/);
 });
-  }
 };
