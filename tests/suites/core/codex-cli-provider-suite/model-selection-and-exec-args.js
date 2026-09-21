@@ -523,6 +523,26 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
       assert.match(error.message, /Settings > Codex Model & Access/);
       assert.equal(error.cause, cause);
     });
+    test('working-directory guidance removes legacy managed blocks and preserves user guidance', async () => {
+      const { ensureCodexCliWorkingDirectoryGuidance } = require(path.join(__dirname, 'src/main/lib/codex-cli-provider/guidance.js'));
+      const { buildHikariCodexAgentsBlock } = require(path.join(__dirname, 'src/main/agent/codex-agent/agent-instructions.js'));
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-guidance-migration-'));
+      const agentsPath = path.join(workspaceDir, 'AGENTS.md');
+      try {
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.existsSync(agentsPath), false);
+        fs.writeFileSync(agentsPath, buildHikariCodexAgentsBlock());
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.existsSync(agentsPath), false);
+        fs.writeFileSync(agentsPath, '# My guidance\n\n' + buildHikariCodexAgentsBlock());
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My guidance\n');
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My guidance\n');
+      } finally {
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-agents-'));
       try {

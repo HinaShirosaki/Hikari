@@ -369,7 +369,7 @@ export function createWorkflowModel(options = {}) {
       templateId: String(template?.id || '').trim(),
       name,
       description: template.description,
-      projectId: String(template?.projectId || '').trim(),
+      projectId: '',
       notebookEntryIds: [],
       blocks,
       links,

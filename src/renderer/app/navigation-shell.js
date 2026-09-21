@@ -14,6 +14,10 @@ export function applyAppearanceSnapshot(appearance, rootDocument = document) {
   return applyAppearanceToDocument(appearance, rootDocument, 16);
 }
 
+export function isAgentChatRailAvailable(app, view) {
+  return app?.agentChatRail === true && view?.dataset?.agentChatRail !== 'disabled';
+}
+
 function createNavigationAliasMap(aliases, normalize) {
   const entries = aliases instanceof Map
     ? Array.from(aliases.entries())
@@ -125,7 +129,8 @@ export function createNavigationShell({
 
   function isAgentChatRailEnabledForView(viewId) {
     const app = getAppForView(viewId);
-    return app?.agentChatRail === true;
+    const view = documentObject.getElementById(resolveNavigationViewId(viewId));
+    return isAgentChatRailAvailable(app, view);
   }
 
   function agentChatRailToggleIcon(expanded) {
@@ -350,6 +355,10 @@ export function createNavigationShell({
     });
     documentObject.addEventListener('hikari:open-agent-chat-rail', openAgentChatRail);
     documentObject.addEventListener('hikari:close-agent-chat-rail', () => setAgentChatRailExpanded(false));
+    documentObject.addEventListener('hikari:agent-chat-rail-availability-changed', () => {
+      syncAgentChatRailState(getActiveViewId());
+      sharedLeftRailRuntime.syncWidth();
+    });
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');

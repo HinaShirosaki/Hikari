@@ -19,7 +19,7 @@ export const workflowManagementManifest = {
     persist,
     createId,
     safeText,
-    onWorkflowsChanged: () => {},
+    onWorkflowsChanged: () => modules.biologyNotebook?.refreshProjectDashboard?.(),
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

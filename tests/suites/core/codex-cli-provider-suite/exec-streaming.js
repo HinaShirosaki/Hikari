@@ -206,7 +206,8 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           });
           assert.equal(fs.existsSync(captured.outputSchemaFile), false);
           assert.match(captured.stdin, /Return OK only\./);
-          assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
+          assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), false);
+          assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
           assert.match(runtimeConfig, /mcp-contract\/stdio-server\.js/);
           assert.match(runtimeConfig, /required = true/);

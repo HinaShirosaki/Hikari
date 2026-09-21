@@ -64,10 +64,14 @@ async function ensureCodexCliWorkingDirectoryGuidance(cwd = '', options = {}) {
   const safeCwd = resolveWorkingDirectory(cwd);
   if (await hasCodexProjectMemoryFile(safeCwd)) {
     await ensureCodexCliProjectSkillFolder(safeCwd, options).catch(() => '');
-    await removeHikariCodexAgentsFileIfOnlyManaged(safeCwd).catch(() => false);
-    return '';
   }
-  return ensureCodexCliAgentsFile(safeCwd);
+  // The runtime home owns the durable contract. Remove legacy workspace copies
+  // while preserving user-authored guidance and the runtime-home copy itself.
+  const runtimeHome = resolveCodexCliRuntimeHomeDirectory(safeCwd);
+  if (!runtimeHome || path.resolve(safeCwd) !== path.resolve(runtimeHome)) {
+    await removeHikariCodexAgentsFileIfOnlyManaged(safeCwd).catch(() => false);
+  }
+  return '';
 }
 
 async function ensureCodexCliGlobalAgentsFile(cwd = '') {

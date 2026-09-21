@@ -721,6 +721,23 @@
   font-weight: 650;
 }
 
+/* The global field treatment is intentionally roomy, but this editor lives in a
+   compact plate cell. Keep it visibly active and make formula text read from the left. */
+.assay-transform-grid .tabulator-cell.tabulator-editing {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+}
+
+.assay-transform-grid .tabulator-cell.tabulator-editing input {
+  min-width: 0;
+  padding: 2px 5px;
+  border: 0;
+  border-radius: 0;
+  background: var(--theme-control-background);
+  color: var(--theme-text);
+  text-align: left;
+}
+
 .assay-analysis-modifiers {
   display: grid;
   gap: 8px;

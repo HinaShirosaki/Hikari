@@ -1,3 +1,4 @@
+import { buildWorkflowExecutionLayout, computeEntryProgress } from '../../workflow/execution.js';
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { summarizeNotebookResultTables } from '../../../lib/notebook-result-tables.js';
 import { createDashboardRecords } from './dashboard-records.js';
@@ -342,6 +343,36 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
     `).join('');
   }
 
+  function renderProcesses(project) {
+    const groups = new Map();
+    asArray(state.workflows).filter((process) => process.projectId === project.id).forEach((process) => {
+      const key = process.templateId || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(process);
+    });
+    return `<section class="panel project-processes" aria-label="Project processes">
+      <div class="project-panel-head"><h3>Processes</h3></div>
+      ${groups.size ? [...groups].map(([templateId, processes]) => {
+        const template = asArray(state.workflowTemplates).find((item) => item.id === templateId);
+        return `<div class="project-process-group"><div class="project-panel-head"><h4>${escapeText(template?.name || 'Archived workflow template')}</h4>
+          ${template ? `<button type="button" class="ghost-btn" data-project-workflow-add="${escapeText(project.id)}" data-process-template="${escapeText(templateId)}">+ New process</button>` : ''}</div>
+          ${processes.map((process) => {
+            const entry = process.entries?.[0];
+            const progress = computeEntryProgress(entry, buildWorkflowExecutionLayout(process));
+            const statuses = progress.orderedIds.map((id) => entry?.stepStates?.[id]?.status);
+            const status = progress.complete ? 'Done' : statuses.includes('failed') ? 'Failed'
+              : progress.completedSteps || statuses.includes('pending') ? 'In progress' : 'Not started';
+            return `<button type="button" class="project-process-row" data-project-process-open="${escapeText(process.id)}">
+              <span>${escapeText(process.name || 'Untitled process')}</span>
+              <progress max="100" value="${progress.percentComplete}" aria-label="Process progress"></progress>
+              <span class="workflow-ledger-count">${progress.completedSteps}/${progress.totalSteps}</span>
+              <span>${status}</span>
+            </button>`;
+          }).join('')}</div>`;
+      }).join('') : '<p class="small-note">Choose Workflow in New Experiment to start the first process in this project.</p>'}
+    </section>`;
+  }
+
   function renderDashboard(projectId, options = {}) {
     const project = typeof projectId === 'object' && projectId
       ? projectId
@@ -377,6 +408,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         </div>
         <span class="small-note project-experiment-suggestion-status" role="status" aria-live="polite" data-experiment-suggestion-status></span>
       </section>
+      ${renderProcesses(project)}
       ${renderStats(summary)}
       ${renderProjectOverview(project, summary, { headingId: contributionHeadingId })}
       ${renderProjectPaperFinder(project)}

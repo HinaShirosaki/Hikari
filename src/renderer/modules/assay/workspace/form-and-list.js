@@ -27,6 +27,7 @@ function createAssayFormAndList({
   renderNotebookOptions,
   renderResultsAssayOptions,
   clearActiveAssayInfo,
+  onAssayModeChanged,
   notifyActiveAssayChanged,
   renderAssayNumberDisplay,
   setCsvStatus,
@@ -44,6 +45,7 @@ function createAssayFormAndList({
   function setAssayMode(mode) {
     runtime.assayMode = mode === 'results' ? 'results' : 'create';
     const isCreate = runtime.assayMode === 'create';
+    onAssayModeChanged?.(runtime.assayMode);
     if (elements.assayCreateLayout) {
       elements.assayCreateLayout.hidden = !isCreate;
     }

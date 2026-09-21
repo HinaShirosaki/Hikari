@@ -7,7 +7,6 @@ const {
   defaultCleanText,
   ensureObject
 } = require('./runtime-utils.js');
-const { buildHikariMcpToolName } = require('../mcp-contract/instructions.js');
 const {
   buildCodexSessionRecoveryBlock
 } = require('./session-recovery.js');
@@ -148,9 +147,7 @@ function buildSavedSettingsBlock(input = {}, cleanText = defaultCleanText) {
     'Saved Hikari settings:',
     JSON.stringify({
       preferred_journals: preferredJournals
-    }, null, 2),
-    '',
-    'For literature-search requests, these saved preferred journals are already available to the Hikari MCP tools through the request context. Treat them as soft ranking preferences, including when the user says "from my preferred journals" or asks to use saved preferences. When using native Codex web search for papers, prefer equally relevant results from these journals and their canonical publisher pages. Do not call memory just to rediscover these saved settings. Do not pass a hard `journals` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.'
+    }, null, 2)
   ].join('\n');
 }
 
@@ -165,37 +162,19 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     : cleanText(input.agent?.sessionPrompt, 6000);
   const savedSettingsBlock = buildSavedSettingsBlock(input, cleanText);
   const sessionRecoveryBlock = buildCodexSessionRecoveryBlock(input, { cleanText });
-  const protocolGenerationTool = buildHikariMcpToolName('protocol_generation');
-  const assayTableTool = buildHikariMcpToolName('assay_table');
-  const plotlyGraphTool = buildHikariMcpToolName('plotly_graph');
   const blocks = [
     '# Hikari Codex Chat Turn',
-    '',
-    'You are handling this Hikari chat turn as the Codex reasoning agent. Own the lifecycle yourself: manage context in this Codex session, clarify if necessary, call raw Hikari MCP tools, verify the inference, and synthesize the final user-facing answer.',
-    '',
-    'The Codex instruction chain contains the durable Hikari Codex agent contract. If this turn is scoped to a selected project, the working directory may also contain project `MEMORY.md` and `.agents/skills`; treat them as the project-specific context and skill layers for this run.',
-    '',
-    'Hikari provides rendering and the MCP server. Use your Codex session context for continuity, tool choice, intent parsing, synthesis, and normal assistant prose for Hikari to render. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
-    '',
-    'For a normal paper-discovery request, make at most one `literature_search` call. When a paper request needs both literature APIs and Codex web discovery, use API sources only (`pubmed`, `crossref`, and `europe_pmc`) in that Hikari call, then use native Codex web search separately. Do not include `web` in the Hikari call: that source would start a nested Codex CLI request and stall the current turn.',
-    '',
-    `Protocol and notebook handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.`,
-    '',
-    `Assay context handoff: when this chat turn contains hidden assay context, retrieve the active assay data by reading the \`Assay plate data (TSV...)\` block inside this same prompt. Parse the TSV lines after the header \`well\\trow\\tcolumn\\tsample\\tconcentration\\tresult\` into explicit row objects, then call \`${assayTableTool}\` with \`action: "create"\` when calculations, regression, derived tables, or graphing are needed. Do not use local lookup tools for active assay plate data. If the TSV title says rows exist but the body rows are absent, report that the assay context was supplied without row data instead of trying lookup fallback paths. Use \`${plotlyGraphTool}\` only after the table or calculation data exists.`,
-    '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
       : 'Selected project: none',
-    '',
     savedSettingsBlock,
     scopedAgentSessionPrompt ? `Active Hikari view instructions:\n${scopedAgentSessionPrompt}` : '',
     paperAgentSessionBlock,
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
     sessionRecoveryBlock,
-    '',
     `Current user request:\n${message}`
   ];
-  return blocks.filter((block) => cleanText(block, 1) || block === '').join('\n\n').trim();
+  return blocks.filter((block) => cleanText(block, 1)).join('\n\n').trim();
 }
 
 function buildCodexAgentParserPayload(codexAgent = {}, {

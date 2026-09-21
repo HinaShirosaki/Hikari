@@ -1066,7 +1066,9 @@
 /* Step glyphs shared by the stepper and the drawer spine: circles are main
    steps, squares are branch steps. */
 .workflow-stepper {
-  display: flex;
+  display: grid;
+  overflow-x: auto;
+  padding: 4px;
   flex: 1 1 auto;
   align-items: center;
   min-width: 0;
@@ -1150,6 +1152,7 @@
 }
 
 .workflow-stepper-link {
+  align-self: center;
   flex: 1 1 14px;
   min-width: 8px;
   height: 2px;
@@ -1168,10 +1171,51 @@
   background: repeating-linear-gradient(90deg, var(--theme-success) 0 3px, transparent 3px 6px);
 }
 
+/* Branches leave their parent vertically; the main path stays continuous. */
+.workflow-stepper-stem {
+  width: 2px;
+  margin-left: 6px;
+  margin-bottom: 9px;
+  align-self: stretch;
+  background: var(--theme-border);
+}
+
+.workflow-stepper-branch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-width: max-content;
+  min-height: 28px;
+  padding: 10px 4px 0 28px;
+}
+
+.workflow-stepper-branch::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: 8px;
+  width: 22px;
+  height: 2px;
+  background: var(--theme-border);
+}
+
+.workflow-stepper-stem.is-complete,
+.workflow-stepper-branch.is-complete::before {
+  background: var(--theme-success);
+}
+
+.workflow-stepper-branch .workflow-stepper-link {
+  flex: 0 0 24px;
+}
+
 .workflow-stepper-fork {
   flex: none;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  line-height: 14px;
   height: 14px;
   padding: 0 1px;
   color: var(--theme-text-muted);
@@ -1351,15 +1395,37 @@
 
 .workflow-drawer-field textarea {
   width: 100%;
+  min-height: 84px;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface);
   font-size: 0.84rem;
+  line-height: 1.45;
+  resize: vertical;
 }
 
-.workflow-drawer-files,
-.workflow-drawer-actions {
+.workflow-drawer-files {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.workflow-drawer-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 3px;
+  margin: -3px;
+}
+
+.workflow-drawer-actions > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 /* A <label> wearing the button look, so the hidden file input gets a real control. */
@@ -1400,9 +1466,18 @@
 }
 
 .workflow-drawer-actions .primary-btn,
-.workflow-drawer-actions .ghost-btn {
+.workflow-drawer-actions .ghost-btn,
+.workflow-drawer-actions .workflow-drawer-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  margin: 0;
   padding: 4px 8px;
-  font-size: 0.78rem;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 18px;
 }
 
 .workflow-drawer-danger-btn {
@@ -1450,27 +1525,36 @@
 .workflow-placeholder-table {
   width: 100%;
   border: 1px solid var(--theme-border);
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 6px;
+  overflow: hidden;
   table-layout: fixed;
   background: var(--theme-surface);
 }
 
 .workflow-placeholder-table th,
 .workflow-placeholder-table td {
-  height: 42px;
+  height: 36px;
   padding: 0;
-  border: 1px solid var(--theme-border-soft);
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
   text-align: left;
   vertical-align: middle;
 }
 
+.workflow-placeholder-table tr:last-child > * {
+  border-bottom: 0;
+}
+
 .workflow-placeholder-table th {
-  width: 46%;
-  padding: 8px 10px;
-  background: var(--theme-surface-subtle);
+  width: 40%;
+  padding: 6px 10px;
+  overflow-wrap: anywhere;
+  background: transparent;
   color: var(--theme-text-strong);
   font-size: 0.84rem;
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.3;
 }
 
@@ -1478,8 +1562,8 @@
   display: block;
   width: 100%;
   min-width: 0;
-  min-height: 40px;
-  padding: 8px 10px;
+  min-height: 35px;
+  padding: 6px 10px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -1636,3 +1720,70 @@ body.theme-night .workflow-context-item:hover {
 .left-rail-template__rail .workflow-card:first-child {
   border-top: 0 !important;
 }
+
+.workflow-process-dialog {
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 20px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: var(--theme-shadow-medium);
+}
+
+.workflow-process-dialog::backdrop {
+  background: color-mix(in srgb, var(--theme-text) 25%, transparent);
+}
+
+.workflow-process-dialog h3 { margin: 0; }
+.workflow-process-dialog .form-actions { justify-content: flex-end; }
+.workflow-process-dialog #workflow-process-status:empty { display: none; }
+
+.workflow-project-heading > th {
+  padding: 12px 10px 6px;
+  background: var(--theme-surface-subtle);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.workflow-project-heading > th > div,
+.project-processes .project-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workflow-project-heading button,
+.project-processes .project-panel-head button { margin-left: auto; }
+.project-processes h3, .project-processes h4 { margin: 0; }
+.project-process-group { margin-top: 12px; }
+.project-process-group > .project-panel-head { padding: 6px 0; }
+
+.project-process-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(60px, 120px) auto minmax(70px, auto);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text);
+  text-align: left;
+  font-size: 0.82rem;
+}
+.project-process-row:hover { background: var(--theme-surface-subtle); }
+.project-process-row > span { overflow-wrap: anywhere; }
+.project-process-row progress { width: 100%; height: 6px; accent-color: var(--theme-accent); }
+.project-processes { min-width: 0; overflow-x: auto; }
+
+#biology-notebook-experiment-protocol-fields,
+#biology-notebook-experiment-workflow-fields {
+  display: grid;
+  gap: 12px;
+}
+#biology-notebook-experiment-protocol-fields[hidden],
+#biology-notebook-experiment-workflow-fields[hidden] { display: none; }

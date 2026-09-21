@@ -229,7 +229,7 @@ function createWorkflowTemplateEditor({
         || elements.workflowDescriptionInput?.value
         || ''
       ).trim() || runtime.draft.description,
-      projectId: String(elements.workflowProjectInput?.value || runtime.draft.projectId || '').trim(),
+      projectId: '',
       blocks: runtime.draft.blocks.map((block) => ({ ...block })),
       links: runtime.draft.links.map((link) => ({ ...link })),
       createdAt: now,

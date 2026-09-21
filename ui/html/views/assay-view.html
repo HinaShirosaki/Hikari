@@ -126,28 +126,31 @@
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
           <div class="form-actions assay-plate-toolbar">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
-              <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
-              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
+              <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active" aria-label="Edit Sample ID">Sample ID</button>
+              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Concentration</button>
             </div>
-            <label class="assay-conc-unit-field">
-              Fill
-              <select id="assay-fill-mode" class="assay-fill-mode-select">
-                <option value="factor">Dilution &divide;</option>
-                <option value="linear">Linear</option>
-                <option value="log">Log</option>
-              </select>
-            </label>
-            <input
-              type="number"
-              id="assay-dilution-factor"
-              class="assay-conc-unit-input"
-              min="0"
-              step="any"
-              placeholder="factor e.g. 10"
-            />
-            <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
-            <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
+            <div class="assay-plate-fill-controls" role="group" aria-label="Fill concentrations">
+              <label class="assay-conc-unit-field">
+                <span class="sr-only">Concentration fill method</span>
+                <select id="assay-fill-mode" class="assay-fill-mode-select">
+                  <option value="factor">Dilution &divide;</option>
+                  <option value="linear">Linear</option>
+                  <option value="log">Log</option>
+                </select>
+              </label>
+              <input
+                type="number"
+                id="assay-dilution-factor"
+                class="assay-conc-unit-input"
+                min="0"
+                step="any"
+                placeholder="Factor"
+                aria-label="Dilution factor"
+              />
+              <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
+            </div>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
+            <button type="button" id="assay-clear-mappings-btn" class="ghost-btn assay-plate-clear-btn" aria-label="Clear all well mappings">Clear mappings</button>
           </div>
           <div id="assay-layout-status" class="small-note"></div>
           <div id="assay-plate-preview" class="assay-plate-preview"></div>

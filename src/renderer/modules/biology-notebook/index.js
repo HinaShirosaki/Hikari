@@ -35,6 +35,8 @@ export function initLabNotebook({
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
   onProjectsChanged,
+  onCreateWorkflowProcess = () => null,
+  onOpenWorkflowProcess = () => {},
   selectionInsightsController = null,
   onActiveNotebookPageChanged = () => {},
   notebookType = 'biology'
@@ -122,6 +124,8 @@ export function initLabNotebook({
     onExperimentProtocolSearch,
     startExperiment
   } = createExperimentDialog({
+    onCreateWorkflowProcess,
+    onOpenWorkflowProcess,
     syncPageStarterProject: (...args) => syncPageStarterProject(...args),
     state,
     safeText,
@@ -471,6 +475,16 @@ export function initLabNotebook({
     updateRecord: updateNotebookEntryRecord
   });
 
+  elements.notebookProjectDashboard?.addEventListener('click', (event) => {
+    const add = event.target.closest('[data-project-workflow-add]');
+    if (add) {
+      openExperimentDialog({ kind: 'workflow', projectId: add.dataset.projectWorkflowAdd, templateId: add.dataset.processTemplate || '' });
+      return;
+    }
+    const open = event.target.closest('[data-project-process-open]');
+    if (open) onOpenWorkflowProcess(open.dataset.projectProcessOpen);
+  });
+
   return {
     hasUnsavedChanges: () => Boolean(
       drafts.getSavedDraftSnapshot()
@@ -480,6 +494,10 @@ export function initLabNotebook({
     appendAgentNotebookContent,
     openExperimentDialog,
     openProjectDashboard: showProjectDashboard,
+    refreshProjectDashboard: () => {
+      const id = drafts.getActiveProjectDashboardId();
+      if (id) showProjectDashboard(id);
+    },
     getAgentChatContext,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,
     renderProtocolOptions: dropdownRenderer.renderProtocolOptions,

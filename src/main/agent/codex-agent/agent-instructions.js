@@ -13,6 +13,8 @@ function buildHikariCodexAgentsInstructions() {
     '',
     'The `hikari` MCP server\'s instructions are the app tool contract. Use its tools over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.',
     '',
+    'For selected-project runs, use project MEMORY.md and .agents/skills as the project context and skill layers. Use native Codex search for external web evidence.',
+    '',
     'Paper-context sub-agent: read the exact title-named Markdown paths under `KnowledgeBase/papers.md/.../` (legacy records may use `paper.md`) and return the requested context JSON.'
   ].join('\n');
 }

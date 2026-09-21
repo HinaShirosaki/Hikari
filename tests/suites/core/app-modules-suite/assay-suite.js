@@ -441,6 +441,104 @@ test('assay agent TSV formatter preserves object-row cells', () => {
   assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
 });
 
+test('assay setup suppresses the universal agent chat rail while analysis keeps it available', () => {
+  const { createAssayFormAndList } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'workspace',
+    'form-and-list.js'
+  ));
+  const runtime = { assayMode: 'create', activeResultsAssayId: '' };
+  const createLayout = { hidden: false };
+  const resultsLayout = { hidden: true };
+  const createButton = new MockElement('assay-mode-create-btn');
+  const resultsButton = new MockElement('assay-mode-results-btn');
+  const createRail = { prepend() {} };
+  const resultsRail = { prepend() {} };
+  const observedModes = [];
+  const manager = createAssayFormAndList({
+    runtime,
+    elements: {
+      assayCreateLayout: createLayout,
+      assayResultsLayout: resultsLayout,
+      assayModeCreateBtn: createButton,
+      assayModeResultsBtn: resultsButton,
+      assayModeSwitch: {},
+      assayCreateRail: createRail,
+      assayResultsRail: resultsRail,
+      assayResultsAssaySelect: { value: '' }
+    },
+    layoutManager: {
+      renderPlateDefinition() {},
+      renderPlatePreview() {}
+    },
+    onAssayModeChanged: (mode) => observedModes.push(mode),
+    notifyActiveAssayChanged() {},
+    renderResultsAssayOptions() {},
+    clearActiveAssayInfo() {}
+  });
+
+  manager.setAssayMode('create');
+  assert.equal(createLayout.hidden, false);
+  assert.equal(resultsLayout.hidden, true);
+  assert.equal(observedModes.at(-1), 'create');
+
+  manager.setAssayMode('results');
+  assert.equal(createLayout.hidden, true);
+  assert.equal(resultsLayout.hidden, false);
+  assert.equal(observedModes.at(-1), 'results');
+
+  const { assayManifest } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'module-manifests',
+    'assay.js'
+  ));
+  const assayView = { dataset: {} };
+  const dispatchedEvents = [];
+  class TestCustomEvent {
+    constructor(type) {
+      this.type = type;
+    }
+  }
+  const manifestOptions = assayManifest.createOptions({
+    state: {},
+    persist() {},
+    createId() {},
+    safeText: (value) => String(value ?? ''),
+    rendererServices: { analysis: { handleAssaysChanged() {} } },
+    modules: {},
+    rootDocument: {
+      defaultView: { CustomEvent: TestCustomEvent },
+      getElementById: () => assayView,
+      dispatchEvent: (event) => dispatchedEvents.push(event.type)
+    }
+  });
+  manifestOptions.onAssayModeChanged('create');
+  assert.equal(assayView.dataset.agentChatRail, 'disabled');
+  manifestOptions.onAssayModeChanged('results');
+  assert.equal(assayView.dataset.agentChatRail, 'enabled');
+  assert.deepEqual(dispatchedEvents, [
+    'hikari:agent-chat-rail-availability-changed',
+    'hikari:agent-chat-rail-availability-changed'
+  ]);
+
+  const { isAgentChatRailAvailable } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'app',
+    'navigation-shell.js'
+  ));
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: true }, { dataset: { agentChatRail: 'disabled' } }), false);
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: true }, { dataset: { agentChatRail: 'enabled' } }), true);
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: false }, { dataset: { agentChatRail: 'enabled' } }), false);
+});
+
 test('assay analysis split initializes chart collaborators before the extracted surface', () => {
   const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
     __dirname,

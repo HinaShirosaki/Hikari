@@ -1,6 +1,12 @@
 // Every DOM node the notebook module touches, resolved once at init.
 function queryNotebookElements(doc = document) {
   return {
+    notebookExperimentKind: doc.getElementById('biology-notebook-experiment-kind'),
+    notebookExperimentProtocolFields: doc.getElementById('biology-notebook-experiment-protocol-fields'),
+    notebookExperimentWorkflowFields: doc.getElementById('biology-notebook-experiment-workflow-fields'),
+    notebookExperimentWorkflow: doc.getElementById('biology-notebook-experiment-workflow'),
+    notebookExperimentProcessName: doc.getElementById('biology-notebook-experiment-process-name'),
+
     notebookProjectSelect: doc.getElementById('biology-notebook-project-select'),
     notebookProtocolSearchInput: doc.getElementById('biology-notebook-protocol-search'),
     notebookProtocolSelect: doc.getElementById('biology-notebook-protocol-select'),

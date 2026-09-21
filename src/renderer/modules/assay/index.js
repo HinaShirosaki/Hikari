@@ -18,7 +18,15 @@ import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-
 import { createAssayFormAndList } from './workspace/form-and-list.js';
 import { createAssayNotebookLinks } from './workspace/notebook-links.js';
 
-export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
+export function initAssay({
+  state,
+  persist,
+  createId,
+  safeText,
+  onAssaysChanged,
+  onActiveAssayChanged,
+  onAssayModeChanged
+}) {
   const TabulatorLib = window.Tabulator || null;
   const elements = getAssayElements(document);
   const runtime = {
@@ -365,6 +373,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     renderNotebookOptions,
     renderResultsAssayOptions,
     clearActiveAssayInfo,
+    onAssayModeChanged,
     notifyActiveAssayChanged,
     renderAssayNumberDisplay,
     setCsvStatus,

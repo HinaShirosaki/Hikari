@@ -8,6 +8,7 @@ function createSpreadsheetFillHandle({
   getDraftTables,
   handleEdited,
   canFillCell = () => true,
+  canStartFillCell,
   applyFill
 } = {}) {
   /* -------------------------------------------------------------- fill edges */
@@ -97,7 +98,8 @@ function createSpreadsheetFillHandle({
     const tableHost = cellElement?.closest?.('[data-result-table-host]');
     const tableIndex = Number(tableHost?.dataset?.resultTableHost);
     const position = cellElement && getGrids()[tableIndex] ? cellPositionOf(tableIndex, cellElement) : null;
-    if (!position || !canFillCell(position)) {
+    const canStartFill = typeof canStartFillCell === 'function' ? canStartFillCell : canFillCell;
+    if (!position || !canStartFill(position)) {
       hideFillHandle();
       return;
     }

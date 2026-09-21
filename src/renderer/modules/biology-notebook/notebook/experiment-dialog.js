@@ -11,7 +11,9 @@ function createExperimentDialog({
   syncPageStarterProject,
   onProtocolChange,
   setEditingEntryId,
-  getActiveProjectDashboardId
+  getActiveProjectDashboardId,
+  onCreateWorkflowProcess = () => null,
+  onOpenWorkflowProcess = () => {}
 } = {}) {
   const {
     notebookProjectSelect,
@@ -23,6 +25,16 @@ function createExperimentDialog({
     notebookExperimentStartBtn,
     notebookNewExperimentBtn
   } = elements;
+  const isWorkflow = () => elements.notebookExperimentKind?.value === 'workflow';
+  const selectedWorkflow = () => (state.workflowTemplates || []).find((item) => item.id === elements.notebookExperimentWorkflow?.value);
+  function syncKind() {
+    const workflow = isWorkflow();
+    if (elements.notebookExperimentProtocolFields) elements.notebookExperimentProtocolFields.hidden = workflow;
+    if (elements.notebookExperimentWorkflowFields) elements.notebookExperimentWorkflowFields.hidden = !workflow;
+    syncExperimentDialogControls();
+  }
+  elements.notebookExperimentKind?.addEventListener('change', syncKind);
+  elements.notebookExperimentWorkflow?.addEventListener('change', syncExperimentDialogControls);
   let experimentDialogPreviousSelection = null;
   let experimentDialogWorkspaceProjectId = '';
 
@@ -47,15 +59,20 @@ function createExperimentDialog({
 
   function syncExperimentDialogControls() {
     const project = findSelectedProject();
-    const protocol = findSelectedProtocol();
+    const protocol = isWorkflow() ? selectedWorkflow() : findSelectedProtocol();
     if (notebookExperimentStartBtn) {
-      notebookExperimentStartBtn.disabled = !project || !protocol;
+      notebookExperimentStartBtn.disabled = !project || !protocol || (isWorkflow() && !protocol.blocks?.length);
+      notebookExperimentStartBtn.textContent = isWorkflow() ? 'Start process' : 'Start Experiment';
     }
     if (!isExperimentDialogOpen()) {
       return;
     }
     if (!project) {
-      setExperimentDialogStatus('Choose a project to see available protocols.');
+      setExperimentDialogStatus('Choose a project to start an experiment.');
+      return;
+    }
+    if (isWorkflow()) {
+      setExperimentDialogStatus(!state.workflowTemplates?.length ? 'Create a workflow template in Workflow first.' : protocol && !protocol.blocks?.length ? 'This template has no steps yet.' : '');
       return;
     }
     if (!protocol) {
@@ -128,7 +145,7 @@ function createExperimentDialog({
     }
   }
 
-  function openExperimentDialog() {
+  function openExperimentDialog(options = {}) {
     if (!notebookExperimentDialogOverlay || !notebookProjectSelect || !notebookProtocolSelect) {
       return;
     }
@@ -137,7 +154,14 @@ function createExperimentDialog({
       protocolId: String(notebookProtocolSelect.value || ''),
       protocolSearch: String(notebookProtocolSearchInput?.value || '')
     };
-    experimentDialogWorkspaceProjectId = String(getActiveProjectDashboardId() || notebookProjectSelect.value || '');
+    experimentDialogWorkspaceProjectId = String(options.projectId || getActiveProjectDashboardId() || notebookProjectSelect.value || '');
+    if (elements.notebookExperimentKind) elements.notebookExperimentKind.value = options.kind === 'workflow' ? 'workflow' : 'protocol';
+    if (elements.notebookExperimentWorkflow) {
+      elements.notebookExperimentWorkflow.innerHTML = '<option value="">Choose a workflow template</option>' + (state.workflowTemplates || []).map((item) => `<option value="${safeText(item.id)}">${safeText(item.name || 'Untitled template')}</option>`).join('');
+      elements.notebookExperimentWorkflow.value = options.templateId || '';
+    }
+    if (elements.notebookExperimentProcessName) elements.notebookExperimentProcessName.value = '';
+    syncKind();
 
     dropdownRenderer.renderProjectOptions();
     const hasWorkspaceProject = state.projects.some((project) => project.id === experimentDialogWorkspaceProjectId);
@@ -177,6 +201,21 @@ function createExperimentDialog({
   function startExperiment(event) {
     event?.preventDefault?.();
     const project = findSelectedProject();
+    if (isWorkflow()) {
+      const template = selectedWorkflow();
+      if (!project || !template?.blocks?.length) {
+        setExperimentDialogStatus('Choose a project and a workflow template with steps.', { error: true });
+        return;
+      }
+      const process = onCreateWorkflowProcess({ templateId: template.id, projectId: project.id, workflowName: elements.notebookExperimentProcessName?.value.trim() || '' });
+      if (!process) {
+        setExperimentDialogStatus('Could not start the workflow process.', { error: true });
+        return;
+      }
+      closeExperimentDialog({ restoreSelection: true, returnFocus: false });
+      onOpenWorkflowProcess(process.id);
+      return;
+    }
     const protocol = findSelectedProtocol();
     if (!project || !protocol) {
       setExperimentDialogStatus('Choose both a project and a protocol before starting.', { error: true });

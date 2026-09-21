@@ -41,6 +41,13 @@ function createDerivedPlateGrid({
     canFillCell: ({ columnIndex, rowIndex }) => (
       buildMappedWellSet(runtime.currentLayout).has(wellIdFor(rowIndex, columnIndex))
     ),
+    canStartFillCell: ({ columnIndex, rowIndex }) => {
+      const well = wellIdFor(rowIndex, columnIndex);
+      // An empty transformed cell has nothing to copy. Leaving its edge unclaimed
+      // gives the compact cell its full click area for opening the formula editor.
+      return buildMappedWellSet(runtime.currentLayout).has(well)
+        && Boolean(String(transformFormulas[well] ?? '').trim());
+    },
     applyFill: ({ columnIndex, rowIndex, targets, source }) => {
       targets.forEach((target) => {
         const well = wellIdFor(target.rowIndex, target.columnIndex);
@@ -173,6 +180,9 @@ function createDerivedPlateGrid({
         index: '__rowIndex',
         layout: 'fitDataTable',
         reactiveData: false,
+        // Range selection otherwise wins the first interaction in some Electron
+        // builds, making a formula cell feel like it needs a double-click.
+        editTriggerEvent: 'click',
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true
