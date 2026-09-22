@@ -12,7 +12,6 @@ function createChartSurface({
   chartStyleStore,
   chartControls,
   plotlyRenderer,
-  assayAnalysisSummary,
   assayAnalysisTable,
   assayChartFormatPanel
 } = {}) {
@@ -156,7 +155,7 @@ function createChartSurface({
   }
 
   function renderAgentPlotlyGraph(artifact = {}) {
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return false;
     }
     const normalized = normalizeAgentPlotlyGraphArtifact(artifact);
@@ -165,7 +164,6 @@ function createChartSurface({
     }
     const plotly = getPlotlyRuntime();
     if (typeof plotly?.newPlot !== 'function') {
-      assayAnalysisSummary.textContent = 'Plotly is unavailable, so the agent graph could not be rendered.';
       showTransientNotice('Plotly is unavailable, so the agent graph could not be rendered.', { type: 'error' });
       assayAnalysisTable.innerHTML = '<p class="small-note">Plotly is unavailable in this workspace.</p>';
       return false;
@@ -178,14 +176,13 @@ function createChartSurface({
       .filter(Boolean);
     const title = normalized.name || getPlotlyTitle(normalized.figure.layout);
     const issueCount = asArray(normalized.inspection?.issues).length;
-    const issueNote = issueCount ? ` Inspection issues: ${issueCount}.` : '';
     const graphLabel = title ? `Agent Plotly graph: ${title}` : 'Agent Plotly graph';
-    const summary = normalized.summary || `${graphLabel} rendered.`;
-    assayAnalysisSummary.textContent = `${summary}${issueNote}`;
+    // The graph's own caption carries the inspection count; nothing is written to
+    // the controls rail.
     assayAnalysisTable.innerHTML = `
       <div class="assay-analysis-results assay-analysis-agent-results" data-assay-agent-plotly-output>
         <div class="assay-analysis-agent-note">
-          ${safeText(graphLabel)}${normalized.id ? ` <span>${safeText(`ID ${normalized.id}`)}</span>` : ''}
+          ${safeText(graphLabel)}${normalized.id ? ` <span>${safeText(`ID ${normalized.id}`)}</span>` : ''}${issueCount ? ` <span>${safeText(`Inspection issues: ${issueCount}`)}</span>` : ''}
         </div>
         <div class="assay-analysis-chart assay-analysis-agent-chart" data-assay-agent-plotly-chart></div>
       </div>
@@ -224,8 +221,7 @@ function createChartSurface({
       );
       if (renderResult && typeof renderResult.then === 'function') {
         renderResult.catch((error) => {
-          assayAnalysisSummary.textContent = String(error?.message || error || 'Unable to render Plotly graph.');
-          showTransientNotice(assayAnalysisSummary.textContent, { type: 'error' });
+          showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
         });
       }
       lastAnalysisContext = {
@@ -240,8 +236,7 @@ function createChartSurface({
       setChartContext(lastAnalysisContext);
       return true;
     } catch (error) {
-      assayAnalysisSummary.textContent = String(error?.message || error || 'Unable to render Plotly graph.');
-          showTransientNotice(assayAnalysisSummary.textContent, { type: 'error' });
+      showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
       return false;
     }
   }

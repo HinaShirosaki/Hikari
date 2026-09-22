@@ -33,7 +33,7 @@ function createDraftProposal({
       message,
       parserPayload
     });
-    return asArray(ranked).slice(0, 3).map((match) => ({
+    return asArray(ranked).slice(0, 20).map((match) => ({
       id: uniqueStrings(['protocol-only', cleanText(match?.id, 120), cleanText(match?.name, 220)], 5).join('::'),
       source_type: 'protocol_match',
       priority: 40,
@@ -93,9 +93,9 @@ function createDraftProposal({
         evidenceSummaries.length ? `Evidence considered: ${evidenceSummaries.join(' ')}` : ''
       ].filter(Boolean).join(' '), 700),
       planned_materials: uniqueStrings([
-        ...asArray(selectedProtocol?.materials).slice(0, 5),
+        ...asArray(selectedProtocol?.materials).slice(0, 120),
         protocolName
-      ], 6),
+      ], 120),
       checkpoints: uniqueStrings([
         ...trail,
         cleanText(candidate?.reason, 220),
@@ -142,7 +142,7 @@ function createDraftProposal({
         }
       });
     }
-    return cleanText(lines.join('\n'), 3000);
+    return cleanText(lines.join('\n'), 40000);
   }
 
   function decorateNotebookDraft({
@@ -160,9 +160,9 @@ function createDraftProposal({
       title: cleanText(proposal?.title, 220) || cleanText(candidate?.protocol_name, 220) || 'Planned Experiment',
       purpose: cleanText(proposal?.purpose, 700),
       rationale: cleanText(proposal?.rationale, 700) || cleanText(candidate?.reason, 320),
-      planned_materials: uniqueStrings(asArray(proposal?.planned_materials), 8),
-      checkpoints: uniqueStrings(asArray(proposal?.checkpoints), 8),
-      evidence_context: normalizeEvidenceContext(evidenceContext).slice(0, 6),
+      planned_materials: uniqueStrings(asArray(proposal?.planned_materials), 120),
+      checkpoints: uniqueStrings(asArray(proposal?.checkpoints), 40),
+      evidence_context: normalizeEvidenceContext(evidenceContext).slice(0, 20),
       workflow: candidate?.workflow && typeof candidate.workflow === 'object'
         ? {
           id: cleanText(candidate.workflow.id, 120),

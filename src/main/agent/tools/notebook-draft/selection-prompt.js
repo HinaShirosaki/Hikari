@@ -29,12 +29,12 @@ function createDraftSelectionPrompt({ asArray, cleanText, ensureObject } = {}) {
       planned_materials: {
         type: 'array',
         items: { type: 'string' },
-        maxItems: 10
+        maxItems: 120
       },
       checkpoints: {
         type: 'array',
         items: { type: 'string' },
-        maxItems: 10
+        maxItems: 40
       }
     }
   };
@@ -84,21 +84,21 @@ function createDraftSelectionPrompt({ asArray, cleanText, ensureObject } = {}) {
     candidates,
     evidenceContext = []
   } = {}) {
-    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
+    const promptConversation = asArray(conversation).slice(-32).map((row, index) => {
       const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = cleanText(row?.text, 1200);
+      const text = cleanText(row?.text, 3000);
       return text ? `${index + 1}. ${role}: ${text}` : '';
     }).filter(Boolean).join('\n');
     return [
       ...NOTEBOOK_DRAFT_SELECTION_RULES,
-      `User message: ${cleanText(message, 3200)}`,
+      `User message: ${cleanText(message, 12000)}`,
       promptConversation ? `Recent conversation:\n${promptConversation}` : '',
       `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
       `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
-      `Recent notebook runs JSON:\n${JSON.stringify(asArray(notebookRuns).slice(0, 12), null, 2)}`,
-      `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 6), null, 2)}`,
+      `Recent notebook runs JSON:\n${JSON.stringify(asArray(notebookRuns).slice(0, 60), null, 2)}`,
+      `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 40), null, 2)}`,
       asArray(evidenceContext).length
-        ? `Evidence context JSON:\n${JSON.stringify(normalizeEvidenceContext(evidenceContext).slice(0, 6), null, 2)}`
+        ? `Evidence context JSON:\n${JSON.stringify(normalizeEvidenceContext(evidenceContext).slice(0, 20), null, 2)}`
         : ''
     ].filter(Boolean).join('\n\n');
   }

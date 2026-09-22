@@ -238,7 +238,7 @@ function createAgentRuntimeSupport(deps = {}) {
       : null;
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
-      protocols: asArray(snapshot.protocols).slice(0, 100),
+      protocols: asArray(snapshot.protocols).slice(0, 500),
       notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
       workflows: asArray(snapshot.workflows).slice(0, 120),
       assays,

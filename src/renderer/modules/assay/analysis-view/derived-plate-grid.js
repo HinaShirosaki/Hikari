@@ -20,7 +20,6 @@ function createDerivedPlateGrid({
   assayResultTable,
   assayDerivedPlatePanel,
   assayDerivedPlateTable,
-  assayTransformSummary,
   assayAnalysisRowGroupsInput,
   assayAnalysisColumnGroupsInput
 } = {}) {
@@ -66,12 +65,6 @@ function createDerivedPlateGrid({
 
   function getTransformSpec() {
     return normalizeTransformSpec({ mode: 'cells', enabled: transformEnabled, formulas: transformFormulas });
-  }
-
-  function setTransformSummary(text) {
-    if (assayTransformSummary) {
-      assayTransformSummary.textContent = text;
-    }
   }
 
   function clearTransformGrid() {
@@ -208,7 +201,6 @@ function createDerivedPlateGrid({
       derivedPlate = null;
       if (assayDerivedPlatePanel) assayDerivedPlatePanel.hidden = true;
       clearTransformGrid();
-      setTransformSummary('');
       return null;
     }
 
@@ -220,10 +212,7 @@ function createDerivedPlateGrid({
       columnGroupSpec: String(assayAnalysisColumnGroupsInput?.value || '')
     });
     derivedPlate = result;
-
-    setTransformSummary(result.errorCount
-      ? `${result.errorCount} formula error(s); hover #ERROR for details.`
-      : '');
+    // A failed formula shows up as its own #ERROR cell, with the reason on hover.
 
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
@@ -314,7 +303,6 @@ function createDerivedPlateGrid({
       return transformFormulas;
     },
     getTransformSpec,
-    setTransformSummary,
     clearTransformGrid,
     ensureTransformGrid,
     refreshDerivedPlate,

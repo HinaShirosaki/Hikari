@@ -255,15 +255,16 @@ export function createAgentRequestController(deps) {
         }
       }
       const response = normalizeAgentResponse(result);
-      const notebookDraft = notebookDraftAdapter?.applyAutoSave?.(response.notebookPayload, messageText)
-        ?? notebookDraftAdapter?.normalizeDraft?.(response.notebookPayload)
-        ?? null;
-      if (notebookDraft?.save?.applied === true) {
+      const notebookDrafts = response.notebookPayloads.map((payload) => notebookDraftAdapter?.applyAutoSave?.(payload, messageText)
+        ?? notebookDraftAdapter?.normalizeDraft?.(payload)
+        ?? null).filter(Boolean);
+      const notebookDraft = notebookDrafts[0] || null;
+      if (notebookDrafts.some((draft) => draft.save?.applied === true)) {
         renderContextSummary();
       }
       const traceRows = collectTraceRows(request);
       clearLiveAssistantState(request);
-      const assistantMessage = buildAssistantResponseMessage({ createId, response, notebookDraft, traceRows, messageText });
+      const assistantMessage = buildAssistantResponseMessage({ createId, response, notebookDraft, notebookDrafts, traceRows, messageText });
       if (persistAssistantMessage(request, assistantMessage)) {
         openReviewForMessage(assistantMessage);
       }

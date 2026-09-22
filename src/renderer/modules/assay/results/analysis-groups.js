@@ -1,3 +1,4 @@
+import { showTransientNotice } from '../../../lib/notify.js';
 import { rowLabelToIndex } from '../plate-model.js';
 import { parseDimensionGroupSpec } from '../analysis/shared.js';
 import { resultFieldToColumnIndex } from './result-fields.js';
@@ -12,8 +13,7 @@ function createAssayAnalysisGroups({
 } = {}) {
   const {
     assayAnalysisColumnGroupsInput,
-    assayAnalysisRowGroupsInput,
-    assayAnalysisSelectionStatus
+    assayAnalysisRowGroupsInput
   } = elements;
 
   const analysisGroupColorCount = 4;
@@ -22,14 +22,6 @@ function createAssayAnalysisGroups({
       `assay-analysis-row-group-color-${colorIndex}`,
       `assay-analysis-column-group-color-${colorIndex}`
     ]);
-
-  function setAnalysisSelectionStatus(message, isError = false) {
-    if (!assayAnalysisSelectionStatus) {
-      return;
-    }
-    assayAnalysisSelectionStatus.textContent = message || '';
-    assayAnalysisSelectionStatus.classList.toggle('is-error', Boolean(isError && message));
-  }
 
   function getCurrentResultRangeSelection() {
     if (!getResultGrid() || typeof getResultGrid().getRanges !== 'function') {
@@ -158,14 +150,6 @@ function createAssayAnalysisGroups({
     return analysisGroups;
   }
 
-  function updateResultRangeSelectionStatus() {
-    const selection = getCurrentResultRangeSelection();
-    // Selection is already visible in the result grid and the toolbar labels make
-    // the available actions clear. Keep this status target for validation feedback.
-    setAnalysisSelectionStatus('');
-    return selection;
-  }
-
   function nextGroupName(dimension) {
     const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
     const prefix = dimension === 'row' ? 'Row Group' : 'Column Group';
@@ -186,10 +170,12 @@ function createAssayAnalysisGroups({
   }
 
   function addSelectedRangeGroup(dimension) {
-    const selection = updateResultRangeSelectionStatus();
+    const selection = getCurrentResultRangeSelection();
     const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
+    // The selection itself is visible in the result grid, so only a blocked action
+    // has anything to say -- and it says it in the shared transient notice.
     if (!members.length) {
-      setAnalysisSelectionStatus(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`, true);
+      showTransientNotice(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`, { type: 'error' });
       return;
     }
 
@@ -197,7 +183,6 @@ function createAssayAnalysisGroups({
     const groupName = nextGroupName(dimension);
     appendGroupEntry(input, groupName, members);
     refreshAnalysisGroupDisplay();
-    setAnalysisSelectionStatus('');
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
     }
@@ -219,19 +204,16 @@ function createAssayAnalysisGroups({
       assayAnalysisColumnGroupsInput.value = '';
     }
     refreshAnalysisGroupDisplay();
-    setAnalysisSelectionStatus('Cleared row and column groups.');
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
     }
   }
 
   return {
-    setAnalysisSelectionStatus,
     getCurrentResultRangeSelection,
     getAnalysisGroups,
     applyAnalysisGroupHighlights,
     refreshAnalysisGroupDisplay,
-    updateResultRangeSelectionStatus,
     onAddSelectedRowGroup,
     onAddSelectedColumnGroup,
     onClearAnalysisGroups

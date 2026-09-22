@@ -8,7 +8,7 @@ function createNotebookPayloadBuilders({
   cleanText
 } = {}) {
   function renderProtocolStepText(step, values) {
-    const source = cleanText(step?.text, 1600);
+    const source = cleanText(step?.text, 6000);
     const placeholders = asArray(step?.placeholders).map((placeholder) => ({
       id: cleanText(placeholder?.id, 120),
       name: cleanText(placeholder?.name, 120) || 'value'

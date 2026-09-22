@@ -55,14 +55,12 @@ export function createAssayAnalysisView({
     assayAnalysisPolyOrderInput,
     assayAnalysisSubtotalsField,
     assayAnalysisSubtotalsInput,
-    assayAnalysisSummary,
     assayAnalysisRowGroupsInput,
     assayAnalysisTable,
     assayAnalysisXAxisField,
     assayAnalysisXAxisInput,
     assayChartStyleMount,
     assayChartFormatPanel,
-    assayTransformSummary,
     assayResultTable,
     assayDerivedPlatePanel,
     assayDerivedPlateTable
@@ -96,7 +94,6 @@ export function createAssayAnalysisView({
     assayResultTable,
     assayDerivedPlatePanel,
     assayDerivedPlateTable,
-    assayTransformSummary,
     assayAnalysisRowGroupsInput,
     assayAnalysisColumnGroupsInput
   });
@@ -156,7 +153,6 @@ export function createAssayAnalysisView({
     chartStyleStore,
     chartControls,
     plotlyRenderer,
-    assayAnalysisSummary,
     assayAnalysisTable,
     assayChartFormatPanel
   });
@@ -210,9 +206,6 @@ export function createAssayAnalysisView({
   }
 
   function clearOutput() {
-    if (assayAnalysisSummary) {
-      assayAnalysisSummary.textContent = '';
-    }
     unmountAnalysisChart();
     purgeAgentPlotly();
     if (assayAnalysisTable) {
@@ -246,10 +239,9 @@ export function createAssayAnalysisView({
       method: lastSpec.analysis,
       spec: { ...lastSpec },
       methodLabel: describeAnalysisSpec(lastSpec),
-      // The rail reserves status text for actionable notices. Keep the complete
-      // analysis description in the saved/agent record even when a successful
-      // result does not need to repeat it above the table and chart.
-      summary: lastRecordedSummary || lastResult.summary || assayAnalysisSummary?.textContent || '',
+      // Keep the complete analysis description in the saved/agent record even
+      // though the UI no longer repeats it beside the table and chart.
+      summary: lastRecordedSummary || lastResult.summary || '',
       headers: Array.isArray(lastResult.headers) ? lastResult.headers.map((item) => String(item)) : [],
       rows: Array.isArray(lastResult.rows) ? lastResult.rows : [],
       chartDataUrl: plotlyRenderer.captureDataUrl(),
@@ -278,7 +270,7 @@ export function createAssayAnalysisView({
   }
 
   function renderAnalysis() {
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
 
@@ -289,10 +281,11 @@ export function createAssayAnalysisView({
     const spec = getAnalysisSpec();
     const { observations, nonNumericCount } = collectNumericObservations();
     if (!observations.length) {
-      assayAnalysisSummary.textContent = nonNumericCount
+      // Nothing to plot: say so where the table and chart would have been, not in
+      // the rail beside the controls.
+      assayAnalysisTable.innerHTML = `<p class="small-note">${safeText(nonNumericCount
         ? `No numeric values found. Non-numeric result cells: ${nonNumericCount}.`
-        : 'No result values to analyze.';
-      assayAnalysisTable.innerHTML = '';
+        : 'No result values to analyze.')}</p>`;
       lastResult = null;
       lastSpec = null;
       lastModel = null;
@@ -313,8 +306,8 @@ export function createAssayAnalysisView({
       method: spec.analysis
     });
 
-    // Successful analysis tables and charts already show their model and result
-    // rows. Use this compact status target only for information that needs action.
+    // The analysis table and chart already show the model and its result rows; the
+    // notices below only ride along into the saved record.
     const notices = [];
     if (!result.rows.length && result.summary) {
       notices.push(result.summary);
@@ -323,7 +316,6 @@ export function createAssayAnalysisView({
       notices.push(`Non-numeric cells ignored: ${nonNumericCount}.`);
     }
     lastRecordedSummary = [result.summary, ...notices.filter((notice) => notice !== result.summary)].join(' ');
-    assayAnalysisSummary.textContent = notices.join(' ');
     if (!result.rows.length) {
       assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this analysis.</p>';
       setChartContext(getAnalysisContext());
@@ -348,7 +340,7 @@ export function createAssayAnalysisView({
 
   function onAnalysisMethodChange() {
     syncAnalysisControls();
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
     clearOutput();
@@ -429,7 +421,7 @@ export function createAssayAnalysisView({
   }
 
   function onAnalysisConfigChange() {
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
     syncCurrentResultsFromGrid();

@@ -52,6 +52,15 @@ export function initPapersManagement({
     summaryCollapsed: false
   };
 
+  // Intake only ever runs inside a session, so a paper still marked 'running' at
+  // boot is left over from a quit or a crash. Clearing it keeps the Processing
+  // badge from sticking on a row nothing is working on.
+  (state.papers || []).forEach((paper) => {
+    if (paper?.ingestionStatus === 'running') {
+      paper.ingestionStatus = 'uploaded';
+    }
+  });
+
 
 
   const { openPdfExternalWebsite } = createExternalLinkOpener({ windowRef });

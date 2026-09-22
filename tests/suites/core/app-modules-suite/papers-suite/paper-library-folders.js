@@ -449,7 +449,10 @@ test('papers viewer preserves and surfaces automatic intake failures after stori
     ok: true,
     fileName: payload.fileName,
     filePath: '/tmp/hikari-storage/Project/Cancer_Study/Papers/intake-failed.pdf',
-    relativePath: 'Project/Cancer_Study/Papers/intake-failed.pdf',
+    relativePath: 'Project/Cancer_Study/Papers/intake-failed.pdf'
+  });
+  harness.window.hikariApi.transformStoredPaperPdf = async () => ({
+    ok: true,
     knowledgeStatus: 'ready',
     paperIntakeStatus: 'failed',
     paperIntakeError: 'Structured intake response failed validation.'
@@ -501,7 +504,10 @@ test('papers viewer reports batched intake failures in one notice', async () => 
     ok: true,
     fileName: payload.fileName,
     filePath: `/tmp/hikari-storage/Project/Cancer_Study/Papers/${payload.fileName}`,
-    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`,
+    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`
+  });
+  harness.window.hikariApi.transformStoredPaperPdf = async () => ({
+    ok: true,
     knowledgeStatus: 'ready',
     paperIntakeStatus: 'failed',
     paperIntakeError: 'Structured intake response failed validation.'

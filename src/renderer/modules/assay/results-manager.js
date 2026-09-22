@@ -35,11 +35,9 @@ export function createAssayResultsManager({
   let resultGrid = null;
   let resultGridSignature = '';
   const {
-    setAnalysisSelectionStatus,
     getAnalysisGroups,
     applyAnalysisGroupHighlights,
     refreshAnalysisGroupDisplay,
-    updateResultRangeSelectionStatus,
     onAddSelectedRowGroup,
     onAddSelectedColumnGroup,
     onClearAnalysisGroups
@@ -98,7 +96,6 @@ export function createAssayResultsManager({
     resultGrid.destroy();
     resultGrid = null;
     resultGridSignature = '';
-    setAnalysisSelectionStatus('');
   }
 
   function onResultGridCellEdited(cell) {
@@ -114,11 +111,10 @@ export function createAssayResultsManager({
     const updated = setResultValue(rowIndex, columnIndex, cell.getValue());
     if (!updated) {
       renderResultTable();
-      setResultStatus(`Only mapped wells accept result values. ${wellIdFor(rowIndex, columnIndex)} is not mapped.`);
+      setResultStatus(`Only mapped wells accept result values. ${wellIdFor(rowIndex, columnIndex)} is not mapped.`, true);
       return;
     }
     runtime.resultPasteAnchor = { rowIndex, columnIndex };
-    setResultStatus('');
     notifyResultsChanged();
   }
 
@@ -133,7 +129,6 @@ export function createAssayResultsManager({
       return;
     }
     runtime.resultPasteAnchor = { rowIndex, columnIndex };
-    setResultStatus(`Active cell: ${wellIdFor(rowIndex, columnIndex)}.`);
   }
 
   function ensureResultGrid(def) {
@@ -177,36 +172,21 @@ export function createAssayResultsManager({
         // value into the result model at all.
         resultGrid.on('cellEdited', onResultGridCellEdited);
         resultGrid.on('cellClick', onResultGridCellClick);
-        resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
-        resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
-        resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);
-        // Both of these read the grid (getRanges, cell elements), so they have to
-        // wait for tableBuilt -- calling them right after the constructor warns
-        // and returns nothing.
-        resultGrid.on('tableBuilt', () => {
-          updateResultRangeSelectionStatus();
-          refreshAnalysisGroupDisplay();
-        });
+        // This reads the grid's cell elements, so it has to wait for tableBuilt --
+        // calling it right after the constructor warns and returns nothing.
+        resultGrid.on('tableBuilt', refreshAnalysisGroupDisplay);
         resultGrid.on('renderComplete', () => applyAnalysisGroupHighlights(getAnalysisGroups()));
       }
-      host.addEventListener('focus', () => {
-        setResultStatus('Table selected. Paste starts at A1 unless a result cell is selected.');
-      });
       resultGridSignature = signature;
       return true;
     }
     resultGrid.replaceData(buildResultGridData(def));
-    updateResultRangeSelectionStatus();
     refreshAnalysisGroupDisplay();
     return true;
   }
 
   function renderResultTable() {
-    const def = getCurrentDefinition();
-    if (!ensureResultGrid(def)) {
-      return;
-    }
-    setResultStatus('');
+    ensureResultGrid(getCurrentDefinition());
   }
 
   // Tabulator measures column widths on build, so a grid built (or resized) while its
@@ -412,7 +392,6 @@ export function createAssayResultsManager({
     renderResultTable,
     redrawResultGrid,
     syncCurrentResultsFromGrid,
-    setAnalysisSelectionStatus,
     refreshAnalysisGroupDisplay,
     onAddSelectedRowGroup,
     onAddSelectedColumnGroup,

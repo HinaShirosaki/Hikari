@@ -125,6 +125,22 @@
           </div>
         </div>
       </aside>
+      <div id="agent-rail-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+        <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-rail-review-title">
+          <header class="agent-review-dialog-header app-dialog-head">
+            <div>
+              <h3 id="agent-rail-review-title">Review generated drafts</h3>
+            </div>
+            <button type="button" id="agent-rail-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
+          </header>
+          <div id="agent-rail-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
+          <footer class="agent-review-footer">
+            <button type="button" id="agent-rail-review-prev-btn" class="ghost-btn" aria-label="Previous generated draft">Previous</button>
+            <span id="agent-rail-review-page-label" class="small-note">1 / 1</span>
+            <button type="button" id="agent-rail-review-next-btn" class="ghost-btn" aria-label="Next generated draft">Next</button>
+          </footer>
+        </section>
+      </div>
     </div>
   </main>
 

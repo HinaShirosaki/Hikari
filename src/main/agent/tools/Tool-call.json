@@ -456,14 +456,14 @@
           "items": {
             "type": "string"
           },
-          "maxItems": 5
+          "maxItems": 20
         },
         "pending_values": {
           "$ref": "#/$defs/pending_values"
         },
         "step_edits": {
           "type": "array",
-          "maxItems": 60,
+          "maxItems": 240,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -1108,7 +1108,7 @@
     }
   },
   "paper-download": {
-    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename and `collection_name` for the non-project destination folder; papers from one literature search should share its original query as `collection_name`. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename and `collection_name` for the non-project destination folder; papers from one literature search should share its original query as `collection_name`. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process. Matching active jobs and verified saved PDFs are reused. If status is `running`, repeat the same DOI/title and collection to check the existing job; a caller timeout does not mean the PDF was not saved. Read any returned `knowledge_markdown_path` while experiment extraction continues in the background.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

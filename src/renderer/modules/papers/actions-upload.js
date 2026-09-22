@@ -114,11 +114,7 @@ function createPaperUploadActions({
           linkedName: linked.name
         }),
         fileName: file.name,
-        dataBytes: pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength),
-        transformPdfToMarkdown: true,
-        paperTitle: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
-        linkedType,
-        linkedName: linked.name
+        dataBytes: pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength)
       });
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to store uploaded PDF.');
@@ -130,11 +126,6 @@ function createPaperUploadActions({
     }
 
     const now = new Date().toISOString();
-    const paperIntakeError = String(
-      storedFile.paperIntakeError
-        || storedFile.knowledgeDatabase?.paper_intake_error
-        || ''
-    ).trim();
     const paper = {
       id: createId(),
       title: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
@@ -155,16 +146,16 @@ function createPaperUploadActions({
       keyFigures: [],
       highlights: [],
       comments: [],
-      knowledgeMarkdownRelativePath: storedFile.knowledgeMarkdownRelativePath || '',
-      knowledgeExtractedTextRelativePath: storedFile.knowledgeExtractedTextRelativePath || '',
-      knowledgeMetaRelativePath: storedFile.knowledgeMetaRelativePath || '',
-      knowledgeStatus: storedFile.knowledgeStatus || '',
-      knowledgeGenerationMethod: storedFile.knowledgeDatabase?.wiki_generation_method || '',
+      knowledgeMarkdownRelativePath: '',
+      knowledgeExtractedTextRelativePath: '',
+      knowledgeMetaRelativePath: '',
+      knowledgeStatus: '',
+      knowledgeGenerationMethod: '',
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
-      ingestionStatus: paperIntakeError ? 'error' : 'uploaded',
+      ingestionStatus: 'running',
       ingestionUpdatedAt: now,
-      ingestionErrors: paperIntakeError ? [paperIntakeError] : [],
+      ingestionErrors: [],
       createdAt: now,
       updatedAt: now
     };
@@ -176,10 +167,57 @@ function createPaperUploadActions({
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
     context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
     context.render?.();
-    // Intake failures are reported once per batch by uploadPaperFiles; they are
-    // correlated (missing key, offline model), so alerting here would stack one
-    // blocking modal per dropped PDF.
     return paper;
+  }
+
+  // Intake reads the PDF, writes Markdown and figures, and asks a model for the
+  // structured record - minutes of work on a real paper. It runs after the row
+  // is already in the library so an upload never looks like it did nothing, and
+  // failures are reported once per batch because they are correlated (missing
+  // key, offline model) rather than per-file. 'running' drives the Processing
+  // badge in the rail; a quit mid-intake is cleared on the next boot.
+  async function runPaperIntake(papers = [], uploadTarget = null) {
+    const rootPath = String(uploadTarget?.rootPath || state.settings?.storagePath || '').trim();
+    if (!rootPath || typeof windowRef?.hikariApi?.transformStoredPaperPdf !== 'function') {
+      return;
+    }
+
+    for (const uploaded of papers) {
+      const result = await windowRef.hikariApi.transformStoredPaperPdf({
+        storagePath: rootPath,
+        filePath: uploaded.storedFilePath,
+        relativePath: uploaded.storedRelativePath,
+        paperTitle: uploaded.title,
+        linkedType: uploaded.linkedType,
+        linkedName: uploaded.linkedName
+      }).catch((error) => ({ ok: false, error: String(error?.message || error) }));
+
+      // The paper may have been deleted while intake was running.
+      const paper = getPaperById(uploaded.id);
+      if (!paper) {
+        continue;
+      }
+
+      const intakeError = String(
+        (result?.ok ? '' : result?.error)
+          || result?.paperIntakeError
+          || result?.knowledgeDatabase?.paper_intake_error
+          || ''
+      ).trim();
+      paper.knowledgeMarkdownRelativePath = result?.knowledgeMarkdownRelativePath || '';
+      paper.knowledgeExtractedTextRelativePath = result?.knowledgeExtractedTextRelativePath || '';
+      paper.knowledgeMetaRelativePath = result?.knowledgeMetaRelativePath || '';
+      paper.knowledgeStatus = result?.knowledgeStatus || '';
+      paper.knowledgeGenerationMethod = result?.knowledgeDatabase?.wiki_generation_method || '';
+      paper.ingestionStatus = intakeError ? 'error' : 'uploaded';
+      paper.ingestionErrors = intakeError ? [intakeError] : [];
+      paper.ingestionUpdatedAt = new Date().toISOString();
+      updatePaperAvailability(paper);
+      persist();
+      context.render?.();
+    }
+
+    reportPaperIntakeFailures(papers.map((uploaded) => getPaperById(uploaded.id)).filter(Boolean));
   }
 
   const MAX_LISTED_INTAKE_FAILURES = 5;
@@ -220,7 +258,7 @@ function createPaperUploadActions({
     }
     elements.paperForm?.reset?.();
     context.render?.();
-    reportPaperIntakeFailures(uploaded);
+    void runPaperIntake(uploaded, uploadTarget);
     return uploaded;
   }
 
@@ -237,6 +275,7 @@ function createPaperUploadActions({
     startPaperAutoIngest,
     resolvePaperUploadTarget,
     uploadPaperFile,
+    runPaperIntake,
     reportPaperIntakeFailures,
     uploadPaperFiles,
     uploadAndViewPaperFile

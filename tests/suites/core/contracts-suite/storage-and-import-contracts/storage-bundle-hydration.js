@@ -269,12 +269,22 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           syncSqliteBundleFromSnapshot: async () => ({})
         });
 
-        const result = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
+        const stored = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
           storagePath: tempDir,
           targetFolder: path.join(tempDir, 'Project', 'Atlas', 'Papers'),
           fileName: 'paper-one.pdf',
-          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64'),
-          transformPdfToMarkdown: true,
+          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64')
+        });
+
+        // Storing the PDF must not wait on intake: the library row appears
+        // first, and the caller runs the pipeline afterwards.
+        assert.equal(stored.ok, true);
+        assert.equal(intakeCalls.length, 0);
+
+        const result = await handlers.get(STORAGE.TRANSFORM_PAPER_PDF)(null, {
+          storagePath: tempDir,
+          filePath: stored.filePath,
+          relativePath: stored.relativePath,
           paperTitle: 'Paper One',
           linkedType: 'project',
           linkedName: 'Atlas'

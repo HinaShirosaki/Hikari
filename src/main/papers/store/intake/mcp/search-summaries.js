@@ -2,14 +2,15 @@
 
 const { DOC_TYPES } = require('../intake-store.js');
 const { asArray, ensureObject } = require('../../../../lib/normalize.js');
-const { rankAndTrim, scoreSummary, tokenize } = require('../intake-search.js');
-const { MAX_LIMIT, TOOL_NAMES, clampLimit, cleanText, compact, ensureStore, matchesDocTypes, projectionForSummaryMatch, readOnlyAnnotations, resolveProjectSelector } = require('./projections.js');
+const { prepareQuery, rankAndTrim, scorePaper, tokenize } = require('../intake-search.js');
+const { MAX_LIMIT, SEARCH_SCOPE_SCHEMA, TOOL_NAMES, clampLimit, cleanText, compact, ensureStore, matchesDocTypes, projectionForSummaryMatch, readOnlyAnnotations, resolveProjectSelector } = require('./projections.js');
 
 const SEARCH_SUMMARIES_DEFINITION = Object.freeze({
   name: TOOL_NAMES.SEARCH_SUMMARIES,
   description: [
-    'Keyword search across one-sentence paper summaries (and titles) in the paper-intake KB.',
-    'Scores titles slightly higher than summaries and rewards verbatim phrase matches.',
+    'Find local papers across titles, DOIs, one-sentence summaries, experiment methods, variables, outcomes, evidence, outlines, and claims in the paper-intake KB.',
+    'Ranks lexical matches by distinct query concepts and term rarity, with explicit title/DOI bonuses, normalized punctuation, and selected assay aliases.',
+    'Returns matched fields and excerpts with experiment/figure references; partial keyword matches are discovery candidates, not proof of the whole query.',
     'Use this when the user wants to find a paper by topic, finding, or concept without reading every summary.',
     'Optionally constrain to a single project or to specific document types (research_paper, review, book, ...).'
   ].join(' '),
@@ -20,6 +21,7 @@ const SEARCH_SUMMARIES_DEFINITION = Object.freeze({
     required: ['query'],
     properties: {
       query: { type: 'string', minLength: 1, maxLength: 300 },
+      scope: SEARCH_SCOPE_SCHEMA,
       project_name: { type: 'string', minLength: 1, maxLength: 240 },
       doc_types: {
         type: 'array',
@@ -86,13 +88,11 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
     candidates = candidates.filter((record) => matchesDocTypes(record, docTypes));
   }
 
-  const scored = candidates
-    .map((record) => {
-      const { score, matched } = scoreSummary(record, tokens, query);
-      return { record, score, matched };
-    });
-  const ranked = rankAndTrim(scored, limit);
-  const items = ranked.map(({ record, score, matched }) => projectionForSummaryMatch(record, score, matched));
+  const preparedQuery = prepareQuery(tokens, query);
+  const scored = candidates.map((record) => ({ record, ...scorePaper(record, tokens, query, preparedQuery) }));
+  const ranked = rankAndTrim(scored, limit, tokens);
+  const items = ranked.map((match) => projectionForSummaryMatch(match.record, match.score, match.matched, match));
+  const totalMatches = scored.filter((match) => match.score > 0).length;
 
   return {
     ...compact({
@@ -102,12 +102,15 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
       app_tool: TOOL_NAMES.SEARCH_SUMMARIES,
       query,
       terms_used: tokens,
+      search_scope: projectId || projectName ? 'project' : 'library',
+      total_matches: totalMatches,
+      truncated: totalMatches > items.length,
       project_id: projectId,
       project_name: projectName,
       doc_types: docTypes,
       summary: items.length
-        ? `Matched ${items.length} paper${items.length === 1 ? '' : 's'} on summary terms: ${tokens.join(', ')}.`
-        : `No paper summary matched terms: ${tokens.join(', ')}.`,
+        ? `Matched ${items.length} paper${items.length === 1 ? '' : 's'} across stored intake fields: ${tokens.join(', ')}.`
+        : `No stored paper intake fields matched: ${tokens.join(', ')}. This does not rule out relevant full text.`,
       errors: load.errors
     }),
     items

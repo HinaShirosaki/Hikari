@@ -1,6 +1,7 @@
 import { asArray, trimText } from './shared.js';
+import { collectNotebookDrafts, findNotebookDraft } from './notebook-draft-list.js';
 
-function updateAssistantNotebookDraftMessage(messages, messageId, nextDraft, notebookDraftAdapter) {
+function updateAssistantNotebookDraftMessage(messages, messageId, nextDraft, notebookDraftAdapter, draftId = '') {
   const normalizedMessageId = trimText(messageId, 120);
   if (!normalizedMessageId || !nextDraft || typeof nextDraft !== 'object') {
     return null;
@@ -13,9 +14,14 @@ function updateAssistantNotebookDraftMessage(messages, messageId, nextDraft, not
   if (!normalizedDraft) {
     return null;
   }
+  const items = collectNotebookDrafts(message.meta, notebookDraftAdapter);
+  const selected = findNotebookDraft(message.meta, notebookDraftAdapter, draftId);
+  if (!selected) return null;
+  const drafts = items.map((item) => item.draftId === selected.draftId ? normalizedDraft : item.draft);
   message.meta = {
     ...message.meta,
-    notebookDraft: normalizedDraft
+    notebookDraft: drafts[0] || normalizedDraft,
+    notebookDrafts: drafts
   };
   return normalizedDraft;
 }
@@ -42,9 +48,9 @@ export function createNotebookHistoryActions({
     }
   }
 
-  function openNotebookPage(messageId = '') {
+  function openNotebookPage(messageId = '', draftId = '') {
     const message = findMessage(messageId);
-    const draft = notebookDraftAdapter?.normalizeDraft?.(message?.meta?.notebookDraft) || null;
+    const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     const existingEntry = notebookDraftAdapter?.findEntryForDraft?.(draft) || null;
     if (!draft || !existingEntry) {
       setStatus('Notebook page is unavailable for opening.');
@@ -58,30 +64,32 @@ export function createNotebookHistoryActions({
     );
   }
 
-  function createPlannedPage(messageId = '') {
+  function createPlannedPage(messageId = '', draftId = '') {
     const message = findMessage(messageId);
-    const draft = notebookDraftAdapter?.normalizeDraft?.(message?.meta?.notebookDraft) || null;
+    const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     if (!draft || draft.save.mode !== 'confirm_before_save') {
       setStatus('Planned notebook draft is unavailable for creation.');
-      return;
+      return false;
     }
+    if (draft.save.status === 'rejected') return false;
     const result = notebookDraftAdapter?.createPlannedPage?.(
       draft,
       trimText(message?.meta?.requestText, 3000)
     );
     if (!result?.ok && result?.reason === 'missing_binding') {
       setStatus('Planned notebook draft is missing a project or protocol binding.');
-      return;
+      return false;
     }
     if (!result?.ok || !result.entry || !result.draft) {
       setStatus('Planned notebook draft is unavailable for creation.');
-      return;
+      return false;
     }
     updateAssistantNotebookDraftMessage(
       state.agentChat.messages,
       messageId,
       result.draft,
-      notebookDraftAdapter
+      notebookDraftAdapter,
+      draftId
     );
     persist();
     if (result.created) {
@@ -90,15 +98,17 @@ export function createNotebookHistoryActions({
     renderHistoryView({ forceScroll: true });
     openExistingEntry(result.entry);
     setStatus(result.created ? 'Planned notebook page created.' : 'Opened planned notebook page.');
+    return true;
   }
 
-  function rejectPlannedPage(messageId = '') {
+  function rejectPlannedPage(messageId = '', draftId = '') {
     const message = findMessage(messageId);
-    const draft = notebookDraftAdapter?.normalizeDraft?.(message?.meta?.notebookDraft) || null;
+    const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     if (!draft || draft.save.mode !== 'confirm_before_save') {
       setStatus('Planned notebook draft is unavailable for rejection.');
       return;
     }
+    if (draft.save.applied || notebookDraftAdapter?.findEntryForDraft?.(draft)) return false;
     updateAssistantNotebookDraftMessage(state.agentChat.messages, messageId, {
       ...draft,
       save: {
@@ -107,10 +117,11 @@ export function createNotebookHistoryActions({
         status: 'rejected',
         reason: 'Planned page rejected by user.'
       }
-    }, notebookDraftAdapter);
+    }, notebookDraftAdapter, draftId);
     persist();
     renderHistoryView({ forceScroll: true });
     setStatus('Planned notebook draft rejected.');
+    return true;
   }
 
   return {

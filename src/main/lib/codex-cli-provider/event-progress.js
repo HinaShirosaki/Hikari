@@ -1,4 +1,5 @@
 'use strict';
+const { extractNotebookDraftArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/notebook-drafts.js');
 
 const { extractHtmlArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/image-output.js');
@@ -144,6 +145,7 @@ function extractCodexJsonEventToolCall(event = {}) {
   const htmlArtifact = extractHtmlArtifactFromToolOutput(toolName, outputValue);
   const imageArtifact = extractImageArtifactFromToolOutput(toolName, outputValue);
   const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, outputValue, { status });
+  const notebookDraftArtifact = extractNotebookDraftArtifactFromToolOutput(toolName, outputValue);
   return {
     type: 'codex_tool_call',
     event_type: type,
@@ -152,6 +154,7 @@ function extractCodexJsonEventToolCall(event = {}) {
     call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
     tool_output_text: outputText,
+    ...(notebookDraftArtifact ? { notebook_draft_artifact: notebookDraftArtifact } : {}),
     ...(htmlArtifact ? { html_artifact: htmlArtifact } : {}),
     ...(imageArtifact ? { image_artifact: imageArtifact } : {}),
     ...(plotlyGraphArtifact ? { plotly_graph_artifact: plotlyGraphArtifact } : {})
@@ -174,6 +177,7 @@ function buildCodexProgressEventKey(event = {}) {
     cleanText(event.event_type || event.eventType, 160),
     cleanText(event.status, 80),
     cleanText(event.tool_name || event.toolName, 160),
+    cleanText(event.call_id, 160),
     cleanText(event.tool_call_text || event.toolCallText || event.thinking_text || event.thinkingText, 4000)
   ].join('\u0001');
 }

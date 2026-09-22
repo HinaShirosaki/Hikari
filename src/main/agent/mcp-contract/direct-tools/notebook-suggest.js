@@ -1,6 +1,6 @@
 'use strict';
 
-const { NOTEBOOK_DRAFT_MCP_TOOL, callNotebookDraft } = require('./notebook-draft.js');
+const { NOTEBOOK_DRAFT_MCP_TOOL, SINGLE_DRAFT_SCHEMA, callNotebookDraft } = require('./notebook-draft.js');
 const { isNotebookSuggestionContext } = require('../notebook-suggestion-policy.js');
 const { cleanText } = require('./shared.js');
 
@@ -10,13 +10,13 @@ const NOTEBOOK_SUGGEST_MCP_TOOL = Object.freeze({
   description: 'Only available in the background next-experiment suggestion workflow. Submit zero to five Suggested experiments in the suggestions array using the notebook_draft protocol, placeholder and per-copy step-edit contract. Hikari adds it to the scoped project for review; it becomes Planned only when the user takes it into plan. Supply a concise title and evidence-grounded rationale for each. An empty suggestions array explicitly reports that there is no useful next experiment. Never download papers in this workflow.',
   annotations: { ...NOTEBOOK_DRAFT_MCP_TOOL.annotations, title: 'Suggest next experiment' },
   inputSchema: {
-    ...NOTEBOOK_DRAFT_MCP_TOOL.inputSchema,
+    ...SINGLE_DRAFT_SCHEMA,
     properties: {
-      ...NOTEBOOK_DRAFT_MCP_TOOL.inputSchema.properties,
+      ...SINGLE_DRAFT_SCHEMA.properties,
       suggestions: {
         type: 'array', maxItems: 5,
-        items: { ...NOTEBOOK_DRAFT_MCP_TOOL.inputSchema, properties: {
-          ...NOTEBOOK_DRAFT_MCP_TOOL.inputSchema.properties,
+        items: { ...SINGLE_DRAFT_SCHEMA, properties: {
+          ...SINGLE_DRAFT_SCHEMA.properties,
           title: { type: 'string', maxLength: 220 }, rationale: { type: 'string', minLength: 1, maxLength: 1500 }
         }, required: ['title', 'rationale'] }
       },
@@ -27,6 +27,7 @@ const NOTEBOOK_SUGGEST_MCP_TOOL = Object.freeze({
 });
 
 async function callNotebookSuggest(input = {}, context = {}, deps = {}) {
+  if ('drafts' in input) return { ok: false, status: 'rejected', error: 'Use the suggestions array in background runs.' };
   if (!isNotebookSuggestionContext(context)) {
     return { ok: false, status: 'rejected', error: 'notebook_suggest is restricted to background experiment suggestions.' };
   }

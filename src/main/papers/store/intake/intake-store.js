@@ -5,6 +5,7 @@ const { asArray, ensureObject } = require('../../../lib/normalize.js');
 const { defaultSourcePaths, intakeRelativePath } = require('./store/paths.js');
 const { DOC_TYPES, INTAKE_FILE_NAME, INTAKE_SCHEMA_VERSION, PAPERS_ROOT_REL, cleanText, normalizeIntakeRecord, uniqueStrings } = require('./store/record-normalizing.js');
 const { createPaperReads } = require('./store/paper-reads.js');
+const { getIntakeRecordCache } = require('./search/record-cache.js');
 
 /**
  * Create an intake store bound to a workspace root and an injected file-system.
@@ -23,6 +24,8 @@ const { createPaperReads } = require('./store/paper-reads.js');
 function createIntakeStore(deps = {}) {
   const workspacePath = cleanText(deps.workspacePath, 1024);
   const fs = ensureObject(deps.fs);
+  const recordCache = getIntakeRecordCache(fs);
+  const resolvedPathRecords = new WeakSet();
   const resolveProjectIdsForPaper = typeof deps.resolveProjectIdsForPaper === 'function'
     ? deps.resolveProjectIdsForPaper
     : null;
@@ -61,7 +64,7 @@ function createIntakeStore(deps = {}) {
   async function listPaperIds() {
     if (listKnownPaperIds) {
       const ids = await listKnownPaperIds();
-      return uniqueStrings(ids, 1000);
+      return uniqueStrings(ids, Infinity);
     }
     try {
       const entries = await fs.readdir(papersRootAbsolute(), { withFileTypes: true });
@@ -69,7 +72,7 @@ function createIntakeStore(deps = {}) {
         asArray(entries)
           .filter((entry) => entry && typeof entry === 'object' && entry.isDirectory && entry.isDirectory())
           .map((entry) => entry.name),
-        1000
+        Infinity
       );
     } catch {
       return [];
@@ -77,6 +80,13 @@ function createIntakeStore(deps = {}) {
   }
 
   async function readIntake(paperId) {
+    const id = cleanText(paperId, 200);
+    if (!id || ensureReady()) return readIntakeUncached(paperId);
+    return recordCache.read(absoluteIntakePath(id), () => readIntakeUncached(id),
+      (result) => !resolvedPathRecords.has(result.record));
+  }
+
+  async function readIntakeUncached(paperId) {
     const guard = ensureReady();
     if (guard) {
       return guard;
@@ -113,6 +123,9 @@ function createIntakeStore(deps = {}) {
     }
     const record = normalizeIntakeRecord({ ...parsed, paper_id: parsed?.paper_id || id });
     if (!record.source_paths.paper_md) {
+      // These paths depend on meta.json / folder contents as well as intake.json.
+      // Resolve legacy paths afresh rather than caching against the wrong file.
+      resolvedPathRecords.add(record);
       const located = await resolvePaperMarkdownPath(id);
       const defaults = defaultSourcePaths(id, {
         paper_md: located?.paper_md,
@@ -167,6 +180,7 @@ function createIntakeStore(deps = {}) {
     });
     const absPath = absoluteIntakePath(id);
     try {
+      recordCache.remove(absPath);
       await fs.mkdir(path.dirname(absPath), { recursive: true });
       await fs.writeFile(absPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
     } catch (error) {
@@ -177,6 +191,7 @@ function createIntakeStore(deps = {}) {
         error: cleanText(error?.message || error, 600)
       };
     }
+    recordCache.remove(absPath);
     return { ok: true, status: 'saved', paper_id: id, record: merged };
   }
 
@@ -188,8 +203,17 @@ function createIntakeStore(deps = {}) {
     const ids = await listPaperIds();
     const records = [];
     const errors = [];
-    for (const paperId of ids) {
-      const result = await readIntake(paperId);
+    const loaded = new Array(ids.length);
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(16, ids.length) }, async () => {
+      while (next < ids.length) {
+        const index = next++;
+        loaded[index] = await readIntake(ids[index]);
+      }
+    }));
+    for (let index = 0; index < ids.length; index += 1) {
+      const paperId = ids[index];
+      const result = loaded[index];
       if (result.ok) {
         records.push(result.record);
       } else if (result.status === 'not_found') {

@@ -5,6 +5,7 @@ export function buildAssistantResponseMessage({
   createId,
   response,
   notebookDraft,
+  notebookDrafts,
   traceRows,
   messageText
 }) {
@@ -30,6 +31,7 @@ export function buildAssistantResponseMessage({
       result_analysis: response.resultAnalysis,
       thinking_trace: response.thinkingTrace,
       notebookDraft: notebookDraft || null,
+      notebookDrafts: notebookDrafts || (notebookDraft ? [notebookDraft] : []),
       html_artifacts: mergeAgentHtmlArtifacts(traceRows.htmlArtifacts, response.htmlArtifacts),
       image_artifacts: mergeAgentImageArtifacts(traceRows.imageArtifacts, response.imageArtifacts),
       sequence_actions: traceRows.sequenceActions || [],

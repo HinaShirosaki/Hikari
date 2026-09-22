@@ -20,6 +20,7 @@ const RESEARCH_PAGE_SYSTEM_PROMPT = [
   'List every distinct experiment, control, ablation, computational analysis, or supplementary experiment evidenced by the supplied content.',
   'Include only experiments conducted by this paper; exclude background studies, cited prior work, future work, and reference-list entries.',
   'For each experiment, copy a short verbatim evidence excerpt from the supplied content.',
+  'Preserve stated assay names and acronyms in technique, and exact target, construct, mutation, compound, cell-line, organism, dose, and time identifiers in variables so later queries can retrieve the experiment; never infer missing details.',
   'Do not paraphrase evidence and do not report an experiment without supporting content.',
   'Set request_next_page to true when another page is available and the paragraph, caption, table, method, result, or experiment continues.',
   'Do not add identifiers, page numbers, line numbers, or source paths. Return JSON only.'

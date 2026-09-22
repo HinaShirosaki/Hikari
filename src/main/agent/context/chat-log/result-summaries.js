@@ -181,6 +181,7 @@ function summarizeScienceResult(payload) {
 // Build a concise assistant-facing summary from notebook draft proposal results.
 function summarizeNotebookDraft(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
+  if (asArray(source.notebooks).length > 1) return `Prepared ${source.notebooks.length} notebook drafts for individual review.`;
   const status = cleanText(source.status);
   if (!status) {
     return '';

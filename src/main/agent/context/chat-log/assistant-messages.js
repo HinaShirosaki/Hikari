@@ -86,6 +86,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
       : null,
     thinking_trace: extractStructuredThinkingTrace(payload),
     notebookDraft: notebookPayload ? cloneJson(notebookPayload, null) : null,
+    notebookDrafts: cloneJson(payload.notebookDrafts || notebookDraftWorkflow?.notebooks || (notebookPayload ? [notebookPayload] : []), []),
     notebookAppend: notebookAppendWorkflow ? cloneJson(notebookAppendWorkflow, null) : null,
     requestText: cleanText(requestText)
   };

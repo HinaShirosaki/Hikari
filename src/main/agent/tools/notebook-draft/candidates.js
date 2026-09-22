@@ -38,7 +38,7 @@ function createDraftCandidates({
     const notebookEntries = typeof notebookApi.listAgentEntries === 'function'
       ? asArray(notebookApi.listAgentEntries({
         snapshot,
-        limit: 180
+        limit: 1000
       }))
       : asArray(snapshot?.notebookEntries);
     return notebookEntries.map((entry) => {

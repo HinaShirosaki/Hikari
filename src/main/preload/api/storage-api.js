@@ -12,6 +12,7 @@ function createStorageApi(ipcRenderer) {
     getLastStorageRoot: () => ipcRenderer.invoke(STORAGE.LAST_ROOT),
     storeImportedFile: (payload) => ipcRenderer.invoke(STORAGE.STORE_IMPORTED_FILE, payload),
     moveStoredFile: (payload) => ipcRenderer.invoke(STORAGE.MOVE_STORED_FILE, payload),
+    transformStoredPaperPdf: (payload) => ipcRenderer.invoke(STORAGE.TRANSFORM_PAPER_PDF, payload),
     writeJsonFile: (payload) => ipcRenderer.invoke(STORAGE.WRITE_JSON_FILE, payload),
     discoverStoredPapers: (payload) => ipcRenderer.invoke(STORAGE.DISCOVER_PAPERS, payload),
     openFilePath: (path) => ipcRenderer.invoke(STORAGE.OPEN_FILE, { path }),

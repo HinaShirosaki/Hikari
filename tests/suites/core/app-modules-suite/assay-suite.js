@@ -569,7 +569,7 @@ test('assay analysis split initializes chart collaborators before the extracted 
   view.destroy();
 });
 
-test('assay analysis hides successful status copy while retaining saved analysis metadata', () => {
+test('assay analysis keeps the rail free of status copy while retaining saved analysis metadata', () => {
   const document = createMockDocument();
   const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
     __dirname,
@@ -579,7 +579,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
     'assay',
     'analysis-view.js'
   ), { document });
-  const summary = new MockElement('assay-analysis-summary');
   const table = new MockElement('assay-analysis-table');
   const input = (value = '') => {
     const element = new MockElement();
@@ -607,7 +606,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
       assayAnalysisPolyOrderInput: input('2'),
       assayAnalysisSubtotalsField: new MockElement(),
       assayAnalysisSubtotalsInput: input(),
-      assayAnalysisSummary: summary,
       assayAnalysisRowGroupsInput: input(),
       assayAnalysisTable: table,
       assayAnalysisXAxisField: new MockElement(),
@@ -631,7 +629,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
 
   view.renderAnalysis();
 
-  assert.equal(summary.textContent, '', 'successful analysis does not add redundant rail status copy');
   assert.match(table.innerHTML, /<td>Linear<\/td>/, 'the result table still identifies the fitted model');
   assert.match(savedAnalysis.summary, /^Linear fitted for 1 series/, 'the saved analysis retains its full summary');
   assert.doesNotMatch(savedAnalysis.summary, /Rows:/, 'the UI-only row count is not persisted');
@@ -648,7 +645,6 @@ test('assay group selection stays silent but missing selections still explain th
     'assay',
     'results-manager.js'
   ), { document });
-  const selectionStatus = new MockElement('assay-analysis-selection-status');
   const resultTable = new MockElement('assay-result-table');
   resultTable.append = () => {};
 
@@ -683,7 +679,6 @@ test('assay group selection stays silent but missing selections still explain th
   const manager = createAssayResultsManager({
     runtime: { currentLayout: [], currentResults: {}, resultPasteAnchor: { rowIndex: 0, columnIndex: 0 } },
     elements: {
-      assayAnalysisSelectionStatus: selectionStatus,
       assayAnalysisRowGroupsInput: new MockElement(),
       assayAnalysisColumnGroupsInput: new MockElement(),
       assayResultTable: resultTable
@@ -707,13 +702,13 @@ test('assay group selection stays silent but missing selections still explain th
     getRows: () => [{ getData: () => ({ rowLabel: 'B' }) }],
     getColumns: () => []
   }];
-  RangeTabulator.instance.events.rangeAdded();
-  assert.equal(selectionStatus.textContent, '', 'the selected-range hint remains hidden');
+  assert.equal(document.querySelector('[data-hikari-transient-toast]'), null, 'selecting a range says nothing');
 
   RangeTabulator.instance.ranges = [];
   manager.onAddSelectedRowGroup();
-  assert.equal(selectionStatus.textContent, 'Select at least one row before adding a group.');
-  assert.equal(selectionStatus.classList.contains('is-error'), true, 'a blocked action reads as an error, not a note');
+  const toast = document.querySelector('[data-hikari-transient-toast]');
+  assert.equal(toast.textContent, 'Select at least one row before adding a group.');
+  assert.equal(toast.hidden, false, 'a blocked action surfaces in the shared transient notice');
 });
 
 test('assay treats loading a saved plate as a clean setup and results baseline', () => {

@@ -101,6 +101,7 @@ function registerDataIpc(deps = {}) {
     sanitizeImportedFileName,
     asArray,
     storeImportedFile,
+    transformStoredPaperPdf,
     moveStoredFile,
     appendNotebookPageLog,
     writeJsonStorageFile,
@@ -281,6 +282,15 @@ function registerDataIpc(deps = {}) {
     try {
       const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
       return { ok: true, ...stored };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle(STORAGE.TRANSFORM_PAPER_PDF, async (_event, payload) => {
+    try {
+      const transformed = await transformStoredPaperPdf(normalizeJsonPayload(payload, {}));
+      return { ok: true, ...transformed };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }

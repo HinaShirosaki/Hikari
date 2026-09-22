@@ -793,10 +793,6 @@
   background: var(--theme-surface-subtle);
 }
 
-.assay-analysis-selection-status {
-  min-height: 1.1rem;
-}
-
 .assay-analysis-results {
   display: grid;
   gap: 10px;

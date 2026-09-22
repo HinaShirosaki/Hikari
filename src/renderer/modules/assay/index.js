@@ -116,7 +116,6 @@ export function initAssay({
     elements,
     renderList,
     renderResultsAssayOptions,
-    clearActiveAssayInfo,
     onAssaysChanged,
     getAssayById,
     artifactStorage: { persistAssayArtifacts: (id) => artifactStorage.persistAssayArtifacts(id) },
@@ -145,13 +144,11 @@ export function initAssay({
     }
   }
 
+  // The results rail carries no status copy of its own; every confirmation and
+  // recoverable failure goes to the shared transient notice.
   function setResultStatus(message, isError = false) {
-    if (isError && message) {
-      showTransientNotice(String(message), { type: 'error' });
-    }
-    if (elements.assayResultStatus) {
-      elements.assayResultStatus.textContent = message || '';
-      elements.assayResultStatus.classList.toggle('is-error', Boolean(isError && message));
+    if (message) {
+      showTransientNotice(String(message), { type: isError ? 'error' : 'success' });
     }
   }
 
@@ -162,13 +159,6 @@ export function initAssay({
       return;
     }
     elements.assayNumberDisplay.textContent = previewNextAssayNumber(state);
-  }
-
-  function clearActiveAssayInfo() {
-    if (!elements.assayActiveAssayInfo) {
-      return;
-    }
-    elements.assayActiveAssayInfo.textContent = '';
   }
 
   function getActiveResultsAssay() {
@@ -230,7 +220,6 @@ export function initAssay({
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -320,7 +309,6 @@ export function initAssay({
     const assay = getAssayById(assayId);
     if (!assay) {
       runtime.activeResultsAssayId = '';
-      clearActiveAssayInfo();
       return;
     }
     runtime.activeResultsAssayId = assay.id;
@@ -336,7 +324,6 @@ export function initAssay({
     layoutManager.renderPlatePreview(axisValues);
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
-    clearActiveAssayInfo();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.loadTransformSpec(assay.transformSpec);
     analysisView.clearOutput();
@@ -372,7 +359,6 @@ export function initAssay({
     renderProjectOptions,
     renderNotebookOptions,
     renderResultsAssayOptions,
-    clearActiveAssayInfo,
     onAssayModeChanged,
     notifyActiveAssayChanged,
     renderAssayNumberDisplay,

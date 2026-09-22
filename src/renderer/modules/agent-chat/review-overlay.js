@@ -105,13 +105,11 @@ export function createAgentReviewOverlayController({
   }
 
   function approveNotebook(item) {
-    notebookActions?.createPlannedPage?.(item.messageId);
-    removeItem(item.id);
+    if (notebookActions?.createPlannedPage?.(item.messageId, item.draftId) === true) removeItem(item.id);
   }
 
   function rejectNotebook(item) {
-    notebookActions?.rejectPlannedPage?.(item.messageId);
-    removeItem(item.id);
+    if (notebookActions?.rejectPlannedPage?.(item.messageId, item.draftId) === true) removeItem(item.id);
   }
 
   async function approveNotebookAppend(item) {

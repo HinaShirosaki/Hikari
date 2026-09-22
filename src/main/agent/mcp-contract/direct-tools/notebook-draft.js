@@ -29,7 +29,7 @@ const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
       protocol_candidates: {
         type: 'array',
         items: { type: 'string' },
-        maxItems: 5
+        maxItems: 20
       },
       pending_values: {
         type: 'object',
@@ -37,7 +37,7 @@ const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
       },
       step_edits: {
         type: 'array',
-        maxItems: 60,
+        maxItems: 240,
         items: {
           type: 'object',
           additionalProperties: false,
@@ -46,9 +46,21 @@ const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
             text: { type: 'string' }
           }
         }
-      }
+      },
+      title: { type: 'string', maxLength: 220 },
+      draft_id: { type: 'string', maxLength: 160, description: 'Returned proposal_id to update an existing draft instead of adding another page.' }
     }
   }
+});
+
+const SINGLE_DRAFT_SCHEMA = NOTEBOOK_DRAFT_MCP_TOOL.inputSchema;
+const BATCH_NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
+  ...NOTEBOOK_DRAFT_MCP_TOOL,
+  description: NOTEBOOK_DRAFT_MCP_TOOL.description + ' For several pages, supply drafts (1–20 items), each with its own title and protocol/values/edits. Omit drafts for one page. Reuse a returned proposal_id as draft_id when refining a page. Every page is reviewed separately; no pages are auto-saved.',
+  inputSchema: { ...SINGLE_DRAFT_SCHEMA, properties: {
+    ...SINGLE_DRAFT_SCHEMA.properties,
+    drafts: { type: 'array', minItems: 1, maxItems: 20, items: SINGLE_DRAFT_SCHEMA }
+  } }
 });
 
 function normalizeProject(input = {}, context = {}) {
@@ -70,7 +82,8 @@ function normalizeProject(input = {}, context = {}) {
     220
   );
   return compactObject({
-    id: projectId,
+    id: input.project_name && cleanText(contextProject.name || context.projectName, 220).toLowerCase() !== projectName.toLowerCase()
+      ? undefined : projectId,
     name: projectName,
     resolution_source: cleanText(contextProject.resolution_source || contextProject.resolutionSource, 120)
   });
@@ -90,10 +103,33 @@ function resolveNotebookDraftPayload(result = {}) {
 }
 
 async function callNotebookDraft(input = {}, context = {}, deps = {}) {
+  if (Object.prototype.hasOwnProperty.call(input, 'drafts')) {
+    if (!Array.isArray(input.drafts) || input.drafts.length < 1 || input.drafts.length > 20
+      || input.drafts.some((item) => !item || typeof item !== 'object' || Array.isArray(item) || 'drafts' in item)) {
+      return { ok: false, status: 'invalid_arguments', error: 'Supply 1–20 individual notebook drafts.' };
+    }
+    const results = [];
+    for (const item of input.drafts) {
+      try {
+        results.push(await callNotebookDraft({ project_name: input.project_name, ...item }, context, deps));
+      } catch (error) {
+        results.push({ ok: false, status: 'failed', error: String(error?.message || error) });
+      }
+    }
+    const notebooks = results.filter((result) => result.ok && result.notebook?.entry_template).map((result) => result.notebook);
+    return {
+      ok: notebooks.length > 0, status: notebooks.length === results.length ? 'proposal_ready' : 'partial',
+      mcp_tool: 'notebook_draft', app_tool: 'notebook-draft',
+      results: results.map(({ notebook, ...result }) => ({ ...result, proposal_id: notebook?.proposal?.proposal_id })), notebooks,
+      notebook: notebooks[0] || null,
+      summary: `Prepared ${notebooks.length} of ${results.length} notebook drafts for individual review.`
+    };
+  }
   const project = normalizeProject(input, context);
-  const protocolCandidates = uniqueStrings(asArray(input.protocol_candidates), 5);
+  const protocolCandidates = uniqueStrings(asArray(input.protocol_candidates), 20);
   const pendingValues = ensureObject(input.pending_values);
-  const message = cleanText(context.message, 3200);
+  const title = cleanText(input.title, 220);
+  const message = [cleanText(context.message, 12000), title ? `Prepare this page: ${title}` : ''].filter(Boolean).join('\n');
   const parserPayload = normalizeParserPayload(context.parserPayload, {
     primary_intent: 'notebook_draft',
     entities: {
@@ -128,6 +164,15 @@ async function callNotebookDraft(input = {}, context = {}, deps = {}) {
     && payload.ok !== false
     && !['error', 'failed'].includes(status);
 
+  if (ok && payload.notebook?.entry_template) {
+    const notebook = payload.notebook;
+    const draftId = cleanText(input.draft_id, 160);
+    notebook.proposal = { ...notebook.proposal, ...(title ? { title } : {}), ...(draftId ? { proposal_id: draftId } : {}) };
+    if (title) notebook.entry_template.experimentName = title;
+    if (draftId) notebook.entry_template.agentDraftMeta = { ...notebook.entry_template.agentDraftMeta, proposalId: draftId };
+    payload.proposal = notebook.proposal;
+  }
+
   return compactObject({
     ok,
     status,
@@ -147,7 +192,8 @@ async function callNotebookDraft(input = {}, context = {}, deps = {}) {
 }
 
 module.exports = {
-  NOTEBOOK_DRAFT_MCP_TOOL,
+  NOTEBOOK_DRAFT_MCP_TOOL: BATCH_NOTEBOOK_DRAFT_MCP_TOOL,
+  SINGLE_DRAFT_SCHEMA,
   callNotebookDraft,
   normalizeProject
 };

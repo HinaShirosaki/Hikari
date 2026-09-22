@@ -16,9 +16,11 @@ Direct tool:
 Draft context checklist:
 
 - `project_name`: the selected or resolved Hikari project name when known.
-- `protocol_candidates`: up to five likely protocol names, with the strongest candidate first.
+- `protocol_candidates`: up to 20 likely protocol names, with the strongest candidate first; one is selected per page.
 - `pending_values`: known placeholder values. Every key must exactly match a `placeholder_key` in `<step-id>:<placeholder-id>` form from the normalized protocol or an earlier notebook-draft result; display names are not keys.
-- `step_edits`: optional draft-only replacements by `step_number`, or appended step text when `step_number` is omitted. These edits never mutate the saved protocol.
+- `step_edits`: up to 240 optional draft-only replacements by `step_number`, or appended step text when `step_number` is omitted. These edits never mutate the saved protocol.
+- `title`: an optional distinctive page title. `draft_id`: the returned proposal_id when refining an existing page, so the updated proposal replaces that page rather than creating a duplicate.
+- `drafts`: for multiple pages, an array of 1–20 individual requests using the fields above. Each page selects one protocol and keeps its own values and edits. Additional calls retain earlier drafts, and each page must be approved separately.
 - These are the only supported tool arguments. The host already supplies the current message and project context; do not send `message`, `project_id`, `workflow_id`, `evidence_context`, or `parser_payload`.
 
 Placeholder fill rules:
@@ -32,8 +34,8 @@ Workflow:
 
 1. Resolve the project and experiment target from the selected project, user request, recent workflow state, protocol candidates, and loaded notebook history.
 2. Gather local Hikari context first when it matters: protocol candidates, workflow progress, previous notebook results, relevant records, and paper-derived evidence.
-3. Call `notebook_draft` using only `project_name`, `protocol_candidates`, `pending_values`, and optional `step_edits`.
-4. Read the tool result and use `status`, `proposal_summary`, `proposal`, `notebook`, `missing_placeholders`, and `follow_up_questions` as the source of truth.
-5. Retry once with exact placeholder keys when known or routine values can be supplied, then return the confirmation-ready draft or the one genuinely blocking follow-up question.
+3. Call `notebook_draft` with a single page request or a `drafts` array. A top-level `project_name` is the default project for batch items.
+4. Read the tool result and use `status`, `proposal_summary`, `proposal`, `notebook`, `missing_placeholders`, and `follow_up_questions` as the source of truth. Batch results include `notebooks` and per-item `results`; report failed items honestly without discarding successful pages.
+5. Retry once with exact placeholder keys and the same `draft_id` when known or routine values can be supplied, then return the confirmation-ready drafts or the one genuinely blocking follow-up question.
 
 If one blocking detail is missing, ask the user through the Hikari clarification flow instead of inventing values.

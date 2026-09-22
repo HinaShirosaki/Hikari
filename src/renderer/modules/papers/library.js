@@ -193,6 +193,13 @@ export function createPapersLibraryController(context) {
     return syncSelectedFolder();
   }
 
+  function renderPaperLeafMetaHtml(paper) {
+    if (paper?.ingestionStatus === 'running') {
+      return '<span class="papers-paper-processing folder-tree-template__leaf-meta" title="Reading the PDF and building its notes">Processing</span>';
+    }
+    return `<span class="papers-paper-time folder-tree-template__leaf-meta">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>`;
+  }
+
   function buildPaperTreeListHtml(selectedFolder = getSelectedFolder()) {
     const visiblePapers = getVisiblePapersForFolder(state, selectedFolder);
     if (!visiblePapers.length) {
@@ -213,7 +220,7 @@ export function createPapersLibraryController(context) {
       },
       contentHtml: `
         <span class="papers-paper-title folder-tree-template__leaf-label">${safeText(getPaperDisplayTitle(paper))}</span>
-        <span class="papers-paper-time folder-tree-template__leaf-meta">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
+        ${renderPaperLeafMetaHtml(paper)}
       `
     })).join('');
   }

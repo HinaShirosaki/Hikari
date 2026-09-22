@@ -152,33 +152,16 @@ function createStorageFileHelpers({
       : await getUniqueFilePath(resolvedTargetFolder, fileName);
     const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
     await fs.writeFile(targetFilePath, binary);
-    let paperMarkdown = null;
-    if (payload?.transformPdfToMarkdown === true && /\.pdf$/i.test(targetFilePath)) {
-      paperMarkdown = await transformPaperPdfToMarkdown({
-        storagePath: resolvedStoragePath,
-        filePath: targetFilePath,
-        paper: {
-          title: payload?.paperTitle || payload?.title || fileName.replace(/\.pdf$/i, ''),
-          fileName: path.basename(targetFilePath),
-          storedRelativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
-          linkedType: payload?.linkedType,
-          linkedName: payload?.linkedName,
-          doi: payload?.doi
-        },
-        paperKnowledgeDatabaseRuntime,
-        skipExistingMarkdown: false,
-        source: 'manual-import'
-      }).catch((error) => ({
-        ok: false,
-        status: 'error',
-        error: String(error?.message || error)
-      }));
-    }
 
     return {
       filePath: targetFilePath,
       fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+    };
+  }
+
+  function buildPaperKnowledgeFields(paperMarkdown) {
+    return {
       knowledgeDatabase: paperMarkdown || null,
       knowledgeMarkdownRelativePath: cleanText(paperMarkdown?.markdown_relative_path, 2400),
       knowledgeExtractedTextRelativePath: cleanText(paperMarkdown?.extracted_text_relative_path, 2400),
@@ -187,6 +170,49 @@ function createStorageFileHelpers({
       knowledgeError: cleanText(paperMarkdown?.error || paperMarkdown?.paper_intake_error, 1200),
       paperIntakeStatus: cleanText(paperMarkdown?.paper_intake_status, 80),
       paperIntakeError: cleanText(paperMarkdown?.paper_intake_error, 1200)
+    };
+  }
+
+  // Intake (PDF -> Markdown + figures + structured records) runs for minutes on
+  // a real paper, so it is deliberately not part of storing the file: callers
+  // store the PDF, show the library row, then run this in the background.
+  async function transformStoredPaperPdf(payload) {
+    const storagePath = String(payload?.storagePath || '').trim();
+    if (!storagePath) {
+      throw new Error('Missing storage path.');
+    }
+
+    const resolvedStoragePath = path.resolve(storagePath);
+    const filePath = resolveStorageFilePath(resolvedStoragePath, payload?.filePath, payload?.relativePath);
+    if (!/\.pdf$/i.test(filePath)) {
+      throw new Error('Stored file is not a PDF.');
+    }
+    const relativePath = path.relative(resolvedStoragePath, filePath).split(path.sep).join('/');
+
+    const paperMarkdown = await transformPaperPdfToMarkdown({
+      storagePath: resolvedStoragePath,
+      filePath,
+      paper: {
+        title: payload?.paperTitle || payload?.title || path.basename(filePath).replace(/\.pdf$/i, ''),
+        fileName: path.basename(filePath),
+        storedRelativePath: relativePath,
+        linkedType: payload?.linkedType,
+        linkedName: payload?.linkedName,
+        doi: payload?.doi
+      },
+      paperKnowledgeDatabaseRuntime,
+      skipExistingMarkdown: false,
+      source: 'manual-import'
+    }).catch((error) => ({
+      ok: false,
+      status: 'error',
+      error: String(error?.message || error)
+    }));
+
+    return {
+      filePath,
+      relativePath,
+      ...buildPaperKnowledgeFields(paperMarkdown)
     };
   }
 
@@ -373,6 +399,7 @@ function createStorageFileHelpers({
     getUniqueFilePath,
     normalizeImportedDataBytes,
     storeImportedFile,
+    transformStoredPaperPdf,
     resolveStorageFilePath,
     moveStoredFile,
     appendNotebookPageLog,

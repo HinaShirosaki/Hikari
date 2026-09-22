@@ -26,14 +26,18 @@ function recordLiteratureResearchDownload(snapshot, args, result) {
   const metadata = result.knowledge_database || {};
   if (result.ok && result.knowledge_markdown_path && session.downloads.some((paper) =>
     paper.ok && paper.knowledge_markdown_path === result.knowledge_markdown_path)) return;
-  session.downloads.push({
+  const entry = {
     ...result,
     paper_id: result.knowledge_paper_id || metadata.paper_id || `research-paper-${session.downloads.length + 1}`,
     paper_title: args.paper_title || metadata.title || result.file_name || '',
     doi: args.doi || metadata.doi || '',
     url: args.page_url || args.paper_pdf_url || '',
     pdf_urls: args.candidate_urls || []
-  });
+  };
+  const existingIndex = result.download_id
+    ? session.downloads.findIndex((paper) => paper.download_id === result.download_id) : -1;
+  if (existingIndex >= 0) session.downloads[existingIndex] = entry;
+  else session.downloads.push(entry);
 }
 
 module.exports = {
