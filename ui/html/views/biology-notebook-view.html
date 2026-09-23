@@ -448,6 +448,10 @@
                 <option value="">Select project</option>
               </select>
             </div>
+            <label>Start from
+              <select id="biology-notebook-experiment-kind"><option value="protocol">Single protocol</option><option value="workflow">Workflow</option></select>
+            </label>
+            <div id="biology-notebook-experiment-protocol-fields">
             <label>
               Search &amp; Select Protocol
               <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="biology-notebook-protocol-search-results" />
@@ -456,6 +460,11 @@
             <select id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1">
               <option value="">Select protocol</option>
             </select>
+            </div>
+            <div id="biology-notebook-experiment-workflow-fields" hidden>
+              <label>Workflow template<select id="biology-notebook-experiment-workflow"></select></label>
+              <label>Process name<input id="biology-notebook-experiment-process-name" placeholder="Optional — named from the template" /></label>
+            </div>
             <p id="biology-notebook-experiment-dialog-status" class="small-note" aria-live="polite"></p>
             <div class="form-actions">
               <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>

@@ -1,4 +1,5 @@
 import {
+  GROUPED_ANALYSES,
   analyzeAssayData,
   describeAnalysisSpec,
   normalizeAnalysisSpec
@@ -40,6 +41,8 @@ export function createAssayAnalysisView({
   buildResultGridColumns,
   buildResultGridData,
   getResultGridHeight,
+  resultRowVisible,
+  onWorkspaceChanged,
   onAnalysisRendered,
   onChartStyleChanged,
   onTransformChanged
@@ -49,20 +52,22 @@ export function createAssayAnalysisView({
     assayAnalysisColumnGroupsInput,
     assayAnalysisErrorBarsInput,
     assayAnalysisErrorBarsField,
+    assayAnalysisControlsField,
     assayAnalysisGroupByInput,
+    assayAnalysisHighControlInput,
     assayAnalysisKindInput,
+    assayAnalysisLowControlInput,
     assayAnalysisPolyOrderField,
     assayAnalysisPolyOrderInput,
     assayAnalysisSubtotalsField,
     assayAnalysisSubtotalsInput,
-    assayAnalysisSummary,
     assayAnalysisRowGroupsInput,
     assayAnalysisTable,
+    assayAnalysisSummaryTable,
     assayAnalysisXAxisField,
     assayAnalysisXAxisInput,
     assayChartStyleMount,
     assayChartFormatPanel,
-    assayTransformSummary,
     assayResultTable,
     assayDerivedPlatePanel,
     assayDerivedPlateTable
@@ -73,13 +78,15 @@ export function createAssayAnalysisView({
   const MODEL_STYLE_KEYS = ['xColumn', 'yColumn', 'seriesColumn'];
 
   const {
+    getDerivedPlate,
+    refreshRowVisibility,
     getTransformFormulas,
     redrawTransformGrid,
     setTransformFormulas,
     setTransformEnabled,
     getTransformSpec,
     clearTransformGrid,
-    refreshDerivedPlate,
+    refreshDerivedPlate: refreshDerivedPlateGrid,
     collectNumericObservations,
     buildAnalysisTable,
     getGroupOptions
@@ -92,11 +99,11 @@ export function createAssayAnalysisView({
     buildResultGridColumns,
     buildResultGridData,
     buildResultGridSignature,
+    resultRowVisible,
     onTransformChange: () => onTransformChange(),
     assayResultTable,
     assayDerivedPlatePanel,
     assayDerivedPlateTable,
-    assayTransformSummary,
     assayAnalysisRowGroupsInput,
     assayAnalysisColumnGroupsInput
   });
@@ -140,13 +147,17 @@ export function createAssayAnalysisView({
       chartControls?.refresh();
     }
   });
+  let chartSurface = null;
   const chartControls = assayChartStyleMount
     ? mountChartControls(assayChartStyleMount, {
       store: chartStyleStore,
+      agentElements: {
+        getStyle: () => chartSurface?.getAgentElementStyle(),
+        apply: (patch) => chartSurface?.updateAgentElements(patch.plotElements)
+      },
       safeText
     })
     : null;
-  let chartSurface = null;
   // Every analysis ships its own chartModel, which is what "auto" means. The moment a
   // column is overridden that model no longer answers the question, so it has to be
   // rebuilt from the result table -- otherwise the Data Series mapping does nothing.
@@ -156,7 +167,6 @@ export function createAssayAnalysisView({
     chartStyleStore,
     chartControls,
     plotlyRenderer,
-    assayAnalysisSummary,
     assayAnalysisTable,
     assayChartFormatPanel
   });
@@ -176,6 +186,12 @@ export function createAssayAnalysisView({
     renderAgentPlotlyGraph
   } = chartSurface;
 
+  function refreshDerivedPlate() {
+    const result = refreshDerivedPlateGrid();
+    onWorkspaceChanged?.();
+    return result;
+  }
+
   function getAnalysisSpec() {
     return normalizeAnalysisSpec({
       groupBy: assayAnalysisGroupByInput?.value,
@@ -184,7 +200,9 @@ export function createAssayAnalysisView({
       polyOrder: Number(assayAnalysisPolyOrderInput?.value),
       asymmetric: Boolean(assayAnalysisAsymmetricInput?.checked),
       subtotals: Boolean(assayAnalysisSubtotalsInput?.checked),
-      errorBars: assayAnalysisErrorBarsInput ? assayAnalysisErrorBarsInput.checked : true
+      errorBars: assayAnalysisErrorBarsInput ? assayAnalysisErrorBarsInput.checked : true,
+      highControl: assayAnalysisHighControlInput?.value,
+      lowControl: assayAnalysisLowControlInput?.value
     });
   }
 
@@ -198,9 +216,13 @@ export function createAssayAnalysisView({
         element.hidden = !visible;
       }
     };
-    toggle(assayAnalysisXAxisField, !isSummary);
+    toggle(assayAnalysisXAxisField, !GROUPED_ANALYSES.includes(analysis));
     toggle(assayAnalysisSubtotalsField, isSummary);
     toggle(assayAnalysisPolyOrderField, analysis === 'polynomial');
+    toggle(
+      assayAnalysisControlsField,
+      ['percent_control', 'plate_qc', 'zscore', 'ttest'].includes(analysis)
+    );
     // Every analysis pools replicates before plotting, so every one of them can show
     // the spread -- a fitted curve carries it on its observed markers.
     toggle(assayAnalysisErrorBarsField, true);
@@ -210,14 +232,13 @@ export function createAssayAnalysisView({
   }
 
   function clearOutput() {
-    if (assayAnalysisSummary) {
-      assayAnalysisSummary.textContent = '';
-    }
     unmountAnalysisChart();
     purgeAgentPlotly();
     if (assayAnalysisTable) {
-      assayAnalysisTable.innerHTML = '';
+      assayAnalysisTable.innerHTML = assayAnalysisSummaryTable
+        ? '<p class="small-note assay-workspace-empty">Add result values to see the analysis chart.</p>' : '';
     }
+    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = '<p class="small-note">No summary yet.</p>';
     if (previewSaveTimer) {
       clearTimeout(previewSaveTimer);
       previewSaveTimer = null;
@@ -239,6 +260,7 @@ export function createAssayAnalysisView({
   }
 
   function emitAnalysisRendered() {
+    onWorkspaceChanged?.();
     if (typeof onAnalysisRendered !== 'function' || !lastResult || !lastSpec) {
       return;
     }
@@ -246,10 +268,9 @@ export function createAssayAnalysisView({
       method: lastSpec.analysis,
       spec: { ...lastSpec },
       methodLabel: describeAnalysisSpec(lastSpec),
-      // The rail reserves status text for actionable notices. Keep the complete
-      // analysis description in the saved/agent record even when a successful
-      // result does not need to repeat it above the table and chart.
-      summary: lastRecordedSummary || lastResult.summary || assayAnalysisSummary?.textContent || '',
+      // Keep the complete analysis description in the saved/agent record even
+      // though the UI no longer repeats it beside the table and chart.
+      summary: lastRecordedSummary || lastResult.summary || '',
       headers: Array.isArray(lastResult.headers) ? lastResult.headers.map((item) => String(item)) : [],
       rows: Array.isArray(lastResult.rows) ? lastResult.rows : [],
       chartDataUrl: plotlyRenderer.captureDataUrl(),
@@ -278,7 +299,7 @@ export function createAssayAnalysisView({
   }
 
   function renderAnalysis() {
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
 
@@ -289,14 +310,17 @@ export function createAssayAnalysisView({
     const spec = getAnalysisSpec();
     const { observations, nonNumericCount } = collectNumericObservations();
     if (!observations.length) {
-      assayAnalysisSummary.textContent = nonNumericCount
+      // Nothing to plot: say so where the table and chart would have been, not in
+      // the rail beside the controls.
+      assayAnalysisTable.innerHTML = `<p class="small-note">${safeText(nonNumericCount
         ? `No numeric values found. Non-numeric result cells: ${nonNumericCount}.`
-        : 'No result values to analyze.';
-      assayAnalysisTable.innerHTML = '';
+        : 'No result values to analyze.')}</p>`;
       lastResult = null;
       lastSpec = null;
       lastModel = null;
       lastRecordedSummary = '';
+      if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = assayAnalysisTable.innerHTML;
+      onWorkspaceChanged?.();
       return;
     }
 
@@ -313,8 +337,8 @@ export function createAssayAnalysisView({
       method: spec.analysis
     });
 
-    // Successful analysis tables and charts already show their model and result
-    // rows. Use this compact status target only for information that needs action.
+    // The analysis table and chart already show the model and its result rows; the
+    // notices below only ride along into the saved record.
     const notices = [];
     if (!result.rows.length && result.summary) {
       notices.push(result.summary);
@@ -323,23 +347,24 @@ export function createAssayAnalysisView({
       notices.push(`Non-numeric cells ignored: ${nonNumericCount}.`);
     }
     lastRecordedSummary = [result.summary, ...notices.filter((notice) => notice !== result.summary)].join(' ');
-    assayAnalysisSummary.textContent = notices.join(' ');
     if (!result.rows.length) {
       assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this analysis.</p>';
+      if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = assayAnalysisTable.innerHTML;
       setChartContext(getAnalysisContext());
       emitAnalysisRendered();
       return;
     }
 
     const tableHtml = buildAnalysisTable(result.headers, result.rows);
+    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = tableHtml;
     assayAnalysisTable.innerHTML = hasPlotly
       ? `
         <div class="assay-analysis-results">
           <div class="assay-analysis-chart" data-assay-analysis-chart></div>
-          ${tableHtml}
+          ${assayAnalysisSummaryTable ? '' : tableHtml}
         </div>
       `
-      : tableHtml;
+      : (assayAnalysisSummaryTable ? '<p class="small-note">Chart rendering is unavailable. Results are in Summary.</p>' : tableHtml);
     lastModel = modelForStyle(result, spec.analysis, getChartStyle());
     applyChartContext(renderAnalysisChart(lastModel));
     emitAnalysisRendered();
@@ -348,7 +373,7 @@ export function createAssayAnalysisView({
 
   function onAnalysisMethodChange() {
     syncAnalysisControls();
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
     clearOutput();
@@ -400,6 +425,7 @@ export function createAssayAnalysisView({
       assayDerivedPlatePanel.open = true;
     }
     onTransformChange();
+    onWorkspaceChanged?.({ tab: 'transformed' });
     assayDerivedPlatePanel?.scrollIntoView?.({ block: 'nearest' });
     return true;
   }
@@ -429,7 +455,7 @@ export function createAssayAnalysisView({
   }
 
   function onAnalysisConfigChange() {
-    if (!assayAnalysisSummary || !assayAnalysisTable) {
+    if (!assayAnalysisTable) {
       return;
     }
     syncCurrentResultsFromGrid();
@@ -442,6 +468,35 @@ export function createAssayAnalysisView({
   syncAnalysisControls();
 
   return {
+    getPlotSnapshot: () => ({
+      available: Boolean(lastModel && assayAnalysisTable?.querySelector('[data-assay-analysis-chart]')),
+      style: JSON.parse(JSON.stringify(getChartStyle())),
+      context: getAnalysisContext(),
+      model: lastModel ? JSON.parse(JSON.stringify(lastModel)) : null
+    }),
+    plotReady: () => plotlyRenderer.ready(),
+    capturePlotImage: () => plotlyRenderer.toImage('svg'),
+    replacePlotStyle(style) {
+      loadChartStyle(style);
+      if (lastModel) applyChartContext(renderAnalysisChart(lastModel));
+      onWorkspaceChanged?.();
+      return plotlyRenderer.ready();
+    },
+    refreshRowVisibility,
+    getWorkspaceState: () => ({
+      transformActive: isTransformActive(getTransformSpec()),
+      errors: Object.entries(getDerivedPlate()?.cells || {}).filter(([, cell]) => cell.error)
+        .map(([well, cell]) => ({ well, message: cell.error })),
+      methodLabel: describeAnalysisSpec(getAnalysisSpec()),
+      ...getAnalysisContext()
+    }),
+    setChartType(type) {
+      if (lastModel && !chartSurface.hasFittedCurve(lastModel) && ['bar', 'line'].includes(type)) {
+        chartStyleStore.setStyle({ chartType: type });
+        onWorkspaceChanged?.();
+      }
+    },
+    redrawChart: () => { if (lastModel) renderAnalysisChart(lastModel); },
     clearOutput,
     renderAnalysis,
     onAnalysisMethodChange,
@@ -460,7 +515,14 @@ export function createAssayAnalysisView({
     getChartStyle,
     loadChartStyle,
     refreshChartControls,
-    renderAgentPlotlyGraph,
+    renderAgentPlotlyGraph: (artifact) => {
+      const rendered = renderAgentPlotlyGraph(artifact);
+      if (rendered && assayAnalysisSummaryTable) {
+        assayAnalysisSummaryTable.innerHTML = '<p class="small-note">This agent chart has no summary table.</p>';
+      }
+      onWorkspaceChanged?.();
+      return rendered;
+    },
     destroy() {
       if (previewSaveTimer) {
         clearTimeout(previewSaveTimer);

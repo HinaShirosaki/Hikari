@@ -264,4 +264,182 @@ assert.equal(
   'an explicit groupBy still wins over the defined groups'
 );
 
+// --- plate-based analyses: controls, QC, hit scoring, group comparison ---------
+// A screening plate: 6 POS wells, 6 NEG wells, and 4 samples in triplicate.
+const screen = [];
+[1, 2, 3, 4, 5, 6].forEach((column) => {
+  screen.push(obs('A', column, 'POS', '', 1000 + (column % 3) * 10));
+  screen.push(obs('B', column, 'NEG', '', 100 + (column % 3) * 8));
+});
+const SAMPLE_LEVELS = { S1: 980, S2: 540, S3: 120, S4: 1600 };
+Object.entries(SAMPLE_LEVELS).forEach(([sample, level], index) => {
+  [1, 2, 3].forEach((replicate) => {
+    screen.push(obs('C', index * 3 + replicate, sample, '', level + replicate * 6));
+  });
+});
+
+const percent = analyzeAssayData({
+  spec: { analysis: 'percent_control', groupBy: 'sample', highControl: 'POS', lowControl: 'NEG' },
+  observations: screen
+});
+const activityIndex = percent.headers.indexOf('% of Control');
+const inhibitionIndex = percent.headers.indexOf('% Inhibition');
+const percentOf = (label) => Number(percent.rows.find((row) => row[0] === label)[activityIndex]);
+assert.ok(percentOf('POS') > 99 && percentOf('POS') < 101, 'the high control reads ~100%');
+assert.ok(Math.abs(percentOf('NEG')) < 1, 'the low control reads ~0%');
+assert.ok(percentOf('S3') < percentOf('S2') && percentOf('S2') < percentOf('S1'), 'samples rank by activity');
+assert.equal(
+  Number(percent.rows.find((row) => row[0] === 'S2')[inhibitionIndex]).toFixed(2),
+  (100 - percentOf('S2')).toFixed(2),
+  'inhibition is the complement of activity'
+);
+assert.equal(percent.chartModel.yLabel, '% of control', 'the chart is plotted in percent');
+assert.ok(
+  percent.chartModel.series[0].data.every((point) => Math.abs(point.y) <= 200),
+  'the SD error bar is rescaled into percent along with the mean'
+);
+assert.equal(
+  percent.rows.find((row) => row[0] === 'POS')[1],
+  'high',
+  'control wells are labelled with their role'
+);
+
+// controls are named, so an unnamed one is reported rather than silently ignored
+const noControl = analyzeAssayData({
+  spec: { analysis: 'percent_control', groupBy: 'sample', highControl: 'nope' },
+  observations: screen
+});
+assert.equal(noControl.rows.length, 0, 'an unmatched control produces no rows');
+assert.ok(/name the high/i.test(noControl.summary), 'and says which control to name');
+
+// the usual names are detected without typing them
+const autoControls = analyzeAssayData({
+  spec: { analysis: 'percent_control', groupBy: 'sample' },
+  observations: screen
+});
+assert.ok(autoControls.rows.length, 'POS/NEG are auto-detected');
+assert.ok(/auto-detected/i.test(autoControls.summary), 'and the auto-detection is reported');
+
+const qc = analyzeAssayData({
+  spec: { analysis: 'plate_qc', groupBy: 'sample', highControl: 'POS', lowControl: 'NEG' },
+  observations: screen
+});
+const metric = (name) => Number(qc.rows.find((row) => row[0] === name)[1]);
+// Z' = 1 - 3*(sdHigh + sdLow)/|window|, and these controls are tight against a 900 window.
+assert.ok(metric("Z'-factor") > 0.9, "a tight plate has an excellent Z'");
+assert.ok(/excellent/i.test(qc.rows[0][2]), "and the Z' verdict says so");
+assert.ok(metric('SSMD (beta)') > 3, 'SSMD agrees');
+// POS wells mean 1010, NEG wells mean 108.
+assert.equal(metric('Signal window').toFixed(0), '902', 'the signal window is high mean - low mean');
+assert.ok(metric('High control CV%') < 2, 'control CV% is reported');
+assert.ok(qc.rows.some((row) => row[0] === 'Sample CV%'), 'sample wells get their own CV%');
+assert.equal(qc.chartModel.series[0].data.length, 2, 'the QC chart shows both control means');
+
+// a plate with sloppy controls fails the same test
+const sloppy = screen.map((item) => (item.sampleId === 'POS'
+  ? { ...item, response: item.response + (item.columnNumber % 2 ? 400 : -400) }
+  : item));
+assert.ok(
+  Number(analyzeAssayData({
+    spec: { analysis: 'plate_qc', groupBy: 'sample', highControl: 'POS', lowControl: 'NEG' },
+    observations: sloppy
+  }).rows[0][1]) < 0.5,
+  "a noisy high control drops Z' below the excellent threshold"
+);
+
+const hits = analyzeAssayData({
+  spec: { analysis: 'zscore', groupBy: 'sample', highControl: 'POS', lowControl: 'NEG' },
+  observations: screen
+});
+assert.equal(hits.rows.length, 12, 'controls are excluded from the scored population');
+assert.equal(hits.headers.join('|'), 'Well|Sample ID|Concentration|Value|Z|Robust Z|Hit', 'the hit list is per well');
+assert.ok(
+  hits.rows.every((row, index) => index === 0 || Number(row[5]) <= Number(hits.rows[index - 1][5])),
+  'wells are ranked by robust Z'
+);
+assert.equal(hits.rows[0][1], 'S4', 'the strongest sample tops the list');
+assert.ok(/12 well/.test(hits.summary) && /control well\(s\) excluded/.test(hits.summary), 'the summary states the population');
+// Hit calling needs a tight population to stand out from: these four samples span
+// the whole plate, so nothing in `screen` is an outlier and nothing is flagged.
+assert.equal(hits.rows.filter((row) => row[6]).length, 0, 'a wide spread has no hits');
+
+const tightPlate = [];
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((column) => {
+  tightPlate.push(obs('A', column, `S${column}`, '', 500 + (column % 3)));
+});
+tightPlate.push(obs('B', 1, 'HIT-UP', '', 900));
+tightPlate.push(obs('B', 2, 'HIT-DOWN', '', 120));
+const flagged = analyzeAssayData({ spec: { analysis: 'zscore', groupBy: 'sample' }, observations: tightPlate });
+assert.equal(flagged.rows[0][1], 'HIT-UP', 'the high outlier ranks first');
+assert.equal(flagged.rows[0][6], 'up', 'and is flagged upward');
+assert.equal(flagged.rows[flagged.rows.length - 1][6], 'down', 'the low outlier is flagged downward');
+assert.equal(flagged.rows.filter((row) => row[6]).length, 2, 'only the two outliers are hits');
+
+const compare = analyzeAssayData({
+  spec: { analysis: 'ttest', groupBy: 'sample', highControl: 'POS', lowControl: 'NEG' },
+  observations: screen
+});
+const pIndex = compare.headers.indexOf('p');
+const qIndex = compare.headers.indexOf('q (BH)');
+const starIndex = compare.headers.length - 1;
+const compareRow = (label) => compare.rows.find((row) => row[0] === label);
+assert.equal(compareRow('NEG')[1], 'reference', 'the low control is the reference group');
+assert.equal(compareRow('NEG')[pIndex], '-', 'the reference is not tested against itself');
+assert.ok(Number(compareRow('S4')[pIndex]) < 0.001, 'a large separation is significant');
+assert.ok(
+  Number(compareRow('S4')[qIndex]) >= Number(compareRow('S4')[pIndex]),
+  'the BH q is never smaller than its p'
+);
+assert.equal(compareRow('S4')[starIndex], '***', 'stars are reported');
+assert.equal(
+  Number(compareRow('S1')[compare.headers.indexOf('Diff vs control')]).toFixed(0),
+  // S1 replicates mean 992, NEG reference mean 108.
+  String(SAMPLE_LEVELS.S1 + 12 - 108),
+  'the difference is against the reference mean'
+);
+// no control named: the first group becomes the reference and says so
+const impliedReference = analyzeAssayData({
+  spec: { analysis: 'ttest', groupBy: 'row' },
+  observations: screen
+});
+assert.ok(/used as the reference group/.test(impliedReference.summary), 'an implied reference is called out');
+
+// --- one-phase exponential -----------------------------------------------------
+const decay = [];
+[0, 1, 2, 4, 8, 16].forEach((time, index) => {
+  const value = 20 + (80 * Math.exp(-0.25 * time));
+  decay.push(obs('A', index + 1, 'S1', String(time), value));
+  decay.push(obs('B', index + 1, 'S1', String(time), value + 0.4));
+});
+const exponential = analyzeAssayData({
+  spec: { analysis: 'exponential', xAxis: 'concentration' },
+  observations: decay
+});
+assert.equal(exponential.rows.length, 1, 'the exponential fits one series');
+const kIndex = exponential.headers.indexOf('Rate k');
+const halfLifeIndex = exponential.headers.indexOf('Half-life');
+assert.ok(Math.abs(Number(exponential.rows[0][kIndex]) - 0.25) < 0.02, 'the rate constant is recovered');
+assert.ok(
+  Math.abs(Number(exponential.rows[0][halfLifeIndex]) - (Math.LN2 / 0.25)) < 0.3,
+  'the half-life follows from k'
+);
+assert.ok(
+  Number(exponential.rows[0][exponential.headers.indexOf('R²')]) > 0.999,
+  'a clean decay fits tightly'
+);
+assert.equal(exponential.chartModel.chartType, 'line', 'the exponential charts as a fitted line');
+
+// --- new analyses are reachable from the spec and describe themselves ----------
+assert.equal(specFromLegacyMethod('percent_inhibition').analysis, 'percent_control', 'legacy alias migrates');
+assert.equal(specFromLegacyMethod('z_factor').analysis, 'plate_qc', 'legacy Z-factor alias migrates');
+assert.equal(normalizeAnalysisSpec({ highControl: '  POS  ' }).highControl, 'POS', 'control names are trimmed');
+assert.ok(
+  describeAnalysisSpec({ analysis: 'percent_control', highControl: 'POS' }).includes('high control = POS'),
+  'the control names reach the saved description'
+);
+assert.ok(
+  !describeAnalysisSpec({ analysis: 'plate_qc' }).includes('X ='),
+  'a grouped analysis does not claim an X axis'
+);
+
 console.log('assay analysis self-check passed');

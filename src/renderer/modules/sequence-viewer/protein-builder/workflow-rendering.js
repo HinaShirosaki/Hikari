@@ -1,3 +1,4 @@
+import { mapProteinHighlightParts } from './highlight-parts.js';
 import { escapeHtml } from '../../../lib/html.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText } from '../shared.js';
@@ -54,30 +55,6 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         : (row.note || 'No annotation.');
       const blockTitle = [getBlockTypeLabel(row.type), `${sequence.length} aa`, note].filter(Boolean).join(' | ');
 
-      const customFields = row.kind === 'custom'
-        ? `
-          <div class="sequence-viewer-protein-builder-custom-fields">
-            <label>
-              Label
-              <input
-                type="text"
-                value="${escapeAttribute(row.label)}"
-                data-protein-builder-custom-label="${escapeAttribute(row.id)}"
-              />
-            </label>
-            <label>
-              Sequence
-              <input
-                type="text"
-                value="${escapeAttribute(row.sequence)}"
-                data-protein-builder-custom-sequence="${escapeAttribute(row.id)}"
-                placeholder="Amino-acid sequence"
-              />
-            </label>
-          </div>
-        `
-        : '';
-
       const moveButton = (direction) => `
         <button
           type="button"
@@ -114,19 +91,47 @@ export function installProteinBuilderWorkflowRendering(ctx) {
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          ${customFields}
         </li>
       `;
     }).join('');
 
+    // Keep manual editors outside the proportional ribbon. Preserve disclosure
+    // state when a committed edit rebuilds the workflow.
+    const openEditors = new Set(Array.from(
+      elements.proteinBuilderWorkflow.querySelectorAll?.('details[data-protein-builder-editor][open]') || []
+    ).map((editor) => editor.dataset.proteinBuilderEditor));
+    const editors = parts.filter(({ row }) => row.kind === 'custom').map(({ row, label, sequence }) => `
+      <details class="sequence-viewer-protein-builder-custom-editor"
+        data-protein-builder-editor="${escapeAttribute(row.id)}"${openEditors.has(row.id) ? ' open' : ''}>
+        <summary>
+          <span>Edit ${escapeHtml(label || 'Custom protein')}</span>
+          <span class="small-note">${sequence.length} aa</span>
+        </summary>
+        <div class="sequence-viewer-protein-builder-custom-fields">
+          <label>Label
+            <input type="text" value="${escapeAttribute(row.label)}"
+              data-protein-builder-custom-label="${escapeAttribute(row.id)}" />
+          </label>
+          <label>Amino-acid sequence
+            <textarea rows="4" spellcheck="false" autocapitalize="off"
+              data-protein-builder-custom-sequence="${escapeAttribute(row.id)}"
+              placeholder="Amino-acid sequence">${escapeHtml(row.sequence || '')}</textarea>
+          </label>
+        </div>
+      </details>
+    `).join('');
+
     // The chain reads N to C, and the termini say so: without them a row of
     // arrows is just a row of arrows.
     elements.proteinBuilderWorkflow.innerHTML = `
+      <div class="sequence-viewer-protein-builder-chain-scroll">
       <div class="sequence-viewer-protein-builder-chain-rail">
         <span class="sequence-viewer-protein-builder-terminus">N</span>
         <ol class="sequence-viewer-protein-builder-chain">${blocks}</ol>
         <span class="sequence-viewer-protein-builder-terminus">C</span>
       </div>
+      </div>
+      ${editors}
     `;
   };
 
@@ -152,7 +157,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     }
     if (elements.proteinBuilderProteinSequenceHighlight) {
       elements.proteinBuilderProteinSequenceHighlight.innerHTML = construct.sequence
-        ? `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedProtein(construct.sequence, construct.parts)}</span>`
+        ? `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedProtein(construct.sequence, mapProteinHighlightParts(construct.sequence, construct.parts))}</span>`
         : '<p class="small-note">Add a block to start the chain.</p>';
     }
     if (elements.proteinBuilderSequenceEdited) {

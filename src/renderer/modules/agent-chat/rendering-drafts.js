@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { collectNotebookDrafts } from './notebook-draft-list.js';
 import { renderAgentChatIcon } from './icons.js';
 import { getProtocolReviewStatus, resolveNotebookAppendReviewState } from './review-overlay/review-status.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
@@ -17,31 +18,32 @@ function renderCard({ key, title, kind, status, preview, className = '', reviewM
   </details>`;
 }
 
-function action(attribute, id, label, safeText, primary = false) {
-  return `<button type="button" class="${primary ? 'primary-btn' : 'ghost-btn'}" ${attribute}="${safeText(id)}">${safeText(label)}</button>`;
+function action(attribute, id, label, safeText, primary = false, draftId = '') {
+  return `<button type="button" class="${primary ? 'primary-btn' : 'ghost-btn'}" ${attribute}="${safeText(id)}"${draftId ? ` data-agent-draft-id="${safeText(draftId)}"` : ''}>${safeText(label)}</button>`;
 }
 
 export function renderDraftCards(meta, messageId, { safeText, notebookDraftAdapter, protocolReviewAdapter, notebookEntries = [] }) {
   const id = trimText(messageId, 120);
   if (!id) return '';
   const sections = [];
-  const draft = notebookDraftAdapter?.normalizeDraft?.(meta.notebookDraft) || null;
-  const entry = notebookDraftAdapter?.findEntryForDraft?.(draft) || null;
-  if (draft && (draft.save?.mode === 'confirm_before_save' || entry)) {
-    const rejected = draft.save?.status === 'rejected';
-    const saved = Boolean(entry) || draft.save?.applied === true;
-    const pending = !saved && !rejected;
-    const openLabel = notebookDraftAdapter?.normalizeState?.(entry?.notebookState) === 'planned' ? 'Open Planned Page' : 'Open Notebook Page';
-    const actions = entry ? action('data-agent-open-notebook-page', id, openLabel, safeText)
-      : pending ? action('data-agent-reject-planned-page', id, 'Reject', safeText)
-        + action('data-agent-create-planned-page', id, 'Create Planned Page', safeText, true) : '';
-    sections.push(renderCard({
-      key: `notebook:${id}`,
-      title: trimText(draft.proposal?.title || draft.entry_template?.result, 220) || 'Notebook draft',
-      kind: 'Notebook page', status: saved ? 'Created' : rejected ? 'Rejected' : 'Review required',
-      preview: renderNotebookPreview({ id: `notebook:${id}`, draft }, safeText, { inline: true, actions }),
-      reviewMessageId: pending ? id : ''
-    }, safeText));
+  for (const { draft, draftId } of collectNotebookDrafts(meta, notebookDraftAdapter)) {
+    const entry = notebookDraftAdapter?.findEntryForDraft?.(draft) || null;
+    if (draft && (draft.save?.mode === 'confirm_before_save' || entry)) {
+      const rejected = draft.save?.status === 'rejected';
+      const saved = Boolean(entry) || draft.save?.applied === true;
+      const pending = !saved && !rejected;
+      const openLabel = notebookDraftAdapter?.normalizeState?.(entry?.notebookState) === 'planned' ? 'Open Planned Page' : 'Open Notebook Page';
+      const actions = entry ? action('data-agent-open-notebook-page', id, openLabel, safeText, false, draftId)
+        : pending ? action('data-agent-reject-planned-page', id, 'Reject', safeText, false, draftId)
+          + action('data-agent-create-planned-page', id, 'Create Planned Page', safeText, true, draftId) : '';
+      sections.push(renderCard({
+        key: `notebook:${id}:${draftId}`,
+        title: trimText(draft.proposal?.title || draft.entry_template?.result, 220) || 'Notebook draft',
+        kind: 'Notebook page', status: saved ? 'Created' : rejected ? 'Rejected' : 'Review required',
+        preview: renderNotebookPreview({ id: `notebook:${id}:${draftId}`, draft }, safeText, { inline: true, actions }),
+        reviewMessageId: pending ? id : ''
+      }, safeText));
+    }
   }
   const appendState = resolveNotebookAppendReviewState(meta, notebookEntries);
   const append = appendState.append;

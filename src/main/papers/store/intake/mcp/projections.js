@@ -2,6 +2,7 @@
 
 const { createIntakeStore } = require('../intake-store.js');
 const { asArray, ensureObject } = require('../../../../lib/normalize.js');
+const { scoreTextAgainstTokens } = require('../intake-search.js');
 
 const TOOL_NAMES = Object.freeze({
   LIST_PROJECT_SUMMARIES: 'paper_intake_list_project_summaries',
@@ -11,6 +12,11 @@ const TOOL_NAMES = Object.freeze({
 
 const DEFAULT_LIMIT = 12;
 const MAX_LIMIT = 50;
+const SEARCH_SCOPE_SCHEMA = Object.freeze({
+  type: 'string',
+  enum: ['context', 'library'],
+  description: 'Defaults to context (active project, or the library if no project is active). Use library to search beyond the active project. An explicit project_name always takes precedence.'
+});
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value == null ? '' : value).trim();
@@ -35,6 +41,9 @@ function resolveProjectSelector(args = {}, context = {}) {
   const suppliedName = cleanText(args.project_name || args.projectName, 240);
   if (suppliedName) {
     return { projectId: '', projectName: suppliedName };
+  }
+  if (args.scope === 'library') {
+    return { projectId: '', projectName: '' };
   }
   const ctxProject = ensureObject(context.project);
   return {
@@ -97,27 +106,70 @@ function projectionForListing(record) {
   });
 }
 
-function projectionForSummaryMatch(record, score, matchedTerms) {
+function matchExcerpt(match) {
+  const text = match.text;
+  let excerpt = text.slice(0, 360);
+  let bestScore = -1;
+  for (let start = 0; start < text.length; start += 180) {
+    const candidate = text.slice(start, start + 360);
+    const { score } = scoreTextAgainstTokens(candidate, match.matched);
+    if (score > bestScore) {
+      excerpt = candidate;
+      bestScore = score;
+    }
+  }
+  return excerpt;
+}
+
+function matchContext(matches = []) {
+  const remaining = [...matches];
+  const covered = new Set();
+  const out = [];
+  while (remaining.length && out.length < 3) {
+    const newTerms = (match) => match.matched.filter((term) => !covered.has(term)).length;
+    remaining.sort((a, b) => newTerms(b) - newTerms(a) || b.score * b.weight - a.score * a.weight);
+    const match = remaining.shift();
+    if (out.length && !newTerms(match)) break;
+    match.matched.forEach((term) => covered.add(term));
+    out.push(compact({
+      field: match.field,
+      experiment_id: match.experiment_id,
+      figure_ref: match.figure_ref,
+      matched_terms: match.matched,
+      excerpt: matchExcerpt(match)
+    }));
+  }
+  return out;
+}
+
+function projectionForSummaryMatch(record, score, matchedTerms, details = {}) {
   return compact({
     paper_id: record.paper_id,
     title: record.title,
+    doi: record.doi,
     doc_type: record.doc_type,
     intake_status: record.intake_status,
     one_sentence_summary: record.one_sentence_summary,
     score: Math.round(score * 1000) / 1000,
     matched_terms: matchedTerms,
+    unmatched_terms: details.unmatched,
+    match_coverage: details.coverage,
+    match_context: matchContext(details.matches),
     source_paths: compact(record.source_paths)
   });
 }
 
-function projectionForExperimentMatch(record, experiment, score, matchedTerms) {
+function projectionForExperimentMatch(record, experiment, score, matchedTerms, details = {}) {
   return compact({
     paper_id: record.paper_id,
     paper_title: record.title,
+    doi: record.doi,
     doc_type: record.doc_type,
     experiment: compact(experiment),
     score: Math.round(score * 1000) / 1000,
     matched_terms: matchedTerms,
+    unmatched_terms: details.unmatched,
+    match_coverage: details.coverage,
     source_paths: compact(record.source_paths)
   });
 }
@@ -157,6 +209,7 @@ function ensureStore(deps, mcpToolName) {
 
 module.exports = {
   MAX_LIMIT,
+  SEARCH_SCOPE_SCHEMA,
   TOOL_NAMES,
   clampLimit,
   cleanText,

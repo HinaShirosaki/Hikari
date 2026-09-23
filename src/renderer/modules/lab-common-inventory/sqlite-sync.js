@@ -30,8 +30,6 @@ async function syncChemicalSqliteBundle(force = false) {
     return;
   }
 
-  const normalizedRoot = storagePath.replace(/[\\/]+$/, '');
-  const targetPath = `${normalizedRoot}/hikari-chemicals.index.sqlite`;
   const inventorySnapshot = {
     labInventory: {
       chemicals: Array.isArray(state.labInventory.chemicals) ? state.labInventory.chemicals : [],
@@ -50,15 +48,15 @@ async function syncChemicalSqliteBundle(force = false) {
   };
 
   try {
+    // Main owns the bundle path; this side only says which bundle it is.
     const result = await window.hikariApi.syncSqliteBundle({
       mode: 'chemical',
-      snapshot: inventorySnapshot,
-      sqlitePath: targetPath
+      snapshot: inventorySnapshot
     });
     if (result?.ok) {
       ctx.lastChemicalSqliteSyncKey = syncKey;
     } else {
-      console.warn('Failed to sync chemical sqlite bundle:', result?.error || targetPath);
+      console.warn('Failed to sync chemical sqlite bundle:', result?.error || 'unknown error');
       showTransientNotice('Chemical inventory could not be written to the sqlite bundle.', { type: 'error' });
     }
   } catch (error) {

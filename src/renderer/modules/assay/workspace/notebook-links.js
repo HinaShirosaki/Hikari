@@ -7,7 +7,6 @@ function createAssayNotebookLinks({
   elements,
   renderList,
   renderResultsAssayOptions,
-  clearActiveAssayInfo,
   onAssaysChanged,
   getAssayById,
   artifactStorage,
@@ -90,7 +89,6 @@ function createAssayNotebookLinks({
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();

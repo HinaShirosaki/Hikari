@@ -158,6 +158,8 @@ export function createAssayLayoutManager({
   function renderPlateEditFieldButtons() {
     assayPlateFieldSampleBtn?.classList.toggle('calendar-view-active', runtime.plateEditField === 'sampleId');
     assayPlateFieldConcentrationBtn?.classList.toggle('calendar-view-active', runtime.plateEditField === 'concentration');
+    assayPlateFieldSampleBtn?.setAttribute('aria-pressed', String(runtime.plateEditField === 'sampleId'));
+    assayPlateFieldConcentrationBtn?.setAttribute('aria-pressed', String(runtime.plateEditField === 'concentration'));
   }
 
   function syncAxisDisplay() {

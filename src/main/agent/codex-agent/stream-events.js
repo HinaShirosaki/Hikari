@@ -2,6 +2,7 @@
 
 const { extractHtmlArtifactFromToolEvent } = require('../runtime/tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent } = require('../runtime/tool-artifacts/image-output.js');
+const { mergeNotebookDraftArtifacts } = require('../runtime/tool-artifacts/notebook-drafts.js');
 
 const { extractSequenceActions } = require('../../../renderer/modules/sequence-viewer/main-process/mcp/artifact-events');
 const {
@@ -49,7 +50,7 @@ function createCodexStreamProgressHandler({
       }
       const notebookDraftArtifact = extractNotebookDraftArtifactFromToolEvent(streamEvent);
       if (notebookDraftArtifact?.notebook) {
-        streamedNotebookDraftPayload = notebookDraftArtifact;
+        streamedNotebookDraftPayload = mergeNotebookDraftArtifacts(streamedNotebookDraftPayload, notebookDraftArtifact);
       }
       const notebookAppendArtifact = extractNotebookAppendArtifactFromToolEvent(streamEvent);
       if (notebookAppendArtifact?.proposal?.content_markdown) {

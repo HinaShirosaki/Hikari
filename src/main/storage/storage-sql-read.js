@@ -10,6 +10,24 @@ const {
   parseJsonObject
 } = require('./storage-utils');
 
+// The bundle index is derived from the sidecars and rewritten on every save,
+// so an unusable one must never block hydration: hand back an empty index and a
+// warning and let the folders on disk answer instead.
+function emptyBundleIndex(exists, extra = {}) {
+  return {
+    exists,
+    inventoryChemicals: [],
+    inventoryPersonal: [],
+    inventorySamples: [],
+    protocolRows: [],
+    notebookRows: [],
+    paperRows: [],
+    recordRows: [],
+    inventoryMeta: {},
+    ...extra
+  };
+}
+
 function readSqlRows(db, sql, values = []) {
   const stmt = db.prepare(sql);
   const rows = [];
@@ -107,17 +125,7 @@ async function readSqliteBundleIndex(sqlitePath) {
   try {
     const bytes = await fs.readFile(sqlitePath);
     if (!bytes.length) {
-      return {
-        exists: true,
-        inventoryChemicals: [],
-        inventoryPersonal: [],
-        inventorySamples: [],
-        protocolRows: [],
-        notebookRows: [],
-        paperRows: [],
-        recordRows: [],
-        inventoryMeta: {}
-      };
+      return emptyBundleIndex(true);
     }
     const SQL = await loadSqlJs();
     const db = new SQL.Database(new Uint8Array(bytes));
@@ -208,34 +216,21 @@ async function readSqliteBundleIndex(sqlitePath) {
     }
   } catch (error) {
     if (error?.code === 'ENOENT') {
-      return {
-        exists: false,
-        inventoryChemicals: [],
-        inventoryPersonal: [],
-        inventorySamples: [],
-        protocolRows: [],
-        notebookRows: [],
-        paperRows: [],
-        recordRows: [],
-        inventoryMeta: {}
-      };
+      return emptyBundleIndex(false);
     }
     if (error?.code === 'EPERM' || error?.code === 'EACCES') {
-      return {
-        exists: false,
+      return emptyBundleIndex(false, {
         permissionDenied: true,
-        warning: `Permission denied reading SQLite bundle index: ${String(error?.message || error)}`,
-        inventoryChemicals: [],
-        inventoryPersonal: [],
-        inventorySamples: [],
-        protocolRows: [],
-        notebookRows: [],
-        paperRows: [],
-        recordRows: [],
-        inventoryMeta: {}
-      };
+        warning: `Permission denied reading SQLite bundle index: ${String(error?.message || error)}`
+      });
     }
-    throw error;
+    // Corrupt or truncated image (a crash mid-save used to leave these), a
+    // directory in its place, anything else unreadable: same answer as a
+    // missing file, so the workspace still loads from its sidecars.
+    return emptyBundleIndex(false, {
+      unreadable: true,
+      warning: `Ignoring unreadable SQLite bundle index ${sqlitePath}: ${String(error?.message || error)}`
+    });
   }
 }
 

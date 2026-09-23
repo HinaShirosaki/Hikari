@@ -449,7 +449,10 @@ test('papers viewer preserves and surfaces automatic intake failures after stori
     ok: true,
     fileName: payload.fileName,
     filePath: '/tmp/hikari-storage/Project/Cancer_Study/Papers/intake-failed.pdf',
-    relativePath: 'Project/Cancer_Study/Papers/intake-failed.pdf',
+    relativePath: 'Project/Cancer_Study/Papers/intake-failed.pdf'
+  });
+  harness.window.hikariApi.transformStoredPaperPdf = async () => ({
+    ok: true,
     knowledgeStatus: 'ready',
     paperIntakeStatus: 'failed',
     paperIntakeError: 'Structured intake response failed validation.'
@@ -501,7 +504,10 @@ test('papers viewer reports batched intake failures in one notice', async () => 
     ok: true,
     fileName: payload.fileName,
     filePath: `/tmp/hikari-storage/Project/Cancer_Study/Papers/${payload.fileName}`,
-    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`,
+    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`
+  });
+  harness.window.hikariApi.transformStoredPaperPdf = async () => ({
+    ok: true,
     knowledgeStatus: 'ready',
     paperIntakeStatus: 'failed',
     paperIntakeError: 'Structured intake response failed validation.'
@@ -530,6 +536,71 @@ test('papers viewer reports batched intake failures in one notice', async () => 
     assert.ok(notice.textContent.includes(name), `${name} is named in the summary`);
   }
   assert.match(notice.textContent, /^3 PDFs were stored, but automatic paper intake failed:/);
+});
+test('papers rapid separate uploads run intake one at a time and report one notice', async () => {
+  const harness = buildPapersManagementHarness();
+  const papersLibraryRail = harness.document.getElementById('papers-library-rail');
+  const pdfBytes = new Uint8Array([37, 80, 68, 70]);
+  harness.state.settings.storagePath = '/tmp/hikari-storage';
+
+  let activeIntakes = 0;
+  let maxConcurrentIntakes = 0;
+  const releases = [];
+  harness.window.hikariApi.storeImportedFile = async (payload) => ({
+    ok: true,
+    fileName: payload.fileName,
+    filePath: `/tmp/hikari-storage/Project/Cancer_Study/Papers/${payload.fileName}`,
+    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`
+  });
+  harness.window.hikariApi.transformStoredPaperPdf = async () => {
+    activeIntakes += 1;
+    maxConcurrentIntakes = Math.max(maxConcurrentIntakes, activeIntakes);
+    await new Promise((resolve) => {
+      releases.push(resolve);
+    });
+    activeIntakes -= 1;
+    return {
+      ok: true,
+      knowledgeStatus: 'ready',
+      paperIntakeStatus: 'failed',
+      paperIntakeError: 'Structured intake response failed validation.'
+    };
+  };
+
+  const dropOne = (name) => trigger(papersLibraryRail, 'drop', {
+    dataTransfer: {
+      files: [{
+        name,
+        type: 'application/pdf',
+        arrayBuffer: async () => pdfBytes.buffer
+      }],
+      types: ['Files'],
+      dropEffect: ''
+    }
+  });
+
+  // Two separate drops, back to back — the real "several PDFs in a few seconds".
+  dropOne('first.pdf');
+  dropOne('second.pdf');
+  for (let tick = 0; tick < 6; tick += 1) {
+    await flushAsync();
+  }
+
+  assert.equal(maxConcurrentIntakes, 1, 'only one intake pipeline runs at a time');
+
+  // Drain both, letting the queue hand the second batch its turn.
+  while (releases.length || activeIntakes) {
+    releases.splice(0).forEach((release) => release());
+    for (let tick = 0; tick < 6; tick += 1) {
+      await flushAsync();
+    }
+  }
+
+  assert.equal(maxConcurrentIntakes, 1);
+  const notice = harness.document.querySelector('[data-hikari-transient-toast]');
+  assert.match(notice.textContent, /^2 PDFs were stored, but automatic paper intake failed:/);
+  assert.ok(notice.textContent.includes('first.pdf'), 'first.pdf survives in the single notice');
+  assert.ok(notice.textContent.includes('second.pdf'), 'second.pdf survives in the single notice');
 });
 test('papers module drags a paper between folders and moves the stored PDF', async () => {
   const harness = buildPapersManagementHarness();

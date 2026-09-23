@@ -1,5 +1,6 @@
 import { resolveAxisStyle, plotlyAxisRange } from './chart-style-targets.js';
 import { buildPlotlyTraces } from './plotly-traces.js';
+import { buildPlotElements, plotElementEditPatch } from './plot-elements.js';
 import {
   FIGURE_BAR_GAP,
   FIGURE_BAR_GROUP_GAP,
@@ -135,6 +136,8 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
   // The host is a fixed-size canvas, so its box is not the figure's -- exports have to
   // use the size the figure was actually drawn at.
   let chartSize = null;
+  let renderReady = Promise.resolve({ ok: true });
+  let elementEditContext = null;
 
   const getPlotly = () => (typeof window !== 'undefined' ? window.Plotly : null);
 
@@ -147,6 +150,7 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     chartSize = null;
     titleGeometry = null;
     editBoundHost = null;
+    elementEditContext = null;
   }
 
   // ponytail: best-effort sync thumbnail from the rendered SVG. For full-fidelity
@@ -355,15 +359,18 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     if (shapes.length) {
       layout.shapes = shapes;
     }
+    const elements = buildPlotElements(st.plotElements, { x: xScaleCfg, y: yScaleCfg });
+    layout.annotations.push(...elements.annotations);
+    if (shapes.length || elements.shapes.length) layout.shapes = [...shapes, ...elements.shapes];
+    elementEditContext = { annotations: layout.annotations, elements: st.plotElements || [], axes: { x: xScaleCfg, y: yScaleCfg } };
 
     // react() diffs against what is already drawn instead of rebuilding the node.
-    Plotly.react(target, traces, layout, {
+    renderReady = Promise.resolve(Plotly.react(target, traces, layout, {
       displayModeBar: false,
       responsive: false,
-      // The axis titles are the only annotations, so this makes exactly them draggable
-      // and renameable in place -- the text-box handling of the title.
+      // Axis titles and added labels share the same direct editing surface.
       edits: { annotationPosition: true, annotationText: true }
-    });
+    })).then(() => ({ ok: true }), (error) => ({ ok: false, error: String(error?.message || error) }));
     chartHost = target;
     chartSize = { width, height };
     titleGeometry = { plotWidth: plotAreaWidth, plotHeight: plotAreaHeight };
@@ -371,7 +378,9 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     if (typeof onTitleEdit === 'function' && editBoundHost !== target && typeof target.on === 'function') {
       editBoundHost = target;
       target.on('plotly_relayout', (event) => {
-        const patch = titleEditPatch(event, titleGeometry);
+        const extra = elementEditContext;
+        const patch = { ...titleEditPatch(event, titleGeometry),
+          ...(extra ? plotElementEditPatch(event, extra.annotations, extra.elements, extra.axes) : {}) };
         if (Object.keys(patch).length) {
           onTitleEdit(patch);
         }
@@ -402,5 +411,5 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     });
   }
 
-  return { render, unmount, captureDataUrl, toImage };
+  return { render, unmount, captureDataUrl, toImage, ready: () => renderReady };
 }

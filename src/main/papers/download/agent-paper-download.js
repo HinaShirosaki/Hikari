@@ -5,6 +5,7 @@ const path = require('node:path');
 const { cloneJson, ensureObject } = require('../../lib/normalize.js');
 const { createBrowserDownloadSession } = require('./paper-download/browser-session.js');
 const { createPaperTransfer } = require('./paper-download/transfer.js');
+const { createDownloadReconciliation, downloadIdentity, waitForTask } = require('./paper-download/reconciliation.js');
 const { PAPER_DOWNLOAD_ACTIONS } = require('./paper-download/constants.js');
 const { createDownloadError, inferPdfFileName, isExplicitFalse } = require('./paper-download/http-response.js');
 const { buildPaperStorageFolder, buildRelativePath, createDownloadId, defaultCleanText, ensurePathWithinRoot, getUniqueFilePath, resolvePaperCollectionName } = require('./paper-download/storage-paths.js');
@@ -20,6 +21,9 @@ function createPaperDownloadRuntime(deps = {}) {
   const onJobUpdate = typeof deps.onJobUpdate === 'function' ? deps.onJobUpdate : null;
   const jobs = deps.jobs instanceof Map ? deps.jobs : new Map();
   const activeTasks = deps.activeTasks instanceof Map ? deps.activeTasks : new Map();
+  const activeIdentities = new Map();
+  const downloadContexts = new Map();
+  const reservedPaths = new Set();
   const providedBrowserSession = typeof deps.startBrowserDownloadSession === 'function'
     ? deps.startBrowserDownloadSession
     : null;
@@ -40,6 +44,7 @@ function createPaperDownloadRuntime(deps = {}) {
     && typeof deps.paperKnowledgeDatabaseRuntime === 'object'
     ? deps.paperKnowledgeDatabaseRuntime
     : null;
+  const reconciliation = createDownloadReconciliation(paperKnowledgeDatabaseRuntime);
 
   function buildJobSnapshot(job) {
     return cloneJson(ensureObject(job), {});
@@ -99,7 +104,22 @@ function createPaperDownloadRuntime(deps = {}) {
     }
     const task = activeTasks.get(downloadId);
     if (task) {
-      await task.catch(() => {});
+      await waitForTask(task, source.wait_timeout_ms == null ? NaN : Number(source.wait_timeout_ms));
+    }
+    if (activeTasks.has(downloadId)) {
+      const context = downloadContexts.get(downloadId);
+      const job = getStoredJob(downloadId);
+      if (context && job.status === 'completed') {
+        const patch = await reconciliation.reconcile(context.source, context.identity, job).catch(() => ({}));
+        updateJob(downloadId, patch);
+      }
+      // A caller's wait ending does not cancel the transfer or the paper intake.
+      if (activeTasks.has(downloadId)) return {
+        ...getDownloadStatus({ download_id: downloadId }),
+        ok: true,
+        status: 'running',
+        summary: 'Paper work is still running. Repeat the same paper request to check it; do not start another copy.'
+      };
     }
     return getDownloadStatus({ download_id: downloadId });
   }
@@ -124,6 +144,8 @@ function createPaperDownloadRuntime(deps = {}) {
     }
     return {
       ...job,
+      in_progress: activeTasks.has(downloadId),
+      download_status: job.status,
       ok: job.status === 'completed'
     };
   }
@@ -151,7 +173,7 @@ function createPaperDownloadRuntime(deps = {}) {
     await fsPromises.mkdir(targetFolder, { recursive: true });
 
     const inferredName = inferPdfFileName(source, extraction.selected_pdf_url || extraction.browser_entry_url || '');
-    const targetFilePath = await getUniqueFilePath(targetFolder, inferredName);
+    const targetFilePath = await getUniqueFilePath(targetFolder, inferredName, reservedPaths);
     return {
       storage_path: path.resolve(storagePath),
       target_folder: targetFolder,
@@ -178,7 +200,16 @@ function createPaperDownloadRuntime(deps = {}) {
     startDefaultBrowserDownloadSession
   });
 
-  async function runDownload(downloadId, input = {}) {
+  async function finishDownload(downloadId, completed, input) {
+    const { identity } = downloadContexts.get(downloadId);
+    // Save the receipt before the potentially lengthy knowledge/intake work.
+    await reconciliation.remember(completed, identity).catch((error) => {
+      updateJob(downloadId, { reconciliation_warning: cleanText(error?.message, 600) });
+    });
+    return attachKnowledgeDatabaseResult(downloadId, completed, input);
+  }
+
+  async function runTransfer(downloadId, input = {}) {
     const extraction = extractPaperDownloadTargets(input);
     const target = await resolveTargetFile(input, extraction);
     updateJob(downloadId, {
@@ -201,7 +232,7 @@ function createPaperDownloadRuntime(deps = {}) {
           target,
           downloadId
         });
-        return attachKnowledgeDatabaseResult(downloadId, completed, input);
+        return await finishDownload(downloadId, completed, input);
       }
       if (extraction.browser_entry_url) {
         const completed = await performBrowserFallback({
@@ -210,7 +241,7 @@ function createPaperDownloadRuntime(deps = {}) {
           target,
           downloadId
         });
-        return attachKnowledgeDatabaseResult(downloadId, completed, input);
+        return await finishDownload(downloadId, completed, input);
       }
       throw createDownloadError('No paper download URL was found.');
     } catch (error) {
@@ -225,7 +256,7 @@ function createPaperDownloadRuntime(deps = {}) {
             target,
             downloadId
           });
-          return attachKnowledgeDatabaseResult(downloadId, completed, input);
+          return await finishDownload(downloadId, completed, input);
         } catch (browserError) {
           const browserStatus = browserError?.browser_required === true ? 'browser_required' : 'failed';
           const failed = updateJob(downloadId, {
@@ -251,8 +282,25 @@ function createPaperDownloadRuntime(deps = {}) {
         completed_at: now(),
         summary: cleanText(error?.message, 600) || 'Paper download failed.'
       });
+    }
+  }
+
+  async function runDownload(downloadId, source, identity) {
+    try {
+      const saved = await reconciliation.findSaved(source, identity);
+      if (saved) {
+        const result = updateJob(downloadId, saved);
+        return saved.knowledge_markdown_path ? result : await finishDownload(downloadId, result, source);
+      }
+      return await runTransfer(downloadId, source);
+    } catch (error) {
+      return updateJob(downloadId, { ok: false, status: 'failed', completed_at: now(),
+        error: cleanText(error?.message, 1200), summary: 'Paper download could not be completed.' });
     } finally {
+      reservedPaths.delete(getStoredJob(downloadId)?.file_path);
       activeTasks.delete(downloadId);
+      activeIdentities.delete(identity.key);
+      downloadContexts.delete(downloadId);
     }
   }
 
@@ -267,6 +315,15 @@ function createPaperDownloadRuntime(deps = {}) {
       };
     }
 
+    let identity;
+    try { identity = downloadIdentity(source); } catch (error) {
+      return { ok: false, status: 'error', error: error.message };
+    }
+    const activeId = activeIdentities.get(identity.key);
+    if (activeId) return {
+      ...getDownloadStatus({ download_id: activeId }), ok: true, reused: true,
+      summary: 'Rejoined the existing paper download.'
+    };
     const downloadId = cleanText(source.download_id || source.downloadId, 160) || createId();
     if (jobs.has(downloadId) || activeTasks.has(downloadId)) {
       return {
@@ -287,12 +344,16 @@ function createPaperDownloadRuntime(deps = {}) {
       started_at: createdAt,
       linked_type: cleanText(source.linked_type || source.linkedType, 80) || 'project',
       linked_name: cleanText(resolvePaperCollectionName(source), 220),
+      storage_path: identity.root,
+      target_folder: identity.folder,
       progress_ratio: 0,
       received_bytes: 0,
       total_bytes: 0,
       summary: 'Paper download queued.'
     });
-    const task = runDownload(downloadId, source);
+    activeIdentities.set(identity.key, downloadId);
+    downloadContexts.set(downloadId, { source, identity });
+    const task = Promise.resolve().then(() => runDownload(downloadId, source, identity));
     activeTasks.set(downloadId, task);
     return {
       ...buildJobSnapshot(initialJob),
@@ -310,7 +371,8 @@ function createPaperDownloadRuntime(deps = {}) {
     if (!started?.ok) {
       return started;
     }
-    return waitForDownload({ download_id: started.download_id });
+    const result = await waitForDownload({ download_id: started.download_id, wait_timeout_ms: input.wait_timeout_ms });
+    return started.reused ? { ...result, reused: true } : result;
   }
 
   async function execute(input = {}) {

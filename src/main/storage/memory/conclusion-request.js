@@ -39,10 +39,11 @@ function validateNotebookConclusionResult(result, source) {
     return null;
   }
   return {
-    // Quote membership proves the excerpt, not the model's interpretation.
-    // Publish evidence; retain the proposed summary separately for inspection.
-    conclusion: truncateInline(quotes.join(' '), 800),
-    proposedConclusion: conclusion,
+    // MEMORY.md carries the one-sentence summary, not the raw excerpt: it is an
+    // index the agent reads in full, and quote joins do not read as sentences.
+    // The quotes stay the gate — every one must appear verbatim in the saved
+    // result — and are kept in the cache so a summary can be audited later.
+    conclusion,
     quotes,
     model: cleanText(result?.model || payload.model, 120)
   };

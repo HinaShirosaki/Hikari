@@ -113,14 +113,25 @@ if (!process.versions.electron) {
       assert.equal(await js("Boolean(document.querySelector('#assay-result-table .tabulator-row'))"),true,'the production spreadsheet is loaded');
       const rawBefore=await js('JSON.stringify(qa.state.assays[0].resultValues)');
       const dataBefore=await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))');
-      const tableBefore=await js("document.querySelector('#assay-analysis-table table')?.textContent");
+      const tableBefore=await js("document.querySelector('#assay-analysis-summary-table table')?.textContent");
+      assert.ok(tableBefore, 'the Summary tab holds the computed analysis rows');
+      assert.equal(await js("document.querySelector('#assay-result-table-panel').hidden"),false);
+      await js("document.querySelector('#assay-data-tab-summary').click()");await settle();
+      assert.equal(await js("document.querySelector('#assay-result-table-panel').hidden"),true);
+      assert.equal(await js("document.querySelector('#assay-summary-panel').hidden"),false);
+      assert.equal(await js("Boolean(qa.host?.data?.length)"),true,'switching tables preserves the chart');
+      await js("document.querySelector('#assay-data-tab-raw').click();document.querySelector('#assay-show-empty-rows').click()");await settle();
+      assert.equal(await js("Tabulator.findTable(document.querySelector('#assay-result-table .tabulator'))[0].getRows('active').length"),8);
+      await js("document.querySelector('#assay-show-empty-rows').click()");await settle();
+      assert.equal(await js("Tabulator.findTable(document.querySelector('#assay-result-table .tabulator'))[0].getRows('active').length"),2);
+      assert.equal(await js('qa.module.hasUnsavedChanges()'),false,'view filtering preserves the clean plate snapshot');
       if (phase === 'workspace') {
         await js("qa.tab('frame')");await edit('frameStrokeWidth',2.25);
         assert.equal(await js('qa.state.assays[0].chartStyle.frameStrokeWidth'),3,'real Assay onChartStyleChanged persists the target record');
         await js("qa.tab('text')");await edit('textTarget','yTitle');await edit('titleText','Measured response');
         assert.equal(await js('qa.module.hasUnsavedChanges()'),false,'formatting does not dirty the plate data');
         assert.equal(await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))'),dataBefore,'formatting preserves plotted scientific data');
-        assert.equal(await js("document.querySelector('#assay-analysis-table table')?.textContent"),tableBefore,'formatting preserves analysis results');
+        assert.equal(await js("document.querySelector('#assay-analysis-summary-table table')?.textContent"),tableBefore,'formatting preserves analysis results');
         await js("qa.tab('series')");
         assert.equal(await js("document.querySelector('[data-cc=chartType]').disabled"),true,'chart type is locked for a fitted curve');
         await shot('08-assay-workspace');

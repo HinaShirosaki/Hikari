@@ -141,7 +141,8 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
       linked_type: resolved.linked_type,
       collection_name: resolved.linked_name,
       linked_name: resolved.linked_name,
-      storage_path: resolved.storage_path
+      storage_path: resolved.storage_path,
+      wait_timeout_ms: 15000
     }).catch((error) => ({
       ok: false,
       status: 'error',

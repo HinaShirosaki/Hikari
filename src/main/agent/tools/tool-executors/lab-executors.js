@@ -299,7 +299,7 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
       endpoint: cleanText(context?.endpoint, 2000),
       apiKey: cleanText(context?.apiKey, 400),
       model: cleanText(context?.model, 120),
-      message: cleanText(context?.message, 3200),
+      message: cleanText(context?.message, 12000),
       conversation: Array.isArray(context?.conversation) ? context.conversation : [],
       snapshot,
       parserPayload: context?.parserPayload && typeof context.parserPayload === 'object' ? context.parserPayload : {},

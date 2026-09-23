@@ -43,6 +43,13 @@ assert.match(homeNotebookJs, /noteDialogCloseBtn\.addEventListener\('click', clo
 assert.doesNotMatch(protocolCss, /padding:\s*max\((?:76|86)px,\s*env\(safe-area-inset-top/);
 assert.match(protocolCss, /height:\s*min\(760px,\s*var\(--app-dialog-available-height\)\)/);
 assert.match(shellEndHtml, /id="unsaved-changes-close-btn"[^>]*class="app-dialog-close-btn"/s);
+assert.match(shellEndHtml, /id="agent-rail-review-overlay"[^>]*class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top"/s);
+assert.match(shellEndHtml, /<\/aside>\s*<div id="agent-rail-review-overlay"/s);
+assert.match(shellEndHtml, /id="agent-rail-review-track"[^>]*class="agent-review-track"/s);
+assert.match(shellEndHtml, /id="agent-rail-review-close-btn"[^>]*class="app-dialog-close-btn"/s);
+assert.match(shellEndHtml, /id="agent-rail-review-prev-btn"/);
+assert.match(shellEndHtml, /id="agent-rail-review-next-btn"/);
+assert.match(shellEndHtml, /id="agent-rail-review-page-label"/);
 assert.match(unsavedChangesJs, /closeButton\?\.addEventListener\('click', cancelClose\)/);
 
 assert.equal(measureDialogTopClearance({

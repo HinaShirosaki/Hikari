@@ -26,7 +26,7 @@ function createAssayFormAndList({
   renderProjectOptions,
   renderNotebookOptions,
   renderResultsAssayOptions,
-  clearActiveAssayInfo,
+  onAssayModeChanged,
   notifyActiveAssayChanged,
   renderAssayNumberDisplay,
   setCsvStatus,
@@ -44,6 +44,7 @@ function createAssayFormAndList({
   function setAssayMode(mode) {
     runtime.assayMode = mode === 'results' ? 'results' : 'create';
     const isCreate = runtime.assayMode === 'create';
+    onAssayModeChanged?.(runtime.assayMode);
     if (elements.assayCreateLayout) {
       elements.assayCreateLayout.hidden = !isCreate;
     }
@@ -69,7 +70,6 @@ function createAssayFormAndList({
       if (selected) {
         loadAssayForResults(selected);
       } else {
-        clearActiveAssayInfo();
       }
     }
     notifyActiveAssayChanged();
@@ -79,7 +79,6 @@ function createAssayFormAndList({
     const assayId = elements.assayResultsAssaySelect?.value || '';
     if (!assayId) {
       runtime.activeResultsAssayId = '';
-      clearActiveAssayInfo();
       setResultStatus('No assay plate selected.', true);
       notifyActiveAssayChanged();
       return;
@@ -108,7 +107,6 @@ function createAssayFormAndList({
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -172,6 +170,7 @@ function createAssayFormAndList({
       // Analysis-side settings live on the assay but are edited in the Analyze view, so
       // a save from Setup has to carry them forward instead of rebuilding them away.
       chartStyle: existing?.chartStyle || null,
+      plotToolReceipts: existing?.plotToolReceipts || [],
       transformSpec: existing?.transformSpec || null,
       updatedAt: new Date().toISOString()
     };
@@ -232,6 +231,12 @@ function createAssayFormAndList({
     if (elements.assayAnalysisSubtotalsInput) {
       elements.assayAnalysisSubtotalsInput.checked = false;
     }
+    if (elements.assayAnalysisHighControlInput) {
+      elements.assayAnalysisHighControlInput.value = '';
+    }
+    if (elements.assayAnalysisLowControlInput) {
+      elements.assayAnalysisLowControlInput.value = '';
+    }
     analysisView?.syncAnalysisControls();
     analysisView?.clearTransform();
     if (elements.assayAnalysisRowGroupsInput) {
@@ -243,7 +248,6 @@ function createAssayFormAndList({
     if (elements.assayAnalysisErrorBarsInput) {
       elements.assayAnalysisErrorBarsInput.checked = true;
     }
-    resultsManager.setAnalysisSelectionStatus('');
     resultsManager.refreshAnalysisGroupDisplay();
     setCsvStatus('');
     setLayoutStatus('');
@@ -262,7 +266,6 @@ function createAssayFormAndList({
     layoutManager.renderPlatePreview();
     renderAssayNumberDisplay();
     renderResultsAssayOptions();
-    clearActiveAssayInfo();
     resultsManager.renderResultTable();
     analysisView.clearOutput();
     layoutManager.updateActiveWellPreviewState();
@@ -300,7 +303,6 @@ function createAssayFormAndList({
     layoutManager.renderPlatePreview(axisValues);
     renderAssayNumberDisplay();
     renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
     resultsManager.renderResultTable();
     elements.assayNotebookEntryInput.value = assay.notebookEntryId || '';
     if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
@@ -325,7 +327,6 @@ function createAssayFormAndList({
       runtime.currentResults = {};
       runtime.currentLayout = [];
       resultsManager.renderResultTable();
-      clearActiveAssayInfo();
       analysisView.clearOutput();
     }
     syncNotebookAssayLinks();
@@ -375,7 +376,6 @@ function createAssayFormAndList({
     layoutManager.renderPlateDefinition();
     renderAssayNumberDisplay();
     renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
-    clearActiveAssayInfo();
     layoutManager.renderPlatePreview();
     resultsManager.renderResultTable();
     renderList();

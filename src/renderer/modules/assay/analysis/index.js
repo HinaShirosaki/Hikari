@@ -1,4 +1,5 @@
 import {
+  GROUPED_ANALYSES,
   normalizeAnalysisSpec,
   resolveGrouping,
   resolveXAxis,
@@ -7,16 +8,33 @@ import {
 import { analyzeSummary } from './grouped-summary.js';
 import { analyzeCurveFit } from './curve-fit.js';
 import { analyzeNormalize } from './dose-response.js';
+import {
+  analyzePercentControl,
+  analyzePlateQc,
+  analyzeTTest,
+  analyzeZScore
+} from './plate-stats.js';
 
 export {
   ANALYSIS_LABELS,
   ANALYSIS_VALUES,
   GROUP_BY_VALUES,
+  GROUPED_ANALYSES,
   X_AXIS_VALUES,
   describeAnalysisSpec,
   normalizeAnalysisSpec,
   specFromLegacyMethod
 } from './grouping.js';
+
+// The grouped analyses all take (observations, grouping, spec) and pool wells without
+// an X axis; the curve fits all need one. That split is the whole of the routing below.
+const GROUPED_RUNNERS = {
+  summary: analyzeSummary,
+  percent_control: analyzePercentControl,
+  plate_qc: analyzePlateQc,
+  zscore: analyzeZScore,
+  ttest: analyzeTTest
+};
 
 // `method` is the legacy flat identifier kept for saved analyses; it maps onto a spec.
 export function analyzeAssayData({ spec, method, observations, options = {} }) {
@@ -29,9 +47,9 @@ export function analyzeAssayData({ spec, method, observations, options = {} }) {
   }
 
   const normalized = spec ? normalizeAnalysisSpec(spec) : specFromLegacyMethod(method);
-  if (normalized.analysis === 'summary') {
+  if (GROUPED_ANALYSES.includes(normalized.analysis)) {
     const grouping = resolveGrouping(observations, normalized, options, null);
-    return analyzeSummary(observations, grouping, normalized);
+    return GROUPED_RUNNERS[normalized.analysis](observations, grouping, normalized);
   }
 
   const xAxis = resolveXAxis(observations, normalized);

@@ -1,7 +1,6 @@
 'use strict';
 
-const fs = require('fs/promises');
-const path = require('path');
+const { persistSqliteDatabase } = require('../lib/sqlite-persist');
 const {
   applyChemicalSqliteSchema,
   applyCommonSqliteSchema
@@ -442,9 +441,7 @@ async function writeSqliteBundleIndex(sqlitePath, snapshot) {
     writeSqlNotebookIndex(db, snapshot, updatedAtDefault);
     writeSqlPaperIndex(db, snapshot, updatedAtDefault);
     writeSqlRecordIndex(db, snapshot);
-    const bytes = db.export();
-    await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
-    await fs.writeFile(sqlitePath, Buffer.from(bytes));
+    await persistSqliteDatabase(sqlitePath, db);
   } finally {
     db.close();
   }
@@ -457,9 +454,7 @@ async function writeChemicalSqliteBundleIndex(sqlitePath, snapshot) {
     applyChemicalSqliteSchema(db);
     writeSqlInventoryChemicals(db, snapshot);
     writeSqlInventoryMeta(db, snapshot);
-    const bytes = db.export();
-    await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
-    await fs.writeFile(sqlitePath, Buffer.from(bytes));
+    await persistSqliteDatabase(sqlitePath, db);
   } finally {
     db.close();
   }

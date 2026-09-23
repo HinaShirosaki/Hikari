@@ -237,6 +237,29 @@ test('assay preserves restored result values while the result grid is still init
   assert.deepEqual(manager.syncCurrentResultsFromGrid(), { A1: '0.33', A2: '0.22' });
 });
 
+test('assay compact rows preserve mapped blanks, zero values and original well coordinates', () => {
+  const { createResultGridModel } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'assay', 'results', 'grid-model.js'
+  ));
+  const runtime = {
+    currentLayout: [{ well: 'C1', sampleId: 'Blank control' }],
+    currentResults: { A1: '0', D2: '7.5' }
+  };
+  const model = createResultGridModel({
+    runtime, getSampleAxis: () => 'row', isMappedWell: (well) => well === 'C1',
+    escapeHtml: String, toResultField: (column) => `c${column + 1}`
+  });
+  const rows = model.buildResultGridData({ rows: 4, columns: 2 });
+  const visible = rows.filter(model.resultRowVisible);
+  assert.deepEqual(Array.from(visible, (row) => row.rowLabel), ['A', 'C', 'D']);
+  assert.deepEqual(Array.from(visible, (row) => row.__rowIndex), [0, 2, 3]);
+  assert.equal(visible[0].c1, '0');
+  assert.equal(visible[1].c1, '', 'mapped blank controls remain editable');
+  runtime.showEmptyResultRows = true;
+  assert.equal(rows.filter(model.resultRowVisible).length, 4);
+  assert.deepEqual(runtime.currentResults, { A1: '0', D2: '7.5' });
+});
+
 test('assay dilution fill commits generated concentrations before the layout re-reads the plate', () => {
   const concentrationUtils = loadEsmStyleModule(path.join(
     __dirname,
@@ -441,6 +464,104 @@ test('assay agent TSV formatter preserves object-row cells', () => {
   assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
 });
 
+test('assay setup suppresses the universal agent chat rail while analysis keeps it available', () => {
+  const { createAssayFormAndList } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'workspace',
+    'form-and-list.js'
+  ));
+  const runtime = { assayMode: 'create', activeResultsAssayId: '' };
+  const createLayout = { hidden: false };
+  const resultsLayout = { hidden: true };
+  const createButton = new MockElement('assay-mode-create-btn');
+  const resultsButton = new MockElement('assay-mode-results-btn');
+  const createRail = { prepend() {} };
+  const resultsRail = { prepend() {} };
+  const observedModes = [];
+  const manager = createAssayFormAndList({
+    runtime,
+    elements: {
+      assayCreateLayout: createLayout,
+      assayResultsLayout: resultsLayout,
+      assayModeCreateBtn: createButton,
+      assayModeResultsBtn: resultsButton,
+      assayModeSwitch: {},
+      assayCreateRail: createRail,
+      assayResultsRail: resultsRail,
+      assayResultsAssaySelect: { value: '' }
+    },
+    layoutManager: {
+      renderPlateDefinition() {},
+      renderPlatePreview() {}
+    },
+    onAssayModeChanged: (mode) => observedModes.push(mode),
+    notifyActiveAssayChanged() {},
+    renderResultsAssayOptions() {},
+    clearActiveAssayInfo() {}
+  });
+
+  manager.setAssayMode('create');
+  assert.equal(createLayout.hidden, false);
+  assert.equal(resultsLayout.hidden, true);
+  assert.equal(observedModes.at(-1), 'create');
+
+  manager.setAssayMode('results');
+  assert.equal(createLayout.hidden, true);
+  assert.equal(resultsLayout.hidden, false);
+  assert.equal(observedModes.at(-1), 'results');
+
+  const { assayManifest } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'module-manifests',
+    'assay.js'
+  ));
+  const assayView = { dataset: {} };
+  const dispatchedEvents = [];
+  class TestCustomEvent {
+    constructor(type) {
+      this.type = type;
+    }
+  }
+  const manifestOptions = assayManifest.createOptions({
+    state: {},
+    persist() {},
+    createId() {},
+    safeText: (value) => String(value ?? ''),
+    rendererServices: { analysis: { handleAssaysChanged() {} } },
+    modules: {},
+    rootDocument: {
+      defaultView: { CustomEvent: TestCustomEvent },
+      getElementById: () => assayView,
+      dispatchEvent: (event) => dispatchedEvents.push(event.type)
+    }
+  });
+  manifestOptions.onAssayModeChanged('create');
+  assert.equal(assayView.dataset.agentChatRail, 'disabled');
+  manifestOptions.onAssayModeChanged('results');
+  assert.equal(assayView.dataset.agentChatRail, 'enabled');
+  assert.deepEqual(dispatchedEvents, [
+    'hikari:agent-chat-rail-availability-changed',
+    'hikari:agent-chat-rail-availability-changed'
+  ]);
+
+  const { isAgentChatRailAvailable } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'app',
+    'navigation-shell.js'
+  ));
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: true }, { dataset: { agentChatRail: 'disabled' } }), false);
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: true }, { dataset: { agentChatRail: 'enabled' } }), true);
+  assert.equal(isAgentChatRailAvailable({ agentChatRail: false }, { dataset: { agentChatRail: 'enabled' } }), false);
+});
+
 test('assay analysis split initializes chart collaborators before the extracted surface', () => {
   const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
     __dirname,
@@ -471,7 +592,7 @@ test('assay analysis split initializes chart collaborators before the extracted 
   view.destroy();
 });
 
-test('assay analysis hides successful status copy while retaining saved analysis metadata', () => {
+test('assay analysis keeps the rail free of status copy while retaining saved analysis metadata', () => {
   const document = createMockDocument();
   const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
     __dirname,
@@ -481,7 +602,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
     'assay',
     'analysis-view.js'
   ), { document });
-  const summary = new MockElement('assay-analysis-summary');
   const table = new MockElement('assay-analysis-table');
   const input = (value = '') => {
     const element = new MockElement();
@@ -509,7 +629,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
       assayAnalysisPolyOrderInput: input('2'),
       assayAnalysisSubtotalsField: new MockElement(),
       assayAnalysisSubtotalsInput: input(),
-      assayAnalysisSummary: summary,
       assayAnalysisRowGroupsInput: input(),
       assayAnalysisTable: table,
       assayAnalysisXAxisField: new MockElement(),
@@ -533,7 +652,6 @@ test('assay analysis hides successful status copy while retaining saved analysis
 
   view.renderAnalysis();
 
-  assert.equal(summary.textContent, '', 'successful analysis does not add redundant rail status copy');
   assert.match(table.innerHTML, /<td>Linear<\/td>/, 'the result table still identifies the fitted model');
   assert.match(savedAnalysis.summary, /^Linear fitted for 1 series/, 'the saved analysis retains its full summary');
   assert.doesNotMatch(savedAnalysis.summary, /Rows:/, 'the UI-only row count is not persisted');
@@ -550,7 +668,6 @@ test('assay group selection stays silent but missing selections still explain th
     'assay',
     'results-manager.js'
   ), { document });
-  const selectionStatus = new MockElement('assay-analysis-selection-status');
   const resultTable = new MockElement('assay-result-table');
   resultTable.append = () => {};
 
@@ -585,7 +702,6 @@ test('assay group selection stays silent but missing selections still explain th
   const manager = createAssayResultsManager({
     runtime: { currentLayout: [], currentResults: {}, resultPasteAnchor: { rowIndex: 0, columnIndex: 0 } },
     elements: {
-      assayAnalysisSelectionStatus: selectionStatus,
       assayAnalysisRowGroupsInput: new MockElement(),
       assayAnalysisColumnGroupsInput: new MockElement(),
       assayResultTable: resultTable
@@ -609,13 +725,13 @@ test('assay group selection stays silent but missing selections still explain th
     getRows: () => [{ getData: () => ({ rowLabel: 'B' }) }],
     getColumns: () => []
   }];
-  RangeTabulator.instance.events.rangeAdded();
-  assert.equal(selectionStatus.textContent, '', 'the selected-range hint remains hidden');
+  assert.equal(document.querySelector('[data-hikari-transient-toast]'), null, 'selecting a range says nothing');
 
   RangeTabulator.instance.ranges = [];
   manager.onAddSelectedRowGroup();
-  assert.equal(selectionStatus.textContent, 'Select at least one row before adding a group.');
-  assert.equal(selectionStatus.classList.contains('is-error'), true, 'a blocked action reads as an error, not a note');
+  const toast = document.querySelector('[data-hikari-transient-toast]');
+  assert.equal(toast.textContent, 'Select at least one row before adding a group.');
+  assert.equal(toast.hidden, false, 'a blocked action surfaces in the shared transient notice');
 });
 
 test('assay treats loading a saved plate as a clean setup and results baseline', () => {

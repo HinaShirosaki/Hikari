@@ -1,5 +1,13 @@
 export function getWorkflowElements(rootDocument) {
   return {
+    workflowProcessDialog: rootDocument?.getElementById?.('workflow-process-dialog'),
+    workflowProcessForm: rootDocument?.getElementById?.('workflow-process-form'),
+    workflowProcessTemplate: rootDocument?.getElementById?.('workflow-process-template'),
+    workflowProcessProject: rootDocument?.getElementById?.('workflow-process-project'),
+    workflowProcessName: rootDocument?.getElementById?.('workflow-process-name'),
+    workflowProcessStatus: rootDocument?.getElementById?.('workflow-process-status'),
+    workflowProcessCancel: rootDocument?.getElementById?.('workflow-process-cancel'),
+
     workflowForm: rootDocument?.getElementById?.('workflow-form'),
     workflowIdInput: rootDocument?.getElementById?.('workflow-id'),
     workflowNameInput: rootDocument?.getElementById?.('workflow-name'),

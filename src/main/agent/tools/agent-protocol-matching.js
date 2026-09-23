@@ -72,7 +72,7 @@ function createProtocolMatchingRuntime(deps = {}) {
   function normalizeProtocolStep(step, index = 0) {
     const source = step && typeof step === 'object' ? step : {};
     const stepId = cleanText(source.id, 120) || `step-${index + 1}`;
-    const text = cleanText(source.text || source.instruction || source.action, 1600);
+    const text = cleanText(source.text || source.instruction || source.action, 6000);
     const placeholders = asArray(source.placeholders).map((placeholder, placeholderIndex) => ({
       id: cleanText(placeholder?.id, 120) || `${stepId}-ph-${placeholderIndex + 1}`,
       name: cleanText(placeholder?.name, 120) || 'value'
@@ -89,9 +89,9 @@ function createProtocolMatchingRuntime(deps = {}) {
     const id = cleanText(source.id, 120) || `protocol-${index + 1}`;
     const name = cleanText(source.name, 220);
     const purpose = cleanText(source.purpose || source.description, 700);
-    const materials = asArray(source.materials).map((item) => cleanText(item, 180)).filter(Boolean).slice(0, 30);
+    const materials = asArray(source.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 120);
     const troubleshooting = cleanText(source.troubleshooting, 700);
-    const steps = asArray(source.steps).map((step, stepIndex) => normalizeProtocolStep(step, stepIndex)).slice(0, 120);
+    const steps = asArray(source.steps).map((step, stepIndex) => normalizeProtocolStep(step, stepIndex)).slice(0, 240);
     const aliases = uniqueStrings(source.aliases, 8);
     return {
       id,
@@ -177,7 +177,7 @@ function createProtocolMatchingRuntime(deps = {}) {
     const candidateNames = uniqueStrings([
       ...asArray(protocolCandidates),
       protocolHint
-    ], 3);
+    ], 20);
 
     const ranked = asArray(protocols).map((protocolRecord, index) => {
       const protocol = normalizeProtocolRecord(protocolRecord, index);
@@ -206,7 +206,7 @@ function createProtocolMatchingRuntime(deps = {}) {
     return ranked
       .filter((item) => item.score > 0 && (item.name || item.id))
       .sort((left, right) => right.score - left.score)
-      .slice(0, 8);
+      .slice(0, 20);
   }
 
   function hasDeterministicProtocolWinner(matches = []) {

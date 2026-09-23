@@ -17,6 +17,7 @@ export function createEntryListRenderer({
   safeText,
   getNotebookEntries,
   getProjects,
+  getWorkflows = () => [],
   getEditingEntryId,
   getActiveProjectDashboardId = () => ''
 } = {}) {
@@ -82,6 +83,9 @@ export function createEntryListRenderer({
 
   function groupEntries(entries) {
     const projects = getProjects();
+    const workflowRecords = getWorkflows();
+    const workflows = Array.isArray(workflowRecords) ? workflowRecords : [];
+    const workflowsById = new Map(workflows.map((workflow) => [String(workflow?.id || ''), workflow]));
     const groups = new Map();
     projects
       .slice()
@@ -93,20 +97,47 @@ export function createEntryListRenderer({
           projectId: project.id,
           groupClass: 'biology-notebook-folder--project',
           itemClass: 'biology-notebook-folder-item--project',
-          entries: []
+          entries: [],
+          processes: new Map()
         });
       });
+    workflows.forEach((workflow) => {
+      const projectGroup = groups.get(String(workflow?.projectId || ''));
+      if (!projectGroup || !workflow?.id) return;
+      const key = `__process__:${workflow.id}`;
+      projectGroup.processes.set(key, {
+        key,
+        id: workflow.id,
+        name: workflow.name || 'Untitled process',
+        entries: []
+      });
+    });
     entries.forEach((entry) => {
+      const workflowId = String(entry?.workflowContext?.workflowId || '').trim();
       const workflowEntryId = String(entry?.workflowContext?.workflowEntryId || '').trim();
       const workflowName = String(entry?.workflowContext?.workflowName || '').trim();
-      const isWorkflowEntry = Boolean(workflowEntryId || workflowName);
+      const isWorkflowEntry = Boolean(workflowId || workflowEntryId || workflowName);
       const groupName = resolveEntryCollectionName(entry, projects);
-      const project = isWorkflowEntry
-        ? null
-        : (projects.find((item) => String(item?.id || '') === String(entry?.projectId || ''))
-          || projects.find((item) => String(item?.name || '').trim().toLowerCase() === String(groupName || '').trim().toLowerCase())
+      const workflow = workflowsById.get(workflowId);
+      const projectName = isWorkflowEntry ? entry?.projectName : groupName;
+      const project = (projects.find((item) => String(item?.id || '') === String(workflow?.projectId || entry?.projectId || ''))
+          || projects.find((item) => String(item?.name || '').trim().toLowerCase() === String(projectName || '').trim().toLowerCase())
           || null);
       const projectId = project?.id || '';
+      if (isWorkflowEntry && projectId) {
+        const projectGroup = groups.get(projectId);
+        const key = `__process__:${workflowId || `${projectId}:${workflowEntryId || workflowName || entry.id}`}`;
+        if (!projectGroup.processes.has(key)) {
+          projectGroup.processes.set(key, {
+            key,
+            id: workflow?.id || '',
+            name: workflow?.name || workflowName || groupName,
+            entries: []
+          });
+        }
+        projectGroup.processes.get(key).entries.push(entry);
+        return;
+      }
       const groupKey = isWorkflowEntry
         ? `__workflow__:${workflowEntryId || workflowName || entry.id}`
         : (projectId || entry.projectId || `__project__:${groupName}`);
@@ -121,7 +152,8 @@ export function createEntryListRenderer({
           itemClass: isWorkflowEntry
             ? 'biology-notebook-folder-item--workflow'
             : 'biology-notebook-folder-item--project',
-          entries: []
+          entries: [],
+          processes: new Map()
         });
       }
       groups.get(groupKey).entries.push(entry);
@@ -160,7 +192,35 @@ export function createEntryListRenderer({
     listEl.innerHTML = Array.from(groups.values()).map((group) => {
       const entryButtons = group.entries.length
         ? group.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
-        : '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>';
+        : (!group.processes.size
+          ? '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>'
+          : '');
+      const processFolders = [...group.processes.values()].map((process) => {
+        const expanded = folderTree.isExpanded(process.key, true);
+        return renderFolderTreeNode({
+          key: process.key,
+          expanded,
+          label: process.name,
+          childrenHtml: process.entries.length
+            ? process.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
+            : '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>',
+          nodeClass: `biology-notebook-folder biology-notebook-folder--process${expanded ? '' : ' is-collapsed'}`,
+          rowClass: 'biology-notebook-folder-item biology-notebook-folder-item--process',
+          disclosureClass: 'biology-notebook-folder-toggle',
+          mainClass: 'biology-notebook-folder-name-btn',
+          labelClass: 'biology-notebook-folder-name',
+          glyphClass: 'biology-notebook-folder-glyph',
+          childrenClass: 'biology-notebook-folder-children biology-notebook-folder-children--pages folder-tree-template__children--full-width-leaves',
+          disclosureAttributes: { 'data-notebook-folder-toggle': process.key },
+          mainAttributes: process.id ? { 'data-notebook-process-id': process.id } : {},
+          mainHtml: process.id ? '' : `
+            <div class="biology-notebook-folder-static folder-tree-template__main">
+              <span class="biology-notebook-folder-glyph left-rail-folder-glyph" aria-hidden="true"></span>
+              <span class="biology-notebook-folder-name folder-tree-template__label">${safeText(process.name)}</span>
+            </div>
+          `
+        });
+      }).join('');
       const isActiveProject = group.projectId && group.projectId === activeProjectDashboardId;
       const isExpanded = folderTree.isExpanded(group.groupKey, true);
       const mainHtml = group.projectId ? '' : `
@@ -174,7 +234,7 @@ export function createEntryListRenderer({
         expanded: isExpanded,
         active: Boolean(isActiveProject),
         label: group.groupName,
-        childrenHtml: entryButtons,
+        childrenHtml: entryButtons + processFolders,
         nodeClass: `biology-notebook-folder ${group.groupClass}${isExpanded ? '' : ' is-collapsed'}`,
         rowClass: `biology-notebook-folder-item ${group.itemClass}`,
         disclosureClass: 'biology-notebook-folder-toggle',

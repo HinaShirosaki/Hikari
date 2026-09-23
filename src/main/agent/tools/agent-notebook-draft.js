@@ -75,6 +75,7 @@ function createNotebookDraftRuntime(deps = {}) {
     if (typeof protocolApi.listAgentProtocols === 'function') {
       return asArray(protocolApi.listAgentProtocols({
         snapshot,
+        limit: 500,
         ...options
       })).map((protocol, index) => normalizeProtocolRecord(protocol, index));
     }
@@ -149,7 +150,7 @@ function createNotebookDraftRuntime(deps = {}) {
     const clone = cloneJson(protocol, {}) || {};
     const steps = asArray(clone.steps).slice();
     edits.forEach((edit) => {
-      const text = cleanText(edit.text, 2000);
+      const text = cleanText(edit.text, 6000);
       if (!text) {
         return;
       }
@@ -222,7 +223,7 @@ function createNotebookDraftRuntime(deps = {}) {
     const parserProtocolCandidates = uniqueStrings([
       ...asArray(protocolCandidates),
       ...asArray(parserPayload?.protocol_candidates)
-    ], 5);
+    ], 20);
     const workflowCandidates = collectWorkflowCandidates({
       snapshot,
       project: resolvedProject,
@@ -239,7 +240,7 @@ function createNotebookDraftRuntime(deps = {}) {
         ...workflowCandidates.map((candidate) => candidate.id),
         ...directProtocolCandidates.map((candidate) => candidate.id)
       ],
-      20
+      40
     ).map((candidateId) => (
       workflowCandidates.find((candidate) => candidate.id === candidateId)
       || directProtocolCandidates.find((candidate) => candidate.id === candidateId)
@@ -263,7 +264,7 @@ function createNotebookDraftRuntime(deps = {}) {
         parser_protocol_candidates: parserProtocolCandidates
       },
       response_payload: {
-        candidates: asArray(candidates).slice(0, 6)
+        candidates: asArray(candidates).slice(0, 40)
       }
     });
 
@@ -284,7 +285,7 @@ function createNotebookDraftRuntime(deps = {}) {
 
     const notebookRuns = extractNotebookRuns(snapshot)
       .filter((entry) => cleanText(entry.project_id, 120) === cleanText(resolvedProject.id, 120))
-      .slice(0, 12);
+      .slice(0, 60);
     const normalizedEvidenceContext = normalizeEvidenceContext(evidenceContext);
     let selectedCandidate = candidates[0];
     let proposalFields = buildFallbackProposal(
@@ -318,11 +319,11 @@ function createNotebookDraftRuntime(deps = {}) {
         title: cleanText(llmSelection.payload.title, 220) || proposalFields.title,
         purpose: cleanText(llmSelection.payload.purpose, 700) || proposalFields.purpose,
         rationale: cleanText(llmSelection.payload.rationale, 700) || proposalFields.rationale,
-        planned_materials: uniqueStrings(asArray(llmSelection.payload.planned_materials), 8).length
-          ? uniqueStrings(asArray(llmSelection.payload.planned_materials), 8)
+        planned_materials: uniqueStrings(asArray(llmSelection.payload.planned_materials), 120).length
+          ? uniqueStrings(asArray(llmSelection.payload.planned_materials), 120)
           : proposalFields.planned_materials,
-        checkpoints: uniqueStrings(asArray(llmSelection.payload.checkpoints), 8).length
-          ? uniqueStrings(asArray(llmSelection.payload.checkpoints), 8)
+        checkpoints: uniqueStrings(asArray(llmSelection.payload.checkpoints), 40).length
+          ? uniqueStrings(asArray(llmSelection.payload.checkpoints), 40)
           : proposalFields.checkpoints
       };
     }
@@ -366,7 +367,7 @@ function createNotebookDraftRuntime(deps = {}) {
         message,
         proposalFields.title ? `Planned experiment title: ${proposalFields.title}` : '',
         proposalFields.purpose ? `Planned purpose: ${proposalFields.purpose}` : ''
-      ].filter(Boolean).join('\n'), 3200),
+      ].filter(Boolean).join('\n'), 12000),
       conversation,
       snapshot,
       parserPayload,

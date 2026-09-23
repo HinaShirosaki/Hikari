@@ -514,7 +514,7 @@ function buildMcpToolResponseContent(toolName = '', result = {}) {
       ? buildLiteratureSearchModelPayload(toolName, result)
       : ensureObject(result));
   const text = JSON.stringify(payload, null, 2);
-  if (paperAnalysisResult || payload.delegated_research === true) {
+  if (paperAnalysisResult || payload.delegated_research === true || /(?:^|__)notebook_draft$/.test(toolName)) {
     return text;
   }
   if (text.length <= MAX_MODEL_TEXT_CHARS) {
@@ -617,7 +617,7 @@ function createAgentMcpStdioServer(deps = {}) {
     // paper_analysis already carries every selected line and comment in its one
     // compact text payload. Repeating the full gateway result here made Codex
     // serialize two copies and truncate the otherwise-valid response.
-    if (!isPaperAnalysisResult(toolName, result)) {
+    if (!isPaperAnalysisResult(toolName, result) && !/(?:^|__)notebook_draft$/.test(toolName)) {
       response.structuredContent = ensureObject(result);
     }
     return response;

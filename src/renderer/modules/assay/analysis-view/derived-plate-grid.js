@@ -16,11 +16,11 @@ function createDerivedPlateGrid({
   buildResultGridColumns,
   buildResultGridData,
   buildResultGridSignature,
+  resultRowVisible,
   onTransformChange,
   assayResultTable,
   assayDerivedPlatePanel,
   assayDerivedPlateTable,
-  assayTransformSummary,
   assayAnalysisRowGroupsInput,
   assayAnalysisColumnGroupsInput
 } = {}) {
@@ -41,6 +41,13 @@ function createDerivedPlateGrid({
     canFillCell: ({ columnIndex, rowIndex }) => (
       buildMappedWellSet(runtime.currentLayout).has(wellIdFor(rowIndex, columnIndex))
     ),
+    canStartFillCell: ({ columnIndex, rowIndex }) => {
+      const well = wellIdFor(rowIndex, columnIndex);
+      // An empty transformed cell has nothing to copy. Leaving its edge unclaimed
+      // gives the compact cell its full click area for opening the formula editor.
+      return buildMappedWellSet(runtime.currentLayout).has(well)
+        && Boolean(String(transformFormulas[well] ?? '').trim());
+    },
     applyFill: ({ columnIndex, rowIndex, targets, source }) => {
       targets.forEach((target) => {
         const well = wellIdFor(target.rowIndex, target.columnIndex);
@@ -59,12 +66,6 @@ function createDerivedPlateGrid({
 
   function getTransformSpec() {
     return normalizeTransformSpec({ mode: 'cells', enabled: transformEnabled, formulas: transformFormulas });
-  }
-
-  function setTransformSummary(text) {
-    if (assayTransformSummary) {
-      assayTransformSummary.textContent = text;
-    }
   }
 
   function clearTransformGrid() {
@@ -173,6 +174,10 @@ function createDerivedPlateGrid({
         index: '__rowIndex',
         layout: 'fitDataTable',
         reactiveData: false,
+        initialFilter: resultRowVisible,
+        // Range selection otherwise wins the first interaction in some Electron
+        // builds, making a formula cell feel like it needs a double-click.
+        editTriggerEvent: 'click',
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true
@@ -182,6 +187,7 @@ function createDerivedPlateGrid({
         options.height = height;
       }
       transformGrid = new TabulatorLib(host, options);
+      transformGrid?.on?.('tableBuilt', () => transformGrid?.redraw?.(true));
       transformGrid?.on?.('cellEdited', onTransformGridCellEdited);
       transformGridSignature = signature;
       return true;
@@ -198,7 +204,6 @@ function createDerivedPlateGrid({
       derivedPlate = null;
       if (assayDerivedPlatePanel) assayDerivedPlatePanel.hidden = true;
       clearTransformGrid();
-      setTransformSummary('');
       return null;
     }
 
@@ -210,10 +215,7 @@ function createDerivedPlateGrid({
       columnGroupSpec: String(assayAnalysisColumnGroupsInput?.value || '')
     });
     derivedPlate = result;
-
-    setTransformSummary(result.errorCount
-      ? `${result.errorCount} formula error(s); hover #ERROR for details.`
-      : '');
+    // A failed formula shows up as its own #ERROR cell, with the reason on hover.
 
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
@@ -296,15 +298,17 @@ function createDerivedPlateGrid({
 
   return {
     getDerivedPlate: () => derivedPlate,
+    refreshRowVisibility: () => transformGrid?.setFilter?.(resultRowVisible),
     getTransformFormulas: () => transformFormulas,
     setTransformEnabled: (enabled) => { transformEnabled = enabled === true; },
-    redrawTransformGrid: () => transformGrid?.redraw?.(true),
+    redrawTransformGrid: () => {
+      if (transformGrid?.initialized !== false) transformGrid?.redraw?.(true);
+    },
     setTransformFormulas(next) {
       transformFormulas = next;
       return transformFormulas;
     },
     getTransformSpec,
-    setTransformSummary,
     clearTransformGrid,
     ensureTransformGrid,
     refreshDerivedPlate,

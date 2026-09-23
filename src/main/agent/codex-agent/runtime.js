@@ -336,7 +336,8 @@ function createCodexAgentRuntime(deps = {}) {
       ...(streamState.streamedNotebookDraftPayload
         ? {
           notebook_draft: streamState.streamedNotebookDraftPayload,
-          notebookDraft: streamState.streamedNotebookDraftPayload.notebook
+          notebookDraft: streamState.streamedNotebookDraftPayload.notebook,
+          notebookDrafts: streamState.streamedNotebookDraftPayload.notebooks || [streamState.streamedNotebookDraftPayload.notebook]
         }
         : {}),
       ...(streamState.streamedNotebookAppendPayload

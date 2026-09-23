@@ -158,6 +158,7 @@ function summarizeScienceResult(payload) {
 
 function summarizeNotebookDraft(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
+  if (asArray(source.notebooks).length > 1) return `Prepared ${source.notebooks.length} notebook drafts for individual review.`;
   const status = trimText(source.status, 40);
   if (!status) {
     return '';

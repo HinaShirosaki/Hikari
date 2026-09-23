@@ -1,4 +1,5 @@
 import { trimText } from '../shared.js';
+import { collectNotebookDrafts } from '../notebook-draft-list.js';
 import {
   getProtocolReviewStatus,
   resolveNotebookAppendReviewState
@@ -15,24 +16,24 @@ function collectReviewItemsForMessage(message, {
     return [];
   }
   const items = [];
-  const notebookDraft = notebookDraftAdapter?.normalizeDraft?.(meta.notebookDraft) || null;
-  const existingNotebookEntry = notebookDraftAdapter?.findEntryForDraft?.(notebookDraft) || null;
-  if (
-    notebookDraft
-    && notebookDraft.save.mode === 'confirm_before_save'
-    && notebookDraft.save.applied !== true
-    && trimText(notebookDraft.save.status, 80) !== 'rejected'
-    && !existingNotebookEntry
-  ) {
-    const proposalId = notebookDraftAdapter?.resolveProposalId?.(notebookDraft) || '';
-    items.push({
-      id: `notebook:${messageId}:${proposalId || 'draft'}`,
-      type: 'notebook',
-      messageId,
-      draft: notebookDraft
-    });
+  for (const { draft: notebookDraft, draftId } of collectNotebookDrafts(meta, notebookDraftAdapter)) {
+    const existingNotebookEntry = notebookDraftAdapter?.findEntryForDraft?.(notebookDraft) || null;
+    if (
+      notebookDraft
+      && notebookDraft.save.mode === 'confirm_before_save'
+      && notebookDraft.save.applied !== true
+      && trimText(notebookDraft.save.status, 80) !== 'rejected'
+      && !existingNotebookEntry
+    ) {
+      items.push({
+        id: `notebook:${messageId}:${draftId}`,
+        type: 'notebook',
+        messageId,
+        draftId,
+        draft: notebookDraft
+      });
+    }
   }
-
 
   const notebookAppendState = resolveNotebookAppendReviewState(meta, notebookEntries);
   const notebookAppend = notebookAppendState.append;

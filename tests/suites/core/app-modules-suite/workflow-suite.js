@@ -121,7 +121,7 @@ test('workflow execution layout keeps main path separate from manual branches an
   assert.equal(isWorkflowStepOpenable(activeBranchEntry, layout, 'c'), true);
 });
 
-test('workflow template instantiation preserves linked project id', () => {
+test('workflow template instantiation leaves project assignment to each process', () => {
   let nextId = 0;
   const workflowModel = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'model.js'));
   const { createWorkflowModel } = workflowModel;
@@ -142,7 +142,7 @@ test('workflow template instantiation preserves linked project id', () => {
   const workflow = model.instantiateTemplate(template, 'Protein Expression 1');
 
   assert.equal(template.projectId, 'project-1');
-  assert.equal(workflow.projectId, 'project-1');
+  assert.equal(workflow.projectId, '');
   assert.equal(workflow.templateId, 'template-1');
 });
 
@@ -333,11 +333,13 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
 
   assert.equal(elements.workflowExecutionTitle.textContent, 'NiNTA');
   assert.match(board.innerHTML, /<table class="workflow-ledger">/);
-  assert.match(board.innerHTML, /<th>Run<\/th>\s*<th>Progress<\/th>\s*<th>Next step<\/th>\s*<th>Updated<\/th>/);
+  assert.match(board.innerHTML, /<th>Process<\/th>\s*<th>Progress<\/th>\s*<th>Next step<\/th>\s*<th>Updated<\/th>/);
   assert.doesNotMatch(board.innerHTML, /Entity|workflow-progress-track|data-workflow-step-popover/);
   // Every run is one row; the selected run is highlighted and its name is not an inline input.
-  assert.match(board.innerHTML, /workflow-ledger-row is-selected" data-workflow-run-open="workflow-1"[\s\S]*workflow-ledger-name">NiNTA 1<\/div>[\s\S]*workflow-ledger-project">GFP reporter panel/);
+  assert.match(board.innerHTML, /workflow-ledger-row is-selected" data-workflow-run-open="workflow-1"[\s\S]*workflow-ledger-name">NiNTA 1<\/div>/);
   assert.match(board.innerHTML, /workflow-ledger-row" data-workflow-run-open="workflow-2"/);
+  assert.match(board.innerHTML, /workflow-project-heading[\s\S]*GFP reporter panel[\s\S]*data-workflow-project-add="project-1"[\s\S]*data-workflow-run-open="workflow-1"/);
+  assert.match(board.innerHTML, /workflow-project-heading[\s\S]*No project[\s\S]*data-workflow-run-open="workflow-2"/);
   const ledger = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside class="workflow-drawer"'));
   assert.doesNotMatch(ledger, /data-workflow-run-name=/);
   // Stepper: done, next (pending), locked.
@@ -357,15 +359,16 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
   assert.match(drawer, /<details class="workflow-drawer-details" >\s*<summary >[\s\S]*Review final yield/);
   assert.match(drawer, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>[\s\S]*data-workflow-step-value="step-1:amount-1"[\s\S]*value="10 mL"/);
   assert.match(drawer, /data-workflow-step-status="not_done" data-workflow-block-id="block-a"[\s\S]*>Reopen</);
-  assert.match(drawer, /class="primary-btn" data-workflow-step-status="completed" data-workflow-block-id="block-b" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" >Mark complete</);
+  assert.match(drawer, /class="primary-btn" title="Mark complete" aria-label="Mark complete" data-workflow-step-status="completed" data-workflow-block-id="block-b" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" >Complete</);
   assert.match(drawer, /data-workflow-step-status="failed" data-workflow-block-id="block-b"/);
   assert.match(drawer, /data-workflow-step-result-field="block-b"/);
-  assert.match(drawer, /type="file" multiple data-workflow-step-files="block-b"/);
-  assert.match(drawer, /data-workflow-step-open-notebook="block-b"[\s\S]*data-workflow-step-create-assay="block-b"/);
+  assert.match(drawer, /type="file" multiple aria-label="Attach files" data-workflow-step-files="block-b"/);
+  assert.match(drawer, /workflow-drawer-actions">[\s\S]*data-workflow-step-open-notebook="block-b"[\s\S]*data-workflow-step-files="block-b"/);
+  assert.doesNotMatch(drawer, /data-workflow-step-create-assay/);
   assert.match(drawer, /data-workflow-step-status="completed" data-workflow-block-id="block-c" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" disabled/);
 });
 
-test('workflow execution renderer shows branches inline as squares and inactive branches as a fork', () => {
+test('workflow execution renderer keeps main steps continuous with separate anchored branch lanes', () => {
   const rendererModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js'),
     { window: {} }
@@ -431,9 +434,9 @@ test('workflow execution renderer shows branches inline as squares and inactive 
 
   renderer.renderExecutionBoard();
 
-  // Inactive branch: the row keeps the main path only, plus one fork mark after its anchor.
+  // The main path stays together; the optional lane attaches to the parent column.
   const forkRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
-  assert.match(forkRow, /data-workflow-step-open="block-b"[\s\S]*workflow-stepper-fork"[^>]*aria-label="Optional branch: Branch Root → Branch Follow-up"[\s\S]*data-workflow-step-open="block-c"/);
+  assert.match(forkRow, /data-workflow-step-open="block-b"[\s\S]*data-workflow-step-open="block-c"[\s\S]*workflow-stepper-branch" style="grid-column: 3 \/ -1; grid-row: 2"[\s\S]*workflow-stepper-fork"[^>]*aria-label="Optional branch: Branch Root → Branch Follow-up"/);
   assert.doesNotMatch(forkRow, /data-workflow-step-open="block-d"/);
   assert.match(forkRow, /workflow-ledger-count">2\/3</);
   // Drawer offers the branch as a card at the fork point.
@@ -442,13 +445,29 @@ test('workflow execution renderer shows branches inline as squares and inactive 
   entry.activeBranchRootIds = ['block-d'];
   renderer.renderExecutionBoard();
 
-  // Active branch: its steps sit inline after the anchor as square nodes, and a dotted link leads into them.
+  // Active branch nodes keep their own lane and the existing execution gating.
   const activeRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
-  assert.match(activeRow, /data-workflow-step-open="block-b"[\s\S]*workflow-stepper-link is-branch"[\s\S]*workflow-stepper-node is-pending is-branch"[\s\S]*data-workflow-step-open="block-d"[\s\S]*workflow-stepper-node is-empty is-branch is-locked"[\s\S]*data-workflow-step-open="block-e"[\s\S]*data-workflow-step-open="block-c"/);
+  assert.match(activeRow, /data-workflow-step-open="block-c"[\s\S]*workflow-stepper-branch is-active" style="grid-column: 3 \/ -1; grid-row: 2"[\s\S]*workflow-stepper-node is-pending is-branch"[\s\S]*data-workflow-step-open="block-d"[\s\S]*workflow-stepper-node is-empty is-branch is-locked"[\s\S]*data-workflow-step-open="block-e"/);
   assert.match(activeRow, /workflow-ledger-count">2\/5</);
   assert.doesNotMatch(activeRow, /workflow-stepper-fork/);
   // The untouched branch root can be skipped again from the drawer.
   assert.match(board.innerHTML, /workflow-step-dot is-pending is-branch"[\s\S]*data-workflow-branch-toggle="block-d"[^>]*>Skip branch</);
+
+  entry.stepStates['block-d'] = { status: 'completed' };
+  entry.stepStates['block-e'] = { status: 'completed' };
+  renderer.renderExecutionBoard();
+  const completedRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
+  assert.match(completedRow, /workflow-stepper-branch is-active is-complete/);
+  assert.match(completedRow, /workflow-stepper-link is-branch is-complete/);
+  assert.match(completedRow, /workflow-ledger-count">4\/5</);
+
+  blocks.push({ id: 'block-f', type: 'text', text: 'Second branch', x: 260, y: 300 });
+  links.push({ fromBlockId: 'block-b', toBlockId: 'block-f' });
+  renderer.renderExecutionBoard();
+  const multipleRow = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside'));
+  assert.match(multipleRow, /workflow-stepper-branch is-active is-complete" style="grid-column: 3 \/ -1; grid-row: 2"/);
+  assert.match(multipleRow, /workflow-stepper-branch" style="grid-column: 3 \/ -1; grid-row: 3"/);
+  assert.match(multipleRow, /workflow-ledger-count">4\/5</);
 });
 
 test('workflow template navigation and graph actions use compact accessible icons', () => {
@@ -643,6 +662,109 @@ test('workflow block type switch synchronizes protocol and plain-text composer f
   assert.equal(elements.workflowBlockProtocolInput.disabled, true);
   assert.equal(elements.workflowBlockTextInput.disabled, false);
   assert.equal(elements.workflowBlockAddBtn.textContent, 'Add Text Block');
+});
+
+test('workflow processes share a template across projects without sharing execution state', () => {
+  let nextId = 0;
+  const model = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/workflow/model.js')).createWorkflowModel({ createId: () => `id-${++nextId}` });
+  const template = model.normalizeTemplate({ id: 'template', name: 'Screen', projectId: 'legacy', blocks: [{ id: 'a', type: 'text', text: 'Prepare' }], links: [] });
+  const state = { workflowTemplates: [template], workflows: [], projects: [{ id: 'p1' }, { id: 'p2' }] };
+  let persisted = 0;
+  const actions = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/workflow/actions.js'), { window: {} }).createWorkflowActions({
+    state, runtime: {}, ...model, createId: () => `id-${++nextId}`, persist: () => { persisted++; }
+  });
+  const first = actions.createWorkflowFromTemplateRecord(template, { projectId: 'p1', workflowName: 'First' });
+  const second = actions.createWorkflowFromTemplateRecord(template, { projectId: 'p1' });
+  const other = actions.createWorkflowFromTemplateRecord(template, { projectId: 'p2' });
+  const unassigned = actions.createWorkflowFromTemplateRecord(template, { projectId: '' });
+  assert.equal(persisted, 4);
+  assert.equal(first.projectId, 'p1');
+  assert.equal(second.projectId, 'p1');
+  assert.equal(other.projectId, 'p2');
+  assert.equal(unassigned.projectId, '');
+  assert.equal(other.templateId, first.templateId);
+  first.entries[0].stepStates[first.blocks[0].id] = { status: 'completed' };
+  template.blocks[0].text = 'Changed template';
+  assert.equal(second.blocks[0].text, 'Prepare');
+  assert.equal(Object.keys(second.entries[0].stepStates).length, 0);
+  assert.notEqual(first.blocks[0].id, second.blocks[0].id);
+
+  const dashboard = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/biology-notebook/project/project-dashboard-renderer.js'))
+    .createProjectDashboardRenderer({ state, safeText: (value) => String(value || '') });
+  const markup = dashboard.renderDashboard({ id: 'p1', name: 'Project One' });
+  assert.match(markup, /data-project-workflow-add="p1"/);
+  assert.ok(markup.includes(`data-project-process-open="${first.id}"`));
+  assert.ok(markup.includes(`data-project-process-open="${second.id}"`));
+  assert.ok(!markup.includes(`data-project-process-open="${other.id}"`));
+});
+
+test('workflow process dialog preselects context, cancels safely, and creates with explicit project', () => {
+  const listeners = {};
+  const control = (key) => ({ value: '', focus() {}, addEventListener(type, fn) { listeners[`${key}:${type}`] = fn; } });
+  const dialog = { open: false, showModal() { this.open = true; }, close() { this.open = false; } };
+  const elements = { workflowProcessDialog: dialog, workflowProcessForm: control('form'), workflowProcessTemplate: control('template'),
+    workflowProcessProject: control('project'), workflowProcessName: control('name'), workflowProcessStatus: {}, workflowProcessCancel: control('cancel') };
+  let created = null;
+  let navigated = '';
+  const state = { workflowTemplates: [{ id: 't1', name: 'Screen', blocks: [{ id: 'a' }] }], projects: [{ id: 'p1', name: 'Project' }] };
+  const api = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/workflow/process-dialog.js')).createWorkflowProcessDialog({
+    state, elements, safeText: (v) => String(v), createProcess: (template, options) => { created = { template, options }; return { id: 'new' }; }
+  });
+  api.open({ projectId: 'p1' });
+  assert.equal(elements.workflowProcessProject.value, 'p1');
+  listeners['cancel:click']();
+  assert.equal(created, null);
+  api.open({ templateId: 't1', projectId: 'p1', onCreated: (process) => { navigated = process.id; } });
+  elements.workflowProcessName.value = ' Repeat ';
+  listeners['form:submit']({ preventDefault() {} });
+  assert.equal(created.options.projectId, 'p1');
+  assert.equal(created.options.workflowName, 'Repeat');
+  assert.equal(navigated, 'new');
+  assert.equal(dialog.open, false);
+  api.open({ templateId: 't1' });
+  elements.workflowProcessProject.value = 'deleted';
+  created = null;
+  listeners['form:submit']({ preventDefault() {} });
+  assert.equal(created, null);
+  assert.equal(dialog.open, true);
+});
+
+test('notebook New Experiment starts workflow processes directly and restores selection on cancel', () => {
+  const el = () => ({ value: '', hidden: false, innerHTML: '', focus() {}, addEventListener() {}, classList: { toggle() {} } });
+  const elements = {};
+  ['ProjectSelect', 'ProtocolSelect', 'ProtocolSearchInput', 'ExperimentDialogOverlay', 'ExperimentDialogStatus', 'ExperimentProtocolResults', 'ExperimentStartBtn', 'NewExperimentBtn', 'ExperimentKind', 'ExperimentWorkflow', 'ExperimentProcessName', 'ExperimentProtocolFields', 'ExperimentWorkflowFields'].forEach((key) => { elements['notebook' + key] = el(); });
+  elements.notebookExperimentDialogOverlay.hidden = true;
+  elements.notebookProjectSelect.value = 'p1';
+  elements.notebookProtocolSelect.value = 'protocol';
+  const state = { projects: [{ id: 'p1' }], protocols: [{ id: 'protocol', name: 'Protocol' }], workflowTemplates: [{ id: 't1', name: 'Workflow', blocks: [{ id: 'a' }] }] };
+  let created = null;
+  let opened = '';
+  let protocolStarts = 0;
+  const api = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/biology-notebook/notebook/experiment-dialog.js'), { window: {} }).createExperimentDialog({
+    state, elements, safeText: String,
+    dropdownRenderer: { renderProjectOptions() {}, renderProtocolOptions(id) { elements.notebookProtocolSelect.value = id; } },
+    findSelectedProject: () => state.projects.find((p) => p.id === elements.notebookProjectSelect.value),
+    getActiveProjectDashboardId: () => 'p1', syncPageStarterProject() {}, setEditingEntryId() {}, onProtocolChange() { protocolStarts++; },
+    onCreateWorkflowProcess(options) { created = options; return { id: 'process' }; }, onOpenWorkflowProcess(id) { opened = id; }
+  });
+  api.openExperimentDialog({ kind: 'workflow', templateId: 't1' });
+  assert.equal(elements.notebookExperimentProtocolFields.hidden, true);
+  assert.equal(elements.notebookExperimentStartBtn.disabled, false);
+  api.closeExperimentDialog();
+  assert.equal(created, null);
+  assert.equal(elements.notebookProtocolSelect.value, 'protocol');
+  api.openExperimentDialog({ kind: 'workflow', templateId: 't1' });
+  elements.notebookExperimentProcessName.value = ' Repeat ';
+  api.startExperiment();
+  assert.equal(created.projectId, 'p1');
+  assert.equal(created.templateId, 't1');
+  assert.equal(created.workflowName, 'Repeat');
+  assert.equal(opened, 'process');
+  assert.equal(protocolStarts, 0);
+  assert.equal(elements.notebookExperimentDialogOverlay.hidden, true);
+  api.openExperimentDialog();
+  assert.equal(elements.notebookExperimentKind.value, 'protocol');
+  assert.equal(elements.notebookExperimentWorkflowFields.hidden, true);
 });
 
 };

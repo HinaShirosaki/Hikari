@@ -213,7 +213,7 @@ export function createWorkflowActions(config = {}) {
 
     const workflowName = String(options.workflowName || '').trim() || buildDefaultWorkflowName(template);
     const workflow = instantiateTemplate(template, workflowName);
-    workflow.projectId = String(options.projectId || template?.projectId || '').trim();
+    workflow.projectId = String(options.projectId || '').trim();
     workflow.entries = [createWorkflowEntryRecord(workflow, workflowName)];
     const normalizedWorkflowRecord = normalizeWorkflow(workflow);
     state.workflows.push(normalizedWorkflowRecord);
@@ -311,6 +311,7 @@ export function createWorkflowActions(config = {}) {
     elements,
     onOpenNotebookEntry,
     onCreateLinkedAssay,
+    openProcessDialog: config.openProcessDialog,
     renderWorkflowViews: (...args) => renderWorkflowViews(...args),
     persistWorkflowChanges: (...args) => persistWorkflowChanges(...args),
     getWorkflowById: (...args) => getWorkflowById(...args),
@@ -451,6 +452,7 @@ export function createWorkflowActions(config = {}) {
 
   return {
     bindEvents,
+    createWorkflowFromTemplateRecord,
     cloneWorkflowIntoDraft,
     ensureStateShape,
     normalizeDraft,

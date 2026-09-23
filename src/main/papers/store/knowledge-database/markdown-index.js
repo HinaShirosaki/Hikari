@@ -8,8 +8,8 @@ const { buildRelativePath, getPaperScope } = require('../paper-knowledge-paths.j
 const {
   buildPaperId,
   findExistingPaperRow,
-  openKnowledgeDatabase,
   persistKnowledgeDatabase,
+  withKnowledgeDatabaseWrite,
   runStatement,
   updateJsonIndex
 } = require('../paper-knowledge-store.js');
@@ -116,8 +116,7 @@ function createKnowledgeMarkdownIndex({
   }
 
   async function upsertKnowledgeIndex({ paths, metadata, filePath, paperId, extractionStatus, wikiStatus, nowIso }) {
-    const db = await openKnowledgeDatabase(paths.sqlite_path);
-    try {
+    return withKnowledgeDatabaseWrite(paths.sqlite_path, async (db) => {
       const existing = findExistingPaperRow(db, {
         doi: metadata.doi,
         pmid: metadata.pmid,
@@ -229,9 +228,7 @@ function createKnowledgeMarkdownIndex({
         wiki_path: wikiPath,
         location
       };
-    } finally {
-      db.close();
-    }
+    });
   }
 
   return {

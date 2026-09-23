@@ -25,6 +25,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['./memory.js', 'MEMORY_MCP_TOOL', 'callMemory'],
   ['./container.js', 'CONTAINER_MCP_TOOL', 'callContainer'],
   ['./assay-table.js', 'ASSAY_TABLE_MCP_TOOL', 'callAssayTable'],
+  ['./assay-plot.js', 'ASSAY_PLOT_MCP_TOOL', 'callAssayPlot'],
   ['./plotly-graph.js', 'PLOTLY_GRAPH_MCP_TOOL', 'callPlotlyGraph'],
   ['./image-output.js', 'IMAGE_OUTPUT_MCP_TOOL', 'callImageOutput'],
   ['./html-output.js', 'HTML_OUTPUT_MCP_TOOL', 'callHtmlOutput'],

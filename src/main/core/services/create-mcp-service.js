@@ -1,15 +1,20 @@
 'use strict';
 
 const { createAgentMcpHost } = require('../../agent/mcp-contract/host.js');
+const { createAssayPlotBridge } = require('./assay-plot-bridge.js');
 
 function createMainMcpService({
   agentToolRuntime,
+  ipcMain,
+  getMainWindow,
   getWorkingDirectory = () => process.cwd(),
   processObject = process,
   createMcpHost = createAgentMcpHost
 } = {}) {
+  const plotBridge = createAssayPlotBridge({ ipcMain, getMainWindow });
   const mcpHost = createMcpHost({
-    runTool: agentToolRuntime?.runAgentTool,
+    runTool: (toolId, ...args) => toolId === 'assay-plot'
+      ? plotBridge.run(args[0]) : agentToolRuntime?.runAgentTool(toolId, ...args),
     env: processObject.env,
     getSnapshot: () => ({}),
     getContextDefaults: () => ({
@@ -34,6 +39,7 @@ function createMainMcpService({
   }
 
   async function stop() {
+    plotBridge.close();
     await mcpHost.close();
   }
 

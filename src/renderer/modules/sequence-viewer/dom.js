@@ -210,6 +210,8 @@ export function getSequenceViewerElements(rootDocument) {
     proteinBuilderAddProteinForm: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-form'),
     proteinBuilderAddProteinCloseBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-close-btn'),
     proteinBuilderAddProteinName: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-name'),
+    proteinBuilderAddProteinType: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-type'),
+    proteinBuilderAddProteinHint: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-hint'),
     proteinBuilderAddProteinSequence: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-sequence'),
     proteinBuilderAddProteinStatus: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-status'),
     proteinBuilderAddProteinConfirmBtn: rootDocument?.getElementById?.('sequence-viewer-protein-builder-add-protein-confirm-btn'),

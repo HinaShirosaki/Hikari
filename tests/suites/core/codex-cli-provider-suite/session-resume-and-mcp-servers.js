@@ -1014,6 +1014,17 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         assert.equal(summaryResult.status, 'matched');
         assert.equal(summaryResult.items[0].paper_id, paperId);
 
+        const detailResponse = await client.callTool({
+          name: 'paper_intake_search_summaries',
+          arguments: { query: 'SD40', scope: 'library', limit: 3 }
+        });
+        const detailResult = JSON.parse(detailResponse.content[0].text);
+        assert.equal(detailResponse.isError, false);
+        assert.equal(detailResult.items[0].paper_id, paperId);
+        assert.equal(detailResult.items[0].match_coverage, 1);
+        assert.equal(detailResult.items[0].match_context[0].experiment_id, 'e1');
+        assert.equal(detailResult.items[0].match_context[0].figure_ref, 'Fig. 2');
+
         const experimentResponse = await client.callTool({
           name: 'paper_intake_search_experiments',
           arguments: { query: 'phage assisted continuous evolution SD40', limit: 3 }

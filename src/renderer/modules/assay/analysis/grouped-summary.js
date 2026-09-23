@@ -29,7 +29,7 @@ function sortDetailMembers(members, factor) {
   ));
 }
 
-function collectBuckets(observations, grouping) {
+export function collectBuckets(observations, grouping) {
   const buckets = new Map();
   observations.forEach((item) => {
     const values = grouping.keys.map((key) => key.keyOf(item));
@@ -39,11 +39,13 @@ function collectBuckets(observations, grouping) {
         values,
         sort: grouping.keys.map(() => Number.POSITIVE_INFINITY),
         members: new Set(),
-        responses: []
+        responses: [],
+        items: []
       });
     }
     const bucket = buckets.get(id);
     bucket.responses.push(item.response);
+    bucket.items.push(item);
     grouping.keys.forEach((key, index) => {
       bucket.sort[index] = Math.min(bucket.sort[index], key.sortOf(item));
     });
@@ -58,7 +60,7 @@ function collectBuckets(observations, grouping) {
     .sort(compareBuckets);
 }
 
-function statsCells(stats) {
+export function statsCells(stats) {
   return [
     stats.n,
     formatNumber(stats.mean),

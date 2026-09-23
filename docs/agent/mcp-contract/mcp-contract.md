@@ -6,6 +6,20 @@ This document exports the provider-neutral MCP-facing contract for Hikari agents
 
 `notebook_suggest` is a conditional tool available only to Hikari background experiment suggestion runs. It prepares zero to five Suggested pages with the notebook draft contract; paper downloads are blocked. See [Notebook suggestions](notebook-suggestions.md) for triggers, state transitions and access rules.
 
+## Notebook draft capacity
+
+`notebook_draft` accepts one page request or a `drafts` array of 1–20 requests. Each item accepts a project name, up to 20 protocol candidates, known placeholder values, up to 240 step edits, an optional title, and an optional `draft_id` for updating a previously returned proposal. Additional tool calls retain earlier pages; reuse a returned `proposal_id` as `draft_id` to refine one without duplicating it. Every page remains a separate approve/reject item. Partial batches preserve successful drafts and report individual failures.
+
+Notebook planning considers up to 60 past notebook records, 40 experiment candidates and 32 conversation messages. Protocol preparation retains up to 240 source steps and 120 materials, with up to 6,000 characters per source step. The filling helper receives all prepared steps, including draft-only appended steps. Planning notes survive review and saving up to 40,000 characters. These are notebook limits; `protocol_generation` and background suggestion batch limits are unchanged.
+
+## Paper download recovery
+
+`paper_download` waits up to 15 seconds for its background job, then returns `status: running` if work remains. This ends only the caller's wait, not the download or experiment extraction. Repeat the same DOI (preferred), or the same title/URL when no DOI is available, in the same destination collection to join the existing job. A timeout alone is not evidence that a transfer failed.
+
+`download_status` describes the PDF transfer; `in_progress` covers the remaining background work. A returned `knowledge_markdown_path` can be read immediately, even while experiment extraction continues. Research sessions record that path so line-backed evidence can be validated before intake finishes.
+
+Before starting a transfer, Hikari checks its paper index and saved download receipts. It verifies the PDF header and destination before reusing a file. Receipts are stored under the destination's `.hikari-downloads` folder before intake starts, so a later request after an app restart can reuse the PDF. Missing or invalid files allow a new transfer; different DOIs and different destination folders remain separate. Existing duplicate files are not removed.
+
 ## Runtime config
 
 Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
@@ -157,6 +171,18 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 
 Codex-facing instructions, skills, and examples use these same raw tool names.
 Hikari does not add or document a provider namespace prefix.
+
+### Local paper discovery
+
+`paper_intake_search_summaries` retrieves papers from the existing `intake.json` records using titles, DOI, paper ID, one-sentence summaries, experiment techniques/variables/outcomes/figure references/evidence, and saved outlines/claims. `paper_intake_search_experiments` returns individual experiment entries and also searches their verbatim evidence. Both tools normalize punctuation, common plural forms, Greek-letter spellings, and a small set of assay aliases. Terms that fold to the same concept count once. Query coverage and term rarity affect ranking, with explicit bonuses for title/DOI hits; repeated experiment entries do not inflate paper-level scores. This is lexical retrieval, not general semantic search, and it does not require embeddings or re-running intake.
+
+Parsed intake records and compiled field term counts are reused across searches, including across per-call MCP store instances. File mtime, ctime, size, and inode validate cached records; directory mtime alone would miss in-place edits. Library enumeration still runs on every search to discover additions/deletions, with at most 16 concurrent intake reads/stat checks. The cache has a 128 MiB estimated-memory budget with eviction; that budget does not truncate the searchable library. Cold loads, changed files, and files evicted from the cache still incur parsing/indexing cost. Legacy records whose Markdown path must be resolved dynamically are not cached against intake.json alone.
+
+Scaling follow-up (open, separate from the source-text accounting correction): evaluate scan-resistant cache admission and incremental retrieval when a representative library approaches the cache budget or warm searches begin rereading/recompiling most intake files. Sequential full-library scans can evict useful entries to admit records encountered earlier in the scan, causing repeated churn. `loadAll()` retains all loaded records for the query, so eviction does not bound total live query memory or immediately free their compiled WeakMap entries. Benchmark cold/warm latency, intake rereads, peak heap/RSS, and post-query GC behavior on realistic experiment/evidence sizes before broad large-library use. Paper count alone is not a reliable trigger; no fixed 1 GB peak or universally safe size has been established. The 128 MiB limit is an accounting estimate for retained cache entries, not a process-memory limit.
+
+Both search tools accept `scope: "context"` (default: active project when present) or `scope: "library"` (all local papers). An explicit `project_name` takes precedence. Results report `search_scope`, `total_matches`, and `truncated`. Each hit includes `matched_terms`, `match_coverage`, and any `unmatched_terms`; paper hits also include bounded `match_context` excerpts with stored field names and available experiment/figure references. Coverage describes matched terms, not confidence that all conditions occurred together. Use `source_paths.paper_md` to verify details. On weak/no matches, retry specific identifiers or alternative wording, broaden scope if appropriate, and search full local Markdown before concluding that a paper is absent. Metadata-only papers remain discoverable by title and DOI, but their experimental contents are not indexed until intake completes.
+
+Retrieval cannot recover experiments omitted by intake classification: research-only extraction and the review-skip policy remain in effect. The separate SQLite wiki `paper-search` app tool is not currently exposed as a direct MCP tool. Markdown fallback requires available workspace file-search access; when that access is unavailable, report the full-text search as unperformed rather than claiming the paper is absent. The wiki search uses SQL LIKE candidate filtering and a candidate cap, not FTS5.
 
 Direct wrappers that delegate to app executors use the app tool schema and return this envelope:
 

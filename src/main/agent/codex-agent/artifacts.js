@@ -16,6 +16,7 @@ function collectToolEventObjects(streamEvent = {}) {
     ? streamEvent
     : {};
   const objectCandidates = [
+    source.notebook_draft_artifact,
     source.tool_result,
     source.toolResult,
     source.tool_output,
@@ -101,7 +102,8 @@ function normalizeNotebookDraftArtifact(payload = {}, { cleanText = defaultClean
       .slice(0, 10),
     proposal_summary: cleanText(source.proposal_summary || source.proposalSummary, 600),
     proposal: cloneJson(source.proposal, null),
-    notebook
+    notebook,
+    ...(Array.isArray(source.notebooks) ? { notebooks: cloneJson(source.notebooks, []) } : {})
   };
 }
 

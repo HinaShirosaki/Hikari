@@ -9,7 +9,6 @@ module.exports = function workspacePage({ root, url }) {
     #assay-view .assay-results-layout{height:100vh}[hidden]{display:none!important}</style>
     <script src="${url('vendor/plotly/plotly.min.js')}"></script>
     <script src="${url('vendor/tabulator/tabulator.min.js')}"></script>
-    <button id="assay-mode-create-btn" hidden>Setup</button><button id="assay-mode-results-btn" hidden>Analyze</button>
     ${markup}
     <script type="module">
       import {initAssay} from '${url('src/renderer/modules/assay/index.js')}';

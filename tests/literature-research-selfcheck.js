@@ -69,6 +69,8 @@ test('paper research repeats discovery and downloads through both MCP layers, th
           } });
           assert.equal(downloaded.isError, false, downloaded.content[0].text);
           const result = JSON.parse(downloaded.content[0].text).output;
+          assert.equal(result.status, 'running');
+          assert.equal(result.in_progress, true);
           papers.push({ knowledge_markdown_path: result.knowledge_markdown_path, selected_line_ranges: [
             { line_ranges: [{ start_line: 2, end_line: 14 }], relevance_reason: comment }
           ] });
@@ -100,10 +102,11 @@ test('paper research repeats discovery and downloads through both MCP layers, th
     paperDownloadRuntime: {
       downloadPaper: async (input) => {
         downloads.push(input);
+        assert.equal(input.wait_timeout_ms, 15000);
         if (input.doi.endsWith('/fail')) return { ok: false, status: 'failed', error: 'Unavailable PDF' };
         const markdownPath = path.join(root, `paper-${downloads.length}.md`);
         await fs.writeFile(markdownPath, '# Results\n' + Array.from({ length: 15 }, (_, i) => `Physical evidence line ${i + 2}`).join('\n'));
-        return { ok: true, status: 'downloaded', knowledge_markdown_path: markdownPath,
+        return { ok: true, status: 'running', in_progress: true, download_status: 'completed', knowledge_markdown_path: markdownPath,
           knowledge_markdown_relative_path: path.basename(markdownPath), knowledge_database: { paper_id: `saved-${downloads.length}` } };
       }
     }

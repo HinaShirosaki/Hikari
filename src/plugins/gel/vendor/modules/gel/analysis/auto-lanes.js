@@ -92,7 +92,10 @@ function detectGelEdges(smoothed, threshold) {
   if (maxValue <= 0) {
     return { left: 0, right: length - 1 };
   }
-  const thr = threshold ?? maxValue * 0.15;
+  // Generous: this only bounds the peak search. A 15%-of-max bar let one
+  // overloaded lane push the edge past every faint lane on the gel. The
+  // reported lane boundaries come from the peak grid instead (see detectLanes).
+  const thr = threshold ?? maxValue * 0.02;
   let left = 0;
   while (left < length && smoothed[left] < thr) {
     left += 1;
@@ -187,12 +190,39 @@ export function computeProminence(values, peakX, fromX, toX) {
   return v - Math.max(leftMin, rightMin);
 }
 
+function peakGaps(peaks) {
+  const gaps = [];
+  for (let i = 1; i < peaks.length; i += 1) {
+    gaps.push(peaks[i] - peaks[i - 1]);
+  }
+  return gaps;
+}
+
+// The argmin of a flat gutter is wherever the noise happened to dip, which moved
+// dividers by ~12% of the lane pitch. Take everything within 10% of the interval
+// floor and pick the candidate nearest the midpoint.
 function findValley(smoothed, fromX, toX) {
-  let bestX = Math.round((fromX + toX) / 2);
-  let bestValue = Number.POSITIVE_INFINITY;
+  const mid = Math.round((fromX + toX) / 2);
+  let lo = Number.POSITIVE_INFINITY;
+  let hi = Number.NEGATIVE_INFINITY;
   for (let x = fromX; x <= toX; x += 1) {
-    if (smoothed[x] < bestValue) {
-      bestValue = smoothed[x];
+    if (smoothed[x] < lo) {
+      lo = smoothed[x];
+    }
+    if (smoothed[x] > hi) {
+      hi = smoothed[x];
+    }
+  }
+  if (!Number.isFinite(lo)) {
+    return mid;
+  }
+  const floorBand = lo + (0.1 * (hi - lo));
+  let bestX = mid;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (let x = fromX; x <= toX; x += 1) {
+    const distance = Math.abs(x - mid);
+    if (smoothed[x] <= floorBand && distance < bestDistance) {
+      bestDistance = distance;
       bestX = x;
     }
   }
@@ -263,9 +293,17 @@ export function detectLanes({
 
   const windowValues = smoothed.slice(edges.left, edges.right + 1);
   const noise = gutterNoise(windowValues);
-  // Prominence floor: stricter without a count (avoid junk peaks), looser with
-  // a count (the top-N selection already rejects junk).
-  const minProminence = wantCount ? 0.8 * noise : 3.0 * noise;
+  let windowMax = 0;
+  for (let i = 0; i < windowValues.length; i += 1) {
+    if (windowValues[i] > windowMax) {
+      windowMax = windowValues[i];
+    }
+  }
+  // Two floors, because either one alone fails: the noise term tracks background
+  // texture (near zero on a clean gel with wide gutters, which let junk peaks
+  // through), the relative term tracks signal scale. 0.02 is low enough to keep a
+  // lane 25x fainter than the strongest one.
+  const minProminence = Math.max(3.0 * noise, 0.02 * windowMax);
 
   const candidates = findLocalMaxima(smoothed, edges.left, edges.right);
   const scored = candidates
@@ -300,7 +338,25 @@ export function detectLanes({
       }
     }
   }
-  const peaks = kept.map((c) => c.x);
+  let peaks = kept.map((c) => c.x);
+  // A blank lane (negative control) carries no signal and so no peak, which
+  // renumbers every lane after it. It leaves a gap of ~2x the pitch, so fill it
+  // back in — but only when the caller said how many lanes to expect, otherwise
+  // a deliberately uneven gel grows phantom lanes.
+  if (wantCount && peaks.length >= 3 && peaks.length < wantCount) {
+    const pitch = median(peakGaps(peaks));
+    const filled = [peaks[0]];
+    for (let i = 1; i < peaks.length; i += 1) {
+      const steps = Math.round((peaks[i] - peaks[i - 1]) / pitch);
+      for (let k = 1; k < steps; k += 1) {
+        filled.push(Math.round(peaks[i - 1] + (((peaks[i] - peaks[i - 1]) * k) / steps)));
+      }
+      filled.push(peaks[i]);
+    }
+    if (filled.length <= wantCount) {
+      peaks = filled;
+    }
+  }
 
   const dividers = [];
   for (let i = 1; i < peaks.length; i += 1) {
@@ -310,9 +366,21 @@ export function detectLanes({
     }
   }
 
+  // Reported edges are lane boundaries downstream (manual-lanes.js builds lanes
+  // from [gelLeft, ...dividers, gelRight]), so put them half a pitch outside the
+  // outer peaks rather than where the outer lane's flank crossed a threshold —
+  // that clipped ~20% off the first and last lane only.
+  let outerLeft = edges.left;
+  let outerRight = edges.right;
+  if (!hasManualEdges && peaks.length >= 2) {
+    const pitch = median(peakGaps(peaks));
+    outerLeft = clamp(Math.round(peaks[0] - (pitch / 2)), 0, width - 1);
+    outerRight = clamp(Math.round(peaks[peaks.length - 1] + (pitch / 2)), 0, width - 1);
+  }
+
   return {
-    gelLeft: edges.left,
-    gelRight: edges.right,
+    gelLeft: outerLeft,
+    gelRight: outerRight,
     bandTop,
     bandBottom,
     dividers,

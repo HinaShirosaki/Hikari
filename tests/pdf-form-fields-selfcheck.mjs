@@ -61,6 +61,7 @@ const helpers = createStorageFileHelpers({
   fs: fsPromises,
   cleanText: (value) => String(value || ''),
   getStorageRootPointerPath: () => path.join(root, '.pointer'),
+  getStorageRoot: () => root,
   paperKnowledgeDatabaseRuntime: null
 });
 const saved = await helpers.storeImportedFile({

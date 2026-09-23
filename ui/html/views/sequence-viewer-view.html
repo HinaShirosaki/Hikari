@@ -255,9 +255,17 @@
                 <input id="sequence-viewer-protein-builder-add-protein-name" type="text" placeholder="e.g. Fluorescent protein" />
               </label>
               <label class="sequence-viewer-protein-builder-add-protein-field">
-                Protein sequence
-                <textarea id="sequence-viewer-protein-builder-add-protein-sequence" rows="6" spellcheck="false" placeholder="Enter an amino-acid sequence"></textarea>
+                Sequence type
+                <select id="sequence-viewer-protein-builder-add-protein-type">
+                  <option value="protein">Amino-acid sequence</option>
+                  <option value="dna">DNA coding sequence</option>
+                </select>
               </label>
+              <label class="sequence-viewer-protein-builder-add-protein-field">
+                Sequence
+                <textarea aria-describedby="sequence-viewer-protein-builder-add-protein-hint" id="sequence-viewer-protein-builder-add-protein-sequence" rows="6" spellcheck="false" placeholder="Enter an amino-acid sequence"></textarea>
+              </label>
+              <p id="sequence-viewer-protein-builder-add-protein-hint" class="small-note">Enter the protein sequence using one-letter amino-acid codes.</p>
               <p id="sequence-viewer-protein-builder-add-protein-status" class="small-note" aria-live="polite">0 aa</p>
               <p class="small-note">Protein additions over 20 aa can be built as DNA, but the direct Cloning Design action will be hidden after vector insertion.</p>
               <div class="form-actions sequence-viewer-protein-builder-add-protein-actions">

@@ -1,3 +1,4 @@
+import { createWorkflowProcessDialog } from './process-dialog.js';
 import { getWorkflowElements } from './dom.js';
 import {
   createWorkflowModel,
@@ -82,7 +83,9 @@ export function initWorkflowManagement({
     document
   });
 
+  let processDialog;
   const actions = createWorkflowActions({
+    openProcessDialog: (options) => processDialog.open(options),
     state,
     runtime,
     elements,
@@ -113,10 +116,25 @@ export function initWorkflowManagement({
     renderer.setWorkflowEntryMode(runtime.workflowEntryMode || 'list');
   }
 
+  processDialog = createWorkflowProcessDialog({
+    state, elements, safeText,
+    createProcess: actions.createWorkflowFromTemplateRecord
+  });
   actions.bindEvents();
   render();
 
   return {
+    createProcess: ({ templateId, ...options }) => {
+      const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
+      return template ? actions.createWorkflowFromTemplateRecord(template, options) : null;
+    },
+    openProcessDialog: (options) => processDialog.open(options),
+    openProcess: (id) => {
+      if (elements.workflowSearchInput) elements.workflowSearchInput.value = '';
+      runtime.workflowSearchTerm = '';
+      renderer.setWorkflowEntryMode('list');
+      actions.selectWorkflow(id);
+    },
     render,
     renderProjectOptions: renderer.renderProjectOptions,
     renderNotebookOptions: renderer.renderNotebookOptions,

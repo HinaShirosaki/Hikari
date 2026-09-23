@@ -1,7 +1,9 @@
 import {
   LINE_HEIGHT,
   TABLE_FONT_SIZE,
-  FOOTER_BASELINE
+  FOOTER_BASELINE,
+  EDITORIAL_INK,
+  EDITORIAL_RULE
 } from './constants.js';
 
 function getJsPdfCtor() {
@@ -98,13 +100,34 @@ function refreshPageMetrics(ctx) {
   ctx.maxWidth = ctx.pageWidth - ctx.marginLeft - ctx.marginRight;
 }
 
-function addPage(ctx, orientation = ctx.orientation) {
+function addPage(ctx, orientation = ctx.orientation, { runningHeader = true } = {}) {
+  const previousFont = ctx.doc.getFont?.();
+  const previousFontSize = ctx.doc.getFontSize?.();
   if (typeof ctx.doc.addPage === 'function') {
     ctx.doc.addPage(ctx.format, orientation);
   }
   ctx.orientation = orientation || ctx.orientation;
   refreshPageMetrics(ctx);
   ctx.y = ctx.marginTop;
+  if (runningHeader && ctx.visualStyle === 'editorial') {
+    font(ctx, 'bold');
+    ctx.doc.setFontSize(8);
+    setTextColor(ctx, EDITORIAL_INK);
+    const title = ctx.doc.splitTextToSize(`HIKARI  /  ${ctx.runningTitle || ctx.footerLabel}`, ctx.maxWidth - 85)[0] || '';
+    ctx.doc.text(title, ctx.margin, ctx.y);
+    ctx.doc.text('CONTINUED', ctx.margin + ctx.maxWidth, ctx.y, { align: 'right' });
+    ctx.doc.setDrawColor(...EDITORIAL_RULE);
+    ctx.doc.setLineWidth(0.5);
+    ctx.doc.line(ctx.margin, ctx.y + 10, ctx.margin + ctx.maxWidth, ctx.y + 10);
+    ctx.y += 29;
+    ctx.doc.setTextColor(0, 0, 0);
+    if (previousFont?.fontName) {
+      ctx.doc.setFont(previousFont.fontName, previousFont.fontStyle || 'normal');
+    }
+    if (Number.isFinite(previousFontSize)) {
+      ctx.doc.setFontSize(previousFontSize);
+    }
+  }
 }
 
 function contentBottom(ctx) {
@@ -135,6 +158,9 @@ function splitWrappedLines(doc, text, maxWidth) {
 
 function writeWrappedBlock(ctx, text, x, maxWidth, lineHeight = LINE_HEIGHT) {
   const lines = splitWrappedLines(ctx.doc, text, maxWidth);
+  if (ctx.visualStyle === 'editorial' && lines.length * lineHeight <= contentBottom(ctx) - ctx.marginTop - 30) {
+    ensureSpace(ctx, lines.length * lineHeight);
+  }
   lines.forEach((line) => {
     ensureSpace(ctx, lineHeight);
     ctx.doc.text(String(line || ''), x, ctx.y);

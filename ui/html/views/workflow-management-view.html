@@ -136,17 +136,17 @@
                 <h3 id="workflow-execution-title">Select a workflow template</h3>
               </div>
               <div class="workflow-execution-actions">
-                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="Add workflow" data-hover-caption="Add workflow">
+                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="New process" data-hover-caption="New process">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M12 5v14M5 12h14"></path>
                   </svg>
-                  <span class="sr-only">Add workflow</span>
+                  <span class="sr-only">New process</span>
                 </button>
-                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete workflow" data-hover-caption="Delete workflow">
+                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete process" data-hover-caption="Delete process">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 7h15M9 3.5h6l1 3.5H8zM7 7l.75 13.5h8.5L17 7M10 10.5v6M14 10.5v6"></path>
                   </svg>
-                  <span class="sr-only">Delete workflow</span>
+                  <span class="sr-only">Delete process</span>
                 </button>
               </div>
             </div>
@@ -166,3 +166,17 @@
         </div>
       </div>
     </section>
+
+<dialog id="workflow-process-dialog" class="workflow-process-dialog" aria-labelledby="workflow-process-heading">
+  <form id="workflow-process-form" class="stack-form">
+    <h3 id="workflow-process-heading">New process</h3>
+    <label>Workflow template<select id="workflow-process-template" required></select></label>
+    <label>Project<select id="workflow-process-project"></select></label>
+    <label>Process name<input id="workflow-process-name" placeholder="Optional — named from the template" /></label>
+    <p id="workflow-process-status" class="small-note" role="status"></p>
+    <div class="form-actions">
+      <button type="button" id="workflow-process-cancel" class="ghost-btn">Cancel</button>
+      <button type="submit" class="primary-btn">Create process</button>
+    </div>
+  </form>
+</dialog>

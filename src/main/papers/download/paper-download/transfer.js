@@ -221,6 +221,7 @@ function createPaperTransfer({
       return result;
     }
 
+    updateJob(downloadId, { knowledge_status: 'processing' });
     const knowledgeResult = await paperKnowledgeDatabaseRuntime.ingestPaperPdf({
       ...source,
       file_path: result.file_path,
@@ -239,6 +240,7 @@ function createPaperTransfer({
 
     return updateJob(downloadId, {
       knowledge_database: knowledgeResult,
+      knowledge_status: knowledgeResult?.ok ? 'ready' : 'failed',
       knowledge_markdown_path: cleanText(knowledgeResult?.markdown_path, 4000),
       knowledge_markdown_relative_path: cleanText(knowledgeResult?.markdown_relative_path, 2000),
       summary: cleanText(result.summary, 600)

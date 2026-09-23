@@ -11,7 +11,8 @@ export const assayManifest = {
     createId,
     safeText,
     rendererServices,
-    modules
+    modules,
+    rootDocument
   }) => ({
     state,
     persist,
@@ -20,6 +21,16 @@ export const assayManifest = {
     onAssaysChanged: rendererServices.analysis.handleAssaysChanged,
     onActiveAssayChanged: () => {
       modules?.agentChatRail?.render?.();
+    },
+    onAssayModeChanged: (mode) => {
+      const assayView = rootDocument?.getElementById?.('assay-view');
+      if (assayView?.dataset) {
+        assayView.dataset.agentChatRail = mode === 'results' ? 'enabled' : 'disabled';
+      }
+      const EventCtor = rootDocument?.defaultView?.CustomEvent;
+      if (typeof EventCtor === 'function') {
+        rootDocument.dispatchEvent(new EventCtor('hikari:agent-chat-rail-availability-changed'));
+      }
     }
   }),
   render: ({ modules }) => modules.assay.render()

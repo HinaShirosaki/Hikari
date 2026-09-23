@@ -12,12 +12,19 @@ export const biologyNotebookManifest = {
     safeText,
     rendererServices,
     modules,
+    showView,
+    views,
     selectionInsightsController
   }) => ({
     state,
     persist,
     createId,
     safeText,
+    onCreateWorkflowProcess: (options) => modules.workflowManagement?.createProcess?.(options),
+    onOpenWorkflowProcess: (id) => {
+      showView(views.WORKFLOW_MANAGEMENT);
+      modules.workflowManagement?.openProcess?.(id);
+    },
     notebookType: 'biology',
     importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
     onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
@@ -32,5 +39,6 @@ export const biologyNotebookManifest = {
     modules.biologyNotebook.renderProjectOptions();
     modules.biologyNotebook.renderProtocolOptions();
     modules.biologyNotebook.renderEntries();
+    modules.biologyNotebook.refreshProjectDashboard?.();
   }
 };

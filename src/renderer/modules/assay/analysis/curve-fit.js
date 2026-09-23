@@ -5,6 +5,7 @@ import {
   summarizeModelFit
 } from './shared.js';
 import {
+  fitExponentialCurve,
   fitHyperbolaCurve,
   fitLineCurve,
   fitPade11Curve,
@@ -49,6 +50,18 @@ function resolveModel(spec) {
       minPoints: 3,
       requireNonNegativeX: true,
       fit: (points) => fitHyperbolaCurve(points)
+    };
+  }
+  if (spec.analysis === 'exponential') {
+    return {
+      label: 'One-phase exponential',
+      minPoints: 3,
+      fit: (points) => fitExponentialCurve(points),
+      extraHeaders: ['Rate k', 'Half-life'],
+      extraCells: (fit) => {
+        const params = fit.params || {};
+        return [formatNumber(params.k, 6), formatNumber(params.halfLife, 4)];
+      }
     };
   }
   if (spec.analysis === 'polynomial') {

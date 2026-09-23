@@ -24,22 +24,22 @@ function createPlaceholderHelpers({
     unresolvedPlaceholders,
     toolContext = null
   } = {}) {
-    const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
+    const promptConversation = asArray(conversation).slice(-32).map((row, index) => {
       const role = row?.role === 'assistant' ? 'assistant' : 'user';
-      const text = cleanText(row?.text, 1200);
+      const text = cleanText(row?.text, 3000);
       return text ? `${index + 1}. ${role}: ${text}` : '';
     }).filter(Boolean).join('\n');
     return [
       ...PROTOCOL_TO_NOTEBOOK_FILL_RULES,
       ...PROTOCOL_TO_NOTEBOOK_FILL_EXAMPLES,
-      `User message: ${cleanText(message, 3200)}`,
+      `User message: ${cleanText(message, 12000)}`,
       promptConversation ? `Recent conversation:\n${promptConversation}` : '',
       `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
       `Selected protocol JSON:\n${JSON.stringify({
         id: selectedProtocol?.id,
         name: selectedProtocol?.name,
         purpose: selectedProtocol?.purpose,
-        steps: asArray(selectedProtocol?.steps).slice(0, 40)
+        steps: asArray(selectedProtocol?.steps)
       }, null, 2)}`,
       `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
       toolContext ? `Optional tool context JSON:\n${JSON.stringify(toolContext, null, 2)}` : '',
@@ -52,7 +52,7 @@ function createPlaceholderHelpers({
     const rows = [];
     asArray(protocolRecord.steps).forEach((step) => {
       const stepId = cleanText(step?.id, 120);
-      const stepText = cleanText(step?.text, 800);
+      const stepText = cleanText(step?.text, 6000);
       const placeholders = asArray(step?.placeholders).map((placeholder) => ({
         id: cleanText(placeholder?.id, 120),
         name: cleanText(placeholder?.name, 120) || 'value'

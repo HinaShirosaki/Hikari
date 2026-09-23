@@ -54,7 +54,7 @@ export function normalizeNotebookDraft(rawDraft) {
     placeholder_id: trimText(item?.placeholder_id, 120),
     placeholder_key: trimText(item?.placeholder_key, 120),
     display: trimText(item?.display, 120),
-    value: trimText(item?.value, 220),
+    value: trimText(item?.value, 260),
     source: trimText(item?.source, 120),
     source_type: trimText(item?.source_type, 80)
   })).filter((item) => item.step_id && item.placeholder_id && item.value);
@@ -101,7 +101,7 @@ export function normalizeNotebookDraft(rawDraft) {
         }
         : null
     },
-    rendered_steps: asArray(rawDraft.rendered_steps).map((step) => trimText(step, 300)).filter(Boolean),
+    rendered_steps: asArray(rawDraft.rendered_steps).map((step) => String(step || '').trim()).filter(Boolean),
     placeholder_values: placeholderValues,
     unresolved_placeholders: unresolvedPlaceholders,
     save: {
@@ -120,7 +120,7 @@ export function normalizeNotebookDraft(rawDraft) {
       experimentName: trimText(entryTemplate.experimentName || proposal.title, 220),
       protocolSnapshot: cloneProtocolSnapshot(entryTemplate.protocolSnapshot),
       values: entryTemplate.values && typeof entryTemplate.values === 'object' ? entryTemplate.values : {},
-      result: trimText(entryTemplate.result, rawDraft?.save?.mode === 'suggestion_only' ? 12000 : 900),
+      result: trimText(entryTemplate.result, 40000),
       updatedAt: trimText(entryTemplate.updatedAt, 80),
       notebookState: normalizeNotebookState(entryTemplate.notebookState),
       executedAt: trimText(entryTemplate.executedAt, 80),
@@ -163,7 +163,7 @@ export function buildNotebookEntryFromDraft(draft, requestText = '', options = {
     protocolSnapshot: cloneProtocolSnapshot(template.protocolSnapshot),
     createdAt: updatedAt,
     values: template.values && typeof template.values === 'object' ? template.values : {},
-    result: trimText(template.result, draft?.save?.mode === 'suggestion_only' ? 12000 : 900) || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
+    result: trimText(template.result, 40000) || `Agent-generated notebook draft from request: ${trimText(requestText, 220)}`,
     resultFiles: asArray(template.resultFiles),
     resultFileRecords: asArray(template.resultFileRecords),
     updatedAt,

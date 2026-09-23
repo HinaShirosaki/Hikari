@@ -40,19 +40,32 @@ const { createHistoryController } = await import(new URL(`file://${vendor}/histo
 const { initPluginLeftRailResizer } = await import(new URL(`file://${pluginDir}/left-rail.js`));
 const ladderConstants = await import(new URL(`file://${vendor}/constants.js`));
 
-// Six evenly spaced dark lanes on a light background, each with one band.
-function syntheticGel({ width = 320, height = 200, laneCount = 6 } = {}) {
+// Evenly spaced dark lanes on a light background, each with one band.
+// `intensities` sets the band grey per lane (0.9 = background = a blank lane),
+// `noise` adds deterministic speckle — a perfectly flat gutter is not a gel.
+function syntheticGel({ width = 320, height = 200, laneCount = 6, intensities = null, noise = 0 } = {}) {
   const gray = new Float32Array(width * height).fill(0.9);
   const pitch = Math.floor(width / (laneCount + 1));
   for (let lane = 1; lane <= laneCount; lane += 1) {
+    const value = intensities ? intensities[lane - 1] : 0.15;
+    if (value >= 0.9) {
+      continue;
+    }
     const centerX = lane * pitch;
     for (let y = 90; y < 110; y += 1) {
       for (let x = centerX - 8; x <= centerX + 8; x += 1) {
-        gray[(y * width) + x] = 0.15;
+        gray[(y * width) + x] = value;
       }
     }
   }
-  return { gray, width, height, laneCount };
+  if (noise) {
+    let seed = 7;
+    for (let i = 0; i < gray.length; i += 1) {
+      seed = ((seed * 1664525) + 1013904223) % 4294967296;
+      gray[i] = Math.min(1, Math.max(0, gray[i] + (noise * ((seed / 4294967296) - 0.5))));
+    }
+  }
+  return { gray, width, height, laneCount, pitch };
 }
 
 async function checkFolderContract() {
@@ -260,7 +273,9 @@ function checkPipeline() {
 
   const detected = detectLanes({ gray, width, height, expectedLaneCount: laneCount });
   assert.ok(detected, 'detectLanes found nothing on a synthetic gel');
-  assert.ok(detected.peaks.length >= 2, `expected lane peaks, got ${detected.peaks.length}`);
+  // Exact, not ">= 2": every lane-detection bug found so far still cleared a
+  // floor of two, and a miscount renumbers every lane downstream of it.
+  assert.equal(detected.peaks.length, laneCount, `expected ${laneCount} lane peaks, got ${detected.peaks.length}`);
   assert.ok(detected.bandBottom > detected.bandTop, 'band window is inverted');
 
   // The same handoff main.js makes: auto-detected segmentation in as manual
@@ -290,7 +305,7 @@ function checkPipeline() {
     }
   });
 
-  assert.ok(report.lanes.length >= 2, `expected quantified lanes, got ${report.lanes.length}`);
+  assert.equal(report.lanes.length, laneCount, `expected ${laneCount} quantified lanes, got ${report.lanes.length}`);
   assert.ok(
     report.lanes.every((lane) => lane.bands.length > 0),
     'every lane inside the band window should carry a band'
@@ -301,6 +316,60 @@ function checkPipeline() {
   );
   // No ladder is passed, so MW calibration must fail cleanly rather than throw.
   assert.equal(report.calibration.ok, false);
+}
+
+// Lane detection against the gels that actually break it. manual-lanes.js builds
+// lanes from [gelLeft, ...dividers, gelRight], so a wrong count or a wrong edge
+// is a quantification error, not a cosmetic one.
+function checkLaneDetection() {
+  const lanesFound = (gel, options = {}) => {
+    const found = detectLanes({ gray: gel.gray, width: gel.width, height: gel.height, ...options });
+    assert.ok(found, 'detectLanes returned nothing');
+    return found;
+  };
+
+  // Few lanes, wide gutters, ordinary speckle: the prominence floor must not be
+  // anchored to background texture alone, or junk peaks split the gel.
+  const sparse = syntheticGel({ laneCount: 3, noise: 0.01 });
+  assert.equal(lanesFound(sparse).peaks.length, 3, 'noisy gutters invented lanes');
+
+  // One overloaded lane must not raise the bar past the faint ones. A 20x spread
+  // between the weakest and strongest lane is an ordinary loading difference.
+  const contrast = syntheticGel({ intensities: [0.86, 0.87, 0.15, 0.15, 0.87, 0.86] });
+  assert.equal(lanesFound(contrast).peaks.length, 6, 'faint lanes were cut off by a strong one');
+
+  // A blank negative control carries no signal and so no peak. Told how many
+  // lanes to expect, the detector must put it back rather than renumber the rest.
+  const blank = syntheticGel({ intensities: [0.15, 0.15, 0.9, 0.15, 0.15, 0.15] });
+  const filled = lanesFound(blank, { expectedLaneCount: 6 });
+  assert.equal(filled.peaks.length, 6, 'a blank lane renumbered the lanes after it');
+  assert.ok(
+    Math.abs(filled.peaks[2] - (3 * blank.pitch)) <= 6,
+    `the reconstructed blank lane sits at ${filled.peaks[2]}, not near ${3 * blank.pitch}`
+  );
+
+  // Dividers land in the gutter, not wherever the noise dipped: lane widths feed
+  // total-lane normalization, so a wandering divider reads as signal.
+  const even = syntheticGel();
+  const detected = lanesFound(even);
+  assert.equal(detected.dividers.length, even.laneCount - 1, 'one divider per gutter');
+  detected.dividers.forEach((divider, index) => {
+    const expected = (index + 1.5) * even.pitch;
+    assert.ok(
+      Math.abs(divider - expected) <= even.pitch * 0.1,
+      `divider ${index} at ${divider} is more than 10% of the pitch from ${expected}`
+    );
+  });
+  // The outer lanes are whole lanes, not the part of them that cleared a
+  // threshold: the edges sit about half a pitch outside the outer peaks.
+  assert.ok(
+    Math.abs(detected.gelLeft - (detected.peaks[0] - (even.pitch / 2))) <= 4,
+    `gelLeft ${detected.gelLeft} clips the first lane`
+  );
+  assert.ok(
+    Math.abs(detected.gelRight - (detected.peaks[detected.peaks.length - 1] + (even.pitch / 2))) <= 4,
+    `gelRight ${detected.gelRight} clips the last lane`
+  );
 }
 
 function checkLadderPresets() {
@@ -423,6 +492,7 @@ await checkFolderContract();
 await checkAdapterContract();
 await checkLeftRailContract();
 checkPipeline();
+checkLaneDetection();
 checkLadderPresets();
 checkLadderDetection();
 checkHistoryController();

@@ -6,13 +6,11 @@ function createWorkflowExecutionBoard({
   runtime,
   elements,
   onOpenNotebookEntry,
-  onCreateLinkedAssay,
   renderWorkflowViews,
   persistWorkflowChanges,
   getWorkflowById,
-  getTemplateById,
   deleteWorkflow,
-  createWorkflowFromTemplateRecord,
+  openProcessDialog,
   onWorkflowFileInputChange,
   getWorkflowEntry,
   getPrimaryWorkflowEntry,
@@ -28,11 +26,7 @@ function createWorkflowExecutionBoard({
   }
 
   function onAddWorkflow() {
-    const template = getTemplateById(runtime.activeTemplateId);
-    if (!template) {
-      return;
-    }
-    createWorkflowFromTemplateRecord(template);
+    openProcessDialog?.({ templateId: runtime.activeTemplateId });
   }
 
   function onDeleteWorkflow() {
@@ -40,6 +34,12 @@ function createWorkflowExecutionBoard({
   }
 
   function onExecutionBoardClick(event) {
+    const addProcess = event.target.closest('[data-workflow-project-add]');
+    if (addProcess) {
+      openProcessDialog?.({ templateId: runtime.activeTemplateId, projectId: addProcess.dataset.workflowProjectAdd });
+      return;
+    }
+
     const statusBtn = event.target.closest('[data-workflow-step-status]');
     if (statusBtn) {
       const workflowId = String(statusBtn.dataset.workflowWorkflowId || '').trim();
@@ -183,29 +183,6 @@ function createWorkflowExecutionBoard({
       touchWorkflow(workflow);
       persistWorkflowChanges();
       onOpenNotebookEntry(notebookEntry.id);
-      renderWorkflowViews();
-      return;
-    }
-
-    const assayBtn = event.target.closest('[data-workflow-step-create-assay]');
-    if (assayBtn) {
-      const workflowId = String(assayBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(assayBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(assayBtn.dataset.workflowStepCreateAssay || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      onCreateLinkedAssay({
-        notebookEntryId: notebookEntry.id,
-        projectId: notebookEntry.projectId,
-        notebookType: notebookEntry.notebookType || 'biology'
-      });
       renderWorkflowViews();
       return;
     }

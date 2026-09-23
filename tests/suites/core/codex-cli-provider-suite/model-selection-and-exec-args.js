@@ -105,7 +105,7 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         provider.setCodexCliModel('');
       });
     });
-    test('codex cli provider prefers explicit request models and remembers them', () => {
+    test('codex cli provider keeps explicit request models isolated from the configured default', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
         provider.setCodexCliModel('gpt-5.4');
@@ -118,7 +118,11 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
 
         assert.equal(args[args.indexOf('-m') + 1], 'gpt-5.1-codex-mini');
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=high');
-        assert.equal(provider.getCodexCliModel(), 'gpt-5.1-codex-mini');
+        assert.equal(provider.getCodexCliModel(), 'gpt-5.4');
+        const followingArgs = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt'
+        });
+        assert.equal(followingArgs[followingArgs.indexOf('-m') + 1], 'gpt-5.4');
         provider.setCodexCliModel('');
       });
     });
@@ -522,6 +526,26 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
       assert.match(error.message, /Codex CLI was not found/);
       assert.match(error.message, /Settings > Codex Model & Access/);
       assert.equal(error.cause, cause);
+    });
+    test('working-directory guidance removes legacy managed blocks and preserves user guidance', async () => {
+      const { ensureCodexCliWorkingDirectoryGuidance } = require(path.join(__dirname, 'src/main/lib/codex-cli-provider/guidance.js'));
+      const { buildHikariCodexAgentsBlock } = require(path.join(__dirname, 'src/main/agent/codex-agent/agent-instructions.js'));
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-guidance-migration-'));
+      const agentsPath = path.join(workspaceDir, 'AGENTS.md');
+      try {
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.existsSync(agentsPath), false);
+        fs.writeFileSync(agentsPath, buildHikariCodexAgentsBlock());
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.existsSync(agentsPath), false);
+        fs.writeFileSync(agentsPath, '# My guidance\n\n' + buildHikariCodexAgentsBlock());
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My guidance\n');
+        await ensureCodexCliWorkingDirectoryGuidance(workspaceDir);
+        assert.equal(fs.readFileSync(agentsPath, 'utf8'), '# My guidance\n');
+      } finally {
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
     });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-agents-'));

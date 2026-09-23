@@ -9,6 +9,7 @@ const { registerSystemToolExecutors } = require('../src/main/agent/tools/tool-ex
 const { createDirectMcpToolRouter } = require('../src/main/agent/mcp-contract/direct-tools/index.js');
 const { validateNotebookConclusionResult } = require('../src/main/storage/memory/conclusion-request.js');
 const { shouldGenerateConclusion } = require('../src/main/storage/memory/conclusion-cache.js');
+const { buildProjectMemoryGeneratedBlock } = require('../src/main/storage/memory/memory-markdown.js');
 
 function deferred() {
   let resolve;
@@ -151,10 +152,18 @@ async function main() {
 
     assert.equal((await router.callTool('memory', { action: 'recall' }, { settings: { agent: { disabledMcpToolNames: ['memory'] } } })).status, 'disabled');
 
+    // Quote membership proves the excerpt, never the interpretation: this
+    // summary inverts its own evidence and still passes the gate. MEMORY.md
+    // publishes the sentence, so the quote has to travel with it.
     const evidence = validateNotebookConclusionResult({ conclusion: 'Treatment improved growth.', quotes: ['no improvement'] }, { corpus: 'Treatment showed no improvement.' });
-    assert.equal(evidence.conclusion, 'no improvement');
-    assert.equal(evidence.proposedConclusion, 'Treatment improved growth.');
+    assert.equal(evidence.conclusion, 'Treatment improved growth.');
     assert.deepEqual(evidence.quotes, ['no improvement']);
+    assert.equal(
+      buildProjectMemoryGeneratedBlock({ displayName: 'P' }, { notebookEntries: [{ title: 'Run', ...evidence }] })
+        .includes('- Run; Treatment improved growth. ("no improvement")'),
+      true,
+      'an inverted summary is published beside the evidence that contradicts it'
+    );
     assert.equal(validateNotebookConclusionResult({ conclusion: 'made up', quotes: ['not recorded'] }, { corpus: 'recorded' }), null);
     assert.equal(shouldGenerateConclusion({ hash: 'h', status: 'fallback', attempts: 1, retryAfter: new Date(1000).toISOString() }, { hash: 'h' }, 999), false);
     assert.equal(shouldGenerateConclusion({ hash: 'h', status: 'fallback', attempts: 1, retryAfter: new Date(1000).toISOString() }, { hash: 'h' }, 1000), true);

@@ -2,6 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { persistSqliteDatabase } = require('../../lib/sqlite-persist');
 const { MEMORY_FILE_NAME, buildWorkflowMemoryMarkdown } = require('../storage-memory');
 const { asArray, cleanText, ensureObject, loadSqlJs } = require('../storage-utils');
 const { NOTEBOOK_PAGE_FILE_NAME, RELATED_PAPERS_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
@@ -58,131 +59,134 @@ async function syncWorkflowRootFromSnapshot({
 
   const SQL = await loadSqlJs();
   const db = new SQL.Database();
-  applyWorkflowStorageSchema(db);
+  // Everything below holds a whole sql.js image in the WASM heap; without
+  // this the image leaks on any throw from the folder writes below.
+  try {
+    applyWorkflowStorageSchema(db);
 
-  for (const template of templatesForStorage.values()) {
-    const folderName = buildTemplateFolderName(template);
-    const templateFolderPath = path.join(rootPaths.workflowRootPath, folderName);
-    await ensureFolder(templateFolderPath);
-    await writeJsonFile(path.join(templateFolderPath, TEMPLATE_METADATA_FILE_NAME), {
-      exportedAt: new Date().toISOString(),
-      template: ensureObject(template)
-    });
-    db.run(
-      `INSERT OR REPLACE INTO workflow_templates (id, raw_json) VALUES (?, ?)`,
-      [
-        cleanText(template.id, 220),
-        JSON.stringify(ensureObject(template))
-      ]
-    );
-  }
-
-  const notebookIdsWritten = new Set();
-  const paperIdsWritten = new Set();
-
-  for (const rawWorkflow of asArray(safeSnapshot.workflows)) {
-    const workflow = ensureObject(rawWorkflow);
-    const workflowId = cleanText(workflow.id, 220);
-    if (!workflowId) {
-      continue;
+    for (const template of templatesForStorage.values()) {
+      const folderName = buildTemplateFolderName(template);
+      const templateFolderPath = path.join(rootPaths.workflowRootPath, folderName);
+      await ensureFolder(templateFolderPath);
+      await writeJsonFile(path.join(templateFolderPath, TEMPLATE_METADATA_FILE_NAME), {
+        exportedAt: new Date().toISOString(),
+        template: ensureObject(template)
+      });
+      db.run(
+        `INSERT OR REPLACE INTO workflow_templates (id, raw_json) VALUES (?, ?)`,
+        [
+          cleanText(template.id, 220),
+          JSON.stringify(ensureObject(template))
+        ]
+      );
     }
-    const template = resolveWorkflowTemplateRecord(templateById, workflow);
-    const runLayout = buildWorkflowFolderLayout({
-      storagePath: rootPaths.storagePath,
-      template,
-      workflow
-    });
-    await ensureFolder(runLayout.resultsFolderPath);
-    await ensureFolder(runLayout.notebookFolderPath);
-    await ensureFolder(runLayout.relatedPapersFolderPath);
 
-    const linkedNotebookIds = collectLinkedNotebookIds(workflow);
-    const notebookEntries = asArray(safeSnapshot.notebookEntries).filter((entry) => (
-      linkedNotebookIds.includes(cleanText(entry?.id, 220))
-    ));
-    const relatedPapers = collectRelatedPaperData(safeSnapshot, workflow, linkedNotebookIds);
-    const workflowSummary = collectWorkflowSummary(workflow);
-    const project = asArray(safeSnapshot.projects).find((item) => (
-      cleanText(item?.id, 220) === cleanText(workflow.projectId, 220)
-    ));
-    const portableWorkflow = compactWorkflowRecord(workflow);
+    const notebookIdsWritten = new Set();
+    const paperIdsWritten = new Set();
 
-    await ensureFolder(runLayout.workflowFolderPath);
-    await fs.writeFile(
-      path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),
-      buildWorkflowMemoryMarkdown({
-        workflow,
-        template,
-        project,
-        workflowSummary,
-        notebookEntries,
-        relatedPapers: relatedPapers.papers
-      }),
-      'utf8'
-    );
-    await writeJsonFile(path.join(runLayout.workflowFolderPath, WORKFLOW_METADATA_FILE_NAME), {
-      exportedAt: new Date().toISOString(),
-      template: ensureObject(template),
-      workflow: portableWorkflow,
-      summary: {
-        ...workflowSummary,
-        notebookCount: notebookEntries.length,
-        paperCount: relatedPapers.papers.length
+    for (const rawWorkflow of asArray(safeSnapshot.workflows)) {
+      const workflow = ensureObject(rawWorkflow);
+      const workflowId = cleanText(workflow.id, 220);
+      if (!workflowId) {
+        continue;
       }
-    });
-    await writeJsonFile(path.join(runLayout.relatedPapersFolderPath, RELATED_PAPERS_FILE_NAME), {
-      exportedAt: new Date().toISOString(),
-      workflowId,
-      papers: relatedPapers.papers,
-      paperExperimentLinks: relatedPapers.paperExperimentLinks
-    });
+      const template = resolveWorkflowTemplateRecord(templateById, workflow);
+      const runLayout = buildWorkflowFolderLayout({
+        storagePath: rootPaths.storagePath,
+        template,
+        workflow
+      });
+      await ensureFolder(runLayout.resultsFolderPath);
+      await ensureFolder(runLayout.notebookFolderPath);
+      await ensureFolder(runLayout.relatedPapersFolderPath);
 
-    for (const notebookEntry of notebookEntries) {
-      const notebookFolder = buildNotebookStorageFolder(runLayout, notebookEntry);
-      const compactEntry = compactNotebookEntry(notebookEntry);
-      compactEntry.storageFolder = '';
-      await writeJsonFile(path.join(notebookFolder, NOTEBOOK_PAGE_FILE_NAME), {
+      const linkedNotebookIds = collectLinkedNotebookIds(workflow);
+      const notebookEntries = asArray(safeSnapshot.notebookEntries).filter((entry) => (
+        linkedNotebookIds.includes(cleanText(entry?.id, 220))
+      ));
+      const relatedPapers = collectRelatedPaperData(safeSnapshot, workflow, linkedNotebookIds);
+      const workflowSummary = collectWorkflowSummary(workflow);
+      const project = asArray(safeSnapshot.projects).find((item) => (
+        cleanText(item?.id, 220) === cleanText(workflow.projectId, 220)
+      ));
+      const portableWorkflow = compactWorkflowRecord(workflow);
+
+      await ensureFolder(runLayout.workflowFolderPath);
+      await fs.writeFile(
+        path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),
+        buildWorkflowMemoryMarkdown({
+          workflow,
+          template,
+          project,
+          workflowSummary,
+          notebookEntries,
+          relatedPapers: relatedPapers.papers
+        }),
+        'utf8'
+      );
+      await writeJsonFile(path.join(runLayout.workflowFolderPath, WORKFLOW_METADATA_FILE_NAME), {
+        exportedAt: new Date().toISOString(),
+        template: ensureObject(template),
+        workflow: portableWorkflow,
+        summary: {
+          ...workflowSummary,
+          notebookCount: notebookEntries.length,
+          paperCount: relatedPapers.papers.length
+        }
+      });
+      await writeJsonFile(path.join(runLayout.relatedPapersFolderPath, RELATED_PAPERS_FILE_NAME), {
         exportedAt: new Date().toISOString(),
         workflowId,
-        notebookEntry: compactEntry
+        papers: relatedPapers.papers,
+        paperExperimentLinks: relatedPapers.paperExperimentLinks
       });
-      const notebookId = cleanText(notebookEntry?.id, 220);
-      if (notebookId) {
-        notebookIdsWritten.add(notebookId);
+
+      for (const notebookEntry of notebookEntries) {
+        const notebookFolder = buildNotebookStorageFolder(runLayout, notebookEntry);
+        const compactEntry = compactNotebookEntry(notebookEntry);
+        compactEntry.storageFolder = '';
+        await writeJsonFile(path.join(notebookFolder, NOTEBOOK_PAGE_FILE_NAME), {
+          exportedAt: new Date().toISOString(),
+          workflowId,
+          notebookEntry: compactEntry
+        });
+        const notebookId = cleanText(notebookEntry?.id, 220);
+        if (notebookId) {
+          notebookIdsWritten.add(notebookId);
+        }
       }
+
+      relatedPapers.papers.forEach((paper) => {
+        const paperId = cleanText(paper?.id, 220);
+        if (paperId) {
+          paperIdsWritten.add(paperId);
+        }
+      });
+
+      db.run(
+        `INSERT OR REPLACE INTO workflow_runs (id, relative_folder_path, raw_json) VALUES (?, ?, ?)`,
+        [
+          workflowId,
+          runLayout.relativeFolderPath,
+          JSON.stringify(portableWorkflow)
+        ]
+      );
     }
 
-    relatedPapers.papers.forEach((paper) => {
-      const paperId = cleanText(paper?.id, 220);
-      if (paperId) {
-        paperIdsWritten.add(paperId);
+    await persistSqliteDatabase(rootPaths.sqlitePath, db);
+    return {
+      workflowRootPath: rootPaths.workflowRootPath,
+      sqlitePath: rootPaths.sqlitePath,
+      summary: {
+        workflowTemplates: templatesForStorage.size,
+        workflows: asArray(safeSnapshot.workflows).length,
+        notebookEntries: notebookIdsWritten.size,
+        papers: paperIdsWritten.size
       }
-    });
-
-    db.run(
-      `INSERT OR REPLACE INTO workflow_runs (id, relative_folder_path, raw_json) VALUES (?, ?, ?)`,
-      [
-        workflowId,
-        runLayout.relativeFolderPath,
-        JSON.stringify(portableWorkflow)
-      ]
-    );
+    };
+  } finally {
+    db.close();
   }
-
-  const bytes = db.export();
-  db.close();
-  await fs.writeFile(rootPaths.sqlitePath, Buffer.from(bytes));
-
-  return {
-    workflowRootPath: rootPaths.workflowRootPath,
-    sqlitePath: rootPaths.sqlitePath,
-    summary: {
-      workflowTemplates: templatesForStorage.size,
-      workflows: asArray(safeSnapshot.workflows).length,
-      notebookEntries: notebookIdsWritten.size,
-      papers: paperIdsWritten.size
-    }
-  };
 }
 
 module.exports = {

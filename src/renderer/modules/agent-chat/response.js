@@ -102,6 +102,8 @@ export function normalizeAgentResponse(result) {
     notebookAppendWorkflow,
     protocolGeneration,
     notebookPayload,
+    notebookPayloads: asArray(result?.notebookDrafts).length ? result.notebookDrafts
+      : (asArray(notebookDraftWorkflow?.notebooks).length ? notebookDraftWorkflow.notebooks : [notebookPayload].filter(Boolean)),
     purchaseRecommendation,
     codexAgent,
     userQuestion,

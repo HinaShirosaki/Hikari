@@ -173,4 +173,60 @@ module.exports = function registerCliDiscovery(context = {}) {
     await controller.onStartCodexLogin();
     assert.equal(loginCalls, 1);
   });
+  test('Settings restores the saved model and reasoning effort into the Codex runtime on startup', async () => {
+    const { loadEsmStyleModule } = require('../../../support/runtime');
+    const appliedModels = [];
+    const appliedReasoningEfforts = [];
+    const state = {
+      settings: {
+        llm: {
+          provider: 'codex',
+          model: 'gpt-5.6-luna',
+          reasoningEffort: 'high'
+        }
+      }
+    };
+    const { createCodexAccountSettings } = loadEsmStyleModule(path.resolve(__dirname,
+      '../../../../src/renderer/modules/settings/codex-account.js'), {
+      window: { hikariApi: {
+        getCodexLlmCatalog: async () => ({
+          ok: true,
+          defaultModel: 'gpt-5.6-sol',
+          models: [{
+            id: 'gpt-5.6-luna',
+            reasoningEfforts: ['low', 'medium', 'high'],
+            defaultReasoningEffort: 'medium'
+          }]
+        }),
+        setCodexLlmModel: async (model) => {
+          appliedModels.push(model);
+          return { ok: true, model };
+        },
+        setCodexLlmReasoningEffort: async (reasoningEffort) => {
+          appliedReasoningEfforts.push(reasoningEffort);
+          return { ok: true, reasoningEffort };
+        }
+      } }
+    });
+    let renderCount = 0;
+    const llmModelCatalog = {
+      setCodexCatalog() {},
+      normalizeReasoning(_provider, _model, reasoningEffort) {
+        return reasoningEffort;
+      }
+    };
+    const controller = createCodexAccountSettings({
+      state,
+      persist() {},
+      llmModelCatalog,
+      renderForms() { renderCount += 1; }
+    });
+
+    await controller.refreshCodexCatalog();
+
+    assert.deepEqual(appliedModels, ['gpt-5.6-luna']);
+    assert.deepEqual(appliedReasoningEfforts, ['high']);
+    assert.equal(renderCount, 1);
+    assert.equal(state.settings.llm.model, 'gpt-5.6-luna');
+  });
 };

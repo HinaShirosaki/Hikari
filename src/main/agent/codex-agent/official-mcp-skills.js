@@ -12,7 +12,7 @@ const CODEX_SKILLS_FOLDER_NAME = 'skills';
 const OFFICIAL_MCP_SKILL_MARKER = 'HIKARI_OFFICIAL_MCP_SKILL';
 const OFFICIAL_SKILLS_ROOT = path.join(__dirname, 'official-skills');
 const OFFICIAL_MCP_SKILL_TOOL_REQUIREMENTS = Object.freeze({
-  'assay-plotly': Object.freeze(['assay_table', 'plotly_graph']),
+  'assay-plotly': Object.freeze(['assay_table', 'plotly_graph', 'assay_plot']),
   container: Object.freeze(['container']),
   'html-output': Object.freeze(['html_output']),
   'notebook-draft': Object.freeze(['notebook_draft']),

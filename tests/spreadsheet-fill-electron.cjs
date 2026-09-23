@@ -78,6 +78,12 @@ if (!process.versions.electron) {
     const input = async (type,p,buttons=0) => {
       await js(`document.elementFromPoint(${p.x},${p.y}).dispatchEvent(new MouseEvent('${type}',{bubbles:true,cancelable:true,clientX:${p.x},clientY:${p.y},button:0,buttons:${buttons}}))`);await settle();
     };
+    const nativeClick = async (p) => {
+      win.webContents.sendInputEvent({type:'mouseMove',x:p.x,y:p.y});
+      win.webContents.sendInputEvent({type:'mouseDown',x:p.x,y:p.y,button:'left',clickCount:1});
+      win.webContents.sendInputEvent({type:'mouseUp',x:p.x,y:p.y,button:'left',clickCount:1});
+      await settle();
+    };
     const move = p => input('mousemove',p);
     const shot = async name => { await settle();fs.writeFileSync(path.join(output, name+'.png'),(await win.webContents.capturePage()).toPNG()); };
     const drag = async (host, row, field, axis, targetRow, targetField, preview) => {
@@ -106,9 +112,19 @@ if (!process.versions.electron) {
     await js('qa.plate.loadTransformSpec(savedEmpty)');await settle();
     assert.equal(await js('document.getElementById("plate-panel").hidden'),false,'saved empty plate reopens');
     assert.equal(await js('JSON.stringify(qa.plate.getTransformSpec().formulas)'),'{}','reopened empty plate stays empty');
-    const seed=point(await cell('plate',0,'c1'),'center');
-    await input('click',seed);
-    await js(`(() => {const input=document.querySelector('#plate .tabulator-cell input');input.value='=Table1:A1*2';input.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',keyCode:13,bubbles:true}))})()`);await settle();
+    const seed=point(await cell('plate',0,'c1'),'row');
+    await move(seed);
+    assert.equal(await js("Boolean(document.querySelector('#plate .spreadsheet-fill-handle'))"),false,'an empty cell keeps its full click area for editing');
+    await nativeClick(seed);
+    assert.equal(await js("Boolean(document.querySelector('#plate .tabulator-cell input'))"),true,'one real click opens the transformed-cell editor');
+    for (const keyCode of '=Table1:A1*2') {
+      win.webContents.sendInputEvent({type:'char',keyCode});
+    }
+    assert.equal(await js("document.querySelector('#plate .tabulator-cell input')?.value"),'=Table1:A1*2','normal keyboard input reaches the transformed-cell editor');
+    await shot('transformed-plate-editing');
+    win.webContents.sendInputEvent({type:'keyDown',keyCode:'ENTER'});
+    win.webContents.sendInputEvent({type:'keyUp',keyCode:'ENTER'});
+    await settle();
     assert.equal(await js('qa.plate.getTransformSpec().formulas.A1'),'=Table1:A1*2','first formula can be entered in the empty plate');
     await js('qa.resetCommits()');
     await shot('initial');

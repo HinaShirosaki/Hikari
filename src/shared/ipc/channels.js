@@ -38,6 +38,7 @@ const STORAGE = Object.freeze({
   LAST_ROOT: 'storage:last-root',
   STORE_IMPORTED_FILE: 'storage:store-imported-file',
   MOVE_STORED_FILE: 'storage:move-stored-file',
+  TRANSFORM_PAPER_PDF: 'storage:transform-paper-pdf',
   WRITE_JSON_FILE: 'storage:write-json-file',
   DISCOVER_PAPERS: 'storage:discover-papers',
   OPEN_FILE: 'storage:open-file',
@@ -81,7 +82,9 @@ const INVENTORY = Object.freeze({
 });
 
 const ASSAY = Object.freeze({
-  PARSE_RESULT_IMPORT: 'assay:parse-result-import'
+  PARSE_RESULT_IMPORT: 'assay:parse-result-import',
+  PLOT_REQUEST: 'assay:plot-request',
+  PLOT_RESPONSE: 'assay:plot-response'
 });
 
 const SEQUENCE_LIBRARY = Object.freeze({

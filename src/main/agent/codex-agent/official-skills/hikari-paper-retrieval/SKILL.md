@@ -13,8 +13,8 @@ Do not use this skill to download new papers. For new external literature search
 
 Direct tools:
 
-- `paper_intake_search_summaries` — search ingested paper titles and one-sentence summaries by topic, finding, organism, method, molecule, or concept.
-- `paper_intake_search_experiments` — search structured experiment entries by assay, technique, condition, variable, figure/table reference, or outcome.
+- `paper_intake_search_summaries` — find candidate papers across titles, DOIs, one-sentence summaries, experiment details and evidence, and saved outlines/claims. Existing intake records are searchable without reprocessing.
+- `paper_intake_search_experiments` — search structured experiment entries by assay, technique, condition, variable, figure/table reference, outcome, or verbatim evidence.
 - `paper_intake_list_project_summaries` — list ingested paper summaries attached to a known Hikari project.
 
 Retrieval workflow:
@@ -23,11 +23,11 @@ Retrieval workflow:
    - Use `paper_intake_search_summaries` for "find papers about...", title/topic/finding questions, or when the user wants candidate papers.
    - Use `paper_intake_search_experiments` for "which paper did assay X?", "find experiments using technique Y", condition/outcome questions, or figure-level experiment lookup.
    - Use `paper_intake_list_project_summaries` when the user gives a project name, or has an active project, and wants papers attached to that project.
-2. For either search tool, use a short keyword `query` and preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags. For the project roll-up, pass `project_name` when supplied or rely on active-project context; do not add `query`.
-3. Inspect `status`, `items`, `matched_terms`, `score`, `doc_type`, `paper_id`, `title`, `one_sentence_summary`, `experiment`, and `source_paths`.
+2. For either search tool, use a short keyword `query` and preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags. Search defaults to the active project when present; use `scope: "library"` for all local papers. An explicit `project_name` takes precedence over scope. For the project roll-up, pass `project_name` when supplied or rely on active-project context; do not add `query`.
+3. Inspect `status`, `search_scope`, `items`, `matched_terms`, `unmatched_terms`, `match_coverage`, `match_context`, `score`, `doc_type`, `paper_id`, `title`, `one_sentence_summary`, `experiment`, and `source_paths`. `match_context` contains stored field excerpts and available experiment/figure references. `match_coverage` is the fraction of query terms matched, not a probability or proof that the paper answers the question. Check `total_matches` and `truncated` before claiming completeness.
 4. If the returned fields answer the question, answer from the tool result and cite the returned `paper_id`, `title`, and `source_paths.paper_md`.
 5. If the user asks for details that are not in the summary or experiment entry, read the returned `source_paths.paper_md` from the current workspace before answering. Use `extracted.txt`, figures, or the original PDF only when that Markdown file leaves a concrete question unanswered.
-6. If no intake item matches, say that the local paper-intake KB had no match. Then ask whether to search external literature or download/ingest a new paper if that would help.
+6. If matches are absent or weak, retry with concise identifiers, expanded acronyms, or alternative wording. If the user has not restricted retrieval to a project, retry with `scope: "library"`. Search local paper Markdown with available file-search tools before declaring a paper absent; the intake index is a compressed representation and these tools are lexical, not general semantic search. This fallback requires workspace file-search access: if unavailable, explicitly say that full text was not searched. The internal `paper-search` wiki tool is not exposed by this MCP contract. Report remaining retrieval limits explicitly, then continue external research when the user's request authorizes it.
 
 Argument patterns:
 
@@ -43,5 +43,6 @@ Answering rules:
 - Prefer the paper-intake MCP result over memory or guesses for local paper availability.
 - Do not imply a paper is attached to a project unless `paper_intake_list_project_summaries` or the returned `project_ids` supports it.
 - Do not claim the full paper supports a detail unless you read the returned `source_paths.paper_md` or the detail appears in the returned `experiment` or `one_sentence_summary`.
+- Matches from separate experiments can make a paper relevant without establishing that a single experiment combined every requested condition. Read the identified experiment and source text before making that claim.
 - For reviews, books, or non-research documents, do not invent experiments; use `doc_type`, `structure_outline`, or `notable_claims` only when the returned record provides them.
 - Keep citations local and concrete: use `paper_id`, title, and `source_paths.paper_md` rather than invented source labels. Use the paper title, not the raw Markdown basename, as the visible citation label.

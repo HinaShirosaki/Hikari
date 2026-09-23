@@ -17,6 +17,7 @@ export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['memory', 'Memory', 'Recall, store, and forget durable preferences and project facts.'],
   ['container', 'Container', 'Create and edit temporary exact-value containers.', 'hikari-container'],
   ['assay_table', 'Assay table', 'Create and transform scratch assay tables.', 'hikari-assay-plotly'],
+  ['assay_plot', 'Assay plot', 'Style the live plot and edit labels, reference lines and bands.', 'hikari-assay-plotly'],
   ['plotly_graph', 'Plotly graph', 'Create and inspect scratch Plotly figures.', 'hikari-assay-plotly'],
   ['image_output', 'Analysis images', 'Display saved analysis images in Agent Chat.', ''],
   ['html_output', 'Interactive HTML', 'Display interactive HTML in Agent Chat.', 'hikari-html-output'],

@@ -14,6 +14,7 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
 const { loadSqlJs } = require('../../storage/storage-utils.js');
+const { persistSqliteDatabase } = require('../../lib/sqlite-persist.js');
 const { normalizeDoi, sanitizeStorageName } = require('./paper-knowledge-paths.js');
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 
@@ -127,9 +128,42 @@ async function openKnowledgeDatabase(sqlitePath) {
 }
 
 async function persistKnowledgeDatabase(sqlitePath, db) {
-  const bytes = db.export();
-  await fsPromises.mkdir(path.dirname(sqlitePath), { recursive: true });
-  await fsPromises.writeFile(sqlitePath, Buffer.from(bytes));
+  await persistSqliteDatabase(sqlitePath, db);
+}
+
+// sql.js loads the whole database image, so open -> mutate -> persist is a
+// read-modify-write. paper-acquisition.js ingests DEFAULT_DOWNLOAD_CONCURRENCY
+// papers at once; unserialized, they all start from the same image and only the
+// last one to persist survives. Every write path runs through here so the
+// critical section covers identity lookup (findExistingPaperRow) and the
+// index.json mirror as well, not just the INSERT.
+//
+// ponytail: in-process queue, keyed by path. Swap in the directory lock from
+// sequence-library/operation-lock.js if a separate process ever opens this
+// database.
+const knowledgeWriteQueues = new Map();
+
+function withKnowledgeDatabaseWrite(sqlitePath, action) {
+  const key = path.resolve(String(sqlitePath || ''));
+  const previous = knowledgeWriteQueues.get(key) || Promise.resolve();
+  const current = previous.then(async () => {
+    const db = await openKnowledgeDatabase(sqlitePath);
+    try {
+      return await action(db);
+    } finally {
+      db.close();
+    }
+  });
+  // A rejected turn must not poison the queue, and the map entry is dropped once
+  // this turn is the last one so repeated storage paths cannot accumulate.
+  const settled = current.then(() => {}, () => {});
+  knowledgeWriteQueues.set(key, settled);
+  settled.then(() => {
+    if (knowledgeWriteQueues.get(key) === settled) {
+      knowledgeWriteQueues.delete(key);
+    }
+  });
+  return current;
 }
 
 function findExistingPaperRow(db, { doi = '', pmid = '', pmcid = '', pdfSha256 = '', title = '' } = {}) {
@@ -284,6 +318,7 @@ module.exports = {
   applyKnowledgeDatabaseSchema,
   openKnowledgeDatabase,
   persistKnowledgeDatabase,
+  withKnowledgeDatabaseWrite,
   findExistingPaperRow,
   buildPaperId,
   readJsonObject,

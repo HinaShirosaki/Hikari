@@ -475,6 +475,9 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         /`plotly_graph`:[^\n]+canonical `data`, `layout`, and optional `config`/
       );
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
+      assert.equal(checkedContract.mcp.tools.find((tool) => tool.name === 'paper_download').description,
+        paperDownloadDefinition.description);
+      assert.match(paperDownloadDefinition.description, /Matching active jobs and verified saved PDFs are reused/);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
       assert.deepEqual(Object.keys(paperDownloadDefinition.inputSchema.properties).sort(), [
         'candidate_urls',

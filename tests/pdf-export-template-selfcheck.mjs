@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
 // Stub jsPDF: records the text/shape calls so we can assert on the rendered template.
-const calls = { text: [], images: [], pages: 1, saved: '', output: '', documents: [] };
+const calls = { text: [], images: [], colors: [], iconTints: [], pages: 1, saved: '', output: '', documents: [] };
 
 class FakeDoc {
   constructor(options = {}) {
@@ -36,11 +36,11 @@ class FakeDoc {
     return (this.fontSize || 10) * 0.5;
   }
 
-  setTextColor() {}
+  setTextColor(...values) { calls.colors.push(values); }
 
-  setFillColor() {}
+  setFillColor(...values) { calls.colors.push(values); }
 
-  setDrawColor() {}
+  setDrawColor(...values) { calls.colors.push(values); }
 
   setLineWidth() {}
 
@@ -105,10 +105,10 @@ class FakeDoc {
 
 class FakeImage {
   constructor() {
-    this.width = 256;
-    this.height = 256;
-    this.naturalWidth = 256;
-    this.naturalHeight = 256;
+    this.width = FakeImage.naturalSize.width;
+    this.height = FakeImage.naturalSize.height;
+    this.naturalWidth = FakeImage.naturalSize.width;
+    this.naturalHeight = FakeImage.naturalSize.height;
     this.source = '';
   }
 
@@ -117,6 +117,8 @@ class FakeImage {
     this.onload?.();
   }
 }
+
+FakeImage.naturalSize = { width: 256, height: 256 };
 
 globalThis.Image = FakeImage;
 globalThis.document = {
@@ -145,7 +147,10 @@ globalThis.document = {
         };
       },
       toDataURL() {
-        return canvas.drawnSource === './assets/loadingicon.png' && canvas.tintColor === '#185fa5'
+        if (canvas.drawnSource === './assets/loadingicon.png') {
+          calls.iconTints.push(canvas.tintColor);
+        }
+        return canvas.drawnSource === './assets/loadingicon.png' && ['#185fa5', '#444444'].includes(canvas.tintColor)
           ? 'data:image/png;base64,SElLQVJJ'
           : 'data:image/png;base64,RklHVVJF';
       }
@@ -182,7 +187,8 @@ assert.ok(hasText('Plasmid mini-prep'), 'title is rendered');
 assert.ok(hasText('STEPS'), 'section headings are uppercased');
 assert.ok(hasText('MATERIALS'), 'materials section is rendered');
 assert.ok(hasText('•'), 'material bullets are rendered');
-assert.ok(rendered.includes('1') && rendered.includes('2'), 'step numbers sit in their own gutter');
+assert.ok(rendered.includes('01') && rendered.includes('02'), 'step numbers sit in their own gutter');
+assert.ok(calls.colors.every((values) => values.length < 3 || values[0] === values[1] && values[1] === values[2]), 'protocol PDF uses grayscale ink and rules');
 
 // Footer runs on every page, with the page count resolved after all content is laid out.
 const footers = rendered.filter((line) => line.startsWith('Page ') && line.includes(' of '));
@@ -199,6 +205,7 @@ assert.equal(overflow.length, 0, `no content past the footer baseline, got ${JSO
 
 calls.text.length = 0;
 calls.images.length = 0;
+calls.colors.length = 0;
 calls.pages = 1;
 calls.saved = '';
 const notebookOk = await exportNotebookEntryPdf({
@@ -228,8 +235,8 @@ const notebookOk = await exportNotebookEntryPdf({
 assert.equal(notebookOk, true, 'notebook export should report success');
 assert.equal(calls.documents.at(-1).options.format, 'a4', 'notebook export uses the selected page size');
 assert.equal(
-  calls.text.find((item) => item.text === 'NOTEBOOK PAGE')?.x,
-  108,
+  calls.text.find((item) => item.text === 'HIKARI  /  NOTEBOOK PAGE')?.x,
+  136,
   'left staple space shifts notebook content inward by 0.5 inch'
 );
 assert.equal(calls.saved, 'notebook-Atlas-Microscope-capture.pdf');
@@ -237,6 +244,7 @@ const notebookCornerIcons = calls.images.filter((args) => args[0] === 'data:imag
 const notebookFigures = calls.images.filter((args) => args[0] === 'data:image/png;base64,RklHVVJF');
 assert.equal(notebookFigures.length, 1, 'attached notebook images are embedded in PDF output');
 assert.equal(notebookCornerIcons.length, calls.pages, 'the Hikari icon is rendered once on every notebook PDF page');
+assert.ok(calls.iconTints.includes('#444444'), 'notebook footer icon is tinted neutral gray for printing');
 assert.ok(Math.abs(notebookCornerIcons[0][2] - 543.28) < 0.01, 'the Hikari icon sits in the lower-right A4 margin');
 assert.ok(Math.abs(notebookCornerIcons[0][3] - 773.89) < 0.01, 'the Hikari icon aligns beside the A4 footer');
 assert.equal(notebookCornerIcons[0][4], 32, 'the Hikari icon is large enough to remain visible');
@@ -244,6 +252,8 @@ assert.equal(notebookCornerIcons[0][5], 32, 'the Hikari icon remains square');
 assert.ok(calls.text.some((item) => item.text.includes('cells.png')), 'attached image filename is rendered as a caption');
 assert.ok(calls.text.some((item) => item.text.includes('PDF Cell Sample')), 'linked plate cells retain their saved sample labels');
 assert.ok(calls.text.some((item) => item.text.includes('3.5 uM')), 'linked plate cells retain their saved concentration labels');
+assert.ok(calls.text.some((item) => item.text.includes('Legend: shaded cells')), 'linked plate occupancy remains clear in monochrome');
+assert.ok(calls.colors.every((values) => values.length < 3 || values[0] === values[1] && values[1] === values[2]), 'notebook PDF uses grayscale ink, tables, and plate cells');
 
 calls.text.length = 0;
 calls.images.length = 0;
@@ -301,7 +311,7 @@ const projectNotebookOk = await exportProjectNotebookEntriesPdf({
 assert.equal(projectNotebookOk, true, 'project notebook export should report success');
 assert.equal(calls.documents.at(-1).options.format, 'legal', 'project notebook export uses the selected page size');
 assert.equal(
-  calls.text.find((item) => item.text === 'PROJECT NOTEBOOK')?.y,
+  calls.text.find((item) => item.text === 'HIKARI  /  PROJECT NOTEBOOK')?.y,
   108,
   'top staple space shifts project notebook content downward by 0.5 inch'
 );
@@ -342,11 +352,11 @@ calls.text.length = 0;
 calls.pages = 1;
 const longStep = 'Prepare complete medium and maintain cells under validated culture conditions and confirm they are healthy and free of contamination before seeding.';
 exportProtocolPdf({ name: 'Wrap', materials: [longStep], steps: [{ id: 'a', text: longStep }, { id: 'b', text: longStep }] });
-const stepLines = calls.text.filter((item) => item.x === 72 + 22).map((item) => item.text);
+const stepLines = calls.text.filter((item) => item.x === 72 + 30).map((item) => item.text);
 assert.ok(stepLines.length >= 2, 'both steps rendered');
 assert.equal(stepLines[0], stepLines[stepLines.length / 2], 'first step wraps identically to a later step');
 const bulletLines = calls.text.filter((item) => item.x === 72 + 14).map((item) => item.text);
-assert.equal(bulletLines[0], stepLines[0].slice(0, bulletLines[0].length), 'first bullet wraps with the body font too');
+assert.ok(bulletLines[0].startsWith(stepLines[0]), 'wider material text uses the same body font as steps');
 
 // Many columns: narrow ones sit at the floor, the rest absorb it — the table never exceeds the margin.
 {
@@ -357,6 +367,31 @@ assert.equal(bulletLines[0], stepLines[0].slice(0, bulletLines[0].length), 'firs
   const widths = resolveTableColumnWidths({ doc, maxWidth: 468 }, headers, rows);
   const total = widths.reduce((sum, width) => sum + width, 0);
   assert.ok(Math.abs(total - 468) < 0.01, `column widths fill the content width exactly, got ${total}`);
+}
+
+// Attachments are rasterized to the figure box, never to the source resolution:
+// a 7650x9900 scan embedded whole took ~10s and produced a 200MB PDF.
+{
+  const { preparePdfImageAsset } = await import('../src/renderer/modules/pdf-export/figures.js');
+  const box = { maxWidthPt: 468, maxHeightPt: 320 };
+  const pixelCap = (points) => Math.ceil((points * 200) / 72);
+
+  FakeImage.naturalSize = { width: 7650, height: 9900 };
+  const big = await preparePdfImageAsset('data:image/png;base64,aW1hZ2U=', box);
+  assert.equal(big.format, 'JPEG', 'figures go in as JPEG so jsPDF does not re-deflate every pixel');
+  assert.ok(big.width <= pixelCap(box.maxWidthPt), `raster width capped at print dpi, got ${big.width}`);
+  assert.ok(big.height <= pixelCap(box.maxHeightPt), `raster height capped at print dpi, got ${big.height}`);
+  assert.ok(
+    Math.abs((big.width / big.height) - (7650 / 9900)) < 0.01,
+    `aspect ratio survives the downscale, got ${big.width}x${big.height}`
+  );
+
+  FakeImage.naturalSize = { width: 240, height: 120 };
+  const small = await preparePdfImageAsset('data:image/png;base64,aW1hZ2U=', box);
+  assert.equal(small.width, 240, 'an image that already fits is never upscaled');
+  assert.equal(small.height, 120, 'an image that already fits keeps its height');
+
+  FakeImage.naturalSize = { width: 256, height: 256 };
 }
 
 console.log('pdf-export template selfcheck passed');

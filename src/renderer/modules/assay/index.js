@@ -1,3 +1,5 @@
+import { createAnalyzeWorkspace } from './workspace/analyze-workspace.js';
+import { createPlotAgentController } from './plotly/plot-agent-controller.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
@@ -18,7 +20,15 @@ import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-
 import { createAssayFormAndList } from './workspace/form-and-list.js';
 import { createAssayNotebookLinks } from './workspace/notebook-links.js';
 
-export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
+export function initAssay({
+  state,
+  persist,
+  createId,
+  safeText,
+  onAssaysChanged,
+  onActiveAssayChanged,
+  onAssayModeChanged
+}) {
   const TabulatorLib = window.Tabulator || null;
   const elements = getAssayElements(document);
   const runtime = {
@@ -36,6 +46,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
   };
 
   let analysisView = null;
+  let analyzeWorkspace = null;
   let savedCreateDraftSnapshot = '';
   let savedResultsDraftSnapshot = '';
   let lastAgentContextSignature = '';
@@ -108,7 +119,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     elements,
     renderList,
     renderResultsAssayOptions,
-    clearActiveAssayInfo,
     onAssaysChanged,
     getAssayById,
     artifactStorage: { persistAssayArtifacts: (id) => artifactStorage.persistAssayArtifacts(id) },
@@ -137,13 +147,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
   }
 
+  // The results rail carries no status copy of its own; every confirmation and
+  // recoverable failure goes to the shared transient notice.
   function setResultStatus(message, isError = false) {
-    if (isError && message) {
-      showTransientNotice(String(message), { type: 'error' });
-    }
-    if (elements.assayResultStatus) {
-      elements.assayResultStatus.textContent = message || '';
-      elements.assayResultStatus.classList.toggle('is-error', Boolean(isError && message));
+    if (message) {
+      showTransientNotice(String(message), { type: isError ? 'error' : 'success' });
     }
   }
 
@@ -156,19 +164,13 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     elements.assayNumberDisplay.textContent = previewNextAssayNumber(state);
   }
 
-  function clearActiveAssayInfo() {
-    if (!elements.assayActiveAssayInfo) {
-      return;
-    }
-    elements.assayActiveAssayInfo.textContent = '';
-  }
-
   function getActiveResultsAssay() {
     const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     return assayId ? getAssayById(assayId) : null;
   }
 
   function notifyActiveAssayChanged() {
+    analyzeWorkspace?.refresh();
     if (typeof onActiveAssayChanged !== 'function') {
       return;
     }
@@ -222,7 +224,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -277,6 +278,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     buildResultGridColumns: resultsManager.buildResultGridColumns,
     buildResultGridData: resultsManager.buildResultGridData,
     getResultGridHeight: resultsManager.getResultGridHeight,
+    resultRowVisible: resultsManager.resultRowVisible,
+    onWorkspaceChanged: (options) => analyzeWorkspace?.refresh(options),
     onAnalysisRendered: (info) => {
       saveAssayAnalysisPreview(info);
     },
@@ -298,6 +301,25 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
   });
 
+  analyzeWorkspace = createAnalyzeWorkspace({
+    elements, runtime, resultsManager, analysisView,
+    getAssay: getActiveResultsAssay,
+    getDefinition: layoutManager.getCurrentDefinition
+  });
+
+  const plotAgent = createPlotAgentController({
+    getAssay: getActiveResultsAssay,
+    isActive: () => runtime.assayMode === 'results'
+      && (!document.body.dataset.activeView || document.body.dataset.activeView === 'assay-view'),
+    analysisView, persist, onChanged: notifyActiveAssayChanged
+  });
+  window.hikariApi?.onAssayPlotRequest?.(async (request) => {
+    let result;
+    try { result = await plotAgent.execute(request.args, { deadline: request.deadline }); }
+    catch (error) { result = { ok: false, status: 'failed', error: error.message }; }
+    window.hikariApi?.respondToAssayPlotRequest?.({ id: request.id, result });
+  });
+
   const { getAgentChatContext } = createAssayAgentContext({
     runtime,
     elements,
@@ -312,7 +334,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     const assay = getAssayById(assayId);
     if (!assay) {
       runtime.activeResultsAssayId = '';
-      clearActiveAssayInfo();
       return;
     }
     runtime.activeResultsAssayId = assay.id;
@@ -328,7 +349,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     layoutManager.renderPlatePreview(axisValues);
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
-    clearActiveAssayInfo();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.loadTransformSpec(assay.transformSpec);
     analysisView.clearOutput();
@@ -364,7 +384,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     renderProjectOptions,
     renderNotebookOptions,
     renderResultsAssayOptions,
-    clearActiveAssayInfo,
+    onAssayModeChanged,
     notifyActiveAssayChanged,
     renderAssayNumberDisplay,
     setCsvStatus,
@@ -432,6 +452,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     renderNotebookOptions,
     renderList,
     renderAgentPlotlyGraph: (artifact) => analysisView?.renderAgentPlotlyGraph?.(artifact) === true,
+    executePlotRequest: (input, options) => plotAgent.execute(input, options),
     saveUnsavedChanges: async () => {
       if (savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot) {
         if (!onSaveResults()) {

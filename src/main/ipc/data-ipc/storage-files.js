@@ -10,6 +10,8 @@ function createStorageFileHelpers({
   fs: fsApi,
   cleanText,
   getStorageRootPointerPath,
+  getStorageRoot = () => '',
+  getDefaultDataFilePath = () => '',
   setStorageRoot = () => {},
   paperKnowledgeDatabaseRuntime
 } = {}) {
@@ -72,6 +74,40 @@ function createStorageFileHelpers({
       throw new Error('Target path must be inside the configured storage path.');
     }
     return resolvedTarget;
+  }
+
+  // The storage root as this process knows it: app-paths keeps it in memory,
+  // seeded from the pointer file and refreshed on every auto-save, so it stays
+  // right even when the pointer write fails. Pointer and legacy snapshot follow.
+  async function readConfiguredStorageRoot() {
+    const liveRoot = cleanText(getStorageRoot(), 2400);
+    if (liveRoot) {
+      return liveRoot;
+    }
+    const pointerRoot = await readStorageRootFrom(getStorageRootPointerPath(), 'pointer');
+    if (pointerRoot) {
+      return pointerRoot;
+    }
+    // ponytail: pre-pointer installs only recorded the root inside a saved
+    // snapshot, so fall back to those. Drop once no one is upgrading from them.
+    return readStorageRootFrom(getDefaultDataFilePath(), 'snapshot');
+  }
+
+  // ensurePathWithinRoot only confines a target against whatever root it is
+  // handed, so taking that root from the payload made it decorative: a caller
+  // could name any folder as "the workspace" and stay trivially inside it.
+  // A caller may still say which workspace it means, but it has to be ours.
+  async function resolveConfiguredStorageRoot(claimedPath) {
+    const configuredRoot = await readConfiguredStorageRoot();
+    if (!configuredRoot) {
+      throw new Error('No storage path is configured yet.');
+    }
+    const resolvedRoot = path.resolve(configuredRoot);
+    const claimed = String(claimedPath || '').trim();
+    if (claimed && path.resolve(claimed) !== resolvedRoot) {
+      throw new Error('Storage path does not match the configured storage path.');
+    }
+    return resolvedRoot;
   }
 
   async function pathExists(targetPath) {
@@ -139,7 +175,7 @@ function createStorageFileHelpers({
       throw new Error('Missing imported file data.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -152,33 +188,16 @@ function createStorageFileHelpers({
       : await getUniqueFilePath(resolvedTargetFolder, fileName);
     const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
     await fs.writeFile(targetFilePath, binary);
-    let paperMarkdown = null;
-    if (payload?.transformPdfToMarkdown === true && /\.pdf$/i.test(targetFilePath)) {
-      paperMarkdown = await transformPaperPdfToMarkdown({
-        storagePath: resolvedStoragePath,
-        filePath: targetFilePath,
-        paper: {
-          title: payload?.paperTitle || payload?.title || fileName.replace(/\.pdf$/i, ''),
-          fileName: path.basename(targetFilePath),
-          storedRelativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
-          linkedType: payload?.linkedType,
-          linkedName: payload?.linkedName,
-          doi: payload?.doi
-        },
-        paperKnowledgeDatabaseRuntime,
-        skipExistingMarkdown: false,
-        source: 'manual-import'
-      }).catch((error) => ({
-        ok: false,
-        status: 'error',
-        error: String(error?.message || error)
-      }));
-    }
 
     return {
       filePath: targetFilePath,
       fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+    };
+  }
+
+  function buildPaperKnowledgeFields(paperMarkdown) {
+    return {
       knowledgeDatabase: paperMarkdown || null,
       knowledgeMarkdownRelativePath: cleanText(paperMarkdown?.markdown_relative_path, 2400),
       knowledgeExtractedTextRelativePath: cleanText(paperMarkdown?.extracted_text_relative_path, 2400),
@@ -187,6 +206,49 @@ function createStorageFileHelpers({
       knowledgeError: cleanText(paperMarkdown?.error || paperMarkdown?.paper_intake_error, 1200),
       paperIntakeStatus: cleanText(paperMarkdown?.paper_intake_status, 80),
       paperIntakeError: cleanText(paperMarkdown?.paper_intake_error, 1200)
+    };
+  }
+
+  // Intake (PDF -> Markdown + figures + structured records) runs for minutes on
+  // a real paper, so it is deliberately not part of storing the file: callers
+  // store the PDF, show the library row, then run this in the background.
+  async function transformStoredPaperPdf(payload) {
+    const storagePath = String(payload?.storagePath || '').trim();
+    if (!storagePath) {
+      throw new Error('Missing storage path.');
+    }
+
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
+    const filePath = resolveStorageFilePath(resolvedStoragePath, payload?.filePath, payload?.relativePath);
+    if (!/\.pdf$/i.test(filePath)) {
+      throw new Error('Stored file is not a PDF.');
+    }
+    const relativePath = path.relative(resolvedStoragePath, filePath).split(path.sep).join('/');
+
+    const paperMarkdown = await transformPaperPdfToMarkdown({
+      storagePath: resolvedStoragePath,
+      filePath,
+      paper: {
+        title: payload?.paperTitle || payload?.title || path.basename(filePath).replace(/\.pdf$/i, ''),
+        fileName: path.basename(filePath),
+        storedRelativePath: relativePath,
+        linkedType: payload?.linkedType,
+        linkedName: payload?.linkedName,
+        doi: payload?.doi
+      },
+      paperKnowledgeDatabaseRuntime,
+      skipExistingMarkdown: false,
+      source: 'manual-import'
+    }).catch((error) => ({
+      ok: false,
+      status: 'error',
+      error: String(error?.message || error)
+    }));
+
+    return {
+      filePath,
+      relativePath,
+      ...buildPaperKnowledgeFields(paperMarkdown)
     };
   }
 
@@ -211,7 +273,7 @@ function createStorageFileHelpers({
       throw new Error('Missing target folder.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const sourceFilePath = resolveStorageFilePath(
       resolvedStoragePath,
       payload?.sourcePath,
@@ -273,7 +335,7 @@ function createStorageFileHelpers({
       throw new Error('Missing log action.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -315,7 +377,7 @@ function createStorageFileHelpers({
       throw new Error('Missing target folder.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -369,10 +431,13 @@ function createStorageFileHelpers({
     sanitizeImportedFileName,
     asArray,
     ensurePathWithinRoot,
+    readConfiguredStorageRoot,
+    resolveConfiguredStorageRoot,
     pathExists,
     getUniqueFilePath,
     normalizeImportedDataBytes,
     storeImportedFile,
+    transformStoredPaperPdf,
     resolveStorageFilePath,
     moveStoredFile,
     appendNotebookPageLog,

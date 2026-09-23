@@ -111,16 +111,6 @@
   background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
 }
 
-/* Status copy appears here after result and grouping actions. Empty targets should
-   not create grid rows (and gaps), but return to normal flow as soon as text is set. */
-#assay-active-assay-info:empty,
-#assay-result-status:empty,
-#assay-transform-summary:empty,
-#assay-analysis-selection-status:empty,
-#assay-analysis-summary:empty {
-  display: none;
-}
-
 .assay-header-row {
   display: flex;
   align-items: center;
@@ -547,5 +537,68 @@
 }
 
 .assay-create-preview-panel > .assay-plate-toolbar {
-  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.assay-plate-toolbar .assay-mode-switch {
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-plate-toolbar .ghost-btn,
+.assay-plate-toolbar .assay-fill-mode-select,
+.assay-plate-toolbar .assay-conc-unit-input {
+  box-sizing: border-box;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  line-height: 20px;
+}
+
+.assay-plate-toolbar .ghost-btn {
+  white-space: nowrap;
+}
+
+.assay-plate-toolbar .assay-plate-fill-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.assay-plate-toolbar .assay-conc-unit-field {
+  margin: 0;
+}
+
+.assay-plate-toolbar .assay-conc-unit-input {
+  width: 84px;
+}
+
+.assay-plate-toolbar .assay-plate-clear-btn {
+  margin-inline-start: auto;
+  border-color: transparent;
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+
+.assay-plate-toolbar .assay-plate-clear-btn:hover {
+  color: var(--theme-text-strong);
+  background: var(--theme-surface-subtle);
+}
+
+.assay-plate-toolbar .assay-mode-switch > .calendar-view-active {
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: 0 1px 2px var(--theme-border);
 }

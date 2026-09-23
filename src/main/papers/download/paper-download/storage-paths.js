@@ -90,7 +90,7 @@ async function pathExists(targetPath) {
   }
 }
 
-async function getUniqueFilePath(folderPath, fileName) {
+async function getUniqueFilePath(folderPath, fileName, reservedPaths = null) {
   const parsed = path.parse(fileName);
   const safeNameBase = sanitizeStorageName(parsed.name, 'paper');
   const safeExt = String(parsed.ext || '.pdf').replace(/[^.\w-]+/g, '').slice(0, 24) || '.pdf';
@@ -100,7 +100,8 @@ async function getUniqueFilePath(folderPath, fileName) {
     const suffix = attempt === 0 ? '' : `_${attempt + 1}`;
     const candidateName = `${safeNameBase}${suffix}${safeExt}`;
     const candidatePath = path.join(folderPath, candidateName);
-    if (!(await pathExists(candidatePath))) {
+    if (!(await pathExists(candidatePath)) && !reservedPaths?.has(candidatePath)) {
+      reservedPaths?.add(candidatePath);
       return candidatePath;
     }
     attempt += 1;

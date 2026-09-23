@@ -61,7 +61,7 @@
   },
   {
     "name": "paper-download",
-    "description": "Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches."
+    "description": "Download a paper PDF into app storage, reusing saved copies and matching active jobs. A running result continues in the background; repeat the same DOI/title and collection to check it. Read any returned knowledge_markdown_path while experiment extraction continues. Browser assistance is available when sites block automated fetches."
   },
   {
     "name": "paper-analysis",

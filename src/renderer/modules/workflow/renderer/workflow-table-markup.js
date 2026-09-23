@@ -38,25 +38,6 @@ function createWorkflowTableMarkup({
     return days === 0 ? 'today' : (days === 1 ? 'yesterday' : `${days} d ago`);
   }
 
-  // Main steps as circles, active branch steps inline as squares, and one
-  // fork mark for each branch that has not been activated on this run.
-  function buildStepSequence(layout, entry) {
-    const sequence = [];
-    layout.mainPathIds.forEach((blockId, index) => {
-      sequence.push({ kind: 'main', blockId, index });
-      (layout.branches || [])
-        .filter((branch) => branch.anchorIndex === index)
-        .forEach((branch) => {
-          if (isBranchActiveForEntry(entry, branch)) {
-            branch.blockIds.forEach((branchBlockId) => sequence.push({ kind: 'branch', blockId: branchBlockId, branch }));
-          } else {
-            sequence.push({ kind: 'fork', branch });
-          }
-        });
-    });
-    return sequence;
-  }
-
   function stepDataAttributes(workflow, entry) {
     return `data-workflow-entry-id="${safeText(entry.id)}" data-workflow-workflow-id="${safeText(workflow.id)}"`;
   }
@@ -80,29 +61,15 @@ function createWorkflowTableMarkup({
   }
 
   function buildStepperMarkup(workflow, entry, layout, progress, activeBlockId) {
-    const sequence = buildStepSequence(layout, entry);
-    const nodes = sequence.map((item, position) => {
-      const previous = sequence[position - 1];
-      let link = '';
-      if (previous) {
-        const branchLink = item.kind === 'branch' || (item.kind === 'main' && previous.kind === 'branch');
-        const complete = Boolean(previous.blockId && item.blockId)
-          && getWorkflowStepState(entry, previous.blockId).status === 'completed'
-          && getWorkflowStepState(entry, item.blockId).status === 'completed';
-        link = `<span class="workflow-stepper-link${branchLink ? ' is-branch' : ''}${complete ? ' is-complete' : ''}" aria-hidden="true"></span>`;
-      }
-      if (item.kind === 'fork') {
-        const label = `Optional branch: ${branchNames(layout, item.branch)}`;
-        return `${link}<span class="workflow-stepper-fork" role="img" title="${safeText(label)}" aria-label="${safeText(label)}">${FORK_ICON}</span>`;
-      }
+    function nodeMarkup(item, placement = '') {
       const block = layout.blockById.get(item.blockId);
       const stepState = getWorkflowStepState(entry, item.blockId);
       const openable = isWorkflowStepOpenable(entry, layout, item.blockId);
       const dotState = classifyWorkflowDot(stepState, item.blockId, activeBlockId, progress);
       const title = item.kind === 'main' ? `${item.index + 1}. ${titleForBlock(block)}` : `${titleForBlock(block)} (branch)`;
       const hint = openable ? dotState.title : 'Locked — complete earlier steps first';
-      return `${link}<button
-        type="button"
+      return `<button
+        type="button" ${placement}
         class="workflow-stepper-node ${dotState.className}${item.kind === 'branch' ? ' is-branch' : ''}${openable ? '' : ' is-locked'}"
         data-workflow-step-open="${safeText(item.blockId)}"
         ${stepDataAttributes(workflow, entry)}
@@ -110,8 +77,33 @@ function createWorkflowTableMarkup({
         aria-label="${safeText(`${title} for ${workflow.name || 'workflow'}: ${hint}`)}"
         ${openable ? '' : 'disabled aria-disabled="true"'}
       ></button>`;
-    });
-    return `<div class="workflow-stepper">${nodes.join('')}</div>`;
+    }
+    function linkMarkup(fromId, toId, placement = '', branch = false) {
+      const complete = getWorkflowStepState(entry, fromId).status === 'completed'
+        && getWorkflowStepState(entry, toId).status === 'completed';
+      return `<span class="workflow-stepper-link${branch ? ' is-branch' : ''}${complete ? ' is-complete' : ''}" ${placement} aria-hidden="true"></span>`;
+    }
+    const main = layout.mainPathIds.map((blockId, index) => {
+      const column = index * 2 + 1;
+      const link = index ? linkMarkup(layout.mainPathIds[index - 1], blockId, `style="grid-column: ${column - 1}; grid-row: 1"`) : '';
+      return link + nodeMarkup({ kind: 'main', blockId, index }, `style="grid-column: ${column}; grid-row: 1"`);
+    }).join('');
+    const branches = (layout.branches || []).map((branch, index) => {
+      const active = isBranchActiveForEntry(entry, branch);
+      const complete = active && branch.blockIds.every((id) => getWorkflowStepState(entry, id).status === 'completed');
+      const label = `${active ? 'Branch' : 'Optional branch'}: ${branchNames(layout, branch)}`;
+      const nodes = active ? branch.blockIds.map((blockId, stepIndex) => {
+        const link = stepIndex ? linkMarkup(branch.blockIds[stepIndex - 1], blockId, '', true) : '';
+        return link + nodeMarkup({ kind: 'branch', blockId });
+      }).join('') : `<span class="workflow-stepper-fork" role="img" title="${safeText(label)}" aria-label="${safeText(label)}">${FORK_ICON}<span>Optional</span></span>`;
+      const column = branch.anchorIndex * 2 + 1;
+      const row = index + 2;
+      return `<span class="workflow-stepper-stem${complete ? ' is-complete' : ''}" style="grid-column: ${column}; grid-row: 2 / ${row + 1}" aria-hidden="true"></span>
+        <div class="workflow-stepper-branch${active ? ' is-active' : ''}${complete ? ' is-complete' : ''}" style="grid-column: ${column} / -1; grid-row: ${row}" role="group" aria-label="${safeText(label)}">${nodes}</div>`;
+    }).join('');
+    const columns = layout.mainPathIds.length;
+    const tracks = columns > 1 ? `repeat(${columns - 1}, 14px minmax(24px, 1fr)) 14px` : '14px';
+    return `<div class="workflow-stepper" style="grid-template-columns: ${tracks}">${main}${branches}</div>`;
   }
 
   function buildRunRowMarkup(workflow, activeWorkflow) {
@@ -130,7 +122,6 @@ function createWorkflowTableMarkup({
     const activeBlockId = selected ? runtime.activeBlockId : '';
     const failedId = progress.orderedIds.find((blockId) => getWorkflowStepState(entry, blockId).status === 'failed');
     const nextBlock = layout.blockById.get(failedId || progress.nextBlockId) || null;
-    const project = (state.projects || []).find((item) => item.id === workflow.projectId) || null;
     const nextMarkup = progress.complete
       ? stateChipMarkup(entry, progress)
       : (nextBlock
@@ -140,7 +131,6 @@ function createWorkflowTableMarkup({
       <tr class="workflow-ledger-row${selected ? ' is-selected' : ''}" data-workflow-run-open="${safeText(workflow.id)}">
         <td>
           <div class="workflow-ledger-name">${safeText(workflow.name || 'Untitled workflow')}</div>
-          ${project ? `<div class="workflow-ledger-project">${safeText(project.name)}</div>` : ''}
         </td>
         <td class="workflow-ledger-progress-cell">
           <div class="workflow-ledger-progress">
@@ -168,8 +158,8 @@ function createWorkflowTableMarkup({
     const dateText = completed
       ? `done ${formatDay(stepState.completedAt)}`
       : (failed ? `failed ${formatDay(stepState.updatedAt)}` : (progress.nextBlockId === blockId ? 'next' : ''));
-    const statusButton = (status, label, className) => `
-      <button type="button" class="${className}" data-workflow-step-status="${status}" data-workflow-block-id="${safeText(blockId)}" ${ids} ${disabled}>${label}</button>
+    const statusButton = (status, label, className, description = label) => `
+      <button type="button" class="${className}" title="${description}" aria-label="${description}" data-workflow-step-status="${status}" data-workflow-block-id="${safeText(blockId)}" ${ids} ${disabled}>${label}</button>
     `;
     const instructionMarkup = getBlockType(block) === BLOCK_TYPES.TEXT
       ? `<p class="workflow-step-inline-text">${safeText(block.text || 'No text provided.')}</p>`
@@ -220,18 +210,15 @@ function createWorkflowTableMarkup({
               Result
               <textarea rows="2" data-workflow-step-result-field="${safeText(blockId)}" ${ids} placeholder="What happened?" ${disabled}>${safeText(stepState.result)}</textarea>
             </label>
-            <div class="workflow-drawer-files">
-              ${filesMarkup}
-              <label class="workflow-drawer-file-btn">
-                Attach files
-                <input type="file" multiple data-workflow-step-files="${safeText(blockId)}" ${ids} ${disabled} />
-              </label>
-            </div>
+            ${filesMarkup ? `<div class="workflow-drawer-files" aria-label="Attached files">${filesMarkup}</div>` : ''}
             <div class="workflow-drawer-actions">
-              ${completed ? statusButton('not_done', 'Reopen', 'ghost-btn') : statusButton('completed', 'Mark complete', 'primary-btn')}
-              ${failed ? statusButton('pending', 'Retry', 'ghost-btn') : statusButton('failed', 'Mark failed', 'ghost-btn workflow-drawer-danger-btn')}
-              <button type="button" class="ghost-btn" data-workflow-step-open-notebook="${safeText(blockId)}" ${ids} ${disabled}>Notebook page</button>
-              <button type="button" class="ghost-btn" data-workflow-step-create-assay="${safeText(blockId)}" ${ids} ${disabled}>+ Assay</button>
+              ${completed ? statusButton('not_done', 'Reopen', 'ghost-btn') : statusButton('completed', 'Complete', 'primary-btn', 'Mark complete')}
+              ${failed ? statusButton('pending', 'Retry', 'ghost-btn') : statusButton('failed', 'Fail', 'ghost-btn workflow-drawer-danger-btn', 'Mark failed')}
+              <button type="button" class="ghost-btn" data-workflow-step-open-notebook="${safeText(blockId)}" ${ids} title="Open notebook page" aria-label="Open notebook page" ${disabled}>Notebook</button>
+              <label class="workflow-drawer-file-btn" title="Attach files">
+                Attach
+                <input type="file" multiple aria-label="Attach files" data-workflow-step-files="${safeText(blockId)}" ${ids} ${disabled} />
+              </label>
               ${skipBranchMarkup}
             </div>
           </div>
@@ -323,8 +310,23 @@ function createWorkflowTableMarkup({
     }
 
     if (!workflows.length) {
-      return '<p class="small-note">Use Add Workflow to create one.</p>';
+      return '<p class="small-note">Use New process to start this workflow.</p>';
     }
+
+    const groups = new Map();
+    workflows.forEach((workflow) => {
+      const key = workflow.projectId || '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(workflow);
+    });
+    const groupedRows = [...groups].map(([projectId, processes]) => {
+      const project = (state.projects || []).find((item) => item.id === projectId);
+      const name = project?.name || (projectId ? `Missing project (${projectId})` : 'No project');
+      return `<tbody><tr class="workflow-project-heading"><th colspan="4" scope="rowgroup">
+        <div><span>${safeText(name)}</span><span class="workflow-ledger-count">${processes.length} ${processes.length === 1 ? 'process' : 'processes'}</span>
+        ${!projectId || project ? `<button type="button" class="ghost-btn" data-workflow-project-add="${safeText(projectId)}" aria-label="New process in ${safeText(name)}">+ New process</button>` : ''}</div>
+      </th></tr>${processes.map((workflow) => buildRunRowMarkup(workflow, activeWorkflow)).join('')}</tbody>`;
+    }).join('');
 
     return `
       <div class="workflow-execution-shell">
@@ -332,15 +334,13 @@ function createWorkflowTableMarkup({
           <table class="workflow-ledger">
             <thead>
               <tr>
-                <th>Run</th>
+                <th>Process</th>
                 <th>Progress</th>
                 <th>Next step</th>
                 <th>Updated</th>
               </tr>
             </thead>
-            <tbody>
-              ${workflows.map((workflow) => buildRunRowMarkup(workflow, activeWorkflow)).join('')}
-            </tbody>
+            ${groupedRows}
           </table>
         </div>
         ${activeWorkflow ? buildDrawerMarkup(activeWorkflow) : ''}

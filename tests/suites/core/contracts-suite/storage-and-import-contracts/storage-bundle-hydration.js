@@ -202,6 +202,9 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           dialog: {},
           shell: {},
           mainDataHelpers: {},
+          // These handlers write into the configured workspace, so the test must
+          // stand one up the way an auto-save would.
+          getStorageRoot: () => tempDir,
           importStorageRoot: async () => ({}),
           discoverPapersFromStorageRoot: async () => ({}),
           syncSqliteBundleFromSnapshot: async () => ({}),
@@ -251,6 +254,9 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           dialog: {},
           shell: {},
           mainDataHelpers: {},
+          // These handlers write into the configured workspace, so the test must
+          // stand one up the way an auto-save would.
+          getStorageRoot: () => tempDir,
           paperKnowledgeDatabaseRuntime: {
             async ingestPaperPdf(input = {}) {
               intakeCalls.push(input);
@@ -269,12 +275,22 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           syncSqliteBundleFromSnapshot: async () => ({})
         });
 
-        const result = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
+        const stored = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
           storagePath: tempDir,
           targetFolder: path.join(tempDir, 'Project', 'Atlas', 'Papers'),
           fileName: 'paper-one.pdf',
-          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64'),
-          transformPdfToMarkdown: true,
+          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64')
+        });
+
+        // Storing the PDF must not wait on intake: the library row appears
+        // first, and the caller runs the pipeline afterwards.
+        assert.equal(stored.ok, true);
+        assert.equal(intakeCalls.length, 0);
+
+        const result = await handlers.get(STORAGE.TRANSFORM_PAPER_PDF)(null, {
+          storagePath: tempDir,
+          filePath: stored.filePath,
+          relativePath: stored.relativePath,
           paperTitle: 'Paper One',
           linkedType: 'project',
           linkedName: 'Atlas'
@@ -998,7 +1014,166 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
       assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
       assert.match(chemicalSqliteSyncSource, /window\.hikariApi\?\.syncSqliteBundle/);
-      assert.match(chemicalSqliteSyncSource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
+      // The destination belongs to main. The renderer names the bundle, not the file.
+      assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.index.sqlite'), false);
+      assert.equal(chemicalSqliteSyncSource.includes('sqlitePath'), false);
       assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.json'), false);
+    });
+    test('sqlite bundle sync ignores a caller-supplied path and writes inside the recorded storage root', async () => {
+      const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+      const { STORAGE } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-sqlite-sync-path-'));
+      const handlers = new Map();
+      const ipcMain = { handle(channel, handler) { handlers.set(channel, handler); } };
+      try {
+        const storageRoot = path.join(tempDir, 'Lab');
+        const pointerPath = path.join(tempDir, 'pointer.json');
+        await fsPromises.mkdir(storageRoot, { recursive: true });
+        await fsPromises.writeFile(pointerPath, JSON.stringify({ storagePath: storageRoot }), 'utf8');
+
+        const writtenPaths = [];
+        registerDataIpc({
+          ipcMain,
+          fs: fsPromises,
+          dialog: {},
+          shell: {},
+          mainDataHelpers: {},
+          getStorageRootPointerPath: () => pointerPath,
+          getDefaultDataFilePath: () => path.join(tempDir, 'missing-data.json'),
+          importStorageRoot: async () => ({}),
+          discoverPapersFromStorageRoot: async () => ({}),
+          syncSqliteBundleFromSnapshot: async ({ sqlitePath }) => {
+            writtenPaths.push(sqlitePath);
+            return { sqlitePath };
+          },
+          listSequenceEntries: async () => ({}),
+          getSequenceEntry: async () => ({}),
+          upsertSequenceEntry: async () => ({}),
+          promoteSequenceEntry: async () => ({}),
+          deleteSequenceEntry: async () => ({}),
+          annotateSequenceRecord: async () => ({}),
+          searchSequenceFeatures: async () => ({}),
+          listRecognizedBackbones: async () => ({}),
+          upsertRecognizedBackbone: async () => ({}),
+          recognizeSequenceBackbone: async () => ({})
+        });
+
+        const escapePath = path.join(tempDir, '..', 'escaped.sqlite');
+        const result = await handlers.get(STORAGE.SYNC_SQLITE_BUNDLE)(null, {
+          mode: 'chemical',
+          snapshot: { labInventory: { chemicals: [] } },
+          sqlitePath: escapePath,
+          filePath: escapePath
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(writtenPaths.length, 1);
+        assert.equal(writtenPaths[0], path.join(storageRoot, 'hikari-chemicals.index.sqlite'));
+        assert.equal(writtenPaths[0].includes('escaped.sqlite'), false);
+
+        // With no storage root on record there is nothing to write into.
+        const orphanHandlers = new Map();
+        registerDataIpc({
+          ipcMain: { handle(channel, handler) { orphanHandlers.set(channel, handler); } },
+          fs: fsPromises,
+          dialog: {},
+          shell: {},
+          mainDataHelpers: {},
+          getStorageRootPointerPath: () => path.join(tempDir, 'absent-pointer.json'),
+          getDefaultDataFilePath: () => path.join(tempDir, 'missing-data.json'),
+          importStorageRoot: async () => ({}),
+          discoverPapersFromStorageRoot: async () => ({}),
+          syncSqliteBundleFromSnapshot: async ({ sqlitePath }) => {
+            writtenPaths.push(sqlitePath);
+            return { sqlitePath };
+          },
+          listSequenceEntries: async () => ({}),
+          getSequenceEntry: async () => ({}),
+          upsertSequenceEntry: async () => ({}),
+          promoteSequenceEntry: async () => ({}),
+          deleteSequenceEntry: async () => ({}),
+          annotateSequenceRecord: async () => ({}),
+          searchSequenceFeatures: async () => ({}),
+          listRecognizedBackbones: async () => ({}),
+          upsertRecognizedBackbone: async () => ({}),
+          recognizeSequenceBackbone: async () => ({})
+        });
+        const refused = await orphanHandlers.get(STORAGE.SYNC_SQLITE_BUNDLE)(null, {
+          mode: 'chemical',
+          snapshot: { labInventory: { chemicals: [] } },
+          sqlitePath: escapePath
+        });
+        assert.equal(refused.ok, false);
+        assert.equal(writtenPaths.length, 1, 'nothing may be written without a recorded storage root');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('storage file handlers refuse a workspace root the caller made up', async () => {
+      const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+      const { STORAGE } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-foreign-root-'));
+      const handlers = new Map();
+      try {
+        const storageRoot = path.join(tempDir, 'Lab');
+        const outsideRoot = path.join(tempDir, 'Elsewhere');
+        await fsPromises.mkdir(storageRoot, { recursive: true });
+        await fsPromises.mkdir(outsideRoot, { recursive: true });
+
+        registerDataIpc({
+          ipcMain: { handle(channel, handler) { handlers.set(channel, handler); } },
+          fs: fsPromises,
+          dialog: {},
+          shell: {},
+          mainDataHelpers: {},
+          getStorageRoot: () => storageRoot,
+          importStorageRoot: async () => ({}),
+          discoverPapersFromStorageRoot: async () => ({}),
+          syncSqliteBundleFromSnapshot: async () => ({}),
+          listSequenceEntries: async () => ({}),
+          getSequenceEntry: async () => ({}),
+          upsertSequenceEntry: async () => ({}),
+          promoteSequenceEntry: async () => ({}),
+          deleteSequenceEntry: async () => ({}),
+          annotateSequenceRecord: async () => ({}),
+          searchSequenceFeatures: async () => ({}),
+          listRecognizedBackbones: async () => ({}),
+          upsertRecognizedBackbone: async () => ({}),
+          recognizeSequenceBackbone: async () => ({})
+        });
+
+        // Declaring a different folder as "the workspace" used to satisfy the
+        // containment check trivially, because the check used that same folder.
+        const escaped = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
+          storagePath: outsideRoot,
+          targetFolder: outsideRoot,
+          fileName: 'planted.pdf',
+          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64')
+        });
+        assert.equal(escaped.ok, false);
+        assert.match(String(escaped.error || ''), /storage path/i);
+        assert.deepEqual(await fsPromises.readdir(outsideRoot), []);
+
+        // The real workspace still works, and relative paths stay confined.
+        const stored = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
+          storagePath: storageRoot,
+          targetFolder: path.join(storageRoot, 'Papers'),
+          fileName: 'kept.pdf',
+          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64')
+        });
+        assert.equal(stored.ok, true);
+        assert.equal(stored.relativePath, 'Papers/kept.pdf');
+
+        const traversal = await handlers.get(STORAGE.WRITE_JSON_FILE)(null, {
+          storagePath: storageRoot,
+          targetFolder: path.join(storageRoot, '..', 'Elsewhere'),
+          fileName: 'planted.json',
+          data: {}
+        });
+        assert.equal(traversal.ok, false);
+        assert.deepEqual(await fsPromises.readdir(outsideRoot), []);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
     });
 };

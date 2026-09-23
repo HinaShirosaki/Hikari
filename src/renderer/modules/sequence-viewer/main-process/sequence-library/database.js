@@ -2,6 +2,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { resolveSqlJsWasmJsPath } = require('../../../../../main/lib/sqljs-path.js');
+const { persistSqliteDatabase } = require('../../../../../main/lib/sqlite-persist.js');
 const { FEATURE_INDEX_VERSION } = require('./constants');
 const {
   cleanText,
@@ -172,13 +173,7 @@ async function openDatabase(sqlitePath) {
   return db;
 }
 async function persistDatabase(sqlitePath, db) {
-  const bytes = db.export();
-  await fs.mkdir(path.dirname(sqlitePath), { recursive: true });
-  const temporaryPath = `${sqlitePath}.${process.pid}.tmp`;
-  try {
-    await fs.writeFile(temporaryPath, Buffer.from(bytes));
-    await fs.rename(temporaryPath, sqlitePath);
-  } finally { await fs.rm(temporaryPath, { force: true }); }
+  await persistSqliteDatabase(sqlitePath, db);
 }
 function readSingleRow(db, sql, values = []) {
   const stmt = db.prepare(sql);

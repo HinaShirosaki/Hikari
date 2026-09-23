@@ -139,7 +139,7 @@ export function createHistoryActionController({
     }
     const rejectDraftButton = event?.target?.closest?.('[data-agent-reject-planned-page]');
     if (rejectDraftButton) {
-      notebookActions.rejectPlannedPage(rejectDraftButton.dataset.agentRejectPlannedPage);
+      notebookActions.rejectPlannedPage(rejectDraftButton.dataset.agentRejectPlannedPage, rejectDraftButton.dataset.agentDraftId);
       return;
     }
     const reviewMessageButton = event?.target?.closest?.('[data-agent-review-message]')
@@ -207,14 +207,14 @@ export function createHistoryActionController({
     const openNotebookButton = event?.target?.closest?.('[data-agent-open-notebook-page]')
       || (event?.target?.dataset?.agentOpenNotebookPage ? event.target : null);
     if (openNotebookButton) {
-      notebookActions.openNotebookPage(openNotebookButton.dataset.agentOpenNotebookPage);
+      notebookActions.openNotebookPage(openNotebookButton.dataset.agentOpenNotebookPage, openNotebookButton.dataset.agentDraftId);
       return;
     }
 
     const createButton = event?.target?.closest?.('[data-agent-create-planned-page]')
       || (event?.target?.dataset?.agentCreatePlannedPage ? event.target : null);
     if (createButton) {
-      notebookActions.createPlannedPage(createButton.dataset.agentCreatePlannedPage);
+      notebookActions.createPlannedPage(createButton.dataset.agentCreatePlannedPage, createButton.dataset.agentDraftId);
     }
   }
 

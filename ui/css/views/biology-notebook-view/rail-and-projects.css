@@ -180,6 +180,10 @@
   width: calc(100% + var(--app-left-rail-padding-inline, 16px));
 }
 
+#biology-notebook-view .biology-notebook-folder-children > .biology-notebook-folder--process {
+  width: 100%;
+}
+
 #biology-notebook-view .biology-notebook-folder-item {
   box-sizing: border-box;
 }

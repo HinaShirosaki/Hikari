@@ -71,8 +71,8 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
       {
         title: '',
         field: 'rowLabel',
-        width: 54,
-        minWidth: 54,
+        width: 38,
+        minWidth: 38,
         headerSort: false,
         hozAlign: 'center',
         frozen: true,
@@ -145,12 +145,16 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
     for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
       const row = {
         __rowIndex: rowIndex,
+        __hasContent: false,
         rowLabel: toRowLabel(rowIndex),
         rowMeta: metadata.rowValues[rowIndex] || '—'
       };
       for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
         const well = wellIdFor(rowIndex, columnIndex);
         row[toResultField(columnIndex)] = values?.[well] ?? '';
+        // Keep mapped, editable blank rows visible. Only wholly unused rows fold
+        // away; filtering never removes cells from the underlying data model.
+        row.__hasContent ||= isMappedWell(well) || String(values?.[well] ?? '').trim() !== '';
       }
       rows.push(row);
     }
@@ -165,6 +169,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
   }
 
   return {
+    resultRowVisible: (row) => runtime.showEmptyResultRows === true || row.__hasContent,
     buildResultGridSignature,
     buildResultGridColumns,
     buildResultGridData,
