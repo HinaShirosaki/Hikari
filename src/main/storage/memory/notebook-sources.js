@@ -3,7 +3,7 @@
 const crypto = require('node:crypto');
 const path = require('node:path');
 const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('../storage-utils');
-const { hasWorkflowContext, normalizeRelativePath, normalizeWhitespace, truncateInline } = require('./text-utils.js');
+const { hasWorkflowContext, normalizeRelativePath, normalizeWhitespace } = require('./text-utils.js');
 
 function projectRecordMatchesSource(projectRecord, source = {}) {
   const record = ensureObject(projectRecord);
@@ -160,8 +160,7 @@ function buildNotebookMemorySource(storageRootPath, projectRecord, entry = {}) {
     pageFilePath,
     sourceRelativePath: normalizeRelativePath(path.relative(storageRootPath, pageFilePath)),
     corpus,
-    hash,
-    fallbackConclusion: truncateInline(corpus, 800)
+    hash
   };
 }
 

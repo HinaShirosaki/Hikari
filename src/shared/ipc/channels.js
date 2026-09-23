@@ -82,7 +82,9 @@ const INVENTORY = Object.freeze({
 });
 
 const ASSAY = Object.freeze({
-  PARSE_RESULT_IMPORT: 'assay:parse-result-import'
+  PARSE_RESULT_IMPORT: 'assay:parse-result-import',
+  PLOT_REQUEST: 'assay:plot-request',
+  PLOT_RESPONSE: 'assay:plot-response'
 });
 
 const SEQUENCE_LIBRARY = Object.freeze({

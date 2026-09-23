@@ -1,7 +1,8 @@
 'use strict';
 
+const { normalizeFolderKey } = require('../memory/text-utils.js');
 const { PROJECT_MEMORY_AUTO_END, PROJECT_MEMORY_AUTO_START } = require('../storage-memory');
-const { cleanText } = require('../storage-utils');
+const { asArray, cleanText, ensureObject } = require('../storage-utils');
 
 function pickLatestTimestamp(...values) {
   let latest = '';
@@ -20,6 +21,26 @@ function pickLatestTimestamp(...values) {
 function buildProjectFolderDisplayName(folderName) {
   const normalized = cleanText(folderName, 320);
   return normalized ? normalized.replace(/_/g, ' ') : 'Untitled Project';
+}
+
+// The folder IS the project's identity on disk: it was written as
+// sanitizeFolderName(project.name), so the same transform finds the live record
+// again. Without this, a project whose folder holds no page.json to read the id
+// back from hydrates under a minted id and lands beside itself in the list.
+// ponytail: two names that sanitize to one folder key collide and the first
+// known project wins. They already share a single folder, so memory for the
+// second is lost before hydration sees it; fix that at the folder layer.
+function buildProjectIdResolverByFolder(knownProjects) {
+  const byFolderKey = new Map();
+  asArray(knownProjects).forEach((project) => {
+    const source = ensureObject(project);
+    const id = cleanText(source.id, 220);
+    const folderKey = normalizeFolderKey(source.name);
+    if (id && folderKey && !byFolderKey.has(folderKey)) {
+      byFolderKey.set(folderKey, id);
+    }
+  });
+  return (folderName) => byFolderKey.get(normalizeFolderKey(folderName)) || '';
 }
 
 function buildProjectFolderFallbackId(folderName) {
@@ -71,6 +92,7 @@ function parseProjectMemoryMarkdown(rawMarkdown) {
 module.exports = {
   buildProjectFolderDisplayName,
   buildProjectFolderFallbackId,
+  buildProjectIdResolverByFolder,
   parseProjectMemoryMarkdown,
   pickLatestTimestamp
 };

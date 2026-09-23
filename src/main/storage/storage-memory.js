@@ -3,7 +3,7 @@
 const path = require('node:path');
 const { asArray, ensureObject } = require('./storage-utils');
 const { buildNotebookConclusionRequest, validateNotebookConclusionResult } = require('./memory/conclusion-request.js');
-const { CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME, MEMORY_FILE_NAME, NOTEBOOK_MEMORY_MODEL_FALLBACK, PAPER_SUMMARY_PENDING, PROJECT_MEMORY_AUTO_END, PROJECT_MEMORY_AUTO_START } = require('./memory/constants.js');
+const { CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME, MEMORY_FILE_NAME, NOTEBOOK_MEMORY_MODEL_FALLBACK, NOTEBOOK_SUMMARY_PENDING, PAPER_SUMMARY_PENDING, PROJECT_MEMORY_AUTO_END, PROJECT_MEMORY_AUTO_START } = require('./memory/constants.js');
 const { buildProjectMemoryMarkdown, mergeProjectMemoryMarkdown } = require('./memory/memory-markdown.js');
 const { buildNotebookResultCorpus, deriveKnowledgePaperId, hashNotebookResult } = require('./memory/notebook-sources.js');
 const { buildProjectMemoryInput, generateAndCacheNotebookConclusion, renderProjectMemoryInput } = require('./memory/project-inputs.js');
@@ -17,6 +17,7 @@ async function writeProjectMemoryFile({
   snapshot,
   projectRecord,
   requestNotebookConclusion,
+  agentMemoryFilePath = '',
   regenerateConclusions = false
 } = {}) {
   const filePath = path.join(folderPath, MEMORY_FILE_NAME);
@@ -26,7 +27,8 @@ async function writeProjectMemoryFile({
     filePath,
     snapshot,
     projectRecord,
-    requestNotebookConclusion
+    requestNotebookConclusion,
+    agentMemoryFilePath
   });
   latestProjectMemoryInputs.set(input.projectKey, input);
   const rendered = await enqueueProjectMemoryWork(input.projectKey, () => (
@@ -100,6 +102,7 @@ module.exports = {
   CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   NOTEBOOK_MEMORY_MODEL_FALLBACK,
+  NOTEBOOK_SUMMARY_PENDING,
   PAPER_SUMMARY_PENDING,
   PROJECT_MEMORY_AUTO_END,
   PROJECT_MEMORY_AUTO_START,

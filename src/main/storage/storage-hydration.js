@@ -93,7 +93,8 @@ async function hydrateSnapshotFromBundle({
     || cleanText(bundlePaths?.storageRootPath, 2400);
   if (storageRootPath) {
     const projectHydrated = await hydrateProjectRootFromStoragePath({
-      storagePath: storageRootPath
+      storagePath: storageRootPath,
+      knownProjects: nextSnapshot.projects
     });
     asArray(projectHydrated.warnings).forEach((warning) => {
       if (warning) {

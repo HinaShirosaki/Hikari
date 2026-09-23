@@ -173,7 +173,8 @@ async function writeProjectMemoryFiles(
   storageRootPath,
   snapshot,
   releaseOfficialSkills,
-  requestNotebookConclusion
+  requestNotebookConclusion,
+  agentMemoryFilePath
 ) {
   if (!storageRootPath) {
     return [];
@@ -196,7 +197,8 @@ async function writeProjectMemoryFiles(
       folderPath,
       snapshot,
       projectRecord,
-      requestNotebookConclusion
+      requestNotebookConclusion,
+      agentMemoryFilePath
     });
     writtenPaths.push(result.filePath || filePath);
   }
@@ -221,7 +223,8 @@ async function syncBundleFromSnapshot({
   snapshot,
   fallbackDataFilePath = '',
   releaseOfficialMcpSkillsForWorkspace = async () => {},
-  requestProjectMemoryConclusion = null
+  requestProjectMemoryConclusion = null,
+  getAgentMemoryFilePath = null
 } = {}) {
   const safeSnapshot = ensureObject(snapshot);
   const bundlePaths = getBundlePaths({
@@ -259,7 +262,8 @@ async function syncBundleFromSnapshot({
       bundlePaths.storageRootPath,
       safeSnapshot,
       releaseOfficialMcpSkillsForWorkspace,
-      requestProjectMemoryConclusion
+      requestProjectMemoryConclusion,
+      typeof getAgentMemoryFilePath === 'function' ? cleanText(getAgentMemoryFilePath(), 2400) : ''
     )
     : [];
   await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});

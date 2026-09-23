@@ -12,7 +12,8 @@ export const GROUP_BY_VALUES = Object.freeze([
 ]);
 export const X_AXIS_VALUES = Object.freeze(['auto', 'concentration', 'sample', 'column']);
 export const ANALYSIS_VALUES = Object.freeze([
-  'summary', 'linear', 'sigmoidal', 'hyperbola', 'polynomial', 'pade11', 'normalize'
+  'summary', 'linear', 'sigmoidal', 'hyperbola', 'polynomial', 'pade11', 'exponential',
+  'normalize', 'percent_control', 'plate_qc', 'zscore', 'ttest'
 ]);
 
 export const ANALYSIS_LABELS = Object.freeze({
@@ -22,8 +23,19 @@ export const ANALYSIS_LABELS = Object.freeze({
   hyperbola: 'Hyperbola',
   polynomial: 'Polynomial',
   pade11: 'Pade (1,1)',
-  normalize: 'Normalize to baseline'
+  exponential: 'One-phase exponential',
+  normalize: 'Normalize to baseline',
+  percent_control: 'Percent of control',
+  plate_qc: "Plate QC (Z'-factor)",
+  zscore: 'Well Z-score / hit list',
+  ttest: 'Compare groups to control'
 });
+
+// The analyses that pool wells into groups and need no X axis. Everything else is a
+// curve fit over the X axis.
+export const GROUPED_ANALYSES = Object.freeze([
+  'summary', 'percent_control', 'plate_qc', 'zscore', 'ttest'
+]);
 
 function pick(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback;
@@ -39,7 +51,11 @@ export function normalizeAnalysisSpec(input) {
     polyOrder: Number.isInteger(order) && order >= 2 && order <= 4 ? order : 2,
     asymmetric: Boolean(source.asymmetric),
     subtotals: Boolean(source.subtotals),
-    errorBars: source.errorBars !== false
+    errorBars: source.errorBars !== false,
+    // Control wells are named, not flagged on the plate: these match a group label or
+    // a sample ID. Blank falls back to the naming conventions in plate-stats.js.
+    highControl: String(source.highControl || '').trim(),
+    lowControl: String(source.lowControl || '').trim()
   };
 }
 
@@ -63,7 +79,10 @@ const LEGACY_METHODS = Object.freeze({
   standard_curve_hyperbola: { analysis: 'hyperbola', xAxis: 'concentration' },
   standard_curve_quadratic: { analysis: 'polynomial', xAxis: 'concentration', polyOrder: 2 },
   standard_curve_cubic: { analysis: 'polynomial', xAxis: 'concentration', polyOrder: 3 },
-  standard_curve_pade_11: { analysis: 'pade11', xAxis: 'concentration' }
+  standard_curve_pade_11: { analysis: 'pade11', xAxis: 'concentration' },
+  percent_inhibition: { analysis: 'percent_control' },
+  z_factor: { analysis: 'plate_qc' },
+  one_phase_decay: { analysis: 'exponential', xAxis: 'concentration' }
 });
 
 export function specFromLegacyMethod(method) {
@@ -80,8 +99,14 @@ export function describeAnalysisSpec(spec) {
     parts[0] = `Polynomial fit (order ${normalized.polyOrder})`;
   }
   parts.push(`grouped by ${normalized.groupBy}`);
-  if (normalized.analysis !== 'summary') {
+  if (!GROUPED_ANALYSES.includes(normalized.analysis)) {
     parts.push(`X = ${normalized.xAxis}`);
+  }
+  if (normalized.highControl) {
+    parts.push(`high control = ${normalized.highControl}`);
+  }
+  if (normalized.lowControl) {
+    parts.push(`low control = ${normalized.lowControl}`);
   }
   return parts.join(' · ');
 }

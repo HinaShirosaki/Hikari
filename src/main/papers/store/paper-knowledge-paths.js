@@ -33,10 +33,58 @@ function normalizeDoi(value) {
     .replace(/\s+/g, '');
 }
 
+const DOI_PATTERN = /\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i;
+
+// A heading alone on its line. "References ... 245" in a table of contents has
+// trailing text, so it will not match and will not truncate the document.
+const REFERENCES_HEADING_PATTERN = /^[^\S\r\n]*(?:\d+[.)]?[^\S\r\n]*)?(?:references(?:[^\S\r\n]+and[^\S\r\n]+notes)?|bibliography|literature[^\S\r\n]+cited|works[^\S\r\n]+cited)[^\S\r\n]*:?[^\S\r\n]*$/im;
+
+// Phrases that introduce the document's *own* DOI. Journals print these in back
+// matter, after the reference list, so they are checked before the bibliography
+// is trimmed away.
+const SELF_REFERENCE_PATTERNS = [
+  /(?:how[^\S\r\n]+to[^\S\r\n]+)?cite[^\S\r\n]+this[^\S\r\n]+(?:article|paper)/i,
+  /(?:supplementary[^\S\r\n]+information|online[^\S\r\n]+version)[\s\S]{0,200}?available[^\S\r\n]+at/i
+];
+
+function matchDoi(value) {
+  const match = String(value || '').match(DOI_PATTERN);
+  return match?.[0] ? match[0].replace(/[),.;\]]+$/g, '') : '';
+}
+
+function extractSelfReferencedDoi(text) {
+  for (const pattern of SELF_REFERENCE_PATTERNS) {
+    const match = text.match(pattern);
+    if (!match) {
+      continue;
+    }
+    const start = match.index + match[0].length;
+    const doi = matchDoi(text.slice(start, start + 400));
+    if (doi) {
+      return doi;
+    }
+  }
+  return '';
+}
+
+// A paper's own DOI sits in the front matter or in a "cite this article" line.
+// Every DOI under the references heading belongs to somebody else's paper, so
+// taking the first match in the whole document files the record under a cited
+// work - and silently, because a wrong DOI looks exactly like a right one.
+// Finding nothing is the better answer: the caller falls back to a content hash.
 function extractDoiFromText(value) {
   const text = String(value || '');
-  const match = text.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
-  return normalizeDoi(match?.[0] ? match[0].replace(/[),.;\]]+$/g, '') : '');
+
+  const selfReferenced = extractSelfReferencedDoi(text);
+  if (selfReferenced) {
+    return normalizeDoi(selfReferenced);
+  }
+
+  const referencesHeading = text.match(REFERENCES_HEADING_PATTERN);
+  const frontMatter = referencesHeading
+    ? text.slice(0, referencesHeading.index)
+    : text;
+  return normalizeDoi(matchDoi(frontMatter));
 }
 
 function sanitizeStorageName(value, fallback = 'paper') {

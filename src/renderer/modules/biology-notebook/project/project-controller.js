@@ -89,12 +89,25 @@ export function createNotebookProjectController({
     returnFocusEl = null;
   }
 
+  // Mirrors sanitizeFolderName in src/main/storage/storage-utils.js, which the
+  // renderer cannot import. project-research-memory-selfcheck asserts the two
+  // agree: when they drift, this asks main to create one folder while storage
+  // writes MEMORY.md to another.
   function sanitizeFolderName(value) {
-    return String(value || '')
+    const cleaned = String(value || '')
       .trim()
       .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
       .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '');
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 180);
+    return !cleaned || /^\.+$/.test(cleaned) ? '' : cleaned;
+  }
+
+  // Two names that sanitize alike share one project folder, and the loser's
+  // notebooks and papers drop out of project memory entirely. Comparing raw
+  // names lets "Atlas" and "Atlas " both through.
+  function projectFolderKey(value) {
+    return sanitizeFolderName(value).toLowerCase();
   }
 
   async function ensureProjectDirectory(projectName) {
@@ -125,8 +138,17 @@ export function createNotebookProjectController({
       projectNameInput?.focus?.();
       return null;
     }
-    if (state.projects?.some((project) => cleanText(project.name).toLowerCase() === name.toLowerCase())) {
-      setDialogError('A project with this name already exists. Choose a different name.');
+    const folderKey = projectFolderKey(name);
+    const clash = state.projects?.find((project) => (
+      cleanText(project.name).toLowerCase() === name.toLowerCase()
+      || (folderKey && projectFolderKey(project.name) === folderKey)
+    ));
+    if (clash) {
+      setDialogError(
+        cleanText(clash.name).toLowerCase() === name.toLowerCase()
+          ? 'A project with this name already exists. Choose a different name.'
+          : `This name shares a storage folder with "${cleanText(clash.name)}". Choose a more distinct name.`
+      );
       projectNameInput?.focus?.();
       return null;
     }

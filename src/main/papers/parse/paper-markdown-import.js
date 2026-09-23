@@ -14,7 +14,7 @@ const { createReviewJournalSkipResult } = require('../shared/review-paper-filter
 const { asArray, ensureObject } = require('../../lib/normalize.js');
 const {
   findExistingPaperRow,
-  openKnowledgeDatabase,
+  withKnowledgeDatabaseWrite,
   persistKnowledgeDatabase,
   queryRows,
   runStatement,
@@ -140,8 +140,7 @@ async function synchronizeTitleMarkdownReferences({
     return '';
   }
   const folderRelativePrefix = `${toPosixRelative(storagePath, paths.paper_folder_path)}/`;
-  const db = await openKnowledgeDatabase(paths.sqlite_path);
-  try {
+  return withKnowledgeDatabaseWrite(paths.sqlite_path, async (db) => {
     // The stored title can differ from the import-side title (it may have come
     // from embedded PDF metadata), so fall back to the row that already points
     // into this folder -- the only row whose wiki_path the rename can dangle.
@@ -166,9 +165,7 @@ async function synchronizeTitleMarkdownReferences({
       await updateJsonIndex(paths.json_index_path, updated);
     }
     return '';
-  } finally {
-    db.close();
-  }
+  });
 }
 
 async function ensureTitleNamedKnowledgeMarkdown({ storagePath, paths, title, doi } = {}) {

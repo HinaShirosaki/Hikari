@@ -115,6 +115,7 @@ function createNotebookControllers({
     safeText,
     getNotebookEntries: () => state.notebookEntries,
     getProjects: () => state.projects,
+    getWorkflows: () => state.workflows,
     getEditingEntryId,
     getActiveProjectDashboardId
   });

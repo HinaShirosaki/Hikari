@@ -18,6 +18,7 @@ function createNotebookEntryActions({
   previewImageLoader,
   getActiveEntry,
   showProjectDashboard,
+  onOpenWorkflowProcess,
   clearViewer,
   renderProtocolViewer,
   getEditingEntryId,
@@ -96,6 +97,13 @@ function createNotebookEntryActions({
       || (event?.target?.dataset?.notebookFolderToggle ? event.target : null);
     if (folderToggle) {
       entryListRenderer.toggleFolder(folderToggle.dataset.notebookFolderToggle);
+      return;
+    }
+
+    const processFolder = event?.target?.closest?.('[data-notebook-process-id]')
+      || (event?.target?.dataset?.notebookProcessId ? event.target : null);
+    if (processFolder) {
+      onOpenWorkflowProcess?.(processFolder.dataset.notebookProcessId);
       return;
     }
 

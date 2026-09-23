@@ -7,7 +7,9 @@ import {
   ACCENT,
   ACCENT_TINT,
   ZEBRA_FILL,
-  RULE_COLOR
+  RULE_COLOR,
+  EDITORIAL_INK,
+  EDITORIAL_RULE
 } from './constants.js';
 import {
   safeValue,
@@ -75,18 +77,23 @@ function getTableRowHeight(lineGroups) {
 function drawTableRow(ctx, lineGroups, widths, { header = false, zebra = false } = {}) {
   const rowHeight = getTableRowHeight(lineGroups);
   const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+  const editorial = ctx.visualStyle === 'editorial';
 
-  if (header) {
+  if (editorial && header) {
+    ctx.doc.setDrawColor(...EDITORIAL_INK);
+    ctx.doc.setLineWidth(0.8);
+    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + totalWidth, ctx.y);
+  } else if (header) {
     ctx.doc.setFillColor(ACCENT_TINT[0], ACCENT_TINT[1], ACCENT_TINT[2]);
     ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
-  } else if (zebra) {
+  } else if (zebra && !editorial) {
     ctx.doc.setFillColor(ZEBRA_FILL[0], ZEBRA_FILL[1], ZEBRA_FILL[2]);
     ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
   }
 
   font(ctx, header ? 'bold' : 'normal');
   ctx.doc.setFontSize(TABLE_FONT_SIZE);
-  setTextColor(ctx, header ? ACCENT : [0, 0, 0]);
+  setTextColor(ctx, editorial ? EDITORIAL_INK : (header ? ACCENT : [0, 0, 0]));
 
   let x = ctx.margin;
   lineGroups.forEach((lines, columnIndex) => {
@@ -101,7 +108,8 @@ function drawTableRow(ctx, lineGroups, widths, { header = false, zebra = false }
   setTextColor(ctx, [0, 0, 0]);
 
   ctx.y += rowHeight;
-  ctx.doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
+  const rule = editorial ? EDITORIAL_RULE : RULE_COLOR;
+  ctx.doc.setDrawColor(rule[0], rule[1], rule[2]);
   ctx.doc.setLineWidth(0.5);
   ctx.doc.line(ctx.margin, ctx.y, ctx.margin + totalWidth, ctx.y);
 }
@@ -129,6 +137,10 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
   font(ctx, 'bold');
   const headerLines = splitTableCells(ctx, safeHeaders, widths, { fallback: '-' });
   const headerHeight = getTableRowHeight(headerLines);
+  font(ctx, 'normal');
+  const firstRow = safeHeaders.map((_header, index) => String(safeRows[0]?.[index] ?? '').trim());
+  const firstRowHeight = getTableRowHeight(splitTableCells(ctx, firstRow, widths));
+  ensureSpace(ctx, headerHeight + firstRowHeight);
 
   function writeHeader() {
     ensureSpace(ctx, headerHeight);

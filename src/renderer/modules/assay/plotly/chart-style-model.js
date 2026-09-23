@@ -1,3 +1,4 @@
+import { normalizePlotElements } from '../../../../shared/assay-plot.mjs';
 // Plotly defaults used by the Assay analysis view.
 // Publication-figure pastel palette (lavender / cyan / teal / coral / amber / green).
 export const DEFAULT_CHART_PALETTE = Object.freeze([
@@ -63,6 +64,7 @@ function sanitizeChartTextStyle(input) {
 export function createDefaultChartStyle() {
   return {
     styleVersion: 2,
+    plotElements: [],
     axisStyles: {},
     seriesStyles: {},
     replicateStyle: {},
@@ -209,6 +211,8 @@ export function normalizeChartStyle(input) {
     });
   }
   const seriesShapes = {};
+  let plotElements = [];
+  try { plotElements = normalizePlotElements(input.plotElements || []); } catch { /* Ignore malformed imported elements. */ }
   if (input.seriesShapes && typeof input.seriesShapes === 'object') {
     Object.entries(input.seriesShapes).forEach(([label, shape]) => {
       if (POINT_SHAPES.includes(shape)) {
@@ -218,6 +222,7 @@ export function normalizeChartStyle(input) {
   }
   return {
     styleVersion: 2,
+    plotElements,
     axisStyles: normalizeAxisStyles(input.axisStyles),
     seriesStyles: normalizeSeriesStyles(input.seriesStyles),
     replicateStyle: legacy ? {

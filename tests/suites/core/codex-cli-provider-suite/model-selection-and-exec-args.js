@@ -105,7 +105,7 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         provider.setCodexCliModel('');
       });
     });
-    test('codex cli provider prefers explicit request models and remembers them', () => {
+    test('codex cli provider keeps explicit request models isolated from the configured default', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
         provider.setCodexCliModel('gpt-5.4');
@@ -118,7 +118,11 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
 
         assert.equal(args[args.indexOf('-m') + 1], 'gpt-5.1-codex-mini');
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=high');
-        assert.equal(provider.getCodexCliModel(), 'gpt-5.1-codex-mini');
+        assert.equal(provider.getCodexCliModel(), 'gpt-5.4');
+        const followingArgs = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt'
+        });
+        assert.equal(followingArgs[followingArgs.indexOf('-m') + 1], 'gpt-5.4');
         provider.setCodexCliModel('');
       });
     });

@@ -399,6 +399,7 @@ export function initLabNotebook({
     previewImageLoader,
     getActiveEntry: () => getActiveEntry(),
     showProjectDashboard: (...args) => showProjectDashboard(...args),
+    onOpenWorkflowProcess,
     clearViewer: (...args) => clearViewer(...args),
     renderProtocolViewer: (...args) => renderProtocolViewer(...args),
     ...drafts,

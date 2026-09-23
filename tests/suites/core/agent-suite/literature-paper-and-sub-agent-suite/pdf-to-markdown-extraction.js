@@ -11,6 +11,63 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
     agentPaperDownload,
     agentPaperKnowledgeDatabase
   } = scope;
+    test('paper DOI extraction never takes a DOI out of the reference list', () => {
+      const { extractDoiFromText } = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'paper-knowledge-paths.js'));
+
+      // Front matter wins.
+      assert.equal(
+        extractDoiFromText([
+          'www.nature.com/scientificreports',
+          'Some Paper Title',
+          'https://doi.org/10.1038/s41598-000-00000-0',
+          '',
+          'References',
+          '1. Bull, M. et al. Defining blood processing parameters. J. Immunol. Methods 322,',
+          '57-69. https://doi.org/10.1016/j.jim.2007.02.003 (2007).'
+        ].join('\n')),
+        '10.1038/s41598-000-00000-0'
+      );
+
+      // No DOI of its own: a cited work's DOI must not be adopted as the paper's.
+      assert.equal(
+        extractDoiFromText([
+          'Peripheral blood mononuclear cell phenotype and function',
+          'Same day processing of biospecimens is not always possible.',
+          '',
+          'References',
+          '1. Bull, M. et al. Defining blood processing parameters. J. Immunol. Methods 322,',
+          '57-69. https://doi.org/10.1016/j.jim.2007.02.003 (2007).'
+        ].join('\n')),
+        ''
+      );
+
+      // Nature-style back matter prints the paper's own DOI after the references.
+      assert.equal(
+        extractDoiFromText([
+          'Filament-catalyst lightbulb reactor',
+          'References',
+          '1. Lange, J.-P. Towards circular carbo-chemicals. Energy Environ. Sci. 14,',
+          'https://doi.org/10.1016/j.example.2020.01.001 (2021).',
+          '',
+          'Additional information',
+          'Supplementary information The online version contains supplementary',
+          'material available at https://doi.org/10.1038/s41893-026-01812-z.'
+        ].join('\n')),
+        '10.1038/s41893-026-01812-z'
+      );
+
+      // A table-of-contents line is not a references heading, so it must not
+      // truncate the document before the DOI.
+      assert.equal(
+        extractDoiFromText([
+          'Contents',
+          'References ......... 245',
+          'Chapter 1',
+          'https://doi.org/10.1000/book-chapter-1'
+        ].join('\n')),
+        '10.1000/book-chapter-1'
+      );
+    });
     test('pdf text extraction prefers the embedded PDF title metadata used for Markdown naming', () => {
       const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
       const metadata = new Map([

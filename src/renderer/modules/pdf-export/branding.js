@@ -1,21 +1,18 @@
 import { FOOTER_BASELINE } from './constants.js';
 
-const HIKARI_PDF_ICON_SOURCE = './assets/loadingicon.png';
-const HIKARI_PDF_ICON_RASTER_SIZE = 128;
+const HIKARI_PDF_ICON_SOURCE = './assets/icons/hikari-button.svg';
+const HIKARI_PDF_ICON_RASTER_SIZE = 512;
 const HIKARI_PDF_ICON_SIZE = 32;
 const HIKARI_PDF_ICON_COLOR = '#185fa5';
-const HIKARI_PDF_ICON_SOURCE_CROP = Object.freeze({
-  x: 394,
-  y: 185,
-  width: 465,
-  height: 860
-});
+const HIKARI_PDF_ICON_MONOCHROME_COLOR = '#444444';
+const HIKARI_PDF_ICON_ASPECT = 475 / 865;
 
-let hikariPdfIconPromise = null;
+const hikariPdfIconPromises = new Map();
 
-export function loadHikariPdfIconDataUrl() {
-  if (hikariPdfIconPromise) {
-    return hikariPdfIconPromise;
+export function loadHikariPdfIconDataUrl({ monochrome = false } = {}) {
+  const color = monochrome ? HIKARI_PDF_ICON_MONOCHROME_COLOR : HIKARI_PDF_ICON_COLOR;
+  if (hikariPdfIconPromises.has(color)) {
+    return hikariPdfIconPromises.get(color);
   }
   if (
     typeof Image !== 'function'
@@ -25,7 +22,7 @@ export function loadHikariPdfIconDataUrl() {
     return Promise.resolve('');
   }
 
-  hikariPdfIconPromise = new Promise((resolve) => {
+  const iconPromise = new Promise((resolve) => {
     const image = new Image();
     image.onload = () => {
       try {
@@ -38,25 +35,13 @@ export function loadHikariPdfIconDataUrl() {
         canvas.width = HIKARI_PDF_ICON_RASTER_SIZE;
         canvas.height = HIKARI_PDF_ICON_RASTER_SIZE;
         context2d.clearRect(0, 0, canvas.width, canvas.height);
-        const targetHeight = 116;
-        const targetWidth = Math.round(
-          targetHeight * (HIKARI_PDF_ICON_SOURCE_CROP.width / HIKARI_PDF_ICON_SOURCE_CROP.height)
-        );
+        const targetHeight = Math.round(canvas.height * 0.906);
+        const targetWidth = Math.round(targetHeight * HIKARI_PDF_ICON_ASPECT);
         const targetX = Math.round((canvas.width - targetWidth) / 2);
         const targetY = Math.round((canvas.height - targetHeight) / 2);
-        context2d.drawImage(
-          image,
-          HIKARI_PDF_ICON_SOURCE_CROP.x,
-          HIKARI_PDF_ICON_SOURCE_CROP.y,
-          HIKARI_PDF_ICON_SOURCE_CROP.width,
-          HIKARI_PDF_ICON_SOURCE_CROP.height,
-          targetX,
-          targetY,
-          targetWidth,
-          targetHeight
-        );
+        context2d.drawImage(image, targetX, targetY, targetWidth, targetHeight);
         context2d.globalCompositeOperation = 'source-in';
-        context2d.fillStyle = HIKARI_PDF_ICON_COLOR;
+        context2d.fillStyle = color;
         context2d.fillRect(0, 0, canvas.width, canvas.height);
         context2d.globalCompositeOperation = 'source-over';
         resolve(canvas.toDataURL('image/png'));
@@ -68,7 +53,8 @@ export function loadHikariPdfIconDataUrl() {
     image.src = HIKARI_PDF_ICON_SOURCE;
   });
 
-  return hikariPdfIconPromise;
+  hikariPdfIconPromises.set(color, iconPromise);
+  return iconPromise;
 }
 
 export function drawHikariPdfCornerIcon(ctx, pageWidth, pageHeight) {
@@ -89,7 +75,7 @@ export function drawHikariPdfCornerIcon(ctx, pageWidth, pageHeight) {
       HIKARI_PDF_ICON_SIZE,
       HIKARI_PDF_ICON_SIZE,
       undefined,
-      'FAST'
+      'SLOW'
     );
     return true;
   } catch (_error) {
@@ -102,5 +88,6 @@ export {
   HIKARI_PDF_ICON_RASTER_SIZE,
   HIKARI_PDF_ICON_SIZE,
   HIKARI_PDF_ICON_COLOR,
-  HIKARI_PDF_ICON_SOURCE_CROP
+  HIKARI_PDF_ICON_MONOCHROME_COLOR,
+  HIKARI_PDF_ICON_ASPECT
 };

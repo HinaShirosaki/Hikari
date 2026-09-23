@@ -1,3 +1,5 @@
+import { createAnalyzeWorkspace } from './workspace/analyze-workspace.js';
+import { createPlotAgentController } from './plotly/plot-agent-controller.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
@@ -44,6 +46,7 @@ export function initAssay({
   };
 
   let analysisView = null;
+  let analyzeWorkspace = null;
   let savedCreateDraftSnapshot = '';
   let savedResultsDraftSnapshot = '';
   let lastAgentContextSignature = '';
@@ -167,6 +170,7 @@ export function initAssay({
   }
 
   function notifyActiveAssayChanged() {
+    analyzeWorkspace?.refresh();
     if (typeof onActiveAssayChanged !== 'function') {
       return;
     }
@@ -274,6 +278,8 @@ export function initAssay({
     buildResultGridColumns: resultsManager.buildResultGridColumns,
     buildResultGridData: resultsManager.buildResultGridData,
     getResultGridHeight: resultsManager.getResultGridHeight,
+    resultRowVisible: resultsManager.resultRowVisible,
+    onWorkspaceChanged: (options) => analyzeWorkspace?.refresh(options),
     onAnalysisRendered: (info) => {
       saveAssayAnalysisPreview(info);
     },
@@ -293,6 +299,25 @@ export function initAssay({
         persist();
       }
     }
+  });
+
+  analyzeWorkspace = createAnalyzeWorkspace({
+    elements, runtime, resultsManager, analysisView,
+    getAssay: getActiveResultsAssay,
+    getDefinition: layoutManager.getCurrentDefinition
+  });
+
+  const plotAgent = createPlotAgentController({
+    getAssay: getActiveResultsAssay,
+    isActive: () => runtime.assayMode === 'results'
+      && (!document.body.dataset.activeView || document.body.dataset.activeView === 'assay-view'),
+    analysisView, persist, onChanged: notifyActiveAssayChanged
+  });
+  window.hikariApi?.onAssayPlotRequest?.(async (request) => {
+    let result;
+    try { result = await plotAgent.execute(request.args, { deadline: request.deadline }); }
+    catch (error) { result = { ok: false, status: 'failed', error: error.message }; }
+    window.hikariApi?.respondToAssayPlotRequest?.({ id: request.id, result });
   });
 
   const { getAgentChatContext } = createAssayAgentContext({
@@ -427,6 +452,7 @@ export function initAssay({
     renderNotebookOptions,
     renderList,
     renderAgentPlotlyGraph: (artifact) => analysisView?.renderAgentPlotlyGraph?.(artifact) === true,
+    executePlotRequest: (input, options) => plotAgent.execute(input, options),
     saveUnsavedChanges: async () => {
       if (savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot) {
         if (!onSaveResults()) {

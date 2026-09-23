@@ -207,7 +207,9 @@ export function createAssayAgentContext({
         xAxis: elements.assayAnalysisXAxisInput?.value,
         analysis: elements.assayAnalysisKindInput?.value,
         polyOrder: Number(elements.assayAnalysisPolyOrderInput?.value),
-        asymmetric: Boolean(elements.assayAnalysisAsymmetricInput?.checked)
+        asymmetric: Boolean(elements.assayAnalysisAsymmetricInput?.checked),
+        highControl: elements.assayAnalysisHighControlInput?.value,
+        lowControl: elements.assayAnalysisLowControlInput?.value
       }) || latestAnalysis?.methodLabel || latestAnalysis?.method || '',
       160
     );
@@ -225,6 +227,7 @@ export function createAssayAgentContext({
       assayName ? `Assay name: ${assayName}` : '',
       assayNumber ? `Assay number: ${assayNumber}` : '',
       assayId ? `Assay ID: ${assayId}` : 'Assay ID: unsaved draft',
+      assayId ? 'Use assay_plot read to inspect and style the native plot, including labels, reference lines and shaded bands.' : '',
       projectName ? `Project: ${projectName}` : '',
       `Plate: ${plateDef.label || plateDef.value}`,
       `Sample axis: ${axisLabel(elements.assaySampleAxisInput?.value || assay?.sampleAxis || 'row')}`,

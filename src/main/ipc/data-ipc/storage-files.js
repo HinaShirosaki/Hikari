@@ -10,6 +10,8 @@ function createStorageFileHelpers({
   fs: fsApi,
   cleanText,
   getStorageRootPointerPath,
+  getStorageRoot = () => '',
+  getDefaultDataFilePath = () => '',
   setStorageRoot = () => {},
   paperKnowledgeDatabaseRuntime
 } = {}) {
@@ -72,6 +74,40 @@ function createStorageFileHelpers({
       throw new Error('Target path must be inside the configured storage path.');
     }
     return resolvedTarget;
+  }
+
+  // The storage root as this process knows it: app-paths keeps it in memory,
+  // seeded from the pointer file and refreshed on every auto-save, so it stays
+  // right even when the pointer write fails. Pointer and legacy snapshot follow.
+  async function readConfiguredStorageRoot() {
+    const liveRoot = cleanText(getStorageRoot(), 2400);
+    if (liveRoot) {
+      return liveRoot;
+    }
+    const pointerRoot = await readStorageRootFrom(getStorageRootPointerPath(), 'pointer');
+    if (pointerRoot) {
+      return pointerRoot;
+    }
+    // ponytail: pre-pointer installs only recorded the root inside a saved
+    // snapshot, so fall back to those. Drop once no one is upgrading from them.
+    return readStorageRootFrom(getDefaultDataFilePath(), 'snapshot');
+  }
+
+  // ensurePathWithinRoot only confines a target against whatever root it is
+  // handed, so taking that root from the payload made it decorative: a caller
+  // could name any folder as "the workspace" and stay trivially inside it.
+  // A caller may still say which workspace it means, but it has to be ours.
+  async function resolveConfiguredStorageRoot(claimedPath) {
+    const configuredRoot = await readConfiguredStorageRoot();
+    if (!configuredRoot) {
+      throw new Error('No storage path is configured yet.');
+    }
+    const resolvedRoot = path.resolve(configuredRoot);
+    const claimed = String(claimedPath || '').trim();
+    if (claimed && path.resolve(claimed) !== resolvedRoot) {
+      throw new Error('Storage path does not match the configured storage path.');
+    }
+    return resolvedRoot;
   }
 
   async function pathExists(targetPath) {
@@ -139,7 +175,7 @@ function createStorageFileHelpers({
       throw new Error('Missing imported file data.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -182,7 +218,7 @@ function createStorageFileHelpers({
       throw new Error('Missing storage path.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const filePath = resolveStorageFilePath(resolvedStoragePath, payload?.filePath, payload?.relativePath);
     if (!/\.pdf$/i.test(filePath)) {
       throw new Error('Stored file is not a PDF.');
@@ -237,7 +273,7 @@ function createStorageFileHelpers({
       throw new Error('Missing target folder.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const sourceFilePath = resolveStorageFilePath(
       resolvedStoragePath,
       payload?.sourcePath,
@@ -299,7 +335,7 @@ function createStorageFileHelpers({
       throw new Error('Missing log action.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -341,7 +377,7 @@ function createStorageFileHelpers({
       throw new Error('Missing target folder.');
     }
 
-    const resolvedStoragePath = path.resolve(storagePath);
+    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
@@ -395,6 +431,8 @@ function createStorageFileHelpers({
     sanitizeImportedFileName,
     asArray,
     ensurePathWithinRoot,
+    readConfiguredStorageRoot,
+    resolveConfiguredStorageRoot,
     pathExists,
     getUniqueFilePath,
     normalizeImportedDataBytes,

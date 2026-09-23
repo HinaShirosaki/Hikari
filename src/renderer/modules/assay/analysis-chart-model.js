@@ -13,7 +13,11 @@ function parseAnalysisCellNumber(value) {
 function pickChartMetricIndex(method, headers, numericIndexes) {
   const methodPriority = {
     summary: ['mean'],
-    normalize: ['normalized', 'survival', 'mean']
+    normalize: ['normalized', 'survival', 'mean'],
+    percent_control: ['% of control', 'mean'],
+    plate_qc: ['value'],
+    zscore: ['robust z', 'z'],
+    ttest: ['mean']
   };
   const priorities = methodPriority[method] || ['r²', 'r2', 'rmse', 'x50', 'mean', 'value'];
   for (let keywordIndex = 0; keywordIndex < priorities.length; keywordIndex += 1) {

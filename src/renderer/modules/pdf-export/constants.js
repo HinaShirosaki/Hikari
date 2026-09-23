@@ -17,6 +17,12 @@ const RULE_COLOR = [205, 205, 200];
 const FOOTER_BASELINE = 40;
 const LABEL_FONT_SIZE = 7.5;
 
+// The protocol/notebook document style uses neutral ink so page structure
+// survives grayscale and black-and-white printing without large filled areas.
+const EDITORIAL_INK = [27, 27, 27];
+const EDITORIAL_MUTED = [83, 83, 83];
+const EDITORIAL_RULE = [174, 174, 174];
+
 const PLATE_DEFINITIONS = {
   '6': { rows: 2, columns: 3, label: '6 well' },
   '12': { rows: 3, columns: 4, label: '12 well' },
@@ -44,5 +50,8 @@ export {
   RULE_COLOR,
   FOOTER_BASELINE,
   LABEL_FONT_SIZE,
+  EDITORIAL_INK,
+  EDITORIAL_MUTED,
+  EDITORIAL_RULE,
   PLATE_DEFINITIONS
 };

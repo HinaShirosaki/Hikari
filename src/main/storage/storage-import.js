@@ -359,7 +359,10 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
 
   const protocolRoot = await importProtocolRoot({ storagePath: resolvedStoragePath });
   mergeByIdMap(protocolMap, protocolRoot.protocols, 'protocol');
-  const projectRoot = await hydrateProjectRootFromStoragePath({ storagePath: resolvedStoragePath });
+  const projectRoot = await hydrateProjectRootFromStoragePath({
+    storagePath: resolvedStoragePath,
+    knownProjects: [...projectMap.values()]
+  });
   mergeByIdMap(projectMap, projectRoot.projects, 'project');
   mergeByIdMap(notebookMap, projectRoot.notebookEntries, 'notebook');
   const samplesRoot = await hydrateSamplesRootFromStoragePath({ storagePath: resolvedStoragePath });

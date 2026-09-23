@@ -1,6 +1,6 @@
 ---
 name: "hikari-assay-plotly"
-description: "Use Hikari MCP assay_table and plotly_graph to calculate, summarize, normalize, and plot assay data, or revise an existing scratch graph. Use for active Assay plate/results context and user-provided assay rows."
+description: "Calculate, summarize, normalize and plot assay data with Hikari MCP. Style the live native Assay plot, add labels, reference lines and shaded bands, or revise a custom scratch graph. Use for active Assay context and user-provided assay rows."
 ---
 
 <!-- HIKARI_OFFICIAL_MCP_SKILL:assay-plotly -->
@@ -9,6 +9,8 @@ description: "Use Hikari MCP assay_table and plotly_graph to calculate, summariz
 
 Turn the user's assay data into traceable calculations and an inspectable Plotly figure. Use the connected Hikari server's `assay_table` and `plotly_graph` tools, with the namespace exposed by the client. These tools manage scratch objects; their IDs do not identify saved Assay records.
 
+Use `assay_plot` to style the native plot in Analyze or add labels, reference lines and shaded bands within that plot. It saves formatting on the active assay and returns live rendering acknowledgements. It does not calculate values or change plate measurements.
+
 ## Choose the relevant reference
 
 - Read [tool-reference.md](references/tool-reference.md) for action arguments, returned objects, update semantics, and limits. The connected tool schemas are authoritative.
@@ -16,6 +18,7 @@ Turn the user's assay data into traceable calculations and an inspectable Plotly
 - Read [plotly-recipes.md](references/plotly-recipes.md) when building dose/time plots, comparisons, distributions, plate heatmaps, or changing chart formatting.
 - Read [python-transforms.md](references/python-transforms.md) when built-in calculations cannot express the requested transform, or when preparing a fit.
 - Read [inspection-and-errors.md](references/inspection-and-errors.md) for the review loop, incomplete data, failed calls, or compatibility problems.
+- Read [live-plot.md](references/live-plot.md) to style or annotate the native analysis plot.
 
 Load only the references needed for the current task.
 
@@ -30,6 +33,7 @@ Load only the references needed for the current task.
 | Build a graph | Supply explicit `data`, `layout`, and optional `config` to `plotly_graph` → `create` |
 | Restyle an existing graph | `plotly_graph` → `read`, then a scoped `update`, then `inspect` |
 | Recover a scratch object | `list`, identify the correct object, then `read` by returned ID |
+| Style or annotate the native analysis plot | `assay_plot` → `read`, then a style patch with the returned assay ID and revision |
 
 ## Establish the actual data
 

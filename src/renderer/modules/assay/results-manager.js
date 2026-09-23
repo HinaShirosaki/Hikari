@@ -59,6 +59,7 @@ export function createAssayResultsManager({
 
   const {
     buildResultGridSignature,
+    resultRowVisible,
     buildResultGridColumns,
     buildResultGridData,
     getResultGridHeight
@@ -157,6 +158,7 @@ export function createAssayResultsManager({
         index: '__rowIndex',
         layout: 'fitDataTable',
         reactiveData: false,
+        initialFilter: resultRowVisible,
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true,
@@ -192,7 +194,7 @@ export function createAssayResultsManager({
   // Tabulator measures column widths on build, so a grid built (or resized) while its
   // panel was folded away comes back with zero-width columns until it redraws.
   function redrawResultGrid() {
-    if (typeof resultGrid?.redraw === 'function') {
+    if (resultGrid?.initialized !== false && typeof resultGrid?.redraw === 'function') {
       resultGrid.redraw(true);
     }
   }
@@ -384,6 +386,8 @@ export function createAssayResultsManager({
 
   return {
     buildResultGridSignature,
+    resultRowVisible,
+    refreshRowVisibility: () => resultGrid?.setFilter?.(resultRowVisible),
     buildResultGridColumns,
     buildResultGridData,
     getResultGridHeight,

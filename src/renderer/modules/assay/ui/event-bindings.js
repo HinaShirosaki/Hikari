@@ -64,6 +64,8 @@ export function bindAssayEvents({
   elements.assayAnalysisAsymmetricInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisPolyOrderInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisSubtotalsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayAnalysisHighControlInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  elements.assayAnalysisLowControlInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisRowGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisColumnGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisErrorBarsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);

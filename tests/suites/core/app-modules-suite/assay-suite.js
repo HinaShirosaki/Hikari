@@ -237,6 +237,29 @@ test('assay preserves restored result values while the result grid is still init
   assert.deepEqual(manager.syncCurrentResultsFromGrid(), { A1: '0.33', A2: '0.22' });
 });
 
+test('assay compact rows preserve mapped blanks, zero values and original well coordinates', () => {
+  const { createResultGridModel } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'assay', 'results', 'grid-model.js'
+  ));
+  const runtime = {
+    currentLayout: [{ well: 'C1', sampleId: 'Blank control' }],
+    currentResults: { A1: '0', D2: '7.5' }
+  };
+  const model = createResultGridModel({
+    runtime, getSampleAxis: () => 'row', isMappedWell: (well) => well === 'C1',
+    escapeHtml: String, toResultField: (column) => `c${column + 1}`
+  });
+  const rows = model.buildResultGridData({ rows: 4, columns: 2 });
+  const visible = rows.filter(model.resultRowVisible);
+  assert.deepEqual(Array.from(visible, (row) => row.rowLabel), ['A', 'C', 'D']);
+  assert.deepEqual(Array.from(visible, (row) => row.__rowIndex), [0, 2, 3]);
+  assert.equal(visible[0].c1, '0');
+  assert.equal(visible[1].c1, '', 'mapped blank controls remain editable');
+  runtime.showEmptyResultRows = true;
+  assert.equal(rows.filter(model.resultRowVisible).length, 4);
+  assert.deepEqual(runtime.currentResults, { A1: '0', D2: '7.5' });
+});
+
 test('assay dilution fill commits generated concentrations before the layout re-reads the plate', () => {
   const concentrationUtils = loadEsmStyleModule(path.join(
     __dirname,

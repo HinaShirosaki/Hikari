@@ -216,8 +216,39 @@ function createPaperUploadActions({
       persist();
       context.render?.();
     }
+  }
 
-    reportPaperIntakeFailures(papers.map((uploaded) => getPaperById(uploaded.id)).filter(Boolean));
+  // Every drop is its own batch, so without this a handful of PDFs dropped in a
+  // few seconds would start that many intake pipelines at once - each one a
+  // Codex process and a full PDF parse - and each batch would fire its own
+  // notice into the single shared toast, so only the last one survived. One
+  // queue keeps intake to one paper at a time and reports the whole run once.
+  const intakeQueue = {
+    chain: Promise.resolve(),
+    running: 0,
+    finished: []
+  };
+
+  function queuePaperIntake(papers = [], uploadTarget = null) {
+    const rows = (Array.isArray(papers) ? papers : []).filter(Boolean);
+    if (!rows.length) {
+      return intakeQueue.chain;
+    }
+
+    intakeQueue.running += 1;
+    intakeQueue.chain = intakeQueue.chain
+      .then(() => runPaperIntake(rows, uploadTarget))
+      .catch(() => {})
+      .then(() => {
+        intakeQueue.finished.push(...rows);
+        intakeQueue.running -= 1;
+        if (intakeQueue.running > 0) {
+          return;
+        }
+        const drained = intakeQueue.finished.splice(0);
+        reportPaperIntakeFailures(drained.map((paper) => getPaperById(paper.id)).filter(Boolean));
+      });
+    return intakeQueue.chain;
   }
 
   const MAX_LISTED_INTAKE_FAILURES = 5;
@@ -258,7 +289,7 @@ function createPaperUploadActions({
     }
     elements.paperForm?.reset?.();
     context.render?.();
-    void runPaperIntake(uploaded, uploadTarget);
+    void queuePaperIntake(uploaded, uploadTarget);
     return uploaded;
   }
 
@@ -276,6 +307,7 @@ function createPaperUploadActions({
     resolvePaperUploadTarget,
     uploadPaperFile,
     runPaperIntake,
+    queuePaperIntake,
     reportPaperIntakeFailures,
     uploadPaperFiles,
     uploadAndViewPaperFile

@@ -15,6 +15,8 @@ function buildHikariCodexAgentsInstructions() {
     '',
     'For selected-project runs, use project MEMORY.md and .agents/skills as the project context and skill layers. Use native Codex search for external web evidence.',
     '',
+    'MEMORY.md is a bounded index, not the record: one line per paper, experiment and note, newest first, trimmed to fit. A line saying older entries were omitted means exactly that, so retrieve them with `paper_intake_list_project_summaries` or `notebook_lookup` rather than concluding the project has nothing older. Its `## Agent Notes` section is yours to write: record memos, decisions, dead ends and reminders you want the next run to have by calling `memory` with scope project, and they appear there on the next save. You cannot edit MEMORY.md directly — the sandbox is read-only, and everything above that section is regenerated from app data on every save.',
+    '',
     'Paper-context sub-agent: read the exact title-named Markdown paths under `KnowledgeBase/papers.md/.../` (legacy records may use `paper.md`) and return the requested context JSON.'
   ].join('\n');
 }

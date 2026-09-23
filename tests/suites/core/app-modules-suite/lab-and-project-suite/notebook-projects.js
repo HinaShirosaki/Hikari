@@ -131,6 +131,17 @@ test('biology-notebook project creation resumes experiment setup and prevents du
   assert.match(get('status').textContent, /already exists/);
   assert.equal(saves, 0);
 
+  // Distinct names that land on one Project/<folder> lose the second project's
+  // notebooks and papers out of project memory, so creation has to refuse them.
+  state.projects.push({ id: 'existing-2', name: 'My Project' });
+  for (const collidingName of ['Atlas ', 'My/Project', 'My_Project', 'My  Project']) {
+    get('name').value = collidingName;
+    assert.equal(await controller.createProject(), null, `${collidingName} must be refused`);
+    assert.match(get('status').textContent, /already exists|shares a storage folder/);
+  }
+  state.projects = state.projects.filter((project) => project.id !== 'existing-2');
+  assert.equal(saves, 0);
+
   get('name').value = '  Protein stability  ';
   get('description').value = 'Screen temperature tolerance.';
   const pending = controller.createProject();
@@ -182,6 +193,49 @@ test('biology-notebook project tree renders projects before they have pages', ()
   assert.match(html, /data-notebook-project-id="p1"/);
   assert.match(html, />Atlas</);
   assert.match(html, /No pages yet\./);
+});
+test('biology-notebook nests project processes and their pages in the project tree', () => {
+  const document = createMockDocument(['biology-notebook-entry-list']);
+  const entryList = document.getElementById('biology-notebook-entry-list');
+  const { createEntryListRenderer } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-list-renderer.js'
+  ));
+  const renderer = createEntryListRenderer({
+    listEl: entryList,
+    notebookType: 'biology',
+    safeText: shared.safeText,
+    getProjects: () => [{ id: 'p1', name: 'Atlas' }],
+    getWorkflows: () => [
+      { id: 'w1', projectId: 'p1', name: 'Protein preparation' },
+      { id: 'w2', projectId: 'p1', name: 'Purification' }
+    ],
+    getNotebookEntries: () => [
+      { id: 'n1', notebookType: 'biology', projectId: '', protocolName: 'IPTG Expression',
+        workflowContext: { workflowId: 'w1', workflowName: 'Old process name', workflowEntryId: 'e1' } },
+      { id: 'n2', notebookType: 'biology', projectId: 'p1', protocolName: 'Standalone assay' }
+    ],
+    getEditingEntryId: () => null
+  });
+
+  renderer.renderEntries();
+  const html = entryList.innerHTML;
+  const projectStart = html.indexOf('data-folder-tree-key="p1"');
+  const processStart = html.indexOf('data-folder-tree-key="__process__:w1"');
+  const pageStart = html.indexOf('data-notebook-entry-id="n1"');
+  const emptyProcessStart = html.indexOf('data-folder-tree-key="__process__:w2"');
+  const openDivs = (markup) => (markup.match(/<div\b/g) || []).length - (markup.match(/<\/div>/g) || []).length;
+  assert.ok(projectStart >= 0 && processStart > projectStart && pageStart > processStart);
+  assert.ok(openDivs(html.slice(projectStart, processStart)) > 0, 'process belongs inside project');
+  assert.ok(openDivs(html.slice(processStart, pageStart)) > 0, 'page belongs inside process');
+  assert.match(html.slice(processStart, pageStart), /data-notebook-process-id="w1"[\s\S]*?Protein preparation/);
+  assert.ok(emptyProcessStart > processStart);
+  assert.match(html.slice(emptyProcessStart), /No pages yet\./);
+  assert.match(html, /data-notebook-entry-id="n2"/);
+  assert.equal((html.match(/data-folder-tree-key="__process__:w1"/g) || []).length, 1);
+
+  renderer.toggleFolder('__process__:w1');
+  assert.match(entryList.innerHTML, /data-folder-tree-key="__process__:w1"[\s\S]*?biology-notebook-folder-children[^>]*hidden/);
+  assert.match(entryList.innerHTML, /data-folder-tree-key="p1"[\s\S]*?aria-expanded="true"/);
 });
 test('biology-notebook keeps planned pages distinct, marks them executed, and preserves metadata on save', async () => {
   const document = createMockDocument([
@@ -436,12 +490,14 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
       hikariApi: {}
     }
   });
+  let openedProcessId = '';
   const notebook = notebookModule.initLabNotebook({
     state,
     persist: () => {},
     createId: () => 'new-entry',
     safeText: shared.safeText,
-    onNotebookEntriesChanged: () => {}
+    onNotebookEntriesChanged: () => {},
+    onOpenWorkflowProcess: (id) => { openedProcessId = id; }
   });
 
   notebook.renderProjectOptions();
@@ -454,6 +510,13 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.doesNotMatch(document.getElementById('biology-notebook-entry-list').innerHTML, /Untitled Project/);
   assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name[^>]*>Clone 12</g) || []).length, 1);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
+
+  state.workflows = [{ id: 'workflow-1', projectId: 'p1', name: 'Histagged protein preparation' }];
+  notebook.renderEntries();
+  const entryList = document.getElementById('biology-notebook-entry-list');
+  assert.match(entryList.innerHTML, /data-notebook-process-id="workflow-1"/);
+  trigger(entryList, 'click', { target: entryList.querySelector('[data-notebook-process-id]') });
+  assert.equal(openedProcessId, 'workflow-1');
 });
 test('biology-notebook project folder click renders the project dashboard in place', async () => {
   const document = createMockDocument([

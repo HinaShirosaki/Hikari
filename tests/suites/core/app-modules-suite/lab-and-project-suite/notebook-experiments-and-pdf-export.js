@@ -343,7 +343,7 @@ test('notebook pdf export includes linked page content and omits notebook type p
   assert.equal(pdf.imageCalls.length, 2);
   assert.match(pdf.savedFileName, /Expression-Panel-A/i);
 });
-test('notebook pdf export paginates wrapped notes and draws result tables as cells', async () => {
+test('notebook pdf export paginates wrapped notes and draws ruled result tables', async () => {
   class MockJsPdf {
     static instances = [];
 
@@ -352,6 +352,7 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
       this.addPageCalls = 0;
       this.textCalls = [];
       this.rectCalls = [];
+      this.lineCalls = [];
       this.savedFileName = '';
       this.internal = {
         pageSize: {
@@ -375,7 +376,7 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
     setLineWidth() {}
 
 
-    line() {}
+    line(...args) { this.lineCalls.push(args); }
 
 
     roundedRect() {}
@@ -484,7 +485,7 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
 
   assert.ok(pdf.addPageCalls > 0);
   assert.ok(pdf.textCalls.every((call) => call.y <= 188), 'Expected text baselines to stay inside the visible page body.');
-  assert.ok(pdf.rectCalls.length >= 6, 'Expected result table cells to be drawn as bordered rectangles.');
+  assert.ok(pdf.lineCalls.length >= 6, 'Expected table headers and rows to have readable horizontal rules.');
   assert.doesNotMatch(allText, /Sample \| Reading/);
   // The export carries the grid's spreadsheet furniture so A1 references still read.
   assert.match(allText, /A · Sample/);

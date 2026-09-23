@@ -242,7 +242,18 @@ function createAgentLookupSupport(deps = {}) {
       return { ok: false, reason: 'sqlite_empty', result: null };
     }
     const SQL = await loadSqlJs();
-    const db = new SQL.Database(new Uint8Array(bytes));
+    let db;
+    try {
+      db = new SQL.Database(new Uint8Array(bytes));
+      // sql.js parses lazily, so the constructor accepts a corrupt image and the
+      // failure only surfaces on the first query. Force that here: a corrupt
+      // index should read like a missing one and fall back to the snapshot
+      // search, while real errors from the callback still propagate.
+      db.exec('SELECT name FROM sqlite_master LIMIT 1');
+    } catch {
+      try { db?.close(); } catch { /* already unusable */ }
+      return { ok: false, reason: 'sqlite_unreadable', result: null };
+    }
     try {
       return { ok: true, reason: '', result: await callback(db) };
     } finally {

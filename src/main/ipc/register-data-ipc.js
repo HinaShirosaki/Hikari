@@ -19,6 +19,7 @@ const {
 } = require('./register-data-ipc/register-sequence-library-ipc');
 
 const { createStorageFileHelpers } = require('./data-ipc/storage-files.js');
+const { getBundlePaths } = require('../storage/storage-paths');
 
 const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
 const BUNDLED_PLUGIN_TOKEN_PATTERN = /^@bundled\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
@@ -106,11 +107,13 @@ function registerDataIpc(deps = {}) {
     appendNotebookPageLog,
     writeJsonStorageFile,
     mirrorStorageRoot,
-    readStorageRootFrom
+    readConfiguredStorageRoot
   } = createStorageFileHelpers({
     fs,
     cleanText,
     getStorageRootPointerPath,
+    getStorageRoot: typeof deps.getStorageRoot === 'function' ? deps.getStorageRoot : () => '',
+    getDefaultDataFilePath,
     setStorageRoot: deps.setStorageRoot,
     paperKnowledgeDatabaseRuntime
   });
@@ -129,29 +132,35 @@ function registerDataIpc(deps = {}) {
   });
 
   ipcMain.handle(STORAGE.LAST_ROOT, async () => {
-    const pointerRoot = await readStorageRootFrom(getStorageRootPointerPath(), 'pointer');
-    if (pointerRoot) {
-      return { ok: true, storagePath: pointerRoot };
-    }
-    // ponytail: pre-pointer installs only recorded the root inside a saved
-    // snapshot, so fall back to those. Drop once no one is upgrading from them.
-    const snapshotRoot = await readStorageRootFrom(getDefaultDataFilePath(), 'snapshot');
-    return { ok: Boolean(snapshotRoot), storagePath: snapshotRoot };
+    const storageRoot = await readConfiguredStorageRoot();
+    return { ok: Boolean(storageRoot), storagePath: storageRoot };
   });
 
   ipcMain.handle(STORAGE.SYNC_SQLITE_BUNDLE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
-    const sqlitePath = cleanText(normalizedPayload?.sqlitePath || normalizedPayload?.filePath, 2400);
     const mode = cleanText(normalizedPayload?.mode, 40);
     const snapshot = normalizedPayload?.snapshot || normalizedPayload?.data;
-    if (!sqlitePath) {
-      return { ok: false, error: 'Missing sqlite path.' };
-    }
     if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) {
       return { ok: false, error: 'Missing snapshot payload.' };
     }
     if (typeof syncSqliteBundleFromSnapshot !== 'function') {
       return { ok: false, error: 'SQLite bundle sync is unavailable.' };
+    }
+    // The caller used to name the destination file, which let anything running
+    // in the renderer write a bundle-shaped blob to any path the user can write.
+    // Both bundle names already belong to getBundlePaths, so derive the target
+    // from the recorded storage root and ignore whatever the payload asked for.
+    const storageRoot = await readConfiguredStorageRoot();
+    if (!storageRoot) {
+      return { ok: false, error: 'No storage path is configured yet.' };
+    }
+    const bundlePaths = getBundlePaths({ storagePath: storageRoot });
+    const sqlitePath = cleanText(
+      mode.toLowerCase() === 'chemical' ? bundlePaths.chemicalsSqlitePath : bundlePaths.sqlitePath,
+      2400
+    );
+    if (!sqlitePath) {
+      return { ok: false, error: 'Could not resolve the sqlite bundle path.' };
     }
     try {
       const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot, mode });

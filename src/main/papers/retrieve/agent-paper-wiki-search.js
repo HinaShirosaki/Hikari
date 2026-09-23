@@ -1,6 +1,7 @@
 'use strict';
 
 const fsPromises = require('node:fs/promises');
+const { readSearchSections } = require('./wiki-search-markdown.js');
 
 const {
   buildKnowledgeDatabasePaths,
@@ -22,7 +23,6 @@ const {
 
 const MAX_LIMIT = 25;
 const DEFAULT_LIMIT = 8;
-const PRE_FILTER_CAP = 400;
 
 function clampLimit(value) {
   const numeric = Number.parseInt(value, 10);
@@ -128,17 +128,42 @@ function createPaperWikiSearchRuntime() {
         FROM paper_chunks c
         LEFT JOIN papers p ON p.id = c.paper_id
         ${whereClause}
-        LIMIT ?
-      `, [...params, PRE_FILTER_CAP]);
+      `, params);
 
+      // Search the current source even when older chunks exist: historical
+      // chunks may contain only the first 12,000 characters of a section.
+      const paperFilter = buildPreFilter({
+        terms: [],
+        paperId: String(paperId || '').trim(),
+        scope: String(scope || '').trim(),
+        container: String(container || '').trim()
+      });
+      const papers = queryRows(db, `SELECT c.id AS paper_id, c.title AS paper_title,
+        c.doi AS paper_doi, c.year AS paper_year, c.journal AS paper_journal, c.wiki_path
+        FROM papers c ${paperFilter.filters.length ? `WHERE ${paperFilter.filters.join(' AND ').replaceAll('c.paper_id', 'c.id')}` : ''}`,
+      paperFilter.params);
+      const sourcePaperIds = new Set();
+      const sourceErrors = [];
       const scored = [];
-      for (const row of rows) {
+      function consider(row) {
         const score = scoreRow(row, terms, phrase);
-        if (score > 0) {
-          scored.push({ row, score });
+        if (score <= 0) return;
+        scored.push({ row, score });
+        scored.sort((left, right) => right.score - left.score);
+        if (scored.length > resolvedLimit) scored.pop();
+      }
+      for (const paper of papers) {
+        const source = await readSearchSections(resolvedStoragePath, paper);
+        if (source.ok) {
+          sourcePaperIds.add(paper.paper_id);
+          source.rows.forEach(consider);
+        } else {
+          sourceErrors.push({ paper_id: paper.paper_id, error: source.error });
         }
       }
-      scored.sort((left, right) => right.score - left.score);
+      for (const row of rows) {
+        if (!sourcePaperIds.has(row.paper_id)) consider(row);
+      }
 
       const matches = scored.slice(0, resolvedLimit).map(({ row, score }) => ({
         chunk_id: String(row.chunk_id || ''),
@@ -160,6 +185,8 @@ function createPaperWikiSearchRuntime() {
         ok: true,
         query: String(query || ''),
         match_count: matches.length,
+        source_errors: sourceErrors,
+        partial: sourceErrors.length > 0,
         matches,
         summary: matches.length
           ? `Found ${matches.length} matching section${matches.length === 1 ? '' : 's'} across ${new Set(matches.map((m) => m.paper_id)).size} paper(s).`

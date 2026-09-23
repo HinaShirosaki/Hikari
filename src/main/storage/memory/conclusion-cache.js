@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { cleanText, ensureObject } = require('../storage-utils');
-const { NOTEBOOK_MEMORY_MODEL_FALLBACK, PROJECT_MEMORY_CACHE_FILE, PROJECT_MEMORY_CACHE_FOLDER } = require('./constants.js');
+const { NOTEBOOK_MEMORY_MODEL_FALLBACK, NOTEBOOK_SUMMARY_PENDING, PROJECT_MEMORY_CACHE_FILE, PROJECT_MEMORY_CACHE_FOLDER } = require('./constants.js');
 const { truncateInline } = require('./text-utils.js');
 
 function normalizeNotebookConclusionCache(rawCache = {}) {
@@ -25,7 +25,6 @@ function normalizeNotebookConclusionCache(rawCache = {}) {
       generatedAt: cleanText(value.generatedAt, 80),
       model: cleanText(value.model, 120),
       status: cleanText(value.status, 40) || (value.model === NOTEBOOK_MEMORY_MODEL_FALLBACK ? 'fallback' : 'legacy'),
-      proposedConclusion: truncateInline(value.proposedConclusion, 800),
       quotes: Array.isArray(value.quotes) ? value.quotes.map((quote) => String(quote)).slice(0, 3) : [],
       sourceRelativePath: cleanText(value.sourceRelativePath, 2400),
       attempts: Math.max(0, Number(value.attempts) || 0),
@@ -92,16 +91,18 @@ function pruneNotebookConclusionCache(cache, notebookSources) {
   return next;
 }
 
+// No summary yet means say so, not paste the result. A verbatim dump is not a
+// sentence, it is indistinguishable from a real summary once rendered, and the
+// page it came from is one notebook_lookup away.
 function buildFallbackCacheEntry(source, generatedAt = new Date().toISOString()) {
   return {
     hash: source.hash,
-    conclusion: source.fallbackConclusion,
+    conclusion: NOTEBOOK_SUMMARY_PENDING,
     generatedAt,
     model: NOTEBOOK_MEMORY_MODEL_FALLBACK,
     status: 'fallback',
     sourceRelativePath: source.sourceRelativePath,
     quotes: [],
-    proposedConclusion: '',
     attempts: 0,
     retryAfter: ''
   };

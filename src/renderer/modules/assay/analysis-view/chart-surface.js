@@ -3,6 +3,8 @@ import { applyFigureDefaults } from '../plotly/figure-theme.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 import { asArray, ensureObject } from '../../../lib/normalize.js';
 import { getPlotlyTitle, normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
+import { normalizePlotElements } from '../../../../shared/assay-plot.mjs';
+import { buildPlotElements, plotElementEditPatch, validatePlotElementAxes } from '../plotly/plot-elements.js';
 
 // Owns the Plotly surface: the analysis chart, the agent-supplied graph that can
 // replace it, and the context the style store and controls read.
@@ -25,6 +27,35 @@ function createChartSurface({
     hasFittedCurve: false
   };
   let agentPlotlyTarget = null;
+  let agentElements = [];
+  let agentReady = Promise.resolve();
+  let elementQueue = Promise.resolve();
+  const clone = (value) => JSON.parse(JSON.stringify(value));
+  function getAgentElementStyle() {
+    const layout = agentPlotlyTarget?.layout || {};
+    return { plotElements: clone(agentElements), xScale: layout.xaxis?.type === 'log' ? 'log10' : 'linear',
+      yScale: layout.yaxis?.type === 'log' ? 'log10' : 'linear' };
+  }
+  function updateAgentElements(input) {
+    const target = agentPlotlyTarget;
+    const next = normalizePlotElements(input);
+    const job = elementQueue.then(async () => {
+      await agentReady;
+      if (!target || target !== agentPlotlyTarget) throw new Error('The active plot changed.');
+      const axes = { x: target._fullLayout?.xaxis || target.layout?.xaxis || {}, y: target._fullLayout?.yaxis || target.layout?.yaxis || {} };
+      validatePlotElementAxes(next, axes);
+      const previousNames = new Set(agentElements.map((item) => `assay-element-${item.id}`));
+      const annotations = clone(target.layout?.annotations || []).filter((item) => !previousNames.has(item.name));
+      const shapes = clone(target.layout?.shapes || []).filter((item) => !previousNames.has(item.name));
+      const extra = buildPlotElements(next, axes);
+      await getPlotlyRuntime().relayout(target, { annotations: [...annotations, ...extra.annotations], shapes: [...shapes, ...extra.shapes] });
+      if (target !== agentPlotlyTarget) return;
+      agentElements = next;
+      chartControls?.refresh();
+    });
+    elementQueue = job.catch(() => {});
+    return job;
+  }
 
   function setChartContext(context) {
     chartStyleStore.setContext(context);
@@ -106,7 +137,9 @@ function createChartSurface({
   async function exportChartImage(format) {
     const extension = format === 'svg' ? 'svg' : 'png';
     try {
-      const dataUrl = await plotlyRenderer.toImage(extension);
+      const dataUrl = agentPlotlyTarget
+        ? await getPlotlyRuntime().toImage(agentPlotlyTarget, { format: extension, scale: extension === 'svg' ? 1 : 2 })
+        : await plotlyRenderer.toImage(extension);
       if (!dataUrl) {
         showTransientNotice('Render a chart before exporting.', { type: 'error' });
         return;
@@ -152,6 +185,11 @@ function createChartSurface({
       }
     }
     agentPlotlyTarget = null;
+    agentElements = [];
+    if (lastAnalysisContext.method === 'agent_plotly') {
+      lastAnalysisContext = { ...lastAnalysisContext, method: '' };
+      setChartContext(lastAnalysisContext);
+    }
   }
 
   function renderAgentPlotlyGraph(artifact = {}) {
@@ -164,6 +202,7 @@ function createChartSurface({
     }
     const plotly = getPlotlyRuntime();
     if (typeof plotly?.newPlot !== 'function') {
+      purgeAgentPlotly();
       showTransientNotice('Plotly is unavailable, so the agent graph could not be rendered.', { type: 'error' });
       assayAnalysisTable.innerHTML = '<p class="small-note">Plotly is unavailable in this workspace.</p>';
       return false;
@@ -210,7 +249,8 @@ function createChartSurface({
     const config = {
       responsive: true,
       displayModeBar: true,
-      ...ensureObject(themed.config)
+      ...ensureObject(themed.config),
+      edits: { ...ensureObject(themed.config?.edits), annotationPosition: true, annotationText: true }
     };
     try {
       const renderResult = plotly.newPlot(
@@ -219,11 +259,25 @@ function createChartSurface({
         layout,
         config
       );
-      if (renderResult && typeof renderResult.then === 'function') {
-        renderResult.catch((error) => {
+      const target = agentPlotlyTarget;
+      agentReady = Promise.resolve(renderResult).then(() => {
+        if (target !== agentPlotlyTarget) return;
+        lastAnalysisContext.hasCategoryX = target._fullLayout?.xaxis?.type === 'category';
+        setChartContext(lastAnalysisContext);
+        target.on?.('plotly_relayout', (event) => {
+          if (target !== agentPlotlyTarget) return;
+          const patch = plotElementEditPatch(event, target.layout.annotations || [], agentElements,
+            { x: target._fullLayout?.xaxis || {}, y: target._fullLayout?.yaxis || {} });
+          if (patch.plotElements) { agentElements = patch.plotElements; chartControls?.refresh(); }
+        });
+      });
+      agentReady.catch((error) => {
+          if (target !== agentPlotlyTarget) return;
+          purgeAgentPlotly();
+          lastAnalysisContext = { ...lastAnalysisContext, method: '' };
+          setChartContext(lastAnalysisContext);
           showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
         });
-      }
       lastAnalysisContext = {
         headers: [],
         numericHeaders: [],
@@ -236,12 +290,17 @@ function createChartSurface({
       setChartContext(lastAnalysisContext);
       return true;
     } catch (error) {
+      purgeAgentPlotly();
+      lastAnalysisContext = { ...lastAnalysisContext, method: '' };
+      setChartContext(lastAnalysisContext);
       showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
       return false;
     }
   }
 
   return {
+    getAgentElementStyle,
+    updateAgentElements,
     getAnalysisContext: () => lastAnalysisContext,
     setAnalysisContext(next) {
       lastAnalysisContext = next;

@@ -6,7 +6,7 @@ const { asArray, cleanText, ensureObject } = require('../storage-utils');
 const { atomicWriteFile, buildFallbackCacheEntry, shouldGenerateConclusion, pruneNotebookConclusionCache, readJsonObject, readNotebookConclusionCache, stableJson, writeNotebookConclusionCache } = require('./conclusion-cache.js');
 const { buildNotebookConclusionRequest, validateNotebookConclusionResult } = require('./conclusion-request.js');
 const { PAPER_SUMMARY_PENDING } = require('./constants.js');
-const { buildProjectMemoryGeneratedBlock, mergeProjectMemoryMarkdown, readExistingText } = require('./memory-markdown.js');
+const { buildProjectMemoryGeneratedBlock, mergeProjectMemoryMarkdown, projectMemoryByteBudget, readExistingText } = require('./memory-markdown.js');
 const { buildNotebookMemorySource, deriveKnowledgePaperId, projectRecordMatchesSource } = require('./notebook-sources.js');
 const { enqueueProjectMemoryWork, latestProjectMemoryInputs } = require('./queues.js');
 const { normalizeRelativePath } = require('./text-utils.js');
@@ -23,6 +23,7 @@ function collectProjectPaperSources(snapshot, projectRecord) {
       return paperId ? {
         paperId,
         fallbackTitle: cleanText(paper.title, 400),
+        updatedAt: cleanText(paper.updatedAt || paper.updated_at || paper.createdAt || paper.discoveredAt, 80),
         knowledgeMarkdownRelativePath: normalizeRelativePath(
           paper.knowledgeMarkdownRelativePath || paper.knowledge_markdown_relative_path
         )
@@ -49,21 +50,50 @@ async function loadProjectPaperEntries(storageRootPath, paperSources) {
     const summary = cleanText(intake.one_sentence_summary, 1200);
     entries.push({
       paperId: source.paperId,
+      updatedAt: source.updatedAt,
       title: cleanText(intake.title, 400) || source.fallbackTitle || source.paperId,
-      docType: cleanText(intake.doc_type, 80) || 'other',
-      doi: cleanText(intake.doi, 240),
       // ponytail: papers predating intake.json used to be dropped here, so a
       // project with linked-but-unanalyzed papers rendered the same as one with
-      // no papers. Keep the title and path; say the summary is missing.
-      summary: summary || PAPER_SUMMARY_PENDING,
-      sourceRelativePath: normalizeRelativePath(intake.source_paths?.paper_md)
-        || source.knowledgeMarkdownRelativePath
-        || sourceRelativePath
+      // no papers. Keep the title; say the summary is missing.
+      summary: summary || PAPER_SUMMARY_PENDING
     });
   }
-  return entries.sort((left, right) => (
-    String(left.title || left.paperId).localeCompare(String(right.title || right.paperId))
-  ));
+  return entries;
+}
+
+// The agent cannot write this file: Codex runs read-only. Its durable write is
+// the `memory` tool, so the notes section renders that store's project-scoped
+// records rather than inviting an edit the sandbox would refuse.
+async function loadProjectNoteEntries(agentMemoryFilePath, projectRecord) {
+  const filePath = cleanText(agentMemoryFilePath, 2400);
+  if (!filePath) {
+    return [];
+  }
+  const payload = await readJsonObject(filePath);
+  const projectId = cleanText(ensureObject(projectRecord).projectId, 220);
+  const projectName = cleanText(
+    ensureObject(projectRecord).displayName || ensureObject(projectRecord).folderName,
+    320
+  ).toLowerCase();
+  return asArray(payload.items)
+    .map((item) => ensureObject(item))
+    .filter((item) => {
+      if (cleanText(item.scope, 40) !== 'project') {
+        return false;
+      }
+      const itemId = cleanText(item.project_id, 220);
+      const itemName = cleanText(item.project_name, 320).toLowerCase();
+      return (projectId && itemId && itemId === projectId)
+        || (projectName && itemName && itemName === projectName);
+    })
+    .map((item) => ({
+      id: cleanText(item.id, 160),
+      title: cleanText(item.key, 220) || cleanText(item.category, 120) || cleanText(item.id, 160),
+      summary: cleanText(item.summary, 800)
+        || (item.value && typeof item.value === 'object' ? JSON.stringify(item.value) : cleanText(item.value, 800)),
+      updatedAt: cleanText(item.updated_at || item.created_at, 80)
+    }))
+    .filter((note) => note.title && note.summary);
 }
 
 function buildProjectMemoryInput({
@@ -72,13 +102,13 @@ function buildProjectMemoryInput({
   filePath,
   snapshot,
   projectRecord,
-  requestNotebookConclusion
+  requestNotebookConclusion,
+  agentMemoryFilePath = ''
 } = {}) {
   const safeSnapshot = ensureObject(snapshot);
   const notebooks = asArray(safeSnapshot.notebookEntries)
     .map((entry) => buildNotebookMemorySource(storageRootPath, projectRecord, ensureObject(entry)))
-    .filter(Boolean)
-    .sort((left, right) => String(left.title || left.id).localeCompare(String(right.title || right.id)));
+    .filter(Boolean);
   return {
     projectKey: path.resolve(folderPath),
     storageRootPath,
@@ -86,6 +116,7 @@ function buildProjectMemoryInput({
     filePath,
     projectRecord: JSON.parse(JSON.stringify(projectRecord)),
     paperSources: collectProjectPaperSources(safeSnapshot, projectRecord),
+    agentMemoryFilePath: cleanText(agentMemoryFilePath, 2400),
     notebooks,
     requestNotebookConclusion: typeof requestNotebookConclusion === 'function'
       ? requestNotebookConclusion
@@ -94,8 +125,9 @@ function buildProjectMemoryInput({
 }
 
 async function renderProjectMemoryInput(input, { writePrunedCache = false, resetConclusions = false } = {}) {
-  const [paperEntries, loadedCache] = await Promise.all([
+  const [paperEntries, noteEntries, loadedCache] = await Promise.all([
     loadProjectPaperEntries(input.storageRootPath, input.paperSources),
+    loadProjectNoteEntries(input.agentMemoryFilePath, input.projectRecord),
     readNotebookConclusionCache(input.folderPath)
   ]);
   const cache = resetConclusions ? {} : pruneNotebookConclusionCache(loadedCache, input.notebooks);
@@ -114,15 +146,18 @@ async function renderProjectMemoryInput(input, { writePrunedCache = false, reset
     return {
       ...source,
       conclusion: conclusion.conclusion,
+      quotes: conclusion.quotes,
       generatedAt: conclusion.generatedAt,
       model: conclusion.model
     };
   });
+  const existing = await readExistingText(input.filePath);
   const generatedBlock = buildProjectMemoryGeneratedBlock(input.projectRecord, {
     paperEntries,
-    notebookEntries
+    notebookEntries,
+    noteEntries,
+    byteBudget: projectMemoryByteBudget(existing)
   });
-  const existing = await readExistingText(input.filePath);
   await atomicWriteFile(
     input.filePath,
     mergeProjectMemoryMarkdown(existing, generatedBlock)
@@ -219,7 +254,6 @@ async function generateAndCacheNotebookConclusion(projectKey, requestedSource) {
           generatedAt: new Date().toISOString(),
           model: validated.model || 'generated',
           status: 'evidence',
-          proposedConclusion: validated.proposedConclusion,
           quotes: validated.quotes,
           sourceRelativePath: requestedSource.sourceRelativePath,
           attempts: 0,

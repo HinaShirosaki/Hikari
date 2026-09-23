@@ -16,7 +16,13 @@ function sanitizeFolderName(value, fallback = 'item') {
     .replace(/\s+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 180);
-  return cleaned || fallback;
+  // Separators are already gone, but a name of nothing but dots survives them
+  // and still walks: path.join(root, 'Project', '..') is the storage root, and
+  // every caller here joins this onto a trusted base.
+  if (!cleaned || /^\.+$/.test(cleaned)) {
+    return fallback;
+  }
+  return cleaned;
 }
 
 function toPosixRelative(rootPath, targetPath) {

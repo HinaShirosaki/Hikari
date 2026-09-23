@@ -330,3 +330,71 @@ export function fitPade11Curve(points) {
     predict: (x) => pade11Point(x, fitted)
   };
 }
+
+export function exponentialCurvePoint(x, params) {
+  const value = params.plateau + ((params.y0 - params.plateau) * Math.exp(-params.k * x));
+  return Number.isFinite(value) ? value : NaN;
+}
+
+// One-phase exponential. The same equation is a decay when y0 > plateau and an
+// association when y0 < plateau, so kinetic reads and ligand association share it.
+export function fitExponentialCurve(points) {
+  if (!Array.isArray(points) || points.length < 3) {
+    return null;
+  }
+  const valid = points.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  if (valid.length < 3) {
+    return null;
+  }
+  const xValues = valid.map((point) => point.x);
+  const yValues = valid.map((point) => point.y);
+  const xMin = Math.min(...xValues);
+  const xMax = Math.max(...xValues);
+  const xRange = Math.max(1e-6, xMax - xMin);
+  const yMin = Math.min(...yValues);
+  const yMax = Math.max(...yValues);
+  const yRange = Math.max(1e-9, yMax - yMin);
+  const initialK = 3 / xRange;
+
+  const initial = {
+    y0: yValues[0],
+    plateau: yValues[yValues.length - 1],
+    k: initialK
+  };
+  const bounds = {
+    y0: { min: yMin - (yRange * 2), max: yMax + (yRange * 2) },
+    plateau: { min: yMin - (yRange * 2), max: yMax + (yRange * 2) },
+    // k stays positive: a negative rate is the same curve with y0 and plateau swapped,
+    // and letting it go negative only gives the search a way to blow up.
+    k: { min: 1e-9, max: initialK * 500 }
+  };
+  const stepSizes = {
+    y0: yRange * 0.6,
+    plateau: yRange * 0.6,
+    k: initialK * 0.5
+  };
+  const evaluateError = (params) => valid.reduce((sum, point) => {
+    const predicted = exponentialCurvePoint(point.x, params);
+    if (!Number.isFinite(predicted)) {
+      return Number.POSITIVE_INFINITY;
+    }
+    return sum + ((point.y - predicted) ** 2);
+  }, 0);
+
+  const optimized = optimizeModelParameters({
+    initial, bounds, stepSizes, evaluateError
+  });
+  if (!optimized?.params) {
+    return null;
+  }
+
+  const fitted = optimized.params;
+  const halfLife = Math.LN2 / fitted.k;
+  return {
+    modelLabel: 'One-phase exponential',
+    equation: 'y = plateau + (y0-plateau)*exp(-k*x)',
+    parameters: `y0=${formatNumber(fitted.y0)}; plateau=${formatNumber(fitted.plateau)}; k=${formatNumber(fitted.k, 6)}; tau=${formatNumber(1 / fitted.k, 4)}`,
+    params: { ...fitted, halfLife },
+    predict: (x) => exponentialCurvePoint(x, fitted)
+  };
+}

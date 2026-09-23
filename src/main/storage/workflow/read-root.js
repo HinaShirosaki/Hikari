@@ -60,7 +60,14 @@ async function readWorkflowStatusIndex(sqlitePath) {
         warnings: [`Permission denied reading workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
       };
     }
-    throw error;
+    // The workflow index is rebuilt from the run folders on every sync, so an
+    // unreadable one degrades to "no index" rather than failing the load.
+    return {
+      exists: false,
+      templateRows: [],
+      workflowRows: [],
+      warnings: [`Ignoring unreadable workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
+    };
   }
 }
 

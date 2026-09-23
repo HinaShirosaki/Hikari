@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { asArray, cleanText, ensureObject, readJsonFile } = require('../storage-utils');
-const { buildProjectFolderDisplayName, buildProjectFolderFallbackId, parseProjectMemoryMarkdown, pickLatestTimestamp } = require('./project-memory.js');
+const { buildProjectFolderDisplayName, buildProjectFolderFallbackId, buildProjectIdResolverByFolder, parseProjectMemoryMarkdown, pickLatestTimestamp } = require('./project-memory.js');
 const { isPermissionDeniedError } = require('./sqlite-inventory.js');
 
 async function readProjectMemoryRecord(projectFolderPath) {
@@ -75,7 +75,8 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
 }
 
 async function hydrateProjectRootFromStoragePath({
-  storagePath = ''
+  storagePath = '',
+  knownProjects = []
 } = {}) {
   const resolvedStoragePath = cleanText(storagePath, 2400);
   if (!resolvedStoragePath) {
@@ -111,6 +112,7 @@ async function hydrateProjectRootFromStoragePath({
     throw error;
   }
 
+  const knownProjectIdForFolder = buildProjectIdResolverByFolder(knownProjects);
   const projectMap = new Map();
   const notebookMap = new Map();
   const warnings = [];
@@ -130,7 +132,12 @@ async function hydrateProjectRootFromStoragePath({
       warnings.push(`Failed to read project memory for ${projectFolderName}: ${String(error?.message || error)}`);
     }
 
-    const fallbackProjectId = cleanText(memoryRecord.id, 220) || buildProjectFolderFallbackId(projectFolderName);
+    // A live project owning this folder outranks anything read back out of it:
+    // MEMORY.md carries no id, and a stale page.json may carry an old one.
+    const knownProjectId = knownProjectIdForFolder(projectFolderName);
+    const fallbackProjectId = knownProjectId
+      || cleanText(memoryRecord.id, 220)
+      || buildProjectFolderFallbackId(projectFolderName);
     const fallbackProjectName = cleanText(memoryRecord.name, 320) || buildProjectFolderDisplayName(projectFolderName);
 
     try {
@@ -144,7 +151,7 @@ async function hydrateProjectRootFromStoragePath({
         }
       });
 
-      let projectId = cleanText(memoryRecord.id, 220);
+      let projectId = knownProjectId || cleanText(memoryRecord.id, 220);
       let projectName = cleanText(memoryRecord.name, 320);
       let createdAt = cleanText(memoryRecord.createdAt, 80);
       let updatedAt = cleanText(memoryRecord.updatedAt, 80);

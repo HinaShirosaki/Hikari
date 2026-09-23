@@ -4,6 +4,7 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { isMarkdownTableLine } = require('./pdf-text-layout.js');
 const { asArray, ensureObject } = require('../../lib/normalize.js');
+const { extractDoiFromText } = require('../store/paper-knowledge-paths.js');
 
 const PDF_TO_MD_FORMAT = 'hikari-pdf-to-md-v1';
 const DEFAULT_MAX_SECTION_CHARS = 0;
@@ -36,11 +37,6 @@ function normalizeYear(value) {
   }
   const match = direct.match(/\b(19|20)\d{2}\b/);
   return match?.[0] || '';
-}
-
-function extractDoiFromText(value) {
-  const match = String(value || '').match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
-  return normalizeDoi(match?.[0] ? match[0].replace(/[),.;\]]+$/g, '') : '');
 }
 
 function guessTitleFromText(text = '') {

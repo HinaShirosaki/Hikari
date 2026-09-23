@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   NOTEBOOK_MEMORY_MODEL_FALLBACK,
+  NOTEBOOK_SUMMARY_PENDING,
   PAPER_SUMMARY_PENDING,
   PROJECT_MEMORY_AUTO_END,
   PROJECT_MEMORY_AUTO_START,
@@ -17,6 +18,12 @@ const {
   writeProjectMemoryFile
 } = require('../src/main/storage/storage-memory.js');
 const { importStorageRoot } = require('../src/main/storage/storage-import.js');
+const { hydrateSnapshotFromBundle } = require('../src/main/storage/storage-hydration.js');
+const { PROJECT_MEMORY_MAX_BYTES } = require('../src/main/storage/memory/constants.js');
+const { CODEX_PROJECT_DOC_MAX_BYTES } = require('../src/main/lib/codex-cli-provider/constants.js');
+const { buildProjectMemoryGeneratedBlock, projectMemoryByteBudget } = require('../src/main/storage/memory/memory-markdown.js');
+const { sanitizeFolderName } = require('../src/main/storage/storage-utils.js');
+const { hydrateProjectRootFromStoragePath } = require('../src/main/storage/hydration/project-folders.js');
 
 function countOccurrences(text, needle) {
   return String(text || '').split(needle).length - 1;
@@ -202,13 +209,14 @@ try {
   assert.equal(generatedMemory.includes('\nFolder: Atlas\n'), false);
   const generatedNotebookLines = sectionLines(
     generatedMemory,
-    '## Experimental Conclusions',
-    PROJECT_MEMORY_AUTO_END
+    '## Experiments',
+    '## Agent Notes'
   );
   assert.equal(generatedNotebookLines.length, 1, 'each notebook page occupies one MEMORY.md line');
   assert.equal(
     generatedNotebookLines[0],
-    'Protein Yield Run; Yield increased to 42 mg after purification.'
+    '- Protein Yield Run; Purification produced a recorded yield of 42 mg. ("Yield increased to 42 mg after purification.")',
+    'the published line is the summary sentence, carrying the quote that proves it'
   );
 
   const changedEntry = {
@@ -247,7 +255,11 @@ try {
   ));
   assert.equal(modelCalls, 2);
   assert.equal(cache['notebook:note-1'].model, NOTEBOOK_MEMORY_MODEL_FALLBACK);
-  assert.equal(cache['notebook:note-1'].conclusion, 'Observed 3 colonies after selection.');
+  assert.equal(
+    cache['notebook:note-1'].conclusion,
+    NOTEBOOK_SUMMARY_PENDING,
+    'an unsummarized page says so instead of pasting the saved result'
+  );
   assert.deepEqual(cache['notebook:note-1'].quotes, []);
   assert.equal(cache['notebook:note-1'].status, 'fallback');
   assert.equal(Object.prototype.hasOwnProperty.call(cache['notebook:note-1'], 'error'), false);
@@ -272,9 +284,15 @@ try {
   const recovered = JSON.parse(await fs.readFile(cachePath, 'utf8'))['notebook:note-1'];
   assert.equal(recovered.status, 'evidence');
   assert.deepEqual(recovered.quotes, ['Observed 3 colonies after selection.']);
-  assert.equal(recovered.proposedConclusion, 'A proposed interpretation.');
+  assert.equal(recovered.conclusion, 'A proposed interpretation.');
   assert.ok(recovered.sourceRelativePath.endsWith('page.json'));
-  assert.equal((await fs.readFile(memoryPath, 'utf8')).includes('A proposed interpretation.'), false);
+  assert.equal(
+    (await fs.readFile(memoryPath, 'utf8')).includes(
+      'A proposed interpretation. ("Observed 3 colonies after selection.")'
+    ),
+    true,
+    'a quote-verified summary is what MEMORY.md publishes, beside its evidence'
+  );
   await writeProjectMemoryFile({ ...recoveryInput, regenerateConclusions: true });
   await waitForProjectMemoryQueue(projectFolder);
   assert.equal(recoveryCalls, 2);
@@ -383,11 +401,11 @@ try {
   assert.equal(capMemory.includes('## Memory Sync'), false);
   const capNotebookLines = sectionLines(
     capMemory,
-    '## Experimental Conclusions',
-    PROJECT_MEMORY_AUTO_END
+    '## Experiments',
+    '## Agent Notes'
   );
   assert.equal(capNotebookLines.length, 5, 'five notebook pages produce exactly five MEMORY.md lines');
-  assert.equal(capNotebookLines.every((line) => /^Protein Yield Run; .+$/.test(line)), true);
+  assert.equal(capNotebookLines.every((line) => /^- Protein Yield Run; .+$/.test(line)), true);
   assert.equal(capNotebookLines.some((line) => /(?:^- Page:|Generated conclusion:|Recorded result extract:)/.test(line)), false);
   assert.equal(capNotebookLines.some((line) => /; (Protocol|Model|Generated|Result updated|Source):/.test(line)), false);
 
@@ -435,7 +453,12 @@ try {
     'utf8'
   ));
   assert.equal(unreadableCache['notebook:unreadable-1'].model, NOTEBOOK_MEMORY_MODEL_FALLBACK);
-  assert.equal(unreadableCache['notebook:unreadable-1'].conclusion, 'Run produced 5 mg.');
+  assert.equal(unreadableCache['notebook:unreadable-1'].conclusion, NOTEBOOK_SUMMARY_PENDING);
+  assert.equal(
+    (await fs.readFile(path.join(unreadableFolder, 'MEMORY.md'), 'utf8')).includes('Produced 5 mg.'),
+    false,
+    'a summary that could not be confirmed against the saved page is never published'
+  );
 
   // --- a save never waits on in-flight conclusion generation ------------------
   // Generation holds its own queue; only the short cache commit shares the file
@@ -534,25 +557,23 @@ try {
   const legacyMemory = await fs.readFile(path.join(legacyFolder, 'MEMORY.md'), 'utf8');
   const legacyNotebookLines = sectionLines(
     legacyMemory,
-    '## Experimental Conclusions',
-    PROJECT_MEMORY_AUTO_END
+    '## Experiments',
+    '## Agent Notes'
   );
   assert.deepEqual(
     legacyNotebookLines,
-    ['Legacy Run; Recovered 7 mg of protein.'],
+    [`- Legacy Run; ${NOTEBOOK_SUMMARY_PENDING}`],
     'a page without notebookType still reaches MEMORY.md'
   );
   const legacyPaperLines = sectionLines(
     legacyMemory,
-    '## Paper Conclusions',
-    '## Experimental Conclusions'
+    '## Papers',
+    '## Experiments'
   );
-  assert.equal(legacyPaperLines.includes('### Old Paper'), true, 'an un-analyzed paper is listed');
-  assert.equal(legacyPaperLines.includes(`- Summary: ${PAPER_SUMMARY_PENDING}`), true);
-  assert.equal(
-    legacyPaperLines.includes('- Source: `KnowledgeBase/papers.md/Old_Paper/Old_Paper.md`'),
-    true,
-    'the paper path stays reachable without intake.json'
+  assert.deepEqual(
+    legacyPaperLines,
+    [`- Old Paper; ${PAPER_SUMMARY_PENDING}`],
+    'an un-analyzed paper is still listed, on one line, saying the summary is missing'
   );
 
   // An explicit non-biology type is still excluded; only an absent one is not.
@@ -572,10 +593,239 @@ try {
   await waitForProjectMemoryQueue(synthesisFolder);
   const synthesisMemory = await fs.readFile(path.join(synthesisFolder, 'MEMORY.md'), 'utf8');
   assert.deepEqual(
-    sectionLines(synthesisMemory, '## Experimental Conclusions', PROJECT_MEMORY_AUTO_END),
+    sectionLines(synthesisMemory, '## Experiments', '## Agent Notes'),
     ['- None recorded.'],
     'an explicit synthesis page stays out of project memory'
   );
+
+  // The folder is the project's identity: MEMORY.md stores no id, so a project
+  // whose folder holds no page.json to read one back from must still hydrate
+  // onto its live record instead of beside it under a minted id.
+  const identityRoot = path.join(tempDir, 'identity-root');
+  const identityProject = {
+    id: 'project-identity',
+    name: 'Ion Channels',
+    description: 'Paper-only project.',
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-02T00:00:00.000Z'
+  };
+  const identitySnapshot = {
+    settings: { storagePath: identityRoot },
+    projects: [identityProject],
+    notebookEntries: [],
+    papers: [{
+      id: 'paper-identity',
+      title: 'Ion Paper',
+      linkedType: 'project',
+      linkedId: 'project-identity',
+      knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/Ion_Paper/Ion_Paper.md'
+    }]
+  };
+  const identityFolder = path.join(identityRoot, 'Project', 'Ion_Channels');
+  await fs.mkdir(identityFolder, { recursive: true });
+  await writeProjectMemoryFile({
+    storageRootPath: identityRoot,
+    folderPath: identityFolder,
+    snapshot: identitySnapshot,
+    projectRecord: collectProjectMemoryRecords(identitySnapshot)[0]
+  });
+  await waitForProjectMemoryQueue(identityFolder);
+
+  const reloaded = await hydrateSnapshotFromBundle({
+    dataFilePath: path.join(identityRoot, 'hikari-data.json'),
+    snapshot: identitySnapshot
+  });
+  assert.deepEqual(
+    reloaded.snapshot.projects.map((project) => project.id),
+    ['project-identity'],
+    'a paper-only project folder hydrates onto its live record, not beside it'
+  );
+
+  // Recovery with no data file left to match against still mints a folder id.
+  const recoveredRoot = await hydrateProjectRootFromStoragePath({ storagePath: identityRoot });
+  assert.deepEqual(
+    recoveredRoot.projects.map((project) => project.id),
+    ['project_folder_ion_channels'],
+    'a folder with no live project still recovers under a minted id'
+  );
+
+  // --- the index stays inside the project-doc cap, newest first -------------
+  // Codex stops reading at CODEX_PROJECT_DOC_MAX_BYTES and says nothing when it
+  // does, so the block has to bound itself. Storage cannot import that constant
+  // across the agent boundary; this is what keeps the copy honest.
+  assert.equal(
+    PROJECT_MEMORY_MAX_BYTES,
+    CODEX_PROJECT_DOC_MAX_BYTES,
+    'the memory byte cap must track the Codex project-doc cap'
+  );
+
+  const isoDay = (day) => new Date(Date.UTC(2020, 0, 1) + (day * 86400000)).toISOString();
+  const manyPapers = Array.from({ length: 400 }, (unused, index) => ({
+    paperId: `cap-p${index}`,
+    title: `Paper ${index}`,
+    updatedAt: isoDay(index),
+    summary: `A summary of paper ${index} written at a realistic length for one index line.`
+  }));
+  const manyPages = Array.from({ length: 400 }, (unused, index) => ({
+    id: `cap-n${index}`,
+    title: `Run ${index}`,
+    updatedAt: isoDay(index),
+    conclusion: `Run ${index} produced a measurable result worth one recorded sentence.`,
+    quotes: [`run ${index} measured a result worth quoting back`]
+  }));
+  const cappedBlock = buildProjectMemoryGeneratedBlock(
+    { displayName: 'Capped' },
+    { paperEntries: manyPapers, notebookEntries: manyPages, byteBudget: projectMemoryByteBudget('') }
+  );
+  assert.ok(
+    Buffer.byteLength(cappedBlock, 'utf8') <= PROJECT_MEMORY_MAX_BYTES,
+    'an oversized project still renders within the project-doc cap'
+  );
+  const cappedLines = cappedBlock.split('\n');
+  assert.ok(cappedLines.some((line) => line.startsWith('- Paper 399;')), 'the newest paper survives');
+  assert.ok(cappedLines.some((line) => line.startsWith('- Run 399;')), 'the newest experiment survives');
+  assert.ok(!cappedLines.some((line) => line.startsWith('- Paper 0;')), 'the oldest paper is dropped');
+  assert.ok(!cappedLines.some((line) => line.startsWith('- Run 0;')), 'the oldest experiment is dropped');
+  assert.equal(
+    cappedLines.filter((line) => line.includes('omitted from this index')).length,
+    2,
+    'each section says how many records it left out and which tool retrieves them'
+  );
+
+  // Hand-written notes are counted against the same cap, never truncated.
+  const notes = `## Bench notes\n${'x'.repeat(40000)}`;
+  const notesBudget = projectMemoryByteBudget(notes);
+  assert.ok(notesBudget < PROJECT_MEMORY_MAX_BYTES - 40000, 'manual notes shrink the generated budget');
+  const withNotes = mergeProjectMemoryMarkdown(notes, buildProjectMemoryGeneratedBlock(
+    { displayName: 'Noted' },
+    { notebookEntries: manyPages, byteBudget: notesBudget }
+  ));
+  assert.ok(
+    Buffer.byteLength(withNotes, 'utf8') <= PROJECT_MEMORY_MAX_BYTES,
+    'the whole file, notes included, stays within the cap'
+  );
+  assert.ok(withNotes.includes('## Bench notes'), 'hand-written notes are never the thing that gets cut');
+
+  // Ordering is recency, not the alphabet: an old A-title yields to a new Z-title.
+  const orderedBlock = buildProjectMemoryGeneratedBlock({ displayName: 'Ordered' }, {
+    notebookEntries: [
+      { id: 'a', title: 'Alpha run', updatedAt: isoDay(1), conclusion: 'Older result.' },
+      { id: 'z', title: 'Zulu run', updatedAt: isoDay(9), conclusion: 'Newer result.' }
+    ]
+  });
+  assert.deepEqual(
+    sectionLines(mergeProjectMemoryMarkdown('', orderedBlock), '## Experiments', '## Agent Notes'),
+    ['- Zulu run; Newer result.', '- Alpha run; Older result.'],
+    'the newest experiment is listed first, not the alphabetical one'
+  );
+
+  // A notebook result may contain anything, including a pasted MEMORY.md. If a
+  // marker survives into the block, the next merge splices at the injected one
+  // and appends a fresh block on every save until the file is garbage.
+  const injectedBlock = buildProjectMemoryGeneratedBlock({ displayName: 'Inj' }, {
+    notebookEntries: [{
+      id: 'inj',
+      title: `Evil ${PROJECT_MEMORY_AUTO_END} run`,
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      conclusion: `pasted ${PROJECT_MEMORY_AUTO_START} block ${PROJECT_MEMORY_AUTO_END} here`
+    }]
+  });
+  const injectedOnce = mergeProjectMemoryMarkdown('## Bench notes\nkeep me', injectedBlock);
+  const injectedTwice = mergeProjectMemoryMarkdown(injectedOnce, injectedBlock);
+  assert.equal(
+    injectedOnce.split(PROJECT_MEMORY_AUTO_START).length - 1,
+    1,
+    'an injected marker cannot open a second auto block'
+  );
+  assert.equal(injectedOnce, injectedTwice, 're-merging an injected block is byte-stable');
+  assert.ok(injectedTwice.includes('keep me'), 'injection cannot eat hand-written notes');
+
+  // A project folder name is joined onto a trusted base by every sidecar
+  // writer, not just this one: "Project/.." resolves to the storage root, and
+  // a project named ".." used to drop MEMORY.md and .agents/ there.
+  assert.equal(sanitizeFolderName('..', 'Untitled_Project'), 'Untitled_Project');
+  assert.equal(sanitizeFolderName('.', 'Untitled_Project'), 'Untitled_Project');
+  assert.equal(sanitizeFolderName('...', 'Untitled_Project'), 'Untitled_Project');
+  assert.equal(sanitizeFolderName('.hikari', 'Untitled_Project'), '.hikari', 'a leading dot is still a usable name');
+  assert.equal(sanitizeFolderName('../../evil', 'Untitled_Project'), '.._.._evil');
+
+  // The notebook's project dialog cannot import the helper above, so it carries
+  // its own copy to decide both the folder it asks main to create and whether a
+  // new name would collide. Drift means the dialog creates one folder while
+  // storage writes MEMORY.md into another.
+  const controllerSource = await fs.readFile(
+    new URL('../src/renderer/modules/biology-notebook/project/project-controller.js', import.meta.url),
+    'utf8'
+  );
+  const rendererSanitize = new Function(`${
+    controllerSource.slice(
+      controllerSource.indexOf('function sanitizeFolderName'),
+      controllerSource.indexOf('function projectFolderKey')
+    )
+  } return sanitizeFolderName;`)();
+  for (const candidate of [
+    'Atlas', 'Atlas ', 'My Project', 'My/Project', 'My_Project', 'My  Project',
+    '..', '.', '...', '.hikari', '../../evil', 'a'.repeat(400), '', '   '
+  ]) {
+    assert.equal(
+      rendererSanitize(candidate),
+      sanitizeFolderName(candidate, ''),
+      `renderer and storage must agree on the folder for ${JSON.stringify(candidate)}`
+    );
+  }
+
+  // --- Agent Notes: the agent's own memos, written through the memory tool ---
+  // Codex runs read-only, so the section renders the memory store rather than
+  // inviting a file edit the sandbox would refuse.
+  const { createAgentMemoryRuntime } = require('../src/main/agent/context/agent-memory.js');
+  const notesRoot = path.join(tempDir, 'notes-root');
+  const agentMemoryFilePath = path.join(notesRoot, '.hikari', 'agent-memory.json');
+  const runtime = createAgentMemoryRuntime({ memoryFilePath: agentMemoryFilePath });
+  await runtime.execute({ action: 'remember', scope: 'project', project_id: 'proj-notes',
+    key: 'buffer-prep', summary: 'Use freshly made KCl; the old stock drifted.' });
+  await runtime.execute({ action: 'remember', scope: 'project', project_name: 'Ion Channels',
+    key: 'next-step', summary: 'Repeat trial 3 at 30 uM before calling it a dose response.' });
+  await runtime.execute({ action: 'remember', key: 'format', summary: 'Prefers terse answers.' });
+  await runtime.execute({ action: 'remember', scope: 'project', project_id: 'someone-else',
+    key: 'other-note', summary: 'Belongs to a different project.' });
+
+  const notesSnapshot = {
+    settings: { storagePath: notesRoot },
+    projects: [{ id: 'proj-notes', name: 'Ion Channels' }],
+    notebookEntries: [], papers: []
+  };
+  const notesFolder = path.join(notesRoot, 'Project', 'Ion_Channels');
+  await fs.mkdir(notesFolder, { recursive: true });
+  await writeProjectMemoryFile({
+    storageRootPath: notesRoot,
+    folderPath: notesFolder,
+    snapshot: notesSnapshot,
+    projectRecord: collectProjectMemoryRecords(notesSnapshot)[0],
+    agentMemoryFilePath
+  });
+  await waitForProjectMemoryQueue(notesFolder);
+  const notesMemory = await fs.readFile(path.join(notesFolder, 'MEMORY.md'), 'utf8');
+  assert.deepEqual(
+    sectionLines(notesMemory, '## Agent Notes', PROJECT_MEMORY_AUTO_END).sort(),
+    [
+      '- buffer-prep; Use freshly made KCl; the old stock drifted.',
+      '- next-step; Repeat trial 3 at 30 uM before calling it a dose response.'
+    ].sort(),
+    'project-scoped memos reach Agent Notes, by id or by project name'
+  );
+  assert.equal(notesMemory.includes('- format;'), false, 'a global preference is not a project note');
+  assert.equal(notesMemory.includes('- other-note;'), false, 'another project\'s memo does not leak in');
+
+  // Under budget pressure the agent's memos outrank papers and experiments.
+  const squeezed = buildProjectMemoryGeneratedBlock({ displayName: 'Squeezed' }, {
+    notebookEntries: manyPages,
+    noteEntries: [{ id: 'm', title: 'keep-me', summary: 'The note must survive the trim.', updatedAt: isoDay(0) }],
+    byteBudget: 900
+  });
+  assert.ok(squeezed.includes('- keep-me; The note must survive the trim.'),
+    'a note is reserved ahead of newer papers and experiments');
+  assert.ok(squeezed.includes('omitted from this index'), 'the records it displaced are still accounted for');
+  assert.ok(Buffer.byteLength(squeezed, 'utf8') <= 900 + 400, 'the squeezed block stays near its budget');
 
   console.log('project research memory selfcheck OK');
 } finally {

@@ -57,6 +57,18 @@ function uniqueTerms(tokens) {
   return out;
 }
 
+// PDF extraction commonly renders compact identifiers as PT-179 or PT 179.
+// Keep original source offsets so snippets remain verbatim.
+function findOccurrence(text, needle, from = 0) {
+  if (/^[a-z]+[0-9]+[a-z]*$/.test(needle)) {
+    const pattern = needle.replace(/([a-z])([0-9])/, '$1[\\s\\-‐‑–]?$2');
+    const regex = new RegExp(`\\b${pattern}\\b`, 'g');
+    regex.lastIndex = from;
+    return regex.exec(text)?.index ?? -1;
+  }
+  return text.indexOf(needle, from);
+}
+
 function countOccurrences(haystackLower, needle) {
   if (!needle) {
     return 0;
@@ -64,7 +76,7 @@ function countOccurrences(haystackLower, needle) {
   let count = 0;
   let from = 0;
   while (true) {
-    const found = haystackLower.indexOf(needle, from);
+    const found = findOccurrence(haystackLower, needle, from);
     if (found < 0) {
       break;
     }
@@ -120,7 +132,7 @@ function buildSnippet(body, terms, phrase) {
   }
   if (bestIndex < 0) {
     for (const term of terms) {
-      const found = haystack.indexOf(term);
+      const found = findOccurrence(haystack, term);
       if (found >= 0 && (bestIndex < 0 || found < bestIndex)) {
         bestIndex = found;
       }

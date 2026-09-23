@@ -16,6 +16,7 @@ function createDerivedPlateGrid({
   buildResultGridColumns,
   buildResultGridData,
   buildResultGridSignature,
+  resultRowVisible,
   onTransformChange,
   assayResultTable,
   assayDerivedPlatePanel,
@@ -173,6 +174,7 @@ function createDerivedPlateGrid({
         index: '__rowIndex',
         layout: 'fitDataTable',
         reactiveData: false,
+        initialFilter: resultRowVisible,
         // Range selection otherwise wins the first interaction in some Electron
         // builds, making a formula cell feel like it needs a double-click.
         editTriggerEvent: 'click',
@@ -185,6 +187,7 @@ function createDerivedPlateGrid({
         options.height = height;
       }
       transformGrid = new TabulatorLib(host, options);
+      transformGrid?.on?.('tableBuilt', () => transformGrid?.redraw?.(true));
       transformGrid?.on?.('cellEdited', onTransformGridCellEdited);
       transformGridSignature = signature;
       return true;
@@ -295,9 +298,12 @@ function createDerivedPlateGrid({
 
   return {
     getDerivedPlate: () => derivedPlate,
+    refreshRowVisibility: () => transformGrid?.setFilter?.(resultRowVisible),
     getTransformFormulas: () => transformFormulas,
     setTransformEnabled: (enabled) => { transformEnabled = enabled === true; },
-    redrawTransformGrid: () => transformGrid?.redraw?.(true),
+    redrawTransformGrid: () => {
+      if (transformGrid?.initialized !== false) transformGrid?.redraw?.(true);
+    },
     setTransformFormulas(next) {
       transformFormulas = next;
       return transformFormulas;

@@ -170,6 +170,7 @@ function createAssayFormAndList({
       // Analysis-side settings live on the assay but are edited in the Analyze view, so
       // a save from Setup has to carry them forward instead of rebuilding them away.
       chartStyle: existing?.chartStyle || null,
+      plotToolReceipts: existing?.plotToolReceipts || [],
       transformSpec: existing?.transformSpec || null,
       updatedAt: new Date().toISOString()
     };
@@ -229,6 +230,12 @@ function createAssayFormAndList({
     }
     if (elements.assayAnalysisSubtotalsInput) {
       elements.assayAnalysisSubtotalsInput.checked = false;
+    }
+    if (elements.assayAnalysisHighControlInput) {
+      elements.assayAnalysisHighControlInput.value = '';
+    }
+    if (elements.assayAnalysisLowControlInput) {
+      elements.assayAnalysisLowControlInput.value = '';
     }
     analysisView?.syncAnalysisControls();
     analysisView?.clearTransform();

@@ -9,7 +9,7 @@ const {
   buildLegacyKnowledgeDatabasePaths
 } = require('../store/paper-knowledge-paths.js');
 const {
-  openKnowledgeDatabase,
+  withKnowledgeDatabaseWrite,
   persistKnowledgeDatabase,
   queryRows,
   runStatement
@@ -170,8 +170,7 @@ function createPaperWikiChunkerRuntime(deps = {}) {
       return { ok: false, error: 'storage_path and paper_id are required.' };
     }
     const paths = await pickIndexPaths(resolvedStoragePath);
-    const db = await openKnowledgeDatabase(paths.sqlite_path);
-    try {
+    return withKnowledgeDatabaseWrite(paths.sqlite_path, async (db) => {
       applyWikiChunkSchema(db);
       const rows = queryRows(db, 'SELECT id, wiki_path, wiki_status FROM papers WHERE id = ? LIMIT 1', [resolvedPaperId]);
       const paperRow = rows[0];
@@ -197,9 +196,7 @@ function createPaperWikiChunkerRuntime(deps = {}) {
         chunk_count: chunkIds.length,
         chunk_ids: chunkIds
       };
-    } finally {
-      db.close();
-    }
+    });
   }
 
   async function chunkAllPapers({ storage_path: storagePath, only_missing: onlyMissing = false } = {}) {
@@ -208,8 +205,7 @@ function createPaperWikiChunkerRuntime(deps = {}) {
       return { ok: false, error: 'storage_path is required.' };
     }
     const paths = await pickIndexPaths(resolvedStoragePath);
-    const db = await openKnowledgeDatabase(paths.sqlite_path);
-    try {
+    return withKnowledgeDatabaseWrite(paths.sqlite_path, async (db) => {
       applyWikiChunkSchema(db);
       const papers = queryRows(db, `
         SELECT id, wiki_path, wiki_status FROM papers
@@ -242,9 +238,7 @@ function createPaperWikiChunkerRuntime(deps = {}) {
         succeeded: results.filter((entry) => entry.ok).length,
         results
       };
-    } finally {
-      db.close();
-    }
+    });
   }
 
   return {

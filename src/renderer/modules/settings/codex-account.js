@@ -248,6 +248,56 @@ function createCodexAccountSettings({
     }
   }
 
+  async function syncCodexExecutionSettings() {
+    const llm = state.settings?.llm && typeof state.settings.llm === 'object'
+      ? state.settings.llm
+      : {};
+    const requestedModel = String(llm.model || '').trim();
+    const requestedReasoningEffort = String(llm.reasoningEffort || '').trim().toLowerCase();
+    let appliedModel = requestedModel;
+
+    if (window.hikariApi?.setCodexLlmModel) {
+      const result = await window.hikariApi.setCodexLlmModel(requestedModel);
+      if (result?.ok === false) {
+        throw new Error(result.error || 'Failed to apply the Codex model.');
+      }
+      appliedModel = String(result?.model || requestedModel).trim();
+    }
+
+    const normalizedReasoningEffort = llmModelCatalog.normalizeReasoning(
+      DEFAULT_LLM_PROVIDER,
+      appliedModel,
+      requestedReasoningEffort
+    );
+    let appliedReasoningEffort = normalizedReasoningEffort;
+    if (window.hikariApi?.setCodexLlmReasoningEffort) {
+      const result = await window.hikariApi.setCodexLlmReasoningEffort(normalizedReasoningEffort);
+      if (result?.ok === false) {
+        throw new Error(result.error || 'Failed to apply the Codex reasoning effort.');
+      }
+      appliedReasoningEffort = String(
+        result?.reasoningEffort ?? normalizedReasoningEffort
+      ).trim().toLowerCase();
+    }
+
+    const changed = appliedModel !== requestedModel
+      || appliedReasoningEffort !== requestedReasoningEffort;
+    if (changed) {
+      state.settings.llm = {
+        ...llm,
+        provider: DEFAULT_LLM_PROVIDER,
+        model: appliedModel,
+        reasoningEffort: appliedReasoningEffort
+      };
+      persist();
+    }
+    return {
+      changed,
+      model: appliedModel,
+      reasoningEffort: appliedReasoningEffort
+    };
+  }
+
   async function onSaveLlmSettings(event) {
     event.preventDefault();
     const provider = DEFAULT_LLM_PROVIDER;
@@ -262,14 +312,10 @@ function createCodexAccountSettings({
     persist();
 
     try {
-      await Promise.all([
-        window.hikariApi?.setCodexLlmModel
-          ? window.hikariApi.setCodexLlmModel(state.settings.llm.model)
-          : Promise.resolve(),
-        window.hikariApi?.setCodexLlmReasoningEffort
-          ? window.hikariApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
-          : Promise.resolve()
-      ]);
+      const syncResult = await syncCodexExecutionSettings();
+      if (syncResult.changed && typeof renderForms === 'function') {
+        renderForms();
+      }
       const status = await refreshCodexLoginStatus();
       if (status.loggedIn !== true && status.cliAvailable !== false) {
         await startCodexLoginFlow();
@@ -285,18 +331,28 @@ function createCodexAccountSettings({
   }
 
   async function refreshCodexCatalog() {
-    if (!window.hikariApi?.getCodexLlmCatalog) {
-      return;
-    }
+    let catalogChanged = false;
     try {
-      const result = await window.hikariApi.getCodexLlmCatalog();
-      if (!result?.ok) {
-        return;
+      if (window.hikariApi?.getCodexLlmCatalog) {
+        const result = await window.hikariApi.getCodexLlmCatalog();
+        if (result?.ok) {
+          llmModelCatalog.setCodexCatalog(result);
+          catalogChanged = true;
+          if (typeof renderForms === 'function') {
+            renderForms();
+          }
+        }
       }
-      llmModelCatalog.setCodexCatalog(result);
-      renderForms();
     } catch {
       // Keep settings available even when the desktop bridge cannot inspect Codex CLI.
+    }
+    try {
+      const syncResult = await syncCodexExecutionSettings();
+      if (syncResult.changed && !catalogChanged && typeof renderForms === 'function') {
+        renderForms();
+      }
+    } catch {
+      // Agent Chat still passes its model explicitly if startup synchronization fails.
     }
   }
 
@@ -312,7 +368,8 @@ function createCodexAccountSettings({
     onCopyCodexInstallCommand,
     onSaveLlmSettings,
     onModelChanged,
-    refreshCodexCatalog
+    refreshCodexCatalog,
+    syncCodexExecutionSettings
   };
 }
 

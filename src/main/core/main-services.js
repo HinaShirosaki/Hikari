@@ -134,7 +134,8 @@ function createMainServices(context = {}) {
   const syncBundleFromSnapshot = (input = {}) => syncBundleFromSnapshotBase({
     ...input,
     releaseOfficialMcpSkillsForWorkspace,
-    requestProjectMemoryConclusion
+    requestProjectMemoryConclusion,
+    getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath
   });
 
   // Storage.
@@ -214,6 +215,8 @@ function createMainServices(context = {}) {
 
   const mcp = createMainMcpService({
     agentToolRuntime: agents.agentToolRuntime,
+    ipcMain,
+    getMainWindow,
     getWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     processObject
   });
@@ -281,6 +284,7 @@ function createMainServices(context = {}) {
     mainDataHelpers,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
+    getStorageRoot: appPaths.getStorageRoot,
     setStorageRoot: async (root) => {
       if (!appPaths.setStorageRoot(root)) {
         return;

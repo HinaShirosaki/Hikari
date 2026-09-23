@@ -171,7 +171,6 @@ function resolveCodexCliModel(model = '', catalog = null) {
   const explicitModel = normalizeCodexCliModel(model);
   const explicitConfig = findCodexCliModelConfig(explicitModel, resolvedCatalog);
   if (explicitConfig?.id) {
-    configuredCodexModel = explicitConfig.id;
     return explicitConfig.id;
   }
   const configuredConfig = findCodexCliModelConfig(configuredCodexModel, resolvedCatalog);
