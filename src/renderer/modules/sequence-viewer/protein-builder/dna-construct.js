@@ -1,3 +1,4 @@
+import { mapProteinHighlightParts } from './highlight-parts.js';
 import { reverseTranslateProteinSequence } from '../calculations/sequence.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { alignDnaToProteinSequence, normalizeProteinBuildSequence } from './sequence-utils.js';
@@ -172,12 +173,21 @@ export function buildDnaConstruct(payload = {}, options = {}) {
     { organism }
   );
   const sequence = reconciled.sequence;
+  let highlightOffset = 0;
+  const highlightParts = sequence.length === proteinConstruct.sequence.length * 3
+    ? mapProteinHighlightParts(proteinConstruct.sequence, proteinConstruct.parts).map((part) => {
+      const dnaSequence = sequence.slice(highlightOffset, highlightOffset + part.sequence.length * 3);
+      highlightOffset += dnaSequence.length;
+      return { ...part, dnaSequence };
+    })
+    : parts;
   return {
     ok: Boolean(sequence.length) && errors.length === 0,
     length: sequence.length,
     sequence,
     warnings,
     errors,
-    parts
+    parts,
+    highlightParts
   };
 }

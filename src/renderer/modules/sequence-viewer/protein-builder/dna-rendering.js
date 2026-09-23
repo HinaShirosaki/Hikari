@@ -52,7 +52,7 @@ export function installProteinBuilderDnaRendering(ctx) {
     }
 
     elements.proteinBuilderDnaSequence.innerHTML =
-      `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedDna(state.dnaConstruct.sequence, state.dnaConstruct.parts)}</span>`;
+      `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedDna(state.dnaConstruct.sequence, state.dnaConstruct.highlightParts || state.dnaConstruct.parts)}</span>`;
   };
 
   ctx.buildCurrentDnaSequence = function buildCurrentDnaSequence() {

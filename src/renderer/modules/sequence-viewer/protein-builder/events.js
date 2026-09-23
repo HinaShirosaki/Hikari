@@ -93,6 +93,8 @@ export function installProteinBuilderEvents(ctx) {
       ctx.renderAddProteinDialog();
     });
 
+    elements.proteinBuilderAddProteinType?.addEventListener('change', () => ctx.renderAddProteinDialog());
+
     elements.proteinBuilderAddProteinForm?.addEventListener('submit', (event) => {
       event.preventDefault?.();
       ctx.addProteinFromDialog();
@@ -242,6 +244,7 @@ export function installProteinBuilderEvents(ctx) {
         const row = state.rows.find((item) => item.id === rowId);
         if (row) {
           row.sequence = sanitizeProteinAssemblySequence(customSequenceTrigger.value, true);
+          row.sourceDnaSequence = '';
           ctx.invalidateDnaConstruct();
         }
         ctx.render();

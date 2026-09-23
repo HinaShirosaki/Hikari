@@ -543,4 +543,69 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-protein-sequence-highlight"[^>]*role="button"[^>]*tabindex="0"/);
 });
+test('[EDGE] protein builder manual DNA input validates coding sequence and retains codons', () => {
+  const { parseAddProteinInput, installProteinBuilderAddProteinDialog } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'add-protein-dialog.js')
+  );
+  assert.equal(parseAddProteinInput('m a\nkt', 'protein').sequence, 'MAKT');
+  const translated = parseAddProteinInput('atg gcc\ntaa', 'dna');
+  assert.equal(translated.sequence, 'MA');
+  assert.equal(translated.sourceDnaSequence, 'ATGGCC');
+  assert.equal(translated.error, '');
+  assert.match(parseAddProteinInput('ATGG', 'dna').error, /complete codons/);
+  assert.match(parseAddProteinInput('ATGNNN', 'dna').error, /Unsupported DNA/);
+  assert.match(parseAddProteinInput('ATGTAAATG', 'dna').error, /internal stop/);
+  assert.equal(parseAddProteinInput('TAA', 'dna').sequence, '');
+  let added;
+  const ctx = {
+    elements: {
+      proteinBuilderAddProteinType: { value: 'dna' },
+      proteinBuilderAddProteinName: { value: 'Manual DNA' },
+      proteinBuilderAddProteinSequence: { value: 'ATGGCTTGA' }
+    },
+    state: { nextRowId: 1 },
+    appendRow: (row) => { added = row; },
+    invalidateDnaConstruct() {}, render() {}, setBuilderStatus() {}
+  };
+  installProteinBuilderAddProteinDialog(ctx);
+  assert.equal(ctx.addProteinFromDialog(), true);
+  assert.equal(added.sequence, 'MA');
+  assert.equal(added.sourceDnaSequence, 'ATGGCT');
+  added = null;
+  ctx.elements.proteinBuilderAddProteinSequence.value = 'ATGA';
+  assert.equal(ctx.addProteinFromDialog(), false);
+  assert.equal(added, null);
+});
+test('[EDGE] protein builder edits retain block colors in protein and DNA highlights', () => {
+  const base = path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder');
+  const { mapProteinHighlightParts } = loadEsmStyleModule(path.join(base, 'highlight-parts.js'));
+  const { buildConstruct } = loadEsmStyleModule(path.join(base, 'protein-construct.js'));
+  const { buildDnaConstruct } = loadEsmStyleModule(path.join(base, 'dna-construct.js'));
+  const { translateDnaSequence } = loadEsmStyleModule(path.join(base, '..', 'calculations', 'sequence.js'));
+  const payload = { rows: [
+    { kind: 'custom', type: 'custom', label: 'First', sequence: 'MACD' },
+    { kind: 'custom', type: 'custom', label: 'Second', sequence: 'EFGH' },
+    { kind: 'custom', type: 'custom', label: 'Third', sequence: 'IKLM' }
+  ] };
+  const original = buildConstruct(payload);
+  for (const [sequence, expected] of [
+    ['MACDEFGHIKLM*', ['MACD', 'EFGH', 'IKLM*']],
+    ['MVCDQFGHIKLM', ['MVCD', 'QFGH', 'IKLM']],
+    ['MMACDEFGHIKLM*', ['MMACD', 'EFGH', 'IKLM*']],
+    ['MACDEFWGHIKLM', ['MACD', 'EFWGH', 'IKLM']],
+    ['MACDEGHIKLM', ['MACD', 'EGH', 'IKLM']]
+  ]) {
+    const highlights = mapProteinHighlightParts(sequence, original.parts);
+    assert.deepEqual(Array.from(highlights, (part) => part.sequence), expected);
+    assert.deepEqual(Array.from(highlights, (part) => part.paletteSlot), [1, 2, 3]);
+    const dna = buildDnaConstruct({ ...payload, sequenceOverride: sequence });
+    assert.equal(dna.ok, true);
+    assert.equal(dna.highlightParts.map((part) => part.dnaSequence).join(''), dna.sequence);
+    assert.deepEqual(Array.from(dna.highlightParts, (part) => part.paletteSlot), [1, 2, 3]);
+    assert.equal(translateDnaSequence(dna.sequence).protein, sequence);
+    assert.deepEqual(Array.from(dna.parts, (part) => part.proteinLength), [4, 4, 4]);
+  }
+  const deletion = mapProteinHighlightParts('MACDIKLM', original.parts);
+  assert.deepEqual(Array.from(deletion, (part) => part.paletteSlot), [1, 3]);
+});
 };

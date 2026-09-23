@@ -1160,10 +1160,14 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   --builder-notch: 15px;
   margin-top: 10px;
   min-height: 0;
-  display: flex;
-  align-items: center;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.sequence-viewer-protein-builder-chain-scroll {
+  min-width: 0;
   overflow-x: auto;
-  overflow-y: hidden;
   padding: 14px 2px 10px 0;
   scrollbar-gutter: stable;
 }
@@ -1200,7 +1204,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   display: grid;
   /* The shape takes the row height so a block whose name wraps does not leave a
      step in the ribbon. */
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: 78px auto;
   gap: 6px;
   /* Width tracks the block's length in residues, so the ribbon is a map of the
      construct: a 232 aa protein reads as the bulk of it and a 6 aa tag as a
@@ -1219,6 +1223,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-block-shape {
   min-height: 62px;
+  box-sizing: border-box;
+  min-width: 0;
   height: 100%;
   padding: 8px calc(var(--builder-notch) + 10px) 8px 12px;
   display: grid;
@@ -1422,9 +1428,50 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   color: var(--theme-danger);
 }
 
+.sequence-viewer-protein-builder-custom-editor {
+  min-width: 0;
+  border-top: 1px solid var(--theme-border);
+  padding: 8px 0;
+}
+
+.sequence-viewer-protein-builder-custom-editor summary {
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-protein-builder-custom-editor summary .small-note {
+  margin-left: 8px;
+}
+
 .sequence-viewer-protein-builder-custom-fields {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: start;
+  gap: 12px;
+  padding-top: 12px;
+}
+
+.sequence-viewer-protein-builder-custom-fields label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-protein-builder-custom-fields input,
+.sequence-viewer-protein-builder-custom-fields textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sequence-viewer-protein-builder-custom-fields textarea {
+  resize: vertical;
+  font-family: monospace;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .sequence-viewer-protein-builder-sequence-panel .sequence-block {
