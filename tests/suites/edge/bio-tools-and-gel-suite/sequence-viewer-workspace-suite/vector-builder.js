@@ -811,14 +811,13 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
 
 test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in strand order', async () => {
   // His6 is forward 7-24; Terminator is reverse 31-50.
-  const { document } = bootVectorBuilder([
+  const features = [
     { name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
     { name: 'Terminator', type: 'terminator', strand: -1, source: 'external', segments: [{ start: 30, end: 50 }] }
-  ]);
-
+  ];
+  const { document } = bootVectorBuilder(features);
   const map = document.getElementById('sequence-viewer-vector-builder-map');
   const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
-  const note = document.getElementById('sequence-viewer-vector-builder-sequence-edit-note');
 
   trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
@@ -829,26 +828,32 @@ test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in stran
   assert.match(contextMenu.innerHTML, /Insert Protein Construct Before 5'/);
   assert.match(contextMenu.innerHTML, /Insert Protein Construct After 3'/);
 
-  // Forward feature: 5' is the low coordinate (base 7), 3' the high one (24).
-  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
-  assert.equal(note.innerHTML, '');
-  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
+  // Inserts ten bases through the menu on a fresh record and reports where both
+  // features ended up, which pins the insertion point between them.
+  async function insertTenBases(featureIndex, action) {
+    const { document: doc } = bootVectorBuilder(features);
+    const vectorMap = doc.getElementById('sequence-viewer-vector-builder-map');
+    trigger(vectorMap, 'mousedown', { button: 0, target: featureTarget(featureIndex) });
+    trigger(vectorMap, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(featureIndex) });
+    trigger(doc.getElementById('sequence-viewer-vector-builder-context-menu'), 'click', { target: contextActionTarget(action) });
+    assert.equal(doc.getElementById('sequence-viewer-vector-builder-sequence-edit-note').innerHTML, '');
+    doc.getElementById('sequence-viewer-vector-builder-sequence-edit-textarea').value = 'CCCCCCCCCC';
+    trigger(doc.getElementById('sequence-viewer-vector-builder-sequence-edit-form'), 'submit', { preventDefault() {} });
+    await flushAsync();
+    return [...new Set(Array.from(
+      String(vectorMap.innerHTML).matchAll(/aria-label="((?:His6|Terminator) \(\d+\.\.\d+\))"/g),
+      (match) => match[1]
+    ))];
+  }
 
-  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
-  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
-  assert.equal(note.innerHTML, '');
-  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
+  // Forward feature: 5' is the low coordinate (before base 7), 3' the high one (after 24).
+  assert.deepEqual(await insertTenBases(0, 'insert-bases-five'), ['His6 (17..34)', 'Terminator (41..60)']);
+  assert.deepEqual(await insertTenBases(0, 'insert-bases-three'), ['His6 (7..24)', 'Terminator (41..60)']);
 
-  // Reverse feature: the sides swap, because 5' sits at the higher coordinate.
-  trigger(map, 'mousedown', { button: 0, target: featureTarget(1) });
-  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
-  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
-  assert.equal(note.innerHTML, '');
-  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
-
-  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
-  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
-  assert.equal(note.innerHTML, '');
+  // Reverse feature: the sides swap, because 5' sits at the higher coordinate
+  // (after base 50) and 3' at the lower one (before base 31).
+  assert.deepEqual(await insertTenBases(1, 'insert-bases-five'), ['His6 (7..24)', 'Terminator (31..50)']);
+  assert.deepEqual(await insertTenBases(1, 'insert-bases-three'), ['His6 (7..24)', 'Terminator (41..60)']);
 });
 
 test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and keeps both boxes in step', () => {

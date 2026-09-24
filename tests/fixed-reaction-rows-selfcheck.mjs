@@ -92,7 +92,8 @@ doc.getElementById('fixed-reaction-stock-7').value = '1 mg/mL';
 doc.getElementById('fixed-reaction-final-7').value = '100 ng/uL';
 const input7 = doc.getElementById('fixed-reaction-final-7');
 input7.listeners.filter(([t]) => t === 'input').forEach(([, h]) => h());
-assert.match(doc.getElementById('fixed-reaction-volume-7').placeholder, /10/);
+// 100 ng/uL from a 1 mg/mL (1000 ng/uL) stock in 100 uL
+assert.equal(doc.getElementById('fixed-reaction-volume-7').placeholder, '10 uL');
 
 const removeTarget = {
   closest(selector) {

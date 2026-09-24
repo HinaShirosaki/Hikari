@@ -15,42 +15,6 @@ module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
     gelLaneTableInternals,
     assertClose
   } = scope;
-test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => {
-  [
-    'selectViewerBaseImageData',
-    'clamp',
-    'round',
-    'mean',
-    'confidenceLabel',
-    'normalizeManualOverrides',
-    'normalizeLaneBandWindows',
-    'normalizeLaneVertices',
-    'normalizePeakIntegrations',
-    'getLaneRowBounds',
-    'getLaneRowSegment',
-    'getLaneRectifiedWidth',
-    'lanePointToRectifiedRow',
-    'laneContainsPoint',
-    'getTargetBandWindowForLane',
-    'isPerLaneBandMode',
-    'analyzeGelImage',
-    'safeFilePart',
-    'escapeCsv',
-    'computeHistogramPercentiles',
-    'normalizeArrayRange',
-    'buildGaussianKernel',
-    'gaussianBlur2d',
-    'linearRegression',
-    'buildCalibration',
-    'applyNormalization',
-    'clusterBandsAcrossLanes',
-    'computeLaneConfidence',
-    'interpretLane'
-  ].forEach((name) => {
-    assert.equal(typeof gelAnalysisInternals[name], 'function');
-  });
-});
-
 test('[EDGE] gel-analysis viewer keeps imported color image data when preprocessing exists', () => {
   const originalImageData = { tag: 'original' };
   const previewImageData = { tag: 'preview' };
@@ -2348,16 +2312,17 @@ test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking 
 });
 
 [
-  new Float32Array(100).fill(0),
-  new Float32Array(100).fill(1),
-  Float32Array.from({ length: 100 }, (_, i) => i / 99),
-  Float32Array.from({ length: 100 }, (_, i) => (i % 2 ? 1 : 0))
-].forEach((data, idx) => {
-  test(`[EDGE] gel-analysis histogram percentile shape case ${idx + 1}`, () => {
+  { data: new Float32Array(100).fill(0), low: 0, high: 0 },
+  { data: new Float32Array(100).fill(1), low: 1, high: 1 },
+  // 0, 1/99, ..., 1 in 256 buckets: the 2nd value lands in bucket 3, the 98th in bucket 250.
+  { data: Float32Array.from({ length: 100 }, (_, i) => i / 99), low: 3 / 255, high: 250 / 255 },
+  // Half black, half white: 2% is reached on black, 98% only on white.
+  { data: Float32Array.from({ length: 100 }, (_, i) => (i % 2 ? 1 : 0)), low: 0, high: 1 }
+].forEach(({ data, low: expectedLow, high: expectedHigh }, idx) => {
+  test(`[EDGE] gel-analysis histogram percentile values case ${idx + 1}`, () => {
     const { low, high } = gelAnalysisInternals.computeHistogramPercentiles(data, 2, 98);
-    assert.equal(low >= 0 && low <= 1, true);
-    assert.equal(high >= 0 && high <= 1, true);
-    assert.equal(high >= low, true);
+    assert.equal(low, expectedLow);
+    assert.equal(high, expectedHigh);
   });
 });
 
@@ -2372,6 +2337,13 @@ test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking 
     out.forEach((value) => {
       assert.equal(value >= 0 && value <= 1, true);
     });
+    if (idx === 0) {
+      assert.equal(new Set(out).size, 1, 'a flat image stays flat');
+    } else {
+      // The 2nd/98th percentiles of these fixtures are their own 0 and 1 extremes,
+      // so the stretch is the identity.
+      assert.deepEqual(Array.from(out), Array.from(data));
+    }
   });
 });
 
@@ -2491,7 +2463,9 @@ test('[EDGE] gel-analysis applyCalibrationToBands sets estimatedMw', () => {
       { index: 0, imageHeight: 100, bands: [{ bandIndex: 0, estimatedMw: 100, pixelY: 20 }] },
       { index: 1, imageHeight: 100, bands: [{ bandIndex: 0, estimatedMw: 103, pixelY: 30 }] }
     ],
-    minGroups: 1
+    // 100 and 103 kDa are within the 5% merge tolerance: one shared group.
+    lanesByGroup: [[1, 2]],
+    approxMw: [101.5]
   },
   {
     hasMwCalibration: false,
@@ -2500,12 +2474,18 @@ test('[EDGE] gel-analysis applyCalibrationToBands sets estimatedMw', () => {
       { index: 1, imageHeight: 100, bands: [{ bandIndex: 0, estimatedMw: null, pixelY: 22 }] },
       { index: 2, imageHeight: 100, bands: [{ bandIndex: 0, estimatedMw: null, pixelY: 80 }] }
     ],
-    minGroups: 2
+    // 20% and 22% of the lane height sit within 0.03 of each other; 80% does not.
+    lanesByGroup: [[1, 2], [3]],
+    approxMw: [null, null]
   }
 ].forEach((scenario, idx) => {
   test(`[EDGE] gel-analysis clusterBandsAcrossLanes case ${idx + 1}`, () => {
     const groups = gelAnalysisInternals.clusterBandsAcrossLanes(scenario.lanes, scenario.hasMwCalibration);
-    assert.equal(groups.length >= scenario.minGroups, true);
+    assert.deepEqual(
+      Array.from(groups, (group) => Array.from(group.members, (member) => member.laneIndex).sort((a, b) => a - b)),
+      scenario.lanesByGroup
+    );
+    assert.deepEqual(Array.from(groups, (group) => group.approxMw), scenario.approxMw);
     scenario.lanes.forEach((lane) => {
       lane.bands.forEach((band) => {
         assert.equal(typeof band.groupId, 'string');

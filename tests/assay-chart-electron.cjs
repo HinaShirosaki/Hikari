@@ -156,7 +156,8 @@ if (!process.versions.electron) {
       await shot('06-restarted');
       console.log('Electron restart persistence passed');
     } else {
-      assert.deepEqual(await js("[...document.querySelectorAll('[role=tab]')].map(e=>e.textContent)"),['Frame','Axis','Data Series','Text']);
+      // Elements is only offered for agent-built plots, so it stays hidden here.
+      assert.deepEqual(await js("[...document.querySelectorAll('[role=tab]:not([hidden])')].map(e=>e.textContent)"),['Frame','Axis','Data Series','Text']);
       await js("qa.q('frameStyle').querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");
       assert.equal(await js("document.activeElement.getAttribute('role')"),'option','frame preview opens from the keyboard');
       await js("document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
@@ -270,7 +271,7 @@ if (!process.versions.electron) {
       await js("qa.host.emit('plotly_relayout',{'annotations[0].x':0.3})");await settle();
       assert.equal(await js('qa.store.getStyle().xTitlePos'),0.3);
       await edit('textTarget','yTicks');await shot('04-text');
-      const frameRect = await js("[...document.querySelectorAll('[role=tab]')].map(e=>{let r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,scroll:e.scrollWidth,client:e.clientWidth}})");
+      const frameRect = await js("[...document.querySelectorAll('[role=tab]:not([hidden])')].map(e=>{let r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,scroll:e.scrollWidth,client:e.clientWidth}})");
       assert.ok(frameRect.every(r=>r.y===frameRect[0].y && r.scroll<=r.client+1),'tabs stay on one line without clipping');
       await js("document.querySelector('[data-cc-tab=frame]').focus();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}))");
       assert.equal(await js('document.activeElement.dataset.ccTab'),'text');
@@ -296,7 +297,7 @@ if (!process.versions.electron) {
       assert.ok(wideRail.height <= 500, 'the Frame panel stays dense on a wide rail');
       await shot('13-wide');
       win.setSize(900,700);await js("document.getElementById('qa').style.gridTemplateColumns='240px minmax(0,1fr)';qa.render();qa.tab('frame')");await settle();
-      const narrow = await js("[...document.querySelectorAll('[role=tab]')].map(e=>({y:e.getBoundingClientRect().y,w:e.clientWidth,s:e.scrollWidth}))");
+      const narrow = await js("[...document.querySelectorAll('[role=tab]:not([hidden])')].map(e=>({y:e.getBoundingClientRect().y,w:e.clientWidth,s:e.scrollWidth}))");
       assert.ok(narrow.every(r=>r.y===narrow[0].y&&r.s<=r.w+1),'tabs fit a 240px rail');
       await shot('07-narrow');
       const scrollBefore = await js("document.getElementById('workspace').scrollTop=60;document.getElementById('workspace').scrollTop");

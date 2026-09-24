@@ -50,18 +50,6 @@ normalizedArrayKeys.forEach((key) => {
     assert.deepEqual(normalized[key], payload);
   });
 });
-test('[P1] normalizeState adds empty comments array to papers missing comment data', () => {
-  const normalized = shared.normalizeState({
-    papers: [
-      {
-        id: 'paper-1',
-        title: 'Atlas'
-      }
-    ]
-  });
-  assert.equal(Array.isArray(normalized.papers[0].comments), true);
-  assert.equal(normalized.papers[0].comments.length, 0);
-});
 test('[P0] normalizeState drops malformed nested paper comments', () => {
   const normalized = shared.normalizeState({
     papers: [

@@ -34,9 +34,11 @@ const suitesRoot = path.join(__dirname, 'tests', 'suites');
 function callerGroup() {
   const frames = String(new Error().stack).split('\n').slice(2);
   for (const frame of frames) {
-    const file = (frame.match(/\(?(\/[^():]+\.js):\d+:\d+\)?$/) || [])[1];
+    // POSIX (/repo/...) and Windows (D:\repo\...) frames; group names always use '/'
+    // so filters such as '^core/...' work on every platform.
+    const file = (frame.match(/\(?((?:[A-Za-z]:)?[\\/][^():]+\.js):\d+:\d+\)?$/) || [])[1];
     if (file && file.startsWith(suitesRoot)) {
-      return path.relative(suitesRoot, file).replace(/\.js$/, '');
+      return path.relative(suitesRoot, file).split(path.sep).join('/').replace(/\.js$/, '');
     }
   }
   return 'root';
@@ -1425,7 +1427,9 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
 
   // A moved storage root makes the recorded absolute path stale; the record's
   // relative path still resolves, and losing the image here is permanent.
-  disk.set('/moved/Gels/old/source.png', 'U09VUkNF');
+  // The old root is gone, so only the relative fallback can find the image.
+  disk.delete('/root/Gels/old/source.png');
+  disk.set('/moved/Gels/old/source.png', 'TU9WRUQ=');
   state.settings.storagePath = '/moved';
   state.gelAnalyses = [{
     id: 'gel-3',
@@ -1443,6 +1447,11 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
     frame.replies.at(-1).result.records[0].sourceImagePath,
     /source\.png$/,
     'a stale absolute path falls back to the relative one'
+  );
+  assert.equal(
+    disk.get('/moved/Plugins/gel/Gels/Moved_Gel__gel-3/source.png'),
+    'TU9WRUQ=',
+    'the image copied is the one under the moved root'
   );
   state.settings.storagePath = '/root';
 
@@ -1571,13 +1580,18 @@ test('plugin system: python.run is permission gated and hands back no host paths
 });
 
 test('python sandbox: Finder launches prefer standard user Python installs on macOS', async () => {
-  if (process.platform !== 'darwin') {
-    return;
-  }
   const {
     platformPythonCandidates,
     resolvePythonExecutable
   } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js'));
+  // The candidate table is plain data, so its order is checked on every platform;
+  // only the probe against real installs below needs a Mac.
+  assert.deepEqual(platformPythonCandidates('darwin'), ['/opt/homebrew/bin/python3', '/usr/local/bin/python3']);
+  assert.deepEqual(platformPythonCandidates('linux'), []);
+  assert.deepEqual(platformPythonCandidates('win32'), []);
+  if (process.platform !== 'darwin') {
+    return;
+  }
   const available = [];
   for (const candidate of platformPythonCandidates('darwin')) {
     try {

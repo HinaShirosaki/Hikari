@@ -99,7 +99,8 @@ doc.getElementById('buffer-name-7').value = 'NaCl';
 doc.getElementById('buffer-mw-7').value = '58.44';
 doc.getElementById('buffer-final-7').value = '150 mM';
 doc.getElementById('buffer-final-7').fire('input');
-assert.match(doc.getElementById('buffer-amount-7').placeholder, /\d/);
+// 150 mM x 1 L x 58.44 g/mol
+assert.equal(doc.getElementById('buffer-amount-7').placeholder, '8.766 g');
 
 const bufferRemoveTarget = {
   closest(selector) {

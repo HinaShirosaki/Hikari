@@ -518,20 +518,48 @@ test('papers outline panel scrolls independently and gives back its collapsed sp
   assert.match(css, /\.papers-comment-sidebar\s*\{[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s);
 });
 test('papers selection search popover dismisses on outside document pointer down', () => {
-  const searchUiSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-search-ui-controller.js'),
-    'utf8'
-  );
-  const eventsSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-events-controller.js'),
-    'utf8'
-  );
+  const viewerDir = path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer');
+  const { installPdfViewerSearchUiController } = loadEsmStyleModule(path.join(viewerDir, 'pdf-viewer-search-ui-controller.js'));
+  const { installPdfViewerEventsController } = loadEsmStyleModule(path.join(viewerDir, 'pdf-viewer-events-controller.js'));
+  const insidePopover = {};
+  const insideMenu = {};
+  const popover = { hidden: false, contains: (node) => node === insidePopover };
+  const documentListeners = {};
+  const ctx = {
+    elements: {
+      selectionSearchPopover: popover,
+      selectionMenu: { contains: (node) => node === insideMenu },
+      selectionSearchResults: { innerHTML: '<p>Results</p>' }
+    },
+    state: {
+      pageRecords: [],
+      searchMatches: [{ id: 'match-1', pageNumber: 1 }],
+      activeSearchMatchIndex: 0,
+      searchToneIndex: 0
+    },
+    getWindowRef: () => ({ addEventListener() {} }),
+    getDocumentRef: () => ({
+      addEventListener: (type, listener) => {
+        (documentListeners[type] = documentListeners[type] || []).push(listener);
+      }
+    })
+  };
+  installPdfViewerSearchUiController(ctx);
+  installPdfViewerEventsController(ctx);
+  ctx.bindEvents();
+  const pointerDown = (target) => (documentListeners.pointerdown || []).forEach((listener) => listener({ target }));
 
-  assert.match(searchUiSource, /function handleDocumentPointerDown\(event\)/);
-  assert.match(searchUiSource, /selectionSearchPopover\?\.hidden === false/);
-  assert.match(searchUiSource, /!isSelectionSearchPopoverEvent\(event\)/);
-  assert.match(searchUiSource, /hideSelectionSearchPopover\(\)/);
-  assert.match(eventsSource, /doc\.addEventListener\('pointerdown', ctx\.handleDocumentPointerDown\)/);
+  // Pointer downs inside the popover or the selection menu keep it open.
+  pointerDown(insidePopover);
+  pointerDown(insideMenu);
+  assert.equal(popover.hidden, false);
+  assert.equal(ctx.state.searchMatches.length, 1);
+
+  // Anywhere else on the page closes it and drops its matches.
+  pointerDown({});
+  assert.equal(popover.hidden, true);
+  assert.equal(ctx.state.searchMatches.length, 0);
+  assert.equal(ctx.elements.selectionSearchResults.innerHTML, '');
 });
 test('papers PDF loading prefers stored bytes and compacts embedded PDF state', () => {
   const actionsSource = [
