@@ -509,8 +509,8 @@ test('biology-notebook page metadata omits redundant result file and table summa
   });
   assert.doesNotMatch(meta, /Result files:/);
   assert.doesNotMatch(meta, /Result table:/);
-  assert.match(meta, /Tool calculations: 1 calculation \(Molarity\)\./);
-  assert.match(meta, /Linked samples: 1\./);
+  assert.match(meta, /1 calculation \(Molarity\)/);
+  assert.match(meta, /1 linked sample/);
 });
 test('biology-notebook places Clarify and Save inside the notes composer', () => {
   const html = fs.readFileSync(path.join(
@@ -591,7 +591,7 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
     'rail-and-projects.css'
   ), 'utf8');
   assert.match(html, /<tbody id="biology-notebook-tool-buffer-rows">/);
-  assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[\s\S]*?>\+<\/button>/);
+  assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg><\/button>/);
   assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
   const molarityButtonStart = html.indexOf('<button id="biology-notebook-add-molarity-btn"');
   const molarityButton = html.slice(molarityButtonStart, html.indexOf('</button>', molarityButtonStart) + 9);
@@ -1631,7 +1631,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.doesNotMatch(renderedCalculations, /NaCl: 8\.766 g/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.doesNotMatch(renderedCalculations, /<p[\s>]/);
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 2 calculations/i);
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /2 calculations/i);
 
   // A recorded reaction is a starting point: its cells are editable, and one
   // edit runs the engine again for every derived volume and the fill.

@@ -2,8 +2,8 @@
 #assay-analyze-workspace {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px;
+  gap: var(--space-20);
+  padding: var(--space-24);
   min-width: 0;
   container-type: inline-size;
 }
@@ -17,10 +17,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10);
   flex-wrap: wrap;
 }
-.assay-workspace-header h2 { margin: 0; font-size: 1.25rem; letter-spacing: -0.025em; }
+.assay-workspace-header h2 { margin: 0; font-size: var(--text-2xl); letter-spacing: -0.025em; }
 .assay-workspace-header .small-note,
 .assay-workspace-chart-header .small-note { margin: 4px 0 0; }
 .assay-workspace-header > div { min-width: 0; overflow-wrap: anywhere; }
@@ -38,18 +38,20 @@
   overflow: hidden;
 }
 .assay-workspace-chart-header { padding: 14px 16px 4px; }
-.assay-workspace-chart-header h3 { margin: 0; font-size: 0.88rem; font-weight: 600; }
+.assay-workspace-chart-header h3 { margin: 0; font-size: var(--text-base); font-weight: 600; }
 .assay-workspace-chart-actions { flex-wrap: wrap; gap: 4px; }
-#assay-analyze-workspace button { font-size: 0.78rem; }
-.assay-workspace-chart-actions button,
+#assay-analyze-workspace button { font-size: var(--text-xs); }
+.assay-workspace-chart-actions .ghost-btn,
 .assay-workspace-data-header > button { padding: 5px 8px; min-height: 30px; }
 .assay-workspace-chart-types { border: 1px solid var(--theme-border); padding: 2px; border-radius: 6px; gap: 2px; }
 .assay-workspace-chart-types button { border: 0; min-height: 26px; border-radius: 4px; }
-.assay-workspace-chart-types button[aria-pressed="true"] {
+.assay-workspace-chart-types button[aria-pressed="true"],
+#assay-chart-focus-btn[aria-pressed="true"] {
   background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
   color: var(--theme-accent);
 }
-#assay-analyze-workspace .assay-chart-export-actions { margin: 0; gap: 3px; }
+#assay-analyze-workspace .assay-chart-export-actions { margin: 0 0 0 var(--space-6); gap: 3px; }
+.assay-chart-export-icon { color: var(--theme-text-muted); }
 #assay-analyze-workspace #assay-analysis-table { margin: 0; border: 0; padding: 0; }
 #assay-analyze-workspace .assay-analysis-chart {
   border: 0; border-radius: 0; padding: 8px 12px;
@@ -63,7 +65,7 @@
 .assay-workspace-tabs { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
 .assay-workspace-tabs [role="tab"] {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 10px 0; border: 0; border-bottom: 2px solid transparent;
+  padding: var(--space-10) 0; border: 0; border-bottom: 2px solid transparent;
   border-radius: 0; background: transparent; color: var(--theme-text-muted);
 }
 .assay-workspace-tabs [aria-selected="true"] {
@@ -72,17 +74,83 @@
 .assay-workspace-tabs [role="tab"]:hover { color: var(--theme-accent); }
 .assay-workspace-data-options { justify-content: flex-end; padding: 10px 0; gap: 16px; }
 .assay-workspace-data-options > .small-note { margin: 0 auto 0 0; }
-.assay-workspace-check { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--theme-text-muted); }
+.assay-workspace-check { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-xs); color: var(--theme-text-muted); }
 .assay-workspace-check input { width: 14px; height: 14px; margin: 0; accent-color: var(--theme-accent); }
 .assay-workspace-table-panel { min-width: 0; }
 .assay-workspace-table-panel .assay-tabulator.tabulator {
-  border: 1px solid var(--theme-border); border-radius: 7px; font-size: 0.75rem;
+  border: 1px solid var(--theme-border); border-radius: 7px; font-size: var(--text-xs);
 }
 .assay-workspace-table-panel .assay-tabulator .tabulator-row { min-height: 30px; }
 .assay-workspace-table-panel .assay-tabulator .tabulator-cell { padding: 6px; font-variant-numeric: tabular-nums; }
-.assay-workspace-table-panel .assay-result-col-index { font-weight: 500; font-size: 0.68rem; }
-.assay-workspace-table-panel .assay-result-col-meta { font-size: 0.7rem; }
-.assay-workspace-compare-label { display: none; margin: 0 0 8px; font-size: 0.78rem; font-weight: 600; }
+.assay-workspace-table-panel .assay-result-col-index { font-weight: 500; font-size: var(--text-2xs); }
+.assay-workspace-table-panel .assay-result-col-meta { font-size: var(--text-2xs); }
+/* Analyze tables use opaque, quiet surfaces; override Tabulator's grey defaults
+   without changing Setup plates or the semantic row/column group overlays. */
+#assay-analyze-workspace .assay-tabulator.tabulator {
+  background: var(--assay-plate-analysis-surface);
+  border-color: var(--assay-plate-analysis-line);
+  color: var(--assay-plate-analysis-ink);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-row,
+#assay-analyze-workspace .assay-tabulator .tabulator-cell {
+  background-color: var(--assay-plate-analysis-surface);
+  color: var(--assay-plate-analysis-ink);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-cell {
+  border-bottom-color: var(--assay-plate-analysis-line);
+  border-right-color: color-mix(in srgb, var(--assay-plate-analysis-line) 55%, transparent);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-header,
+#assay-analyze-workspace .assay-tabulator .tabulator-col,
+#assay-analyze-workspace .assay-tabulator .tabulator-cell.tabulator-frozen-left {
+  background-color: var(--assay-plate-analysis-header);
+  border-color: var(--assay-plate-analysis-line);
+  color: var(--assay-plate-analysis-muted);
+  font-weight: 500;
+}
+#assay-analyze-workspace .assay-result-col-meta {
+  color: var(--assay-plate-analysis-muted);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-cell.assay-result-disabled {
+  background-color: var(--assay-plate-analysis-header);
+  color: var(--assay-plate-analysis-muted);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-cell:not(.assay-result-disabled):hover,
+#assay-analyze-workspace .assay-tabulator .tabulator-col.tabulator-range-highlight {
+  background-color: var(--assay-plate-analysis-header);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-cell.tabulator-range-selected,
+#assay-analyze-workspace .assay-tabulator .tabulator-col.tabulator-range-selected,
+#assay-analyze-workspace .assay-tabulator .tabulator-row.tabulator-selected .tabulator-cell {
+  background-color: var(--assay-plate-analysis-selection);
+  color: var(--assay-plate-analysis-ink);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-range,
+#assay-analyze-workspace .assay-tabulator .tabulator-range-cell-active,
+#assay-analyze-workspace .assay-tabulator .tabulator-cell.tabulator-editing {
+  border-color: var(--assay-plate-analysis-focus);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-range.tabulator-range-active::after {
+  background-color: var(--assay-plate-analysis-focus);
+}
+#assay-analyze-workspace .assay-tabulator .tabulator-cell.tabulator-editing input {
+  background: var(--assay-plate-analysis-surface);
+  color: var(--assay-plate-analysis-ink);
+}
+#assay-analyze-workspace #assay-analysis-summary-table .assay-plate-table th {
+  background: var(--assay-plate-analysis-header);
+  color: var(--assay-plate-analysis-muted);
+  font-weight: 500;
+}
+#assay-analyze-workspace #assay-analysis-summary-table .assay-plate-table td {
+  background: var(--assay-plate-analysis-surface);
+  color: var(--assay-plate-analysis-ink);
+}
+#assay-analyze-workspace #assay-analysis-summary-table .assay-plate-table th,
+#assay-analyze-workspace #assay-analysis-summary-table .assay-plate-table td {
+  border-color: var(--assay-plate-analysis-line);
+}
+.assay-workspace-compare-label { display: none; margin: 0 0 8px; font-size: var(--text-xs); font-weight: 600; }
 .is-comparing-plates .assay-workspace-compare-label { display: block; }
 .is-comparing-plates #assay-transformed-data-panel { margin-top: 16px; }
 .assay-workspace-transform-header { justify-content: flex-start; margin-bottom: 8px; }
@@ -92,7 +160,7 @@
   padding: 0 5px; border-radius: 4px; font-size: 0.65rem;
   color: var(--theme-danger); background: color-mix(in srgb, var(--theme-danger) 10%, var(--theme-surface-elevated));
 }
-#assay-workspace-row-status { margin: 8px 0 0; font-size: 0.7rem; }
+#assay-workspace-row-status { margin: 8px 0 0; font-size: var(--text-2xs); }
 #assay-analysis-summary-table { overflow: auto; margin: 0; }
 #assay-analysis-summary-table .assay-plate-table th,
 #assay-analysis-summary-table .assay-plate-table td { padding: 8px 10px; font-variant-numeric: tabular-nums; }

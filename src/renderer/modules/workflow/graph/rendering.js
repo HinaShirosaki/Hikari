@@ -159,7 +159,7 @@ function createGraphRendering({
             data-workflow-block-remove="${safeText(block.id)}"
             aria-label="Delete ${safeText(title)}"
             title="Delete block"
-          >&times;</button>
+          ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}"></button>
           <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}"></button>
           <header class="workflow-node-header" data-workflow-node-drag="${safeText(block.id)}">

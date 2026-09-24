@@ -151,13 +151,13 @@ body.theme-night {
   padding-bottom: var(--left-rail-item-padding-block, 8px) !important;
   min-height: var(--left-rail-item-min-height, 36px) !important;
   line-height: 1.35 !important;
-  font-size: 0.88rem !important;
+  font-size: var(--text-base) !important;
 }
 
 .left-rail-template__rail .folder-tree-template__node > .folder-tree-template__row {
   min-height: var(--left-rail-item-min-height, 36px) !important;
-  padding: 2px 4px !important;
-  font-size: 0.88rem !important;
+  padding: var(--space-2) var(--space-4) !important;
+  font-size: var(--text-base) !important;
   line-height: 1.35 !important;
 }
 
@@ -178,12 +178,12 @@ body.theme-night {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  font-size: 0.88rem !important;
+  font-size: var(--text-base) !important;
   line-height: 1.25 !important;
 }
 
 .left-rail-template__rail .biology-notebook-page-badge {
-  font-size: 0.7rem !important;
+  font-size: var(--text-2xs) !important;
 }
 
 /* Protocol rows use full-width dividers; keep their active fill square. */

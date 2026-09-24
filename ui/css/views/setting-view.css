@@ -4,7 +4,7 @@
 }
 
 #setting-view .settings-layout {
-  --left-rail-main-gap: 20px;
+  --left-rail-main-gap: var(--space-20);
 }
 
 #setting-view .settings-nav {
@@ -14,19 +14,17 @@
 
 #setting-view .settings-nav-list {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 #setting-view .settings-nav-item {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 80%, transparent);
-  background: color-mix(in srgb, var(--theme-panel) 92%, transparent);
+  padding: var(--space-10) var(--space-12);
+  background: transparent;
   color: inherit;
   text-align: left;
-  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
 }
 
 #setting-view .settings-nav-item span {
@@ -35,16 +33,6 @@
 
 #setting-view .settings-nav-item small {
   color: var(--theme-text-muted);
-}
-
-#setting-view .settings-nav-item:hover {
-  border-color: color-mix(in srgb, var(--theme-accent) 35%, transparent);
-  transform: translateX(2px);
-}
-
-#setting-view .settings-nav-item.is-active {
-  border-color: color-mix(in srgb, var(--theme-accent) 60%, transparent);
-  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-panel));
 }
 
 #setting-view .settings-detail {
@@ -57,7 +45,7 @@
 
 #setting-view .settings-section {
   display: grid;
-  gap: 14px;
+  gap: var(--space-14);
   margin-top: 0;
 }
 
@@ -76,22 +64,22 @@
 
 #setting-view .settings-subsection {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 #setting-view .settings-subsection h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-md);
 }
 
 #setting-view .settings-subsection + .settings-subsection {
-  padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 #setting-view .settings-codex-desktop-mcp {
-  padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 #setting-view .settings-codex-desktop-mcp-actions {
@@ -109,7 +97,7 @@
 #setting-view .settings-location-entry {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: stretch;
 }
 
@@ -119,7 +107,7 @@
 
 #setting-view .settings-choice-field {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 #setting-view .settings-choice-field--short {
@@ -143,9 +131,9 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   width: min(100%, 560px);
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
   background: color-mix(in srgb, var(--theme-panel) 90%, transparent);
   color: var(--theme-text-strong);
@@ -170,23 +158,23 @@
 }
 
 #setting-view #setting-location-list {
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--theme-border-soft);
   background: color-mix(in srgb, var(--theme-panel) 90%, transparent);
 }
 
 #setting-view .settings-edit-row {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto auto auto;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
-  padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid var(--theme-border-soft);
   background: color-mix(in srgb, var(--theme-panel) 90%, transparent);
 }
 
@@ -200,14 +188,14 @@
   min-height: 42px;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 62%, transparent);
+  border-bottom: 1px solid var(--theme-border-soft);
   background: transparent;
 }
 
 #setting-view .settings-sample-inventory-location-row input,
 #setting-view .settings-preferred-journal-row input {
   width: 100%;
-  padding: 4px 0;
+  padding: var(--space-4) 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -249,7 +237,7 @@
   display: grid;
   width: min(100%, 420px);
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
 }
 
@@ -261,10 +249,10 @@
 #setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) input {
   width: 100%;
   min-width: 0;
-  padding: 8px 0;
+  padding: var(--space-8) 0;
   border: 0;
   border-radius: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  border-bottom: 1px solid var(--theme-border-soft);
   background: transparent;
   box-shadow: none;
 }
@@ -287,8 +275,6 @@
   border-radius: 0;
   background: transparent;
   color: var(--theme-text-muted);
-  font-size: 1.2rem;
-  line-height: 1;
 }
 
 #setting-view .settings-inline-icon:not(:disabled):hover {
@@ -308,9 +294,9 @@
   display: grid;
   grid-template-columns: 8px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 42px;
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 62%, transparent);
+  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 #setting-view .settings-sample-type-label-row:last-child {
@@ -327,7 +313,7 @@
 #setting-view .settings-sample-type-label-input {
   width: 100%;
   min-width: 0;
-  padding: 4px 0;
+  padding: var(--space-4) 0;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -349,9 +335,8 @@
   place-items: center;
   padding: 0;
   border: 0;
+  background: transparent;
   color: var(--theme-text-muted);
-  font-size: 1.35rem;
-  line-height: 1;
 }
 
 #setting-view .settings-sample-type-remove:not(:disabled):hover {
@@ -360,11 +345,11 @@
 
 #setting-view .settings-skill-list {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 #setting-view .settings-mcp-tool-list {
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 #setting-view .settings-mcp-tool-row {
@@ -374,23 +359,23 @@
 #setting-view .settings-skill-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: var(--space-12);
   align-items: start;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  padding: var(--space-12);
+  border: 1px solid var(--theme-border-soft);
   background: color-mix(in srgb, var(--theme-panel) 91%, transparent);
 }
 
 #setting-view .settings-skill-main {
   display: grid;
-  gap: 4px;
+  gap: var(--space-4);
   min-width: 0;
 }
 
 #setting-view .settings-skill-title {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: baseline;
   font-weight: 700;
 }
@@ -408,7 +393,7 @@
 
 #setting-view .settings-skill-toggle {
   display: inline-flex;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
   white-space: nowrap;
 }
@@ -416,10 +401,6 @@
 @media (max-width: 840px) {
   #setting-view .settings-nav-list {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  }
-
-  #setting-view .settings-nav-item:hover {
-    transform: none;
   }
 
   #setting-view .settings-skill-row {

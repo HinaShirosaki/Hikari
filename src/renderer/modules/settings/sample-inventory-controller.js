@@ -145,7 +145,7 @@ export function createSampleInventorySettingsController({
         <div class="settings-edit-row settings-sample-inventory-location-row">
           <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
           <span class="small-note">${escapeHtml(`${count} container${count === 1 ? '' : 's'}`)}</span>
-          <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" aria-label="Delete ${escapeHtml(location)}" title="${count > 0 ? 'Move or rename containers before deleting this location.' : 'Delete location'}"${count > 0 ? ' disabled' : ''}>&times;</button>
+          <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" aria-label="Delete ${escapeHtml(location)}" title="${count > 0 ? 'Move or rename containers before deleting this location.' : 'Delete location'}"${count > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       `;
     }).join('');
@@ -169,7 +169,7 @@ export function createSampleInventorySettingsController({
       const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === entry.type).length;
       const deleteTitle = sampleCount > 0 ? 'Reassign samples before removing this type.' : 'Remove sample type';
       const removeButton = entry.isCustom
-        ? `<button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${sampleCount > 0 ? ' disabled' : ''}>&times;</button>`
+        ? `<button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${sampleCount > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`
         : '<span class="settings-sample-type-remove" aria-hidden="true"></span>';
       return `
       <li class="settings-sample-type-label-row">

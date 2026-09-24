@@ -120,7 +120,7 @@ export function installSectionNavigation(ctx) {
           data-section="${safeText(section)}"
           aria-label="Add a physical container to ${safeText(folder.name)}"
           title="Add container here"
-        ><span aria-hidden="true">+</span></button>
+        ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       `
     });
   }
@@ -174,7 +174,7 @@ export function installSectionNavigation(ctx) {
               data-location-add-container="${safeText(section)}"
               aria-label="Add a physical container to ${safeText(display.title)}"
               title="Add container here"
-            ><span aria-hidden="true">+</span></button>
+            ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
           </div>
           ${containerMarkup}
         </div>

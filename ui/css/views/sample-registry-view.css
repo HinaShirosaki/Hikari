@@ -14,12 +14,12 @@ label:has(> .sample-plasmid-suggestions) {
   max-height: 14rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  margin-top: 0.125rem;
+  margin-top: var(--space-2);
   border: 0.0625rem solid var(--theme-border);
   border-radius: 0 0 0.5rem 0.5rem;
   background: var(--theme-surface-elevated);
   color: var(--theme-text);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   font-weight: 400;
 }
 
@@ -30,7 +30,7 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-plasmid-suggestions [role="option"],
 .sample-plasmid-suggestions-note {
   display: block;
-  padding: 0.5rem 0.625rem;
+  padding: var(--space-8) var(--space-10);
   overflow-wrap: anywhere;
 }
 
@@ -48,10 +48,10 @@ label:has(> .sample-plasmid-suggestions) {
 }
 
 .left-rail-template.sample-layout {
-  --left-rail-main-gap: 28px;
+  --left-rail-main-gap: var(--space-28);
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(300px, 0.9fr) minmax(320px, 1fr);
-  gap: 28px;
+  gap: var(--space-28);
   align-items: stretch;
   min-height: var(--shared-left-rail-layout-height);
 }
@@ -63,7 +63,7 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-main-grid {
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1fr);
-  gap: 28px;
+  gap: var(--space-28);
   align-items: start;
   min-width: 0;
 }
@@ -79,20 +79,28 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-list-panel,
 .sample-detail-panel {
   display: grid;
-  gap: 14px;
+  gap: var(--space-14);
 }
 
 .sample-panel-head {
   display: flex;
   justify-content: space-between;
   align-items: end;
-  gap: 16px;
+  gap: var(--space-16);
   flex-wrap: wrap;
+}
+
+.sample-detail-panel > .sample-panel-head {
+  align-items: center;
+}
+
+.sample-detail-panel > .sample-panel-head > h3 {
+  margin: 0;
 }
 
 .sample-panel-copy {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .sample-panel-copy h3 {
@@ -106,25 +114,25 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-type-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
 }
 
 .sample-detail-panel {
-  padding-top: 18px;
+  padding-top: var(--space-18);
   border-top: 1px solid var(--theme-border);
 }
 
 .sample-detail-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px 10px;
+  gap: var(--space-8) var(--space-10);
 }
 
 .sample-detail-item {
   display: grid;
-  gap: 2px;
-  padding: 10px 0;
+  gap: var(--space-2);
+  padding: var(--space-10) 0;
   border-top: 1px solid var(--theme-border-soft);
 }
 
@@ -134,20 +142,20 @@ label:has(> .sample-plasmid-suggestions) {
 
 .sample-detail-label {
   color: var(--theme-text-strong);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
 .sample-detail-value {
   color: var(--theme-text);
-  font-size: 0.92rem;
+  font-size: var(--text-md);
   overflow-wrap: anywhere;
 }
 
 .sample-compound-structure-card {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: var(--space-10);
+  padding: var(--space-14);
   border: 1px solid var(--theme-border);
   border-radius: 14px;
   background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
@@ -162,8 +170,8 @@ label:has(> .sample-plasmid-suggestions) {
   display: grid;
   place-items: center;
   min-height: 220px;
-  padding: 14px;
-  border: 1px dashed color-mix(in srgb, var(--theme-border) 75%, transparent);
+  padding: var(--space-14);
+  border: 1px dashed var(--theme-border-soft);
   border-radius: 12px;
   background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface));
 }
@@ -176,8 +184,8 @@ label:has(> .sample-plasmid-suggestions) {
 
 .sample-compound-fields {
   grid-column: 1 / -1;
-  margin-top: 4px;
-  padding: 12px 0 0;
+  margin-top: var(--space-4);
+  padding: var(--space-12) 0 0;
   border: 0;
   border-top: 1px solid var(--theme-border-soft);
   border-radius: 0;
@@ -187,15 +195,15 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-compound-head {
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .sample-compound-preview {
   display: grid;
   place-items: center;
   min-height: 220px;
-  padding: 12px;
-  border: 1px dashed color-mix(in srgb, var(--theme-border) 72%, transparent);
+  padding: var(--space-12);
+  border: 1px dashed var(--theme-border-soft);
   border-radius: 12px;
   background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface));
 }
@@ -209,8 +217,8 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-type-fields,
 .sample-cell-passage-fields {
   grid-column: 1 / -1;
-  margin-top: 4px;
-  padding: 12px 0 0;
+  margin-top: var(--space-4);
+  padding: var(--space-12) 0 0;
   border: 0;
   border-top: 1px solid var(--theme-border-soft);
   border-radius: 0;
@@ -220,11 +228,11 @@ label:has(> .sample-plasmid-suggestions) {
 .sample-cell-passage-head {
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .sample-top-search {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-10);
   max-width: 420px;
 }
 

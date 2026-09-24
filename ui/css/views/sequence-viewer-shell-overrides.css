@@ -2,8 +2,8 @@
 
 #sequence-viewer-view .sequence-viewer-library-switch,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch {
-  gap: 4px;
-  padding: 2px;
+  gap: var(--space-4);
+  padding: var(--space-2);
   border: 1px solid var(--theme-border);
   border-radius: 8px;
   background: var(--theme-surface);
@@ -15,7 +15,7 @@
   border-radius: 6px;
   background: transparent;
   color: var(--theme-text-muted);
-  padding: 7px 10px;
+  padding: 7px var(--space-10);
 }
 
 #sequence-viewer-view .sequence-viewer-library-switch > button:hover,
@@ -80,12 +80,12 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle {
-  padding: 6px 8px;
+  padding: var(--space-6) var(--space-8);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle-group {
-  padding: 6px 8px;
-  gap: 6px;
+  padding: var(--space-6) var(--space-8);
+  gap: var(--space-6);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle-group-label {
@@ -99,7 +99,7 @@
 #sequence-viewer-detail-view .sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
   border: 0;
   background: transparent;
-  padding: 4px 6px;
+  padding: var(--space-4) var(--space-6);
 }
 
 /* The detail action bar is a flat toolbar rather than a boxed panel. */

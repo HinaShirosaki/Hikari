@@ -63,7 +63,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
           aria-label="Move ${escapeAttribute(label || 'block')} ${direction}"
           title="Move ${direction}"
         >
-          <span aria-hidden="true">${direction === 'left' ? '&larr;' : '&rarr;'}</span>
+          ${direction === 'left' ? '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>' : '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'}
         </button>
       `;
 
@@ -88,7 +88,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
               aria-label="Remove ${escapeAttribute(label || 'block')}"
               title="Remove block"
             >
-              <span aria-hidden="true">&times;</span>
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>
         </li>

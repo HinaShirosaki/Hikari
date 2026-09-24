@@ -231,7 +231,7 @@ export function initPaperFindingWidget({
     if (availabilityMessage) {
       summary.textContent = availabilityMessage;
       renderScheduleFooter([]);
-      setListMarkup('<button type="button" class="home-paper-finding-setup" data-paper-finding-setup>Open project notebooks →</button>');
+      setListMarkup('<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup>Open project notebooks →</button>');
       return;
     }
     if (tasks === null) {
@@ -250,7 +250,7 @@ export function initPaperFindingWidget({
         : '';
 
     if (!tasks.length) {
-      setListMarkup('<button type="button" class="home-paper-finding-setup" data-paper-finding-setup>+ Set up paper finding</button>');
+      setListMarkup('<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Set up paper finding</button>');
       return;
     }
 

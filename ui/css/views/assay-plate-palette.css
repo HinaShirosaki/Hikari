@@ -38,6 +38,13 @@
  * those light colors into night mode. The theme class lives on body.
  */
 body {
+  --assay-plate-analysis-surface: var(--theme-surface-elevated);
+  --assay-plate-analysis-header: var(--theme-surface-hover);
+  --assay-plate-analysis-line: var(--theme-border-soft);
+  --assay-plate-analysis-ink: var(--theme-text);
+  --assay-plate-analysis-muted: var(--theme-text-muted);
+  --assay-plate-analysis-selection: var(--theme-surface-active);
+  --assay-plate-analysis-focus: var(--theme-focus);
   --assay-plate-meta: var(--theme-text-muted);
   --assay-plate-analysis-group-1: var(--theme-accent);
   --assay-plate-analysis-group-2: var(--theme-success);

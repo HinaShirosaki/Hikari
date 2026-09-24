@@ -1,6 +1,6 @@
 #home-view .dashboard-field {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-6);
   max-width: none;
   color: var(--home-tile-text);
 }
@@ -25,11 +25,11 @@
 #home-view .home-contribution-map {
   --contribution-cell-gap: clamp(2px, 0.7cqw, 5px);
   --contribution-weekday-width: 2rem;
-  --contribution-body-gap: 0.6rem;
+  --contribution-body-gap: var(--space-10);
   --contribution-cell-size: min(1.6rem, calc((100cqw - var(--contribution-weekday-width) - var(--contribution-body-gap) - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))) / var(--contribution-week-count)), calc((100cqh - 1.5rem - (6 * var(--contribution-cell-gap))) / var(--contribution-day-count)));
   --contribution-grid-width: calc((var(--contribution-week-count) * var(--contribution-cell-size)) + ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap)));
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-6);
   align-content: center;
   width: max-content;
   max-width: 100%;
@@ -43,7 +43,7 @@
   width: var(--contribution-grid-width);
   margin-left: calc(var(--contribution-weekday-width) + var(--contribution-body-gap));
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.2;
 }
 #home-view .home-contribution-month-label {
@@ -64,7 +64,7 @@
   row-gap: var(--contribution-cell-gap);
   align-items: center;
   color: var(--home-tile-muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 #home-view .home-contribution-weekdays span:nth-child(1) {
   grid-row: 2;
@@ -106,7 +106,7 @@
   margin-left: auto;
   gap: 0.2rem;
   color: var(--home-tile-muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 #home-view .home-contribution-legend i {
   width: 0.6rem;
@@ -158,7 +158,7 @@
   color: var(--home-tile-text);
   resize: none;
   line-height: 1.6;
-  font-size: 0.95rem;
+  font-size: var(--text-md);
   box-shadow: none;
 }
 #home-view .home-tile .home-quicklog-input::placeholder {
@@ -170,7 +170,7 @@
   justify-content: flex-end;
   gap: 0.45rem;
   border-top: 1px solid var(--home-tile-line-soft);
-  padding-top: 0.6rem;
+  padding-top: var(--space-10);
 }
 #home-view .home-quicklog-status {
   margin-right: auto;

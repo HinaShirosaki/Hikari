@@ -2,7 +2,7 @@
 .assay-chart-export-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   justify-content: flex-start;
 }
 
@@ -15,7 +15,7 @@
   /* One compact control height keeps the panel dense at any rail width. */
   --cc-control-height: 2.125rem;
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .assay-chart-style input:not([type="checkbox"]):not([type="color"]),
@@ -41,12 +41,12 @@
 .assay-chart-style-presets {
   display: flex;
   align-items: end;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .assay-chart-style-actions {
   display: flex;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .assay-chart-style-actions .row-action-icon-btn {
@@ -59,7 +59,7 @@
 .assay-plot-element-fields {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
   border: 0;
   padding: 0;
   margin: 0;
@@ -78,11 +78,11 @@
 .assay-chart-style-tabs button {
   min-width: 0;
   font: inherit;
-  font-size: .7rem;
+  font-size: var(--text-2xs);
   background: transparent;
   border: 0;
   border-bottom: .125rem solid transparent;
-  padding: .5rem .2rem;
+  padding: var(--space-8) .2rem;
   border-radius: 0;
   box-shadow: none;
   white-space: nowrap;
@@ -107,7 +107,7 @@
 
 .assay-chart-style-panel {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .assay-chart-style-panel[hidden] {
@@ -119,7 +119,7 @@
   /* A single shrinkable track: fields honour the label's width instead of overflowing it. */
   grid-template-columns: minmax(0, 1fr);
   gap: 3px;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--theme-text-strong);
 }
 
@@ -129,8 +129,8 @@
 
 .assay-chart-style-subsection {
   display: grid;
-  gap: 8px;
-  padding-top: 8px;
+  gap: var(--space-8);
+  padding-top: var(--space-8);
   border-top: 1px solid var(--theme-border-soft);
 }
 
@@ -139,7 +139,7 @@
 }
 
 .assay-chart-style-subhead {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--theme-text-muted);
@@ -147,7 +147,7 @@
 
 .assay-chart-style-note {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   color: var(--theme-text-muted);
 }
 
@@ -155,7 +155,7 @@
   flex-direction: row;
   display: flex !important;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .assay-chart-style-checkbox[hidden] {
@@ -169,20 +169,20 @@
 .assay-chart-style-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 /* X and Y axis controls sit side by side; identical fields keep the rows aligned. */
 .assay-chart-style-axis-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 8px;
+  gap: var(--space-8);
   align-items: start;
 }
 
 .assay-chart-style-axis-column {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   align-content: start;
   min-inline-size: 0;
 }
@@ -240,10 +240,10 @@
 .assay-chart-picker__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
   min-height: 30px;
-  padding: 4px 8px;
+  padding: var(--space-4) var(--space-8);
   background: var(--theme-surface);
   color: var(--theme-text-strong);
   border: 1px solid var(--theme-border-soft);
@@ -282,7 +282,7 @@
 
 .assay-chart-picker__label {
   flex: 1 1 auto;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--theme-text-strong);
   white-space: nowrap;
   overflow: hidden;
@@ -298,10 +298,10 @@
 .assay-chart-picker__menu {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 2px;
+  gap: var(--space-2);
   max-height: 280px;
   overflow-y: auto;
-  padding: 4px;
+  padding: var(--space-4);
   background: var(--theme-surface);
   color: var(--theme-text-strong);
   border: 1px solid var(--theme-border-soft);
@@ -312,8 +312,8 @@
 .assay-chart-picker__option {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-8);
   min-height: 28px;
   background: transparent;
   border: 1px solid transparent;
@@ -346,7 +346,7 @@
 }
 
 .assay-chart-picker__option-label {
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   color: var(--theme-text-strong);
   flex: 1 1 auto;
 }
@@ -355,13 +355,13 @@
 .assay-chart-text-bar {
   --text-bar-control-height: var(--cc-control-height);
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .assay-chart-text-bar__row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   flex-wrap: wrap;
 }
 
@@ -444,7 +444,7 @@
   width: 1px;
   height: 18px;
   background: var(--theme-border-soft);
-  margin: 0 4px;
+  margin: 0 var(--space-4);
 }
 
 .assay-chart-text-font-option {
@@ -480,44 +480,44 @@
   text-transform: none;
   letter-spacing: normal;
   font-weight: 600;
-  font-size: .8rem;
+  font-size: var(--text-sm);
 }
 
 .assay-chart-style details > summary {
   cursor: pointer;
-  padding-bottom: .5rem;
+  padding-bottom: var(--space-8);
 }
 
 .assay-chart-style-presets > label {
   display: grid;
-  gap: .25rem;
-  font-size: .8rem;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
   flex: 1 1 auto;
   min-inline-size: 0;
 }
 
 .assay-chart-style-validation {
   margin: 0;
-  padding: .5rem 0;
+  padding: var(--space-8) 0;
   color: var(--theme-text-strong);
-  font-size: .8rem;
+  font-size: var(--text-sm);
 }
 
 .assay-chart-text-bar__size-mount input {
   min-width: 0;
   flex: 1 1 auto;
-  padding: 4px 6px;
+  padding: var(--space-4) var(--space-6);
 }
 
 .assay-chart-text-bar__size-mount {
   display: flex;
   align-items: center;
-  gap: .25rem;
+  gap: var(--space-4);
 }
 
 .assay-chart-text-bar__unit {
   color: var(--theme-text-muted);
-  font-size: .75rem;
+  font-size: var(--text-xs);
 }
 
 .assay-chart-style-tabs.has-agent-elements { grid-template-columns: 1fr .8fr 1.65fr .8fr 1.3fr; }

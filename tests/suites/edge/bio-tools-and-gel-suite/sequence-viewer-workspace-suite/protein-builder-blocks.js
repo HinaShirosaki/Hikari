@@ -530,7 +530,7 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
     path.join(__dirname, 'ui', 'html', 'views', 'sequence-viewer-view.html'),
     'utf8'
   );
-  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*>\+Protein<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg>Protein<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-add-protein-form"[^>]*role="dialog"[^>]*aria-modal="true"/);
   const dnaBuildTitleStart = html.indexOf('class="sequence-viewer-protein-builder-dna-title"');
   const codonUsageStart = html.indexOf('id="sequence-viewer-protein-builder-codon-usage"');

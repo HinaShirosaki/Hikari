@@ -328,7 +328,7 @@ export function createSpreadsheetTables({
           </div>
         ` : ''}
         <div class="spreadsheet-table" data-result-table-host="${index}" aria-label="${label} ${index + 1}"></div>
-        <button class="spreadsheet-table-add-row" type="button" data-result-table-add-row="${index}">+ Add row</button>
+        <button class="spreadsheet-table-add-row" type="button" data-result-table-add-row="${index}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Add row</button>
       </section>
     `).join('');
 

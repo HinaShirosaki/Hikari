@@ -4,14 +4,14 @@
   --home-tile-line: color-mix(in srgb, var(--theme-text-strong) 11%, transparent);
   --home-tile-line-soft: color-mix(in srgb, var(--theme-text-strong) 7%, transparent);
   --home-tile-control-bg: var(--theme-control-background);
-  --home-tile-control-border: var(--theme-control-border);
+  --home-tile-control-border: var(--theme-border);
   --home-tile-text: var(--theme-text);
   --home-tile-muted: var(--theme-text-muted);
   --home-shell-gap-inline: clamp(1rem, 1.9vw, 2rem);
-  --home-shell-gap-top: 0.85rem;
+  --home-shell-gap-top: var(--space-14);
   --home-shell-gap-bottom: var(--home-shell-gap-top);
-  --home-gap: 0.9rem;
-  --home-tile-padding: 1.1rem;
+  --home-gap: var(--space-14);
+  --home-tile-padding: var(--space-18);
   --home-tile-inner-gap: 0.7rem;
   --contribution-day-count: 7;
   --contribution-week-count: 18;
@@ -100,13 +100,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-8);
   min-height: 2rem;
 }
 
 #home-view .home-tile-titles {
   display: grid;
-  gap: 0.4rem;
+  gap: var(--space-6);
   min-width: 0;
 }
 
@@ -114,10 +114,10 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-8);
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 550;
   line-height: 1.3;
 }
@@ -125,7 +125,7 @@
 #home-view .home-tile .small-note {
   color: var(--home-tile-muted);
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
 
@@ -136,22 +136,22 @@
 }
 
 #home-view .home-widget-count {
-  padding: 0.1rem 0.35rem;
+  padding: var(--space-2) var(--space-6);
   border-radius: 0.25rem;
   background: var(--theme-surface-subtle);
   color: var(--home-tile-muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
 }
 
 #home-view .home-tile .home-link-btn {
   flex: 0 0 auto;
-  padding: 0.35rem 0;
+  padding: var(--space-6) 0;
   border: 0;
   background: transparent;
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
@@ -195,7 +195,7 @@
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 0.15rem;
+  padding-right: var(--space-2);
   overscroll-behavior: contain;
 }
 
@@ -208,8 +208,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.65rem 0;
+  gap: var(--space-10);
+  padding: var(--space-10) 0;
   border-top: 1px solid var(--home-tile-line-soft);
 }
 
@@ -223,7 +223,7 @@
 #home-view .home-row-name {
   display: block;
   color: var(--theme-text-strong);
-  font-size: 0.93rem;
+  font-size: var(--text-md);
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -233,7 +233,7 @@
   display: block;
   margin: 0.2rem 0 0;
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
@@ -251,7 +251,7 @@
 #home-view .home-row-tag,
 #home-view .home-passage-number {
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -260,7 +260,7 @@
   color: var(--home-warn);
 }
 #home-view .home-passage-number {
-  margin-left: 0.4rem;
+  margin-left: var(--space-6);
   font-weight: 400;
 }
 #home-view .home-passage-action.is-complete {
@@ -286,24 +286,24 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 1rem;
+  gap: var(--space-16);
   padding: 0.45rem 0;
 }
 #home-view .home-notebook-project-head h3 {
   margin: 0;
   color: var(--theme-accent);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 #home-view .home-notebook-project-head > span {
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 #home-view .home-tile button.home-notebook-row {
   width: 100%;
-  padding: 0.7rem 0.6rem;
+  padding: 0.7rem var(--space-10);
   border: 0;
   border-bottom: 1px solid var(--home-tile-line-soft);
   border-radius: 0;
@@ -329,25 +329,25 @@
 }
 #home-view .home-paper-finding-result {
   display: grid;
-  gap: 0.5rem;
+  gap: var(--space-8);
   min-width: 0;
-  padding: 1rem 0;
+  padding: var(--space-16) 0;
   border-top: 1px solid var(--home-tile-line-soft);
 }
 #home-view .home-paper-finding-result:first-child {
-  padding-top: 0.4rem;
+  padding-top: var(--space-6);
   border-top: 0;
 }
 #home-view .home-paper-finding-result-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 #home-view .home-paper-finding-project {
   min-width: 0;
   color: var(--theme-accent);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   overflow-wrap: anywhere;
 }
 #home-view .home-paper-finding-policy {
@@ -355,13 +355,13 @@
   color: var(--home-tile-muted);
   background: var(--theme-surface-subtle);
   border-radius: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.78rem;
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--text-xs);
 }
 #home-view .home-paper-finding-title {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 550;
   line-height: 1.45;
   overflow-wrap: anywhere;
@@ -373,7 +373,7 @@
 #home-view .home-paper-finding-reason {
   margin: 0;
   color: var(--home-tile-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -388,38 +388,35 @@
   padding: 0.2rem 0;
   color: var(--theme-accent);
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 #home-view .home-paper-finding-details[open] > p {
-  margin-top: 0.65rem;
+  margin-top: var(--space-10);
 }
 #home-view .home-paper-finding-source {
   justify-self: start;
   color: var(--theme-accent);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   text-decoration: none;
 }
 #home-view .home-paper-finding-source:hover {
   text-decoration: underline;
 }
 #home-view .home-paper-finding-schedule {
-  padding-top: 0.6rem;
+  padding-top: var(--space-10);
   border-top: 1px solid var(--home-tile-line-soft);
 }
 #home-view .home-tile .home-paper-finding-setup {
   justify-self: start;
-  margin-top: 0.5rem;
+  margin-top: var(--space-8);
   padding: 0.55rem 0.7rem;
-  border: 1px solid var(--home-tile-line);
   border-radius: 0.4rem;
-  background: transparent;
   color: var(--home-tile-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 #home-view .home-tile .home-paper-finding-setup:hover {
   color: var(--theme-accent);
-  background: var(--theme-surface-subtle);
 }
 
 #home-view .home-tile button:focus-visible,

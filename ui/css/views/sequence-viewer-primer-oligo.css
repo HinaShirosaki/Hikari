@@ -25,7 +25,7 @@
 .sequence-viewer-primer-nt {
   fill: var(--theme-text-strong);
   font-family: var(--sequence-viewer-sequence-font);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
 }
 

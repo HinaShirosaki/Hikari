@@ -11,18 +11,18 @@
 
 .biology-notebook-viewer-scroll {
   display: grid;
-  gap: 14px;
+  gap: var(--space-14);
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-top: 14px;
+  padding-top: var(--space-14);
   scrollbar-gutter: stable;
 }
 
 .biology-notebook-result-attachments {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .biology-notebook-result-attachments[hidden] {
@@ -31,7 +31,7 @@
 
 .biology-notebook-notes-field {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .biology-notebook-notes-composer {
@@ -40,7 +40,7 @@
 
 .biology-notebook-notes-composer textarea {
   min-height: 132px;
-  padding: 10px 12px 50px;
+  padding: var(--space-10) var(--space-12) 50px;
   resize: vertical;
 }
 
@@ -50,7 +50,7 @@
   bottom: 8px;
   z-index: 1;
   min-height: 32px;
-  padding: 5px 10px;
+  padding: var(--space-6) var(--space-10);
   background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-panel));
 }
 
@@ -58,7 +58,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   font-weight: 600;
   color: var(--theme-text-strong);
 }
@@ -68,7 +68,7 @@
   grid-template-columns: repeat(auto-fill, minmax(180px, 320px));
   align-items: start;
   justify-content: start;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .biology-notebook-attachment {
@@ -107,12 +107,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px 10px;
-  padding: 8px 10px;
+  gap: var(--space-4) var(--space-10);
+  padding: var(--space-8) var(--space-10);
 }
 
 .biology-notebook-attachment-image figcaption {
-  padding: 6px 2px 0;
+  padding: var(--space-6) var(--space-2) 0;
 }
 
 .biology-notebook-attachment-file {
@@ -129,12 +129,12 @@
 
 .biology-notebook-attachment-file-icon {
   color: var(--theme-accent);
-  font-size: 1.1rem;
+  font-size: var(--text-xl);
 }
 
 .biology-notebook-viewer-section {
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
-  padding-top: 10px;
+  border-top: 1px solid var(--theme-border);
+  padding-top: var(--space-10);
 }
 
 .biology-notebook-viewer-section-summary {
@@ -142,7 +142,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 7px;
+  gap: var(--space-8);
   cursor: pointer;
   font-weight: 600;
   color: var(--theme-text-strong);
@@ -167,15 +167,15 @@
 
 .biology-notebook-viewer-section-body {
   display: grid;
-  gap: 12px;
-  padding-top: 10px;
+  gap: var(--space-12);
+  padding-top: var(--space-10);
 }
 
 .biology-notebook-protocol-editor {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px dashed color-mix(in srgb, var(--theme-border) 78%, transparent);
+  gap: var(--space-12);
+  padding: var(--space-14);
+  border: 1px dashed var(--theme-border-soft);
   border-radius: 14px;
   background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
 }
@@ -200,12 +200,12 @@
 
 .biology-notebook-linked-results {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .biology-notebook-result-table-wrap {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -218,13 +218,13 @@
 
 .biology-notebook-result-table-list {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 /* No outer panel: the grid's own border is the only frame around a result table. */
 .spreadsheet-table-editor {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 /* With the panel gone, the active table is marked on the grid border itself -- it is
@@ -236,7 +236,7 @@
 /* Sits under the grid as a quiet text button: the row it adds goes right above it. */
 .spreadsheet-table-add-row {
   justify-self: start;
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
@@ -244,6 +244,11 @@
   font: inherit;
   font-size: 0.85em;
   cursor: pointer;
+}
+
+.spreadsheet-table-add-row .btn-icon {
+  width: 12px;
+  height: 12px;
 }
 
 .spreadsheet-table-add-row:hover,
@@ -257,7 +262,7 @@
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: var(--space-8) var(--space-12);
 }
 
 .biology-notebook-result-table-head .small-note:empty {
@@ -269,7 +274,7 @@
 .spreadsheet-head {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 0;
 }
 
@@ -291,7 +296,7 @@
   flex: 0 0 auto;
   /* The base select stretches to 100%, which here swallows the column name. */
   width: auto;
-  padding: 0 2px;
+  padding: 0 var(--space-2);
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
@@ -392,7 +397,7 @@
 }
 
 .spreadsheet-table {
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border: 1px solid var(--theme-border);
   border-radius: 0;
   overflow: hidden;
   background: var(--theme-surface-elevated);
@@ -401,7 +406,7 @@
 .spreadsheet-table.tabulator {
   border: 0;
   background: transparent;
-  font-size: 0.92rem;
+  font-size: var(--text-md);
 }
 
 .spreadsheet-table.tabulator .tabulator-tableholder {
@@ -419,19 +424,19 @@
 /* Vendor paints the header #e6e6e6 with #555 text at the same specificity, and loads
    later, so this has to out-specify it the way the row rules do. */
 .spreadsheet-table.tabulator .tabulator-header {
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border-bottom: 1px solid var(--theme-border);
   background: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
   color: var(--theme-text);
 }
 
 .spreadsheet-table.tabulator .tabulator-header .tabulator-col {
   background: transparent;
-  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  border-right: 1px solid var(--theme-border-soft);
 }
 
 .spreadsheet-table .tabulator-col,
 .spreadsheet-table .tabulator-cell {
-  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  border-right: 1px solid var(--theme-border-soft);
 }
 
 /* Tabulator ships its own zebra striping, grey hover and blue selection, and its
@@ -461,7 +466,7 @@
 }
 
 .spreadsheet-table .tabulator-row:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 66%, transparent);
+  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 .spreadsheet-table .tabulator-cell:focus {
@@ -471,9 +476,9 @@
 
 .biology-notebook-linked-preview {
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  gap: var(--space-10);
+  padding: var(--space-12);
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
 }
@@ -482,7 +487,7 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: var(--space-8) var(--space-12);
   align-items: baseline;
 }
 
@@ -494,22 +499,22 @@
 
 .biology-notebook-linked-preview-copy {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .biology-notebook-linked-preview-meta {
   color: var(--theme-text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .biology-notebook-linked-preview-media {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .biology-notebook-linked-preview-figure {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   margin: 0;
 }
 
@@ -517,25 +522,25 @@
   width: 100%;
   max-width: 100%;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-linked-assay-grid {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .biology-notebook-linked-assay-serial-dilution {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .biology-notebook-linked-assay-serial-dilution-head {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 8px 12px;
+  gap: var(--space-8) var(--space-12);
   align-items: baseline;
 }
 
@@ -546,18 +551,18 @@
 
 .biology-notebook-linked-assay-serial-dilution-block {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .biology-notebook-linked-results .assay-serial-dilution-table-wrap {
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border: 1px solid var(--theme-border);
 }
 
 .biology-notebook-linked-results .assay-plate-table-wrap {
   max-height: min(52vh, 520px);
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  border: 1px solid var(--theme-border);
 }
 
 .biology-notebook-linked-results .assay-plate-table tr > *:nth-child(2) {
@@ -576,17 +581,17 @@
 }
 
 .biology-notebook-assay-axis-value {
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 
 .biology-notebook-assay-well-primary {
-  font-size: 0.7rem;
-  margin-bottom: 4px;
+  font-size: var(--text-2xs);
+  margin-bottom: var(--space-4);
 }
 
 .biology-notebook-assay-well-secondary {
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   color: color-mix(in srgb, var(--theme-text) 78%, transparent);
 }
 
@@ -596,8 +601,8 @@
 }
 
 #biology-notebook-view .notebook-steps {
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 #biology-notebook-view .notebook-step-line {
@@ -619,8 +624,8 @@
   color: var(--theme-text-strong);
   border: 1px solid var(--theme-border);
   border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 0.85rem;
+  padding: var(--space-2) var(--space-8);
+  font-size: var(--text-base);
   cursor: text;
 }
 
@@ -639,8 +644,8 @@
   width: auto;
   min-width: 0;
   max-width: min(360px, calc(100vw - 96px));
-  font-size: 0.85rem;
-  padding: 2px 8px;
+  font-size: var(--text-base);
+  padding: var(--space-2) var(--space-8);
   border-radius: 6px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
@@ -654,7 +659,7 @@
   appearance: none;
   display: block;
   width: 100%;
-  padding: 7px 10px;
+  padding: var(--space-8) var(--space-10);
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -682,8 +687,8 @@
   z-index: 3000;
   width: 132px;
   overflow: hidden;
-  padding: 4px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
+  padding: var(--space-4);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   background: var(--theme-surface-elevated);
   box-shadow: 0 8px 22px var(--theme-shadow-color);
@@ -705,14 +710,14 @@
   background: var(--theme-surface-elevated);
   color: var(--theme-text);
   box-shadow: 0 0.5rem 1.375rem var(--theme-shadow-color);
-  font-size: 0.875rem;
+  font-size: var(--text-base);
   line-height: 1.4;
 }
 
 .biology-notebook-sample-suggestions [role="option"] {
   display: grid;
-  gap: 0.125rem;
-  padding: 0.5rem 0.625rem;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-10);
   overflow-wrap: anywhere;
   cursor: pointer;
 }
@@ -724,5 +729,5 @@
 
 .biology-notebook-sample-suggestion-detail {
   color: var(--theme-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
 }

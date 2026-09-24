@@ -1,9 +1,6 @@
 import {
-  formatEntryTimestamp,
   notebookStateLabel,
-  resolveEntryCollectionName,
-  resolveEntryExecutedAt,
-  resolveEntryExperimentName
+  resolveEntryExecutedAt
 } from './entry-helpers.js';
 import {
   formatSampleLinkValue,
@@ -14,31 +11,45 @@ import {
 import { renderStepSentence } from '../protocol/step-renderer.js';
 import { summarizeNotebookToolCalculations } from '../../../lib/notebook-tool-calculations.js';
 
+function viewerTimestamp(rawValue, sameDayAs = '') {
+  const date = new Date(String(rawValue || '').trim());
+  if (Number.isNaN(date.getTime())) {
+    return 'Unknown time';
+  }
+  const reference = new Date(String(sameDayAs || '').trim());
+  const sameDay = !Number.isNaN(reference.getTime())
+    && date.toDateString() === reference.toDateString();
+  return date.toLocaleString(undefined, {
+    ...(sameDay ? {} : { dateStyle: 'medium' }),
+    timeStyle: 'short'
+  });
+}
+
 export function buildViewerMeta({
   project,
   entry,
-  isSavedEntry,
-  projects = []
+  isSavedEntry
 }) {
-  const contextLabel = entry
-    ? `${resolveEntryCollectionName(entry, projects)} / ${resolveEntryExperimentName(entry)}`
-    : String(project?.name || '').trim() || 'Untitled Project';
   if (entry) {
-    const updatedAt = entry.updatedAt ? formatEntryTimestamp(entry.updatedAt) : 'Unknown time';
-    const stateLabel = notebookStateLabel(entry);
-    const executedAt = resolveEntryExecutedAt(entry)
-      ? ` Executed at ${formatEntryTimestamp(resolveEntryExecutedAt(entry))}.`
-      : '';
+    const executedAt = resolveEntryExecutedAt(entry);
+    const parts = [notebookStateLabel(entry)];
+    if (executedAt) {
+      parts.push(viewerTimestamp(executedAt));
+    }
+    if (!executedAt || new Date(entry.updatedAt).getTime() !== new Date(executedAt).getTime()) {
+      parts.push(`Updated ${viewerTimestamp(entry.updatedAt, executedAt)}`);
+    }
     const toolCalculationSummary = summarizeNotebookToolCalculations(entry?.toolCalculations);
-    const toolCalculations = toolCalculationSummary
-      ? ` Tool calculations: ${toolCalculationSummary}.`
-      : '';
+    if (toolCalculationSummary) {
+      parts.push(toolCalculationSummary);
+    }
     const sampleLinkCount = normalizeNotebookSampleLinks(entry?.sampleLinks).length;
-    const sampleLinks = sampleLinkCount
-      ? ` Linked samples: ${sampleLinkCount}.`
-      : '';
-    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${toolCalculations}${sampleLinks}`;
+    if (sampleLinkCount) {
+      parts.push(`${sampleLinkCount} linked sample${sampleLinkCount === 1 ? '' : 's'}`);
+    }
+    return parts.join(' · ');
   }
+  const contextLabel = String(project?.name || '').trim() || 'Untitled Project';
   if (isSavedEntry) {
     return `${contextLabel} notebook page.`;
   }

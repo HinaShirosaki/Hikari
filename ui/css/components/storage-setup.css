@@ -9,7 +9,7 @@
   display: grid;
   place-items: center;
   overflow: auto;
-  padding: 4rem 2rem;
+  padding: 4rem var(--space-32);
   background: var(--theme-background);
   color: var(--theme-text);
 }
@@ -29,7 +29,7 @@
 .storage-setup__icon {
   width: 4rem;
   height: 4rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-24);
 }
 
 .theme-night .storage-setup__icon {
@@ -37,8 +37,8 @@
 }
 
 .storage-setup h1 {
-  margin: 0 0 1rem;
-  font-size: 2rem;
+  margin: 0 0 var(--space-16);
+  font-size: var(--text-4xl);
   line-height: 1.2;
   letter-spacing: -0.025em;
 }
@@ -49,17 +49,17 @@
 }
 
 .storage-setup__actions {
-  margin-top: 1.75rem;
+  margin-top: var(--space-28);
 }
 
 .storage-setup__path {
   overflow-wrap: anywhere;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .storage-setup__status {
   min-height: 1.6em;
-  font-size: 0.875rem;
+  font-size: var(--text-base);
 }
 
 .storage-setup__status[data-error="true"] {

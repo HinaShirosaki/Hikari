@@ -1,9 +1,9 @@
 /* Shared HTML/CSS template for rail-first workspaces */
 
 .left-rail-template {
-  --left-rail-main-gap: 24px;
+  --left-rail-main-gap: var(--space-24);
   --left-rail-item-min-height: 36px;
-  --left-rail-item-padding-block: 8px;
+  --left-rail-item-padding-block: var(--space-8);
   position: relative;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
@@ -25,12 +25,12 @@
 
 .left-rail-template > .left-rail-template__rail.app-left-rail,
 .left-rail-template > .left-rail-template__rail {
-  gap: 14px;
+  gap: var(--space-14);
   align-self: stretch;
   height: 100%;
   min-height: 100%;
   max-height: none;
-  padding: 14px var(--app-left-rail-padding-inline, 16px) 16px !important;
+  padding: var(--space-14) var(--app-left-rail-padding-inline, 16px) var(--space-16) !important;
   border-top: 0 !important;
   border-right: 1px solid var(--app-left-rail-divider) !important;
   border-bottom: 0 !important;
@@ -65,7 +65,7 @@
 
 .left-rail-template__pinned {
   display: grid;
-  gap: 14px;
+  gap: var(--space-14);
   align-content: start;
   min-width: 0;
   padding-right: var(--app-left-rail-padding-inline, 16px);
@@ -95,13 +95,13 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 
 .left-rail-template__section {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   align-content: start;
   min-width: 0;
 }
 
 .left-rail-template__section + .left-rail-template__section {
-  padding-top: 16px;
+  padding-top: var(--space-16);
   border-top: 1px solid var(--theme-border-soft);
 }
 
@@ -132,7 +132,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__rail.app-left-rail,
   .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__rail {
     max-height: none;
-    padding: 0 0 18px !important;
+    padding: 0 0 var(--space-18) !important;
     border-right: 0 !important;
     border-bottom: 1px solid var(--app-left-rail-divider) !important;
     background: transparent !important;
@@ -141,7 +141,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__main {
     height: auto;
     padding-left: 0;
-    padding-top: 18px;
+    padding-top: var(--space-18);
     overflow: visible;
   }
 

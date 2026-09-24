@@ -10,17 +10,17 @@ body {
   --app-left-rail-divider: color-mix(in srgb, var(--theme-border-soft) 88%, var(--theme-text-strong) 12%);
 }
 .app-left-rail {
-  --app-left-rail-padding-inline: 16px;
+  --app-left-rail-padding-inline: var(--space-16);
   position: relative;
   align-self: stretch;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: var(--space-14);
   min-width: 0;
   min-height: 100%;
   max-height: var(--shared-left-rail-layout-height);
   margin-top: 0 !important;
-  padding: 14px var(--app-left-rail-padding-inline) 16px var(--app-left-rail-padding-inline) !important;
+  padding: var(--space-14) var(--app-left-rail-padding-inline) var(--space-16) var(--app-left-rail-padding-inline) !important;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -58,13 +58,13 @@ body {
 
 .app-left-rail-section {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   align-content: start;
   min-width: 0;
 }
 
 .app-left-rail-section + .app-left-rail-section {
-  padding-top: 16px;
+  padding-top: var(--space-16);
   border-top: 1px solid color-mix(in srgb, var(--theme-border-soft) 92%, transparent);
 }
 

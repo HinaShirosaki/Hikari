@@ -21,8 +21,8 @@ function createPreferredJournalSettings({
       ? journals.map((journal, index) => `
           <div class="settings-edit-row settings-preferred-journal-row" data-preferred-journal-row="${index}">
             <input value="${escapeHtml(journal)}" data-preferred-journal-input="${index}" aria-label="Preferred journal ${index + 1}" />
-            <button type="button" class="ghost-btn settings-inline-icon" data-preferred-journal-save="${index}" aria-label="Save ${escapeHtml(journal)}" title="Save journal">&check;</button>
-            <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-preferred-journal-delete="${index}" aria-label="Delete ${escapeHtml(journal)}" title="Delete journal">&times;</button>
+            <button type="button" class="ghost-btn settings-inline-icon" data-preferred-journal-save="${index}" aria-label="Save ${escapeHtml(journal)}" title="Save journal"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></button>
+            <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-preferred-journal-delete="${index}" aria-label="Delete ${escapeHtml(journal)}" title="Delete journal"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
         `).join('')
       : '<p class="small-note">No preferred journals configured.</p>';

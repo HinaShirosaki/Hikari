@@ -67,15 +67,20 @@ function buildProtocolAgentMessage({
     'Create a lab protocol in Hikari from the user request, current draft context, and attached evidence.',
     'Research online and search papers when useful before authoring the protocol.',
     '',
+    'A competent lab member who has not read the sources should be able to run the result at the bench without a follow-up question.',
+    '',
     'Protocol requirements:',
     '- Create a complete, executable, import-ready protocol, not a questionnaire.',
+    '- Give every step one operation with its own numbers: volume, concentration, time, temperature, centrifugation as x g rather than rpm, pH, plate or tube format, and replicate count. No "as appropriate" or "if needed" without the value or criterion that resolves it.',
+    '- Order steps as the run happens, mark day boundaries and safe hold points inline, name each control next to the sample it controls, and give every readout or checkpoint its expected observation or acceptance criterion.',
+    '- List every reagent a step uses in materials with the attribute that step depends on (working or stock concentration, buffer composition, grade, clone, host), and list nothing the steps never use.',
     '- Fill routine parameters such as replicate count, dilution factor, wash count and wash buffer, incubation time and temperature, and working volumes with a scientifically conventional starting value, and identify it in troubleshooting as a recommended starting condition rather than a source-reported fact.',
     '- Reserve placeholders for sample or clone identity, reagent identity, stock concentration or solvent, and instrument-specific settings that cannot be reliably inferred. Aim for 0-3 placeholders and never more than 5.',
     '- Write placeholders as [name] and use square brackets for nothing else; write concentrations as "Ca2+ concentration", not "[Ca2+]".',
     '- Preserve useful details from the current draft when provided.',
-    '- Use attached evidence when available; do not invent exact measurements, times, temperatures, or reagent identities it does not support, beyond the labeled starting defaults above.',
+    '- Use attached evidence when available; keep source-reported values as reported; do not invent exact measurements, times, temperatures, reagent identities, catalog numbers, or instrument models it does not support, beyond the labeled starting defaults above. Where sources disagree, run one value and record the alternative in troubleshooting.',
     '- Use concise scientific language and operational step wording.',
-    '- Materials must be short item strings. Steps must be ordered instruction strings. Troubleshooting is one plain-text block.',
+    '- Materials must be short item strings. Steps must be ordered instruction strings. Troubleshooting is one plain-text block written as labeled lines: Expected outcome, Quality checks, Starting defaults, Failure modes, Safety, Source limitations; omit any label with nothing real to report.',
     '',
     'User request:',
     trimText(prompt, 3000) || '(none provided)',
@@ -148,7 +153,7 @@ export function createProtocolGenerationController({
           <span>${safeText(label)}</span>
           <span>${safeText(trimText(attachment?.name, 180))}</span>
           ${size ? `<span>${safeText(size)}</span>` : ''}
-          <button type="button" data-protocol-generate-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">&times;</button>
+          <button type="button" data-protocol-generate-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}"><svg class="agent-chat-icon agent-attachment-remove-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </span>
       `;
     }).join('');

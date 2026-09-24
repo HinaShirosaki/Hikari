@@ -26,9 +26,9 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
   min-height: 44px;
-  padding: 10px 0;
+  padding: var(--space-10) 0;
   cursor: pointer;
   color: var(--theme-text-strong);
   font-weight: 650;
@@ -80,8 +80,8 @@
 
 .foldable-section__body {
   display: grid;
-  gap: 16px;
-  padding: 2px 0 16px;
+  gap: var(--space-16);
+  padding: var(--space-2) 0 var(--space-16);
 }
 
 .foldable-section--subsection {
@@ -92,9 +92,9 @@
 /* Subsections read as gel's tool groups: a quiet micro-label, not a second headline. */
 .foldable-section--subsection > .foldable-section__summary {
   min-height: 34px;
-  padding-block: 8px;
+  padding-block: var(--space-8);
   color: var(--theme-text-muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -106,7 +106,7 @@
 }
 
 .foldable-section--subsection > .foldable-section__body {
-  padding-bottom: 6px;
+  padding-bottom: var(--space-6);
 }
 
 @media (prefers-reduced-motion: reduce) {
