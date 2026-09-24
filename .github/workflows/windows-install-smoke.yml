@@ -1,0 +1,71 @@
+name: Windows install smoke
+
+# Walks the path a Windows user takes -- pack this branch, `npx` the tarball,
+# run HikariSetup.exe, check the installed app stays up -- on a clean runner.
+# workflow_dispatch only reaches workflows on the default branch, so pushing to
+# win-smoke/** is how you run this from a feature branch before it lands.
+on:
+  push:
+    branches: ['win-smoke/**']
+  workflow_dispatch:
+
+jobs:
+  install:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Pack this branch
+        id: pack
+        shell: pwsh
+        run: |
+          $tgz = npm pack --silent | Select-Object -Last 1
+          "tarball=$((Resolve-Path $tgz).Path)" >> $env:GITHUB_OUTPUT
+
+      # Same entry point as install.ps1's last line, against this branch's code
+      # instead of the published package.
+      - name: npx the tarball
+        shell: pwsh
+        working-directory: ${{ runner.temp }}
+        run: npx.cmd --yes "${{ steps.pack.outputs.tarball }}"
+
+      - name: Install, then watch the app Squirrel launches
+        shell: pwsh
+        run: |
+          $setup = Join-Path $env:RUNNER_TEMP 'hikari-out\Hikari-win32-x64\HikariSetup.exe'
+          if (-not (Test-Path $setup)) { throw "No installer at $setup" }
+          Start-Process $setup
+          # Squirrel extracts, runs the app once per --squirrel-install hook, then
+          # starts it for real; poll instead of guessing how long that takes.
+          $deadline = (Get-Date).AddMinutes(5)
+          do {
+            Start-Sleep 5
+            $exe = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'hikari') -Recurse -Filter Hikari.exe -ErrorAction SilentlyContinue |
+              Where-Object { $_.DirectoryName -match 'app-' } | Select-Object -First 1
+          } while (-not $exe -and (Get-Date) -lt $deadline)
+          if (-not $exe) { throw 'Installer never produced app-*\Hikari.exe' }
+          Write-Host "Installed: $($exe.FullName)"
+          $running = $null
+          do {
+            Start-Sleep 5
+            # Electron's renderers share the exe name; the oldest is the main process.
+            $running = Get-Process Hikari -ErrorAction SilentlyContinue |
+              Sort-Object StartTime | Select-Object -First 1
+          } while (-not $running -and (Get-Date) -lt $deadline)
+          if (-not $running) { $running = Start-Process $exe.FullName -PassThru }
+          Start-Sleep 30
+          if (-not (Get-Process -Id $running.Id -ErrorAction SilentlyContinue)) {
+            throw 'Hikari exited within 30s of first launch'
+          }
+          Get-Process Hikari -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HikariSetup
+          path: ${{ runner.temp }}/hikari-out/Hikari-win32-x64/HikariSetup.exe
+          if-no-files-found: error

@@ -36,7 +36,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       compare = false;
       root.classList.remove('is-chart-focused');
       find('assay-chart-focus-btn').setAttribute('aria-pressed', 'false');
-      find('assay-chart-focus-btn').textContent = 'Focus';
       lastAssayId = assay?.id || '';
     }
     if (options.tab) activeTab = options.tab;
@@ -122,7 +121,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
   find('assay-chart-focus-btn').addEventListener('click', (event) => {
     const focused = root.classList.toggle('is-chart-focused');
     event.currentTarget.setAttribute('aria-pressed', String(focused));
-    event.currentTarget.textContent = focused ? 'Exit focus' : 'Focus';
     requestAnimationFrame(() => analysisView.redrawChart());
   });
   find('assay-workspace-format-btn').addEventListener('click', () => analysisView.openChartFormat());

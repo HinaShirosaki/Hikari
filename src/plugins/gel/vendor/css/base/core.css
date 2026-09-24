@@ -1,6 +1,39 @@
 :root {
   color-scheme: light;
   --app-font-size: 16px;
+  /* Type scale: integer px steps at the 16px root, held in rem so
+     --app-font-size still scales the whole ladder. */
+  --text-2xs: 0.6875rem;
+  /* Body text is unified at 13px; xs/sm/base are deliberately equal so call
+     sites keep their intent and re-splitting them is a one-line change. */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.8125rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.25rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 2rem;
+
+  /*
+   * Spacing scale. The app's real grid is 2px, so the ladder is every even step
+   * through 20px, then 24/28/32. Held in rem, with whole-px values at the 16px
+   * root, so padding and gaps scale with the Font Size setting the way text does.
+   */
+  --space-2: 0.125rem;
+  --space-4: 0.25rem;
+  --space-6: 0.375rem;
+  --space-8: 0.5rem;
+  --space-10: 0.625rem;
+  --space-12: 0.75rem;
+  --space-14: 0.875rem;
+  --space-16: 1rem;
+  --space-18: 1.125rem;
+  --space-20: 1.25rem;
+  --space-24: 1.5rem;
+  --space-28: 1.75rem;
+  --space-32: 2rem;
   --font-app: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
@@ -30,7 +63,7 @@ body {
   color: var(--theme-text);
   background: var(--theme-background);
   font-family: var(--font-app);
-  font-size: var(--app-font-size);
+  font-size: var(--text-sm);
   line-height: 1.45;
   font-optical-sizing: auto;
   font-kerning: normal;
@@ -159,8 +192,8 @@ div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 14px;
-  padding: 8px 20px 6px;
+  gap: var(--space-14);
+  padding: var(--space-8) var(--space-20) var(--space-6);
   border-bottom: 0;
   background: var(--theme-background);
   overflow: visible;
@@ -175,7 +208,7 @@ div {
 
 .topbar h1 {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: var(--text-2xl);
   line-height: 1.1;
   font-weight: 650;
   color: var(--theme-text-strong);
@@ -183,13 +216,13 @@ div {
 
 .topbar-context {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .topbar-heading-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
   flex-wrap: wrap;
 }
@@ -197,21 +230,21 @@ div {
 .topbar-page-title {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 650;
 }
 
 .topbar-view-actions {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
 }
 
 #page-subtitle {
   margin: 0;
   color: var(--theme-text-muted);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
 }
 
 .topbar-tools {
@@ -222,14 +255,14 @@ div {
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .topbar-history-controls {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .topbar-history-btn {
@@ -333,10 +366,10 @@ div {
   left: 0;
   right: 0;
   margin: 0;
-  padding: 4px;
+  padding: var(--space-4);
   list-style: none;
   background: var(--theme-surface);
-  border: 1px solid var(--theme-border-translucent);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   box-shadow: 0 12px 28px var(--theme-shadow-color-strong);
   max-height: min(420px, 60vh);
@@ -364,17 +397,17 @@ div {
 .topbar-search-suggestion {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-10);
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.88rem;
+  font-size: var(--text-base);
   color: var(--theme-text);
   user-select: none;
 }
 
 .topbar-search-suggestion + .topbar-search-suggestion {
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 .topbar-search-suggestion.is-active,
@@ -399,7 +432,7 @@ div {
 
 .topbar-search-suggestion-sublabel {
   color: var(--theme-text-muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -407,19 +440,18 @@ div {
 
 .topbar-search-suggestion-kind {
   flex: 0 0 auto;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--theme-text-muted);
   background: var(--theme-surface-muted);
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
   border-radius: 999px;
   white-space: nowrap;
 }
 
 body.theme-night .topbar-search-suggestions {
   background: var(--theme-surface);
-  border-color: var(--theme-border-translucent);
   box-shadow: 0 16px 32px var(--theme-shadow-color-strong);
 }
 
@@ -463,7 +495,6 @@ body.has-shared-left-rail-view.has-folded-shared-left-rail .workspace-shell::bef
   height: 100%;
   overflow: auto;
   padding: 0;
-  font-size: var(--app-font-size);
 }
 
 body.has-shared-left-rail-view .workspace-main {
@@ -478,8 +509,8 @@ body.has-shared-left-rail-view .workspace-main {
   min-width: 0;
   min-height: 0;
   height: 100%;
-  padding: 8px 6px;
-  border-left: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
+  padding: var(--space-8) var(--space-6);
+  border-left: 1px solid var(--theme-border-soft);
   background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-background) 6%);
   overflow: hidden;
 }
@@ -525,8 +556,8 @@ body.has-shared-left-rail-view .workspace-main {
 
 body.has-agent-chat-rail-expanded .universal-agent-chat-rail {
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 10px;
-  padding: 10px 14px 14px;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-14) var(--space-14);
 }
 
 body.has-agent-chat-rail-expanded .universal-agent-chat-rail__toggle {
@@ -539,7 +570,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__toggle {
 body.has-agent-chat-rail-expanded .universal-agent-chat-rail__content {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--space-12);
   grid-row: 1 / span 2;
   grid-column: 1;
   min-height: 0;
@@ -549,7 +580,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__content {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
 }
 
@@ -559,14 +590,14 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .universal-agent-chat-rail__header > div {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .universal-agent-chat-rail__header h2 {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   line-height: 1.2;
 }
 
@@ -575,23 +606,23 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .universal-agent-chat-rail .agent-history-viewport {
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .universal-agent-chat-rail .agent-chat-history {
-  gap: 18px;
-  padding: 18px 0 24px;
+  gap: var(--space-18);
+  padding: var(--space-18) 0 var(--space-24);
   scrollbar-gutter: auto;
 }
 
 .universal-agent-chat-rail .agent-chat-item {
   width: 100%;
   max-width: none;
-  padding: 8px 0;
+  padding: var(--space-8) 0;
 }
 
 .universal-agent-chat-rail .agent-chat-item-user {
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
 }
 
@@ -602,8 +633,8 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .universal-agent-chat-rail .agent-composer-card {
   width: 100%;
-  gap: 10px;
-  padding: 10px;
+  gap: var(--space-10);
+  padding: var(--space-10);
   border-radius: 14px;
 }
 
@@ -612,20 +643,20 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   --agent-composer-max-height: 150px;
   min-height: var(--agent-composer-min-height);
   max-height: var(--agent-composer-max-height);
-  font-size: 0.94rem;
+  font-size: var(--text-md);
   line-height: 1.45;
 }
 
 .universal-agent-chat-rail .agent-composer-label {
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .agent-rail-quick-prompts {
   display: flex;
-  gap: 6px;
+  gap: var(--space-6);
   max-width: 100%;
   overflow-x: auto;
-  padding: 0 0 2px;
+  padding: 0 0 var(--space-2);
   scrollbar-width: none;
 }
 
@@ -641,7 +672,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   padding: 5px 9px;
   background: color-mix(in srgb, var(--theme-surface-subtle) 74%, transparent);
   color: var(--theme-text-muted);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -682,7 +713,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: max-content;
   min-width: 0;
   max-width: min(100%, calc(100vw - 32px));
@@ -701,7 +732,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 0;
   overflow: visible;
   padding-bottom: 0;
@@ -755,12 +786,12 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   top: calc(100% + 12px);
   bottom: auto;
   transform: translate(-50%, -6px);
-  padding: 4px 8px;
+  padding: var(--space-4) var(--space-8);
   border: 1px solid var(--theme-border);
   border-radius: 6px;
   background: var(--theme-surface-elevated);
   color: var(--theme-text-strong);
-  font-size: 0.77rem;
+  font-size: var(--text-xs);
   line-height: 1.2;
   white-space: nowrap;
   opacity: 0;
@@ -807,7 +838,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   bottom: auto;
   z-index: 6;
   min-width: 260px;
-  padding: 6px;
+  padding: var(--space-6);
   border-radius: 8px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
@@ -820,7 +851,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   align-items: center;
   width: 100%;
   justify-content: flex-start;
-  gap: 10px;
+  gap: var(--space-10);
   border: 0;
   border-radius: 6px;
   padding: 7px 9px;
@@ -837,7 +868,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .app-more-label {
   flex: 1 1 auto;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   text-align: left;
 }
@@ -922,14 +953,14 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
 }
 
 .plugin-rail__title {
-  margin: 0 0 2px;
-  font-size: 15px;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
   line-height: 1.3;
 }
 
 .plugin-rail__kind {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   opacity: 0.6;
@@ -938,7 +969,7 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
 .plugin-rail__description,
 .plugin-rail__access,
 .plugin-rail__origin {
-  margin: 12px 0 0;
+  margin: var(--space-12) 0 0;
   word-break: break-word;
 }
 
@@ -969,8 +1000,8 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
 .panel,
 .card {
   position: relative;
-  margin-top: 18px;
-  padding: 18px 0;
+  margin-top: var(--space-18);
+  padding: var(--space-18) 0;
   border-top: 1px solid var(--theme-border);
   background: transparent;
 }
@@ -987,11 +1018,24 @@ h4 {
   color: var(--theme-text-strong);
 }
 
+/*
+ * Headings took their size from body, so a 13px body flattened every unstyled
+ * h3/h4 into the text around it. Pin them to the scale instead.
+ */
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3,
+h4 {
+  font-size: var(--text-md);
+}
+
 label {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
   color: var(--theme-text-strong);
-  font-size: 0.94rem;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -1023,13 +1067,17 @@ textarea {
   resize: vertical;
 }
 
+/*
+ * Buttons draw no outline. The border stays as 1px transparent so no control
+ * changes size; affordance comes from fill instead (see .ghost-btn).
+ */
 button {
-  border: 1px solid var(--theme-border);
+  border: 1px solid transparent;
   border-radius: 8px;
   background: var(--theme-surface);
   color: var(--theme-text);
   cursor: pointer;
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
@@ -1050,7 +1098,6 @@ button:focus-visible {
 }
 
 .primary-btn {
-  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border));
   background: var(--theme-accent);
   color: var(--theme-text-on-accent);
 }
@@ -1059,9 +1106,38 @@ button:focus-visible {
   background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
 }
 
+/*
+ * Secondary text buttons keep a quiet tonal fill at rest. With neither border
+ * nor fill, a standalone "Export CSV" or "Edit" reads as a label. Toolbars and
+ * icon buttons set their own transparent background and keep only the hover.
+ */
 .ghost-btn {
-  background: var(--theme-surface);
+  background: color-mix(in srgb, var(--theme-text) 6%, transparent);
   color: var(--theme-text);
+}
+
+.ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-text) 11%, transparent);
+}
+
+/* Stroke icon inside a text button, drawn from the same Lucide set as the dock. */
+.btn-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Zero specificity: a view that sets its own display on an icon button wins. */
+:where(button:has(> .btn-icon)) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
 }
 
 a.ghost-btn {
@@ -1071,9 +1147,12 @@ a.ghost-btn {
 }
 
 .danger-btn {
-  border-color: color-mix(in srgb, var(--theme-danger) 35%, var(--theme-border));
   color: var(--theme-danger);
-  background: var(--theme-surface);
+  background: color-mix(in srgb, var(--theme-danger) 9%, transparent);
+}
+
+.danger-btn:hover {
+  background: color-mix(in srgb, var(--theme-danger) 15%, transparent);
 }
 
 .row-action-icon-btn {
@@ -1121,10 +1200,10 @@ button:disabled {
 }
 
 .grid {
-  margin-top: 16px;
+  margin-top: var(--space-16);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 14px;
+  gap: var(--space-14);
 }
 
 .tile {
@@ -1139,32 +1218,32 @@ button:disabled {
 .form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .stack-form {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .form-actions,
 .inline-row,
 .card-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
   flex-wrap: wrap;
 }
 
 .cards {
-  margin-top: 14px;
+  margin-top: var(--space-14);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 20px;
+  gap: var(--space-20);
 }
 
 .list-table {
-  margin-top: 14px;
+  margin-top: var(--space-14);
   display: grid;
   gap: 0;
   border-top: 1px solid var(--theme-border);
@@ -1173,7 +1252,7 @@ button:disabled {
 .list-row {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(120px, auto) auto;
-  gap: 10px;
+  gap: var(--space-10);
   align-items: center;
   padding: 11px 0;
   border-bottom: 1px solid var(--theme-border-soft);
@@ -1186,7 +1265,7 @@ button:disabled {
 
 .list-row-header {
   color: var(--theme-text-strong);
-  font-size: 0.88rem;
+  font-size: var(--text-base);
   font-weight: 650;
 }
 
@@ -1221,7 +1300,7 @@ button:disabled {
 .small-note {
   color: var(--theme-text-muted);
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
 }
 
 
@@ -1258,8 +1337,8 @@ button:disabled {
 
 .notebook-steps {
   display: grid;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: var(--space-12);
+  margin-bottom: var(--space-12);
 }
 
 .notebook-step-line {
@@ -1294,8 +1373,8 @@ button:disabled {
 .selection-insight-menu {
   min-width: 180px;
   display: grid;
-  gap: 6px;
-  padding: 8px;
+  gap: var(--space-6);
+  padding: var(--space-8);
   border: 1px solid var(--theme-border);
   border-radius: 12px;
   background: var(--theme-surface-elevated);
@@ -1326,9 +1405,9 @@ button:disabled {
   max-height: min(72vh, 680px);
   overflow: auto;
   display: grid;
-  gap: 12px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
+  gap: var(--space-12);
+  padding: var(--space-14) var(--space-16);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
   background: var(--theme-surface-elevated);
   box-shadow: 0 22px 48px var(--theme-shadow-color-strong);
@@ -1337,7 +1416,7 @@ button:disabled {
 .selection-insight-panel-head,
 .selection-insight-answer-copy {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .selection-insight-panel-head h4,
@@ -1351,7 +1430,7 @@ button:disabled {
 .selection-insight-panel-kicker,
 .selection-insight-panel-meta {
   color: var(--theme-text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .selection-insight-panel-kicker {
@@ -1361,9 +1440,9 @@ button:disabled {
 
 .selection-insight-answer-block {
   display: grid;
-  gap: 10px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  gap: var(--space-10);
+  padding-top: var(--space-10);
+  border-top: 1px solid var(--theme-border);
 }
 
 .selection-insight-answer-block.is-pending {
@@ -1394,7 +1473,7 @@ button:disabled {
   }
 
   .universal-agent-chat-rail {
-    border-top: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
+    border-top: 1px solid var(--theme-border-soft);
     border-left: 0;
   }
 
@@ -1405,8 +1484,8 @@ button:disabled {
   .topbar {
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
-    gap: 10px;
-    padding: 8px 14px 6px;
+    gap: var(--space-10);
+    padding: var(--space-8) var(--space-14) var(--space-6);
   }
 
   .topbar-tools {
@@ -1427,14 +1506,14 @@ button:disabled {
   }
 
   .app-dock-nav {
-    gap: 6px;
+    gap: var(--space-6);
   }
 
   .app-dock {
     width: max-content;
     min-width: 0;
     max-width: calc(100vw - 28px);
-    padding: 7px 8px;
+    padding: 7px var(--space-8);
   }
 
   .app-dock-btn {

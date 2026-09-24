@@ -1,13 +1,13 @@
 /* Late-load Papers library and viewer refinements. */
 
 #papers-view .papers-layout {
-  gap: 16px;
+  gap: var(--space-16);
 }
 
 #papers-view .papers-folder-item {
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 8px 10px 8px 0;
+  padding: var(--space-8) var(--space-10) var(--space-8) 0;
 }
 
 #papers-view .papers-folder-item:hover,
@@ -23,13 +23,13 @@
 #papers-view .papers-paper-row {
   border: 1px solid transparent;
   border-radius: 8px;
-  padding: 7px 8px;
+  padding: 7px var(--space-8);
 }
 
 #papers-view .papers-paper-row.is-active {
   border-color: transparent;
   background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
-  padding: 7px 8px;
+  padding: 7px var(--space-8);
 }
 
 #papers-view .papers-paper-row.is-active .papers-paper-title {
@@ -37,7 +37,7 @@
 }
 
 #papers-view .papers-viewer-stage {
-  padding: 12px;
+  padding: var(--space-12);
 }
 
 #papers-view .papers-viewer-canvas {
@@ -79,7 +79,7 @@ body[data-active-view="papers-view"] .universal-agent-chat-rail {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 0;
-  padding: .875rem 0 0;
+  padding: var(--space-14) 0 0;
   border-top: 0;
   background: var(--theme-surface);
 }
@@ -88,12 +88,12 @@ body[data-active-view="papers-view"] .universal-agent-chat-rail__tools {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: .6rem;
+  gap: var(--space-10);
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
-  padding: .35rem .25rem;
+  padding: var(--space-6) var(--space-4);
   grid-column: 1;
   grid-row: 1;
 }
@@ -152,7 +152,7 @@ body[data-active-view="papers-view"].has-agent-chat-rail-expanded .universal-age
 body[data-active-view="papers-view"].has-agent-chat-rail-expanded .universal-agent-chat-rail__content {
   grid-column: 1;
   grid-row: 1;
-  padding: .7rem .875rem .875rem;
+  padding: .7rem var(--space-14) var(--space-14);
 }
 
 body[data-active-view="papers-view"] .universal-agent-chat-rail__header {
@@ -161,7 +161,7 @@ body[data-active-view="papers-view"] .universal-agent-chat-rail__header {
 }
 
 #papers-view .papers-comment-sidebar {
-  padding: .7rem .875rem;
+  padding: .7rem var(--space-14);
   background: var(--theme-surface);
 }
 

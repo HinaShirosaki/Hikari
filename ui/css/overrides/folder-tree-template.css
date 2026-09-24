@@ -11,7 +11,7 @@
 .folder-tree-template,
 .folder-tree-template__node,
 .folder-tree-template__children {
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .folder-tree-template__row {
@@ -22,7 +22,7 @@
   grid-template-columns: 22px minmax(0, 1fr) 24px;
   gap: 3px;
   align-items: center;
-  padding: 2px 4px;
+  padding: var(--space-2) var(--space-4);
   border-radius: 8px;
   color: var(--theme-text);
 }
@@ -119,7 +119,7 @@
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   font-weight: 550;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -131,7 +131,7 @@
 
 .folder-tree-template__meta {
   color: var(--theme-text-muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   line-height: 1;
 }
 
@@ -148,7 +148,7 @@
   background: transparent;
   color: var(--theme-text-muted);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-lg);
   line-height: 1;
   opacity: 0;
   cursor: pointer;
@@ -180,13 +180,13 @@
   width: 100%;
   min-height: 28px;
   margin: 0;
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
   border: 1px solid var(--theme-focus);
   border-radius: 6px;
   background: var(--theme-surface-elevated);
   color: var(--theme-text-strong);
   font: inherit;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
 }
 
 .folder-tree-template__rename-input:focus,
@@ -218,14 +218,14 @@
 
 .folder-tree-template__children {
   margin-left: 11px;
-  padding-left: 14px;
+  padding-left: var(--space-14);
 }
 
 .folder-tree-template__children--full-width-leaves > .folder-tree-template__leaf > .folder-tree-template__leaf-control {
   width: calc(100% + 25px);
   max-width: calc(100% + 25px);
   margin-left: -25px;
-  padding-left: 32px;
+  padding-left: var(--space-32);
 }
 
 .folder-tree-template__children[hidden] {

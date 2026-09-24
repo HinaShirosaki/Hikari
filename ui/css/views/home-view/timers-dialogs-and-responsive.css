@@ -3,14 +3,14 @@
   align-items: baseline;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  padding-top: 0.4rem;
+  gap: var(--space-6);
+  padding-top: var(--space-6);
   color: var(--home-tile-muted);
 }
 #home-view .dashboard-local-time,
 #home-view .dashboard-local-date {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.4;
   font-weight: 400;
   color: var(--home-tile-muted);
@@ -25,8 +25,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 0;
+  gap: var(--space-8);
+  padding: var(--space-10) 0;
   border-top: 1px solid var(--home-tile-line-soft);
 }
 #home-view .home-timer-row:first-child {
@@ -37,12 +37,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: var(--space-10);
   min-width: 0;
 }
 #home-view .home-timer-name {
   color: var(--theme-text-strong);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.3;
   font-weight: 500;
   overflow-wrap: anywhere;
@@ -52,8 +52,8 @@
   color: var(--theme-accent);
   background: var(--theme-surface-subtle);
   border-radius: 0.25rem;
-  padding: 0.1rem 0.35rem;
-  font-size: 0.78rem;
+  padding: var(--space-2) var(--space-6);
+  font-size: var(--text-xs);
   line-height: 1.3;
 }
 #home-view .home-timer-meta {
@@ -76,7 +76,7 @@
 }
 #home-view .home-timer-count {
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -107,7 +107,7 @@
 #home-view .home-timer-row.is-featured {
   grid-template-columns: minmax(0, 1fr) auto;
   row-gap: 0.3rem;
-  padding-bottom: 0.5rem;
+  padding-bottom: var(--space-8);
 }
 #home-view .home-timer-row.is-featured .home-timer-copy {
   grid-column: 1 / -1;
@@ -132,11 +132,11 @@
   gap: 0.3rem;
   grid-column: 1 / -1;
   color: var(--home-tile-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   line-height: 1.3;
 }
 #home-view .home-timer-finished:not(:last-child) {
-  padding-bottom: 0.5rem;
+  padding-bottom: var(--space-8);
 }
 #home-view .home-timer-finished-row .home-row-meta {
   color: var(--theme-danger);
@@ -145,7 +145,7 @@
 #home-view .home-tile-head-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-8);
 }
 
 @media (max-height: 760px) and (min-width: 1280px) {
@@ -210,11 +210,11 @@
 
 @media (max-width: 480px) {
   #home-view {
-    --home-shell-gap-inline: 0.65rem;
-    --home-tile-padding: 1rem;
+    --home-shell-gap-inline: var(--space-10);
+    --home-tile-padding: var(--space-16);
   }
   #home-view .home-tile-head-actions {
-    gap: 0.15rem;
+    gap: var(--space-2);
   }
   #home-view .home-passage-interval {
     display: none;

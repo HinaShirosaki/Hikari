@@ -7,20 +7,20 @@
   background: var(--sequence-viewer-overlay-soft);
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: var(--space-18);
 }
 
 .sequence-viewer-new-dialog.app-dialog-surface {
   --app-dialog-width: 680px;
-  --app-dialog-padding: 20px;
-  --app-dialog-gap: 16px;
+  --app-dialog-padding: var(--space-20);
+  --app-dialog-gap: var(--space-16);
 }
 
 .sequence-viewer-new-field {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   color: var(--theme-text-strong);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
@@ -32,9 +32,9 @@
   border-radius: 8px;
   background: var(--theme-surface-elevated);
   color: var(--theme-text);
-  padding: 12px;
+  padding: var(--space-12);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: 0.02em;
@@ -51,7 +51,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 16px;
+  gap: var(--space-8) var(--space-16);
   margin: 0;
   padding: 0;
   border: 0;
@@ -59,13 +59,13 @@
 
 .sequence-viewer-new-topology legend {
   padding: 0;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
 }
 
 .sequence-viewer-new-topology label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   font-weight: 500;
   color: var(--theme-text);
 }
@@ -96,7 +96,7 @@
      A window-fixed overlay put the dialog head under the bar, and the shared
      76px offset does not cover the two-row bar of a narrow window. */
   position: absolute;
-  padding: 18px;
+  padding: var(--space-18);
   overflow: hidden;
 }
 
@@ -111,7 +111,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: var(--space-4);
   scrollbar-gutter: stable;
 }
 
@@ -123,9 +123,9 @@
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
   box-shadow: var(--theme-shadow-small);
-  padding: 14px;
+  padding: var(--space-14);
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .sequence-viewer-sequence-edit-dialog {
@@ -150,14 +150,14 @@
 
 .sequence-viewer-primer-design-result {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
   max-height: min(60vh, 520px);
   overflow: auto;
 }
 
 .sequence-viewer-primer-design-summary {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .sequence-viewer-primer-design-summary p,
@@ -167,7 +167,7 @@
 
 .sequence-viewer-primer-design-warnings {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .sequence-viewer-primer-design-warning {
@@ -176,14 +176,14 @@
 
 .sequence-viewer-feature-editor-grid {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .sequence-viewer-feature-editor-grid label {
   display: grid;
   gap: 5px;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   color: var(--theme-text);
 }
 
@@ -195,7 +195,7 @@
   background: var(--theme-surface-elevated);
   color: var(--theme-text);
   font: inherit;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   resize: vertical;
 }
 
@@ -206,7 +206,7 @@
 .sequence-viewer-sequence-edit-input-wrap {
   display: grid;
   gap: 5px;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   color: var(--theme-text);
 }
 
@@ -217,10 +217,10 @@
   background: var(--theme-surface-elevated);
   color: var(--theme-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.86rem;
+  font-size: var(--text-base);
   line-height: 1.45;
   letter-spacing: 0;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   resize: vertical;
   text-transform: uppercase;
 }
@@ -246,19 +246,19 @@
 @media (max-width: 640px) {
   .sequence-viewer-backbone-dialog-overlay,
 .sequence-viewer-alignment-workspace {
-    padding: max(56px, env(safe-area-inset-top, 0px)) 10px 10px;
+    padding: max(56px, env(safe-area-inset-top, 0px)) var(--space-10) var(--space-10);
   }
 
   .sequence-viewer-backbone-dialog {
     width: 100%;
     max-height: calc(100svh - 66px);
-    padding: 12px;
+    padding: var(--space-12);
   }
 
   .sequence-viewer-alignment-dialog {
     width: 100%;
     max-height: calc(100svh - 66px);
-    padding: 12px;
+    padding: var(--space-12);
   }
 
   
@@ -285,16 +285,16 @@
 
   .sequence-viewer-dual-line {
     grid-template-columns: 58px 1fr;
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .sequence-viewer-strand-row {
     grid-template-columns: 24px 1fr 24px;
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
   }
 
   .sequence-viewer-seq-text {
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
   }
 
   .sequence-viewer-protein-builder-toolbar {
@@ -361,7 +361,7 @@ body.theme-night .sequence-viewer-cloning-design-result-section {
    the dimmed workspace, its read-only summary has a restrained inset, and a
    selected backbone reads as the active choice rather than a warning. */
 body.theme-night .sequence-viewer-backbone-dialog {
-  border-color: color-mix(in srgb, var(--theme-border) 74%, transparent);
+  border-color: var(--theme-border-soft);
   background: linear-gradient(
     145deg,
     color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-text-strong) 8%),

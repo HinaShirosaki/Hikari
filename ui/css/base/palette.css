@@ -21,7 +21,6 @@
   /* Borders */
   --theme-border: #d8cec1;
   --theme-border-soft: #e6ddd1;
-  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 90%, transparent);
 
   /* Text */
   --theme-text: #2a241d;
@@ -50,7 +49,6 @@
   /* Preserve the original near-white textbox treatment in day mode. */
   --theme-control-background: var(--theme-surface);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
-  --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
 
   /* Overlays and shadows */
   --theme-loading-background: #11140f;
@@ -88,7 +86,6 @@ body.theme-night {
 
   --theme-border: #727c6b;
   --theme-border-soft: #3a4235;
-  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 90%, transparent);
 
   --theme-text: #e9eee3;
   --theme-text-muted: #aab4a1;
@@ -108,7 +105,6 @@ body.theme-night {
   /* Keep fields visibly lifted from the page instead of reading as dark cutouts. */
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
-  --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
 
   --theme-loading-background: #12150f;
   --theme-overlay: rgba(6, 9, 5, 0.5);
@@ -136,7 +132,6 @@ body.theme-miku {
 
   --theme-border: #9bd8d4;
   --theme-border-soft: #c5ebe8;
-  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 88%, transparent);
 
   --theme-text: #233b3f;
   --theme-text-muted: #527378;
@@ -154,7 +149,6 @@ body.theme-miku {
   --theme-panel: var(--theme-surface-elevated);
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-accent) 32%);
-  --theme-control-border: color-mix(in srgb, var(--theme-border) 90%, transparent);
 
   --theme-loading-background: #102b2e;
   --theme-overlay: rgba(20, 67, 70, 0.2);

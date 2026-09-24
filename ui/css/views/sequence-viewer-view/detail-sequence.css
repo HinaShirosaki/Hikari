@@ -8,19 +8,19 @@
 
 .sequence-viewer-stats {
   display: grid;
-  gap: 6px;
-  font-size: 0.86rem;
+  gap: var(--space-6);
+  font-size: var(--text-base);
 }
 
 .sequence-viewer-message-box {
-  margin-top: 10px;
+  margin-top: var(--space-10);
 }
 
 .sequence-viewer-feature-rail-host {
   border-radius: 8px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface);
-  padding: 10px;
+  padding: var(--space-10);
 }
 
 .sequence-viewer-feature-rail {
@@ -129,7 +129,7 @@
 .sequence-viewer-feature-axis span {
   position: absolute;
   transform: translateX(-50%);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   color: var(--sequence-viewer-axis-muted);
 }
 
@@ -145,7 +145,7 @@
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
   min-height: 0;
   margin: 0;
   padding: 0;
@@ -157,7 +157,7 @@
 
 .sequence-viewer-feature-bottom {
   display: none;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .sequence-viewer-feature-detail {
@@ -169,9 +169,9 @@
 }
 
 .sequence-viewer-protein-sequence {
-  margin: 4px 0 0;
+  margin: var(--space-4) 0 0;
   font-family: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -230,7 +230,7 @@
 .sequence-viewer-dual-line {
   display: grid;
   grid-template-columns: 74px 1fr;
-  gap: 10px;
+  gap: var(--space-10);
   align-items: start;
   margin-bottom: 22px;
   /* A plasmid is hundreds of these, and laying out the ones nobody is looking
@@ -258,22 +258,22 @@
 .sequence-viewer-strand-pair {
   position: relative;
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .sequence-viewer-strand-block {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 0;
 }
 
 .sequence-viewer-strand-row {
   display: grid;
   grid-template-columns: 28px 1fr 28px;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: baseline;
   font-family: var(--sequence-viewer-sequence-font);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.42;
 }
 
@@ -360,7 +360,7 @@
 
 .sequence-viewer-alignment-guide-row {
   color: var(--theme-text-muted);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   line-height: 0.82;
 }
 
@@ -391,7 +391,7 @@
   user-select: none;
   text-align: right;
   line-height: 1.35;
-  padding-top: 2px;
+  padding-top: var(--space-2);
 }
 
 .sequence-viewer-strand-end {
@@ -405,7 +405,7 @@
   width: 100%;
   position: relative;
   font-family: var(--sequence-viewer-sequence-font);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   font-stretch: 106%;
   font-variant-ligatures: none;
@@ -518,7 +518,7 @@
   border: 1px solid var(--sequence-viewer-aa-chip-border, var(--sequence-viewer-aa-border));
   background: var(--sequence-viewer-aa-chip-background, var(--sequence-viewer-aa-bg));
   color: var(--sequence-viewer-aa-chip-color, var(--sequence-viewer-aa-ink));
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
@@ -584,7 +584,7 @@
   bottom: calc(100% + 3px + var(--sequence-viewer-restriction-label-stack-offset, 0px));
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
   font-weight: 650;
   line-height: 1;
   color: var(--sequence-viewer-aa-ink);
@@ -831,11 +831,11 @@
   min-width: 170px;
   max-width: 260px;
   border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, transparent);
+  border: 1px solid var(--theme-border);
   background: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
   box-shadow: var(--theme-shadow-small);
   padding: 7px 9px;
-  font-size: 0.69rem;
+  font-size: var(--text-2xs);
   line-height: 1.3;
   color: var(--theme-text-strong);
   pointer-events: none;
@@ -846,18 +846,18 @@
 }
 
 .sequence-viewer-feature-hover-tooltip p + p {
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 .sequence-viewer-feature-hover-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .sequence-viewer-feature-hover-head + p {
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 .sequence-viewer-feature-hover-title {
@@ -868,13 +868,13 @@
   position: fixed;
   z-index: 2600;
   min-width: 210px;
-  padding: 6px;
+  padding: var(--space-6);
   border-radius: 8px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
   box-shadow: var(--theme-shadow-small);
   display: grid;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .sequence-viewer-context-menu[hidden] {
@@ -888,7 +888,7 @@
   color: var(--theme-text);
   text-align: left;
   padding: 7px 9px;
-  font-size: 0.86rem;
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
@@ -904,7 +904,7 @@
 
 .sequence-viewer-aa-edit-context {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 270px;
   padding: 3px;
 }
@@ -915,13 +915,13 @@
 
 .sequence-viewer-aa-edit-title {
   color: var(--theme-text-strong);
-  font-size: 0.86rem;
+  font-size: var(--text-base);
 }
 
 .sequence-viewer-aa-replacement-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .sequence-viewer-aa-replacement-option {
@@ -930,7 +930,7 @@
   gap: 1px;
   min-width: 0;
   min-height: 42px;
-  padding: 4px 3px;
+  padding: var(--space-4) 3px;
   border-color: transparent;
   background: var(--theme-surface);
 }
@@ -943,7 +943,7 @@
 
 .sequence-viewer-aa-replacement-code {
   color: var(--theme-text-strong);
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   font-weight: 750;
   line-height: 1;
 }

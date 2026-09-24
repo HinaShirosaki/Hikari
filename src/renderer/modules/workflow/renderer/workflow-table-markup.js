@@ -280,7 +280,7 @@ function createWorkflowTableMarkup({
         <div class="workflow-drawer-head">
           <div class="workflow-drawer-title-row">
             <input class="workflow-drawer-name" aria-label="Workflow name" value="${safeText(workflow.name || '')}" data-workflow-run-name="${safeText(workflow.id)}" />
-            <button type="button" class="workflow-drawer-close" data-workflow-drawer-close="true" aria-label="Close">&times;</button>
+            <button type="button" class="workflow-drawer-close" data-workflow-drawer-close="true" aria-label="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="workflow-drawer-meta">
             <span>${safeText(project?.name || 'No project')}</span>
@@ -324,7 +324,7 @@ function createWorkflowTableMarkup({
       const name = project?.name || (projectId ? `Missing project (${projectId})` : 'No project');
       return `<tbody><tr class="workflow-project-heading"><th colspan="4" scope="rowgroup">
         <div><span>${safeText(name)}</span><span class="workflow-ledger-count">${processes.length} ${processes.length === 1 ? 'process' : 'processes'}</span>
-        ${!projectId || project ? `<button type="button" class="ghost-btn" data-workflow-project-add="${safeText(projectId)}" aria-label="New process in ${safeText(name)}">+ New process</button>` : ''}</div>
+        ${!projectId || project ? `<button type="button" class="ghost-btn" data-workflow-project-add="${safeText(projectId)}" aria-label="New process in ${safeText(name)}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>New process</button>` : ''}</div>
       </th></tr>${processes.map((workflow) => buildRunRowMarkup(workflow, activeWorkflow)).join('')}</tbody>`;
     }).join('');
 

@@ -363,13 +363,13 @@
                   <button type="button" class="ghost-btn" data-assay-chart-type="bar" aria-pressed="false">Bars</button>
                   <button type="button" class="ghost-btn" data-assay-chart-type="line" aria-pressed="false">Line</button>
                 </div>
-                <button type="button" id="assay-workspace-format-btn" class="ghost-btn">Format</button>
+                <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
                     <div class="form-actions assay-chart-export-actions">
-                      <span class="sr-only">Export chart</span>
+                      <span class="sr-only">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
                       <button type="button" id="assay-chart-export-png-btn" class="ghost-btn">PNG</button>
                       <button type="button" id="assay-chart-export-svg-btn" class="ghost-btn">SVG</button>
                     </div>
-                <button type="button" id="assay-chart-focus-btn" class="ghost-btn" aria-pressed="false">Focus</button>
+                <button type="button" id="assay-chart-focus-btn" class="row-action-icon-btn" aria-pressed="false" aria-label="Focus chart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
               </div>
             </header>
             <div id="assay-analysis-table" class="list-table"></div>
@@ -397,7 +397,7 @@
                 <div class="assay-workspace-transform-header">
                   <h4 class="assay-workspace-compare-label">Transformed · Table2</h4>
                   <p id="assay-transform-error-notice" class="small-note" role="status" hidden></p>
-                  <button type="button" id="assay-transform-clear-btn" class="ghost-btn row-action-icon-btn-danger">Remove transform</button>
+                  <button type="button" id="assay-transform-clear-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Remove transform"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
                 </div>
                 <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
               </div>
@@ -414,7 +414,7 @@
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
-            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" data-hover-caption="Close"><span aria-hidden="true">&times;</span></button>
+            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" data-hover-caption="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
           <div class="assay-serial-dilution-controls">
@@ -435,7 +435,7 @@
               <h3 id="assay-result-import-title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
             </div>
-            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" data-hover-caption="Close"><span aria-hidden="true">&times;</span></button>
+            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" data-hover-caption="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="assay-result-import-body">
             <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>

@@ -131,7 +131,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
           return value;
         },
         headerSort: false,
-        hozAlign: 'center',
+        hozAlign: 'right',
         headerHozAlign: 'center',
         minWidth: 76
       });

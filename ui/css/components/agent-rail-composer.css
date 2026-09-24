@@ -11,7 +11,7 @@
   min-width: 0;
   max-height: 100%;
   padding: 0;
-  gap: .75rem;
+  gap: var(--space-12);
   align-self: end;
   overflow-y: auto;
 }
@@ -19,8 +19,8 @@
 .universal-agent-chat-rail .agent-composer-card {
   width: 100%;
   min-width: 0;
-  gap: .5rem;
-  padding: .875rem .75rem .625rem;
+  gap: var(--space-8);
+  padding: var(--space-14) var(--space-12) var(--space-10);
   border: 1px solid var(--theme-border-soft);
   border-radius: 1rem;
   background: var(--theme-surface-elevated);
@@ -32,9 +32,9 @@
   display: block;
   min-height: var(--agent-composer-min-height);
   max-height: var(--agent-composer-max-height);
-  padding: 0 .125rem;
+  padding: 0 var(--space-2);
   border-radius: 0;
-  font-size: .875rem;
+  font-size: var(--text-base);
   line-height: 1.55;
 }
 
@@ -46,7 +46,7 @@
 .universal-agent-chat-rail .agent-rail-quick-prompts {
   display: flex;
   flex-wrap: wrap;
-  gap: .375rem;
+  gap: var(--space-6);
   min-width: 0;
 }
 
@@ -58,12 +58,12 @@
   flex: 0 1 auto;
   max-width: 100%;
   min-height: 1.875rem;
-  padding: .375rem .625rem;
+  padding: var(--space-6) var(--space-10);
   border: 1px solid var(--theme-border-soft);
   border-radius: .625rem;
   background: transparent;
   color: var(--theme-text-muted);
-  font-size: .75rem;
+  font-size: var(--text-xs);
   font-weight: 400;
   line-height: 1.35;
   text-align: left;
@@ -81,13 +81,13 @@
   align-items: center;
   flex-direction: row;
   flex-wrap: nowrap;
-  gap: .5rem;
+  gap: var(--space-8);
 }
 
 .universal-agent-chat-rail .agent-composer-toolbar-start {
   flex: 0 1 auto;
   width: auto;
-  gap: .25rem;
+  gap: var(--space-4);
 }
 
 .universal-agent-chat-rail .agent-composer-actions.form-actions {
@@ -96,7 +96,7 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: .375rem;
+  gap: var(--space-6);
 }
 
 .universal-agent-chat-rail :is(.agent-attach-btn, .agent-paper-screenshot-btn, .agent-send-icon-btn) {
@@ -124,8 +124,8 @@
 }
 
 .universal-agent-chat-rail .agent-user-question-card {
-  gap: 10px;
-  padding: 12px;
+  gap: var(--space-10);
+  padding: var(--space-12);
   border-radius: 14px;
 }
 

@@ -1,8 +1,8 @@
 /* Home-specific dimensions take precedence over the shared window defaults. */
 #home-view .home-dialog.home-dashboard-dialog.app-dialog-surface {
   --app-dialog-width: 30rem;
-  --app-dialog-padding: 1.5rem;
-  --app-dialog-gap: 1.25rem;
+  --app-dialog-padding: var(--space-24);
+  --app-dialog-gap: var(--space-20);
   width: min(var(--app-dialog-width), 100%);
   border-color: var(--home-tile-line);
   border-radius: 1rem;
@@ -18,19 +18,19 @@
 #home-view .home-dialog-form {
   display: grid;
   min-width: 0;
-  gap: 1.25rem;
+  gap: var(--space-20);
 }
 
 #home-view .home-dialog .app-dialog-head {
   align-items: center;
-  padding-block-end: 1rem;
+  padding-block-end: var(--space-16);
   border-block-end: 1px solid var(--home-tile-line-soft);
 }
 
 #home-view .home-dialog h3 {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1.2rem;
+  font-size: var(--text-2xl);
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: -0.02em;
@@ -39,18 +39,18 @@
 #home-view .home-dialog-section {
   display: grid;
   min-width: 0;
-  gap: 0.85rem;
+  gap: var(--space-14);
 }
 
 #home-view .home-dialog-section + .home-dialog-section {
-  padding-block-start: 1.25rem;
+  padding-block-start: var(--space-20);
   border-block-start: 1px solid var(--home-tile-line-soft);
 }
 
 #home-view .home-dialog-section h4 {
   margin: 0;
   color: var(--home-tile-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -69,7 +69,7 @@
   min-width: 0;
   margin: 0;
   gap: 0.45rem;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 
@@ -78,13 +78,13 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 0.65rem 0.75rem;
+  padding: var(--space-10) var(--space-12);
   border: 1px solid var(--home-tile-control-border);
   border-radius: 0.5rem;
   background: var(--home-tile-control-bg);
   color: var(--home-tile-text);
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 
@@ -111,7 +111,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 0.85rem;
+  gap: var(--space-14);
 }
 
 #home-view .home-timer-form-row {
@@ -123,8 +123,8 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  padding-block-start: 0.25rem;
+  gap: var(--space-10);
+  padding-block-start: var(--space-4);
 }
 
 #home-view .home-dialog :is(.primary-btn, .ghost-btn) {
@@ -132,27 +132,21 @@
   align-items: center;
   justify-content: center;
   min-height: 2.5rem;
-  padding: 0.55rem 0.9rem;
+  padding: 0.55rem var(--space-14);
   border-radius: 0.5rem;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   font-weight: 500;
   line-height: 1.4;
 }
 
 #home-view .home-dialog .ghost-btn {
-  border-color: var(--home-tile-line);
-  background: transparent;
   color: var(--home-tile-text);
-}
-
-#home-view .home-dialog .ghost-btn:hover {
-  background: var(--theme-surface-subtle);
 }
 
 #home-view .home-dialog-context {
   margin: 0;
   color: var(--home-tile-text);
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -167,7 +161,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding-inline-end: 0.25rem;
+  padding-inline-end: var(--space-4);
 }
 
 #home-view .home-incubation-location-list {
@@ -179,8 +173,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.6rem 0;
+  gap: var(--space-14);
+  padding: var(--space-10) 0;
   border-block-end: 1px solid var(--home-tile-line-soft);
 }
 
@@ -193,7 +187,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 0.6rem;
+  gap: var(--space-10);
   min-width: 0;
 }
 
@@ -201,7 +195,7 @@
 #home-view .home-incubation-location-name {
   min-width: 0;
   color: var(--home-tile-text);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -210,7 +204,7 @@
 #home-view .home-timer-template-duration {
   margin: 0;
   color: var(--home-tile-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -264,15 +258,15 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: 0.6rem;
+  gap: var(--space-10);
 }
 
 @media (max-width: 480px) {
   #home-view .home-dialog.home-dashboard-dialog.app-dialog-surface {
-    --app-dialog-padding: 1rem;
+    --app-dialog-padding: var(--space-16);
   }
   #home-view .home-dialog-form {
-    gap: 1rem;
+    gap: var(--space-16);
   }
   #home-view .home-dialog-actions > button {
     flex: 1 1 auto;

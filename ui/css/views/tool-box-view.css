@@ -1,10 +1,10 @@
 /* tool-box-view */
 
 .left-rail-template.tool-layout {
-  --left-rail-main-gap: 24px;
+  --left-rail-main-gap: var(--space-24);
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
-  gap: 24px;
+  gap: var(--space-24);
   align-items: stretch;
   min-height: var(--shared-left-rail-layout-height);
 }
@@ -21,7 +21,7 @@
 .tool-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .tool-tile {
@@ -42,11 +42,11 @@
   align-items: center;
   width: 100%;
   min-height: 44px;
-  padding: 10px 12px;
+  padding: var(--space-10) var(--space-12);
   border-radius: var(--hikari-left-rail-list-radius, 8px);
   border-bottom: 0;
   color: var(--theme-text);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   transition: box-shadow 140ms ease, color 140ms ease;
 }
@@ -76,7 +76,7 @@
 .tool-subview {
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: var(--space-14);
   margin-top: 0;
   padding: 0;
   border: 0;
@@ -87,16 +87,16 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 3px 16px;
+  gap: 3px var(--space-16);
   margin: 0;
-  padding-bottom: 12px;
+  padding-bottom: var(--space-12);
   border-bottom: 1px solid var(--theme-border-soft);
 }
 
 .tool-head h3 {
   grid-column: 1;
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--text-xl);
   letter-spacing: -0.015em;
 }
 
@@ -105,7 +105,7 @@
   max-width: 70ch;
   margin: 0;
   color: var(--theme-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   line-height: 1.45;
 }
 
@@ -114,17 +114,17 @@
   grid-column: 2;
   grid-row: 1 / -1;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .calc-output {
-  margin-top: 10px;
-  padding: 12px 14px;
+  margin-top: var(--space-10);
+  padding: var(--space-12) var(--space-14);
   border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
   background: var(--theme-surface-subtle);
   color: var(--theme-text);
-  font-size: 0.88rem;
+  font-size: var(--text-base);
   overflow-wrap: anywhere;
 }
 
@@ -141,7 +141,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   word-break: break-all;
   line-height: 1.4;
-  padding: 12px 14px;
+  padding: var(--space-12) var(--space-14);
   border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
   background: var(--theme-surface-subtle);
@@ -149,7 +149,7 @@
 
 /* Keep sequence and property results flat against the tool canvas. */
 .tool-calculation-output {
-  padding: 0.875rem 0 0;
+  padding: var(--space-14) 0 0;
   border: 0;
   border-top: thin solid var(--theme-border-soft);
   border-radius: 0;
@@ -163,12 +163,12 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  font-size: 1rem;
+  font-size: var(--text-lg);
   white-space: normal;
 }
 
 .tool-box-sheet-shell {
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .tool-box-sheet-add-btn {
@@ -183,8 +183,6 @@
   border-radius: 8px;
   background: transparent;
   color: var(--theme-text);
-  font-size: 1.35rem;
-  line-height: 1;
 }
 
 .tool-box-sheet-add-btn:hover,
@@ -231,7 +229,7 @@
   min-width: 880px;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 0.86rem;
+  font-size: var(--text-base);
 }
 
 .tool-box-buffer-sheet th,
@@ -266,7 +264,7 @@
   width: 100%;
   min-width: 0;
   min-height: 40px;
-  padding: 8px 9px;
+  padding: var(--space-8) 9px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -285,7 +283,7 @@
   width: auto;
   min-width: 4.25rem;
   min-height: 40px;
-  padding: 8px 24px 8px 8px;
+  padding: var(--space-8) var(--space-24) var(--space-8) var(--space-8);
   border: 0;
   border-left: 1px solid var(--theme-border-soft);
   border-radius: 0;
@@ -309,7 +307,7 @@
 .tool-box-reaction-sheet output {
   display: block;
   min-height: 1.2em;
-  padding: 8px 9px;
+  padding: var(--space-8) 9px;
   overflow-wrap: anywhere;
   color: var(--theme-text);
 }
@@ -318,7 +316,7 @@
 .tool-box-buffer-adjustment-row th,
 .tool-box-reaction-meta-row th,
 .tool-box-reaction-solvent-row th {
-  padding: 8px 9px;
+  padding: var(--space-8) 9px;
 }
 
 .tool-box-buffer-sheet th:first-child,
@@ -397,8 +395,6 @@
   border-radius: 0;
   background: transparent;
   color: var(--theme-text-muted);
-  font-size: 1.2rem;
-  line-height: 1;
 }
 
 .tool-box-sheet-row-remove:hover,
@@ -434,9 +430,9 @@
 
 .tool-box-buffer-suggestion {
   display: grid;
-  gap: 2px;
+  gap: var(--space-2);
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   border: 0;
   border-bottom: 1px solid var(--theme-border-soft);
   border-radius: 0;
@@ -452,21 +448,21 @@
 
 .tool-box-buffer-suggestion span {
   color: var(--theme-text-muted);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
 }
 
 .result-card {
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-subtle);
-  padding: 12px;
+  padding: var(--space-12);
 }
 
 .result-card-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--space-10);
+  margin-bottom: var(--space-8);
 }
 
 .result-card-head h4 {
@@ -491,10 +487,10 @@
 
 .result-table th,
 .result-table td {
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   text-align: left;
-  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
-  font-size: 0.86rem;
+  border-bottom: 1px solid var(--theme-border-soft);
+  font-size: var(--text-base);
 }
 
 .result-table th {
@@ -511,12 +507,12 @@
 
 .crispr-designer-shell {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .crispr-target-grid {
   display: grid;
-  gap: 10px;
+  gap: var(--space-10);
   grid-template-columns: minmax(0, 1fr) minmax(220px, 0.9fr);
   align-items: start;
 }
@@ -549,10 +545,10 @@
   align-items: center;
   justify-content: center;
   min-width: 74px;
-  padding: 2px 8px;
+  padding: var(--space-2) var(--space-8);
   border-radius: 6px;
   border: 1px solid transparent;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 650;
 }
 
@@ -586,7 +582,7 @@
 
 .colony-counter-shell {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
   align-items: start;
 }
@@ -594,7 +590,7 @@
 .colony-workspace-plate,
 .colony-workspace-settings {
   display: grid;
-  gap: 12px;
+  gap: var(--space-12);
   align-content: start;
   min-width: 0;
 }
@@ -647,8 +643,8 @@
   left: 0;
   display: grid;
   min-width: 184px;
-  gap: 2px;
-  padding: 6px;
+  gap: var(--space-2);
+  padding: var(--space-6);
   border: 0;
   border-radius: 10px;
   background: var(--theme-surface-raised, var(--theme-surface));
@@ -661,7 +657,7 @@
 
 .colony-crop-menu-option {
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--space-8) var(--space-10);
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -687,20 +683,20 @@
 
 .colony-preview-card {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
   margin: 0;
 }
 
 .colony-preview-card h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--text-md);
 }
 
 .colony-cropper-shell {
   border-radius: 12px;
   border: 1px solid var(--tool-box-canvas-border);
   background: var(--tool-box-canvas-background);
-  padding: 10px;
+  padding: var(--space-10);
   min-height: 320px;
 }
 
@@ -771,7 +767,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 #tool-molarity-view .inline-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: stretch;
 }
 
@@ -783,20 +779,20 @@ body.ui-neutral-compact input[id*="api-key"] {
 @media (max-width: 1080px) {
   .tool-layout {
     grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
-    gap: 20px;
+    gap: var(--space-20);
   }
 }
 
 @media (max-width: 640px) {
   .tool-layout {
     grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
+    gap: var(--space-18);
   }
 
   .tool-sidebar {
     position: static;
     padding-right: 0;
-    padding-bottom: 18px;
+    padding-bottom: var(--space-18);
     border-right: 0;
     border-bottom: 1px solid var(--theme-border);
   }
@@ -822,7 +818,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 .molarity-card-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 14px;
+  gap: var(--space-14);
 }
 
 #tool-molarity-view .molarity-block {
@@ -830,7 +826,7 @@ body.ui-neutral-compact input[id*="api-key"] {
   grid-template-rows: auto auto 1fr;
   min-width: 0;
   margin: 0;
-  padding: 16px 18px;
+  padding: var(--space-16) var(--space-18);
   border: 1px solid var(--theme-border-soft);
   border-radius: 12px;
   background: var(--theme-surface);
@@ -838,26 +834,26 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 .molarity-card-header {
   display: grid;
-  gap: 2px;
-  margin-bottom: 14px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-14);
 }
 
 .molarity-card-header h4 {
   margin: 0;
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   letter-spacing: -0.01em;
 }
 
 .molarity-card-header p {
   margin: 3px 0 0;
   color: var(--theme-text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 #tool-molarity-view .molarity-form {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-12);
   align-items: end;
 }
 
@@ -867,10 +863,10 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 #tool-molarity-view .molarity-form > label {
   display: grid;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 0;
   color: var(--theme-text-muted);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 650;
 }
 
@@ -901,9 +897,9 @@ body.ui-neutral-compact input[id*="api-key"] {
 #tool-molarity-view .molarity-block .molarity-output {
   display: grid;
   align-content: center;
-  gap: 4px;
+  gap: var(--space-4);
   min-height: 58px;
-  margin: 14px 0 0;
+  margin: var(--space-14) 0 0;
   padding: 13px 0 0;
   overflow-wrap: anywhere;
   border: 0;
@@ -911,13 +907,13 @@ body.ui-neutral-compact input[id*="api-key"] {
   border-radius: 0;
   background: transparent;
   color: var(--theme-text-muted);
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   line-height: 1.45;
 }
 
 #tool-molarity-view .molarity-output::before {
   color: var(--theme-text-muted);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   font-weight: 750;
   letter-spacing: 0.03em;
   content: "Result:";
@@ -925,7 +921,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 #tool-molarity-view .molarity-output[data-state="calculated"] {
   color: var(--theme-text-strong);
-  font-size: 1rem;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
@@ -948,25 +944,25 @@ body.ui-neutral-compact input[id*="api-key"] {
   }
 
   #tool-molarity-view .molarity-block {
-    padding: 14px;
+    padding: var(--space-14);
   }
 }
 
 .reverse-translate-sites {
   display: grid;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .reverse-translate-sites-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .reverse-translate-sites-title {
   color: var(--theme-text-muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -977,13 +973,13 @@ body.ui-neutral-compact input[id*="api-key"] {
 .reverse-translate-sites-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .reverse-translate-sites-column h4 {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-6);
   color: var(--theme-text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -992,9 +988,9 @@ body.ui-neutral-compact input[id*="api-key"] {
 .reverse-translate-site-list {
   display: grid;
   align-content: start;
-  gap: 2px;
+  gap: var(--space-2);
   max-height: 14rem;
-  padding: 6px;
+  padding: var(--space-6);
   border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
   background: var(--theme-surface);
@@ -1005,14 +1001,14 @@ body.ui-neutral-compact input[id*="api-key"] {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 8px;
+  gap: var(--space-10);
+  padding: var(--space-4) var(--space-8);
   border: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--theme-text);
   font: inherit;
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   text-align: left;
   cursor: pointer;
 }
@@ -1029,7 +1025,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 .reverse-translate-site-motif {
   color: var(--theme-text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 
 @media (max-width: 720px) {

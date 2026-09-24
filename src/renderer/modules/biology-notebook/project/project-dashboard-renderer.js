@@ -355,7 +355,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
       ${groups.size ? [...groups].map(([templateId, processes]) => {
         const template = asArray(state.workflowTemplates).find((item) => item.id === templateId);
         return `<div class="project-process-group"><div class="project-panel-head"><h4>${escapeText(template?.name || 'Archived workflow template')}</h4>
-          ${template ? `<button type="button" class="ghost-btn" data-project-workflow-add="${escapeText(project.id)}" data-process-template="${escapeText(templateId)}">+ New process</button>` : ''}</div>
+          ${template ? `<button type="button" class="ghost-btn" data-project-workflow-add="${escapeText(project.id)}" data-process-template="${escapeText(templateId)}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>New process</button>` : ''}</div>
           ${processes.map((process) => {
             const entry = process.entries?.[0];
             const progress = computeEntryProgress(entry, buildWorkflowExecutionLayout(process));
