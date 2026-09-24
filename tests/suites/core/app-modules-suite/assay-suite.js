@@ -450,18 +450,39 @@ test('assay analysis grouping keeps manual specs hidden without rendering summar
 });
 
 test('assay agent TSV formatter preserves object-row cells', () => {
-  const source = fs.readFileSync(path.join(
-    __dirname,
-    'src',
-    'renderer',
-    'modules',
-    'assay',
-    'agent',
-    'context.js'
-  ), 'utf8');
+  const { createAssayAgentContext } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'agent', 'context.js')
+  );
+  const assay = {
+    id: 'assay-1',
+    name: 'Dose plate',
+    latestAnalysis: { headers: ['Sample', 'EC50'], rows: [['S1', '3.2']] }
+  };
+  const agentContext = createAssayAgentContext({
+    runtime: {
+      assayMode: 'results',
+      activeResultsAssayId: 'assay-1',
+      currentLayout: [{ well: 'a1', sampleId: 'S1', concentration: '10 nM' }],
+      currentResults: { A1: '0.42' }
+    },
+    elements: {},
+    state: { projects: [] },
+    getAssayById: (id) => (id === assay.id ? assay : null),
+    getLayoutManager: () => ({}),
+    getResultsManager: () => null,
+    hasUnsavedResultsDraft: () => false
+  });
+  const lines = agentContext.getAgentChatContext().hiddenContext.text.split('\n');
 
-  assert.match(source, /row && typeof row === 'object' \? row : \{\}/);
-  assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
+  // Plate data rows are objects keyed by column name.
+  const plateHeader = lines.indexOf('well\trow\tcolumn\tsample\tconcentration\tresult');
+  assert.notEqual(plateHeader, -1, 'the plate data table is present');
+  assert.equal(lines[plateHeader + 1], 'A1\tA\t1\tS1\t10 nM\t0.42');
+
+  // Saved analysis rows are arrays indexed by column position.
+  const analysisHeader = lines.indexOf('Sample\tEC50');
+  assert.notEqual(analysisHeader, -1, 'the analysis table is present');
+  assert.equal(lines[analysisHeader + 1], 'S1\t3.2');
 });
 
 test('assay setup suppresses the universal agent chat rail while analysis keeps it available', () => {

@@ -129,6 +129,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       });
       assert.equal(result.ok, true);
       assert.equal(result.status, 'ok');
+      // The runner catches hook errors into warnings, so a failed assertion inside
+      // a lifecycle callback above only surfaces here.
+      assert.deepEqual(result.warnings, []);
       assert.equal(Array.isArray(result.readback_files), true);
       assert.equal(result.readback_files.length, 1);
       assert.match(String(result.readback_files[0].content || ''), /"value": 42/);

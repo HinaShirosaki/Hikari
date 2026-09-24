@@ -39,12 +39,29 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       }
     });
 
-    test('main window keeps the renderer sandboxed behind the split preload', () => {
-      const source = readLocalSource('src', 'main', 'windows', 'create-main-window.js');
-      assert.match(source, /contextIsolation:\s*true/);
-      assert.match(source, /nodeIntegration:\s*false/);
-      assert.match(source, /sandbox:\s*false/);
-      assert.match(source, /preload:\s*preloadPath/);
+    test('main window isolates the renderer and loads the split preload outside the OS sandbox', () => {
+      const { createMainWindow } = require(path.join(__dirname, 'src', 'main', 'windows', 'create-main-window.js'));
+      let options = null;
+      const webContents = { setWindowOpenHandler() {}, on() {}, getURL: () => '', session: { setPermissionRequestHandler() {} } };
+      createMainWindow({
+        BrowserWindow: function BrowserWindowStub(windowOptions) {
+          options = windowOptions;
+          return { webContents, loadFile() {}, on() {} };
+        },
+        platform: 'linux',
+        shell: { openExternal() {} },
+        path,
+        projectRoot: '/app',
+        appIconPath: '/app/icon.png',
+        preloadPath: '/app/preload.js'
+      });
+      // The preload is split across local CommonJS modules that Electron's
+      // renderer sandbox cannot require, so sandbox stays off while context
+      // isolation keeps Node out of the page itself.
+      assert.equal(options.webPreferences.contextIsolation, true);
+      assert.equal(options.webPreferences.nodeIntegration, false);
+      assert.equal(options.webPreferences.sandbox, false);
+      assert.equal(options.webPreferences.preload, '/app/preload.js');
     });
 
     test('main sql.js helpers resolve the bundled vendor asset from package-safe paths', () => {

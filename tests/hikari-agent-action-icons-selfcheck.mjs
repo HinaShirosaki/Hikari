@@ -68,7 +68,7 @@ for (const id of [
   );
 }
 
-assert.match(sourceMarkup, /id="agent-send-btn"[\s\S]*?data-agent-chat-icon="send"/);
-assert.match(sourceMarkup, /id="agent-rail-send-btn"[\s\S]*?data-agent-chat-icon="send"/);
+assert.match(sourceMarkup, /id="agent-send-btn"(?:(?!<\/button>)[\s\S])*data-agent-chat-icon="send"/);
+assert.match(sourceMarkup, /id="agent-rail-send-btn"(?:(?!<\/button>)[\s\S])*data-agent-chat-icon="send"/);
 
 console.log('Hikari agent action icon self-check passed.');
