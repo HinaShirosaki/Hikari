@@ -1,6 +1,6 @@
 # Hikari Internal Docs
 
-These are the internal architecture docs for Hikari, the local-first Electron lab-work app. For a product/feature overview and setup, see the top-level [Readme.md](../Readme.md).
+These are the internal architecture docs for Hikari, the local-first Electron lab-work app. For a product overview, see the top-level [Readme.md](../Readme.md); for the full feature, setup, and development reference, see the [Hikari Guide](guide/README.md).
 
 ## The big picture
 

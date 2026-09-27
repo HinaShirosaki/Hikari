@@ -178,4 +178,4 @@ You have completed the core Hikari loop: reusable records fed a project-scoped e
 - Add a paper PDF and link it to **GFP expression pilot**.
 - Configure Codex only when you are ready to use **Agent**, protocol generation, or paper analysis; none of those features are required for local record keeping.
 
-Return to the [Hikari README](../../Readme.md) for the complete feature and setup reference.
+See the [Hikari Guide](../guide/README.md) for the complete feature and setup reference.
