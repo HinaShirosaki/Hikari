@@ -120,7 +120,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Notebook notes** — the six most recently updated notebook pages; append a result note to one of them (optionally clarified by the LLM) without opening `Notebook`.
 - **Lab activity** — an 18-week contribution heatmap built from notebook entries, workflow steps, assay analyses, and experiment-log lines.
 - **Cell passage** — reminders for upcoming and overdue sub-cultures.
-- **Overnight incubation** — named incubators with an optional reminder date, against your configured location list.
+- **Overnight incubation** — named incubators (managed from the widget itself) with an optional reminder date for tomorrow.
 - **Paper finder** — results of the scheduled literature sweeps you set up from a Notebook project, against your preferred journals, with a **Find papers now** button and one-click download into the library (see [`Papers`](#papers)).
 
 ![Hikari Home dashboard with teaching-lab reminders](../screenshots/home.png)
@@ -281,7 +281,7 @@ The Settings rail has three groups.
 | Workspace | Appearance | Day/night theme and workspace look. |
 | | Startup | Default startup module, or "remember last opened module". |
 | | Storage & data | The storage root folder — the one setting to get right first — plus **Diagnostics & app information** (logs folder, third-party notices). |
-| Lab preferences | Locations & samples | The shared inventory location vocabulary (used by `Chemicals` and `Home`), sample storage locations, and the sample type names used by `Samples` (rename or add types). |
+| Lab preferences | Locations & samples | The inventory location vocabulary used by `Chemicals`, the sample storage locations, and the sample type names used by `Samples` (rename or add types). |
 | | Papers | Preferred journal names or URLs for `Papers` search and the scheduled paper finder. |
 | | Notebook PDF | Layout options for notebook PDF export. |
 | Agent & extensions | Codex | Codex CLI install/sign-in status, model choice, and reasoning effort. |
