@@ -25,7 +25,7 @@ Paper search, retrieval, parsing, download, analysis, and intake storage are own
 ## Live request path
 
 1. The renderer calls `agent:chat`.
-2. `agent-chat-handler.js` creates lifecycle/session state and records the user turn.
+2. `agent-chat-handler.js` hands the request to `runtime/agent-chat-request.js`, which creates lifecycle/session state and records the user turn.
 3. `agent-controller-core.js` validates the request and selects the Codex route.
 4. `codex-agent/runtime.js` prepares the workspace and prompt, then starts or resumes a Codex CLI turn.
 5. Codex calls Hikari through the direct MCP tools when local app data or structured actions are needed.
@@ -37,10 +37,11 @@ There is no second API-agent controller or parser-first science path. Agent Chat
 
 | Folder | Purpose |
 | --- | --- |
-| `codex-agent/` | Codex prompt/session adapter, streamed artifacts, and runtime files |
+| `codex-agent/` | Codex prompt/session adapter, streamed artifacts, runtime files, the Codex Desktop setup prompt, and the official skills (`official-skills/`) |
 | `context/` | chat-session persistence and sparse long-term memory |
-| `mcp-contract/` | MCP stdio/HTTP host, direct tools, and Hikari instructions |
-| `runtime/` | snapshot normalization and sub-app API adapters |
+| `html-output/` | the sandboxed `hikari-html://` preview protocol for `html_output` artifacts |
+| `mcp-contract/` | MCP stdio/HTTP host, direct tools, tool availability, and Hikari instructions |
+| `runtime/` | the `agent:chat` request pipeline, snapshot normalization, sub-app API adapters, and tool-artifact normalization |
 | `shared/` | provider helpers, observability, and small registries |
 | `skills/` | installed/official skill discovery |
 | `tools/` | deterministic tool runtimes and the executor catalog |

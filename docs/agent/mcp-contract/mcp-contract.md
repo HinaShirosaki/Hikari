@@ -29,9 +29,32 @@ Any agent provider that supports MCP can launch the shared stdio server. The Cod
 [mcp_servers.hikari]
 enabled = true
 required = true
-command = "/absolute/path/to/node"
-args = ["/absolute/path/to/src/main/agent/mcp-contract/stdio-server.js"]
+command = "/Applications/Hikari.app/Contents/MacOS/Hikari"
+args = ["--hikari-mcp-stdio"]
 enabled_tools = [
+  "inventory_lookup",
+  "chemical_lookup",
+  "notebook_lookup",
+  "protocol_lookup",
+  "protocol_generation",
+  "notebook_draft",
+  "notebook_suggest",
+  "notebook_append",
+  "literature_search",
+  "paper_download",
+  "paper_analysis",
+  "paper_intake_search_summaries",
+  "paper_intake_search_experiments",
+  "paper_experiments_sql",
+  "paper_intake_list_project_summaries",
+  "purchase_recommendation",
+  "memory",
+  "container",
+  "assay_table",
+  "assay_plot",
+  "plotly_graph",
+  "image_output",
+  "html_output",
   "sequence_list",
   "sequence_search",
   "sequence_get",
@@ -41,25 +64,6 @@ enabled_tools = [
   "sequence_protein_get",
   "sequence_protein_edit",
   "sequence_mutagenesis_primers",
-  "inventory_lookup",
-  "chemical_lookup",
-  "notebook_lookup",
-  "protocol_lookup",
-  "protocol_generation",
-  "notebook_draft",
-  "notebook_suggest",
-  "literature_search",
-  "paper_download",
-  "paper_analysis",
-  "paper_intake_search_summaries",
-  "paper_intake_search_experiments",
-  "paper_intake_list_project_summaries",
-  "purchase_recommendation",
-  "container",
-  "assay_table",
-  "plotly_graph",
-  "image_output",
-  "html_output",
   "ask_user"
 ]
 default_tools_approval_mode = "approve"
@@ -85,7 +89,9 @@ approval_mode = "approve"
 # HIKARI_MCP_CONFIG_END
 ```
 
-`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is resolved to an absolute Node executable path, such as `/opt/homebrew/bin/node`, so Codex does not depend on the Finder-launched app inheriting a shell `PATH`.
+`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is Hikari's own executable with `--hikari-mcp-stdio`: `src/main/main.js` then starts only the MCP stdio server on Electron's embedded Node (no window, app services, or single-instance lock), so Codex needs no separate Node install and does not depend on a Finder-launched app inheriting a shell `PATH`. In a development checkout (`npm start`), `command` is an absolute Node executable (found from `HIKARI_NODE_PATH`, the Codex install, or `PATH`) and `args` is the path to `src/main/agent/mcp-contract/stdio-server.js`.
+
+`enabled_tools` is the full tool list minus anything switched off in **Settings > Tool access** (`settings.agent.disabledMcpToolNames`), so a disabled tool is invisible to Codex rather than failing when called. `notebook_suggest` is listed but only callable in background suggestion runs.
 
 ## Per-request context
 
@@ -145,29 +151,17 @@ Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-3
 
 ## MCP tools
 
-The Hikari MCP surface is direct-tool-only. Agent providers call the named tools below as the complete Hikari app tool surface for this server:
+The Hikari MCP surface is direct-tool-only. Agent providers call the named tools below as the complete Hikari app tool surface for this server (33 tools; the canonical order is `HIKARI_MCP_TOOL_NAMES` in `instructions.js`):
 
-- `inventory_lookup`
-- `chemical_lookup`
-- `notebook_lookup`
-- `protocol_lookup`
-- `protocol_generation`
-- `notebook_draft`
-- `notebook_generation`
-- `literature_search`
-- `paper_download`
-- `paper_analysis`
-- `paper_intake_search_summaries`
-- `paper_intake_search_experiments`
-- `paper_intake_list_project_summaries`
-- `purchase_recommendation`
-- `memory`
-- `container`
-- `assay_table`
-- `plotly_graph`
-- `image_output`
-- `html_output`
-- `ask_user`
+| Group | Tools |
+| --- | --- |
+| Lookups | `inventory_lookup`, `chemical_lookup`, `notebook_lookup`, `protocol_lookup` |
+| Records (review-before-write) | `protocol_generation`, `notebook_draft`, `notebook_append`, `notebook_suggest` (background suggestion runs only) |
+| Literature | `literature_search`, `paper_download`, `paper_analysis`, `paper_intake_search_summaries`, `paper_intake_search_experiments`, `paper_intake_list_project_summaries`, `paper_experiments_sql` |
+| Lab tools | `purchase_recommendation`, `memory`, `container` |
+| Analysis and output | `assay_table`, `assay_plot`, `plotly_graph`, `image_output`, `html_output` |
+| Sequence Viewer | `sequence_list`, `sequence_search`, `sequence_get`, `sequence_feature_edit`, `sequence_protein_parts`, `sequence_protein_build`, `sequence_protein_get`, `sequence_protein_edit`, `sequence_mutagenesis_primers` (see [sequence-tools.md](sequence-tools.md)) |
+| Conversation | `ask_user` |
 
 Codex-facing instructions, skills, and examples use these same raw tool names.
 Hikari does not add or document a provider namespace prefix.
@@ -182,7 +176,11 @@ Scaling follow-up (open, separate from the source-text accounting correction): e
 
 Both search tools accept `scope: "context"` (default: active project when present) or `scope: "library"` (all local papers). An explicit `project_name` takes precedence. Results report `search_scope`, `total_matches`, and `truncated`. Each hit includes `matched_terms`, `match_coverage`, and any `unmatched_terms`; paper hits also include bounded `match_context` excerpts with stored field names and available experiment/figure references. Coverage describes matched terms, not confidence that all conditions occurred together. Use `source_paths.paper_md` to verify details. On weak/no matches, retry specific identifiers or alternative wording, broaden scope if appropriate, and search full local Markdown before concluding that a paper is absent. Metadata-only papers remain discoverable by title and DOI, but their experimental contents are not indexed until intake completes.
 
-Retrieval cannot recover experiments omitted by intake classification: research-only extraction and the review-skip policy remain in effect. The separate SQLite wiki `paper-search` app tool is not currently exposed as a direct MCP tool. Markdown fallback requires available workspace file-search access; when that access is unavailable, report the full-text search as unperformed rather than claiming the paper is absent. The wiki search uses SQL LIKE candidate filtering and a candidate cap, not FTS5.
+Retrieval cannot recover experiments omitted by intake classification: research-only extraction and the review-skip policy remain in effect. The separate `paper-search` app tool (full-text search over `KnowledgeBase/papers.md/`, scored over in-memory text windows) is not exposed as a direct MCP tool. Markdown fallback requires available workspace file-search access; when that access is unavailable, report the full-text search as unperformed rather than claiming the paper is absent.
+
+### `paper_experiments_sql`
+
+Runs one read-only `SELECT` (or `WITH … SELECT`) against `KnowledgeBase/experiments.sqlite`, the table of experiments extracted by paper intake. Arguments: `sql` (required), positional `parameters`, and `limit` (default 50, maximum 200). Tables are `experiments(paper_id, ordinal, id, title, technique, variables, figure_ref, outcome, evidence)` and `papers(paper_id, title, doi, doc_type, one_sentence_summary, project_ids_json, intake_path, paper_md, figures_dir, pdf_path, created_at, updated_at)`; join on `paper_id`. Results return `columns` and row-value arrays, with truncation reported. Queries run on a disposable in-memory copy in a worker (3-second deadline, 48 KB result budget); writes, `PRAGMA` statements, file paths, and multiple statements are rejected. Queries cover the whole workspace library, so use `paper_intake_list_project_summaries` to constrain to a project. Storage, rebuild, and limits are described in [storage-and-bundles.md](../../main-platform/data/storage-and-bundles.md#paper-knowledge-storage).
 
 Direct wrappers that delegate to app executors use the app tool schema and return this envelope:
 
@@ -386,6 +384,18 @@ Input schema:
 
 `pending_values` keys must exactly match the generated `placeholder_key` (the placeholder id); display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
 
+### `notebook_append`
+
+Prepares a proposal to append evidence-backed Markdown to an existing notebook page (normally the page open beside the agent rail). Required: `notebook_entry_id`, `page_title`, `project_name`, `protocol_name`, `content_markdown`; optional `section_title`, `rationale`, `sources`, and `expected_updated_at` (so a proposal made against an older version of the page is not applied over newer edits). The tool never writes the page: Hikari shows the proposal as a review card and applies it only after the user approves. It does not create pages; use `notebook_draft` for that.
+
+### `assay_plot`
+
+Reads and styles the live native chart in the open **Plate** (Assay) view: titles, axes, series appearance, legend, grid, error bars, and added labels, reference lines, and shaded bands. `action: "read"` returns the supported style fields, series labels, and a `revision`; `action: "update"` merges a `style` patch (arrays such as `plotElements` replace in full) and should pass `expected_revision`. It never changes plate values, data mapping, or analysis. Main forwards the request to the renderer over `ASSAY.PLOT_REQUEST` and waits for its acknowledgement (`src/main/core/services/assay-plot-bridge.js`). For a custom figure built by the agent, use `plotly_graph` instead. The `hikari-assay-plotly` skill documents the workflow.
+
+### `memory`
+
+Sparse long-term memory with `remember`, `recall`, `forget`, and `list` actions, stored in `<storage root>/.hikari/agent-memory.json`. Scope, recall ranking, and persistence rules are in [context-and-observability.md](../context/context-and-observability.md#contextagent-memoryjs).
+
 ### `ask_user`
 
 Direct MCP helper for one blocking clarification. It is a turn boundary: Codex emits the returned `final_response` and ends the current turn in a completed waiting state. Hikari renders the one-shot options and custom text box, then sends the answer as the next chat turn. Codex resumes from that answer without repeating the same question.
@@ -536,9 +546,9 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Direct tool files
 
-The MCP surface is allow-listed by `src/main/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools stay with their domain owner in `src/main/papers/store/intake/mcp-tools.js` and are folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `notebook-lookup` as `notebook_lookup`.
+The MCP surface is allow-listed by `src/main/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools (`paper_intake_*`, `paper_experiments_sql`) stay with their domain owner in `src/main/papers/store/intake/mcp/` and are folded into the same allow-list, and the `sequence_*` tools are implemented in `src/renderer/modules/sequence-viewer/main-process/mcp/` behind `direct-tools/sequence-tools.js`. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `notebook-lookup` as `notebook_lookup`.
 
-See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.
+See `mcp-contract.json` next to this file for the exact MCP tool definitions, input schemas, and agent instructions. It is a checked-in snapshot, not generated on build; several tests compare its entries with the live definitions, so update it when you change a tool definition.
 
 ## Sequence Viewer
 
