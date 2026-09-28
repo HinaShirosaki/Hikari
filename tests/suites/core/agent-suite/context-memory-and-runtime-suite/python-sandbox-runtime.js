@@ -477,7 +477,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       // The candidate table is plain data, so its order is checked on every platform;
       // only the probe against real installs below needs a Mac.
       assert.deepEqual(platformPythonCandidates('darwin'), ['/opt/homebrew/bin/python3', '/usr/local/bin/python3']);
-      assert.deepEqual(platformPythonCandidates('linux'), []);
       assert.deepEqual(platformPythonCandidates('win32'), []);
       if (process.platform !== 'darwin') {
         return;

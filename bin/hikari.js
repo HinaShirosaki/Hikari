@@ -5,6 +5,11 @@
 const { execSync } = require('node:child_process');
 const path = require('node:path');
 
+if (!['darwin', 'win32'].includes(process.platform)) {
+  console.error('Hikari supports macOS and Windows only.');
+  process.exit(1);
+}
+
 const root = path.join(__dirname, '..');
 process.env.HIKARI_OUT_DIR ||= path.resolve('hikari-out');
 
@@ -17,7 +22,5 @@ run('npm run dist');
 
 const output = process.platform === 'darwin'
   ? path.join(process.env.HIKARI_OUT_DIR, `Hikari-darwin-${process.arch}`, 'Hikari.app')
-  : process.platform === 'win32'
-    ? path.join(process.env.HIKARI_OUT_DIR, `Hikari-win32-${process.arch}`, 'HikariSetup.exe')
-    : path.join(process.env.HIKARI_OUT_DIR, 'make');
+  : path.join(process.env.HIKARI_OUT_DIR, `Hikari-win32-${process.arch}`, 'HikariSetup.exe');
 console.log(`\nHikari: ${output}`);

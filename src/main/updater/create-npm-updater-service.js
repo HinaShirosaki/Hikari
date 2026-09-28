@@ -24,7 +24,6 @@ const { findInstaller, resolveNpxInvocation } = require('./installer.js');
 function createNpmUpdaterService(deps = {}) {
   const app = deps.app || {};
   const dialog = deps.dialog || null;
-  const shell = deps.shell || null;
   const getMainWindow = typeof deps.getMainWindow === 'function'
     ? deps.getMainWindow
     : (() => null);
@@ -218,23 +217,6 @@ function createNpmUpdaterService(deps = {}) {
       return 'install-failed';
     }
     updateStatus({ status: 'ready', error: '' });
-
-    if (platform === 'linux') {
-      const result = await showMessage({
-        type: 'info',
-        title: 'Hikari Update Built',
-        message: `Hikari ${release.version} was built.`,
-        detail: `Install ${path.basename(prepared)} with your package manager to finish the update.`,
-        buttons: ['Show File', 'Close'],
-        defaultId: 0,
-        cancelId: 1,
-        noLink: true
-      });
-      if (result?.response === 0) {
-        shell?.showItemInFolder?.(prepared);
-      }
-      return 'built';
-    }
 
     app.once('will-quit', () => {
       try {

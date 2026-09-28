@@ -30,7 +30,7 @@ module.exports = function registerMcpStartup(context = {}) {
     };
   }
 
-  for (const platform of ['darwin', 'win32', 'linux']) {
+  for (const platform of ['darwin', 'win32']) {
     test(`MCP starts with Hikari's embedded runtime when Node is absent on ${platform}`, () => {
       const fixture = options(platform);
       const invocation = resolveHikariCodexMcpInvocation(fixture);
@@ -63,7 +63,7 @@ module.exports = function registerMcpStartup(context = {}) {
     }
   });
   test('MCP reports a missing runtime instead of emitting an unresolved node command', () => {
-    assert.throws(() => resolveHikariCodexMcpInvocation({ ...options('linux'), electronVersion: '' }), /Node.js runtime/);
+    assert.throws(() => resolveHikariCodexMcpInvocation({ ...options('darwin'), electronVersion: '' }), /Node.js runtime/);
   });
   test('MCP workspace rejects a missing host and records the startup failure', async () => {
     let writes = 0;

@@ -481,19 +481,14 @@ test('personal-inventory sample editor actions are compact accessible icons', ()
     'personal-inventory',
     'detail-well-editor.js'
   ), 'utf8');
-  const css = fs.readFileSync(path.join(
-    __dirname,
-    'ui',
-    'css',
-    'views',
-    'personal-inventory-view.css'
-  ), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'personal-inventory-view.css'), 'utf8');
+  const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
 
-  assert.match(singleEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
-  assert.match(wellEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.match(singleEditorSource, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.match(wellEditorSource, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
   assert.doesNotMatch(singleEditorSource, /data-single-sample-create="true">Add Sample<\/button>/);
   assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
-  assert.match(css, /\.inventory-add-sample-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
+  assert.match(coreCss, /\.lab-add-icon-btn\s*\{[^}]*width:\s*36px;[^}]*min-width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*0;/s);
   assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
   assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
   assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);

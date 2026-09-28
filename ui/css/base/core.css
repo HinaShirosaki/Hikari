@@ -1218,6 +1218,39 @@ button:focus-visible {
   background: var(--theme-accent-hover);
 }
 
+/* Shared create action for the sample editor and chemical rail. */
+.lab-add-icon-btn {
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--theme-accent-line);
+  border-radius: 10px;
+  background: var(--theme-accent-wash);
+  color: var(--theme-accent);
+  box-shadow: none;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.lab-add-icon-btn:hover {
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
+}
+
+.lab-add-icon-btn:active {
+  background: var(--theme-accent-line);
+}
+
+.lab-add-icon-btn:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: -2px;
+}
+
 /*
  * Secondary text buttons keep a quiet tonal fill at rest. With neither border
  * nor fill, a standalone "Export CSV" or "Edit" reads as a label. Toolbars and

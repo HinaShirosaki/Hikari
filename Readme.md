@@ -10,7 +10,7 @@ Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in 
 **No account. No server. No API key.**
 
 <p>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="macOS | Windows | Linux" />
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555?style=flat-square" alt="macOS | Windows" />
   <img src="https://img.shields.io/badge/local--first-no%20backend-7C3AED?style=flat-square" alt="local-first, no backend" />
   <img src="https://img.shields.io/badge/AI-no%20API%20key-10A37F?style=flat-square" alt="AI with no API key" />
   <img src="https://img.shields.io/badge/version-1.0.3-0EA5E9?style=flat-square" alt="version 1.0.3" />
@@ -28,7 +28,7 @@ Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in 
 
 ## Quick Start
 
-**macOS / Linux**
+**macOS**
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
