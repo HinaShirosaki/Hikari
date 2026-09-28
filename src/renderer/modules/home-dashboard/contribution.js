@@ -5,7 +5,7 @@ import { formatDateLocal, normalizeNotebookState } from './utils.js';
 // notebook entries, completed protocol steps, file uploads, analysis notes,
 // and quick logs into per-day buckets.
 export function initContributionWidget({ state, safeText, elements }) {
-  const { monthLabels, grid, streak, summary, selected } = elements;
+  const { monthLabels, grid, summary, selected } = elements;
   let selectedDayKey = '';
   let visibleDays = [];
 
@@ -18,12 +18,12 @@ export function initContributionWidget({ state, safeText, elements }) {
     renderSelectedDay();
   });
 
+  // Until a day is picked, the footer describes today.
   function renderSelectedDay() {
-    const day = visibleDays.find((item) => item.dayKey === selectedDayKey);
+    const dayKey = selectedDayKey || formatDateLocal(new Date());
+    const day = visibleDays.find((item) => item.dayKey === dayKey);
     if (selected) {
-      selected.textContent = day
-        ? `${day.date.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${day.bucket.total} ${day.bucket.total === 1 ? 'entry' : 'entries'}`
-        : '';
+      selected.innerHTML = day ? selectedDayMarkup(day) : '';
       selected.title = day ? contributionCellLabel(day) : '';
     }
     grid.querySelectorAll('[data-contribution-day]').forEach((cell) => {
@@ -247,6 +247,21 @@ export function initContributionWidget({ state, safeText, elements }) {
     return `${value} ${value === 1 ? label : plural}`;
   }
 
+  function selectedDayMarkup(day) {
+    const total = Number(day.bucket.total) || 0;
+    const isToday = day.dayKey === formatDateLocal(new Date());
+    const title = `${isToday ? 'Today' : formatContributionDate(day.date)} · ${total} ${total === 1 ? 'entry' : 'entries'}`;
+    const parts = [
+      formatContributionPart(day.bucket.notebookEntries, 'page'),
+      formatContributionPart(day.bucket.completedProtocols, 'protocol'),
+      formatContributionPart(day.bucket.dataUploads, 'upload'),
+      formatContributionPart(day.bucket.analysisNotes, 'note'),
+      formatContributionPart(day.bucket.quickLogs, 'quick log')
+    ].filter(Boolean);
+    const detail = parts.length ? parts.join(' · ') : (isToday ? 'nothing logged yet' : 'no activity');
+    return `<strong>${safeText(title)}</strong> — ${safeText(detail)}`;
+  }
+
   function contributionCellLabel(day) {
     const total = Number(day.bucket.total) || 0;
     const dateLabel = formatContributionDate(day.date);
@@ -263,27 +278,24 @@ export function initContributionWidget({ state, safeText, elements }) {
     return `${total} logged activit${total === 1 ? 'y' : 'ies'} on ${dateLabel}: ${parts.join(', ')}`;
   }
 
+  // One label per month, on the week holding its 1st. The partial first
+  // month is labelled only when the next label leaves room for it.
   function renderContributionMonthLabels(days) {
-    const seenMonths = new Set();
+    const weekCount = Math.ceil(days.length / 7);
     const labels = [];
     days.forEach((day, index) => {
-      const monthKey = `${day.date.getFullYear()}-${day.date.getMonth()}`;
-      if (seenMonths.has(monthKey)) {
+      if (index > 0 && day.date.getDate() !== 1) {
         return;
       }
-      if (index > 0 && day.date.getDate() > 7) {
-        return;
-      }
-      seenMonths.add(monthKey);
       labels.push({
-        column: Math.floor(index / 7) + 1,
+        column: Math.min(Math.floor(index / 7) + 1, weekCount - 1),
         label: day.date.toLocaleDateString([], { month: 'short' })
       });
     });
-    const weekCount = Math.ceil(days.length / 7);
+    const visible = labels.filter((label, index) => !labels[index + 1] || labels[index + 1].column - label.column >= 3);
     monthLabels.style.gridTemplateColumns = `repeat(${weekCount}, var(--contribution-cell-size))`;
-    monthLabels.innerHTML = labels.map((label) => `
-      <span class="home-contribution-month-label${label.column > weekCount - 2 ? ' is-last' : ''}" style="grid-column: ${Math.min(label.column, weekCount - 2)} / span 3;">${safeText(label.label)}</span>
+    monthLabels.innerHTML = visible.map((label) => `
+      <span class="home-contribution-month-label" style="grid-column: ${label.column} / span 2;">${safeText(label.label)}</span>
     `).join('');
   }
 
@@ -328,10 +340,11 @@ export function initContributionWidget({ state, safeText, elements }) {
     renderSelectedDay();
     if (summary) {
       const total = days.reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
-      summary.textContent = `${total} ${total === 1 ? 'entry' : 'entries'}`;
-    }
-    if (streak) {
-      streak.textContent = String(computeLoggingStreak(dayMap));
+      const week = days.slice(-7).reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
+      const streak = computeLoggingStreak(dayMap);
+      summary.innerHTML = `<strong>${total}</strong> ${total === 1 ? 'entry' : 'entries'}`
+        + ` · <strong>${week}</strong> this week`
+        + (streak ? ` · <strong>${streak}</strong>-day streak` : '');
     }
   }
 

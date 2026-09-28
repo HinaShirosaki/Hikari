@@ -49,7 +49,7 @@ assert.match(css, /\.papers-viewer-form-layer section \{[^}]*pointer-events: aut
 // Saving a filled form overwrites the stored PDF in place; a de-duplicated
 // copy would leave the library pointing at the unfilled original.
 const require = createRequire(import.meta.url);
-const { createStorageFileHelpers } = require('../src/main/ipc/data-ipc/storage-files.js');
+const { createStorageFileHelpers } = require('../src/main/ipc/register-data-ipc/storage-files.js');
 const fsPromises = require('node:fs/promises');
 
 const root = await mkdtemp(path.join(os.tmpdir(), 'hikari-form-save-'));

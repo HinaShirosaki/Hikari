@@ -1,10 +1,6 @@
-import { createSavedNotebookAppend } from '../biology-notebook/agent/saved-append.js';
-import { initAgentChat } from '../agent-chat/index.js';
-import { createScopedAgentChatState } from '../agent-chat/scoped-state.js';
-
-// Reuse the complete conversation/review workflow with independent Home history.
-export function createHomeNotebookAgent({ state, persist, createId, safeText,
-  rootDocument, windowObject, rendererServices, modules }) {
+// Home's agent overlay. The chat itself comes from `createAgent`, which the
+// manifest wires to Agent Chat so Home never imports another feature.
+export function createHomeNotebookAgent({ rootDocument, createAgent }) {
   const overlay = rootDocument.getElementById('home-agent-overlay');
   const closeButton = rootDocument.getElementById('home-agent-close-btn');
   let agent = null;
@@ -41,19 +37,7 @@ export function createHomeNotebookAgent({ state, persist, createId, safeText,
   return async (message) => {
     if (!overlay) return { ok: false, reason: 'unavailable' };
     if (!agent) {
-      agent = initAgentChat({
-        document: rootDocument, windowObject, idPrefix: 'home-agent',
-        loadPersistentSessions: false,
-        state: createScopedAgentChatState(state, { getScopeContext: () => ({ scopeType: 'home' }) }),
-        persist, createId, safeText,
-        onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
-        onProtocolsChanged: () => {
-          rendererServices.protocol.handleProtocolsChanged();
-          modules.protocol?.renderList?.();
-        },
-        onAppendNotebookEntry: createSavedNotebookAppend({ state, persist,
-          onChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged })
-      });
+      agent = createAgent();
     }
     returnFocus = rootDocument.activeElement;
     overlay.hidden = false;

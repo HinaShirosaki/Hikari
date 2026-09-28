@@ -1,4 +1,4 @@
-import { mapExperimentDataToLlmJson } from '../../services/experiment-llm-mapper.js';
+import { mapExperimentDataToLlmJson } from './experiment-llm-mapper.js';
 import {
   asArray,
   mapPaper,
@@ -90,7 +90,6 @@ export function buildStateSnapshot(state, projectId) {
       aliases: asArray(protocol?.aliases).map((alias) => trimText(alias, 120)).filter(Boolean).slice(0, 8),
       materials: asArray(protocol?.materials).slice(0, 120).map((item) => trimText(item, 220)),
       steps: asArray(protocol?.steps).slice(0, 240).map((step, stepIndex) => ({
-        id: trimText(step?.id, 120) || `step-${stepIndex + 1}`,
         text: trimText(step?.text || step?.instruction || step?.action, 6000),
         placeholders: asArray(step?.placeholders).slice(0, 40).map((placeholder, placeholderIndex) => ({
           id: trimText(placeholder?.id, 120) || `ph-${stepIndex + 1}-${placeholderIndex + 1}`,

@@ -2,7 +2,7 @@
 
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
-const { sanitizeProjectMemoryFolderName } = require('../../storage/storage-memory.js');
+const { sanitizeProjectMemoryFolderName } = require('../../project-memory');
 
 function createNotebookSuggestionService({ codexAgentRuntime, getDefaultDataFilePath, getWorkingDirectory, normalizeSnapshot = value => value } = {}) {
   const running = new Set();

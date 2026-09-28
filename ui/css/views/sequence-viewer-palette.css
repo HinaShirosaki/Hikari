@@ -1,42 +1,12 @@
-/* Sequence Viewer colors.
-   These colors encode biological features, base traces, restrictions, and
-   selection states; keep them outside the shared product palette. */
+/* Sequence Viewer data colors: protein translation chips, feature lanes, DNA
+   base traces and the protein builder's blocks. These encode biology and stay
+   rich on purpose. The viewer's chrome (controls, tracks, cursor, selection,
+   restriction sites, mismatches) uses the shared --theme-* tokens directly. */
 
 :root {
-  --sequence-viewer-control-muted: rgba(31, 49, 73, 0.72);
-  --sequence-viewer-control-ink: #1f3553;
-  --sequence-viewer-control-border: rgba(109, 141, 183, 0.34);
-  --sequence-viewer-control-surface: rgba(255, 255, 255, 0.88);
-  --sequence-viewer-blue-ink: #17385f;
-  --sequence-viewer-blue-muted: #36567e;
-  --sequence-viewer-blue-border-strong: rgba(43, 87, 154, 0.72);
-  --sequence-viewer-active-blue: rgba(33, 77, 145, 1);
-  --sequence-viewer-overlay: rgba(18, 34, 55, 0.24);
-  --sequence-viewer-overlay-soft: rgba(18, 34, 55, 0.18);
-  --sequence-viewer-overlay-shadow: rgba(18, 34, 55, 0.22);
-  --sequence-viewer-alert-surface: rgba(173, 47, 47, 0.07);
-  --sequence-viewer-alert-ring: rgba(173, 47, 47, 0.18);
-  --sequence-viewer-alert-border: rgba(173, 47, 47, 0.3);
-  --sequence-viewer-track-surface: #ffffff;
-  --sequence-viewer-track-border: #d6d6d6;
-  --sequence-viewer-track-grid: rgba(0, 0, 0, 0.12);
-  --sequence-viewer-active-ring: rgba(0, 0, 0, 0.26);
-  --sequence-viewer-axis-muted: #727272;
-  --sequence-viewer-selection-highlight-light: rgba(78, 127, 255, 0.22);
-  --sequence-viewer-selection-highlight-strong: rgba(78, 127, 255, 0.35);
-  --sequence-viewer-cursor: rgba(33, 77, 145, 0.96);
-  --sequence-viewer-mismatch-bg: rgba(208, 48, 48, 0.18);
-  --sequence-viewer-mismatch-ink: #a61717;
-  --sequence-viewer-mismatch-shadow: rgba(166, 23, 23, 0.22);
   --sequence-viewer-aa-border: rgba(92, 132, 191, 0.28);
   --sequence-viewer-aa-bg: rgba(92, 132, 191, 0.14);
   --sequence-viewer-aa-ink: #355a8a;
-  --sequence-viewer-restriction-border: rgba(71, 101, 150, 0.86);
-  --sequence-viewer-restriction-bg: rgba(220, 236, 255, 0.18);
-  --sequence-viewer-restriction-line: rgba(49, 81, 133, 0.92);
-  --sequence-viewer-restriction-active-bg: rgba(186, 219, 255, 0.26);
-  --sequence-viewer-restriction-active-ink: #1f4275;
-  --sequence-viewer-restriction-active-line: rgba(20, 59, 120, 0.98);
   --sequence-viewer-line-feature-border: rgba(104, 132, 173, 0.88);
   --sequence-viewer-line-feature-ink: #14325a;
   --sequence-viewer-base-a-stroke: #258d49;
@@ -61,83 +31,24 @@
   --sequence-viewer-builder-custom: var(--sequence-viewer-builder-palette-5);
   --sequence-viewer-builder-poi: var(--sequence-viewer-builder-palette-6);
   --sequence-viewer-builder-ink: #243126;
+  --sequence-viewer-builder-fill-share: 100%;
 }
 
 /*
- * Night values derive from the shared theme contract so the viewer keeps the
- * app's identity (they were hardcoded steel-blue, which floated a blue panel
- * stack on a sage page). They must be declared here rather than on :root:
- * a custom property is substituted where it is DECLARED, so --theme-* inside
- * a :root declaration resolves against the day palette and the night value
- * inherits down as a light color.
+ * Night: the default translation chip and the uncolored feature outline sit on
+ * a dark track, so their ink follows the theme. Builder blocks retain their
+ * categorical hues with softened pastel fills and dark ink for legibility.
+ * Declared on body, not :root: a custom property is substituted where it is
+ * declared, so --theme-* read on :root would freeze the day palette.
  */
 body.theme-night {
-  /*
-   * Chrome that sits on a themed surface. The DNA base strokes and the protein
-   * builder's pastel blocks stay fixed: those encode data, and the builder
-   * blocks carry their own dark ink on a light chip in every theme.
-   */
-  --sequence-viewer-active-blue: var(--theme-focus);
-  --sequence-viewer-track-surface: var(--theme-surface);
-  --sequence-viewer-track-border: var(--theme-border-soft);
-  --sequence-viewer-track-grid: color-mix(in srgb, var(--theme-border) 45%, transparent);
-  --sequence-viewer-axis-muted: var(--theme-text-muted);
-  --sequence-viewer-active-ring: color-mix(in srgb, var(--theme-focus) 45%, transparent);
-  --sequence-viewer-control-surface: var(--theme-control-background);
-  --sequence-viewer-control-border: var(--theme-border);
-  --sequence-viewer-control-ink: var(--theme-text);
-  --sequence-viewer-control-muted: var(--theme-text-muted);
-  --sequence-viewer-blue-ink: var(--theme-text);
-  --sequence-viewer-blue-muted: var(--theme-text-muted);
-  --sequence-viewer-blue-border-strong: var(--theme-border);
-  --sequence-viewer-overlay: var(--theme-overlay);
-  --sequence-viewer-overlay-soft: var(--theme-overlay);
-  --sequence-viewer-overlay-shadow: var(--theme-shadow-color);
-  /* Mismatches are the point of an alignment: keep the ink light on dark. */
-  --sequence-viewer-mismatch-ink: var(--theme-danger);
-  --sequence-viewer-mismatch-bg: color-mix(in srgb, var(--theme-danger) 26%, transparent);
-  --sequence-viewer-mismatch-shadow: color-mix(in srgb, var(--theme-danger) 40%, transparent);
-  --sequence-viewer-alert-surface: color-mix(in srgb, var(--theme-danger) 14%, transparent);
-  --sequence-viewer-alert-ring: color-mix(in srgb, var(--theme-danger) 26%, transparent);
-  --sequence-viewer-alert-border: color-mix(in srgb, var(--theme-danger) 44%, transparent);
+  --sequence-viewer-builder-ink: var(--theme-text-on-accent);
+  --sequence-viewer-builder-fill-share: 70%;
   --sequence-viewer-aa-ink: var(--theme-text);
   --sequence-viewer-aa-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
   --sequence-viewer-aa-border: color-mix(in srgb, var(--theme-accent) 34%, transparent);
   --sequence-viewer-line-feature-ink: var(--theme-text);
   --sequence-viewer-line-feature-border: var(--theme-border);
-  --sequence-viewer-cursor: var(--theme-focus);
-  --sequence-viewer-restriction-border: var(--theme-accent);
-  --sequence-viewer-restriction-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
-  --sequence-viewer-restriction-line: var(--theme-focus);
-  --sequence-viewer-restriction-active-bg: color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  --sequence-viewer-restriction-active-ink: var(--theme-text-strong);
-  --sequence-viewer-restriction-active-line: var(--theme-focus);
-  --sequence-viewer-selection-highlight-light: color-mix(in srgb, var(--theme-focus) 24%, transparent);
+  /* A selection behind light letters needs more than the day wash to show. */
   --sequence-viewer-selection-highlight-strong: color-mix(in srgb, var(--theme-focus) 38%, transparent);
-
-  --sequence-viewer-night-border: var(--theme-border-soft);
-  --sequence-viewer-night-border-strong: var(--theme-border);
-  --sequence-viewer-night-control: var(--theme-control-background);
-  --sequence-viewer-night-control-strong: var(--theme-background);
-  --sequence-viewer-night-muted: var(--theme-text-muted);
-  --sequence-viewer-night-text: var(--theme-text);
-  --sequence-viewer-night-hover: var(--theme-surface-hover);
-  --sequence-viewer-night-panel: var(--theme-surface);
-  --sequence-viewer-night-input: var(--theme-control-background);
-  --sequence-viewer-night-overlay: var(--theme-overlay);
-  --sequence-viewer-night-overlay-strong: var(--theme-overlay-strong);
-  --sequence-viewer-night-inset: color-mix(in srgb, var(--theme-text) 8%, transparent);
-  --sequence-viewer-night-strong: var(--theme-text-strong);
-  --sequence-viewer-night-restriction-border: var(--theme-accent);
-  --sequence-viewer-night-restriction-bg: color-mix(in srgb, var(--theme-accent) 16%, transparent);
-  --sequence-viewer-night-restriction-line: var(--theme-focus);
-  --sequence-viewer-night-active-border: var(--theme-focus);
-  --sequence-viewer-night-active-bg: color-mix(in srgb, var(--theme-accent) 30%, transparent);
-  --sequence-viewer-night-feature-border: color-mix(in srgb, var(--theme-border) 88%, var(--theme-accent));
-  --sequence-viewer-night-feature-active-border: var(--theme-text-strong);
-  --sequence-viewer-night-feature-ring: color-mix(in srgb, var(--theme-focus) 45%, transparent);
-  --sequence-viewer-night-menu-item: var(--theme-surface-elevated);
-  --sequence-viewer-night-menu-hover: var(--theme-surface-active);
-  --sequence-viewer-night-shadow: var(--theme-shadow-color);
-  --sequence-viewer-night-tooltip-base: var(--theme-background);
 }

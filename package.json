@@ -3,6 +3,7 @@
   "productName": "Hikari",
   "version": "1.0.3",
   "description": "Electron shell for Hikari sub-app launcher",
+  "author": "HinaShirosaki",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -20,7 +21,6 @@
     "ui",
     "vendor",
     "assets",
-    "config",
     "scripts/build-ui.mjs",
     "scripts/build-ui",
     "forge.config.js",

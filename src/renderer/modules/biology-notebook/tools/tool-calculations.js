@@ -1,4 +1,5 @@
 import { calculateBufferRecipe, calculateFixedReaction } from '../../../lib/bench-calculations.js';
+import { resultTextAfterName } from '../../../lib/notebook-tool-calculations.js';
 
 // Reading the buffer / fixed-reaction forms, running the bench calculation for
 // whichever tool is open, and rendering its result table.
@@ -96,12 +97,6 @@ function createToolCalculations({
     return getActiveTool() === 'reaction' ? calculateCurrentReaction() : calculateCurrentBuffer();
   }
 
-  function resultTextAfterName(text) {
-    const source = String(text || '').trim();
-    const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
-    return match ? match[1].trim() : source;
-  }
-
   function renderBufferTableResult(result) {
     for (let index = 1; index <= bufferRowCount(); index += 1) {
       setPlaceholder(getElement(doc, `biology-notebook-tool-buffer-amount-${index}`), 'auto');
@@ -154,7 +149,6 @@ function createToolCalculations({
     collectReactionRows,
     calculateCurrentReaction,
     calculateActiveTool,
-    resultTextAfterName,
     renderBufferTableResult,
     renderReactionTableResult,
     renderCurrentTool

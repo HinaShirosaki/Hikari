@@ -10,7 +10,7 @@ import {
   changedFieldList,
   describeNotebookEntryChanges,
   logNotebookPageEvent
-} from '../storage/page-log.js';
+} from '../../../services/notebook-page-log.js';
 
 // Marking a page executed and keeping its sample links in step with the
 // placeholders the page actually uses.
@@ -135,14 +135,8 @@ function createNotebookSampleLinks({
       });
     }
     entryListRenderer.renderEntries();
-    const project = getEntryProject(nextEntry);
-    if (project && notebookProtocolMeta) {
-      notebookProtocolMeta.textContent = buildViewerMeta({
-        project,
-        entry: nextEntry,
-        isSavedEntry: true,
-        projects: state.projects
-      });
+    if (notebookProtocolMeta) {
+      notebookProtocolMeta.textContent = buildViewerMeta({ entry: nextEntry });
     }
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();

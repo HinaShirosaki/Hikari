@@ -2,6 +2,11 @@
 
 const fs = require('node:fs/promises');
 const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
+const {
+  normalizeIsoTimestamp: normalizeSharedIsoTimestamp,
+  normalizeProtocolMaterials,
+  normalizeProtocolTroubleshooting
+} = require('../../../shared/protocol-normalization.mjs');
 
 function cleanText(value, maxLength = 1200) {
   const text = String(value || '').trim();
@@ -28,17 +33,9 @@ function slugText(value = '', fallback = 'protocol') {
     || fallback;
 }
 
-function normalizeIsoTimestamp(rawValue, fallback = '') {
-  const candidate = cleanText(rawValue, 120);
-  if (!candidate) {
-    return fallback;
-  }
-  const timestamp = Date.parse(candidate);
-  if (!Number.isFinite(timestamp)) {
-    return fallback;
-  }
-  return new Date(timestamp).toISOString();
-}
+const normalizeIsoTimestamp = (rawValue, fallback = '') => (
+  normalizeSharedIsoTimestamp(rawValue, fallback, { text: cleanText })
+);
 
 function uniqueProtocolId(baseName = '', existingIds = new Set()) {
   const base = `agent-${slugText(baseName, 'protocol')}`;
@@ -79,7 +76,7 @@ function normalizeStepEntries(rawSteps = []) {
     .map((step, index) => {
       if (typeof step === 'string') {
         const text = cleanText(step, 2000);
-        return text ? { id: `step-${index + 1}`, text, placeholders: [] } : null;
+        return text ? { text, placeholders: [] } : null;
       }
       const source = ensureObject(step);
       const text = cleanText(source.text || source.instruction || source.action, 2000);
@@ -87,7 +84,6 @@ function normalizeStepEntries(rawSteps = []) {
         return null;
       }
       return {
-        id: cleanText(source.id, 120) || `step-${index + 1}`,
         text,
         placeholders: asArray(source.placeholders)
           .map((placeholder, placeholderIndex) => {
@@ -108,39 +104,14 @@ function normalizeStepEntries(rawSteps = []) {
     .slice(0, 160);
 }
 
-function normalizeMaterials(rawMaterials) {
-  if (Array.isArray(rawMaterials)) {
-    return rawMaterials.map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 80);
-  }
-  return cleanText(rawMaterials, 6000)
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean)
-    .slice(0, 80);
-}
-
-function normalizeTroubleshooting(rawTroubleshooting) {
-  if (Array.isArray(rawTroubleshooting)) {
-    return rawTroubleshooting
-      .map((item) => {
-        if (typeof item === 'string') {
-          return cleanText(item, 1200);
-        }
-        const source = ensureObject(item);
-        return [
-          cleanText(source.problem, 400) ? `Problem: ${cleanText(source.problem, 400)}` : '',
-          cleanText(source.possible_cause || source.possibleCause, 400)
-            ? `Possible cause: ${cleanText(source.possible_cause || source.possibleCause, 400)}`
-            : '',
-          cleanText(source.solution, 400) ? `Solution: ${cleanText(source.solution, 400)}` : ''
-        ].filter(Boolean).join('; ');
-      })
-      .filter(Boolean)
-      .join('\n');
-  }
-  return cleanText(rawTroubleshooting, 6000);
-}
+const normalizeMaterials = (rawMaterials) => normalizeProtocolMaterials(rawMaterials, {
+  text: cleanText,
+  maxItems: 80
+});
+const normalizeTroubleshooting = (rawTroubleshooting) => normalizeProtocolTroubleshooting(
+  rawTroubleshooting,
+  { text: cleanText }
+);
 
 function normalizeProtocolForSave(rawProtocol = {}, {
   existingProtocols = [],

@@ -1,5 +1,6 @@
 import { ACTION_WHERE_TO_BUY } from './constants.js';
 import { asArray } from '../../lib/normalize.js';
+import { escapeHtml } from '../../lib/html.js';
 
 export function cleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();
@@ -48,14 +49,7 @@ export function escapeAttribute(value) {
     .replace(/"/g, '&quot;');
 }
 
-export function escapeHtml(value) {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+export { escapeHtml };
 
 export function formatAnswerText(value) {
   return cleanText(value, 12000)

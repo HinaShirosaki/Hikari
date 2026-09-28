@@ -1,5 +1,5 @@
 import { getGelAnalyses } from '../../../lib/gel-records.js';
-import { findLatestLinkedRecord } from '../../../services/notebook-linked-previews.js';
+import { findLatestLinkedRecord } from '../linked-previews.js';
 import {
   buildLinkedAssayPreviewHtml,
   buildLinkedGelPreviewHtml
@@ -48,7 +48,7 @@ function createNotebookEntryActions({
 
     const activeEntry = entry || getActiveEntry();
     if (!activeEntry?.id) {
-      notebookLinkedResults.innerHTML = '<p class="small-note biology-notebook-linked-empty">Save this notebook page to attach gel and assay records.</p>';
+      notebookLinkedResults.innerHTML = '';
       return;
     }
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const fsPromises = require('node:fs/promises');
+const { readPaperMetadata } = require('../store/knowledge-index-schema.js');
 
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const {
@@ -59,7 +60,7 @@ function createPaperAnalysisRuntime(deps = {}) {
       db = await openKnowledgeDatabase(sqlitePath);
       const rows = queryRows(
         db,
-        `SELECT id, title, abstract, doi, wiki_path FROM papers WHERE ${clauses.join(' OR ')} LIMIT 1`,
+        `SELECT * FROM papers WHERE ${clauses.join(' OR ')} LIMIT 1`,
         params
       );
       const row = rows && rows[0];
@@ -72,10 +73,11 @@ function createPaperAnalysisRuntime(deps = {}) {
       if (!cleanText(markdown, 10)) {
         return null;
       }
+      const metadata = await readPaperMetadata(resolved, row).catch(() => ({}));
       return {
         id: cleanText(row.id, 200),
         title: cleanText(row.title, 220),
-        abstract: cleanText(row.abstract, 3000),
+        abstract: cleanText(metadata.abstract || row.abstract, 3000),
         doi: cleanText(row.doi, 200),
         markdown_path: markdownPath,
         markdown_relative_path: wikiPath,
@@ -173,7 +175,6 @@ function createPaperAnalysisRuntime(deps = {}) {
           return cleanText(step, 2000);
         }
         return {
-          id: cleanText(step?.id, 120),
           text: cleanText(step?.text || step?.instruction || step?.action, 2000)
         };
       })

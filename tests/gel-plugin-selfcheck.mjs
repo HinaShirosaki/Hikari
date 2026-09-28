@@ -28,17 +28,35 @@ globalThis.ImageData ??= class ImageData {
   }
 };
 
-const vendor = path.join(pluginDir, 'vendor/modules/gel');
-const { detectLanes } = await import(new URL(`file://${vendor}/analysis/auto-lanes.js`));
+const workspace = path.join(pluginDir, 'workspace');
+const { detectLanes } = await import(new URL(`file://${workspace}/analysis/auto-lanes.js`));
 const {
   analyzeGelImage,
   buildLanesFromManualSegmentation,
   detectLadderBandRows
-} = await import(new URL(`file://${vendor}/analysis/analysis-core.js`));
-const { buildQuantificationSignal } = await import(new URL(`file://${vendor}/analysis/image-processing.js`));
-const { createHistoryController } = await import(new URL(`file://${vendor}/history.js`));
+} = await import(new URL(`file://${workspace}/analysis/analysis-core.js`));
+const { buildQuantificationSignal } = await import(new URL(`file://${workspace}/analysis/image-processing.js`));
+const { createHistoryController } = await import(new URL(`file://${workspace}/history.js`));
 const { initPluginLeftRailResizer } = await import(new URL(`file://${pluginDir}/left-rail.js`));
-const ladderConstants = await import(new URL(`file://${vendor}/constants.js`));
+const ladderConstants = await import(new URL(`file://${workspace}/constants.js`));
+
+async function checkHostHelperSnapshots() {
+  const pairs = [
+    ['src/plugins/gel/lib/csv.js', 'src/renderer/lib/csv.js'],
+    ['src/plugins/gel/lib/file-drop.js', 'src/renderer/lib/file-drop.js'],
+    ['src/plugins/gel/lib/search-field-lens.js', 'src/renderer/lib/search-field-lens.js'],
+    ['src/plugins/gel/lib/unsaved-draft.js', 'src/renderer/lib/unsaved-draft.js'],
+    ['src/plugins/gel/lib/app-utils.js', 'src/renderer/lib/app-utils.js'],
+    ['src/plugins/gel/lib/html.js', 'src/renderer/lib/html.js']
+  ];
+  for (const [snapshotPath, ownerPath] of pairs) {
+    const [snapshot, owner] = await Promise.all([
+      fs.readFile(path.join(projectRoot, snapshotPath)),
+      fs.readFile(path.join(projectRoot, ownerPath))
+    ]);
+    assert.deepEqual(snapshot, owner, `${snapshotPath} must stay aligned with ${ownerPath}`);
+  }
+}
 
 // Evenly spaced dark lanes on a light background, each with one band.
 // `intensities` sets the band grey per lane (0.9 = background = a blank lane),
@@ -199,14 +217,14 @@ async function checkAdapterContract() {
       fs.readFile(path.join(pluginDir, 'main.js'), 'utf8'),
       fs.readFile(path.join(pluginDir, 'storage-records.js'), 'utf8')
     ]).then((parts) => parts.join('\n')),
-    fs.readFile(path.join(vendor, 'export.js'), 'utf8'),
+    fs.readFile(path.join(workspace, 'export.js'), 'utf8'),
     Promise.all([
-      fs.readFile(path.join(vendor, 'records-manager.js'), 'utf8'),
-      fs.readFile(path.join(vendor, 'records/record-artifacts.js'), 'utf8'),
-      fs.readFile(path.join(vendor, 'records/record-images.js'), 'utf8')
+      fs.readFile(path.join(workspace, 'records-manager.js'), 'utf8'),
+      fs.readFile(path.join(workspace, 'records/record-artifacts.js'), 'utf8'),
+      fs.readFile(path.join(workspace, 'records/record-images.js'), 'utf8')
     ]).then((parts) => parts.join('\n')),
-    fs.readFile(path.join(vendor, 'index.js'), 'utf8'),
-    fs.readFile(path.join(vendor, 'rendering/powerpoint-export.js'), 'utf8'),
+    fs.readFile(path.join(workspace, 'index.js'), 'utf8'),
+    fs.readFile(path.join(workspace, 'rendering/powerpoint-export.js'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'index.html'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'vendor/gel-view.html'), 'utf8'),
     fs.readFile(path.join(pluginDir, 'vendor/css/base/core.css'), 'utf8')
@@ -489,6 +507,7 @@ function checkHistoryController() {
 }
 
 await checkFolderContract();
+await checkHostHelperSnapshots();
 await checkAdapterContract();
 await checkLeftRailContract();
 checkPipeline();

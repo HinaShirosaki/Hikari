@@ -3,7 +3,7 @@
         <div id="sequence-viewer-protein-builder-confirmation" class="sequence-viewer-protein-builder-confirmation" hidden>
           <div class="sequence-viewer-protein-builder-confirmation-copy">
             <h4>Confirm Construct</h4>
-            <p class="small-note">Review the assembled plasmid in Sequence Viewer before confirming the construct.</p>
+            <p class="small-note">Review the assembled plasmid in DNA before confirming the construct.</p>
           </div>
           <div id="sequence-viewer-protein-builder-confirmation-summary" class="sequence-viewer-protein-builder-confirmation-summary">
             <p class="small-note">Protein Builder review details will appear here.</p>
@@ -75,7 +75,7 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
-          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="Sequence viewer input mode" hidden aria-hidden="true">
+          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="DNA input mode" hidden aria-hidden="true">
             <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
             <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button">Load File</button>
           </div>
@@ -396,7 +396,7 @@
         </div>
       </div>
 
-      <!-- Sibling of the workspaces, not inside one: the Sequence Viewer and the
+      <!-- Sibling of the workspaces, not inside one: the DNA and the
            Vector Builder map both open it, and a hidden workspace hides its children. -->
       <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
         <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
@@ -444,11 +444,11 @@
       <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
         <div class="sequence-viewer-vector-builder-toolbar">
           <div class="sequence-viewer-vector-builder-toolbar-nav">
-            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Sequence Viewer" title="Back to Sequence Viewer">
+            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to DNA" title="Back to DNA">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M19 12H5M11 6l-6 6 6 6"></path>
               </svg>
-              <span class="sr-only">Back to Sequence Viewer</span>
+              <span class="sr-only">Back to DNA</span>
             </button>
             <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
           </div>

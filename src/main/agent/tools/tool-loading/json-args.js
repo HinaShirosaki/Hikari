@@ -1,8 +1,8 @@
 'use strict';
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const {
+  asArray: defaultAsArray,
+  ensureObject: defaultEnsureObject
+} = require('../../../lib/normalize.js');
 
 // Convert unknown input to a string without trimming or clipping content.
 function defaultCleanText(value) {
@@ -11,11 +11,6 @@ function defaultCleanText(value) {
     return '';
   }
   return text;
-}
-
-// Keep only plain object-like values; everything else becomes an empty object.
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 // Parse JSON safely and return a fallback instead of throwing on invalid payloads.

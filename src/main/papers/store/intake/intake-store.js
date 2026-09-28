@@ -1,18 +1,20 @@
 'use strict';
 
 const path = require('node:path');
+const crypto = require('node:crypto');
 const { asArray, ensureObject } = require('../../../lib/normalize.js');
 const { defaultSourcePaths, intakeRelativePath } = require('./store/paths.js');
 const { DOC_TYPES, INTAKE_FILE_NAME, INTAKE_SCHEMA_VERSION, PAPERS_ROOT_REL, cleanText, normalizeIntakeRecord, uniqueStrings } = require('./store/record-normalizing.js');
 const { createPaperReads } = require('./store/paper-reads.js');
 const { getIntakeRecordCache } = require('./search/record-cache.js');
+const { withExperimentDatabaseWrite, syncExperimentDatabase } = require('./store/experiment-database.js');
 
 /**
  * Create an intake store bound to a workspace root and an injected file-system.
  *
  * Required deps:
  *   - workspacePath: string. Absolute path to the Hikari workspace root.
- *   - fs: { readFile, writeFile, readdir, mkdir, stat } — node:fs/promises shape.
+ *   - fs: node:fs/promises shape (writes also require rename and rm).
  *
  * Optional deps:
  *   - resolveProjectIdsForPaper(paperId): Promise<string[]> — returns the project
@@ -113,6 +115,9 @@ function createIntakeStore(deps = {}) {
     let parsed = null;
     try {
       parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('Paper intake must be a JSON object.');
+      }
     } catch (error) {
       return {
         ok: false,
@@ -141,11 +146,43 @@ function createIntakeStore(deps = {}) {
   }
 
   async function writeIntake(paperId, record) {
+    return withExperimentDatabaseWrite(workspacePath, () => writeIntakeAndExperiments(paperId, record));
+  }
+
+  // Strict disk enumeration: a partial read must never replace a complete index.
+  // Do not use listKnownPaperIds, which may describe only the active project.
+  async function loadExperimentRecords() {
+    const entries = await fs.readdir(papersRootAbsolute(), { withFileTypes: true });
+    const records = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const result = await readIntake(entry.name);
+      if (result.status === 'not_found') continue;
+      if (!result.ok) throw new Error(`Cannot index experiments for ${entry.name}: ${result.error || result.status}`);
+      records.push({ ...result.record, paper_id: entry.name });
+    }
+    return records;
+  }
+
+  async function rebuildExperimentDatabase() {
+    const guard = ensureReady();
+    if (guard) return guard;
+    return withExperimentDatabaseWrite(workspacePath, async () => {
+      try {
+        const result = await syncExperimentDatabase({ workspacePath, fs, loadRecords: loadExperimentRecords, rebuild: true });
+        return { ok: true, status: 'rebuilt', ...result };
+      } catch (error) {
+        return { ok: false, status: 'experiment_index_failed', error: cleanText(error?.message || error, 600) };
+      }
+    });
+  }
+
+  async function writeIntakeAndExperiments(paperId, record) {
     const guard = ensureReady();
     if (guard) {
       return guard;
     }
-    if (typeof fs.writeFile !== 'function' || typeof fs.mkdir !== 'function') {
+    if (['writeFile', 'mkdir', 'rename', 'rm'].some((method) => typeof fs[method] !== 'function')) {
       return configError();
     }
     const id = cleanText(paperId, 200);
@@ -182,7 +219,13 @@ function createIntakeStore(deps = {}) {
     try {
       recordCache.remove(absPath);
       await fs.mkdir(path.dirname(absPath), { recursive: true });
-      await fs.writeFile(absPath, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+      const temporary = `${absPath}.${crypto.randomUUID()}.tmp`;
+      try {
+        await fs.writeFile(temporary, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
+        await fs.rename(temporary, absPath);
+      } finally {
+        await fs.rm(temporary, { force: true });
+      }
     } catch (error) {
       return {
         ok: false,
@@ -192,7 +235,13 @@ function createIntakeStore(deps = {}) {
       };
     }
     recordCache.remove(absPath);
-    return { ok: true, status: 'saved', paper_id: id, record: merged };
+    try {
+      const index = await syncExperimentDatabase({ workspacePath, fs, record: merged, loadRecords: loadExperimentRecords });
+      return { ok: true, status: 'saved', paper_id: id, record: merged, experiment_database: index };
+    } catch (error) {
+      return { ok: false, status: 'experiment_index_failed', paper_id: id, intake_saved: true,
+        error: `Intake JSON was saved, but experiment SQLite indexing failed: ${cleanText(error?.message || error, 600)}` };
+    }
   }
 
   async function loadAll() {
@@ -308,6 +357,7 @@ function createIntakeStore(deps = {}) {
     DOC_TYPES,
     readIntake,
     writeIntake,
+    rebuildExperimentDatabase,
     loadAll,
     listPaperIds,
     readPaperMarkdown,

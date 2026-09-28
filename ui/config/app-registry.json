@@ -111,7 +111,7 @@
     {
       "id": "assay",
       "viewKey": "ASSAY",
-      "label": "Assay",
+      "label": "Plate",
       "viewId": "assay-view",
       "subtitle": "Plate setup, pasted results, and assay analysis.",
       "icon": "assay.svg",
@@ -170,7 +170,7 @@
     {
       "id": "sequence-viewer",
       "viewKey": "SEQUENCE_VIEWER",
-      "label": "Sequence Viewer",
+      "label": "DNA",
       "viewId": "sequence-viewer-view",
       "subtitle": "Sequence records, annotations, overlays, and detail views.",
       "icon": "sequence-viewer.svg",

@@ -1,19 +1,11 @@
 import { PLATE_DEFINITIONS } from './constants.js';
 import { oppositeAxis } from './shared.js';
+import { toRowLabel } from '../../lib/plate-wells.js';
+
+export { toRowLabel };
 
 export function getPlateDefinition(value) {
   return PLATE_DEFINITIONS.find((item) => item.value === String(value || '')) || PLATE_DEFINITIONS[0];
-}
-
-export function toRowLabel(rowIndex) {
-  let value = Number(rowIndex) + 1;
-  let label = '';
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
 }
 
 export function wellIdFor(rowIndex, columnIndex) {

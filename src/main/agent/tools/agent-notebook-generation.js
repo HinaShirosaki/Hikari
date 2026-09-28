@@ -182,8 +182,6 @@ function createNotebookGenerationRuntime(deps = {}) {
 
     if (!cleanText(project?.name, 220)) {
       unresolved.push({
-        step_id: 'project',
-        placeholder_id: 'project_name',
         placeholder_key: 'project_name',
         display: 'project name',
         reason: 'Project could not be resolved from the request.'

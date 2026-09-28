@@ -3,6 +3,7 @@
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { cloneJson, ensureObject } = require('../../lib/normalize.js');
+const { readResponseText } = require('../../lib/web-text.js');
 const {
   LITERATURE_SOURCES,
   LITERATURE_SOURCE_ORDER,
@@ -45,16 +46,6 @@ function createLiteratureSearchRuntime(deps = {}) {
       throw new Error(`${sourceName} search requires fetch support.`);
     }
     return fetchImpl;
-  }
-
-  async function readResponseText(response) {
-    if (typeof response?.text === 'function') {
-      return String(await response.text());
-    }
-    if (typeof response?.json === 'function') {
-      return JSON.stringify(await response.json());
-    }
-    return '';
   }
 
   async function fetchJson(url, options = {}) {

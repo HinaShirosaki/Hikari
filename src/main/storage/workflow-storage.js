@@ -1,10 +1,10 @@
 'use strict';
 
 const path = require('path');
-const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile, sanitizeFolderName } = require('./storage-utils');
-const { RELATED_PAPERS_FILE_NAME, WORKFLOW_ROOT_FOLDER_NAME, WORKFLOW_STATUS_SQLITE_FILE_NAME } = require('./workflow/constants.js');
+const { asArray, cleanText, ensureObject, readJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { RELATED_PAPERS_FILE_NAME, WORKFLOW_ROOT_FOLDER_NAME } = require('./workflow/constants.js');
 const { buildBlockFolderName, buildEntryFolderName, buildNotebookPageFolderName, buildTemplateFolderName, buildWorkflowFolderLayout, buildWorkflowFolderName, resolveWorkflowStoragePaths } = require('./workflow/folder-names.js');
-const { readNotebookEntriesForWorkflowFolder, readWorkflowStatusIndex } = require('./workflow/read-root.js');
+const { readNotebookEntriesForWorkflowFolder, readWorkflowFolders } = require('./workflow/read-root.js');
 const { syncWorkflowRootFromSnapshot } = require('./workflow/sync-root.js');
 
 async function hydrateWorkflowRootFromStoragePath({
@@ -23,8 +23,8 @@ async function hydrateWorkflowRootFromStoragePath({
     };
   }
 
-  const sqlData = await readWorkflowStatusIndex(rootPaths.sqlitePath);
-  if (!sqlData.exists) {
+  const folderData = await readWorkflowFolders(rootPaths.workflowRootPath);
+  if (!folderData.exists) {
     return {
       exists: false,
       workflowTemplates: [],
@@ -32,20 +32,13 @@ async function hydrateWorkflowRootFromStoragePath({
       notebookEntries: [],
       papers: [],
       paperExperimentLinks: [],
-      warnings: asArray(sqlData.warnings)
+      warnings: folderData.warnings
     };
   }
 
-  const warnings = [];
-  const workflowTemplates = sqlData.templateRows
-    .map((row) => parseJsonObject(row.raw_json) || null)
-    .filter(Boolean);
-  const workflows = sqlData.workflowRows
-    .map((row) => ({
-      relativeFolderPath: cleanText(row.relative_folder_path, 600),
-      workflow: parseJsonObject(row.raw_json) || null
-    }))
-    .filter((row) => row.workflow);
+  const warnings = [...folderData.warnings];
+  const workflowTemplates = folderData.templates;
+  const workflows = folderData.workflowRows;
 
   const notebookMap = new Map();
   const paperMap = new Map();
@@ -125,7 +118,6 @@ async function importWorkflowRoot({
 
 module.exports = {
   WORKFLOW_ROOT_FOLDER_NAME,
-  WORKFLOW_STATUS_SQLITE_FILE_NAME,
   buildBlockFolderName,
   buildEntryFolderName,
   buildNotebookPageFolderName,

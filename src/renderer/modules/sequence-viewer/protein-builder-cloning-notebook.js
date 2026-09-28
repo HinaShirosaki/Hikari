@@ -13,6 +13,8 @@ export function createProteinBuilderCloningNotebookPage({
   state,
   persist,
   createId,
+  ensureProjectRecord,
+  saveProtocolRecord,
   onNotebookEntriesChanged,
   entryId: requestedEntryId = '',
   constructName = '',
@@ -36,9 +38,9 @@ export function createProteinBuilderCloningNotebookPage({
   }
 
   const nowIso = new Date().toISOString();
-  const project = ensureProteinBuilderProject(state, createId, nowIso);
+  const project = ensureProteinBuilderProject(ensureProjectRecord, createId, nowIso);
   const pcrProgram = buildProteinBuilderPcrProgram(cloningPlan);
-  const protocol = ensureProteinBuilderProtocol(state, pcrProgram, nowIso);
+  const protocol = ensureProteinBuilderProtocol(saveProtocolRecord, pcrProgram, nowIso);
   const backboneName = buildBackboneName(backbone);
   const safeConstructName = cleanText(constructName, 160)
     || cleanText(assembledRecord?.name, 160)
@@ -152,6 +154,5 @@ export {
 export {
   buildProteinBuilderCloningProtocolSteps,
   buildProteinBuilderCloningProtocol,
-  resolveProteinBuilderCloningNotebookProtocol,
-  migrateProteinBuilderCloningNotebookState
+  resolveProteinBuilderCloningNotebookProtocol
 } from './protein-builder-cloning/notebook-protocol.js';

@@ -12,7 +12,7 @@ These are the renderer areas where the code is split into dedicated folders beca
 | `papers/` | `modules/papers/index.js` | about 7.5k lines | library rail, PDF viewer, comments, paper actions, and LLM helpers |
 | `sequence-viewer/` | `modules/sequence-viewer/index.js` | about 18.7k lines | file parsing, library storage, detailed sequence inspection, alignment, annotation, and analysis |
 | `workflow/` | `modules/workflow/index.js` | about 3.9k lines | workflow data model, graph editor, list rendering, and actions |
-| `tool-box/` | `modules/tool-box.js` | about 7.2k lines | many small calculator/analysis tools sharing one workspace shell |
+| `tool-box/` | `modules/tool-box/index.js` | about 7.2k lines | many small calculator/analysis tools sharing one workspace shell |
 
 > Sizes are approximate and drift as subsystems grow. Regenerate a current snapshot with `find src/renderer/modules/<name> -name '*.js' | xargs wc -l` when in doubt.
 
@@ -160,7 +160,7 @@ Start in `tool-box.js` and then immediately open `tool-box/view-manager.js`.
 The toolbox is really a collection of mini-tools with two kinds of files:
 
 - pure cross-feature calculators such as `lib/molarity.js` and `lib/bench-calculations.js`
-- UI initializers such as `molarity-ui.js` and `buffer-ui.js`; sequence/protein UI adapters are owned by `modules/sequence-viewer/calculations/ui/`
+- UI initializers such as `molarity-ui.js` and `buffer-ui.js`; sequence/protein calculator panels are owned by `modules/tool-box/`
 
 Two details matter here:
 

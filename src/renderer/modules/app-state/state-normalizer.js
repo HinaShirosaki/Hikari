@@ -23,7 +23,7 @@ import {
 } from './dashboard-normalizers.js';
 import { normalizePaperRecord } from './paper-normalizers.js';
 import { normalizeSampleRecord } from './sample-normalizers.js';
-import { migrateProteinBuilderCloningNotebookState } from '../sequence-viewer/protein-builder-cloning-notebook.js';
+import { migrateProteinBuilderCloningNotebookState } from '../../services/notebook-record-compat.js';
 
 export { defaultState };
 

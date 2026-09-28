@@ -108,45 +108,22 @@ export function initPassageWidget({
     return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
   }
 
+  // Tone drives the pill: danger = overdue (solid), warn = due today or needs
+  // setup, neutral = tomorrow, plain = later.
   function passageTag(row) {
     if (row.status === 'unconfigured') {
-      return { text: 'Needs setup', cls: ' is-soon' };
+      return { text: 'Needs setup', tone: 'warn' };
     }
     if (row.status === 'overdue') {
-      const days = Math.abs(row.daysFromToday);
-      return { text: `Overdue · ${days} ${days === 1 ? 'day' : 'days'}`, cls: ' is-due' };
+      return { text: `Overdue ${Math.abs(row.daysFromToday)} d`, tone: 'danger' };
     }
     if (row.status === 'due_today') {
-      return { text: 'Due today', cls: ' is-soon' };
+      return { text: 'Due today', tone: 'warn' };
     }
     if (row.daysFromToday <= 1) {
-      return { text: 'Tomorrow', cls: '' };
+      return { text: 'Tomorrow', tone: 'neutral' };
     }
-    return { text: `In ${row.daysFromToday} days`, cls: '' };
-  }
-
-  function passageMeta(row) {
-    if (row.status === 'unconfigured') {
-      return 'Needs last passage date or interval';
-    }
-    return `Every ${row.intervalDays} d`;
-  }
-
-  function renderPassageActionIcon(action) {
-    if (action === 'done') {
-      return `
-        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-          <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
-          <path d="m8.4 12.1 2.35 2.4 4.95-5.25" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-      `;
-    }
-    return `
-      <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-        <rect x="5" y="5.5" width="14" height="13" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.8"></rect>
-        <path d="M8.25 3.75v3.5M15.75 3.75v3.5M5 9.5h14M12 12v4M10 14h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
-      </svg>
-    `;
+    return { text: `In ${row.daysFromToday} days`, tone: 'plain' };
   }
 
   function renderPassageActionButtons(row) {
@@ -156,7 +133,15 @@ export function initPassageWidget({
     const passageId = safeText(String(row.sample?.id || ''));
     const passageSource = safeText(String(row.source || 'sample'));
     const label = safeText(sampleLabel(row.sample));
-    return `
+    return `<button
+        type="button"
+        class="home-row-action home-passage-action is-extend"
+        data-dashboard-passage-action="extend"
+        data-dashboard-passage-id="${passageId}"
+        data-dashboard-passage-source="${passageSource}"
+        aria-label="Remind me about ${label} tomorrow"
+        title="Remind me tomorrow"
+      >Tomorrow</button>
       <button
         type="button"
         class="home-row-action home-passage-action is-complete"
@@ -165,17 +150,7 @@ export function initPassageWidget({
         data-dashboard-passage-source="${passageSource}"
         aria-label="Mark passage done for ${label}"
         title="Mark passaged"
-      >${renderPassageActionIcon('done')}</button>
-      <button
-        type="button"
-        class="home-row-action home-passage-action is-extend"
-        data-dashboard-passage-action="extend"
-        data-dashboard-passage-id="${passageId}"
-        data-dashboard-passage-source="${passageSource}"
-        aria-label="Extend passage reminder one day for ${label}"
-        title="Extend one day"
-      >${renderPassageActionIcon('extend')}</button>
-    `;
+      ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>`;
   }
 
   function clonePassageConfig(sample) {
@@ -354,26 +329,26 @@ export function initPassageWidget({
     if (!passageRows.rows.length) {
       summary.textContent = '';
       summary.hidden = true;
-      list.innerHTML = '';
+      list.innerHTML = '<p class="home-empty-note">No cell lines tracked yet. Use + to get a reminder when one needs splitting.</p>';
       panelList.innerHTML = '';
       return;
     }
     const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
-    summary.textContent = String(passageRows.rows.length);
+    summary.textContent = dueCount ? `${dueCount} due` : String(passageRows.rows.length);
+    summary.classList.toggle('is-due', passageRows.overdue.length > 0);
+    summary.classList.toggle('is-soon', !passageRows.overdue.length && dueCount > 0);
     summary.setAttribute('aria-label', `${dueCount} due · ${passageRows.rows.length} cell lines`);
-    summary.title = `${dueCount} due`;
+    summary.title = `${dueCount} due · ${passageRows.rows.length} cell lines`;
     summary.hidden = false;
     list.innerHTML = passageRows.rows.map((row) => {
       const tag = passageTag(row);
       return `
       <article class="home-row home-passage-row${row.status === 'unconfigured' ? ' is-muted' : ''}">
         <div class="home-row-copy">
-          <div class="home-row-name">${safeText(sampleLabel(row.sample))}${row.passageNumber > 0 ? ` <span class="home-passage-number">P${row.passageNumber}</span>` : ''}</div>
-          <div class="home-row-meta"><span class="home-row-tag${tag.cls}">${safeText(tag.text)}</span><span class="home-passage-interval"> · ${safeText(passageMeta(row))}</span></div>
+          <span class="home-row-name">${safeText(sampleLabel(row.sample))}</span>${row.passageNumber > 0 ? `<span class="home-passage-number">P${row.passageNumber}</span>` : ''}${row.intervalDays > 0 ? `<span class="home-passage-interval">· every ${row.intervalDays} d</span>` : ''}
         </div>
-        <div class="home-row-end">
-          ${renderPassageActionButtons(row)}
-        </div>
+        <span class="home-status-pill" data-tone="${tag.tone}">${safeText(tag.text)}</span>
+        <div class="home-row-end">${renderPassageActionButtons(row)}</div>
       </article>
     `;
     }).join('');

@@ -7,8 +7,8 @@ import { createPluginBridge } from '../src/renderer/app/plugin-bridge.js';
 import { createPluginServiceRegistry } from '../src/renderer/app/plugin-services.js';
 
 const require = createRequire(import.meta.url);
-const { registerPluginFileIpc } = require('../src/main/ipc/register-plugin-file-ipc.js');
-const { createSystemApi } = require('../src/main/preload/api/system-api.js');
+const { registerPluginIpc } = require('../src/main/ipc/register-plugin-ipc.js');
+const { createPluginApi } = require('../src/main/preload/api/plugin-api.js');
 const { createPluginServer, createPluginServerRegistry } = require('../src/main/lib/plugin-server.js');
 const ORIGIN = 'http://127.0.0.1:43210';
 const OTHER_ORIGIN = 'http://127.0.0.1:43211';
@@ -134,8 +134,13 @@ function checkNotebookAndRollback() {
 
 async function checkFiles(temp) {
   const handlers = new Map();
-  registerPluginFileIpc({ ipcMain: { handle: (name, handler) => handlers.set(name, handler) } });
-  const api = createSystemApi({ invoke: (channel, payload) => handlers.get(channel)({}, payload) });
+  registerPluginIpc({
+    ipcMain: { handle: (name, handler) => handlers.set(name, handler) },
+    fs,
+    dialog: {},
+    session: {}
+  });
+  const api = createPluginApi({ invoke: (channel, payload) => handlers.get(channel)({}, payload) });
   const root = path.join(temp, 'storage');
   await fs.mkdir(root);
   const payload = { storagePath: root, pluginId: 'audit', path: 'nested/file.txt', dataBase64: 'b2xk' };

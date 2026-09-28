@@ -1,10 +1,7 @@
 'use strict';
 
 const { getAgentRequestContext } = require('./request-context.js');
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray: defaultAsArray } = require('../normalize.js');
 
 function defaultCleanText(value) {
   const text = String(value || '');
@@ -24,6 +21,34 @@ function defaultSafeParseJson(text, fallback = null) {
     // Fallback below.
   }
   return fallback;
+}
+
+function parseJsonObjectFromText(raw = '') {
+  const text = String(raw || '').trim();
+  if (!text) {
+    return null;
+  }
+  const candidates = [text];
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) {
+    candidates.push(fenced[1].trim());
+  }
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    candidates.push(text.slice(firstBrace, lastBrace + 1));
+  }
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed;
+      }
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  return null;
 }
 
 function createAgentLlmRuntimeHelpers(deps = {}) {
@@ -269,5 +294,6 @@ module.exports = {
   defaultAsArray,
   defaultCleanText,
   defaultSafeParseJson,
+  parseJsonObjectFromText,
   createAgentLlmRuntimeHelpers
 };

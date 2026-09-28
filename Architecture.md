@@ -141,7 +141,7 @@ Channel groups in `src/shared/ipc/channels.js`, the preload API that exposes the
 | Channel group | `hikariApi` (preload) | Registrar | Handled by | Used by |
 | --- | --- | --- | --- | --- |
 | `STORAGE` | `storage-api` — auto-save, pick/import storage root, ensure dir, store/move/read files, write JSON, discover papers, page logs, protocol-record-saved event | `register-data-ipc` | `data/` + `storage/` (+ `papers/` for discovery) | every module that keeps files; app-state autosave |
-| `PLUGINS` | `storage-api` — inspect/serve plugin folder, read/write/export plugin files | `register-data-ipc` (+ `register-plugin-file-ipc`) | `lib/plugin-server`, `lib/plugin-files` | plugin loader / bridge |
+| `PLUGINS` | `plugin-api` — inspect/serve plugin folder, read/write/export plugin files | `register-plugin-ipc` | `lib/plugin-server`, `lib/plugin-files` | plugin loader / bridge |
 | `INVENTORY`, `ASSAY` | `inventory-api`, `assay-api` — parse chemical / assay result import files | `register-data-ipc` | `lib/chemical-import`, assay parser | Chemicals, Assay |
 | `SEQUENCE_LIBRARY` | `sequence-library-api` — list/get/upsert/delete entries and folders, annotate, search features, backbones | `register-data-ipc` → `register-sequence-library-ipc` | `sequence-viewer/main-process/sequence-library` (SQLite) | Sequence Viewer, agent sequence tools |
 | `AGENT` | `agent-api` — chat + cancel, generate protocol, suggest experiment, list skills, chat-log sessions, log replay; `agent-progress` events back | `register-agent-ipc` | agent backend (Codex runtime, tool runtime, chat logs) | Agent, Protocols, Notebook |
@@ -186,16 +186,17 @@ flowchart TD
 | Service | Folder | What happens |
 | --- | --- | --- |
 | Data helpers | `main/data/` | Reads and writes the single `.json` snapshot; every save compacts it and syncs the storage bundle; load hydrates missing pieces back from the bundle. |
-| Storage | `main/storage/` | Keeps the storage root in step with the snapshot: writes sidecar JSON per record, SQLite indexes (chemicals, protocols, workflow status), per-project memory files (with an LLM-written conclusion), notebook page folders, experiment logs; hydrates a snapshot back from a bundle; imports a foreign storage root; discovers PDFs dropped into the papers folder. |
+| Storage | `main/storage/` | Keeps the storage root in step with the snapshot: writes sidecar JSON per record, SQLite indexes (chemicals, protocols, workflow status), notebook page folders, and experiment logs; hydrates a snapshot back from a bundle; imports a foreign storage root; discovers PDFs dropped into the papers folder. |
+| Project memory | `main/project-memory/` | Collects project-scoped records and produces the Codex-facing `MEMORY.md`, including the optional LLM-written conclusion. |
 | Papers | `main/papers/` | Literature search and retrieval, PDF download, PDF→Markdown parsing, DOI/identity resolution, LLM analysis, the paper knowledge store, and the scheduled "paper finding" workflow. Used by both the Papers module and the agent tools. |
 | Sequence library | `renderer/modules/sequence-viewer/main-process/` | SQLite-backed sequence store: entries and folders, GenBank parsing, auto-annotation against the feature database, backbone recognition, summaries for the storage manifest. |
 | Bioinformatics | `main/bioinformatics/` | Submits BLAST jobs to NCBI and polls for results; UniProt search and entry lookup. |
-| Genome | `core/services/create-genome-service.js` | Registry of user-connected reference genome FASTA files; paths only ever enter through a user-driven file dialog. |
-| Scheduled tasks | `core/services/scheduled-task/` | Persists task definitions, wakes on schedule, runs each as a Codex task, normalises the run result (e.g. paper finding) for the Home widget. |
+| Genome | `main/genome/` | Registry of user-connected reference genome FASTA files; paths only ever enter through a user-driven file dialog. |
+| Scheduled tasks | `main/scheduled-tasks/` | Persists task definitions, wakes on schedule, runs each as a Codex task, normalises the run result (e.g. paper finding) for the Home widget. |
 | Codex CLI provider | `main/lib/codex-cli-provider/` | Spawns the signed-in `codex` CLI: login flow, model and reasoning-effort config, one-shot text requests, and the long-running turns the agent runtime drives. |
 | LLM runtime | `main/lib/llm/` | Provider-neutral prompt/response helpers, the direct-LLM registry that module features call, and a monitor that transforms raw chat logs into session files. |
-| Plugin files | `main/lib/plugin-*.js`, `ipc/register-plugin-file-ipc.js` | Validates a plugin folder against the manifest contract, serves it on its own loopback origin, and handles plugin file read/write confined to a folder under the storage root (symlinks rejected). |
-| npm updater | `core/services/create-npm-updater-service.js` | Fetches the release feed at startup, compares versions, and offers the update dialog. |
+| Plugin files | `main/lib/plugin-*.js`, `ipc/register-plugin-ipc.js` | Validates a plugin folder against the manifest contract, serves it on its own loopback origin, and handles plugin file read/write confined to a folder under the storage root (symlinks rejected). |
+| npm updater | `main/updater/` | Fetches the release feed at startup, compares versions, and offers the update dialog. |
 
 ### Agent backend (`main/agent/`)
 
@@ -273,7 +274,7 @@ Manifests are grouped in `module-manifests/index.js` as foundation (notebook, pr
 | `undoService` | Global undo/redo over persisted state snapshots; edits in the same field coalesce, external (main-process) writes are excluded; a focused plugin frame can claim the undo controls. |
 | `unsavedChangesService` | Answers main's close request: collects editors with unsaved changes, shows the quit dialog, replies quit/cancel. |
 | `direct-llm` | Builds LLM settings from state and sends one-shot text requests through the Codex CLI for module features (paper summaries, protocol polish, chemical-import guessing). |
-| adapters | `experiment-llm-mapper` (compact experiment JSON for prompts), `notebook-linked-previews` (assay/gel/workflow previews inside entries), `chemical-structure-clipboard` (structure paste), `notebook-note-tools` (clarified notes). |
+| adapters | `direct-llm` (shared prompt transport), `notebook-note-tools` (clarified notes), and the event/service registries. Feature-owned mappers, linked previews, and Samples clipboard parsing live with their renderer modules. |
 
 ### Cross-module fan-out (via `services/`)
 

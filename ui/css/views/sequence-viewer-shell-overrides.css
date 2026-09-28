@@ -63,7 +63,7 @@
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-active {
-  border-color: color-mix(in srgb, var(--theme-accent) 75%, var(--theme-border));
+  border-color: var(--theme-accent-line);
   background: var(--theme-surface-subtle);
 }
 
@@ -114,7 +114,7 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-overlay {
-  background: var(--sequence-viewer-overlay-soft);
+  background: var(--theme-overlay);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid label {

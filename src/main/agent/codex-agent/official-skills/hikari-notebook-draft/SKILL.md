@@ -17,7 +17,7 @@ Draft context checklist:
 
 - `project_name`: the selected or resolved Hikari project name when known.
 - `protocol_candidates`: up to 20 likely protocol names, with the strongest candidate first; one is selected per page.
-- `pending_values`: known placeholder values. Every key must exactly match a `placeholder_key` in `<step-id>:<placeholder-id>` form from the normalized protocol or an earlier notebook-draft result; display names are not keys.
+- `pending_values`: known placeholder values. Every key must exactly match a `placeholder_key` (the placeholder id) from the normalized protocol or an earlier notebook-draft result; display names are not keys.
 - `step_edits`: up to 240 optional draft-only replacements by `step_number`, or appended step text when `step_number` is omitted. These edits never mutate the saved protocol.
 - `title`: an optional distinctive page title. `draft_id`: the returned proposal_id when refining an existing page, so the updated proposal replaces that page rather than creating a duplicate.
 - `drafts`: for multiple pages, an array of 1–20 individual requests using the fields above. Each page selects one protocol and keeps its own values and edits. Additional calls retain earlier drafts, and each page must be approved separately.
@@ -26,7 +26,7 @@ Draft context checklist:
 Placeholder fill rules:
 
 - Put actual selected, user-provided, evidence-supported, or deliberately chosen routine starting values in `pending_values`. Never fill a placeholder with uncertainty prose such as `not specified`, `unknown`, or a generic restatement of its label.
-- For a newly normalized protocol, derive keys from its returned step ids and placeholder ids: `<step.id>:<placeholder.id>`.
+- For a newly normalized protocol, the keys are its returned placeholder ids.
 - After the first notebook-draft result, inspect `missing_placeholders`. If any values are already known or are safe routine starting choices, retry once using their exact returned `placeholder_key` values.
 - Do not call a draft confirmation-ready while avoidable routine placeholders remain. Aim for 0-3 unresolved choices and review any result with more than 5; ask one blocking clarification only for genuinely sample-, reagent-, or instrument-specific decisions.
 

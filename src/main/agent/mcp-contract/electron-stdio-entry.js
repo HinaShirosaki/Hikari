@@ -18,13 +18,20 @@ function startElectronMcpStdio() {
       app.exit(code);
     }
   }
-  process.stdin.once('end', () => { void close(); });
-  process.stdin.once('error', () => { void close(1); });
+  // On Windows Electron swaps process.stdin for a stream that is already at EOF,
+  // so the server would exit before the client's first message. MCP clients
+  // always attach a pipe, so read fd 0 directly.
+  const input = process.platform === 'win32'
+    ? new (require('node:net').Socket)({ fd: 0, readable: true, writable: false })
+    : process.stdin;
+  input.once('end', () => { void close(); });
+  input.once('error', () => { void close(1); });
   process.once('SIGTERM', () => { void close(); });
   process.once('SIGINT', () => { void close(); });
   try {
+    const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
     server = require('./stdio-server').createAgentMcpStdioServer();
-    server.start().catch((error) => {
+    server.connect(new StdioServerTransport(input, process.stdout)).catch((error) => {
       console.error(`Hikari MCP failed to start: ${error.message}`);
       void close(1);
     });

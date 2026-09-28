@@ -72,7 +72,7 @@ if (!process.versions.electron) {
         check(style.backgroundImage.includes('linear-gradient'),'Spectrum gradient survives cascade');
         check(style.fontStyle==='italic' && nameStyle.color==='rgb(80, 84, 90)','Italic dark-grey suggestion text: '+style.fontStyle+' / '+nameStyle.color);
         row.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));
-        const reasonBox=document.querySelector('.biology-notebook-suggestion-reason');
+        const reasonBox=document.querySelector('.folder-tree-template__hover-card');
         check(reasonBox && !reasonBox.hidden && reasonBox.textContent.includes('recorded control'),'Hover textbox shows the suggestion reason');
         check(reasonBox.getBoundingClientRect().right<=window.innerWidth,'Reason textbox fits the viewport');
         document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));

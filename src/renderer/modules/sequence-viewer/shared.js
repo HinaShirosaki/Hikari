@@ -29,6 +29,40 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, numeric));
 }
 
+export function positiveModulo(value, modulo) {
+  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
+    return 0;
+  }
+  const numeric = Number(value) || 0;
+  return ((numeric % modulo) + modulo) % modulo;
+}
+
+export function formatPrimerRole(role) {
+  return String(role || '')
+    .trim()
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
+}
+
+export function formatDuration(totalSeconds) {
+  const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
+  if (seconds < 60) {
+    return `${seconds} s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = seconds % 60;
+  return remainder ? `${minutes} min ${remainder} s` : `${minutes} min`;
+}
+
+export function formatThermocycleCondition(step = {}) {
+  return [
+    cleanText(step?.label) || 'Thermocycle step',
+    cleanText(step?.temperature),
+    cleanText(step?.time)
+  ].filter(Boolean).join(' - ');
+}
+
 export function cleanText(value) {
   const text = String(value || '');
   if (!text) {

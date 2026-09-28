@@ -49,7 +49,6 @@ test('agent-chat keeps the notebook draft card and opens its approval overlay au
         projectName: 'Atlas',
         steps: [
           {
-            id: 's1',
             text: 'Measure viability for {{ph:sample_name}}.',
             placeholders: [{ id: 'sample_name', name: 'sample name' }]
           }
@@ -126,7 +125,7 @@ test('agent-chat keeps the notebook draft card and opens its approval overlay au
           },
           missing_placeholders: [
             {
-              placeholder_key: 's1:sample_name',
+              placeholder_key: 'sample_name',
               display: 'sample name',
               reason: 'Leave visible for the planned draft.'
             }
@@ -154,9 +153,7 @@ test('agent-chat keeps the notebook draft card and opens its approval overlay au
             rendered_steps: ['Measure viability for [sample name].'],
             unresolved_placeholders: [
               {
-                step_id: 's1',
-                placeholder_id: 'sample_name',
-                placeholder_key: 's1:sample_name',
+                placeholder_key: 'sample_name',
                 display: 'sample name',
                 reason: 'Leave visible for the planned draft.'
               }
@@ -210,9 +207,7 @@ test('agent-chat keeps the notebook draft card and opens its approval overlay au
           rendered_steps: ['Measure viability for [sample name].'],
           unresolved_placeholders: [
             {
-              step_id: 's1',
-              placeholder_id: 'sample_name',
-              placeholder_key: 's1:sample_name',
+              placeholder_key: 'sample_name',
               display: 'sample name',
               reason: 'Leave visible for the planned draft.'
             }

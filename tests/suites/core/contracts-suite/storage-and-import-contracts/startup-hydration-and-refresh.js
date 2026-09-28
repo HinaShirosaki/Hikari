@@ -24,9 +24,42 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
       assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
       assert.equal(mainSource.includes('CHEMICALS_DATA_FILE_PATH'), false);
-      assert.match(importSource, /isSqliteBundleCandidateName/);
-      assert.match(importSource, /getBundlePathsFromSqlitePath/);
-      assert.match(importSource, /kind:\s*'sqlite_only_bundle'/);
+      // Chemicals load from their own index, not from a loose *.index.sqlite bundle scan.
+      assert.match(hydrationSource, /readChemicalIndex\(bundlePaths\.chemicalsSqlitePath\)/);
+      assert.equal(importSource.includes('sqlite_only_bundle'), false);
+    });
+    test('storage root import shows its alerts as error notices', async () => {
+      const reported = [];
+      const windowStub = {
+        hikariApi: { reportError: (event) => reported.push(event) },
+        setTimeout: () => 0,
+        clearTimeout: () => {}
+      };
+      const documentStub = {
+        createElement: () => ({ setAttribute: () => {}, style: {}, hidden: true }),
+        querySelector: () => null,
+        body: { appendChild: () => {} }
+      };
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: windowStub, document: documentStub }
+      );
+      const alert = 'The chemical inventory file could not be read, so it was moved aside.';
+      const controller = createStorageImportController({
+        state: structuredClone(shared.defaultState),
+        persist: () => {},
+        persistState: () => {},
+        normalizeStateStoragePaths: () => {},
+        windowObject: {
+          hikariApi: {
+            ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
+            importStorageRoot: async () => ({ ok: true, statePatch: {}, alerts: [alert] })
+          }
+        }
+      });
+      const result = await controller.runStorageRootImport('/root', {});
+      assert.equal(result.ok, true);
+      assert.deepEqual(JSON.parse(JSON.stringify(reported)), [{ source: 'renderer:notice', message: alert }]);
     });
     test('storage root refresh clears cached module data before importing a changed root', async () => {
       const { createStorageImportController } = loadEsmStyleModule(
@@ -259,7 +292,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
     test('settings split constructs extracted callbacks before startup binds them', () => {
       const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');
       const codexControllerIndex = settingsSource.indexOf('} = createCodexAccountSettings({');
-      const codexListenerIndex = settingsSource.indexOf("llmForm.addEventListener('submit', onSaveLlmSettings)");
+      const codexListenerIndex = settingsSource.indexOf('formPresentation.bind(llmForm, onSaveLlmSettings)');
       const journalControllerIndex = settingsSource.indexOf('} = createPreferredJournalSettings({');
       const journalListenerIndex = settingsSource.indexOf("preferredJournalForm?.addEventListener('submit', onSavePreferredJournal)");
 

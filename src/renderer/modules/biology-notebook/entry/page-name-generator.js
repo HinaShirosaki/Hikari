@@ -1,13 +1,5 @@
 import { requestDirectLlmText } from '../../../services/direct-llm.js';
 
-const SMALL_MODEL_BY_PROVIDER = Object.freeze({
-  openai: 'gpt-5-mini',
-  gemini: 'gemini-2.5-flash-lite',
-  claude: 'claude-3-5-haiku-latest',
-  deepseek: 'deepseek-v4-flash',
-  codex: 'gpt-5.4-mini'
-});
-
 const NOTEBOOK_NAME_SOURCES = new Set(['protocol', 'generated', 'user']);
 
 function cleanLine(value, maxLength = 180) {
@@ -21,17 +13,16 @@ function cleanLine(value, maxLength = 180) {
 function collectPlaceholderRows(protocol, values = {}) {
   const sourceValues = values && typeof values === 'object' ? values : {};
   const rows = [];
-  (Array.isArray(protocol?.steps) ? protocol.steps : []).forEach((step, stepIndex) => {
-    const stepId = String(step?.id || `step_${stepIndex + 1}`).trim();
+  (Array.isArray(protocol?.steps) ? protocol.steps : []).forEach((step) => {
     (Array.isArray(step?.placeholders) ? step.placeholders : []).forEach((placeholder, placeholderIndex) => {
       const placeholderId = String(placeholder?.id || '').trim();
       if (!placeholderId) {
         return;
       }
       rows.push({
-        key: `${stepId}:${placeholderId}`,
+        key: placeholderId,
         name: cleanLine(placeholder?.name || placeholderId || `Value ${placeholderIndex + 1}`, 100),
-        value: cleanLine(sourceValues[`${stepId}:${placeholderId}`] ?? sourceValues[placeholderId], 180)
+        value: cleanLine(sourceValues[placeholderId], 180)
       });
     });
   });
@@ -66,7 +57,7 @@ export function buildSmallNotebookNamingLlm(llm = {}) {
   return {
     ...llm,
     provider,
-    model: SMALL_MODEL_BY_PROVIDER[provider] || String(llm?.model || '').trim(),
+    model: String(llm?.model || '').trim(),
     reasoningEffort: provider === 'codex' ? 'low' : ''
   };
 }

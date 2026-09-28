@@ -42,19 +42,10 @@ function normalizeSessionBrief(text, fallback = 'New Chat') {
   return normalized || fallback;
 }
 
-function slugText(value, fallback = 'option') {
-  const normalized = cleanText(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-  return normalized || fallback;
-}
-
 module.exports = {
   cleanText,
   sanitizeFileName,
   createDefaultId,
   deriveSessionTitle,
-  normalizeSessionBrief,
-  slugText
+  normalizeSessionBrief
 };

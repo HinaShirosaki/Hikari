@@ -27,14 +27,14 @@ export function createNavigationActions(ctx) {
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
     controllers.detail?.renderActiveRecord?.();
-    actions.setStatus('Returned to Sequence Viewer.');
+    actions.setStatus('Returned to DNA.');
   }
 
   function returnToSequenceDetailFromCloningDesign() {
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
     controllers.detail?.renderActiveRecord?.();
-    actions.setStatus('Returned to Sequence Viewer.');
+    actions.setStatus('Returned to DNA.');
   }
 
   function returnToProteinBuilder() {

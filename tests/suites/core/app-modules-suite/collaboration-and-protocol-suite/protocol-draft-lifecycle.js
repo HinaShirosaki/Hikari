@@ -272,6 +272,12 @@ test('protocol-management opens JSON import in an overlay on create and hides th
   assert.ok(lysatePreset, 'configured custom sample types appear as Protocol interactive bars');
   trigger(presetToolbar, 'click', { target: lysatePreset });
   assert.equal(document.getElementById('protocol-steps').value, '[Lysate]');
+  document.getElementById('protocol-steps').value = '';
+  document.getElementById('placeholder-name').value = 'yield';
+  trigger(document.getElementById('add-placeholder-btn'), 'click');
+  assert.equal(document.getElementById('protocol-steps').value, '[yield]');
+  assert.equal(document.getElementById('placeholder-name').value, '');
+
 
   trigger(document.getElementById('open-protocol-json-import-btn'), 'click');
   assert.equal(document.getElementById('protocol-json-import-overlay').hidden, false);

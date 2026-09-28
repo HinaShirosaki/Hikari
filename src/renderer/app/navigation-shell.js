@@ -1,8 +1,10 @@
-import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
+import { applyAppearanceToDocument } from './appearance.js';
 import { createAppDock } from './navigation-shell/app-dock.js';
+import { createAgentChatRail } from './navigation-shell/agent-rail.js';
 import { createSearchSuggestions } from './navigation-shell/search-suggestions.js';
 import { runSearchInput } from '../lib/search-field-lens.js';
-import { renderAgentChatIcon } from '../modules/agent-chat/icons.js';
+
+export { isAgentChatRailAvailable } from './navigation-shell/agent-rail.js';
 
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 
@@ -12,10 +14,6 @@ export function normalizeViewId(VIEWS, viewId) {
 
 export function applyAppearanceSnapshot(appearance, rootDocument = document) {
   return applyAppearanceToDocument(appearance, rootDocument, 16);
-}
-
-export function isAgentChatRailAvailable(app, view) {
-  return app?.agentChatRail === true && view?.dataset?.agentChatRail !== 'disabled';
 }
 
 function createNavigationAliasMap(aliases, normalize) {
@@ -73,15 +71,9 @@ export function createNavigationShell({
   const appDockDivider = documentObject.querySelector('.app-dock-divider');
   const moreBtn = documentObject.getElementById('app-more-btn');
   const moreMenu = documentObject.getElementById('app-more-menu');
-  const agentChatRail = documentObject.getElementById('universal-agent-chat-rail');
-  const agentChatRailToggleBtn = documentObject.getElementById('agent-chat-rail-toggle-btn');
-  const paperDetailsToggleBtn = documentObject.getElementById('paper-details-toggle-btn');
-  const paperBriefToggleBtn = documentObject.getElementById('paper-brief-toggle-btn');
-  const paperOutlineToggleBtn = documentObject.getElementById('paper-comment-toggle-btn');
   const views = [...documentObject.querySelectorAll('.view')];
 
   let lastViewPersistenceEnabled = false;
-  let agentChatRailExpanded = false;
 
   function isValidStartupViewId(viewId) {
     return validStartupViewIds.has(normalize(String(viewId || '').trim()));
@@ -126,74 +118,6 @@ export function createNavigationShell({
   function getAppForView(viewId) {
     return appsByViewId.get(resolveNavigationViewId(viewId)) || null;
   }
-
-  function isAgentChatRailEnabledForView(viewId) {
-    const app = getAppForView(viewId);
-    const view = documentObject.getElementById(resolveNavigationViewId(viewId));
-    return isAgentChatRailAvailable(app, view);
-  }
-
-  function agentChatRailToggleIcon(expanded) {
-    return renderAgentChatIcon(expanded ? 'rail-collapse' : 'chat', {
-      className: 'universal-agent-chat-rail__toggle-icon'
-    });
-  }
-
-  function syncAgentChatRailExpansion(enabled) {
-    const expanded = enabled && agentChatRailExpanded;
-    const viewId = getActiveViewId();
-    const isPapers = viewId === VIEWS.PAPERS;
-    documentObject.body.classList.toggle('has-agent-chat-rail-expanded', expanded);
-    if (agentChatRail) {
-      agentChatRail.classList.toggle('is-expanded', expanded);
-      agentChatRail.classList.toggle('is-collapsed', enabled && !expanded);
-      agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
-    }
-    if (agentChatRailToggleBtn) {
-      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded);
-      agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
-      const label = isPapers
-        ? (expanded ? 'Close Hikari' : 'Ask Hikari')
-        : (expanded ? 'Fold agent chat rail' : 'Open agent chat rail');
-      agentChatRailToggleBtn.setAttribute('aria-label', label);
-      agentChatRailToggleBtn.title = isPapers ? label : (expanded ? 'Fold chat' : 'Open chat');
-    }
-    if (paperOutlineToggleBtn) paperOutlineToggleBtn.hidden = !isPapers || !enabled;
-    if (paperBriefToggleBtn) paperBriefToggleBtn.hidden = !isPapers || !enabled;
-    if (paperDetailsToggleBtn) paperDetailsToggleBtn.hidden = !isPapers || !enabled;
-    const EventCtor = documentObject.defaultView?.CustomEvent;
-    if (typeof EventCtor === 'function') {
-      documentObject.dispatchEvent(new EventCtor('hikari:agent-chat-rail-state', {
-        detail: { expanded, viewId }
-      }));
-    }
-    return expanded;
-  }
-
-  function setAgentChatRailExpanded(expanded) {
-    agentChatRailExpanded = Boolean(expanded);
-    const enabled = documentObject.body.classList.contains('has-agent-chat-rail');
-    const visibleExpanded = syncAgentChatRailExpansion(enabled);
-    if (visibleExpanded) {
-      moduleRuntime.renderAgentChatRail?.();
-    }
-    sharedLeftRailRuntime.syncWidth();
-  }
-
-  function openAgentChatRail() {
-    setAgentChatRailExpanded(true);
-  }
-
-  function syncAgentChatRailState(activeViewId) {
-    const enabled = isAgentChatRailEnabledForView(activeViewId);
-    documentObject.body.classList.toggle('has-agent-chat-rail', enabled);
-    if (agentChatRail) {
-      agentChatRail.hidden = !enabled;
-      agentChatRail.setAttribute('aria-hidden', enabled ? 'false' : 'true');
-    }
-    return syncAgentChatRailExpansion(enabled);
-  }
-
 
   const {
     closeMoreMenu,
@@ -271,6 +195,16 @@ export function createNavigationShell({
     return activeViews[0] || VIEWS.HOME;
   }
 
+  const agentChatRailRuntime = createAgentChatRail({
+    VIEWS,
+    documentObject,
+    getActiveViewId,
+    getAppForView,
+    resolveNavigationViewId,
+    moduleRuntime,
+    sharedLeftRailRuntime
+  });
+
   function syncSharedLeftRailShellChrome() {
     const activeView = views.find((view) => view.classList.contains('is-active')) || null;
     const railShells = Array.from(activeView?.querySelectorAll?.('.left-rail-template') || []);
@@ -304,7 +238,7 @@ export function createNavigationShell({
     });
 
     const activeNavView = resolveNavigationViewId(nextView);
-    const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
+    const agentChatRailEnabled = agentChatRailRuntime.syncState(activeNavView);
 
     const subtitleView = activeNavView;
     if (pageTitle && !pageTitle.classList?.contains?.('topbar-timekeeping')) {
@@ -350,15 +284,7 @@ export function createNavigationShell({
         toggleMoreMenu(true);
       }
     });
-    agentChatRailToggleBtn?.addEventListener('click', () => {
-      setAgentChatRailExpanded(!agentChatRailExpanded);
-    });
-    documentObject.addEventListener('hikari:open-agent-chat-rail', openAgentChatRail);
-    documentObject.addEventListener('hikari:close-agent-chat-rail', () => setAgentChatRailExpanded(false));
-    documentObject.addEventListener('hikari:agent-chat-rail-availability-changed', () => {
-      syncAgentChatRailState(getActiveViewId());
-      sharedLeftRailRuntime.syncWidth();
-    });
+    agentChatRailRuntime.init();
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');
@@ -517,7 +443,7 @@ export function createNavigationShell({
     getActiveViewId,
     initNavigation,
     normalizeViewId: normalize,
-    openAgentChatRail,
+    openAgentChatRail: agentChatRailRuntime.open,
     renderAppNavigation,
     resolveStartupViewId,
     setSearchInputValue,

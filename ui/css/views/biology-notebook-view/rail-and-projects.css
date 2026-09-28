@@ -143,7 +143,7 @@
 }
 
 .biology-notebook-new-experiment-btn:hover {
-  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong));
+  background: var(--theme-accent-hover);
   color: var(--theme-text-on-accent);
 }
 
@@ -273,6 +273,10 @@
   white-space: nowrap;
 }
 
+.left-rail-template__rail .biology-notebook-page-badge {
+  font-size: var(--text-2xs) !important;
+}
+
 .biology-notebook-page-row.is-planned .biology-notebook-page-badge {
   color: var(--theme-warning);
 }
@@ -281,26 +285,22 @@
   color: var(--theme-success);
 }
 
+/* A suggestion is not a page yet: an accent wash and italic muted text set it
+   apart without a second color scheme. */
 #biology-notebook-view .biology-notebook-page-row.is-suggested {
-  background: linear-gradient(100deg,
-    var(--biology-notebook-suggestion-violet),
-    var(--biology-notebook-suggestion-blue),
-    var(--biology-notebook-suggestion-green),
-    var(--biology-notebook-suggestion-yellow),
-    var(--biology-notebook-suggestion-orange),
-    var(--biology-notebook-suggestion-red)) !important;
-  color: var(--biology-notebook-suggestion-ink) !important;
+  background: var(--theme-accent-wash) !important;
+  color: var(--theme-text-muted) !important;
   font-style: italic;
 }
 
 #biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-name,
 #biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-badge {
-  color: var(--biology-notebook-suggestion-ink) !important;
+  color: var(--theme-text-muted) !important;
   font-weight: 400 !important;
 }
 
 #biology-notebook-view .biology-notebook-page-row.is-suggested:focus-visible {
-  outline: 0.125rem solid var(--theme-focus-ring);
+  outline: 0.125rem solid var(--theme-focus);
   outline-offset: -0.125rem;
 }
 
@@ -732,7 +732,7 @@
 
 .biology-notebook-tool-tab.is-active {
   color: var(--theme-text-strong);
-  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-accent) 18%);
+  background: var(--theme-surface-active);
   box-shadow: none;
 }
 
@@ -742,7 +742,7 @@
   padding: var(--space-12);
   border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-tool-workspace[hidden] {
@@ -889,7 +889,7 @@
 
 .biology-notebook-buffer-volume-control select:focus {
   outline: none;
-  background-color: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background-color: var(--theme-accent-wash);
 }
 
 .biology-notebook-buffer-sheet input[type="number"] {
@@ -907,7 +907,7 @@
 .biology-notebook-buffer-sheet input:focus,
 .biology-notebook-reaction-sheet input:focus {
   outline: none;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background: var(--theme-accent-wash);
 }
 
 .biology-notebook-buffer-sheet output,
@@ -925,7 +925,7 @@
 .biology-notebook-reaction-header-row th,
 .biology-notebook-reaction-solvent-row th {
   padding: var(--space-8);
-  background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-buffer-header-row th,
@@ -966,7 +966,7 @@
   padding: var(--space-4) var(--space-8);
   border: 0;
   border-radius: 0;
-  background: color-mix(in srgb, var(--theme-panel) 78%, var(--theme-surface));
+  background: var(--theme-surface-elevated);
   color: var(--theme-text-muted);
   font-size: var(--text-xl);
   line-height: 1;
@@ -974,7 +974,7 @@
 
 .biology-notebook-sheet-add-row-button:hover,
 .biology-notebook-sheet-add-row-button:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  background: var(--theme-surface-active);
   color: var(--theme-text-strong);
 }
 
@@ -995,7 +995,7 @@
   right: 0;
   max-height: 190px;
   overflow: auto;
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  border: 1px solid var(--theme-accent-line);
   background: var(--theme-surface-elevated);
   box-shadow: 0 14px 28px var(--theme-shadow-color);
 }
@@ -1025,7 +1025,7 @@
 
 .biology-notebook-buffer-suggestion:hover,
 .biology-notebook-buffer-suggestion:focus {
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
+  background: var(--theme-accent-wash);
   outline: none;
 }
 
@@ -1147,7 +1147,7 @@
 .biology-notebook-tool-calculation-footer-row th,
 .biology-notebook-tool-calculation-footer-row td {
   font-weight: 700;
-  background: color-mix(in srgb, var(--theme-panel) 88%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-project-dashboard {
@@ -1215,7 +1215,7 @@
   padding: var(--space-16);
   border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 86%, var(--theme-surface-subtle));
+  background: var(--theme-surface-elevated);
 }
 
 .project-stat-card span {
@@ -1264,109 +1264,150 @@
 
 .project-paper-finder-panel {
   display: grid;
-  gap: var(--space-14);
+  gap: var(--space-10);
   min-width: 0;
 }
 
+/* Header = the schedule's state and its controls; the card below = its settings. */
 .project-paper-finder-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-16);
+  gap: var(--space-8) var(--space-16);
+}
+
+.project-paper-finder-head .project-panel-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-4) var(--space-12);
 }
 
 .project-paper-finder-state {
-  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
   color: var(--theme-text-muted);
   font-size: var(--text-sm);
-  font-weight: 650;
+  font-weight: 500;
+}
+
+.project-paper-finder-state::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--theme-text-muted);
+}
+
+.project-paper-finder-state[data-state="active"]::before {
+  background: var(--theme-success);
+}
+
+.project-paper-finder-state[data-state="none"]::before {
+  display: none;
+}
+
+.project-paper-finder-task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+/* One control height for every button, input and select in the panel. */
+.project-paper-finder-panel button,
+.project-paper-finder-schedule-row input,
+.project-paper-finder-schedule-row select {
+  min-height: 0;
+  height: 2rem;
+  font-size: var(--text-sm);
+}
+
+.project-paper-finder-panel button {
+  padding: 0 var(--space-12);
 }
 
 .project-paper-finder-form {
   display: grid;
-  gap: var(--space-16);
-  padding: var(--space-16);
+  gap: var(--space-10);
+  padding: var(--space-12);
   border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 86%, var(--theme-surface-subtle));
+  background: var(--theme-surface-elevated);
 }
 
-.project-paper-finder-fields {
-  display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
-  gap: var(--space-14);
-  align-items: start;
-}
-
-.project-paper-finder-schedule {
-  display: grid;
-  gap: var(--space-8);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.project-paper-finder-schedule legend,
-.project-paper-finder-frequency,
-.project-paper-finder-calendar-field,
 .project-paper-finder-requirements {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
   color: var(--theme-text);
   font-size: var(--text-sm);
   font-weight: 650;
 }
 
-.project-paper-finder-frequency,
-.project-paper-finder-calendar-field,
-.project-paper-finder-requirements {
-  display: grid;
-  gap: var(--space-8);
-  min-width: 0;
-}
-
-.project-paper-finder-schedule-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-8);
-  align-items: end;
-}
-
-.project-paper-finder-frequency-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr);
-  gap: var(--space-8);
-}
-
-.project-paper-finder-frequency input,
-.project-paper-finder-frequency select,
-.project-paper-finder-calendar-field input,
-.project-paper-finder-calendar-field select,
 .project-paper-finder-requirements textarea {
   width: 100%;
-}
-
-.project-paper-finder-timezone {
-  justify-self: start;
-  margin: 0;
-}
-
-.project-paper-finder-requirements textarea {
-  min-height: 6.5rem;
+  min-height: 3.5rem;
   font-size: var(--text-base);
   font-weight: 400;
   line-height: 1.5;
   resize: vertical;
 }
 
-.project-paper-finder-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  flex-wrap: wrap;
+.project-paper-finder-schedule {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
-.project-paper-finder-status {
-  min-width: min(100%, 240px);
+/* Reads as a sentence: Every [1] [week] on [Monday] at [09:00] · zone … [Save]. */
+.project-paper-finder-schedule-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6) var(--space-10);
+}
+
+.project-paper-finder-frequency,
+.project-paper-finder-calendar-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--theme-text-muted);
+  font-size: var(--text-sm);
+}
+
+.project-paper-finder-calendar-field[hidden] {
+  display: none;
+}
+
+.project-paper-finder-schedule-row input,
+.project-paper-finder-schedule-row select {
+  min-width: 0;
+  padding: 0 var(--space-8);
+  color: var(--theme-text);
+}
+
+.project-paper-finder-frequency input {
+  width: 3.5rem;
+}
+
+.project-paper-finder-timezone {
+  margin: 0;
+}
+
+.project-paper-finder-save {
+  margin-left: auto;
+}
+
+.project-paper-finder-status:empty {
+  display: none;
+}
+
+.project-paper-finder-status.is-error {
+  color: var(--theme-danger);
 }
 
 .project-paper-finder-results {
@@ -1405,6 +1446,32 @@
 .project-paper-finder-result-meta,
 .project-paper-finder-result-reason {
   margin: 0;
+}
+
+.project-paper-finder-result-saved {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: 0;
+  color: var(--theme-success-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.project-paper-finder-result-saved .btn-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.project-paper-finder-panel .project-paper-finder-open {
+  height: auto;
+  margin-left: var(--space-8);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-accent);
+  font-weight: 500;
+  cursor: pointer;
 }
 
 .project-contribution-panel {
@@ -1482,7 +1549,7 @@
   height: var(--project-contribution-cell-size);
   border: 1px solid var(--theme-shadow-color-subtle);
   border-radius: 3px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-surface-elevated));
+  background: var(--theme-heat-0);
 }
 
 .project-contribution-cell {
@@ -1499,22 +1566,22 @@
 
 .project-contribution-cell[data-level="1"],
 .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--theme-accent) 32%, var(--theme-surface-elevated));
+  background: var(--theme-heat-1);
 }
 
 .project-contribution-cell[data-level="2"],
 .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-surface-elevated));
+  background: var(--theme-heat-2);
 }
 
 .project-contribution-cell[data-level="3"],
 .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--theme-accent) 74%, var(--theme-surface-elevated));
+  background: var(--theme-heat-3);
 }
 
 .project-contribution-cell[data-level="4"],
 .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--theme-accent) 92%, var(--theme-text-strong));
+  background: var(--theme-heat-4);
 }
 
 .project-contribution-legend {
@@ -1563,48 +1630,8 @@
   display: none;
 }
 
-.project-paper-finder-schedule legend {
-  margin-bottom: var(--space-10);
-  padding: 0;
-}
-
-.project-paper-finder-schedule-grid input,
-.project-paper-finder-schedule-grid select {
-  min-width: 0;
-  min-height: 2.5rem;
-  height: 2.5rem;
-  padding: var(--space-8);
-  font-size: var(--text-sm);
-}
-
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-stat-card {
-  background: color-mix(in srgb, var(--theme-surface-elevated) 82%, var(--theme-surface-subtle));
-}
-
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell,
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell {
-  border-color: color-mix(in srgb, var(--theme-text-strong) 12%, transparent);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, var(--theme-text-strong));
-}
-
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="1"],
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-subtle));
-}
-
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="2"],
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--theme-accent) 62%, var(--theme-surface-subtle));
-}
-
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="3"],
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-surface-subtle));
-}
-
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="4"],
-body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--theme-accent) 94%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-empty-state {
@@ -1642,10 +1669,6 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 /* Respond to the dashboard's available space, including resized side rails. */
 @container project-dashboard (max-width: 56rem) {
-  .project-paper-finder-fields {
-    grid-template-columns: 1fr;
-  }
-
   .project-overview-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1665,38 +1688,45 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   .project-stat-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .project-paper-finder-schedule-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .project-paper-finder-frequency {
-    grid-column: 1 / -1;
-  }
-
-  .project-paper-finder-head {
-    flex-wrap: wrap;
-  }
 }
 
-/* Render outside the scroll rail so long reasons remain readable. */
-.biology-notebook-suggestion-reason {
-  position: fixed;
-  z-index: 1000;
-  box-sizing: border-box;
-  width: min(24rem, calc(100vw - 1rem));
-  max-height: min(24rem, calc(100vh - 1rem));
-  overflow: auto;
-  padding: var(--space-12) var(--space-16);
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 0.5rem;
-  background: var(--theme-surface-elevated);
+.project-processes .project-panel-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.project-processes .project-panel-head button { margin-left: auto; }
+.project-processes h3, .project-processes h4 { margin: 0; }
+.project-process-group { margin-top: 12px; }
+.project-process-group > .project-panel-head { padding: 6px 0; }
+
+.project-process-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(60px, 120px) auto minmax(70px, auto);
+  align-items: center;
+  gap: var(--space-12);
+  width: 100%;
+  padding: var(--space-10) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--theme-border-soft);
+  border-radius: 0;
+  background: transparent;
   color: var(--theme-text);
-  box-shadow: 0 0.3rem 1rem var(--theme-shadow-color-subtle);
-  font-size: var(--text-base);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  text-align: left;
+  font-size: var(--text-sm);
 }
 
-.biology-notebook-suggestion-reason[hidden] { display: none; }
+.project-process-row:hover { background: var(--theme-surface-subtle); }
+.project-process-row > span { overflow-wrap: anywhere; }
+.project-process-row progress { width: 100%; height: 6px; accent-color: var(--theme-accent); }
+.project-processes { min-width: 0; overflow-x: auto; }
+
+#biology-notebook-experiment-protocol-fields,
+#biology-notebook-experiment-workflow-fields {
+  display: grid;
+  gap: var(--space-12);
+}
+
+#biology-notebook-experiment-protocol-fields[hidden],
+#biology-notebook-experiment-workflow-fields[hidden] { display: none; }

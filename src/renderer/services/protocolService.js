@@ -1,9 +1,9 @@
-import { createId } from '../modules/utils.js';
+import { createId } from '../lib/app-utils.js';
 
 function normalizeProtocolStep(step, index) {
   if (typeof step === 'string') {
     const text = step.trim();
-    return text ? { id: `step-${index + 1}`, text, placeholders: [] } : null;
+    return text ? { text, placeholders: [] } : null;
   }
   if (!step || typeof step !== 'object') {
     return null;
@@ -13,7 +13,6 @@ function normalizeProtocolStep(step, index) {
     return null;
   }
   return {
-    id: String(step.id || `step-${index + 1}`),
     text,
     placeholders: Array.isArray(step.placeholders)
       ? step.placeholders
@@ -104,6 +103,28 @@ export function createProtocolService(registry, deps = {}) {
   const persist = typeof deps.persist === 'function' ? deps.persist : null;
   const createProtocolId = typeof deps.createId === 'function' ? deps.createId : createId;
 
+  function saveProtocolRecord(protocol, { preserveCreatedAt = true } = {}) {
+    if (!state || typeof state !== 'object' || !protocol) {
+      return null;
+    }
+    if (!Array.isArray(state.protocols)) {
+      state.protocols = [];
+    }
+    const protocolId = String(protocol.id || '').trim();
+    const existingIndex = state.protocols.findIndex((item) => String(item?.id || '').trim() === protocolId);
+    if (existingIndex >= 0) {
+      const existing = state.protocols[existingIndex];
+      state.protocols[existingIndex] = {
+        ...existing,
+        ...protocol,
+        ...(preserveCreatedAt && existing?.createdAt ? { createdAt: existing.createdAt } : {})
+      };
+      return state.protocols[existingIndex];
+    }
+    state.protocols.push(protocol);
+    return protocol;
+  }
+
   function importProtocolsFromJson(rawInput, options = {}) {
     const protocol = registry.get('protocol');
     if (typeof protocol.importProtocolsFromJson !== 'function') {
@@ -177,6 +198,7 @@ export function createProtocolService(registry, deps = {}) {
     handleProtocolsChanged,
     handleProtocolsImported,
     handleExternalProtocolRecordSaved,
+    saveProtocolRecord,
     openProtocol,
     createDraftFromPaper
   };

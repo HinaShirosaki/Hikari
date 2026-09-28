@@ -24,7 +24,7 @@ This folder splits those responsibilities into smaller modules so each part is e
   - Coordinates request logging, lifecycle recording, session persistence, and final response shaping.
 - `agent-controller-core.js`
   - Validates controller inputs, resolves agent-provider configuration, and owns the Codex route.
-- `agent-session-service.js`
+- `../../agent/context/chat-log/session-service.js`
   - Wraps chat-session creation/appending and keeps session row ordering logic in one place.
 - `agent-lifecycle-service.js`
   - Centralizes lifecycle helpers such as payload normalization, progress events, tool-call lifecycle tracing, and lifecycle log flushing.

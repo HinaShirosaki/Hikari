@@ -146,7 +146,7 @@
   display: grid;
   gap: var(--space-6);
   font-size: 0.8rem;
-  color: var(--gel-label);
+  color: var(--theme-text-muted);
 }
 
 .gel-lane-profile-picker select {
@@ -177,7 +177,7 @@
 
 .gel-lane-profile-chart .lane-profile-hover-dot {
   fill: var(--gel-marker-solid);
-  stroke: var(--gel-point-border);
+  stroke: var(--theme-surface);
   stroke-width: 1.5;
   pointer-events: none;
 }
@@ -191,11 +191,11 @@
 }
 
 .gel-lane-profile-chart .lane-profile-window {
-  fill: var(--gel-chart-selection);
+  fill: var(--theme-accent-soft);
 }
 
 .gel-lane-profile-chart .lane-profile-grid {
-  stroke: var(--gel-chart-grid);
+  stroke: var(--theme-border-soft);
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }
@@ -210,13 +210,13 @@
 
 .gel-lane-profile-chart .lane-profile-peak {
   fill: var(--gel-path);
-  stroke: var(--gel-point-border);
+  stroke: var(--theme-surface);
   stroke-width: 2;
 }
 
 .gel-lane-profile-chart .lane-profile-axis-label,
 .gel-lane-profile-chart .lane-profile-empty {
-  fill: var(--gel-label);
+  fill: var(--theme-text-muted);
   font-size: 10px;
   font-family: var(--font-app);
 }
@@ -271,9 +271,9 @@
 }
 
 .gel-peak-editor-toolbar .ghost-btn.is-active {
-  border-color: var(--gel-active-border);
-  background: var(--gel-active-background);
-  color: var(--gel-active-text);
+  border-color: var(--theme-success-line);
+  background: var(--theme-success-soft);
+  color: var(--theme-success-ink);
 }
 
 .gel-peak-editor-chart-shell {
@@ -292,12 +292,12 @@
 }
 
 .gel-peak-editor-chart .peak-editor-frame {
-  fill: var(--gel-chart-surface);
-  stroke: var(--gel-chart-border);
+  fill: var(--theme-surface);
+  stroke: var(--theme-border-soft);
 }
 
 .gel-peak-editor-chart .peak-editor-grid {
-  stroke: var(--gel-chart-grid);
+  stroke: var(--theme-border-soft);
   stroke-width: 1;
   stroke-dasharray: 4 5;
 }
@@ -319,7 +319,7 @@
 }
 
 .gel-peak-editor-chart .peak-editor-area {
-  fill: var(--gel-chart-selection);
+  fill: var(--theme-accent-soft);
   stroke: none;
 }
 
@@ -332,12 +332,12 @@
 .gel-peak-editor-chart .peak-editor-apex,
 .gel-peak-editor-chart .peak-editor-hover-dot {
   fill: var(--gel-marker-solid);
-  stroke: var(--gel-point-border);
+  stroke: var(--theme-surface);
   stroke-width: 2;
 }
 
 .gel-peak-editor-chart .peak-editor-hover-dot {
-  fill: var(--gel-point-border);
+  fill: var(--theme-surface);
   stroke: var(--gel-marker);
   stroke-width: 3;
   pointer-events: none;
@@ -358,7 +358,7 @@
 .gel-peak-editor-chart .peak-editor-divider-label,
 .gel-peak-editor-chart .peak-editor-hover-label,
 .gel-peak-editor-chart .peak-editor-empty {
-  fill: var(--gel-label);
+  fill: var(--theme-text-muted);
   font-size: 12px;
   font-family: var(--font-app);
   font-weight: 600;
@@ -381,7 +381,7 @@
 .gel-peak-table th,
 .gel-peak-table td {
   padding: var(--space-6) var(--space-8);
-  border-bottom: 1px solid var(--gel-table-divider);
+  border-bottom: 1px solid var(--theme-border-soft);
   text-align: left;
 }
 
@@ -648,16 +648,16 @@
 }
 
 .gel-viewer-toolbar .ghost-btn {
-  border: 1px solid var(--gel-chart-border);
-  background: var(--gel-chart-surface);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface);
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 .gel-viewer-toolbar .ghost-btn.is-active,
 .gel-tool-actions .ghost-btn.is-active {
-  border-color: var(--gel-active-border);
-  background: var(--gel-active-background);
-  color: var(--gel-active-text);
+  border-color: var(--theme-success-line);
+  background: var(--theme-success-soft);
+  color: var(--theme-success-ink);
 }
 
 .gel-viewer-toolbar .gel-viewer-icon-btn {
@@ -754,7 +754,7 @@
   gap: var(--space-10);
   min-height: 32px;
   padding: var(--space-8) 0;
-  color: var(--gel-label);
+  color: var(--theme-text-muted);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -795,8 +795,8 @@
   min-width: 0;
   min-height: 2.125rem;
   padding: var(--space-6) var(--space-8);
-  border: 1px solid var(--gel-chart-border);
-  background: var(--gel-chart-surface);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface);
   font-size: 0.75rem;
   line-height: 1.25;
   white-space: normal;
@@ -959,10 +959,10 @@
 
 .gel-lane-table-label-head,
 .gel-lane-table-label-cell {
-  border: 1px solid var(--gel-chart-border);
+  border: 1px solid var(--theme-border-soft);
   padding: 0;
   text-align: center;
-  background: var(--gel-table-background);
+  background: var(--theme-surface);
 }
 
 .gel-lane-table-label-head {
@@ -970,12 +970,12 @@
   place-items: center;
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--gel-table-header-text);
-  background: var(--gel-table-header-background);
+  color: var(--theme-text);
+  background: var(--theme-surface-subtle);
 }
 
 .gel-lane-table-label-cell {
-  background: var(--gel-table-muted-background);
+  background: var(--theme-surface-muted);
 }
 
 .gel-lane-table-grid-shell,
@@ -996,24 +996,24 @@
 
 .gel-lane-table th,
 .gel-lane-table td {
-  border: 1px solid var(--gel-chart-border);
+  border: 1px solid var(--theme-border-soft);
   padding: 0;
   height: 40px;
   text-align: center;
   vertical-align: middle;
-  background: var(--gel-table-background);
+  background: var(--theme-surface);
 }
 
 .gel-lane-table thead th {
   font-size: 0.72rem;
   font-weight: 600;
-  color: var(--gel-table-header-text);
-  background: var(--gel-table-header-background);
+  color: var(--theme-text);
+  background: var(--theme-surface-subtle);
 }
 
 .gel-lane-table tbody th {
   font-weight: 500;
-  background: var(--gel-table-muted-background);
+  background: var(--theme-surface-muted);
 }
 
 .gel-lane-table .gel-lane-table-excluded-cell {
@@ -1039,19 +1039,19 @@
 }
 
 .gel-lane-table-input::placeholder {
-  color: var(--gel-table-placeholder);
+  color: var(--theme-text-muted);
 }
 
 .gel-lane-table-input:focus {
   outline: none;
-  background: var(--gel-point-border);
+  background: var(--theme-surface);
 }
 
 /* Extracted from ui/css/themes/modes.css */
 .gel-canvas-shell {
-  border: 1px solid var(--gel-chart-border);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
-  background: var(--gel-table-background);
+  background: var(--theme-surface);
   overflow: visible;
   min-height: 0;
   max-height: none;
@@ -1078,12 +1078,12 @@
 }
 
 body.theme-night .gel-canvas-shell {
-  border-color: var(--gel-table-border);
-  background: var(--gel-table-background);
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface);
 }
 
 body.theme-night .gel-lane-profile-picker {
-  color: var(--gel-label);
+  color: var(--theme-text-muted);
 }
 
 body.theme-night .gel-lane-profile-chart-shell {
@@ -1092,11 +1092,11 @@ body.theme-night .gel-lane-profile-chart-shell {
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-grid {
-  stroke: var(--gel-chart-grid);
+  stroke: var(--theme-border-soft);
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-window {
-  fill: var(--gel-chart-selection);
+  fill: var(--theme-accent-soft);
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-path {
@@ -1105,21 +1105,21 @@ body.theme-night .gel-lane-profile-chart .lane-profile-path {
 
 body.theme-night .gel-lane-profile-chart .lane-profile-peak {
   fill: var(--gel-path);
-  stroke: var(--gel-point-border);
+  stroke: var(--theme-surface);
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-axis-label,
 body.theme-night .gel-lane-profile-chart .lane-profile-empty {
-  fill: var(--gel-label);
+  fill: var(--theme-text-muted);
 }
 
 body.theme-night .gel-peak-editor-chart .peak-editor-frame {
-  fill: var(--gel-chart-surface);
-  stroke: var(--gel-chart-border);
+  fill: var(--theme-surface);
+  stroke: var(--theme-border-soft);
 }
 
 body.theme-night .gel-peak-editor-chart .peak-editor-grid {
-  stroke: var(--gel-chart-grid);
+  stroke: var(--theme-border-soft);
 }
 
 body.theme-night .gel-peak-editor-chart .peak-editor-path-shadow {
@@ -1136,63 +1136,63 @@ body.theme-night .gel-peak-editor-chart .peak-editor-baseline-label,
 body.theme-night .gel-peak-editor-chart .peak-editor-divider-label,
 body.theme-night .gel-peak-editor-chart .peak-editor-hover-label,
 body.theme-night .gel-peak-editor-chart .peak-editor-empty {
-  fill: var(--gel-label);
+  fill: var(--theme-text-muted);
 }
 
 body.theme-night .gel-peak-table th,
 body.theme-night .gel-peak-table td {
-  border-color: var(--gel-table-border);
+  border-color: var(--theme-border-soft);
 }
 
 body.theme-night .gel-tool-groups,
 body.theme-night .gel-tool-group {
-  border-color: var(--gel-chart-border);
+  border-color: var(--theme-border-soft);
 }
 
 body.theme-night .gel-viewer-toolbar .ghost-btn,
 body.theme-night .gel-tool-actions .ghost-btn,
 body.theme-night .gel-tool-footer .ghost-btn {
-  border-color: var(--gel-chart-border);
-  background: var(--gel-table-background);
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface);
 }
 
 body.theme-night .gel-viewer-toolbar .ghost-btn.is-active,
 body.theme-night .gel-tool-actions .ghost-btn.is-active {
-  border-color: var(--gel-active-border);
-  background: var(--gel-active-background);
-  color: var(--gel-active-text);
+  border-color: var(--theme-success-line);
+  background: var(--theme-success-soft);
+  color: var(--theme-success-ink);
 }
 
 body.theme-night .gel-lane-table th,
 body.theme-night .gel-lane-table td {
-  border-color: var(--gel-table-border);
-  background: var(--gel-table-background);
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface);
 }
 
 body.theme-night .gel-lane-table thead th {
-  color: var(--gel-table-header-text);
-  background: var(--gel-table-header-background);
+  color: var(--theme-text);
+  background: var(--theme-surface-subtle);
 }
 
 body.theme-night .gel-lane-table-label-head {
-  color: var(--gel-table-header-text);
-  background: var(--gel-table-header-background);
+  color: var(--theme-text);
+  background: var(--theme-surface-subtle);
 }
 
 body.theme-night .gel-lane-table-label-cell {
-  background: var(--gel-table-muted-background);
+  background: var(--theme-surface-muted);
 }
 
 body.theme-night .gel-lane-table-input {
-  color: var(--gel-table-text);
+  color: var(--theme-text);
 }
 
 body.theme-night .gel-lane-table-input::placeholder {
-  color: var(--gel-table-placeholder);
+  color: var(--theme-text-muted);
 }
 
 body.theme-night .gel-lane-table-input:focus {
-  background: var(--gel-table-focus-background);
+  background: var(--theme-surface-elevated);
 }
 
 @media (min-width: 1100px) {
@@ -1365,7 +1365,7 @@ body.theme-night .gel-lane-table-input:focus {
 .gel-cell-table th,
 .gel-cell-table td {
   padding: var(--space-4) var(--space-8);
-  border-bottom: 1px solid var(--gel-table-divider);
+  border-bottom: 1px solid var(--theme-border-soft);
   text-align: left;
 }
 
@@ -1381,7 +1381,7 @@ body.theme-night .gel-lane-table-input:focus {
 }
 
 .gel-cell-table tbody tr.is-empty td {
-  color: var(--gel-empty-text);
+  color: var(--theme-text-muted);
 }
 
 .gel-cell-table tbody tr.is-has-band td.gel-cell-hasband {
@@ -1390,5 +1390,5 @@ body.theme-night .gel-lane-table-input:focus {
 }
 
 .gel-cell-table tbody tr.is-empty td.gel-cell-hasband {
-  color: var(--gel-empty-text);
+  color: var(--theme-text-muted);
 }

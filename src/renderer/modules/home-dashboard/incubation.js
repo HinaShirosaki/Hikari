@@ -157,15 +157,15 @@ export function initIncubationWidget({
         const dayDelta = reminder
           ? Math.round((reminder.getTime() - today.getTime()) / 86400000)
           : null;
-        let detail = 'No reminder set.';
+        let status = { text: 'No reminder', tone: 'plain' };
         if (dayDelta === 0) {
-          detail = 'Reminder today.';
+          status = { text: 'Check today', tone: 'warn' };
         } else if (dayDelta === 1) {
-          detail = 'Reminder tomorrow.';
+          status = { text: 'Tomorrow', tone: 'neutral' };
         } else if (dayDelta !== null && dayDelta > 1) {
-          detail = `Reminder in ${dayDelta} day(s).`;
+          status = { text: `In ${dayDelta} days`, tone: 'plain' };
         } else if (dayDelta !== null && dayDelta < 0) {
-          detail = `Reminder overdue by ${Math.abs(dayDelta)} day(s).`;
+          status = { text: `Overdue ${Math.abs(dayDelta)} d`, tone: 'danger' };
         }
         return {
           sourceIndex: index,
@@ -173,7 +173,7 @@ export function initIncubationWidget({
           reminderDate: normalized.reminderDate,
           dayDelta,
           isDue: dayDelta !== null && dayDelta <= 0,
-          detail
+          status
         };
       })
       .filter(Boolean)
@@ -193,35 +193,36 @@ export function initIncubationWidget({
   function renderIncubationWidget(locations) {
     if (!locations.length) {
       summary.textContent = '';
-      list.innerHTML = '';
+      summary.hidden = true;
+      list.innerHTML = '<p class="home-empty-note">No locations yet. Add your shaker or incubator to get a reminder the next morning.</p>';
       panelList.innerHTML = '';
       return;
     }
     const dueCount = locations.filter((location) => location.isDue).length;
-    summary.textContent = `${dueCount} due · ${locations.length} location${locations.length === 1 ? '' : 's'}`;
-    list.innerHTML = locations.map((location) => `
+    summary.textContent = dueCount ? `${dueCount} due` : String(locations.length);
+    summary.classList.toggle('is-soon', dueCount > 0);
+    summary.setAttribute('aria-label', `${dueCount} due · ${locations.length} location${locations.length === 1 ? '' : 's'}`);
+    summary.hidden = false;
+    list.innerHTML = locations.map((location) => {
+      const isSet = location.dayDelta === 1;
+      const name = safeText(location.name);
+      return `
       <article class="home-row home-incubation-row">
-        <svg class="home-incubation-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14.5V5a3 3 0 0 1 6 0v9.5a5 5 0 1 1-6 0ZM12 8v10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path></svg>
-        <div class="home-row-copy">
-          <div class="home-row-name">${safeText(location.name)}</div>
-          <div class="home-row-meta${location.isDue ? ' is-due' : ''}">${safeText(location.detail)}</div>
-        </div>
-        <div class="home-row-end">
-          ${location.reminderDate ? `<time class="home-row-tag" datetime="${safeText(location.reminderDate)}">${safeText(parseLocalDate(location.reminderDate).toLocaleDateString([], { month: 'short', day: 'numeric' }))}</time>` : ''}
-          <button
-            type="button"
-            class="home-row-action"
-            data-dashboard-incubation-remind="${location.sourceIndex}"
-            aria-label="Set reminder for tomorrow for ${safeText(location.name)}"
-            title="Remind tomorrow"
-          >
-            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-              <path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
-            </svg>
-          </button>
-        </div>
+        <svg class="home-incubation-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        <span class="home-row-name">${name}</span>
+        <span class="home-status-pill" data-tone="${location.status.tone}">${safeText(location.status.text)}</span>
+        <button
+          type="button"
+          class="home-row-action home-incubation-remind${isSet ? ' is-set' : ''}"
+          data-dashboard-incubation-remind="${location.sourceIndex}"
+          aria-label="${isSet ? `Reminder set for tomorrow for ${name}` : `Remind me tomorrow about ${name}`}"
+          title="${isSet ? 'Reminder set for tomorrow' : 'Remind me tomorrow'}"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </button>
       </article>
-    `).join('');
+    `;
+    }).join('');
     panelList.innerHTML = list.innerHTML;
   }
 

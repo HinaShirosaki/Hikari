@@ -1,11 +1,8 @@
 'use strict';
 
-const fsPromises = require('node:fs/promises');
 const path = require('node:path');
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray: defaultAsArray } = require('../../../lib/normalize.js');
+const { ensurePathWithinRoot, pathExists } = require('../../../lib/path-safety.js');
 
 function defaultCleanText(value) {
   const text = String(value || '');
@@ -61,33 +58,6 @@ function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
     return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
   }
   return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
-}
-
-function ensurePathWithinRoot(rootPath, targetPath) {
-  const resolvedRoot = path.resolve(rootPath);
-  const resolvedTarget = path.resolve(targetPath);
-  if (resolvedTarget === resolvedRoot) {
-    return resolvedTarget;
-  }
-  const rootWithSep = resolvedRoot.endsWith(path.sep)
-    ? resolvedRoot
-    : `${resolvedRoot}${path.sep}`;
-  if (!resolvedTarget.startsWith(rootWithSep)) {
-    throw new Error('Target path must be inside the configured storage path.');
-  }
-  return resolvedTarget;
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fsPromises.access(targetPath);
-    return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return false;
-    }
-    throw error;
-  }
 }
 
 async function getUniqueFilePath(folderPath, fileName, reservedPaths = null) {

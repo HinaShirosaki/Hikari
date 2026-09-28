@@ -1,13 +1,15 @@
 'use strict';
 
-const { getBundlePaths } = require('./storage-paths');
-const { readNotebookRowsFromSqlite, readPaperRowsFromSqlite, readProtocolRowsFromSqlite, readSqliteBundleIndex } = require('./storage-sql-read');
+const { RECORD_FOLDERS, getBundlePaths } = require('./storage-paths');
+const { readChemicalIndex } = require('./chemical-index-guard');
+const { readPaperRecordFiles } = require('./paper-discovery');
+const { readSampleContainers } = require('./sample-containers');
 const { asArray, cleanText, cloneJson, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 const { readExperimentLogSidecar } = require('./experiment-log-storage');
 const { hydrateProjectRootFromStoragePath } = require('./hydration/project-folders.js');
-const { getLegacyProtocolsFilePath, getLegacySqlitePath, hydrateSamplesRootFromStoragePath, readProtocolDirectory } = require('./hydration/protocol-directory.js');
-const { hydrateInventoryFromSqliteSnapshot, mergeInventorySqliteSnapshots, mergePaperExperimentLinks, mergePaperRecords, mergeRecordsById, mergeSamplesSidecarIntoSnapshot, readNotebookEntriesFromSidecar, readProtocolsFromSidecar, readRecordIndexPayloadsByType } = require('./hydration/sqlite-inventory.js');
+const { getLegacyProtocolsFilePath, hydrateSamplesRootFromStoragePath, readProtocolDirectory, readRecordFolders } = require('./hydration/protocol-directory.js');
+const { hydrateInventoryFromSqliteSnapshot, mergePaperExperimentLinks, mergePaperRecords, mergeRecordsById, mergeSamplesSidecarIntoSnapshot, readNotebookEntriesFromSidecar, readProtocolsFromSidecar } = require('./hydration/sqlite-inventory.js');
 
 async function hydrateSnapshotFromBundle({
   dataFilePath,
@@ -26,7 +28,7 @@ async function hydrateSnapshotFromBundle({
     warnings: []
   };
 
-  if (!bundlePaths.basePath && !bundlePaths.sqlitePath && !bundlePaths.protocolsPath && !bundlePaths.notebookPagesPath && !bundlePaths.samplesPath) {
+  if (!bundlePaths.basePath && !bundlePaths.samplesRootPath && !bundlePaths.protocolsPath && !bundlePaths.notebookPagesPath) {
     return {
       snapshot: nextSnapshot,
       bundlePaths,
@@ -61,13 +63,10 @@ async function hydrateSnapshotFromBundle({
     migration.warnings.push(notebookSidecar.error);
   }
 
-  const samplesSidecar = await readJsonFile(bundlePaths.samplesPath);
-  if (samplesSidecar.ok) {
-    if (mergeSamplesSidecarIntoSnapshot(nextSnapshot, samplesSidecar.data)) {
-      migration.applied.push('samples_folder');
-    }
-  } else if (samplesSidecar.exists && samplesSidecar.error) {
-    migration.warnings.push(samplesSidecar.error);
+  const sampleContainers = await readSampleContainers(bundlePaths.samplesRootPath);
+  migration.warnings.push(...sampleContainers.warnings);
+  if (sampleContainers.exists && mergeSamplesSidecarIntoSnapshot(nextSnapshot, sampleContainers)) {
+    migration.applied.push('samples_folder');
   }
 
   const experimentLogSidecar = await readExperimentLogSidecar(bundlePaths.experimentLogPath);
@@ -128,50 +127,26 @@ async function hydrateSnapshotFromBundle({
     }
   }
 
-  let commonSqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
-  if (commonSqliteData.warning) {
-    migration.warnings.push(commonSqliteData.warning);
+  const chemicalSqliteData = await readChemicalIndex(bundlePaths.chemicalsSqlitePath);
+  migration.warnings.push(...[chemicalSqliteData.warning, chemicalSqliteData.alert].filter(Boolean));
+
+  if (hydrateInventoryFromSqliteSnapshot(nextSnapshot, chemicalSqliteData)) {
+    migration.applied.push('inventory_sqlite');
   }
-  if (!commonSqliteData.exists) {
-    commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
-    if (commonSqliteData.warning) {
-      migration.warnings.push(commonSqliteData.warning);
-    }
+  // Each stored PDF carries its paper record beside it.
+  const paperRecords = await readPaperRecordFiles(storageRootPath || bundlePaths.storageRootPath);
+  migration.warnings.push(...paperRecords.warnings);
+  if (paperRecords.records.length) {
+    nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, paperRecords.records);
+    migration.applied.push('paper_files');
   }
-  let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
-  if (chemicalSqliteData.warning) {
-    migration.warnings.push(chemicalSqliteData.warning);
-  }
-  if (!chemicalSqliteData.exists && commonSqliteData.exists) {
-    chemicalSqliteData = commonSqliteData;
-  }
-  const inventorySqliteData = mergeInventorySqliteSnapshots(chemicalSqliteData, commonSqliteData);
-  if (commonSqliteData.exists || chemicalSqliteData.exists) {
-    const hydratedInventory = hydrateInventoryFromSqliteSnapshot(nextSnapshot, inventorySqliteData);
-    if (hydratedInventory) {
-      migration.applied.push('inventory_sqlite');
-    }
-    if ((!Array.isArray(nextSnapshot.protocols) || !nextSnapshot.protocols.length) && asArray(commonSqliteData.protocolRows).length) {
-      nextSnapshot.protocols = readProtocolRowsFromSqlite(commonSqliteData.protocolRows);
-      migration.applied.push('protocol_sqlite_fallback');
-    }
-    if ((!Array.isArray(nextSnapshot.notebookEntries) || !nextSnapshot.notebookEntries.length) && asArray(commonSqliteData.notebookRows).length) {
-      nextSnapshot.notebookEntries = readNotebookRowsFromSqlite(commonSqliteData.notebookRows);
-      migration.applied.push('notebook_sqlite_fallback');
-    }
-    if (asArray(commonSqliteData.paperRows).length) {
-      nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, readPaperRowsFromSqlite(commonSqliteData.paperRows));
-      migration.applied.push('paper_sqlite');
-    }
-    const assayRows = readRecordIndexPayloadsByType(commonSqliteData.recordRows, 'assay');
-    if (assayRows.length) {
-      nextSnapshot.assays = mergeRecordsById(nextSnapshot.assays, assayRows, 'assay');
-      migration.applied.push('assay_record_index');
-    }
-    const gelRows = readRecordIndexPayloadsByType(commonSqliteData.recordRows, 'gel');
-    if (gelRows.length) {
-      nextSnapshot.gelAnalyses = mergeRecordsById(nextSnapshot.gelAnalyses, gelRows, 'gel');
-      migration.applied.push('gel_record_index');
+  // Assays and gels live one record file per folder.
+  for (const [snapshotKey, folders] of Object.entries(RECORD_FOLDERS)) {
+    const found = await readRecordFolders(bundlePaths[folders.rootKey], folders);
+    migration.warnings.push(...found.warnings);
+    if (found.records.length) {
+      nextSnapshot[snapshotKey] = mergeRecordsById(nextSnapshot[snapshotKey], found.records, folders.key);
+      migration.applied.push(`${folders.key}_folders`);
     }
   }
 
@@ -182,7 +157,7 @@ async function hydrateSnapshotFromBundle({
       protocolsPath: bundlePaths.protocolsPath,
       notebookPagesPath: bundlePaths.notebookPagesPath,
       experimentLogPath: bundlePaths.experimentLogPath,
-      samplesPath: bundlePaths.samplesPath
+      samplesRootPath: bundlePaths.samplesRootPath
     },
     migration: migration.applied.length || migration.warnings.length ? migration : null
   };

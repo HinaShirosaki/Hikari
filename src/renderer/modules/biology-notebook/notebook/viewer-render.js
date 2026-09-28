@@ -58,7 +58,6 @@ function createNotebookViewerRender({
   } = elements;
 
   function renderProtocolViewer({
-    project,
     protocol,
     entry,
     isSavedEntry,
@@ -85,12 +84,7 @@ function createNotebookViewerRender({
       notebookProtocolTitle.hidden = false;
     }
     syncNotebookTitle(protocol);
-    notebookProtocolMeta.textContent = buildViewerMeta({
-      project,
-      entry,
-      isSavedEntry,
-      projects: state.projects
-    });
+    notebookProtocolMeta.textContent = buildViewerMeta({ entry });
 
     if (entry) {
       seedSampleLinkDrafts(entry);

@@ -1,4 +1,9 @@
 import { asArray } from '../../../lib/normalize.js';
+import {
+  normalizeIsoTimestamp as normalizeSharedIsoTimestamp,
+  normalizeProtocolMaterials,
+  normalizeProtocolTroubleshooting
+} from '../../../../shared/protocol-normalization.mjs';
 
 function trimText(value, limit = 0) {
   const text = String(value || '').trim();
@@ -20,7 +25,7 @@ function normalizeStepEntries(rawSteps = []) {
     .map((step, index) => {
       if (typeof step === 'string') {
         const text = trimText(step, 2000);
-        return text ? { id: `step-${index + 1}`, text, placeholders: [] } : null;
+        return text ? { text, placeholders: [] } : null;
       }
       const source = step && typeof step === 'object' && !Array.isArray(step) ? step : {};
       const text = trimText(source.text || source.instruction || source.action || source.description, 2000);
@@ -28,7 +33,6 @@ function normalizeStepEntries(rawSteps = []) {
         return null;
       }
       return {
-        id: trimText(source.id, 120) || `step-${index + 1}`,
         text,
         placeholders: asArray(source.placeholders)
           .map((placeholder, placeholderIndex) => {
@@ -51,39 +55,14 @@ function normalizeStepEntries(rawSteps = []) {
     .slice(0, 160);
 }
 
-function normalizeMaterials(rawMaterials) {
-  if (Array.isArray(rawMaterials)) {
-    return rawMaterials.map((item) => trimText(item, 220)).filter(Boolean).slice(0, 80);
-  }
-  return trimText(rawMaterials, 6000)
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean)
-    .slice(0, 80);
-}
-
-function normalizeTroubleshooting(rawTroubleshooting) {
-  if (Array.isArray(rawTroubleshooting)) {
-    return rawTroubleshooting
-      .map((item) => {
-        if (typeof item === 'string') {
-          return trimText(item, 1200);
-        }
-        const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-        return [
-          trimText(source.problem, 400) ? `Problem: ${trimText(source.problem, 400)}` : '',
-          trimText(source.possible_cause || source.possibleCause, 400)
-            ? `Possible cause: ${trimText(source.possible_cause || source.possibleCause, 400)}`
-            : '',
-          trimText(source.solution, 400) ? `Solution: ${trimText(source.solution, 400)}` : ''
-        ].filter(Boolean).join('; ');
-      })
-      .filter(Boolean)
-      .join('\n');
-  }
-  return trimText(rawTroubleshooting, 6000);
-}
+const normalizeMaterials = (rawMaterials) => normalizeProtocolMaterials(rawMaterials, {
+  text: trimText,
+  maxItems: 80
+});
+const normalizeTroubleshooting = (rawTroubleshooting) => normalizeProtocolTroubleshooting(
+  rawTroubleshooting,
+  { text: trimText }
+);
 
 export function normalizeGeneratedProtocol(rawProtocol) {
   const source = rawProtocol && typeof rawProtocol === 'object' && !Array.isArray(rawProtocol)
@@ -184,17 +163,9 @@ function buildUniqueProtocolName(baseName = '', protocols = []) {
   return candidate;
 }
 
-function normalizeIsoTimestamp(rawValue, fallback = '') {
-  const candidate = trimText(rawValue, 120);
-  if (!candidate) {
-    return fallback;
-  }
-  const timestamp = Date.parse(candidate);
-  if (!Number.isFinite(timestamp)) {
-    return fallback;
-  }
-  return new Date(timestamp).toISOString();
-}
+const normalizeIsoTimestamp = (rawValue, fallback = '') => (
+  normalizeSharedIsoTimestamp(rawValue, fallback, { text: trimText })
+);
 
 export function buildGeneratedProtocolRecord(protocol, { protocols = [], createId } = {}) {
   const normalizedProtocol = normalizeGeneratedProtocol(protocol);

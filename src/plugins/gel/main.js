@@ -1,10 +1,10 @@
 // Gel's host adapter. The workspace owns its UI and analysis code under
-// ./vendor; this file supplies the narrow Hikari services it needs.
+// ./workspace; this file supplies the narrow Hikari services it needs.
 
-import { initGelAnalysis } from './vendor/modules/gel/index.js';
-import { createId, safeText } from './vendor/modules/utils.js';
+import { initGelAnalysis } from './workspace/index.js';
+import { createId, safeText } from './lib/app-utils.js';
 import { initPluginLeftRailResizer } from './left-rail.js';
-import { installSearchFieldLens } from './vendor/lib/search-field-lens.js';
+import { installSearchFieldLens } from './lib/search-field-lens.js';
 import { createGelStorageRecords } from './storage-records.js';
 
 const hikari = window.HikariPlugin?.hikari;

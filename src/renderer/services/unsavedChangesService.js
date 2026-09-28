@@ -3,7 +3,7 @@ import { showTransientNotice } from '../lib/notify.js';
 const EDITOR_SOURCES = Object.freeze([
   { key: 'sampleRegistry', label: 'Sample' },
   { key: 'protocol', label: 'Protocol' },
-  { key: 'assay', label: 'Assay' },
+  { key: 'assay', label: 'Plate' },
   { key: 'biologyNotebook', label: 'Notebook' }
 ]);
 

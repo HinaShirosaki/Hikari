@@ -1,9 +1,10 @@
 'use strict';
 
-const { SCHEDULED_TASK } = require('../../shared/ipc/channels');
+const { PAPER_FINDING, SCHEDULED_TASK } = require('../../shared/ipc/channels');
 const { ensureObject } = require('../lib/normalize.js');
+const { createPaperFindingScheduledTasks } = require('../papers/finding/paper-finding-scheduled-tasks.js');
 
-function registerScheduledTaskIpc({ ipcMain, scheduledTaskService, cleanText } = {}) {
+function registerScheduledTaskIpc({ ipcMain, scheduledTaskService, paperDownloadRuntime, cleanText } = {}) {
   const clean = typeof cleanText === 'function'
     ? cleanText
     : ((value, maxLength = 2400) => String(value || '').trim().slice(0, maxLength));
@@ -16,6 +17,8 @@ function registerScheduledTaskIpc({ ipcMain, scheduledTaskService, cleanText } =
       ...(error?.scheduledTaskRun ? { run: error.scheduledTaskRun } : {})
     };
   }
+
+  const paperFinding = createPaperFindingScheduledTasks({ scheduledTaskService, paperDownloadRuntime });
 
   ipcMain.handle(SCHEDULED_TASK.LIST, async () => {
     try {
@@ -81,6 +84,52 @@ function registerScheduledTaskIpc({ ipcMain, scheduledTaskService, cleanText } =
         : { ok: false, not_found: true, error: 'Scheduled task was not found.' };
     } catch (error) {
       return failure(error, 'Failed to run scheduled task.');
+    }
+  });
+
+  ipcMain.handle(PAPER_FINDING.LIST, async () => {
+    try {
+      return { ok: true, tasks: await paperFinding.listTasks() };
+    } catch (error) {
+      return { ...failure(error, 'Failed to list paper-finding tasks.'), tasks: [] };
+    }
+  });
+
+  ipcMain.handle(PAPER_FINDING.CREATE, async (_event, payload) => {
+    try {
+      return { ok: true, task: await paperFinding.createTask(ensureObject(payload)) };
+    } catch (error) {
+      return failure(error, 'Failed to create paper-finding task.');
+    }
+  });
+
+  ipcMain.handle(PAPER_FINDING.UPDATE, async (_event, payload) => {
+    try {
+      const input = ensureObject(payload);
+      const task = await paperFinding.updateTask(clean(input.id, 160), input.updates);
+      return task
+        ? { ok: true, task }
+        : { ok: false, not_found: true, error: 'Paper-finding task was not found.' };
+    } catch (error) {
+      return failure(error, 'Failed to update paper-finding task.');
+    }
+  });
+
+  ipcMain.handle(PAPER_FINDING.SCHEDULE, async (_event, payload) => {
+    try {
+      return { ok: true, task: await paperFinding.scheduleTask(ensureObject(payload)) };
+    } catch (error) {
+      return failure(error, 'Failed to schedule paper finding.');
+    }
+  });
+
+  ipcMain.handle(PAPER_FINDING.DOWNLOAD, async (_event, payload) => {
+    try {
+      const input = ensureObject(payload);
+      const result = await paperFinding.downloadPaper(clean(input.task_id, 160), input.paper);
+      return result || { ok: false, not_found: true, error: 'Paper-finding task was not found.' };
+    } catch (error) {
+      return failure(error, 'Failed to download paper.');
     }
   });
 }

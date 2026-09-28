@@ -1,32 +1,19 @@
 'use strict';
 
-const { asArray, cleanText, ensureObject, parseJsonObject } = require('../storage-utils');
+const { asArray, cleanText, ensureObject } = require('../storage-utils');
+const { mergePaperExperimentLinks: mergeSharedPaperExperimentLinks } = require('../../../shared/paper-experiment-links.mjs');
 
 function isPermissionDeniedError(error) {
   return error?.code === 'EPERM' || error?.code === 'EACCES';
 }
 
+// The chemicals index is the only copy of the lab chemical inventory.
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
-  const inventoryPersonalMap = {};
-  asArray(sqliteData.inventoryPersonal).forEach((row) => {
-    const zone = cleanText(row.zone, 200);
-    if (!zone) {
-      return;
-    }
-    if (!inventoryPersonalMap[zone]) {
-      inventoryPersonalMap[zone] = [];
-    }
-    inventoryPersonalMap[zone].push(row.item);
-  });
-
   const hasSqlChemicals = asArray(sqliteData.inventoryChemicals).length > 0;
-  const hasSqlPersonal = Object.keys(inventoryPersonalMap).length > 0;
-  const hasSqlSamples = asArray(sqliteData.inventorySamples).length > 0;
   const hasSqlMeta = Object.keys(ensureObject(sqliteData.inventoryMeta)).length > 0;
-  if (!hasSqlChemicals && !hasSqlPersonal && !hasSqlSamples && !hasSqlMeta) {
+  if (!hasSqlChemicals && !hasSqlMeta) {
     return false;
   }
-
   const existingLabInventory = ensureObject(nextSnapshot.labInventory);
   nextSnapshot.labInventory = {
     ...existingLabInventory,
@@ -42,35 +29,7 @@ function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
     locationCodeMap: ensureObject(sqliteData.inventoryMeta?.lab_location_code_map),
     locationCodeNextByLocation: ensureObject(sqliteData.inventoryMeta?.lab_location_code_next_by_location)
   };
-
-  const hasContainers = Object.values(ensureObject(nextSnapshot.inventory)).some((list) => asArray(list).length > 0);
-  if (!hasContainers && hasSqlPersonal) {
-    nextSnapshot.inventory = inventoryPersonalMap;
-  }
-  if ((!Array.isArray(nextSnapshot.samples) || !nextSnapshot.samples.length) && hasSqlSamples) {
-    nextSnapshot.samples = asArray(sqliteData.inventorySamples);
-  }
-
   return true;
-}
-
-function mergeInventorySqliteSnapshots(primarySqliteData, secondarySqliteData) {
-  const primary = ensureObject(primarySqliteData);
-  const secondary = ensureObject(secondarySqliteData);
-  return {
-    inventoryChemicals: asArray(primary.inventoryChemicals).length
-      ? asArray(primary.inventoryChemicals)
-      : asArray(secondary.inventoryChemicals),
-    inventoryPersonal: asArray(primary.inventoryPersonal).length
-      ? asArray(primary.inventoryPersonal)
-      : asArray(secondary.inventoryPersonal),
-    inventorySamples: asArray(primary.inventorySamples).length
-      ? asArray(primary.inventorySamples)
-      : asArray(secondary.inventorySamples),
-    inventoryMeta: Object.keys(ensureObject(primary.inventoryMeta)).length
-      ? ensureObject(primary.inventoryMeta)
-      : ensureObject(secondary.inventoryMeta)
-  };
 }
 
 function readProtocolsFromSidecar(payload) {
@@ -177,52 +136,20 @@ function mergePaperRecords(existingRecords, importedRecords) {
   return [...byId.values()];
 }
 
-function readRecordIndexPayloadsByType(rows, recordType) {
-  const targetType = cleanText(recordType, 80).toLowerCase();
-  if (!targetType) {
-    return [];
-  }
-  return asArray(rows)
-    .map((row) => ensureObject(row))
-    .filter((row) => cleanText(row.record_type, 80).toLowerCase() === targetType)
-    .map((row) => parseJsonObject(row.raw_json))
-    .filter((record) => record && typeof record === 'object' && !Array.isArray(record));
-}
-
-function mergePaperExperimentLinks(existingLinks, importedLinks) {
-  const byKey = new Map();
-  const pushLink = (rawLink, prefix, index) => {
-    const link = ensureObject(rawLink);
-    const substantiveKey = [
-      cleanText(link.paperId, 220),
-      cleanText(link.entryId, 220),
-      cleanText(link.projectId, 220),
-      cleanText(link.note, 600)
-    ].join('::');
-    const key = substantiveKey || `${prefix}_${index + 1}`;
-    if (!substantiveKey && !Object.keys(link).length) {
-      return;
-    }
-    byKey.set(key, {
-      ...(byKey.get(key) || {}),
-      ...link
-    });
-  };
-  asArray(existingLinks).forEach((link, index) => pushLink(link, 'existing', index));
-  asArray(importedLinks).forEach((link, index) => pushLink(link, 'imported', index));
-  return [...byKey.values()];
-}
+const mergePaperExperimentLinks = (existingLinks, importedLinks) => mergeSharedPaperExperimentLinks(
+  existingLinks,
+  importedLinks,
+  { text: cleanText, skipEmpty: true }
+);
 
 module.exports = {
   hasOwn,
   hydrateInventoryFromSqliteSnapshot,
   isPermissionDeniedError,
-  mergeInventorySqliteSnapshots,
   mergePaperExperimentLinks,
   mergePaperRecords,
   mergeRecordsById,
   mergeSamplesSidecarIntoSnapshot,
   readNotebookEntriesFromSidecar,
-  readProtocolsFromSidecar,
-  readRecordIndexPayloadsByType
+  readProtocolsFromSidecar
 };

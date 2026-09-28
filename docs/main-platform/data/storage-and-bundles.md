@@ -45,12 +45,70 @@ Given a base data file, it derives:
 
 - the primary data file
 - `*.protocols.json`
-- `*.index.sqlite`
-- `Samples/samples.json`
+- the `Samples/` container files
 
-`getBundlePaths(...)` is the shared path builder used throughout the folder. The layout has grown additional sidecars such as `protocol/protocol.index.sqlite` and a `knowledgebase/knowledge.index.sqlite`. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
+`getBundlePaths(...)` is the shared path builder used throughout the folder. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
+
+Every save rebuilds these from the snapshot. JSON is the only copy wherever a module's records have a folder layout; SQLite is kept only where a module still reads or searches through it:
+
+| Data | Stored as |
+| --- | --- |
+| Protocols | `Protocol/<name>__<id>/protocol.json` |
+| Notebook pages | page folders under `Project/` and `Workflow/` |
+| Workflow templates, runs | `Workflow/<template>__<id>/template.json`, `Workflow/<template>__<id>/<run>__<id>/workflow.json` |
+| Personal inventory, samples | `Samples/<zone>/<container>__<id>.json` per container, `Samples/<zone>/folders.json`, `Samples/unplaced.json` (see below) |
+| Assays | `Assays/<name>__<id>/assay.json`, beside the assay's artifacts |
+| Gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts |
+| Papers | `<file>.pdf.json` beside each stored PDF (under `Papers/`, `Project/<p>/Papers/`, `RelatedPapers/`): links, highlights, comments, bookmarks, summaries |
+| Chemicals | `hikari-chemicals.index.sqlite` (`inventory_chemicals`, `inventory_meta`) |
+
+Personal inventory is one file per container (`src/main/storage/sample-containers.js`). Each file holds the container's fields, its `wellCount`, and only the wells that hold a sample (or still carry legacy well text), with those samples inside the well entry; samples linked to a container but no well sit in the file's own `samples`. Loading rebuilds the full `wells` array from `wellCount`, so the renderer sees what it saved. Type-specific sample fields stay in each sample's `details`, which the agent inventory lookup searches and returns as a whole, so a new sample type or field needs no storage or search change. `folders.json` holds a zone's container folders, and `unplaced.json` the samples no container holds. A save deletes the file of a removed container, and a zone folder once it is empty.
+
+Hydration finds papers by walking the same folders paper discovery scans for PDFs and reading each PDF's `.json`; a record follows its PDF, so its `storedRelativePath` is taken from where the PDF actually is, and moving a stored file moves its record with it. It finds assays and gels by scanning `Assays/*/assay.json` and `Gels/*/gel.json`, and workflows by scanning `Workflow/*/template.json` and `Workflow/*/*/workflow.json`; there is no summary file or index. If two folders hold the same record id (a root saved by an older build, or a save interrupted between writing a renamed folder and pruning the old one), the most recently written file wins. A record whose `storageFolder` is already a folder under that root keeps it, so its record file sits next to its images and analysis results. Removing a record deletes only its record file (for workflows, `template.json` / `workflow.json`; results, notebook pages and `MEMORY.md` stay), and an assay or gel folder only once empty.
+
+`KnowledgeBase/knowledge.index.sqlite`, `KnowledgeBase/experiments.sqlite` and `SequenceViewer/sequence-library.sqlite` are owned and written by their own modules.
+
+The chemicals index is the only copy of the lab chemical inventory, so an unreadable one is never overwritten (`chemical-index-guard.js`). Loading moves it aside to `hikari-chemicals.index.sqlite.corrupt-<time>` and the next save starts a new file; if it cannot be moved, chemical writes are refused until a later load reads it again, while the rest of each save still goes through. Either way the storage import returns an `alerts` entry, which the renderer shows as an error notice.
 
 For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.json`. 
+
+### Paper knowledge storage
+
+`KnowledgeBase/knowledge.index.sqlite` contains only paper identity and location links:
+
+- `papers`: `id`, `doi`, `pmid`, `pmcid`, `title`, `pdf_sha256`, `wiki_path`. Title remains for identity lookup when external identifiers are missing.
+- `paper_locations`: `id`, `paper_id`, `scope`, `container`, `pdf_path`. A paper can appear in multiple projects or collections.
+
+Paper text is read directly from Markdown under `KnowledgeBase/papers.md/`. Descriptive metadata, processing status, timestamps, and location details live in each paper's `meta.json`. Search creates overlapping text windows in memory; there is no persisted `paper_chunks` table or SQLite text fallback. Missing Markdown is reported in search's `source_errors`. The redundant global `index.json` mirror is no longer written or read; older copies can remain on disk.
+
+New databases use the compact schema immediately. A legacy database is compacted on its next write, after missing JSON metadata has been preserved. The original database is retained once as `knowledge.index.sqlite.pre-compact.bak`, and `VACUUM` reclaims the live index's discarded pages. Reads do not migrate files. Malformed metadata stops migration without replacing the database or the invalid JSON.
+
+To compact an existing index immediately, with the app closed, run:
+
+```sh
+node scripts/maintenance/compact-paper-knowledge-index.js /path/to/KnowledgeBase/knowledge.index.sqlite
+```
+
+The recovery backup retains the original disk space until removed after verification.
+
+Paper intake also maintains `KnowledgeBase/experiments.sqlite`:
+
+- `experiments` stores one row per extracted experiment: `paper_id`, `ordinal`, `id`, `title`, `technique`, `variables`, `figure_ref`, `outcome`, and verbatim `evidence`. The key is `(paper_id, ordinal)` so paper-local or duplicate legacy experiment IDs cannot overwrite another experiment.
+- `papers` stores the intake paper ID (the folder under `papers.md`, not the separate knowledge-index identity), title, DOI, document type, summary, saved project IDs as JSON, source paths, and intake timestamps. Join on `paper_id` to trace an experiment to its paper, Markdown, figures, PDF, and `intake.json`.
+
+Each successful intake save replaces that paper's experiment rows; removed experiments and saved non-research classifications clear previous rows. Writes are serialized within the process and use atomic file replacement. The first save with a missing database backfills all saved intake records. `intake.json` remains the recoverable source, and current intake search continues to read it without writing SQLite. A SQLite failure is reported even when the JSON save succeeded.
+
+To backfill immediately, recover the derived database, or reconcile externally edited/deleted intake files, close the app and run:
+
+```sh
+node scripts/maintenance/rebuild-paper-experiments.js /path/to/workspace
+```
+
+Rebuilding uses saved intake records without calling an LLM or changing the JSON files. Unreadable or malformed intake records stop the rebuild before replacing the existing database.
+
+Agents consume this database through the `paper_experiments_sql` MCP tool. It accepts `sql`, optional positional `parameters`, and `limit` (50 by default, at most 200). One read-only `SELECT` or `WITH ... SELECT` can join `experiments` with `papers` on `paper_id`, filter, group, or count. The response contains `columns`, matching row-value arrays in `rows`, `row_count`, and explicit truncation. Schema inspection uses `SELECT * FROM pragma_table_info('experiments')`. Queries cover the current workspace library; project-specific callers must constrain paper IDs using project-summary retrieval.
+
+The tool opens a disposable in-memory snapshot and never persists changes or accepts a database path. SQL is parsed as a single statement and required to work as a SELECT subquery, with SQLite `query_only` enabled. Each query runs in a worker with a three-second deadline, a 64 MiB SQLite heap limit, a 48 KB result budget, and at most two active queries per process. Missing or corrupt databases return an error; reads do not trigger rebuilding. The tool can be disabled independently in Settings.
 
 ## Write path
 
@@ -58,19 +116,9 @@ For the standalone Chemicals workspace, the app now also supports a SQLite-only 
 
 1. protocol folders
 2. notebook-page folders
-3. `Samples/samples.json`
-4. a SQLite index built from the snapshot
-
-That SQLite file includes searchable tables for:
-
-- inventory chemicals
-- personal inventory
-- inventory samples
-- protocol index
-- notebook index
-- record index
-
-So the bundle sync step is not just archival. It also builds fast lookup state used elsewhere in the app.
+3. one file per personal-inventory container
+4. one record file per assay and gel folder, and one beside each stored paper PDF
+5. the chemicals SQLite index
 
 ## Read path
 
@@ -78,8 +126,9 @@ So the bundle sync step is not just archival. It also builds fast lookup state u
 
 1. protocol sidecar JSON
 2. legacy notebook-page sidecar JSON, if present
-3. `Samples/samples.json`
-4. SQLite inventory/record data
+3. personal-inventory container files
+4. the chemicals SQLite index
+5. assay and gel record folders, and paper records beside their PDFs
 
 It also returns a `migration` summary that reports which fallback or hydration sources were used.
 
@@ -92,7 +141,6 @@ That means a load can succeed even when the primary JSON is intentionally missin
 It:
 
 - scans a storage root for bundle candidate files
-- also recognizes standalone `*.index.sqlite` bundle indexes when no base data file exists
 - decides whether the folder is one Hikari has used before by looking at the folder itself — any of `Protocol/`, `Project/`, `Samples/`, `Workflow/`, `SequenceViewer/`, `KnowledgeBase/`, or a snapshot `.json` — and reports that as `recognized`
 - hydrates each discovered bundle
 - merges protocols, notebook entries, chemicals, and inventory across bundles

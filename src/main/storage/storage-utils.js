@@ -2,12 +2,9 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { resolveSqlJsWasmJsPath } = require('../lib/sqljs-path.js');
+const { SQLJS_WASM_JS_PATH, loadSqlJs } = require('../lib/sqlite.js');
 const { asArray } = require('../lib/normalize.js');
 
-const SQLJS_WASM_JS_PATH = resolveSqlJsWasmJsPath(__dirname);
-
-let sqlJsInitPromise = null;
 
 function sanitizeFolderName(value, fallback = 'item') {
   const cleaned = String(value || '')
@@ -121,16 +118,32 @@ function buildSearchText(parts) {
     .toLowerCase();
 }
 
-async function loadSqlJs() {
-  if (!sqlJsInitPromise) {
-    sqlJsInitPromise = (async () => {
-      const initSqlJs = require(SQLJS_WASM_JS_PATH);
-      return initSqlJs({
-        locateFile: (fileName) => path.join(path.dirname(SQLJS_WASM_JS_PATH), fileName)
-      });
-    })();
+// Reads a folder record file ({ [key]: record }) along with its mtime, for
+// keepLatestById. A file without a record id is skipped, with a warning if it
+// could not be parsed.
+async function readRecordFile(filePath, key, warnings) {
+  const payload = await readJsonFile(filePath);
+  const record = ensureObject(payload.ok ? payload.data?.[key] : null);
+  if (!cleanText(record.id, 220)) {
+    if (payload.exists && payload.error) {
+      warnings.push(payload.error);
+    }
+    return null;
   }
-  return sqlJsInitPromise;
+  const { mtimeMs } = await fs.stat(filePath).catch(() => ({ mtimeMs: 0 }));
+  return { record, mtimeMs };
+}
+
+// Two folders can hold the same record: a root saved by an older build, or a
+// save that crashed between writing a renamed record's new folder and pruning
+// the old one. The file the latest save wrote wins; merging in folder-name
+// order would let a stale copy override the current one.
+function keepLatestById(byId, found, value = found.record) {
+  const id = cleanText(found.record.id, 220);
+  const current = byId.get(id);
+  if (!current || found.mtimeMs > current.mtimeMs) {
+    byId.set(id, { mtimeMs: found.mtimeMs, value });
+  }
 }
 
 module.exports = {
@@ -140,11 +153,13 @@ module.exports = {
   cleanText,
   cloneJson,
   ensureObject,
+  keepLatestById,
   loadSqlJs,
   normalizeFileTimestamp,
   parseJsonArray,
   parseJsonObject,
   readJsonFile,
+  readRecordFile,
   sanitizeFolderName,
   toPosixRelative
 };

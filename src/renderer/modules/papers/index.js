@@ -4,6 +4,7 @@ import { createPapersActions } from './actions.js';
 import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
+import { resolveStoredPaperPath } from './storage.js';
 import { normalizePaperSummary } from './normalizers.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { boxesToPdfQuadPoints, normalizeHighlightBoxes, normalizePageDimension } from './pdf-viewer/pdf-viewer-geometry.js';
@@ -16,6 +17,7 @@ import { getPapersElements } from './management/elements.js';
 import { searchPaperDatabaseForSelectedText } from './management/paper-search-text.js';
 import { createPaperResearchBrief } from './research-brief.js';
 import { createPapersWorkspaceControls } from './workspace-controls.js';
+import { createPaperAgentChatContextGetter } from './agent-context.js';
 
 export function initPapersManagement({
   state,
@@ -270,7 +272,7 @@ export function initPapersManagement({
   const library = createPapersLibraryController(context);
   context.library = library;
 
-  const { maybeDiscoverStoredPapers } = createStoredPaperDiscovery({
+  const { maybeDiscoverStoredPapers, markStale: markStoredPapersStale } = createStoredPaperDiscovery({
     state,
     elements,
     windowRef,
@@ -487,8 +489,44 @@ export function initPapersManagement({
   library.observeViewActivation();
   context.renderCommentPanelState();
 
+  const getAgentChatContext = createPaperAgentChatContextGetter({
+    state,
+    getActivePaperId: () => paperViewer.getActivePaperId()
+  });
+
+  // For other modules (Home, project Paper Finder): open a PDF saved under the
+  // storage root. The caller shows the Papers view first, which starts the scan
+  // that adds a newly saved file; a miss forces one more scan before giving up.
+  async function openStoredPaper({ filePath = '', relativePath = '' } = {}) {
+    const wantedRelative = String(relativePath || '').trim().replace(/\\/g, '/').toLowerCase();
+    const wantedPath = String(filePath || '').trim();
+    const findPaper = () => (state.papers || []).find((paper) => (
+      (wantedRelative && String(paper?.storedRelativePath || '').replace(/\\/g, '/').toLowerCase() === wantedRelative)
+      || (wantedPath && resolveStoredPaperPath(paper, state.settings?.storagePath) === wantedPath)
+    ));
+    let paper = findPaper();
+    if (!paper) {
+      await maybeDiscoverStoredPapers({ force: true });
+      paper = findPaper();
+    }
+    if (!paper) {
+      showTransientNotice('This PDF is not in the paper library yet.', { type: 'error' });
+      return false;
+    }
+    await actions.viewPaperPdf(paper.id);
+    return true;
+  }
+
   return {
+    getAgentChatContext,
     getActivePaperId: () => paperViewer.getActivePaperId(),
+    openStoredPaper,
+    // Main saved a PDF under the storage root: rescan now if Papers is open,
+    // otherwise on the next visit, regardless of the scan throttle.
+    handleStoredPaperSaved() {
+      markStoredPapersStale();
+      void maybeDiscoverStoredPapers();
+    },
     startPaperScreenshotSelection: () => paperViewer.startPaperScreenshotSelection?.(),
     render: context.render,
     renderLinkTargets: library.renderLinkTargets

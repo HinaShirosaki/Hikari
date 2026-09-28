@@ -4,8 +4,12 @@ const fs = require('fs/promises');
 const path = require('path');
 const { resolveStorageRootLayout } = require('./storage-paths');
 const {
-  asArray, cleanText, ensureObject, normalizeFileTimestamp, sanitizeFolderName, toPosixRelative
+  asArray, cleanText, ensureObject, keepLatestById, normalizeFileTimestamp, readRecordFile, sanitizeFolderName, toPosixRelative
 } = require('./storage-utils');
+
+// A stored PDF's paper record (links, highlights, comments, summaries) is saved
+// beside it as <file>.pdf.json, so it travels with the PDF.
+const PAPER_RECORD_FILE_SUFFIX = '.json';
 
 function simpleHash(value) {
   const source = String(value || '');
@@ -300,6 +304,34 @@ async function discoverPapersFromStorageRoot({
   };
 }
 
+// Finds paper records by walking the same folders discovery scans for PDFs and
+// reading each PDF's record file. The PDF's actual location wins over the
+// storedRelativePath the record was saved with.
+async function readPaperRecordFiles(storagePath) {
+  const storageRootPath = cleanText(storagePath, 2400);
+  const byId = new Map();
+  const warnings = [];
+  if (!storageRootPath) {
+    return { records: [], warnings };
+  }
+  try {
+    for (const folderPath of await collectCandidatePaperFolders(storageRootPath)) {
+      for (const pdfPath of await collectPdfFiles(folderPath)) {
+        const found = await readRecordFile(`${pdfPath}${PAPER_RECORD_FILE_SUFFIX}`, 'paper', warnings);
+        if (found) {
+          found.record = { ...found.record, storedRelativePath: toPosixRelative(storageRootPath, pdfPath) };
+          keepLatestById(byId, found);
+        }
+      }
+    }
+  } catch (error) {
+    warnings.push(`Failed to scan paper records in ${storageRootPath}: ${String(error?.message || error)}`);
+  }
+  return { records: [...byId.values()].map((entry) => entry.value), warnings };
+}
+
 module.exports = {
-  discoverPapersFromStorageRoot
+  PAPER_RECORD_FILE_SUFFIX,
+  discoverPapersFromStorageRoot,
+  readPaperRecordFiles
 };

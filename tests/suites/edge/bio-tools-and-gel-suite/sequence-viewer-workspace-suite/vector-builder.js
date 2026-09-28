@@ -70,7 +70,7 @@ test('[EDGE] sequence-viewer back actions share one compact accessible control',
   const backActions = [
     ['sequence-viewer-protein-builder-back-btn', 'Back to Sequence Library'],
     ['sequence-viewer-protein-builder-confirmation-back-btn', 'Back to Protein Builder'],
-    ['sequence-viewer-vector-builder-back-btn', 'Back to Sequence Viewer'],
+    ['sequence-viewer-vector-builder-back-btn', 'Back to DNA'],
     ['sequence-viewer-cloning-design-back-btn', 'Back to Sequence']
   ];
 
@@ -973,12 +973,30 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   trigger(addProteinForm, 'input');
 
   assert.equal(addProteinOverlay.hidden, false);
-  assert.match(document.getElementById('sequence-viewer-protein-builder-add-protein-status').textContent, /21 aa/);
   assert.equal(document.getElementById('sequence-viewer-protein-builder-add-protein-confirm-btn').disabled, false);
 
   trigger(addProteinForm, 'submit', { preventDefault() {} });
   assert.equal(addProteinOverlay.hidden, true);
   assert.match(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML, /Long custom protein/);
+
+  const workflow = document.getElementById('sequence-viewer-protein-builder-workflow');
+  const countBlocks = () => (workflow.innerHTML.match(/data-protein-builder-row-id=/g) || []).length;
+  const blockCount = countBlocks();
+  const editRowId = workflow.innerHTML.match(/data-protein-builder-row-edit="([^"]+)"/)[1];
+  trigger(workflow, 'click', {
+    target: { closest: (selector) => (selector === '[data-protein-builder-row-edit]' ? { dataset: { proteinBuilderRowEdit: editRowId } } : null) }
+  });
+  assert.equal(addProteinOverlay.hidden, false);
+  assert.equal(addProteinName.value, 'Long custom protein');
+  assert.equal(addProteinSequence.value, 'AAAAAAAAAAAAAAAAAAAAA');
+  addProteinName.value = 'Edited protein';
+  addProteinSequence.value = 'MKVAAAAAAAAAAAAAAAAAAA';
+  trigger(addProteinForm, 'input');
+  trigger(addProteinForm, 'submit', { preventDefault() {} });
+  assert.equal(addProteinOverlay.hidden, true);
+  assert.equal(countBlocks(), blockCount);
+  assert.match(workflow.innerHTML, /Edited protein/);
+  assert.match(workflow.innerHTML, />22 aa</);
 
   const codonUsage = document.getElementById('sequence-viewer-protein-builder-codon-usage');
   assert.match(codonUsage.innerHTML, /E\. coli \(K-12\)/);

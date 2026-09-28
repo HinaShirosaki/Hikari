@@ -316,7 +316,7 @@ The Agent workspace uses:
 
 - `Codex Agent (CLI)`
 
-The model catalog is [`config/codex-models.json`](../../config/codex-models.json). All LLM-backed features use the signed-in `codex` CLI; no API endpoint or API key is stored by the app.
+Hikari ships no model list: Settings asks Codex (`codex app-server`, `model/list`) which models the account can use and which is the default. All LLM-backed features use the signed-in `codex` CLI; no API endpoint or API key is stored by the app.
 
 ### No LLM API key required
 
@@ -387,7 +387,7 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 
 | Module | Renderer folder | Main-process half |
 | --- | --- | --- |
-| Home | `modules/home-dashboard.js` + `home-dashboard/` | — |
+| Home | `modules/home-dashboard/index.js` + `home-dashboard/` | — |
 | Protocols | `modules/protocol/` | `src/main/storage/` (protocol index) |
 | Notebook | `modules/biology-notebook/` | — |
 | Papers | `modules/papers/` | `src/main/papers/` (search, download, parse, retrieve, analysis, finding) |
@@ -397,7 +397,7 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 | Agent | `modules/agent-chat/` | `src/main/agent/` |
 | Sequence Viewer | `modules/sequence-viewer/` | `modules/sequence-viewer/main-process/` |
 | Assay | `modules/assay/` | — |
-| Tools | `modules/tool-box.js` + `tool-box/` | — |
+| Tools | `modules/tool-box/index.js` + `tool-box/` | — |
 | Settings | `modules/settings/` | `src/main/core/main-services.js` |
 | Gel (plugin) | `src/plugins/gel/` | served plugin runtime |
 
@@ -407,6 +407,10 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 - `src/main/core/main-services.js`: constructs main-process services in dependency order and registers IPC.
 - `src/main/storage/`: storage-bundle import/export, persistence, and sequence-library summary logic.
 - `src/main/data/`: primary snapshot and data-helper utilities.
+- `src/main/project-memory/`: project-scoped Codex memory collection and Markdown generation.
+- `src/main/scheduled-tasks/`: task persistence, recurrence, and Codex task execution.
+- `src/main/genome/`: connected FASTA indexing and genome registry logic.
+- `src/main/updater/`: release metadata, version comparison, installer lookup, and update orchestration.
 - `src/main/agent/`: Codex integration, MCP contracts, tool adapters, context, and agent runtime support.
 - `src/main/papers/`: paper search, download, parsing, retrieval, analysis, and scheduled finding.
 - `src/main/ipc/`: IPC registrars; channel names are centralized in `src/shared/ipc/channels.js`.
@@ -416,7 +420,6 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/app-registry.json`: source-of-truth dock order, labels, aliases, and search wiring.
 - `vendor/` and `src/plugins/gel/vendor/`: unmodified third-party builds. Licences are listed in [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md), also reachable from **Settings → Startup → Diagnostics → Third-Party Notices**.
-- `config/codex-models.json`: Codex model catalog used to generate renderer and main-process model metadata modules.
 - `docs/`: internal walkthroughs for renderer, main helpers, plugins, and the agent backend.
 
 ## Internal Docs

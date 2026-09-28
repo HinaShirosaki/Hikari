@@ -1,3 +1,12 @@
+#papers-view .papers-library-topbar {
+  padding-top: 0;
+}
+
+#papers-view .papers-library-topbar h2,
+#papers-view .papers-library-topbar .small-note {
+  display: none;
+}
+
 #papers-view.view.is-active {
   display: grid;
   gap: var(--space-16);
@@ -148,7 +157,7 @@
 }
 
 .papers-library-upload-btn.ghost-btn:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--theme-accent-soft) 40%, transparent);
+  background: var(--theme-accent-wash);
   border-color: var(--theme-border);
 }
 
@@ -204,8 +213,8 @@
 }
 
 .papers-folder-item.is-paper-drop-target {
-  background: color-mix(in srgb, var(--theme-accent) 8%, transparent) !important;
-  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--theme-accent) 62%, var(--theme-text-strong) 10%);
+  background: var(--theme-accent-wash) !important;
+  box-shadow: inset 3px 0 0 var(--theme-accent-ink);
 }
 
 .papers-paper-row:focus-visible {
@@ -252,12 +261,12 @@
 
 .papers-paper-row:hover,
 .papers-paper-row:focus-visible {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 64%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-strong);
 }
 
 .papers-paper-row.is-active {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-strong);
 }
 
@@ -353,7 +362,7 @@
 
 .papers-context-item:hover,
 .papers-context-item:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 6%, transparent);
+  background: var(--theme-accent-wash);
 }
 
 .papers-context-item-danger {

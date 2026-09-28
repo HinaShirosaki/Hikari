@@ -78,8 +78,7 @@ const PANEL_HTML = `<div class="assay-chart-style">
     ${section('Grid', row(check('showVerticalGrid', 'Vertical') + check('showHorizontalGrid', 'Horizontal'))
       + row(color('gridColor', 'Grid color') + number('gridStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25)))}
     ${section('Plot dimensions', check('sizeAuto', 'Fit to canvas')
-      + row(number('frameWidth', 'Width (px)', 320, 2000, 1) + number('frameHeight', 'Height (px)', 180, 1200, 1))
-      + '<p class="assay-chart-style-note">Dimensions describe the framed plot. Titles and labels sit outside it.</p>')}
+      + row(number('frameWidth', 'Width (px)', 320, 2000, 1) + number('frameHeight', 'Height (px)', 180, 1200, 1)))}
   `)}
   ${panel('axis', `
     ${axisGrid(axisColumn('x') + axisColumn('y'))}

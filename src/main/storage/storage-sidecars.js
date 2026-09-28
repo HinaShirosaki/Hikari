@@ -2,25 +2,26 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { PROJECT_SEQUENCE_FOLDER_NAME, getBundlePaths } = require('./storage-paths');
+const { PROJECT_SEQUENCE_FOLDER_NAME, RECORD_FOLDERS, getBundlePaths } = require('./storage-paths');
 const {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   collectProjectMemoryRecords,
   writeProjectMemoryFile
-} = require('./storage-memory');
-const {
-  writeChemicalSqliteBundleIndex,
-  writeSqliteBundleIndex
-} = require('./storage-sql-write');
+} = require('../project-memory');
+const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
+const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
+const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
 const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
+const { isPathInside } = require('../lib/path-safety.js');
+const { writeFileAtomic } = require('../lib/shared-json-file.js');
+const { PAPER_RECORD_FILE_SUFFIX } = require('./paper-discovery');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
-const SAMPLE_SIDECAR_SCHEMA = 'hikari_samples';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
 const PROTOCOL_FILE_NAME = 'protocol.json';
 
@@ -49,17 +50,6 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
     schema_version: SIDECAR_SCHEMA_VERSION,
     updated_at: updatedAt,
     notebookPages: asArray(snapshot.notebookEntries)
-  };
-}
-
-function buildSamplesSidecar(snapshot, updatedAt) {
-  return {
-    schema_name: SAMPLE_SIDECAR_SCHEMA,
-    schema_version: SIDECAR_SCHEMA_VERSION,
-    updated_at: updatedAt,
-    samples: asArray(snapshot.samples),
-    inventory: ensureObject(snapshot.inventory),
-    inventoryFolders: ensureObject(snapshot.inventoryFolders)
   };
 }
 
@@ -102,17 +92,77 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
   return writtenPaths;
 }
 
-function isPathInside(parentPath, childPath) {
-  const parent = path.resolve(String(parentPath || ''));
-  const child = path.resolve(String(childPath || ''));
-  if (!parent || !child) {
-    return false;
+// A record whose artifacts already sit in a folder under this root keeps that
+// folder, so its record file lands beside them; the modules name new folders
+// the same way.
+function buildRecordFolderName(rootPath, record, label) {
+  const storageFolder = cleanText(record.storageFolder, 2400);
+  if (storageFolder && path.dirname(path.resolve(storageFolder)) === path.resolve(rootPath)) {
+    return path.basename(path.resolve(storageFolder));
   }
-  if (parent === child) {
-    return true;
+  const id = sanitizeFolderName(record.id, label.toLowerCase());
+  return `${sanitizeFolderName(record.name || record.assayNumber || record.id, label)}__${id}`;
+}
+
+// One folder per record, found again on load by scanning the root. The folders
+// also hold the modules' artifacts (images, analysis results), so a removed
+// record loses only its record file, and the folder goes only once empty.
+async function writeRecordFolders(rootPath, records, { fileName, key, schemaName, label }, updatedAt) {
+  if (!rootPath) {
+    return [];
   }
-  const prefix = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
-  return child.startsWith(prefix);
+  await fs.mkdir(rootPath, { recursive: true });
+  const activeFolders = new Set();
+  const writtenPaths = [];
+  for (const rawRecord of asArray(records)) {
+    const record = ensureObject(rawRecord);
+    if (!cleanText(record.id, 220)) {
+      continue;
+    }
+    const folderName = buildRecordFolderName(rootPath, record, label);
+    activeFolders.add(folderName);
+    const filePath = path.join(rootPath, folderName, fileName);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await writeFileAtomic(fs, filePath, JSON.stringify({
+      schema_name: schemaName,
+      schema_version: SIDECAR_SCHEMA_VERSION,
+      updated_at: updatedAt,
+      [key]: record
+    }, null, 2));
+    writtenPaths.push(filePath);
+  }
+  const entries = await fs.readdir(rootPath, { withFileTypes: true }).catch(() => []);
+  for (const entry of entries) {
+    if (entry.isDirectory() && !activeFolders.has(entry.name)) {
+      await fs.rm(path.join(rootPath, entry.name, fileName), { force: true });
+      await fs.rmdir(path.join(rootPath, entry.name)).catch(() => {});
+    }
+  }
+  return writtenPaths;
+}
+
+// Beside each stored PDF, where readPaperRecordFiles finds it. A record whose
+// PDF is not a file inside the storage root has nothing to sit beside.
+async function writePaperRecordFiles(storageRootPath, papers, updatedAt) {
+  for (const rawPaper of asArray(papers)) {
+    const paper = ensureObject(rawPaper);
+    const relativePath = cleanText(paper.storedRelativePath, 2400);
+    if (!cleanText(paper.id, 220) || !relativePath) {
+      continue;
+    }
+    const pdfPath = path.resolve(storageRootPath, relativePath);
+    const isStoredFile = isPathInside(storageRootPath, pdfPath)
+      && await fs.stat(pdfPath).then((stat) => stat.isFile(), () => false);
+    if (!isStoredFile) {
+      continue;
+    }
+    await writeFileAtomic(fs, `${pdfPath}${PAPER_RECORD_FILE_SUFFIX}`, JSON.stringify({
+      schema_name: 'hikari_paper',
+      schema_version: SIDECAR_SCHEMA_VERSION,
+      updated_at: updatedAt,
+      paper: { ...paper, pdfDataUrl: '', storedFilePath: '' }
+    }, null, 2));
+  }
 }
 
 function isWorkflowNotebookEntry(entry) {
@@ -205,19 +255,6 @@ async function writeProjectMemoryFiles(
   return writtenPaths;
 }
 
-async function writeSamplesFile(samplesPath, snapshot, updatedAt) {
-  if (!samplesPath) {
-    return '';
-  }
-  await fs.mkdir(path.dirname(samplesPath), { recursive: true });
-  await fs.writeFile(
-    samplesPath,
-    JSON.stringify(buildSamplesSidecar(snapshot, updatedAt), null, 2),
-    'utf8'
-  );
-  return samplesPath;
-}
-
 async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
@@ -267,14 +304,23 @@ async function syncBundleFromSnapshot({
     )
     : [];
   await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
-  const samplesPath = await writeSamplesFile(bundlePaths.samplesPath, safeSnapshot, updatedAt);
+  await writeSampleContainers(bundlePaths.samplesRootPath, safeSnapshot, updatedAt);
   const experimentLogPath = await writeExperimentLogSidecar(
     bundlePaths.experimentLogPath,
     safeSnapshot,
     updatedAt
   );
-  await writeSqliteBundleIndex(bundlePaths.sqlitePath, safeSnapshot);
-  await writeChemicalSqliteBundleIndex(bundlePaths.chemicalsSqlitePath, safeSnapshot);
+  for (const [snapshotKey, folders] of Object.entries(RECORD_FOLDERS)) {
+    await writeRecordFolders(bundlePaths[folders.rootKey], safeSnapshot[snapshotKey], folders, updatedAt);
+  }
+  await writePaperRecordFiles(storageRootPath, safeSnapshot.papers, updatedAt);
+  // An unreadable chemicals index that could not be moved aside stays untouched;
+  // everything else in the save still goes through.
+  await writeChemicalSqliteBundleIndex(bundlePaths.chemicalsSqlitePath, safeSnapshot).catch((error) => {
+    if (error?.code !== CHEMICAL_INDEX_UNREADABLE_CODE) {
+      throw error;
+    }
+  });
   const workflowSync = await syncWorkflowRootFromSnapshot({
     storagePath: safeSnapshot?.settings?.storagePath,
     snapshot: safeSnapshot
@@ -290,20 +336,19 @@ async function syncBundleFromSnapshot({
       experimentLogPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,
       paperMarkdownRootPath: bundlePaths.paperMarkdownRootPath,
-      samplesPath
+      samplesRootPath: bundlePaths.samplesRootPath
     },
     workflowPaths: {
-      workflowRootPath: workflowSync?.workflowRootPath || '',
-      sqlitePath: workflowSync?.sqlitePath || ''
+      workflowRootPath: workflowSync?.workflowRootPath || ''
     },
     workflowSummary: workflowSync?.summary || null
   };
 }
 
+// Only the chemical inventory syncs on its own; the other indexes follow full saves.
 async function syncSqliteBundleFromSnapshot({
   sqlitePath,
-  snapshot,
-  mode = ''
+  snapshot
 } = {}) {
   const targetSqlitePath = String(sqlitePath || '').trim();
   if (!targetSqlitePath) {
@@ -312,11 +357,7 @@ async function syncSqliteBundleFromSnapshot({
     };
   }
   await fs.mkdir(path.dirname(targetSqlitePath), { recursive: true });
-  if (cleanText(mode, 40).toLowerCase() === 'chemical') {
-    await writeChemicalSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
-  } else {
-    await writeSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
-  }
+  await writeChemicalSqliteBundleIndex(targetSqlitePath, ensureObject(snapshot));
   return {
     sqlitePath: targetSqlitePath
   };

@@ -45,6 +45,18 @@
   color: var(--assay-plate-meta);
 }
 
+/* Filled wells carry an inline text color picked against their fill. */
+#assay-view .assay-well.is-filled .assay-well-meta,
+#assay-view .assay-well.is-filled .assay-well-inline-input,
+#assay-view .assay-well.is-filled .assay-well-inline-input::placeholder {
+  color: inherit;
+}
+
+#assay-view .assay-well.is-filled .assay-well-meta,
+#assay-view .assay-well.is-filled .assay-well-inline-input::placeholder {
+  opacity: 0.75;
+}
+
 #assay-view .assay-result-disabled {
   background: var(--assay-plate-disabled-bg);
   color: var(--theme-text-muted);

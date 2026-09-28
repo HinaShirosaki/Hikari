@@ -1,17 +1,15 @@
 'use strict';
 
-const fsSync = require('node:fs');
-const path = require('node:path');
-const {
-  CODEX_CONFIG_FILE,
-  CODEX_MODELS_CACHE_FILE
-} = require('./constants');
-const {
-  getCodexCliCandidateHomeDirectories,
-  getCodexCliHomeDirectory
-} = require('./paths');
-const { cleanText } = require('./utils');
+const { spawn } = require('node:child_process');
+const { resolveCodexInvocation } = require('./paths');
+const { cleanText, safeParseJson } = require('./utils');
 
+const CODEX_MODEL_LIST_TIMEOUT_MS = 20000;
+const EMPTY_CATALOG = Object.freeze({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' });
+
+// Hikari ships no model list: Codex says which models the signed-in account may
+// use and which one is the default. Kept from the last successful request.
+let codexCatalog = EMPTY_CATALOG;
 let configuredCodexModel = '';
 let configuredCodexReasoningEffort = '';
 
@@ -23,57 +21,97 @@ function normalizeCodexCliReasoningEffort(reasoningEffort = '') {
   return String(cleanText(reasoningEffort, 40) || '').trim().toLowerCase();
 }
 
-function parseCodexCliModelsCache(rawValue = '') {
-  try {
-    const parsed = JSON.parse(String(rawValue || ''));
-    const models = Array.isArray(parsed?.models)
-      ? parsed.models.map((entry) => {
-        const id = cleanText(entry?.slug, 120);
-        const label = cleanText(entry?.display_name, 160) || id;
-        const reasoningEfforts = Array.isArray(entry?.supported_reasoning_levels)
-          ? entry.supported_reasoning_levels
-            .map((level) => normalizeCodexCliReasoningEffort(level?.effort))
-            .filter(Boolean)
-          : [];
-        const defaultReasoningEffort = normalizeCodexCliReasoningEffort(entry?.default_reasoning_level);
-        if (!id) {
-          return null;
-        }
-        return {
-          id,
-          label,
-          reasoningEfforts,
-          defaultReasoningEffort: reasoningEfforts.includes(defaultReasoningEffort) ? defaultReasoningEffort : ''
-        };
-      }).filter(Boolean)
-      : [];
+// Maps app-server `model/list` entries to Hikari's catalog shape.
+function catalogFromCodexModelList(entries = []) {
+  const models = (Array.isArray(entries) ? entries : []).map((entry) => {
+    const id = normalizeCodexCliModel(entry?.id || entry?.model);
+    if (!id) {
+      return null;
+    }
+    const reasoningEfforts = (Array.isArray(entry?.supportedReasoningEfforts) ? entry.supportedReasoningEfforts : [])
+      .map((level) => normalizeCodexCliReasoningEffort(level?.reasoningEffort))
+      .filter(Boolean);
+    const defaultReasoningEffort = normalizeCodexCliReasoningEffort(entry?.defaultReasoningEffort);
     return {
-      models,
-      fetchedAt: cleanText(parsed?.fetched_at, 80),
-      clientVersion: cleanText(parsed?.client_version, 80)
+      id,
+      label: cleanText(entry?.displayName, 160) || id,
+      hidden: entry?.hidden === true,
+      isDefault: entry?.isDefault === true,
+      reasoningEfforts,
+      defaultReasoningEffort: reasoningEfforts.includes(defaultReasoningEffort) ? defaultReasoningEffort : ''
     };
-  } catch {
-    return {
-      models: [],
-      fetchedAt: '',
-      clientVersion: ''
-    };
-  }
-}
-
-function parseCodexCliConfigDefaults(rawValue = '') {
-  const source = String(rawValue || '');
-  const modelMatch = source.match(/^\s*model\s*=\s*"([^"]+)"/m);
-  const reasoningMatch = source.match(/^\s*model_reasoning_effort\s*=\s*"([^"]+)"/m);
+  }).filter(Boolean);
+  const defaultModel = models.find((entry) => entry.isDefault) || null;
   return {
-    defaultModel: normalizeCodexCliModel(modelMatch?.[1] || ''),
-    defaultReasoningEffort: normalizeCodexCliReasoningEffort(reasoningMatch?.[1] || '')
+    ok: models.length > 0,
+    models,
+    defaultModel: defaultModel?.id || '',
+    defaultReasoningEffort: defaultModel?.defaultReasoningEffort || ''
   };
 }
 
+// Asks `codex app-server` for every model (hidden ones too, so a saved choice such
+// as a reserve model still validates) over its JSON-RPC stdio protocol.
+function listCodexModels({ env = process.env, timeoutMs = CODEX_MODEL_LIST_TIMEOUT_MS } = {}) {
+  return new Promise((resolve, reject) => {
+    const invocation = resolveCodexInvocation(env);
+    const child = spawn(invocation.command, [...invocation.argsPrefix, 'app-server'], { env, stdio: 'pipe' });
+    const entries = [];
+    let buffer = '';
+    let stderr = '';
+    let settled = false;
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      child.kill();
+      if (error) reject(error);
+      else resolve(entries);
+    };
+    const timer = setTimeout(() => finish(new Error('Codex did not return its model list in time.')), timeoutMs);
+    const send = (message) => child.stdin.write(`${JSON.stringify(message)}\n`);
+    const requestPage = (id, cursor) => send({ id, method: 'model/list', params: { includeHidden: true, ...(cursor ? { cursor } : {}) } });
+    child.on('error', finish);
+    child.stdin.on('error', () => {});
+    child.stderr.on('data', (chunk) => { stderr = `${stderr}${chunk}`.slice(-2000); });
+    child.on('exit', (code) => finish(new Error(
+      `Codex exited (${code}) before listing its models.${stderr.trim() ? ` ${stderr.trim().slice(-400)}` : ''}`
+    )));
+    child.stdout.on('data', (chunk) => {
+      buffer += chunk;
+      for (let index; (index = buffer.indexOf('\n')) >= 0;) {
+        const message = safeParseJson(buffer.slice(0, index).trim(), null);
+        buffer = buffer.slice(index + 1);
+        if (!message || message.id === undefined) continue;
+        if (message.error) {
+          finish(new Error(cleanText(message.error.message, 400) || 'Codex could not list its models.'));
+          return;
+        }
+        if (message.id === 1) {
+          send({ method: 'initialized' });
+          requestPage(2);
+          continue;
+        }
+        entries.push(...(Array.isArray(message.result?.data) ? message.result.data : []));
+        if (message.result?.nextCursor) requestPage(message.id + 1, message.result.nextCursor);
+        else finish();
+      }
+    });
+    send({ id: 1, method: 'initialize', params: { clientInfo: { name: 'hikari', title: 'Hikari', version: '1' } } });
+  });
+}
+
+async function requestCodexCliCatalog({ listModels = listCodexModels, ...options } = {}) {
+  codexCatalog = catalogFromCodexModelList(await listModels(options));
+  return codexCatalog;
+}
+
+function getCodexCliCatalog() {
+  return codexCatalog;
+}
+
 function findCodexCliModelConfig(model = '', catalog = null) {
-  const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : null;
-  const models = Array.isArray(resolvedCatalog?.models) ? resolvedCatalog.models : [];
+  const models = Array.isArray(catalog?.models) ? catalog.models : [];
   const target = normalizeCodexCliModel(model);
   if (!target) {
     return null;
@@ -81,79 +119,12 @@ function findCodexCliModelConfig(model = '', catalog = null) {
   return models.find((entry) => entry.id === target) || null;
 }
 
-function getCodexCliCatalog() {
-  const { cacheInfo, modelsCachePath } = readCatalogFile(CODEX_MODELS_CACHE_FILE, parseCodexCliModelsCache, {
-    models: [],
-    fetchedAt: '',
-    clientVersion: ''
-  });
-  const { cacheInfo: configDefaults, modelsCachePath: configPath } = readCatalogFile(CODEX_CONFIG_FILE, parseCodexCliConfigDefaults, {
-    defaultModel: '',
-    defaultReasoningEffort: ''
-  });
-  const codexHome = path.dirname(modelsCachePath || configPath) || getCodexCliHomeDirectory();
-  const models = cacheInfo.models;
-  const fallbackModel = models[0]?.id || '';
-  const defaultModel = findCodexCliModelConfig(configDefaults.defaultModel, { models })?.id
-    || findCodexCliModelConfig(configuredCodexModel, { models })?.id
-    || fallbackModel
-    || configDefaults.defaultModel
-    || configuredCodexModel
-    || '';
-  const defaultModelConfig = findCodexCliModelConfig(defaultModel, { models });
-  const defaultReasoningEffort = defaultModelConfig?.reasoningEfforts?.includes(configDefaults.defaultReasoningEffort)
-    ? configDefaults.defaultReasoningEffort
-    : defaultModelConfig?.reasoningEfforts?.includes(configuredCodexReasoningEffort)
-      ? configuredCodexReasoningEffort
-      : defaultModelConfig?.defaultReasoningEffort
-        || defaultModelConfig?.reasoningEfforts?.[0]
-        || configDefaults.defaultReasoningEffort
-        || configuredCodexReasoningEffort
-        || '';
-
-  return {
-    ok: models.length > 0,
-    codexHome,
-    modelsCachePath,
-    configPath,
-    fetchedAt: cacheInfo.fetchedAt,
-    clientVersion: cacheInfo.clientVersion,
-    defaultModel,
-    defaultReasoningEffort,
-    models
-  };
-}
-
-function readCatalogFile(fileName, parser, fallback) {
-  let cacheInfo = fallback;
-  let modelsCachePath = path.join(getCodexCliHomeDirectory(), fileName);
-  for (const homeDirectory of getCodexCliCandidateHomeDirectories()) {
-    const candidatePath = path.join(homeDirectory, fileName);
-    try {
-      cacheInfo = parser(fsSync.readFileSync(candidatePath, 'utf8'));
-      modelsCachePath = candidatePath;
-      break;
-    } catch {
-      // Continue scanning fallbacks.
-    }
-  }
-  return { cacheInfo, modelsCachePath };
-}
-
 function getCodexCliModel() {
   return configuredCodexModel;
 }
 
 function setCodexCliModel(model = '') {
-  const cleanModel = normalizeCodexCliModel(model);
-  if (!cleanModel) {
-    configuredCodexModel = '';
-    return configuredCodexModel;
-  }
-  const catalog = getCodexCliCatalog();
-  configuredCodexModel = findCodexCliModelConfig(cleanModel, catalog)?.id
-    || normalizeCodexCliModel(catalog.defaultModel)
-    || cleanModel;
+  configuredCodexModel = normalizeCodexCliModel(model);
   return configuredCodexModel;
 }
 
@@ -166,30 +137,20 @@ function setCodexCliReasoningEffort(reasoningEffort = '') {
   return configuredCodexReasoningEffort;
 }
 
+// '' means "no -m": Codex then runs its own current default model.
 function resolveCodexCliModel(model = '', catalog = null) {
   const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : getCodexCliCatalog();
-  const explicitModel = normalizeCodexCliModel(model);
-  const explicitConfig = findCodexCliModelConfig(explicitModel, resolvedCatalog);
-  if (explicitConfig?.id) {
-    return explicitConfig.id;
+  const chosen = normalizeCodexCliModel(model) || configuredCodexModel;
+  // A saved choice Codex no longer offers would fail every turn; use Codex's default.
+  if (chosen && resolvedCatalog.models?.length && !findCodexCliModelConfig(chosen, resolvedCatalog)) {
+    return '';
   }
-  const configuredConfig = findCodexCliModelConfig(configuredCodexModel, resolvedCatalog);
-  if (configuredConfig?.id) {
-    return configuredConfig.id;
-  }
-  if (!Array.isArray(resolvedCatalog.models) || !resolvedCatalog.models.length) {
-    // No models_cache.json yet (fresh machine). A static name such as the app's
-    // catalog seed can already be retired for ChatGPT accounts, so pass only a
-    // model the user chose; without -m the CLI picks its own current default
-    // and writes the cache for the next call.
-    return configuredCodexModel;
-  }
-  return normalizeCodexCliModel(resolvedCatalog.defaultModel) || explicitModel || configuredCodexModel;
+  return chosen;
 }
 
 function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalog = null) {
   const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : getCodexCliCatalog();
-  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog);
+  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog) || resolvedCatalog.defaultModel;
   const modelConfig = findCodexCliModelConfig(resolvedModel, resolvedCatalog);
   const explicitEffort = normalizeCodexCliReasoningEffort(reasoningEffort);
 
@@ -200,22 +161,21 @@ function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalo
     if (modelConfig.reasoningEfforts.includes(configuredCodexReasoningEffort)) {
       return configuredCodexReasoningEffort;
     }
-    if (modelConfig.reasoningEfforts.includes(resolvedCatalog.defaultReasoningEffort)) {
-      return resolvedCatalog.defaultReasoningEffort;
-    }
-    return modelConfig.defaultReasoningEffort || modelConfig.reasoningEfforts[0] || '';
+    return modelConfig.defaultReasoningEffort || '';
   }
 
-  return explicitEffort || configuredCodexReasoningEffort || normalizeCodexCliReasoningEffort(resolvedCatalog.defaultReasoningEffort);
+  return explicitEffort || configuredCodexReasoningEffort;
 }
 
 module.exports = {
+  catalogFromCodexModelList,
   findCodexCliModelConfig,
   getCodexCliCatalog,
   getCodexCliModel,
   getCodexCliReasoningEffort,
   normalizeCodexCliModel,
   normalizeCodexCliReasoningEffort,
+  requestCodexCliCatalog,
   resolveCodexCliModel,
   resolveCodexCliReasoningEffort,
   setCodexCliModel,

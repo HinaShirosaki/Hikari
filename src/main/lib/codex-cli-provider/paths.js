@@ -3,6 +3,7 @@
 const fsSync = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { isFilesystemRoot } = require('../path-safety.js');
 const {
   CODEX_RUNTIME_HOME_DIR_NAME
 } = require('./constants');
@@ -31,19 +32,6 @@ function pickExistingDirectory(candidates) {
     }
   }
   return '';
-}
-
-function isFilesystemRoot(candidatePath = '') {
-  const value = String(candidatePath || '').trim();
-  if (!value) {
-    return false;
-  }
-  try {
-    const resolved = path.resolve(value);
-    return resolved === path.parse(resolved).root;
-  } catch {
-    return false;
-  }
 }
 
 function resolveWorkingDirectory(cwd = '') {

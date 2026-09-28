@@ -12,6 +12,8 @@ export function createNotebookService(registry) {
 
   return {
     handleNotebookEntriesChanged,
-    handleAgentNotebookEntriesChanged
+    handleAgentNotebookEntriesChanged,
+    logPageEvent: logNotebookPageEvent
   };
 }
+import { logNotebookPageEvent } from './notebook-page-log.js';

@@ -1,5 +1,6 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { asArray, ensureObject } from '../../../lib/normalize.js';
+import { escapeHtml } from '../../../lib/html.js';
 
 function cleanText(value) {
   return String(value || '').trim();
@@ -26,9 +27,12 @@ function taskConfig(task = {}) {
 }
 
 function formatNextRun(task = {}) {
+  if (task.enabled === false) {
+    return 'Paused';
+  }
   const raw = cleanText(task.next_run_at || task.nextRunAt);
   if (!raw) {
-    return task.enabled === false ? 'Paused' : 'Not scheduled';
+    return 'Not scheduled';
   }
   const parsed = new Date(raw);
   if (Number.isNaN(parsed.getTime())) {
@@ -54,15 +58,6 @@ function taskRunResult(task = {}) {
   return ensureObject(ensureObject(task).last_run?.result);
 }
 
-function escapeHtml(value) {
-  return cleanText(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 function safeHttpUrl(value) {
   const raw = cleanText(value);
   return /^https?:\/\//i.test(raw) ? raw : '';
@@ -80,6 +75,11 @@ function renderPaperCard(paper = {}) {
     .filter(Boolean);
   const summary = escapeHtml(source.summary);
   const reason = escapeHtml(source.relevance_reason);
+  // Saved before this run (already_local) or from a card since (download_status).
+  const localFile = ensureObject(source.local_file);
+  const savedPath = source.already_local === true || source.download_status === 'saved'
+    ? cleanText(localFile.file_path)
+    : '';
   return [
     '<article class="project-paper-finder-result" data-paper-finder-result>',
     `<h4>${heading}</h4>`,
@@ -88,6 +88,9 @@ function renderPaperCard(paper = {}) {
       : '',
     summary ? `<p class="project-paper-finder-result-summary">${summary}</p>` : '',
     reason ? `<p class="small-note project-paper-finder-result-reason">Why: ${reason}</p>` : '',
+    savedPath
+      ? `<p class="project-paper-finder-result-saved">Saved<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><button type="button" class="project-paper-finder-open" data-paper-finder-open="${escapeHtml(savedPath)}" data-paper-finder-open-relative="${escapeHtml(localFile.relative_path)}" title="Open in Papers">Open</button></p>`
+      : '',
     '</article>'
   ].join('');
 }
@@ -96,6 +99,7 @@ export function createProjectPaperFinderController({
   host,
   state,
   api,
+  onOpenPaper = null,
   onTaskChanged = () => {}
 } = {}) {
   let activeProject = null;
@@ -202,6 +206,7 @@ export function createProjectPaperFinderController({
     }
     if (controls.stateLabel) {
       controls.stateLabel.textContent = hasTask ? formatNextRun(activeTask) : 'Not scheduled';
+      controls.stateLabel.dataset.state = !hasTask ? 'none' : activeTask.enabled === false ? 'paused' : 'active';
     }
     if (controls.saveBtn) {
       controls.saveBtn.textContent = hasTask ? 'Save schedule' : 'Schedule';
@@ -292,7 +297,7 @@ export function createProjectPaperFinderController({
       syncTask(task);
       hydrateFields(task);
       renderResults(task);
-      setStatus(task ? 'Metadata-only paper finding is active.' : '');
+      setStatus('');
       return task;
     } catch (error) {
       if (revision === loadRevision) {
@@ -450,6 +455,17 @@ export function createProjectPaperFinderController({
     }
   }
 
+  async function openSavedPaper(filePath, relativePath = '') {
+    if (!cleanText(filePath) || typeof onOpenPaper !== 'function') {
+      return;
+    }
+    try {
+      await onOpenPaper({ filePath, relativePath: cleanText(relativePath) });
+    } catch (error) {
+      showTransientNotice(error?.message || 'Could not open the saved PDF.', { type: 'error' });
+    }
+  }
+
   function onHostSubmit(event) {
     const form = event?.target?.closest?.('[data-paper-finder-form]')
       || (event?.target?.dataset?.paperFinderForm !== undefined ? event.target : null);
@@ -466,6 +482,9 @@ export function createProjectPaperFinderController({
       void toggleEnabled();
     } else if (target?.closest?.('[data-paper-finder-remove]') || target?.dataset?.paperFinderRemove !== undefined) {
       void remove();
+    } else if (target?.closest?.('[data-paper-finder-open]')) {
+      const openBtn = target.closest('[data-paper-finder-open]');
+      void openSavedPaper(openBtn.dataset.paperFinderOpen, openBtn.dataset.paperFinderOpenRelative);
     }
   }
 

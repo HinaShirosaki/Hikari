@@ -20,8 +20,7 @@ function createNotebookPayloadBuilders({
         return source;
       }
       const trailingValues = placeholders.map((placeholder) => {
-        const key = `${cleanText(step?.id, 120)}:${placeholder.id}`;
-        const value = cleanText(values?.[key], 260);
+        const value = cleanText(values?.[placeholder.id], 260);
         return value || `[${placeholder.name}]`;
       }).join(' ');
       return `${source} ${trailingValues}`.trim();
@@ -32,9 +31,8 @@ function createNotebookPayloadBuilders({
     matches.forEach((match) => {
       const index = Number(match?.index || 0);
       const placeholderId = cleanText(match?.[1], 120);
-      const key = `${cleanText(step?.id, 120)}:${placeholderId}`;
       const placeholder = placeholders.find((item) => item.id === placeholderId);
-      const value = cleanText(values?.[key], 260);
+      const value = cleanText(values?.[placeholderId], 260);
       text += source.slice(cursor, index);
       text += value || `[${cleanText(placeholder?.name, 120) || 'value'}]`;
       cursor = index + String(match?.[0] || '').length;
@@ -62,8 +60,6 @@ function createNotebookPayloadBuilders({
       }
       values[key] = value;
       placeholderValues.push({
-        step_id: cleanText(placeholder?.step_id, 120),
-        placeholder_id: cleanText(placeholder?.placeholder_id, 120),
         placeholder_key: key,
         display: cleanText(placeholder?.display, 120) || 'value',
         value,
@@ -72,12 +68,10 @@ function createNotebookPayloadBuilders({
       });
     });
     const unresolvedRows = asArray(missingPlaceholders).map((row) => ({
-      step_id: cleanText(row?.step_id, 120),
-      placeholder_id: cleanText(row?.placeholder_id, 120),
       placeholder_key: cleanText(row?.placeholder_key, 160),
       display: cleanText(row?.display, 120) || 'value',
       reason: cleanText(row?.reason, 220) || 'Missing information from user request.'
-    })).filter((row) => row.step_id && row.placeholder_id && row.placeholder_key);
+    })).filter((row) => row.placeholder_key);
 
     const renderedSteps = asArray(selectedProtocol?.steps).map((step) => renderProtocolStepText(step, values)).filter(Boolean);
     const updatedAt = new Date().toISOString();

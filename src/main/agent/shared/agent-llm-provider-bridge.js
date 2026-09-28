@@ -1,10 +1,8 @@
 'use strict';
 
 const { createCodexAgentLlmProvider } = require('./llm-providers/codex-agent-provider.js');
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray: defaultAsArray } = require('../../lib/normalize.js');
+const { extractSourceDomain, safeHttpUrl: normalizeWebUrl } = require('../../lib/web-text.js');
 
 function defaultCleanText(value) {
   const text = String(value || '');
@@ -24,34 +22,6 @@ function defaultSafeParseJson(text, fallback = null) {
     // Fallback below.
   }
   return fallback;
-}
-
-function normalizeWebUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  try {
-    const parsed = new URL(raw);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return '';
-    }
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function extractSourceDomain(url) {
-  const normalized = normalizeWebUrl(url);
-  if (!normalized) {
-    return '';
-  }
-  try {
-    return String(new URL(normalized).hostname || '').toLowerCase();
-  } catch {
-    return '';
-  }
 }
 
 function createAgentLlmProviderBridge(deps = {}) {

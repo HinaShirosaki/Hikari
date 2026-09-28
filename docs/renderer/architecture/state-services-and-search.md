@@ -1,6 +1,6 @@
 # State, Services, And Search
 
-This doc explains the cross-cutting runtime pieces that sit underneath the feature modules: `modules/views.js`, `modules/app-state.js`, `modules/utils.js`, `services/`, the module registry, and the topbar search pipeline in the renderer core.
+This doc explains the cross-cutting runtime pieces that sit underneath the feature modules: `modules/views.js`, `modules/app-state/`, `lib/app-utils.js`, `services/`, the module registry, and the topbar search pipeline in the renderer core.
 
 ## Canonical renderer state
 
@@ -9,8 +9,8 @@ Renderer-wide contracts are split across a few small files:
 They define:
 
 - `src/renderer/modules/views.js`: `VIEWS` and `TITLES`
-- `src/renderer/modules/app-state.js`: `defaultState`, normalization, local-storage load/persist, and LLM settings normalization
-- `src/renderer/modules/utils.js`: small utilities such as `createId()`, `safeText()`, and `cssEscape()`
+- `src/renderer/modules/app-state/index.js`: `defaultState`, normalization, local-storage load/persist, and LLM settings normalization
+- `src/renderer/lib/app-utils.js`: small utilities such as `createId()`, `safeText()`, and `cssEscape()`
 
 The important thing is that `defaultState` is broad. It is not only UI preferences. It also contains the app's core working data:
 
@@ -42,7 +42,7 @@ So when reading feature code, assume most modules receive a reasonably normalize
 
 There are two persistence layers to keep in mind:
 
-1. `persistState(state)` in `modules/app-state.js`
+1. `persistState(state)` in `modules/app-state/index.js`
    - writes the local renderer snapshot to `localStorage`
 2. `persist()` in `core/start-hikari-core.js`
    - creates an undo checkpoint through `undoService`

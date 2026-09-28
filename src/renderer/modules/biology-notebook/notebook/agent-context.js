@@ -1,5 +1,5 @@
 import { getGelAnalyses } from '../../../lib/gel-records.js';
-import { findLatestLinkedRecord } from '../../../services/notebook-linked-previews.js';
+import { findLatestLinkedRecord } from '../linked-previews.js';
 import {
   mergeNotebookValues,
   normalizeNotebookState,
@@ -84,12 +84,11 @@ function createNotebookAgentContext({
   function buildStepContextLines(protocol, values = {}) {
     const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
     return steps.slice(0, 80).map((step, index) => {
-      const stepId = String(step?.id || `step_${index + 1}`).trim();
       const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
       const filledValues = placeholders.map((placeholder) => {
         const placeholderId = String(placeholder?.id || '').trim();
         const placeholderName = String(placeholder?.name || placeholderId || 'value').trim();
-        const value = compactContextLine(values[`${stepId}:${placeholderId}`] || values[placeholderId] || '', 180);
+        const value = compactContextLine(values[placeholderId] || '', 180);
         return value ? `${placeholderName}=${value}` : '';
       }).filter(Boolean);
       const suffix = filledValues.length ? ` Filled values: ${filledValues.join('; ')}.` : '';

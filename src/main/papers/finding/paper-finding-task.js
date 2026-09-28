@@ -286,5 +286,6 @@ module.exports = {
   isPaperFindingTask,
   normalizePaperFindingFrequency,
   normalizePaperFindingRunResult,
+  paperIdentity,
   parsePaperFindingResultText
 };

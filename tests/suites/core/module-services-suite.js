@@ -113,7 +113,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         protocols: [{
           id: 'protocol-existing',
           name: 'Old Protocol',
-          steps: [{ id: 'step-1', text: 'Old step', placeholders: [] }]
+          steps: [{ text: 'Old step', placeholders: [] }]
         }]
       };
       const persist = createSpy('persist');
@@ -147,7 +147,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(state.protocols.length, 1);
       assert.equal(state.protocols[0].name, 'Updated Protocol');
       assert.deepEqual(Array.from(state.protocols[0].materials), ['Buffer', 'Enzyme']);
-      assert.deepEqual(clone(state.protocols[0].steps), [{ id: 'step-1', text: 'Mix gently', placeholders: [] }]);
+      assert.deepEqual(clone(state.protocols[0].steps), [{ text: 'Mix gently', placeholders: [] }]);
       assert.deepEqual(Array.from(state.protocols[0].aliases), ['quick save']);
       assert.equal(state.protocols[0].projectId, 'project-1');
       assert.equal(state.protocols[0].projectName, 'Project One');

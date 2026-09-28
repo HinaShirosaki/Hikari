@@ -3,6 +3,7 @@
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { normalizePaperAnnotationSnapshot } = require('../../papers/shared/paper-comment-context.js');
 const { normalizeChemicalStorePayload } = require('../../data/data-snapshot-utils.js');
+const { normalizePreferredJournalNames } = require('../../lib/preferred-journals.js');
 
 function createAgentRuntimeSupport(deps = {}) {
   const {
@@ -13,32 +14,6 @@ function createAgentRuntimeSupport(deps = {}) {
   function clamp(value, min, max) {
     const numeric = Number.isFinite(Number(value)) ? Number(value) : min;
     return Math.max(min, Math.min(max, numeric));
-  }
-
-  function normalizePreferredJournalNames(value) {
-    const candidates = [];
-    function pushCandidate(candidate) {
-      if (Array.isArray(candidate)) {
-        candidate.forEach(pushCandidate);
-        return;
-      }
-      if (candidate && typeof candidate === 'object') {
-        pushCandidate(candidate.name || candidate.url || candidate.href || '');
-        return;
-      }
-      String(candidate || '')
-        .split(/[;\n]+/)
-        .map((item) => cleanText(item, 240).trim())
-        .filter(Boolean)
-        .forEach((item) => candidates.push(item));
-    }
-    pushCandidate(value);
-    return asArray(candidates)
-      .filter((item, index, list) => {
-        const key = item.toLowerCase();
-        return key && list.findIndex((candidate) => candidate.toLowerCase() === key) === index;
-      })
-      .slice(0, 12);
   }
 
   function buildProjectRecordIndex({ snapshot } = {}) {
@@ -225,7 +200,7 @@ function createAgentRuntimeSupport(deps = {}) {
       settingsSource.preferred_journal,
       snapshot.preferredJournal,
       snapshot.preferred_journal
-    ]);
+    ], cleanText);
     const preferredJournal = preferredJournals.join('; ');
     const rawScheduledTask = snapshot.scheduled_task || snapshot.scheduledTask;
     const scheduledTaskSource = rawScheduledTask && typeof rawScheduledTask === 'object' && !Array.isArray(rawScheduledTask)

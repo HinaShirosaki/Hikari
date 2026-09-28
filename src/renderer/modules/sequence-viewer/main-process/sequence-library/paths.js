@@ -14,6 +14,7 @@ const {
 } = require('../../../../../main/storage/storage-paths');
 const { sanitizeFolderName } = require('../../../../../main/storage/storage-utils');
 const { cleanText } = require('./utils');
+const { ensureRelativePathWithinRoot } = require('../../../../../main/lib/path-safety.js');
 
 function ensureStoragePath(storagePath) {
   const resolved = path.resolve(cleanText(storagePath, 2000));
@@ -28,12 +29,7 @@ function toPosixRelative(rootPath, absolutePath) {
 }
 
 function ensurePathWithinRoot(rootPath, relativePath) {
-  const target = path.resolve(rootPath, relativePath);
-  const normalizedRoot = `${path.resolve(rootPath)}${path.sep}`;
-  if (target !== path.resolve(rootPath) && !target.startsWith(normalizedRoot)) {
-    throw new Error('Resolved path escaped sequence library root.');
-  }
-  return target;
+  return ensureRelativePathWithinRoot(rootPath, relativePath, 'Resolved path escaped sequence library root.');
 }
 
 function resolveLibraryPaths(storagePath) {

@@ -1,21 +1,12 @@
-import { cleanText } from '../shared.js';
+import { cleanText, formatThermocycleCondition } from '../shared.js';
 import { asArray } from '../../../lib/normalize.js';
 import { CLONING_NOTEBOOK_SOURCE, CLONING_PROJECT_DESCRIPTION, CLONING_PROJECT_NAME, CLONING_PROTOCOL_ID, CLONING_PROTOCOL_NAME, LEGACY_CLONING_PROTOCOL_NAME } from './constants.js';
 import { createStableId } from './formatting.js';
-
-function formatThermocycleCondition(step = {}) {
-  return [
-    cleanText(step?.label, 120) || 'Thermocycle step',
-    cleanText(step?.temperature, 60),
-    cleanText(step?.time, 60)
-  ].filter(Boolean).join(' - ');
-}
 
 function buildProteinBuilderCloningProtocolSteps(pcrProgram = {}) {
   const programSteps = asArray(pcrProgram?.steps);
   if (!programSteps.length) {
     return [{
-      id: `${CLONING_PROTOCOL_ID}_step_1`,
       text: 'Configure the thermocycler with the generated PCR program.',
       placeholders: []
     }];
@@ -36,8 +27,7 @@ function buildProteinBuilderCloningProtocolSteps(pcrProgram = {}) {
     .filter((step) => cleanText(step?.label, 80).toLowerCase() !== 'initial denaturation')
     .forEach((step) => steps.push(formatThermocycleCondition(step)));
 
-  return steps.map((text, index) => ({
-    id: `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
+  return steps.map((text) => ({
     text,
     placeholders: []
   }));
@@ -88,16 +78,7 @@ function resolveProteinBuilderCloningNotebookProtocol(entry = {}) {
   );
 }
 
-function ensureProteinBuilderProject(state, createId, nowIso) {
-  state.projects = asArray(state.projects);
-  const existing = state.projects.find((project) => (
-    cleanText(project?.source, 80) === CLONING_NOTEBOOK_SOURCE
-    || cleanText(project?.name, 160).toLowerCase() === CLONING_PROJECT_NAME.toLowerCase()
-  ));
-  if (existing) {
-    return existing;
-  }
-
+function ensureProteinBuilderProject(ensureProjectRecord, createId, nowIso) {
   const project = {
     id: createStableId(createId, 'protein_builder_project'),
     name: CLONING_PROJECT_NAME,
@@ -106,26 +87,12 @@ function ensureProteinBuilderProject(state, createId, nowIso) {
     updatedAt: nowIso,
     source: CLONING_NOTEBOOK_SOURCE
   };
-  state.projects.push(project);
-  return project;
+  return ensureProjectRecord?.(project) || project;
 }
 
-function ensureProteinBuilderProtocol(state, pcrProgram, nowIso) {
-  state.protocols = asArray(state.protocols);
+function ensureProteinBuilderProtocol(saveProtocolRecord, pcrProgram, nowIso) {
   const nextProtocol = buildProteinBuilderCloningProtocol(pcrProgram, nowIso);
-  const existingIndex = state.protocols.findIndex((protocol) => (
-    cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID
-  ));
-  if (existingIndex >= 0) {
-    state.protocols[existingIndex] = {
-      ...state.protocols[existingIndex],
-      ...nextProtocol,
-      createdAt: cleanText(state.protocols[existingIndex]?.createdAt, 120) || nextProtocol.createdAt
-    };
-    return state.protocols[existingIndex];
-  }
-  state.protocols.push(nextProtocol);
-  return nextProtocol;
+  return saveProtocolRecord?.(nextProtocol, { preserveCreatedAt: true }) || nextProtocol;
 }
 
 function cloneProtocolSnapshot(protocol = {}) {
@@ -135,56 +102,13 @@ function cloneProtocolSnapshot(protocol = {}) {
     category: cleanText(protocol?.category, 120),
     purpose: cleanText(protocol?.purpose, 1000),
     steps: asArray(protocol?.steps).map((step, index) => ({
-      id: cleanText(step?.id, 160) || `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
       text: cleanText(step?.text, 1200),
       placeholders: asArray(step?.placeholders).map((placeholder, placeholderIndex) => ({
-        id: cleanText(placeholder?.id, 120) || `placeholder_${placeholderIndex + 1}`,
+        id: cleanText(placeholder?.id, 120) || `step_${index + 1}_placeholder_${placeholderIndex + 1}`,
         name: cleanText(placeholder?.name, 160) || `Value ${placeholderIndex + 1}`
       }))
     }))
   };
-}
-
-function migrateProteinBuilderCloningNotebookState(state = {}) {
-  if (!state || typeof state !== 'object') {
-    return 0;
-  }
-
-  let migratedCount = 0;
-  let latestProtocol = null;
-  state.notebookEntries = asArray(state.notebookEntries).map((entry) => {
-    const protocol = resolveProteinBuilderCloningNotebookProtocol(entry);
-    if (!protocol) {
-      return entry;
-    }
-    migratedCount += 1;
-    latestProtocol = protocol;
-    return {
-      ...entry,
-      protocolId: protocol.id,
-      protocolName: protocol.name,
-      protocolSnapshot: cloneProtocolSnapshot(protocol)
-    };
-  });
-
-  if (latestProtocol) {
-    state.protocols = asArray(state.protocols);
-    const protocolIndex = state.protocols.findIndex((protocol) => (
-      cleanText(protocol?.id, 160) === CLONING_PROTOCOL_ID
-    ));
-    if (protocolIndex >= 0) {
-      const existingProtocol = state.protocols[protocolIndex];
-      state.protocols[protocolIndex] = {
-        ...existingProtocol,
-        ...latestProtocol,
-        createdAt: cleanText(existingProtocol?.createdAt, 120) || latestProtocol.createdAt
-      };
-    } else {
-      state.protocols.push(latestProtocol);
-    }
-  }
-
-  return migratedCount;
 }
 
 export {
@@ -193,6 +117,5 @@ export {
   cloneProtocolSnapshot,
   ensureProteinBuilderProject,
   ensureProteinBuilderProtocol,
-  migrateProteinBuilderCloningNotebookState,
   resolveProteinBuilderCloningNotebookProtocol
 };

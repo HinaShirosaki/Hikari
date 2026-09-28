@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { installDialogLayout, measureDialogTopClearance } from '../src/renderer/app/dialog-layout.js';
-import { initNotebookWidget } from '../src/renderer/modules/home-dashboard/notebook.js';
 
 const read = (relativePath) => readFile(new URL(`../${relativePath}`, import.meta.url), 'utf8');
 const [
@@ -9,7 +8,6 @@ const [
   gelDialogCss,
   agentHtml,
   homeHtml,
-  homeNotebookJs,
   protocolCss,
   shellEndHtml,
   unsavedChangesJs,
@@ -19,7 +17,6 @@ const [
   read('src/plugins/gel/vendor/css/overrides/universal-dialogs.css'),
   read('ui/html/views/agent-view.html'),
   read('ui/html/views/home-view.html'),
-  read('src/renderer/modules/home-dashboard/notebook.js'),
   read('ui/css/views/protocol-management-view.css'),
   read('ui/html/shell/end.html'),
   read('src/renderer/services/unsavedChangesService.js'),
@@ -38,8 +35,9 @@ assert.match(agentHtml, /class="agent-review-dialog-header app-dialog-head"/);
 assert.match(gelHtml, /id="gel-peak-editor-overlay"[^>]*app-dialog-overlay app-dialog-overlay--center/);
 assert.match(gelHtml, /class="gel-peak-editor-dialog app-dialog-surface"/);
 assert.match(gelHtml, /class="gel-peak-editor-header app-dialog-head"/);
-assert.match(homeHtml, /id="dashboard-notebook-note-dialog-close-btn"[^>]*class="app-dialog-close-btn"/s);
-assert.match(homeNotebookJs, /noteDialogCloseBtn\.addEventListener\('click', closeNotebookNoteDialog\)/);
+for (const id of ['dashboard-passage-dialog-close-btn', 'dashboard-timer-dialog-close-btn', 'dashboard-incubation-dialog-close-btn']) {
+  assert.match(homeHtml, new RegExp(`id="${id}"[^>]*class="app-dialog-close-btn"`, 's'));
+}
 assert.doesNotMatch(protocolCss, /padding:\s*max\((?:76|86)px,\s*env\(safe-area-inset-top/);
 assert.match(protocolCss, /height:\s*min\(760px,\s*var\(--app-dialog-available-height\)\)/);
 assert.match(shellEndHtml, /id="unsaved-changes-close-btn"[^>]*class="app-dialog-close-btn"/s);
@@ -98,49 +96,5 @@ assert.equal(typeof windowListeners.get('resize'), 'function');
 cleanup();
 assert.equal(observerDisconnected, true);
 assert.equal(windowListeners.has('resize'), false);
-
-class MockElement {
-  constructor() {
-    this.hidden = false;
-    this.textContent = '';
-    this.value = '';
-    this.listeners = new Map();
-  }
-
-  addEventListener(type, listener) {
-    this.listeners.set(type, listener);
-  }
-
-  click() {
-    this.listeners.get('click')?.({ target: this });
-  }
-
-  reset() {
-    this.value = '';
-  }
-}
-
-const notebookElements = {
-  pagesStatus: new MockElement(),
-  pageList: new MockElement(),
-  noteDialogOverlay: new MockElement(),
-  noteDialogForm: new MockElement(),
-  noteDialogCloseBtn: new MockElement(),
-  noteDialogPage: new MockElement(),
-  noteInput: new MockElement(),
-  noteClarifyBtn: new MockElement()
-};
-initNotebookWidget({
-  state: { notebookEntries: [], settings: {} },
-  persist() {},
-  safeText: (value) => String(value || ''),
-  render() {},
-  elements: notebookElements
-});
-notebookElements.noteDialogOverlay.hidden = false;
-notebookElements.noteDialogPage.textContent = 'Page 1';
-notebookElements.noteDialogCloseBtn.click();
-assert.equal(notebookElements.noteDialogOverlay.hidden, true);
-assert.equal(notebookElements.noteDialogPage.textContent, '');
 
 console.log('dialog style selfcheck OK');

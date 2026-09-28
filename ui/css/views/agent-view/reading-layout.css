@@ -38,7 +38,7 @@
   margin-left: auto;
   padding: .8rem var(--space-16);
   border-radius: 1rem 1rem .3rem 1rem;
-  background: var(--theme-surface-subtle);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 50%, transparent);
 }
 
 .agent-chat-item .agent-chat-header {

@@ -1,7 +1,7 @@
 'use strict';
 
-const { normalizeFolderKey } = require('../memory/text-utils.js');
-const { PROJECT_MEMORY_AUTO_END, PROJECT_MEMORY_AUTO_START } = require('../storage-memory');
+const { normalizeFolderKey } = require('../../project-memory/text-utils.js');
+const { PROJECT_MEMORY_AUTO_END, PROJECT_MEMORY_AUTO_START } = require('../../project-memory');
 const { asArray, cleanText, ensureObject } = require('../storage-utils');
 
 function pickLatestTimestamp(...values) {

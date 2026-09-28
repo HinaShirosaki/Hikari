@@ -1,4 +1,6 @@
 import { isChemicalStructureSampleType } from './compound-model.js';
+import { escapeHtml } from '../../lib/html.js';
+import { cloneMetadataObject, formatSampleRecordLabel } from '../../lib/sample-records.js';
 import {
   getEditableSampleTypeEntries,
   getSampleTypeLabel,
@@ -22,28 +24,7 @@ export function normalizeCode(value) {
     .replace(/[^a-zA-Z0-9._-]/g, '');
 }
 
-export function cloneMetadataObject(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return Object.entries(value).reduce((accumulator, [key, raw]) => {
-    const cleanKey = String(key || '').trim();
-    if (!cleanKey) {
-      return accumulator;
-    }
-    accumulator[cleanKey] = raw === null || raw === undefined ? '' : raw;
-    return accumulator;
-  }, {});
-}
-
-export function formatSampleRecordLabel(sample) {
-  const code = String(sample?.code || '').trim();
-  const name = String(sample?.name || '').trim();
-  if (code && name) {
-    return `${code} - ${name}`;
-  }
-  return code || name || String(sample?.id || 'Sample').trim();
-}
+export { cloneMetadataObject, formatSampleRecordLabel };
 
 export function formatSampleTypeLabel(sampleType, settings = {}) {
   if (isChemicalStructureSampleType(sampleType)) {
@@ -67,18 +48,7 @@ export function renderSampleTypeOptions(ctx) {
   }
 }
 
-export function escapeHtml(text) {
-  return String(text || '').replace(/[&<>"']/g, (char) => {
-    const entityMap = {
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
-    };
-    return entityMap[char] || char;
-  });
-}
+export { escapeHtml };
 
 export function setMultiSelectValues(selectEl, values) {
   if (!selectEl) {

@@ -2,73 +2,53 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { cleanText, ensureObject, loadSqlJs, readJsonFile } = require('../storage-utils');
-const { NOTEBOOK_PAGE_FILE_NAME } = require('./constants.js');
+const { cleanText, ensureObject, keepLatestById, readJsonFile, readRecordFile } = require('../storage-utils');
+const { NOTEBOOK_PAGE_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
 const { isPermissionDeniedError } = require('./folder-names.js');
 
-function readSqlRows(db, sql, values = []) {
-  const stmt = db.prepare(sql);
-  const rows = [];
-  try {
-    stmt.bind(values);
-    while (stmt.step()) {
-      rows.push(stmt.getAsObject());
-    }
-  } finally {
-    stmt.free();
-  }
-  return rows;
-}
-
-async function readWorkflowStatusIndex(sqlitePath) {
-  try {
-    const bytes = await fs.readFile(sqlitePath);
-    if (!bytes.length) {
-      return {
-        exists: true,
-        templateRows: [],
-        workflowRows: []
-      };
-    }
-    const SQL = await loadSqlJs();
-    const db = new SQL.Database(new Uint8Array(bytes));
+// Workflow/<template folder>/template.json and
+// Workflow/<template folder>/<run folder>/workflow.json are the only copy of
+// templates and runs; a save removes the record file of a deleted one.
+async function readWorkflowFolders(workflowRootPath) {
+  const templates = new Map();
+  const workflowRows = new Map();
+  const warnings = [];
+  const result = (exists) => ({
+    exists,
+    templates: [...templates.values()].map((entry) => entry.value),
+    workflowRows: [...workflowRows.values()].map((entry) => entry.value),
+    warnings
+  });
+  const readFolders = async (folderPath) => {
     try {
-      const templateRows = readSqlRows(db, 'SELECT * FROM workflow_templates', []);
-      const workflowRows = readSqlRows(db, 'SELECT * FROM workflow_runs', []);
-      return {
-        exists: true,
-        templateRows,
-        workflowRows
-      };
-    } finally {
-      db.close();
+      return (await fs.readdir(folderPath, { withFileTypes: true })).filter((entry) => entry.isDirectory());
+    } catch (error) {
+      if (error?.code !== 'ENOENT') {
+        const reason = isPermissionDeniedError(error) ? 'Permission denied reading' : 'Could not read';
+        warnings.push(`${reason} workflow folder ${folderPath}: ${String(error?.message || error)}`);
+      }
+      return null;
     }
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return {
-        exists: false,
-        templateRows: [],
-        workflowRows: [],
-        warnings: []
-      };
-    }
-    if (isPermissionDeniedError(error)) {
-      return {
-        exists: false,
-        templateRows: [],
-        workflowRows: [],
-        warnings: [`Permission denied reading workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
-      };
-    }
-    // The workflow index is rebuilt from the run folders on every sync, so an
-    // unreadable one degrades to "no index" rather than failing the load.
-    return {
-      exists: false,
-      templateRows: [],
-      workflowRows: [],
-      warnings: [`Ignoring unreadable workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
-    };
+  };
+
+  const templateFolders = await readFolders(workflowRootPath);
+  if (!templateFolders) {
+    return result(false);
   }
+  for (const templateFolder of templateFolders) {
+    const templateFolderPath = path.join(workflowRootPath, templateFolder.name);
+    const template = await readRecordFile(path.join(templateFolderPath, TEMPLATE_METADATA_FILE_NAME), 'template', warnings);
+    if (template) {
+      keepLatestById(templates, template);
+    }
+    for (const runFolder of (await readFolders(templateFolderPath)) || []) {
+      const run = await readRecordFile(path.join(templateFolderPath, runFolder.name, WORKFLOW_METADATA_FILE_NAME), 'workflow', warnings);
+      if (run) {
+        keepLatestById(workflowRows, run, { relativeFolderPath: `${templateFolder.name}/${runFolder.name}`, workflow: run.record });
+      }
+    }
+  }
+  return result(true);
 }
 
 async function readNotebookEntriesForWorkflowFolder(workflowFolderPath) {
@@ -114,5 +94,5 @@ async function readNotebookEntriesForWorkflowFolder(workflowFolderPath) {
 
 module.exports = {
   readNotebookEntriesForWorkflowFolder,
-  readWorkflowStatusIndex
+  readWorkflowFolders
 };

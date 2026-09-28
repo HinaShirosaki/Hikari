@@ -20,7 +20,7 @@ const {
   changedFieldList,
   describeNotebookEntryChanges,
   logNotebookPageEvent
-} = await import('../src/renderer/modules/biology-notebook/storage/page-log.js');
+} = await import('../src/renderer/services/notebook-page-log.js');
 
 const calculation = (result) => ({
   id: 'calc-1', type: 'dilution', title: 'Dilution', result, summary: '', inputs: {}

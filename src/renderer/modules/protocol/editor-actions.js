@@ -29,16 +29,6 @@ function createProtocolEditorActions({
     }
   }
 
-  function setActivePlaceholderPreset(placeholderName = '') {
-    localState.activePlaceholderPreset = String(placeholderName || '').trim();
-    const buttons = ui.protocolPlaceholderPresets?.querySelectorAll?.('[data-protocol-placeholder-preset]') || [];
-    buttons.forEach((button) => {
-      const isActive = String(button.dataset.protocolPlaceholderPreset || '').trim() === localState.activePlaceholderPreset;
-      button.classList.toggle('is-active', isActive);
-      button.setAttribute('aria-pressed', String(isActive));
-    });
-  }
-
   function onProtocolSubmit(event) {
     event.preventDefault();
 
@@ -92,7 +82,7 @@ function createProtocolEditorActions({
     const convertedSteps = draftHelpers.normalizeMethodStepEntries(steps);
 
     if (citations.length) {
-      convertedSteps.unshift({ id: createId(), text: `Source citation(s): ${citations.join('; ')}`, placeholders: [] });
+      convertedSteps.unshift({ text: `Source citation(s): ${citations.join('; ')}`, placeholders: [] });
     }
     if (!convertedSteps.length) {
       return false;
@@ -111,7 +101,6 @@ function createProtocolEditorActions({
 
   return {
     addInteractivePlaceholderToken,
-    setActivePlaceholderPreset,
     onProtocolSubmit,
     addDraftFromExtractedMethod
   };

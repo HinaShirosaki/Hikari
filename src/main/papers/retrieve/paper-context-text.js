@@ -1,6 +1,7 @@
 'use strict';
 
 const { ensureObject } = require('../../lib/normalize.js');
+const { decodeXmlEntities, safeUrl, stripHtml } = require('../../lib/web-text.js');
 
 /**
  * Text + parsing helpers for the paper context loader.
@@ -23,37 +24,6 @@ const QUERY_STOP_WORDS = new Set([
   'in', 'into', 'is', 'it', 'its', 'of', 'on', 'or', 'that', 'the', 'their', 'then', 'there',
   'these', 'this', 'to', 'was', 'were', 'what', 'when', 'where', 'which', 'why', 'with'
 ]);
-
-function decodeXmlEntities(value) {
-  return String(value || '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, '\'')
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_match, code) => {
-      const parsed = Number(code);
-      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
-    });
-}
-
-function stripHtml(value) {
-  return decodeXmlEntities(String(value || '').replace(/<[^>]+>/g, ' '))
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function safeUrl(value, baseUrl = '') {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  try {
-    return new URL(raw, baseUrl || undefined).toString();
-  } catch {
-    return '';
-  }
-}
 
 function looksLikePdfUrl(value) {
   return /(?:\.pdf(?:$|[?#])|\/pdf(?:\/|$)|[?&](?:format|type|download|pdf)=(?:1|true|pdf)?\b|[?&][^=#]*pdf\b)/i

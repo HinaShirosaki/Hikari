@@ -1,15 +1,10 @@
-import {
-  notebookStateLabel,
-  resolveEntryExecutedAt
-} from './entry-helpers.js';
+import { resolveEntryExecutedAt } from './entry-helpers.js';
 import {
   formatSampleLinkValue,
   getSampleTypeLabel,
-  normalizeNotebookSampleLinks,
   resolveSampleTypeForPlaceholder
 } from '../samples/sample-helpers.js';
 import { renderStepSentence } from '../protocol/step-renderer.js';
-import { summarizeNotebookToolCalculations } from '../../../lib/notebook-tool-calculations.js';
 
 function viewerTimestamp(rawValue, sameDayAs = '') {
   const date = new Date(String(rawValue || '').trim());
@@ -25,35 +20,20 @@ function viewerTimestamp(rawValue, sameDayAs = '') {
   });
 }
 
-export function buildViewerMeta({
-  project,
-  entry,
-  isSavedEntry
-}) {
-  if (entry) {
-    const executedAt = resolveEntryExecutedAt(entry);
-    const parts = [notebookStateLabel(entry)];
-    if (executedAt) {
-      parts.push(viewerTimestamp(executedAt));
-    }
-    if (!executedAt || new Date(entry.updatedAt).getTime() !== new Date(executedAt).getTime()) {
-      parts.push(`Updated ${viewerTimestamp(entry.updatedAt, executedAt)}`);
-    }
-    const toolCalculationSummary = summarizeNotebookToolCalculations(entry?.toolCalculations);
-    if (toolCalculationSummary) {
-      parts.push(toolCalculationSummary);
-    }
-    const sampleLinkCount = normalizeNotebookSampleLinks(entry?.sampleLinks).length;
-    if (sampleLinkCount) {
-      parts.push(`${sampleLinkCount} linked sample${sampleLinkCount === 1 ? '' : 's'}`);
-    }
-    return parts.join(' · ');
+// The line under a page title carries times only; an unsaved draft has none.
+export function buildViewerMeta({ entry }) {
+  if (!entry) {
+    return '';
   }
-  const contextLabel = String(project?.name || '').trim() || 'Untitled Project';
-  if (isSavedEntry) {
-    return `${contextLabel} notebook page.`;
+  const executedAt = resolveEntryExecutedAt(entry);
+  const parts = [];
+  if (executedAt) {
+    parts.push(`Executed ${viewerTimestamp(executedAt)}`);
   }
-  return `${contextLabel} protocol draft. Fill placeholders and results, then save this notebook page.`;
+  if (!executedAt || new Date(entry.updatedAt).getTime() !== new Date(executedAt).getTime()) {
+    parts.push(`Updated ${viewerTimestamp(entry.updatedAt, executedAt)}`);
+  }
+  return parts.join(' · ');
 }
 
 export function buildProtocolStepsHtml({
@@ -77,7 +57,7 @@ export function buildProtocolStepsHtml({
     const sentenceHtml = renderStepSentence(step, values || {}, helpers);
     return `
         <article class="card">
-          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${safeText(String(step?.id || `step_${index + 1}`))}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
+          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${index + 1}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
         </article>
       `;
   }).join('');

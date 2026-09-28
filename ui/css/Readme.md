@@ -30,11 +30,13 @@ aliases that token to `--theme-surface` to preserve its near-white fields;
 night and other themes may override the control fill independently.
 
 Modules should use the shared `--theme-*` variables unless a color carries
-module-specific meaning. Extra colors belong in a dedicated module palette:
+module-specific meaning. Washes, tinted borders and status inks come from the
+tint steps at the end of `base/palette.css` (`--theme-fill`, `--theme-*-wash`,
+`-soft`, `-line`, `-ink`, `--theme-heat-*`); do not mint a new `color-mix()`
+percentage in a view. Extra colors belong in a dedicated module palette:
 
 - `views/assay-plate-palette.css` — assay plates and labware previews
 - `views/gel-palette.css` — gel charts and quantification
-- `views/home-palette.css` — contribution heatmaps
 - `views/papers-palette.css` — PDF highlights
 - `views/sequence-viewer-palette.css` — biological sequence features
 - `views/tool-box-palette.css` — fixed-color scientific canvases
@@ -67,6 +69,7 @@ part of the standard verification path.
 - `.folder-tree-template__row` contains the disclosure control, main folder button, and optional action.
 - `.folder-tree-template__disclosure` wraps the CSS-drawn chevron; do not use text `>` characters.
 - `.folder-tree-template__rename-input` styles the input `startInlineRename` swaps in for a row control while it is being renamed.
+- `.folder-tree-template__hover-card` is the box `attachRailHoverCard` shows beside a row, e.g. the full text of a clipped name.
 
 Modules keep ownership of their data, labels, and commands. Folder-based rails
 use `src/renderer/lib/folder-tree.js` for consistent node/leaf markup and

@@ -514,8 +514,13 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
       const openedUrls = [];
       const createdWindows = [];
       const createdWindowOptions = [];
+      const sentEvents = [];
 
       class FakeBrowserWindow {
+        static getAllWindows() {
+          return createdWindows;
+        }
+
         constructor(options = {}) {
           this.destroyed = false;
           this.handlers = new Map();
@@ -527,7 +532,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
               },
               removeListener: () => {}
             },
-            downloadURL: () => {}
+            downloadURL: () => {},
+            send: (channel, payload) => sentEvents.push({ channel, payload })
           };
           createdWindows.push(this);
           createdWindowOptions.push(options);
@@ -596,6 +602,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         assert.equal(createdWindowOptions[0]?.webPreferences?.plugins, true);
         assert.equal(createdWindowOptions[0]?.webPreferences?.partition, 'persist:paper-browser');
         assert.equal(await fsPromises.readFile(result.file_path, 'utf8'), '%PDF-1.7\nmain service browser fallback\n');
+        // The renderer is told once, so Papers shows the new PDF without waiting for its next scan.
+        const { STORAGE } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+        const saved = sentEvents.filter((event) => event.channel === STORAGE.PAPER_FILE_SAVED);
+        assert.equal(saved.length, 1);
+        assert.equal(saved[0].payload.relative_path, result.relative_path);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -836,6 +847,34 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('paper browser session turns inline PDF pages into downloads so they are saved', () => {
+      const { forcePdfDownloads } = require(path.join(
+        __dirname, 'src', 'main', 'papers', 'download', 'paper-download', 'browser-session.js'
+      ));
+      const run = (details) => {
+        let result;
+        forcePdfDownloads(details, (value) => { result = value; });
+        return result;
+      };
+      // PMC serves `application/pdf; charset=utf-8` with `inline`.
+      const inlinePdf = run({
+        resourceType: 'mainFrame',
+        responseHeaders: { 'content-type': ['application/pdf; charset=utf-8'], 'content-disposition': ['inline'] }
+      });
+      assert.deepEqual(inlinePdf.responseHeaders['Content-Disposition'], ['attachment']);
+      assert.equal('content-disposition' in inlinePdf.responseHeaders, false);
+      assert.deepEqual(
+        run({ resourceType: 'mainFrame', responseHeaders: { 'Content-Type': ['text/html'] } }),
+        {},
+        'publisher HTML PDF viewers stay pages'
+      );
+      assert.deepEqual(
+        run({ resourceType: 'xhr', responseHeaders: { 'Content-Type': ['application/pdf'] } }),
+        {},
+        'a page script fetching a PDF is left alone'
+      );
+    });
+
     test('literature search workflow preserves DOI metadata for later user-triggered download', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-doi-'));
       const downloadCalls = [];

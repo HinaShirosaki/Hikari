@@ -2,17 +2,19 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { takeChemicalIndexAlerts } = require('./chemical-index-guard');
 const { normalizeExperimentLogState, readExperimentLogSidecar } = require('./experiment-log-storage');
 const {
   hydrateProjectRootFromStoragePath,
   hydrateSamplesRootFromStoragePath,
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
-const { isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary } = require('./storage-discovery');
-const { getBundlePaths, getBundlePathsFromSqlitePath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PROJECT_ROOT_FOLDER_NAME, PROTOCOL_ROOT_FOLDER_NAME, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
+const { isBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary } = require('./storage-discovery');
+const { getBundlePaths, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PROJECT_ROOT_FOLDER_NAME, PROTOCOL_ROOT_FOLDER_NAME, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { importWorkflowRoot } = require('./workflow-storage');
 const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile, toPosixRelative } = require('./storage-utils');
+const { addPaperExperimentLinks } = require('../../shared/paper-experiment-links.mjs');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -47,27 +49,13 @@ function mergeInventoryMap(targetInventoryMap, inventoryPayload) {
   });
 }
 
-function mergePaperExperimentLinks(targetMap, links) {
-  asArray(links).forEach((rawLink, index) => {
-    const link = ensureObject(rawLink);
-    const key = [
-      cleanText(link.paperId, 220),
-      cleanText(link.entryId, 220),
-      cleanText(link.projectId, 220),
-      cleanText(link.note, 600)
-    ].join('::') || `paper_link_${index + 1}`;
-    targetMap.set(key, link);
-  });
-}
-
 async function importProtocolRoot({ storagePath = '' } = {}) {
   const protocolPaths = resolveProtocolBundlePaths({ storagePath });
   const protocolRootPath = cleanText(protocolPaths.protocolRootPath, 2400);
   if (!protocolRootPath) {
     return {
       protocols: [],
-      protocolRootPath: '',
-      sqlitePath: ''
+      protocolRootPath: ''
     };
   }
   let entries = [];
@@ -77,8 +65,7 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
     if (error?.code === 'ENOENT') {
       return {
         protocols: [],
-        protocolRootPath,
-        sqlitePath: protocolPaths.sqlitePath
+        protocolRootPath
       };
     }
     throw error;
@@ -102,8 +89,7 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
 
   return {
     protocols,
-    protocolRootPath,
-    sqlitePath: protocolPaths.sqlitePath
+    protocolRootPath
   };
 }
 
@@ -140,7 +126,6 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
 
   const warnings = [];
   const candidateFiles = [];
-  const discoveredBundleBases = new Set();
 
   for (const entry of dirEntries) {
     if (!entry.isFile()) {
@@ -158,31 +143,6 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
       modifiedAt: Number(stat.mtimeMs) || 0,
       bundlePaths
     });
-    if (bundlePaths.basePath) {
-      discoveredBundleBases.add(bundlePaths.basePath);
-    }
-  }
-
-  for (const entry of dirEntries) {
-    if (!entry.isFile()) {
-      continue;
-    }
-    if (!isSqliteBundleCandidateName(entry.name)) {
-      continue;
-    }
-    const absPath = path.join(resolvedStoragePath, entry.name);
-    const bundlePaths = getBundlePathsFromSqlitePath(absPath, { storagePath: resolvedStoragePath });
-    if (!bundlePaths.basePath || discoveredBundleBases.has(bundlePaths.basePath)) {
-      continue;
-    }
-    const stat = await fs.stat(absPath);
-    candidateFiles.push({
-      kind: 'sqlite_only_bundle',
-      path: absPath,
-      modifiedAt: Number(stat.mtimeMs) || 0,
-      bundlePaths
-    });
-    discoveredBundleBases.add(bundlePaths.basePath);
   }
 
   candidateFiles.sort((left, right) => left.modifiedAt - right.modifiedAt);
@@ -246,7 +206,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     mergeByIdMap(workflowTemplateMap, source.workflowTemplates, 'workflow_template');
     mergeByIdMap(workflowMap, source.workflows, 'workflow');
     mergeByIdMap(paperMap, source.papers, 'paper');
-    mergePaperExperimentLinks(paperExperimentLinkMap, source.paperExperimentLinks);
+    addPaperExperimentLinks(paperExperimentLinkMap, source.paperExperimentLinks, { text: cleanText });
     mergeByIdMap(assayMap, source.assays, 'assay');
     mergeByIdMap(gelAnalysisMap, source.gelAnalyses, 'gel');
     mergeByIdMap(chemicalMap, ensureObject(source.labInventory).chemicals, 'chemical');
@@ -291,8 +251,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
       bundle_paths: {
         protocols_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.protocolsPath),
         notebook_pages_path: '',
-        samples_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.samplesPath),
-        sqlite_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.sqlitePath)
+        samples_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.samplesRootPath)
       },
       counts: rootSummary,
       migration: rootHydrated.migration || null
@@ -303,37 +262,31 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     const candidatePath = candidate.path;
     const bundlePaths = candidate.bundlePaths || getBundlePaths({ dataFilePath: candidatePath, storagePath: resolvedStoragePath });
     let parsed = {};
-    if (candidate.kind === 'data_bundle') {
-      try {
-        const raw = await fs.readFile(candidatePath, 'utf8');
-        parsed = parseJsonObject(raw);
-      } catch (error) {
-        warnings.push(`Failed to read ${toPosixRelative(resolvedStoragePath, candidatePath)}: ${String(error?.message || error)}`);
-        continue;
-      }
-
-      if (!parsed) {
-        warnings.push(`Skipped ${toPosixRelative(resolvedStoragePath, candidatePath)} because JSON payload is invalid.`);
-        continue;
-      }
-    }
-
-    const [notebookSidecarExists, sqliteExists, legacySqliteExists] = await Promise.all([
-      fs.access(bundlePaths.notebookPagesPath).then(() => true).catch(() => false),
-      fs.access(bundlePaths.sqlitePath).then(() => true).catch(() => false),
-      fs.access(bundlePaths.legacySqlitePath || '').then(() => true).catch(() => false)
-    ]);
-    const hasAnySqlite = sqliteExists || legacySqliteExists;
-
-    if (candidate.kind === 'data_bundle' && !looksLikeHikariSnapshot(parsed) && !notebookSidecarExists && !hasAnySqlite) {
+    try {
+      const raw = await fs.readFile(candidatePath, 'utf8');
+      parsed = parseJsonObject(raw);
+    } catch (error) {
+      warnings.push(`Failed to read ${toPosixRelative(resolvedStoragePath, candidatePath)}: ${String(error?.message || error)}`);
       continue;
     }
-    if (candidate.kind !== 'data_bundle' && !notebookSidecarExists && !hasAnySqlite) {
+
+    if (!parsed) {
+      warnings.push(`Skipped ${toPosixRelative(resolvedStoragePath, candidatePath)} because JSON payload is invalid.`);
+      continue;
+    }
+
+    const exists = (targetPath) => fs.access(targetPath || '').then(() => true).catch(() => false);
+    const [notebookSidecarExists, hasSqliteIndex] = await Promise.all([
+      exists(bundlePaths.notebookPagesPath),
+      exists(bundlePaths.chemicalsSqlitePath)
+    ]);
+
+    if (!looksLikeHikariSnapshot(parsed) && !notebookSidecarExists && !hasSqliteIndex) {
       continue;
     }
 
     const hydrated = await hydrateSnapshotFromBundle({
-      dataFilePath: candidate.kind === 'data_bundle' ? candidatePath : '',
+      dataFilePath: candidatePath,
       snapshot: parsed,
       bundlePaths
     });
@@ -343,14 +296,11 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
 
     bundleSummaries.push({
       bundle_type: candidate.kind,
-      data_file_path: candidate.kind === 'data_bundle'
-        ? toPosixRelative(resolvedStoragePath, candidatePath)
-        : '',
+      data_file_path: toPosixRelative(resolvedStoragePath, candidatePath),
       bundle_paths: {
         protocols_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.protocolsPath),
         notebook_pages_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.notebookPagesPath),
-        samples_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.samplesPath),
-        sqlite_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.sqlitePath)
+        samples_path: toPosixRelative(resolvedStoragePath, hydrated.bundlePaths.samplesRootPath)
       },
       counts: summary,
       migration: hydrated.migration || null
@@ -432,7 +382,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   mergeByIdMap(workflowMap, workflowRoot?.statePatch?.workflows, 'workflow');
   mergeByIdMap(notebookMap, workflowRoot?.statePatch?.notebookEntries, 'notebook');
   mergeByIdMap(paperMap, workflowRoot?.statePatch?.papers, 'paper');
-  mergePaperExperimentLinks(paperExperimentLinkMap, workflowRoot?.statePatch?.paperExperimentLinks);
+  addPaperExperimentLinks(paperExperimentLinkMap, workflowRoot?.statePatch?.paperExperimentLinks, { text: cleanText });
 
   statePatch.projects = [...projectMap.values()];
   statePatch.workflowTemplates = [...workflowTemplateMap.values()];
@@ -485,6 +435,8 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     recognized,
     lastSavedAt: newestSnapshot?.modifiedAt ? new Date(newestSnapshot.modifiedAt).toISOString() : '',
     warnings: allWarnings,
+    // Problems the user must see, not just a line in the import summary.
+    alerts: takeChemicalIndexAlerts(rootLayout.chemicalsSqlitePath),
     bundles: bundleSummaries,
     sequenceLibrary
   };

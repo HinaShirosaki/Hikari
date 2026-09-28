@@ -42,7 +42,7 @@ function ensureToastElement() {
     maxWidth: 'min(360px, calc(100vw - 32px))',
     padding: '12px 16px',
     borderRadius: '12px',
-    boxShadow: '0 16px 32px rgba(23, 18, 14, 0.18)',
+    boxShadow: '0 16px 32px rgba(27, 20, 14, 0.18)',
     color: '#ffffff',
     fontSize: '0.94rem',
     lineHeight: '1.35',
@@ -79,9 +79,11 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
     }
   }
   toast.textContent = text;
+  // The day theme's danger/success, fixed: a toast floats over every theme and
+  // keeps white text, so it cannot follow night's light status colors.
   toast.style.background = type === 'error'
-    ? 'rgba(156, 54, 48, 0.96)'
-    : 'rgba(51, 111, 75, 0.96)';
+    ? 'rgba(167, 75, 58, 0.96)'
+    : 'rgba(22, 101, 52, 0.96)';
   toast.hidden = false;
   toast.style.opacity = '1';
   toast.style.transform = 'translateY(0)';

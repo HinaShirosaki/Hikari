@@ -10,9 +10,9 @@ const {
   findExistingPaperRow,
   persistKnowledgeDatabase,
   withKnowledgeDatabaseWrite,
-  runStatement,
-  updateJsonIndex
+  runStatement
 } = require('../paper-knowledge-store.js');
+const { readPaperMetadata, writePaperMetadata } = require('../knowledge-index-schema.js');
 const {
   DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT,
   asArrayDefault,
@@ -21,8 +21,7 @@ const {
   normalizeMarkdown
 } = require('./helpers.js');
 
-// Turns extracted PDF text into knowledge markdown and writes the SQLite +
-// JSON index rows that point at it.
+// Turns extracted PDF text into Markdown and indexes identity and file locations.
 function createKnowledgeMarkdownIndex({
   cleanText,
   requestAssistantText,
@@ -115,7 +114,7 @@ function createKnowledgeMarkdownIndex({
     };
   }
 
-  async function upsertKnowledgeIndex({ paths, metadata, filePath, paperId, extractionStatus, wikiStatus, nowIso }) {
+  async function upsertKnowledgeIndex({ paths, metadata, meta, filePath, paperId, nowIso }) {
     return withKnowledgeDatabaseWrite(paths.sqlite_path, async (db) => {
       const existing = findExistingPaperRow(db, {
         doi: metadata.doi,
@@ -130,7 +129,6 @@ function createKnowledgeMarkdownIndex({
         pdfSha256: metadata.pdf_sha256,
         title: metadata.title
       });
-      const previousAddedAt = cleanText(existing?.added_at, 80) || nowIso;
       const wikiPath = buildRelativePath(paths.storage_path, paths.markdown_path);
       const folderPath = buildRelativePath(paths.storage_path, path.dirname(filePath));
       const pdfPath = buildRelativePath(paths.storage_path, filePath);
@@ -148,81 +146,49 @@ function createKnowledgeMarkdownIndex({
         pdf_path: pdfPath,
         discovered_at: nowIso
       };
+      const previous = {
+        ...await readPaperMetadata(paths.storage_path, existing || {}),
+        ...await readPaperMetadata(paths.storage_path, { wiki_path: wikiPath })
+      };
+      const nextMetadata = {
+        ...previous,
+        ...metadata,
+        ...meta,
+        paper_id: resolvedPaperId,
+        doi: metadata.doi || existing?.doi || '',
+        pmid: metadata.pmid || existing?.pmid || '',
+        pmcid: metadata.pmcid || existing?.pmcid || '',
+        added_at: previous.added_at || nowIso,
+        locations: [...asArrayDefault(previous.locations).filter((entry) => entry.id !== location.id), location]
+      };
+      // An import may only supply identity. Keep descriptive metadata already
+      // saved in JSON, including values rescued from a legacy SQLite row.
+      for (const key of ['abstract', 'authors', 'journal', 'year', 'url', 'notes']) {
+        if (!nextMetadata[key] || (Array.isArray(nextMetadata[key]) && !nextMetadata[key].length)) {
+          nextMetadata[key] = previous[key] ?? nextMetadata[key];
+        }
+      }
+      await writePaperMetadata(paths.meta_path, nextMetadata);
       runStatement(db, `
-        INSERT INTO papers (
-          id, doi, pmid, pmcid, title, abstract, authors_json, journal, year, url, pdf_sha256,
-          added_at, updated_at, source, wiki_status, wiki_path, extraction_status, notes
-        ) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO papers (id, doi, pmid, pmcid, title, pdf_sha256, wiki_path)
+        VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, NULLIF(?, ''), ?)
         ON CONFLICT(id) DO UPDATE SET
           doi = COALESCE(excluded.doi, papers.doi),
           pmid = COALESCE(excluded.pmid, papers.pmid),
           pmcid = COALESCE(excluded.pmcid, papers.pmcid),
           title = excluded.title,
-          abstract = excluded.abstract,
-          authors_json = excluded.authors_json,
-          journal = excluded.journal,
-          year = excluded.year,
-          url = excluded.url,
           pdf_sha256 = COALESCE(excluded.pdf_sha256, papers.pdf_sha256),
-          updated_at = excluded.updated_at,
-          source = excluded.source,
-          wiki_status = excluded.wiki_status,
-          wiki_path = excluded.wiki_path,
-          extraction_status = excluded.extraction_status,
-          notes = excluded.notes
-      `, [
-        resolvedPaperId,
-        metadata.doi,
-        metadata.pmid,
-        metadata.pmcid,
-        metadata.title,
-        metadata.abstract,
-        JSON.stringify(metadata.authors || []),
-        metadata.journal,
-        metadata.year,
-        metadata.url,
-        metadata.pdf_sha256,
-        previousAddedAt,
-        nowIso,
-        metadata.source,
-        wikiStatus,
-        wikiPath,
-        extractionStatus,
-        metadata.notes
-      ]);
+          wiki_path = excluded.wiki_path
+      `, [resolvedPaperId, metadata.doi, metadata.pmid, metadata.pmcid,
+        metadata.title, metadata.pdf_sha256, wikiPath]);
       runStatement(db, `
-        INSERT INTO paper_locations (
-          id, paper_id, scope, container, folder_path, pdf_filename, pdf_path, discovered_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO paper_locations (id, paper_id, scope, container, pdf_path)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
-          paper_id = excluded.paper_id,
-          scope = excluded.scope,
-          container = excluded.container,
-          folder_path = excluded.folder_path,
-          pdf_filename = excluded.pdf_filename,
-          pdf_path = excluded.pdf_path,
-          discovered_at = excluded.discovered_at
-      `, [
-        location.id,
-        location.paper_id,
-        location.scope,
-        location.container,
-        location.folder_path,
-        location.pdf_filename,
-        location.pdf_path,
-        location.discovered_at
-      ]);
+          paper_id = excluded.paper_id, scope = excluded.scope,
+          container = excluded.container, pdf_path = excluded.pdf_path
+      `, [location.id, location.paper_id, location.scope, location.container, location.pdf_path]);
       await persistKnowledgeDatabase(paths.sqlite_path, db);
-      await updateJsonIndex(paths.json_index_path, {
-        id: resolvedPaperId,
-        doi: metadata.doi,
-        title: metadata.title,
-        pdf_sha256: metadata.pdf_sha256,
-        wiki_status: wikiStatus,
-        wiki_path: wikiPath,
-        extraction_status: extractionStatus,
-        updated_at: nowIso
-      }, location);
       return {
         paper_id: resolvedPaperId,
         wiki_path: wikiPath,

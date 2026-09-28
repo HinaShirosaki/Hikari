@@ -16,7 +16,7 @@ src/renderer/modules/my-feature/
   Readme.md         # short maintenance note
 ```
 
-[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) is a legacy composition-root pattern, not the default for new views.
+[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box/index.js](../../src/renderer/modules/tool-box/index.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) is a legacy composition-root pattern, not the default for new views.
 
 The feature entry exports a single function named `init<Name>` (camel-cased, capitalized after `init`):
 
@@ -127,7 +127,7 @@ This keeps `renderAll()` safe.
 
 ## State contract
 
-There is one state object. It is loaded through the stable [app-state.js](../../src/renderer/modules/app-state.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
+There is one state object. It is loaded through the stable [app-state.js](../../src/renderer/modules/app-state/index.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
 
 Rules:
 

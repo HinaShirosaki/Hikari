@@ -1,15 +1,7 @@
-import { cleanText } from '../shared.js';
+import { cleanText, formatThermocycleCondition } from '../shared.js';
 import { asArray } from '../../../lib/normalize.js';
 import { CLONING_NOTEBOOK_SOURCE, CLONING_PROJECT_DESCRIPTION, CLONING_PROJECT_NAME, CLONING_PROTOCOL_ID, CLONING_PROTOCOL_NAME } from './constants.js';
 import { createStableId } from './pcr-programs.js';
-
-function formatThermocycleCondition(step = {}) {
-  return [
-    cleanText(step?.label, 120) || 'Thermocycle step',
-    cleanText(step?.temperature, 60),
-    cleanText(step?.time, 60)
-  ].filter(Boolean).join(' - ');
-}
 
 function buildProtocolSteps(pcrPrograms = []) {
   const multiProgram = asArray(pcrPrograms).length > 1;
@@ -29,8 +21,7 @@ function buildProtocolSteps(pcrPrograms = []) {
       .filter((step) => cleanText(step?.label, 80).toLowerCase() !== 'initial denaturation')
       .forEach((step) => texts.push(`${prefix}${formatThermocycleCondition(step)}`));
     return texts;
-  }).map((text, index) => ({
-    id: `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
+  }).map((text) => ({
     text,
     placeholders: []
   }));
@@ -63,23 +54,14 @@ function cloneProtocolSnapshot(protocol = {}) {
     name: cleanText(protocol?.name, 220) || CLONING_PROTOCOL_NAME,
     category: cleanText(protocol?.category, 120),
     purpose: cleanText(protocol?.purpose, 1000),
-    steps: asArray(protocol?.steps).map((step, index) => ({
-      id: cleanText(step?.id, 160) || `${CLONING_PROTOCOL_ID}_step_${index + 1}`,
+    steps: asArray(protocol?.steps).map((step) => ({
       text: cleanText(step?.text, 1200),
       placeholders: []
     }))
   };
 }
 
-function ensureProject(state, createId, nowIso) {
-  state.projects = asArray(state.projects);
-  const existing = state.projects.find((project) => (
-    cleanText(project?.source, 80) === CLONING_NOTEBOOK_SOURCE
-    || cleanText(project?.name, 160).toLowerCase() === CLONING_PROJECT_NAME.toLowerCase()
-  ));
-  if (existing) {
-    return existing;
-  }
+function ensureProject(ensureProjectRecord, createId, nowIso) {
   const project = {
     id: createStableId(createId, 'sequence_viewer_project'),
     name: CLONING_PROJECT_NAME,
@@ -88,29 +70,12 @@ function ensureProject(state, createId, nowIso) {
     updatedAt: nowIso,
     source: CLONING_NOTEBOOK_SOURCE
   };
-  state.projects.push(project);
-  return project;
+  return ensureProjectRecord?.(project) || project;
 }
 
-function upsertProtocol(state, nextProtocol, nowIso) {
-  state.protocols = asArray(state.protocols);
-  const existingIndex = state.protocols.findIndex((protocol) => (
-    cleanText(protocol?.id, 160) === cleanText(nextProtocol?.id, 160)
-  ));
-  if (existingIndex >= 0) {
-    state.protocols[existingIndex] = {
-      ...state.protocols[existingIndex],
-      ...nextProtocol,
-      createdAt: cleanText(state.protocols[existingIndex]?.createdAt, 120) || nowIso
-    };
-    return state.protocols[existingIndex];
-  }
-  state.protocols.push(nextProtocol);
-  return nextProtocol;
-}
-
-function ensureProtocol(state, pcrPrograms, nowIso) {
-  return upsertProtocol(state, buildProtocol(pcrPrograms, nowIso), nowIso);
+function ensureProtocol(saveProtocolRecord, pcrPrograms, nowIso) {
+  const protocol = buildProtocol(pcrPrograms, nowIso);
+  return saveProtocolRecord?.(protocol, { preserveCreatedAt: true }) || protocol;
 }
 
 export {

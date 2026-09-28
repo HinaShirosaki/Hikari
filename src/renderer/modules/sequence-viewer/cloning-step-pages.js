@@ -65,8 +65,7 @@ function buildStepProtocol(step, source, nowIso) {
     name: cleanText(step?.name, 220) || 'Cloning Reaction',
     purpose: cleanText(step?.purpose, 1000),
     materials: asArray(step?.materials).map((material) => cleanText(material, 160)).filter(Boolean),
-    steps: asArray(step?.steps).map((text, index) => ({
-      id: `${STEP_PREFIX}_${stepId}_step_${index + 1}`,
+    steps: asArray(step?.steps).map((text) => ({
       text: cleanText(text, 1200),
       placeholders: []
     })),

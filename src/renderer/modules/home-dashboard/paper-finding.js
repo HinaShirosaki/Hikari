@@ -105,10 +105,24 @@ function sortTasksByLatestResult(tasks = []) {
   });
 }
 
+// Papers already saved when the run finished are not news; papers saved from
+// this round's cards stay (as "Saved") until the next run replaces them.
 function papersForTasks(tasks = []) {
   return sortTasksByLatestResult(tasks).flatMap((task) => (
-    asArray(taskRunResult(task).papers).map((paper) => ({ paper, task }))
+    asArray(taskRunResult(task).papers)
+      .filter((paper) => paper?.already_local !== true)
+      .map((paper) => ({ paper, task }))
   ));
+}
+
+function savedFilePath(paper = {}) {
+  return paper.download_status === 'saved' ? cleanText(ensureObject(paper.local_file).file_path) : '';
+}
+
+function paperKey({ paper, task }) {
+  const source = ensureObject(paper);
+  const url = safeHttpUrl(source.url);
+  return `${cleanText(task.id) || projectNameForTask(task)}:${cleanText(source.doi || source.pmid) || url || cleanText(source.title) || 'Untitled paper'}`;
 }
 
 function sortScheduledTasks(tasks) {
@@ -125,6 +139,7 @@ export function initPaperFindingWidget({
   api = null,
   safeText = (value) => String(value || ''),
   onOpenNotebook = () => {},
+  onOpenPaper = null,
   elements = {}
 } = {}) {
   const { summary, list, openBtn, runBtn, nextRun } = elements;
@@ -140,12 +155,22 @@ export function initPaperFindingWidget({
   let availabilityMessage = '';
   let hasLoadError = false;
   let running = false;
+  const cardTargets = new Map();
+  const downloading = new Set();
 
   openBtn?.addEventListener?.('click', () => onOpenNotebook());
   runBtn?.addEventListener?.('click', () => { void runNow(); });
   list.addEventListener('click', (event) => {
     if (event.target.closest?.('[data-paper-finding-setup]')) {
       onOpenNotebook();
+    }
+    const downloadBtn = event.target.closest?.('[data-paper-finding-download]');
+    if (downloadBtn) {
+      void downloadPaper(downloadBtn.dataset.paperFindingDownload);
+    }
+    const openBtn = event.target.closest?.('[data-paper-finding-open]');
+    if (openBtn) {
+      void openSavedPaper(openBtn.dataset.paperFindingOpen);
     }
   });
 
@@ -162,19 +187,26 @@ export function initPaperFindingWidget({
     });
   }
 
-  function renderScheduleFooter(activeTasks) {
+  // The finder never downloads on its own, so the footer says so once instead
+  // of badging every card; Download on a card saves a PDF on demand.
+  function renderScheduleFooter(activeTasks, hasPapers = false) {
     if (!nextRun) {
       return;
     }
     const scheduled = sortScheduledTasks(activeTasks).find((task) => (
       Number.isFinite(new Date(task?.next_run_at || task?.nextRunAt || '').getTime())
     ));
-    nextRun.textContent = scheduled ? nextRunForTask(scheduled) : '';
-    nextRun.hidden = !scheduled;
+    const parts = [
+      scheduled ? `<span>${escapeText(nextRunForTask(scheduled))}</span>` : '',
+      hasPapers ? '<span title="Paper finder saves citation details only; use Download to save a PDF to the project.">Metadata only</span>' : ''
+    ].filter(Boolean);
+    nextRun.innerHTML = parts.join('');
+    nextRun.hidden = !parts.length;
   }
 
   function renderPaperResult({ paper, task }) {
     const source = ensureObject(paper);
+    const key = paperKey({ paper, task });
     const projectName = projectNameForTask(task);
     const title = cleanText(source.title) || 'Untitled paper';
     const authors = authorsForPaper(source);
@@ -193,26 +225,40 @@ export function initPaperFindingWidget({
     const summaryText = cleanText(source.summary);
     const reasonText = cleanText(source.relevance_reason);
     const url = safeHttpUrl(source.url);
-    const key = `${cleanText(task.id) || projectName}:${cleanText(source.doi || source.pmid) || url || title}`;
     const bibliography = [source.journal, source.published_at].map(cleanText).filter(Boolean).join(' · ');
+    const hasDetails = Boolean(summaryText || authors || meta.length);
+    const savedPath = savedFilePath(source);
+    const canOpen = Boolean(savedPath) && typeof onOpenPaper === 'function';
+    const canDownload = !savedPath && Boolean(cleanText(task.id) && (url || cleanText(source.doi)))
+      && typeof api?.downloadFoundPaper === 'function';
+    if (canDownload || canOpen) {
+      cardTargets.set(key, { paper: source, task });
+    }
+    const isDownloading = downloading.has(key);
     return `
       <article class="home-paper-finding-result" data-paper-finding-result>
         <div class="home-paper-finding-result-head">
           <span class="home-paper-finding-project">${escapeText(projectName)}</span>
-          <span class="home-paper-finding-policy">Metadata only</span>
+          ${bibliography ? `<span class="home-paper-finding-citation">${escapeText(bibliography)}</span>` : ''}
         </div>
         <h3 class="home-paper-finding-title">${escapeText(title)}</h3>
-        ${bibliography ? `<p class="home-paper-finding-citation">${escapeText(bibliography)}</p>` : ''}
         ${reasonText ? `<p class="home-paper-finding-reason"><strong>Why it matters:</strong> ${escapeText(reasonText)}</p>` : ''}
-        ${summaryText || authors || meta.length ? `
-          <details class="home-paper-finding-details" data-paper-finding-key="${escapeText(key)}">
-            <summary>${summaryText ? 'Read summary' : 'Paper details'}</summary>
-            ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
-            ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
-            ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
-          </details>
+        ${hasDetails || url || canDownload || savedPath ? `
+          <div class="home-paper-finding-links">
+            ${hasDetails ? `
+              <details class="home-paper-finding-details" data-paper-finding-key="${escapeText(key)}">
+                <summary>${summaryText ? 'Summary' : 'Details'}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></summary>
+                ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
+                ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
+                ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
+              </details>
+            ` : ''}
+            ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">Source<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M8 7h9v9"/></svg></a>` : ''}
+            ${canDownload ? `<button type="button" class="home-paper-finding-source" data-paper-finding-download="${escapeText(key)}" title="Save the PDF to ${escapeText(projectName)}"${isDownloading ? ' disabled' : ''}>${isDownloading ? 'Downloading…' : 'Download'}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg></button>` : ''}
+            ${savedPath ? `<span class="home-paper-finding-saved" title="Saved to ${escapeText(projectName)}">Saved<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>` : ''}
+            ${canOpen ? `<button type="button" class="home-paper-finding-source" data-paper-finding-open="${escapeText(key)}" title="Open in Papers">Open</button>` : ''}
+          </div>
         ` : ''}
-        ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">View source ↗</a>` : ''}
       </article>
     `;
   }
@@ -242,7 +288,7 @@ export function initPaperFindingWidget({
 
     const activeTasks = tasks.filter((task) => task?.enabled !== false);
     const foundPapers = papersForTasks(tasks);
-    renderScheduleFooter(activeTasks);
+    renderScheduleFooter(activeTasks, foundPapers.length > 0);
     summary.textContent = foundPapers.length
       ? `${foundPapers.length} paper${foundPapers.length === 1 ? '' : 's'} found · ${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
       : tasks.length
@@ -255,6 +301,7 @@ export function initPaperFindingWidget({
     }
 
     if (foundPapers.length) {
+      cardTargets.clear();
       setListMarkup(foundPapers.map(renderPaperResult).join(''));
       return;
     }
@@ -339,6 +386,49 @@ export function initPaperFindingWidget({
     await refresh();
     if (failures.length) {
       showTransientNotice(failures[0], { type: 'error' });
+    }
+  }
+
+  async function downloadPaper(key) {
+    const target = cardTargets.get(key);
+    if (!target || downloading.has(key)) {
+      return;
+    }
+    downloading.add(key);
+    renderTasks();
+    const projectName = projectNameForTask(target.task);
+    try {
+      const response = await api.downloadFoundPaper(target.task.id, target.paper);
+      if (response?.ok !== true) {
+        showTransientNotice(cleanText(response?.error) || 'Paper download failed.', { type: 'error' });
+      } else if (response.download_status === 'completed') {
+        showTransientNotice(`Saved ${cleanText(response.file_name) || 'the PDF'} to ${projectName}.`);
+        // Main marked the card saved; reload so it turns into Saved · Open.
+        if (request) {
+          await request;
+        }
+        await refresh();
+      } else {
+        showTransientNotice('Paper download is still running.');
+      }
+    } catch (error) {
+      showTransientNotice(cleanText(error?.message) || 'Paper download failed.', { type: 'error' });
+    } finally {
+      downloading.delete(key);
+      renderTasks();
+    }
+  }
+
+  async function openSavedPaper(key) {
+    const paper = ensureObject(cardTargets.get(key)?.paper);
+    const filePath = savedFilePath(paper);
+    if (!filePath) {
+      return;
+    }
+    try {
+      await onOpenPaper({ filePath, relativePath: cleanText(ensureObject(paper.local_file).relative_path) });
+    } catch (error) {
+      showTransientNotice(cleanText(error?.message) || 'Could not open the saved PDF.', { type: 'error' });
     }
   }
 

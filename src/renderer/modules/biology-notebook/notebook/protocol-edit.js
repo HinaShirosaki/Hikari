@@ -5,7 +5,7 @@ import {
   resolveEntryExperimentName,
   shouldSyncExperimentNameWithProtocol
 } from '../entry/entry-helpers.js';
-import { logNotebookPageEvent } from '../storage/page-log.js';
+import { logNotebookPageEvent } from '../../../services/notebook-page-log.js';
 
 // Editing the protocol snapshot attached to a saved page, and re-syncing the
 // page when its project or protocol selection changes.

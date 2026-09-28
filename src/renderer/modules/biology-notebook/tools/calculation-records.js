@@ -1,5 +1,6 @@
 import { calculateFixedReaction } from '../../../lib/bench-calculations.js';
 import {
+  buildBufferCalculationTable,
   buildFixedReactionCalculationTable,
   normalizeNotebookToolCalculations
 } from '../../../lib/notebook-tool-calculations.js';
@@ -12,66 +13,15 @@ function createCalculationRecords({
   setToolCalculations,
   getCurrentResult,
   calculateActiveTool,
-  resultTextAfterName,
   renderSavedCalculations
 } = {}) {
-  function cleanCell(value) {
-    return String(value ?? '').trim();
-  }
-
-  function concentrationText(parsed, fallback = '') {
-    return cleanCell(parsed?.text || fallback);
-  }
-
-  function bufferCalculationTable(result) {
-    if (!result || result.type !== 'buffer' || result.mode !== 'recipe') {
-      return null;
-    }
-    const rowsByIndex = new Map((Array.isArray(result.inputs?.rows) ? result.inputs.rows : [])
-      .map((row) => [Number(row?.rowIndex) || 0, row]));
-    const rows = (Array.isArray(result.details) ? result.details : []).map((detail) => {
-      const rowIndex = Number(detail?.rowIndex) || 0;
-      const rowInput = rowsByIndex.get(rowIndex) || {};
-      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      return [
-        cleanCell(rowDetail?.name || detail.inputs?.name || rowInput.name),
-        cleanCell(detail.inputs?.molecularWeight || rowInput.molecularWeight),
-        concentrationText(rowDetail?.stockConcentration, rowInput.stockConcentration),
-        concentrationText(rowDetail?.finalConcentration, rowInput.finalConcentration),
-        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText)),
-        // What actually went on the balance -- the lot, which bottle it came from.
-        cleanCell(rowInput.note)
-      ];
-    }).filter((row) => row.some(Boolean));
-    const footerRows = [[
-      ['Solvent to add', cleanCell(result.solvent?.text)].filter(Boolean).join(' '),
-      '', '', '', '', ''
-    ]];
-    const volumeValue = cleanCell(result.inputs?.volumeValue ?? result.inputs?.volumeMl);
-    const volumeUnit = cleanCell(result.inputs?.volumeUnit) || 'mL';
-    return {
-      caption: 'Buffer Preparer',
-      metaRows: [[
-        'Volume',
-        volumeValue ? `${volumeValue} ${volumeUnit}` : '',
-        'pH',
-        cleanCell(result.inputs?.pH),
-        '',
-        ''
-      ]],
-      headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume', 'Note'],
-      rows,
-      footerRows
-    };
-  }
-
   function reactionCalculationTable(result) {
     const table = buildFixedReactionCalculationTable(result);
     return table && (table.rows.length || table.footerRows.some((row) => row.some(Boolean))) ? table : null;
   }
 
   function calculationTableForResult(result) {
-    return bufferCalculationTable(result) || reactionCalculationTable(result);
+    return buildBufferCalculationTable(result) || reactionCalculationTable(result);
   }
 
   function makeCalculationRecord() {

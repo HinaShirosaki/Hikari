@@ -1,3 +1,5 @@
+import { calculateBufferRecipe } from './bench-calculations.js';
+
 function clonePlainObject(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -55,7 +57,7 @@ export function normalizeNotebookToolCalculation(rawCalculation) {
     return null;
   }
 
-  return {
+  return refreshBufferCalculation({
     id,
     type,
     mode: String(source.mode || '').trim(),
@@ -69,6 +71,25 @@ export function normalizeNotebookToolCalculation(rawCalculation) {
     summary,
     createdAt: String(source.createdAt || '').trim(),
     status: String(source.status || '').trim()
+  });
+}
+
+// A buffer table is only ever the calculator's output for its saved inputs
+// (its cells are not editable on the page), so it is rebuilt from them: a page
+// saved by an older calculator -- the dropped 6 M NaOH / HCl pH estimate --
+// reads what the current one gives.
+function refreshBufferCalculation(calculation) {
+  if (calculation.type !== 'buffer' || calculation.mode !== 'recipe' || !Array.isArray(calculation.inputs.rows) || !calculation.inputs.rows.length) {
+    return calculation;
+  }
+  const result = calculateBufferRecipe(calculation.inputs);
+  return {
+    ...calculation,
+    table: normalizeNotebookToolCalculationTable(buildBufferCalculationTable(result)) || calculation.table,
+    result: result.resultText || '',
+    formula: result.formulaText || '',
+    summary: result.resultText || result.formulaText || calculation.summary,
+    status: result.status || ''
   };
 }
 
@@ -87,19 +108,6 @@ export function formatNotebookToolCalculationLine(rawCalculation) {
   return `${calculation.title}: ${main}`.trim();
 }
 
-export function summarizeNotebookToolCalculations(rawCalculations) {
-  const calculations = normalizeNotebookToolCalculations(rawCalculations);
-  if (!calculations.length) {
-    return '';
-  }
-  const labels = calculations
-    .map((calculation) => calculation.title)
-    .filter(Boolean)
-    .slice(0, 3);
-  const suffix = calculations.length > labels.length ? ` + ${calculations.length - labels.length} more` : '';
-  return `${calculations.length} calculation${calculations.length === 1 ? '' : 's'}${labels.length ? ` (${labels.join('; ')}${suffix})` : ''}`;
-}
-
 function cleanCell(value) {
   return String(value ?? '').trim();
 }
@@ -110,6 +118,53 @@ function formulaAfterName(text) {
   const source = cleanCell(text);
   const match = source.match(/^[^=]*=\s*(.+)$/s);
   return match ? match[1].trim() : source;
+}
+
+export function resultTextAfterName(text) {
+  const source = String(text || '').trim();
+  const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
+  return match ? match[1].trim() : source;
+}
+
+export function buildBufferCalculationTable(result) {
+  if (!result || result.type !== 'buffer' || result.mode !== 'recipe') {
+    return null;
+  }
+  const rowsByIndex = new Map((Array.isArray(result.inputs?.rows) ? result.inputs.rows : [])
+    .map((row) => [Number(row?.rowIndex) || 0, row]));
+  const rows = (Array.isArray(result.details) ? result.details : []).map((detail) => {
+    const rowIndex = Number(detail?.rowIndex) || 0;
+    const rowInput = rowsByIndex.get(rowIndex) || {};
+    const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+    return [
+      cleanCell(rowDetail?.name || detail.inputs?.name || rowInput.name),
+      cleanCell(detail.inputs?.molecularWeight || rowInput.molecularWeight),
+      cleanCell(rowDetail?.stockConcentration?.text || rowInput.stockConcentration),
+      cleanCell(rowDetail?.finalConcentration?.text || rowInput.finalConcentration),
+      cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText)),
+      // What actually went on the balance -- the lot, which bottle it came from.
+      cleanCell(rowInput.note)
+    ];
+  }).filter((row) => row.some(Boolean));
+  const volumeValue = cleanCell(result.inputs?.volumeValue ?? result.inputs?.volumeMl);
+  const volumeUnit = cleanCell(result.inputs?.volumeUnit) || 'mL';
+  return {
+    caption: 'Buffer Preparer',
+    metaRows: [[
+      'Volume',
+      volumeValue ? `${volumeValue} ${volumeUnit}` : '',
+      'pH',
+      cleanCell(result.inputs?.pH),
+      '',
+      ''
+    ]],
+    headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume', 'Note'],
+    rows,
+    footerRows: [[
+      ['Solvent to add', cleanCell(result.solvent?.text)].filter(Boolean).join(' '),
+      '', '', '', '', ''
+    ]]
+  };
 }
 
 function reactionRowCells(result) {

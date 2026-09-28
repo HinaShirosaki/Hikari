@@ -168,11 +168,7 @@ ownerCycleKeys.forEach((cycle) => failures.push(`cross-owner dependency cycle: $
 
 const allowedRendererModuleRootFiles = new Set([
   'app-registry.generated.js',
-  'app-state.js',
-  'home-dashboard.js',
   'codex-model-catalog.generated.js',
-  'tool-box.js',
-  'utils.js',
   'views.js'
 ]);
 fs.readdirSync(path.join(sourceRoot, 'renderer', 'modules'), { withFileTypes: true })
@@ -188,6 +184,9 @@ const allowedSequencePrefixes = [
 ];
 const allowedSequenceFiles = new Set([
   'src/renderer/module-manifests/sequence-viewer.js',
+  // Tool Box owns these DOM panels; their pure calculations remain in Sequence Viewer.
+  'src/renderer/modules/tool-box/oligo-tool.js',
+  'src/renderer/modules/tool-box/peptide-tool.js',
   // Thin MCP validation/registration adapter; domain logic remains in Sequence Viewer.
   'src/main/agent/mcp-contract/direct-tools/sequence-tools.js',
   // Packaged official agent guidance; executable domain code stays in the feature.
@@ -350,7 +349,7 @@ allowedCssFiles.forEach((filePath) => {
   }
 });
 
-const runtimeReferenceRoots = [sourceRoot, uiRoot, path.join(repoRoot, 'config')];
+const runtimeReferenceRoots = [sourceRoot, uiRoot];
 const runtimeReferenceText = runtimeReferenceRoots
   .flatMap(listFiles)
   .filter((filePath) => /\.(?:css|html|js|json|mjs)$/.test(filePath))

@@ -46,7 +46,7 @@ function buildPaperDownloadNoticeScript() {
       border: '0.0625rem solid rgba(255, 255, 255, 0.26)',
       borderRadius: '0.875rem',
       boxShadow: '0 0.875rem 2.25rem rgba(23, 18, 14, 0.28)',
-      background: '#647255',
+      background: '#4169d8',
       color: '#fbf9f4',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: '0.9375rem',

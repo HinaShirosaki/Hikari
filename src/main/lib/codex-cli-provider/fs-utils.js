@@ -2,15 +2,7 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-
-async function pathExists(targetPath = '') {
-  try {
-    await fs.access(targetPath);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const { pathExistsQuietly: pathExists } = require('../path-safety.js');
 
 async function removeFileIfExists(targetPath = '') {
   if (!targetPath) {

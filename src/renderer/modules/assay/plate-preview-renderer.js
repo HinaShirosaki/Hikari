@@ -20,6 +20,21 @@ function sampleColor(sampleId) {
   };
 }
 
+// The well fill is fixed across themes, so its text must be too: dark or white,
+// whichever contrasts more with the fill (WCAG relative luminance).
+function wellTextColor(hue, saturation, lightness) {
+  const s = saturation / 100;
+  const l = lightness / 100;
+  const channel = (n) => {
+    const k = (n + (hue / 30)) % 12;
+    const srgb = l - (s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1)));
+    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (0.2126 * channel(0)) + (0.7152 * channel(8)) + (0.0722 * channel(4));
+  // #2a241d has luminance ~0.018; it and white contrast equally at ~0.22.
+  return luminance > 0.22 ? '#2a241d' : '#ffffff';
+}
+
 function buildRankedConcentrations(filledLayouts) {
   const rawValues = filledLayouts
     .map((item) => String(item.concentration || '').trim())
@@ -149,7 +164,7 @@ export function buildPlatePreviewHtml({
       const saturation = Math.round(Math.min(94, color.saturation - 10 + (intensity * 18)));
       const lightness = Math.round(Math.max(58, 96 - (intensity * 34)));
       const cellStyle = sampleValue || concentrationValue
-        ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%);"`
+        ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%); color: ${wellTextColor(color.hue, saturation, lightness)};"`
         : '';
       cells.push(`
         <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>

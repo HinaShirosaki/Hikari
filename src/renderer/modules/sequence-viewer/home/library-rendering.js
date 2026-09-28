@@ -1,5 +1,6 @@
 import { escapeHtml } from '../../../lib/html.js';
 import {
+  attachRailHoverCard,
   createFolderTreeState,
   renderFolderTreeLeaf,
   renderFolderTreeNode
@@ -24,6 +25,10 @@ function createLibraryRendering({
       state.expandedLibraryFolderIds = keys;
     }
   });
+  // The rail clips long names; hovering shows the whole one.
+  const hideNameCards = getLibraryListElements().map((list) => attachRailHoverCard(list, {
+    rowSelector: '[data-sequence-entry-id], [data-sequence-folder-main]'
+  }));
   // The preview is drawn straight from the entry's stored GenBank text as inline
   // SVG. No iframe, so it inherits the app theme and needs no height syncing,
   // and no preview document has to be generated or kept on disk.
@@ -44,6 +49,7 @@ function createLibraryRendering({
   }
 
   function renderLibraryList() {
+    hideNameCards.forEach((hide) => hide());
     const libraryLists = getLibraryListElements();
     if (!libraryLists.length) {
       return;
@@ -89,8 +95,7 @@ function createLibraryRendering({
         controlClass: `sequence-viewer-library-item folder-tree-template__rail-leaf${active ? ' sequence-viewer-library-item-active' : ''}`,
         controlAttributes: {
           'data-sequence-entry-id': entry.id,
-          draggable: 'true',
-          title: entry.name || 'sequence'
+          draggable: 'true'
         },
         contentHtml: `<span class="sequence-viewer-library-item-name folder-tree-template__leaf-label">${escapeHtml(entry.name || 'sequence')}</span>`
       });
@@ -128,8 +133,7 @@ function createLibraryRendering({
           disclosureAttributes: { 'data-sequence-folder-id': folderId },
           mainAttributes: {
             'data-sequence-folder-id': folderId,
-            'data-sequence-folder-main': folderId,
-            title: folder.name || 'Folder'
+            'data-sequence-folder-main': folderId
           }
         });
       }).join('')

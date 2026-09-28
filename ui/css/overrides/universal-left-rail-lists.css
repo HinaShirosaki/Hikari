@@ -181,12 +181,3 @@ body.theme-night {
   font-size: var(--text-base) !important;
   line-height: 1.25 !important;
 }
-
-.left-rail-template__rail .biology-notebook-page-badge {
-  font-size: var(--text-2xs) !important;
-}
-
-/* Protocol rows use full-width dividers; keep their active fill square. */
-#protocol-management-view .left-rail-template__rail .protocol-list-row {
-  border-radius: 0 !important;
-}

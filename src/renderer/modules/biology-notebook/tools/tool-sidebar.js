@@ -6,6 +6,8 @@ import { createBufferSuggestions } from './buffer-suggestions.js';
 import { createToolboxDrag } from './toolbox-drag.js';
 import { createCalculationRecords } from './calculation-records.js';
 import { createToolCalculations } from './tool-calculations.js';
+import { addListener, getElement, inputValue, isHidden, setText } from './tool-dom.js';
+import { createNotebookToolRowManagers } from './tool-row-managers.js';
 
 const INITIAL_BUFFER_ROW_COUNT = 6;
 const REACTION_ROW_COUNT = 6;
@@ -13,30 +15,6 @@ const BUFFER_SUGGESTION_MAX_HEIGHT = 230;
 const BUFFER_SUGGESTION_VIEWPORT_GAP = 8;
 const TOOLBOX_DRAG_THRESHOLD_PX = 4;
 const TOOLBOX_FOLDED_SIZE_PX = 42;
-
-function getElement(doc, id) {
-  return doc?.getElementById?.(id) || null;
-}
-
-function addListener(element, eventName, handler, options) {
-  if (element && typeof element.addEventListener === 'function') {
-    element.addEventListener(eventName, handler, options);
-  }
-}
-
-function setText(element, value) {
-  if (element) {
-    element.textContent = String(value || '');
-  }
-}
-
-function inputValue(element) {
-  return element?.value ?? '';
-}
-
-function isHidden(element) {
-  return Boolean(element?.hidden);
-}
 
 function createNoopController() {
   return {
@@ -78,8 +56,10 @@ export function createNotebookToolSidebarController({
   let boundPageId = '';
   // Which recorded table each tool is writing to on the open page.
   const boundCalculationIds = new Map();
-  let bufferRowTotal = INITIAL_BUFFER_ROW_COUNT;
-  let reactionRowTotal = REACTION_ROW_COUNT;
+  let toolRows = {
+    bufferRowCount: () => INITIAL_BUFFER_ROW_COUNT,
+    reactionRowCount: () => REACTION_ROW_COUNT
+  };
   let toolboxDragState = null;
   let toolboxAnchor = null;
   let suppressFoldToggleClick = false;
@@ -100,7 +80,7 @@ export function createNotebookToolSidebarController({
     getStoredCompounds,
     BUFFER_SUGGESTION_MAX_HEIGHT,
     BUFFER_SUGGESTION_VIEWPORT_GAP,
-    getBufferRowTotal: () => bufferRowTotal,
+    getBufferRowTotal: () => toolRows.bufferRowCount(),
     renderCurrentTool: () => renderCurrentTool()
   });
 
@@ -203,7 +183,6 @@ export function createNotebookToolSidebarController({
   const {
     syncBufferCompound,
     calculateActiveTool,
-    resultTextAfterName,
     renderCurrentTool: computeCurrentTool
   } = createToolCalculations({
     doc,
@@ -230,12 +209,35 @@ export function createNotebookToolSidebarController({
     setToolCalculations: (next) => { toolCalculations = next; },
     getCurrentResult: () => currentResult,
     calculateActiveTool: () => calculateActiveTool(),
-    resultTextAfterName: (text) => resultTextAfterName(text),
     renderSavedCalculations: () => renderSavedCalculations()
   });
 
+  toolRows = createNotebookToolRowManagers({
+    addListener,
+    bufferRows,
+    bufferRowTemplate,
+    closeBufferSuggestions,
+    doc,
+    getElement,
+    initialBufferRowCount: INITIAL_BUFFER_ROW_COUNT,
+    initialReactionRowCount: REACTION_ROW_COUNT,
+    reactionRowTemplate,
+    renderBufferSuggestions,
+    renderCurrentTool,
+    selectBufferCandidate,
+    syncBufferCompound
+  });
+  const {
+    appendBufferRow,
+    appendReactionRow,
+    bindBufferRow,
+    bindReactionRow,
+    revealOrAddBufferRow,
+    revealOrAddReactionRow
+  } = toolRows;
+
   function reactionRowCount() {
-    return reactionRowTotal;
+    return toolRows.reactionRowCount();
   }
 
   // Opening a tool puts its table on the page and every edit rewrites it, so
@@ -391,160 +393,6 @@ export function createNotebookToolSidebarController({
     loadCalculationIntoSheet(tool, calculation.inputs);
     showToolWorkspace();
     syncToolSelection();
-    renderCurrentTool();
-  }
-
-  function bindReactionRow(index) {
-    [
-      `biology-notebook-tool-reaction-name-${index}`,
-      `biology-notebook-tool-reaction-stock-${index}`,
-      `biology-notebook-tool-reaction-final-${index}`,
-      `biology-notebook-tool-reaction-volume-${index}`,
-      `biology-notebook-tool-reaction-note-${index}`
-    ].forEach((id) => {
-      const element = getElement(doc, id);
-      addListener(element, 'input', renderCurrentTool);
-      addListener(element, 'change', renderCurrentTool);
-    });
-  }
-
-  function appendReactionRow() {
-    const addRow = getElement(doc, 'biology-notebook-tool-reaction-add-row-anchor');
-    const rowsHost = addRow?.parentElement;
-    if (!reactionRowTemplate?.cloneNode || typeof rowsHost?.insertBefore !== 'function') {
-      return;
-    }
-    const index = reactionRowTotal + 1;
-    const row = reactionRowTemplate.cloneNode(true);
-    row.hidden = false;
-    row.id = `biology-notebook-tool-reaction-row-${index}`;
-    row.querySelectorAll?.('[id]').forEach((element) => {
-      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
-      element.value = '';
-      element.textContent = '';
-      const label = element.getAttribute?.('aria-label');
-      if (label) {
-        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
-      }
-    });
-    rowsHost.insertBefore(row, addRow);
-    reactionRowTotal = index;
-    bindReactionRow(index);
-  }
-
-  function revealOrAddReactionRow() {
-    for (let index = 1; index <= reactionRowCount(); index += 1) {
-      const row = getElement(doc, `biology-notebook-tool-reaction-row-${index}`);
-      if (row?.hidden) {
-        row.hidden = false;
-        renderCurrentTool();
-        return;
-      }
-    }
-    appendReactionRow();
-    renderCurrentTool();
-  }
-
-  function insertBufferRowBeforeAddRow(row) {
-    const addRow = getElement(doc, 'biology-notebook-tool-buffer-add-row-anchor');
-    if (
-      addRow?.parentElement === bufferRows
-      && typeof bufferRows?.insertBefore === 'function'
-    ) {
-      bufferRows.insertBefore(row, addRow);
-      return true;
-    }
-    if (typeof bufferRows?.appendChild === 'function') {
-      bufferRows.appendChild(row);
-      return true;
-    }
-    return false;
-  }
-
-  function bindBufferRow(index) {
-    const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
-    const suggestions = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
-    addListener(nameInput, 'focus', () => renderBufferSuggestions(index));
-    addListener(nameInput, 'input', () => {
-      syncBufferCompound(index, { overwriteMw: true });
-      renderBufferSuggestions(index);
-      renderCurrentTool();
-    });
-    addListener(nameInput, 'keydown', (event) => {
-      if (event?.key === 'Escape') {
-        closeBufferSuggestions(index);
-      }
-    });
-    addListener(suggestions, 'mousedown', (event) => {
-      event?.preventDefault?.();
-    });
-    addListener(suggestions, 'click', (event) => {
-      const button = event?.target?.closest?.('[data-buffer-candidate]')
-        || (event?.target?.dataset?.bufferCandidate ? event.target : null);
-      const candidateName = button?.dataset?.bufferCandidate || '';
-      if (candidateName) {
-        selectBufferCandidate(index, candidateName);
-      }
-    });
-    [
-      `biology-notebook-tool-buffer-mw-${index}`,
-      `biology-notebook-tool-buffer-stock-${index}`,
-      `biology-notebook-tool-buffer-final-${index}`,
-      `biology-notebook-tool-buffer-amount-${index}`,
-      `biology-notebook-tool-buffer-note-${index}`
-    ].forEach((id) => {
-      const element = getElement(doc, id);
-      addListener(element, 'input', renderCurrentTool);
-      addListener(element, 'change', renderCurrentTool);
-    });
-  }
-
-  function appendBufferRow() {
-    if (!bufferRowTemplate?.cloneNode) {
-      return;
-    }
-    const index = bufferRowCount() + 1;
-    const row = bufferRowTemplate.cloneNode(true);
-    row.hidden = false;
-    row.id = `biology-notebook-tool-buffer-row-${index}`;
-    row.querySelectorAll?.('[id]').forEach((element) => {
-      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
-      element.value = '';
-      element.textContent = '';
-      const label = element.getAttribute?.('aria-label');
-      if (label) {
-        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
-      }
-      const controls = element.getAttribute?.('aria-controls');
-      if (controls) {
-        element.setAttribute('aria-controls', controls.replace(/-\d+$/, `-${index}`));
-      }
-      if (element.dataset?.bufferChemicalIndex) {
-        element.dataset.bufferChemicalIndex = String(index);
-      }
-    });
-    const menu = row.querySelector?.('.biology-notebook-buffer-suggestions');
-    if (menu) {
-      menu.hidden = true;
-      menu.innerHTML = '';
-    }
-    if (!insertBufferRowBeforeAddRow(row)) {
-      return;
-    }
-    bufferRowTotal = index;
-    bindBufferRow(index);
-  }
-
-  function revealOrAddBufferRow() {
-    for (let index = 1; index <= bufferRowCount(); index += 1) {
-      const row = getElement(doc, `biology-notebook-tool-buffer-row-${index}`);
-      if (row?.hidden) {
-        row.hidden = false;
-        renderCurrentTool();
-        return;
-      }
-    }
-    appendBufferRow();
     renderCurrentTool();
   }
 

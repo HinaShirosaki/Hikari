@@ -4,6 +4,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { cleanText, ensureObject } = require('../storage-utils');
 const { buildEntryFolderName, buildNotebookPageFolderName } = require('./folder-names.js');
+const { isPathInside } = require('../../lib/path-safety.js');
 
 async function ensureFolder(targetPath) {
   if (!targetPath) {
@@ -15,16 +16,6 @@ async function ensureFolder(targetPath) {
 async function writeJsonFile(targetPath, payload) {
   await ensureFolder(path.dirname(targetPath));
   await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), 'utf8');
-}
-
-function isPathInside(parentPath, childPath) {
-  const parent = path.resolve(parentPath);
-  const child = path.resolve(childPath);
-  if (parent === child) {
-    return true;
-  }
-  const prefix = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
-  return child.startsWith(prefix);
 }
 
 function buildNotebookStorageFolder(runLayout, notebookEntry) {
@@ -52,22 +43,7 @@ function buildNotebookStorageFolder(runLayout, notebookEntry) {
   );
 }
 
-function applyWorkflowStorageSchema(db) {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS workflow_templates (
-      id TEXT PRIMARY KEY,
-      raw_json TEXT
-    );
-    CREATE TABLE IF NOT EXISTS workflow_runs (
-      id TEXT PRIMARY KEY,
-      relative_folder_path TEXT,
-      raw_json TEXT
-    );
-  `);
-}
-
 module.exports = {
-  applyWorkflowStorageSchema,
   buildNotebookStorageFolder,
   ensureFolder,
   writeJsonFile

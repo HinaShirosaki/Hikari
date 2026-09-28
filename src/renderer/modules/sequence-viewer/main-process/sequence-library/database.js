@@ -1,29 +1,19 @@
 'use strict';
 const fs = require('fs/promises');
-const path = require('path');
-const { resolveSqlJsWasmJsPath } = require('../../../../../main/lib/sqljs-path.js');
 const { persistSqliteDatabase } = require('../../../../../main/lib/sqlite-persist.js');
+const {
+  loadSqlJs,
+  querySqlRow: readSingleRow,
+  querySqlRows: readRows
+} = require('../../../../../main/lib/sqlite.js');
 const { FEATURE_INDEX_VERSION } = require('./constants');
 const {
   cleanText,
   normalizeStatus
 } = require('./utils');
-const SQLJS_WASM_JS_PATH = resolveSqlJsWasmJsPath(__dirname);
-let sqlJsInitPromise = null;
 let cdsSequenceTableRebuilder = null;
 function setCdsSequenceTableRebuilder(rebuilder) {
   cdsSequenceTableRebuilder = typeof rebuilder === 'function' ? rebuilder : null;
-}
-async function loadSqlJs() {
-  if (!sqlJsInitPromise) {
-    sqlJsInitPromise = (async () => {
-      const initSqlJs = require(SQLJS_WASM_JS_PATH);
-      return initSqlJs({
-        locateFile: (fileName) => path.join(path.dirname(SQLJS_WASM_JS_PATH), fileName)
-      });
-    })();
-  }
-  return sqlJsInitPromise;
 }
 function applySchema(db) {
   const hadFolderTable = Boolean(readSingleRow(
@@ -174,32 +164,6 @@ async function openDatabase(sqlitePath) {
 }
 async function persistDatabase(sqlitePath, db) {
   await persistSqliteDatabase(sqlitePath, db);
-}
-function readSingleRow(db, sql, values = []) {
-  const stmt = db.prepare(sql);
-  try {
-    stmt.bind(values);
-    if (!stmt.step()) {
-      return null;
-    }
-    const row = stmt.getAsObject();
-    return row && typeof row === 'object' ? row : null;
-  } finally {
-    stmt.free();
-  }
-}
-function readRows(db, sql, values = []) {
-  const stmt = db.prepare(sql);
-  const rows = [];
-  try {
-    stmt.bind(values);
-    while (stmt.step()) {
-      rows.push(stmt.getAsObject());
-    }
-  } finally {
-    stmt.free();
-  }
-  return rows;
 }
 function normalizeEntryRow(row) {
   if (!row || typeof row !== 'object') {

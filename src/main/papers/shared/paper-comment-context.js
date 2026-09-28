@@ -1,13 +1,9 @@
 'use strict';
 
-const { cloneJson, ensureObject } = require('../../lib/normalize.js');
+const { asArray: defaultAsArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
 
 const DEFAULT_MAX_COMMENTS_PER_PAPER = 16;
 const DEFAULT_MAX_RELATED_COMMENTS = 4;
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function defaultCleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();

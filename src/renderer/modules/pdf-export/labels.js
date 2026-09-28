@@ -1,5 +1,9 @@
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 import { formatTimestamp, flowText } from './doc-context.js';
+import {
+  formatAssayAnalysisMethodLabel,
+  formatGelAnalysisTypeLabel
+} from '../../lib/analysis-labels.js';
 
 function notebookEntryMeta(entry) {
   return [
@@ -12,28 +16,6 @@ function notebookEntryMeta(entry) {
 function notebookStateLabel(entry) {
   const status = String(entry?.notebookState || '').trim().toLowerCase();
   return status === 'suggested' ? 'Suggested' : status === 'planned' ? 'Planned' : 'Executed';
-}
-
-function formatGelAnalysisTypeLabel(type) {
-  if (type === 'western') {
-    return 'Western Blot';
-  }
-  if (type === 'agarose') {
-    return 'DNA/RNA Agarose';
-  }
-  return 'SDS-PAGE';
-}
-
-function formatAssayAnalysisMethodLabel(method) {
-  const source = String(method || '').trim();
-  if (!source) {
-    return 'Analysis plot';
-  }
-  return source
-    .split('_')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
 }
 
 function hasSerialDilutionContent(summary) {
@@ -58,8 +40,7 @@ function renderStepText(step, values = null) {
       return source.trim();
     }
     const trailing = placeholders.map((placeholder) => {
-      const key = `${step.id}:${placeholder.id}`;
-      const rawValue = values ? String(values[key] || '').trim() : '';
+      const rawValue = values ? String(values[placeholder.id] || '').trim() : '';
       return rawValue || `[${String(placeholder?.name || 'value').trim()}]`;
     }).join(' ');
     return `${source} ${trailing}`.trim();
@@ -71,8 +52,7 @@ function renderStepText(step, values = null) {
     const startIndex = Number(match.index || 0);
     const placeholderId = String(match[1] || '');
     const placeholder = placeholders.find((item) => String(item?.id || '') === placeholderId);
-    const key = `${step.id}:${placeholderId}`;
-    const rawValue = values ? String(values[key] || '').trim() : '';
+    const rawValue = values ? String(values[placeholderId] || '').trim() : '';
     text += source.slice(cursor, startIndex);
     text += rawValue || `[${String(placeholder?.name || 'value').trim()}]`;
     cursor = startIndex + match[0].length;

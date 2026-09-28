@@ -1,15 +1,5 @@
 /* Late-load Protocol Management action refinements. */
 
-#protocol-management-view .placeholder-chip {
-  border: 1px solid var(--theme-border);
-  border-radius: 6px;
-  background: var(--theme-surface-subtle);
-  color: var(--theme-text-strong);
-  letter-spacing: 0;
-  text-transform: none;
-  box-shadow: none;
-}
-
 #protocol-management-view .protocol-view-btn,
 #protocol-management-view .protocol-edit-btn {
   color: var(--theme-text);

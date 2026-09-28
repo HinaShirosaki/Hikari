@@ -195,14 +195,14 @@
 }
 
 .vector-map__selection {
-  fill: color-mix(in srgb, var(--theme-accent) 45%, transparent);
+  fill: var(--theme-accent-line);
   stroke: var(--theme-accent);
   stroke-width: 1;
   pointer-events: none;
 }
 
 .vector-map--linear .vector-map__selection {
-  fill: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  fill: var(--theme-accent-soft);
 }
 
 .vector-map__caret {
@@ -557,7 +557,7 @@
 
 .sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item.is-selected,
 .sequence-viewer-protein-picker .sequence-viewer-feature-source-item.is-selected {
-  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+  background: var(--theme-surface-hover);
   box-shadow: none;
 }
 
@@ -693,13 +693,13 @@
 }
 
 .sequence-viewer-protein-builder-sequence-input:hover {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 42%, transparent);
+  background: var(--theme-fill);
 }
 
 .sequence-viewer-protein-builder-sequence-input:focus {
   outline: none;
   border: 0;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 42%, transparent);
+  background: var(--theme-fill);
   box-shadow: none;
 }
 

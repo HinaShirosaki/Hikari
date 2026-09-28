@@ -3,14 +3,14 @@
 const {
   hasSupportedDataExtension,
   normalizeDataFilePath
-} = require('../lib/main-utils');
+} = require('../storage/storage-paths');
 const {
   clearCodexCliStoredLogin,
-  getCodexCliCatalog,
   launchCodexCliLogin,
   getCodexCliModel,
   getCodexCliReasoningEffort,
   getCodexLoginStatus,
+  requestCodexCliCatalog,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText
@@ -49,6 +49,7 @@ const {
 const {
   normalizePaperFindingRunResult
 } = require('../papers/finding/paper-finding-task.js');
+const { markSavedPapers } = require('../papers/finding/paper-finding-scheduled-tasks.js');
 const {
   listSequenceEntries,
   getSequenceEntry,
@@ -68,24 +69,29 @@ const { buildCompactIndexedSnapshot } = require('../data/data-snapshot-utils');
 const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transformer.js');
 const { createBioinformaticsService } = require('../bioinformatics');
 const { createAgentLogService } = require('./services/create-agent-log-service');
-const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
+const { createNpmUpdaterService } = require('../updater/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
-const { createGenomeService } = require('./services/create-genome-service');
+const { createGenomeService } = require('../genome/create-genome-service');
 const { createNotebookSuggestionService } = require('./services/create-notebook-suggestion-service');
-const { createScheduledTaskService } = require('./services/create-scheduled-task-service');
+const { createScheduledTaskService } = require('../scheduled-tasks/create-scheduled-task-service');
 const { registerDataIpc } = require('../ipc/register-data-ipc');
 const { registerAgentIpc } = require('../ipc/register-agent-ipc');
 const { registerBioinformaticsIpc } = require('../ipc/register-bioinformatics-ipc');
 const { registerGenomeIpc } = require('../ipc/register-genome-ipc');
+const { registerPluginIpc } = require('../ipc/register-plugin-ipc');
 const { registerPythonIpc } = require('../ipc/register-python-ipc');
 const { registerScheduledTaskIpc } = require('../ipc/register-scheduled-task-ipc');
 const { registerSystemIpc } = require('../ipc/register-system-ipc');
 const { runPythonSandbox } = require('../agent/tools/agent-python-sandbox.js');
+const {
+  guardHtmlPreviewNavigation,
+  installHtmlPreviewService,
+  registerHtmlPreviewScheme
+} = require('../agent/html-output/preview-service.js');
 
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const DEFAULT_DATA_FILE_NAME = 'hikari-data.json';
-const PROJECT_MEMORY_NOTEBOOK_MODEL = 'gpt-5.4-mini';
 
 // Constructs every main-process service in dependency order and registers all
 // IPC handlers. Construction and IPC registration are synchronous so they can
@@ -105,6 +111,8 @@ function createMainServices(context = {}) {
     projectRoot,
     getMainWindow
   } = context;
+
+  registerHtmlPreviewScheme(context.protocol);
 
   // App metadata and paths.
   const cleanText = defaultCleanText;
@@ -197,17 +205,10 @@ function createMainServices(context = {}) {
       return codex.runSubAgentTurn(input);
     }
   });
-  requestProjectMemoryConclusion = async (input = {}) => {
-    const result = await agents.directLlmRegistry.requestModuleLlm({
-      ...input,
-      model: PROJECT_MEMORY_NOTEBOOK_MODEL,
-      reasoningEffort: 'low'
-    });
-    return {
-      ...result,
-      model: PROJECT_MEMORY_NOTEBOOK_MODEL
-    };
-  };
+  requestProjectMemoryConclusion = (input = {}) => agents.directLlmRegistry.requestModuleLlm({
+    ...input,
+    reasoningEffort: 'low'
+  });
   const transformPaperRecordsWithAgentRuntime = (input = {}) => transformPaperRecordsToMarkdown({
     ...input,
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime
@@ -240,7 +241,11 @@ function createMainServices(context = {}) {
     cleanText,
     getScheduledTasksPath: appPaths.getScheduledTasksPath,
     runCodexTask: codex.runScheduledTask,
-    normalizeRunResult: normalizePaperFindingRunResult
+    normalizeRunResult: async (task, text, context) => markSavedPapers(
+      task,
+      normalizePaperFindingRunResult(task, text, context),
+      agents.paperDownloadRuntime
+    )
   });
 
   const genomes = createGenomeService({
@@ -272,9 +277,19 @@ function createMainServices(context = {}) {
   });
 
   // IPC registration (before app ready).
-  registerDataIpc({
+  registerPluginIpc({
     ipcMain,
     session,
+    dialog,
+    fs,
+    cleanText,
+    getBundledPluginPath: (pluginId) => (
+      pluginId === 'gel' ? path.join(projectRoot, 'src', 'plugins', 'gel') : ''
+    )
+  });
+
+  registerDataIpc({
+    ipcMain,
     dialog,
     shell,
     fs,
@@ -295,9 +310,6 @@ function createMainServices(context = {}) {
         console.error('Failed to reload scheduled tasks from the new storage root:', error);
       });
     },
-    getBundledPluginPath: (pluginId) => (
-      pluginId === 'gel' ? path.join(projectRoot, 'src', 'plugins', 'gel') : ''
-    ),
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime,
     discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
       ...input,
@@ -363,6 +375,7 @@ function createMainServices(context = {}) {
   registerScheduledTaskIpc({
     ipcMain,
     scheduledTaskService: scheduledTasks,
+    paperDownloadRuntime: agents.paperDownloadRuntime,
     cleanText
   });
 
@@ -378,7 +391,7 @@ function createMainServices(context = {}) {
     cleanText,
     clearCodexCliStoredLogin,
     getCodexLoginStatus,
-    getCodexCliCatalog,
+    requestCodexCliCatalog,
     getCodexCliModel,
     getCodexCliReasoningEffort,
     launchCodexCliLogin,
@@ -405,6 +418,9 @@ function createMainServices(context = {}) {
   }
 
   async function start() {
+    await bestEffort('html-preview', async () => {
+      installHtmlPreviewService({ protocol: context.protocol, ipcMain, getMainWindow });
+    });
     await bestEffort('agent-logging', async () => {
       await agentLogService.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
       const storageRoot = appPaths.getStorageRoot();
@@ -450,7 +466,7 @@ function createMainServices(context = {}) {
     }
   }
 
-  return { appIconPath, start, shutdown };
+  return { appIconPath, guardHtmlPreviewNavigation, start, shutdown };
 }
 
 module.exports = {

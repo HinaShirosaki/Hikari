@@ -4,14 +4,10 @@ const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.
 const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
-const { cloneJson } = require('../../lib/normalize.js');
+const { cloneJson, ensureObject: defaultEnsureObject } = require('../../lib/normalize.js');
 const { createDraftSelectionPrompt } = require('./notebook-draft/selection-prompt.js');
 const { createDraftCandidates } = require('./notebook-draft/candidates.js');
 const { createDraftProposal } = require('./notebook-draft/proposal.js');
-
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function createNotebookDraftRuntime(deps = {}) {
   const {

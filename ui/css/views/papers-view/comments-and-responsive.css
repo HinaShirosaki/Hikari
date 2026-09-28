@@ -53,7 +53,7 @@
 
 .papers-bookmark-item:hover,
 .papers-bookmark-item:focus-visible {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-accent) 12%);
+  background: var(--theme-accent-wash);
 }
 
 .papers-bookmark-item:disabled {

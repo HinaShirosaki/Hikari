@@ -13,6 +13,27 @@ module.exports = function registerEdgeSequenceViewerInteractionsSuiteKeyboardEdi
 function stripHtmlTags(html) {
   return String(html || '').replace(/<[^>]*>/g, '');
 }
+function createRecordServices(state) {
+  return {
+    ensureProjectRecord(record) {
+      const existing = state.projects.find((project) => (
+        project.source === record.source || project.name === record.name
+      ));
+      if (existing) return existing;
+      state.projects.push(record);
+      return record;
+    },
+    saveProtocolRecord(record) {
+      const index = state.protocols.findIndex((protocol) => protocol.id === record.id);
+      if (index >= 0) {
+        state.protocols[index] = { ...state.protocols[index], ...record };
+        return state.protocols[index];
+      }
+      state.protocols.push(record);
+      return record;
+    }
+  };
+}
 test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-base deletion', async () => {
   const ids = [
     'sequence-viewer-mode-paste',
@@ -337,6 +358,7 @@ test('[EDGE] sequence-viewer detail cloning design renders primers and sends a t
   );
   const viewer = moduleWithDom.initSequenceViewer({
     state: appState,
+    ...createRecordServices(appState),
     persist() {
       persistCalls += 1;
     },
@@ -508,6 +530,7 @@ test('[EDGE] sequence-viewer two-step cloning notebook keeps distinct PCR thermo
   let nextId = 0;
   const created = notebookModule.createSequenceViewerCloningDesignNotebookPage({
     state,
+    ...createRecordServices(state),
     source,
     record: { name: source.recordName, sequence, topology: 'circular' },
     displayPlan,
@@ -565,6 +588,7 @@ test('[EDGE] sequence-viewer two-step cloning notebook keeps distinct PCR thermo
   // carries the logged note onto the fresh one.
   notebookModule.createSequenceViewerCloningDesignNotebookPage({
     state,
+    ...createRecordServices(state),
     source,
     record: { name: source.recordName, sequence, topology: 'circular' },
     displayPlan,
@@ -690,7 +714,7 @@ test('[EDGE] regenerating a design leaves executed cloning pages untouched', () 
     plans: []
   };
   const design = (entryId = '') => designModule.createSequenceViewerCloningDesignNotebookPage({
-    state, createId, entryId, source, record, displayPlan
+    state, createId, entryId, source, record, displayPlan, ...createRecordServices(state)
   });
 
   const first = design();
@@ -719,6 +743,7 @@ test('[EDGE] regenerating a design leaves executed cloning pages untouched', () 
   const insertSequence = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
   const build = (entryId = '') => builderModule.createProteinBuilderCloningNotebookPage({
     state: builderState,
+    ...createRecordServices(builderState),
     createId: () => `builder_id_${builderNextId += 1}`,
     entryId,
     constructName: 'His6-TEV-POI',

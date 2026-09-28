@@ -4,6 +4,14 @@
 // state ensures live here so each widget module can stay independent and
 // import only what it needs.
 
+import {
+  normalizeDashboardActiveTimers,
+  normalizeDashboardIncubationLocations,
+  normalizeDashboardPassageReminders,
+  normalizeDashboardQuickLogEntries,
+  normalizeDashboardTimerTemplates
+} from '../app-state/dashboard-normalizers.js';
+
 export function formatDateLocal(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -114,86 +122,19 @@ export function normalizeIncubationLocationValue(value) {
 }
 
 export function normalizeIncubationLocationRecord(rawValue) {
-  const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-    ? rawValue
-    : { name: rawValue };
-  const name = normalizeIncubationLocationValue(source.name);
-  if (!name) {
-    return null;
-  }
-  const reminderDate = /^\d{4}-\d{2}-\d{2}$/.test(String(source.reminderDate || source.remindOnDate || '').trim())
-    ? String(source.reminderDate || source.remindOnDate || '').trim()
-    : '';
-  return {
-    name,
-    reminderDate
-  };
+  return normalizeDashboardIncubationLocations([rawValue])[0] || null;
 }
 
 export function normalizeTimerTemplateRecord(rawValue) {
-  const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-    ? rawValue
-    : null;
-  const name = normalizeIncubationLocationValue(source?.name);
-  const durationMinutes = Math.round(Number(source?.durationMinutes || source?.minutes));
-  if (!name || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-    return null;
-  }
-  return {
-    name,
-    durationMinutes
-  };
+  return normalizeDashboardTimerTemplates([rawValue])[0] || null;
 }
 
 export function normalizeActiveTimerRecord(rawValue) {
-  const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-    ? rawValue
-    : null;
-  const name = normalizeIncubationLocationValue(source?.name);
-  const durationMinutes = Math.round(Number(source?.durationMinutes || source?.minutes));
-  const startedAtMs = Number(source?.startedAtMs || source?.startedAt || 0);
-  const endAtMs = Number(source?.endAtMs || source?.endAt || 0);
-  const isPaused = source?.isPaused === true || source?.paused === true;
-  const remainingMs = Math.max(0, Number(source?.remainingMs || source?.pausedRemainingMs || 0));
-  if (
-    !name
-    || !Number.isFinite(durationMinutes)
-    || durationMinutes <= 0
-    || !Number.isFinite(startedAtMs)
-    || startedAtMs <= 0
-    || !Number.isFinite(endAtMs)
-    || endAtMs <= startedAtMs
-    || !Number.isFinite(remainingMs)
-  ) {
-    return null;
-  }
-  return {
-    name,
-    durationMinutes,
-    startedAtMs,
-    endAtMs,
-    isPaused,
-    remainingMs: isPaused ? remainingMs : 0
-  };
+  return normalizeDashboardActiveTimers([rawValue])[0] || null;
 }
 
 export function normalizeQuickLogRecord(rawValue) {
-  const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
-    ? rawValue
-    : null;
-  const id = String(source?.id || '').trim();
-  const text = String(source?.text || source?.note || '').trim();
-  const createdAt = String(source?.createdAt || source?.updatedAt || '').trim();
-  const updatedAt = String(source?.updatedAt || source?.createdAt || '').trim() || createdAt;
-  if (!id || !text || Number.isNaN(Date.parse(createdAt))) {
-    return null;
-  }
-  return {
-    id,
-    text,
-    createdAt,
-    updatedAt
-  };
+  return normalizeDashboardQuickLogEntries([rawValue])[0] || null;
 }
 
 export function passageReminderId(createId) {
@@ -237,43 +178,7 @@ export function ensureSamplesState(state) {
 }
 
 function normalizePassageReminderRecord(rawValue) {
-  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
-    return null;
-  }
-  const id = String(rawValue.id || '').trim();
-  const name = String(rawValue.name || rawValue.strain || '').trim().replace(/\s+/g, ' ');
-  const rawPassage = rawValue.cellPassage && typeof rawValue.cellPassage === 'object'
-    ? rawValue.cellPassage
-    : rawValue;
-  const lastPassageDate = String(rawPassage.lastPassageDate || '').trim();
-  const intervalDays = Math.round(Number(rawPassage.intervalDays));
-  const passageNumber = Math.round(Number(rawPassage.passageNumber));
-  if (
-    !id
-    || !name
-    || !parseLocalDate(lastPassageDate)
-    || !Number.isFinite(intervalDays)
-    || intervalDays <= 0
-    || !Number.isFinite(passageNumber)
-    || passageNumber <= 0
-  ) {
-    return null;
-  }
-  const cellPassage = {
-    lastPassageDate,
-    intervalDays,
-    passageNumber
-  };
-  const deferredUntilDate = String(rawPassage.deferredUntilDate || '').trim();
-  if (parseLocalDate(deferredUntilDate)) {
-    cellPassage.deferredUntilDate = deferredUntilDate;
-  }
-  return {
-    id,
-    name,
-    cellPassage,
-    updatedAt: String(rawValue.updatedAt || '').trim()
-  };
+  return normalizeDashboardPassageReminders([rawValue])[0] || null;
 }
 
 function isEmptyLocation(location) {

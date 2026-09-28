@@ -48,13 +48,6 @@ function createMainDataHelpers(deps = {}) {
     ? deps.getDefaultDataFilePath
     : (() => '');
 
-  function withSqlitePath(source) {
-    return {
-      ...(source?.sidecarPaths || {}),
-      sqlitePath: cleanText(source?.bundlePaths?.sqlitePath, 1600)
-    };
-  }
-
   function hasObjectKeys(value) {
     return Boolean(value && typeof value === 'object' && Object.keys(value).length);
   }
@@ -130,7 +123,7 @@ function createMainDataHelpers(deps = {}) {
       return {
         ok: true,
         filePath: targetPath,
-        sidecarPaths: withSqlitePath(bundleSync),
+        sidecarPaths: bundleSync.sidecarPaths || {},
         bundlePaths: bundleSync.bundlePaths
       };
     } catch (error) {
@@ -176,7 +169,7 @@ function createMainDataHelpers(deps = {}) {
         ok: true,
         filePath: targetPath,
         data: hydrated.snapshot,
-        sidecarPaths: withSqlitePath(sidecarSource),
+        sidecarPaths: sidecarSource.sidecarPaths || {},
         bundlePaths: sidecarSource.bundlePaths || hydrated.bundlePaths,
         migration: hydrated.migration
       };

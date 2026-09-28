@@ -1,5 +1,6 @@
 import { buildNotebookFolderPath, sanitizeFolderName } from '../../../lib/storage-paths.js';
-import { resolveProteinBuilderCloningNotebookProtocol } from '../../sequence-viewer/protein-builder-cloning-notebook.js';
+import { resolveProteinBuilderCloningNotebookProtocol } from '../../../services/notebook-record-compat.js';
+import { cloneProtocolSnapshot } from '../../../lib/protocol-snapshot.js';
 
 export { buildNotebookFolderPath, sanitizeFolderName };
 
@@ -47,33 +48,7 @@ export function cloneSelectionInsights(insights) {
   }
 }
 
-export function cloneProtocolSnapshot(protocol) {
-  if (!protocol || typeof protocol !== 'object') {
-    return null;
-  }
-  const protocolId = String(protocol.id || '').trim();
-  return {
-    id: protocolId,
-    name: String(protocol.name || '').trim() || 'Untitled Protocol',
-    category: String(protocol.category || '').trim(),
-    purpose: String(protocol.purpose || '').trim(),
-    steps: Array.isArray(protocol.steps)
-      ? protocol.steps.map((step, index) => {
-        const stepId = String(step?.id || '').trim() || `${protocolId || 'protocol'}_step_${index + 1}`;
-        return {
-          id: stepId,
-          text: String(step?.text || '').trim(),
-          placeholders: Array.isArray(step?.placeholders)
-            ? step.placeholders.map((placeholder, placeholderIndex) => ({
-              id: String(placeholder?.id || '').trim() || `${stepId}_placeholder_${placeholderIndex + 1}`,
-              name: String(placeholder?.name || '').trim() || `Value ${placeholderIndex + 1}`
-            }))
-            : []
-        };
-      })
-      : []
-  };
-}
+export { cloneProtocolSnapshot };
 
 export function resolveEntryProject(entry, projects = []) {
   const liveProject = (Array.isArray(projects) ? projects : []).find((item) => item.id === entry?.projectId) || null;
@@ -163,14 +138,10 @@ export function shouldSyncExperimentNameWithProtocol(currentName, previousProtoc
 export function collectProtocolPlaceholderKeys(protocol) {
   const allowedKeys = new Set();
   (Array.isArray(protocol?.steps) ? protocol.steps : []).forEach((step) => {
-    const stepId = String(step?.id || '').trim();
-    if (!stepId) {
-      return;
-    }
     (Array.isArray(step?.placeholders) ? step.placeholders : []).forEach((placeholder) => {
       const placeholderId = String(placeholder?.id || '').trim();
       if (placeholderId) {
-        allowedKeys.add(`${stepId}:${placeholderId}`);
+        allowedKeys.add(placeholderId);
       }
     });
   });

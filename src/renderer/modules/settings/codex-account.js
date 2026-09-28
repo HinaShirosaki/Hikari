@@ -24,7 +24,9 @@ function createCodexAccountSettings({
   settingReasoningEffort,
   startCodexLoginBtn,
   clearCodexLoginBtn,
-  copyCodexDesktopMcpPromptBtn
+  copyCodexDesktopMcpPromptBtn,
+  settingCodexDesktopPreview,
+  settingCodexDesktopPrompt
 } = {}) {
   let codexLoginConfig = {
     ok: false,
@@ -56,10 +58,13 @@ function createCodexAccountSettings({
     }
     settingCodexAuthControls.hidden = false;
     if (startCodexLoginBtn) {
+      startCodexLoginBtn.hidden = codexLoginConfig.loggedIn && codexLoginConfig.cliAvailable !== false;
       startCodexLoginBtn.disabled = codexLoginConfig.cliAvailable === false;
     }
     if (clearCodexLoginBtn) {
-      clearCodexLoginBtn.disabled = false;
+      clearCodexLoginBtn.hidden = !codexLoginConfig.loggedIn && codexLoginConfig.source !== 'stored';
+      clearCodexLoginBtn.disabled = codexLoginConfig.source === 'env';
+      clearCodexLoginBtn.textContent = codexLoginConfig.loggedIn ? 'Sign out' : 'Clear saved login';
     }
 
     const cliMissing = codexLoginConfig.cliAvailable === false;
@@ -76,33 +81,33 @@ function createCodexAccountSettings({
 
     const override = String(overrideMessage || '').trim();
     if (override) {
-      settingCodexStatus.textContent = `Codex login: ${override}`;
+      settingCodexStatus.textContent = `OpenAI account: ${override}`;
       return;
     }
 
     if (codexLoginConfig.loggedIn) {
       settingCodexStatus.textContent = codexLoginConfig.source === 'env'
-        ? 'Codex login: connected through an environment token.'
-        : 'Codex login: connected and stored for future launches.';
+        ? 'OpenAI account: connected through an environment token.'
+        : 'OpenAI account: connected.';
       return;
     }
 
     if (codexLoginConfig.source === 'login_in_progress') {
-      settingCodexStatus.textContent = 'Codex login: sign-in is in progress in your browser.';
+      settingCodexStatus.textContent = 'OpenAI account: sign-in is in progress in your browser.';
       return;
     }
 
     if (codexLoginConfig.expired) {
-      settingCodexStatus.textContent = 'Codex login: current session expired. Save settings or click Login with OpenAI to sign in again.';
+      settingCodexStatus.textContent = 'OpenAI account: current session expired. Sign in with OpenAI again.';
       return;
     }
 
     if (codexLoginConfig.source === 'stored') {
-      settingCodexStatus.textContent = 'Codex login: stored credentials were found, but they are not usable right now. Sign in again or clear them.';
+      settingCodexStatus.textContent = 'OpenAI account: stored credentials were found, but they are not usable right now. Sign in again or clear them.';
       return;
     }
 
-    settingCodexStatus.textContent = 'Codex login: not configured yet. Saving Codex settings will open the OpenAI login flow.';
+    settingCodexStatus.textContent = 'OpenAI account: not connected. Sign in to use Codex in Hikari.';
   }
 
   async function refreshCodexLoginStatus() {
@@ -210,13 +215,11 @@ function createCodexAccountSettings({
     }
   }
 
-  async function onCopyCodexDesktopMcpPrompt() {
-    if (!copyCodexDesktopMcpPromptBtn) {
-      return;
-    }
-    copyCodexDesktopMcpPromptBtn.disabled = true;
-    renderCodexDesktopMcpStatus('Preparing live connection...', 'working');
-    try {
+  let preparingDesktopPrompt = null;
+
+  async function prepareDesktopPrompt() {
+    if (preparingDesktopPrompt) return preparingDesktopPrompt;
+    preparingDesktopPrompt = (async () => {
       const storagePath = String(state.settings?.storagePath || '').trim();
       let dataFilePath = '';
       if (storagePath && window.hikariApi?.autoSaveDataFile) {
@@ -224,25 +227,48 @@ function createCodexAccountSettings({
         dataFilePath = String(syncResult?.filePath || '').trim();
       }
       if (!window.hikariApi?.getCodexDesktopMcpSetupPrompt) {
-        throw new Error('Codex Desktop MCP setup is unavailable.');
+        throw new Error('Codex Desktop setup is unavailable.');
       }
-      const result = await window.hikariApi.getCodexDesktopMcpSetupPrompt({
-        storagePath,
-        dataFilePath
-      });
+      const result = await window.hikariApi.getCodexDesktopMcpSetupPrompt({ storagePath, dataFilePath });
       if (!result?.ok || !result.prompt) {
-        throw new Error(result?.error || 'Hikari could not prepare the setup prompt.');
+        throw new Error(result?.error || 'Hikari could not prepare the setup instructions.');
       }
-      const copied = await copyTextToClipboard(result.prompt);
-      if (!copied) {
-        throw new Error('The text clipboard is unavailable.');
-      }
-      renderCodexDesktopMcpStatus('Copied. Paste into Codex Desktop.', 'success');
+      if (settingCodexDesktopPrompt) settingCodexDesktopPrompt.value = result.prompt;
+      return result.prompt;
+    })();
+    try {
+      return await preparingDesktopPrompt;
+    } finally {
+      preparingDesktopPrompt = null;
+    }
+  }
+
+  async function onPreviewCodexDesktopPrompt() {
+    if (!settingCodexDesktopPreview?.open) return;
+    renderCodexDesktopMcpStatus('Preparing setup instructions…', 'working');
+    try {
+      await prepareDesktopPrompt();
+      renderCodexDesktopMcpStatus();
     } catch (error) {
-      renderCodexDesktopMcpStatus(
-        String(error?.message || error || 'Failed to copy the setup prompt.'),
-        'error'
-      );
+      renderCodexDesktopMcpStatus(String(error?.message || error), 'error');
+    }
+  }
+  settingCodexDesktopPreview?.addEventListener('toggle', onPreviewCodexDesktopPrompt);
+
+  async function onCopyCodexDesktopMcpPrompt() {
+    if (!copyCodexDesktopMcpPromptBtn) return;
+    copyCodexDesktopMcpPromptBtn.disabled = true;
+    copyCodexDesktopMcpPromptBtn.textContent = 'Preparing…';
+    renderCodexDesktopMcpStatus('Preparing live connection…', 'working');
+    try {
+      const prompt = await prepareDesktopPrompt();
+      const copied = await copyTextToClipboard(prompt);
+      if (!copied) throw new Error('Could not copy. Open View setup instructions and copy the text manually.');
+      copyCodexDesktopMcpPromptBtn.textContent = 'Copied';
+      renderCodexDesktopMcpStatus('Paste into a Codex Desktop task and send.', 'success');
+    } catch (error) {
+      copyCodexDesktopMcpPromptBtn.textContent = 'Copy setup instructions';
+      renderCodexDesktopMcpStatus(String(error?.message || error || 'Failed to copy the setup instructions.'), 'error');
     } finally {
       copyCodexDesktopMcpPromptBtn.disabled = false;
     }
@@ -365,6 +391,7 @@ function createCodexAccountSettings({
     onClearCodexLogin,
     renderCodexDesktopMcpStatus,
     onCopyCodexDesktopMcpPrompt,
+    onPreviewCodexDesktopPrompt,
     onCopyCodexInstallCommand,
     onSaveLlmSettings,
     onModelChanged,

@@ -7,9 +7,9 @@ const path = require('node:path');
 const { createAgentMemoryRuntime } = require('../src/main/agent/context/agent-memory.js');
 const { registerSystemToolExecutors } = require('../src/main/agent/tools/tool-executors/system-executors.js');
 const { createDirectMcpToolRouter } = require('../src/main/agent/mcp-contract/direct-tools/index.js');
-const { validateNotebookConclusionResult } = require('../src/main/storage/memory/conclusion-request.js');
-const { shouldGenerateConclusion } = require('../src/main/storage/memory/conclusion-cache.js');
-const { buildProjectMemoryGeneratedBlock } = require('../src/main/storage/memory/memory-markdown.js');
+const { validateNotebookConclusionResult } = require('../src/main/project-memory/conclusion-request.js');
+const { shouldGenerateConclusion } = require('../src/main/project-memory/conclusion-cache.js');
+const { buildProjectMemoryGeneratedBlock } = require('../src/main/project-memory/memory-markdown.js');
 
 function deferred() {
   let resolve;

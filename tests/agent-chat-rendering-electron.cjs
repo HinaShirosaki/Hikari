@@ -151,7 +151,8 @@ async function main() {
   await run('document.querySelector("[data-agent-question-submit]").click();');
   assert.equal(await run('answers.at(-1).text'), 'Keep the missing data explicit');
   // Long histories should not drag a reader back to the latest message.
-  await run(`state.agentChat.messages=Array.from({length:40},(_,i)=>({id:'long-'+i,role:i%2?'assistant':'user',text:'Example message '+i})); redraw(); dom.historyNode.scrollTop=100; state.agentChat.messages.push({id:'last',role:'assistant',text:'New message'}); redraw();`);
+  await run(`state.agentChat.messages=Array.from({length:40},(_,i)=>({id:'long-'+i,role:i%2?'assistant':'user',text:'Example message '+i})); redraw(); new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
+  await run(`dom.historyNode.scrollTop=100; state.agentChat.messages.push({id:'last',role:'assistant',text:'New message'}); redraw();`);
   assert.equal(await run('dom.historyNode.scrollTop'), 100);
   // Opening a saved session deliberately anchors its latest content after the
   // layout is final, rather than leaving a partially visible first message.
@@ -159,8 +160,56 @@ async function main() {
   assert.equal(await run('dom.historyNode.scrollHeight - dom.historyNode.scrollTop - dom.historyNode.clientHeight <= 1'), true);
   await run('state.agentChat.messages=[]; redraw();');
   assert.equal(await run('dom.conversationShell.classList.contains("is-empty-chat")'), true);
+  // Exercise the real workspace shell too: the isolated reading fixture above
+  // removes panel padding and cannot catch inherited page spacing/clipping.
+  const workspaceFixture = path.join(scratch, 'workspace.html');
+  const workspaceHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace('<head>', `<head><base href="${url('')}/">`);
+  fs.writeFileSync(workspaceFixture, workspaceHtml);
+  await win.loadFile(workspaceFixture);
+  const runWorkspace = code => win.webContents.executeJavaScript(code);
+  await runWorkspace(`
+    document.querySelector('#app-loading-cover').remove();
+    document.body.className = 'ui-neutral-compact theme-day agent-view-fixed-scroll has-shared-left-rail-view';
+    document.querySelectorAll('.view').forEach(node => node.classList.toggle('is-active', node.id === 'agent-view'));
+    document.querySelector('#agent-view .agent-conversation-shell').classList.remove('is-empty-chat');
+    document.querySelector('#agent-chat-history').innerHTML = Array.from({length: 20}, (_, i) =>
+      '<div class="agent-chat-row"><article class="agent-chat-item agent-chat-item-assistant"><div class="agent-chat-body"><p>Message ' + i + '</p><p>' + 'Readable message content. '.repeat(20) + '</p></div></article></div>').join('');
+  `);
+  const workspaceMeasurements = [];
+  for (const width of [1500, 1100, 900, 700, 390]) {
+    win.setContentSize(width, 900);
+    await runWorkspace(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
+    const metrics = await runWorkspace(`(() => {
+      const history = document.querySelector('#agent-chat-history');
+      const panel = document.querySelector('#agent-view .agent-chat-panel');
+      history.scrollTop = 0;
+      const panelRect = panel.getBoundingClientRect();
+      const historyRect = history.getBoundingClientRect();
+      const first = history.firstElementChild.getBoundingClientRect();
+      history.scrollTop = history.scrollHeight;
+      const last = history.lastElementChild.getBoundingClientRect();
+      document.querySelector('#agent-message-input').focus();
+      return { width: innerWidth, panelTop: panelRect.top, panelBottom: panelRect.bottom,
+        historyTop: historyRect.top, historyBottom: historyRect.bottom, firstTop: first.top,
+        lastBottom: last.bottom, composerBottom: document.querySelector('#agent-view .agent-composer-card').getBoundingClientRect().bottom,
+        outerScroll: panel.scrollTop + document.querySelector('#agent-view').scrollTop,
+        viewportBottom: innerHeight };
+    })()`);
+    assert.ok(Math.abs(metrics.historyTop - metrics.panelTop) <= 1, `No blank clipping band: ${JSON.stringify(metrics)}`);
+    assert.ok(metrics.firstTop >= metrics.historyTop + 16, `First message has readable inset: ${JSON.stringify(metrics)}`);
+    assert.ok(metrics.lastBottom <= metrics.historyBottom + 1, `Last message reachable: ${JSON.stringify(metrics)}`);
+    assert.ok(metrics.panelBottom <= metrics.viewportBottom + 1 && metrics.composerBottom <= metrics.viewportBottom, `Pane and composer fit: ${JSON.stringify(metrics)}`);
+    assert.equal(metrics.outerScroll, 0, 'Focusing the composer must not scroll/clamp the outer pane');
+    workspaceMeasurements.push(metrics);
+  }
+  win.setContentSize(1500, 900);
+  await runWorkspace(`document.querySelector('#agent-chat-history').scrollTop = 0; new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
+  fs.writeFileSync(path.join(out, 'workspace-layout.png'), (await win.webContents.capturePage()).toPNG());
+  fs.writeFileSync(path.join(out, 'workspace-layout.json'), JSON.stringify(workspaceMeasurements, null, 2));
   fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements, checks: ['selection during streaming', 'stable disclosures', 'copy', 'inline notebook approval', 'protocol approval idempotency', 'clarification focus and custom answer', 'scroll anchoring', 'empty conversation'] }, null, 2));
-  console.log('Agent Chat Electron: 8 day/night layouts, streaming selection, stable cards, copy, inline approvals, clarification, scroll anchoring and empty state passed.');
+  console.log('Agent Chat Electron: 8 day/night layouts, 5 full-workspace sizes, streaming selection, stable cards, copy, inline approvals, clarification, scroll anchoring and empty state passed.');
   win.destroy(); app.quit();
 }
 
