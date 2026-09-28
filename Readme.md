@@ -26,9 +26,7 @@ Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in 
 
 <br/>
 
-![Hikari Home dashboard](docs/screenshots/home.png)
-
-## Why Hikari
+## Highlights
 
 <table>
 <tr>
@@ -78,6 +76,8 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 </td>
 </tr>
 </table>
+
+![Hikari Home dashboard](docs/screenshots/home.png)
 
 ## See it in action
 
