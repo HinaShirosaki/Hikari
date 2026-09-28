@@ -32,9 +32,11 @@ const suitesRoot = path.join(__dirname, 'tests', 'suites');
 function callerGroup() {
   const frames = String(new Error().stack).split('\n').slice(2);
   for (const frame of frames) {
-    const file = (frame.match(/\(?(\/[^():]+\.js):\d+:\d+\)?$/) || [])[1];
+    // POSIX (/repo/...) and Windows (D:\repo\...) frames; group names always use '/'
+    // so filters such as '^core/...' work on every platform.
+    const file = (frame.match(/\(?((?:[A-Za-z]:)?[\\/][^():]+\.js):\d+:\d+\)?$/) || [])[1];
     if (file && file.startsWith(suitesRoot)) {
-      return path.relative(suitesRoot, file).replace(/\.js$/, '');
+      return path.relative(suitesRoot, file).split(path.sep).join('/').replace(/\.js$/, '');
     }
   }
   return 'root';

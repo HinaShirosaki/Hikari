@@ -23,12 +23,14 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
     viewSource,
     /<div class="protocol-steps-field">\s*<label for="protocol-steps">Steps<\/label>/
   );
+  // The preset buttons are rendered into this host at runtime, so the static
+  // markup can only show where the host sits.
+  assert.match(viewSource, /id="protocol-placeholder-presets"/);
   assert.equal(
-    labelBodies.some((body) => body.includes('data-protocol-placeholder-preset')),
+    labelBodies.some((body) => body.includes('id="protocol-placeholder-presets"')),
     false,
     'preset buttons must not be descendants of a label that forwards distant clicks'
   );
-  assert.match(viewSource, /id="protocol-placeholder-presets"/);
   assert.deepEqual(
     presetModule.getProtocolPlaceholderPresetEntries({ sampleTypeLabels: { custom_lysate: 'Lysate' } })
       .map((entry) => entry.name),

@@ -1121,7 +1121,9 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
 
   // A moved storage root makes the recorded absolute path stale; the record's
   // relative path still resolves, and losing the image here is permanent.
-  disk.set('/moved/Gels/old/source.png', 'U09VUkNF');
+  // The old root is gone, so only the relative fallback can find the image.
+  disk.delete('/root/Gels/old/source.png');
+  disk.set('/moved/Gels/old/source.png', 'TU9WRUQ=');
   state.settings.storagePath = '/moved';
   state.gelAnalyses = [{
     id: 'gel-3',
@@ -1139,6 +1141,11 @@ test('plugin system: bundled Gel migration copies legacy records into its file n
     frame.replies.at(-1).result.records[0].sourceImagePath,
     /source\.png$/,
     'a stale absolute path falls back to the relative one'
+  );
+  assert.equal(
+    disk.get('/moved/Plugins/gel/Gels/Moved_Gel__gel-3/source.png'),
+    'TU9WRUQ=',
+    'the image copied is the one under the moved root'
   );
   state.settings.storagePath = '/root';
 

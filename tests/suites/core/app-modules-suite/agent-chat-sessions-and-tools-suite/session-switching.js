@@ -12,6 +12,19 @@ module.exports = function registerAppAgentChatSessionsAndToolsSuiteSessionSwitch
     test,
     shared
   } = scope;
+
+// New Chat is a button on each session folder row, rendered into the session
+// list and handled by the list's delegated click listener.
+function renderedNewChatButtons(document) {
+  return document.getElementById('agent-session-list').innerHTML.match(/<button[^>]*\bagent-new-chat-btn\b[^>]*>/g) || [];
+}
+function clickNewChatInFolder(document, folderId) {
+  const button = { disabled: false, dataset: { agentNewChatFolder: folderId } };
+  trigger(document.getElementById('agent-session-list'), 'click', {
+    target: { closest: (selector) => (selector === '[data-agent-new-chat-folder]' ? button : null) }
+  });
+}
+
 test('agent-chat loads saved sessions from chat logs and switches sessions from the sidebar', async () => {
   const document = createMockDocument([
     'agent-project-select',
@@ -530,7 +543,7 @@ test('agent-chat keeps the selected session intact when new-chat creation fails'
 
   agent.render();
   document.getElementById('agent-message-input').value = 'Keep this draft too.';
-  trigger(document.getElementById('agent-new-chat-btn'), 'click');
+  clickNewChatInFolder(document, 'project:project-next');
   await flushAsync();
   await flushAsync();
 
@@ -611,7 +624,8 @@ test('agent-chat locks duplicate sends while the first session is being created'
   assert.equal(createSessionCalls, 1);
   assert.equal(agentChatCalls, 0);
   assert.equal(document.getElementById('agent-send-btn').disabled, true);
-  assert.equal(document.getElementById('agent-new-chat-btn').disabled, true);
+  assert.notEqual(renderedNewChatButtons(document).length, 0);
+  assert.equal(renderedNewChatButtons(document).every((button) => /\sdisabled[\s>]/.test(button)), true);
 
   releaseSessionCreation();
   await flushAsync();
@@ -678,13 +692,20 @@ test('agent-chat keeps New Chat disabled while an unpersisted local request runs
   await flushAsync();
 
   assert.equal(typeof finishRequest, 'function');
-  assert.equal(document.getElementById('agent-new-chat-btn').disabled, true);
+  assert.notEqual(renderedNewChatButtons(document).length, 0);
+  assert.equal(renderedNewChatButtons(document).every((button) => /\sdisabled[\s>]/.test(button)), true);
+  // A click that still reaches the list is ignored until the request settles.
+  const messagesWhileRunning = JSON.stringify(state.agentChat.messages);
+  clickNewChatInFolder(document, 'general');
+  await flushAsync();
+  assert.equal(JSON.stringify(state.agentChat.messages), messagesWhileRunning);
 
   finishRequest({ ok: false, canceled: true, error: 'Local request finished.' });
   await flushAsync();
   await flushAsync();
 
-  assert.equal(document.getElementById('agent-new-chat-btn').disabled, false);
+  assert.notEqual(renderedNewChatButtons(document).length, 0);
+  assert.equal(renderedNewChatButtons(document).some((button) => /\sdisabled[\s>]/.test(button)), false);
 });
 test('agent-chat session switching honors nested click targets and replays the latest click after an in-flight load', async () => {
   const document = createMockDocument([

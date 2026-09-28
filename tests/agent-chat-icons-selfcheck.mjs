@@ -30,7 +30,9 @@ for (const [id, icon] of [
   ['home-agent-send-btn', 'send'],
   ['protocol-generate-attach-btn', 'attach']
 ]) {
-  assert.match(staticMarkup, new RegExp(`id="${id}"[\\s\\S]*?data-agent-chat-icon="${icon}"`));
+  // Stop at the button's own </button>: a later element with the same icon
+  // must not satisfy the match for this one.
+  assert.match(staticMarkup, new RegExp(`id="${id}"(?:(?!</button>)[\\s\\S])*data-agent-chat-icon="${icon}"`));
 }
 
 const dynamicRenderers = [

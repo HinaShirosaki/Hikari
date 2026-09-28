@@ -228,7 +228,13 @@ module.exports = function registerAgentRetrievalAndToolCallSuiteToolCallDispatch
       assert.equal(results[1].result.notebook.protocol.name, 'HEK293 Transfection');
     });
     test('agent tool-call runtime surfaces executor failures without built-in fallback behavior', async () => {
-      const runtime = toolExecution.createAgentToolCallRuntime();
+      const runtime = toolExecution.createAgentToolCallRuntime({
+        toolExecutors: {
+          'python-sandbox': async () => {
+            throw new Error('sandbox exploded');
+          }
+        }
+      });
       const result = await runtime.executeToolCall({
         tool_name: 'python-sandbox',
         arguments: {
@@ -237,6 +243,17 @@ module.exports = function registerAgentRetrievalAndToolCallSuiteToolCallDispatch
       });
       assert.equal(result.ok, false);
       assert.equal(result.tool_name, 'python-sandbox');
-      assert.match(String(result.error || ''), /No tool executor is registered/i);
+      assert.equal(result.error, 'sandbox exploded');
+
+      // A stopped request is not a tool failure: it must escape the envelope.
+      runtime.registerToolExecutor('python-sandbox', async () => {
+        const abort = new Error('Agent request stopped.');
+        abort.name = 'AbortError';
+        throw abort;
+      });
+      await assert.rejects(
+        runtime.executeToolCall({ tool_name: 'python-sandbox', arguments: { code: 'print("hello")' } }),
+        /Agent request stopped/
+      );
     });
 };

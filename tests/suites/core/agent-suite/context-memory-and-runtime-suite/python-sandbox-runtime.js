@@ -129,6 +129,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       });
       assert.equal(result.ok, true);
       assert.equal(result.status, 'ok');
+      // The runner catches hook errors into warnings, so a failed assertion inside
+      // a lifecycle callback above only surfaces here.
+      assert.deepEqual(result.warnings, []);
       assert.equal(Array.isArray(result.readback_files), true);
       assert.equal(result.readback_files.length, 1);
       assert.match(String(result.readback_files[0].content || ''), /"value": 42/);
@@ -467,13 +470,18 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
     });
     test('python sandbox: Finder launches prefer standard user Python installs on macOS', async () => {
-      if (process.platform !== 'darwin') {
-        return;
-      }
       const {
         platformPythonCandidates,
         resolvePythonExecutable
       } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js'));
+      // The candidate table is plain data, so its order is checked on every platform;
+      // only the probe against real installs below needs a Mac.
+      assert.deepEqual(platformPythonCandidates('darwin'), ['/opt/homebrew/bin/python3', '/usr/local/bin/python3']);
+      assert.deepEqual(platformPythonCandidates('linux'), []);
+      assert.deepEqual(platformPythonCandidates('win32'), []);
+      if (process.platform !== 'darwin') {
+        return;
+      }
       const available = [];
       for (const candidate of platformPythonCandidates('darwin')) {
         try {

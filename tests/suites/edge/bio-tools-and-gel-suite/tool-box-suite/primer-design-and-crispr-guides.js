@@ -805,16 +805,20 @@ test('[EDGE] protein-builder Gibson insert primers bind the linked source CDS an
     assert.equal(isPositive ? charge > 0 : charge < 0, true);
   });
 });
+// Expected pI values solve Henderson-Hasselbalch for zero net charge with the
+// module's pKa table (N-term 9.69, C-term 2.34, K 10.54, R 12.48, H 6.04,
+// D 3.9, E 4.07, C 8.37, Y 10.46).
 [
   ['', 0],
-  ['KRR', 0],
-  ['DEE', 0],
-  ['ACDEFGHIKLMNPQRSTVWY', 0]
-].forEach(([sequence], idx) => {
+  ['KRR', 12.49],
+  ['DEE', 2.9],
+  ['ACDEFGHIKLMNPQRSTVWY', 7.19]
+].forEach(([sequence, expected], idx) => {
   test(`[EDGE] tool-box estimatePI bounds case ${idx + 1}`, () => {
     const value = toolBox.estimatePI(sequence);
     assert.equal(value >= 0, true);
     assert.equal(value <= 14, true);
+    assertClose(value, expected, 0.01);
   });
 });
 [

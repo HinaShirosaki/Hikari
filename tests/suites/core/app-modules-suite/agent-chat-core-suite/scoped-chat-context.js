@@ -17,14 +17,14 @@ test('agent-chat sends settings API key to main process and stores assistant res
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
-    'agent-new-chat-btn',
+    'agent-session-list',
     'agent-status'
   ]);
   const projectSelect = document.getElementById('agent-project-select');
   const history = document.getElementById('agent-chat-history');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
-  const newChatBtn = document.getElementById('agent-new-chat-btn');
+  const sessionList = document.getElementById('agent-session-list');
   const status = document.getElementById('agent-status');
 
   let persistCalls = 0;
@@ -371,13 +371,20 @@ test('agent-chat sends settings API key to main process and stores assistant res
 
   agent.render();
   assert.equal(sendBtn.disabled, false);
-  assert.equal(newChatBtn.disabled, false);
+  // New Chat is a button on each session folder row, handled by the list's
+  // delegated click listener.
+  const newChatButtons = sessionList.innerHTML.match(/<button[^>]*\bagent-new-chat-btn\b[^>]*>/g) || [];
+  assert.notEqual(newChatButtons.length, 0);
+  assert.equal(newChatButtons.some((button) => /\sdisabled[\s>]/.test(button)), false);
   assert.equal(projectSelect.disabled, false);
   assert.equal(messageInput.disabled, false);
   assert.equal(status.textContent, 'Ready.');
   assert.ok(persistCalls >= 3);
 
-  trigger(newChatBtn, 'click');
+  const newChatInGeneral = { disabled: false, dataset: { agentNewChatFolder: 'general' } };
+  trigger(sessionList, 'click', {
+    target: { closest: (selector) => (selector === '[data-agent-new-chat-folder]' ? newChatInGeneral : null) }
+  });
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
 });

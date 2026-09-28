@@ -557,14 +557,6 @@ test('biology-notebook quick sample submit is a compact accessible icon', () => 
 });
 test('biology-notebook buffer preparer floats one autocomplete menu and appends ingredients beyond its starter rows', () => {
   const toolsDir = path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools');
-  const source = [
-    fs.readFileSync(path.join(toolsDir, 'tool-sidebar.js'), 'utf8'),
-    fs.readFileSync(path.join(toolsDir, 'tool-row-managers.js'), 'utf8'),
-    fs.readFileSync(path.join(toolsDir, 'buffer-suggestions.js'), 'utf8'),
-    fs.readFileSync(path.join(toolsDir, 'toolbox-drag.js'), 'utf8'),
-    fs.readFileSync(path.join(toolsDir, 'calculation-records.js'), 'utf8'),
-    fs.readFileSync(path.join(toolsDir, 'tool-calculations.js'), 'utf8')
-  ].join('\n');
   const html = fs.readFileSync(path.join(
     __dirname,
     'ui',
@@ -580,13 +572,6 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
     'biology-notebook-view',
     'rail-and-projects.css'
   ), 'utf8');
-  assert.match(source, /const INITIAL_BUFFER_ROW_COUNT = 6;/);
-  assert.match(source, /function closeOtherBufferSuggestions\(activeIndex\)/);
-  assert.match(source, /function renderBufferSuggestions\(index\)[\s\S]*?closeOtherBufferSuggestions\(index\)[\s\S]*?positionBufferSuggestions\(index\);/);
-  assert.match(source, /function appendBufferRow\(\)[\s\S]*?bufferRowTotal = index;[\s\S]*?bindBufferRow\(index\);/);
-  assert.match(source, /function insertBufferRowBeforeAddRow\(row\)[\s\S]*?biology-notebook-tool-buffer-add-row-anchor/);
-  assert.doesNotMatch(source, /revealNextRow\('biology-notebook-tool-buffer-row'/);
-  assert.match(source, /addListener\(doc, 'scroll', repositionOpenBufferSuggestions, true\);/);
   assert.match(html, /<tbody id="biology-notebook-tool-buffer-rows">/);
   assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg><\/button>/);
   assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
@@ -595,6 +580,133 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
   assert.match(molarityButton, /aria-label="Add molarity table"[\s\S]*?<svg[^>]*aria-hidden="true"[^>]*focusable="false"[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
   assert.doesNotMatch(molarityButton, /biology-notebook-molarity-icon/);
   assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
+
+  // Drive the real sidebar controller over a small DOM stand-in.
+  const { createNotebookToolSidebarController } = loadEsmStyleModule(path.join(toolsDir, 'tool-sidebar.js'));
+  const elements = new Map();
+  const doc = {
+    documentElement: { clientWidth: 1000, clientHeight: 800 },
+    getElementById(id) {
+      if (!elements.has(id)) {
+        elements.set(id, new FakeElement(id));
+      }
+      return elements.get(id);
+    },
+    querySelector: (selector) => (selector === '[data-notebook-tool-sidebar]' ? doc.getElementById('biology-notebook-tool-sidebar') : null),
+    addEventListener() {},
+    register(element) {
+      if (element.id) {
+        elements.set(element.id, element);
+      }
+      element.children.forEach((child) => doc.register(child));
+    }
+  };
+  class FakeElement {
+    constructor(id = '', className = '') {
+      this.id = id;
+      this.value = '';
+      this.textContent = '';
+      this.innerHTML = '';
+      this.hidden = false;
+      this.children = [];
+      this.parentElement = null;
+      this.attributes = {};
+      this.dataset = {};
+      this.style = {};
+      this.listeners = {};
+      this.classes = new Set(className.split(/\s+/).filter(Boolean));
+      this.classList = {
+        add: (name) => this.classes.add(name),
+        remove: (name) => this.classes.delete(name),
+        toggle: (name, force = !this.classes.has(name)) => (force ? this.classes.add(name) : this.classes.delete(name)),
+        contains: (name) => this.classes.has(name)
+      };
+    }
+    addEventListener(type, handler) { (this.listeners[type] = this.listeners[type] || []).push(handler); }
+    fire(type) { (this.listeners[type] || []).forEach((handler) => handler({ preventDefault() {}, target: this })); }
+    getAttribute(name) { return this.attributes[name] ?? null; }
+    setAttribute(name, value) { this.attributes[name] = String(value); }
+    getBoundingClientRect() { return this.rect || { top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0 }; }
+    descendants() { return this.children.flatMap((child) => [child, ...child.descendants()]); }
+    querySelectorAll(selector) {
+      if (selector === '[id]') return this.descendants().filter((element) => element.id);
+      if (selector.startsWith('.')) return this.descendants().filter((element) => element.classes.has(selector.slice(1)));
+      return [];
+    }
+    querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+    insertBefore(child, reference) {
+      if (child.parentElement) child.parentElement.children.splice(child.parentElement.children.indexOf(child), 1);
+      const index = this.children.indexOf(reference);
+      this.children.splice(index < 0 ? this.children.length : index, 0, child);
+      child.parentElement = this;
+      doc.register(child);
+      return child;
+    }
+    appendChild(child) { return this.insertBefore(child, null); }
+    cloneNode() {
+      const copy = new FakeElement(this.id, [...this.classes].join(' '));
+      Object.assign(copy.attributes, this.attributes);
+      Object.assign(copy.dataset, this.dataset);
+      copy.hidden = this.hidden;
+      copy.children = this.children.map((child) => Object.assign(child.cloneNode(), { parentElement: copy }));
+      return copy;
+    }
+  }
+  doc.body = new FakeElement('body');
+  const bufferRows = doc.getElementById('biology-notebook-tool-buffer-rows');
+  for (let index = 1; index <= 6; index += 1) {
+    const row = new FakeElement(`biology-notebook-tool-buffer-row-${index}`);
+    ['name', 'mw', 'stock', 'final', 'amount', 'note'].forEach((field) => {
+      row.appendChild(new FakeElement(`biology-notebook-tool-buffer-${field}-${index}`));
+    });
+    row.appendChild(new FakeElement(`biology-notebook-tool-buffer-suggestions-${index}`, 'biology-notebook-buffer-suggestions'));
+    bufferRows.appendChild(row);
+  }
+  const addRowAnchor = bufferRows.appendChild(new FakeElement('biology-notebook-tool-buffer-add-row-anchor'));
+  createNotebookToolSidebarController({
+    doc,
+    win: { addEventListener() {}, innerWidth: 1000, innerHeight: 800 },
+    safeText: (value) => String(value ?? ''),
+    createId: () => 'tool-record',
+    getStoredCompounds: () => []
+  });
+  const nameInput = (index) => doc.getElementById(`biology-notebook-tool-buffer-name-${index}`);
+  const menu = (index) => doc.getElementById(`biology-notebook-tool-buffer-suggestions-${index}`);
+
+  // Focusing a compound field opens its menu outside the toolbox, which would
+  // clip it. With no room below the field it opens upward instead.
+  nameInput(1).rect = { top: 700, bottom: 730, left: 100, right: 300, width: 200, height: 30 };
+  menu(1).scrollHeight = 150;
+  nameInput(1).fire('focus');
+  assert.equal(menu(1).hidden, false);
+  assert.match(menu(1).innerHTML, /data-buffer-candidate=/);
+  assert.equal(nameInput(1).getAttribute('aria-expanded'), 'true');
+  assert.equal(menu(1).parentElement, doc.body);
+  assert.equal(menu(1).classList.contains('biology-notebook-buffer-suggestions--floating'), true);
+  assert.deepEqual(
+    { ...menu(1).style },
+    { left: '99px', right: 'auto', width: '202px', top: 'auto', bottom: '101px', maxHeight: '230px' }
+  );
+
+  // Only one menu is open at a time.
+  nameInput(2).rect = { top: 100, bottom: 130, left: 100, right: 300, width: 200, height: 30 };
+  nameInput(2).fire('focus');
+  assert.equal(menu(2).hidden, false);
+  assert.equal(menu(2).style.top, '129px', 'with room below the field the menu opens downward');
+  assert.equal(menu(1).hidden, true);
+  assert.equal(menu(1).innerHTML, '');
+  assert.equal(nameInput(1).getAttribute('aria-expanded'), 'false');
+
+  // All six starter rows are showing, so + appends a seventh above the add-row
+  // anchor, wired like the others.
+  doc.getElementById('biology-notebook-tool-buffer-add-row').fire('click');
+  const row7 = doc.getElementById('biology-notebook-tool-buffer-row-7');
+  assert.equal(row7.hidden, false);
+  assert.deepEqual(bufferRows.children.slice(-2), [row7, addRowAnchor]);
+  nameInput(7).rect = { top: 300, bottom: 330, left: 100, right: 300, width: 200, height: 30 };
+  nameInput(7).fire('focus');
+  assert.equal(menu(7).hidden, false);
+  assert.equal(menu(2).hidden, true);
 });
 test('biology-notebook buffer preparer starts blank, records without a button, and exposes compound pKa data', () => {
   const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'biology-notebook-view.html'), 'utf8');

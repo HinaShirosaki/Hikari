@@ -301,21 +301,69 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.ok(journalControllerIndex >= 0);
       assert.ok(journalListenerIndex > journalControllerIndex);
     });
-    test('main agent chat logging records request/result/error with redacted API key metadata', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
-      const agentPath = (...parts) => path.join(agentDir, ...parts);
+    test('main agent chat logging records request/result/error with redacted API key metadata', async () => {
       const mainSource = readMainProcessSource();
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
-      const agentChatRequestSource = fs.readFileSync(agentPath('runtime', 'agent-chat-request.js'), 'utf8');
-      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'controller-utils', 'tracing.js'), 'utf8');
       assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
       assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
-      assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
-      assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
-      assert.match(agentChatRequestSource, /type: 'agent-chat-request'/);
-      assert.match(agentChatRequestSource, /type: 'agent-chat-result'/);
-      assert.match(agentChatRequestSource, /type: 'agent-chat-error'/);
+
+      // Drive the real chat handler and read back everything it writes.
+      const os = require('node:os');
+      const { AGENT } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const registrarDir = path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc');
+      const { registerAgentChatHandler } = require(path.join(registrarDir, 'agent-chat-handler.js'));
+      const { createAgentLifecycleService } = require(path.join(registrarDir, 'agent-lifecycle-service.js'));
+      const { createAgentControllerUtils } = require(path.join(__dirname, 'src', 'main', 'agent', 'shared', 'agent-controller-utils.js'));
+      const { createAgentChatLogRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-chat-log.js'));
+      const observability = require(path.join(__dirname, 'src', 'main', 'agent', 'shared', 'agent-observability.js'));
+      const cleanText = (value, max = 2000) => String(value || '').trim().slice(0, max);
+      const apiKey = 'sk-live-must-not-be-logged';
+      const storagePath = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-agent-log-'));
+      const logLines = [];
+      const handlers = new Map();
+      let failNext = false;
+      let persistedText = '';
+      try {
+        registerAgentChatHandler({
+          ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+          cleanText,
+          controllerUtils: createAgentControllerUtils({ cleanText }),
+          observability,
+          agentChatLogRuntime: createAgentChatLogRuntime(),
+          getAgentChatLogPath: () => path.join(storagePath, 'agent-chat.log'),
+          getAgentChatSessionStoragePath: () => storagePath,
+          appendAgentChatLogEntry: async (_logPath, line) => { logLines.push(String(line)); },
+          lifecycleService: { ...createAgentLifecycleService({ cleanText }), flushLifecycleRecorderEvents: async () => {} },
+          runAgentController: async () => {
+            if (failNext) {
+              throw new Error('Model unavailable.');
+            }
+            return { ok: true, codex_agent: { answer: 'Done.', status: 'completed' } };
+          }
+        });
+        const llm = { provider: 'codex', model: 'gpt-test', apiKey };
+        await handlers.get(AGENT.CHAT)({}, { message: 'Summarize the run.', llm });
+        failNext = true;
+        await handlers.get(AGENT.CHAT)({}, { message: 'Summarize it again.', llm });
+        const readAll = (dir) => fs.readdirSync(dir, { withFileTypes: true }).map((entry) => (
+          entry.isDirectory() ? readAll(path.join(dir, entry.name)) : fs.readFileSync(path.join(dir, entry.name), 'utf8')
+        )).join('\n');
+        persistedText = readAll(storagePath);
+      } finally {
+        fs.rmSync(storagePath, { recursive: true, force: true });
+      }
+
+      const entries = logLines.map((line) => JSON.parse(line));
+      assert.deepEqual(
+        entries.map((entry) => entry.type),
+        ['agent-chat-request', 'agent-chat-result', 'agent-chat-request', 'agent-chat-error']
+      );
+      assert.equal(entries[0].llm.apiKeyProvided, true);
+      assert.equal(entries[0].llm.model, 'gpt-test');
+      assert.equal(logLines.some((line) => line.includes(apiKey)), false, 'the request log must not carry the key');
+      assert.notEqual(persistedText, '', 'the chat sessions were persisted');
+      assert.equal(persistedText.includes(apiKey), false, 'saved chat sessions must not carry the key');
     });
 };

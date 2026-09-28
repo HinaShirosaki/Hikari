@@ -116,8 +116,9 @@ test('agent-chat replaces the live placeholder with a persisted error response o
   assert.equal(/Working on this/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
   assert.equal(status.textContent, 'Error.');
-  // The pill ships hidden in the markup, so a status that never unhides it is
-  // a status the user never sees.
-  assert.equal(status.hidden, false, 'a status message must make the pill visible');
+  // setStatus hides an empty status line, so every write has to show it again.
+  // Only the home composer renders one (#home-agent-status); the main view's
+  // status pill was removed, so this node exists only in the mock document.
+  assert.equal(status.hidden, false, 'a status message must make the status line visible');
 });
 };
