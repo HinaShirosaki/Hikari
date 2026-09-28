@@ -13,6 +13,12 @@ This folder contains the split implementation of the personal inventory renderer
 - `detail-single-editor.js`: single-tube side editor markup.
 - `detail-structure-rendering.js`: structure action and preview markup.
 - `index.js`: top-level module orchestration.
+- `controller-context.js`, `section-navigation.js`, `rendering.js`: shared controller state, zone/section navigation, and the list render pass.
+- `container-form.js`, `container-context-menu.js`, `container-rename-events.js`, `container-delete-events.js`, `folder-actions.js`: container create/edit, right-click menu, inline rename, delete, and container folders.
+- `structure-state.js`, `structure-actions.js`, `structure-bindings.js`: chemical-structure state, actions, and bindings.
+- `well-sample-events.js`, `single-sample-events.js`, `events.js`: multi-well and single-tube editor events, and the remaining top-level bindings.
+
+Containers are saved one file per container under `Samples/<zone>/` in the storage root (`src/main/storage/sample-containers.js`).
 
 Maintenance notes:
 

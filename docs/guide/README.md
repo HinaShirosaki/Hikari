@@ -427,7 +427,7 @@ See [`tests/README.md`](../../tests/README.md) for the full layout.
 - **CI** (`.github/workflows/ci.yml`) runs on every push, on macOS: `npm ci`, `npm test`, then the embedded-Electron MCP startup check and the workspace onboarding test (`tests/storage-setup-electron.cjs`).
 - **Publish** (`.github/workflows/publish.yml`) runs when a GitHub release (`vX.Y.Z`, matching `package.json`) is published. It re-runs CI, builds and attaches the Windows x64 `HikariSetup.exe`, and publishes the package to npmjs (trusted publishing) and GitHub Packages.
 - **Windows install smoke** (`.github/workflows/windows-install-smoke.yml`) packs the branch, runs it through `npx`, installs `HikariSetup.exe`, and drives the installed app (`tests/installed-app-smoke.mjs`). Push to a `win-smoke/**` branch to run it before merging.
-- The app checks npm for a newer `@hinashirosaki/hikari` at startup and offers an update dialog (`src/main/updater/`).
+- **In-app updates.** At startup Hikari checks the npm registry for a newer `@hinashirosaki/hikari`. If you choose **Update**, it runs the same `npx` build in the background, then offers **Restart Now** (or applies the new build when Hikari next quits). There are no hosted binaries and builds are ad-hoc signed, so Electron's Squirrel auto-updater is not used (`src/main/updater/`).
 
 ### Where a module's code lives
 

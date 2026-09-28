@@ -4,7 +4,7 @@ This folder contains the main-process IPC registration for the agent/chat subsys
 
 ## Why this exists
 
-`register-agent-ipc.js` had grown into a single file that mixed together:
+The original single `register-agent-ipc.js` file mixed together:
 
 - IPC route registration
 - chat request orchestration
@@ -20,8 +20,8 @@ This folder splits those responsibilities into smaller modules so each part is e
 - `index.js`
   - Entry point that wires dependencies together and registers all agent IPC handlers.
 - `agent-chat-handler.js`
-  - Owns the `agent:chat` IPC flow.
-  - Coordinates request logging, lifecycle recording, session persistence, and final response shaping.
+  - Registers `agent:chat` and `agent:chat:cancel`, and tracks active requests so a cancel aborts the right one.
+  - Delegates the request itself to `createAgentChatRequestHandler(...)` in `../../agent/runtime/agent-chat-request.js`, which coordinates request logging, lifecycle recording, progress events, session persistence, and final response shaping.
 - `agent-controller-core.js`
   - Validates controller inputs, resolves agent-provider configuration, and owns the Codex route.
 - `../../agent/context/chat-log/session-service.js`
@@ -29,7 +29,8 @@ This folder splits those responsibilities into smaller modules so each part is e
 - `agent-lifecycle-service.js`
   - Centralizes lifecycle helpers such as payload normalization, progress events, tool-call lifecycle tracing, and lifecycle log flushing.
 - `agent-log-handlers.js`
-  - Registers the non-chat IPC endpoints for chat-log access, lifecycle request listing, and lifecycle replay.
+  - Registers the non-chat IPC endpoints for chat-log access, lifecycle request listing, lifecycle replay, skill listing, and protocol generation.
+- `index.js` also registers `agent:suggest-experiment` (background notebook suggestions).
 
 ## Design notes
 

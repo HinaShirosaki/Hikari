@@ -199,7 +199,7 @@ flowchart TD
 | Codex CLI provider | `main/lib/codex-cli-provider/` | Spawns the signed-in `codex` CLI: login flow, model and reasoning-effort config, one-shot text requests, and the long-running turns the agent runtime drives. |
 | LLM runtime | `main/lib/llm/` | Provider-neutral prompt/response helpers, the direct-LLM registry that module features call, and a monitor that transforms raw chat logs into session files. |
 | Plugin files | `main/lib/plugin-*.js`, `ipc/register-plugin-ipc.js` | Validates a plugin folder against the manifest contract, serves it on its own loopback origin, and handles plugin file read/write confined to a folder under the storage root (symlinks rejected). |
-| npm updater | `main/updater/` | Fetches the npm registry metadata for `@hinashirosaki/hikari` at startup, compares versions, and offers the update dialog. |
+| npm updater | `main/updater/` | Fetches the npm registry metadata for `@hinashirosaki/hikari` at startup, compares versions, and on **Update** builds the new version with `npx` in the background, then swaps it in on restart or quit. |
 | Main window | `main/windows/` | Creates the `BrowserWindow` with the preload bridge and navigation guards. |
 
 ### Agent backend (`main/agent/`)

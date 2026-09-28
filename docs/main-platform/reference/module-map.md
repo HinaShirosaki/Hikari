@@ -55,7 +55,7 @@ Root-folder layout, per-record folders, hydration, storage-root import, and the 
 | `scheduled-tasks/` | Specialized | scheduled Codex tasks: normalization, calendar recurrence, the Codex task runner, persistence to `Config/scheduled-tasks.json` |
 | `genome/` | Specialized | reference-genome registry (`Config/genome-library.json`) and a streaming FASTA indexer for region reads |
 | `bioinformatics/` | Specialized | NCBI BLAST submit/poll/results and UniProt search/lookup over a shared request client |
-| `updater/` | Specialized | npm registry release metadata, version comparison, installer lookup, and the update dialog |
+| `updater/` | Specialized | npm registry release metadata, version comparison, the background `npx` build, and swapping the built app in at restart or quit |
 | `papers/` | Specialized | search, retrieve, download, parse, identity, analysis, knowledge store, paper-finding, and literature workflow services (used by Papers and the agent) |
 
 ## Sequence Viewer library — feature-owned

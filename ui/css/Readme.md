@@ -36,11 +36,11 @@ tint steps at the end of `base/palette.css` (`--theme-fill`, `--theme-*-wash`,
 percentage in a view. Extra colors belong in a dedicated module palette:
 
 - `views/assay-plate-palette.css` — assay plates and labware previews
-- `views/gel-palette.css` — gel charts and quantification
 - `views/papers-palette.css` — PDF highlights
 - `views/sequence-viewer-palette.css` — biological sequence features
 - `views/tool-box-palette.css` — fixed-color scientific canvases
-- `views/workflow-palette.css` — workflow graph links and selections
+
+(The gel palette moved into the Gel plugin, `src/plugins/gel/vendor/css/views/gel-palette.css`, when Gel stopped being a renderer module.)
 
 A custom property that reads a `--theme-*` token must **not** be declared on
 `:root`. Substitution happens where a property is *declared*, so
@@ -58,6 +58,16 @@ Every palette must be listed in `ui/config/css-order.json` before view styles.
 Raw color literals are not allowed in ordinary component/view CSS. Run
 `npm run check:css-colors` after changing colors; `npm test` runs this check as
 part of the standard verification path.
+
+## Folder layout
+
+- `base/`: `palette.css` (the theme contract) and `core.css` (primitives).
+- `themes/modes.css`: day/night mode switches.
+- `views/`: one stylesheet per view (discovered from `app-registry.json`), plus module palettes and late `*-shell-overrides.css`.
+- `components/`: shared components used by several views — the first-launch storage setup page, foldable sections, the spreadsheet fill handle, plugin frames, draft review cards, and the agent rail composer.
+- `overrides/`: shared layouts and corrective rules (rail templates, menus, dialogs, rail lists, cross-view fixes).
+
+The load order is `ui/config/css-order.json`: palettes and base first, view styles in the middle, components and overrides last.
 
 ## Shared rail templates
 
