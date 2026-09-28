@@ -26,6 +26,26 @@ Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in 
 
 <br/>
 
+## Quick Start
+
+**macOS / Linux**
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
+```
+
+**Windows (PowerShell)**
+
+```powershell
+iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
+```
+
+You do not need Node.js. The script builds a native app for your OS and CPU and writes it to `./hikari-out/`. If you already have Node.js 20+, `npx @hinashirosaki/hikari` does the same thing.
+
+Then open Hikari, click **Choose Folder**, and follow the **[15-minute first experiment tutorial](docs/getting-started/first-experiment.md)**.
+
+The [installation guide](docs/guide/README.md#install) covers the other options: running from source, installing from GitHub Packages, and letting a coding agent install it for you.
+
 ## Highlights
 
 <table>
@@ -77,8 +97,6 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 </tr>
 </table>
 
-![Hikari Home dashboard](docs/screenshots/home.png)
-
 ## See it in action
 
 <table>
@@ -112,31 +130,17 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 <b>Agent</b>: a project-scoped assistant grounded in your records
 </td>
 </tr>
+<tr>
+<td colspan="2" valign="top">
+<img src="docs/screenshots/home.png" alt="Home dashboard with timers, notes, and reminders" /><br/>
+<b>Home</b>: a bench dashboard with timers, quick notes, an activity heatmap, and passage and incubation reminders
+</td>
+</tr>
 </table>
 
 <sub>All screenshots use fictional demonstration data. See the <a href="docs/screenshots/README.md">capture notes</a>.</sub>
 
-**Also in the dock:** Home · Protocols · Samples · Chemicals · Workflows · Tools · Settings, plus sandboxed plugins. **[Tour every workspace →](docs/guide/README.md#app-surface)**
-
-## Quick Start
-
-**macOS / Linux**
-
-```bash
-curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
-```
-
-**Windows (PowerShell)**
-
-```powershell
-iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
-```
-
-You do not need Node.js. The script builds a native app for your OS and CPU and writes it to `./hikari-out/`. If you already have Node.js 20+, `npx @hinashirosaki/hikari` does the same thing.
-
-Then open Hikari, click **Choose Folder**, and follow the **[15-minute first experiment tutorial](docs/getting-started/first-experiment.md)**.
-
-The [installation guide](docs/guide/README.md#install) covers the other options: running from source, installing from GitHub Packages, and letting a coding agent install it for you.
+**Also in the dock:** Protocols · Samples · Chemicals · Workflows · Tools · Settings, plus sandboxed plugins. **[Tour every workspace →](docs/guide/README.md#app-surface)**
 
 ## Learn more
 
