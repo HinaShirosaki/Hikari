@@ -17,8 +17,9 @@ or users install from a folder.
    token such as `@bundled/gel`, never an application or developer path.
 2. The main process resolves that token to `src/plugins/<id>` inside the
    application package. A token can resolve only for the same plugin id.
-3. The normal plugin loader mounts the workspace. Served plugins get their own
-   loopback origin; local plugins get an opaque `file:` origin.
+3. The normal plugin loader mounts the workspace. Every folder plugin, bundled
+   or installed, is served on its own loopback origin (`serve: true` is a
+   compatibility no-op).
 4. The normal bridge identifies the iframe by its actual `contentWindow` and
    gates every host call against the definition's permissions.
 

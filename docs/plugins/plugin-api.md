@@ -255,7 +255,7 @@ an answer. Keep durable state in the plugin UI or notebook instead.
 
 A headless service may call this verb if it declares `notifications`; Hikari,
 not the hidden service frame, renders the toast. This does not give the service
-a view. The reference `dna-importer` converter deliberately does not request
+a view. The `dna-importer` example converter ([service-plugins.md](service-plugins.md)) deliberately does not request
 the permission and emits no conversion-progress notification.
 
 ### `app.setUnsaved` — *no permission required*

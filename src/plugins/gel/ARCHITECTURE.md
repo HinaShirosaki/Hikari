@@ -4,7 +4,7 @@ Moved here from `docs/renderer/features/heavyweight-subsystems.md` when Gel
 stopped being a renderer module. Paths below are relative to the plugin-owned
 `workspace/` folder.
 
-Start in `gel/index.js`, but treat it as wiring rather than logic. The subsystem grew from a single controller into a **controller-orchestrated** design similar to `papers/`: `index.js` builds a shared `runtime` bag, constructs six controllers around it, injects cross-controller render callbacks, and binds every DOM event. Almost no analysis or rendering logic lives in `index.js` itself.
+Start in `workspace/index.js`, but treat it as wiring rather than logic. The subsystem grew from a single controller into a **controller-orchestrated** design similar to `papers/`: `index.js` builds a shared `runtime` bag, constructs six controllers around it, injects cross-controller render callbacks, and binds every DOM event. Almost no analysis or rendering logic lives in `index.js` itself.
 
 ### The `runtime` bag
 

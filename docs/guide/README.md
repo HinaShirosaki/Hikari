@@ -296,7 +296,7 @@ Plugin workspaces run in a sandboxed iframe with a declared permission list, and
 
 ### Gel (bundled)
 
-[`src/plugins/gel`](../../src/plugins/gel/) ships with the app and cannot be removed, only turned off in `Settings > Plugins`.
+[`src/plugins/gel`](../../src/plugins/gel/) ships with the app and cannot be removed, only turned off in `Settings > Skills & plugins`.
 
 - Image and TIFF ingestion, crop, free rotation, and enhancement.
 - Lane segmentation, ladder calibration, band quantification, and peak editing.
