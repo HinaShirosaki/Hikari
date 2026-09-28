@@ -10,7 +10,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     summary: find('assay-summary-panel')
   };
   let activeTab = 'raw';
-  let compare = false;
   let lastAssayId = '';
 
   function redraw() {
@@ -33,18 +32,17 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     const definition = getDefinition();
     if (lastAssayId !== (assay?.id || '') || options.tab) {
       activeTab = 'raw';
-      compare = false;
       root.classList.remove('is-chart-focused');
       find('assay-chart-focus-btn').setAttribute('aria-pressed', 'false');
       lastAssayId = assay?.id || '';
     }
     if (options.tab) activeTab = options.tab;
-    if (!info.transformActive) {
-      compare = false;
-      if (activeTab === 'transformed') activeTab = 'raw';
-    }
+    if (!info.transformActive && activeTab === 'transformed') activeTab = 'raw';
+    // Table2 formulas point at Table1 cells, so the Transformed tab always shows its
+    // source plate above it; point-mode clicks need both grids on screen.
+    const comparing = activeTab === 'transformed';
     root.dataset.dataTab = activeTab;
-    root.classList.toggle('is-comparing-plates', compare && activeTab !== 'summary');
+    root.classList.toggle('is-comparing-plates', comparing);
     tabs.forEach((button) => {
       const selected = button.dataset.assayDataTab === activeTab;
       button.hidden = button.dataset.assayDataTab === 'transformed' && !info.transformActive;
@@ -52,7 +50,7 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       button.tabIndex = selected ? 0 : -1;
     });
     Object.entries(panels).forEach(([tab, panel]) => {
-      panel.hidden = tab !== activeTab && !(compare && activeTab !== 'summary' && tab !== 'summary');
+      panel.hidden = tab !== activeTab && !(comparing && tab === 'raw');
     });
     find('assay-workspace-title').textContent = assay?.name || 'Assay analysis';
     find('assay-workspace-meta').textContent = assay
@@ -61,9 +59,7 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       : elements.assayAnalysisKindInput?.selectedOptions?.[0]?.textContent || info.methodLabel;
     find('assay-workspace-chart-source').textContent = info.transformActive ? 'Transformed plate · Table2' : 'Plate results · Table1';
     find('assay-workspace-table-label').textContent = activeTab === 'summary'
-      ? 'Analysis summary' : (compare ? 'Table1 + Table2' : activeTab === 'raw' ? 'Table1' : 'Table2');
-    find('assay-compare-plates-field').hidden = !info.transformActive || activeTab === 'summary';
-    find('assay-compare-plates').checked = compare;
+      ? 'Analysis summary' : (comparing ? 'Table1 + Table2' : 'Table1');
     find('assay-show-empty-rows-field').hidden = activeTab === 'summary';
     find('assay-show-empty-rows').checked = runtime.showEmptyResultRows === true;
     const rows = resultsManager.buildResultGridData(definition, {
@@ -101,11 +97,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       event.preventDefault();
       selectTab(visible[target].dataset.assayDataTab, true);
     });
-  });
-  find('assay-compare-plates').addEventListener('change', (event) => {
-    compare = event.target.checked;
-    refresh();
-    redraw();
   });
   find('assay-show-empty-rows').addEventListener('change', (event) => {
     runtime.showEmptyResultRows = event.target.checked;

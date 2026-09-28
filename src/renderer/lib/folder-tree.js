@@ -240,6 +240,57 @@ export function renderFolderTreeLeaf({
   `;
 }
 
+// Hover card for rail rows, appended to <body> so the scrolling rail cannot
+// clip it. getText gets the row and, when the rail width has cut its label
+// off, the label's full text ('' otherwise); an empty result shows nothing.
+// Returns hide(), for callers to run before re-rendering the list.
+export function attachRailHoverCard(listEl, {
+  rowSelector,
+  labelSelector = '.folder-tree-template__leaf-label, .folder-tree-template__label',
+  getText = (row, clippedLabel) => clippedLabel
+} = {}) {
+  const doc = listEl?.ownerDocument;
+  if (!doc || !rowSelector) {
+    return () => {};
+  }
+  let card, hideTimer;
+  function hide() { clearTimeout(hideTimer); if (card) card.hidden = true; }
+  function show(event) {
+    const row = event.target?.closest?.(rowSelector);
+    if (!row || !listEl.contains(row)) return;
+    const label = row.querySelector(labelSelector);
+    const text = getText(row, label && label.scrollWidth > label.clientWidth ? label.textContent : '');
+    if (!text) return;
+    clearTimeout(hideTimer);
+    if (!card) {
+      card = doc.createElement('div');
+      card.className = 'folder-tree-template__hover-card';
+      card.setAttribute('role', 'tooltip');
+      card.addEventListener('mouseleave', hide);
+      card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      doc.body.append(card);
+    }
+    card.textContent = text;
+    card.hidden = false;
+    const bounds = row.getBoundingClientRect();
+    const view = doc.defaultView;
+    const gap = 8;
+    const box = card.getBoundingClientRect();
+    card.style.left = `${Math.max(gap, Math.min(bounds.right + gap, view.innerWidth - box.width - gap))}px`;
+    card.style.top = `${Math.max(gap, Math.min(bounds.top, view.innerHeight - box.height - gap))}px`;
+  }
+  listEl.addEventListener('mouseover', show);
+  listEl.addEventListener('focusin', show);
+  listEl.addEventListener('mouseout', event => {
+    if (!card?.contains(event.relatedTarget) && !event.target?.closest?.(rowSelector)?.contains(event.relatedTarget)) hideTimer = setTimeout(hide, 150);
+  });
+  listEl.addEventListener('focusout', hide);
+  listEl.addEventListener('scroll', hide);
+  listEl.addEventListener('dragstart', hide);
+  doc.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });
+  return hide;
+}
+
 export function getFolderTreeToggleKey(event) {
   const direct = normalizeFolderTreeKey(event?.target?.dataset?.folderTreeToggle);
   if (direct) {

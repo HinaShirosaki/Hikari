@@ -3,6 +3,19 @@
 const { STORAGE } = require('../../../shared/ipc/channels');
 
 function createStorageApi(ipcRenderer) {
+  function subscribe(channel, handler) {
+    if (typeof handler !== 'function') {
+      return () => {};
+    }
+    const listener = (_event, payload) => {
+      handler(payload);
+    };
+    ipcRenderer.on(channel, listener);
+    return () => {
+      ipcRenderer.removeListener(channel, listener);
+    };
+  }
+
   return {
     autoSaveDataFile: (data, filePath) => ipcRenderer.invoke(STORAGE.AUTO_SAVE, { data, filePath }),
     syncSqliteBundle: (payload) => ipcRenderer.invoke(STORAGE.SYNC_SQLITE_BUNDLE, payload),
@@ -19,18 +32,8 @@ function createStorageApi(ipcRenderer) {
     readFileBytes: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BYTES, { path }),
     readFileBase64: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BASE64, { path }),
     appendNotebookPageLog: (payload) => ipcRenderer.invoke(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, payload),
-    onProtocolRecordSaved: (handler) => {
-      if (typeof handler !== 'function') {
-        return () => {};
-      }
-      const listener = (_event, payload) => {
-        handler(payload);
-      };
-      ipcRenderer.on(STORAGE.PROTOCOL_RECORD_SAVED, listener);
-      return () => {
-        ipcRenderer.removeListener(STORAGE.PROTOCOL_RECORD_SAVED, listener);
-      };
-    }
+    onProtocolRecordSaved: (handler) => subscribe(STORAGE.PROTOCOL_RECORD_SAVED, handler),
+    onPaperFileSaved: (handler) => subscribe(STORAGE.PAPER_FILE_SAVED, handler)
   };
 }
 

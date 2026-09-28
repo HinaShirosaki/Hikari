@@ -14,6 +14,7 @@ const {
   getEnabledHikariMcpToolNames
 } = require('../mcp-contract/tool-availability.js');
 const { resolveCodexBinary, resolveCodexNodeBinary } = require('../../lib/codex-cli-provider/paths.js');
+const { isFilesystemRoot } = require('../../lib/path-safety.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
@@ -25,19 +26,6 @@ function cleanText(value) {
     return '';
   }
   return text;
-}
-
-function isFilesystemRoot(directoryPath = '') {
-  const text = cleanText(directoryPath).trim();
-  if (!text) {
-    return false;
-  }
-  try {
-    const resolved = path.resolve(text);
-    return resolved === path.parse(resolved).root;
-  } catch {
-    return false;
-  }
 }
 
 function tomlString(value = '') {

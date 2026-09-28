@@ -12,13 +12,13 @@ const {
 const { isLikelyJunkPdfTitle } = require('../store/paper-knowledge-paths.js');
 const { createReviewJournalSkipResult } = require('../shared/review-paper-filter.js');
 const { asArray, ensureObject } = require('../../lib/normalize.js');
+const { isPathInside, pathExists } = require('../../lib/path-safety.js');
 const {
   findExistingPaperRow,
   withKnowledgeDatabaseWrite,
   persistKnowledgeDatabase,
   queryRows,
-  runStatement,
-  updateJsonIndex
+  runStatement
 } = require('../store/paper-knowledge-store.js');
 
 function cleanText(value, maxLength = 4000) {
@@ -31,19 +31,6 @@ function cleanText(value, maxLength = 4000) {
     return text;
   }
   return text.length > numericMax ? text.slice(0, numericMax) : text;
-}
-
-function isPathInside(parentPath, childPath) {
-  const parent = path.resolve(String(parentPath || ''));
-  const child = path.resolve(String(childPath || ''));
-  if (!parent || !child) {
-    return false;
-  }
-  if (parent === child) {
-    return true;
-  }
-  const prefix = parent.endsWith(path.sep) ? parent : `${parent}${path.sep}`;
-  return child.startsWith(prefix);
 }
 
 function resolvePathInsideRoot(storagePath, maybePath) {
@@ -60,18 +47,6 @@ function resolvePathInsideRoot(storagePath, maybePath) {
 
 function toPosixRelative(rootPath, targetPath) {
   return path.relative(path.resolve(rootPath), path.resolve(targetPath)).split(path.sep).join('/');
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fsPromises.access(targetPath);
-    return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return false;
-    }
-    throw error;
-  }
 }
 
 async function updateJsonFileIfPresent(filePath, updater) {
@@ -156,14 +131,10 @@ async function synchronizeTitleMarkdownReferences({
     }
     runStatement(
       db,
-      'UPDATE papers SET wiki_path = ?, updated_at = ? WHERE id = ?',
-      [markdownRelativePath, nowIso, paper.id]
+      'UPDATE papers SET wiki_path = ? WHERE id = ?',
+      [markdownRelativePath, paper.id]
     );
     await persistKnowledgeDatabase(paths.sqlite_path, db);
-    const updated = queryRows(db, 'SELECT * FROM papers WHERE id = ? LIMIT 1', [paper.id])[0];
-    if (updated) {
-      await updateJsonIndex(paths.json_index_path, updated);
-    }
     return '';
   });
 }

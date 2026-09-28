@@ -111,8 +111,8 @@ export function createProtocolPreviewHelpers({
       <section class="protocol-view-section">
         <h4>Steps</h4>
         ${steps.length
-          ? `<ol class="protocol-view-steps">${steps.map((step) => `
-              <li data-selection-segment-id="protocol:step:${safeText(String(step?.id || ''))}" data-selection-segment-label="Protocol Step">
+          ? `<ol class="protocol-view-steps">${steps.map((step, index) => `
+              <li data-selection-segment-id="protocol:step:${index + 1}" data-selection-segment-label="Protocol Step">
                 ${renderReadonlyStepSentence(step)}
               </li>
             `).join('')}</ol>`

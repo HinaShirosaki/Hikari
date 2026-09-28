@@ -3,6 +3,8 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { asArray } = require('../../lib/normalize.js');
+const { createUniqueStrings } = require('../../lib/value-utils.js');
+const { pathExistsQuietly: pathExists } = require('../../lib/path-safety.js');
 
 const DEFAULT_MAX_LOG_SIZE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_MAX_ROTATIONS = 5;
@@ -15,23 +17,7 @@ function cleanText(value) {
   return text;
 }
 
-function uniqueStrings(values) {
-  const seen = new Set();
-  const out = [];
-  asArray(values).forEach((value) => {
-    const normalized = cleanText(value);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
-}
+const uniqueStrings = createUniqueStrings(cleanText, 0);
 
 function sanitizeJsonValue(value, depth = 0) {
   if (depth > 4) {
@@ -157,15 +143,6 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
     }
   }
   return normalized;
-}
-
-async function pathExists(filePath) {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 async function rotateLogsIfNeeded(logPath, incomingBytes, maxBytes, maxRotations) {

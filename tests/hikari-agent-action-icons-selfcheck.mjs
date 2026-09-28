@@ -17,6 +17,7 @@ const sourceMarkup = [
 ].join('\n');
 const generatedActions = [
   read('src/renderer/modules/biology-notebook/project/project-dashboard-renderer.js'),
+  read('src/renderer/modules/home-dashboard/notebook.js'),
   read('src/renderer/modules/selection-insights/controller-ui.js'),
   read('src/renderer/modules/agent-chat/rendering-question-card.js')
 ].join('\n');
@@ -35,7 +36,6 @@ assert.doesNotMatch(buttonIcon, /<(?:image|script|foreignObject)\b/i);
 
 for (const id of [
   'dashboard-quick-log-agent-btn',
-  'dashboard-notebook-note-clarify-btn',
   'protocol-generate-btn',
   'protocol-polish-btn',
   'protocol-generate-send-btn',
@@ -49,6 +49,7 @@ for (const id of [
 }
 
 assert.match(generatedActions, /class="ghost-btn hikari-agent-action" data-suggest-experiment/);
+assert.match(generatedActions, /class="ghost-btn hikari-agent-action" data-dashboard-notebook-note-clarify/);
 assert.match(generatedActions, /class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action/);
 assert.match(generatedActions, /class="primary-btn agent-send-icon-btn"[\s\S]*?renderAgentChatIcon\('send'/);
 assert.doesNotMatch(generatedActions, /agent-send-icon-btn hikari-agent-action/);

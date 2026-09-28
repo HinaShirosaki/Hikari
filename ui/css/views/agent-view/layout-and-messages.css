@@ -142,7 +142,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-session-folder-row.is-chat-drop-target {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  box-shadow: inset 0 0 0 1px var(--theme-accent-line);
 }
 
 .agent-session-folder-name {
@@ -231,8 +231,8 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-session-card.is-active {
-  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  background: var(--theme-accent-wash);
+  box-shadow: inset 2px 0 0 var(--theme-accent-line);
 }
 
 .agent-session-card:disabled {
@@ -261,6 +261,16 @@ body.agent-view-fixed-scroll .workspace-main {
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: var(--space-12);
   min-height: 0;
+  overflow: hidden;
+}
+
+/* The history owns scrolling and its top inset. Generic panel spacing leaves
+ * a blank clipping band above it and pushes the full-height pane offscreen. */
+.left-rail-template.agent-chat-layout > .agent-chat-panel.left-rail-template__main {
+  margin-top: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top: 0;
   overflow: hidden;
 }
 
@@ -295,7 +305,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-chat-item-user {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, transparent);
+  background: var(--theme-surface-muted);
   margin-left: auto;
 }
 
@@ -393,7 +403,7 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-chat-markdown code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.92em;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 75%, transparent);
+  background: var(--theme-surface-muted);
   padding: 0.08rem 0.32rem;
   border-radius: 4px;
 }
@@ -402,7 +412,7 @@ body.agent-view-fixed-scroll .workspace-main {
   overflow-x: auto;
   padding: 0.8rem 0.95rem;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  background: var(--theme-surface-muted);
   border: 1px solid var(--theme-border);
 }
 
@@ -439,7 +449,7 @@ body.agent-view-fixed-scroll .workspace-main {
   display: grid;
   gap: var(--space-8);
   padding: var(--space-10) var(--space-12);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
+  background: var(--theme-surface-muted);
   border: 1px solid var(--theme-border-soft);
 }
 
@@ -481,7 +491,7 @@ body.agent-view-fixed-scroll .workspace-main {
   width: 100%;
   max-height: 320px;
   object-fit: contain;
-  background: color-mix(in srgb, var(--theme-surface) 78%, transparent);
+  background: var(--theme-surface);
 }
 
 .agent-purchase-group {
@@ -517,7 +527,7 @@ body.agent-view-fixed-scroll .workspace-main {
   aspect-ratio: 1 / 1;
   border-radius: 18px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+  background: var(--theme-surface);
 }
 
 .agent-purchase-image {
@@ -556,7 +566,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-purchase-item:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 65%, transparent);
+  outline: 2px solid var(--theme-accent-line);
   outline-offset: 4px;
   border-radius: 12px;
 }
@@ -565,7 +575,7 @@ body.agent-view-fixed-scroll .workspace-main {
   margin-left: 0;
   margin-right: 0;
   padding-left: var(--space-14);
-  border-left: 3px solid color-mix(in srgb, var(--theme-accent) 55%, var(--theme-border));
+  border-left: 3px solid var(--theme-accent-line);
   color: var(--theme-text-muted);
 }
 
@@ -589,7 +599,7 @@ body.agent-view-fixed-scroll .workspace-main {
   min-width: 320px;
   border-collapse: collapse;
   border: 1px solid var(--theme-border);
-  background: color-mix(in srgb, var(--theme-surface) 84%, transparent);
+  background: var(--theme-surface);
 }
 
 .agent-chat-table th,
@@ -600,7 +610,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-chat-table th {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  background: var(--theme-surface-muted);
   text-align: left;
   color: var(--theme-primary);
 }
@@ -629,7 +639,7 @@ body.agent-view-fixed-scroll .workspace-main {
   margin: 0 auto;
   border: 1px solid var(--theme-border-soft);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+  background: var(--theme-surface);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -645,7 +655,7 @@ body.agent-view-fixed-scroll .workspace-main {
   padding: var(--space-18) var(--space-20) var(--space-20);
   border: 1px solid var(--theme-border-soft);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+  background: var(--theme-surface);
 }
 
 .agent-question-dock > .agent-user-question-card {
@@ -709,11 +719,11 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-user-question-option:hover,
 .agent-user-question-option:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+  background: var(--theme-surface-hover);
 }
 
 .agent-user-question-option:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 38%, transparent);
+  outline: 2px solid var(--theme-accent-line);
   outline-offset: 2px;
 }
 
@@ -749,7 +759,7 @@ body.agent-view-fixed-scroll .workspace-main {
   border: 1px solid var(--theme-border-soft);
   border-radius: 10px;
   padding: 9px var(--space-12);
-  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
+  background: var(--theme-surface);
   color: var(--theme-text-strong);
   font: inherit;
   line-height: 1.45;
@@ -757,8 +767,8 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-user-question-custom input:focus {
   outline: none;
-  border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  border-color: var(--theme-accent-line);
+  box-shadow: none;
 }
 
 .agent-user-question-custom .agent-send-icon-btn {
@@ -825,7 +835,7 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 .agent-thinking-trace-item {
   margin: 0;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--theme-text-strong) 76%, var(--theme-text-muted));
+  color: var(--theme-text);
 }
 
 @media (max-width: 720px) {

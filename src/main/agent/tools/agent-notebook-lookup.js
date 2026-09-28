@@ -1,15 +1,11 @@
 'use strict';
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const {
+  asArray: defaultAsArray,
+  ensureObject: defaultEnsureObject
+} = require('../../lib/normalize.js');
 
 function defaultCleanText(value) {
   return String(value || '');
-}
-
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function createAgentNotebookLookupRuntime(deps = {}) {
@@ -272,8 +268,7 @@ function createAgentNotebookLookupRuntime(deps = {}) {
         ...(context.loadedDataFile ? ['data_file'] : []),
         ...(appliedSources.includes('notebook_sidecar') ? ['notebook_sidecar'] : []),
         ...(appliedSources.includes('project_root_storage') ? ['project_storage'] : []),
-        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : []),
-        ...(appliedSources.includes('notebook_sqlite_fallback') ? ['sqlite_fallback'] : [])
+        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : [])
       ], 10),
       candidateCount: asArray(context.hydratedSnapshot?.notebookEntries).length,
       access: {

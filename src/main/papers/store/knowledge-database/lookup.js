@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('node:path');
+const { readPaperMetadata } = require('../knowledge-index-schema.js');
 const { cloneJson, ensureObject } = require('../../../lib/normalize.js');
 const {
   buildKnowledgeDatabasePaths,
@@ -15,6 +17,12 @@ const {
   pathExists,
   queryRows
 } = require('../paper-knowledge-store.js');
+
+function asLocationMetadata(metadata, location) {
+  return Array.isArray(metadata.locations)
+    ? metadata.locations.find((entry) => entry.id === location.id) || {}
+    : {};
+}
 
 // Read path: find a stored paper by identity and resolve its on-disk parts.
 function createPaperLookup({
@@ -67,6 +75,13 @@ function createPaperLookup({
       } finally {
         db.close();
       }
+      const metadata = await readPaperMetadata(storagePath, paper).catch(() => ({}));
+      locations = locations.map((location) => ({
+        ...asLocationMetadata(metadata, location),
+        ...location,
+        folder_path: path.posix.dirname(location.pdf_path || ''),
+        pdf_filename: path.posix.basename(location.pdf_path || '')
+      }));
       const selectedLocation = chooseLocation(
         locations,
         getPaperScope(source.linked_type || source.linkedType),
@@ -91,7 +106,7 @@ function createPaperLookup({
           pmid: cleanText(paper.pmid, 120),
           pmcid: cleanText(paper.pmcid, 120),
           title: cleanText(paper.title, 320),
-          wiki_status: cleanText(paper.wiki_status, 80),
+          wiki_status: cleanText(metadata.wiki_status || paper.wiki_status || (markdownExists ? 'ready' : ''), 80),
           wiki_path: cleanText(paper.wiki_path, 2000),
           wiki_file_path: markdownPath,
           wiki_exists: markdownExists,

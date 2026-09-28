@@ -1,6 +1,7 @@
 'use strict';
 
 const { ensureObject } = require('../../lib/normalize.js');
+const { createUniqueStrings } = require('../../lib/value-utils.js');
 
 const CONVERSATIONAL_PATTERNS = [
   /\b(?:can|could|would|will)\s+you\b/gi,
@@ -52,23 +53,7 @@ function cleanText(value) {
   return text;
 }
 
-function uniqueStrings(values, max = 50) {
-  const seen = new Set();
-  const output = [];
-  (Array.isArray(values) ? values : []).forEach((value) => {
-    const normalized = cleanText(value);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || output.length >= max) {
-      return;
-    }
-    seen.add(key);
-    output.push(normalized);
-  });
-  return output;
-}
+const uniqueStrings = createUniqueStrings(cleanText, 0);
 
 function applyQueryRephrasings(text) {
   let normalized = cleanText(text);

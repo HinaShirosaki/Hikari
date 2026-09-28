@@ -40,7 +40,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
       id: 'pr1',
       name: 'Cell Prep',
       steps: [
-        { id: 's1', text: 'Harvest [cell line] cells', placeholders: [{ id: 'p1', name: 'cell_line' }] },
+        { text: 'Harvest [cell line] cells', placeholders: [{ id: 'p1', name: 'cell_line' }] },
         'Legacy mix step'
       ]
     }],
@@ -185,14 +185,12 @@ test('agent-chat sends settings API key to main process and stores assistant res
           filePath: '/tmp/hikari-data.json',
           sidecarPaths: {
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
-            sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json'
           },
           bundlePaths: {
             dataFilePath: '/tmp/hikari-data.json',
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
-            sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json'
           }
         };
       },
@@ -246,9 +244,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
               rendered_steps: ['Harvest HEK293 cells'],
               placeholder_values: [
                 {
-                  step_id: 's1',
-                  placeholder_id: 'p1',
-                  placeholder_key: 's1:p1',
+                  placeholder_key: 'p1',
                   display: 'cell_line',
                   value: 'HEK293',
                   source: 'resolved',
@@ -268,7 +264,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
                 projectName: 'Cancer Study',
                 protocolId: 'pr1',
                 protocolName: 'Cell Prep',
-                values: { 's1:p1': 'HEK293' },
+                values: { 'p1': 'HEK293' },
                 result: 'Notebook draft completed for Cell Prep.',
                 updatedAt: '2026-03-11T12:00:00.000Z',
                 resultFiles: [],

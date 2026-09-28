@@ -51,6 +51,25 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.match(String(result.protocol.troubleshooting || ''), /Low yield/);
       assert.equal(result.summary, 'Prepared a purification protocol.');
       assert.equal(requestOptions.length, 0);
+      assert.equal(Object.prototype.hasOwnProperty.call(result.protocol.steps[0], 'id'), false);
+    });
+
+    test('protocol generation gives each placeholder a protocol-unique id', async () => {
+      const runtime = agentProtocolGeneration.createProtocolGenerationRuntime({ createId: () => 'fresh' });
+      const result = await runtime.generateProtocol({
+        protocol: {
+          name: 'Two volumes',
+          steps: [
+            { text: 'Add {{ph:ph1}} buffer.', placeholders: [{ id: 'ph1', name: 'buffer volume' }] },
+            { text: 'Add {{ph:ph1}} enzyme.', placeholders: [{ id: 'ph1', name: 'enzyme volume' }] }
+          ]
+        }
+      });
+
+      const [first, second] = result.protocol.steps;
+      assert.equal(first.placeholders[0].id, 'ph1');
+      assert.notEqual(second.placeholders[0].id, 'ph1');
+      assert.equal(second.text, `Add {{ph:${second.placeholders[0].id}}} enzyme.`);
     });
 
     test('protocol generation prompt documents deterministic protocol json normalization', () => {

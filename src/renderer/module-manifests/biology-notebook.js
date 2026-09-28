@@ -25,6 +25,10 @@ export const biologyNotebookManifest = {
       showView(views.WORKFLOW_MANAGEMENT);
       modules.workflowManagement?.openProcess?.(id);
     },
+    onOpenPaper: (file) => {
+      showView(views.PAPERS);
+      return modules.papers?.openStoredPaper?.(file);
+    },
     notebookType: 'biology',
     importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
     onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,

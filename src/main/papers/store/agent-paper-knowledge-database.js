@@ -9,7 +9,6 @@ const {
   LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
   LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
   KNOWLEDGE_INDEX_FILE_NAME,
-  KNOWLEDGE_JSON_INDEX_FILE_NAME,
   buildKnowledgeDatabasePaths,
   buildLegacyKnowledgeDatabasePaths,
   buildKnowledgePaperSlug,
@@ -39,9 +38,6 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
   const pdfTextExtractionRuntime = deps.pdfTextExtractionRuntime && typeof deps.pdfTextExtractionRuntime === 'object'
     ? deps.pdfTextExtractionRuntime
     : null;
-  const paperWikiChunkerRuntime = deps.paperWikiChunkerRuntime && typeof deps.paperWikiChunkerRuntime === 'object'
-    ? deps.paperWikiChunkerRuntime
-    : null;
   const injectedPaperIntakePipeline = deps.paperIntakePipeline
     && typeof deps.paperIntakePipeline.runIntakeForPaper === 'function'
     ? deps.paperIntakePipeline
@@ -62,7 +58,6 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     cleanText,
     now,
     pdfTextExtractionRuntime,
-    paperWikiChunkerRuntime,
     runPaperIntake,
     reconcileFiguresDir,
     normalizeMetadata,
@@ -80,7 +75,6 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
     LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
     KNOWLEDGE_INDEX_FILE_NAME,
-    KNOWLEDGE_JSON_INDEX_FILE_NAME,
     buildKnowledgeDatabasePaths,
     buildLegacyKnowledgeDatabasePaths,
     buildKnowledgePaperSlug,
@@ -104,7 +98,6 @@ module.exports = {
   LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
   LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
   KNOWLEDGE_INDEX_FILE_NAME,
-  KNOWLEDGE_JSON_INDEX_FILE_NAME,
   buildKnowledgeDatabasePaths,
   buildLegacyKnowledgeDatabasePaths,
   buildKnowledgePaperSlug,

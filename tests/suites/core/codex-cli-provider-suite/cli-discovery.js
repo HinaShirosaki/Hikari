@@ -173,6 +173,66 @@ module.exports = function registerCliDiscovery(context = {}) {
     await controller.onStartCodexLogin();
     assert.equal(loginCalls, 1);
   });
+  test('Settings account actions follow stored, signed-out, and environment login states', async () => {
+    const { loadEsmStyleModule } = require('../../../support/runtime');
+    let status = { ok: true, loggedIn: true, source: 'stored', cliAvailable: true };
+    const { createCodexAccountSettings } = loadEsmStyleModule(path.resolve(__dirname,
+      '../../../../src/renderer/modules/settings/codex-account.js'), {
+      window: { hikariApi: { getCodexLlmStatus: async () => status } }
+    });
+    const startCodexLoginBtn = {};
+    const clearCodexLoginBtn = {};
+    const controller = createCodexAccountSettings({
+      settingCodexStatus: {}, settingCodexAuthControls: {}, startCodexLoginBtn, clearCodexLoginBtn
+    });
+    await controller.refreshCodexLoginStatus();
+    assert.equal(startCodexLoginBtn.hidden, true);
+    assert.equal(clearCodexLoginBtn.hidden, false);
+    assert.equal(clearCodexLoginBtn.textContent, 'Sign out');
+    status = { ...status, loggedIn: false, source: 'none' };
+    await controller.refreshCodexLoginStatus();
+    assert.equal(startCodexLoginBtn.hidden, false);
+    assert.equal(clearCodexLoginBtn.hidden, true);
+    status = { ...status, loggedIn: true, source: 'env' };
+    await controller.refreshCodexLoginStatus();
+    assert.equal(clearCodexLoginBtn.disabled, true);
+  });
+  test('Desktop setup previews the live prompt and preserves manual copy after clipboard failure', async () => {
+    const { loadEsmStyleModule } = require('../../../support/runtime');
+    let clipboardWorks = false;
+    let copied = '';
+    let generation = 0;
+    const { createCodexAccountSettings } = loadEsmStyleModule(path.resolve(__dirname,
+      '../../../../src/renderer/modules/settings/codex-account.js'), {
+      window: { hikariApi: {
+        getCodexDesktopMcpSetupPrompt: async () => ({ ok: true, prompt: `live instructions ${++generation}` }),
+        writeTextToClipboard: async (text) => { copied = text; return { ok: clipboardWorks }; }
+      } }
+    });
+    const button = {};
+    const preview = { open: true, addEventListener() {} };
+    const field = {};
+    const status = { dataset: {} };
+    const controller = createCodexAccountSettings({
+      state: { settings: {} }, copyCodexDesktopMcpPromptBtn: button,
+      settingCodexDesktopPreview: preview, settingCodexDesktopPrompt: field,
+      settingCodexDesktopMcpStatus: status
+    });
+    await controller.onPreviewCodexDesktopPrompt();
+    assert.equal(field.value, 'live instructions 1');
+    assert.equal(copied, '');
+    await controller.onCopyCodexDesktopMcpPrompt();
+    assert.equal(status.dataset.state, 'error');
+    assert.match(status.textContent, /copy the text manually/);
+    assert.equal(field.value, 'live instructions 2');
+    assert.equal(button.disabled, false);
+    clipboardWorks = true;
+    await controller.onCopyCodexDesktopMcpPrompt();
+    assert.equal(copied, field.value);
+    assert.equal(copied, 'live instructions 3');
+    assert.equal(button.textContent, 'Copied');
+    assert.equal(status.dataset.state, 'success');
+  });
   test('Settings restores the saved model and reasoning effort into the Codex runtime on startup', async () => {
     const { loadEsmStyleModule } = require('../../../support/runtime');
     const appliedModels = [];

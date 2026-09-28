@@ -1,14 +1,12 @@
 'use strict';
 
-const { app, BrowserWindow, crashReporter, dialog, ipcMain, protocol, session, shell } = require('electron');
+const { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, protocol, session, shell } = require('electron');
 const path = require('path');
 const fs = require('node:fs/promises');
 
 const { createMainWindow } = require('../windows/create-main-window');
 const { createMainServices } = require('../core/main-services');
 const { SYSTEM } = require('../../shared/ipc/channels');
-
-const { registerHtmlPreviewScheme, installHtmlPreviewService, guardHtmlPreviewNavigation } = require('../agent/html-output/preview-service');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
@@ -22,7 +20,6 @@ function startMainApp() {
     return;
   }
 
-  registerHtmlPreviewScheme(protocol);
   let mainWindow = null;
   let allowWindowClose = false;
   let closeRequestPending = false;
@@ -40,6 +37,7 @@ function startMainApp() {
     path,
     processObject: process,
     projectRoot: PROJECT_ROOT,
+    protocol,
     getMainWindow: () => mainWindow
   });
 
@@ -109,7 +107,7 @@ function startMainApp() {
         mainWindow = null;
       }
     });
-    guardHtmlPreviewNavigation(mainWindow.webContents);
+    mainServices.guardHtmlPreviewNavigation(mainWindow.webContents);
   }
 
   ipcMain.on(SYSTEM.APP_CLOSE_RESPONSE, (event, payload = {}) => {
@@ -149,8 +147,11 @@ function startMainApp() {
           console.warn('Failed to set dock icon:', error);
         }
       }
+      // Windows and Linux draw Electron's default File/Edit/View/Window menu inside
+      // every window; Hikari has its own header and shortcuts. macOS keeps it in the
+      // system menu bar, where Cmd+C/V depend on its Edit roles.
+      if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
 
-      installHtmlPreviewService({ protocol, ipcMain, getMainWindow: () => mainWindow });
       createWindow();
       await mainServices.start();
 

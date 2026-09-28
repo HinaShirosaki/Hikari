@@ -51,7 +51,7 @@
   z-index: 1;
   min-height: 32px;
   padding: var(--space-6) var(--space-10);
-  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-panel));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-attachment-head {
@@ -177,7 +177,7 @@
   padding: var(--space-14);
   border: 1px dashed var(--theme-border-soft);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-protocol-editor-note {
@@ -230,7 +230,7 @@
 /* With the panel gone, the active table is marked on the grid border itself -- it is
    the only thing left to mark, and it still only matters when there are several. */
 .spreadsheet-table-editor.is-active .spreadsheet-table {
-  border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
+  border-color: var(--theme-accent-line);
 }
 
 /* Sits under the grid as a quiet text button: the row it adds goes right above it. */
@@ -314,52 +314,9 @@
 
 .spreadsheet-table .tabulator-cell.spreadsheet-rownum {
   color: var(--theme-text-muted);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 60%, var(--theme-surface-elevated));
+  background: var(--theme-surface-muted);
   font-variant-numeric: tabular-nums;
   font-size: 0.85em;
-}
-
-/* The grip stays inside the cell edge, including on scrolled and frozen grids.
-   Its decoration never intercepts editing or the full edge's drag hit area. */
-.spreadsheet-fill-handle {
-  position: absolute;
-  z-index: 2;
-  display: block;
-  pointer-events: none;
-  border-radius: 1rem;
-  background: var(--theme-accent);
-  box-shadow: 0 0 0 0.0625rem var(--theme-surface-elevated);
-}
-
-.spreadsheet-fill-handle--row {
-  bottom: 0.125rem;
-  left: 50%;
-  width: 1.125rem;
-  max-width: 50%;
-  height: 0.25rem;
-  transform: translateX(-50%);
-}
-
-.spreadsheet-fill-handle--column {
-  /* Leave the outermost edge available to Tabulator's column resize control. */
-  right: 0.375rem;
-  top: 50%;
-  width: 0.25rem;
-  height: 1.125rem;
-  max-height: 50%;
-  transform: translateY(-50%);
-}
-
-:is(.spreadsheet-table, .assay-transform-grid) .tabulator-cell.is-fill-edge {
-  box-shadow: inset 0 0 0 0.0625rem color-mix(in srgb, var(--theme-accent) 55%, transparent);
-}
-
-:is(.spreadsheet-table, .assay-transform-grid) .tabulator-cell.is-fill-ready {
-  cursor: crosshair;
-}
-
-:is(.spreadsheet-table, .assay-transform-grid) .tabulator-cell.is-fill-target {
-  background: color-mix(in srgb, var(--theme-focus) 18%, transparent);
 }
 
 /* A computed cell keeps the normal text colour — the accent is decorative and reads
@@ -425,7 +382,7 @@
    later, so this has to out-specify it the way the row rules do. */
 .spreadsheet-table.tabulator .tabulator-header {
   border-bottom: 1px solid var(--theme-border);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
+  background: var(--theme-surface-muted);
   color: var(--theme-text);
 }
 
@@ -470,7 +427,7 @@
 }
 
 .spreadsheet-table .tabulator-cell:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
+  outline: 2px solid var(--theme-focus);
   outline-offset: -2px;
 }
 
@@ -480,7 +437,7 @@
   padding: var(--space-12);
   border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-linked-preview-head {
@@ -566,7 +523,7 @@
 }
 
 .biology-notebook-linked-results .assay-plate-table tr > *:nth-child(2) {
-  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-panel));
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-linked-results .assay-well {
@@ -592,7 +549,7 @@
 
 .biology-notebook-assay-well-secondary {
   font-size: var(--text-2xs);
-  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
+  color: var(--theme-text-muted);
 }
 
 .biology-notebook-linked-empty {
@@ -620,21 +577,35 @@
 .inline-placeholder-token {
   display: inline-flex;
   align-items: center;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-accent-wash);
   color: var(--theme-text-strong);
-  border: 1px solid var(--theme-border);
+  border: 1px solid transparent;
   border-radius: 6px;
-  padding: var(--space-2) var(--space-8);
+  padding: 0 var(--space-6);
   font-size: var(--text-base);
+  font-weight: 500;
   cursor: text;
 }
 
+.inline-placeholder-token:hover {
+  background: var(--theme-accent-soft);
+}
+
+/* Blanks recede so recorded values stand out; the brackets mark them as fillable. */
 .inline-placeholder-token.is-empty {
-  color: var(--theme-text);
+  background: var(--theme-fill);
+  color: var(--theme-text-muted);
+  font-weight: 400;
+}
+
+.inline-placeholder-token.is-empty:hover {
+  background: var(--theme-fill-strong);
 }
 
 /* Ghost text: a value offered from previous runs, not yet accepted. */
 .inline-placeholder-token.is-suggested {
+  background: transparent;
+  border-color: var(--theme-border);
   color: var(--theme-text-muted);
   font-style: italic;
   border-style: dashed;
@@ -645,7 +616,7 @@
   min-width: 0;
   max-width: min(360px, calc(100vw - 96px));
   font-size: var(--text-base);
-  padding: var(--space-2) var(--space-8);
+  padding: 0 var(--space-6);
   border-radius: 6px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
@@ -676,10 +647,13 @@
 }
 
 #biology-notebook-view .inline-placeholder-token.is-linked-sample {
-  border-color: color-mix(in srgb, var(--theme-success) 46%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface-elevated));
+  background: var(--theme-success-wash);
   color: var(--theme-success);
   font-weight: 600;
+}
+
+#biology-notebook-view .inline-placeholder-token.is-linked-sample:hover {
+  background: var(--theme-success-soft);
 }
 
 .biology-notebook-sample-link-menu {
@@ -724,7 +698,7 @@
 
 .biology-notebook-sample-suggestions [role="option"]:hover,
 .biology-notebook-sample-suggestions [aria-selected="true"] {
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  background: var(--theme-accent-wash);
 }
 
 .biology-notebook-sample-suggestion-detail {

@@ -11,10 +11,6 @@
   scrollbar-gutter: stable;
 }
 
-#home-view .home-dialog.home-notebook-note-dialog.app-dialog-surface {
-  --app-dialog-width: 34rem;
-}
-
 #home-view .home-dialog-form {
   display: grid;
   min-width: 0;
@@ -97,8 +93,7 @@
 #home-view .home-dialog input:focus,
 #home-view .home-dialog textarea:focus {
   border-color: var(--theme-accent);
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 20%, transparent);
-  outline-offset: 1px;
+  outline: none;
 }
 
 #home-view .home-dialog textarea {
@@ -234,11 +229,11 @@
 }
 
 #home-view .home-timer-template-start-btn:hover {
-  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  background: var(--theme-accent-wash);
 }
 
 #home-view .home-incubation-delete-btn:hover {
-  background: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  background: var(--theme-danger-wash);
   color: var(--theme-danger);
 }
 

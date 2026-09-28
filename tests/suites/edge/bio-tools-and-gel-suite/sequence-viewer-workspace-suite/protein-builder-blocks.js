@@ -523,7 +523,7 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   assert.match(css, /\.sequence-viewer-protein-builder-panel\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*padding:\s*0;/s);
   assert.match(css, /\.sequence-viewer-protein-builder-common-fold\s*\{[^}]*border:\s*0;[^}]*border-bottom:\s*1px solid var\(--theme-border-soft\);[^}]*background:\s*transparent;/s);
   assert.match(css, /\.sequence-viewer-protein-builder-sequence-panel \.sequence-block\s*\{[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s);
-  assert.match(css, /\.sequence-viewer-protein-builder-protein-segment,\s*\.sequence-viewer-protein-builder-dna-segment\s*\{[^}]*background:\s*var\(--builder-block-fill, var\(--sequence-viewer-builder-custom\)\);[^}]*color:\s*var\(--sequence-viewer-builder-ink\);/s);
+  assert.match(css, /\.sequence-viewer-protein-builder-protein-segment,\s*\.sequence-viewer-protein-builder-dna-segment\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--builder-block-fill, var\(--sequence-viewer-builder-custom\)\) var\(--sequence-viewer-builder-fill-share\), var\(--theme-surface\)\);[^}]*color:\s*var\(--sequence-viewer-builder-ink\);/s);
   assert.equal((css.match(/\.sequence-viewer-protein-builder-palette-\d+\s*\{/g) || []).length, 12);
 
   const html = fs.readFileSync(

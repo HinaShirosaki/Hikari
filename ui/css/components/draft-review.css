@@ -140,7 +140,7 @@
 .draft-review-document :is(.agent-review-section, .protocol-view-section) > ol > li {
   padding: var(--space-10) var(--space-14);
   border-radius: .5rem;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 65%, transparent);
+  background: var(--theme-surface-muted);
   line-height: 1.65;
 }
 
@@ -154,7 +154,7 @@
   padding: var(--space-14) var(--space-16);
   border-inline-start: .1875rem solid var(--theme-accent);
   border-radius: .25rem;
-  background: color-mix(in srgb, var(--theme-accent) 7%, transparent);
+  background: var(--theme-accent-wash);
 }
 
 .draft-review-actions {

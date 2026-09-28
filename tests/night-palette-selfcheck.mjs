@@ -7,7 +7,6 @@ const [
   palette,
   core,
   sequenceViewerPalette,
-  workflowPalette,
   assayPalette,
   gelViewPalette,
   gelPalette,
@@ -16,7 +15,6 @@ const [
   read('ui/css/base/palette.css'),
   read('ui/css/base/core.css'),
   read('ui/css/views/sequence-viewer-palette.css'),
-  read('ui/css/views/workflow-palette.css'),
   read('ui/css/views/assay-plate-palette.css'),
   read('src/plugins/gel/vendor/css/views/gel-palette.css'),
   read('src/plugins/gel/vendor/css/base/palette.css'),
@@ -31,9 +29,12 @@ assert.equal(gelPalette, palette, 'Gel must vendor the same palette as the host'
 
 /* ---------- minimal CSS color resolver (hex, rgba, var, color-mix in srgb) ---------- */
 
+// A block may be shared through a selector list (`:root, #preview[...] {`).
 function readBlock(css, selector) {
-  const start = css.indexOf(`${selector} {`);
-  assert.notEqual(start, -1, `missing block: ${selector}`);
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`(?:^|[}/])\\s*${escaped}\\s*(?:,[^{}]*)?\\{`, 'm').exec(css);
+  assert.ok(match, `missing block: ${selector}`);
+  const start = match.index;
   const body = css.slice(start, css.indexOf('\n}', start));
   const vars = new Map();
   for (const [, name, value] of body.matchAll(/(--[\w-]+)\s*:\s*([^;]+);/g)) {
@@ -178,12 +179,17 @@ assert.ok(
   'night control fill must be at least as bright as the subtle surface'
 );
 
-// Status chips must mix toward the light, not toward the surface they sit on.
-for (const status of ['success', 'warning', 'danger']) {
-  const hue = `var(--theme-${status})`;
-  const ink = resolve(`color-mix(in srgb, ${hue} 72%, var(--theme-text-strong))`, night);
-  const fill = resolve(`color-mix(in srgb, ${hue} 16%, var(--theme-surface))`, night);
-  atLeast(`night ${status} chip`, ink, fill, 4.5);
+// Status chips: the shared -ink step must hold 4.5:1 on its own -soft tint in
+// both modes, so a 13px label is readable on any chip the tint steps can make.
+const tints = readBlock(palette, 'body');
+for (const [mode, vars] of [['day', day], ['night', night]]) {
+  const scope = new Map([...vars, ...tints]);
+  const page = resolve('var(--theme-surface)', scope);
+  for (const status of ['accent', 'success', 'warning', 'danger']) {
+    const ink = resolve(`var(--theme-${status}-ink)`, scope);
+    const fill = over(resolve(`var(--theme-${status}${status === 'accent' ? '-wash' : '-soft'})`, scope), page);
+    atLeast(`${mode} ${status} chip`, ink, fill, 4.5);
+  }
 }
 
 /* ---------- night must not fork the theme vocabulary ---------- */
@@ -248,7 +254,6 @@ for (const relativePath of themedStylesheets.flat()) {
 
 for (const [name, css] of [
   ['sequence-viewer-palette.css', sequenceViewerPalette],
-  ['workflow-palette.css', workflowPalette],
   ['assay-plate-palette.css', assayPalette],
   ['gel-palette.css', gelViewPalette]
 ]) {
@@ -282,9 +287,8 @@ const FIXED_ACROSS_THEMES = new Set([
   '--assay-plate-labware-mark', '--assay-plate-sample-fallback',
   // Data encodings.
   '--sequence-viewer-base-a-stroke', '--sequence-viewer-base-c-stroke',
-  '--sequence-viewer-base-t-stroke', '--sequence-viewer-builder-ink',
-  // Categorical fills for protein-builder blocks; each carries the dark
-  // --sequence-viewer-builder-ink above, so the chip is readable in any theme.
+  '--sequence-viewer-base-t-stroke',
+  // Builder hues stay fixed; their rendered fill strength and ink follow the theme.
   ...Array.from({ length: 12 }, (_, i) => `--sequence-viewer-builder-palette-${i + 1}`),
   '--gel-marker', '--gel-marker-solid', '--gel-marker-label', '--gel-divider',
   '--gel-band-positive', '--gel-path', '--gel-path-glow',
@@ -295,12 +299,7 @@ const FIXED_ACROSS_THEMES = new Set([
   '--theme-hikari-rainbow-cyan', '--theme-hikari-rainbow-blue',
   '--theme-hikari-rainbow-violet',
   // Fixed-value scientific canvases, per ui/css/Readme.md.
-  '--tool-box-canvas-background', '--tool-box-canvas-border',
-  // Self-consistent chips: each pins its own light fill AND its own dark ink.
-  '--biology-notebook-suggestion-ink', '--biology-notebook-suggestion-violet',
-  '--biology-notebook-suggestion-blue', '--biology-notebook-suggestion-green',
-  '--biology-notebook-suggestion-yellow', '--biology-notebook-suggestion-orange',
-  '--biology-notebook-suggestion-red'
+  '--tool-box-canvas-background', '--tool-box-canvas-border'
 ]);
 
 const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\s*\(|hsla?\s*\(/;

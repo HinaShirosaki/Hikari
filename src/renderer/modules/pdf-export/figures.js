@@ -1,6 +1,7 @@
 import { LINE_HEIGHT, PLATE_DEFINITIONS } from './constants.js';
 import { ensureSpace } from './doc-context.js';
 import { writeParagraph } from './text-blocks.js';
+import { toRowLabel } from '../../lib/plate-wells.js';
 
 function inferPdfImageFormat(dataUrl) {
   const source = String(dataUrl || '').trim().toLowerCase();
@@ -120,17 +121,6 @@ async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } 
     writeParagraph(ctx, caption);
   }
   return true;
-}
-
-function toRowLabel(rowIndex) {
-  let value = Number(rowIndex) + 1;
-  let label = '';
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
 }
 
 function wellIdFor(rowIndex, columnIndex) {

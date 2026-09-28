@@ -8,9 +8,9 @@ function registerSystemIpc(deps = {}) {
   const launchCodexCliLogin = deps.launchCodexCliLogin;
   const clearCodexCliStoredLogin = deps.clearCodexCliStoredLogin;
   const getCodexLoginStatus = deps.getCodexLoginStatus;
-  const getCodexCliCatalog = typeof deps.getCodexCliCatalog === 'function'
-    ? deps.getCodexCliCatalog
-    : (() => ({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' }));
+  const requestCodexCliCatalog = typeof deps.requestCodexCliCatalog === 'function'
+    ? deps.requestCodexCliCatalog
+    : (async () => ({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' }));
   const setCodexCliModel = deps.setCodexCliModel;
   const getCodexCliModel = deps.getCodexCliModel;
   const setCodexCliReasoningEffort = typeof deps.setCodexCliReasoningEffort === 'function'
@@ -139,15 +139,21 @@ function registerSystemIpc(deps = {}) {
   });
 
   ipcMain.handle(LLM.CODEX_CATALOG, async () => {
-    const catalog = getCodexCliCatalog();
+    // Asked from Codex each time: no Codex, no login, or no network means no list,
+    // and Settings then offers only "Use the default model".
+    const catalog = await requestCodexCliCatalog().catch((error) => ({
+      ok: false, error: cleanText(error?.message || error, 400), models: []
+    }));
     return {
-      ok: catalog.ok !== false,
+      ok: catalog.ok === true,
+      error: catalog.error || '',
       defaultModel: cleanText(catalog.defaultModel, 120),
       defaultReasoningEffort: cleanText(catalog.defaultReasoningEffort, 40),
       currentModel: cleanText(getCodexCliModel(), 120),
       currentReasoningEffort: cleanText(getCodexCliReasoningEffort(), 40),
+      // Hidden models (Codex's own picker hides them) stay valid for a saved choice.
       models: Array.isArray(catalog.models)
-        ? catalog.models.map((entry) => ({
+        ? catalog.models.filter((entry) => !entry?.hidden).map((entry) => ({
           id: cleanText(entry?.id, 120),
           label: cleanText(entry?.label, 160) || cleanText(entry?.id, 120),
           reasoningEfforts: Array.isArray(entry?.reasoningEfforts)

@@ -1,4 +1,5 @@
 import { joinStoragePath } from '../../../lib/storage-paths.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { blobToDataUrl, extractBase64Payload } from '../storage/file-import.js';
 
 const IMAGE_MIME_BY_EXTENSION = Object.freeze({
@@ -18,15 +19,6 @@ const IMAGE_MIME_BY_EXTENSION = Object.freeze({
 
 function cleanText(value) {
   return String(value || '').trim();
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function extensionForName(value) {

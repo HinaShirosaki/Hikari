@@ -14,8 +14,8 @@
 
 #workflow-management-view .workflow-graph-canvas {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
-    linear-gradient(0deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, var(--theme-border-soft) 1px, transparent 1px),
+    linear-gradient(0deg, var(--theme-border-soft) 1px, transparent 1px),
     var(--theme-surface);
   background-size: 28px 28px, 28px 28px, auto;
 }
@@ -34,14 +34,14 @@
 }
 
 #workflow-management-view .workflow-graph-link {
-  stroke: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-text));
+  stroke: var(--theme-accent-ink);
 }
 
 #workflow-management-view .workflow-graph-link-preview {
-  stroke: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-text-muted));
+  stroke: var(--theme-accent-line);
 }
 
 #workflow-management-view .workflow-graph-selection {
   border-color: var(--theme-accent);
-  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+  background: var(--theme-accent-wash);
 }

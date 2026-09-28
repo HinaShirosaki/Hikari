@@ -98,7 +98,7 @@ test('biology-notebook New Experiment keeps the workspace project and starts onl
   assert.equal(overlay.hidden, true);
   assert.equal(protocolArea.hidden, false);
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Transformation');
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Vector Engineering protocol draft/);
+  assert.equal(document.getElementById('biology-notebook-protocol-meta').textContent, '');
 });
 
 test('notebook pdf export includes linked page content and omits notebook type plus storage folder metadata', async () => {

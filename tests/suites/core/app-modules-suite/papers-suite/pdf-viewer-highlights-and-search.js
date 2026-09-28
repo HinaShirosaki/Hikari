@@ -548,11 +548,11 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
     'utf8'
   );
   const storageFileHelpersSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'main', 'ipc', 'data-ipc', 'storage-files.js'),
+    path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc', 'storage-files.js'),
     'utf8'
   );
   const appState = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'index.js')
   );
   const resolveBytesBlock = actionsSource.slice(actionsSource.indexOf('async function resolvePaperPdfBytes'));
 

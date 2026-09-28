@@ -31,7 +31,7 @@ const host = {
   }
 };
 const { createSpreadsheetTables } = loadEsmStyleModule(
-  path.join(ROOT, 'src', 'renderer', 'lib', 'spreadsheet-tables.js'),
+  path.join(ROOT, 'src', 'renderer', 'modules', 'biology-notebook', 'spreadsheet-tables', 'index.js'),
   { document: { createElement: () => ({ style: {}, classList: { add() {}, remove() {} }, addEventListener() {} }), addEventListener() {} }, window: { addEventListener() {} } }
 );
 let n = 0;

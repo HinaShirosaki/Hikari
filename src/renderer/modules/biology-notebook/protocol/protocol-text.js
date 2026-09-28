@@ -63,14 +63,13 @@ export function formatProtocolStepsForEditor(protocol) {
     .join('\n');
 }
 
-export function buildEditedProtocolStep({ rawLine, baseStep, stepIndex, createId }) {
+export function buildEditedProtocolStep({ rawLine, baseStep, createId }) {
   const line = stripNotebookStepBulletPrefix(rawLine);
-  const stepId = String(baseStep?.id || '').trim() || createId();
   const existingPlaceholders = Array.isArray(baseStep?.placeholders)
     ? baseStep.placeholders
       .filter((item) => item && typeof item === 'object')
-      .map((item, index) => ({
-        id: String(item?.id || '').trim() || `${stepId}_placeholder_${index + 1}`,
+      .map((item) => ({
+        id: String(item?.id || '').trim(),
         name: String(item?.name || '').trim()
       }))
     : [];
@@ -98,7 +97,6 @@ export function buildEditedProtocolStep({ rawLine, baseStep, stepIndex, createId
   }).replace(/\s+/g, ' ').trim();
 
   return {
-    id: stepId || `${String(baseStep?.id || '').trim() || 'protocol'}_step_${stepIndex + 1}`,
     text,
     placeholders
   };
@@ -120,7 +118,6 @@ export function buildEditedProtocolSnapshot({ baseProtocol, draftName, draftStep
     .map((line, index) => buildEditedProtocolStep({
       rawLine: line,
       baseStep: fallbackProtocol.steps[index],
-      stepIndex: index,
       createId
     }));
 

@@ -11,7 +11,7 @@ const {
   openKnowledgeDatabase,
   queryRows
 } = require('../store/paper-knowledge-store.js');
-const { applyWikiChunkSchema } = require('./agent-paper-wiki-chunker.js');
+const { readPaperMetadata } = require('../store/knowledge-index-schema.js');
 const {
   MAX_QUERY_CHARS,
   tokenize,
@@ -48,31 +48,18 @@ async function pickIndexPaths(storagePath) {
   }
 }
 
-function buildPreFilter({ terms, paperId, scope, container }) {
+function buildPaperFilter({ paperId, scope, container }) {
   const filters = [];
   const params = [];
-  // Match ANY term in body or heading. JS scoring decides ranking; this just narrows the candidate set.
-  if (terms.length) {
-    const termClauses = terms.map(() => '(body_lower LIKE ? OR lower(section_heading) LIKE ?)');
-    filters.push(`(${termClauses.join(' OR ')})`);
-    for (const term of terms) {
-      const pattern = `%${term}%`;
-      params.push(pattern, pattern);
-    }
-  }
   if (paperId) {
-    filters.push('c.paper_id = ?');
+    filters.push('c.id = ?');
     params.push(paperId);
   }
-  if (scope) {
-    filters.push(`c.paper_id IN (
-      SELECT paper_id FROM paper_locations WHERE lower(scope) = lower(?)
-      ${container ? 'AND lower(container) = lower(?)' : ''}
-    )`);
-    params.push(scope);
-    if (container) {
-      params.push(container);
-    }
+  if (scope || container) {
+    const locationFilters = [];
+    if (scope) { locationFilters.push('lower(scope) = lower(?)'); params.push(scope); }
+    if (container) { locationFilters.push('lower(container) = lower(?)'); params.push(container); }
+    filters.push(`c.id IN (SELECT paper_id FROM paper_locations WHERE ${locationFilters.join(' AND ')})`);
   }
   return { filters, params };
 }
@@ -101,48 +88,14 @@ function createPaperWikiSearchRuntime() {
     }
     const db = await openKnowledgeDatabase(paths.sqlite_path);
     try {
-      applyWikiChunkSchema(db);
       const resolvedLimit = clampLimit(limit);
-      const { filters, params } = buildPreFilter({
-        terms,
+      const { filters, params } = buildPaperFilter({
         paperId: String(paperId || '').trim(),
         scope: String(scope || '').trim(),
         container: String(container || '').trim()
       });
-      const whereClause = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
-      const rows = queryRows(db, `
-        SELECT
-          c.id              AS chunk_id,
-          c.paper_id        AS paper_id,
-          c.section_index,
-          c.section_heading,
-          c.body,
-          c.body_lower,
-          c.page_start,
-          c.page_end,
-          c.char_length,
-          p.title           AS paper_title,
-          p.doi             AS paper_doi,
-          p.year            AS paper_year,
-          p.journal         AS paper_journal
-        FROM paper_chunks c
-        LEFT JOIN papers p ON p.id = c.paper_id
-        ${whereClause}
-      `, params);
-
-      // Search the current source even when older chunks exist: historical
-      // chunks may contain only the first 12,000 characters of a section.
-      const paperFilter = buildPreFilter({
-        terms: [],
-        paperId: String(paperId || '').trim(),
-        scope: String(scope || '').trim(),
-        container: String(container || '').trim()
-      });
-      const papers = queryRows(db, `SELECT c.id AS paper_id, c.title AS paper_title,
-        c.doi AS paper_doi, c.year AS paper_year, c.journal AS paper_journal, c.wiki_path
-        FROM papers c ${paperFilter.filters.length ? `WHERE ${paperFilter.filters.join(' AND ').replaceAll('c.paper_id', 'c.id')}` : ''}`,
-      paperFilter.params);
-      const sourcePaperIds = new Set();
+      const papers = queryRows(db, `SELECT c.* FROM papers c
+        ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}`, params);
       const sourceErrors = [];
       const scored = [];
       function consider(row) {
@@ -153,16 +106,25 @@ function createPaperWikiSearchRuntime() {
         if (scored.length > resolvedLimit) scored.pop();
       }
       for (const paper of papers) {
-        const source = await readSearchSections(resolvedStoragePath, paper);
+        let metadata = {};
+        try {
+          metadata = await readPaperMetadata(resolvedStoragePath, paper);
+        } catch (error) {
+          sourceErrors.push({ paper_id: paper.id, error: `metadata: ${error.message}` });
+        }
+        const source = await readSearchSections(resolvedStoragePath, {
+          paper_id: paper.id,
+          paper_title: paper.title,
+          paper_doi: paper.doi,
+          paper_year: metadata.year || paper.year || '',
+          paper_journal: metadata.journal || paper.journal || '',
+          wiki_path: paper.wiki_path
+        });
         if (source.ok) {
-          sourcePaperIds.add(paper.paper_id);
           source.rows.forEach(consider);
         } else {
-          sourceErrors.push({ paper_id: paper.paper_id, error: source.error });
+          sourceErrors.push({ paper_id: paper.id, error: source.error });
         }
-      }
-      for (const row of rows) {
-        if (!sourcePaperIds.has(row.paper_id)) consider(row);
       }
 
       const matches = scored.slice(0, resolvedLimit).map(({ row, score }) => ({

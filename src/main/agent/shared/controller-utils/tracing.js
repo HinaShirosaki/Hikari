@@ -119,6 +119,9 @@ function createAgentTracing({ asArray, cleanText } = {}) {
     const timestamp = new Date().toISOString();
     const requestPayload = redactTracePayload(event.request_payload);
     const responsePayload = redactTracePayload(event.response_payload);
+    // Background callers (scheduled tasks, notebook suggestions) pass a bare { requestId }.
+    trace.rows ||= [];
+    trace.entries ||= [];
     trace.rows.push({
       stage,
       provider,

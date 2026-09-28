@@ -6,8 +6,7 @@ import { buildResult, collectMissing, describeRawValue, formatAdaptiveMass, with
 import { cleanName, isPositive, normalizeBufferUnitText, parseBufferNumericPrefix } from './units.js';
 
 // What went on the balance or into the tube, typed over the calculated amount.
-// A volume still displaces solvent; a mass does not take any, but still counts
-// toward the pH adjustment estimate.
+// A volume still displaces solvent; a mass does not take any.
 function describeManualQuantity(value) {
   const source = String(value ?? '').trim();
   const parsed = source ? parseBufferNumericPrefix(source) : null;

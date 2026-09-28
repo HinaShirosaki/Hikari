@@ -261,14 +261,14 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   assert.match(inventorySections.innerHTML, /data-container-import-csv="box-1"[^>]*aria-label="Import CSV"/);
   assert.match(inventorySections.innerHTML, /data-container-export-csv="box-1"[^>]*aria-label="Export CSV"/);
   assert.match(inventorySections.innerHTML, /data-well-sample-clone="sample-1"/);
-  assert.match(inventorySections.innerHTML, /Fill Wells/);
+  assert.match(inventorySections.innerHTML, /aria-label="Fill more wells with the selected sample\."/);
   assert.doesNotMatch(inventorySections.innerHTML, /Clone to Well/);
   assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
   assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
   assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
 
   trigger(inventorySections.querySelector('[data-well-sample-clone]'), 'click');
-  assert.match(inventorySections.innerHTML, /Filling Wells/);
+  assert.match(inventorySections.innerHTML, /aria-label="Click to stop filling wells with this sample\."[^>]*aria-pressed="true"/);
   assert.match(inventorySections.innerHTML, /Drag across wells to fill with S-001/);
 
   const existingStructurePasteBtn = inventorySections.querySelector('[data-inventory-sample-structure-paste]');
@@ -489,15 +489,15 @@ test('personal-inventory sample editor actions are compact accessible icons', ()
     'personal-inventory-view.css'
   ), 'utf8');
 
-  assert.match(singleEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
-  assert.match(wellEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.match(singleEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.match(wellEditorSource, /class="primary-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
   assert.doesNotMatch(singleEditorSource, /data-single-sample-create="true">Add Sample<\/button>/);
   assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
   assert.match(css, /\.inventory-add-sample-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
-  assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*title="Save Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*title="Delete Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
-  assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*title="Save Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*title="Delete Sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
+  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
+  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
   assert.doesNotMatch(singleEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
   assert.doesNotMatch(wellEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
   assert.match(css, /\.inventory-sample-editor-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
@@ -855,7 +855,7 @@ test('sample-registry applies pasted SMILES and MOL/SDF but ignores copied image
   assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /No MOL, SDF, or SMILES structure data/);
 });
 test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and images', async () => {
-  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'services', 'chemical-structure-clipboard.js'));
+  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sample-registry', 'chemical-structure-clipboard.js'));
   const molfile = [
     'ethanol',
     '  Hikari',
@@ -912,8 +912,8 @@ test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and i
   assert.equal(bridgeCandidates.some((candidate) => candidate.sourceFormat === 'image'), true);
   assert.equal(bridgeClipboard.formats.includes('com.cambridgesoft.chemdraw'), true);
 
-  const systemApi = require(path.join(__dirname, 'src', 'main', 'preload', 'api', 'system-api.js'));
-  const nativeClipboard = systemApi.readChemicalClipboard({
+  const chemicalClipboardApi = require(path.join(__dirname, 'src', 'main', 'preload', 'api', 'chemical-clipboard-api.js'));
+  const nativeClipboard = chemicalClipboardApi.readChemicalClipboard({
     availableFormats: () => ['com.cambridgesoft.chemdraw', 'public.tiff'],
     readText: () => '',
     readHTML: () => '',

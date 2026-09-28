@@ -1,6 +1,7 @@
 'use strict';
 
 const { defaultEnsureObject } = require('./helpers.js');
+const { normalizePreferredJournalNames: normalizeJournalNames } = require('../../../lib/preferred-journals.js');
 
 // Turns the request into the copied context and sub-agent prompts the workflow
 // runs on, plus the candidate-search runtime it queries.
@@ -10,26 +11,9 @@ function createSearchContext({
   uniqueStrings,
   literatureSearchRuntime
 } = {}) {
-  function normalizePreferredJournalNames(value) {
-    const candidates = [];
-    function pushCandidate(candidate) {
-      if (Array.isArray(candidate)) {
-        candidate.forEach(pushCandidate);
-        return;
-      }
-      if (candidate && typeof candidate === 'object') {
-        pushCandidate(candidate.name || candidate.url || candidate.href || '');
-        return;
-      }
-      String(candidate || '')
-        .split(/[;\n]+/)
-        .map((item) => cleanText(item, 240).trim())
-        .filter(Boolean)
-        .forEach((item) => candidates.push(item));
-    }
-    pushCandidate(value);
-    return uniqueStrings(candidates, 12);
-  }
+  const normalizePreferredJournalNames = (value) => (
+    normalizeJournalNames(value, cleanText, uniqueStrings)
+  );
 
   function getCandidateSearchRuntime() {
     if (literatureSearchRuntime && typeof literatureSearchRuntime.searchLiteratureCandidates === 'function') {

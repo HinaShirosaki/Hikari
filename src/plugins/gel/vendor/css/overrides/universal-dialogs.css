@@ -44,9 +44,9 @@
   display: grid;
   gap: var(--app-dialog-gap);
   padding: var(--app-dialog-padding);
-  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, var(--theme-accent) 12%);
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  background: var(--theme-surface-elevated);
   box-shadow: 0 24px 58px var(--theme-overlay);
 }
 
@@ -105,12 +105,12 @@ button.app-dialog-close-btn {
 button.app-dialog-close-btn:hover,
 button.app-dialog-close-btn:focus-visible {
   border-color: var(--theme-border-soft);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-strong);
 }
 
 button.app-dialog-close-btn:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  outline: 2px solid var(--theme-accent-line);
   outline-offset: 2px;
 }
 
@@ -138,11 +138,7 @@ button.app-dialog-close-btn--floating {
   --app-dialog-width: 320px;
   --app-dialog-padding: var(--space-18);
   --app-dialog-gap: var(--space-12);
-  border-color: color-mix(in srgb, var(--home-tile-line) 88%, var(--theme-accent) 12%);
-}
-
-#home-view .home-notebook-note-dialog.app-dialog-surface {
-  --app-dialog-width: 380px;
+  border-color: var(--home-tile-line);
 }
 
 .chemical-dialog.app-dialog-surface {
@@ -249,14 +245,14 @@ body.theme-night .app-dialog-overlay {
 }
 
 body.theme-night .app-dialog-surface {
-  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
-  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-elevated);
   color: var(--theme-text);
   box-shadow: 0 24px 58px var(--theme-shadow-color-strong);
 }
 
 body.theme-night #home-view .home-dialog.app-dialog-surface {
-  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background: var(--theme-accent-wash);
 }
 
 @media (max-width: 720px) {

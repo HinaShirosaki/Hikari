@@ -745,6 +745,27 @@ test('assay treats loading a saved plate as a clean setup and results baseline',
   assert.match(source, /function editAssay\([\s\S]*?markLoadedAssayDraftsSaved\(\);[\s\S]*?notifyActiveAssayChanged\(\);\s*\}/);
 });
 
+test('assay save keeps the saved plate loaded and a reset cannot re-read the old plate', () => {
+  const source = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'workspace', 'form-and-list.js'), 'utf8');
+  const onSubmit = source.slice(source.indexOf('function onSubmit('), source.indexOf('function resetForm('));
+  const resetForm = source.slice(source.indexOf('function resetForm('), source.indexOf('function startNewAssay('));
+
+  assert.match(onSubmit, /persist\(\);[\s\S]*editAssay\(record\.id, \{ quiet: true \}\);/);
+  assert.doesNotMatch(onSubmit, /resetForm\(\)/);
+  assert.match(resetForm, /assayPlatePreview\?\.replaceChildren\(\);[\s\S]*syncAxisTemplateValues\(\);/);
+});
+
+test('assay well text color follows the well fill, not the theme', () => {
+  const { wellTextColor } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'plate-preview-renderer.js'),
+    {},
+    ['wellTextColor']
+  );
+
+  assert.equal(wellTextColor(20, 88, 90), '#2a241d');
+  assert.equal(wellTextColor(237, 94, 67), '#ffffff');
+});
+
 test('assay analysis accepts agent Plotly graph artifacts for workspace rendering', () => {
   const analysisViewModule = loadEsmStyleModule(path.join(
     __dirname,

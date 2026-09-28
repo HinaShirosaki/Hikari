@@ -9,7 +9,6 @@
                   <span>Add protocol</span>
                 </button>
                 <label class="protocol-search-field">
-                  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
                   <input type="search" id="protocol-search" placeholder="Search protocols" aria-label="Search protocols by name or purpose" aria-controls="protocol-list" autocomplete="off" />
                 </label>
               </div>
@@ -37,18 +36,18 @@
                 <h3 id="protocol-editor-heading">Protocol Editor</h3>
               </div>
               <div class="form-actions">
+                <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
+                  <button type="button" id="open-protocol-json-import-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Import Protocol JSON" aria-haspopup="dialog" aria-controls="protocol-json-import-overlay" title="Import Protocol JSON">
+                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M12 3v11"></path>
+                      <path d="m8 10 4 4 4-4"></path>
+                      <path d="M5 15v4h14v-4"></path>
+                    </svg>
+                    <span class="sr-only">Import Protocol JSON</span>
+                  </button>
+                </div>
                 <button type="button" id="protocol-editor-back-btn" class="ghost-btn" hidden>Back to List</button>
               </div>
-            </div>
-            <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
-              <button type="button" id="open-protocol-json-import-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Import Protocol JSON" aria-haspopup="dialog" aria-controls="protocol-json-import-overlay" title="Import Protocol JSON">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M12 3v11"></path>
-                  <path d="m8 10 4 4 4-4"></path>
-                  <path d="M5 15v4h14v-4"></path>
-                </svg>
-                <span class="sr-only">Import Protocol JSON</span>
-              </button>
             </div>
             <form id="protocol-form" class="stack-form">
               <label>
@@ -64,16 +63,20 @@
                 <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
               </label>
               <div class="protocol-steps-field">
-                <label for="protocol-steps">Steps (start each step with a bullet point)</label>
-                <div class="protocol-steps-toolbar">
-                  <span class="protocol-steps-toolbar-label">Interactive bars</span>
-                  <div id="protocol-placeholder-presets" class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets"></div>
+                <label for="protocol-steps">Steps</label>
+                <div class="protocol-steps-editor">
+                  <div class="protocol-steps-toolbar" role="group" aria-label="Interactive bars">
+                    <div id="protocol-placeholder-presets" class="protocol-placeholder-presets" role="group" aria-label="Protocol step placeholder presets"></div>
+                    <div class="protocol-placeholder-group">
+                      <label class="protocol-steps-toolbar-label" for="placeholder-name">Custom</label>
+                      <div class="protocol-placeholder-custom">
+                        <input id="placeholder-name" placeholder="Bar name (e.g. volume)" />
+                        <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert</button>
+                      </div>
+                    </div>
+                  </div>
+                  <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
                 </div>
-                <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
-              </div>
-              <div class="inline-row">
-                <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert Interactive Bar</button>
-                <input id="placeholder-name" placeholder="Interactive bar name (e.g. volume)" />
               </div>
               <label>
                 Troubleshooting

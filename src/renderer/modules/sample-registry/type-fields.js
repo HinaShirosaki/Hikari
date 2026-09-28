@@ -3,6 +3,8 @@ import { escapeHtml } from './sample-utils.js';
 
 // Type-specific fields, stored flat on record.details as { key: string }.
 // Keys are snake_case so they double as CSV column headers without a mapping.
+// `wide` marks long values that take a whole row where short fields pair up;
+// put one after an even number of short fields, or the last short one sits alone.
 export const SAMPLE_TYPE_FIELDS = {
   plasmid: [
     { key: 'backbone', label: 'Backbone / Vector', placeholder: 'e.g. pET28a' },
@@ -17,8 +19,8 @@ export const SAMPLE_TYPE_FIELDS = {
   ],
   strain: [
     { key: 'species', label: 'Species', placeholder: 'e.g. E. coli' },
-    { key: 'genotype', label: 'Genotype', placeholder: 'e.g. F- ompT hsdSB gal dcm (DE3)' },
-    { key: 'resistance', label: 'Antibiotic Resistance', placeholder: 'e.g. Cm' }
+    { key: 'resistance', label: 'Antibiotic Resistance', placeholder: 'e.g. Cm' },
+    { key: 'genotype', label: 'Genotype', placeholder: 'e.g. F- ompT hsdSB gal dcm (DE3)', wide: true }
   ],
   antibody: [
     { key: 'target', label: 'Target', placeholder: 'e.g. GFP' },
@@ -31,11 +33,11 @@ export const SAMPLE_TYPE_FIELDS = {
   protein: [
     { key: 'molecular_weight', label: 'MW (kDa)', placeholder: 'e.g. 27' },
     { key: 'tag', label: 'Tag', placeholder: 'e.g. His6, GST' },
-    { key: 'buffer', label: 'Buffer', placeholder: 'e.g. 20 mM Tris pH 7.5, 150 mM NaCl' },
+    { key: 'buffer', label: 'Buffer', placeholder: 'e.g. 20 mM Tris pH 7.5, 150 mM NaCl', wide: true },
     { key: 'expression_host', label: 'Expression Host', placeholder: 'e.g. E. coli BL21(DE3)' }
   ],
   primer: [
-    { key: 'sequence', label: "Sequence (5'→3')", placeholder: 'e.g. ATGGTGAGCAAGGGCGAG' },
+    { key: 'sequence', label: "Sequence (5'→3')", placeholder: 'e.g. ATGGTGAGCAAGGGCGAG', wide: true },
     { key: 'direction', label: 'Direction', options: ['Forward', 'Reverse'] },
     { key: 'tm', label: 'Tm (°C)', placeholder: 'e.g. 62' },
     { key: 'target', label: 'Target', placeholder: 'e.g. GFP N-term' }
@@ -72,7 +74,7 @@ export function formatTypeFieldItems(type, details) {
 
 // Shared by the Sample Registry form and the Personal Inventory well/single editors.
 export function renderTypeFieldsMarkup(type, details = null) {
-  return getTypeFields(type).map(({ key, label, placeholder = '', type: inputType = 'text', options }) => {
+  return getTypeFields(type).map(({ key, label, placeholder = '', type: inputType = 'text', options, wide }) => {
     const value = String(details?.[key] || '');
     const control = options
       ? `<select data-sample-detail="${escapeHtml(key)}">
@@ -80,7 +82,7 @@ export function renderTypeFieldsMarkup(type, details = null) {
           ${options.map((option) => `<option value="${escapeHtml(option)}"${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
         </select>`
       : `<input data-sample-detail="${escapeHtml(key)}" type="${inputType}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" />`;
-    return `<label>${escapeHtml(label)}${control}</label>`;
+    return `<label${wide ? ' class="sample-type-field-wide"' : ''}>${escapeHtml(label)}${control}</label>`;
   }).join('');
 }
 

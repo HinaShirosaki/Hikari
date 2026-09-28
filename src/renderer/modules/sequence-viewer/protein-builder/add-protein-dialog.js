@@ -1,7 +1,6 @@
 import { translateDnaSequence } from '../calculations/sequence.js';
 import { cleanText } from '../shared.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
-import { PROTEIN_DIRECT_CLONING_MAX_AA } from './constants.js';
 import { createCustomRow } from './row-factory.js';
 
 const STANDARD_PROTEIN_RESIDUES = new Set('ACDEFGHIKLMNPQRSTVWY*');
@@ -38,37 +37,32 @@ export function installProteinBuilderAddProteinDialog(ctx) {
     const isDna = elements.proteinBuilderAddProteinType?.value === 'dna';
     const input = parseAddProteinInput(elements.proteinBuilderAddProteinSequence?.value, isDna ? 'dna' : 'protein');
     const aaLength = countAminoAcids(input.sequence);
-    const isError = Boolean(input.error);
-    const status = input.error || `${isDna ? `${input.dnaLength} bp → ` : ''}${aaLength} aa${aaLength > PROTEIN_DIRECT_CLONING_MAX_AA ? ' | Cloning Design unavailable after vector insertion' : ''}`;
     if (elements.proteinBuilderAddProteinSequence) {
       elements.proteinBuilderAddProteinSequence.placeholder = isDna ? 'Enter a DNA coding sequence (5′ to 3′)' : 'Enter an amino-acid sequence';
-    }
-    if (elements.proteinBuilderAddProteinHint) {
-      elements.proteinBuilderAddProteinHint.textContent = isDna
-        ? 'Translated from the first base using the standard genetic code. Use complete codons; an optional final stop codon is removed. Original codons are retained when building DNA.'
-        : 'Enter the protein sequence using one-letter amino-acid codes.';
     }
 
     if (elements.proteinBuilderAddProteinOverlay && Object.hasOwn(options, 'open')) {
       elements.proteinBuilderAddProteinOverlay.hidden = !options.open;
     }
-    if (elements.proteinBuilderAddProteinStatus) {
-      elements.proteinBuilderAddProteinStatus.textContent = status;
-      elements.proteinBuilderAddProteinStatus.classList.toggle('is-error', isError);
-    }
     if (elements.proteinBuilderAddProteinConfirmBtn) {
-      elements.proteinBuilderAddProteinConfirmBtn.disabled = !aaLength || isError;
+      elements.proteinBuilderAddProteinConfirmBtn.disabled = !aaLength || Boolean(input.error);
     }
     return { ...input, aaLength };
   };
 
-  ctx.openAddProteinDialog = function openAddProteinDialog() {
-    if (elements.proteinBuilderAddProteinType) elements.proteinBuilderAddProteinType.value = 'protein';
+  // With a row id the dialog edits that manually added block in place;
+  // without one it adds a new block.
+  ctx.openAddProteinDialog = function openAddProteinDialog(rowId = '') {
+    const row = rowId ? state.rows.find((item) => item.id === rowId && item.kind === 'custom') : null;
+    ctx.editingProteinRowId = row?.id || '';
+    if (elements.proteinBuilderAddProteinTitle) elements.proteinBuilderAddProteinTitle.textContent = row ? 'Edit Protein' : 'Add Protein';
+    if (elements.proteinBuilderAddProteinConfirmBtn) elements.proteinBuilderAddProteinConfirmBtn.textContent = row ? 'Save' : 'Add to Chain';
+    if (elements.proteinBuilderAddProteinType) elements.proteinBuilderAddProteinType.value = row?.sourceDnaSequence ? 'dna' : 'protein';
     if (elements.proteinBuilderAddProteinName) {
-      elements.proteinBuilderAddProteinName.value = '';
+      elements.proteinBuilderAddProteinName.value = row?.label || '';
     }
     if (elements.proteinBuilderAddProteinSequence) {
-      elements.proteinBuilderAddProteinSequence.value = '';
+      elements.proteinBuilderAddProteinSequence.value = row ? (row.sourceDnaSequence || row.sequence || '') : '';
     }
     ctx.renderAddProteinDialog({ open: true });
     elements.proteinBuilderAddProteinName?.focus?.();
@@ -85,6 +79,15 @@ export function installProteinBuilderAddProteinDialog(ctx) {
       return false;
     }
     const label = cleanText(elements.proteinBuilderAddProteinName?.value, 160).trim() || 'Custom Protein';
+    const editingRow = ctx.editingProteinRowId && state.rows.find((item) => item.id === ctx.editingProteinRowId);
+    if (editingRow) {
+      Object.assign(editingRow, { label, sequence: input.sequence, sourceDnaSequence: input.sourceDnaSequence });
+      ctx.invalidateDnaConstruct();
+      ctx.closeAddProteinDialog();
+      ctx.render();
+      ctx.setBuilderStatus(`Updated ${label} (${input.aaLength} aa).`);
+      return true;
+    }
     const row = createCustomRow(state.nextRowId++, label, input.sequence);
     if (input.sourceDnaSequence) row.sourceDnaSequence = input.sourceDnaSequence;
     ctx.appendRow(row);

@@ -1,4 +1,4 @@
-import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
+import { applyAppearanceToDocument } from '../app/appearance.js';
 
 const DEFAULT_FONT_SIZE = 16;
 const STORAGE_KEY = 'hikari_state_v1';
@@ -37,8 +37,8 @@ function showBootFailure() {
     maxWidth: 'min(420px, calc(100vw - 32px))',
     padding: '12px 16px',
     borderRadius: '12px',
-    boxShadow: '0 16px 32px rgba(23, 18, 14, 0.18)',
-    background: 'rgba(156, 54, 48, 0.96)',
+    boxShadow: '0 16px 32px rgba(27, 20, 14, 0.18)',
+    background: 'rgba(167, 75, 58, 0.96)',
     color: '#ffffff',
     fontSize: '0.94rem',
     lineHeight: '1.35'

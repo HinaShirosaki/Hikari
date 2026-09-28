@@ -1,7 +1,7 @@
 import { buildMappedWellSet, layoutToMap, parseWellId, toRowLabel, wellIdFor } from '../plate-model.js';
 import { parseFirstNumericToken, parseNumericResult } from '../shared.js';
 import { applyPlateTransform, isTransformActive, normalizeTransformSpec } from '../derived-plate.js';
-import { createSpreadsheetFillHandle } from '../../../lib/spreadsheet-tables/fill-handle.js';
+import { createSpreadsheetFillHandle } from '../../../lib/spreadsheet-fill-handle.js';
 import { fillCellContent } from '../../../lib/notebook-table-formulas.js';
 import { createSpreadsheetReferencePicker } from '../../../lib/spreadsheet-reference-picker.js';
 

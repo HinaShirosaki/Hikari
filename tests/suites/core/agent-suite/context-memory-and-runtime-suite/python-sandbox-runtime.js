@@ -466,4 +466,49 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       assert.match(String(failure.debug?.assistant_message || ''), /Suggested next step/i);
       assert.match(String(failure.debug?.assistant_message || ''), /standard library|vendor/i);
     });
+    test('python sandbox: Finder launches prefer standard user Python installs on macOS', async () => {
+      if (process.platform !== 'darwin') {
+        return;
+      }
+      const {
+        platformPythonCandidates,
+        resolvePythonExecutable
+      } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox', 'runner.js'));
+      const available = [];
+      for (const candidate of platformPythonCandidates('darwin')) {
+        try {
+          await fsPromises.access(candidate);
+          available.push(candidate);
+        } catch {
+          // This standard installation is absent on the current Mac.
+        }
+      }
+      if (!available.length) {
+        return;
+      }
+
+      const saved = {
+        path: process.env.PATH,
+        executable: process.env.HIKARI_AGENT_PYTHON_EXECUTABLE,
+        bin: process.env.HIKARI_AGENT_PYTHON_BIN
+      };
+      try {
+        process.env.PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
+        delete process.env.HIKARI_AGENT_PYTHON_EXECUTABLE;
+        delete process.env.HIKARI_AGENT_PYTHON_BIN;
+        assert.equal(
+          await resolvePythonExecutable(),
+          available[0],
+          'a packaged-style PATH should not silently select Apple/Xcode Python first'
+        );
+      } finally {
+        if (saved.path === undefined) delete process.env.PATH;
+        else process.env.PATH = saved.path;
+        if (saved.executable === undefined) delete process.env.HIKARI_AGENT_PYTHON_EXECUTABLE;
+        else process.env.HIKARI_AGENT_PYTHON_EXECUTABLE = saved.executable;
+        if (saved.bin === undefined) delete process.env.HIKARI_AGENT_PYTHON_BIN;
+        else process.env.HIKARI_AGENT_PYTHON_BIN = saved.bin;
+      }
+    });
+
 };

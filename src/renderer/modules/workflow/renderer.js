@@ -62,9 +62,8 @@ export function createWorkflowRenderer(config = {}) {
     protocol.steps.forEach((step) => {
       const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
       placeholders.forEach((placeholder) => {
-        const key = `${step.id}:${placeholder.id}`;
         fields.push({
-          key,
+          key: placeholder.id,
           placeholderName: placeholder.name
         });
       });

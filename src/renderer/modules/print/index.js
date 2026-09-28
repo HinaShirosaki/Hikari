@@ -1,4 +1,5 @@
 import { showTransientNotice } from '../../lib/notify.js';
+import { escapeHtml } from '../../lib/html.js';
 
 const PRINT_DOC_STYLES = `
   * { box-sizing: border-box; }
@@ -46,15 +47,6 @@ function buildPrintHtmlDocument(bodyHtml, { title = 'Print', extraStyles = '' } 
   </head>
   <body>${bodyHtml}</body>
 </html>`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }
 
 function createPrintFrame() {

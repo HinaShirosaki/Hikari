@@ -7,13 +7,14 @@ const {
   compactObject,
   ensureObject,
   normalizeParserPayload,
+  resolveDirectToolPayload,
   runAppTool,
   uniqueStrings
 } = require('./shared.js');
 
 const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
   name: 'notebook_draft',
-  description: 'Select a protocol from candidates, fill known placeholder values from pending_values, and optionally apply small per-draft step_edits (replace a step by step_number, or append a step), then prepare a planned Hikari biology notebook draft on a copy — never the saved protocol — for explicit user confirmation before any notebook page is created. pending_values keys must exactly match placeholder_key values in <step-id>:<placeholder-id> form; display names are not accepted as keys. Unresolved placeholders are returned as follow-up questions.',
+  description: 'Select a protocol from candidates, fill known placeholder values from pending_values, and optionally apply small per-draft step_edits (replace a step by step_number, or append a step), then prepare a planned Hikari biology notebook draft on a copy — never the saved protocol — for explicit user confirmation before any notebook page is created. pending_values keys must exactly match placeholder_key values (placeholder ids); display names are not accepted as keys. Unresolved placeholders are returned as follow-up questions.',
   annotations: Object.freeze({
     title: 'Notebook draft',
     readOnlyHint: true,
@@ -89,19 +90,6 @@ function normalizeProject(input = {}, context = {}) {
   });
 }
 
-function resolveNotebookDraftPayload(result = {}) {
-  const source = ensureObject(result);
-  const resultPayload = ensureObject(source.result);
-  const outputPayload = ensureObject(source.output);
-  if (Object.keys(resultPayload).length) {
-    return resultPayload;
-  }
-  if (Object.keys(outputPayload).length) {
-    return outputPayload;
-  }
-  return source;
-}
-
 async function callNotebookDraft(input = {}, context = {}, deps = {}) {
   if (Object.prototype.hasOwnProperty.call(input, 'drafts')) {
     if (!Array.isArray(input.drafts) || input.drafts.length < 1 || input.drafts.length > 20
@@ -157,7 +145,7 @@ async function callNotebookDraft(input = {}, context = {}, deps = {}) {
       project
     }
   });
-  const payload = resolveNotebookDraftPayload(result);
+  const payload = resolveDirectToolPayload(result);
   const status = cleanText(payload.status || result?.status, 80) || (result?.ok === false ? 'failed' : 'proposal_ready');
   const error = cleanText(payload.error || result?.error, 1200);
   const ok = result?.ok !== false

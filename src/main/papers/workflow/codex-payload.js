@@ -12,7 +12,8 @@
  */
 
 const { normalizeLineRanges } = require('./paper-line-ranges.js');
-const { ensureObject } = require('../../lib/normalize.js');
+const { asArray: defaultAsArray, ensureObject } = require('../../lib/normalize.js');
+const { parseJsonObjectFromText } = require('../../lib/llm/runtime-helpers.js');
 const {
   attachRelatedCommentsToContextBlocks,
   normalizeRelatedComments
@@ -21,10 +22,6 @@ const {
 // Independent cap on how many blocks/selections a payload may contribute.
 const DEFAULT_MAX_CONTEXT_BLOCKS = 50;
 
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
 function defaultCleanText(value) {
   return String(value || '');
 }
@@ -32,34 +29,6 @@ function defaultCleanText(value) {
 function toPositiveInteger(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function parseJsonObjectFromText(raw = '') {
-  const text = String(raw || '').trim();
-  if (!text) {
-    return null;
-  }
-  const candidates = [text];
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) {
-    candidates.push(fenced[1].trim());
-  }
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    candidates.push(text.slice(firstBrace, lastBrace + 1));
-  }
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
 }
 
 function normalizeSelectedPaper(rawPaper = {}, fallback = {}, { cleanText = defaultCleanText } = {}) {

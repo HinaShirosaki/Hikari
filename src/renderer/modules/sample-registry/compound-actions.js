@@ -2,7 +2,7 @@ import {
   getChemicalStructureCandidatesFromClipboardData,
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
-} from '../../services/chemical-structure-clipboard.js';
+} from './chemical-structure-clipboard.js';
 import {
   buildCompoundClipboardNotFoundMessage,
   emptyCompoundStructureDraft,

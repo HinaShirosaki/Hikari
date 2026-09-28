@@ -1,4 +1,4 @@
-import { cleanText } from '../shared.js';
+import { cleanText, formatDuration, formatPrimerRole } from '../shared.js';
 
 function fallbackCreateId(prefix = 'id') {
   return `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
@@ -21,14 +21,6 @@ function formatBp(length) {
   return `${Math.max(0, Number(length) || 0).toLocaleString()} bp`;
 }
 
-function formatPrimerRole(role) {
-  return String(role || '')
-    .trim()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
-}
-
 function formatStrategyName(strategy) {
   const normalized = String(strategy || '').trim().toLowerCase();
   if (normalized === 'restriction-ligation') {
@@ -44,16 +36,6 @@ function formatStrategyName(strategy) {
     return 'Site-directed mutagenesis';
   }
   return normalized ? formatPrimerRole(normalized) : 'No feasible route';
-}
-
-function formatDuration(totalSeconds) {
-  const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
-  if (seconds < 60) {
-    return `${seconds} s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return remainder ? `${minutes} min ${remainder} s` : `${minutes} min`;
 }
 
 function roundToFiveSeconds(seconds) {

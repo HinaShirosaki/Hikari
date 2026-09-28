@@ -15,6 +15,7 @@ Direct tools:
 
 - `paper_intake_search_summaries` — find candidate papers across titles, DOIs, one-sentence summaries, experiment details and evidence, and saved outlines/claims. Existing intake records are searchable without reprocessing.
 - `paper_intake_search_experiments` — search structured experiment entries by assay, technique, condition, variable, figure/table reference, outcome, or verbatim evidence.
+- `paper_experiments_sql` (when enabled) — query the experiment SQLite database with one read-only `SELECT`, including joins, exact filters, grouping, counts, and `WITH` clauses. Its tool description contains the table schema.
 - `paper_intake_list_project_summaries` — list ingested paper summaries attached to a known Hikari project.
 
 Retrieval workflow:
@@ -37,6 +38,15 @@ Argument patterns:
   `{ "query": "phage-assisted continuous evolution SD40", "technique": "phage-assisted continuous evolution", "limit": 5 }`
 - Project roll-up:
   `{ "project_name": "Atlas", "doc_types": ["research_paper"], "limit": 20 }`
+
+SQL retrieval:
+
+- Use `paper_experiments_sql` for exact questions or aggregations that keyword ranking cannot answer. Example:
+  `{ "sql": "SELECT p.paper_id, p.title AS paper_title, p.paper_md, e.id, e.technique, e.figure_ref, e.outcome, e.evidence FROM experiments e JOIN papers p USING (paper_id) WHERE e.technique LIKE ? ORDER BY p.paper_id, e.ordinal", "parameters": ["%blot%"], "limit": 50 }`
+- Queries cover the whole workspace library. For project-specific questions, first get paper IDs from project-summary retrieval and constrain SQL with those IDs; `project_ids_json` is the saved intake membership, not a live project-link resolver.
+- Read `columns` and the corresponding value arrays in `rows`. Check `truncated` and `truncation_reason`; use a narrower projection/filter or ordered `LIMIT`/`OFFSET` paging as needed. Counts describe extracted records, not all experiments in the original paper. Prefer `COUNT(*)` for totals instead of counting a capped response.
+- To inspect columns, use `SELECT * FROM pragma_table_info('experiments')` or the same query for `papers`. SQL values can be bound with `?` and `parameters`; file paths and mutations are not accepted.
+- If SQLite is missing or unavailable, use the intake search tools and report that SQL retrieval was unavailable. Queries do not build or repair the database.
 
 Answering rules:
 

@@ -5,37 +5,55 @@
   color: var(--home-tile-text);
 }
 
-#home-view .home-contribution-footer {
+/* Lab activity: 18 week columns sized to the tile, never wider than 1.125rem. */
+#home-view .home-tile-contribution {
+  container-type: inline-size;
+}
+
+#home-view .home-contribution-legend {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-}
-#home-view #dashboard-contribution-summary {
-  color: var(--home-tile-text);
-}
-#home-view .home-contribution-display {
-  display: grid;
   align-items: center;
-  min-height: 0;
-  min-width: 0;
-  container-type: size;
+  gap: 0.1875rem;
+  color: var(--home-tile-muted);
+  font-size: var(--text-2xs);
 }
+
+#home-view .home-contribution-legend i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 0.125rem;
+  background: var(--theme-heat-0);
+}
+
+#home-view .home-contribution-legend span {
+  margin: 0 0.1875rem;
+}
+
+#home-view .home-tile .home-contribution-stats {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+#home-view .home-contribution-stats strong {
+  color: var(--theme-text-strong);
+  font-size: var(--text-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 #home-view .home-contribution-map {
-  --contribution-cell-gap: clamp(2px, 0.7cqw, 5px);
-  --contribution-weekday-width: 2rem;
-  --contribution-body-gap: var(--space-10);
-  --contribution-cell-size: min(1.6rem, calc((100cqw - var(--contribution-weekday-width) - var(--contribution-body-gap) - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))) / var(--contribution-week-count)), calc((100cqh - 1.5rem - (6 * var(--contribution-cell-gap))) / var(--contribution-day-count)));
+  --contribution-cell-gap: 3px;
+  --contribution-weekday-width: 1.875rem;
+  --contribution-body-gap: var(--space-8);
+  --contribution-cell-size: min(1.125rem, calc((100cqw - var(--contribution-weekday-width) - var(--contribution-body-gap) - ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap))) / var(--contribution-week-count)));
   --contribution-grid-width: calc((var(--contribution-week-count) * var(--contribution-cell-size)) + ((var(--contribution-week-count) - 1) * var(--contribution-cell-gap)));
   display: grid;
-  gap: var(--space-6);
-  align-content: center;
+  gap: var(--space-4);
   width: max-content;
   max-width: 100%;
-  justify-self: center;
   min-width: 0;
+  padding-top: var(--space-4);
 }
+
 #home-view .home-contribution-months {
   display: grid;
   grid-template-columns: repeat(var(--contribution-week-count), var(--contribution-cell-size));
@@ -43,38 +61,43 @@
   width: var(--contribution-grid-width);
   margin-left: calc(var(--contribution-weekday-width) + var(--contribution-body-gap));
   color: var(--home-tile-muted);
-  font-size: var(--text-sm);
-  line-height: 1.2;
+  font-size: var(--text-2xs);
+  line-height: 1.3;
 }
+
 #home-view .home-contribution-month-label {
+  grid-row: 1;
   white-space: nowrap;
 }
-#home-view .home-contribution-month-label.is-last {
-  text-align: right;
-}
+
 #home-view .home-contribution-body {
   display: grid;
   grid-template-columns: var(--contribution-weekday-width) var(--contribution-grid-width);
   gap: var(--contribution-body-gap);
   min-width: 0;
 }
+
 #home-view .home-contribution-weekdays {
   display: grid;
   grid-template-rows: repeat(var(--contribution-day-count), var(--contribution-cell-size));
   row-gap: var(--contribution-cell-gap);
   align-items: center;
   color: var(--home-tile-muted);
-  font-size: var(--text-xs);
+  font-size: var(--text-2xs);
 }
+
 #home-view .home-contribution-weekdays span:nth-child(1) {
   grid-row: 2;
 }
+
 #home-view .home-contribution-weekdays span:nth-child(2) {
   grid-row: 4;
 }
+
 #home-view .home-contribution-weekdays span:nth-child(3) {
   grid-row: 6;
 }
+
 #home-view .home-contribution-grid {
   display: grid;
   grid-auto-flow: column;
@@ -83,6 +106,7 @@
   gap: var(--contribution-cell-gap);
   min-width: 0;
 }
+
 #home-view .home-tile .home-contribution-cell {
   display: block;
   width: var(--contribution-cell-size);
@@ -91,48 +115,36 @@
   min-height: 0;
   padding: 0;
   border: 0;
-  border-radius: 0.2rem;
-  background: var(--home-contribution-empty);
+  border-radius: 0.1875rem;
+  background: var(--theme-heat-0);
   cursor: pointer;
 }
+
 #home-view .home-tile .home-contribution-cell:disabled {
   cursor: default;
   opacity: 0.45;
 }
-#home-view .home-contribution-legend {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-left: auto;
-  gap: 0.2rem;
-  color: var(--home-tile-muted);
-  font-size: var(--text-xs);
-}
-#home-view .home-contribution-legend i {
-  width: 0.6rem;
-  height: 0.6rem;
-  border-radius: 0.15rem;
-  background: var(--home-contribution-empty);
-}
-#home-view .home-contribution-legend span {
-  margin: 0 0.2rem;
-}
+
 #home-view .home-tile .home-contribution-cell[data-level="1"],
 #home-view .home-contribution-legend [data-level="1"] {
-  background: var(--home-contribution-level-1);
+  background: var(--theme-heat-1);
 }
+
 #home-view .home-tile .home-contribution-cell[data-level="2"],
 #home-view .home-contribution-legend [data-level="2"] {
-  background: var(--home-contribution-level-2);
+  background: var(--theme-heat-2);
 }
+
 #home-view .home-tile .home-contribution-cell[data-level="3"],
 #home-view .home-contribution-legend [data-level="3"] {
-  background: var(--home-contribution-level-3);
+  background: var(--theme-heat-3);
 }
+
 #home-view .home-tile .home-contribution-cell[data-level="4"],
 #home-view .home-contribution-legend [data-level="4"] {
-  background: var(--home-contribution-level-4);
+  background: var(--theme-heat-4);
 }
+
 #home-view .home-tile .home-contribution-cell:hover:not(:disabled),
 #home-view .home-tile .home-contribution-cell[aria-selected="true"],
 #home-view .home-tile .home-contribution-cell:focus-visible {
@@ -140,72 +152,105 @@
   outline-offset: 1px;
 }
 
-#home-view .home-quicklog-body {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 0.7rem;
-  min-height: 0;
+#home-view .home-tile .home-contribution-selected {
+  padding-top: var(--space-8);
+  overflow: hidden;
+  border-top: 1px solid var(--home-tile-line-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+#home-view .home-contribution-selected strong {
+  color: var(--theme-text-strong);
+  font-weight: 600;
+}
+
+/* Experiment log: a filled field, text actions, and today's saved entries. */
 #home-view .home-tile .home-quicklog-input {
-  min-height: 0;
-  height: 100%;
+  flex: none;
   width: 100%;
-  box-sizing: border-box;
-  padding: 0.3rem 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: var(--home-tile-text);
-  resize: none;
-  line-height: 1.6;
+  height: 7.5rem;
+  min-height: 0;
+  padding: var(--space-10) var(--space-12);
+  border: 1px solid transparent;
+  border-radius: 0.5625rem;
+  background: var(--home-tonal);
+  color: var(--theme-text-strong);
   font-size: var(--text-md);
+  line-height: 1.5;
+  resize: none;
   box-shadow: none;
 }
+
+#home-view .home-tile .home-quicklog-input:focus-visible {
+  border-color: var(--theme-focus);
+  background: var(--home-tile-bg);
+}
+
 #home-view .home-tile .home-quicklog-input::placeholder {
   color: var(--home-tile-muted);
 }
+
 #home-view .home-quicklog-actions {
+  flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.45rem;
-  border-top: 1px solid var(--home-tile-line-soft);
-  padding-top: var(--space-10);
+  gap: var(--space-6) var(--space-8);
 }
-#home-view .home-quicklog-status {
-  margin-right: auto;
+
+/* Status sits under the buttons so they never move when it changes. Empty,
+ * it stays in the accessibility tree and cancels the tile gap above it. */
+#home-view .home-tile .home-quicklog-status {
+  flex: none;
+}
+
+#home-view .home-tile .home-quicklog-status:empty {
+  margin-top: calc(var(--space-8) * -1);
+}
+
+#home-view .home-quicklog-actions > button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+#home-view .home-quicklog-actions .btn-icon {
+  width: 15px;
+  height: 15px;
+}
+
+#home-view .home-quicklog-recent {
+  flex: none;
+  display: grid;
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--home-tile-line-soft);
+}
+
+#home-view .home-quicklog-recent-label {
+  margin: 0 0 var(--space-2);
+  color: var(--home-tile-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+#home-view .home-quicklog-recent-row {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr);
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-4) 0;
+  font-size: var(--text-sm);
+}
+
+#home-view .home-quicklog-recent-row time {
+  color: var(--home-tile-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#home-view .home-quicklog-recent-row span {
   min-width: 0;
   overflow: hidden;
-  white-space: nowrap;
   text-overflow: ellipsis;
-}
-#home-view .home-tile .home-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 2.3rem;
-  height: 2.3rem;
-  padding: 0;
-  border: 1px solid var(--home-tile-line);
-  border-radius: 0.4rem;
-  background: transparent;
-  color: var(--theme-text-strong);
-  cursor: pointer;
-}
-#home-view .home-icon-btn svg {
-  width: 1.2rem;
-  height: 1.2rem;
-}
-#home-view .home-tile .home-icon-btn-send {
-  border-color: var(--theme-accent);
-  background: var(--theme-accent);
-  color: var(--theme-text-on-accent);
-}
-#home-view .home-tile .home-icon-btn:hover:not(:disabled) {
-  filter: brightness(0.94);
-}
-#home-view .home-tile .home-icon-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+  white-space: nowrap;
 }

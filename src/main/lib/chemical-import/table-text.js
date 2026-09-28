@@ -1,5 +1,7 @@
 'use strict';
 
+const { decodeXmlEntities } = require('../web-text.js');
+
 function trimTrailingEmptyCells(row) {
   const next = Array.isArray(row) ? [...row] : [];
   while (next.length && !String(next[next.length - 1] ?? '').trim()) {
@@ -25,18 +27,6 @@ function buildParsedTable(rows, metadata = {}) {
     rowCount: dataRows.length,
     ...metadata
   };
-}
-
-function decodeXmlEntities(value) {
-  return String(value || '')
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
-    .replace(/&#x([0-9a-fA-F]+);/g, (_match, hex) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_match, number) => String.fromCodePoint(Number(number)));
 }
 
 function decodeZipName(buffer) {

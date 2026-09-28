@@ -40,7 +40,7 @@ const rules = {
 export default [
   {
     ignores: [
-      'src/plugins/*/vendor/**',   // vendored third-party + snapshot of app code
+      'src/plugins/*/vendor/**',   // vendored third-party browser assets
       'vendor/**',
       '**/*.generated.js',         // written by npm run build:ui
       'src/renderer/modules/views.js',

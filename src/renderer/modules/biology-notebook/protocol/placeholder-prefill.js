@@ -18,7 +18,7 @@ function placeholderKeysOf(protocol) {
   for (const step of Array.isArray(protocol?.steps) ? protocol.steps : []) {
     for (const placeholder of Array.isArray(step?.placeholders) ? step.placeholders : []) {
       rows.push({
-        key: `${step.id}:${placeholder.id}`,
+        key: String(placeholder?.id || ''),
         name: String(placeholder?.name || '').trim()
       });
     }

@@ -23,6 +23,27 @@ function deterministicDna(length, seed) {
   }
   return result;
 }
+function createRecordServices(state) {
+  return {
+    ensureProjectRecord(record) {
+      const existing = state.projects.find((project) => (
+        project.source === record.source || project.name === record.name
+      ));
+      if (existing) return existing;
+      state.projects.push(record);
+      return record;
+    },
+    saveProtocolRecord(record) {
+      const index = state.protocols.findIndex((protocol) => protocol.id === record.id);
+      if (index >= 0) {
+        state.protocols[index] = { ...state.protocols[index], ...record };
+        return state.protocols[index];
+      }
+      state.protocols.push(record);
+      return record;
+    }
+  };
+}
 test('[EDGE] sequence-viewer designCloningPrimers falls back to relaxed thresholds when needed', () => {
   const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'restriction-ligation',
@@ -251,6 +272,21 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.doesNotMatch(trisBufferResult.resultText, /NaOH|HCl/);
   assert.match(trisBufferResult.resultText, /Solvent to add: 1000 mL/);
 
+  // A page saved while the estimate existed is rebuilt from its inputs on load.
+  const { normalizeNotebookToolCalculation } = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'lib', 'notebook-tool-calculations.js'));
+  const legacyBuffer = normalizeNotebookToolCalculation({
+    id: 'calc-legacy',
+    type: 'buffer',
+    mode: 'recipe',
+    title: 'Buffer Preparer',
+    inputs: { volumeValue: '500', volumeUnit: 'mL', pH: '8', rows: [{ rowIndex: 1, name: 'Tris base', molecularWeight: '121.14', finalConcentration: '100 mM' }] },
+    table: { headers: ['Chemical'], footerRows: [['Solvent to add 499.7 mL', '', '6 M NaOH 0 uL', '', '6 M HCl 287.4 uL']] },
+    result: 'Tris base: 6.057 g.\n6 M HCl: 287.4 uL estimated from Tris pKa 8.06.',
+    formula: 'pH adjustment estimate uses Tris pKa 8.06 and 6 M acid/base'
+  });
+  assert.doesNotMatch(JSON.stringify(legacyBuffer), /NaOH|HCl|pH adjustment/);
+  assert.equal(legacyBuffer.table.footerRows[0][0], 'Solvent to add 500 mL (5.000e+5 uL)');
+
   assert.equal(toolBox.parseBufferConcentration('2000x').kind, 'fold');
   assert.equal(toolBox.parseBufferConcentration('100 ng/uL').kind, 'massVolume');
   assert.equal(toolBox.parseBufferConcentration('0.1% m/v').percentKind, 'massVolume');
@@ -461,6 +497,7 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   const insertSequence = 'ATGCGTACGATCCGATGCTAGCTACGATCGTACCTGACTGATCGTAGCTAGCATGCTACGATCG';
   const created = notebookAdapter.createProteinBuilderCloningNotebookPage({
     state,
+    ...createRecordServices(state),
     persist: () => {
       persisted = true;
     },
@@ -530,8 +567,8 @@ test('[EDGE] builder cloning notebook page uses a thermocycle protocol and prefi
   assert.equal(created.plan.primerOligoPlan.feasible, true);
 });
 test('[EDGE] builder cloning notebook migration replaces only legacy assembly protocols', () => {
-  const notebookAdapter = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder-cloning-notebook.js')
+  const notebookCompatibility = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'services', 'notebook-record-compat.js')
   );
   const pcrProgram = {
     steps: [
@@ -574,7 +611,7 @@ test('[EDGE] builder cloning notebook migration replaces only legacy assembly pr
     notebookEntries: [legacyEntry, editedEntry]
   };
 
-  assert.equal(notebookAdapter.migrateProteinBuilderCloningNotebookState(state), 1);
+  assert.equal(notebookCompatibility.migrateProteinBuilderCloningNotebookState(state), 1);
   assert.equal(state.protocols[0].name, 'PCR Thermocycle Program');
   assert.equal(state.protocols[0].createdAt, '2026-04-27T00:00:00.000Z');
   assert.equal(state.notebookEntries[0].protocolName, 'PCR Thermocycle Program');

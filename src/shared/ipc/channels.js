@@ -45,7 +45,8 @@ const STORAGE = Object.freeze({
   READ_FILE_BYTES: 'storage:read-file-bytes',
   READ_FILE_BASE64: 'storage:read-file-base64',
   APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log',
-  PROTOCOL_RECORD_SAVED: 'storage:protocol-record-saved'
+  PROTOCOL_RECORD_SAVED: 'storage:protocol-record-saved',
+  PAPER_FILE_SAVED: 'storage:paper-file-saved'
 });
 
 const SYSTEM = Object.freeze({
@@ -121,6 +122,14 @@ const SCHEDULED_TASK = Object.freeze({
   RUN: 'scheduled-task:run'
 });
 
+const PAPER_FINDING = Object.freeze({
+  LIST: 'paper-finding:list',
+  CREATE: 'paper-finding:create',
+  UPDATE: 'paper-finding:update',
+  SCHEDULE: 'paper-finding:schedule',
+  DOWNLOAD: 'paper-finding:download'
+});
+
 const LLM = Object.freeze({
   CODEX_STATUS: 'llm:codex-status',
   CODEX_CATALOG: 'llm:codex-catalog',
@@ -146,6 +155,7 @@ module.exports = {
   ASSAY,
   SEQUENCE_LIBRARY,
   SCHEDULED_TASK,
+  PAPER_FINDING,
   GENOME,
   LLM
 };

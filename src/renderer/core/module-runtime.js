@@ -5,7 +5,7 @@ import {
   createManifestRenderEntries,
   initializeModuleManifests,
   renderModuleManifests
-} from '../module-manifests/runtime.js';
+} from './manifest-runtime.js';
 
 export function createRendererModuleRuntime(config = {}) {
   const state = config?.state || {};

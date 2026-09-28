@@ -10,7 +10,11 @@ on:
   workflow_dispatch:
 
 jobs:
+  validate:
+    uses: ./.github/workflows/ci.yml
+
   windows-distribution:
+    needs: validate
     runs-on: windows-latest
     timeout-minutes: 30
     permissions:
@@ -44,6 +48,7 @@ jobs:
         run: gh release upload "$env:RELEASE_TAG" out/Hikari-win32-x64/HikariSetup.exe --clobber
 
   npmjs:
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # id-token lets npm prove this workflow's identity to npmjs (trusted
@@ -62,6 +67,7 @@ jobs:
       - run: npm publish --access public
 
   github-packages:
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

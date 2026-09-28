@@ -3,6 +3,7 @@
 const { asArray } = require('../../../lib/normalize.js');
 const { cleanText } = require('./text-utils.js');
 const { normalizeSearchResult } = require('./candidate-scoring.js');
+const { readResponseText } = require('../../../lib/web-text.js');
 
 // Fetching a vendor page and running the provider-layer web search. Both are
 // injected so tests can drive the runtime without network access.
@@ -12,16 +13,6 @@ function createPurchaseWebFetch({
   searchWebResultsOverride,
   runtimeCleanText
 } = {}) {
-  async function readResponseText(response) {
-    if (typeof response?.text === 'function') {
-      return String(await response.text());
-    }
-    if (typeof response?.json === 'function') {
-      return JSON.stringify(await response.json());
-    }
-    return '';
-  }
-
   async function fetchText(url) {
     if (!fetchImpl) {
       throw new Error('Purchase recommendation requires fetch support.');

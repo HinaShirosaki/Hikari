@@ -206,6 +206,12 @@ export function installProteinBuilderEvents(ctx) {
       const removeTrigger = event?.target?.closest?.('[data-protein-builder-row-remove]');
       const upTrigger = event?.target?.closest?.('[data-protein-builder-row-up]');
       const downTrigger = event?.target?.closest?.('[data-protein-builder-row-down]');
+      const editTrigger = event?.target?.closest?.('[data-protein-builder-row-edit]');
+
+      if (editTrigger?.dataset?.proteinBuilderRowEdit) {
+        ctx.openAddProteinDialog(cleanText(editTrigger.dataset.proteinBuilderRowEdit, 160));
+        return;
+      }
 
       if (removeTrigger?.dataset?.proteinBuilderRowRemove) {
         ctx.removeRow(cleanText(removeTrigger.dataset.proteinBuilderRowRemove, 160));
@@ -219,34 +225,6 @@ export function installProteinBuilderEvents(ctx) {
       }
       if (downTrigger?.dataset?.proteinBuilderRowDown) {
         ctx.moveRow(cleanText(downTrigger.dataset.proteinBuilderRowDown, 160), 'down');
-        ctx.render();
-      }
-    });
-
-    // Commit inline custom-block edits on change. Rebuilding this rendered list
-    // on every keystroke would replace the focused input before typing finishes.
-    elements.proteinBuilderWorkflow?.addEventListener('change', (event) => {
-      const customLabelTrigger = event?.target?.closest?.('[data-protein-builder-custom-label]');
-      const customSequenceTrigger = event?.target?.closest?.('[data-protein-builder-custom-sequence]');
-
-      if (customLabelTrigger?.dataset?.proteinBuilderCustomLabel) {
-        const rowId = cleanText(customLabelTrigger.dataset.proteinBuilderCustomLabel, 160);
-        const row = state.rows.find((item) => item.id === rowId);
-        if (row) {
-          row.label = cleanText(customLabelTrigger.value, 160) || 'Custom Block';
-        }
-        ctx.render();
-        return;
-      }
-
-      if (customSequenceTrigger?.dataset?.proteinBuilderCustomSequence) {
-        const rowId = cleanText(customSequenceTrigger.dataset.proteinBuilderCustomSequence, 160);
-        const row = state.rows.find((item) => item.id === rowId);
-        if (row) {
-          row.sequence = sanitizeProteinAssemblySequence(customSequenceTrigger.value, true);
-          row.sourceDnaSequence = '';
-          ctx.invalidateDnaConstruct();
-        }
         ctx.render();
       }
     });

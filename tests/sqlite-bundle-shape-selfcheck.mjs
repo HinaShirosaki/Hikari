@@ -1,5 +1,5 @@
-// Guards the SQLite bundle shape: chemicals live in their own bundle file, and
-// the agent inventory lookup must read them from there, not the common bundle.
+// Guards the SQLite bundle shape: the chemicals index is the only save-time
+// SQLite bundle, and the agent inventory lookup must read chemicals from it.
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import os from 'node:os';
@@ -11,58 +11,47 @@ const require = createRequire(import.meta.url);
 const initSqlJs = require(path.join(root, 'vendor/sqljs/sql-wasm.js'));
 const SQL = await initSqlJs({ locateFile: (f) => path.join(root, 'vendor/sqljs', f) });
 
-const { applyChemicalSqliteSchema, applyCommonSqliteSchema } = require(path.join(root, 'src/main/storage/storage-sql-schema.js'));
+const schema = require(path.join(root, 'src/main/storage/storage-sql-schema.js'));
+const { applyChemicalSqliteSchema } = schema;
 const { createAgentLookupSupport } = require(path.join(root, 'src/main/agent/tools/agent-lookup-support.js'));
 const { createAgentInventoryLookupRuntime } = require(path.join(root, 'src/main/agent/tools/agent-inventory-lookup.js'));
 
-// 1. The two bundles are disjoint.
-const common = new SQL.Database();
-applyCommonSqliteSchema(common);
-const commonTables = common.exec("SELECT name FROM sqlite_master WHERE type='table'")[0].values.flat();
-assert.ok(!commonTables.includes('inventory_chemicals'), 'common bundle must not hold inventory_chemicals');
-assert.ok(commonTables.includes('inventory_personal'), 'common bundle holds inventory_personal');
-
-const chem = new SQL.Database();
-applyChemicalSqliteSchema(chem);
-const chemTables = chem.exec("SELECT name FROM sqlite_master WHERE type='table'")[0].values.flat();
-assert.ok(chemTables.includes('inventory_chemicals'), 'chemical bundle holds inventory_chemicals');
-
-// 2. No index survives that the query planner cannot use.
-for (const [label, db] of [['common', common], ['chemical', chem]]) {
-  const idx = db.exec("SELECT name FROM sqlite_master WHERE type='index' AND sql IS NOT NULL");
-  assert.equal(idx.length, 0, `${label} bundle should carry no unusable indexes`);
+// 1. Each module index holds exactly its own tables.
+const tablesOf = (applySchema) => {
+  const db = new SQL.Database();
+  applySchema(db);
+  const names = db.exec("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")[0].values.flat();
+  const indexes = db.exec("SELECT name FROM sqlite_master WHERE type='index' AND sql IS NOT NULL");
+  const searchCols = names.filter((t) => db.exec(`PRAGMA table_info(${t})`)[0].values.some((r) => r[1] === 'search_text'));
+  db.close();
+  return { names, indexes: indexes.length, searchCols };
+};
+const expected = {
+  applyChemicalSqliteSchema: ['inventory_chemicals', 'inventory_meta']
+};
+assert.deepEqual(Object.keys(schema).sort(), Object.keys(expected).sort(), 'one schema per module index');
+for (const [name, tables] of Object.entries(expected)) {
+  const shape = tablesOf(schema[name]);
+  assert.deepEqual(shape.names, tables, `${name} holds only its module's tables`);
+  // 2. No index survives that the query planner cannot use.
+  assert.equal(shape.indexes, 0, `${name} should carry no unusable indexes`);
+  // 3. search_text exists only where the LIKE lookup reads it.
+  const searched = tables.filter((t) => t === 'inventory_chemicals');
+  assert.deepEqual(shape.searchCols, searched, `${name} carries search_text only on searched tables`);
 }
 
-// 3. search_text exists only where it is actually queried.
-{
-  const cols = (db, table) => db.exec(`PRAGMA table_info(${table})`)[0].values.map((r) => r[1]);
-  for (const t of ['inventory_personal', 'inventory_samples']) {
-    assert.ok(cols(common, t).includes('search_text'), `${t} keeps search_text (LIKE lookup reads it)`);
-  }
-  assert.ok(cols(chem, 'inventory_chemicals').includes('search_text'), 'inventory_chemicals keeps search_text');
-  for (const t of ['protocol_index', 'notebook_index', 'paper_index', 'record_index']) {
-    assert.ok(!cols(common, t).includes('search_text'), `${t} must not carry write-only search_text`);
-  }
-}
-
-// 4. record_index carries only what hydration reads, plus its composite PK.
-{
-  const cols = common.exec('PRAGMA table_info(record_index)')[0].values.map((r) => r[1]);
-  assert.deepEqual(cols, ['record_type', 'record_id', 'raw_json'], 'record_index stays minimal');
-}
-
-// 5. The search query still cannot use an index -- if that ever changes, revisit.
-const explain = common.exec(
-  "EXPLAIN QUERY PLAN SELECT id FROM inventory_personal WHERE lower(search_text) LIKE '%x%' LIMIT 5"
+const chemicals = new SQL.Database();
+applyChemicalSqliteSchema(chemicals);
+// 4. The search query still cannot use an index -- if that ever changes, revisit.
+const explain = chemicals.exec(
+  "EXPLAIN QUERY PLAN SELECT id FROM inventory_chemicals WHERE lower(search_text) LIKE '%x%' LIMIT 5"
 )[0].values.flat().join(' ');
 assert.match(explain, /SCAN/, 'search_text LIKE is a scan; an index here would be dead weight');
-common.close();
-chem.close();
+chemicals.close();
 
-// 6. A chemical present only in the chemicals bundle must be findable.
+// 5. A chemical present only in the chemicals bundle must be findable.
 const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'sqlite-shape-'));
 const chemPath = path.join(dir, 'chemicals.sqlite');
-const commonPath = path.join(dir, 'common.sqlite');
 {
   const db = new SQL.Database();
   applyChemicalSqliteSchema(db);
@@ -73,24 +62,16 @@ const commonPath = path.join(dir, 'common.sqlite');
   await fs.writeFile(chemPath, Buffer.from(db.export()));
   db.close();
 }
-{
-  const db = new SQL.Database();
-  applyCommonSqliteSchema(db);
-  await fs.writeFile(commonPath, Buffer.from(db.export()));
-  db.close();
-}
 
 const support = createAgentLookupSupport({});
 const runtime = createAgentInventoryLookupRuntime({
   withSqliteDatabase: support.withSqliteDatabase,
   readSqliteTables: support.readSqliteTables,
   collectLikeMatches: support.collectLikeMatches,
-  querySqlRows: support.querySqlRows,
   rankRows: support.rankRows
 });
 
 const result = await runtime.searchInventorySqlite({
-  sqlitePath: commonPath,
   chemicalsSqlitePath: chemPath,
   searchTerms: ['tris'],
   limit: 5

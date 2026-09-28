@@ -11,13 +11,11 @@ import {
 } from '../../../lib/inventory-settings.js';
 import {
   buildLocationFromInventoryLink,
-  getContainerWellName
-} from '../../sample-registry/inventory-links.js';
-import {
+  buildNotebookSampleCapture,
+  getContainerWellName,
   makeDefaultCode,
   normalizeCode
-} from '../../sample-registry/sample-utils.js';
-import { buildNotebookSampleCapture } from '../../sample-registry/notebook-capture-record.js';
+} from '../../sample-registry/public-api.js';
 import { asArray } from '../../../lib/normalize.js';
 
 function listContainers(inventory = {}) {

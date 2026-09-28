@@ -45,22 +45,42 @@ export function updateTopbarTimer({
   topbarTimer.classList.toggle('is-paused', timer.isPaused);
 }
 
+function clockLabel(ms) {
+  return new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
 function endLabel(timer) {
+  return timer.isPaused ? 'Paused' : `Ends ${clockLabel(timer.endAtMs)}`;
+}
+
+function stateLabel(timer) {
   if (timer.isPaused) {
     return 'Paused';
   }
-  return `Ends ${new Date(timer.endAtMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+  return timer.isWarn ? 'Ending soon' : 'Running';
+}
+
+// Chips read at a glance: "5m", "1h", "1h 30m".
+export function formatPresetDuration(minutes) {
+  const total = Math.max(1, Math.round(Number(minutes) || 0));
+  const hours = Math.floor(total / 60);
+  const rest = total % 60;
+  if (!hours) {
+    return `${rest}m`;
+  }
+  return rest ? `${hours}h ${rest}m` : `${hours}h`;
 }
 
 export function renderActiveTimer(timer, index, safeText) {
   const label = `${timer.isPaused ? 'Resume' : 'Pause'} timer ${timer.name}`;
+  const warn = timer.isWarn && !timer.isPaused;
   return `
-    <article class="home-timer-row${index === 0 ? ' is-featured' : ''}" data-dashboard-timer-index="${timer.sourceIndex}">
+    <article class="home-timer-row${index === 0 ? ' is-featured' : ''}${timer.isPaused ? ' is-paused' : ''}" data-dashboard-timer-index="${timer.sourceIndex}">
       <div class="home-timer-copy">
         <div class="home-timer-name">${safeText(timer.name)}</div>
-        <span class="home-timer-state">${timer.isPaused ? 'Paused' : 'Running'}</span>
+        <span class="home-timer-state${warn ? ' is-warn' : ''}">${stateLabel(timer)}</span>
       </div>
-      <span class="home-timer-count${timer.isWarn ? ' is-warn' : ''}">${formatCountdown(timer.remainingMs)}</span>
+      <span class="home-timer-count${warn ? ' is-warn' : ''}">${formatCountdown(timer.remainingMs)}</span>
       <button type="button" class="home-timer-btn" data-dashboard-toggle-active-timer="${timer.sourceIndex}" aria-label="${safeText(label)}" title="${safeText(label)}">
         <svg viewBox="0 0 24 24" aria-hidden="true">${timer.isPaused
           ? '<path d="M8 5 19 12 8 19Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>'
@@ -68,7 +88,7 @@ export function renderActiveTimer(timer, index, safeText) {
         </svg>
       </button>
       <div class="home-timer-track" role="progressbar" aria-label="Elapsed time for ${safeText(timer.name)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(timer.pct)}">
-        <div class="home-timer-fill${timer.isWarn ? ' is-warn' : ''}" style="width: ${timer.pct.toFixed(1)}%"></div>
+        <div class="home-timer-fill${warn ? ' is-warn' : ''}" style="width: ${timer.pct.toFixed(1)}%"></div>
       </div>
       <div class="home-timer-meta"><span>${timer.durationMinutes} min total</span><span>${safeText(endLabel(timer))}</span></div>
     </article>`;
@@ -76,21 +96,34 @@ export function renderActiveTimer(timer, index, safeText) {
 
 // Ticks update existing nodes so keyboard focus and pointer targets stay stable.
 export function updateActiveTimer(row, timer) {
+  const warn = timer.isWarn && !timer.isPaused;
   const count = row.querySelector('.home-timer-count');
   count.textContent = formatCountdown(timer.remainingMs);
-  count.classList.toggle('is-warn', timer.isWarn && !timer.isPaused);
+  count.classList.toggle('is-warn', warn);
   const fill = row.querySelector('.home-timer-fill');
   fill.style.width = `${timer.pct.toFixed(1)}%`;
-  fill.classList.toggle('is-warn', timer.isWarn && !timer.isPaused);
+  fill.classList.toggle('is-warn', warn);
   row.querySelector('.home-timer-track').setAttribute('aria-valuenow', String(Math.round(timer.pct)));
+  const state = row.querySelector('.home-timer-state');
+  if (state) {
+    state.textContent = stateLabel(timer);
+    state.classList.toggle('is-warn', warn);
+  }
 }
 
 export function renderFinishedTimer(timer, safeText) {
   return `
     <article class="home-row home-timer-finished-row">
-      <div class="home-row-copy"><div class="home-row-name">${safeText(timer.name)}</div><div class="home-row-meta">${timer.durationMinutes} min · Complete</div></div>
-      <button type="button" class="home-row-action" data-dashboard-remove-active-timer="${timer.sourceIndex}" aria-label="Dismiss finished timer ${safeText(timer.name)}" title="Dismiss finished timer">
+      <svg class="home-timer-finished-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+      <div class="home-row-copy"><span class="home-row-name">${safeText(timer.name)}</span><span class="home-row-meta">${timer.durationMinutes} min · finished ${clockLabel(timer.endAtMs)}</span></div>
+      <button type="button" class="home-row-action" data-dashboard-remove-active-timer="${timer.sourceIndex}" aria-label="Dismiss finished timer ${safeText(timer.name)}" title="Dismiss">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
       </button>
     </article>`;
+}
+
+export function renderTimerPreset(template, index, safeText) {
+  const name = safeText(template.name);
+  const duration = formatPresetDuration(template.durationMinutes);
+  return `<button type="button" class="home-timer-preset" data-dashboard-start-timer-template="${index}" aria-label="Start ${name} timer, ${duration}" title="Start ${name} timer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"></path></svg><span>${name}</span><span class="home-timer-preset-duration">${duration}</span></button>`;
 }

@@ -2,6 +2,7 @@
 
 const { Buffer } = require('node:buffer');
 const fsPromises = require('node:fs/promises');
+const { readResponseText } = require('../../../lib/web-text.js');
 
 const {
   ensureObject,
@@ -26,16 +27,6 @@ function createPaperContextSourceFetchers({
       throw new Error('Paper context loading requires fetch support.');
     }
     return fetchImpl;
-  }
-
-  async function readResponseText(response) {
-    if (typeof response?.text === 'function') {
-      return String(await response.text());
-    }
-    if (typeof response?.json === 'function') {
-      return JSON.stringify(await response.json());
-    }
-    return '';
   }
 
   async function fetchJson(url, options = {}) {

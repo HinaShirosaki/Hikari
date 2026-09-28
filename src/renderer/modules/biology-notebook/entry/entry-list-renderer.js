@@ -6,6 +6,7 @@ import {
   resolveEntryExperimentName
 } from './entry-helpers.js';
 import {
+  attachRailHoverCard,
   createFolderTreeState,
   renderFolderTreeLeaf,
   renderFolderTreeNode
@@ -22,42 +23,10 @@ export function createEntryListRenderer({
   getActiveProjectDashboardId = () => ''
 } = {}) {
   const folderTree = createFolderTreeState({ defaultExpanded: true });
-  let reasonBox, hideTimer;
-  function hideReason() { clearTimeout(hideTimer); if (reasonBox) reasonBox.hidden = true; }
-  function showReason(event) {
-    const row = event.target?.closest?.('[data-notebook-entry-id]');
-    if (!row || !listEl.contains(row)) return;
-    const name = row.querySelector('.biology-notebook-page-name');
-    const clippedName = name && name.scrollWidth > name.clientWidth ? name.textContent : '';
-    const text = [clippedName, row.dataset.suggestionReason].filter(Boolean).join('\n\n');
-    if (!text) return;
-    clearTimeout(hideTimer);
-    const doc = listEl.ownerDocument;
-    if (!reasonBox) {
-      reasonBox = doc.createElement('div');
-      reasonBox.className = 'biology-notebook-suggestion-reason';
-      reasonBox.setAttribute('role', 'tooltip');
-      reasonBox.addEventListener('mouseleave', hideReason);
-      reasonBox.addEventListener('mouseenter', () => clearTimeout(hideTimer));
-      doc.body.append(reasonBox);
-    }
-    reasonBox.textContent = text;
-    reasonBox.hidden = false;
-    const bounds = row.getBoundingClientRect();
-    const view = doc.defaultView;
-    const gap = 8;
-    const box = reasonBox.getBoundingClientRect();
-    reasonBox.style.left = `${Math.max(gap, Math.min(bounds.right + gap, view.innerWidth - box.width - gap))}px`;
-    reasonBox.style.top = `${Math.max(gap, Math.min(bounds.top, view.innerHeight - box.height - gap))}px`;
-  }
-  listEl?.addEventListener?.('mouseover', showReason);
-  listEl?.addEventListener?.('focusin', showReason);
-  listEl?.addEventListener?.('mouseout', event => {
-    if (!reasonBox?.contains(event.relatedTarget) && !event.target?.closest?.('[data-notebook-entry-id]')?.contains(event.relatedTarget)) hideTimer = setTimeout(hideReason, 150);
+  const hideReason = attachRailHoverCard(listEl, {
+    rowSelector: '[data-notebook-entry-id]',
+    getText: (row, clippedName) => [clippedName, row.dataset.suggestionReason].filter(Boolean).join('\n\n')
   });
-  listEl?.addEventListener?.('focusout', hideReason);
-  listEl?.addEventListener?.('scroll', hideReason);
-  listEl?.ownerDocument?.addEventListener('keydown', event => { if (event.key === 'Escape') hideReason(); });
 
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);

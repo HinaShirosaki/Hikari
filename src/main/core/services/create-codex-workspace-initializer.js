@@ -3,6 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { asArray, ensureObject } = require('../../lib/normalize.js');
+const { isFilesystemRoot } = require('../../lib/path-safety.js');
 const {
   releaseOfficialMcpSkillsForWorkspace
 } = require('../../agent/codex-agent/official-mcp-skills.js');
@@ -11,7 +12,7 @@ const {
 } = require('../../lib/codex-cli-provider/runtime-home.js');
 const {
   sanitizeProjectMemoryFolderName
-} = require('../../storage/storage-memory.js');
+} = require('../../project-memory');
 
 function defaultCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -26,19 +27,6 @@ function parseJsonObject(value = '') {
     return ensureObject(JSON.parse(String(value || '')));
   } catch {
     return {};
-  }
-}
-
-function isFilesystemRoot(candidatePath = '') {
-  const value = String(candidatePath || '').trim();
-  if (!value) {
-    return false;
-  }
-  try {
-    const resolved = path.resolve(value);
-    return resolved === path.parse(resolved).root;
-  } catch {
-    return false;
   }
 }
 

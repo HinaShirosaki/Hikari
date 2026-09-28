@@ -23,14 +23,7 @@ const PDF_SELECTION_SEARCH_STOP_WORDS = new Set([
   'with'
 ]);
 
-export function escapeHtml(value = '') {
-  return String(value || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
+export { escapeHtml };
 
 export function buildHighlightCommentPopoverMarkup(comment = {}) {
   const author = String(comment.author || 'Local user').trim() || 'Local user';
@@ -229,3 +222,4 @@ export function buildPdfSelectionSearchResultFromMatches(matches = [], currentPa
     targetMatchIndex
   };
 }
+import { escapeHtml } from '../../../lib/html.js';

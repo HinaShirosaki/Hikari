@@ -1,4 +1,4 @@
-import { cleanText, normalizeSequenceText } from '../shared.js';
+import { cleanText, formatDuration, formatPrimerRole, normalizeSequenceText } from '../shared.js';
 import { asArray } from '../../../lib/normalize.js';
 
 function fallbackCreateId(prefix = 'id') {
@@ -17,24 +17,6 @@ function formatNumber(value, digits = 1) {
 
 function formatBp(value) {
   return `${Math.max(0, Math.round(Number(value) || 0)).toLocaleString()} bp`;
-}
-
-function formatDuration(totalSeconds) {
-  const seconds = Math.max(0, Math.round(Number(totalSeconds) || 0));
-  if (seconds < 60) {
-    return `${seconds} s`;
-  }
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return remainder ? `${minutes} min ${remainder} s` : `${minutes} min`;
-}
-
-function formatPrimerRole(role) {
-  return String(role || '')
-    .trim()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
 }
 
 function formatStrategy(strategy) {

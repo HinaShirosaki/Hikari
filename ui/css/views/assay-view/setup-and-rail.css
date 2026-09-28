@@ -108,7 +108,7 @@
 
 .assay-results-actions > .assay-results-save-icon-btn.primary-btn:hover,
 .assay-results-actions > .assay-results-save-icon-btn.primary-btn:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+  background: var(--theme-accent-hover);
 }
 
 .assay-header-row {

@@ -20,6 +20,7 @@ export function initProtocolManagement({
   createId,
   safeText,
   onProtocolsChanged,
+  logNotebookPageEvent,
   selectionInsightsController = null,
   __globals = {}
 }) {
@@ -40,7 +41,6 @@ export function initProtocolManagement({
   const localState = {
     currentProtocolDraft: draftHelpers.createEmptyDraft(),
     activeMenuProtocolId: '',
-    activePlaceholderPreset: '',
     protocolSortField: 'time',
     protocolSortOrder: 'asc',
     activeProtocolId: '',
@@ -120,8 +120,7 @@ export function initProtocolManagement({
     return renderProtocolPlaceholderPresetButtons(
       ui.protocolPlaceholderPresets,
       state.settings,
-      safeText,
-      localState.activePlaceholderPreset
+      safeText
     );
   }
 
@@ -158,13 +157,13 @@ export function initProtocolManagement({
     state,
     persist,
     onProtocolsChanged,
+    logNotebookPageEvent,
     selectionInsightsController
   });
 
 
   const {
     addInteractivePlaceholderToken,
-    setActivePlaceholderPreset,
     onProtocolSubmit,
     addDraftFromExtractedMethod
   } = createProtocolEditorActions({
@@ -315,12 +314,11 @@ export function initProtocolManagement({
   ui.protocolStepsInput?.addEventListener('focus', () => editorHelpers.ensureLeadingBullet(ui.protocolStepsInput));
   ui.protocolStepsInput?.addEventListener('keydown', editorHelpers.onBulletTextareaKeydown);
   ui.protocolStepsInput?.addEventListener('blur', () => editorHelpers.normalizeBulletTextarea(ui.protocolStepsInput));
-  ui.addPlaceholderBtn?.addEventListener('click', addInteractivePlaceholderToken);
+  ui.addPlaceholderBtn?.addEventListener('click', () => addInteractivePlaceholderToken());
   ui.protocolPlaceholderPresets?.addEventListener('click', (event) => {
     const button = event.target?.closest?.('[data-protocol-placeholder-preset]') || event.target;
     const placeholder = String(button?.dataset?.protocolPlaceholderPreset || '').trim();
     if (placeholder) {
-      setActivePlaceholderPreset(placeholder);
       addInteractivePlaceholderToken(placeholder);
     }
   });

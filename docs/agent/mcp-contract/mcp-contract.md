@@ -384,7 +384,7 @@ Input schema:
 }
 ```
 
-`pending_values` keys must exactly match the generated `placeholder_key` form `<step-id>:<placeholder-id>`; display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
+`pending_values` keys must exactly match the generated `placeholder_key` (the placeholder id); display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
 
 ### `ask_user`
 

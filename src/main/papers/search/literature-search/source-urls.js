@@ -2,6 +2,12 @@
 
 const { normalizePaperDoi } = require('../literature-candidates.js');
 const { LITERATURE_SOURCES } = require('./constants.js');
+const {
+  decodeXmlEntities,
+  extractSourceDomain,
+  safeUrl,
+  stripHtml
+} = require('../../../lib/web-text.js');
 
 function toFiniteInteger(value, fallback = 0) {
   const parsed = Number(value);
@@ -29,49 +35,6 @@ function firstPositiveInteger(values = [], fallback = 0) {
     }
   }
   return fallback;
-}
-
-function decodeXmlEntities(value) {
-  return String(value || '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, '\'')
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_match, code) => {
-      const parsed = Number(code);
-      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
-    });
-}
-
-function stripHtml(value) {
-  return decodeXmlEntities(String(value || '').replace(/<[^>]+>/g, ' '))
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function safeUrl(value, baseUrl = '') {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  try {
-    return new URL(raw, baseUrl || undefined).toString();
-  } catch {
-    return '';
-  }
-}
-
-function extractSourceDomain(url) {
-  const normalized = safeUrl(url);
-  if (!normalized) {
-    return '';
-  }
-  try {
-    return String(new URL(normalized).hostname || '').toLowerCase();
-  } catch {
-    return '';
-  }
 }
 
 function normalizeSource(value) {

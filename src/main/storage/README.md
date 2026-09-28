@@ -25,9 +25,9 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `storage-utils.js`
   - Generic helpers such as `cleanText`, `ensureObject`, `asArray`, JSON parsing, file reads, and shared SQL.js loading.
 - `storage-sql-schema.js`
-  - SQLite schema creation via `applySqliteSchema`.
+  - The chemicals index schema, the only save-time SQLite bundle.
 - `storage-sql-write.js`
-  - SQLite bundle index writers for inventory, protocols, notebook rows, record rows, and metadata.
+  - `writeChemicalSqliteBundleIndex`, rebuilding the chemicals index from the snapshot.
 - `storage-sql-read.js`
   - SQLite read helpers and row-to-snapshot fallback readers.
 - `storage-sidecars.js`

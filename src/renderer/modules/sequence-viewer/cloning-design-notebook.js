@@ -12,6 +12,8 @@ export function createSequenceViewerCloningDesignNotebookPage({
   state,
   persist,
   createId,
+  ensureProjectRecord,
+  saveProtocolRecord,
   onNotebookEntriesChanged,
   entryId: requestedEntryId = '',
   source = {},
@@ -23,12 +25,12 @@ export function createSequenceViewerCloningDesignNotebookPage({
   }
   const nowIso = new Date().toISOString();
   const sourceKey = buildNotebookSourceKey(source, record);
-  const project = ensureProject(state, createId, nowIso);
+  const project = ensureProject(ensureProjectRecord, createId, nowIso);
   const pcrPrograms = buildSequenceViewerPcrPrograms({ displayPlan, source, record });
   if (!pcrPrograms.length) {
     return null;
   }
-  const protocol = ensureProtocol(state, pcrPrograms, nowIso);
+  const protocol = ensureProtocol(saveProtocolRecord, pcrPrograms, nowIso);
   state.notebookEntries = asArray(state.notebookEntries);
   const matchingEntry = state.notebookEntries.find((candidate) => (
     cleanText(candidate?.sequenceViewerCloningDesign?.source, 80) === CLONING_NOTEBOOK_SOURCE

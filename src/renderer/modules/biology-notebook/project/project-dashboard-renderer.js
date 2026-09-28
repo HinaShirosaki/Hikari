@@ -1,4 +1,4 @@
-import { buildWorkflowExecutionLayout, computeEntryProgress } from '../../workflow/execution.js';
+import { buildWorkflowExecutionLayout, computeEntryProgress } from '../../workflow/public-api.js';
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { summarizeNotebookResultTables } from '../../../lib/notebook-result-tables.js';
 import { createDashboardRecords } from './dashboard-records.js';
@@ -164,81 +164,77 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         <div class="project-panel-head project-paper-finder-head">
           <div class="project-panel-copy">
             <h3 id="project-paper-finder-heading">Paper Finder</h3>
+            <span class="project-paper-finder-state" data-paper-finder-state data-state="none">Not scheduled</span>
           </div>
-          <span class="project-paper-finder-state" data-paper-finder-state>Not scheduled</span>
-        </div>
-        <form class="project-paper-finder-form" data-paper-finder-form data-project-id="${escapeText(project?.id || '')}">
-          <div class="project-paper-finder-fields">
-            <fieldset class="project-paper-finder-schedule">
-              <legend>Schedule</legend>
-              <div class="project-paper-finder-schedule-grid">
-                <label class="project-paper-finder-frequency">
-                  <span>Every</span>
-                  <span class="project-paper-finder-frequency-controls">
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value="1"
-                      aria-label="Paper finding frequency"
-                      data-paper-finder-frequency-value
-                      required
-                    />
-                    <select aria-label="Paper finding frequency unit" data-paper-finder-frequency-unit>
-                      <option value="day">day</option>
-                      <option value="week" selected>week</option>
-                      <option value="month">month</option>
-                    </select>
-                  </span>
-                </label>
-                <label class="project-paper-finder-calendar-field" data-paper-finder-weekday-field>
-                  <span>On</span>
-                  <select aria-label="Paper finding weekday" data-paper-finder-weekday>
-                    <option value="1" selected>Monday</option>
-                    <option value="2">Tuesday</option>
-                    <option value="3">Wednesday</option>
-                    <option value="4">Thursday</option>
-                    <option value="5">Friday</option>
-                    <option value="6">Saturday</option>
-                    <option value="0">Sunday</option>
-                  </select>
-                </label>
-                <label class="project-paper-finder-calendar-field" data-paper-finder-monthday-field hidden>
-                  <span>On day</span>
-                  <select aria-label="Paper finding day of month" data-paper-finder-monthday>
-                    ${monthDayOptions}
-                  </select>
-                </label>
-                <label class="project-paper-finder-calendar-field">
-                  <span>At</span>
-                  <input
-                    type="time"
-                    value="09:00"
-                    aria-label="Paper finding time"
-                    data-paper-finder-time
-                    required
-                  />
-                </label>
-              </div>
-              <span class="small-note project-paper-finder-timezone" data-paper-finder-timezone>Local time</span>
-            </fieldset>
-            <label class="project-paper-finder-requirements">
-              <span>Requirements <span class="small-note">(optional)</span></span>
-              <textarea
-                rows="3"
-                maxlength="12000"
-                data-paper-finder-requirements
-                placeholder="e.g. recent primary research on delivery efficiency and off-target effects"
-              ></textarea>
-            </label>
-          </div>
-          <div class="project-paper-finder-actions">
-            <button type="submit" class="primary-btn" data-paper-finder-save>Schedule</button>
+          <div class="project-paper-finder-task-actions">
             <button type="button" class="ghost-btn" data-paper-finder-run hidden>Run now</button>
             <button type="button" class="ghost-btn" data-paper-finder-toggle hidden>Pause</button>
             <button type="button" class="ghost-btn danger-btn" data-paper-finder-remove hidden>Remove</button>
-            <span class="small-note project-paper-finder-status" role="status" aria-live="polite" data-paper-finder-status></span>
           </div>
+        </div>
+        <form class="project-paper-finder-form" data-paper-finder-form data-project-id="${escapeText(project?.id || '')}">
+          <label class="project-paper-finder-requirements">
+            <span>Requirements <span class="small-note">(optional)</span></span>
+            <textarea
+              rows="2"
+              maxlength="12000"
+              data-paper-finder-requirements
+              placeholder="e.g. recent primary research on delivery efficiency and off-target effects"
+            ></textarea>
+          </label>
+          <fieldset class="project-paper-finder-schedule">
+            <legend class="sr-only">Schedule</legend>
+            <div class="project-paper-finder-schedule-row">
+              <label class="project-paper-finder-frequency">
+                <span>Every</span>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                  aria-label="Paper finding frequency"
+                  data-paper-finder-frequency-value
+                  required
+                />
+                <select aria-label="Paper finding frequency unit" data-paper-finder-frequency-unit>
+                  <option value="day">day</option>
+                  <option value="week" selected>week</option>
+                  <option value="month">month</option>
+                </select>
+              </label>
+              <label class="project-paper-finder-calendar-field" data-paper-finder-weekday-field>
+                <span>on</span>
+                <select aria-label="Paper finding weekday" data-paper-finder-weekday>
+                  <option value="1" selected>Monday</option>
+                  <option value="2">Tuesday</option>
+                  <option value="3">Wednesday</option>
+                  <option value="4">Thursday</option>
+                  <option value="5">Friday</option>
+                  <option value="6">Saturday</option>
+                  <option value="0">Sunday</option>
+                </select>
+              </label>
+              <label class="project-paper-finder-calendar-field" data-paper-finder-monthday-field hidden>
+                <span>on day</span>
+                <select aria-label="Paper finding day of month" data-paper-finder-monthday>
+                  ${monthDayOptions}
+                </select>
+              </label>
+              <label class="project-paper-finder-calendar-field">
+                <span>at</span>
+                <input
+                  type="time"
+                  value="09:00"
+                  aria-label="Paper finding time"
+                  data-paper-finder-time
+                  required
+                />
+              </label>
+              <span class="small-note project-paper-finder-timezone" data-paper-finder-timezone>Local time</span>
+              <button type="submit" class="primary-btn project-paper-finder-save" data-paper-finder-save>Schedule</button>
+            </div>
+          </fieldset>
+          <span class="small-note project-paper-finder-status" role="status" aria-live="polite" data-paper-finder-status></span>
         </form>
         <div class="project-paper-finder-results" data-paper-finder-results hidden></div>
       </section>

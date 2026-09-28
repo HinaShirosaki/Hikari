@@ -349,17 +349,20 @@ test('[P1] normalizeState preserves supported llm reasoning effort values', () =
   });
   assert.equal(normalized.settings.llm.reasoningEffort, 'xhigh');
 });
-test('[P1] normalizeState clears unsupported llm reasoning effort values for the selected model', () => {
+test('[P1] normalizeState keeps the saved model and reasoning effort; Codex decides what a model supports', () => {
+  // No model list ships with Hikari. Settings re-checks the effort once Codex lists
+  // its models, and exec args fall back to the model's default effort.
   const normalized = shared.normalizeState({
     settings: {
       llm: {
         provider: 'codex',
         model: 'gpt-5.1-codex-mini',
-        reasoningEffort: 'xhigh'
+        reasoningEffort: ' XHigh '
       }
     }
   });
-  assert.equal(normalized.settings.llm.reasoningEffort, '');
+  assert.equal(normalized.settings.llm.model, 'gpt-5.1-codex-mini');
+  assert.equal(normalized.settings.llm.reasoningEffort, 'xhigh');
 });
 test('[P1] normalizeState does not mutate defaultState arrays', () => {
   const normalized = shared.normalizeState({});

@@ -24,9 +24,42 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
       assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
       assert.equal(mainSource.includes('CHEMICALS_DATA_FILE_PATH'), false);
-      assert.match(importSource, /isSqliteBundleCandidateName/);
-      assert.match(importSource, /getBundlePathsFromSqlitePath/);
-      assert.match(importSource, /kind:\s*'sqlite_only_bundle'/);
+      // Chemicals load from their own index, not from a loose *.index.sqlite bundle scan.
+      assert.match(hydrationSource, /readChemicalIndex\(bundlePaths\.chemicalsSqlitePath\)/);
+      assert.equal(importSource.includes('sqlite_only_bundle'), false);
+    });
+    test('storage root import shows its alerts as error notices', async () => {
+      const reported = [];
+      const windowStub = {
+        hikariApi: { reportError: (event) => reported.push(event) },
+        setTimeout: () => 0,
+        clearTimeout: () => {}
+      };
+      const documentStub = {
+        createElement: () => ({ setAttribute: () => {}, style: {}, hidden: true }),
+        querySelector: () => null,
+        body: { appendChild: () => {} }
+      };
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: windowStub, document: documentStub }
+      );
+      const alert = 'The chemical inventory file could not be read, so it was moved aside.';
+      const controller = createStorageImportController({
+        state: structuredClone(shared.defaultState),
+        persist: () => {},
+        persistState: () => {},
+        normalizeStateStoragePaths: () => {},
+        windowObject: {
+          hikariApi: {
+            ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
+            importStorageRoot: async () => ({ ok: true, statePatch: {}, alerts: [alert] })
+          }
+        }
+      });
+      const result = await controller.runStorageRootImport('/root', {});
+      assert.equal(result.ok, true);
+      assert.deepEqual(JSON.parse(JSON.stringify(reported)), [{ source: 'renderer:notice', message: alert }]);
     });
     test('storage root refresh clears cached module data before importing a changed root', async () => {
       const { createStorageImportController } = loadEsmStyleModule(
@@ -259,7 +292,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
     test('settings split constructs extracted callbacks before startup binds them', () => {
       const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');
       const codexControllerIndex = settingsSource.indexOf('} = createCodexAccountSettings({');
-      const codexListenerIndex = settingsSource.indexOf("llmForm.addEventListener('submit', onSaveLlmSettings)");
+      const codexListenerIndex = settingsSource.indexOf('formPresentation.bind(llmForm, onSaveLlmSettings)');
       const journalControllerIndex = settingsSource.indexOf('} = createPreferredJournalSettings({');
       const journalListenerIndex = settingsSource.indexOf("preferredJournalForm?.addEventListener('submit', onSavePreferredJournal)");
 
@@ -271,10 +304,9 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
-      const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
+      const agentChatRequestSource = fs.readFileSync(agentPath('runtime', 'agent-chat-request.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'controller-utils', 'tracing.js'), 'utf8');
       assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
       assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
@@ -282,8 +314,8 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
       assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
-      assert.match(agentChatHandlerSource, /type: 'agent-chat-request'/);
-      assert.match(agentChatHandlerSource, /type: 'agent-chat-result'/);
-      assert.match(agentChatHandlerSource, /type: 'agent-chat-error'/);
+      assert.match(agentChatRequestSource, /type: 'agent-chat-request'/);
+      assert.match(agentChatRequestSource, /type: 'agent-chat-result'/);
+      assert.match(agentChatRequestSource, /type: 'agent-chat-error'/);
     });
 };

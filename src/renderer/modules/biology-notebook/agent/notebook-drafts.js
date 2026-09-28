@@ -50,22 +50,18 @@ export function normalizeNotebookDraft(rawDraft) {
     return null;
   }
   const placeholderValues = asArray(rawDraft.placeholder_values).map((item) => ({
-    step_id: trimText(item?.step_id, 120),
-    placeholder_id: trimText(item?.placeholder_id, 120),
     placeholder_key: trimText(item?.placeholder_key, 120),
     display: trimText(item?.display, 120),
     value: trimText(item?.value, 260),
     source: trimText(item?.source, 120),
     source_type: trimText(item?.source_type, 80)
-  })).filter((item) => item.step_id && item.placeholder_id && item.value);
+  })).filter((item) => item.placeholder_key && item.value);
 
   const unresolvedPlaceholders = asArray(rawDraft.unresolved_placeholders).map((item) => ({
-    step_id: trimText(item?.step_id, 120),
-    placeholder_id: trimText(item?.placeholder_id, 120),
     placeholder_key: trimText(item?.placeholder_key, 120),
     display: trimText(item?.display, 120),
     reason: trimText(item?.reason, 120)
-  })).filter((item) => item.step_id && item.placeholder_id);
+  })).filter((item) => item.placeholder_key);
 
   const entryTemplate = rawDraft.entry_template && typeof rawDraft.entry_template === 'object'
     ? rawDraft.entry_template

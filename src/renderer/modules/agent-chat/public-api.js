@@ -1,6 +1,8 @@
 import * as responseModule from './response.js';
 
 export { buildStateSnapshot } from './state-snapshot.js';
+export { initAgentChat } from './index.js';
+export { createScopedAgentChatState } from './scoped-state.js';
 
 export function collectAgentActivityRows(meta) {
   return responseModule.collectAgentActivityRows(meta);

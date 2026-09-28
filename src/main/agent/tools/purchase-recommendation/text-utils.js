@@ -1,6 +1,12 @@
 'use strict';
 
-const { asArray } = require('../../../lib/normalize.js');
+const { createUniqueStrings } = require('../../../lib/value-utils.js');
+const {
+  decodeXmlEntities: decodeHtmlEntities,
+  extractSourceDomain,
+  safeHttpUrl: safeUrl,
+  stripHtml
+} = require('../../../lib/web-text.js');
 
 function cleanText(value) {
   const text = String(value || '');
@@ -21,23 +27,7 @@ function sliceText(value, max = 1200) {
   return `${text.slice(0, Math.max(0, max - 3)).trim()}...`;
 }
 
-function uniqueStrings(values, max = 20) {
-  const seen = new Set();
-  const output = [];
-  asArray(values).forEach((value) => {
-    const normalized = cleanText(value);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || output.length >= max) {
-      return;
-    }
-    seen.add(key);
-    output.push(normalized);
-  });
-  return output;
-}
+const uniqueStrings = createUniqueStrings(cleanText, 0);
 
 function tokenizeSearchText(value) {
   return String(value || '')
@@ -59,53 +49,6 @@ function clampInteger(value, fallback = 6, min = 1, max = 25) {
     return fallback;
   }
   return Math.max(min, Math.min(max, numeric));
-}
-
-function decodeHtmlEntities(value) {
-  return String(value || '')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, '\'')
-    .replace(/&amp;/g, '&')
-    .replace(/&#(\d+);/g, (_match, code) => {
-      const parsed = Number(code);
-      return Number.isFinite(parsed) ? String.fromCharCode(parsed) : '';
-    });
-}
-
-function stripHtml(value) {
-  return decodeHtmlEntities(String(value || '').replace(/<[^>]+>/g, ' '))
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function safeUrl(value, baseUrl = '') {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  try {
-    const parsed = new URL(raw, baseUrl || undefined);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return '';
-    }
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function extractSourceDomain(url) {
-  const normalized = safeUrl(url);
-  if (!normalized) {
-    return '';
-  }
-  try {
-    return String(new URL(normalized).hostname || '').toLowerCase();
-  } catch {
-    return '';
-  }
 }
 
 function hasFiniteNumber(value) {

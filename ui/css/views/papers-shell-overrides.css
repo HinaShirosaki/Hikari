@@ -28,7 +28,7 @@
 
 #papers-view .papers-paper-row.is-active {
   border-color: transparent;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  background: var(--theme-surface-muted);
   padding: 7px var(--space-8);
 }
 

@@ -20,6 +20,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['./paper-analysis.js', 'PAPER_ANALYSIS_MCP_TOOL', 'callPaperAnalysis'],
   ['../../../papers/store/intake/mcp/search-summaries.js', 'SEARCH_SUMMARIES_DEFINITION', 'callSearchSummaries'],
   ['../../../papers/store/intake/mcp/search-experiments.js', 'SEARCH_EXPERIMENTS_DEFINITION', 'callSearchExperiments'],
+  ['../../../papers/store/intake/mcp/query-experiments.js', 'QUERY_EXPERIMENTS_DEFINITION', 'callQueryExperiments'],
   ['../../../papers/store/intake/mcp/list-summaries.js', 'LIST_PROJECT_SUMMARIES_DEFINITION', 'callListProjectSummaries'],
   ['./purchase-recommendation.js', 'PURCHASE_RECOMMENDATION_MCP_TOOL', 'callPurchaseRecommendation'],
   ['./memory.js', 'MEMORY_MCP_TOOL', 'callMemory'],

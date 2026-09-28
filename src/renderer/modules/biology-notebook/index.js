@@ -37,6 +37,7 @@ export function initLabNotebook({
   onProjectsChanged,
   onCreateWorkflowProcess = () => null,
   onOpenWorkflowProcess = () => {},
+  onOpenPaper = null,
   selectionInsightsController = null,
   onActiveNotebookPageChanged = () => {},
   notebookType = 'biology'
@@ -78,6 +79,7 @@ export function initLabNotebook({
     notebookType,
     onProjectsChanged,
     onCreateLinkedAssay,
+    onOpenPaper,
     ...drafts,
     persistActiveEntrySampleLinks: (...args) => persistActiveEntrySampleLinks(...args),
     maybeGenerateNotebookPageName: (...args) => maybeGenerateNotebookPageName(...args),

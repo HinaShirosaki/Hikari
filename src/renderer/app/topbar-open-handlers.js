@@ -72,7 +72,7 @@ export function createTopbarOpenItemHandlers({
       return moduleRegistry.get('personalInventory')?.openSample?.(itemId) === true;
     },
     Chemical: (itemId) => openItemViaDataAttr(views.LAB_COMMON_INVENTORY, 'data-chemical-open', itemId),
-    Assay: (itemId) => openItemViaDataAttr(views.ASSAY, 'data-assay-open-results', itemId),
+    Plate: (itemId) => openItemViaDataAttr(views.ASSAY, 'data-assay-open-results', itemId),
     Project: (itemId) => {
       if (!itemId) {
         return false;

@@ -2,20 +2,13 @@ import {
   clamp,
   normalizeSequenceText,
   normalizeTopology,
+  positiveModulo,
   reverseComplementIupac
 } from './sequence-utils.js';
 
 const ORF_START_CODONS = new Set(['ATG']);
 const ORF_STOP_CODONS = ['TAA', 'TAG', 'TGA'];
 const DEFAULT_MIN_ORF_AA_LENGTH = 75;
-
-function positiveModulo(value, modulo) {
-  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
-    return 0;
-  }
-  const numeric = Number(value) || 0;
-  return ((numeric % modulo) + modulo) % modulo;
-}
 
 function readCircularCodon(sequence, start) {
   const text = String(sequence || '');

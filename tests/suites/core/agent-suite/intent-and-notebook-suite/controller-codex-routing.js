@@ -206,6 +206,17 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
       assert.equal(Object.prototype.hasOwnProperty.call(codexRunInput, 'fallbackDataFilePath'), false);
       assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
       assert.equal(lifecycleStages.includes('controller_intent_only'), false);
+
+      // No model chosen: the resolved static default must not become the configured
+      // model, or a fresh machine sends a retired `-m gpt-5.4` before Codex has a catalog.
+      await controller.runAgentControllerCore({
+        message: 'List my sequences.',
+        llm: { provider: 'codex', model: '' }
+      }, {
+        requestId: 'req-codex-agent-default-model',
+        lifecycleRecorder: { requestId: 'req-codex-agent-default-model', events: [] }
+      });
+      assert.equal(setModelValue, '');
     });
     test('Codex-only controller refuses API agent routing', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));

@@ -15,8 +15,7 @@ const {
 } = require('../paper-knowledge-paths.js');
 const {
   looksLikePdfBuffer,
-  sha256Buffer,
-  writeJsonFile
+  sha256Buffer
 } = require('../paper-knowledge-store.js');
 const { FIGURE_STAGING_FOLDER_NAME, normalizeMarkdown } = require('./helpers.js');
 
@@ -26,7 +25,6 @@ function createPaperIngest({
   cleanText,
   now,
   pdfTextExtractionRuntime,
-  paperWikiChunkerRuntime,
   runPaperIntake,
   reconcileFiguresDir,
   normalizeMetadata,
@@ -176,20 +174,11 @@ function createPaperIngest({
     }
 
     const nowIso = now();
-    const indexResult = await upsertKnowledgeIndex({
-      paths,
-      metadata,
-      filePath: resolvedFilePath,
-      extractionStatus,
-      wikiStatus,
-      nowIso
-    });
     const figuresRelativeDir = figureDescriptors.length
       ? buildRelativePath(resolvedStoragePath, paths.figures_path)
       : '';
     const meta = {
       version: 1,
-      paper_id: indexResult.paper_id,
       title: metadata.title,
       doi: metadata.doi,
       authors: metadata.authors,
@@ -224,7 +213,9 @@ function createPaperIngest({
       error: cleanText(markdownResult?.error || extraction?.error, 1200),
       warning: cleanText(markdownResult?.warning, 1200)
     };
-    await writeJsonFile(paths.meta_path, meta);
+    const indexResult = await upsertKnowledgeIndex({
+      paths, metadata, meta, filePath: resolvedFilePath, nowIso
+    });
 
     const paperIntake = wikiStatus === 'ready'
       ? await runPaperIntake({
@@ -234,17 +225,6 @@ function createPaperIngest({
         metadata
       })
       : null;
-
-    let chunkResult = null;
-    if (wikiStatus === 'ready' && paperWikiChunkerRuntime && typeof paperWikiChunkerRuntime.chunkPaperMarkdown === 'function') {
-      chunkResult = await paperWikiChunkerRuntime.chunkPaperMarkdown({
-        storage_path: resolvedStoragePath,
-        paper_id: indexResult.paper_id
-      }).catch((error) => ({
-        ok: false,
-        error: cleanText(error?.message || error, 1200) || 'Wiki chunking failed.'
-      }));
-    }
 
     return {
       ok: wikiStatus === 'ready',
@@ -271,9 +251,6 @@ function createPaperIngest({
       figures: meta.figures,
       extraction_status: extractionStatus,
       wiki_generation_method: markdownResult?.method || '',
-      wiki_chunk_status: chunkResult?.ok === true ? 'ready' : (chunkResult ? 'failed' : 'skipped'),
-      wiki_chunk_count: Number.isFinite(chunkResult?.chunk_count) ? chunkResult.chunk_count : 0,
-      wiki_chunk_error: cleanText(chunkResult?.error, 1200),
       paper_intake: paperIntake,
       paper_intake_status: paperIntake?.status || (wikiStatus === 'ready' ? 'skipped' : ''),
       paper_intake_error: cleanText(paperIntake?.error, 1200),

@@ -34,7 +34,6 @@ const { createPaperAnalysisRuntime } = require('../../papers/analysis/agent-pape
 const { createPaperContextLoaderRuntime } = require('../../papers/retrieve/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../../papers/download/agent-paper-download.js');
 const { createPaperKnowledgeDatabaseRuntime } = require('../../papers/store/agent-paper-knowledge-database.js');
-const { createPaperWikiChunkerRuntime } = require('../../papers/retrieve/agent-paper-wiki-chunker.js');
 const { createPaperWikiSearchRuntime } = require('../../papers/retrieve/agent-paper-wiki-search.js');
 const { createPdfTextExtractionRuntime } = require('../../papers/parse/agent-pdf-text-extraction.js');
 const { createProtocolMatchingRuntime } = require('../../agent/tools/agent-protocol-matching.js');
@@ -49,7 +48,7 @@ const {
   createDirectLlmModuleRegistry,
   registerDefaultDirectLlmModules
 } = require('../../lib/llm/direct-llm-module-registry.js');
-const { asArray, createUniqueStrings } = require('../../data/value-utils.js');
+const { asArray, createUniqueStrings } = require('../../lib/value-utils.js');
 const { STORAGE } = require('../../../shared/ipc/channels');
 
 function createMainAgentServices(deps = {}) {
@@ -293,7 +292,7 @@ function createMainAgentServices(deps = {}) {
   const protocolGenerationRuntime = createProtocolGenerationRuntime({
     ...sharedAgentLlmDeps
   });
-  function emitProtocolSaved(payload = {}) {
+  function broadcastToWindows(channel, payload = {}) {
     const BrowserWindow = deps.BrowserWindow || deps.electron?.BrowserWindow || null;
     if (!BrowserWindow || typeof BrowserWindow.getAllWindows !== 'function') {
       return;
@@ -301,9 +300,27 @@ function createMainAgentServices(deps = {}) {
     BrowserWindow.getAllWindows().forEach((windowRef) => {
       const webContents = windowRef?.webContents;
       if (webContents && typeof webContents.send === 'function' && !webContents.isDestroyed?.()) {
-        webContents.send(STORAGE.PROTOCOL_RECORD_SAVED, payload);
+        webContents.send(channel, payload);
       }
     });
+  }
+  const emitProtocolSaved = (payload = {}) => broadcastToWindows(STORAGE.PROTOCOL_RECORD_SAVED, payload);
+  // Papers only rescans its storage folder now and then; tell it a PDF just
+  // landed (Home "Download", the agent) so the library shows it right away.
+  const announcedPaperDownloads = new Set();
+  function announcePaperFileSaved(job = {}) {
+    if (job.status !== 'completed' || !job.file_path || announcedPaperDownloads.has(job.download_id)) {
+      return;
+    }
+    announcedPaperDownloads.add(job.download_id);
+    try {
+      broadcastToWindows(STORAGE.PAPER_FILE_SAVED, {
+        storage_path: job.storage_path,
+        relative_path: job.relative_path
+      });
+    } catch {
+      // Runs inside the download's progress update: a missed notice must not fail the download.
+    }
   }
   const protocolSaveRuntime = createProtocolSaveRuntime({
     protocolGenerationRuntime,
@@ -340,13 +357,11 @@ function createMainAgentServices(deps = {}) {
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
     pdfTextExtractionRuntime
   });
-  const paperWikiChunkerRuntime = createPaperWikiChunkerRuntime({});
   const paperWikiSearchRuntime = createPaperWikiSearchRuntime();
   const paperKnowledgeDatabaseRuntime = createPaperKnowledgeDatabaseRuntime({
     ...sharedAgentLlmDeps,
     requestStructuredJsonPayload: requestPaperIntakeStructuredJson,
-    pdfTextExtractionRuntime,
-    paperWikiChunkerRuntime
+    pdfTextExtractionRuntime
   });
   const webSearchRuntime = createWebSearchRuntime({
     ...sharedAgentLlmDeps
@@ -359,6 +374,7 @@ function createMainAgentServices(deps = {}) {
   });
   const paperDownloadRuntime = createPaperDownloadRuntime({
     ...sharedAgentLlmDeps,
+    onJobUpdate: announcePaperFileSaved,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
     enableDefaultBrowserSession: true,
     BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null,

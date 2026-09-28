@@ -1,5 +1,6 @@
 import { wellIdFor } from './plate-model.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { escapeHtml } from '../../lib/html.js';
 import { createResultImportController } from './results/result-import.js';
 import { createResultGridModel } from './results/grid-model.js';
 import { createAssayAnalysisGroups } from './results/analysis-groups.js';
@@ -47,15 +48,6 @@ export function createAssayResultsManager({
     onAnalysisConfigChange,
     getResultGrid: () => resultGrid
   });
-
-  function escapeHtml(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   const {
     buildResultGridSignature,

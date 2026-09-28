@@ -2,7 +2,29 @@
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { extractPageRange } = require('./agent-paper-wiki-chunker.js');
+const PAGE_CITATION_REGEX = /\(pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\)/g;
+
+function extractPageRange(body) {
+  const text = String(body || '');
+  let start = Number.POSITIVE_INFINITY;
+  let end = Number.NEGATIVE_INFINITY;
+  let match;
+  PAGE_CITATION_REGEX.lastIndex = 0;
+  while ((match = PAGE_CITATION_REGEX.exec(text)) !== null) {
+    const low = Number.parseInt(match[1], 10);
+    const high = match[2] ? Number.parseInt(match[2], 10) : low;
+    if (Number.isFinite(low)) {
+      start = Math.min(start, low);
+    }
+    if (Number.isFinite(high)) {
+      end = Math.max(end, high);
+    }
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return { pageStart: null, pageEnd: null };
+  }
+  return { pageStart: start, pageEnd: end };
+}
 
 // In-memory windows preserve the entire source, including oversized sections.
 // Overlap keeps query phrases crossing a window boundary discoverable.

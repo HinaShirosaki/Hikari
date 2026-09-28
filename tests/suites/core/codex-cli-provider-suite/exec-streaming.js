@@ -289,7 +289,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           assert.match(protocolSkillText, /Routine recommended starting conditions are allowed/);
           const notebookSkillText = fs.readFileSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'), 'utf8');
           assert.match(notebookSkillText, /These are the only supported tool arguments/);
-          assert.match(notebookSkillText, /<step-id>:<placeholder-id>/);
+          assert.match(notebookSkillText, /keys are its returned placeholder ids/);
           assert.match(notebookSkillText, /Never fill a placeholder with uncertainty prose/);
           const paperRetrievalSkillText = fs.readFileSync(paperRetrievalSkillPath, 'utf8');
           assert.match(paperRetrievalSkillText, /`paper_intake_search_experiments`/);

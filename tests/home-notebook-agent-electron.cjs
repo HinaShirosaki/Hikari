@@ -23,14 +23,14 @@ async function main() {
   await win.loadFile(fixture);
   const result = await win.webContents.executeJavaScript(`(async () => {
     const check = (value, message) => { if (!value) throw new Error(message); };
-    const { createHomeNotebookAgent } = await import(${JSON.stringify(url('src/renderer/modules/home-dashboard/notebook-agent.js'))});
+    const { homeDashboardManifest } = await import(${JSON.stringify(url('src/renderer/module-manifests/home-dashboard.js'))});
     const { createSavedNotebookAppend } = await import(${JSON.stringify(url('src/renderer/modules/biology-notebook/agent/saved-append.js'))});
     const originalChat = { messages: [{ role: 'user', text: 'Unrelated chat draft' }] };
     const state = { settings: { storagePath: '', agent: {} }, projects: [{id:'p',name:'GFP'}], protocols: [{id:'r',name:'Expression',steps:[]}], notebookEntries: [{id:'n',projectId:'p',protocolId:'r',experimentName:'GFP expression',result:'Original result',updatedAt:'v1'}], agentChat: originalChat, papers:[], workflows:[], assays:[], gelAnalyses:[], inventory:{},labInventory:{chemicals:[]} };
     let payload; let complete; let saves = 0;
     window.hikariApi = { agentChat: request => { payload = request; return new Promise(resolve => complete = resolve); } };
     const proposal = { proposal_id:'a1',notebook_entry_id:'n',page_title:'GFP expression',expected_updated_at:'v1',content_markdown:'I expressed GFP.' };
-    const send = createHomeNotebookAgent({ state, persist:()=>{ saves++; }, createId:()=>crypto.randomUUID(), safeText:text=>String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;'), rootDocument:document, windowObject:window, rendererServices:{notebook:{handleAgentNotebookEntriesChanged(){}},protocol:{handleProtocolsChanged(){}}},modules:{} });
+    const send = homeDashboardManifest.createOptions({ state, persist:()=>{ saves++; }, createId:()=>crypto.randomUUID(), safeText:text=>String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;'), showView:()=>{}, views:{}, apiBridge:window.hikariApi, rootDocument:document, windowObject:window, rendererServices:{notebook:{handleAgentNotebookEntriesChanged(){}},protocol:{handleProtocolsChanged(){}}},modules:{} }).onSendQuickLogToAgent;
     let settled = false;
     const request = send('I expressed GFP.').then(value => { settled = true; return value; });
     for (let i=0; i<30 && !complete; i++) await new Promise(resolve=>setTimeout(resolve,10));

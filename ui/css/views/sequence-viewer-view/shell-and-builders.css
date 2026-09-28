@@ -256,7 +256,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: var(--space-6) 11px;
   font-size: var(--text-xs);
   font-weight: 650;
-  color: var(--sequence-viewer-control-muted);
+  color: var(--theme-text-muted);
   background: transparent;
   cursor: pointer;
 }
@@ -293,7 +293,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-library-folder-row.is-sequence-drop-target {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  box-shadow: inset 0 0 0 1px var(--theme-accent-line);
 }
 
 .sequence-viewer-library-folder-name {
@@ -343,11 +343,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-library-item:hover {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+  background: var(--hikari-left-rail-list-hover);
 }
 
 .sequence-viewer-library-item-active {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-accent) 28%);
+  background: var(--hikari-left-rail-list-selected);
   box-shadow: none;
 }
 
@@ -356,7 +356,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-width: 0;
   max-width: 100%;
   font-weight: 650;
-  color: var(--sequence-viewer-blue-ink);
+  color: var(--theme-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -453,14 +453,14 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 /* Keep the Protein Builder call to action distinct without putting a dark
    block at the edge of the otherwise light workspace. */
 #sequence-viewer-protein-builder-assemble-btn {
-  border-color: color-mix(in srgb, var(--theme-accent) 46%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent-line);
+  background: var(--theme-accent-wash);
   color: var(--theme-text-strong);
 }
 
 #sequence-viewer-protein-builder-assemble-btn:hover,
 #sequence-viewer-protein-builder-assemble-btn:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 24%, var(--theme-surface-elevated));
+  background: var(--theme-accent-soft);
 }
 
 .sequence-viewer-protein-builder-grid-wrap {
@@ -875,7 +875,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-primer-copy-btn:hover,
 .sequence-viewer-primer-copy-btn:focus-visible {
-  border-color: var(--sequence-viewer-blue-border-strong);
+  border-color: var(--theme-border);
   background: var(--theme-surface-subtle);
 }
 
@@ -1003,7 +1003,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-common-item:hover,
 .sequence-viewer-protein-builder-common-item:focus-visible {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-accent) 18%);
+  background: var(--theme-accent-soft);
 }
 
 .sequence-viewer-protein-builder-common-item-name {
@@ -1194,9 +1194,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   margin: 0;
   padding: 0;
   list-style: none;
-  /* The ribbon spans the panel so the blocks inside it are to scale with each
-     other. Below the blocks' minimum widths it scrolls instead of squashing. */
-  flex: 1 1 auto;
+  /* The ribbon is only as long as its blocks, so one protein does not stretch
+     across the panel. Past the panel width it scrolls instead of squashing. */
+  flex: 0 0 auto;
   min-width: min-content;
 }
 
@@ -1208,11 +1208,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: var(--space-6);
   /* Width tracks the block's length in residues, so the ribbon is a map of the
      construct: a 232 aa protein reads as the bulk of it and a 6 aa tag as a
-     sliver. The minimum keeps that sliver labelled rather than exact. */
-  flex-grow: var(--builder-block-aa, 1);
-  flex-shrink: 1;
-  flex-basis: 0;
+     sliver. The minimum keeps that sliver labelled rather than exact; the
+     maximum keeps a very long protein from taking the whole panel. */
+  flex: 0 0 calc(var(--builder-block-aa, 1) * 1.5px);
   min-width: 104px;
+  max-width: 420px;
 }
 
 /* Each block's tail notch takes the point of the one before it, so the chain
@@ -1231,7 +1231,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   align-content: center;
   justify-items: start;
   gap: 1px;
-  background: var(--builder-block-fill, var(--theme-accent));
+  background: color-mix(in srgb, var(--builder-block-fill, var(--sequence-viewer-builder-custom)) var(--sequence-viewer-builder-fill-share), var(--theme-surface));
   color: var(--sequence-viewer-builder-ink);
   clip-path: polygon(0 0, calc(100% - var(--builder-notch)) 0, 100% 50%, calc(100% - var(--builder-notch)) 100%, 0 100%);
 }
@@ -1431,52 +1431,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   color: var(--theme-danger);
 }
 
-.sequence-viewer-protein-builder-custom-editor {
-  min-width: 0;
-  border-top: 1px solid var(--theme-border);
-  padding: var(--space-8) 0;
-}
-
-.sequence-viewer-protein-builder-custom-editor summary {
-  cursor: pointer;
-  color: var(--theme-text-strong);
-  font-size: var(--text-xs);
-  overflow-wrap: anywhere;
-}
-
-.sequence-viewer-protein-builder-custom-editor summary .small-note {
-  margin-left: var(--space-8);
-}
-
-.sequence-viewer-protein-builder-custom-fields {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  align-items: start;
-  gap: var(--space-12);
-  padding-top: var(--space-12);
-}
-
-.sequence-viewer-protein-builder-custom-fields label {
-  display: grid;
-  min-width: 0;
-  gap: var(--space-6);
-  font-size: var(--text-xs);
-}
-
-.sequence-viewer-protein-builder-custom-fields input,
-.sequence-viewer-protein-builder-custom-fields textarea {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.sequence-viewer-protein-builder-custom-fields textarea {
-  resize: vertical;
-  font-family: monospace;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
 .sequence-viewer-protein-builder-sequence-panel .sequence-block {
   min-height: 136px;
   max-height: 220px;
@@ -1520,7 +1474,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-protein-builder-protein-segment,
 .sequence-viewer-protein-builder-dna-segment {
   padding: 0.12em 0.08em;
-  background: var(--builder-block-fill, var(--sequence-viewer-builder-custom));
+  background: color-mix(in srgb, var(--builder-block-fill, var(--sequence-viewer-builder-custom)) var(--sequence-viewer-builder-fill-share), var(--theme-surface));
   color: var(--sequence-viewer-builder-ink);
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
@@ -1618,8 +1572,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-protein-builder-confirmation {
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 26%, var(--theme-border) 74%);
-  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-accent) 18%);
+  border: 1px solid var(--theme-accent-line);
+  background: var(--theme-surface-active);
   border-radius: 10px;
   padding: var(--space-14) var(--space-16);
   display: grid;
@@ -1662,7 +1616,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   position: fixed;
   inset: 0;
   z-index: 2540;
-  background: var(--sequence-viewer-overlay);
+  background: var(--theme-overlay);
   display: grid;
   justify-items: center;
   align-items: start;
@@ -1687,7 +1641,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-radius: 14px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
-  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  box-shadow: 0 28px 70px var(--theme-shadow-color);
   padding: var(--space-18);
   display: grid;
   gap: var(--space-14);
@@ -1747,9 +1701,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-backbone-dialog-candidate-active {
-  border-color: var(--sequence-viewer-alert-border);
-  box-shadow: inset 0 0 0 1px var(--sequence-viewer-alert-ring);
-  background: var(--sequence-viewer-alert-surface);
+  border-color: var(--theme-danger-line);
+  box-shadow: inset 0 0 0 1px var(--theme-danger-soft);
+  background: var(--theme-danger-wash);
 }
 
 .sequence-viewer-backbone-dialog-candidate-name {
@@ -1795,7 +1749,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-radius: 12px;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
-  box-shadow: 0 28px 70px var(--sequence-viewer-overlay-shadow);
+  box-shadow: 0 28px 70px var(--theme-shadow-color);
   padding: var(--space-16);
   display: grid;
   gap: var(--space-12);
@@ -1874,7 +1828,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: var(--space-6) 11px;
   font-size: var(--text-xs);
   font-weight: 650;
-  color: var(--sequence-viewer-control-muted);
+  color: var(--theme-text-muted);
   background: transparent;
   cursor: pointer;
 }
@@ -1901,7 +1855,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-radius: 6px;
   font-size: var(--text-base);
   font-weight: 650;
-  color: var(--sequence-viewer-control-ink);
+  color: var(--theme-text);
   user-select: none;
 }
 
@@ -1920,13 +1874,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-radius: 6px;
   font-size: var(--text-base);
   font-weight: 650;
-  color: var(--sequence-viewer-control-ink);
+  color: var(--theme-text);
 }
 
 .sequence-viewer-inline-select select {
   border-radius: 6px;
-  border: 1px solid var(--sequence-viewer-control-border);
-  background: var(--sequence-viewer-control-surface);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-control-background);
   color: inherit;
   font: inherit;
   padding: var(--space-4) var(--space-10);
@@ -1942,7 +1896,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-inline-toggle-group-label {
   font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--sequence-viewer-blue-muted);
+  color: var(--theme-text-muted);
   letter-spacing: 0;
 }
 

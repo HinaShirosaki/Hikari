@@ -82,8 +82,8 @@ if (!process.versions.electron) {
     } finally {
       win.destroy();
       fs.rmSync(fixturePath, { force: true });
-      app.exit(0);
     }
+    app.exit(0);
   }).catch((error) => {
     console.error(error);
     app.exit(1);

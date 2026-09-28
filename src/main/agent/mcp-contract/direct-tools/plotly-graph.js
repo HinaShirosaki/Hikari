@@ -11,6 +11,7 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolPayload,
   resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
@@ -43,19 +44,6 @@ const PLOTLY_GRAPH_MCP_TOOL = Object.freeze({
   })
 });
 
-function resolvePlotlyGraphPayload(result = {}) {
-  const source = ensureObject(result);
-  const resultPayload = ensureObject(source.result);
-  const outputPayload = ensureObject(source.output);
-  if (Object.keys(resultPayload).length) {
-    return resultPayload;
-  }
-  if (Object.keys(outputPayload).length) {
-    return outputPayload;
-  }
-  return source;
-}
-
 async function callPlotlyGraph(input = {}, context = {}, deps = {}) {
   const normalized = normalizeToolArgumentsPayload({
     tool_calls: [{
@@ -81,7 +69,7 @@ async function callPlotlyGraph(input = {}, context = {}, deps = {}) {
     args: normalized.payload.tool_calls[0].arguments,
     context
   });
-  const payload = resolvePlotlyGraphPayload(result);
+  const payload = resolveDirectToolPayload(result);
   const status = cleanText(payload.status || result?.status, 80)
     || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 4000);
@@ -111,5 +99,5 @@ async function callPlotlyGraph(input = {}, context = {}, deps = {}) {
 module.exports = {
   PLOTLY_GRAPH_MCP_TOOL,
   callPlotlyGraph,
-  resolvePlotlyGraphPayload
+  resolvePlotlyGraphPayload: resolveDirectToolPayload
 };

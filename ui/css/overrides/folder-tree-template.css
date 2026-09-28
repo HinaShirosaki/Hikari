@@ -29,12 +29,12 @@
 
 .folder-tree-template__row:hover,
 .folder-tree-template__row:focus-within {
-  background: var(--hikari-left-rail-list-hover, color-mix(in srgb, var(--theme-surface-subtle) 68%, transparent));
+  background: var(--hikari-left-rail-list-hover, var(--theme-surface-muted));
   color: var(--theme-text-strong);
 }
 
 .folder-tree-template__row.is-active {
-  background: var(--hikari-left-rail-list-selected, color-mix(in srgb, var(--theme-accent) 12%, transparent));
+  background: var(--hikari-left-rail-list-selected, var(--theme-accent-wash));
   color: var(--theme-text-strong);
 }
 
@@ -63,7 +63,7 @@
 }
 
 .folder-tree-template__disclosure:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  background: var(--theme-accent-wash);
   color: var(--theme-text-strong);
   outline: none;
 }
@@ -168,7 +168,7 @@
 
 .folder-tree-template__action:hover,
 .folder-tree-template__action:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  background: var(--theme-accent-wash);
   color: var(--theme-text-strong);
   outline: none;
 }
@@ -192,7 +192,7 @@
 .folder-tree-template__rename-input:focus,
 .folder-tree-template__rename-input:focus-visible {
   border-color: var(--theme-accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  box-shadow: none;
   outline: none;
 }
 
@@ -231,6 +231,29 @@
 .folder-tree-template__children[hidden] {
   display: none;
 }
+
+/* attachRailHoverCard: full row text, rendered outside the scroll rail. */
+.folder-tree-template__hover-card {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(24rem, calc(100vw - 1rem));
+  max-height: min(24rem, calc(100vh - 1rem));
+  overflow: auto;
+  padding: var(--space-12) var(--space-16);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 0.5rem;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: 0 0.3rem 1rem var(--theme-shadow-color-subtle);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.folder-tree-template__hover-card[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .folder-tree-template__chevron,

@@ -6,7 +6,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
       const rows = runtime.buildProtocolPlaceholderRows({
         steps: [
           {
-            id: 'step-1',
             text: 'Prepare {{ph:buffer_name}} and load [sample name].',
             placeholders: [
               { id: 'buffer_name', name: 'buffer name' }
@@ -15,8 +14,8 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
         ]
       });
       assert.equal(rows.length, 2);
-      assert.equal(rows.some((row) => row.placeholder_key === 'step-1:buffer_name'), true);
-      assert.equal(rows.some((row) => row.placeholder_key === 'step-1:inline-step-1-1'), true);
+      assert.equal(rows.some((row) => row.placeholder_key === 'buffer_name'), true);
+      assert.equal(rows.some((row) => row.placeholder_key === 'inline-1-1'), true);
     });
     test('notebook generation runtime resolves deterministic placeholders and marks draft ready', async () => {
       const runtime = agentNotebookGeneration.createNotebookGenerationRuntime();
@@ -49,7 +48,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
           name: 'HEK293 Transfection',
           steps: [
             {
-              id: 'step-1',
               text: 'Record {{ph:run_date}} for {{ph:project_name}}.',
               placeholders: [
                 { id: 'run_date', name: 'date' },
@@ -57,7 +55,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
               ]
             },
             {
-              id: 'step-2',
               text: 'Use {{ph:cell_line}} with {{ph:protocol_name}} on {{ph:sample_name}}.',
               placeholders: [
                 { id: 'cell_line', name: 'cell line' },
@@ -112,7 +109,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
           name: 'Gel Run',
           steps: [
             {
-              id: 'step-1',
               text: 'Load [sample name] into the gel.',
               placeholders: []
             }
@@ -185,9 +181,7 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
                 filled_values: [],
                 missing_placeholders: [
                   {
-                    step_id: 'step-1',
-                    placeholder_id: 'sample_name',
-                    placeholder_key: 'step-1:sample_name',
+                    placeholder_key: 'sample_name',
                     display: 'sample name',
                     reason: 'Leave visible for planned draft.'
                   }
@@ -221,7 +215,7 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
               projectId: 'proj-1',
               projectName: 'Atlas',
               steps: [
-                { id: 'step-0', text: 'Prepare cells.', placeholders: [] }
+                { text: 'Prepare cells.', placeholders: [] }
               ]
             },
             {
@@ -231,7 +225,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteNotebookPlaceholder
               projectName: 'Atlas',
               steps: [
                 {
-                  id: 'step-1',
                   text: 'Measure viability for {{ph:sample_name}}.',
                   placeholders: [{ id: 'sample_name', name: 'sample name' }]
                 }

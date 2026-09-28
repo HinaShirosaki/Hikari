@@ -6,10 +6,7 @@ const { createHash } = require('node:crypto');
 const { bufferLooksLikePdf } = require('./http-response.js');
 const { buildPaperStorageFolder, buildRelativePath, ensurePathWithinRoot, resolvePaperCollectionName } = require('./storage-paths.js');
 const { extractPaperDownloadTargets } = require('./url-targets.js');
-
-function normalizeDoi(value) {
-  return String(value || '').trim().replace(/^(?:https?:\/\/(?:dx\.)?doi\.org\/|doi:\s*)/i, '').toLowerCase();
-}
+const { normalizeDoi } = require('../../identity/paper-identity.js');
 
 // Scope the identity to the destination, not the publisher URL or suggested filename.
 function downloadIdentity(source) {

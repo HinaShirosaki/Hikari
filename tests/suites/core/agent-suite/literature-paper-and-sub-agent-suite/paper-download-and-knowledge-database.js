@@ -363,7 +363,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePaperDownl
       }
     });
     test('paper intake summary search finds metadata-only legacy papers by exact title', async () => {
-      const intakeTools = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'intake', 'mcp-tools.js'));
+      const intakeTools = require(path.join(__dirname, 'tests', 'support', 'paper-intake-mcp-tools.js'));
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-intake-metadata-fallback-'));
       const paperFolder = path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1126_science.adk4422');
       const title = 'Continuous evolution of compact protein degradation tags regulated by selective molecular glues';
