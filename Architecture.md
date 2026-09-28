@@ -4,7 +4,7 @@ Topology of Hikari from the whole app down to the module/service layer. For anyt
 
 ## 1. The app in one picture
 
-Hikari is a local-first Electron desktop app. One data snapshot (`hikari-data.json`) plus a storage root on disk; no hosted backend. AI features shell out to the signed-in `codex` CLI.
+Hikari is a local-first Electron desktop app. Everything lives in one storage root on disk: a compact snapshot (`hikari-data.json`) plus one JSON file per record in module-owned folders, with SQLite only where a module searches (chemicals, papers, sequences). There is no hosted backend. AI features shell out to the signed-in `codex` CLI.
 
 ```mermaid
 flowchart TB
@@ -41,7 +41,7 @@ flowchart TB
     PB <-- "postMessage" --> PL
   end
 
-  PRE["preload · window.hikariApi<br/>storage · system · assay · bioinformatics · inventory · sequence-library<br/>genome · scheduled-task · llm · python · agent"]
+  PRE["preload · window.hikariApi<br/>storage · system · plugin · chemical-clipboard · assay · bioinformatics · inventory<br/>sequence-library · genome · scheduled-task · llm · python · agent"]
   MODS --> PRE
   PB --> PRE
   ST -- "autoSave · importStorageRoot" --> PRE
@@ -49,7 +49,8 @@ flowchart TB
   subgraph M["Main process · src/main"]
     MS["core/main-services.js<br/>composition root"]
     subgraph IPC["IPC registrars · ipc/ — channel names in src/shared/ipc/channels.js"]
-      idata["data<br/>+ sequence-library · plugin-file"]
+      idata["data<br/>+ sequence-library"]
+      iplug["plugin"]
       iagent["agent"]
       igen["genome"]
       ibio["bioinformatics"]
@@ -67,7 +68,7 @@ flowchart TB
     end
     subgraph PS["Platform services"]
       data["data/<br/>snapshot load · save · index"]
-      storage["storage/<br/>bundle · SQLite · sidecars · hydration"]
+      storage["storage/<br/>record folders · chemicals SQLite · hydration · import"]
       papersS["papers/<br/>search · retrieve · parse · analyse · store"]
       seqlib["sequence library<br/>sequence-viewer/main-process"]
       plugsrv["lib/plugin-server<br/>loopback plugin origins"]
@@ -78,7 +79,8 @@ flowchart TB
     MS --> IPC
     MS --> AG
     MS --> PS
-    idata --> data & storage & seqlib & papersS & plugsrv
+    idata --> data & storage & seqlib & papersS
+    iplug --> plugsrv
     iagent --> ctrl
     igen --> genome
     ibio --> bio
@@ -94,7 +96,7 @@ flowchart TB
 
   PRE -- "ipcRenderer.invoke" --> IPC
 
-  DISK[("Storage root<br/>snapshot .json · SQLite · sidecars · attachments")]
+  DISK[("Storage root<br/>snapshot .json · record folders · SQLite indexes · attachments")]
   CODEX["codex CLI<br/>child process"]
   STDIO["hikari-agent-mcp<br/>mcp-contract/stdio-server.js"]
   NET[("NCBI · UniProt · web")]
@@ -130,7 +132,7 @@ Dependency direction is strict: `main/` and `renderer/` both depend on `shared/`
 | Layer | Entry | Role |
 | --- | --- | --- |
 | Main boot | `src/main/main.js` → `app/start-main-app.js` → `core/main-services.js` | Builds every service in dependency order, registers all IPC, then `start()`s best-effort integrations |
-| Bridge | `src/main/preload.js` → `preload/create-preload-api.js` | Exposes `window.hikariApi`, one spread per domain API (storage, system, assay, bioinformatics, inventory, sequence-library, genome, scheduled-task, llm, python, agent) |
+| Bridge | `src/main/preload.js` → `preload/create-preload-api.js` | Exposes `window.hikariApi`, one spread per domain API (storage, system, plugin, chemical-clipboard, assay, bioinformatics, inventory, sequence-library, genome, scheduled-task, llm, python, agent) |
 | Channel contract | `src/shared/ipc/channels.js` | Only place channel names live |
 | Renderer boot | `src/renderer/renderer.js` → `core/start-hikari-core.js` | Loads state, installs plugins, creates registry + services, inits modules from manifests, renders, shows startup view |
 
@@ -140,15 +142,16 @@ Channel groups in `src/shared/ipc/channels.js`, the preload API that exposes the
 
 | Channel group | `hikariApi` (preload) | Registrar | Handled by | Used by |
 | --- | --- | --- | --- | --- |
-| `STORAGE` | `storage-api` — auto-save, pick/import storage root, ensure dir, store/move/read files, write JSON, discover papers, page logs, protocol-record-saved event | `register-data-ipc` | `data/` + `storage/` (+ `papers/` for discovery) | every module that keeps files; app-state autosave |
+| `STORAGE` | `storage-api` — auto-save, pick/import storage root, last-root pointer, chemicals-index sync, ensure dir, store/move/read/open files, write JSON, paper PDF transform and discovery, page logs; protocol-record-saved and paper-file-saved events | `register-data-ipc` | `data/` + `storage/` (+ `papers/` for discovery) | every module that keeps files; app-state autosave |
 | `PLUGINS` | `plugin-api` — inspect/serve plugin folder, read/write/export plugin files | `register-plugin-ipc` | `lib/plugin-server`, `lib/plugin-files` | plugin loader / bridge |
-| `INVENTORY`, `ASSAY` | `inventory-api`, `assay-api` — parse chemical / assay result import files | `register-data-ipc` | `lib/chemical-import`, assay parser | Chemicals, Assay |
+| `INVENTORY`, `ASSAY` | `inventory-api`, `assay-api` — parse chemical / assay result import files; `ASSAY.PLOT_REQUEST`/`PLOT_RESPONSE` let the agent ask the open Plate view to draw a live plot | `register-data-ipc`; plot bridge in `core/services/assay-plot-bridge.js` | `lib/chemical-import`, assay parser | Chemicals, Assay |
+| — | `chemical-clipboard-api` — read ChemDraw/MOL/SMILES or image clipboard content, write text (Electron `clipboard` in preload, no IPC) | — | — | Samples (chemical structures), Sequence Viewer primer orders, Agent, Settings |
 | `SEQUENCE_LIBRARY` | `sequence-library-api` — list/get/upsert/delete entries and folders, annotate, search features, backbones | `register-data-ipc` → `register-sequence-library-ipc` | `sequence-viewer/main-process/sequence-library` (SQLite) | Sequence Viewer, agent sequence tools |
-| `AGENT` | `agent-api` — chat + cancel, generate protocol, suggest experiment, list skills, chat-log sessions, log replay; `agent-progress` events back | `register-agent-ipc` | agent backend (Codex runtime, tool runtime, chat logs) | Agent, Protocols, Notebook |
-| `LLM`, `SYSTEM` | `llm-api`, `system-api` — Codex login/status/catalog/model/effort, direct LLM prompts, MCP setup prompt, open external URL, app-close handshake | `register-system-ipc` | `lib/codex-cli-provider`, direct-LLM registry | Settings, Papers, Protocols, Chemicals, unsaved-changes service |
-| `GENOME` | `genome-api` — connect/list/disconnect reference genomes | `register-genome-ipc` | genome service | Settings, Sequence Viewer (CRISPR off-target) |
+| `AGENT` | `agent-api` — chat + cancel, HTML preview, generate protocol, suggest experiment, list skills, chat-log sessions, log replay; `agent-progress` events back | `register-agent-ipc` | agent backend (Codex runtime, tool runtime, chat logs) | Agent, Home, Protocols, Notebook |
+| `LLM`, `SYSTEM` | `llm-api`, `system-api` — Codex login/logout/status/catalog/model/effort, Codex Desktop MCP setup prompt, direct LLM prompts; open external URL, error reporting, open logs folder / third-party notices, app-close handshake | `register-system-ipc` | `lib/codex-cli-provider`, direct-LLM registry, `lib/error-reporting` | Settings, Papers, Protocols, Chemicals, unsaved-changes service |
+| `GENOME` | `genome-api` — list/get/add/remove reference genome FASTA files, read a region | `register-genome-ipc` | `genome/` service | exposed on `hikariApi`; no in-app caller yet |
 | `BIOINFORMATICS` | `bioinformatics-api` — BLAST and UniProt queries | `register-bioinformatics-ipc` | `bioinformatics/` (remote NCBI/UniProt) | exposed on `hikariApi`; no in-app caller yet (agent smoke test only) |
-| `SCHEDULED_TASK` | `scheduled-task-api` — create/list/run/delete scheduled Codex tasks | `register-scheduled-task-ipc` | scheduled-task service | Home widget and Notebook project paper-finder |
+| `SCHEDULED_TASK`, `PAPER_FINDING` | `scheduled-task-api` — create/list/update/run/delete scheduled Codex tasks; list/create/update/schedule paper-finding tasks and download a found paper | `register-scheduled-task-ipc` | `scheduled-tasks/` service + `papers/finding/` | Home paper finder and Notebook project paper finder |
 | `PYTHON` | `python-api` — run a script in the agent's Python sandbox | `register-python-ipc` | `agent/tools/agent-python-sandbox` | plugins (bridge verb) |
 
 ## 3. Main process
@@ -186,17 +189,18 @@ flowchart TD
 | Service | Folder | What happens |
 | --- | --- | --- |
 | Data helpers | `main/data/` | Reads and writes the single `.json` snapshot; every save compacts it and syncs the storage bundle; load hydrates missing pieces back from the bundle. |
-| Storage | `main/storage/` | Keeps the storage root in step with the snapshot: writes sidecar JSON per record, SQLite indexes (chemicals, protocols, workflow status), notebook page folders, and experiment logs; hydrates a snapshot back from a bundle; imports a foreign storage root; discovers PDFs dropped into the papers folder. |
+| Storage | `main/storage/` | Keeps the storage root in step with the snapshot: one JSON file per protocol, notebook page, sample container, assay, gel, workflow, and stored paper; the chemicals SQLite index (guarded so an unreadable one is never overwritten); the Home experiment log. Hydrates a snapshot back by scanning those folders; imports a foreign storage root; discovers PDFs dropped into the papers folder. See [storage-and-bundles](docs/main-platform/data/storage-and-bundles.md). |
 | Project memory | `main/project-memory/` | Collects project-scoped records and produces the Codex-facing `MEMORY.md`, including the optional LLM-written conclusion. |
 | Papers | `main/papers/` | Literature search and retrieval, PDF download, PDF→Markdown parsing, DOI/identity resolution, LLM analysis, the paper knowledge store, and the scheduled "paper finding" workflow. Used by both the Papers module and the agent tools. |
 | Sequence library | `renderer/modules/sequence-viewer/main-process/` | SQLite-backed sequence store: entries and folders, GenBank parsing, auto-annotation against the feature database, backbone recognition, summaries for the storage manifest. |
 | Bioinformatics | `main/bioinformatics/` | Submits BLAST jobs to NCBI and polls for results; UniProt search and entry lookup. |
-| Genome | `main/genome/` | Registry of user-connected reference genome FASTA files; paths only ever enter through a user-driven file dialog. |
-| Scheduled tasks | `main/scheduled-tasks/` | Persists task definitions, wakes on schedule, runs each as a Codex task, normalises the run result (e.g. paper finding) for the Home widget. |
+| Genome | `main/genome/` | Registry of user-connected reference genome FASTA files with a FASTA index for region reads; paths only ever enter through a user-driven file dialog. |
+| Scheduled tasks | `main/scheduled-tasks/` | Persists task definitions (`Config/scheduled-tasks.json` in the storage root), computes calendar recurrences, wakes on schedule, runs each as a Codex task, normalises the run result (e.g. paper finding) for the Home widget. |
 | Codex CLI provider | `main/lib/codex-cli-provider/` | Spawns the signed-in `codex` CLI: login flow, model and reasoning-effort config, one-shot text requests, and the long-running turns the agent runtime drives. |
 | LLM runtime | `main/lib/llm/` | Provider-neutral prompt/response helpers, the direct-LLM registry that module features call, and a monitor that transforms raw chat logs into session files. |
 | Plugin files | `main/lib/plugin-*.js`, `ipc/register-plugin-ipc.js` | Validates a plugin folder against the manifest contract, serves it on its own loopback origin, and handles plugin file read/write confined to a folder under the storage root (symlinks rejected). |
-| npm updater | `main/updater/` | Fetches the release feed at startup, compares versions, and offers the update dialog. |
+| npm updater | `main/updater/` | Fetches the npm registry metadata for `@hinashirosaki/hikari` at startup, compares versions, and offers the update dialog. |
+| Main window | `main/windows/` | Creates the `BrowserWindow` with the preload bridge and navigation guards. |
 
 ### Agent backend (`main/agent/`)
 
@@ -244,7 +248,7 @@ Every module owns a slice of `state`, renders its own view, and reaches main onl
 
 | Dock entry | Registry key(s) | What happens | Owns in `state` | Talks to main for | Triggers |
 | --- | --- | --- | --- | --- | --- |
-| Home | `homeDashboard` | Widget board: lab timers, quick notes and one-line experiment logging into the notebook, contribution heatmap from growth events, cell-passage and overnight-incubation trackers, scheduled paper-finding status. Mostly shortcuts into other modules. | `dashboard`, `quickLogs`, `growthMetrics` | scheduled-task list | — |
+| Home | `homeDashboard` | Widget board: lab timers, an experiment log that saves locally or hands the text to the agent's **Prepare notebook page** dialog, quick notes onto recent notebook pages, contribution heatmap from growth events, cell-passage and overnight-incubation reminders, and the scheduled paper finder. Mostly shortcuts into other modules. | `settings.dashboard`, `growthMetrics` | scheduled-task / paper-finding APIs, agent chat (through the manifest-supplied `createAgent`) | — |
 | Protocols | `protocol` | Protocol library CRUD with a structured step editor, JSON import/export, list/preview. Drafting runs through the Codex agent (so it can use web + literature tools); "polish" is a direct-LLM call. Accepts drafts extracted from Papers and protocols the agent saved from main. | `protocols` | agent protocol generation, direct LLM | `onProtocolsChanged` |
 | Notebook | `biologyNotebook` | Projects and experiment entries that link a protocol, samples, an assay plate, a gel, and papers. Result tables use the shared formula engine (`lib/formula.js`); imported result files and page logs go into the storage root; PDF export; calculation sidebar; agent notebook drafts are reviewed here before they persist. | `projects`, `notebookEntries` | storage dirs, file import/read, page logs, direct LLM | `onProjectsChanged`, `onNotebookEntriesChanged`, `onCreateLinkedAssay` |
 | Papers | `papers` | Local PDF library (folder rail, drag/drop), in-app PDF viewer with anchored comments and highlights, summaries and method extraction via direct LLM. PDFs are stored/moved inside the storage root and rediscovered on hydration. Can turn an extracted method into a protocol draft. | `papers`, `paperExperimentLinks`, comments | file store/move/read, paper discovery, direct LLM, open external | `onCreateProtocolDraft` |
@@ -252,10 +256,10 @@ Every module owns a slice of `state`, renders its own view, and reaches main onl
 | Chemicals | `labCommonInventory` | Shared reagent inventory: locations with generated codes, lots, stock, and an append-only activity ledger. CSV/XLSX import with header mapping (parsed in main, fields guessed by LLM). Mirrors records into the storage-root SQLite index. | `labInventory` | chemical import parsing, direct LLM, SQLite sync | — |
 | Workflows | `workflowManagement` | Graph workflow builder with reusable templates; executions link to projects and notebook entries; result files stored in the storage root. Re-renders whenever protocols, entries, projects, or assays change. | `workflows`, `workflowTemplates` | storage dirs, file import | `onCreateLinkedAssay` |
 | Agent | `agentChat`, `agentChatRail` | Chat over app state: sessions and folders, streamed turns and cancel, a compact experiment context built by `experiment-llm-mapper`. Session logs live in main. Review-before-write: agent drafts land in Notebook/Protocols only after the user accepts. The rail is the same controller mounted as a side panel in other views. | `agentChat` | `agent:chat`, cancel, chat-log sessions | `onNotebookEntriesChanged` |
-| Sequence Viewer | `sequenceViewer` | Sequence library (entries/folders live in a main-process SQLite store), annotation and feature search, restriction analysis, alignment, cloning-route and primer design, protein builder, interactive vector map, backbone recognition, AB1 traces. File-format converters can come from service plugins. | — (library is main-owned) | `sequenceLibrary*` (list/get/upsert/annotate/search/backbones) | — |
-| Assay | `assay` | Plate layout design and concentration fill, result import (parsed in main), one spreadsheet formula per transformed cell, grouped summaries, curve fitting (linear, sigmoidal, hyperbola, polynomial, Padé), Plotly charts with styling presets. Analysis JSON, chart SVG, and result files are written to the storage root. Opens pre-linked from a notebook entry or workflow. | `assays` | result-file parsing, JSON/file writes | `onAssaysChanged` |
-| Tools | `toolBox` | Bench calculators (molarity, buffer/reaction prep, qPCR, …), image-based colony counter, and sequence/oligo/protein/CRISPR calculators borrowed from Sequence Viewer. Can hand a sequence straight to Sequence Viewer. | — | file bytes (images) | `sequence.openFromToolBox` |
-| Settings | `settings` | Storage root pick and autosave, startup view, appearance, Codex login/model/reasoning effort, MCP setup prompt, plugin install/manage, external skills, reference-genome connect, shared vocabularies (locations, sample types). | `settings` | storage pick, Codex CLI status/login/model, genome library, plugins | `onSampleInventorySettingsChanged` |
+| DNA (Sequence Viewer) | `sequenceViewer` | Sequence library (entries/folders live in a main-process SQLite store), annotation and feature search, restriction analysis, alignment, cloning-route and primer design, protein builder, interactive vector map, backbone recognition, AB1 traces. File-format converters can come from service plugins. | — (library is main-owned) | `sequenceLibrary*` (list/get/upsert/annotate/search/backbones) | — |
+| Plate (Assay) | `assay` | Plate layout design and concentration fill, result import (parsed in main), one spreadsheet formula per transformed cell, grouped summaries, curve fitting (linear, sigmoidal, hyperbola, polynomial, Padé), Plotly charts with styling presets. Analysis JSON, chart SVG, and result files are written to the storage root. Opens pre-linked from a notebook entry or workflow. | `assays` | result-file parsing, JSON/file writes | `onAssaysChanged` |
+| Tools | `toolBox` | Eight bench calculators (molarity, peptide properties, buffer preparer, fixed-volume reaction, DNA → protein, protein → DNA, oligo properties, extinction coefficient) and an image-based colony counter loaded on demand. Sequence math comes from `sequence-viewer/calculations/`. Can hand a sequence straight to Sequence Viewer. | — | file bytes (images) | `sequence.openFromToolBox` |
+| Settings | `settings` | Appearance, startup view, storage root pick and diagnostics, shared vocabularies (locations, sample types), preferred journals, notebook PDF defaults, Codex install/login/model/reasoning effort, Codex Desktop MCP setup prompt, per-tool MCP access, external skills, and plugin install/manage. | `settings` | storage pick, Codex CLI status/login/model, plugins | `onSampleInventorySettingsChanged` |
 | (support) | — | `pdf-export/` and `print/` render notebook/protocol pages to PDF or print; `selection-insights/` shows quick stats for a selected table range. | — | — | — |
 
 Manifests are grouped in `module-manifests/index.js` as foundation (notebook, protocol) → collaboration (agent, workflow, papers) → inventory → analysis → sequence → utility, and initialise in that order.
@@ -307,7 +311,7 @@ Details: [docs/plugins/](docs/plugins/README.md).
 
 ## 6. Build-time generated glue
 
-`npm run build:ui` compiles `ui/` and `config/` into `index.html`, `styles.css`, `renderer/modules/views.js`, `renderer/modules/app-registry.generated.js`, and both `codex-model-catalog.generated.js` files. Dock order, labels, aliases, and search scopes therefore start in `ui/config/app-registry.json`, not in renderer code.
+`npm run build:ui` compiles `ui/` into `index.html`, `styles.css`, `src/renderer/modules/views.js`, and `src/renderer/modules/app-registry.generated.js`, and writes both `codex-model-catalog.generated.js` files (renderer and `src/main/generated/`) from the provider stub in `scripts/build-ui/llm-catalog.mjs`. None of these are committed. Hikari ships no model list; the model catalog is asked from Codex at runtime. Dock order, labels, aliases, and search scopes therefore start in `ui/config/app-registry.json`, not in renderer code.
 
 ## Going deeper
 

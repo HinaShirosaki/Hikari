@@ -81,14 +81,14 @@ npx @hinashirosaki/hikari
 
 ## First launch checklist
 
-1. On the welcome page, click **Choose Folder** to create or open a Hikari workspace. Hikari opens your workspace after checking and saving the folder. You can change the root later in `Settings > Storage`.
+1. On the welcome page, click **Choose Folder** to create or open a Hikari workspace. Hikari opens your workspace after checking and saving the folder. You can change the root later in `Settings > Storage & data`.
 2. In `Settings > Startup`, pick a default module or enable "remember last opened module".
-3. In `Settings > Samples` and `Settings > Inventory Locations`, set your storage locations and sample type names — the inventory modules read these.
+3. In `Settings > Locations & samples`, set your storage locations and sample type names — the inventory modules read these.
 4. Sign in to the Codex CLI if you want `Agent`, paper summaries, or protocol generation (see [AI and Agent Setup](#ai-and-agent-setup)). A ChatGPT subscription is enough — you do not need an LLM API key.
 
 ## App Surface
 
-Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces live behind the **More** button at the end of the dock.
+Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces live behind the **More** button at the end of the dock. Two dock labels are shorter than the workspace names used in these docs: **Plate** is the Assay workspace and **DNA** is the Sequence Viewer.
 
 > **Screenshots:** Each workspace below is shown with neutral demonstration data in an isolated browser preview of the app. The example conversation, teaching handout, sequence, assay values, and gel image are synthetic; they are not research results. [Capture notes](../screenshots/README.md).
 
@@ -96,7 +96,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 | Module | One-liner |
 | --- | --- |
-| <img src="../../assets/icons/home.svg" width="16"/> [`Home`](#home) | Bench dashboard: timers, quick notes, contribution heatmap, and recurring reminders. |
+| <img src="../../assets/icons/home.svg" width="16"/> [`Home`](#home) | Bench dashboard: timers, experiment log, notebook notes, activity heatmap, reminders, and paper finder. |
 | <img src="../../assets/icons/protocols.svg" width="16"/> [`Protocols`](#protocols) | Protocol library with a structured editor, JSON import/export, and LLM drafting. |
 | <img src="../../assets/icons/biology-notebook.svg" width="16"/> [`Notebook`](#notebook) | Projects and protocol-linked experiment records with result tables and PDF export. |
 | <img src="../../assets/icons/papers.svg" width="16"/> [`Papers`](#papers) | Local PDF library, anchored comments, summaries, and method extraction. |
@@ -104,10 +104,10 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 | <img src="../../assets/icons/chemicals.svg" width="16"/> [`Chemicals`](#chemicals) | Shared reagent inventory with locations, lots, and activity history. |
 | <img src="../../assets/icons/workflows.svg" width="16"/> [`Workflows`](#workflows) | Graph workflow builder with reusable templates and project linkage. |
 | <img src="../../assets/icons/agent.svg" width="16"/> [`Agent`](#agent) | Evidence-grounded assistant over app state, with review-before-write drafts. |
-| <img src="../../assets/icons/sequence-viewer.svg" width="16"/> [`Sequence Viewer`](#sequence-viewer) | Sequence library, annotation, restriction analysis, alignment, and cloning design. |
-| <img src="../../assets/icons/assay.svg" width="16"/> [`Assay`](#assay) | Plate design, result capture, spreadsheet formulas, and curve-fitting analysis. |
-| <img src="../../assets/icons/tools.svg" width="16"/> [`Tools`](#tools) | Ten bench calculators plus an image-based colony counter. |
-| <img src="../../assets/icons/settings.svg" width="16"/> [`Settings`](#settings) | Storage root, startup, appearance, model access, plugins, and shared vocabularies. |
+| <img src="../../assets/icons/sequence-viewer.svg" width="16"/> [`DNA`](#sequence-viewer) (Sequence Viewer) | Sequence library, annotation, restriction analysis, alignment, and cloning design. |
+| <img src="../../assets/icons/assay.svg" width="16"/> [`Plate`](#assay) (Assay) | Plate design, result capture, spreadsheet formulas, and curve-fitting analysis. |
+| <img src="../../assets/icons/tools.svg" width="16"/> [`Tools`](#tools) | Eight bench calculators plus an image-based colony counter. |
+| <img src="../../assets/icons/settings.svg" width="16"/> [`Settings`](#settings) | Storage root, startup, appearance, Codex access, agent tool access, skills and plugins, and shared vocabularies. |
 
 ---
 
@@ -116,12 +116,12 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 <img src="../../assets/icons/home.svg" width="20" align="left" /> The launch dashboard. It is a widget board rather than a single view, so most of it is a shortcut into another module.
 
 - **Lab timers** — named countdown timers for incubations, spins, and washes.
-- **Quick Add Notes** — append a note straight onto a notebook page without opening `Notebook`.
-- **Add Experiments** — log an experiment or notebook entry from one input box.
-- **Contribution heatmap** — calendar-style activity view across your records.
-- **Cell passage** — track cell line, passage number, and split ratio; surfaces the next due passage.
-- **Overnight incubation** — record what is incubating and where, against your configured location list.
-- **Scheduled paper finding** — recurring literature sweep against your preferred journals (see [`Papers`](#papers)).
+- **Experiment log** — type what you did in one box, then either save it as a dated log line (kept in `Dashboard/experiment-log.json` under the storage root) or hand it to the assistant, which opens a **Prepare notebook page** dialog and drafts a notebook page for you to review before anything is saved.
+- **Notebook notes** — the six most recently updated notebook pages; append a result note to one of them (optionally clarified by the LLM) without opening `Notebook`.
+- **Lab activity** — an 18-week contribution heatmap built from notebook entries, completed protocol steps, uploads, analysis notes, and log lines.
+- **Cell passage** — reminders for upcoming and overdue sub-cultures.
+- **Overnight incubation** — named incubators with an optional reminder date, against your configured location list.
+- **Paper finder** — scheduled literature sweeps against your preferred journals, with a **Find papers now** button (see [`Papers`](#papers)).
 
 ![Hikari Home dashboard with teaching-lab reminders](../screenshots/home.png)
 
@@ -176,8 +176,8 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 <img src="../../assets/icons/sample-inventory.svg" width="20" align="left" /> One workspace covering both physical storage containers and the samples inside them — the container view and the registry render together.
 
 - **Storage containers** — define boxes, racks, and freezers, then record samples directly into a position.
-- **Sample types** — plasmids, cell lines, strains, antibodies, proteins, compounds, and primers; type names are editable in `Settings > Samples`.
-- **Chemical structures** — compound samples carry structure data and a rendered preview.
+- **Sample types** — plasmid, cell line, strain, antibody, protein, chemical, primer, and other. Rename them or add your own types in `Settings > Locations & samples`.
+- **Chemical structures** — chemical samples carry structure data and a rendered preview.
 - **CSV import / export** — bulk-load a registry or export it for a shared sheet.
 - **Cell passage tracking** — passage records that feed the `Home` reminder widget.
 - **Notebook capture** — push a sample into the open notebook entry, or create one from an entry.
@@ -215,7 +215,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Project context** — pick the project scope; the assistant reads a compact snapshot of that project's state.
 - **Grounded tools** — it can look up notebook entries, protocols, samples, chemicals, containers, and papers; run literature search and paper download/analysis; read assay tables; build Plotly graphs; and suggest purchases.
 - **Review before write** — generated notebook drafts and protocols land as review cards you approve or reject; the owning module, not the assistant, defines the record schema.
-- **Side rail** — the same chat mounts as a rail inside `Papers`, `Notebook`, and `Assay`, scoped to what is open there.
+- **Side rail** — the same chat mounts as a rail inside `Notebook`, `Plate`, and `Papers`, scoped to what is open there. `Home` also opens it as the **Prepare notebook page** dialog.
 
 Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
@@ -223,7 +223,7 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
 ### Sequence Viewer
 
-<img src="../../assets/icons/sequence-viewer.svg" width="20" align="left" /> The largest workspace — read it as several cooperating tools sharing one sequence library.
+<img src="../../assets/icons/sequence-viewer.svg" width="20" align="left" /> Labelled **DNA** in the dock. The largest workspace — read it as several cooperating tools sharing one sequence library.
 
 - **Import** — `.gbk`, `.gb`, `.gbff`, `.fasta`, `.fa`, `.fas`, `.fna`, `.fastq`, `.fq`, `.seq`, `.txt`, or pasted text.
 - **Library** — nested folders, rename, move, and a saved/unsaved indicator per record.
@@ -238,7 +238,7 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
 ### Assay
 
-<img src="../../assets/icons/assay.svg" width="20" align="left" /> Plate-based data capture and analysis. The mental model is: define the plate → map the wells → paste results → analyze → save one normalized record.
+<img src="../../assets/icons/assay.svg" width="20" align="left" /> Labelled **Plate** in the dock. Plate-based data capture and analysis. The mental model is: define the plate → map the wells → paste results → analyze → save one normalized record.
 
 - **Plate layout** — define the plate, fill concentrations across a row or column, and edit sample IDs per well.
 - **Serial dilution** — a dilution dialog that computes the recipe and writes the concentrations into the layout.
@@ -256,18 +256,16 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
 <img src="../../assets/icons/tools.svg" width="20" align="left" /> Small bench calculators in one workspace. Each is its own subview, switched from the tool rail; the colony counter loads on demand because it is the heavy one.
 
-| Tool | What it computes |
+| Tool (rail label) | What it computes |
 | --- | --- |
-| Mass Molarity Calculator | mass ↔ molarity ↔ volume, with concentration and dilution panels in the same view |
+| Molarity Calculator | mass ↔ molarity ↔ volume, with concentration and dilution panels in the same view |
+| Peptide Properties | peptide mass and properties |
 | Buffer Preparer | buffer recipes from a shared compound dataset |
 | Fixed Volume Reaction | reaction mixes at a fixed final volume |
-| qPCR Efficiency Calculator | amplification efficiency from a standard curve |
-| CRISPR sgRNA Designer | guide candidates for a target sequence |
-| DNA / RNA Oligo Properties | Tm, GC content, and oligo properties |
-| DNA Sequence to Protein | translation |
-| Protein Sequence to DNA | reverse translation, with a restriction-site avoidance list |
-| Peptide Property Calculator | peptide mass and properties |
-| Extinction Coefficient Calculator | extinction coefficient from sequence |
+| DNA to Protein | translation |
+| Protein to DNA | reverse translation, with a restriction-site avoidance list |
+| DNA/RNA Oligo Properties | Tm, GC content, and oligo properties |
+| Extinction Coefficient | extinction coefficient from sequence |
 | Colony Counter | image-based colony counting with annotated output (loaded on demand) |
 
 ![Molarity and dilution calculators with a Tris buffer example](../screenshots/tools-molarity.png)
@@ -276,18 +274,19 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
 <img src="../../assets/icons/settings.svg" width="20" align="left" /> Configuration, plus the shared vocabularies other modules read from.
 
-| Section | What it controls |
-| --- | --- |
-| Appearance | Theme and workspace look. |
-| Storage | The storage root folder — the one setting to get right first. |
-| Startup | Default startup module, or "remember last opened module". |
-| Inventory Locations | The shared location vocabulary used by `Chemicals` and `Home`. |
-| Samples | Storage locations and the editable sample type names used by `Samples`. |
-| Preferred Journals | Journal names or URLs for `Papers` search and scheduled finding. |
-| Codex Model & Access | Model choice, reasoning effort, and Codex sign-in status. |
-| External Skills | Agent skill files loaded from disk. |
-| Genomes | Connect local genome files and refresh the connected list. |
-| Plugins | User plugin folders; enable or disable plugin workspaces. |
+The Settings rail has three groups.
+
+| Group | Section | What it controls |
+| --- | --- | --- |
+| Workspace | Appearance | Day/night theme and workspace look. |
+| | Startup | Default startup module, or "remember last opened module". |
+| | Storage & data | The storage root folder — the one setting to get right first — plus **Diagnostics & app information** (logs folder, third-party notices). |
+| Lab preferences | Locations & samples | The shared inventory location vocabulary (used by `Chemicals` and `Home`), sample storage locations, and the sample type names used by `Samples` (rename or add types). |
+| | Papers | Preferred journal names or URLs for `Papers` search and the scheduled paper finder. |
+| | Notebook PDF | Layout options for notebook PDF export. |
+| Agent & extensions | Codex | Codex CLI install/sign-in status, model choice, and reasoning effort. |
+| | Tool access | Turn individual Hikari MCP tools on or off for the agent. |
+| | Skills & plugins | External agent skill folders, and user plugin folders (add, enable/disable, remove). |
 
 ![Settings appearance controls with the day theme selected](../screenshots/settings-appearance.png)
 
@@ -310,7 +309,7 @@ It requests only `storage`, `files`, `downloads`, and `layout` — it has no not
 
 ## AI and Agent Setup
 
-Configure AI features in `Settings > Codex Model & Access`.
+Configure AI features in `Settings > Codex`.
 
 The Agent workspace uses:
 
@@ -326,9 +325,22 @@ If you prefer usage-based billing, `codex login --api-key` still works, but it i
 
 ### Codex Agent Setup
 
-1. Install the `codex` CLI and make sure it is available on `PATH`.
-2. Run `codex login`.
-3. In `Settings > Codex Model & Access`, optionally choose a model and reasoning effort.
+1. Install the `codex` CLI. If Hikari cannot find it, `Settings > Codex` shows an **Install Codex CLI** card with a **Copy install command** button and a **Check again** button.
+2. Sign in with **Sign in with OpenAI** in `Settings > Codex`, or run `codex login` in a terminal.
+3. In `Settings > Codex`, optionally choose a model and reasoning effort.
+4. In `Settings > Tool access`, optionally turn off Hikari tools you do not want the agent to call.
+
+Hikari uses your normal Codex sign-in (`~/.codex`, or `$CODEX_HOME`), but runs Codex with a private copy of that home under the app-data folder (`Config/codex-cli-home/`, see [Data and Storage](#data-and-storage)). Hikari's MCP server and skills are configured there, so your own Codex settings are not changed.
+
+### Use Hikari from Codex Desktop
+
+`Settings > Codex > Connect Codex Desktop` lets a separately installed Codex Desktop app call Hikari's tools against your open workspace.
+
+1. Click **Copy setup instructions**. Hikari writes a live MCP configuration block (a loopback address and a private token) and copies a prompt that points at it.
+2. Paste the prompt into a Codex Desktop task and send it. Codex merges the marked `hikari` block into its user `config.toml`, keeping your other settings.
+3. Restart Codex Desktop once. `/mcp` should then list `hikari` as connected.
+
+Keep Hikari open while you use the connection: the configuration points at the running app process. The same **Tool access** switches apply.
 
 ## Data and Storage
 
@@ -337,34 +349,61 @@ Hikari keeps state in three layers:
 | Layer | Where | What lives there |
 | --- | --- | --- |
 | Renderer state | `localStorage` key `hikari_state_v1` | Fast UI state, loaded on boot |
-| Snapshot | `hikari-data.json` in the storage root | The saved record set |
-| Storage root | The folder you set in `Settings > Storage` | Every heavy file, in named subfolders |
+| Snapshot | `hikari-data.json` in the storage root | Settings and the small collections; the large collections are cleared from it on save and rebuilt from the module folders on load |
+| Storage root | The folder you set in `Settings > Storage & data` | Every record and file, in folders owned by the module that writes them |
 
-Inside the storage root you will find `Papers/` and `papers.md/`, `Assays/`, `Gels/`, `Samples/`, `Protocol/`, and `KnowledgeBase/`, alongside the snapshot file and the SQLite search indexes for chemicals and protocols.
+Most records are plain JSON files, one per record, so the folder is readable without Hikari:
+
+| Path in the storage root | What it holds |
+| --- | --- |
+| `hikari-data.json` | The compact snapshot |
+| `Protocol/<name>__<id>/protocol.json` | One protocol per folder |
+| `Project/<project>/Notebook/<page>__<id>/page.json` | Notebook pages, grouped by project |
+| `Project/<project>/MEMORY.md`, `.agents/skills/`, `Sequence/` | The agent's per-project memory and skills, and the project's sequence folder |
+| `Samples/<zone>/<container>__<id>.json`, `folders.json`, `unplaced.json` | Samples, one file per storage container |
+| `Assays/<name>__<id>/assay.json` | Plate assays, next to their analysis JSON, chart SVGs, and result files |
+| `Gels/<name>__<id>/gel.json` | Gel records, next to their images and exports |
+| `Workflow/<template>__<id>/template.json`, `…/<run>__<id>/workflow.json` | Workflow templates and runs |
+| `Papers/` (and `Project/<project>/Papers/`) | Stored PDFs; each has a `<file>.pdf.json` record beside it with comments, highlights, and summaries |
+| `KnowledgeBase/papers.md/`, `knowledge.index.sqlite`, `experiments.sqlite` | Parsed paper Markdown and figures, the paper identity index, and extracted experiments |
+| `SequenceViewer/sequence-library.sqlite` | The sequence library |
+| `hikari-chemicals.index.sqlite` | The chemical inventory (the only copy; SQLite is kept here for fast search) |
+| `Dashboard/experiment-log.json` | The Home experiment log |
+| `Plugins/<plugin-id>/` | Files that plugins save |
+| `Config/scheduled-tasks.json`, `Config/genome-library.json` | Scheduled paper-finder tasks and connected genome files |
+| `.hikari/agent-memory.json`, `Project/<project>/.hikari/` | Agent memory, and each project's cached notebook summaries |
+
+App-owned files that are not part of your lab record live in the OS app-data folder (`~/Library/Application Support/Hikari` on macOS, `%APPDATA%\Hikari` on Windows): `Config/last-storage-root.json` (so Hikari can find your workspace again), `Config/codex-cli-home/` (the private Codex runtime home), `Logs/` (`errors.log`, `agent-chat.log`), and `Tmp/`. `Settings > Storage & data > Diagnostics & app information > Open Logs Folder` opens the logs.
 
 Notes:
 
 - The snapshot is a `.json` file; the default filename is `hikari-data.json`.
 - Auto-save runs whenever a storage path is set. Without one, nothing is written to disk.
+- If the chemicals index cannot be read, Hikari moves it aside as `hikari-chemicals.index.sqlite.corrupt-<time>`, starts a new one, and shows an error notice. It never overwrites an unreadable index.
 
 Backup suggestions:
 
-1. Back up the whole storage folder, not just the snapshot file — the snapshot alone does not contain your PDFs, gels, or attachments.
-2. Periodically copy a dated snapshot out of the root.
+1. Back up the whole storage folder, not just the snapshot file — the snapshot alone does not contain your protocols, notebook pages, PDFs, gels, or attachments.
+2. Quit Hikari before copying the folder so the SQLite files are not mid-write.
 
 ## Development
 
-Generated files are part of the normal workflow. Do not hand-edit `index.html`, `styles.css`, or generated config modules unless you also update their source inputs.
+Generated files are part of the normal workflow and are not committed. Do not hand-edit `index.html`, `styles.css`, `src/renderer/modules/views.js`, or the `*.generated.js` modules; edit their sources under `ui/` (or `scripts/build-ui/llm-catalog.mjs` for the Codex provider modules) and rerun `npm run build:ui`.
 
 ### Useful commands
 
 | Command | What it does |
 | --- | --- |
-| `npm run build:ui` | Generates `index.html`, `styles.css`, and generated provider/app-registry modules from `ui/` and `config/`. |
-| `npm run check:dom-ids` | Verifies `document.getElementById(...)` calls against generated `index.html`. |
-| `npm run report:modules` | Reports module relationships for the codebase. |
+| `npm run build:ui` | Generates `index.html`, `styles.css`, `views.js`, the app registry, and the Codex provider modules from `ui/`. |
 | `npm run start` | Builds the UI, then starts Electron in development mode. |
-| `npm test` | Builds the UI, runs DOM ID checks, and executes `node test.js`. |
+| `npm test` | Builds the UI, then runs `node test.js`: lint, the static checks, every `tests/*-selfcheck.*` script, and the core and edge suites. This is the whole CI gate. |
+| `npm run test:checks` | Lint, static checks, and selfchecks only (no suites). |
+| `npm run test:core` / `npm run test:edge` | One suite branch. `node test.js <regex>` runs any subset; `npm run test:groups` lists the groups. |
+| `npm run lint` | ESLint over `src`, `scripts`, `tests`, and `test.js`. |
+| `npm run check:dom-ids` | Verifies `document.getElementById(...)` calls against the generated `index.html`. |
+| `npm run check:css-colors` | Keeps raw color literals inside `*palette.css` files and rejects unused custom properties. |
+| `npm run check:source-layout` | Enforces the import boundaries: no unresolved imports, no main ↔ renderer crossings, no cross-feature cycles, and public-API-only access to Agent Chat and Tools. |
+| `npm run report:modules` | Writes the renderer module relationship report to `reports/renderer-module-relationships.md`. |
 | `npm run package:app` | Creates packaged app artifacts with Electron Forge. |
 | `npm run dist` | Builds the macOS app bundle or the Windows installer. |
 
@@ -376,9 +415,19 @@ Packaging notes:
 
 ### Tests
 
-- `test.js` is the main test entrypoint.
-- `tests/suites/core/` covers app modules, contracts, and agent flows.
+- `test.js` is the main test entrypoint. Every test reports one `PASS`/`FAIL [group] name` line.
+- `tests/suites/core/` covers app modules, contracts, agent flows, the Codex CLI provider, the plugin system, and the updater.
 - `tests/suites/edge/` covers regression-style and edge-case suites.
+- `tests/*-selfcheck.*` are standalone scripts that `test.js` runs in their own process; `tests/*-electron.cjs` drive a real Electron window and run separately.
+
+See [`tests/README.md`](../../tests/README.md) for the full layout.
+
+### Continuous integration and releases
+
+- **CI** (`.github/workflows/ci.yml`) runs on every push, on macOS: `npm ci`, `npm test`, then the embedded-Electron MCP startup check and the workspace onboarding test (`tests/storage-setup-electron.cjs`).
+- **Publish** (`.github/workflows/publish.yml`) runs when a GitHub release (`vX.Y.Z`, matching `package.json`) is published. It re-runs CI, builds and attaches the Windows x64 `HikariSetup.exe`, and publishes the package to npmjs (trusted publishing) and GitHub Packages.
+- **Windows install smoke** (`.github/workflows/windows-install-smoke.yml`) packs the branch, runs it through `npx`, installs `HikariSetup.exe`, and drives the installed app (`tests/installed-app-smoke.mjs`). Push to a `win-smoke/**` branch to run it before merging.
+- The app checks npm for a newer `@hinashirosaki/hikari` at startup and offers an update dialog (`src/main/updater/`).
 
 ### Where a module's code lives
 
@@ -386,26 +435,28 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 
 | Module | Renderer folder | Main-process half |
 | --- | --- | --- |
-| Home | `modules/home-dashboard/index.js` + `home-dashboard/` | — |
-| Protocols | `modules/protocol/` | `src/main/storage/` (protocol index) |
+| Home | `modules/home-dashboard/` | `src/main/scheduled-tasks/` (paper finder), `src/main/storage/experiment-log-storage.js` |
+| Protocols | `modules/protocol/` | `src/main/storage/` (`Protocol/` folders) |
 | Notebook | `modules/biology-notebook/` | — |
 | Papers | `modules/papers/` | `src/main/papers/` (search, download, parse, retrieve, analysis, finding) |
-| Samples | `modules/sample-registry/` + `modules/personal-inventory/` | — |
+| Samples | `modules/sample-registry/` + `modules/personal-inventory/` | `src/main/storage/sample-containers.js` |
 | Chemicals | `modules/lab-common-inventory/` | `src/main/storage/` (chemicals index) |
-| Workflows | `modules/workflow/` | — |
+| Workflows | `modules/workflow/` | `src/main/storage/workflow/` |
 | Agent | `modules/agent-chat/` | `src/main/agent/` |
 | Sequence Viewer | `modules/sequence-viewer/` | `modules/sequence-viewer/main-process/` |
-| Assay | `modules/assay/` | — |
-| Tools | `modules/tool-box/index.js` + `tool-box/` | — |
-| Settings | `modules/settings/` | `src/main/core/main-services.js` |
-| Gel (plugin) | `src/plugins/gel/` | served plugin runtime |
+| Assay | `modules/assay/` | `src/main/storage/` (`Assays/` folders) |
+| Tools | `modules/tool-box/` | — |
+| Settings | `modules/settings/` | `src/main/ipc/register-system-ipc.js`, `src/main/lib/codex-cli-provider/` |
+| Gel (plugin) | `src/plugins/gel/` | `src/main/ipc/register-plugin-ipc.js` (served on its own loopback origin) |
 
 ## Project Layout
 
-- `src/main/app/start-main-app.js`: Electron main process, window lifecycle, IPC wiring, and LLM integration.
+- `src/main/main.js` → `src/main/app/start-main-app.js`: Electron app lifecycle (Squirrel install hooks, crash reporting, window creation, and the unsaved-changes close handshake).
 - `src/main/core/main-services.js`: constructs main-process services in dependency order and registers IPC.
-- `src/main/storage/`: storage-bundle import/export, persistence, and sequence-library summary logic.
-- `src/main/data/`: primary snapshot and data-helper utilities.
+- `src/main/windows/`: the main `BrowserWindow`.
+- `src/main/preload/`: the `window.hikariApi` bridge, one file per domain under `api/`.
+- `src/main/storage/`: storage-root layout, per-module record folders, the chemicals SQLite index, hydration, and import.
+- `src/main/data/`: the compact snapshot and the save/load facade.
 - `src/main/project-memory/`: project-scoped Codex memory collection and Markdown generation.
 - `src/main/scheduled-tasks/`: task persistence, recurrence, and Codex task execution.
 - `src/main/genome/`: connected FASTA indexing and genome registry logic.
@@ -413,12 +464,17 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 - `src/main/agent/`: Codex integration, MCP contracts, tool adapters, context, and agent runtime support.
 - `src/main/papers/`: paper search, download, parsing, retrieval, analysis, and scheduled finding.
 - `src/main/ipc/`: IPC registrars; channel names are centralized in `src/shared/ipc/channels.js`.
-- `src/main/lib/`: process-level integrations and shared utilities (Codex agent launcher, LLM runtime, app-paths).
+- `src/main/bioinformatics/`: NCBI BLAST and UniProt clients.
+- `src/main/lib/`: process-level integrations and shared utilities (Codex CLI provider, LLM runtime, app paths, plugin server and file access, path safety, SQLite helpers).
+- `src/shared/ipc/channels.js`: every IPC channel name, shared by main and preload.
 - `src/renderer/`: renderer shell, feature modules, shared state, and service layer.
 - `src/plugins/`: bundled plugin workspaces.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
-- `ui/config/app-registry.json`: source-of-truth dock order, labels, aliases, and search wiring.
-- `vendor/` and `src/plugins/gel/vendor/`: unmodified third-party builds. Licences are listed in [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md), also reachable from **Settings → Startup → Diagnostics → Third-Party Notices**.
+- `ui/config/`: `app-registry.json` (dock order, labels, aliases, and search wiring) plus the HTML and CSS order files.
+- `vendor/` and the `cropperjs`, `pptxgenjs`, `tabulator`, and `utif` folders under `src/plugins/gel/vendor/`: unmodified third-party builds. Licences are listed in [`THIRD-PARTY-NOTICES.md`](../../THIRD-PARTY-NOTICES.md), also reachable from **Settings → Storage & data → Diagnostics & app information → Third-Party Notices**.
+- `examples/plugins/`: small example plugins (`hello-world`, `notebook-results`).
+- `scripts/`: the UI build, static checks, the module report, and `dev/` and `maintenance/` utilities.
+- `bin/`: `hikari.js` (the `npx` entry that builds the app) and `dist.js` (packaging).
 - `docs/`: internal walkthroughs for renderer, main helpers, plugins, and the agent backend.
 
 ## Internal Docs
