@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -30,9 +30,8 @@ jobs:
       # covers lint, the static checks, the selfchecks and the ~1000-test
       # suite. Generated files are not committed, so the build must run before
       # the checks that read index.html and styles.css.
-      # One shared test gate. Xvfb also supports the Electron-backed selfchecks.
-      - run: xvfb-run -a npm test
+      - run: npm test
       - name: Embedded Electron MCP startup
-        run: xvfb-run -a node -e "require('node:child_process').execFileSync(process.execPath, ['tests/hikari-mcp-launch-selfcheck.js', '.', require('electron'), process.cwd()], {stdio:'inherit'})"
+        run: node -e "require('node:child_process').execFileSync(process.execPath, ['tests/hikari-mcp-launch-selfcheck.js', '.', require('electron'), process.cwd()], {stdio:'inherit'})"
       - name: Workspace onboarding and recovery
-        run: xvfb-run -a node node_modules/electron/cli.js tests/storage-setup-electron.cjs
+        run: node node_modules/electron/cli.js tests/storage-setup-electron.cjs

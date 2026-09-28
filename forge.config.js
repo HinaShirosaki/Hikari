@@ -19,19 +19,6 @@ if (process.platform === 'win32') {
   });
 }
 
-if (process.platform === 'linux') {
-  makers.push(
-    {
-      name: '@electron-forge/maker-deb',
-      config: { options: { name: 'hikari' } }
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: { options: { name: 'hikari' } }
-    }
-  );
-}
-
 module.exports = {
   hooks: {
     async packageAfterExtract(_config, buildPath, _electronVersion, platform) {

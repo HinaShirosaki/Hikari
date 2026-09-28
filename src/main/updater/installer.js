@@ -15,8 +15,7 @@ function resolveNpxInvocation(nodeBinary, platform) {
 
 const INSTALLER_PATTERNS = {
   darwin: /\.zip$/iu,
-  win32: /Setup\.exe$/iu,
-  linux: /\.(?:deb|rpm)$/iu
+  win32: /Setup\.exe$/iu
 };
 
 function findInstaller(makeDir, platform, fs = nodeFs) {

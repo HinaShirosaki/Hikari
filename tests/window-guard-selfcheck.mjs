@@ -105,10 +105,8 @@ const macWindow = harness('darwin').windowOptions;
 assert.equal(macWindow.titleBarStyle, 'hidden');
 assert.deepEqual(macWindow.trafficLightPosition, { x: 16, y: 24 });
 assert.notEqual(macWindow.frame, false, 'retain native window controls and window behavior');
-for (const platform of ['win32', 'linux']) {
-  const options = harness(platform).windowOptions;
-  assert.equal(options.titleBarStyle, undefined);
-  assert.equal(options.trafficLightPosition, undefined);
-}
+const winWindow = harness('win32').windowOptions;
+assert.equal(winWindow.titleBarStyle, undefined);
+assert.equal(winWindow.trafficLightPosition, undefined);
 
 console.log('PASS window-guard: popup, navigation, and permission guards');

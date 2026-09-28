@@ -27,7 +27,7 @@ module.exports = function registerCliDiscovery(context = {}) {
     };
   }
 
-  for (const platform of ['darwin', 'win32', 'linux']) {
+  for (const platform of ['darwin', 'win32']) {
     const p = platform === 'win32' ? path.win32 : path.posix;
     const base = fixture(platform);
     const executable = platform === 'win32'
@@ -90,18 +90,18 @@ module.exports = function registerCliDiscovery(context = {}) {
     const options = fixture('darwin', { [`${bin}/codex`]: '#!/usr/bin/env node\n', [`${bin}/node`]: '' }, { [root]: ['v22.0.0', 'v24.1.0'] });
     assert.deepEqual(resolveCodexInvocation({ PATH: '/usr/bin:/bin' }, options), { command: `${bin}/node`, argsPrefix: [`${bin}/codex`] });
   });
-  test('Linux fnm respects XDG data and explicit fnm directories without shell PATH', () => {
+  test('fnm respects XDG data and explicit fnm directories without shell PATH', () => {
     for (const [env, root] of [
       [{ XDG_DATA_HOME: '/custom data' }, '/custom data/fnm/node-versions'],
       [{ FNM_DIR: '/custom fnm' }, '/custom fnm/node-versions']
     ]) {
       const bin = `${root}/v24.1.0/installation/bin`;
-      const options = fixture('linux', { [`${bin}/codex`]: '#!/usr/bin/env node\n', [`${bin}/node`]: '' }, { [root]: ['v24.1.0'] });
+      const options = fixture('darwin', { [`${bin}/codex`]: '#!/usr/bin/env node\n', [`${bin}/node`]: '' }, { [root]: ['v24.1.0'] });
       assert.deepEqual(resolveCodexInvocation(env, options), { command: `${bin}/node`, argsPrefix: [`${bin}/codex`] });
     }
   });
   test('explicit JavaScript CLI entrypoints use Node even without a shebang', () => {
-    const options = fixture('linux', { '/custom/codex.js': 'console.log("fixture")', '/custom/node': '' });
+    const options = fixture('darwin', { '/custom/codex.js': 'console.log("fixture")', '/custom/node': '' });
     assert.deepEqual(resolveCodexInvocation({ HIKARI_CODEX_CLI: '/custom/codex.js' }, options), {
       command: '/custom/node', argsPrefix: ['/custom/codex.js']
     });

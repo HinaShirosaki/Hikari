@@ -170,7 +170,7 @@ function createMainServices(context = {}) {
     return storagePath;
   };
 
-  const npmUpdater = createNpmUpdaterService({ app, dialog, shell, getMainWindow });
+  const npmUpdater = createNpmUpdaterService({ app, dialog, getMainWindow });
 
   // Provider-neutral agent foundation. Codex is constructed afterwards (it
   // needs the MCP service), so sub-agent delegation resolves it lazily.

@@ -66,7 +66,6 @@ function harness(deps = {}) {
 }
 
 // Only macOS has the /usr/bin/python3 stub; elsewhere bare `python3` is always probed.
-assert.strictEqual(await developerToolsMissing('linux'), false);
 assert.strictEqual(await developerToolsMissing('win32'), false);
 
 // End to end: the renderer payload actually executes Python and reads a file back.

@@ -18,13 +18,12 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
 
     const make = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-make-'));
     for (const file of ['zip/darwin/arm64/Hikari-darwin-arm64-1.0.3.zip', 'squirrel.windows/x64/hikariSetup.exe',
-      'squirrel.windows/x64/hikari-1.0.3-full.nupkg', 'deb/x64/hikari_1.0.3_amd64.deb']) {
+      'squirrel.windows/x64/hikari-1.0.3-full.nupkg']) {
       fs.mkdirSync(path.dirname(path.join(make, file)), { recursive: true });
       fs.writeFileSync(path.join(make, file), '');
     }
     assert.equal(findInstaller(make, 'darwin'), path.join(make, 'zip/darwin/arm64/Hikari-darwin-arm64-1.0.3.zip'));
     assert.equal(findInstaller(make, 'win32'), path.join(make, 'squirrel.windows/x64/hikariSetup.exe'));
-    assert.equal(findInstaller(make, 'linux'), path.join(make, 'deb/x64/hikari_1.0.3_amd64.deb'));
     assert.equal(findInstaller(path.join(make, 'missing'), 'darwin'), '');
   });
 

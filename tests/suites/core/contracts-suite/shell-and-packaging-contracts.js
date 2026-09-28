@@ -48,7 +48,7 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
           options = windowOptions;
           return { webContents, loadFile() {}, on() {} };
         },
-        platform: 'linux',
+        platform: 'win32',
         shell: { openExternal() {} },
         path,
         projectRoot: '/app',

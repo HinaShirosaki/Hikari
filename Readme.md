@@ -7,7 +7,7 @@
 **A local-first lab workspace for the bench — planning, protocols, records, analysis, papers, and AI, all on your machine.**
 
 <p>
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="platforms" />
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555?style=flat-square" alt="platforms" />
   <img src="https://img.shields.io/badge/Electron-40-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 40" />
   <img src="https://img.shields.io/badge/Node.js-20%2B-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 20+" />
   <img src="https://img.shields.io/badge/local--first-no%20backend-7C3AED?style=flat-square" alt="local-first" />
@@ -43,7 +43,7 @@ New to Hikari? Follow the **[15-minute first experiment tutorial](./docs/getting
 
 ### Install Hikari
 
-**macOS / Linux**
+**macOS**
 
 ```bash
 curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
@@ -55,13 +55,13 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
-No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS/Linux) or `%LOCALAPPDATA%\Hikari\node` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
+No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\Hikari\node` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
 
 ```bash
 npx @hinashirosaki/hikari
 ```
 
-Either way this downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes a single `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. Windows produces one `./hikari-out/Hikari-win32-<arch>/HikariSetup.exe`; run it to install Hikari. Linux installers (`.deb`/`.rpm`) are written to `./hikari-out/make/`. Set `HIKARI_OUT_DIR` to build somewhere else.
+Either way this downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes a single `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. Windows produces one `./hikari-out/Hikari-win32-<arch>/HikariSetup.exe`; run it to install Hikari. Set `HIKARI_OUT_DIR` to build somewhere else.
 
 Or paste this into a coding agent that has terminal access:
 
@@ -69,7 +69,7 @@ Or paste this into a coding agent that has terminal access:
 Install Hikari (https://github.com/HinaShirosaki/Hikari) for me:
 
 1. Confirm Node.js 20 or newer and npm are available. If missing, explain what is needed and ask before installing system software or requesting administrator privileges.
-2. Run `npx @hinashirosaki/hikari` in a user-owned folder. It builds the native app for my OS and CPU and writes `Hikari.app` under `hikari-out/Hikari-darwin-<arch>/` on macOS, `HikariSetup.exe` under `hikari-out/Hikari-win32-<arch>/` on Windows, or installers under `hikari-out/make/` on Linux.
+2. Run `npx @hinashirosaki/hikari` in a user-owned folder. It builds the native app for my OS and CPU and writes `Hikari.app` under `hikari-out/Hikari-darwin-<arch>/` on macOS, or `HikariSetup.exe` under `hikari-out/Hikari-win32-<arch>/` on Windows.
 3. Install Hikari from that artifact using the normal convention for my operating system. Ask before overwriting an existing installation or making a system-wide change, and do not bypass operating-system security checks.
 4. Launch Hikari once and confirm that it opens. Report the build artifact, installed application path, and any step I still need to complete.
 
@@ -80,7 +80,7 @@ Preserve any existing Hikari application data. Do not choose or change the Hikar
 
 - Node.js 20+
 - npm
-- Linux only: `dpkg` + `fakeroot` (for `.deb`) and `rpm` (for `.rpm`)
+- macOS or Windows (Linux is not supported)
 
 ### Run from source
 
@@ -90,7 +90,7 @@ npm install
 npm run start
 ```
 
-`npm run dist` builds the same output as `npx @hinashirosaki/hikari`: a single `out/Hikari-darwin-<arch>/Hikari.app` on macOS, one `out/Hikari-win32-<arch>/HikariSetup.exe` on Windows, or installers in `out/make/` on Linux. macOS license notices are retained inside the app bundle.
+`npm run dist` builds the same output as `npx @hinashirosaki/hikari`: a single `out/Hikari-darwin-<arch>/Hikari.app` on macOS or one `out/Hikari-win32-<arch>/HikariSetup.exe` on Windows. macOS license notices are retained inside the app bundle.
 
 ### Install from GitHub Packages
 
@@ -389,13 +389,12 @@ Generated files are part of the normal workflow. Do not hand-edit `index.html`, 
 | `npm run start` | Builds the UI, then starts Electron in development mode. |
 | `npm test` | Builds the UI, runs DOM ID checks, and executes `node test.js`. |
 | `npm run package:app` | Creates packaged app artifacts with Electron Forge. |
-| `npm run dist` | Builds the macOS app bundle or Windows/Linux installers. |
+| `npm run dist` | Builds the macOS app bundle or the Windows installer. |
 
 Packaging notes:
 
 - macOS builds produce one `Hikari.app` bundle, with license notices inside and no ZIP
 - Windows builds produce one self-contained `HikariSetup.exe` using Squirrel; intermediate packages stay in temporary staging. Published GitHub releases include the x64 installer.
-- Linux builds use `deb` and `rpm`
 - Build artifacts are written under `out/`
 
 ### Tests

@@ -147,7 +147,7 @@ function startMainApp() {
           console.warn('Failed to set dock icon:', error);
         }
       }
-      // Windows and Linux draw Electron's default File/Edit/View/Window menu inside
+      // Windows draws Electron's default File/Edit/View/Window menu inside
       // every window; Hikari has its own header and shortcuts. macOS keeps it in the
       // system menu bar, where Cmd+C/V depend on its Edit roles.
       if (process.platform !== 'darwin') Menu.setApplicationMenu(null);
