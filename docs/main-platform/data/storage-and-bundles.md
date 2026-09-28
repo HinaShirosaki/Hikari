@@ -52,7 +52,7 @@ Every save rebuilds these from the snapshot. JSON is the only copy wherever a mo
 | Workflow templates, runs | `Workflow/<template>__<id>/template.json`, `Workflow/<template>__<id>/<run>__<id>/workflow.json` |
 | Personal inventory, samples | `Samples/<zone>/<container>__<id>.json` per container, `Samples/<zone>/folders.json`, `Samples/unplaced.json` (see below) |
 | Assays | `Assays/<name>__<id>/assay.json`, beside the assay's artifacts |
-| Gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts |
+| Legacy gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts. These are `state.gelAnalyses` records from before Gel became a plugin; nothing writes new ones, and the Gel plugin imports them. The plugin keeps its own records in `settings.pluginStorage.gel` (inside the snapshot) and its files under `Plugins/gel/` |
 | Papers | `<file>.pdf.json` beside each stored PDF (under `Papers/`, `Project/<p>/Papers/`, `RelatedPapers/`): links, highlights, comments, bookmarks, summaries |
 | Chemicals | `hikari-chemicals.index.sqlite` (`inventory_chemicals`, `inventory_meta`) |
 | Home experiment log | `Dashboard/experiment-log.json` (the `settings.dashboard` quick-log draft and entries) |

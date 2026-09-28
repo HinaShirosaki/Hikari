@@ -362,14 +362,14 @@ Most records are plain JSON files, one per record, so the folder is readable wit
 | `Project/<project>/MEMORY.md`, `.agents/skills/`, `Sequence/` | The agent's per-project memory and skills, and the project's sequence folder |
 | `Samples/<zone>/<container>__<id>.json`, `folders.json`, `unplaced.json` | Samples, one file per storage container |
 | `Assays/<name>__<id>/assay.json` | Plate assays, next to their analysis JSON, chart SVGs, and result files |
-| `Gels/<name>__<id>/gel.json` | Gel records, next to their images and exports |
+| `Gels/<name>__<id>/gel.json` | Gel records from builds before Gel became a plugin (kept so the Gel plugin can import them) |
 | `Workflow/<template>__<id>/template.json`, `…/<run>__<id>/workflow.json` | Workflow templates and runs |
 | `Papers/` (and `Project/<project>/Papers/`) | Stored PDFs; each has a `<file>.pdf.json` record beside it with comments, highlights, and summaries |
 | `KnowledgeBase/papers.md/`, `knowledge.index.sqlite`, `experiments.sqlite` | Parsed paper Markdown and figures, the paper identity index, and extracted experiments |
 | `SequenceViewer/sequence-library.sqlite` | The sequence library |
 | `hikari-chemicals.index.sqlite` | The chemical inventory (the only copy; SQLite is kept here for fast search) |
 | `Dashboard/experiment-log.json` | The Home experiment log |
-| `Plugins/<plugin-id>/` | Files that plugins save |
+| `Plugins/<plugin-id>/` | Files that plugins save. The Gel plugin keeps its images and exports under `Plugins/gel/`; each plugin's small record store rides in the snapshot's `settings.pluginStorage` |
 | `Config/scheduled-tasks.json`, `Config/genome-library.json` | Scheduled paper-finder tasks and connected genome files |
 | `.hikari/agent-memory.json`, `Project/<project>/.hikari/` | Agent memory, and each project's cached notebook summaries |
 

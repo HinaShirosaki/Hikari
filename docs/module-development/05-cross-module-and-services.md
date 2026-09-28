@@ -24,7 +24,7 @@ Do I need to read or mutate persisted data?
   → read/write state directly, then call persist().
     Don't channel data through services.
 
-Do I need filesystem, native dialog, agent call, scripts, autosave?
+Do I need filesystem, native dialog, agent call, LLM prompt, Python, autosave?
   → window.hikariApi (passed in as apiBridge / getApiBridge).
 ```
 
@@ -63,12 +63,12 @@ The service layer is the glue you should reach for whenever a change in one modu
 
 | Service | Methods (examples) |
 | --- | --- |
-| `protocolService` | `handleProtocolsChanged()`, `handleProtocolsImported()`, `handleExternalProtocolRecordSaved(payload)`, `openProtocol(id)`, `importProtocolsFromJson(json, opts)`, `createDraftFromPaper({method, paper})` |
-| `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()` |
-| `projectService` | `handleProjectsChanged()` |
-| `inventoryService` | `handleSamplesChanged()`, `openSampleSearch(query)` |
+| `protocolService` | `handleProtocolsChanged()`, `handleProtocolsImported()`, `handleExternalProtocolRecordSaved(payload)`, `saveProtocolRecord(...)`, `openProtocol(id)`, `importProtocolsFromJson(json, opts)`, `createDraftFromPaper({method, paper})` |
+| `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()`, `logPageEvent(...)` |
+| `projectService` | `handleProjectsChanged()`, `ensureProjectRecord(...)` |
+| `inventoryService` | `handleSamplesChanged()`, `handleSampleInventorySettingsChanged()`, `openSampleSearch(query)` |
 | `analysisService` | `handleAssaysChanged()`, `openAssayForNotebook(...)` |
-| `sequenceService` | `openFromToolBox(seq)` |
+| `sequence` (`modules/sequence-viewer/service.js`) | `openFromToolBox(seq)` |
 
 Each service is a closure over the registry. A typical implementation:
 
@@ -134,28 +134,39 @@ Projects are a good ownership example: their records remain in `state.projects`,
 
 Anything that touches the OS or main process goes through the preload-injected `window.hikariApi`. In modules, accept it as `apiBridge` / `getApiBridge` rather than referencing `window` directly.
 
-Common methods (full surface in [docs/main-platform/](../main-platform/)):
+The surface is one spread per domain, built in `src/main/preload/create-preload-api.js` from `src/main/preload/api/*.js`. The methods modules use most:
 
-| Method | Purpose |
+| Area | Methods |
 | --- | --- |
-| `autoSaveDataFile(state, manifestPath?)` | autosave the state bundle (called from the renderer core's `persist`) |
-| `loadDataFile()` / `saveDataFile(state)` | manual import/export of the `.json` snapshot |
-| `runScript(name, payload)` | invoke a registered main-process script (used by tool-box, agent) |
-| `openExternalUrl(url)` | shell-open a URL |
-| `selectStorageRoot()` | open the directory picker for `Settings → Storage Path` |
-| Storage bundle import/export | see [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and [src/main/storage/](../../src/main/storage/) |
-| Agent calls | `callAgent`, `streamAgent`, `cancelAgent`, … (see [docs/agent/](../agent/)) |
+| Storage root and snapshot | `autoSaveDataFile(state, filePath)` (called from the renderer core's `persist`), `importStorageRoot(path)`, `pickStorageDirectory(current)`, `ensureStorageDirectory(path)`, `getLastStorageRoot()` |
+| Files in the storage root | `storeImportedFile(...)`, `moveStoredFile(...)`, `writeJsonFile(...)`, `readFileBytes(path)`, `readFileBase64(path)`, `openFilePath(path)`, `appendNotebookPageLog(...)` |
+| Import parsers | `parseChemicalImportFile(...)`, `parseAssayResultImportFile(...)` |
+| Sequence library | `sequenceLibraryList`, `sequenceLibraryGet`, `sequenceLibraryUpsert`, `sequenceLibrarySearchFeatures`, … |
+| LLM and agent | `runDirectLlmPrompt(...)` (through `services/direct-llm.js`), `agentChat(...)`, `agentChatCancel(...)`, `onAgentProgress(handler)`, `agentGenerateProtocol(...)` (see [docs/agent/](../agent/)) |
+| Scheduled tasks | `listScheduledTasks`, `createPaperFindingTask`, `schedulePaperFinding`, … |
+| System | `openExternalUrl(url)`, `openLogsFolder()`, `reportError(...)`, `runPython({ code, files, readback_paths })` |
+| Clipboard | `readChemicalClipboard()`, `writeTextToClipboard(text)` |
+
+The main-process side of each group is in [docs/main-platform/ipc/ipc-registrars.md](../main-platform/ipc/ipc-registrars.md). Most methods resolve `{ ok: false, error }` instead of throwing, so check the result.
 
 Use it via the bridge passed to your module:
 
 ```js
 export function initMyFeature({ getApiBridge, ... }) {
-  async function exportFile() {
+  async function saveResult(result) {
     const bridge = getApiBridge();
-    if (!bridge?.saveDataFile) {
+    if (!bridge?.writeJsonFile) {
       return;
     }
-    await bridge.saveDataFile(state);
+    const saved = await bridge.writeJsonFile({
+      storagePath: state.settings.storagePath,
+      targetFolder: 'MyFeature',
+      fileName: 'result.json',
+      data: result
+    });
+    if (saved?.ok === false) {
+      showTransientNotice(saved.error, { type: 'error' });
+    }
   }
 }
 ```
@@ -164,13 +175,16 @@ Always optional-chain. The bridge is `null` in renderer test harnesses or when r
 
 ## Custom DOM events
 
-Three custom events broadcast from the renderer app shell:
+Custom events broadcast on `window`:
 
 | Event | When | Listened by |
 | --- | --- | --- |
 | `hikari:app-ready` | after `initApp()` finishes (or fails) | `bootstrap/index-shell.js` (drops the loading cover), tests |
-| `hikari:appearance-changed` | when `Settings` writes new appearance | `navigation-shell.js` (re-renders active view to pick up theme) |
-| `hikari:storage-path-changed` | when storage path is saved | `app/storage-import.js` |
+| `hikari:appearance-changed` | when `Settings` writes new appearance | `navigation-shell.js` (reapplies the theme), the plugin bridge (forwards it to plugin frames) |
+| `hikari:storage-changed` | when a storage root is opened or saved | the plugin bridge (forwards it to plugin frames) |
+| `hikari:left-rail-width-changed` | when the shared left rail is resized or collapsed | the plugin bridge (`layout` context) |
+| `hikari:open-agent-chat-rail` / `hikari:close-agent-chat-rail` | a view asks the shell to open or close its agent side rail | `navigation-shell/agent-rail.js` |
+| `hikari:agent-chat-rail-state`, `hikari:agent-chat-rail-availability-changed` | the rail opened/closed, or a view's rail availability changed | views that mirror the rail state (e.g. Papers workspace controls) |
 
 If your module needs to listen, attach to `window` and remember to remove the listener if you ever support hot-reload.
 
@@ -180,7 +194,7 @@ The topbar search command bar (see [src/renderer/app/topbar-search.js](../../src
 
 ## Anti-patterns
 
-- **Importing another feature module's internal helpers.** Your module should not `import { … } from './biology-notebook.js'`. Use the registry/service layer.
+- **Importing another feature module's internal helpers.** Your module should not `import { … } from '../biology-notebook/notebook/save-entry.js'`. Use the registry/service layer, or the feature's `public-api.js` if it has one. `npm run check:source-layout` fails on some of these (Agent Chat and Tool Box internals, cross-feature cycles).
 - **Creating a parallel module for another feature's state slice.** Extend the existing owner and expose a callback, service method, or public API instead.
 - **Direct DOM access into another view's nodes** (e.g. `document.querySelector('#protocol-list')`). The other module owns its DOM. Use its render API.
 - **Throttled persistence inside a module.** `persist()` already accounts for the autosave path; calling it eagerly is correct.

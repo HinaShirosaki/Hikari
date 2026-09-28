@@ -15,7 +15,7 @@ Before you call your module done, verify all of the following.
 
 ### Configuration
 
-- [ ] `ui/config/app-registry.json` lists the new app entry and its `viewKey` in `viewOrder`.
+- [ ] `ui/config/app-registry.json` lists the new app entry, and its `viewId` appears once in `viewOrder`.
 - [ ] If `placement: "dock"`, the id is also added to `dockOrder[]` in the same file.
 
 ### Renderer wiring
@@ -26,10 +26,10 @@ Before you call your module done, verify all of the following.
 - [ ] `src/renderer/module-manifests/<id>.js`:
   - [ ] imports `init<Name>`,
   - [ ] sets `key` to the registry key,
-	  - [ ] builds the module options in `createOptions(...)`,
-	  - [ ] adds `viewKey` plus `render(...)` for navigation rendering,
-	  - [ ] (optional) adds `bootOrder` for boot-time rendering,
-	  - [ ] (optional) adds `renderAll(...)` when the boot render differs from `render(...)`.
+  - [ ] builds the module options in `createOptions(...)`,
+  - [ ] adds `viewKey` plus `render(...)` for navigation rendering,
+  - [ ] (optional) adds `bootOrder` for boot-time rendering,
+  - [ ] (optional) adds `renderAll(...)` when the boot render differs from `render(...)`.
 - [ ] `src/renderer/module-manifests/index.js` exports the manifest in the correct initialization group.
 
 ### Cross-module
@@ -39,8 +39,8 @@ Before you call your module done, verify all of the following.
 
 ### Build and run
 
-- [ ] `npm run build:ui` succeeds and prints all five output paths.
-- [ ] `npm test` passes (`build:ui` + `check:dom-ids` + `node test.js`).
+- [ ] `npm run build:ui` succeeds and prints all six output paths.
+- [ ] `npm test` passes (`build:ui`, then `node test.js`: lint, `check-dom-ids`, `check-css-colors`, `check-source-layout`, the selfchecks, and the suites).
 - [ ] `npm start` boots the app, the dock button shows, the view renders, and reload preserves state.
 
 ## Naming conventions
@@ -69,13 +69,16 @@ Keep the same root noun across all the names. It dramatically reduces the cognit
 - No duplicate `id="..."` attributes anywhere in the concatenated HTML. *Error:* `Duplicate HTML id attributes detected: id1 (2), id2 (2)`.
 - No duplicate shared or generated CSS paths. *Error:* `Duplicate CSS input entry`.
 - Every dock app has its id in `dockOrder`, and every id in `dockOrder` exists. *Errors:* `dockOrder references unknown app id`, `App "x" is placed in the dock but missing from dockOrder`, `dockOrder length must match the number of apps with placement "dock"`.
-- `app-registry.json` entries are well-formed (id, label, viewId, icon, placement among `dock` / `more`).
+- Every app and supplemental view appears in `viewOrder` exactly once. *Errors:* `viewOrder must list every app and supplemental view exactly once`, `viewOrder is missing viewId "..."`.
+- `app-registry.json` entries are well-formed (id, viewKey, label, viewId, subtitle, icon, placement among `dock` / `more`), unique (id, viewId, viewKey, icon), and point at an existing icon file. *Errors:* `Duplicate app ... in app-registry.json`, `App "x" references missing icon "..."`.
 
 `scripts/check-dom-ids.mjs` enforces:
 
-- IDs referenced in the renderer JS exist in the generated HTML, and vice versa. Catches typos before they hit users.
+- Every id passed to `document.getElementById(...)` in the renderer exists in the generated `index.html`. Catches typos before they hit users.
 
-`npm test` runs both, plus `node test.js`.
+`scripts/check-css-colors.mjs` keeps raw color literals in `*palette.css` files, and `scripts/check-source-layout.mjs` enforces the import boundaries (no unresolved imports, no main ↔ renderer crossings, no cross-feature cycles, no loose files under `modules/`).
+
+`npm test` runs `build:ui` and then all three checks, lint, and the test suites through `node test.js`.
 
 ## Common mistakes and how the build complains
 

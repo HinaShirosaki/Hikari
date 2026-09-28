@@ -4,10 +4,11 @@ This doc explains how renderer feature modules are grouped and what shape they s
 
 ## Two structural patterns
 
-The renderer has largely finished migrating from single-file controllers to **folder modules**. Today almost every workspace lives in `modules/<feature>/` with an `index.js` entry, and only a handful of thin top-level files remain.
+Every workspace is now a **folder module**: `modules/<feature>/` with an `index.js` entry. `npm run check:source-layout` rejects loose non-entry files directly under `modules/`; the only top-level files left there are the generated `views.js`, `app-registry.generated.js`, and `codex-model-catalog.generated.js`.
 
-- **Folder module** (`modules/<feature>/index.js`): the entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
-- **Thin top-level orchestrator** that delegates to a folder: e.g. `home-dashboard.js` wires the widgets under `home-dashboard/`; `tool-box.js` composes the mini-tools under `tool-box/`. Conventional folder features are imported directly from their `index.js`; only deliberate secondary APIs, such as `sequence-viewer/public-api.js`, get another entry point.
+- The entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
+- Small workspaces follow the same shape: `home-dashboard/index.js` wires independent widgets, and `tool-box/index.js` composes the mini-tools.
+- Other features import a folder from its `index.js`; only deliberate secondary APIs, such as `sequence-viewer/public-api.js` and `agent-chat/public-api.js`, get another entry point.
 
 ## The shared module contract
 
@@ -34,9 +35,11 @@ Modules do **not** own their own persistence; `persist()` records undo state, no
 | `sequence` | `sequenceViewer` | sequence import, library, inspection, and analysis |
 | `utility` | `toolBox`, `settings`, `homeDashboard` | calculators, configuration, and the dashboard |
 
-Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
+`module-manifests/index.js` imports each manifest on its own, so a manifest that fails to load (missing file, syntax error) is logged and skipped instead of taking down the whole renderer; `core/manifest-runtime.js` fences each module's `init` and `render` the same way.
 
-`agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in Papers, Biology Notebook, and Assay.
+Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a `createOptions(...)` factory that picks what the module receives from the shared runtime context, and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
+
+`agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in every view whose app-registry entry sets `agentChatRail: true` (today Notebook, Plate, and Papers). The Home manifest builds a third, independent chat instance through `agent-chat/public-api.js` for its **Prepare notebook page** dialog, so Home never imports Agent Chat internals.
 
 ## A few wrinkles worth knowing
 
@@ -49,7 +52,7 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 
 | File / folder | Purpose |
 | --- | --- |
-| `views.js`, `app-state.js`, `utils.js` | renderer-wide constants, default state, normalization, persistence helpers, and small shared utilities |
+| `modules/views.js` (generated), `lib/app-utils.js` | renderer-wide view constants and small shared utilities (`createId`, `safeText`, `cssEscape`) |
 | `modules/app-state/` | state defaults, normalization, appearance, persistence, and storage-path hydration |
 | `lib/file-drop.js`, `lib/unsaved-draft.js` | reusable DOM-independent interaction/state helpers |
 | `lib/notebook-result-tables.js` | pure notebook result-table model |
@@ -68,7 +71,7 @@ If you are new to the renderer, read one small module before a large subsystem.
 
 Good starter files:
 
-1. `modules/home-dashboard/index.js` — a ~180-line orchestrator that hands typed element bundles to independent widgets
+1. `modules/home-dashboard/index.js` — a ~200-line orchestrator that hands typed element bundles to independent widgets
 2. `modules/workflow/index.js` — one of the cleanest folder separations (model / renderer / graph-controller / actions / state)
 3. `modules/biology-notebook/project/project-controller.js` — a focused state mutation and dialog controller inside its owning feature
 

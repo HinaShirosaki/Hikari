@@ -97,8 +97,15 @@ If your view is a single column (e.g. Home or a dashboard), drop the wrapper and
 | 1 | `ui/css/base/palette.css`, `ui/css/base/core.css` | shared colors, typography, and primitive elements (`button`, `input`, `.panel`, `.tile`, `.primary-btn`, `.small-note`, `.list-row`, …) |
 | 2 | `ui/css/themes/modes.css` plus view palette files | day/night variables and feature-specific palette aliases |
 | 3..N | `ui/css/views/*-view.css` | per-view styles discovered from the app registry |
+| suffix | `ui/css/components/*.css` | shared components used by several views: `storage-setup`, `foldable-section`, `spreadsheet-fill-handle`, `plugin-frame`, `draft-review`, `agent-rail-composer` |
 | suffix | `ui/css/views/*-shell-overrides.css` | late-loading feature-owned shell corrections for views that need them |
-| last | `ui/css/overrides/*.css` | genuinely shared layouts and corrective rules: `cross-view-fixes`, `left-rail-template`, `universal-menus`, `universal-dialogs`, `universal-left-rail-lists` |
+| suffix | `ui/css/overrides/*.css` | genuinely shared layouts and corrective rules: `cross-view-fixes`, `left-rail-template`, `folder-tree-template`, `universal-menus`, `universal-dialogs`, `universal-left-rail-lists` |
+
+The exact suffix order is the `suffixInputs` list in `css-order.json`; the two agent components load last.
+
+### Colors
+
+`npm run check:css-colors` (part of `npm test`) enforces one rule: raw color literals (`#hex`, `rgb()`, `hsl()`) may appear only in `*palette.css` files, and every palette file must be listed in `css-order.json` `prefixInputs`. A feature palette defines custom properties prefixed with its name (`--papers-…` in `papers-palette.css`); view stylesheets use `var(...)` only. Unused custom properties also fail the check.
 
 Tokens you should reuse rather than redefine:
 
