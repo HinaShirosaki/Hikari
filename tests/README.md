@@ -1,6 +1,9 @@
 # Test Suite Structure
 
-The test runner entrypoint remains `test.js`.
+The test runner entrypoint remains `test.js`. Run it with Node.js 24, as CI
+does: the vendored pdf.js needs `Promise.try`, and on Node 22 the PDF suites
+crash the runner. The `*-selfcheck` scripts that launch Electron need the
+Electron binary that `npm ci` downloads.
 
 ## Running a subset
 

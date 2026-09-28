@@ -55,7 +55,8 @@ Preserve any existing Hikari application data. Do not choose or change the Hikar
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ to install and build (the installers fetch Node 24 when none is found)
+- Node.js 24 to run the test suite, matching CI: the vendored pdf.js uses `Promise.try`, which Node 22 lacks, and `node test.js` stops partway through on older versions
 - npm
 - macOS or Windows (Linux is not supported)
 
