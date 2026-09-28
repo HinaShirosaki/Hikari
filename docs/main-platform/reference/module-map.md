@@ -17,7 +17,7 @@ This is a quick lookup map for the `src/main/` platform layer (`storage/`, `data
 | `core/main-services.js` | Main path | the only composition root: constructs services in dependency order and registers all IPC |
 | `core/services/` | Main path | agent, MCP, Codex, Codex-workspace, agent-log, and notebook-suggestion service factories, plus the assay plot bridge |
 | `windows/create-main-window.js` | Main path | the main `BrowserWindow`, preload wiring, and navigation guards |
-| `preload.js` → `preload/create-preload-api.js` | Main path | builds `window.hikariApi` from one `preload/api/*-api.js` file per domain |
+| `preload.js` → `preload/create-preload-api.js` | Main path | builds `window.hikariApi` from one `preload/api/*-api.js` file per domain ([README](../../../src/main/preload/README.md)) |
 
 ## Data persistence — `data/`
 
@@ -51,12 +51,12 @@ Root-folder layout, per-record folders, hydration, storage-root import, and the 
 
 | Folder | Status | Notes |
 | --- | --- | --- |
-| `project-memory/` | Specialized | collects project records and writes the agent-facing `Project/<project>/MEMORY.md`, with cached LLM notebook conclusions and per-project write queues |
-| `scheduled-tasks/` | Specialized | scheduled Codex tasks: normalization, calendar recurrence, the Codex task runner, persistence to `Config/scheduled-tasks.json` |
+| [`project-memory/`](../../../src/main/project-memory/README.md) | Specialized | collects project records and writes the agent-facing `Project/<project>/MEMORY.md`, with cached LLM notebook conclusions and per-project write queues |
+| [`scheduled-tasks/`](../../../src/main/scheduled-tasks/README.md) | Specialized | scheduled Codex tasks: normalization, calendar recurrence, the Codex task runner, persistence to `Config/scheduled-tasks.json` |
 | `genome/` | Specialized | reference-genome registry (`Config/genome-library.json`) and a streaming FASTA indexer for region reads |
 | `bioinformatics/` | Specialized | NCBI BLAST submit/poll/results and UniProt search/lookup over a shared request client |
-| `updater/` | Specialized | npm registry release metadata, version comparison, the background `npx` build, and swapping the built app in at restart or quit |
-| `papers/` | Specialized | search, retrieve, download, parse, identity, analysis, knowledge store, paper-finding, and literature workflow services (used by Papers and the agent) |
+| [`updater/`](../../../src/main/updater/README.md) | Specialized | npm registry release metadata, version comparison, the background `npx` build, and swapping the built app in at restart or quit |
+| [`papers/`](../../../src/main/papers/README.md) | Specialized | search, retrieve, download, parse, identity, analysis, knowledge store, paper-finding, and literature workflow services (used by Papers and the agent) |
 
 ## Sequence Viewer library — feature-owned
 

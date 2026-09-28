@@ -118,10 +118,10 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Lab timers** — named countdown timers for incubations, spins, and washes.
 - **Experiment log** — type what you did in one box, then either save it as a dated log line (kept in `Dashboard/experiment-log.json` under the storage root) or hand it to the assistant, which opens a **Prepare notebook page** dialog and drafts a notebook page for you to review before anything is saved.
 - **Notebook notes** — the six most recently updated notebook pages; append a result note to one of them (optionally clarified by the LLM) without opening `Notebook`.
-- **Lab activity** — an 18-week contribution heatmap built from notebook entries, completed protocol steps, uploads, analysis notes, and log lines.
+- **Lab activity** — an 18-week contribution heatmap built from notebook entries, workflow steps, assay analyses, and experiment-log lines.
 - **Cell passage** — reminders for upcoming and overdue sub-cultures.
 - **Overnight incubation** — named incubators with an optional reminder date, against your configured location list.
-- **Paper finder** — scheduled literature sweeps against your preferred journals, with a **Find papers now** button (see [`Papers`](#papers)).
+- **Paper finder** — results of the scheduled literature sweeps you set up from a Notebook project, against your preferred journals, with a **Find papers now** button and one-click download into the library (see [`Papers`](#papers)).
 
 ![Hikari Home dashboard with teaching-lab reminders](../screenshots/home.png)
 

@@ -16,6 +16,8 @@ If `docs/agent/` explains the agent subsystem, this folder explains the rest of 
 - PDF→Markdown, paper import, and chemical-import parsing
 - IPC registration (in `src/main/ipc/`), the preload bridge (`preload/`), plus small system integrations such as Codex CLI configuration and error reporting
 
+Folder READMEs with more detail: [`papers/`](../../src/main/papers/README.md), [`project-memory/`](../../src/main/project-memory/README.md), [`scheduled-tasks/`](../../src/main/scheduled-tasks/README.md), [`updater/`](../../src/main/updater/README.md), [`preload/`](../../src/main/preload/README.md), [`storage/`](../../src/main/storage/README.md), and [`core/`](../../src/main/core/Readme.md).
+
 ## Recommended reading order
 
 1. [Main-process helper overview](./architecture/main-process-helpers-overview.md)

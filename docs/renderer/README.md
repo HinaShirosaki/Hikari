@@ -42,6 +42,8 @@ If `docs/main-platform/` explains the main-process bridge, this folder explains 
 | `features/` | how feature controllers are grouped and where the large subsystems live |
 | `reference/` | quick lookup map for files and folders in `src/renderer` |
 
+Folder READMEs live beside the code: start with [`app/`](../../src/renderer/app/README.md) (shell), [`core/`](../../src/renderer/core/Readme.md), [`services/`](../../src/renderer/services/README.md), and the one in each `modules/<feature>/` folder.
+
 ## Important boundaries
 
 - `window.hikariApi` is the renderer-to-main bridge. For the main-process side of those calls, use [docs/main-platform/README.md](../main-platform/README.md).
