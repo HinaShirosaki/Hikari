@@ -164,13 +164,6 @@ The notebook page contains a snapshot of the protocol. Fill its interactive bars
 
 You have completed the core Hikari loop: reusable records fed a project-scoped experiment, the experiment captured structured results, and the complete workspace persisted locally.
 
-## If something does not appear
-
-- **The experiment cannot be started:** make sure both a project and a saved protocol exist, then reopen **New Experiment** and select both.
-- **The sample is not suggested:** confirm it appears under **Registered Samples**, then click **[strain]** and type part of its code or name. You may also enter free text.
-- **The save control is unavailable or data disappears after restart:** return to **Settings > Storage**, verify **Root Folder Path**, and click **Save Storage Path**.
-- **A formula shows an error:** enter it exactly as `=AVERAGE(B1:B2)` or `=AVERAGE(C1:C2)`, including the leading equals sign.
-
 ## Where to go next
 
 - Link an assay, gel, or attachment from the notebook page.
@@ -178,4 +171,4 @@ You have completed the core Hikari loop: reusable records fed a project-scoped e
 - Add a paper PDF and link it to **GFP expression pilot**.
 - Configure Codex only when you are ready to use **Agent**, protocol generation, or paper analysis; none of those features are required for local record keeping.
 
-Return to the [Hikari README](../../Readme.md) for the complete feature and setup reference.
+See the [Hikari Guide](../guide/README.md) for the complete feature and setup reference.
