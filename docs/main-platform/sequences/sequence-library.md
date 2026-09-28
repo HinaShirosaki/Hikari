@@ -1,6 +1,6 @@
 # Sequence Library
 
-`src/renderer/modules/sequence-viewer/main-process/sequence-library/` is a self-contained Node-only storage subsystem inside the existing Sequence Viewer feature, with focused modules behind `index.js`. Storage, search, annotation, alignment, and recognition each have their own modules (`database.js`, `entry-read.js`/`entry-upsert.js`, `feature-store.js`/`feature-search.js`, `annotation-service.js`, `alignment-store.js`, `backbone-service.js`, ...).
+`src/renderer/modules/sequence-viewer/main-process/sequence-library/` is a self-contained Node-only storage subsystem inside the existing Sequence Viewer feature (the **DNA** dock entry), with focused modules behind `index.js`. Storage, folders, search, annotation, alignment, and recognition each have their own modules (`database.js`, `entry-read.js`/`entry-upsert.js`/`entry-reconcile.js`, `folder-store.js`, `feature-store.js`/`feature-search.js`, `annotation-service.js`, `alignment-store.js`, `backbone-service.js`, `recognized-store.js`, ...).
 
 ## Storage layout
 
@@ -8,14 +8,21 @@ The sequence library lives under the chosen storage root in a dedicated folder:
 
 - `SequenceViewer/sequence-library.sqlite`
 - `SequenceViewer/entries/<entry-id>/...`
+- `SequenceViewer/<folder>/` — one directory per library folder the user creates in the rail (renamed along with the folder; removed only once empty)
+- `SequenceViewer/protein-builder-backbones.json` and `SequenceViewer/protein-builder/backbones/` — recognized backbones saved from Protein Builder
+- `Project/<project>/Sequence/` — each project's sequence folder, beside its `Notebook/` folder; the library rail mirrors these as project folders
 
 Each entry stores:
 
 - a GBK file
 - an HTML preview
-- optional alignment-session data under an `alignments/` subfolder
+- optional alignment-session data under an `alignments/` subfolder (`alignment-sessions.json` manifest)
 
-The SQLite database stores metadata, features, and feature occurrences for search and inference.
+The SQLite database stores metadata, folder membership, features, and feature occurrences for search and inference. Folder names that would collide with the library's own files (`entries`, the database, the backbone store) are reserved.
+
+## Concurrency
+
+sql.js loads the whole database image into memory, so two writers would silently drop each other's changes. `operation-lock.js` serialises every read that reconciles records and every write, including those from Hikari MCP server processes running outside the Electron process (the agent's sequence tools).
 
 ## Entry lifecycle
 
@@ -26,6 +33,9 @@ The SQLite database stores metadata, features, and feature occurrences for searc
 - `upsertSequenceEntry(...)`
 - `promoteSequenceEntry(...)`
 - `deleteSequenceEntry(...)`
+- `upsertSequenceFolder(...)`, `deleteSequenceFolder(...)`, `moveSequenceEntryToFolder(...)`
+
+Deleting a folder unfiles its sequences rather than deleting them.
 
 Entries have two main statuses:
 
@@ -83,6 +93,10 @@ At a high level it:
 - ranks acceptable candidates and returns the best match
 
 This is why the file is so much larger than the rest of the folder: it is an algorithm module, not just storage plumbing.
+
+## Agent access
+
+The agent's plasmid and primer tools (`sequence_*` in the MCP contract) are implemented beside the library in `main-process/mcp/` (`service.js`, `tools.js`, `schemas.js`, `store.js`, `artifact-events.js`). They reuse the browser-safe editing, builder, and primer modules from `sequence-viewer/mcp/`, take the same operation lock, and check an entry revision before each edit so a stale read cannot overwrite a newer save. See [agent/mcp-contract/sequence-tools.md](../../agent/mcp-contract/sequence-tools.md).
 
 ## Why it is separate from the main snapshot
 

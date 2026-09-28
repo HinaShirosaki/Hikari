@@ -1,27 +1,13 @@
 # Storage
 
-This folder contains the storage bundle/import pipeline that used to live in one `storage-bundle.js` file.
-
-## Why this exists
-
-The original file mixed together several separate concerns:
-
-- bundle path derivation
-- generic storage helpers
-- SQLite schema, reads, and writes
-- sidecar file generation
-- snapshot hydration
-- storage-root import and merge logic
-- sequence library summary
-
-Splitting those pieces makes the storage pipeline easier to navigate and safer to extend.
+This folder owns the storage-root layout: it writes one JSON file per record into module-owned folders on every save, rebuilds the snapshot from those folders on load, keeps the chemicals SQLite index, and imports an existing storage root. The full layout and the save/load order are in [docs/main-platform/data/storage-and-bundles.md](../../../docs/main-platform/data/storage-and-bundles.md).
 
 ## Module map
 
 - `index.js`
   - Public entry point used by the rest of the app.
 - `storage-paths.js`
-  - Data-file suffix handling, supported extension checks, path resolution, and `getBundlePaths`.
+  - Root-folder names, `RECORD_FOLDERS` (assays, gels), data-file suffix handling, path resolution, and `getBundlePaths`.
 - `storage-utils.js`
   - Generic helpers such as `cleanText`, `ensureObject`, `asArray`, JSON parsing, file reads, and shared SQL.js loading.
 - `storage-sql-schema.js`
@@ -29,11 +15,21 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `storage-sql-write.js`
   - `writeChemicalSqliteBundleIndex`, rebuilding the chemicals index from the snapshot.
 - `storage-sql-read.js`
-  - SQLite read helpers and row-to-snapshot fallback readers.
+  - Chemicals-index read helpers; an unusable index hydrates as empty with a warning.
+- `chemical-index-guard.js`
+  - Moves an unreadable chemicals index aside (`.corrupt-<time>`) and refuses chemical writes when it cannot, because the index is the only copy of the inventory.
 - `storage-sidecars.js`
-  - Protocol folder, notebook page folder, sample JSON, and SQLite writers used by `syncBundleFromSnapshot`. Agent-owned workspace skill release is supplied by the main composition root instead of imported here.
-- `storage-hydration.js`
-  - Snapshot hydration from protocol folders, notebook folders, sample JSON, SQLite fallback data, and legacy sidecars.
+  - `syncBundleFromSnapshot`: protocol folders, notebook page folders, project memory, sample containers, the experiment log, assay/gel record folders, paper records beside PDFs, the chemicals index, and the workflow root. Agent-owned workspace skill release is supplied by the main composition root instead of imported here.
+- `storage-hydration.js` and `hydration/`
+  - Snapshot hydration from protocol folders, project/notebook folders, sample containers, the experiment log, the workflow root, the chemicals index, paper records, assay/gel folders, and legacy `*.protocols.json` / `*.notebook-pages.json` files.
+- `sample-containers.js`
+  - `Samples/<zone>/<container>__<id>.json`, `folders.json`, and `unplaced.json`.
+- `experiment-log-storage.js`
+  - `Dashboard/experiment-log.json` (Home experiment log).
+- `workflow-storage.js` and `workflow/`
+  - `Workflow/` template and run folders, their notebook pages, and related papers.
+- `paper-discovery.js`
+  - Finds PDFs under the storage root and reads the `<file>.pdf.json` record beside each one.
 - `storage-import.js`
   - Storage-root import flow (serialised), merge helpers, bundle summarization, and folder recognition.
 - `storage-discovery.js`
@@ -46,9 +42,11 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `index.js` is the canonical package entry. Node callers may require either the folder or `index.js`.
 - The public exports are:
   - `getBundlePaths`
-  - `syncBundleFromSnapshot`
+  - `syncBundleFromSnapshot`, `syncSqliteBundleFromSnapshot`
   - `hydrateSnapshotFromBundle`
   - `importStorageRoot`
+  - `discoverPapersFromStorageRoot`
+  - `syncWorkflowRootFromSnapshot`, `hydrateWorkflowRootFromStoragePath`, `importWorkflowRoot`
 
 Production callers use the decorated `syncBundleFromSnapshot` assembled in
 `src/main/core/main-services.js`. Narrow storage tests may inject

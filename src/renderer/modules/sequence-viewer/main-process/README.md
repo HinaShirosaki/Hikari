@@ -2,7 +2,8 @@
 
 This folder is the Node-only main-process half of the existing Sequence Viewer feature. It owns filesystem and SQLite work that cannot run in the browser renderer.
 
-- `sequence-library/`: entry persistence, alignments, feature indexing, annotation, and recognized-backbone artifacts.
+- `sequence-library/`: entry and folder persistence, alignments, feature indexing, annotation, recognized-backbone artifacts, and the operation lock that serialises SQLite access.
+- `mcp/`: the Node half of the agent's `sequence_*` MCP tools (schemas, tool table, service, artifact events). It reuses the browser-safe modules in `../mcp/` for edits, builders, and primers.
 - `src/main/ipc/register-data-ipc/register-sequence-library-ipc.js`: the renderer-facing IPC adapter; it stays with the other IPC registrars.
 - `src/main/storage/`: app-wide storage-root and bundle integration; it stays with shared storage infrastructure.
 
