@@ -1,13 +1,9 @@
 'use strict';
 
-const { cloneJson, ensureObject } = require('../../../lib/normalize.js');
+const { asArray: defaultAsArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
 
 // Defaults and normalizers shared by the sub-agent runtime: id/timestamp
 // helpers, the action enum, message/turn shapes, and the Codex prompt.
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
 function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {

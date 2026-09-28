@@ -52,10 +52,7 @@ function createProtocolMatchingRuntime(deps = {}) {
       id: item?.id,
       name: item?.name,
       purpose: item?.purpose,
-      steps: asArray(item?.steps).slice(0, 8).map((step) => ({
-        id: step?.id,
-        text: step?.text
-      }))
+      steps: asArray(item?.steps).slice(0, 8).map((step) => step?.text)
     }));
     const parserEntities = parserPayload?.entities && typeof parserPayload.entities === 'object'
       ? parserPayload.entities
@@ -71,14 +68,12 @@ function createProtocolMatchingRuntime(deps = {}) {
 
   function normalizeProtocolStep(step, index = 0) {
     const source = step && typeof step === 'object' ? step : {};
-    const stepId = cleanText(source.id, 120) || `step-${index + 1}`;
     const text = cleanText(source.text || source.instruction || source.action, 6000);
     const placeholders = asArray(source.placeholders).map((placeholder, placeholderIndex) => ({
-      id: cleanText(placeholder?.id, 120) || `${stepId}-ph-${placeholderIndex + 1}`,
+      id: cleanText(placeholder?.id, 120) || `step-${index + 1}-ph-${placeholderIndex + 1}`,
       name: cleanText(placeholder?.name, 120) || 'value'
     })).filter((item) => item.id);
     return {
-      id: stepId,
       text,
       placeholders
     };

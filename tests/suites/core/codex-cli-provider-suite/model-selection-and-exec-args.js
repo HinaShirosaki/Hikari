@@ -86,10 +86,66 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         assert.equal(provider.getCodexCliModel(), '');
       });
     });
-    test('codex cli provider uses the configured model when building exec args', () => {
-      withCodexHome({}, () => {
+    // What `codex app-server` returns for `model/list` (only the fields Hikari reads).
+    const codexModelList = [
+      {
+        id: 'gpt-5.4', displayName: 'GPT-5.4', hidden: false, isDefault: true, defaultReasoningEffort: 'medium',
+        supportedReasoningEfforts: ['low', 'medium', 'high', 'xhigh'].map((reasoningEffort) => ({ reasoningEffort }))
+      },
+      {
+        id: 'gpt-5.1-codex-mini', displayName: 'GPT-5.1-Codex-Mini', hidden: false, isDefault: false, defaultReasoningEffort: 'medium',
+        supportedReasoningEfforts: ['medium', 'high'].map((reasoningEffort) => ({ reasoningEffort }))
+      },
+      { id: 'gpt-reserve', displayName: 'GPT-Reserve', hidden: true, isDefault: false, supportedReasoningEfforts: [] }
+    ];
+    const useCodexCatalog = (provider, entries = codexModelList) => provider.requestCodexCliCatalog({ listModels: async () => entries });
+
+    test('codex cli provider asks codex app-server for its model catalog, hidden models and all pages included', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-models-'));
+      const capturePath = path.join(tmpDir, 'requests.jsonl');
+      const fakeCodex = path.join(tmpDir, 'codex.js');
+      // A minimal app-server: answers initialize, then model/list in two pages.
+      fs.writeFileSync(fakeCodex, `
+const fs = require('node:fs');
+const pages = { '': { data: [${JSON.stringify(codexModelList[0])}], nextCursor: 'p2' }, p2: { data: ${JSON.stringify(codexModelList.slice(1))}, nextCursor: null } };
+let buffer = '';
+process.stdin.on('data', (chunk) => {
+  buffer += chunk;
+  for (let i; (i = buffer.indexOf('\\n')) >= 0;) {
+    const message = JSON.parse(buffer.slice(0, i)); buffer = buffer.slice(i + 1);
+    fs.appendFileSync(${JSON.stringify(capturePath)}, JSON.stringify(message) + '\\n');
+    if (message.id === undefined) continue;
+    const result = message.method === 'model/list' ? pages[message.params.cursor || ''] : { userAgent: 'fake' };
+    process.stdout.write(JSON.stringify({ id: message.id, result }) + '\\n');
+  }
+});
+`, 'utf8');
+      const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+      process.env.HIKARI_CODEX_CLI = fakeCodex;
+      try {
         const provider = loadProvider();
+        const catalog = await provider.requestCodexCliCatalog();
+        const requests = fs.readFileSync(capturePath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+        assert.deepEqual(requests.map((request) => request.method), ['initialize', 'initialized', 'model/list', 'model/list']);
+        assert.equal(requests.filter((request) => request.method === 'model/list').every((request) => request.params.includeHidden === true), true);
+        assert.equal(requests[3].params.cursor, 'p2');
+        assert.deepEqual(catalog.models.map((entry) => [entry.id, entry.hidden]), [['gpt-5.4', false], ['gpt-5.1-codex-mini', false], ['gpt-reserve', true]]);
+        assert.equal(catalog.defaultModel, 'gpt-5.4');
+        assert.equal(catalog.defaultReasoningEffort, 'medium');
+        assert.deepEqual(catalog.models[1].reasoningEfforts, ['medium', 'high']);
+        assert.deepEqual(provider.getCodexCliCatalog(), catalog);
+      } finally {
+        if (typeof previousCodexCli === 'string') process.env.HIKARI_CODEX_CLI = previousCodexCli;
+        else delete process.env.HIKARI_CODEX_CLI;
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+    test('codex cli provider uses the configured model when building exec args', () => {
+      return withCodexHome({}, async () => {
+        const provider = loadProvider();
+        await useCodexCatalog(provider);
         provider.setCodexCliModel('gpt-5.4');
+        provider.setCodexCliReasoningEffort('xhigh');
 
         const args = provider.buildCodexCliExecArgs({
           outputFile: '/tmp/codex-last-message.txt'
@@ -103,6 +159,7 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         assert.equal(args.includes('project_doc_max_bytes=65536'), true);
         assert.equal(args[args.length - 1], '-');
         provider.setCodexCliModel('');
+        provider.setCodexCliReasoningEffort('');
       });
     });
     test('codex cli provider keeps explicit request models isolated from the configured default', () => {
@@ -126,49 +183,43 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
         provider.setCodexCliModel('');
       });
     });
-    test('codex cli provider exposes the live codex catalog defaults', () => {
-      withCodexHome({}, () => {
+    test('codex cli provider lets codex pick its default for a choice codex no longer lists', () => {
+      return withCodexHome({}, async () => {
         const provider = loadProvider();
-        const catalog = provider.getCodexCliCatalog();
-        assert.equal(catalog.defaultModel, 'gpt-5.4');
-        assert.equal(catalog.defaultReasoningEffort, 'xhigh');
-        assert.deepEqual(
-          catalog.models.map((entry) => entry.id),
-          ['gpt-5.4', 'gpt-5.1-codex-mini']
-        );
-      });
-    });
-    test('codex cli provider falls back from unsupported models and incompatible reasoning effort', () => {
-      withCodexHome({}, () => {
-        const provider = loadProvider();
-        assert.equal(provider.setCodexCliModel('gpt-4.1-mini'), 'gpt-5.4');
+        await useCodexCatalog(provider);
+        // The saved choice is kept; only the exec args fall back.
+        assert.equal(provider.setCodexCliModel('gpt-4.1-mini'), 'gpt-4.1-mini');
         provider.setCodexCliReasoningEffort('xhigh');
+        const retired = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
+        assert.equal(retired.includes('-m'), false);
+        // The effort is checked against Codex's default model instead.
+        assert.equal(retired[retired.indexOf('-c') + 1], 'model_reasoning_effort=xhigh');
 
         const args = provider.buildCodexCliExecArgs({
           outputFile: '/tmp/codex-last-message.txt',
           model: 'gpt-5.1-codex-mini'
         });
-
         assert.equal(args[args.indexOf('-m') + 1], 'gpt-5.1-codex-mini');
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=medium');
+
+        // Hidden models are not in Settings' list but stay valid when saved.
+        provider.setCodexCliModel('gpt-reserve');
+        const hidden = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
+        assert.equal(hidden[hidden.indexOf('-m') + 1], 'gpt-reserve');
+        provider.setCodexCliModel('');
+        provider.setCodexCliReasoningEffort('');
       });
     });
-    test('codex cli provider omits -m on a fresh machine with no models cache unless the user chose a model', () => {
-      withCodexHome({ modelsCache: { models: [] }, configToml: '' }, () => {
+    test('codex cli provider passes only the user choice when codex has not listed its models', () => {
+      return withCodexHome({}, async () => {
         const provider = loadProvider();
+        await useCodexCatalog(provider, []);
         provider.setCodexCliModel('');
-        // The agent layer passes the app's static default; it may be retired upstream.
-        const args = provider.buildCodexCliExecArgs({
-          outputFile: '/tmp/codex-last-message.txt',
-          model: 'gpt-5.4'
-        });
+        const args = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
         assert.equal(args.includes('-m'), false);
 
         provider.setCodexCliModel('gpt-5.5');
-        const chosen = provider.buildCodexCliExecArgs({
-          outputFile: '/tmp/codex-last-message.txt',
-          model: 'gpt-5.4'
-        });
+        const chosen = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
         assert.equal(chosen[chosen.indexOf('-m') + 1], 'gpt-5.5');
         provider.setCodexCliModel('');
       });

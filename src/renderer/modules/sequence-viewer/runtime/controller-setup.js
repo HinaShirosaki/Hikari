@@ -113,6 +113,8 @@ export function setupSequenceViewerControllers(ctx) {
     appState: options?.state,
     persist: options?.persist,
     createId: options?.createId,
+    ensureProjectRecord: options?.ensureProjectRecord,
+    saveProtocolRecord: options?.saveProtocolRecord,
     onNotebookEntriesChanged: options?.onNotebookEntriesChanged,
     getSelectedRecord: actions.getSelectedRecord,
     getCloningDesignSource: () => state.sequenceEditDesignSource,

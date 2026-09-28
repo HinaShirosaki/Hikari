@@ -1,5 +1,5 @@
 import { exportNotebookEntryPdf, exportProjectNotebookEntriesPdf } from '../../pdf-export/index.js';
-import { findLatestLinkedRecord } from '../../../services/notebook-linked-previews.js';
+import { findLatestLinkedRecord } from '../linked-previews.js';
 import {
   matchesNotebookType,
   resolveEntryProtocol

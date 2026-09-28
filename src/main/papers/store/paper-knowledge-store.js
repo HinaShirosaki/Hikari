@@ -1,12 +1,10 @@
 'use strict';
 
 /**
- * SQLite + JSON-index storage layer for the paper knowledge database.
+ * Thin SQLite identity and location index for the paper knowledge database.
  *
- * Owns the schema, migrations, low-level query/run helpers, identity lookup,
- * and the mirror index.json. Split out of `agent-paper-knowledge-database.js`
- * so the ingest runtime and the wiki chunker/search share one storage surface
- * instead of reaching into the runtime module for these primitives.
+ * Paper text lives in Markdown; descriptive metadata lives in meta.json.
+ * Reads leave legacy files untouched; writes compact them after preserving metadata.
  */
 
 const crypto = require('node:crypto');
@@ -15,8 +13,10 @@ const path = require('node:path');
 
 const { loadSqlJs } = require('../../storage/storage-utils.js');
 const { persistSqliteDatabase } = require('../../lib/sqlite-persist.js');
+const { pathExists } = require('../../lib/path-safety.js');
 const { normalizeDoi, sanitizeStorageName } = require('./paper-knowledge-paths.js');
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
+const { SCHEMA, compactKnowledgeIndex } = require('./knowledge-index-schema.js');
 
 function asArrayDefault(value) {
   return Array.isArray(value) ? value : [];
@@ -71,44 +71,8 @@ function migratePaperColumns(db) {
 }
 
 function applyKnowledgeDatabaseSchema(db) {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS papers (
-      id TEXT PRIMARY KEY,
-      doi TEXT UNIQUE,
-      pmid TEXT,
-      pmcid TEXT,
-      title TEXT,
-      abstract TEXT,
-      authors_json TEXT,
-      journal TEXT,
-      year TEXT,
-      url TEXT,
-      pdf_sha256 TEXT UNIQUE,
-      added_at TEXT,
-      updated_at TEXT,
-      source TEXT,
-      wiki_status TEXT,
-      wiki_path TEXT,
-      extraction_status TEXT,
-      notes TEXT
-    );
-    CREATE TABLE IF NOT EXISTS paper_locations (
-      id TEXT PRIMARY KEY,
-      paper_id TEXT NOT NULL,
-      scope TEXT,
-      container TEXT,
-      folder_path TEXT,
-      pdf_filename TEXT,
-      pdf_path TEXT,
-      discovered_at TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_knowledge_locations_paper ON paper_locations(paper_id);
-  `);
-  migratePaperColumns(db);
-  db.run(`
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmid ON papers(pmid);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmcid ON papers(pmcid);
-  `);
+  if (queryRows(db, 'PRAGMA table_info(papers)').length) migratePaperColumns(db);
+  db.run(SCHEMA);
 }
 
 async function openKnowledgeDatabase(sqlitePath) {
@@ -123,11 +87,17 @@ async function openKnowledgeDatabase(sqlitePath) {
     }
     db = new SQL.Database();
   }
-  applyKnowledgeDatabaseSchema(db);
-  return db;
+  try {
+    applyKnowledgeDatabaseSchema(db);
+    return db;
+  } catch (error) {
+    db.close();
+    throw error;
+  }
 }
 
 async function persistKnowledgeDatabase(sqlitePath, db) {
+  await compactKnowledgeIndex(sqlitePath, db);
   await persistSqliteDatabase(sqlitePath, db);
 }
 
@@ -136,7 +106,7 @@ async function persistKnowledgeDatabase(sqlitePath, db) {
 // papers at once; unserialized, they all start from the same image and only the
 // last one to persist survives. Every write path runs through here so the
 // critical section covers identity lookup (findExistingPaperRow) and the
-// index.json mirror as well, not just the INSERT.
+// metadata sidecars as well, not just the INSERT.
 //
 // ponytail: in-process queue, keyed by path. Swap in the directory lock from
 // sequence-library/operation-lock.js if a separate process ever opens this
@@ -149,6 +119,7 @@ function withKnowledgeDatabaseWrite(sqlitePath, action) {
   const current = previous.then(async () => {
     const db = await openKnowledgeDatabase(sqlitePath);
     try {
+      await compactKnowledgeIndex(sqlitePath, db);
       return await action(db);
     } finally {
       db.close();
@@ -218,88 +189,6 @@ function buildPaperId({ existing = null, doi = '', pdfSha256 = '', title = '' } 
   return `paper-title-${sanitizeStorageName(title, 'paper')}`;
 }
 
-async function readJsonObject(filePath) {
-  try {
-    const raw = await fsPromises.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-async function writeJsonFile(filePath, payload) {
-  await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
-  await fsPromises.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fsPromises.access(targetPath);
-    return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return false;
-    }
-    throw error;
-  }
-}
-
-function normalizeIndexEntry(entry = {}) {
-  return {
-    id: String(entry.id || ''),
-    doi: normalizeDoi(entry.doi),
-    title: String(entry.title || ''),
-    pdf_sha256: String(entry.pdf_sha256 || ''),
-    wiki_status: String(entry.wiki_status || ''),
-    wiki_path: String(entry.wiki_path || ''),
-    extraction_status: String(entry.extraction_status || ''),
-    updated_at: String(entry.updated_at || '')
-  };
-}
-
-async function updateJsonIndex(indexPath, paperRow = {}, locationRow = {}) {
-  const current = await readJsonObject(indexPath);
-  const papers = asArrayDefault(current.papers).map(normalizeIndexEntry).filter((entry) => entry.id);
-  const locations = asArrayDefault(current.locations)
-    .map((entry) => ({
-      id: String(entry.id || ''),
-      paper_id: String(entry.paper_id || ''),
-      scope: String(entry.scope || ''),
-      container: String(entry.container || ''),
-      folder_path: String(entry.folder_path || ''),
-      pdf_filename: String(entry.pdf_filename || ''),
-      pdf_path: String(entry.pdf_path || ''),
-      discovered_at: String(entry.discovered_at || '')
-    }))
-    .filter((entry) => entry.id);
-  const paperEntry = normalizeIndexEntry(paperRow);
-  const locationEntry = {
-    id: String(locationRow.id || ''),
-    paper_id: String(locationRow.paper_id || ''),
-    scope: String(locationRow.scope || ''),
-    container: String(locationRow.container || ''),
-    folder_path: String(locationRow.folder_path || ''),
-    pdf_filename: String(locationRow.pdf_filename || ''),
-    pdf_path: String(locationRow.pdf_path || ''),
-    discovered_at: String(locationRow.discovered_at || '')
-  };
-  const nextPapers = papers.filter((entry) => entry.id !== paperEntry.id);
-  if (paperEntry.id) {
-    nextPapers.push(paperEntry);
-  }
-  const nextLocations = locations.filter((entry) => entry.id !== locationEntry.id);
-  if (locationEntry.id) {
-    nextLocations.push(locationEntry);
-  }
-  await writeJsonFile(indexPath, {
-    version: 1,
-    updated_at: new Date().toISOString(),
-    papers: nextPapers,
-    locations: nextLocations
-  });
-}
-
 function chooseLocation(locations = [], scope = '', container = '') {
   const normalizedScope = String(scope || '').trim().toLowerCase();
   const normalizedContainer = String(container || '').trim().toLowerCase();
@@ -321,10 +210,6 @@ module.exports = {
   withKnowledgeDatabaseWrite,
   findExistingPaperRow,
   buildPaperId,
-  readJsonObject,
-  writeJsonFile,
   pathExists,
-  normalizeIndexEntry,
-  updateJsonIndex,
   chooseLocation
 };

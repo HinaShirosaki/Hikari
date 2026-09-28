@@ -1,36 +1,14 @@
 'use strict';
 
 const fs = require('fs/promises');
-const path = require('path');
-const { resolveSqlJsWasmJsPath } = require('../../lib/sqljs-path.js');
-
-let sqlJsInitPromise = null;
-
-async function loadSqlJs() {
-  if (!sqlJsInitPromise) {
-    sqlJsInitPromise = (async () => {
-      // Resolve lazily: keep requiring this module cheap and non-throwing even when
-      // sqljs can't be located (depth-independent walk-up, survives directory moves).
-      const wasmJsPath = resolveSqlJsWasmJsPath(__dirname);
-      const initSqlJs = require(wasmJsPath);
-      return initSqlJs({
-        locateFile: (fileName) => path.join(path.dirname(wasmJsPath), fileName)
-      });
-    })();
-  }
-  return sqlJsInitPromise;
-}
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { loadSqlJs, querySqlRows, readSqliteTableNames } = require('../../lib/sqlite.js');
+const {
+  asArray: defaultAsArray,
+  ensureObject: defaultEnsureObject
+} = require('../../lib/normalize.js');
 
 function defaultCleanText(value) {
   return String(value || '');
-}
-
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function safeParseJson(value, fallback = null) {
@@ -74,9 +52,6 @@ function createAgentLookupSupport(deps = {}) {
   const hydrateSnapshotFromBundle = typeof deps.hydrateSnapshotFromBundle === 'function'
     ? deps.hydrateSnapshotFromBundle
     : (async ({ snapshot = {} } = {}) => ({ snapshot: ensureObject(snapshot), bundlePaths: {}, migration: null }));
-  const syncBundleFromSnapshot = typeof deps.syncBundleFromSnapshot === 'function'
-    ? deps.syncBundleFromSnapshot
-    : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
 
   function buildSearchText(values) {
     return asArray(values)
@@ -211,7 +186,6 @@ function createAgentLookupSupport(deps = {}) {
     return {
       dataFilePath: resolvedDataFilePath,
       fallbackDataFilePath: fallbackPath,
-      sqlitePath: cleanText(bundlePaths?.sqlitePath, 2200),
       hydratedSnapshot,
       bundlePaths,
       migration,
@@ -261,24 +235,10 @@ function createAgentLookupSupport(deps = {}) {
     }
   }
 
-  function querySqlRows(db, sql, values = []) {
-    const statement = db.prepare(sql);
-    const rows = [];
-    try {
-      statement.bind(values);
-      while (statement.step()) {
-        rows.push(statement.getAsObject());
-      }
-    } finally {
-      statement.free();
-    }
-    return rows;
-  }
-
   function readSqliteTables(db) {
     return new Set(
-      querySqlRows(db, "SELECT name FROM sqlite_master WHERE type='table'", [])
-        .map((row) => cleanText(row?.name, 200).toLowerCase())
+      [...readSqliteTableNames(db)]
+        .map((name) => cleanText(name, 200).toLowerCase())
         .filter(Boolean)
     );
   }
@@ -318,23 +278,6 @@ function createAgentLookupSupport(deps = {}) {
     return [...rowsByKey.values()];
   }
 
-  async function maybeBackfillSqlIndex({
-    shouldBackfill = false,
-    dataFilePath = '',
-    fallbackDataFilePath = '',
-    snapshot = {}
-  } = {}) {
-    if (shouldBackfill !== true || !cleanText(dataFilePath, 2000)) {
-      return false;
-    }
-    try {
-      await syncBundleFromSnapshot({ dataFilePath, fallbackDataFilePath, snapshot });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
   return {
     asArray,
     cleanText,
@@ -348,7 +291,6 @@ function createAgentLookupSupport(deps = {}) {
     withSqliteDatabase,
     readSqliteTables,
     collectLikeMatches,
-    maybeBackfillSqlIndex,
     mergeRowsByKey,
     querySqlRows
   };

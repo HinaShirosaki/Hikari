@@ -147,10 +147,10 @@ globalThis.document = {
         };
       },
       toDataURL() {
-        if (canvas.drawnSource === './assets/loadingicon.png') {
+        if (canvas.drawnSource === './assets/icons/hikari-button.svg') {
           calls.iconTints.push(canvas.tintColor);
         }
-        return canvas.drawnSource === './assets/loadingicon.png' && ['#185fa5', '#444444'].includes(canvas.tintColor)
+        return canvas.drawnSource === './assets/icons/hikari-button.svg' && ['#185fa5', '#444444'].includes(canvas.tintColor)
           ? 'data:image/png;base64,SElLQVJJ'
           : 'data:image/png;base64,RklHVVJF';
       }

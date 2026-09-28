@@ -1,23 +1,19 @@
 // Run explicitly with: node node_modules/electron/cli.js tests/plugin-runtime-electron.cjs
 // Uses a hidden window and a temporary Electron profile; never opens user data.
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const fsSync = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { PLUGINS } = require('../src/shared/ipc/channels');
-const { registerPluginFileIpc } = require('../src/main/ipc/register-plugin-file-ipc');
-const { createPluginServerRegistry } = require('../src/main/lib/plugin-server');
+const { registerPluginIpc } = require('../src/main/ipc/register-plugin-ipc');
 
 const projectRoot = path.resolve(__dirname, '..');
 const temp = fsSync.mkdtempSync(path.join(os.tmpdir(), 'hikari-plugin-electron-'));
 app.setPath('userData', path.join(temp, 'profile'));
 app.setPath('sessionData', path.join(temp, 'session'));
-const registry = createPluginServerRegistry({
-  prepareOrigin: (baseUrl) => session.defaultSession.clearStorageData({ origin: new URL(baseUrl).origin })
-});
+let registry;
 let window;
 
 async function write(relative, content) {
@@ -28,8 +24,7 @@ async function write(relative, content) {
 
 async function run() {
   await app.whenReady();
-  registerPluginFileIpc({ ipcMain });
-  ipcMain.handle(PLUGINS.SERVE_FOLDER, (_event, payload) => registry.serve(payload.id, payload.path));
+  registry = registerPluginIpc({ ipcMain, session, dialog, fs });
   await fs.mkdir(path.join(temp, 'storage'));
   const client = await fs.readFile(path.join(projectRoot, 'examples/plugins/notebook-results/hikari.js'), 'utf8');
   await write('local-audit/hikari.js', client);

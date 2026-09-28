@@ -56,7 +56,7 @@ export function bindPlasmidNameSuggestions(root, state, {
     list.className = 'sample-plasmid-suggestions';
     list.hidden = true;
     list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', 'Sequence Viewer matches');
+    list.setAttribute('aria-label', 'DNA matches');
     input.insertAdjacentElement('afterend', list);
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-label', 'Sample Name');
@@ -141,7 +141,7 @@ export function bindPlasmidNameSuggestions(root, state, {
         if (!response?.ok) throw new Error('Search failed');
         show(control, matchPlasmidNames(response.entries, query));
       } catch {
-        if (isCurrent()) show(control, [], 'Could not search Sequence Viewer. Type again to retry.');
+        if (isCurrent()) show(control, [], 'Could not search DNA. Type again to retry.');
       }
     }, delay);
   }

@@ -439,7 +439,7 @@
     }
   },
   "notebook-draft": {
-    "description": "Use this tool to propose a likely next experiment and prepare a planned biology notebook draft for explicit confirmation. It should prefer workflow-downstream experiments and recent executed notebook progress, fill pending_values whose keys exactly match <step-id>:<placeholder-id>, optionally apply per-draft step_edits without mutating the saved protocol, tolerate genuinely unresolved placeholders, and return a confirm-before-save draft instead of auto-creating the page.",
+    "description": "Use this tool to propose a likely next experiment and prepare a planned biology notebook draft for explicit confirmation. It should prefer workflow-downstream experiments and recent executed notebook progress, fill pending_values whose keys exactly match placeholder ids, optionally apply per-draft step_edits without mutating the saved protocol, tolerate genuinely unresolved placeholders, and return a confirm-before-save draft instead of auto-creating the page.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

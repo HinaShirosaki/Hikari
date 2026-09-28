@@ -10,6 +10,7 @@ const {
 const {
   buildCodexSessionRecoveryBlock
 } = require('./session-recovery.js');
+const { normalizePreferredJournalNames } = require('../../lib/preferred-journals.js');
 
 function summarizeAttachments(cleanText, attachments = []) {
   return asArray(attachments)
@@ -99,32 +100,6 @@ function buildPaperAgentSessionBlock(input = {}, cleanText = defaultCleanText) {
     'Active paper context:',
     JSON.stringify(paperContext, null, 2)
   ].join('\n');
-}
-
-function normalizePreferredJournalNames(value, cleanText = defaultCleanText) {
-  const candidates = [];
-  function pushCandidate(candidate) {
-    if (Array.isArray(candidate)) {
-      candidate.forEach(pushCandidate);
-      return;
-    }
-    if (candidate && typeof candidate === 'object') {
-      pushCandidate(candidate.name || candidate.url || candidate.href || '');
-      return;
-    }
-    String(candidate || '')
-      .split(/[;\n]+/u)
-      .map((item) => cleanText(item, 240).trim())
-      .filter(Boolean)
-      .forEach((item) => candidates.push(item));
-  }
-  pushCandidate(value);
-  return candidates
-    .filter((item, index, list) => {
-      const key = item.toLowerCase();
-      return key && list.findIndex((candidate) => candidate.toLowerCase() === key) === index;
-    })
-    .slice(0, 12);
 }
 
 function buildSavedSettingsBlock(input = {}, cleanText = defaultCleanText) {

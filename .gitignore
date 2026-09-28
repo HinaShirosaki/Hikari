@@ -71,3 +71,4 @@ data/Config/codex-cli-home/auth.json
 /examples/plugins/dna-importer/
 /examples/plugins/imagej/
 hikari-out/
+__pycache__/

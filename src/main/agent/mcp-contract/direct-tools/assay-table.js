@@ -11,6 +11,7 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolPayload,
   resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
@@ -43,19 +44,6 @@ const ASSAY_TABLE_MCP_TOOL = Object.freeze({
   })
 });
 
-function resolveAssayTablePayload(result = {}) {
-  const source = ensureObject(result);
-  const resultPayload = ensureObject(source.result);
-  const outputPayload = ensureObject(source.output);
-  if (Object.keys(resultPayload).length) {
-    return resultPayload;
-  }
-  if (Object.keys(outputPayload).length) {
-    return outputPayload;
-  }
-  return source;
-}
-
 async function callAssayTable(input = {}, context = {}, deps = {}) {
   const normalized = normalizeToolArgumentsPayload({
     tool_calls: [{
@@ -81,7 +69,7 @@ async function callAssayTable(input = {}, context = {}, deps = {}) {
     args: normalized.payload.tool_calls[0].arguments,
     context
   });
-  const payload = resolveAssayTablePayload(result);
+  const payload = resolveDirectToolPayload(result);
   const status = cleanText(payload.status || result?.status, 80)
     || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 4000);
@@ -112,5 +100,5 @@ async function callAssayTable(input = {}, context = {}, deps = {}) {
 module.exports = {
   ASSAY_TABLE_MCP_TOOL,
   callAssayTable,
-  resolveAssayTablePayload
+  resolveAssayTablePayload: resolveDirectToolPayload
 };

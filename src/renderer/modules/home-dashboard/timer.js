@@ -9,14 +9,15 @@ import {
 import {
   renderActiveTimer,
   renderFinishedTimer,
+  renderTimerPreset,
   updateActiveTimer,
   updateTopbarTimer
 } from './timer-rendering.js';
 
-// Timer + clock widget. Owns a running local clock plus reusable named
-// countdowns: a dialog manages a list of timer templates the bench user
-// can launch with one click; running timers tick down in the active list
-// and flip into an alert state when complete.
+// Timer widget. Also keeps the topbar clock running. Saved presets start
+// with one click from the tile (the dialog adds and lists them); running
+// timers tick down in the active list and flip into an alert state when
+// complete.
 export function initTimerWidget({
   state,
   persist,
@@ -25,10 +26,9 @@ export function initTimerWidget({
   elements
 }) {
   const {
-    localTimeDisplay,
-    localDateDisplay,
     timerStatus,
     timerActiveList,
+    timerPresetList,
     timerOpenBtn,
     timerDialogOverlay,
     timerDialogCloseBtn,
@@ -52,6 +52,7 @@ export function initTimerWidget({
   timerDialogForm.addEventListener('submit', onTimerDialogSubmit);
   timerMinutesInput.addEventListener('input', () => timerMinutesInput.setCustomValidity(''));
   timerTemplateList.addEventListener('click', onTimerTemplateListClick);
+  timerPresetList.addEventListener('click', onTimerPresetListClick);
   timerActiveList.addEventListener('click', onTimerActiveListClick);
 
   renderLocalClock();
@@ -107,7 +108,7 @@ export function initTimerWidget({
       durationMinutes
     });
     persist();
-    renderTimerTemplateRows();
+    render();
     timerDialogForm.reset();
     timerNameInput.focus();
   }
@@ -115,7 +116,7 @@ export function initTimerWidget({
   function startTimerFromTemplate(template) {
     const normalized = normalizeTimerTemplateRecord(template);
     if (!normalized) {
-      return;
+      return false;
     }
     const now = Date.now();
     state.settings.dashboard.activeTimers.push({
@@ -127,20 +128,28 @@ export function initTimerWidget({
       remainingMs: 0
     });
     persist();
-    closeTimerDialog();
     render();
+    return true;
+  }
+
+  function templateFromClick(event) {
+    const button = event.target.closest('[data-dashboard-start-timer-template]');
+    const index = Number(button?.dataset.dashboardStartTimerTemplate);
+    return Number.isInteger(index) && index >= 0 ? state.settings.dashboard.timerTemplates[index] : null;
   }
 
   function onTimerTemplateListClick(event) {
-    const button = event.target.closest('[data-dashboard-start-timer-template]');
-    if (!button) {
-      return;
+    const template = templateFromClick(event);
+    if (template && startTimerFromTemplate(template)) {
+      closeTimerDialog();
     }
-    const index = Number(button.dataset.dashboardStartTimerTemplate);
-    if (!Number.isInteger(index) || index < 0) {
-      return;
+  }
+
+  function onTimerPresetListClick(event) {
+    const template = templateFromClick(event);
+    if (template) {
+      startTimerFromTemplate(template);
     }
-    startTimerFromTemplate(state.settings.dashboard.timerTemplates[index]);
   }
 
   function onTimerActiveListClick(event) {
@@ -220,21 +229,30 @@ export function initTimerWidget({
   }
 
   function renderLocalClock() {
+    if (!topbarLocalTime) {
+      return;
+    }
     const now = new Date();
-    const weekday = now.toLocaleDateString([], { weekday: 'short' });
-    const month = now.toLocaleDateString([], { month: 'short' });
     const localTime = now.toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false
     });
-    localTimeDisplay.textContent = localTime;
-    localDateDisplay.textContent = `Local · ${weekday} ${now.getDate()} ${month}`;
-    if (topbarLocalTime) {
-      topbarLocalTime.textContent = localTime;
-      topbarLocalTime.setAttribute('datetime', now.toTimeString().slice(0, 5));
-      topbarLocalTime.setAttribute('aria-label', `Current local time ${localTime}`);
-    }
+    topbarLocalTime.textContent = localTime;
+    topbarLocalTime.setAttribute('datetime', now.toTimeString().slice(0, 5));
+    topbarLocalTime.setAttribute('aria-label', `Current local time ${localTime}`);
+  }
+
+  function savedTemplates() {
+    return (Array.isArray(state.settings?.dashboard?.timerTemplates) ? state.settings.dashboard.timerTemplates : [])
+      .map((template, index) => ({ template: normalizeTimerTemplateRecord(template), index }))
+      .filter((item) => item.template);
+  }
+
+  function renderTimerPresets() {
+    const presets = savedTemplates();
+    timerPresetList.hidden = !presets.length;
+    timerPresetList.innerHTML = presets.map(({ template, index }) => renderTimerPreset(template, index, safeText)).join('');
   }
 
   function stopTimerTick() {
@@ -308,15 +326,18 @@ export function initTimerWidget({
     timerStatus.hidden = !activeTimers.length;
     timerStatus.setAttribute('aria-label', `${tickingCount} running, ${running.length - tickingCount} paused, ${finished.length} finished`);
 
-    const structure = JSON.stringify(activeTimers.map((timer) => [
+    const hasPresets = !activeTimers.length && savedTemplates().length > 0;
+    const structure = JSON.stringify([hasPresets, activeTimers.map((timer) => [
       timer.sourceIndex, timer.name, timer.durationMinutes, timer.isPaused, timer.isAlert, timer.endAtMs
-    ]));
+    ])]);
     if (structure !== lastTimerStructure) {
       const focusedIndex = timerActiveList.ownerDocument?.activeElement?.dataset?.dashboardToggleActiveTimer;
       const finishedHtml = finished.length
         ? `<div class="home-timer-finished">${finished.map((timer) => renderFinishedTimer(timer, safeText)).join('')}</div>`
         : '';
-      timerActiveList.innerHTML = finishedHtml + running.map((timer, index) => renderActiveTimer(timer, index, safeText)).join('');
+      timerActiveList.innerHTML = activeTimers.length
+        ? finishedHtml + running.map((timer, index) => renderActiveTimer(timer, index, safeText)).join('')
+        : `<p class="home-empty-note">${hasPresets ? 'No timers running.' : 'No timers running. Save a preset with + to start it here in one click.'}</p>`;
       lastTimerStructure = structure;
       if (focusedIndex !== undefined) {
         timerActiveList.querySelector(`[data-dashboard-toggle-active-timer="${Number(focusedIndex)}"], [data-dashboard-remove-active-timer="${Number(focusedIndex)}"]`)?.focus();
@@ -345,6 +366,7 @@ export function initTimerWidget({
       localClockHandle = window.setInterval(renderLocalClock, 1000);
     }
     renderTimerWidget();
+    renderTimerPresets();
     if (!timerDialogOverlay.hidden) {
       renderTimerTemplateRows();
     }

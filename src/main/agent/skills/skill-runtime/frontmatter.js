@@ -1,8 +1,6 @@
 'use strict';
 
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const { asArray: defaultAsArray } = require('../../../lib/normalize.js');
 
 function defaultCleanText(value) {
   const text = String(value || '');

@@ -47,11 +47,13 @@ the iframe another capability. Old action hooks such as Notebook "Add Gel" and
 | storage availability | Safe `storage.configured` boolean; the path itself is never exposed. |
 | undo and redo | The workspace keeps its own stack over `manualOverrides`; `app.setHistory` reports its depth so the host's global buttons light up, and the host sends `app.undo` / `app.redo` back to this frame. Cmd+Z inside the frame is handled here, because a focused frame's key events never reach the host document. |
 
-The iframe still provides its own DOM and loads the Gel workspace module from
-`vendor/modules/gel/`. Plugin-specific fixes belong there now; it is not a
-verbatim mirror of a renderer source tree. The PowerPoint compatibility writer
-is bundled under `vendor/pptxgenjs/` with its upstream license so export does
-not depend on Electron or Node module resolution inside the sandbox.
+The iframe still provides its own DOM and loads first-party Gel code from
+`workspace/`. The `vendor/` folder is reserved for third-party browser assets
+and the generated host-style snapshot used by the isolated iframe. Small host
+helper snapshots live in `lib/`; the Gel selfcheck keeps those copies byte-for-
+byte aligned with their renderer owners. The PowerPoint compatibility writer is
+bundled under `vendor/pptxgenjs/` with its upstream license so export does not
+depend on Electron or Node module resolution inside the sandbox.
 
 ## Persistence shape
 

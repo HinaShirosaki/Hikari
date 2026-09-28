@@ -1,6 +1,8 @@
 'use strict';
 
 const { asArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
+const { parseJsonObjectFromText } = require('../../../lib/llm/runtime-helpers.js');
+const { compactObject, normalizePlotlyFigure } = require('../../../../shared/plotly-figure.mjs');
 
 const MAX_TEXT_LENGTH = 2000;
 
@@ -10,58 +12,6 @@ function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function compactObject(value = {}) {
-  return Object.entries(ensureObject(value)).reduce((out, [key, entryValue]) => {
-    if (entryValue === undefined || entryValue === null) {
-      return out;
-    }
-    if (typeof entryValue === 'string' && !entryValue) {
-      return out;
-    }
-    if (Array.isArray(entryValue) && !entryValue.length) {
-      return out;
-    }
-    if (
-      entryValue
-      && typeof entryValue === 'object'
-      && !Array.isArray(entryValue)
-      && !Object.keys(entryValue).length
-    ) {
-      return out;
-    }
-    out[key] = entryValue;
-    return out;
-  }, {});
-}
-
-function parseJsonObjectFromText(raw = '') {
-  const text = String(raw || '').trim();
-  if (!text) {
-    return null;
-  }
-  const candidates = [text];
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) {
-    candidates.push(fenced[1].trim());
-  }
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    candidates.push(text.slice(firstBrace, lastBrace + 1));
-  }
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
 }
 
 function normalizePlotlyToolName(rawToolName = '') {
@@ -122,20 +72,6 @@ function collectObjectCandidates(value, out = [], depth = 0) {
   return out;
 }
 
-function normalizeFigure(value = {}) {
-  const source = ensureObject(value.figure || value.plotly || value);
-  return compactObject({
-    data: asArray(source.data || source.traces || value.data || value.traces)
-      .map((trace) => ensureObject(trace))
-      .filter((trace) => Object.keys(trace).length),
-    layout: ensureObject(source.layout || value.layout),
-    config: ensureObject(source.config || value.config),
-    frames: asArray(source.frames || value.frames)
-      .map((frame) => ensureObject(frame))
-      .filter((frame) => Object.keys(frame).length)
-  });
-}
-
 function findGraphPayload(payload = {}) {
   const source = ensureObject(payload);
   const graph = ensureObject(source.graph);
@@ -149,7 +85,7 @@ function findGraphPayload(payload = {}) {
     || (asArray(source.data).length ? source : null)
     || (asArray(graphWithFigure.data).length ? graphWithFigure : null)
     || null;
-  const figure = normalizeFigure(figureSource || {});
+  const figure = normalizePlotlyFigure(figureSource || {});
   if (!asArray(figure.data).length) {
     return null;
   }

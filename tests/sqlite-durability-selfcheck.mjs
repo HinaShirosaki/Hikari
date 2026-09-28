@@ -86,11 +86,10 @@ const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-sqlite-durability-
 }
 
 // 3. An unreadable index degrades instead of failing the whole load.
-// The bundle and workflow indexes are derived from the sidecars and rewritten on
-// every save, so corruption must read like a missing file, not throw.
+// The bundle indexes are rewritten from the snapshot on every save, so
+// corruption must read like a missing file, not throw.
 {
   const { readSqliteBundleIndex } = require(path.join(root, 'src/main/storage/storage-sql-read.js'));
-  const { readWorkflowStatusIndex } = require(path.join(root, 'src/main/storage/workflow/read-root.js'));
   const { createAgentLookupSupport } = require(path.join(root, 'src/main/agent/tools/agent-lookup-support.js'));
 
   const healthy = path.join(workDir, 'healthy.sqlite');
@@ -108,12 +107,8 @@ const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-sqlite-durability-
   for (const [label, target] of [['garbage', garbage], ['truncated', truncated]]) {
     const bundle = await readSqliteBundleIndex(target);
     assert.equal(bundle.exists, false, `${label} bundle index must read as absent`);
-    assert.deepEqual(bundle.protocolRows, [], `${label} bundle index must yield no rows`);
+    assert.deepEqual(bundle.inventoryChemicals, [], `${label} bundle index must yield no rows`);
     assert.match(String(bundle.warning || ''), /unreadable/i, `${label} bundle index must warn`);
-
-    const workflow = await readWorkflowStatusIndex(target);
-    assert.equal(workflow.exists, false, `${label} workflow index must read as absent`);
-    assert.match(String(workflow.warnings?.[0] || ''), /unreadable/i, `${label} workflow index must warn`);
 
     const support = createAgentLookupSupport({});
     const lookup = await support.withSqliteDatabase(target, async () => 'ran');
@@ -155,56 +150,6 @@ const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-sqlite-durability-
   const reopened = await openKnowledgeDatabase(target);
   assert.deepEqual(queryRows(reopened, 'SELECT id FROM papers').map((row) => row.id), ['s']);
   reopened.close();
-}
-
-// 5. A failed workflow sync still closes its database.
-// sql.js holds the whole image in the WASM heap, so a sync that throws part way
-// through the folder writes leaks megabytes unless the close runs in a finally.
-{
-  const { loadSqlJs } = require(path.join(root, 'src/main/storage/storage-utils.js'));
-  const { syncWorkflowRootFromSnapshot } = require(path.join(root, 'src/main/storage/workflow/sync-root.js'));
-
-  const storagePath = path.join(workDir, 'workflow-leak');
-  fs.mkdirSync(storagePath, { recursive: true });
-  const snapshot = {
-    settings: { storagePath },
-    workflowTemplates: [{ id: 't1', name: 'T', steps: [{ id: 's1', text: 'step' }] }],
-    workflows: [{ id: 'w1', templateId: 't1' }]
-  };
-
-  const SQL = await loadSqlJs();
-  const RealDatabase = SQL.Database;
-  const realClose = RealDatabase.prototype.close;
-  let opened = 0;
-  let closed = 0;
-  RealDatabase.prototype.close = function countedClose(...args) {
-    closed += 1;
-    return realClose.apply(this, args);
-  };
-  SQL.Database = function CountedDatabase(...args) {
-    opened += 1;
-    return new RealDatabase(...args);
-  };
-  SQL.Database.prototype = RealDatabase.prototype;
-
-  // Make the folder writes fail after the database has been built. If the
-  // filesystem ignores the mode (running as root) the sync simply succeeds,
-  // and the close must have happened on that path too.
-  const workflowRoot = path.join(storagePath, 'Workflow');
-  fs.mkdirSync(workflowRoot, { recursive: true });
-  fs.chmodSync(workflowRoot, 0o500);
-  try {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      await syncWorkflowRootFromSnapshot({ storagePath, snapshot }).catch(() => {});
-    }
-  } finally {
-    fs.chmodSync(workflowRoot, 0o700);
-    SQL.Database = RealDatabase;
-    RealDatabase.prototype.close = realClose;
-  }
-
-  assert.ok(opened > 0, 'the sync must have opened at least one database');
-  assert.equal(closed, opened, 'every database a workflow sync opens must be closed');
 }
 
 fs.rmSync(workDir, { recursive: true, force: true });

@@ -7,7 +7,8 @@ import { notebookPageLabel } from './utils.js';
 
 // Recent notebook pages widget — surfaces the six most-recently-updated
 // notebook entries so the bench user can append a quick result note (with
-// optional LLM clarification) without leaving the home view.
+// optional LLM clarification) without leaving the home view. The note editor
+// opens inline under the chosen page.
 export function initNotebookWidget({
   state,
   persist,
@@ -15,74 +16,87 @@ export function initNotebookWidget({
   render,
   elements
 }) {
-  const {
-    pagesStatus,
-    pageList,
-    noteDialogOverlay,
-    noteDialogForm,
-    noteDialogCloseBtn,
-    noteDialogPage,
-    noteInput,
-    noteClarifyBtn
-  } = elements;
+  const { pagesStatus, pageList } = elements;
 
-  let notebookNoteEntryId = '';
+  let editingEntryId = '';
+  let noteDraft = '';
+  let lastMarkup = null;
 
-  pageList.addEventListener('click', onNotebookPageListClick);
-  noteDialogOverlay.addEventListener('click', onNotebookNoteDialogOverlayClick);
-  noteDialogForm.addEventListener('submit', onNotebookNoteDialogSubmit);
-  noteDialogCloseBtn.addEventListener('click', closeNotebookNoteDialog);
-  noteClarifyBtn.addEventListener('click', onNotebookNoteClarifyAndSave);
+  pageList.addEventListener('click', onPageListClick);
+  pageList.addEventListener('input', onPageListInput);
+  pageList.addEventListener('submit', onPageListSubmit);
 
-  function openNotebookNoteDialog(entry, initialNote = '') {
-    notebookNoteEntryId = String(entry?.id || '').trim();
-    noteDialogPage.textContent = `${notebookPageLabel(entry)} | ${String(entry?.projectName || 'No project').trim() || 'No project'}`;
-    noteDialogForm.reset();
-    noteInput.value = String(initialNote || '').trim();
-    noteDialogOverlay.hidden = false;
+  function findEntry(entryId) {
+    return (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
+      .find((item) => String(item?.id || '').trim() === entryId) || null;
+  }
+
+  function noteInput() {
+    return pageList.querySelector('[data-dashboard-notebook-note-input]');
+  }
+
+  function openNoteEditor(entryId, initialNote = '') {
+    editingEntryId = entryId;
+    noteDraft = String(initialNote || '');
+    renderWidget();
     window.requestAnimationFrame(() => {
-      noteInput.focus();
+      noteInput()?.focus();
     });
   }
 
-  function closeNotebookNoteDialog() {
-    notebookNoteEntryId = '';
-    noteDialogForm.reset();
-    noteDialogOverlay.hidden = true;
-    noteDialogPage.textContent = '';
+  function closeNoteEditor() {
+    const entryId = editingEntryId;
+    editingEntryId = '';
+    noteDraft = '';
+    renderWidget();
+    // Keyboard users land back on the page they were annotating.
+    [...pageList.querySelectorAll('[data-dashboard-notebook-entry]')]
+      .find((row) => row.dataset.dashboardNotebookEntry === entryId)
+      ?.focus();
   }
 
-  function onNotebookNoteDialogOverlayClick(event) {
-    if (event.target !== noteDialogOverlay) {
+  function onPageListClick(event) {
+    if (event.target.closest('[data-dashboard-notebook-note-cancel]')) {
+      closeNoteEditor();
       return;
     }
-    closeNotebookNoteDialog();
-  }
-
-  function onNotebookPageListClick(event) {
+    if (event.target.closest('[data-dashboard-notebook-note-clarify]')) {
+      void onClarifyAndSave();
+      return;
+    }
     const button = event.target.closest('[data-dashboard-notebook-entry]');
     if (!button) {
       return;
     }
     const entryId = String(button.dataset.dashboardNotebookEntry || '').trim();
-    const entry = (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
-      .find((item) => String(item?.id || '').trim() === entryId);
-    if (!entry) {
+    if (!findEntry(entryId)) {
       return;
     }
-    openNotebookNoteDialog(entry);
+    if (entryId === editingEntryId) {
+      closeNoteEditor();
+      return;
+    }
+    openNoteEditor(entryId);
   }
 
-  function onNotebookNoteDialogSubmit(event) {
+  function onPageListInput(event) {
+    const input = event.target?.closest?.('[data-dashboard-notebook-note-input]');
+    if (input) {
+      noteDraft = input.value;
+    }
+  }
+
+  function onPageListSubmit(event) {
+    if (!event.target?.closest?.('[data-dashboard-notebook-note-form]')) {
+      return;
+    }
     event.preventDefault();
-    const note = String(noteInput.value || '').trim();
-    if (!note) {
+    const note = noteDraft.trim();
+    if (!note || !appendNoteToNotebookEntry(editingEntryId, note)) {
       return;
     }
-    if (!appendNoteToNotebookEntry(notebookNoteEntryId, note)) {
-      return;
-    }
-    closeNotebookNoteDialog();
+    editingEntryId = '';
+    noteDraft = '';
     render();
   }
 
@@ -116,16 +130,16 @@ export function initNotebookWidget({
     return true;
   }
 
-  async function onNotebookNoteClarifyAndSave() {
-    const entryId = String(notebookNoteEntryId || '').trim();
-    const originalNote = String(noteInput.value || '').trim();
+  async function onClarifyAndSave() {
+    const entryId = editingEntryId;
+    const originalNote = noteDraft.trim();
     if (!entryId || !originalNote) {
       showTransientNotice('Add a note before clarifying it.', { type: 'error' });
       return;
     }
-    const entry = (Array.isArray(state.notebookEntries) ? state.notebookEntries : [])
-      .find((item) => String(item?.id || '').trim() === entryId);
-    closeNotebookNoteDialog();
+    editingEntryId = '';
+    noteDraft = '';
+    renderWidget();
     try {
       const clarifiedNote = await clarifyNotebookNote({
         llm: state.settings?.llm,
@@ -138,8 +152,8 @@ export function initNotebookWidget({
       render();
       showTransientNotice('Clarified note saved.');
     } catch (error) {
-      if (entry) {
-        openNotebookNoteDialog(entry, originalNote);
+      if (findEntry(entryId)) {
+        openNoteEditor(entryId, originalNote);
       }
       showTransientNotice(String(error?.message || error || 'Failed to clarify the note.'), {
         type: 'error'
@@ -180,13 +194,49 @@ export function initNotebookWidget({
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
 
-  function renderRecentNotebookPages(entries) {
-    pagesStatus.textContent = entries.length
-      ? 'Tap a page to add a note.'
-      : 'No notebook pages yet.';
+  function renderNoteEditor(label) {
+    return `
+      <form class="home-notebook-note-editor" data-dashboard-notebook-note-form>
+        <textarea
+          class="home-notebook-note-input"
+          data-dashboard-notebook-note-input
+          rows="3"
+          maxlength="4000"
+          required
+          aria-label="Note for ${label}"
+          placeholder="Add a quick note to this page…"
+        ></textarea>
+        <div class="home-notebook-note-actions">
+          <button type="button" class="ghost-btn home-notebook-note-cancel" data-dashboard-notebook-note-cancel>Cancel</button>
+          <button type="button" class="ghost-btn hikari-agent-action" data-dashboard-notebook-note-clarify>Clarify and save</button>
+          <button type="submit" class="primary-btn">Save note</button>
+        </div>
+      </form>`;
+  }
+
+  function renderPageRow(entry, project) {
+    const entryId = String(entry?.id || '').trim();
+    const label = safeText(notebookPageLabel(entry));
+    const editing = entryId === editingEntryId;
+    return `
+      <button
+        type="button"
+        class="home-row home-notebook-row${editing ? ' is-editing' : ''}"
+        data-dashboard-notebook-entry="${safeText(entryId)}"
+        aria-expanded="${editing}"
+        aria-label="Add a note to ${label} in ${safeText(project)}"
+      >
+        <span class="home-row-name">${label}</span>
+        <span class="home-row-meta">${safeText(relativeShort(entry?.updatedAt || entry?.createdAt))}</span>
+        <span class="home-notebook-add" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+        </span>
+      </button>${editing ? renderNoteEditor(label) : ''}`;
+  }
+
+  function renderPagesMarkup(entries) {
     if (!entries.length) {
-      pageList.innerHTML = '';
-      return;
+      return '<p class="home-empty-note">No notebook pages yet. Pages you work on show up here, ready for a quick note.</p>';
     }
     const groups = new Map();
     entries.forEach((entry) => {
@@ -197,30 +247,42 @@ export function initNotebookWidget({
       }
       groups.get(key).pages.push(entry);
     });
-    pageList.innerHTML = [...groups.values()].map(({ project, pages }) => `
+    return [...groups.values()].map(({ project, pages }) => `
       <section class="home-notebook-project" aria-label="${safeText(project)}">
         <div class="home-notebook-project-head">
           <h3>${safeText(project)}</h3>
           <span>${pages.length} ${pages.length === 1 ? 'page' : 'pages'}</span>
         </div>
-        ${pages.map((entry) => `
-      <button
-        type="button"
-        class="home-row home-notebook-row is-clickable"
-        data-dashboard-notebook-entry="${safeText(entry.id)}"
-        aria-label="Add note to ${safeText(notebookPageLabel(entry))} in ${safeText(project)}"
-      >
-        <span class="home-row-copy">
-          <span class="home-row-name">${safeText(notebookPageLabel(entry))}</span>
-          <span class="home-row-meta">${safeText(relativeShort(entry?.updatedAt || entry?.createdAt))}</span>
-        </span>
-        <span class="home-notebook-add" aria-hidden="true" title="Add note">
-          <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-        </span>
-      </button>
-        `).join('')}
+        ${pages.map((entry) => renderPageRow(entry, project)).join('')}
       </section>
     `).join('');
+  }
+
+  // The list re-renders on every dashboard render; an open editor keeps its
+  // text, and its focus when it had it.
+  function renderRecentNotebookPages(entries) {
+    pagesStatus.textContent = entries.length
+      ? 'Select a page to add a note.'
+      : 'No notebook pages yet.';
+    if (editingEntryId && !entries.some((entry) => String(entry?.id || '').trim() === editingEntryId)) {
+      editingEntryId = '';
+      noteDraft = '';
+    }
+    const markup = renderPagesMarkup(entries);
+    if (markup === lastMarkup) {
+      return;
+    }
+    const input = noteInput();
+    const hadFocus = Boolean(input) && input === pageList.ownerDocument?.activeElement;
+    pageList.innerHTML = markup;
+    lastMarkup = markup;
+    const nextInput = noteInput();
+    if (nextInput) {
+      nextInput.value = noteDraft;
+      if (hadFocus) {
+        nextInput.focus();
+      }
+    }
   }
 
   function renderWidget() {
@@ -228,10 +290,10 @@ export function initNotebookWidget({
   }
 
   function handleEscape() {
-    if (noteDialogOverlay.hidden) {
+    if (!editingEntryId) {
       return false;
     }
-    closeNotebookNoteDialog();
+    closeNoteEditor();
     return true;
   }
 

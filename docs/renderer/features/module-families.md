@@ -54,8 +54,8 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 | `lib/file-drop.js`, `lib/unsaved-draft.js` | reusable DOM-independent interaction/state helpers |
 | `lib/notebook-result-tables.js` | pure notebook result-table model |
 | `services/direct-llm.js` | direct (non-agent) LLM request adapter |
-| `services/notebook-linked-previews.js`, `services/notebook-note-tools.js` | cross-feature notebook preview and note integrations |
-| `services/experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
+| `modules/biology-notebook/linked-previews.js`, `services/notebook-note-tools.js` | notebook preview and note integrations |
+| `modules/agent-chat/experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
 | `pdf-export/`, `print/`, `selection-insights/` | shared export, print, and selection-insight helpers |
 | `lib/chemistry/buffer-compounds.js` | reference dataset shared by Toolbox and notebook calculations |
 | `app-registry.generated.js`, `codex-model-catalog.generated.js` | generated shell configuration and Codex model catalog |
@@ -68,7 +68,7 @@ If you are new to the renderer, read one small module before a large subsystem.
 
 Good starter files:
 
-1. `modules/home-dashboard.js` — a ~180-line orchestrator that hands typed element bundles to independent widgets
+1. `modules/home-dashboard/index.js` — a ~180-line orchestrator that hands typed element bundles to independent widgets
 2. `modules/workflow/index.js` — one of the cleanest folder separations (model / renderer / graph-controller / actions / state)
 3. `modules/biology-notebook/project/project-controller.js` — a focused state mutation and dialog controller inside its owning feature
 

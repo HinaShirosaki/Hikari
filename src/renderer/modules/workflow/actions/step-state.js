@@ -1,6 +1,7 @@
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { uniqueStrings } from '../model.js';
 import { buildWorkflowExecutionLayout, computeEntryProgress } from '../execution.js';
+import { cloneProtocolSnapshot } from '../../../lib/protocol-snapshot.js';
 
 function createEmptyStepState() {
   return {
@@ -83,34 +84,6 @@ function createWorkflowStepState({
 
   function touchWorkflow(workflow) {
     workflow.updatedAt = new Date().toISOString();
-  }
-
-  function cloneProtocolSnapshot(protocol) {
-    if (!protocol || typeof protocol !== 'object') {
-      return null;
-    }
-    const protocolId = String(protocol.id || '').trim();
-    return {
-      id: protocolId,
-      name: String(protocol.name || '').trim() || 'Untitled Protocol',
-      category: String(protocol.category || '').trim(),
-      purpose: String(protocol.purpose || '').trim(),
-      steps: Array.isArray(protocol.steps)
-        ? protocol.steps.map((step, index) => {
-          const stepId = String(step?.id || '').trim() || `${protocolId || 'protocol'}_step_${index + 1}`;
-          return {
-            id: stepId,
-            text: String(step?.text || '').trim(),
-            placeholders: Array.isArray(step?.placeholders)
-              ? step.placeholders.map((placeholder, placeholderIndex) => ({
-                id: String(placeholder?.id || '').trim() || `${stepId}_placeholder_${placeholderIndex + 1}`,
-                name: String(placeholder?.name || '').trim() || `Value ${placeholderIndex + 1}`
-              }))
-              : []
-          };
-        })
-        : []
-    };
   }
 
   function upsertNotebookEntryForStep(workflow, entry, block, options = {}) {

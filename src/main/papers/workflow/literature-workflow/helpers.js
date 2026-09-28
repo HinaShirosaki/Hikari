@@ -1,11 +1,9 @@
 'use strict';
 
+const { ensureObject: defaultEnsureObject } = require('../../../lib/normalize.js');
+
 const SEARCH_BATCH_SIZE = 8;
 const DEFAULT_DOWNLOAD_CONCURRENCY = 4;
-
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
 
 function toPositiveInteger(value, fallback = 0) {
   const parsed = Number(value);

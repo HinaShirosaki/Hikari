@@ -1,4 +1,4 @@
-import { createId } from '../utils.js';
+import { createId } from '../../lib/app-utils.js';
 import { defaultState } from './defaults.js';
 
 const COUNTER_EVENTS = new Set([

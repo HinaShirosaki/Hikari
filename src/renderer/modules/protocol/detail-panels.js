@@ -1,5 +1,4 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
-import { logNotebookPageEvent } from '../biology-notebook/storage/page-log.js';
 
 // Switching the protocol detail column between empty / editor / view, plus the
 // create, edit, view, export, print, and delete actions those panels drive.
@@ -20,6 +19,7 @@ function createProtocolDetailPanels({
   state,
   persist,
   onProtocolsChanged,
+  logNotebookPageEvent = () => {},
   selectionInsightsController
 } = {}) {
   function applyDetailMode(nextMode) {

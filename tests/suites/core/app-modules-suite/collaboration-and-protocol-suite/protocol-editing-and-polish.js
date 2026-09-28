@@ -21,7 +21,7 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
 
   assert.match(
     viewSource,
-    /<div class="protocol-steps-field">\s*<label for="protocol-steps">Steps \(start each step with a bullet point\)<\/label>/
+    /<div class="protocol-steps-field">\s*<label for="protocol-steps">Steps<\/label>/
   );
   // The preset buttons are rendered into this host at runtime, so the static
   // markup can only show where the host sits.
@@ -36,6 +36,13 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
       .map((entry) => entry.name),
     ['Plasmid', 'Cell Line', 'Strain', 'Antibody', 'Protein', 'Chemical', 'Primer', 'Lysate', 'volume', 'buffer', 'concentration', 'temperature', 'time']
   );
+});
+test('protocol-management leaves its search lens to the shared search-field component', () => {
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'protocol-management-view.html'), 'utf8');
+  const searchFieldMarkup = viewSource.match(/<label class="protocol-search-field">([\s\S]*?)<\/label>/)?.[1] || '';
+
+  assert.match(searchFieldMarkup, /<input type="search" id="protocol-search"/);
+  assert.doesNotMatch(searchFieldMarkup, /<svg\b/);
 });
 test('protocol-management keeps legacy string steps editable and viewable', () => {
   const document = createMockDocument([

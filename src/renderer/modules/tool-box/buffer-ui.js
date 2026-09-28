@@ -1,8 +1,9 @@
-import { BUFFER_COMPOUNDS } from '../../lib/chemistry/buffer-compounds.js';
 import { escapeHtml } from './common.js';
 import {
+  bufferCandidateForm as resolveBufferCandidateForm,
+  buildBufferCandidates as buildSharedBufferCandidates,
   calculateBufferRecipe,
-  resolveBufferCompound
+  findBufferCandidate as findSharedBufferCandidate
 } from '../../lib/bench-calculations.js';
 
 const BUFFER_STATIC_ROW_COUNT = 6;
@@ -43,35 +44,6 @@ function resultTextAfterName(text) {
   const source = String(text || '').trim();
   const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
   return match ? match[1].trim() : source;
-}
-
-function normalizeCandidateName(value) {
-  return String(value || '').trim().toLowerCase();
-}
-
-function extractCompoundMw(record) {
-  const source = record && typeof record === 'object' ? record : {};
-  const keys = ['mw', 'molecularWeight', 'molecular_weight', 'formulaWeight', 'formula_weight', 'formulaMass', 'molarMass', 'fw'];
-  for (const key of keys) {
-    const parsed = Number(source[key]);
-    if (Number.isFinite(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-  return '';
-}
-
-function inferCompoundForm(record) {
-  const source = record && typeof record === 'object' ? record : {};
-  const formText = [
-    source.form,
-    source.physicalForm,
-    source.state,
-    source.type,
-    source.unitSize,
-    source.amountInStock
-  ].map((item) => String(item || '').toLowerCase()).join(' ');
-  return /\b(liquid|solution|ml|ul|l)\b/.test(formText) ? 'liquid' : 'solid';
 }
 
 export function initBufferTool(options = {}) {
@@ -172,70 +144,15 @@ export function initBufferTool(options = {}) {
   }
 
   function buildBufferCandidates() {
-    const candidates = new Map();
-    function mergeCandidate(candidate) {
-      const name = String(candidate?.name || '').trim();
-      if (!name) {
-        return;
-      }
-      const key = normalizeCandidateName(name);
-      const existing = candidates.get(key);
-      if (!existing) {
-        candidates.set(key, { ...candidate, name });
-        return;
-      }
-      if (candidate.source === 'Stored') {
-        candidates.set(key, {
-          ...existing,
-          ...candidate,
-          mw: candidate.mw || existing.mw,
-          form: candidate.form || existing.form,
-          category: candidate.category || existing.category
-        });
-        return;
-      }
-      candidates.set(key, {
-        ...existing,
-        mw: existing.mw || candidate.mw,
-        form: existing.form || candidate.form,
-        category: existing.category || candidate.category
-      });
-    }
-
-    (Array.isArray(options.getStoredCompounds?.()) ? options.getStoredCompounds() : []).forEach((record) => {
-      mergeCandidate({
-        source: 'Stored',
-        name: record?.name,
-        mw: extractCompoundMw(record),
-        form: inferCompoundForm(record),
-        category: record?.casNumber ? `CAS ${record.casNumber}` : 'Stored compound'
-      });
-    });
-    BUFFER_COMPOUNDS.forEach((compound) => {
-      mergeCandidate({
-        source: 'Tools',
-        name: compound.name,
-        mw: compound.mw,
-        form: compound.form === 'liquid' ? 'liquid' : 'solid',
-        category: compound.category || 'Buffer compound'
-      });
-    });
-    return [...candidates.values()].sort((left, right) => left.name.localeCompare(right.name));
+    return buildSharedBufferCandidates({ storedCompounds: options.getStoredCompounds?.() });
   }
 
   function findBufferCandidate(name) {
-    const key = normalizeCandidateName(name);
-    if (!key) {
-      return null;
-    }
-    return buildBufferCandidates().find((candidate) => normalizeCandidateName(candidate.name) === key)
-      || resolveBufferCompound(name)
-      || null;
+    return findSharedBufferCandidate(name, { storedCompounds: options.getStoredCompounds?.() });
   }
 
   function bufferCandidateForm(name) {
-    const candidate = findBufferCandidate(name);
-    return candidate?.form === 'liquid' ? 'liquid' : 'solid';
+    return resolveBufferCandidateForm(name, { storedCompounds: options.getStoredCompounds?.() });
   }
 
   function closeBufferSuggestions(index = null) {

@@ -81,6 +81,16 @@ export function installProteinBuilderWorkflowRendering(ctx) {
           <div class="sequence-viewer-protein-builder-block-actions">
             ${index > 0 ? moveButton('left') : ''}
             ${index < state.rows.length - 1 ? moveButton('right') : ''}
+            ${row.kind === 'custom' ? `
+            <button
+              type="button"
+              class="sequence-viewer-protein-builder-icon-btn"
+              data-protein-builder-row-edit="${escapeAttribute(row.id)}"
+              aria-label="Edit ${escapeAttribute(label || 'block')}"
+              title="Edit sequence"
+            >
+              <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>` : ''}
             <button
               type="button"
               class="sequence-viewer-protein-builder-icon-btn sequence-viewer-protein-builder-icon-btn-remove"
@@ -95,32 +105,6 @@ export function installProteinBuilderWorkflowRendering(ctx) {
       `;
     }).join('');
 
-    // Keep manual editors outside the proportional ribbon. Preserve disclosure
-    // state when a committed edit rebuilds the workflow.
-    const openEditors = new Set(Array.from(
-      elements.proteinBuilderWorkflow.querySelectorAll?.('details[data-protein-builder-editor][open]') || []
-    ).map((editor) => editor.dataset.proteinBuilderEditor));
-    const editors = parts.filter(({ row }) => row.kind === 'custom').map(({ row, label, sequence }) => `
-      <details class="sequence-viewer-protein-builder-custom-editor"
-        data-protein-builder-editor="${escapeAttribute(row.id)}"${openEditors.has(row.id) ? ' open' : ''}>
-        <summary>
-          <span>Edit ${escapeHtml(label || 'Custom protein')}</span>
-          <span class="small-note">${sequence.length} aa</span>
-        </summary>
-        <div class="sequence-viewer-protein-builder-custom-fields">
-          <label>Label
-            <input type="text" value="${escapeAttribute(row.label)}"
-              data-protein-builder-custom-label="${escapeAttribute(row.id)}" />
-          </label>
-          <label>Amino-acid sequence
-            <textarea rows="4" spellcheck="false" autocapitalize="off"
-              data-protein-builder-custom-sequence="${escapeAttribute(row.id)}"
-              placeholder="Amino-acid sequence">${escapeHtml(row.sequence || '')}</textarea>
-          </label>
-        </div>
-      </details>
-    `).join('');
-
     // The chain reads N to C, and the termini say so: without them a row of
     // arrows is just a row of arrows.
     elements.proteinBuilderWorkflow.innerHTML = `
@@ -131,7 +115,6 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         <span class="sequence-viewer-protein-builder-terminus">C</span>
       </div>
       </div>
-      ${editors}
     `;
   };
 

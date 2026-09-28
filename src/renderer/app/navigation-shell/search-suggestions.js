@@ -1,3 +1,5 @@
+import { escapeHtml as escapeHtmlText } from '../../lib/html.js';
+
 // Dropdown state for the topbar search box: render the list, move focus with
 // the arrow keys, and apply the chosen suggestion.
 function createSearchSuggestions({
@@ -12,15 +14,6 @@ function createSearchSuggestions({
     activeIndex: -1,
     open: false
   };
-
-  function escapeHtmlText(value) {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 
   function renderSearchSuggestionList() {
     if (!topbarSearchSuggestions) {

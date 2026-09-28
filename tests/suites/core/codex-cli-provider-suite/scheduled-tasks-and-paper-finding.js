@@ -20,8 +20,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
       let clockMs = Date.parse('2026-07-18T15:00:00.000Z');
@@ -134,8 +133,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
       let clockMs = Date.parse('2026-07-18T16:00:00.000Z');
@@ -191,8 +189,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
       let clockMs = Date.parse('2026-07-18T15:00:00.000Z');
@@ -264,8 +261,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
       fs.writeFileSync(configPath, JSON.stringify({
@@ -308,8 +304,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
 
@@ -368,8 +363,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
 
@@ -454,7 +448,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
     });
 
     test('scheduled task IPC and preload APIs expose the complete CRUD and run surface', async () => {
-      const { SCHEDULED_TASK } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const { PAPER_FINDING, SCHEDULED_TASK } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
       const { registerScheduledTaskIpc } = require(path.join(
         __dirname,
         'src',
@@ -488,7 +482,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       registerScheduledTaskIpc({ ipcMain, scheduledTaskService });
       assert.deepEqual(
         Array.from(handlers.keys()).sort(),
-        Object.values(SCHEDULED_TASK).sort()
+        [...Object.values(SCHEDULED_TASK), ...Object.values(PAPER_FINDING)].sort()
       );
       const ipcRenderer = {
         invoke(channel, payload) {
@@ -512,6 +506,64 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         SCHEDULED_TASK.RUN
       ]);
       assert.deepEqual(calls[3].payload, { enabled: false, id: 'task-1' });
+    });
+
+    test('paper-finding download saves into the stored task project, not a renderer-supplied path', async () => {
+      const { PAPER_FINDING } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const { registerScheduledTaskIpc } = require(path.join(
+        __dirname, 'src', 'main', 'ipc', 'register-scheduled-task-ipc.js'
+      ));
+      const handlers = new Map();
+      const downloads = [];
+      registerScheduledTaskIpc({
+        ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+        scheduledTaskService: {
+          getTask: async (id) => (id === 'pf-1' ? {
+            id,
+            task_type: 'paper_finding',
+            project: { name: 'CD19 CAR', storage_path: '/data/root' }
+          } : { id, task_type: 'generic' })
+        },
+        paperDownloadRuntime: {
+          downloadPaper: async (input) => {
+            downloads.push(input);
+            return { ok: true, download_status: 'completed', file_name: 'paper.pdf' };
+          }
+        }
+      });
+      const download = handlers.get(PAPER_FINDING.DOWNLOAD);
+      const result = await download(null, {
+        task_id: 'pf-1',
+        paper: {
+          title: 'A CD19 binder',
+          doi: '10.1000/cd19',
+          url: 'file:///etc/passwd',
+          storage_path: '/elsewhere'
+        }
+      });
+      assert.equal(result.ok, true);
+      assert.equal(downloads.length, 1);
+      assert.equal(downloads[0].storage_path, '/data/root');
+      assert.equal(downloads[0].linked_type, 'project');
+      assert.equal(downloads[0].linked_name, 'CD19 CAR');
+      assert.equal(downloads[0].doi, '10.1000/cd19');
+      assert.equal(downloads[0].paper_title, 'A CD19 binder');
+      const { extractPaperDownloadTargets } = require(path.join(
+        __dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'
+      ));
+      assert.equal(
+        extractPaperDownloadTargets(downloads[0]).browser_entry_url,
+        'https://doi.org/10.1000/cd19',
+        'a DOI opens the publisher page, not the finder link'
+      );
+      await download(null, { task_id: 'pf-1', paper: { title: 'No DOI', url: 'https://pubmed.ncbi.nlm.nih.gov/1/' } });
+      assert.equal(downloads[1].page_url, 'https://pubmed.ncbi.nlm.nih.gov/1/', 'without a DOI the finder link is used');
+      await download(null, { task_id: 'pf-1', paper: { title: 'Bad link', url: 'file:///etc/passwd' } });
+      assert.equal(downloads[2].page_url, '', 'non-http URLs never reach the download window');
+      const notPaperFinding = await download(null, { task_id: 'other', paper: { doi: '10.1/x' } });
+      assert.equal(notPaperFinding.ok, false);
+      assert.equal(notPaperFinding.not_found, true);
+      assert.equal(downloads.length, 3);
     });
 
     test('paper finding maps human cadence and project context into a metadata-only scheduled task', () => {
@@ -645,8 +697,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         __dirname,
         'src',
         'main',
-        'core',
-        'services',
+        'scheduled-tasks',
         'create-scheduled-task-service.js'
       ));
       const {
@@ -704,8 +755,95 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       }
     });
 
-    test('paper finding preload helper creates and upserts through scheduled-task IPC', async () => {
-      const { SCHEDULED_TASK } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+    test('paper finding marks saved papers itself and keeps a downloaded card saved until the next run', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-paper-finding-saved-'));
+      const configPath = path.join(tmpDir, 'scheduled-tasks.json');
+      const { createScheduledTaskService } = require(path.join(
+        __dirname, 'src', 'main', 'scheduled-tasks', 'create-scheduled-task-service.js'
+      ));
+      const { buildPaperFindingScheduledTaskInput, normalizePaperFindingRunResult } = require(path.join(
+        __dirname, 'src', 'main', 'papers', 'finding', 'paper-finding-task.js'
+      ));
+      const { createPaperFindingScheduledTasks, markSavedPapers } = require(path.join(
+        __dirname, 'src', 'main', 'papers', 'finding', 'paper-finding-scheduled-tasks.js'
+      ));
+      const savedDois = new Set(['10.1000/saved']);
+      const lookups = [];
+      const paperDownloadRuntime = {
+        findSavedPaper: async (input) => {
+          lookups.push(input);
+          return savedDois.has(input.doi)
+            ? { file_path: `/root/Project/Atlas/Papers/${input.doi.split('/')[1]}.pdf`, relative_path: 'Project/Atlas/Papers/x.pdf' }
+            : null;
+        },
+        downloadPaper: async (input) => {
+          savedDois.add(input.doi);
+          return { ok: true, download_status: 'completed', file_path: '/root/Project/Atlas/Papers/new.pdf', relative_path: 'Project/Atlas/Papers/new.pdf' };
+        }
+      };
+      const ids = ['task-1', 'run-1', 'run-2'];
+      const service = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => configPath,
+        createId: () => ids.shift(),
+        setTimer: () => ({ unref() {} }),
+        clearTimer: () => {},
+        normalizeRunResult: async (task, text, context) => markSavedPapers(
+          task, normalizePaperFindingRunResult(task, text, context), paperDownloadRuntime
+        ),
+        runCodexTask: async () => ({
+          ok: true,
+          codex_agent: {
+            answer: JSON.stringify({
+              type: 'paper_finding_result',
+              papers: [
+                { title: 'Saved before', doi: '10.1000/saved' },
+                // The model's claim is not trusted; Hikari checks the project folder.
+                { title: 'New find', doi: '10.1000/new', already_local: true }
+              ]
+            })
+          }
+        })
+      });
+      const paperFinding = createPaperFindingScheduledTasks({ scheduledTaskService: service, paperDownloadRuntime });
+
+      try {
+        const task = await service.createTask(buildPaperFindingScheduledTaskInput({
+          project: { id: 'project-1', name: 'Atlas', storage_path: '/root' },
+          frequency: '1 week'
+        }));
+        const first = await service.runTask(task.id);
+        const [savedBefore, newFind] = first.run.result.papers;
+        assert.equal(savedBefore.already_local, true);
+        assert.equal(savedBefore.local_file.file_path, '/root/Project/Atlas/Papers/saved.pdf');
+        assert.equal(newFind.already_local, false);
+        assert.equal(lookups[0].linked_name, 'Atlas');
+        assert.equal(lookups[0].storage_path, '/root');
+
+        await paperFinding.downloadPaper(task.id, newFind);
+        const afterDownload = (await service.getTask(task.id)).last_run.result.papers[1];
+        assert.equal(afterDownload.download_status, 'saved');
+        assert.equal(afterDownload.local_file.file_path, '/root/Project/Atlas/Papers/new.pdf');
+        const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        assert.equal(persisted.tasks[0].last_run.result.papers[1].download_status, 'saved');
+        assert.equal(
+          await service.updateRunResult(task.id, 'some-older-run', () => ({ papers: [] })),
+          null,
+          'a stale run id never overwrites the current results'
+        );
+
+        const second = await service.runTask(task.id);
+        assert.deepEqual(second.run.result.papers.map((paper) => paper.already_local), [true, true]);
+        assert.deepEqual(second.run.result.papers.map((paper) => paper.download_status), ['not_requested', 'not_requested']);
+      } finally {
+        await service.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    test('paper finding preload bridge leaves create-or-update logic in the main process', async () => {
+      const { PAPER_FINDING } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
       const { createScheduledTaskApi } = require(path.join(
         __dirname,
         'src',
@@ -714,30 +852,38 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         'api',
         'scheduled-task-api.js'
       ));
+      const { registerScheduledTaskIpc } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'ipc',
+        'register-scheduled-task-ipc.js'
+      ));
       const calls = [];
       let existingTask = null;
+      const handlers = new Map();
+      const scheduledTaskService = {
+        listTasks: async () => (existingTask ? [existingTask] : []),
+        getTask: async () => existingTask,
+        createTask: async (payload) => {
+          existingTask = { id: 'paper-finding-1', ...payload, next_run_at: '2026-07-25T12:00:00.000Z' };
+          return existingTask;
+        },
+        updateTask: async (id, payload) => {
+          existingTask = { ...existingTask, ...payload, id };
+          return existingTask;
+        },
+        deleteTask: async () => null,
+        runTask: async () => null
+      };
+      registerScheduledTaskIpc({
+        ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+        scheduledTaskService
+      });
       const ipcRenderer = {
         async invoke(channel, payload) {
           calls.push({ channel, payload });
-          if (channel === SCHEDULED_TASK.LIST) {
-            return { ok: true, tasks: existingTask ? [existingTask] : [] };
-          }
-          if (channel === SCHEDULED_TASK.GET) {
-            return { ok: true, task: existingTask };
-          }
-          if (channel === SCHEDULED_TASK.CREATE) {
-            existingTask = {
-              id: 'paper-finding-1',
-              ...payload,
-              next_run_at: '2026-07-25T12:00:00.000Z'
-            };
-            return { ok: true, task: existingTask };
-          }
-          if (channel === SCHEDULED_TASK.UPDATE) {
-            existingTask = { ...existingTask, ...payload };
-            return { ok: true, task: existingTask };
-          }
-          return { ok: true };
+          return handlers.get(channel)(null, payload);
         }
       };
       const api = createScheduledTaskApi(ipcRenderer);
@@ -753,21 +899,20 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       const created = await api.schedulePaperFinding(input);
       assert.equal(created.ok, true);
       assert.equal(created.task.task_type, 'paper_finding');
-      assert.equal(calls[0].channel, SCHEDULED_TASK.LIST);
-      assert.equal(calls[1].channel, SCHEDULED_TASK.CREATE);
+      assert.deepEqual(calls.map((entry) => entry.channel), [PAPER_FINDING.SCHEDULE]);
 
       const updated = await api.schedulePaperFinding({
         ...input,
         requirements: 'Primary studies published since 2024.'
       });
       assert.equal(updated.ok, true);
-      assert.equal(calls.at(-2).channel, SCHEDULED_TASK.GET);
-      assert.equal(calls.at(-1).channel, SCHEDULED_TASK.UPDATE);
+      assert.equal(calls.at(-1).channel, PAPER_FINDING.SCHEDULE);
       assert.equal(
-        calls.at(-1).payload.metadata.paper_finding.requirements,
+        updated.task.metadata.paper_finding.requirements,
         'Primary studies published since 2024.'
       );
-      assert.equal(Object.hasOwn(calls.at(-1).payload, 'schedule'), false);
+      assert.equal(updated.task.schedule.kind, 'interval');
+      assert.equal(calls.length, 2, 'the preload performs one invoke and no domain reads');
     });
 
     test('paper finding policy blocks the paper-download executor before acquisition starts', async () => {
@@ -1113,7 +1258,8 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
             summary: 'Found 2 papers.',
             papers: [
               { title: 'Clean paper', url: 'https://example.org/a', journal: 'Nature', relevance_reason: 'On topic.' },
-              { title: '<script>alert(1)</script>', url: 'javascript:alert(1)' }
+              { title: '<script>alert(1)</script>', url: 'javascript:alert(1)' },
+              { title: 'Saved paper', doi: '10.1/saved', already_local: true, local_file: { file_path: '/root/Papers/saved.pdf' } }
             ]
           }
         }
@@ -1127,8 +1273,11 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       await controller.load(project);
       const results = host.querySelector('[data-paper-finder-results]');
       assert.equal(results.hidden, false);
-      assert.equal(results.querySelectorAll('[data-paper-finder-result]').length, 2);
+      assert.equal(results.querySelectorAll('[data-paper-finder-result]').length, 3);
       assert.ok(results.innerHTML.includes('Clean paper'));
+      // The project panel keeps saved papers, marked with an Open action.
+      assert.ok(results.innerHTML.includes('data-paper-finder-open="/root/Papers/saved.pdf"'));
+      assert.equal((results.innerHTML.match(/project-paper-finder-result-saved/g) || []).length, 1);
       // Script text is escaped, not live markup, and the javascript: URL is dropped.
       assert.ok(results.innerHTML.includes('&lt;script&gt;'));
       assert.ok(!results.innerHTML.includes('<script>'));
@@ -1158,7 +1307,7 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       assert.equal(appPaths.getStorageRootPointerPath(), path.join(userData, 'Config', 'last-storage-root.json'));
 
       const { createScheduledTaskService } = require(path.join(
-        __dirname, 'src', 'main', 'core', 'services', 'create-scheduled-task-service.js'
+        __dirname, 'src', 'main', 'scheduled-tasks', 'create-scheduled-task-service.js'
       ));
       const service = createScheduledTaskService({
         fs: fsPromises,
@@ -1227,7 +1376,10 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
         },
         mcpService: { mcpHost: {} },
         agentFoundation: {
-          controllerUtils: { recordAgentLlmTrace: async () => {} },
+          // Real tracer: scheduled runs pass a bare { requestId } trace context.
+          controllerUtils: require(path.join(
+            __dirname, 'src', 'main', 'agent', 'shared', 'controller-utils', 'tracing.js'
+          )).createAgentTracing({ cleanText: (value) => String(value || '').trim() }),
           observability: { recordLifecycleEvent: () => {} },
           agentToolRuntime: { runAgentTool: async () => ({ ok: true }) }
         },

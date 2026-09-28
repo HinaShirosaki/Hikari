@@ -30,7 +30,7 @@
   min-width: 0;
   border: 1px solid var(--theme-border);
   border-radius: 10px;
-  background: color-mix(in srgb, var(--theme-surface) 96%, var(--theme-accent) 4%);
+  background: var(--theme-surface);
 }
 
 .biology-notebook-quick-sample-location-panel {
@@ -77,13 +77,13 @@
 
 .biology-notebook-quick-sample-location:hover,
 .biology-notebook-quick-sample-location:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  border-color: var(--theme-accent-line);
   outline: none;
 }
 
 .biology-notebook-quick-sample-location.is-selected {
-  border-color: color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  border-color: var(--theme-accent-line);
+  background: var(--theme-surface-hover);
 }
 
 .biology-notebook-quick-sample-location-badge {
@@ -92,7 +92,7 @@
   width: 30px;
   height: 30px;
   border-radius: 9px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+  background: var(--theme-accent-soft);
   font-size: var(--text-2xs);
   font-weight: 760;
 }
@@ -207,7 +207,7 @@
 
 .biology-notebook-quick-sample-well.is-selected {
   border-color: var(--theme-accent);
-  background: color-mix(in srgb, var(--theme-accent) 16%, var(--theme-surface));
+  background: var(--theme-surface-active);
   color: var(--theme-text-strong);
   box-shadow: 0 0 0 1px var(--theme-accent);
 }

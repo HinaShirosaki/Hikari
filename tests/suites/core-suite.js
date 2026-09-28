@@ -5,6 +5,7 @@ module.exports = function registerCoreSuite(context = {}) {
   const registerContractsSuite = require('./core/contracts-suite.js');
   const registerModuleServicesSuite = require('./core/module-services-suite.js');
   const registerNpmUpdaterSuite = require('./core/npm-updater-suite.js');
+  const registerPluginSystemSuite = require('./core/plugin-system-suite/plugin-system.js');
 
   registerAgentSuite(context);
   registerAppModulesSuite(context);
@@ -12,4 +13,5 @@ module.exports = function registerCoreSuite(context = {}) {
   registerContractsSuite(context);
   registerModuleServicesSuite(context);
   registerNpmUpdaterSuite(context);
+  registerPluginSystemSuite(context);
 };

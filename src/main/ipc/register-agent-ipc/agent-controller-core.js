@@ -330,7 +330,10 @@ function createAgentControllerCore({
     const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
     if (provider === deps.LLM_PROVIDERS.CODEX) {
-      setCodexCliModel(model);
+      // Only the user's choice. `model` may be the app's static default, which can
+      // already be retired upstream; as the configured model it would reach
+      // `codex exec -m` on a fresh machine before Codex has fetched its catalog.
+      setCodexCliModel(cleanText(payload?.llm?.model, 120));
       setCodexCliReasoningEffort(reasoningEffort);
     }
     const traceContext = controllerUtils.createAgentLlmTraceContext({

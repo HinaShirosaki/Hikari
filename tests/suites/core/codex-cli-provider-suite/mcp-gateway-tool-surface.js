@@ -346,12 +346,9 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES
       } = require(path.join(
         __dirname,
-        'src',
-        'main',
-        'papers',
-        'store',
-        'intake',
-        'mcp-tools.js'
+        'tests',
+        'support',
+        'paper-intake-mcp-tools.js'
       ));
       assert.deepEqual(
         [...mcpToolNames].sort(),

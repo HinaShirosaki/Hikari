@@ -28,7 +28,7 @@ test('workflow model normalizes execution entries and prunes invalid step state 
         stepStates: {
           'block-a': {
             status: 'completed',
-            values: { 'step-1:ph-1': '20 uL' },
+            values: { 'ph-1': '20 uL' },
             result: 'PCR band present',
             resultFiles: ['gel.png'],
             notebookEntryId: 'nb-1',
@@ -47,7 +47,7 @@ test('workflow model normalizes execution entries and prunes invalid step state 
   assert.deepEqual([...normalized.entries[0].activeBranchRootIds], ['block-b']);
   assert.deepEqual([...Object.keys(normalized.entries[0].stepStates)], ['block-a']);
   assert.equal(normalized.entries[0].stepStates['block-a'].status, 'completed');
-  assert.equal(normalized.entries[0].stepStates['block-a'].values['step-1:ph-1'], '20 uL');
+  assert.equal(normalized.entries[0].stepStates['block-a'].values['ph-1'], '20 uL');
   assert.equal(normalized.entries[0].stepStates['block-a'].notebookEntryId, 'nb-1');
 });
 
@@ -278,7 +278,6 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
           name: 'Ni-NTA Purification',
           steps: [
             {
-              id: 'step-1',
               text: 'Load {{ph:amount}} of clarified lysate onto the column.',
               placeholders: [{ id: 'amount-1', name: 'amount' }]
             }
@@ -299,7 +298,7 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
               id: 'entry-1',
               name: 'NiNTA 1',
               stepStates: {
-                'block-a': { status: 'completed', values: { 'step-1:amount-1': '10 mL' } },
+                'block-a': { status: 'completed', values: { 'amount-1': '10 mL' } },
                 'block-b': { status: 'pending' }
               }
             }
@@ -357,7 +356,7 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
   assert.match(drawer, /<details class="workflow-drawer-details" >\s*<summary data-workflow-drawer-toggle="block-a"[\s\S]*Ni-NTA Purification/);
   assert.match(drawer, /<details class="workflow-drawer-details" open>\s*<summary data-workflow-drawer-toggle="block-b"/);
   assert.match(drawer, /<details class="workflow-drawer-details" >\s*<summary >[\s\S]*Review final yield/);
-  assert.match(drawer, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>[\s\S]*data-workflow-step-value="step-1:amount-1"[\s\S]*value="10 mL"/);
+  assert.match(drawer, /workflow-placeholder-table[\s\S]*<th scope="row">amount<\/th>[\s\S]*data-workflow-step-value="amount-1"[\s\S]*value="10 mL"/);
   assert.match(drawer, /data-workflow-step-status="not_done" data-workflow-block-id="block-a"[\s\S]*>Reopen</);
   assert.match(drawer, /class="primary-btn" title="Mark complete" aria-label="Mark complete" data-workflow-step-status="completed" data-workflow-block-id="block-b" data-workflow-entry-id="entry-1" data-workflow-workflow-id="workflow-1" >Complete</);
   assert.match(drawer, /data-workflow-step-status="failed" data-workflow-block-id="block-b"/);
@@ -481,7 +480,7 @@ test('workflow template navigation and graph actions use compact accessible icon
   assert.match(viewCss, /\.workflow-template-actions > \.workflow-template-action-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/);
   assert.match(viewCss, /\.workflow-editor-sidebar-pinned\.left-rail-template__pinned \{[\s\S]*?border-bottom: 0;/);
   assert.match(viewCss, /\.workflow-editor-sidebar-scroll > \.workflow-template-editor-panel,[\s\S]*?\.workflow-editor-sidebar-scroll > \.workflow-block-composer-panel \{[\s\S]*?padding-top: 0;[\s\S]*?border-top: 0;/);
-  assert.match(viewCss, /\.workflow-editor-sidebar-scroll\.left-rail-template__scroll \{[\s\S]*?gap: 16px;/);
+  assert.match(viewCss, /\.workflow-editor-sidebar-scroll\.left-rail-template__scroll \{[\s\S]*?gap: var\(--space-16\);/);
 });
 
 test('workflow template editor omits redundant headings while retaining its controls', () => {
@@ -517,8 +516,8 @@ test('workflow protocol picker matches the Biology Notebook search-result patter
   assert.match(viewSource, /id="workflow-block-protocol-search"[^>]*autocomplete="off"[^>]*aria-controls="workflow-block-protocol-search-results"/);
   assert.match(viewSource, /id="workflow-block-protocol-search-results"[^>]*role="listbox"[^>]*aria-label="Matching protocols"/);
   assert.match(viewSource, /id="workflow-block-protocol" hidden aria-hidden="true" tabindex="-1"/);
-  assert.match(viewCss, /\.workflow-block-protocol-search-results \{[\s\S]*?gap: 0\.125rem;[\s\S]*?max-height: min\(34vh, 240px\);[\s\S]*?overflow-y: auto;/);
-  assert.match(viewCss, /\.workflow-block-protocol-search-result,[\s\S]*?\.workflow-block-protocol-search-empty \{[\s\S]*?min-height: 2\.25rem;[\s\S]*?padding: 0\.375rem 0\.5rem;[\s\S]*?line-height: 1\.4;[\s\S]*?overflow-wrap: anywhere;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-results \{[\s\S]*?gap: var\(--space-2\);[\s\S]*?max-height: min\(34vh, 240px\);[\s\S]*?overflow-y: auto;/);
+  assert.match(viewCss, /\.workflow-block-protocol-search-result,[\s\S]*?\.workflow-block-protocol-search-empty \{[\s\S]*?min-height: 2\.25rem;[\s\S]*?padding: var\(--space-6\) var\(--space-8\);[\s\S]*?line-height: 1\.4;[\s\S]*?overflow-wrap: anywhere;/);
   assert.match(viewCss, /\.workflow-block-protocol-search-result:hover,[\s\S]*?\.workflow-block-protocol-search-result\.is-selected \{/);
 
   const optionListsModule = loadEsmStyleModule(

@@ -32,7 +32,7 @@ if (!process.versions.electron) {
     <main><section><h2>Notebook · Results table</h2><div id="notebook"></div></section>
     <section id="plate-panel"><h2>Assay · Transformed Plate (Table2)</h2><div id="plate"></div></section></main>
     <script type="module">
-      import {createSpreadsheetTables} from '${url('src/renderer/lib/spreadsheet-tables.js')}';
+      import {createSpreadsheetTables} from '${url('src/renderer/modules/biology-notebook/spreadsheet-tables/index.js')}';
       import {createAssayAnalysisView} from '${url('src/renderer/modules/assay/analysis-view.js')}';
       import {createResultGridModel} from '${url('src/renderer/modules/assay/results/grid-model.js')}';
       const def={rows:4,columns:6};

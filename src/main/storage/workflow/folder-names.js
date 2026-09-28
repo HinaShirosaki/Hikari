@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('../storage-utils');
-const { WORKFLOW_ROOT_FOLDER_NAME, WORKFLOW_STATUS_SQLITE_FILE_NAME } = require('./constants.js');
+const { WORKFLOW_ROOT_FOLDER_NAME } = require('./constants.js');
 
 function isPermissionDeniedError(error) {
   return error?.code === 'EPERM' || error?.code === 'EACCES';
@@ -13,16 +13,13 @@ function resolveWorkflowStoragePaths(storagePath = '') {
   if (!resolvedStoragePath) {
     return {
       storagePath: '',
-      workflowRootPath: '',
-      sqlitePath: ''
+      workflowRootPath: ''
     };
   }
   const rootPath = path.resolve(resolvedStoragePath);
-  const workflowRootPath = path.join(rootPath, WORKFLOW_ROOT_FOLDER_NAME);
   return {
     storagePath: rootPath,
-    workflowRootPath,
-    sqlitePath: path.join(workflowRootPath, WORKFLOW_STATUS_SQLITE_FILE_NAME)
+    workflowRootPath: path.join(rootPath, WORKFLOW_ROOT_FOLDER_NAME)
   };
 }
 

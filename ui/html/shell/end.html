@@ -144,46 +144,6 @@
     </div>
   </main>
 
-  <div id="sequence-viewer-new-overlay" class="sequence-viewer-new-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-    <form
-      id="sequence-viewer-new-form"
-      class="sequence-viewer-new-dialog app-dialog-surface"
-      autocomplete="off"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="sequence-viewer-new-title"
-      aria-describedby="sequence-viewer-new-description"
-    >
-      <div class="app-dialog-head">
-        <div>
-          <h3 id="sequence-viewer-new-title">New DNA Sequence</h3>
-          <p id="sequence-viewer-new-description" class="small-note">Paste a DNA sequence or a supported sequence record.</p>
-        </div>
-        <button id="sequence-viewer-new-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close new sequence dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-      </div>
-      <label class="sequence-viewer-new-field" for="sequence-viewer-new-textarea">
-        DNA Sequence
-        <textarea
-          id="sequence-viewer-new-textarea"
-          rows="10"
-          spellcheck="false"
-          placeholder="Paste raw DNA, FASTA, FASTQ, or GenBank text."
-          aria-describedby="sequence-viewer-new-description sequence-viewer-new-status"
-        ></textarea>
-      </label>
-      <fieldset class="sequence-viewer-new-field sequence-viewer-new-topology">
-        <legend>Topology</legend>
-        <label><input type="radio" name="sequence-viewer-new-topology" value="linear" checked /> Linear</label>
-        <label><input type="radio" name="sequence-viewer-new-topology" value="circular" /> Circular</label>
-      </fieldset>
-      <p id="sequence-viewer-new-status" class="small-note sequence-viewer-new-status" role="status" aria-live="polite" hidden></p>
-      <div class="form-actions sequence-viewer-new-actions">
-        <button id="sequence-viewer-new-cancel-btn" type="button" class="ghost-btn">Cancel</button>
-        <button type="submit" class="primary-btn">Load Sequence</button>
-      </div>
-    </form>
-  </div>
-
   <div id="unsaved-changes-overlay" class="unsaved-changes-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
     <section class="unsaved-changes-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="unsaved-changes-title" aria-describedby="unsaved-changes-description">
       <div class="app-dialog-head">

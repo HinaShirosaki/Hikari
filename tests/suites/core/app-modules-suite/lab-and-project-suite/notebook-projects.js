@@ -274,7 +274,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
         id: 'pr1',
         name: 'Viability Assay',
         steps: [
-          { id: 's1', text: 'Measure viability.', placeholders: [] }
+          { text: 'Measure viability.', placeholders: [] }
         ]
       }
     ],
@@ -349,7 +349,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
 
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Planned/);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Executed/);
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /protocol draft/i);
+  assert.equal(document.getElementById('biology-notebook-protocol-meta').textContent, '');
   assert.equal(document.getElementById('save-biology-notebook-btn').getAttribute('aria-label'), 'Save notebook page');
 
   trigger(document.getElementById('biology-notebook-entry-list'), 'click', {
@@ -424,7 +424,6 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
           name: 'IPTG Expression',
           steps: [
             {
-              id: 'step-1',
               text: 'Induce with {{ph:iptg}}.',
               placeholders: [
                 { id: 'iptg', name: 'IPTG' }
@@ -433,7 +432,7 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
           ]
         },
         values: {
-          'step-1:iptg': '0.5 mM'
+          iptg: '0.5 mM'
         },
         result: 'Prepared from workflow',
         resultFiles: [],
@@ -549,7 +548,7 @@ test('biology-notebook project folder click renders the project dashboard in pla
         id: 'pr2',
         name: 'Fresh Protocol',
         steps: [
-          { id: 's1', text: 'Run the fresh protocol.', placeholders: [] }
+          { text: 'Run the fresh protocol.', placeholders: [] }
         ]
       }
     ],
@@ -661,7 +660,7 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.equal(dashboard.hidden, true);
   assert.equal(document.getElementById('biology-notebook-protocol-area').hidden, false);
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Fresh Protocol');
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Atlas protocol draft/);
+  assert.equal(document.getElementById('biology-notebook-protocol-meta').textContent, '');
   assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
 
   document.getElementById('biology-notebook-result').value = 'Observed healthy cells after setup.';

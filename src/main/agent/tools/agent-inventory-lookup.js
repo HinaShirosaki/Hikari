@@ -2,10 +2,10 @@
 
 const { createInventorySnapshotSearch } = require('./inventory-lookup/snapshot-search.js');
 const { createInventorySqliteSearch } = require('./inventory-lookup/sqlite-search.js');
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+const {
+  asArray: defaultAsArray,
+  ensureObject: defaultEnsureObject
+} = require('../../lib/normalize.js');
 
 function defaultCleanText(value) {
   const text = String(value || '');
@@ -15,9 +15,7 @@ function defaultCleanText(value) {
   return text;
 }
 
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
+const ALL_INVENTORY_KINDS = ['chemical', 'personal_container', 'personal_sample'];
 
 function createAgentInventoryLookupRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
@@ -168,32 +166,6 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       });
       return [...rowsByKey.values()];
     });
-  const maybeBackfillSqlIndex = typeof deps.maybeBackfillSqlIndex === 'function'
-    ? deps.maybeBackfillSqlIndex
-    : (async () => false);
-  const mergeRowsByKey = typeof deps.mergeRowsByKey === 'function'
-    ? deps.mergeRowsByKey
-    : ((primaryRows, secondaryRows, toKey) => {
-      const merged = [];
-      const seen = new Set();
-      asArray(primaryRows).forEach((row) => {
-        const key = toKey(row);
-        if (!key || seen.has(key)) {
-          return;
-        }
-        seen.add(key);
-        merged.push(row);
-      });
-      asArray(secondaryRows).forEach((row) => {
-        const key = toKey(row);
-        if (!key || seen.has(key)) {
-          return;
-        }
-        seen.add(key);
-        merged.push(row);
-      });
-      return merged;
-    });
   const buildInventorySearchTerms = typeof deps.buildInventorySearchTerms === 'function'
     ? deps.buildInventorySearchTerms
     : (({
@@ -208,25 +180,6 @@ function createAgentInventoryLookupRuntime(deps = {}) {
         maxTerms
       });
     });
-  const querySqlRows = typeof deps.querySqlRows === 'function'
-    ? deps.querySqlRows
-    : ((db, sql, values = []) => {
-      if (!db || typeof db.prepare !== 'function') {
-        return [];
-      }
-      const stmt = db.prepare(sql);
-      const rows = [];
-      try {
-        stmt.bind(values);
-        while (stmt.step()) {
-          rows.push(stmt.getAsObject());
-        }
-      } finally {
-        stmt.free();
-      }
-      return rows;
-    });
-
   const {
     resolvePersonalSections,
     buildContainerMapFromSnapshot,
@@ -248,8 +201,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     rankRows,
     withSqliteDatabase,
     readSqliteTables,
-    collectLikeMatches,
-    querySqlRows
+    collectLikeMatches
   });
 
   function deriveInventoryLookupQuery({ message = '', parserPayload = {} } = {}) {
@@ -293,80 +245,46 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       maxTerms: 10
     });
 
-    const sqlResult = await searchInventorySqlite({
-      sqlitePath: context.sqlitePath,
-      chemicalsSqlitePath: context.bundlePaths?.chemicalsSqlitePath || '',
-      query,
-      searchTerms: termsUsed,
-      limit,
-      kinds: kindSet
-    });
-    const fallbackResult = buildInventoryFallbackItems({
-      snapshot: context.hydratedSnapshot,
-      query,
-      searchTerms: termsUsed,
-      limit,
-      kinds: kindSet
-    });
-
-    const sqlItems = scopeItems(sqlResult.items);
-    const fallbackItems = scopeItems(fallbackResult.items);
-
-    let source = sqlResult.usedSqlite ? 'sqlite' : 'fallback_json';
-    let items = sqlItems.slice(0, Math.max(1, Number(limit) || 8));
-
-    if (!items.length && fallbackItems.length) {
-      source = 'fallback_json';
-      items = fallbackItems.slice(0, Math.max(1, Number(limit) || 8));
-    }
-
-    const hasSnapshotSamples = asArray(context.hydratedSnapshot?.samples).length > 0;
-    const sqlSampleTableExists = sqlResult.tableStatus?.inventory_samples_exists === true;
-    const sqlSampleRowCount = Number(sqlResult.tableStatus?.inventory_samples_row_count) || 0;
-
-    const shouldBackfill = Boolean(
-      context.dataFilePath
-      && (
-        !sqlResult.usedSqlite
-        || (hasSnapshotSamples && (!sqlSampleTableExists || sqlSampleRowCount === 0))
-        || (source === 'fallback_json' && fallbackItems.length > 0)
-      )
-    );
-
-    const backfilledSql = await maybeBackfillSqlIndex({
-      shouldBackfill,
-      dataFilePath: context.dataFilePath,
-      fallbackDataFilePath: context.fallbackDataFilePath,
-      snapshot: context.hydratedSnapshot
-    });
-
-    if (backfilledSql) {
-      const rerun = await searchInventorySqlite({
-        sqlitePath: context.sqlitePath,
+    // Chemicals come from their SQLite index; containers and samples from the
+    // loaded state (their JSON is the only copy). If the chemicals index cannot
+    // be read, the loaded state answers for chemicals too.
+    const maxItems = Math.max(1, Number(limit) || 8);
+    const wantsChemicals = !kindSet.length || kindSet.includes('chemical');
+    const sqlResult = wantsChemicals
+      ? await searchInventorySqlite({
         chemicalsSqlitePath: context.bundlePaths?.chemicalsSqlitePath || '',
         query,
         searchTerms: termsUsed,
+        limit
+      })
+      : { usedSqlite: false, items: [] };
+    const snapshotKinds = sqlResult.usedSqlite
+      ? (kindSet.length ? kindSet : ALL_INVENTORY_KINDS).filter((kind) => kind !== 'chemical')
+      : kindSet;
+    const snapshotItems = sqlResult.usedSqlite && !snapshotKinds.length
+      ? []
+      : buildInventoryFallbackItems({
+        snapshot: context.hydratedSnapshot,
+        query,
+        searchTerms: termsUsed,
         limit,
-        kinds: kindSet
-      });
-      const rerunItems = scopeItems(rerun.items);
-      if (rerunItems.length) {
-        const merged = mergeRowsByKey(
-          rerunItems,
-          fallbackItems,
-          (row) => `${cleanText(row?.kind, 40)}::${cleanText(row?.zone, 120)}::${cleanText(row?.id, 120)}`
-        );
-        items = merged.slice(0, Math.max(1, Number(limit) || 8));
-        source = merged.length > rerunItems.length ? 'sqlite+fallback' : 'sqlite';
-      }
+        kinds: snapshotKinds
+      }).items;
+    const items = [...scopeItems(sqlResult.items), ...scopeItems(snapshotItems)]
+      .sort((left, right) => (Number(right.score) || 0) - (Number(left.score) || 0))
+      .slice(0, maxItems)
+      .map(({ score: _score, ...item }) => item);
+    let source = 'fallback_json';
+    if (sqlResult.usedSqlite) {
+      source = snapshotItems.length ? 'sqlite+fallback' : 'sqlite';
     }
 
     return {
       items,
-      usedSqlite: source.startsWith('sqlite'),
+      usedSqlite: sqlResult.usedSqlite === true,
       source,
       termsUsed,
-      backfilledSql,
+      backfilledSql: false,
       query: cleanText(query, 300)
     };
   }

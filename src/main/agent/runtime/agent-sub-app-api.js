@@ -3,6 +3,10 @@
 const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation.js');
+const {
+  asArray: defaultAsArray,
+  ensureObject: defaultEnsureObject
+} = require('../../lib/normalize.js');
 
 const AGENT_SUB_APP_API_CATALOG = Object.freeze({
   assay: Object.freeze({
@@ -29,20 +33,12 @@ const AGENT_SUB_APP_API_CATALOG = Object.freeze({
   })
 });
 
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
-
 function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
     return '';
   }
   return text;
-}
-
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function createAgentSubAppApi(deps = {}) {

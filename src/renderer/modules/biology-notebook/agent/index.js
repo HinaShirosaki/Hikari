@@ -9,3 +9,4 @@ export {
   normalizeNotebookState,
   resolveNotebookDraftProposalId
 } from './notebook-drafts.js';
+export { createSavedNotebookAppend } from './saved-append.js';

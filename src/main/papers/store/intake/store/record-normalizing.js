@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { asArray, ensureObject } = require('../../../../lib/normalize.js');
+const { createUniqueStrings } = require('../../../../lib/value-utils.js');
 const { KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PAPER_MARKDOWN_ROOT_FOLDER_NAME } = require('../../../../storage/storage-paths.js');
 
 const INTAKE_SCHEMA_VERSION = 1;
@@ -27,23 +28,7 @@ function cleanText(value, maxLength = 2000) {
   return maxLength > 0 ? text.slice(0, maxLength) : text;
 }
 
-function uniqueStrings(values = [], max = 50) {
-  const seen = new Set();
-  const out = [];
-  asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 240);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || out.length >= max) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
-}
+const uniqueStrings = createUniqueStrings(cleanText, 240);
 
 function normalizeDocType(value) {
   const text = cleanText(value, 40).toLowerCase().replace(/[\s-]+/gu, '_');

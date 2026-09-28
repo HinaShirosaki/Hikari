@@ -71,8 +71,8 @@
   padding: 5px var(--space-8);
   border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
-  background: var(--theme-surface-raised, var(--theme-surface));
-  box-shadow: 0 7px 18px color-mix(in srgb, #000 18%, transparent);
+  background: var(--theme-surface);
+  box-shadow: 0 7px 18px var(--theme-shadow-color-strong);
   color: var(--theme-text-strong);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -141,15 +141,15 @@
 }
 
 .chemical-import-status[data-status="success"] {
-  color: color-mix(in srgb, var(--theme-success) 82%, var(--theme-text) 18%);
+  color: var(--theme-success-ink);
 }
 
 .chemical-import-status[data-status="warning"] {
-  color: color-mix(in srgb, var(--theme-warning) 82%, var(--theme-text) 18%);
+  color: var(--theme-warning-ink);
 }
 
 .chemical-import-status[data-status="error"] {
-  color: color-mix(in srgb, var(--theme-danger) 82%, var(--theme-text) 18%);
+  color: var(--theme-danger-ink);
 }
 
 .chemical-search-field {
@@ -180,6 +180,11 @@
 #lab-common-inventory-view #chemical-list .list-row {
   grid-template-columns: minmax(180px, 1fr) minmax(72px, 96px) minmax(128px, 156px);
   column-gap: var(--space-18);
+  padding-inline: var(--space-12);
+}
+
+#lab-common-inventory-view #chemical-list .list-row-selected {
+  background: color-mix(in srgb, var(--hikari-left-rail-list-selected) 50%, transparent);
 }
 
 #lab-common-inventory-view #chemical-list .list-row > :first-child {
@@ -286,7 +291,7 @@
   padding: var(--space-18);
   border: 1px solid var(--theme-border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 95%, var(--theme-surface-subtle) 5%);
+  background: var(--theme-surface-elevated);
   box-shadow: 0 22px 54px var(--theme-shadow-color-strong);
 }
 
@@ -364,7 +369,7 @@ body.theme-night .chemical-dialog-overlay {
 }
 
 body.theme-night .chemical-dialog {
-  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
-  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-elevated);
   color: var(--theme-text);
 }

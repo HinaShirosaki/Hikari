@@ -1,7 +1,7 @@
 import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
-} from '../../services/chemical-structure-clipboard.js';
+} from '../sample-registry/public-api.js';
 import { showTransientNotice } from '../../lib/notify.js';
 
 export function installStructureActions(ctx) {

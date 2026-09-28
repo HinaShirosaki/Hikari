@@ -157,8 +157,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
             assert.equal(snapshot.settings.storagePath, tempDir);
             return {
               bundlePaths: {
-                storageRootPath: tempDir,
-                sqlitePath: path.join(tempDir, 'Protocol', 'protocol.index.sqlite')
+                storageRootPath: tempDir
               },
               sidecarPaths: {}
             };
@@ -195,6 +194,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         const sourcePath = path.join(sourceFolder, 'atlas.pdf');
         await fsPromises.mkdir(sourceFolder, { recursive: true });
         await fsPromises.writeFile(sourcePath, Buffer.from('%PDF-1.4\n'));
+        await fsPromises.writeFile(`${sourcePath}.json`, '{"paper":{"id":"paper-1"}}');
 
         registerDataIpc({
           ipcMain,
@@ -232,6 +232,9 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(result.relativePath, 'Papers/Reading_Club/atlas.pdf');
         await assert.rejects(fsPromises.access(sourcePath));
         assert.equal(await fsPromises.readFile(path.join(targetFolder, 'atlas.pdf'), 'utf8'), '%PDF-1.4\n');
+        // The paper record beside the PDF moves with it.
+        await assert.rejects(fsPromises.access(`${sourcePath}.json`));
+        assert.equal(await fsPromises.readFile(path.join(targetFolder, 'atlas.pdf.json'), 'utf8'), '{"paper":{"id":"paper-1"}}');
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -430,25 +433,25 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-    test('storage hydration keeps lookups alive when workflow index read is permission denied', async () => {
+    test('storage hydration keeps lookups alive when the workflow folder is permission denied', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-workflow-permission-'));
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
-      const workflowIndexPath = path.join(tempDir, 'Workflow', 'workflow-status.sqlite');
-      const originalReadFile = fsPromises.readFile;
+      const workflowRootPath = path.join(tempDir, 'Workflow');
+      const originalReaddir = fsPromises.readdir;
       try {
-        await fsPromises.mkdir(path.dirname(workflowIndexPath), { recursive: true });
+        await fsPromises.mkdir(workflowRootPath, { recursive: true });
         await fsPromises.writeFile(dataFilePath, JSON.stringify({
           settings: { storagePath: tempDir },
           inventory: { Freezer: [{ id: 'item-1', name: 'Electrocompetent cells' }] }
         }, null, 2), 'utf8');
-        fsPromises.readFile = async (targetPath, ...args) => {
-          if (path.resolve(String(targetPath || '')) === path.resolve(workflowIndexPath)) {
-            const error = new Error(`EPERM: operation not permitted, open '${workflowIndexPath}'`);
+        fsPromises.readdir = async (targetPath, ...args) => {
+          if (path.resolve(String(targetPath || '')) === path.resolve(workflowRootPath)) {
+            const error = new Error(`EPERM: operation not permitted, scandir '${workflowRootPath}'`);
             error.code = 'EPERM';
             throw error;
           }
-          return originalReadFile.call(fsPromises, targetPath, ...args);
+          return originalReaddir.call(fsPromises, targetPath, ...args);
         };
 
         const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
@@ -460,17 +463,17 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         });
 
         assert.equal(hydrated.snapshot.settings.storagePath, tempDir);
-        assert.equal(hydrated.migration.warnings.some((warning) => /Permission denied reading workflow status index/.test(warning)), true);
+        assert.equal(hydrated.migration.warnings.some((warning) => /Permission denied reading workflow folder/.test(warning)), true);
       } finally {
-        fsPromises.readFile = originalReadFile;
+        fsPromises.readdir = originalReaddir;
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-    test('storage hydration keeps notebook fallback data when the shared SQLite index is permission denied', async () => {
+    test('storage hydration keeps notebook data when a module SQLite index is permission denied', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-sqlite-permission-'));
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
-      const sqlitePath = path.join(tempDir, 'Protocol', 'protocol.index.sqlite');
+      const sqlitePath = path.join(tempDir, 'hikari-chemicals.index.sqlite');
       const originalReadFile = fsPromises.readFile;
       try {
         await fsPromises.mkdir(path.dirname(sqlitePath), { recursive: true });
@@ -544,7 +547,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
             locationCodeMap: { shelf4: 'D' },
             locationCodeNextByLocation: { shelf4: 8 }
           },
-          inventory: { 'Room Temp': [{ id: 'box-1', name: 'Plasmid Box', type: 'box81', folderId: 'folder-1' }] },
+          inventory: { 'Room Temp': [{ id: 'box-1', name: 'Plasmid Box', type: 'box81', folderId: 'folder-1', wells: Array.from({ length: 81 }, () => '') }] },
           inventoryFolders: { 'Room Temp': [{ id: 'folder-1', name: 'Shelf A', parentFolderId: '' }] },
           samples: [{
             id: 'sample-1',
@@ -555,6 +558,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
             concentration: '1 mg/mL',
             notes: 'seed stock',
             location: { storageType: 'room', box: 'Plasmid Box', position: 'A1' },
+            details: { backbone: 'pET28a', resistance: 'Kan' },
             inventoryLink: { section: 'Room Temp', containerId: 'box-1', wellIndex: 0 },
             chemicalLinks: ['chem-1'],
             updatedAt: '2026-03-20T11:00:00.000Z'
@@ -570,12 +574,16 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-container', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-assay-plotly', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
-        const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
-        const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));
-        assert.equal(samplesPayload.samples.length, 1);
-        assert.equal(samplesPayload.samples[0].id, 'sample-1');
-        assert.equal(samplesPayload.inventory['Room Temp'][0].id, 'box-1');
-        assert.equal(samplesPayload.inventoryFolders['Room Temp'][0].id, 'folder-1');
+        // One file per container, holding only the wells that hold a sample.
+        const containerFile = JSON.parse(await fsPromises.readFile(path.join(tempDir, 'Samples', 'Room_Temp', 'Plasmid_Box__box-1.json'), 'utf8'));
+        assert.equal(containerFile.container.id, 'box-1');
+        assert.equal(containerFile.container.wells, undefined);
+        assert.equal(containerFile.wellCount, 81);
+        assert.deepEqual(containerFile.wells.map((well) => [well.index, well.samples.map((sample) => sample.id)]), [[0, ['sample-1']]]);
+        const foldersFile = JSON.parse(await fsPromises.readFile(path.join(tempDir, 'Samples', 'Room_Temp', 'folders.json'), 'utf8'));
+        assert.equal(foldersFile.folders[0].id, 'folder-1');
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Samples', 'samples.json')));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Samples', 'samples.index.sqlite')));
         await assert.rejects(
           fsPromises.access(path.join(tempDir, 'example.ena.notebook-pages.json'))
         );
@@ -598,6 +606,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
         assert.equal(Array.isArray(hydrated.snapshot?.inventory?.['Room Temp']), true);
         assert.equal(hydrated.snapshot.inventory['Room Temp'].length, 1);
+        assert.equal(hydrated.snapshot.inventory['Room Temp'][0].wells.length, 81, 'the full wells array is rebuilt');
         assert.equal(Array.isArray(hydrated.snapshot?.samples), true);
         assert.equal(hydrated.snapshot.samples.length, 1);
         assert.equal(hydrated.snapshot.samples[0].id, 'sample-1');
@@ -615,6 +624,12 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         const inventorySearch = await inventoryRuntime.searchInventoryIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Atlas construct', searchTerms: ['atlas', 'construct'], limit: 6 });
         assert.equal(inventorySearch.usedSqlite, true);
         assert.equal(inventorySearch.items.some((item) => item.kind === 'personal_sample'), true);
+        // Type-specific fields are searchable and come back with the sample.
+        const byBackbone = await inventoryRuntime.searchInventoryIndex({ dataFilePath, snapshot: compactSnapshot, query: 'pET28a', searchTerms: ['pet28a'], limit: 6 });
+        const plasmid = byBackbone.items.find((item) => item.kind === 'personal_sample');
+        assert.deepEqual(plasmid?.details, { backbone: 'pET28a', resistance: 'Kan' });
+        const chemical = await inventoryRuntime.searchInventoryIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Imidazole', searchTerms: ['imidazole'], limit: 6 });
+        assert.equal(chemical.items[0]?.kind, 'chemical', 'chemicals still come from the chemicals index');
 
         const calculationSearch = await notebookRuntime.searchNotebookEntries({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', limit: 6 });
         assert.equal(calculationSearch.items.some((item) => item.record_type === 'notebook'), true);
@@ -638,8 +653,11 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         };
 
         await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: sourceSnapshot });
-        await fsPromises.access(path.join(tempDir, 'Protocol', 'protocol.index.sqlite'));
-        await fsPromises.access(path.join(tempDir, 'Samples', 'samples.json'));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Papers', 'papers.index.sqlite')));
+        for (const moduleFile of ['Samples/Freezer/Protein_box__box-1.json', 'Assays/Binding_assay__assay-1/assay.json', 'Gels/SDS-PAGE__gel-1/gel.json']) {
+          await fsPromises.access(path.join(tempDir, moduleFile));
+        }
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Protocol', 'protocol.index.sqlite')));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         await assert.rejects(fsPromises.access(path.join(tempDir, 'hikari-data.json')));
 
@@ -655,6 +673,210 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(imported.statePatch.gelAnalyses.some((gel) => gel.id === 'gel-1'), true);
         assert.equal(imported.summary.assays, 1);
         assert.equal(imported.summary.gelAnalyses, 1);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('an unreadable chemicals index is moved aside, or left untouched when it cannot be, and never overwritten', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const { readSqliteBundleIndex } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-sql-read.js'));
+      const chemicals = [{ id: 'c1', name: 'Tris base' }, { id: 'c2', name: 'Imidazole' }];
+      const saveDamagedRoot = async (label) => {
+        const root = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', `storage-chemicals-${label}-`));
+        const file = path.join(root, 'hikari-chemicals.index.sqlite');
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: { settings: { storagePath: root }, labInventory: { chemicals } } });
+        const damaged = (await fsPromises.readFile(file)).subarray(0, 1024);
+        await fsPromises.writeFile(file, damaged);
+        return { root, file, damaged };
+      };
+      const roots = [];
+      const originalRename = fsPromises.rename;
+      try {
+        // Movable: the damaged file is kept aside and the save starts a new one.
+        const moved = await saveDamagedRoot('moved');
+        roots.push(moved.root);
+        let imported = await bundleHelpers.importStorageRoot({ storagePath: moved.root });
+        assert.equal(imported.statePatch.labInventory.chemicals.length, 0);
+        assert.match(imported.alerts[0], /moved to hikari-chemicals\.index\.sqlite\.corrupt-/);
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: { ...imported.statePatch, settings: { storagePath: moved.root } } });
+        const backupName = (await fsPromises.readdir(moved.root)).find((name) => name.startsWith('hikari-chemicals.index.sqlite.corrupt-'));
+        assert.deepEqual(await fsPromises.readFile(path.join(moved.root, backupName)), moved.damaged, 'the damaged bytes survive the next save');
+        assert.deepEqual((await bundleHelpers.importStorageRoot({ storagePath: moved.root })).alerts, [], 'the alert is shown once');
+
+        // Not movable: nothing may write over it, but the rest of the save goes through.
+        const stuck = await saveDamagedRoot('stuck');
+        roots.push(stuck.root);
+        fsPromises.rename = async (from, ...args) => {
+          if (path.resolve(String(from)) === path.resolve(stuck.file)) {
+            const error = new Error(`EACCES: permission denied, rename '${from}'`);
+            error.code = 'EACCES';
+            throw error;
+          }
+          return originalRename.call(fsPromises, from, ...args);
+        };
+        imported = await bundleHelpers.importStorageRoot({ storagePath: stuck.root });
+        assert.match(imported.alerts[0], /will not be saved until it can be read again/);
+        const nextSnapshot = { ...imported.statePatch, settings: { storagePath: stuck.root }, protocols: [{ id: 'protocol-1', name: 'Still saved' }] };
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: nextSnapshot });
+        assert.deepEqual(await fsPromises.readFile(stuck.file), stuck.damaged, 'a full save leaves the unreadable file alone');
+        await fsPromises.access(path.join(stuck.root, 'Protocol', 'Still_saved__protocol-1', 'protocol.json'));
+        await assert.rejects(
+          bundleHelpers.syncSqliteBundleFromSnapshot({ sqlitePath: stuck.file, snapshot: nextSnapshot }),
+          (error) => error.code === 'CHEMICAL_INDEX_UNREADABLE'
+        );
+
+        // Once the file reads again (the user restored it), saving resumes.
+        fsPromises.rename = originalRename;
+        const healthyRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-chemicals-healthy-'));
+        roots.push(healthyRoot);
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: { settings: { storagePath: healthyRoot }, labInventory: { chemicals } } });
+        await fsPromises.copyFile(path.join(healthyRoot, 'hikari-chemicals.index.sqlite'), stuck.file);
+        imported = await bundleHelpers.importStorageRoot({ storagePath: stuck.root });
+        assert.equal(imported.statePatch.labInventory.chemicals.length, 2);
+        await syncBundleWithOfficialSkills(bundleHelpers, {
+          snapshot: { ...imported.statePatch, settings: { storagePath: stuck.root }, labInventory: { chemicals: [...chemicals, { id: 'c3', name: 'HEPES' }] } }
+        });
+        assert.equal((await readSqliteBundleIndex(stuck.file)).inventoryChemicals.length, 3);
+      } finally {
+        fsPromises.rename = originalRename;
+        await Promise.all(roots.map((root) => fsPromises.rm(root, { recursive: true, force: true })));
+      }
+    });
+    test('personal inventory is saved one file per container with only the filled wells', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-sample-containers-'));
+      try {
+        const plateWells = Array.from({ length: 96 }, (_, index) => ({ name: `W${index + 1}`, content: '' }));
+        plateWells[5] = { name: 'A6', content: 'legacy note' };
+        const snapshot = {
+          settings: { storagePath: tempDir },
+          inventory: {
+            '-20 Degree': [
+              { id: 'plate-1', name: 'Primer plate', type: 'plate96', wells: plateWells },
+              { id: 'box-1', name: 'Box 1', type: 'box81', wells: Array.from({ length: 81 }, () => '') }
+            ],
+            'Room Temp': [{ id: 'tube-1', name: 'Buffer tube', type: 'single', wells: [], singleContent: '' }]
+          },
+          inventoryFolders: { '-20 Degree': [], 'Room Temp': [] },
+          samples: [
+            { id: 's-a1', name: 'Primer F', type: 'primer', details: { sequence: 'ATGGTG', direction: 'Forward' }, inventoryLink: { section: '-20 Degree', containerId: 'plate-1', wellIndex: 0 } },
+            { id: 's-a1b', name: 'Primer R', type: 'primer', inventoryLink: { section: '-20 Degree', containerId: 'plate-1', wellIndex: 0 } },
+            { id: 's-tube', name: 'Tris buffer', type: 'other', inventoryLink: { section: 'Room Temp', containerId: 'tube-1', wellIndex: null } },
+            { id: 's-loose', name: 'Unfiled plasmid', type: 'plasmid' }
+          ]
+        };
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot });
+
+        const plateFile = JSON.parse(await fsPromises.readFile(path.join(tempDir, 'Samples', '-20_Degree', 'Primer_plate__plate-1.json'), 'utf8'));
+        assert.equal(plateFile.wellCount, 96);
+        assert.deepEqual(plateFile.wells.map((well) => well.index), [0, 5], 'only the filled well and the legacy-text well are recorded');
+        assert.deepEqual(plateFile.wells[0].samples.map((sample) => sample.id), ['s-a1', 's-a1b']);
+        const tubeFile = JSON.parse(await fsPromises.readFile(path.join(tempDir, 'Samples', 'Room_Temp', 'Buffer_tube__tube-1.json'), 'utf8'));
+        assert.deepEqual([tubeFile.wells, tubeFile.samples.map((sample) => sample.id)], [[], ['s-tube']]);
+        const unplaced = JSON.parse(await fsPromises.readFile(path.join(tempDir, 'Samples', 'unplaced.json'), 'utf8'));
+        assert.deepEqual(unplaced.samples.map((sample) => sample.id), ['s-loose']);
+
+        let imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        const plate = imported.statePatch.inventory['-20 Degree'][0];
+        assert.deepEqual(imported.statePatch.inventory['-20 Degree'].map((container) => container.id), ['plate-1', 'box-1'], 'container order survives');
+        assert.equal(plate.wells.length, 96);
+        assert.deepEqual(plate.wells[5], { name: 'A6', content: 'legacy note' });
+        assert.deepEqual(imported.statePatch.samples.map((sample) => sample.id).sort(), ['s-a1', 's-a1b', 's-loose', 's-tube']);
+
+        // Deleting a container deletes its file; a zone with nothing left goes too.
+        await syncBundleWithOfficialSkills(bundleHelpers, {
+          snapshot: { ...snapshot, inventory: { '-20 Degree': [snapshot.inventory['-20 Degree'][0]] }, samples: snapshot.samples.slice(0, 2) }
+        });
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Samples', '-20_Degree', 'Box_1__box-1.json')));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Samples', 'Room_Temp')));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Samples', 'unplaced.json')));
+        imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.deepEqual(Object.keys(imported.statePatch.inventory), ['-20 Degree']);
+        assert.equal(imported.statePatch.samples.length, 2);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('paper records are saved beside their PDFs and found again by folder scan', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-paper-records-'));
+      try {
+        const pdfPath = path.join(tempDir, 'Project', 'Atlas', 'Papers', 'atlas.pdf');
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, '%PDF-1.4\n');
+        const snapshot = {
+          settings: { storagePath: tempDir },
+          papers: [{
+            id: 'paper-1',
+            title: 'Atlas binders',
+            storedRelativePath: 'Project/Atlas/Papers/atlas.pdf',
+            storedFilePath: pdfPath,
+            pdfDataUrl: 'data:application/pdf;base64,JVBERi0=',
+            linkedType: 'project',
+            linkedId: 'project-1',
+            highlights: [{ id: 'h1', text: 'Key result' }],
+            comments: [{ id: 'c1', text: 'Check the controls' }]
+          }, {
+            id: 'paper-2',
+            title: 'PDF never stored',
+            storedRelativePath: 'Project/Atlas/Papers/missing.pdf'
+          }]
+        };
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot });
+
+        const saved = JSON.parse(await fsPromises.readFile(`${pdfPath}.json`, 'utf8')).paper;
+        assert.deepEqual([saved.pdfDataUrl, saved.storedFilePath], ['', ''], 'no PDF bytes or absolute path in the record');
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'Papers', 'missing.pdf.json')));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Papers', 'papers.index.sqlite')));
+
+        let imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.deepEqual(imported.statePatch.papers.map((paper) => paper.id), ['paper-1']);
+        assert.equal(imported.statePatch.papers[0].highlights[0].text, 'Key result');
+        assert.equal(imported.statePatch.papers[0].comments[0].text, 'Check the controls');
+
+        // Moving the PDF and its record by hand: the record follows the PDF.
+        const movedPath = path.join(tempDir, 'Papers', 'Reading_Club', 'atlas.pdf');
+        await fsPromises.mkdir(path.dirname(movedPath), { recursive: true });
+        await fsPromises.rename(pdfPath, movedPath);
+        await fsPromises.rename(`${pdfPath}.json`, `${movedPath}.json`);
+        imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.equal(imported.statePatch.papers[0].storedRelativePath, 'Papers/Reading_Club/atlas.pdf');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('assay and gel records are found by folder scan, and removing one deletes only its record file', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-record-folders-'));
+      try {
+        const artifactFolder = path.join(tempDir, 'Gels', 'Old-Gel__gel-1');
+        await fsPromises.mkdir(artifactFolder, { recursive: true });
+        await fsPromises.writeFile(path.join(artifactFolder, 'source.png'), 'image bytes');
+        const snapshot = {
+          settings: { storagePath: tempDir },
+          assays: [{ id: 'assay-1', name: 'Binding assay' }, { id: 'assay-2', name: 'Kinetics' }],
+          gelAnalyses: [{ id: 'gel-1', name: 'Old Gel', storageFolder: artifactFolder }]
+        };
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot });
+        // A record keeps the folder its artifacts are in.
+        await fsPromises.access(path.join(artifactFolder, 'gel.json'));
+        // An older copy of assay-1 in a later-sorting folder must not win.
+        const staleAssayFile = path.join(tempDir, 'Assays', 'zzz_Old__assay-1', 'assay.json');
+        await fsPromises.mkdir(path.dirname(staleAssayFile), { recursive: true });
+        await fsPromises.writeFile(staleAssayFile, JSON.stringify({ assay: { id: 'assay-1', name: 'Stale' } }));
+        await fsPromises.utimes(staleAssayFile, new Date('2020-01-01'), new Date('2020-01-01'));
+        let imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.deepEqual(imported.statePatch.assays.map((assay) => assay.id).sort(), ['assay-1', 'assay-2']);
+        assert.equal(imported.statePatch.assays.find((assay) => assay.id === 'assay-1').name, 'Binding assay');
+        assert.deepEqual(imported.statePatch.gelAnalyses.map((gel) => gel.id), ['gel-1']);
+
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: { ...snapshot, assays: [snapshot.assays[0]], gelAnalyses: [] } });
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Assays', 'Kinetics__assay-2')), 'an emptied record folder is removed');
+        await assert.rejects(fsPromises.access(path.join(artifactFolder, 'gel.json')));
+        assert.equal(await fsPromises.readFile(path.join(artifactFolder, 'source.png'), 'utf8'), 'image bytes', 'artifacts survive');
+        imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.deepEqual(imported.statePatch.assays.map((assay) => assay.id), ['assay-1']);
+        assert.deepEqual(imported.statePatch.gelAnalyses, []);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -755,8 +977,8 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
           }
         }, null, 2), 'utf8');
         await fsPromises.mkdir(path.join(tempDir, 'Samples'), { recursive: true });
-        await fsPromises.writeFile(path.join(tempDir, 'Samples', 'samples.json'), JSON.stringify({
-          schema_name: 'hikari_samples',
+        await fsPromises.writeFile(path.join(tempDir, 'Samples', 'unplaced.json'), JSON.stringify({
+          schema_name: 'hikari_unplaced_samples',
           schema_version: '1.0.0',
           updated_at: '2026-04-20T10:30:00.000Z',
           samples: [{
@@ -881,7 +1103,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json'));
         await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
         await fsPromises.access(path.join(notebookFolder, 'page.json'));
-        await fsPromises.access(path.join(folderLayout.workflowRootPath, 'workflow-status.sqlite'));
+        await assert.rejects(fsPromises.access(path.join(folderLayout.workflowRootPath, 'workflow-status.sqlite')), 'workflows are found by folder scan, not an index');
         await fsPromises.access(path.join(tempDir, 'Dashboard', 'experiment-log.json'));
 
         const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
@@ -914,6 +1136,32 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.equal(imported.statePatch.papers.length, 1);
         assert.equal(imported.statePatch.settings.dashboard.quickLogDraft, 'Draft observation');
         assert.equal(imported.statePatch.settings.dashboard.quickLogEntries[0].id, 'quick-log-1');
+
+        // A stale copy of the run in a folder that sorts later (as a rename leaves
+        // behind) loses to the file the last save wrote.
+        const staleRunFile = path.join(folderLayout.templateFolderPath, `zzz_Old_name__${snapshot.workflows[0].id}`, 'workflow.json');
+        await fsPromises.mkdir(path.dirname(staleRunFile), { recursive: true });
+        await fsPromises.writeFile(staleRunFile, JSON.stringify({ workflow: { ...snapshot.workflows[0], name: 'Stale name' } }));
+        await fsPromises.utimes(staleRunFile, new Date('2020-01-01'), new Date('2020-01-01'));
+        const withStale = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot: { settings: { storagePath: tempDir }, workflowTemplates: [], workflows: [], notebookEntries: [] }
+        });
+        assert.equal(withStale.snapshot.workflows.length, 1);
+        assert.equal(withStale.snapshot.workflows[0].name, snapshot.workflows[0].name);
+
+        // Deleting the run and its template removes only their record files.
+        const resultFile = path.join(folderLayout.resultsFolderPath, 'gel.png');
+        await fsPromises.writeFile(resultFile, 'result bytes');
+        await syncBundleWithOfficialSkills(bundleHelpers, { dataFilePath, snapshot: { ...snapshot, workflows: [], workflowTemplates: [] } });
+        await assert.rejects(fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json')));
+        await assert.rejects(fsPromises.access(path.join(folderLayout.templateFolderPath, 'template.json')));
+        assert.equal(await fsPromises.readFile(resultFile, 'utf8'), 'result bytes', 'run results survive');
+        const afterDelete = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot: { settings: { storagePath: tempDir }, workflowTemplates: [], workflows: [], notebookEntries: [] }
+        });
+        assert.deepEqual([afterDelete.snapshot.workflowTemplates.length, afterDelete.snapshot.workflows.length], [0, 0]);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }

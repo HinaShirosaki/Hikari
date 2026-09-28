@@ -12,6 +12,7 @@ const {
   getCodexCliCatalog,
   getCodexCliModel,
   getCodexCliReasoningEffort,
+  requestCodexCliCatalog,
   setCodexCliModel,
   setCodexCliReasoningEffort
 } = require('./codex-cli-provider/catalog');
@@ -66,6 +67,7 @@ module.exports = {
   invalidateCodexLoginStatusCache,
   launchCodexCliLogin,
   readCodexCliOAuthProfile,
+  requestCodexCliCatalog,
   resolveCodexCliRuntimeHomeDirectory,
   setCodexCliModel,
   setCodexCliReasoningEffort,

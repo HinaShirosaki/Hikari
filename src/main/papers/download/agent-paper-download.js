@@ -375,6 +375,16 @@ function createPaperDownloadRuntime(deps = {}) {
     return started.reused ? { ...result, reused: true } : result;
   }
 
+  // Read-only: the PDF already saved for this paper in its destination folder, or null.
+  async function findSavedPaper(input = {}) {
+    const source = ensureObject(input);
+    try {
+      return await reconciliation.findSaved(source, downloadIdentity(source));
+    } catch {
+      return null;
+    }
+  }
+
   async function execute(input = {}) {
     const source = ensureObject(input);
     const action = normalizeAction(source.action);
@@ -403,6 +413,7 @@ function createPaperDownloadRuntime(deps = {}) {
     waitForDownload,
     getDownloadStatus,
     downloadPaper,
+    findSavedPaper,
     execute
   };
 }

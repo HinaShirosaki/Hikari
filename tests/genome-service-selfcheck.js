@@ -13,7 +13,7 @@ const path = require('node:path');
 const {
   createGenomeService,
   createFastaScanner
-} = require('../src/main/core/services/create-genome-service.js');
+} = require('../src/main/genome/create-genome-service.js');
 
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-genome-'));
 let libraryCounter = 0;

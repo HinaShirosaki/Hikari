@@ -22,7 +22,7 @@ import {
   changedFieldList,
   describeNotebookEntryChanges,
   logNotebookPageEvent
-} from '../storage/page-log.js';
+} from '../../../services/notebook-page-log.js';
 import { normalizeNotebookExperimentNameSource } from '../entry/page-name-generator.js';
 
 // Writing the open notebook page back to state: builds the record, copies any

@@ -1,5 +1,5 @@
 import { normalizeFeatureType } from '../feature-types.js';
-import { clamp } from '../shared.js';
+import { clamp, formatPrimerRole } from '../shared.js';
 import { isOrfFeature } from '../orf-analysis.js';
 
 function sanitizeFeatureType(type) {
@@ -29,14 +29,6 @@ function formatNumber(value, digits = 1) {
     return '-';
   }
   return number.toFixed(digits);
-}
-
-function formatPrimerRole(role) {
-  return String(role || '')
-    .trim()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
 }
 
 function getFeatureOverallRange(feature, sequenceLength) {

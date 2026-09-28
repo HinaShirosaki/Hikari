@@ -1,83 +1,101 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
-        <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
+        <div class="home-column home-column-now">
+          <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
+            <div class="home-tile-head">
               <h2 id="dashboard-timer-heading">Lab timers <span id="dashboard-timer-status" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-timer-open-btn" class="home-add-btn" aria-label="Start timer" title="Start timer">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+              </button>
             </div>
-            <button type="button" id="dashboard-timer-open-btn" class="home-add-btn" aria-label="Start timer" title="Start timer">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-            </button>
-          </div>
-          <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
-          <div class="home-timer-clock">
-            <p id="dashboard-local-date" class="dashboard-local-date"></p>
-            <p id="dashboard-local-time" class="dashboard-local-time">--:--</p>
-          </div>
-        </section>
+            <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
+            <div id="dashboard-timer-preset-list" class="home-timer-presets" role="group" aria-label="Saved timers" hidden></div>
+          </section>
 
-        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
-              <h2 id="dashboard-notebook-pages-heading">Notebook notes</h2>
-              <p id="dashboard-notebook-pages-status" class="sr-only">Tap a page to add a note.</p>
+          <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
+            <div class="home-tile-head">
+              <h2 id="dashboard-passage-heading">Cell passage <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-passage-add-btn" class="home-add-btn" aria-label="Add cell to passage reminder" title="Add reminder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
             </div>
-            <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all →</button>
-          </div>
-          <div class="home-tile-scroll">
-            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
-          </div>
-        </section>
+            <div class="home-tile-scroll">
+              <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
+            </div>
+          </section>
 
-        <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
+          <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
+            <div class="home-tile-head">
+              <h2 id="dashboard-incubation-heading">Overnight incubation <span id="dashboard-incubation-summary" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-incubation-add-btn" class="home-add-btn" aria-label="Manage incubation locations" title="Manage locations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
+            </div>
+            <div class="home-tile-scroll">
+              <div id="dashboard-incubation-list" class="dashboard-list"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="home-column home-column-capture">
+          <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
+            <div class="home-tile-head">
               <h2 id="dashboard-quicklog-heading">Experiment log</h2>
               <button type="button" id="home-agent-reopen-btn" class="home-link-btn" hidden>Continue notebook review</button>
             </div>
-          </div>
-          <div class="home-quicklog-body">
             <textarea
               id="dashboard-quick-log-input"
               class="home-quicklog-input"
-              rows="2"
+              rows="4"
               aria-label="Experiment or observation"
               placeholder="Capture an experiment or observation…"
             ></textarea>
             <div class="home-quicklog-actions">
-              <span id="dashboard-quick-log-status" class="small-note home-quicklog-status" aria-live="polite"></span>
-              <button
-                type="button"
-                id="dashboard-quick-log-save-btn"
-                class="home-icon-btn"
-                aria-label="Save experiment locally"
-                title="Save locally"
-              >
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                  <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
-                </svg>
-              </button>
-              <button
-                type="button"
-                id="dashboard-quick-log-agent-btn"
-                class="home-icon-btn home-icon-btn-send hikari-agent-action hikari-agent-action-icon"
-                aria-label="Prepare notebook page"
-                title="Prepare notebook page (⌘/Ctrl + Enter)"
-              >
-              </button>
+              <button type="button" id="dashboard-quick-log-save-btn" class="ghost-btn" aria-label="Save experiment locally" title="Save locally"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>Save</button>
+              <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn hikari-agent-action" title="Prepare notebook page (⌘/Ctrl + Enter)">Prepare notebook page</button>
             </div>
-          </div>
-        </section>
+            <p id="dashboard-quick-log-status" class="small-note home-quicklog-status" aria-live="polite"></p>
+            <div id="dashboard-quick-log-recent" class="home-quicklog-recent" hidden></div>
+          </section>
 
-        <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
-              <h2 id="dashboard-contribution-heading">Lab activity</h2>
-              <p id="dashboard-contribution-summary" class="small-note"></p>
+          <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
+            <div class="home-tile-head">
+              <h2 id="dashboard-notebook-pages-heading">Notebook notes</h2>
+              <p id="dashboard-notebook-pages-status" class="sr-only">Select a page to add a note.</p>
+              <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
             </div>
-            <span class="small-note">18 weeks</span>
-          </div>
-          <div class="home-contribution-display">
+            <div class="home-tile-scroll">
+              <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="home-column home-column-read">
+          <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
+            <div class="home-tile-head">
+              <div class="home-tile-titles">
+                <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
+                <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
+              </div>
+              <div class="home-tile-head-actions">
+                <button type="button" id="dashboard-paper-finding-run-btn" class="home-add-btn" aria-label="Find papers now" title="Find papers now" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
+                </button>
+                <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+                </button>
+              </div>
+            </div>
+            <div class="home-tile-scroll">
+              <div id="dashboard-paper-finding-list" class="dashboard-list"></div>
+            </div>
+            <p id="dashboard-paper-finding-next-run" class="small-note home-paper-finding-schedule" hidden></p>
+          </section>
+
+          <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
+            <div class="home-tile-head">
+              <h2 id="dashboard-contribution-heading">Lab activity</h2>
+              <div class="home-contribution-legend" aria-hidden="true">
+                <span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span>
+              </div>
+            </div>
+            <p id="dashboard-contribution-summary" class="small-note home-contribution-stats"></p>
             <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
               <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
               <div class="home-contribution-body">
@@ -89,76 +107,9 @@
                 <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
               </div>
             </div>
-          </div>
-          <div class="home-contribution-footer">
-            <p id="dashboard-contribution-selected" class="small-note" aria-live="polite"></p>
-            <div class="home-contribution-legend" aria-label="Activity intensity: less to more">
-              <span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
-              <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
-              <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
-            </div>
-            <div class="home-tile-head-actions">
-              <button type="button" id="dashboard-paper-finding-run-btn" class="home-add-btn" aria-label="Find papers now" title="Find papers now" hidden>
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
-              </button>
-              <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
-              </button>
-            </div>
-          </div>
-          <div class="home-tile-scroll">
-            <div id="dashboard-paper-finding-list" class="dashboard-list"></div>
-          </div>
-          <p id="dashboard-paper-finding-next-run" class="small-note home-paper-finding-schedule" hidden></p>
-        </section>
-
-        <section class="home-tile home-tile-soft home-tile-passage" aria-labelledby="dashboard-passage-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
-              <h2 id="dashboard-passage-heading">Cell passage <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
-            </div>
-            <div class="home-tile-head-actions">
-              <button
-                type="button"
-                id="dashboard-passage-add-btn"
-                class="home-add-btn"
-                aria-label="Add cell to passage reminder"
-                title="Add reminder"
-              ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
-            </div>
-          </div>
-          <div class="home-tile-scroll">
-            <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-soft home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-titles">
-              <h2 id="dashboard-incubation-heading">Overnight incubation</h2>
-              <p id="dashboard-incubation-summary" class="sr-only"></p>
-            </div>
-            <div class="home-tile-head-actions">
-              <button
-                type="button"
-                id="dashboard-incubation-add-btn"
-                class="home-add-btn"
-                aria-label="Manage incubation locations"
-                title="Manage locations"
-              ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
-            </div>
-          </div>
-          <div class="home-tile-scroll">
-            <div id="dashboard-incubation-list" class="dashboard-list"></div>
-          </div>
-        </section>
+            <p id="dashboard-contribution-selected" class="small-note home-contribution-selected" aria-live="polite"></p>
+          </section>
+        </div>
       </div>
 
       <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
@@ -279,43 +230,6 @@
               </div>
             </form>
           </div>
-        </div>
-      </div>
-
-      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
-        <div
-          class="home-dialog home-dashboard-dialog home-notebook-note-dialog app-dialog-surface"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="dashboard-notebook-note-dialog-title"
-        >
-          <form id="dashboard-notebook-note-dialog-form" class="home-dialog-form">
-            <div class="app-dialog-head">
-              <h3 id="dashboard-notebook-note-dialog-title">Add note</h3>
-              <button
-                type="button"
-                id="dashboard-notebook-note-dialog-close-btn"
-                class="app-dialog-close-btn"
-                aria-label="Close add note dialog"
-                title="Close"
-              ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-            </div>
-            <p id="dashboard-notebook-note-dialog-page" class="home-dialog-context"></p>
-            <label class="dashboard-field">
-              Note
-              <textarea
-                id="dashboard-notebook-note-input"
-                rows="7"
-                maxlength="4000"
-                placeholder="Add a quick note to this notebook page."
-                required
-              ></textarea>
-            </label>
-            <div class="home-dialog-actions">
-              <button type="button" id="dashboard-notebook-note-clarify-btn" class="ghost-btn hikari-agent-action">Clarify and save</button>
-              <button type="submit" id="dashboard-notebook-note-save-btn" class="primary-btn">Save note</button>
-            </div>
-          </form>
         </div>
       </div>
 

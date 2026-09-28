@@ -1,6 +1,6 @@
 'use strict';
 
-const { toIntegerInRange } = require('../../../data/value-utils.js');
+const { toIntegerInRange } = require('../../../lib/value-utils.js');
 const { ensureObject } = require('../../../lib/normalize.js');
 const { getLiteratureResearchSession, recordLiteratureResearchDownload } = require('../../../papers/workflow/literature-research-session.js');
 const {

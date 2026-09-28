@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { ensureObject } = require('../../../lib/normalize.js');
+const { readResponseText } = require('../../../lib/web-text.js');
 const { defaultCleanText, ensurePdfFileName } = require('./storage-paths.js');
 
 function parseContentDispositionFileName(value) {
@@ -77,23 +78,6 @@ function bufferLooksLikePdf(buffer) {
     return false;
   }
   return buffer.subarray(0, 5).toString('utf8') === '%PDF-';
-}
-
-async function readResponseText(response) {
-  if (typeof response?.text === 'function') {
-    return String(await response.text());
-  }
-  if (typeof response?.arrayBuffer === 'function') {
-    return Buffer.from(await response.arrayBuffer()).toString('utf8');
-  }
-  if (response?.body && typeof response.body[Symbol.asyncIterator] === 'function') {
-    const chunks = [];
-    for await (const chunk of response.body) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks).toString('utf8');
-  }
-  return '';
 }
 
 async function readResponseBuffer(response, onChunk) {

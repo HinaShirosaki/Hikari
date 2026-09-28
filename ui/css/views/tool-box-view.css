@@ -70,7 +70,7 @@
 
 .tool-tile-active .label {
   font-weight: 650;
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  box-shadow: inset 2px 0 0 var(--theme-accent-line);
 }
 
 .tool-subview {
@@ -256,7 +256,7 @@
 .tool-box-reaction-meta-row th,
 .tool-box-reaction-header-row th,
 .tool-box-reaction-solvent-row th {
-  background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
+  background: var(--theme-surface-elevated);
 }
 
 .tool-box-buffer-sheet input,
@@ -294,13 +294,13 @@
 
 .tool-box-buffer-volume-control select:focus {
   outline: none;
-  background-color: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background-color: var(--theme-accent-wash);
 }
 
 .tool-box-buffer-sheet input:focus,
 .tool-box-reaction-sheet input:focus {
   outline: none;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background: var(--theme-accent-wash);
 }
 
 .tool-box-buffer-sheet output,
@@ -399,7 +399,7 @@
 
 .tool-box-sheet-row-remove:hover,
 .tool-box-sheet-row-remove:focus-visible {
-  background: color-mix(in srgb, var(--theme-danger) 8%, transparent);
+  background: var(--theme-danger-wash);
   color: var(--theme-danger);
 }
 
@@ -415,7 +415,7 @@
   overflow: auto;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface-elevated);
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-shadow) 18%, transparent);
+  box-shadow: 0 12px 28px var(--theme-shadow-color-subtle);
 }
 
 .tool-box-buffer-suggestions--floating {
@@ -554,20 +554,20 @@
 
 .crispr-risk-low {
   color: var(--theme-success);
-  border-color: color-mix(in srgb, var(--theme-success) 34%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface));
+  border-color: var(--theme-success-line);
+  background: var(--theme-success-wash);
 }
 
 .crispr-risk-medium {
   color: var(--theme-warning);
-  border-color: color-mix(in srgb, var(--theme-warning) 40%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-warning) 12%, var(--theme-surface));
+  border-color: var(--theme-warning-line);
+  background: var(--theme-warning-wash);
 }
 
 .crispr-risk-high {
   color: var(--theme-danger);
-  border-color: color-mix(in srgb, var(--theme-danger) 38%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 10%, var(--theme-surface));
+  border-color: var(--theme-danger-line);
+  background: var(--theme-danger-wash);
 }
 
 @media (max-width: 920px) {
@@ -647,8 +647,8 @@
   padding: var(--space-6);
   border: 0;
   border-radius: 10px;
-  background: var(--theme-surface-raised, var(--theme-surface));
-  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-text-strong) 16%, transparent);
+  background: var(--theme-surface);
+  box-shadow: 0 12px 28px var(--theme-fill-strong);
 }
 
 .colony-crop-menu-popup[hidden] {
@@ -736,21 +736,21 @@ body.theme-night .result-table th {
  * surface. Mixing toward the surface put 1.5:1 ink on its own fill.
  */
 body.theme-night .crispr-risk-low {
-  color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-text-strong));
-  border-color: color-mix(in srgb, var(--theme-success) 42%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-success) 16%, var(--theme-surface));
+  color: var(--theme-success-ink);
+  border-color: var(--theme-success-line);
+  background: var(--theme-success-soft);
 }
 
 body.theme-night .crispr-risk-medium {
-  color: color-mix(in srgb, var(--theme-warning) 72%, var(--theme-text-strong));
-  border-color: color-mix(in srgb, var(--theme-warning) 42%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-warning) 16%, var(--theme-surface));
+  color: var(--theme-warning-ink);
+  border-color: var(--theme-warning-line);
+  background: var(--theme-warning-soft);
 }
 
 body.theme-night .crispr-risk-high {
-  color: color-mix(in srgb, var(--theme-danger) 72%, var(--theme-text-strong));
-  border-color: color-mix(in srgb, var(--theme-danger) 42%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 16%, var(--theme-surface));
+  color: var(--theme-danger-ink);
+  border-color: var(--theme-danger-line);
+  background: var(--theme-danger-soft);
 }
 
 body.ui-neutral-compact .calc-output,
@@ -1015,7 +1015,7 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 .reverse-translate-site-item:hover,
 .reverse-translate-site-item:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+  background: var(--theme-accent-wash);
 }
 
 .reverse-translate-site-name {

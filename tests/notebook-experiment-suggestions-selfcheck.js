@@ -11,8 +11,6 @@ const { createNotebookSuggestionService } = require('../src/main/core/services/c
 const { HIKARI_MCP_TOOL_NAMES } = require('../src/main/agent/mcp-contract/instructions.js');
 const { createAgentRuntimeSupport } = require('../src/main/agent/runtime/agent-runtime-support.js');
 const { registerAgentToolExecutors } = require('../src/main/agent/tools/register-agent-tool-executors.js');
-const { writeSqlNotebookIndex } = require('../src/main/storage/storage-sql-write.js');
-const { readNotebookRowsFromSqlite } = require('../src/main/storage/storage-sql-read.js');
 const esm = file => loadEsmStyleModule(path.join(__dirname, '../src/renderer/', file));
 
 async function run() {
@@ -191,11 +189,6 @@ async function run() {
     persist:()=>{throw new Error('Disk full');},api:{suggestNextExperiment:async()=>zero}});
   await zeroFailure.suggest('p');
   assert.equal(rollbackState.settings.notebookSuggestionPauses.p,undefined,'A failed save cannot leave the project paused');
-
-  const rows = [];
-  writeSqlNotebookIndex({ run: (_sql, args) => rows.push(args) }, { notebookEntries: [entry] }, '2026-09-08');
-  assert.equal(rows[0][6], 'suggested', 'SQL writes retain Suggested');
-  assert.equal(readNotebookRowsFromSqlite([{ id: entry.id, notebook_state: rows[0][6] }])[0].notebookState, 'suggested');
 
   const { syncBundleFromSnapshot, hydrateSnapshotFromBundle } = require('../src/main/storage/index.js');
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), 'hikari-suggestion-roundtrip-'));

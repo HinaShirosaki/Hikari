@@ -8,52 +8,17 @@ const {
 const {
   STORAGE,
   ASSAY,
-  INVENTORY,
-  PLUGINS
+  INVENTORY
 } = require('../../shared/ipc/channels');
-const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
-const { createPluginServerRegistry } = require('../lib/plugin-server');
-const { registerPluginFileIpc } = require('./register-plugin-file-ipc');
 const {
   registerSequenceLibraryIpc
 } = require('./register-data-ipc/register-sequence-library-ipc');
 
-const { createStorageFileHelpers } = require('./data-ipc/storage-files.js');
+const { createStorageFileHelpers } = require('./register-data-ipc/storage-files.js');
 const { getBundlePaths } = require('../storage/storage-paths');
-
-const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
-const BUNDLED_PLUGIN_TOKEN_PATTERN = /^@bundled\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
-
-function resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath }) {
-  if (!String(requestedPath || '').startsWith('@bundled/')) {
-    return requestedPath;
-  }
-  const match = BUNDLED_PLUGIN_TOKEN_PATTERN.exec(String(requestedPath || ''));
-  if (!match || match[1] !== pluginId) {
-    throw new Error(`Invalid bundled plugin path for "${pluginId}".`);
-  }
-  const resolvedPath = getBundledPluginPath(pluginId);
-  if (!resolvedPath) {
-    throw new Error(`Unknown bundled plugin "${pluginId}".`);
-  }
-  return resolvedPath;
-}
-
-function isCanonicalBase64(value) {
-  const encoded = String(value || '');
-  if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
-    return false;
-  }
-  try {
-    return Buffer.from(encoded, 'base64').toString('base64') === encoded;
-  } catch {
-    return false;
-  }
-}
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
-  const session = deps.session;
   const dialog = deps.dialog;
   const shell = deps.shell;
   const fs = deps.fs;
@@ -72,9 +37,6 @@ function registerDataIpc(deps = {}) {
     : (() => '');
   const getStorageRootPointerPath = typeof deps.getStorageRootPointerPath === 'function'
     ? deps.getStorageRootPointerPath
-    : (() => '');
-  const getBundledPluginPath = typeof deps.getBundledPluginPath === 'function'
-    ? deps.getBundledPluginPath
     : (() => '');
   const importStorageRoot = deps.importStorageRoot;
   const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
@@ -99,7 +61,6 @@ function registerDataIpc(deps = {}) {
 
   const {
     normalizeJsonPayload,
-    sanitizeImportedFileName,
     asArray,
     storeImportedFile,
     transformStoredPaperPdf,
@@ -148,22 +109,21 @@ function registerDataIpc(deps = {}) {
     }
     // The caller used to name the destination file, which let anything running
     // in the renderer write a bundle-shaped blob to any path the user can write.
-    // Both bundle names already belong to getBundlePaths, so derive the target
+    // The chemical bundle path already belongs to getBundlePaths, so derive it
     // from the recorded storage root and ignore whatever the payload asked for.
     const storageRoot = await readConfiguredStorageRoot();
     if (!storageRoot) {
       return { ok: false, error: 'No storage path is configured yet.' };
     }
-    const bundlePaths = getBundlePaths({ storagePath: storageRoot });
-    const sqlitePath = cleanText(
-      mode.toLowerCase() === 'chemical' ? bundlePaths.chemicalsSqlitePath : bundlePaths.sqlitePath,
-      2400
-    );
+    if (mode.toLowerCase() !== 'chemical') {
+      return { ok: false, error: `Unsupported sqlite bundle mode: ${mode || '(none)'}` };
+    }
+    const sqlitePath = cleanText(getBundlePaths({ storagePath: storageRoot }).chemicalsSqlitePath, 2400);
     if (!sqlitePath) {
       return { ok: false, error: 'Could not resolve the sqlite bundle path.' };
     }
     try {
-      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot, mode });
+      const result = await syncSqliteBundleFromSnapshot({ sqlitePath, snapshot });
       return {
         ok: true,
         sqlitePath: result?.sqlitePath || sqlitePath
@@ -187,89 +147,6 @@ function registerDataIpc(deps = {}) {
     }
 
     return { ok: true, path: result.filePaths[0] };
-  });
-
-  ipcMain.handle(PLUGINS.INSPECT_FOLDER, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    try {
-      return await inspectPluginFolder({ fs, folderPath: normalizedPayload?.path });
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  // Loopback servers for all folder views and headless service plugins.
-  // Process-lifetime: registration runs once per main process, so they are
-  // reused across renderer reloads and torn down with the app.
-  const pluginServers = createPluginServerRegistry({
-    // A plugin's origin is `127.0.0.1:<port>` and the OS hands out the port, so
-    // the same origin can belong to a different plugin from one run to the
-    // next — and localStorage/IndexedDB outlive the process, keyed by origin.
-    // Emptying the origin before its new owner loads is what stops a plugin
-    // inheriting whichever plugin held that port last time. Browser storage is
-    // documented as per-run for exactly this reason; durable plugin data goes
-    // through the `storage` and `files` verbs.
-    prepareOrigin: async (baseUrl) => {
-      if (!session?.defaultSession) {
-        throw new Error('Plugin origins cannot be isolated without an Electron session.');
-      }
-      await session.defaultSession.clearStorageData({ origin: new URL(baseUrl).origin });
-    }
-  });
-
-  // Starts (or reuses) a loopback server for one plugin folder and returns its
-  // base URL. The renderer only ever asks for folders already recorded in
-  // settings, but the registry re-checks the path itself.
-  ipcMain.handle(PLUGINS.SERVE_FOLDER, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    try {
-      if (!session?.defaultSession) {
-        throw new Error('Plugin origins cannot be isolated without an Electron session.');
-      }
-      const pluginId = cleanText(normalizedPayload?.id, 80);
-      const requestedPath = cleanText(normalizedPayload?.path, 2400);
-      const resolvedPath = resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath });
-      return await pluginServers.serve(pluginId, resolvedPath);
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  // Exports are mediated by a native save dialog instead of granting every
-  // plugin iframe the broad `allow-downloads` sandbox token. The plugin picks
-  // the suggested name; the user picks the actual destination.
-  ipcMain.handle(PLUGINS.EXPORT_FILE, async (_event, payload) => {
-    const normalizedPayload = normalizeJsonPayload(payload, {});
-    const dataBase64 = String(normalizedPayload?.dataBase64 || '');
-    if (!dataBase64) {
-      return { ok: false, error: 'Missing export data.' };
-    }
-    if (dataBase64.length > MAX_PLUGIN_EXPORT_BASE64_CHARS) {
-      return { ok: false, error: 'Plugin export is too large.' };
-    }
-    if (!isCanonicalBase64(dataBase64)) {
-      return { ok: false, error: 'Plugin export data is not valid base64.' };
-    }
-    const suggestedName = sanitizeImportedFileName(
-      path.basename(String(normalizedPayload?.fileName || 'plugin-export.dat'))
-    );
-    try {
-      const result = await dialog.showSaveDialog({
-        title: 'Export Plugin File',
-        defaultPath: suggestedName
-      });
-      if (result.canceled || !result.filePath) {
-        return { ok: false, canceled: true };
-      }
-      await fs.writeFile(result.filePath, Buffer.from(dataBase64, 'base64'));
-      return {
-        ok: true,
-        saved: true,
-        fileName: path.basename(result.filePath)
-      };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
   });
 
   ipcMain.handle(STORAGE.ENSURE_DIRECTORY, async (_event, payload) => {
@@ -488,8 +365,6 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  registerPluginFileIpc({ ipcMain });
-
   registerSequenceLibraryIpc({
     ipcMain,
     cleanText,
@@ -511,7 +386,4 @@ function registerDataIpc(deps = {}) {
 
 }
 
-module.exports = {
-  registerDataIpc,
-  resolvePluginServePath
-};
+module.exports = { registerDataIpc };

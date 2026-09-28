@@ -1,4 +1,4 @@
-import { initToolBox } from '../modules/tool-box.js';
+import { initToolBox } from '../modules/tool-box/index.js';
 
 export const toolBoxManifest = {
   key: 'toolBox',

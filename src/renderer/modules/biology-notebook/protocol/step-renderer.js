@@ -88,10 +88,9 @@ export function renderStepSentence(step, values, helpers) {
     if (!placeholders.length) {
       return safeText(source);
     }
-    return replaceBracketPlaceholders(source, placeholders, (item) => {
-      const key = `${step.id}:${item.id}`;
-      return renderInline(key, item.name, values[key] || '');
-    }, safeText);
+    return replaceBracketPlaceholders(source, placeholders, (item) => (
+      renderInline(item.id, item.name, values[item.id] || '')
+    ), safeText);
   }
 
   let cursor = 0;
@@ -100,10 +99,9 @@ export function renderStepSentence(step, values, helpers) {
   matches.forEach((match) => {
     const index = Number(match.index || 0);
     const placeholderId = match[1];
-    const key = `${step.id}:${placeholderId}`;
     const placeholder = placeholders.find((item) => item.id === placeholderId);
     html += safeText(source.slice(cursor, index));
-    html += renderInline(key, placeholder?.name || 'value', values[key] || '');
+    html += renderInline(placeholderId, placeholder?.name || 'value', values[placeholderId] || '');
     cursor = index + match[0].length;
   });
 

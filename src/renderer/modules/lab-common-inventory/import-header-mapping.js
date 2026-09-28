@@ -1,5 +1,7 @@
 import { CHEMICAL_IMPORT_FIELDS, normalizeImportFieldKey, normalizeImportHeader } from './import-schema.js';
 import { guessChemicalImportField } from './import-field-guessing.js';
+import { parseJsonFromText } from '../../lib/json.js';
+import { requestDirectLlm } from '../../services/direct-llm.js';
 export function installImportHeaderMapping(ctx) {
   const { state } = ctx;
 function mapChemicalImportHeadersLocally(headers) {
@@ -59,64 +61,18 @@ function buildLlmHeaderPrompt(headers, rows, localInference) {
     `Preview rows: ${JSON.stringify(previewRows)}`
   ].join('\n');
 }
-function parseJsonObjectFromText(text) {
-  const raw = String(text || '').trim();
-  if (!raw) {
-    return null;
-  }
-  const unfenced = raw
-    .replace(/^```(?:json)?/i, '')
-    .replace(/```$/i, '')
-    .trim();
-  try {
-    return JSON.parse(unfenced);
-  } catch {
-    const start = unfenced.indexOf('{');
-    const end = unfenced.lastIndexOf('}');
-    if (start >= 0 && end > start) {
-      try {
-        return JSON.parse(unfenced.slice(start, end + 1));
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-function buildDirectLlmSettings() {
-  const provider = String(state.settings?.llm?.provider || '').trim();
-  return {
-    provider,
-    model: String(state.settings?.llm?.model || '').trim(),
-    reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
-    apiEndpoint: provider === 'codex' ? '' : String(state.settings?.llm?.apiEndpoint || '').trim(),
-    apiKey: provider === 'codex' ? '' : String(state.settings?.llm?.apiKey || '').trim()
-  };
-}
 async function requestLlmChemicalHeaderMapping(headers, rows, localInference) {
-  if (!window.hikariApi?.runDirectLlmPrompt && !window.hikariApi?.runCodexLlmPrompt) {
-    return null;
-  }
   const prompt = buildLlmHeaderPrompt(headers, rows, localInference);
-  const result = window.hikariApi?.runDirectLlmPrompt
-    ? await window.hikariApi.runDirectLlmPrompt({
-      moduleId: 'inventory',
-      task: 'chemical-header-mapping',
-      prompt,
-      expectJson: true,
-      llm: buildDirectLlmSettings()
-    })
-    : await window.hikariApi.runCodexLlmPrompt({
-      model: String(state.settings?.llm?.model || '').trim(),
-      reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim(),
-      prompt
-    });
-  if (!result?.ok) {
-    throw new Error(result?.error || 'LLM header mapping failed.');
-  }
+  const result = await requestDirectLlm({
+    moduleId: 'inventory',
+    task: 'chemical-header-mapping',
+    prompt,
+    expectJson: true,
+    llm: state.settings?.llm
+  });
   return result.payload && typeof result.payload === 'object'
     ? result.payload
-    : parseJsonObjectFromText(result.text);
+    : parseJsonFromText(result.text);
 }
 function findHeaderIndex(headers, headerName) {
   const normalized = normalizeImportHeader(headerName);
@@ -163,7 +119,7 @@ async function inferChemicalImportHeaders(headers, rows) {
   const needsLlm = inference.unmappedHeaders.length > 0
     || inference.fieldToColumn.name == null
     || inference.fieldToColumn.location == null;
-  if (!needsLlm || (!window.hikariApi?.runDirectLlmPrompt && !window.hikariApi?.runCodexLlmPrompt)) {
+  if (!needsLlm) {
     return inference;
   }
   try {
@@ -179,8 +135,6 @@ async function inferChemicalImportHeaders(headers, rows) {
   Object.assign(ctx, {
     mapChemicalImportHeadersLocally,
     buildLlmHeaderPrompt,
-    parseJsonObjectFromText,
-    buildDirectLlmSettings,
     requestLlmChemicalHeaderMapping,
     findHeaderIndex,
     applyLlmHeaderMapping,

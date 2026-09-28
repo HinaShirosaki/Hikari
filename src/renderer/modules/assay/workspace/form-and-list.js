@@ -190,7 +190,8 @@ function createAssayFormAndList({
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(record.id);
-    resetForm();
+    // Keep the just-saved plate open; "New assay" is the way to a blank form.
+    editAssay(record.id, { quiet: true });
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -211,6 +212,9 @@ function createAssayFormAndList({
     runtime.currentResults = {};
     runtime.resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
     runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
+    // The preview's axis inputs are read back as a value source, so the old
+    // plate's headers would otherwise bleed into the blank one.
+    elements.assayPlatePreview?.replaceChildren();
     layoutManager.setConcentrationUnit('');
     layoutManager.resetSerialDilutionState();
     if (elements.assayAnalysisKindInput) {
@@ -280,12 +284,11 @@ function createAssayFormAndList({
     elements.assayNameInput?.focus();
   }
 
-  function editAssay(assayId) {
+  function editAssay(assayId, { quiet = false } = {}) {
     const assay = getAssayById(assayId);
     if (!assay) {
       return;
     }
-    elements.assayBrowserPanel?.setAttribute('open', '');
     elements.assayIdInput.value = assay.id;
     elements.assayNameInput.value = assay.name || '';
     elements.assayProjectInput.value = assay.projectId || '';
@@ -313,7 +316,9 @@ function createAssayFormAndList({
       elements.assayNotebookEntryInput.value = assay.notebookEntryId;
     }
     setCsvStatus('');
-    setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
+    if (!quiet) {
+      setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
+    }
     setLayoutStatus('');
     analysisView.clearOutput();
     markLoadedAssayDraftsSaved();

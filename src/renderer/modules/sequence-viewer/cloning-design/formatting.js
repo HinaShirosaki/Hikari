@@ -1,4 +1,5 @@
 import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES } from './strategies.js';
+import { formatPrimerRole } from '../shared.js';
 
 function formatNumber(value, digits = 1) {
   const number = Number(value);
@@ -10,14 +11,6 @@ function formatNumber(value, digits = 1) {
 
 function formatBp(value) {
   return `${Math.max(0, Number(value) || 0).toLocaleString()} bp`;
-}
-
-function formatPrimerRole(role) {
-  return String(role || '')
-    .trim()
-    .replace(/[-_]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/\b\w/g, (match) => match.toUpperCase()) || 'Primer';
 }
 
 function formatStrategyLabel(strategyId) {

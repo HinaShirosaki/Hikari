@@ -7,7 +7,7 @@ import {
   createManifestRenderEntries,
   initializeModuleManifests,
   renderModuleManifests
-} from '../src/renderer/module-manifests/runtime.js';
+} from '../src/renderer/core/manifest-runtime.js';
 
 const boom = () => {
   throw new Error('deliberate module failure');

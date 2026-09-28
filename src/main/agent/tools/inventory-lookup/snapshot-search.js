@@ -156,6 +156,9 @@ function createInventorySnapshotSearch({
         container_name: cleanText(container?.name, 220),
         well_index: wellIndex,
         notes: cleanText(payload.notes, 240),
+        // Type-specific fields (a plasmid's backbone, an antibody's target, ...)
+        // differ per sample type, so they are searched and returned as a whole.
+        details: payload.details && typeof payload.details === 'object' ? payload.details : null,
         search_text: buildSearchText([
           payload.id,
           payload.code,
@@ -167,7 +170,8 @@ function createInventorySnapshotSearch({
           section,
           containerId,
           container?.name,
-          wellIndex
+          wellIndex,
+          ...Object.values(ensureObject(payload.details))
         ])
       };
     }).filter((sample) => sample.id || sample.name);
@@ -210,7 +214,9 @@ function createInventorySnapshotSearch({
       container_id: cleanText(row.container_id, 120),
       container_name: cleanText(row.container_name, 220),
       well_index: Number.isFinite(Number(row.well_index)) ? Number(row.well_index) : null,
-      notes: cleanText(row.notes, 240)
+      notes: cleanText(row.notes, 240),
+      ...(row.details ? { details: row.details } : {}),
+      score: row._score
     }));
 
     return {

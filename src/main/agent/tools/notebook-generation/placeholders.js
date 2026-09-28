@@ -50,8 +50,8 @@ function createPlaceholderHelpers({
 
   function buildProtocolPlaceholderRows(protocolRecord = {}) {
     const rows = [];
-    asArray(protocolRecord.steps).forEach((step) => {
-      const stepId = cleanText(step?.id, 120);
+    const seenKeys = new Set();
+    asArray(protocolRecord.steps).forEach((step, stepIndex) => {
       const stepText = cleanText(step?.text, 6000);
       const placeholders = asArray(step?.placeholders).map((placeholder) => ({
         id: cleanText(placeholder?.id, 120),
@@ -75,7 +75,7 @@ function createPlaceholderHelpers({
       const inlineMatches = [...stepText.matchAll(PROTOCOL_INLINE_PLACEHOLDER_REGEX)];
       inlineMatches.forEach((match, index) => {
         const inlineName = cleanText(match?.[1], 120) || 'value';
-        const syntheticId = `inline-${stepId || 'step'}-${index + 1}`;
+        const syntheticId = `inline-${stepIndex + 1}-${index + 1}`;
         if (!placeholders.some((placeholder) => placeholder.id === syntheticId)) {
           placeholders.push({
             id: syntheticId,
@@ -85,17 +85,19 @@ function createPlaceholderHelpers({
       });
 
       placeholders.forEach((placeholder) => {
-        const placeholderKey = `${stepId}:${placeholder.id}`;
+        // A placeholder id reused in a later step is the same value.
+        if (seenKeys.has(placeholder.id)) {
+          return;
+        }
+        seenKeys.add(placeholder.id);
         rows.push({
-          step_id: stepId,
-          placeholder_id: placeholder.id,
-          placeholder_key: placeholderKey,
+          placeholder_key: placeholder.id,
           display: placeholder.name || 'value',
           step_text: stepText
         });
       });
     });
-    return rows.filter((row) => row.step_id && row.placeholder_id && row.placeholder_key);
+    return rows;
   }
 
   function inferDeterministicPlaceholderValue({
@@ -160,22 +162,12 @@ function createPlaceholderHelpers({
 
     const directCandidates = [
       cleanText(row?.placeholder_key, 160),
-      cleanText(row?.placeholder_id, 120),
       cleanText(row?.key, 160)
     ].filter(Boolean);
     for (const candidate of directCandidates) {
       const direct = normalizedMap.get(candidate.toLowerCase());
       if (direct) {
         return direct;
-      }
-      if (!candidate.includes(':')) {
-        const suffixMatches = Array.from(normalizedMap.keys())
-          .filter((key) => key.endsWith(`:${candidate.toLowerCase()}`))
-          .map((key) => normalizedMap.get(key))
-          .filter(Boolean);
-        if (suffixMatches.length === 1) {
-          return suffixMatches[0];
-        }
       }
     }
 

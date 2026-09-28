@@ -16,12 +16,12 @@ const {
   mergeProjectMemoryMarkdown,
   waitForProjectMemoryQueue,
   writeProjectMemoryFile
-} = require('../src/main/storage/storage-memory.js');
+} = require('../src/main/project-memory');
 const { importStorageRoot } = require('../src/main/storage/storage-import.js');
 const { hydrateSnapshotFromBundle } = require('../src/main/storage/storage-hydration.js');
-const { PROJECT_MEMORY_MAX_BYTES } = require('../src/main/storage/memory/constants.js');
+const { PROJECT_MEMORY_MAX_BYTES } = require('../src/main/project-memory/constants.js');
 const { CODEX_PROJECT_DOC_MAX_BYTES } = require('../src/main/lib/codex-cli-provider/constants.js');
-const { buildProjectMemoryGeneratedBlock, projectMemoryByteBudget } = require('../src/main/storage/memory/memory-markdown.js');
+const { buildProjectMemoryGeneratedBlock, projectMemoryByteBudget } = require('../src/main/project-memory/memory-markdown.js');
 const { sanitizeFolderName } = require('../src/main/storage/storage-utils.js');
 const { hydrateProjectRootFromStoragePath } = require('../src/main/storage/hydration/project-folders.js');
 

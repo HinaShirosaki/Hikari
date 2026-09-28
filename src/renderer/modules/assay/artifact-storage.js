@@ -66,7 +66,8 @@ export function createAssayArtifactStorage({
       storagePath: storageRoot,
       targetFolder,
       fileName,
-      dataBase64
+      dataBase64,
+      overwrite: true
     });
     return result?.ok ? result : null;
   }

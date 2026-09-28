@@ -1,6 +1,12 @@
 'use strict';
 
 const { asArray, ensureObject } = require('../../lib/normalize.js');
+const {
+  normalizeIsoTimestamp: normalizeSharedIsoTimestamp,
+  normalizeProtocolMaterials,
+  normalizeProtocolTroubleshooting,
+  uniquePlaceholderIds
+} = require('../../../shared/protocol-normalization.mjs');
 
 function cleanText(value, maxLength = 1200) {
   const text = String(value || '').trim();
@@ -129,46 +135,13 @@ function createProtocolGenerationRuntime(deps = {}) {
     return `${prefix}-${Date.now().toString(36)}-${generatedIdCounter.toString(36)}`;
   }
 
-  function normalizeIsoTimestamp(rawValue, fallback = '') {
-    const candidate = String(rawValue || '').trim();
-    if (!candidate) {
-      return fallback;
-    }
-    const timestamp = Date.parse(candidate);
-    if (!Number.isFinite(timestamp)) {
-      return fallback;
-    }
-    return new Date(timestamp).toISOString();
-  }
+  const normalizeIsoTimestamp = (rawValue, fallback = '') => (
+    normalizeSharedIsoTimestamp(rawValue, fallback, { text: cleanText, maxLength: 0 })
+  );
 
-  function stripBulletPrefix(rawLine) {
-    return String(rawLine || '')
-      .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, '')
-      .trim();
-  }
-
-  function splitTextLines(rawText) {
-    return String(rawText || '').replace(/\r\n?/g, '\n').split('\n');
-  }
-
-  function parseBulletLines(rawText) {
-    return splitTextLines(rawText)
-      .map((line) => stripBulletPrefix(line))
-      .filter(Boolean);
-  }
-
-  function normalizeMaterials(rawMaterials) {
-    if (Array.isArray(rawMaterials)) {
-      return rawMaterials.map((item) => cleanText(item, 220)).filter(Boolean);
-    }
-
-    const value = cleanText(rawMaterials, 6000);
-    if (!value) {
-      return [];
-    }
-
-    return parseBulletLines(value);
-  }
+  const normalizeMaterials = (rawMaterials) => normalizeProtocolMaterials(rawMaterials, {
+    text: cleanText
+  });
 
   function extractPlaceholdersFromText(rawText) {
     const placeholders = [];
@@ -184,36 +157,10 @@ function createProtocolGenerationRuntime(deps = {}) {
     return { cleanedText, placeholders };
   }
 
-  function normalizeTroubleshooting(rawTroubleshooting) {
-    if (Array.isArray(rawTroubleshooting)) {
-      return rawTroubleshooting
-        .map((item) => {
-          if (typeof item === 'string') {
-            return cleanText(item, 1200);
-          }
-          if (!item || typeof item !== 'object') {
-            return '';
-          }
-          const problem = cleanText(item.problem, 400);
-          const possibleCause = cleanText(item.possible_cause || item.possibleCause, 400);
-          const solution = cleanText(item.solution, 400);
-          const parts = [];
-          if (problem) {
-            parts.push(`Problem: ${problem}`);
-          }
-          if (possibleCause) {
-            parts.push(`Possible cause: ${possibleCause}`);
-          }
-          if (solution) {
-            parts.push(`Solution: ${solution}`);
-          }
-          return parts.join('; ');
-        })
-        .filter(Boolean)
-        .join('\n');
-    }
-    return cleanText(rawTroubleshooting, 6000);
-  }
+  const normalizeTroubleshooting = (rawTroubleshooting) => normalizeProtocolTroubleshooting(
+    rawTroubleshooting,
+    { text: cleanText }
+  );
 
   function normalizeImportedProtocolStepEntries(rawSteps) {
     if (!Array.isArray(rawSteps)) {
@@ -238,7 +185,7 @@ function createProtocolGenerationRuntime(deps = {}) {
       })
       .map((entry) => entry.step);
 
-    return sortedSteps
+    const steps = sortedSteps
       .map((rawStep) => {
         if (typeof rawStep === 'string') {
           const rawText = cleanText(rawStep, 2000);
@@ -247,7 +194,6 @@ function createProtocolGenerationRuntime(deps = {}) {
           }
           const parsed = extractPlaceholdersFromText(rawText);
           return {
-            id: createGeneratedId('step'),
             text: parsed.cleanedText || rawText,
             placeholders: parsed.placeholders
           };
@@ -272,7 +218,6 @@ function createProtocolGenerationRuntime(deps = {}) {
 
         if (placeholders.length) {
           return {
-            id: cleanText(rawStep.id, 120) || createGeneratedId('step'),
             text: rawText,
             placeholders
           };
@@ -280,13 +225,13 @@ function createProtocolGenerationRuntime(deps = {}) {
 
         const parsed = extractPlaceholdersFromText(rawText);
         return {
-          id: cleanText(rawStep.id, 120) || createGeneratedId('step'),
           text: parsed.cleanedText || rawText,
           placeholders: parsed.placeholders
         };
       })
       .filter(Boolean)
       .slice(0, 120);
+    return uniquePlaceholderIds(steps, () => createGeneratedId('ph'));
   }
 
   function normalizeGeneratedProtocol(payload, input = {}) {

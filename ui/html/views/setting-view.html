@@ -1,304 +1,644 @@
 <section id="setting-view" class="view">
-      <div class="settings-layout left-rail-template">
-        <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
-          <div class="left-rail-template__stack">
-            <section class="left-rail-template__section settings-nav-list">
+  <div class="settings-layout left-rail-template">
+    <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
+      <div class="left-rail-template__stack">
+        <section class="left-rail-template__section settings-nav-list">
+          <div class="settings-nav-group">
+            <h3 class="settings-nav-heading">
+              Workspace
+            </h3>
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
-              <span>Appearance</span>
-              <small>Font size and theme</small>
+              <span>
+                Appearance
+              </span>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="storage">
-              <span>Storage</span>
-              <small>Root folder and imports</small>
+            <button type="button" class="settings-nav-item" data-settings-target="startup" aria-pressed="false">
+              <span>
+                Startup
+              </span>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="startup">
-              <span>Startup &amp; Data</span>
-              <small>Launch behavior and .json file</small>
+            <button type="button" class="settings-nav-item" data-settings-target="storage" aria-pressed="false">
+              <span>
+                Storage &amp; data
+              </span>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="notebook-pdf">
-              <span>Notebook PDF</span>
-              <small>Page size and binding space</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="locations">
-              <span>Inventory Locations</span>
-              <small>Shared location vocabulary</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
-              <span>Samples</span>
-              <small>Storage locations and type names</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
-              <span>Preferred Journals</span>
-              <small>Default journal names or URLs</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="llm">
-              <span>LLM Model &amp; Access</span>
-              <small>Provider, model, endpoint</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="mcp-tools">
-              <span>Hikari MCP Tools</span>
-              <small>Individual agent tool access</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="skills">
-              <span>External Skills</span>
-              <small>Agent skill files</small>
-            </button>
-            <button type="button" class="settings-nav-item" data-settings-target="plugins">
-              <span>Plugins</span>
-              <small>User plugin folders</small>
-            </button>
-            </section>
           </div>
-        </aside>
-
-        <div class="settings-detail left-rail-template__main">
-            <section class="settings-section" data-settings-panel="appearance">
-              <div class="settings-section-head">
-                <h3>Appearance</h3>
-              </div>
-              <form id="appearance-form" class="stack-form">
-                <label class="settings-choice-field settings-choice-field--short">
-                  Font Size
-                  <select id="setting-font-size">
-                    <option value="14">Small</option>
-                    <option value="16">Medium</option>
-                    <option value="18">Large</option>
-                  </select>
-                </label>
-                <label class="settings-choice-field settings-choice-field--medium">
-                  Theme
-                  <select id="setting-mode">
-                    <option value="day">Day</option>
-                    <option value="night">Night</option>
-                  </select>
-                </label>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Appearance</button>
-                </div>
-              </form>
-            </section>
-
-            <section class="settings-section" data-settings-panel="storage" hidden>
-              <div class="settings-section-head">
-                <h3>Storage</h3>
-              </div>
-              <form id="storage-form" class="stack-form">
-                <label>
-                  Root Folder Path
-                  <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
-                </label>
-                <div class="form-actions">
-                  <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
-                  <button type="submit" class="primary-btn">Save Storage Path</button>
-                </div>
-              </form>
-            </section>
-
-            <section class="settings-section" data-settings-panel="startup" hidden>
-              <div class="settings-section-head">
-                <h3>Startup</h3>
-              </div>
-              <form id="startup-form" class="stack-form">
-                <label>
-                  Default Startup Module
-                  <select id="setting-startup-default-view">
-                    <option value="home-view">Home</option>
-                    <option value="protocol-management-view">Protocols</option>
-                    <option value="biology-notebook-view">Notebook</option>
-                    <option value="lab-common-inventory-view">Chemicals</option>
-                    <option value="sample-registry-view">Samples</option>
-                    <option value="assay-view">Assay</option>
-                    <option value="workflow-management-view">Workflows</option>
-                    <option value="papers-view">Papers</option>
-                    <option value="agent-view">Agent</option>
-                    <option value="sequence-viewer-view">Sequence Viewer</option>
-                    <option value="tool-box-view">Tools</option>
-                    <option value="setting-view">Settings</option>
-                  </select>
-                </label>
-                <label class="inline-row settings-toggle-row">
-                  <input id="setting-startup-remember-last-view" type="checkbox" />
-                  <span>Remember last opened module on launch</span>
-                </label>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Startup Settings</button>
-                </div>
-              </form>
-              <div class="settings-section-head">
-                <h3>Diagnostics</h3>
-              </div>
-              <div class="form-actions">
-                <button type="button" id="open-logs-folder-btn" class="ghost-btn">Open Logs Folder</button>
-                <button type="button" id="open-third-party-notices-btn" class="ghost-btn">Third-Party Notices</button>
-              </div>
-            </section>
-
-            <section class="settings-section" data-settings-panel="notebook-pdf" hidden>
-              <div class="settings-section-head">
-                <h3>Notebook PDF</h3>
-              </div>
-              <form id="notebook-pdf-form" class="stack-form">
-                <label class="settings-choice-field settings-choice-field--medium">
-                  Page Size
-                  <select id="setting-notebook-pdf-page-size">
-                    <option value="letter">US Letter</option>
-                    <option value="a4">A4</option>
-                    <option value="a5">A5</option>
-                    <option value="legal">US Legal</option>
-                  </select>
-                </label>
-                <label class="settings-choice-field settings-choice-field--medium">
-                  Staple Region
-                  <select id="setting-notebook-pdf-staple-edge">
-                    <option value="none">None</option>
-                    <option value="left">Left edge</option>
-                    <option value="top">Top edge</option>
-                  </select>
-                </label>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Notebook PDF Settings</button>
-                </div>
-              </form>
-            </section>
-
-            <section class="settings-section" data-settings-panel="locations" hidden>
-              <div class="settings-section-head">
-                <h3>Inventory Locations</h3>
-              </div>
-              <div class="stack-form">
-                <div class="inline-row settings-location-entry">
-                  <input id="setting-location-input" placeholder="Add approximate location" />
-                  <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
-                </div>
-                <div id="setting-location-list" class="stack-form"></div>
-              </div>
-            </section>
-
-            <section class="settings-section" data-settings-panel="sample-inventory" hidden>
-              <div class="settings-section-head">
-                <h3>Samples</h3>
-              </div>
-              <div class="stack-form">
-                <div class="settings-subsection">
-                  <h4>Storage Locations</h4>
-                  <div class="inline-row settings-location-entry settings-sample-inventory-add">
-                    <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
-                    <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample storage location" title="Add storage location"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
-                  </div>
-                  <div id="setting-sample-inventory-location-list" class="stack-form"></div>
-                </div>
-                <form id="sample-type-labels-form" class="stack-form settings-subsection">
-                  <h4>Sample Type Names</h4>
-                  <div class="inline-row settings-sample-type-add">
-                    <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type" />
-                    <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
-                  </div>
-                  <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list"></ul>
-                </form>
-              </div>
-            </section>
-
-            <section class="settings-section" data-settings-panel="preferred-journal" hidden>
-              <div class="settings-section-head">
-                <h3>Preferred Journals</h3>
-              </div>
-              <form id="preferred-journal-form" class="stack-form">
-                <label>
-                  Journal Names or URLs
-                  <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
-                </label>
-                <div id="setting-preferred-journal-list" class="stack-form"></div>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Add Journal</button>
-                  <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
-                </div>
-              </form>
-            </section>
-
-            <section class="settings-section" data-settings-panel="llm" hidden>
-              <div class="settings-section-head">
-                <h3>Codex Model &amp; Access</h3>
-              </div>
-              <form id="llm-form" class="stack-form">
-                <label>
-                  Model Name
-                  <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
-                </label>
-                <datalist id="setting-model-options"></datalist>
-                <label class="settings-choice-field settings-choice-field--medium">
-                  Reasoning Effort
-                  <select id="setting-reasoning-effort"></select>
-                </label>
-                <div id="setting-codex-auth-controls" class="stack-form">
-                  <p id="setting-codex-status" class="small-note" aria-live="polite">Codex login: checking...</p>
-                  <div id="setting-codex-install" class="settings-subsection" hidden>
-                    <label for="setting-codex-install-command">Install Codex CLI</label>
-                    <textarea id="setting-codex-install-command" rows="3" readonly spellcheck="false" aria-describedby="setting-codex-install-help"></textarea>
-                    <p id="setting-codex-install-help" class="small-note"></p>
-                    <div class="form-actions">
-                      <button type="button" id="copy-codex-install-command-btn" class="ghost-btn">Copy install command</button>
-                      <button type="button" id="check-codex-cli-btn" class="ghost-btn">Check again</button>
-                    </div>
-                  </div>
-                  <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
-                  <div class="form-actions">
-                    <button type="button" id="start-codex-login-btn" class="ghost-btn">Login with OpenAI</button>
-                    <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
-                  </div>
-                </div>
-                <div class="settings-subsection settings-codex-desktop-mcp">
-                  <h4>Connect Codex Desktop to Hikari</h4>
-                  <p class="small-note">Copy this setup prompt into a Codex Desktop task. It merges Hikari's live MCP connection into your Codex user configuration without replacing other settings.</p>
-                  <div class="form-actions settings-codex-desktop-mcp-actions">
-                    <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="ghost-btn">Copy Setup Prompt</button>
-                    <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite"></span>
-                  </div>
-                  <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
-                </div>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save LLM Settings</button>
-                </div>
-              </form>
-            </section>
-
-          <section class="settings-section" data-settings-panel="mcp-tools" hidden>
-            <div class="settings-section-head">
-              <h3>Hikari MCP Tools</h3>
-            </div>
-            <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability"></div>
-          </section>
-
-          <section class="settings-section" data-settings-panel="skills" hidden>
-            <div class="settings-section-head">
-              <h3>External Skills</h3>
-            </div>
-            <div class="stack-form">
-              <label class="inline-row settings-toggle-row settings-switch-row">
-                <input id="setting-agent-external-skills-enabled" type="checkbox" />
-                <span>External skills enabled</span>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
-              </div>
-              <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
-            </div>
-          </section>
-
-
-          <section class="settings-section" data-settings-panel="plugins" hidden>
-            <div class="settings-section-head">
-              <h3>Plugins</h3>
-            </div>
-            <div class="stack-form">
-              <div class="form-actions">
-                <button type="button" id="setting-plugins-add-btn" class="primary-btn">Add Plugin Folder</button>
-                <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">Reload App</button>
-              </div>
-              <p id="setting-plugins-status" class="small-note" aria-live="polite"></p>
-              <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite"></div>
-            </div>
-          </section>
-
-        </div>
+          <div class="settings-nav-group">
+            <h3 class="settings-nav-heading">
+              Lab preferences
+            </h3>
+            <button type="button" class="settings-nav-item" data-settings-target="locations" aria-pressed="false">
+              <span>
+                Locations &amp; samples
+              </span>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal" aria-pressed="false">
+              <span>
+                Papers
+              </span>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="notebook-pdf" aria-pressed="false">
+              <span>
+                Notebook PDF
+              </span>
+            </button>
+          </div>
+          <div class="settings-nav-group">
+            <h3 class="settings-nav-heading">
+              Agent &amp; extensions
+            </h3>
+            <button type="button" class="settings-nav-item" data-settings-target="llm" aria-pressed="false">
+              <span>
+                Codex
+              </span>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="mcp-tools" aria-pressed="false">
+              <span>
+                Tool access
+              </span>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="skills" aria-pressed="false">
+              <span>
+                Skills &amp; plugins
+              </span>
+            </button>
+          </div>
+        </section>
       </div>
-    </section>
+    </aside>
+    <div class="settings-detail left-rail-template__main">
+      <section class="settings-section" data-settings-panel="appearance">
+        <div class="settings-section-head">
+          <h3>
+            Appearance
+          </h3>
+          <p class="settings-description">
+            Make Hikari comfortable to work in.
+          </p>
+        </div>
+        <form id="appearance-form" class="stack-form settings-preference-form">
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-mode">
+                Theme
+              </label>
+              <p>
+                Choose a light or dark workspace.
+              </p>
+            </div>
+            <div>
+              <select id="setting-mode" hidden>
+                <option value="day">
+                  Day
+                </option>
+                <option value="night">
+                  Night
+                </option>
+              </select>
+              <div class="settings-theme-options" role="group" aria-label="Theme">
+                <button type="button" data-settings-mode="day" aria-pressed="true">
+                  Day
+                </button>
+                <button type="button" data-settings-mode="night" aria-pressed="false">
+                  Night
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-font-size">
+                Text size
+              </label>
+              <p>
+                Applies throughout Hikari.
+              </p>
+            </div>
+            <select id="setting-font-size">
+              <option value="14">
+                Small
+              </option>
+              <option value="16">
+                Medium
+              </option>
+              <option value="18">
+                Large
+              </option>
+            </select>
+          </div>
+          <div id="setting-appearance-preview" class="settings-appearance-preview" aria-label="Appearance preview">
+            <div class="settings-preview-heading">
+              <span>
+                Notebook
+              </span>
+              <span>
+                Preview
+              </span>
+            </div>
+            <div class="settings-preview-page">
+              <strong>
+                Protein expression · Day 2
+              </strong>
+              <p>
+                Compare induction conditions for the next assay.
+              </p>
+              <div class="settings-preview-task">
+                <span>
+                  ✓ Record culture density
+                </span>
+                <span class="settings-preview-badge">
+                  Complete
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-save-bar">
+            <span class="small-note" data-settings-save-status role="status">
+              All changes saved
+            </span>
+            <div class="form-actions">
+              <button type="button" class="ghost-btn" data-settings-discard disabled>
+                Discard
+              </button>
+              <button type="submit" class="primary-btn" disabled>
+                Save changes
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+      <section class="settings-section" data-settings-panel="storage" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Storage &amp; data
+          </h3>
+          <p class="settings-description">
+            Your workspace files, in one place.
+          </p>
+        </div>
+        <form id="storage-form" class="stack-form">
+          <label>
+            Root Folder Path
+            <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
+          </label>
+          <div class="form-actions">
+            <button type="button" id="select-storage-path-btn" class="ghost-btn">
+              Select Folder
+            </button>
+            <button type="submit" class="primary-btn">
+              Save Storage Path
+            </button>
+          </div>
+        </form>
+        <details class="settings-disclosure">
+          <summary>
+            Diagnostics &amp; app information
+          </summary>
+          <div class="form-actions">
+            <button type="button" id="open-logs-folder-btn" class="ghost-btn">
+              Open Logs Folder
+            </button>
+            <button type="button" id="open-third-party-notices-btn" class="ghost-btn">
+              Third-Party Notices
+            </button>
+          </div>
+        </details>
+      </section>
+      <section class="settings-section" data-settings-panel="startup" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Startup
+          </h3>
+          <p class="settings-description">
+            Choose where your next session begins.
+          </p>
+        </div>
+        <form id="startup-form" class="stack-form settings-preference-form">
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-startup-default-view">
+                Open on launch
+              </label>
+              <p>
+                Your default starting module.
+              </p>
+            </div>
+            <select id="setting-startup-default-view">
+              <option value="home-view">
+                Home
+              </option>
+              <option value="protocol-management-view">
+                Protocols
+              </option>
+              <option value="biology-notebook-view">
+                Notebook
+              </option>
+              <option value="lab-common-inventory-view">
+                Chemicals
+              </option>
+              <option value="sample-registry-view">
+                Samples
+              </option>
+              <option value="assay-view">
+                Plate
+              </option>
+              <option value="workflow-management-view">
+                Workflows
+              </option>
+              <option value="papers-view">
+                Papers
+              </option>
+              <option value="agent-view">
+                Agent
+              </option>
+              <option value="sequence-viewer-view">
+                DNA
+              </option>
+              <option value="tool-box-view">
+                Tools
+              </option>
+              <option value="setting-view">
+                Settings
+              </option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-startup-remember-last-view">
+                Resume last module
+              </label>
+              <p>
+                Takes priority over your default.
+              </p>
+            </div>
+            <input id="setting-startup-remember-last-view" type="checkbox" />
+          </div>
+          <div class="settings-save-bar">
+            <span class="small-note" data-settings-save-status role="status">
+              All changes saved
+            </span>
+            <div class="form-actions">
+              <button type="button" class="ghost-btn" data-settings-discard disabled>
+                Discard
+              </button>
+              <button type="submit" class="primary-btn" disabled>
+                Save changes
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+      <section class="settings-section" data-settings-panel="notebook-pdf" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Notebook PDF
+          </h3>
+          <p class="settings-description">
+            Set the defaults for notebook exports.
+          </p>
+        </div>
+        <form id="notebook-pdf-form" class="stack-form settings-preference-form">
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-notebook-pdf-page-size">
+                Page size
+              </label>
+              <p>
+                Used for new notebook exports.
+              </p>
+            </div>
+            <select id="setting-notebook-pdf-page-size">
+              <option value="letter">
+                US Letter
+              </option>
+              <option value="a4">
+                A4
+              </option>
+              <option value="a5">
+                A5
+              </option>
+              <option value="legal">
+                US Legal
+              </option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-notebook-pdf-staple-edge">
+                Binding space
+              </label>
+              <p>
+                Reserve an edge for stapling.
+              </p>
+            </div>
+            <select id="setting-notebook-pdf-staple-edge">
+              <option value="none">
+                None
+              </option>
+              <option value="left">
+                Left edge
+              </option>
+              <option value="top">
+                Top edge
+              </option>
+            </select>
+          </div>
+          <div class="settings-save-bar">
+            <span class="small-note" data-settings-save-status role="status">
+              All changes saved
+            </span>
+            <div class="form-actions">
+              <button type="button" class="ghost-btn" data-settings-discard disabled>
+                Discard
+              </button>
+              <button type="submit" class="primary-btn" disabled>
+                Save changes
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+      <section class="settings-section" data-settings-panel="locations" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Locations &amp; samples
+          </h3>
+          <p class="settings-description">
+            Keep names consistent across your lab.
+          </p>
+        </div>
+        <div class="stack-form">
+          <h4>
+            Inventory locations
+          </h4>
+          <div class="inline-row settings-location-entry">
+            <input id="setting-location-input" placeholder="Add approximate location" />
+            <button type="button" id="setting-location-add-btn" class="ghost-btn">
+              Add Location
+            </button>
+          </div>
+          <div id="setting-location-list" class="stack-form">
+          </div>
+        </div>
+        <div class="stack-form">
+          <div class="settings-subsection">
+            <h4>
+              Sample storage
+            </h4>
+            <div class="inline-row settings-location-entry settings-sample-inventory-add">
+              <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
+              <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample storage location" title="Add storage location">
+                <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </div>
+            <div id="setting-sample-inventory-location-list" class="stack-form">
+            </div>
+          </div>
+          <details class="settings-disclosure">
+            <summary>
+              Sample type names
+            </summary>
+            <form id="sample-type-labels-form" class="stack-form settings-subsection">
+              <div class="inline-row settings-sample-type-add">
+                <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type" />
+                <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type">
+                  <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <path d="M12 5v14M5 12h14"/>
+                  </svg>
+                </button>
+              </div>
+              <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list">
+              </ul>
+            </form>
+          </details>
+        </div>
+      </section>
+      <section class="settings-section" data-settings-panel="preferred-journal" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Papers
+          </h3>
+          <p class="settings-description">
+            Set the journals you prefer for literature searches.
+          </p>
+        </div>
+        <form id="preferred-journal-form" class="stack-form">
+          <label>
+            Journal Names or URLs
+            <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+          </label>
+          <div id="setting-preferred-journal-list" class="stack-form">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">
+              Add Journal
+            </button>
+            <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">
+              Clear
+            </button>
+          </div>
+        </form>
+      </section>
+      <section class="settings-section" data-settings-panel="llm" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Codex
+          </h3>
+          <p class="settings-description">
+            Configure the AI you use inside Hikari.
+          </p>
+        </div>
+        <div class="settings-codex-tabs" role="tablist" aria-label="Codex setup">
+          <button type="button" id="codex-hikari-tab" role="tab" aria-selected="true" aria-controls="codex-hikari-panel">
+            Codex in Hikari
+          </button>
+          <button type="button" id="codex-desktop-tab" role="tab" aria-selected="false" aria-controls="codex-desktop-panel" tabindex="-1">
+            Connect Codex Desktop
+          </button>
+        </div>
+        <div id="codex-hikari-panel" role="tabpanel" aria-labelledby="codex-hikari-tab">
+          <p class="small-note">
+            Configure the AI used inside Hikari.
+          </p>
+          <div id="setting-codex-auth-controls" class="settings-codex-account stack-form">
+            <div class="settings-codex-account-row">
+              <p id="setting-codex-status" class="small-note" aria-live="polite">
+                OpenAI account: checking…
+              </p>
+              <div class="form-actions">
+                <button type="button" id="start-codex-login-btn" class="ghost-btn">
+                  Sign in with OpenAI
+                </button>
+                <button type="button" id="clear-codex-login-btn" class="ghost-btn" hidden>
+                  Sign out
+                </button>
+              </div>
+            </div>
+            <div id="setting-codex-install" class="settings-subsection" hidden>
+              <h4>
+                Install Codex CLI
+              </h4>
+              <p class="small-note">
+                Hikari needs Codex CLI to run its AI. Copy the command below and run it in your terminal.
+              </p>
+              <textarea id="setting-codex-install-command" rows="3" readonly spellcheck="false" aria-label="Codex CLI install command" aria-describedby="setting-codex-install-help">
+              </textarea>
+              <p id="setting-codex-install-help" class="small-note">
+              </p>
+              <div class="form-actions">
+                <button type="button" id="copy-codex-install-command-btn" class="primary-btn">
+                  Copy install command
+                </button>
+                <button type="button" id="check-codex-cli-btn" class="ghost-btn">
+                  Check again
+                </button>
+              </div>
+            </div>
+          </div>
+          <form id="llm-form" class="stack-form settings-preference-form">
+            <div class="settings-codex-model-fields">
+              <div class="settings-row">
+                <div class="settings-row-copy">
+                  <label for="setting-model">
+                    Model
+                  </label>
+                  <p>
+                    Used for new agent requests.
+                  </p>
+                </div>
+                <select id="setting-model">
+                </select>
+              </div>
+              <div class="settings-row">
+                <div class="settings-row-copy">
+                  <label for="setting-reasoning-effort">
+                    Reasoning effort
+                  </label>
+                  <p>
+                    How much time the model spends thinking.
+                  </p>
+                </div>
+                <select id="setting-reasoning-effort">
+                </select>
+              </div>
+            </div>
+            <div class="settings-save-bar">
+              <span class="small-note" data-settings-save-status role="status">
+                All changes saved
+              </span>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-settings-discard disabled>
+                  Discard
+                </button>
+                <button type="submit" class="primary-btn" disabled>
+                  Save changes
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+        <div id="codex-desktop-panel" role="tabpanel" aria-labelledby="codex-desktop-tab" hidden>
+          <p class="small-note">
+            Let Codex Desktop work with your Hikari data and tools.
+          </p>
+          <ol class="settings-codex-steps">
+            <li>
+              <strong>
+                Copy setup instructions
+              </strong>
+              <p class="small-note">
+                Adds Hikari’s connection while preserving your other Codex settings.
+              </p>
+              <div class="form-actions settings-codex-desktop-mcp-actions">
+                <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="primary-btn">
+                  Copy setup instructions
+                </button>
+                <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite">
+                </span>
+              </div>
+              <details id="setting-codex-desktop-preview">
+                <summary>
+                  View setup instructions
+                </summary>
+                <textarea id="setting-codex-desktop-prompt" rows="8" readonly spellcheck="false" aria-label="Codex Desktop setup instructions" placeholder="Open to prepare the setup instructions">
+                </textarea>
+              </details>
+            </li>
+            <li>
+              <strong>
+                Paste into a Codex Desktop task and send
+              </strong>
+              <p class="small-note">
+                Codex will set up the connection. Paste into the task’s message box, not a terminal.
+              </p>
+            </li>
+            <li>
+              <strong>
+                Restart Codex Desktop
+              </strong>
+              <p class="small-note">
+                After setup finishes, restart Codex Desktop once. Keep Hikari open while using the connection.
+              </p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section class="settings-section" data-settings-panel="mcp-tools" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Tool access
+          </h3>
+          <p class="settings-description">
+            Choose which Hikari tools agents can use.
+          </p>
+        </div>
+        <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability">
+        </div>
+      </section>
+      <section class="settings-section" data-settings-panel="skills" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Skills &amp; plugins
+          </h3>
+          <p class="settings-description">
+            Manage the capabilities you add to Hikari.
+          </p>
+        </div>
+        <div class="stack-form">
+          <label class="inline-row settings-toggle-row settings-switch-row">
+            <input id="setting-agent-external-skills-enabled" type="checkbox" />
+            <span>
+              External skills enabled
+            </span>
+          </label>
+          <div class="form-actions">
+            <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">
+              Refresh Skills
+            </button>
+          </div>
+          <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite">
+          </div>
+        </div>
+        <h4>
+          Plugins
+        </h4>
+        <div class="stack-form">
+          <div class="form-actions">
+            <button type="button" id="setting-plugins-add-btn" class="primary-btn">
+              Add Plugin Folder
+            </button>
+            <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">
+              Reload App
+            </button>
+          </div>
+          <p id="setting-plugins-status" class="small-note" aria-live="polite">
+          </p>
+          <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite">
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>

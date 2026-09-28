@@ -40,7 +40,7 @@ label:has(> .sample-plasmid-suggestions) {
 
 .sample-plasmid-suggestions [role="option"]:hover,
 .sample-plasmid-suggestions [aria-selected="true"] {
-  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  background: var(--theme-accent-wash);
 }
 
 .sample-plasmid-suggestions-note {
@@ -158,7 +158,7 @@ label:has(> .sample-plasmid-suggestions) {
   padding: var(--space-14);
   border: 1px solid var(--theme-border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
+  background: var(--theme-surface);
 }
 
 .sample-compound-structure-card h4,

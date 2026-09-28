@@ -1,19 +1,13 @@
 'use strict';
 
+const { positiveModulo } = require('../positive-modulo.cjs');
+
 function clampInteger(value, min, max, fallback = min) {
   const numeric = Math.round(Number(value));
   if (!Number.isFinite(numeric)) {
     return fallback;
   }
   return Math.min(max, Math.max(min, numeric));
-}
-
-function positiveModulo(value, modulo) {
-  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
-    return 0;
-  }
-  const numeric = Number(value) || 0;
-  return ((numeric % modulo) + modulo) % modulo;
 }
 
 function normalizeDisplayName(value, fallback = 'feature') {

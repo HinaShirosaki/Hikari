@@ -7,6 +7,7 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolPayload,
   runAppTool
 } = require('./shared.js');
 
@@ -95,19 +96,6 @@ function normalizeProtocolForApp(inputProtocol = {}) {
   return protocol;
 }
 
-function resolveProtocolGenerationPayload(result = {}) {
-  const source = ensureObject(result);
-  const resultPayload = ensureObject(source.result);
-  const outputPayload = ensureObject(source.output);
-  if (Object.keys(resultPayload).length) {
-    return resultPayload;
-  }
-  if (Object.keys(outputPayload).length) {
-    return outputPayload;
-  }
-  return source;
-}
-
 async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
   const rawProtocol = ensureObject(input.protocol);
   const protocol = normalizeProtocolForApp(rawProtocol);
@@ -137,7 +125,7 @@ async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
     }),
     context
   });
-  const payload = resolveProtocolGenerationPayload(result);
+  const payload = resolveDirectToolPayload(result);
   const outputProtocol = ensureObject(payload.protocol);
   const ok = result?.ok !== false && payload.ok !== false && Boolean(Object.keys(outputProtocol).length);
   const error = cleanText(payload.error || result?.error, 1200);

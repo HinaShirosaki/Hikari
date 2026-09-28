@@ -1,13 +1,9 @@
 'use strict';
 
-const { ensureObject } = require('../../../lib/normalize.js');
+const { asArray: defaultAsArray, ensureObject } = require('../../../lib/normalize.js');
 const { getRelatedCommentsForPaperId, normalizeRelatedComments } = require('../../shared/paper-comment-context.js');
 
 const DEFAULT_MAX_CONTEXT_BLOCKS = 50;
-
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function defaultCleanText(value) {
   const text = String(value || '');

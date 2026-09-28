@@ -6,7 +6,8 @@
  * `*-palette.css` file instead of expanding this shared theme.
  */
 
-:root {
+:root,
+#setting-appearance-preview[data-mode="day"] {
   color-scheme: light;
 
   /* Page and surface colors */
@@ -30,9 +31,10 @@
   --theme-text-on-accent: #fbf9f4;
 
   /* Actions and status */
-  --theme-accent: #647255;
+  /* The Hikari mark's blue (rainbow-blue), darkened to hold 4.5:1 under on-accent text. */
+  --theme-accent: #4169d8;
   --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-  --theme-focus: #7a8a69;
+  --theme-focus: #5478e6;
   --theme-success: #166534;
   --theme-warning: #b25522;
   --theme-danger: #a74b3a;
@@ -66,37 +68,39 @@
   --theme-scrollbar-thumb-hover: rgba(120, 113, 104, 0.36);
 }
 
-body.theme-night {
+body.theme-night,
+#setting-appearance-preview[data-mode="night"] {
   color-scheme: dark;
 
   /*
-   * Night keeps day's sage/warm-neutral identity. The ramp is monotonic:
+   * Night is a neutral graphite with a faint cool cast, so the Hikari blue
+   * accent (day's #4169d8, lifted for dark) is its only hue. The ramp is monotonic:
    * background < surface < surface-subtle < surface-elevated, so a raised
    * dialog reads as raised. `--theme-border` is tuned to 3:1 against
    * surface-elevated (the lightest thing it ever sits on) because form
    * fields on dark are told apart by their edge, not by their fill.
    */
-  --theme-background: #12150f;
-  --theme-surface: #191d16;
-  --theme-surface-subtle: #242a21;
-  --theme-surface-elevated: #2b3228;
+  --theme-background: #131417;
+  --theme-surface: #1a1b1f;
+  --theme-surface-subtle: #232429;
+  --theme-surface-elevated: #2a2c32;
   --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface));
   --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
   --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
 
-  --theme-border: #727c6b;
-  --theme-border-soft: #3a4235;
+  --theme-border: #767a86;
+  --theme-border-soft: #383a42;
 
-  --theme-text: #e9eee3;
-  --theme-text-muted: #aab4a1;
-  --theme-text-strong: #f7faf2;
+  --theme-text: #e6e7eb;
+  --theme-text-muted: #a2a5ae;
+  --theme-text-strong: #f6f7f9;
   --theme-primary: var(--theme-text-strong);
   /* Accent is light in night mode, so ink that sits on it must be dark. */
-  --theme-text-on-accent: #0e1509;
+  --theme-text-on-accent: #0b1122;
 
-  --theme-accent: #9dba7d;
+  --theme-accent: #8aa4f0;
   --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 20%, transparent);
-  --theme-focus: #b3cf92;
+  --theme-focus: #a6baf5;
   --theme-success: #74d69e;
   --theme-warning: #eeae70;
   --theme-danger: #f3947f;
@@ -106,59 +110,58 @@ body.theme-night {
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
 
-  --theme-loading-background: #12150f;
-  --theme-overlay: rgba(6, 9, 5, 0.5);
-  --theme-overlay-strong: rgba(6, 9, 5, 0.66);
+  --theme-loading-background: #131417;
+  --theme-overlay: rgba(5, 6, 8, 0.5);
+  --theme-overlay-strong: rgba(5, 6, 8, 0.66);
   --theme-shadow-color-subtle: rgba(0, 0, 0, 0.3);
   --theme-shadow-color: rgba(0, 0, 0, 0.44);
   --theme-shadow-color-strong: rgba(0, 0, 0, 0.6);
   --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.4);
   --theme-shadow-medium: 0 6px 14px rgba(0, 0, 0, 0.48);
 
-  --theme-scrollbar-thumb: rgba(226, 236, 220, 0.26);
-  --theme-scrollbar-thumb-hover: rgba(226, 236, 220, 0.42);
+  --theme-scrollbar-thumb: rgba(226, 228, 234, 0.26);
+  --theme-scrollbar-thumb-hover: rgba(226, 228, 234, 0.42);
 }
 
-body.theme-miku {
-  color-scheme: light;
+/*
+ * Tints: the only steps a view may derive from the colors above. Reach for one
+ * of these before writing a new color-mix() percentage; a wash that is 2%
+ * darker is a new color nobody can tell apart, and they add up.
+ *   fill      neutral tonal fill (ghost buttons, empty chips); -strong on hover
+ *   wash      quiet hover / chip background (10%)
+ *   soft      selected / pressed background (18%; accent-soft is per theme)
+ *   line      tinted border, outline or ring
+ *   ink       status or accent text that must hold 4.5:1 on its own wash
+ * Declared on body (not :root) so each theme's colors are substituted, and on
+ * the appearance preview so its swatches follow the mode they preview.
+ */
+body,
+#setting-appearance-preview {
+  --theme-fill: color-mix(in srgb, var(--theme-text) 6%, transparent);
+  --theme-fill-strong: color-mix(in srgb, var(--theme-text) 11%, transparent);
 
-  --theme-background: #ecfbfa;
-  --theme-surface: #f4fdfc;
-  --theme-surface-subtle: #d8f3f1;
-  --theme-surface-elevated: #ffffff;
-  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 18%);
-  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
-  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
+  --theme-accent-wash: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  --theme-accent-line: color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  --theme-accent-ink: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-text-strong));
+  --theme-accent-hover: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong));
 
-  --theme-border: #9bd8d4;
-  --theme-border-soft: #c5ebe8;
+  --theme-success-wash: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  --theme-success-soft: color-mix(in srgb, var(--theme-success) 18%, transparent);
+  --theme-success-line: color-mix(in srgb, var(--theme-success) 40%, transparent);
+  --theme-success-ink: color-mix(in srgb, var(--theme-success) 80%, var(--theme-text-strong));
+  --theme-warning-wash: color-mix(in srgb, var(--theme-warning) 10%, transparent);
+  --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 18%, transparent);
+  --theme-warning-line: color-mix(in srgb, var(--theme-warning) 40%, transparent);
+  --theme-warning-ink: color-mix(in srgb, var(--theme-warning) 80%, var(--theme-text-strong));
+  --theme-danger-wash: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 18%, transparent);
+  --theme-danger-line: color-mix(in srgb, var(--theme-danger) 40%, transparent);
+  --theme-danger-ink: color-mix(in srgb, var(--theme-danger) 80%, var(--theme-text-strong));
 
-  --theme-text: #233b3f;
-  --theme-text-muted: #527378;
-  --theme-text-strong: #142d31;
-  --theme-primary: var(--theme-text-strong);
-  --theme-text-on-accent: #102b2e;
-
-  --theme-accent: #39c5bb;
-  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 22%, transparent);
-  --theme-focus: #219d95;
-  --theme-success: #268b68;
-  --theme-warning: #bd7a24;
-  --theme-danger: #d84e72;
-
-  --theme-panel: var(--theme-surface-elevated);
-  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
-  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-accent) 32%);
-
-  --theme-loading-background: #102b2e;
-  --theme-overlay: rgba(20, 67, 70, 0.2);
-  --theme-overlay-strong: rgba(10, 47, 50, 0.48);
-  --theme-shadow-color-subtle: rgba(22, 87, 87, 0.08);
-  --theme-shadow-color: rgba(22, 87, 87, 0.14);
-  --theme-shadow-color-strong: rgba(22, 87, 87, 0.2);
-  --theme-shadow-small: 0 2px 8px rgba(22, 87, 87, 0.12);
-  --theme-shadow-medium: 0 6px 14px rgba(22, 87, 87, 0.16);
-
-  --theme-scrollbar-thumb: rgba(45, 151, 145, 0.3);
-  --theme-scrollbar-thumb-hover: rgba(45, 151, 145, 0.46);
+  /* Activity heatmaps (Home, notebook projects): empty, then four accent steps. */
+  --theme-heat-0: color-mix(in srgb, var(--theme-text-strong) 7%, var(--theme-surface-elevated));
+  --theme-heat-1: color-mix(in srgb, var(--theme-accent) 24%, var(--theme-surface-elevated));
+  --theme-heat-2: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-surface-elevated));
+  --theme-heat-3: color-mix(in srgb, var(--theme-accent) 73%, var(--theme-surface-elevated));
+  --theme-heat-4: var(--theme-accent);
 }

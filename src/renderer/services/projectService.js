@@ -1,4 +1,26 @@
-export function createProjectService(registry) {
+export function createProjectService(registry, deps = {}) {
+  const state = deps.state || null;
+
+  function ensureProjectRecord(record = {}) {
+    if (!state || typeof state !== 'object') {
+      return null;
+    }
+    if (!Array.isArray(state.projects)) {
+      state.projects = [];
+    }
+    const source = String(record.source || '').trim();
+    const name = String(record.name || '').trim();
+    const existing = state.projects.find((project) => (
+      (source && String(project?.source || '').trim() === source)
+      || (name && String(project?.name || '').trim().toLowerCase() === name.toLowerCase())
+    ));
+    if (existing) {
+      return existing;
+    }
+    state.projects.push(record);
+    return record;
+  }
+
   function handleProjectsChanged({ refreshNotebook = true } = {}) {
     if (refreshNotebook) {
       registry.get('biologyNotebook').renderProjectOptions?.();
@@ -14,6 +36,7 @@ export function createProjectService(registry) {
   }
 
   return {
+    ensureProjectRecord,
     handleProjectsChanged
   };
 }

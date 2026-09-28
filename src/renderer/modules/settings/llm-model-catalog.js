@@ -53,22 +53,17 @@ export function createLlmModelCatalog() {
   }
 
   function getModelOptions(provider) {
-    return provider === 'codex' && codexCatalog?.models?.length
-      ? codexCatalog.models.map((entry) => ({ value: entry.id, label: entry.label || entry.id }))
-      : getLlmProviderModelOptions(provider);
+    if (provider !== 'codex') return getLlmProviderModelOptions(provider);
+    // Only Codex knows which models this account can use; it writes that list on
+    // its first run. Until then offer just "Use the default model" rather than the
+    // bundled seed list, whose names get retired upstream.
+    return (codexCatalog?.models || []).map((entry) => ({ value: entry.id, label: entry.label || entry.id }));
   }
 
-  function normalizeModel(provider, model = '') {
-    const cleanModel = String(model || '').trim();
-    if (!cleanModel) {
-      return '';
-    }
-    if (provider === 'codex' && codexCatalog?.models?.length) {
-      return getCodexModelConfig(cleanModel)?.id
-        || String(codexCatalog.defaultModel || '').trim()
-        || cleanModel;
-    }
-    return cleanModel;
+  // A saved choice is kept as-is, even one Codex hides or has retired; the main
+  // process falls back to Codex's default when Codex no longer offers it.
+  function normalizeModel(_provider, model = '') {
+    return String(model || '').trim();
   }
 
   function normalizeReasoning(provider, model = '', reasoningEffort = '') {

@@ -1,4 +1,4 @@
-import { ensureDashboardState, quickLogId } from './utils.js';
+import { ensureDashboardState, formatDateLocal, quickLogId } from './utils.js';
 import { showTransientNotice } from '../../lib/notify.js';
 
 const DRAFT_SAVE_DELAY_MS = 400;
@@ -25,6 +25,7 @@ export function initQuickLogWidget({
   state,
   persist,
   createId,
+  safeText,
   render,
   onSendQuickLogToAgent,
   scheduleDraftPersist = (callback, delay) => globalThis.setTimeout(callback, delay),
@@ -35,7 +36,8 @@ export function initQuickLogWidget({
     quickLogInput,
     quickLogStatus,
     quickLogSaveBtn,
-    quickLogAgentBtn
+    quickLogAgentBtn,
+    quickLogRecent
   } = elements;
   let draftPersistTimer = null;
   let handoffPending = false;
@@ -51,18 +53,29 @@ export function initQuickLogWidget({
     return state.settings.dashboard.quickLogEntries;
   }
 
-  function lastSavedSummary() {
-    const last = getEntries().at(-1);
-    if (!last) {
-      return '';
-    }
-    const stamp = new Date(String(last.createdAt || last.updatedAt || ''));
-    const time = Number.isNaN(stamp.getTime())
-      ? ''
-      : stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    const text = String(last.text || '').trim();
-    const short = text.length > 26 ? `${text.slice(0, 26)}…` : text;
-    return `Last saved${time ? ` ${time}` : ''}${short ? ` · ${short}` : ''}`;
+  function entryTime(entry) {
+    const stamp = new Date(String(entry?.createdAt || entry?.updatedAt || ''));
+    return Number.isNaN(stamp.getTime()) ? null : stamp;
+  }
+
+  // Today's last two entries confirm where a save went; older ones stay in storage.
+  function renderRecentEntries() {
+    const today = formatDateLocal(new Date());
+    const recent = getEntries()
+      .filter((entry) => {
+        const stamp = entryTime(entry);
+        return stamp && formatDateLocal(stamp) === today && String(entry?.text || '').trim();
+      })
+      .slice(-2)
+      .reverse();
+    quickLogRecent.hidden = !recent.length;
+    quickLogRecent.innerHTML = recent.length
+      ? `<p class="home-quicklog-recent-label">Saved today</p>${recent.map((entry) => {
+        const stamp = entryTime(entry);
+        const time = stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        return `<p class="home-quicklog-recent-row"><time datetime="${safeText(stamp.toISOString())}">${safeText(time)}</time><span>${safeText(entry.text)}</span></p>`;
+      }).join('')}`
+      : '';
   }
 
   function syncControls() {
@@ -82,7 +95,7 @@ export function initQuickLogWidget({
       if (announce) {
         setStatus(String(state.settings.dashboard.quickLogDraft || '').trim()
           ? 'Draft saved locally.'
-          : lastSavedSummary());
+          : '');
       }
       return true;
     } catch (error) {
@@ -113,10 +126,11 @@ export function initQuickLogWidget({
       quickLogInput.value = draft;
     }
     syncControls();
+    renderRecentEntries();
     if (!handoffPending) {
       setStatus(draftPersistTimer !== null
         ? 'Saving draft…'
-        : (draft.trim() ? 'Draft saved locally.' : lastSavedSummary()));
+        : (draft.trim() ? 'Draft saved locally.' : ''));
     }
   }
 
@@ -124,7 +138,7 @@ export function initQuickLogWidget({
     ensureDashboardState(state);
     state.settings.dashboard.quickLogDraft = quickLogInput.value;
     syncControls();
-    setStatus(quickLogInput.value.trim() ? 'Saving draft…' : lastSavedSummary());
+    setStatus(quickLogInput.value.trim() ? 'Saving draft…' : '');
     scheduleDraftSave();
   }
 

@@ -81,7 +81,6 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
         name: 'Live Protocol Name',
         steps: [
           {
-            id: 'step-live',
             text: 'Live library step.',
             placeholders: []
           }
@@ -101,7 +100,6 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
           name: 'Stored Snapshot Name',
           steps: [
             {
-              id: 'step-saved',
               text: 'Stored notebook step with {{ph:volume}}.',
               placeholders: [
                 { id: 'volume', name: 'Volume' }
@@ -110,7 +108,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
           ]
         },
         values: {
-          'step-saved:volume': '15 mL'
+          'volume': '15 mL'
         },
         result: 'Snapshot-backed page',
         resultFiles: [],
@@ -148,7 +146,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Stored Snapshot Name');
   assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, true);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Stored notebook step with/);
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /data-nb-key-ref="step-saved:volume"/);
+  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /data-nb-key-ref="volume"/);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, />15 mL</);
   assert.doesNotMatch(document.getElementById('biology-notebook-steps').innerHTML, /Live library step/);
   assert.equal(document.getElementById('biology-notebook-page-starter').hidden, true);
@@ -183,7 +181,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.match(notebookShellCss, /\.biology-notebook-title-display,\s*\.biology-notebook-title-editor\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*0;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;[^}]*font-size:\s*1\.17em;/s);
   assert.match(notebookShellCss, /\.biology-notebook-title-editor\s*\{[^}]*overflow:\s*hidden;[^}]*resize:\s*none;[^}]*field-sizing:\s*content;/s);
 });
-test('biology-notebook page naming uses a small model once and skips generated or user-renamed names', async () => {
+test('biology-notebook page naming uses the chosen Codex model once and skips generated or user-renamed names', async () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
@@ -214,7 +212,6 @@ test('biology-notebook page naming uses a small model once and skips generated o
     name: 'Transformation',
     steps: [
       {
-        id: 'step-1',
         text: 'Transform cells with {{ph:dna}} and recover in {{ph:medium}}.',
         placeholders: [
           { id: 'dna', name: 'DNA' },
@@ -237,8 +234,8 @@ test('biology-notebook page naming uses a small model once and skips generated o
         experimentName: 'Transformation',
         protocolSnapshot,
         values: {
-          'step-1:dna': 'pET28a-GFP',
-          'step-1:medium': 'SOC'
+          'dna': 'pET28a-GFP',
+          'medium': 'SOC'
         },
         result: '',
         resultFiles: [],
@@ -254,8 +251,8 @@ test('biology-notebook page naming uses a small model once and skips generated o
         experimentName: 'GFP pilot transformation',
         protocolSnapshot,
         values: {
-          'step-1:dna': 'pET28a-GFP',
-          'step-1:medium': 'SOC'
+          'dna': 'pET28a-GFP',
+          'medium': 'SOC'
         },
         result: '',
         resultFiles: [],
@@ -303,13 +300,13 @@ test('biology-notebook page naming uses a small model once and skips generated o
   assert.equal(directCalls.length, 1);
   assert.equal(directCalls[0].moduleId, 'notebook');
   assert.equal(directCalls[0].task, 'page-name');
-  assert.equal(directCalls[0].llm.model, 'gpt-5.4-mini');
+  assert.equal(directCalls[0].llm.model, 'gpt-5.4');
   assert.equal(directCalls[0].llm.reasoningEffort, 'low');
   assert.equal(directCalls[0].maxOutputTokens, 40);
   assert.equal(state.notebookEntries[0].experimentName, 'pET28a GFP SOC Transformation');
   assert.equal(state.notebookEntries[0].experimentNameSource, 'generated');
   assert.ok(state.notebookEntries[0].experimentNameGeneratedAt);
-  assert.equal(state.notebookEntries[0].experimentNameGeneratedModel, 'gpt-5.4-mini');
+  assert.equal(state.notebookEntries[0].experimentNameGeneratedModel, 'gpt-5.4');
   assert.ok(persistCalls >= 1);
 
   notebook.openEntry('generated-page');
@@ -329,8 +326,8 @@ test('biology-notebook page naming uses a small model once and skips generated o
     experimentName: 'Transformation',
     protocolSnapshot,
     values: {
-      'step-1:dna': 'pET28a-GFP',
-      'step-1:medium': 'SOC'
+      'dna': 'pET28a-GFP',
+      'medium': 'SOC'
     },
     result: '',
     resultFiles: [],
@@ -364,7 +361,6 @@ test('biology-notebook page naming recognizes completion and legacy rename state
     name: 'Expression',
     steps: [
       {
-        id: 'step-1',
         placeholders: [
           { id: 'temperature', name: 'Temperature' },
           { id: 'duration', name: 'Duration' }
@@ -374,12 +370,12 @@ test('biology-notebook page naming recognizes completion and legacy rename state
   };
 
   assert.equal(namingModule.areAllNotebookPlaceholdersFilled(protocol, {
-    'step-1:temperature': '18 C',
-    'step-1:duration': '16 h'
+    'temperature': '18 C',
+    'duration': '16 h'
   }), true);
   assert.equal(namingModule.areAllNotebookPlaceholdersFilled(protocol, {
-    'step-1:temperature': '18 C',
-    'step-1:duration': '   '
+    'temperature': '18 C',
+    'duration': '   '
   }), false);
   assert.equal(namingModule.areAllNotebookPlaceholdersFilled({ name: 'No placeholders', steps: [] }, {}), false);
   assert.equal(namingModule.resolveNotebookExperimentNameSource({
@@ -472,7 +468,7 @@ test('biology-notebook attachment images resolve from portable records for rende
   assert.match(notebookCss, /\.biology-notebook-attachment-image img\s*\{[^}]*width:\s*auto[^}]*height:\s*auto[^}]*max-height:\s*260px[^}]*border:\s*0/s);
   assert.doesNotMatch(notebookCss, /\.biology-notebook-attachment-image img\s*\{[^}]*height:\s*clamp\(/s);
 });
-test('biology-notebook page metadata omits redundant result file and table summaries', () => {
+test('biology-notebook page metadata shows only times', () => {
   const viewerModule = loadEsmStyleModule(path.join(
     __dirname,
     'src',
@@ -482,35 +478,21 @@ test('biology-notebook page metadata omits redundant result file and table summa
     'entry',
     'viewer-renderer.js'
   ));
-  const meta = viewerModule.buildViewerMeta({
-    projects: [{ id: 'project-1', name: 'Atlas' }],
-    entry: {
-      id: 'entry-1',
-      projectId: 'project-1',
-      projectName: 'Atlas',
-      protocolName: 'Binding assay',
-      experimentName: 'Binding assay',
-      notebookState: 'executed',
-      updatedAt: '2026-07-24T12:00:00.000Z',
-      resultFiles: ['VennR4.png'],
-      resultTables: [{
-        columns: [{ field: 'a' }, { field: 'b' }, { field: 'c' }],
-        rows: [{}, {}, {}]
-      }],
-      toolCalculations: [{
-        id: 'calculation-1',
-        type: 'molarity',
-        title: 'Molarity',
-        result: 'Mass needed: 5 mg'
-      }],
-      sampleLinks: [{ sampleId: 'sample-1' }]
-    },
-    isSavedEntry: true
-  });
-  assert.doesNotMatch(meta, /Result files:/);
-  assert.doesNotMatch(meta, /Result table:/);
-  assert.match(meta, /1 calculation \(Molarity\)/);
-  assert.match(meta, /1 linked sample/);
+  const entry = {
+    id: 'entry-1',
+    projectId: 'project-1',
+    protocolName: 'Binding assay',
+    notebookState: 'executed',
+    executedAt: '2026-07-24T12:00:00.000Z',
+    updatedAt: '2026-07-25T12:00:00.000Z',
+    resultFiles: ['VennR4.png'],
+    toolCalculations: [{ id: 'calculation-1', type: 'molarity', title: 'Molarity', result: 'Mass needed: 5 mg' }],
+    sampleLinks: [{ sampleId: 'sample-1' }]
+  };
+  assert.match(viewerModule.buildViewerMeta({ entry }), /^Executed [^·]+ · Updated [^·]+$/);
+  assert.match(viewerModule.buildViewerMeta({ entry: { ...entry, updatedAt: entry.executedAt } }), /^Executed [^·]+$/);
+  assert.match(viewerModule.buildViewerMeta({ entry: { ...entry, notebookState: 'planned' } }), /^Updated [^·]+$/);
+  assert.equal(viewerModule.buildViewerMeta({ entry: null }), '');
 });
 test('biology-notebook places Clarify and Save inside the notes composer', () => {
   const html = fs.readFileSync(path.join(
@@ -535,7 +517,7 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
   assert.match(html, /id="biology-notebook-table-context-menu"[^>]*role="menu"[\s\S]*?id="biology-notebook-add-table-row-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-add-table-column-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-remove-table-btn"[^>]*role="menuitem"/);
   assert.match(css, /\.biology-notebook-linked-results:empty,[\s\S]*?\.biology-notebook-tool-calculations:empty\s*\{[^}]*display:\s*none;/s);
   assert.match(css, /\.biology-notebook-notes-composer\s*\{[^}]*position:\s*relative;/s);
-  assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*10px\s+12px\s+50px;/s);
+  assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-12\)\s+50px;/s);
   assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
 });
 test('biology-notebook quick sample submit is a compact accessible icon', () => {
@@ -797,7 +779,6 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
         name: 'Source Protocol',
         steps: [
           {
-            id: 'step-saved',
             text: 'Add {{ph:volume}} buffer.',
             placeholders: [
               { id: 'volume', name: 'Volume' }
@@ -820,7 +801,6 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
           name: 'Source Protocol',
           steps: [
             {
-              id: 'step-saved',
               text: 'Add {{ph:volume}} buffer.',
               placeholders: [
                 { id: 'volume', name: 'Volume' }
@@ -829,7 +809,7 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
           ]
         },
         values: {
-          'step-saved:volume': '15 mL'
+          'volume': '15 mL'
         },
         result: 'Snapshot-backed page',
         resultFiles: [],
@@ -888,10 +868,9 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
   assert.equal(state.notebookEntries[0].experimentName, 'Edited Page Copy');
   assert.equal(state.notebookEntries[0].protocolSnapshot.name, 'Edited Page Copy');
   assert.equal(state.notebookEntries[0].protocolSnapshot.steps.length, 2);
-  assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].id, 'step-saved');
   assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].id, 'volume');
   assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].name, 'Sample volume');
-  assert.equal(state.notebookEntries[0].values['step-saved:volume'], '15 mL');
+  assert.equal(state.notebookEntries[0].values['volume'], '15 mL');
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Sample volume/);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Mix thoroughly\./);
   assert.ok(persistCalls >= 1);
@@ -983,7 +962,7 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
         id: 'pr1',
         name: 'Expression Readout',
         steps: [
-          { id: 's1', text: 'Capture result table.', placeholders: [] }
+          { text: 'Capture result table.', placeholders: [] }
         ]
       }
     ],
@@ -1141,7 +1120,7 @@ test('biology-notebook creates a result table from a placeholder variable', () =
     }
   }
 
-  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'lib', 'spreadsheet-tables.js'), {});
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'spreadsheet-tables', 'index.js'), {});
   const resultTableController = resultTableModule.createSpreadsheetTables({
     host: document.getElementById('biology-notebook-result-table'),
     statusEl: document.getElementById('biology-notebook-result-table-status'),
@@ -1236,7 +1215,7 @@ test('biology-notebook result table repaints edited cells and recomputes formula
     }
   }
 
-  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'lib', 'spreadsheet-tables.js'), { document });
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'spreadsheet-tables', 'index.js'), { document });
   const controller = resultTableModule.createSpreadsheetTables({
     host: document.getElementById('biology-notebook-result-table'),
     statusEl: document.getElementById('biology-notebook-result-table-status'),
@@ -1319,7 +1298,7 @@ test('biology-notebook table context menu targets the table that was right-click
   }
 
   const resultTableModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'lib', 'spreadsheet-tables.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'spreadsheet-tables', 'index.js'),
     { document, window: windowRef }
   );
   const host = document.getElementById('biology-notebook-result-table');
@@ -1415,7 +1394,7 @@ test('biology-notebook placeholder context menu exposes only a plain Add Table a
     dataset: { placeholderName: 'Incubation temperature' },
     querySelector: () => ({ value: '37 °C' })
   };
-  const token = { dataset: { nbKeyRef: 'step-1:temperature' } };
+  const token = { dataset: { nbKeyRef: 'temperature' } };
 
   controller.open({ wrap, token, x: 100, y: 100 });
   assert.match(menu.innerHTML, /role="menuitem"[^>]*data-placeholder-add-table[^>]*>[\s\S]*?Add Table[\s\S]*?<\/button>/);
@@ -1425,7 +1404,7 @@ test('biology-notebook placeholder context menu exposes only a plain Add Table a
     preventDefault() {}
   });
 
-  assert.equal(receivedState.key, 'step-1:temperature');
+  assert.equal(receivedState.key, 'temperature');
   assert.equal(receivedState.placeholderName, 'Incubation temperature');
   assert.equal(receivedState.value, '37 °C');
   assert.equal(menu.hidden, true);
@@ -1439,11 +1418,11 @@ test('biology-notebook placeholder editor keeps its chip width on click and grow
   };
   const hiddenValue = {
     value: '',
-    dataset: { nbKey: 'step-1:volume' }
+    dataset: { nbKey: 'volume' }
   };
   const token = {
     hidden: false,
-    dataset: { nbKeyRef: 'step-1:volume' },
+    dataset: { nbKeyRef: 'volume' },
     getBoundingClientRect: () => ({ width: 61 }),
     closest: (selector) => selector === '[data-inline-placeholder]' ? wrap : null
   };
@@ -1537,7 +1516,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
         id: 'pr1',
         name: 'Bench Prep',
         steps: [
-          { id: 's1', text: 'Prepare reaction.', placeholders: [] }
+          { text: 'Prepare reaction.', placeholders: [] }
         ]
       }
     ],
@@ -1631,7 +1610,6 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.doesNotMatch(renderedCalculations, /NaCl: 8\.766 g/i);
   assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.doesNotMatch(renderedCalculations, /<p[\s>]/);
-  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /2 calculations/i);
 
   // A recorded reaction is a starting point: its cells are editable, and one
   // edit runs the engine again for every derived volume and the fill.
@@ -1714,7 +1692,7 @@ test('biology-notebook bench toolbox builds one table per tab click and reopens 
 
   const state = {
     projects: [{ id: 'p1', name: 'Atlas' }],
-    protocols: [{ id: 'pr1', name: 'Bench Prep', steps: [{ id: 's1', text: 'Prepare reactions.', placeholders: [] }] }],
+    protocols: [{ id: 'pr1', name: 'Bench Prep', steps: [{ text: 'Prepare reactions.', placeholders: [] }] }],
     notebookEntries: [],
     assays: [],
     gelAnalyses: [],
@@ -1817,8 +1795,8 @@ test('biology-notebook bench toolbox belongs to the open page, not to every page
   const state = {
     projects: [{ id: 'p1', name: 'Atlas' }],
     protocols: [
-      { id: 'pr1', name: 'Bench Prep', steps: [{ id: 's1', text: 'Prepare reaction.', placeholders: [] }] },
-      { id: 'pr2', name: 'Other Prep', steps: [{ id: 's2', text: 'Other bench work.', placeholders: [] }] }
+      { id: 'pr1', name: 'Bench Prep', steps: [{ text: 'Prepare reaction.', placeholders: [] }] },
+      { id: 'pr2', name: 'Other Prep', steps: [{ text: 'Other bench work.', placeholders: [] }] }
     ],
     notebookEntries: [],
     assays: [],

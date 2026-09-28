@@ -138,7 +138,7 @@
   gap: var(--space-8);
   width: 184px;
   padding: var(--space-10);
-  border: 1px solid color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
+  border: 1px solid var(--theme-accent-line);
   background: var(--theme-surface-elevated);
   box-shadow: 0 14px 28px var(--theme-shadow-color);
 }
@@ -187,5 +187,5 @@
 
 .biology-notebook-tool-calculation-input:focus {
   outline: none;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+  background: var(--theme-accent-wash);
 }

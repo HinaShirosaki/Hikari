@@ -24,7 +24,7 @@ export function createRendererServices(registry, options = {}) {
   return {
     protocol: createProtocolService(registry, options.protocol || {}),
     notebook: createNotebookService(registry),
-    project: createProjectService(registry),
+    project: createProjectService(registry, options.project || {}),
     inventory: createInventoryService(registry),
     analysis: createAnalysisService(registry),
     sequence: createSequenceService(registry)

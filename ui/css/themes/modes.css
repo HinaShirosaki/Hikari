@@ -7,7 +7,3 @@ body.ui-neutral-compact {
 body.ui-neutral-compact.theme-night {
   color-scheme: dark;
 }
-
-body.ui-neutral-compact.theme-miku {
-  color-scheme: light;
-}

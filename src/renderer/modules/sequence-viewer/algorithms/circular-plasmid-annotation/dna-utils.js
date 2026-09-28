@@ -1,6 +1,7 @@
 'use strict';
 
 const { BASE_MASKS, REVERSE_COMPLEMENT_MAP } = require('./constants');
+const { positiveModulo } = require('../positive-modulo.cjs');
 
 function cleanText(value) {
   const text = String(value == null ? '' : value)
@@ -14,14 +15,6 @@ function clampInteger(value, min, max, fallback = min) {
     return fallback;
   }
   return Math.min(max, Math.max(min, numeric));
-}
-
-function positiveModulo(value, modulo) {
-  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
-    return 0;
-  }
-  const numeric = Number(value) || 0;
-  return ((numeric % modulo) + modulo) % modulo;
 }
 
 function normalizeTopology(value) {

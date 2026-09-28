@@ -15,6 +15,7 @@
  */
 
 const path = require('node:path');
+const { ensurePathWithinRoot } = require('../../lib/path-safety.js');
 
 const KNOWLEDGE_BASE_FOLDER_NAME = 'KnowledgeBase';
 const KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME = 'papers.md';
@@ -23,7 +24,6 @@ const LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME = 'PaperKnowledge';
 const KNOWLEDGE_DATABASE_FOLDER_NAME = KNOWLEDGE_BASE_FOLDER_NAME;
 const KNOWLEDGE_PAPERS_FOLDER_NAME = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME;
 const KNOWLEDGE_INDEX_FILE_NAME = 'knowledge.index.sqlite';
-const KNOWLEDGE_JSON_INDEX_FILE_NAME = 'index.json';
 
 function normalizeDoi(value) {
   return String(value || '')
@@ -159,21 +159,6 @@ function buildKnowledgePaperSlug({ doi = '', title = '', pdfSha256 = '' } = {}) 
   return sanitizeStorageName(pdfSha256 ? `paper-${String(pdfSha256).slice(0, 16)}` : 'paper', 'paper');
 }
 
-function ensurePathWithinRoot(rootPath, targetPath) {
-  const resolvedRoot = path.resolve(rootPath);
-  const resolvedTarget = path.resolve(targetPath);
-  if (resolvedTarget === resolvedRoot) {
-    return resolvedTarget;
-  }
-  const rootWithSep = resolvedRoot.endsWith(path.sep)
-    ? resolvedRoot
-    : `${resolvedRoot}${path.sep}`;
-  if (!resolvedTarget.startsWith(rootWithSep)) {
-    throw new Error('Target path must be inside the configured storage path.');
-  }
-  return resolvedTarget;
-}
-
 function buildRelativePath(rootPath, targetPath) {
   return path.relative(path.resolve(rootPath), path.resolve(targetPath)).split(path.sep).join('/');
 }
@@ -222,8 +207,7 @@ function buildKnowledgeDatabasePaths({
     extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
     meta_path: path.join(paperFolderPath, 'meta.json'),
     figures_path: path.join(paperFolderPath, 'figures'),
-    sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME),
-    json_index_path: path.join(rootPath, KNOWLEDGE_JSON_INDEX_FILE_NAME)
+    sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME)
   };
 }
 
@@ -257,7 +241,6 @@ module.exports = {
   KNOWLEDGE_DATABASE_FOLDER_NAME,
   KNOWLEDGE_PAPERS_FOLDER_NAME,
   KNOWLEDGE_INDEX_FILE_NAME,
-  KNOWLEDGE_JSON_INDEX_FILE_NAME,
   normalizeDoi,
   extractDoiFromText,
   sanitizeStorageName,

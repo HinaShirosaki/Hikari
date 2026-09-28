@@ -93,7 +93,7 @@ function createSearchCandidates({
       ].join(' '), {
         label,
         sublabel: joinSublabel([assayItem?.assayNumber, assayItem?.projectName, assayItem?.plateLabel]),
-        kind: 'Assay',
+        kind: 'Plate',
         applyQuery: assayItem?.assayNumber || label,
         itemId: assayItem?.id
       });

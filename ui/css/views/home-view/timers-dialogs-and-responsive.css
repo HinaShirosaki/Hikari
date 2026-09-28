@@ -1,164 +1,302 @@
-#home-view .home-timer-clock {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-6);
-  padding-top: var(--space-6);
-  color: var(--home-tile-muted);
-}
-#home-view .dashboard-local-time,
-#home-view .dashboard-local-date {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.4;
-  font-weight: 400;
-  color: var(--home-tile-muted);
-  font-variant-numeric: tabular-nums;
-}
+/* Lab timers: the soonest-ending timer is featured, the rest are one-line
+ * rows, and saved presets sit under them as one-click chips. */
 #home-view .dashboard-timer-active-list {
+  flex: 0 1 auto;
   display: grid;
   align-content: start;
   gap: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+
+#home-view .home-timer-finished {
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+}
+
+#home-view .home-timer-finished-row {
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: 2.25rem;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-12);
+  border-top: 0;
+  border-radius: 0.5625rem;
+  background: var(--theme-success-wash);
+}
+
+#home-view .home-timer-finished-row .home-row-copy {
+  gap: var(--space-8);
+}
+
+#home-view .home-timer-finished-row .home-row-meta {
+  overflow: hidden;
+  color: var(--home-success-ink);
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+#home-view .home-timer-finished-icon {
+  width: 1rem;
+  height: 1rem;
+  color: var(--home-success-ink);
+}
+
+#home-view .home-timer-finished-row .home-row-action {
+  color: var(--home-success-ink);
+}
+
 #home-view .home-timer-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 4.5rem 4rem 2rem;
+  grid-template-areas: "copy track count btn";
   align-items: center;
-  gap: var(--space-8);
+  gap: var(--space-10);
   padding: var(--space-10) 0;
   border-top: 1px solid var(--home-tile-line-soft);
 }
+
 #home-view .home-timer-row:first-child {
   border-top: 0;
-  padding-top: 0;
 }
+
 #home-view .home-timer-copy {
+  grid-area: copy;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-10);
+  gap: var(--space-8);
   min-width: 0;
 }
+
 #home-view .home-timer-name {
+  min-width: 0;
+  overflow: hidden;
   color: var(--theme-text-strong);
-  font-size: var(--text-base);
-  line-height: 1.3;
+  font-size: var(--text-md);
   font-weight: 500;
-  overflow-wrap: anywhere;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 #home-view .home-timer-state {
   display: none;
-  color: var(--theme-accent);
-  background: var(--theme-surface-subtle);
-  border-radius: 0.25rem;
-  padding: var(--space-2) var(--space-6);
-  font-size: var(--text-xs);
-  line-height: 1.3;
+  flex: none;
+  align-items: center;
+  height: 1.375rem;
+  padding: 0 var(--space-6);
+  border-radius: 0.375rem;
+  background: var(--theme-accent-wash);
+  color: var(--home-accent-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1;
 }
-#home-view .home-timer-meta {
-  display: none;
+
+#home-view .home-timer-state.is-warn {
+  background: var(--theme-warning-wash);
+  color: var(--home-warn-ink);
 }
+
+#home-view .home-timer-row.is-paused .home-timer-state {
+  background: var(--home-tonal);
+  color: var(--home-tile-muted);
+}
+
+#home-view .home-timer-count {
+  grid-area: count;
+  color: var(--theme-text-strong);
+  font-size: var(--text-md);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+#home-view .home-timer-count.is-warn {
+  color: var(--theme-warning);
+}
+
+#home-view .home-timer-row.is-paused .home-timer-count {
+  color: var(--home-tile-muted);
+}
+
 #home-view .home-timer-track {
-  display: none;
-  height: 0.3rem;
-  border-radius: 0.2rem;
-  background: var(--theme-surface-subtle);
+  grid-area: track;
+  height: 0.25rem;
+  border-radius: 0.125rem;
+  background: var(--home-tonal);
   overflow: hidden;
 }
+
 #home-view .home-timer-fill {
   height: 100%;
+  border-radius: inherit;
   background: var(--theme-accent);
   transition: width 0.5s linear;
 }
+
 #home-view .home-timer-fill.is-warn {
-  background: var(--home-warn);
+  background: var(--theme-warning);
 }
-#home-view .home-timer-count {
-  color: var(--theme-text-strong);
-  font-size: var(--text-lg);
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+
+#home-view .home-timer-row.is-paused .home-timer-fill {
+  background: var(--home-tile-muted);
 }
-#home-view .home-timer-count.is-warn {
-  color: var(--home-warn);
+
+#home-view .home-timer-meta {
+  display: none;
 }
+
 #home-view .home-timer-btn {
+  grid-area: btn;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2rem;
   height: 2rem;
   padding: 0;
-  border: 1px solid var(--home-tile-line);
-  border-radius: 0.4rem;
-  background: transparent;
-  color: var(--home-tile-text);
+  border: 0;
+  border-radius: 0.4375rem;
+  background: var(--home-tonal);
+  color: var(--theme-text-strong);
   cursor: pointer;
 }
+
 #home-view .home-timer-btn:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--home-tonal-hover);
 }
+
 #home-view .home-timer-btn svg {
   width: 1rem;
   height: 1rem;
 }
+
 #home-view .home-timer-row.is-featured {
+  border-top: 0;
   grid-template-columns: minmax(0, 1fr) auto;
-  row-gap: 0.3rem;
-  padding-bottom: var(--space-8);
+  grid-template-areas:
+    "copy btn"
+    "count btn"
+    "track track"
+    "meta meta";
+  row-gap: var(--space-4);
+  padding-top: var(--space-2);
 }
-#home-view .home-timer-row.is-featured .home-timer-copy {
-  grid-column: 1 / -1;
+
+#home-view .home-timer-row.is-featured .home-timer-name {
+  font-weight: 600;
 }
+
 #home-view .home-timer-row.is-featured .home-timer-state {
-  display: inline;
+  display: inline-flex;
 }
+
 #home-view .home-timer-row.is-featured .home-timer-count {
-  font-size: clamp(2.1rem, 3vw, 2.7rem);
-  line-height: 1.1;
-  font-weight: 400;
+  font-size: clamp(2rem, 2.5vw, 2.25rem);
+  font-weight: 500;
+  line-height: 1.05;
   letter-spacing: -0.03em;
+  text-align: left;
 }
+
+#home-view .home-timer-row.is-featured .home-timer-btn {
+  align-self: end;
+  width: 2.625rem;
+  height: 2.625rem;
+  border-radius: 0.625rem;
+}
+
+#home-view .home-timer-row.is-featured .home-timer-btn svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
 #home-view .home-timer-row.is-featured .home-timer-track {
-  display: block;
-  grid-column: 1 / -1;
+  height: 0.375rem;
+  border-radius: 0.1875rem;
 }
+
 #home-view .home-timer-row.is-featured .home-timer-meta {
+  grid-area: meta;
   display: flex;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  grid-column: 1 / -1;
+  gap: var(--space-8);
   color: var(--home-tile-muted);
   font-size: var(--text-sm);
-  line-height: 1.3;
-}
-#home-view .home-timer-finished:not(:last-child) {
-  padding-bottom: var(--space-8);
-}
-#home-view .home-timer-finished-row .home-row-meta {
-  color: var(--theme-danger);
+  font-variant-numeric: tabular-nums;
 }
 
-#home-view .home-tile-head-actions {
+#home-view .home-timer-presets {
+  flex: none;
   display: flex;
-  align-items: center;
-  gap: var(--space-8);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding-top: var(--space-10);
+  border-top: 1px solid var(--home-tile-line-soft);
 }
 
-@media (max-height: 760px) and (min-width: 1280px) {
+#home-view .home-timer-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  height: 1.875rem;
+  max-width: 100%;
+  padding: 0 var(--space-8) 0 var(--space-6);
+  border: 0;
+  border-radius: 0.4375rem;
+  background: var(--home-tonal);
+  color: var(--home-tile-text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#home-view .home-timer-preset:hover {
+  background: var(--theme-accent-wash);
+  color: var(--home-accent-ink);
+}
+
+#home-view .home-timer-preset > span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#home-view .home-timer-preset svg {
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+#home-view .home-timer-preset-duration {
+  color: var(--home-tile-muted);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #home-view .home-timer-fill {
+    transition: none;
+  }
+}
+
+/* A window too short for three fitted columns scrolls the page instead, so
+ * tiles show their content rather than three small scrollers per column. */
+@media (max-height: 820px) and (min-width: 1280px) {
   #home-view .home-layout {
     height: auto;
     min-height: 100%;
-    grid-template-rows: auto auto auto;
   }
-  #home-view .home-contribution-display {
-    container-type: inline-size;
+  #home-view .home-tile-incubation,
+  #home-view .home-tile-notebook-pages,
+  #home-view .home-tile-paper-finding {
+    flex-basis: auto;
+    max-height: 32rem;
   }
 }
 
+/* Two columns: now and capture side by side, reading across the bottom. */
 @media (max-width: 1279px) {
   #home-view {
     height: auto;
@@ -167,54 +305,35 @@
   }
   #home-view .home-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "timer contribution"
-      "notebook paper-finding"
-      "quicklog passage"
-      "incubation incubation";
-    grid-template-rows: repeat(4, auto);
     height: auto;
-    min-height: auto;
   }
-  #home-view .home-contribution-display {
-    container-type: inline-size;
+  #home-view .home-column-read {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
   }
-  #home-view .home-tile-timer {
-    min-height: 16rem;
-  }
-  #home-view .home-tile-quicklog {
-    min-height: 12rem;
-  }
+  #home-view .home-tile-incubation,
   #home-view .home-tile-notebook-pages,
   #home-view .home-tile-paper-finding {
-    max-height: 38rem;
+    flex-basis: auto;
+    max-height: 36rem;
   }
 }
 
 @media (max-width: 900px) {
-  #home-view .home-layout {
+  #home-view .home-layout,
+  #home-view .home-column-read {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "timer"
-      "contribution"
-      "notebook"
-      "paper-finding"
-      "quicklog"
-      "passage"
-      "incubation";
-    grid-template-rows: none;
-    grid-auto-rows: auto;
-    min-height: auto;
   }
 }
 
 @media (max-width: 480px) {
   #home-view {
     --home-shell-gap-inline: var(--space-10);
-    --home-tile-padding: var(--space-16);
   }
-  #home-view .home-tile-head-actions {
-    gap: var(--space-2);
+  #home-view .home-tile {
+    padding: var(--space-12) var(--space-14);
   }
   #home-view .home-passage-interval {
     display: none;
@@ -222,7 +341,7 @@
 }
 
 /* A scrolling dashboard still opens its windows inside the visible viewport. */
-@media (max-width: 1279px), (max-height: 760px) {
+@media (max-width: 1279px), (max-height: 820px) {
   #home-view .home-dialog-overlay.app-dialog-overlay.app-dialog-overlay--contained {
     position: fixed;
     z-index: 2550;

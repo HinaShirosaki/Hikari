@@ -11,6 +11,7 @@ const {
   cloneJson,
   compactObject,
   ensureObject,
+  resolveDirectToolPayload,
   resolveDirectToolOk,
   runAppTool
 } = require('./shared.js');
@@ -44,19 +45,6 @@ const CONTAINER_MCP_TOOL = Object.freeze({
   })
 });
 
-function resolveContainerPayload(result = {}) {
-  const source = ensureObject(result);
-  const resultPayload = ensureObject(source.result);
-  const outputPayload = ensureObject(source.output);
-  if (Object.keys(resultPayload).length) {
-    return resultPayload;
-  }
-  if (Object.keys(outputPayload).length) {
-    return outputPayload;
-  }
-  return source;
-}
-
 async function callContainer(input = {}, context = {}, deps = {}) {
   const normalized = normalizeToolArgumentsPayload({
     tool_calls: [{
@@ -82,7 +70,7 @@ async function callContainer(input = {}, context = {}, deps = {}) {
     args: normalized.payload.tool_calls[0].arguments,
     context
   });
-  const payload = resolveContainerPayload(result);
+  const payload = resolveDirectToolPayload(result);
   const status = cleanText(payload.status || result?.status, 80)
     || (result?.ok === false ? 'failed' : 'invalid_response');
   const error = cleanText(payload.error || result?.error, 1200);
@@ -112,5 +100,5 @@ async function callContainer(input = {}, context = {}, deps = {}) {
 module.exports = {
   CONTAINER_MCP_TOOL,
   callContainer,
-  resolveContainerPayload
+  resolveContainerPayload: resolveDirectToolPayload
 };

@@ -1,10 +1,10 @@
 import { VIEWS, TITLES } from '../modules/views.js';
-import { createId, safeText, cssEscape } from '../modules/utils.js';
+import { createId, safeText, cssEscape } from '../lib/app-utils.js';
 import {
   loadState,
   persistState,
   trackGrowthEvent
-} from '../modules/app-state.js';
+} from '../modules/app-state/index.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
 import { createRendererModuleRuntime } from './module-runtime.js';
 import {
@@ -251,6 +251,9 @@ export function startHikariCore({
       state,
       persist,
       createId
+    },
+    project: {
+      state
     }
   });
   const storageImportController = createStorageImportController({
@@ -366,6 +369,10 @@ export function startHikariCore({
       return result;
     },
     onComplete: openStartupView
+  });
+
+  windowObject.hikariApi?.onPaperFileSaved?.(() => {
+    moduleRuntime.modules.papers?.handleStoredPaperSaved?.();
   });
 
   windowObject.hikariApi?.onProtocolRecordSaved?.((payload) => {

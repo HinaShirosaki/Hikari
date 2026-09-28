@@ -6,6 +6,7 @@ const {
   STATUS_SAVED,
   STATUS_TEMPORARY
 } = require('./constants');
+const { positiveModulo } = require('../../algorithms/positive-modulo.cjs');
 
 function cleanText(value) {
   const text = String(value || '');
@@ -41,14 +42,6 @@ function clamp(value, min, max) {
     return min;
   }
   return Math.min(max, Math.max(min, numeric));
-}
-
-function positiveModulo(value, modulo) {
-  if (!Number.isFinite(Number(modulo)) || modulo <= 0) {
-    return 0;
-  }
-  const numeric = Number(value) || 0;
-  return ((numeric % modulo) + modulo) % modulo;
 }
 
 function normalizeTopologyValue(value) {

@@ -5,6 +5,7 @@ import {
   normalizeConfiguredSampleType
 } from '../../../lib/inventory-settings.js';
 import { formatEntryTimestamp } from '../entry/entry-helpers.js';
+import { cloneMetadataObject, formatSampleRecordLabel } from '../../../lib/sample-records.js';
 
 export function normalizeSampleLookupText(value) {
   return String(value || '')
@@ -119,14 +120,7 @@ export function formatSampleStorageLabel(sample, inventory = {}) {
   return locationLabel && locationLabel !== '-' ? locationLabel : 'No storage location recorded';
 }
 
-export function formatSampleRecordLabel(sample) {
-  const code = String(sample?.code || '').trim();
-  const name = String(sample?.name || '').trim();
-  if (code && name) {
-    return `${code} - ${name}`;
-  }
-  return code || name || String(sample?.id || 'Sample').trim();
-}
+export { cloneMetadataObject, formatSampleRecordLabel };
 
 export function formatSampleLinkValue(link) {
   const code = String(link?.sampleCode || '').trim();
@@ -135,20 +129,6 @@ export function formatSampleLinkValue(link) {
     return `${code} - ${name}`;
   }
   return code || name || String(link?.sampleId || 'Sample').trim();
-}
-
-export function cloneMetadataObject(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return null;
-  }
-  return Object.entries(value).reduce((accumulator, [key, raw]) => {
-    const cleanKey = String(key || '').trim();
-    if (!cleanKey) {
-      return accumulator;
-    }
-    accumulator[cleanKey] = raw === null || raw === undefined ? '' : raw;
-    return accumulator;
-  }, {});
 }
 
 export function normalizeNotebookSampleLink(rawLink) {

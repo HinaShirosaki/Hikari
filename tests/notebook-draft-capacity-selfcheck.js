@@ -146,7 +146,7 @@ test('large draft fields remain complete through model transport, UI normalizati
 
 test('larger protocols and late placeholders survive the real notebook preparation path', async () => {
   const protocol = { id: 'protocol', name: 'Long protocol', materials: Array.from({ length: 100 }, (_, i) => `Material ${i}`),
-    steps: Array.from({ length: 200 }, (_, i) => ({ id: `s${i}`, text: i === 199 ? 'Final {{ph:p}}' : `Step ${i}`,
+    steps: Array.from({ length: 200 }, (_, i) => ({ text: i === 199 ? 'Final {{ph:p}}' : `Step ${i}`,
       placeholders: i === 199 ? [{ id: 'p', name: 'sample' }] : [] })) };
   const snapshot = buildStateSnapshot({ projects: [{ id: 'project', name: 'Project' }], protocols: [protocol],
     notebookEntries: [], settings: {}, agentChat: {}, workflows: [] }, 'project');
@@ -156,7 +156,7 @@ test('larger protocols and late placeholders survive the real notebook preparati
   const deps = { cleanText, requestStructuredJsonPayload: async (request) => {
     if (request.stage === 'notebook_draft_selection') return { ok: false };
     fillPrompt = request.userPrompt;
-    return { ok: true, payload: { filled_values: [{ placeholder_key: 's199:p', value: 'sample A', source: 'user' }],
+    return { ok: true, payload: { filled_values: [{ placeholder_key: 'p', value: 'sample A', source: 'user' }],
       missing_placeholders: [], follow_up_questions: [], result_summary: 'Ready' } };
   } };
   const runtime = createNotebookDraftRuntime({ ...deps, agentAppApi: createAgentSubAppApi(deps) });
@@ -169,7 +169,7 @@ test('larger protocols and late placeholders survive the real notebook preparati
   assert.equal(result.notebook.rendered_steps[199], 'Final sample A');
   assert.equal(result.notebook.proposal.planned_materials.length, 101);
   assert.match(fillPrompt, /Appended final check/);
-  assert.match(fillPrompt, /s199/);
+  assert.match(fillPrompt, /Final \{\{ph:p\}\}/);
 });
 
 test('planning prompt includes expanded history and candidates at the advertised boundaries', () => {

@@ -3,6 +3,15 @@ export {
   resolveBufferCompound
 } from './bench-calculations/buffer-concentration.js';
 export {
+  bufferCandidateForm,
+  buildBufferCandidates,
+  extractCompoundMw,
+  extractCompoundPka,
+  findBufferCandidate,
+  inferCompoundForm,
+  normalizeBufferCandidateName
+} from './bench-calculations/buffer-candidates.js';
+export {
   calculateMolarityMass,
   calculateMolarityVolume,
   calculateMolarityConcentration,

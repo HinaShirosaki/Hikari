@@ -21,8 +21,6 @@ ui/
     themes/modes.css       # light/dark
     views/<id>-view.css    # per-view styles
     overrides/             # universal layouts (left-rail-template, menus, …)
-config/
-  codex-models.json        # Codex model catalog (also generated)
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
   renderer.js              # browser entry; calls the core directly
@@ -41,7 +39,7 @@ scripts/
 
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
-1. Reads `config/codex-models.json` and writes `src/main/generated/codex-model-catalog.generated.js` and `src/renderer/modules/codex-model-catalog.generated.js`. The catalog supplies the shared Codex model settings used by both direct features and Agent Chat.
+1. Writes `src/main/generated/codex-model-catalog.generated.js` and `src/renderer/modules/codex-model-catalog.generated.js`: the Codex provider settings shared by direct features and Agent Chat. They list no models; the model list and default come from Codex at runtime.
 2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
 3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
 4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.

@@ -6,7 +6,7 @@ module.exports = function registerPaperIntakeRetrieval(context = {}) {
   const { createIntakeStore } = require(path.join(root, 'src/main/papers/store/intake/intake-store.js'));
   const { createDirectMcpToolRouter } = require(path.join(root, 'src/main/agent/mcp-contract/direct-tools/index.js'));
   const { scorePaper, tokenize } = require(path.join(root, 'src/main/papers/store/intake/intake-search.js'));
-  const tools = require(path.join(root, 'src/main/papers/store/intake/mcp-tools.js'));
+  const tools = require(path.join(root, 'tests/support/paper-intake-mcp-tools.js'));
   const records = [
     {
       paper_id: 'glue', doc_type: 'research_paper', title: 'Compact regulated degradation tags',

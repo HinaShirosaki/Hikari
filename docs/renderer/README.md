@@ -26,7 +26,7 @@ If `docs/main-platform/` explains the main-process bridge, this folder explains 
 ## High-level mental model
 
 1. `renderer.js` calls the app wrapper, which delegates to `core/start-hikari-core.js`.
-2. The renderer core loads state from `modules/app-state.js`.
+2. The renderer core loads state from `modules/app-state/index.js`.
 3. It creates a module registry plus a small set of cross-feature services.
 4. It initializes feature modules through manifests, with the same mutable `state`, a shared `persist()` callback, and targeted change hooks.
 5. It loads renderer state from `localStorage`, and during `initApp()` optionally hydrates from an external storage root through `window.hikariApi.importStorageRoot(...)`. Saves go back through `window.hikariApi.autoSaveDataFile(...)`.

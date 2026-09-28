@@ -1,6 +1,6 @@
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { createLinkedPreviewImageLoader } from '../results/linked-previews-renderer.js';
-import { createSpreadsheetTables } from '../../../lib/spreadsheet-tables.js';
+import { createSpreadsheetTables } from '../spreadsheet-tables/index.js';
 import { createSampleLinkMenuController } from '../samples/sample-link-menu.js';
 import { createNotebookQuickSampleController } from '../samples/quick-sample-controller.js';
 import { createInlinePlaceholderController } from '../protocol/inline-placeholder-controller.js';
@@ -28,6 +28,7 @@ function createNotebookControllers({
   notebookType,
   onProjectsChanged,
   onCreateLinkedAssay,
+  onOpenPaper,
   getEditingEntryId,
   getActiveProjectDashboardId,
   getSampleLinkDrafts,
@@ -127,7 +128,8 @@ function createNotebookControllers({
   const projectPaperFinderController = createProjectPaperFinderController({
     host: elements.notebookProjectDashboard,
     state,
-    api: window.hikariApi
+    api: window.hikariApi,
+    onOpenPaper
   });
 
   const dropdownRenderer = createDropdownRenderer({

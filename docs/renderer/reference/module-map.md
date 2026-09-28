@@ -51,9 +51,9 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 | `sampleRegistry` | `SAMPLE_REGISTRY` | `modules/sample-registry/index.js` | sample-centric registry workspace |
 | `assay` | `ASSAY` | `modules/assay/index.js` | plate layout, result grid, charts, analysis math |
 | `sequenceViewer` | `SEQUENCE_VIEWER` | `modules/sequence-viewer/index.js` | import, library, detail, alignment, annotation, analysis |
-| `toolBox` | `TOOL_BOX` | `modules/tool-box.js` | `modules/tool-box/` — calculator and analysis mini-tools |
+| `toolBox` | `TOOL_BOX` | `modules/tool-box/index.js` | `modules/tool-box/` — calculator and analysis mini-tools |
 | `settings` | `SETTING` | `modules/settings/index.js` | renderer-config UI and storage/LLM settings |
-| `homeDashboard` | `HOME` | `modules/home-dashboard.js` (wrapper) | `modules/home-dashboard/` — dashboard widgets and timer |
+| `homeDashboard` | `HOME` | `modules/home-dashboard/index.js` (wrapper) | `modules/home-dashboard/` — dashboard widgets and timer |
 
 See [heavyweight-subsystems.md](../features/heavyweight-subsystems.md) for the internal structure of the largest folder modules (`agent-chat/`, `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, `tool-box/`).
 
@@ -65,16 +65,16 @@ These files expose a deliberate secondary API or compose features that do not us
 | --- | --- | --- |
 | `modules/agent-chat/public-api.js` | Support | explicit response and state-snapshot surface used outside Agent Chat |
 | `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
-| `modules/tool-box.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
-| `modules/home-dashboard.js` | Support | orchestrator that wires the `home-dashboard/` widgets (the folder has no `index.js`) |
+| `modules/tool-box/index.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
+| `modules/home-dashboard/index.js` | Support | orchestrator that wires the `home-dashboard/` widgets (the folder has no `index.js`) |
 
 ## Cross-cutting libraries and adapters
 
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/views.js` | Cross-cutting | generated `VIEWS` and `TITLES` constants sourced from `ui/config/app-registry.json` |
-| `modules/app-state.js` | Cross-cutting | small public facade over the normalization modules in `modules/app-state/` |
-| `modules/utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
+| `modules/app-state/index.js` | Cross-cutting | small public facade over the normalization modules in `modules/app-state/` |
+| `lib/app-utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
 | `modules/app-state/storage-path-normalizer.js` | Cross-cutting | normalizes persisted record paths during state hydration |
 | `lib/file-drop.js` | Cross-cutting | reusable drag-and-drop file-target binding (used by papers, sequence import, etc.) |
 | `lib/unsaved-draft.js` | Cross-cutting | stable form snapshots for unsaved-change detection |
@@ -82,10 +82,10 @@ These files expose a deliberate secondary API or compose features that do not us
 | `lib/notebook-tool-calculations.js` | Cross-cutting | notebook calculation normalization and rendering model |
 | `lib/inventory-settings.js` | Cross-cutting | inventory location and sample-type settings normalization |
 | `services/direct-llm.js` | Cross-cutting | direct (non-agent) LLM request helper and provider settings builder |
-| `services/chemical-structure-clipboard.js` | Cross-cutting | reads chemical-structure candidates from clipboard paste |
-| `services/notebook-linked-previews.js` | Cross-cutting | linked assay/gel/record preview models for notebook entries (gel records are read-only now that Gel ships as a plugin) |
+| `modules/sample-registry/chemical-structure-clipboard.js` | Feature-owned | reads chemical-structure candidates; Personal Inventory uses it through `sample-registry/public-api.js` |
+| `modules/biology-notebook/linked-previews.js` | Feature-owned | builds linked assay/gel/record preview models for notebook entries |
 | `services/notebook-note-tools.js` | Cross-cutting | transient notices and LLM note-clarification helpers |
-| `services/experiment-llm-mapper.js` | Support | compresses notebook, assay, and gel data into LLM-friendly JSON |
+| `modules/agent-chat/experiment-llm-mapper.js` | Feature-owned | compresses notebook, assay, and gel data into LLM-friendly JSON |
 
 ## App configuration (generated)
 
@@ -116,7 +116,7 @@ If you want to read the code after this doc set, start here:
 1. `src/renderer/core/start-hikari-core.js`
 2. `src/renderer/core/module-runtime.js`
 3. `src/renderer/module-manifests/index.js`
-4. `src/renderer/modules/app-state.js`
+4. `src/renderer/modules/app-state/index.js`
 5. `src/renderer/services/index.js`
 6. one focused feature package such as `src/renderer/modules/biology-notebook/project/project-controller.js`
 7. one large subsystem entry such as `src/renderer/modules/sequence-viewer/index.js`

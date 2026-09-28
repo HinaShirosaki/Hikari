@@ -125,7 +125,10 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     const key = event.target.dataset.cc;
     if (!key) return;
     if (event.target.type === 'number' && !event.target.validity.valid) {
-      notice('Enter a value within the indicated limits.');
+      const { min, max, labels } = event.target;
+      const name = labels?.[0]?.firstChild?.textContent.trim() || 'This field';
+      const range = min && max ? `between ${min} and ${max}` : min ? `of at least ${min}` : max ? `of at most ${max}` : 'that is a valid number';
+      notice(`${name} needs a value ${range}.`);
       return;
     }
     const style = store.getStyle();

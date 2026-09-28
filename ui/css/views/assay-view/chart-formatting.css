@@ -325,11 +325,11 @@
 }
 
 .assay-chart-picker__option:hover {
-  background: var(--theme-surface-hover, color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface)));
+  background: var(--theme-surface-hover, var(--theme-surface-hover));
 }
 
 .assay-chart-picker__option.is-selected {
-  background: var(--theme-surface-active, color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface)));
+  background: var(--theme-surface-active, var(--theme-surface-active));
   border-color: var(--theme-accent);
 }
 

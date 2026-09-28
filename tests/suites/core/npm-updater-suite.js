@@ -7,7 +7,7 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
   const path = require('node:path');
   const {
     createNpmUpdaterService, findInstaller, resolveNpxInvocation
-  } = require('../../../src/main/core/services/create-npm-updater-service');
+  } = require('../../../src/main/updater/create-npm-updater-service');
 
   test('npm updater runs npx next to node (npm entrypoint on Windows) and finds each platform installer', () => {
     assert.deepEqual(resolveNpxInvocation('/opt/homebrew/bin/node', 'darwin'), { command: '/opt/homebrew/bin/npx', args: [] });

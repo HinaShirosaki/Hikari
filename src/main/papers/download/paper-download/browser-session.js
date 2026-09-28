@@ -6,6 +6,24 @@ const { createDownloadError } = require('./http-response.js');
 const { buildRelativePath } = require('./storage-paths.js');
 const { attachPaperDownloadNotice } = require('./browser-notice.js');
 
+// PMC, Springer and others serve PDFs `inline`; Chromium's built-in viewer then
+// shows the file and never emits will-download, so nothing is saved. Forcing
+// `attachment` on PDF pages turns them into downloads (plugins: false does not
+// disable the viewer in Electron 40).
+function forcePdfDownloads(details = {}, callback) {
+  const headers = { ...details.responseHeaders };
+  const names = Object.keys(headers);
+  const typeName = names.find((name) => name.toLowerCase() === 'content-type');
+  const isPage = details.resourceType === 'mainFrame' || details.resourceType === 'subFrame';
+  if (!isPage || !typeName || !/\bpdf\b/i.test(String(headers[typeName]))) {
+    callback({});
+    return;
+  }
+  names.filter((name) => name.toLowerCase() === 'content-disposition').forEach((name) => delete headers[name]);
+  headers['Content-Disposition'] = ['attachment'];
+  callback({ responseHeaders: headers });
+}
+
 // Electron-driven fallback: drive a real BrowserWindow when a publisher blocks
 // the direct fetch. Injected so tests can swap in their own session starter.
 function createBrowserDownloadSession({
@@ -64,6 +82,8 @@ function createBrowserDownloadSession({
       const childWindows = new Set();
 
       attachPaperDownloadNotice(webContents);
+      // One listener per session; re-registering on the shared partition just replaces it.
+      sessionObject?.webRequest?.onHeadersReceived?.(forcePdfDownloads);
 
       function hasOpenChildWindow() {
         return Array.from(childWindows).some((childWindow) => !childWindow?.isDestroyed?.());
@@ -237,4 +257,4 @@ function createBrowserDownloadSession({
   return { startDefaultBrowserDownloadSession };
 }
 
-module.exports = { createBrowserDownloadSession };
+module.exports = { createBrowserDownloadSession, forcePdfDownloads };

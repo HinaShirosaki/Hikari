@@ -27,7 +27,7 @@ export function createPoiRow(nextRowId) {
     type: 'poi',
     label: 'Current DNA',
     sequence: '',
-    note: 'Uses the active Sequence Viewer DNA source.'
+    note: 'Uses the active DNA source.'
   };
 }
 

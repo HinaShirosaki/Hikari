@@ -111,7 +111,6 @@ export function createSerialDilutionController({
     const model = buildSummaryModel();
     const {
       groups,
-      concentrationAxisName,
       feedbackMessages,
       initialDilutionRows,
       followingDilutionRows,
@@ -125,7 +124,7 @@ export function createSerialDilutionController({
       return;
     }
 
-    summary.textContent = `Calculated from the current ${concentrationAxisName} order. Trailing 0 concentration control wells are skipped from the serial dilution chain.`;
+    summary.textContent = '';
 
     const renderSerialDilutionTable = (headers, rows, className = '') => {
       if (!rows.length) {
@@ -152,34 +151,39 @@ export function createSerialDilutionController({
     };
 
     const sampleInputTable = `
-      <div class="assay-serial-dilution-stock-table-wrap">
-        <table class="assay-serial-dilution-stock-table">
-          <thead>
-            <tr>
-              <th>Sample</th>
-              <th>Conc</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${groups.map((group) => {
-              const stockValue = getSerialDilutionStockValue(group.sampleId);
-              return `
-                <tr>
-                  <td>${safeText(group.sampleId)}</td>
-                  <td>
-                    <input
-                      type="text"
-                      value="${safeText(stockValue)}"
-                      placeholder="e.g. 10 mM"
-                      data-assay-serial-stock-sample="${safeText(group.sampleId)}"
-                    />
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
+      <section class="assay-serial-dilution-sample">
+        <div class="assay-serial-dilution-sample-head">
+          <h4>Sample Concentrations</h4>
+        </div>
+        <div class="assay-serial-dilution-stock-table-wrap">
+          <table class="assay-serial-dilution-stock-table">
+            <thead>
+              <tr>
+                <th>Sample</th>
+                <th>Stock Conc.</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${groups.map((group) => {
+                const stockValue = getSerialDilutionStockValue(group.sampleId);
+                return `
+                  <tr>
+                    <td>${safeText(group.sampleId)}</td>
+                    <td>
+                      <input
+                        type="text"
+                        value="${safeText(stockValue)}"
+                        placeholder="e.g. 10 mM"
+                        data-assay-serial-stock-sample="${safeText(group.sampleId)}"
+                      />
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
     `;
 
     const feedbackLines = feedbackMessages.map((item) => `
@@ -192,7 +196,6 @@ export function createSerialDilutionController({
           <div class="assay-serial-dilution-sample-head">
             <h4>Initial Dilution</h4>
           </div>
-          <p class="small-note">Prepare the first active dilution well for each sample using its stock concentration.</p>
           ${renderSerialDilutionTable(
             ['Sample', 'Stock Vol.', 'Buffer Vol.'],
             initialDilutionRows.map((row) => [row.sample, row.stockVolume, row.bufferVolume]),
@@ -208,7 +211,6 @@ export function createSerialDilutionController({
           <div class="assay-serial-dilution-sample-head">
             <h4>Following Dilution</h4>
           </div>
-          <p class="small-note">Repeat this same downstream dilution sequence for every sample after the initial well is prepared.</p>
           ${!followingRowsAreShared ? '<p class="small-note assay-serial-dilution-note">Following-dilution rows were not identical across every sample, so this table is based on the first valid sample sequence.</p>' : ''}
           ${renderSerialDilutionTable(
             ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
@@ -238,7 +240,7 @@ export function createSerialDilutionController({
       ? '<p class="small-note">No serial dilution recipe could be calculated yet.</p>'
       : '';
 
-    content.innerHTML = `${sampleInputTable}${feedbackLines}${initialDilutionSection}${followingDilutionSection}${emptyState}`;
+    content.innerHTML = `${feedbackLines}<div class="assay-serial-dilution-overview">${sampleInputTable}${initialDilutionSection}</div>${followingDilutionSection}${emptyState}`;
   }
 
   function open() {

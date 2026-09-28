@@ -10,12 +10,13 @@ import { escapeHtml } from './html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
 import {
-  applyAppearanceToDocument,
   normalizeAppearanceMode
 } from '../app-state/appearance.js';
+import { applyAppearanceToDocument } from '../../app/appearance.js';
 import { createCodexAccountSettings } from './codex-account.js';
 import { createPreferredJournalSettings } from './preferred-journals.js';
 import { createNotebookPdfSettingsController } from './notebook-pdf-controller.js';
+import { createSettingsFormPresentation } from './form-presentation.js';
 
 
 export function initSettings({
@@ -47,7 +48,6 @@ export function initSettings({
     settingNotebookPdfStapleEdge,
     llmForm,
     settingModel,
-    settingModelOptions,
     settingReasoningEffort,
     settingCodexAuthControls,
     settingCodexStatus,
@@ -59,6 +59,10 @@ export function initSettings({
     startCodexLoginBtn,
     clearCodexLoginBtn,
     copyCodexDesktopMcpPromptBtn,
+    settingCodexDesktopPreview,
+    settingCodexDesktopPrompt,
+    codexSettingsTabs,
+    codexSettingsPanels,
     settingCodexDesktopMcpStatus,
     settingMcpToolsList,
     settingAgentExternalSkillsEnabled,
@@ -84,6 +88,12 @@ export function initSettings({
     clearPreferredJournalBtn
   } = getSettingsElements(document);
   const llmModelCatalog = createLlmModelCatalog();
+  const formPresentation = createSettingsFormPresentation({
+    document,
+    onRestoreModel: (reasoning) => renderReasoningEffortOptions(
+      DEFAULT_LLM_PROVIDER, settingModel?.value || '', reasoning
+    )
+  });
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const notebookPdfController = createNotebookPdfSettingsController({
     state,
@@ -156,7 +166,9 @@ export function initSettings({
     settingReasoningEffort,
     startCodexLoginBtn,
     clearCodexLoginBtn,
-    copyCodexDesktopMcpPromptBtn
+    copyCodexDesktopMcpPromptBtn,
+    settingCodexDesktopPreview,
+    settingCodexDesktopPrompt
   });
   const {
     renderPreferredJournal,
@@ -171,15 +183,37 @@ export function initSettings({
     preferredJournalList
   });
 
+  function activateCodexTab(tab) {
+    codexSettingsTabs.forEach((item) => {
+      const selected = item === tab;
+      item.setAttribute('aria-selected', String(selected));
+      item.tabIndex = selected ? 0 : -1;
+    });
+    codexSettingsPanels.forEach((panel) => {
+      panel.hidden = panel.id !== tab.getAttribute('aria-controls');
+    });
+  }
+  codexSettingsTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => activateCodexTab(tab));
+    tab.addEventListener('keydown', (event) => {
+      const offsets = { ArrowRight: 1, ArrowLeft: -1, Home: -index, End: codexSettingsTabs.length - 1 - index };
+      if (!(event.key in offsets)) return;
+      event.preventDefault();
+      const next = codexSettingsTabs[(index + offsets[event.key] + codexSettingsTabs.length) % codexSettingsTabs.length];
+      activateCodexTab(next);
+      next.focus();
+    });
+  });
+
   settingsNavItems.forEach((item) => {
     item.addEventListener('click', () => {
       activateSettingsPanel(item.dataset.settingsTarget);
     });
   });
-  appearanceForm.addEventListener('submit', onSaveAppearance);
+  formPresentation.bind(appearanceForm, onSaveAppearance);
   storageForm.addEventListener('submit', onSaveStoragePath);
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
-  startupForm?.addEventListener('submit', onSaveStartupSettings);
+  formPresentation.bind(startupForm, onSaveStartupSettings);
   openLogsFolderBtn?.addEventListener('click', async () => {
     const result = await window.hikariApi?.openLogsFolder?.();
     if (result && result.ok === false) {
@@ -192,8 +226,8 @@ export function initSettings({
       showTransientNotice(result.error || 'Could not open the third-party notices.', { type: 'error' });
     }
   });
-  notebookPdfForm?.addEventListener('submit', notebookPdfController.save);
-  llmForm.addEventListener('submit', onSaveLlmSettings);
+  formPresentation.bind(notebookPdfForm, notebookPdfController.save);
+  formPresentation.bind(llmForm, onSaveLlmSettings);
   settingModel?.addEventListener('input', onModelChanged);
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
@@ -236,14 +270,20 @@ export function initSettings({
   activateSettingsPanel(activeSettingsPanel);
 
   function activateSettingsPanel(panelId) {
+    // Preserve callers using the former standalone sections.
+    panelId = { 'sample-inventory': 'locations', plugins: 'skills' }[panelId] || panelId;
     activeSettingsPanel = settingsPanels.some((panel) => panel.dataset.settingsPanel === panelId)
       ? panelId
       : activeSettingsPanel;
+    // Codex writes its model list on its first run; pick it up without a restart.
+    if (activeSettingsPanel === 'llm') void refreshCodexCatalog();
 
     settingsNavItems.forEach((item) => {
       const isActive = item.dataset.settingsTarget === activeSettingsPanel;
       item.classList.toggle('is-active', isActive);
       item.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      if (isActive) item.setAttribute('aria-current', 'page');
+      else item.removeAttribute('aria-current');
     });
 
     settingsPanels.forEach((panel) => {
@@ -293,20 +333,30 @@ export function initSettings({
     return true;
   }
 
-  function renderModelOptions(provider) {
-    if (!settingModelOptions) {
+  function renderModelOptions(provider, selectedModel = '') {
+    if (!settingModel) {
       return;
     }
     const modelOptions = llmModelCatalog.getModelOptions(provider);
-    settingModelOptions.textContent = '';
+    const selected = String(selectedModel || '').trim();
+    // Keep a saved choice visible even when Codex has not listed it (yet).
+    if (selected && !modelOptions.some((entry) => entry.value === selected)) {
+      modelOptions.push({ value: selected, label: selected });
+    }
+    settingModel.textContent = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Use the default model';
+    settingModel.append(defaultOption);
+
     modelOptions.forEach((entry) => {
       const option = document.createElement('option');
       option.value = entry.value;
-      if (entry.label && entry.label !== entry.value) {
-        option.label = entry.label;
-      }
-      settingModelOptions.append(option);
+      option.textContent = entry.label || entry.value;
+      settingModel.append(option);
     });
+    settingModel.value = String(selectedModel || '').trim();
   }
 
   function renderReasoningEffortOptions(provider, model, selectedReasoningEffort = '') {
@@ -341,11 +391,12 @@ export function initSettings({
   }
 
   function refreshLlmModelAndReasoningFields(provider, selectedReasoningEffort = '') {
-    renderModelOptions(provider);
+    renderModelOptions(provider, settingModel?.value || '');
     renderReasoningEffortOptions(provider, settingModel?.value || '', selectedReasoningEffort);
   }
 
   function renderForms() {
+    const drafts = formPresentation.captureDrafts();
     const didSyncCodexSettings = syncCodexSettingsFromCatalog();
     const appearance = state.settings.appearance;
     const llm = state.settings.llm;
@@ -365,7 +416,6 @@ export function initSettings({
     notebookPdfController.render();
     const llmProvider = DEFAULT_LLM_PROVIDER;
     settingModel.value = llm.model || '';
-    settingModel.placeholder = 'optional, e.g. gpt-5.4';
     refreshLlmModelAndReasoningFields(llmProvider, llm.reasoningEffort);
     if (settingAgentExternalSkillsEnabled) {
       settingAgentExternalSkillsEnabled.checked = state.settings?.agent?.externalSkillsEnabled !== false;
@@ -378,6 +428,7 @@ export function initSettings({
     sampleInventoryController.renderSampleInventoryLocationList();
     sampleInventoryController.renderSampleTypeLabelList();
     renderPreferredJournal();
+    formPresentation.rendered(drafts);
     if (didSyncCodexSettings) {
       persist();
     }

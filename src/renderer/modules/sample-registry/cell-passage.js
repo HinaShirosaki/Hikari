@@ -1,23 +1,6 @@
-export function normalizeCellPassage(rawValue) {
-  const dateValue = String(rawValue?.lastPassageDate || '').trim();
-  const interval = Math.round(Number(rawValue?.intervalDays));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue) || !Number.isFinite(interval) || interval <= 0) {
-    return null;
-  }
-  const normalized = {
-    lastPassageDate: dateValue,
-    intervalDays: interval
-  };
-  const passageNumber = Math.round(Number(rawValue?.passageNumber));
-  if (Number.isFinite(passageNumber) && passageNumber > 0) {
-    normalized.passageNumber = passageNumber;
-  }
-  const deferredUntilDate = String(rawValue?.deferredUntilDate || '').trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(deferredUntilDate)) {
-    normalized.deferredUntilDate = deferredUntilDate;
-  }
-  return normalized;
-}
+import { normalizeCellPassage } from '../../lib/cell-passage.js';
+
+export { normalizeCellPassage };
 
 export function readCellPassage(ctx, existingValue = null) {
   const existing = normalizeCellPassage(existingValue);

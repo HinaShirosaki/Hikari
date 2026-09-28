@@ -20,7 +20,7 @@ Most feature code lives under `src/renderer/modules/`, while `src/renderer/core/
 
 The boot path is straightforward once you read it as a pipeline instead of a monolith:
 
-1. `loadState()` from `modules/app-state.js` creates the mutable renderer `state`.
+1. `loadState()` from `modules/app-state/index.js` creates the mutable renderer `state`.
 2. `applyAppearanceSnapshot(...)` applies the saved font size and day/night mode before the UI starts rendering.
 3. `APP_REGISTRY` and `APP_DOCK_ORDER` from `modules/app-registry.generated.js` are turned into lookup maps for:
    - app id to app metadata
@@ -95,4 +95,4 @@ Key boot-time or shell-level calls include:
 - `ensureStorageDirectory(path)` / `pickStorageDirectory(currentPath)` — storage path setup
 - `onProtocolRecordSaved(handler)` — subscribes to externally saved protocols (delegated to the protocol service)
 
-Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-platform/README.md](../../main-platform/README.md).
+Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state/index.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-platform/README.md](../../main-platform/README.md).

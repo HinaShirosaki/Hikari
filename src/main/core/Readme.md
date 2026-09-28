@@ -15,7 +15,7 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 1. app metadata and paths
 2. storage plus sequence APIs
 3. agent chat logging / chat-log transform monitor
-4. npm update checks
+4. npm update checks (`main/updater/`)
 5. provider-neutral agent foundation (`core/services/create-agent-services.js`)
 6. provider-neutral MCP host
 7. Codex runtime and workspace initializer
@@ -23,7 +23,12 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 
 Every `start()` step is best-effort: a failed integration is logged with `console.warn` and must not prevent the main window from working. `shutdown()` stops services in reverse order, logging failures without blocking the rest.
 
-Codex and MCP construction live in `core/services/`. The provider-neutral agent factory must not create either integration. Codex owns its runtime-home configuration and official skill release; each Codex request asks that workspace initializer to run again, so an app-start failure remains recoverable.
+Codex and MCP composition helpers live in `core/services/`. Genome indexing,
+scheduled tasks, and npm updates live in their owning `main/` domains. The
+provider-neutral agent factory must not create either integration. Codex owns
+its runtime-home configuration and official skill release; each Codex request
+asks that workspace initializer to run again, so an app-start failure remains
+recoverable.
 
 ## Adding a service
 

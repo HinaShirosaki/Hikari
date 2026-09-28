@@ -29,6 +29,8 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   const appState = config?.appState;
   const persist = config?.persist;
   const createId = config?.createId;
+  const ensureProjectRecord = config?.ensureProjectRecord;
+  const saveProtocolRecord = config?.saveProtocolRecord;
   const onNotebookEntriesChanged = config?.onNotebookEntriesChanged;
 
   const {
@@ -289,7 +291,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     let notebookError = '';
     try {
       notebookResult = source?.proteinBuilderDesign ? (displayPlan.feasible ? createProteinBuilderCloningNotebookPage({
-        state: appState, persist, createId, onNotebookEntriesChanged,
+        state: appState, persist, createId, ensureProjectRecord, saveProtocolRecord, onNotebookEntriesChanged,
         entryId: designState.notebookEntryId,
         ...source.proteinBuilderDesign,
         assembledRecord: record,
@@ -298,6 +300,8 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         state: appState,
         persist,
         createId,
+        ensureProjectRecord,
+        saveProtocolRecord,
         onNotebookEntriesChanged,
         entryId: designState.notebookEntryId,
         source,

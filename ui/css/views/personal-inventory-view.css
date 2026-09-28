@@ -60,7 +60,7 @@
   margin: 0;
   padding: var(--space-12);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
+  background: var(--theme-surface-muted);
 }
 
 .inventory-location-btn {
@@ -100,7 +100,7 @@
 .inventory-location-btn:hover,
 .inventory-location-btn:focus-visible,
 .inventory-location-btn.active {
-  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
+  background: var(--theme-surface-muted);
 }
 
 .inventory-location-group {
@@ -121,7 +121,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-strong);
   font-size: var(--text-2xs);
   font-weight: 700;
@@ -159,7 +159,7 @@
   gap: var(--space-8);
   margin: 0;
   padding: var(--space-6) var(--space-8);
-  border: 1px solid color-mix(in srgb, var(--theme-border-soft) 80%, transparent);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 9px;
   background: color-mix(in srgb, var(--theme-surface-elevated) 54%, transparent);
   color: var(--theme-text);
@@ -171,8 +171,7 @@
 
 .inventory-container-btn:hover,
 .inventory-container-btn:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-accent) 32%, var(--theme-border-soft));
-  background: color-mix(in srgb, var(--theme-surface-elevated) 82%, var(--theme-accent) 4%);
+  background: var(--hikari-left-rail-list-hover);
   outline: none;
 }
 
@@ -181,8 +180,7 @@
 }
 
 .inventory-container-btn.active {
-  border-color: color-mix(in srgb, var(--theme-accent) 46%, transparent);
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
+  background: var(--theme-surface-muted);
 }
 
 .inventory-container-glyph {
@@ -197,27 +195,24 @@
 }
 
 .inventory-container-glyph-box81,
-.inventory-container-glyph-customGrid {
-  box-shadow: inset 0 3px 0 color-mix(in srgb, currentColor 20%, transparent);
+.inventory-container-glyph-customGrid,
+.inventory-container-glyph-plate96 {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 0;
+  background: currentColor;
+  -webkit-mask: var(--inventory-container-icon) center / contain no-repeat;
+  mask: var(--inventory-container-icon) center / contain no-repeat;
 }
 
-.inventory-container-glyph-box81::after,
-.inventory-container-glyph-customGrid::after,
-.inventory-container-glyph-plate96::after {
-  content: '';
-  position: absolute;
-  top: 6px;
-  left: 5px;
-  width: 2px;
-  height: 2px;
-  border-radius: 50%;
-  background: currentColor;
-  box-shadow: 5px 0 currentColor, 10px 0 currentColor, 0 5px currentColor, 5px 5px currentColor, 10px 5px currentColor;
+.inventory-container-glyph-box81,
+.inventory-container-glyph-customGrid {
+  --inventory-container-icon: url("../../../assets/icons/container-grid-box.svg");
 }
 
 .inventory-container-glyph-plate96 {
-  height: 17px;
-  border-radius: 4px;
+  --inventory-container-icon: url("../../../assets/icons/container-plate.svg");
 }
 
 .inventory-container-glyph-single {
@@ -273,7 +268,7 @@
   place-items: center;
   padding: 0 5px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-muted);
   font-size: var(--text-2xs);
   line-height: 1;
@@ -409,7 +404,7 @@
   margin: 0;
   padding: var(--space-24);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
+  background: var(--theme-surface-muted);
 }
 
 
@@ -476,8 +471,8 @@
   padding: 5px var(--space-8);
   border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
-  background: var(--theme-surface-raised, var(--theme-surface));
-  box-shadow: 0 7px 18px color-mix(in srgb, #000 18%, transparent);
+  background: var(--theme-surface);
+  box-shadow: 0 7px 18px var(--theme-shadow-color-strong);
   color: var(--theme-text-strong);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -536,7 +531,7 @@
 
 .inventory-fill-wells-btn.is-active {
   border-color: var(--theme-accent);
-  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  background: var(--theme-accent-soft);
 }
 
 .inventory-fill-wells-icon {
@@ -601,7 +596,7 @@
   grid-template-rows: repeat(var(--well-grid-rows, 9), 1fr);
   width: 100%;
   aspect-ratio: var(--well-grid-aspect-x, 1) / var(--well-grid-aspect-y, 1);
-  border: 1px solid var(--assay-plate-grid-line);
+  border: 1px solid var(--theme-border);
   overflow: hidden;
   gap: 0;
 }
@@ -662,7 +657,7 @@
 }
 
 .well-plate96.well-selected {
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface));
+  background: var(--theme-surface-active);
   border-color: var(--theme-accent);
   box-shadow: 0 0 0 1px var(--theme-accent);
 }
@@ -825,7 +820,7 @@
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   align-items: center;
-  color: var(--assay-plate-label);
+  color: var(--theme-text-muted);
   font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -837,7 +832,7 @@
   display: grid;
   grid-template-rows: repeat(8, 1fr);
   align-items: center;
-  color: var(--assay-plate-label);
+  color: var(--theme-text-muted);
   font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -863,7 +858,7 @@
   left: 3px;
   font-size: 0.56rem;
   line-height: 1;
-  color: var(--assay-plate-well-number);
+  color: var(--theme-text-muted);
   pointer-events: none;
   max-width: calc(100% - 6px);
   overflow: hidden;
@@ -913,7 +908,7 @@
   align-items: center;
   gap: var(--space-6);
   font-size: var(--text-xs);
-  color: var(--assay-plate-ink);
+  color: var(--theme-text);
 }
 
 .well-sample-legend-dot {
@@ -925,8 +920,8 @@
 }
 
 .well-selected {
-  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent);
+  background: var(--theme-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--theme-accent-soft);
   z-index: 1;
 }
 
@@ -935,13 +930,44 @@
 }
 
 .well-clone-target:hover {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 50%, transparent);
+  box-shadow: inset 0 0 0 1px var(--theme-accent-line);
 }
 
 .well-inline-editor {
-  margin-top: var(--space-12);
-  padding-top: var(--space-10);
-  border-top: 0;
+  container: sample-editor / inline-size;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-12);
+}
+
+/* Short fields pair up; selects, notes, long values and non-fields take the row. */
+.well-inline-editor > :not(label),
+.well-inline-editor > label:has(> select, > textarea),
+.well-inline-editor .sample-type-field-wide {
+  grid-column: 1 / -1;
+}
+
+/* Type fields pair among themselves, so Lot / Concentration keep one place for every type. */
+.well-inline-editor [data-sample-type-fields] {
+  display: grid;
+  grid-template-columns: inherit;
+  gap: inherit;
+}
+
+.well-inline-editor [data-sample-type-fields]:empty {
+  display: none;
+}
+
+/* Chromium pins select line-height to normal, so a select sits ~1px shorter than
+   an input; the control row takes the slack and a paired row lines up. */
+.well-inline-editor label {
+  grid-template-rows: auto 1fr;
+}
+
+@container sample-editor (max-width: 20rem) {
+  .well-inline-editor label {
+    grid-column: 1 / -1;
+  }
 }
 
 .well-inline-editor strong {
@@ -1020,7 +1046,7 @@
 }
 
 .well-editor-actions .ghost-btn.is-active {
-  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  background: var(--theme-accent-soft);
   border-color: var(--theme-accent);
 }
 
@@ -1029,7 +1055,11 @@
   gap: var(--space-4);
   align-items: start;
   justify-items: start;
-  margin-top: -2px;
+}
+
+/* Only chemicals show a control here; left empty it would still claim a gap. */
+.inventory-sample-structure-control:not(:has(> :not([hidden]):not(:empty))) {
+  display: none;
 }
 
 .inventory-sample-structure-paste-btn[hidden] {
@@ -1048,7 +1078,7 @@
   padding: var(--space-8);
   border: 1px dashed var(--theme-border-soft);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--theme-surface) 92%, var(--assay-plate-pure-white));
+  background: var(--theme-surface-elevated);
 }
 
 .inventory-sample-structure-preview[hidden] {
@@ -1061,19 +1091,12 @@
   object-fit: contain;
 }
 
-.well-side-editor {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-
 .well-editor-empty {
   margin: 0;
 }
 
 .well-editor-status {
-  margin-top: var(--space-8);
-  color: var(--assay-plate-ink);
+  color: var(--theme-text);
 }
 
 @media (max-width: 1280px) {

@@ -23,15 +23,16 @@ jobs:
         id: pack
         shell: pwsh
         run: |
-          $tgz = npm pack --silent | Select-Object -Last 1
-          "tarball=$((Resolve-Path $tgz).Path)" >> $env:GITHUB_OUTPUT
+          $tgz = npm pack --silent --pack-destination $env:RUNNER_TEMP | Select-Object -Last 1
+          "tarball=$tgz" >> $env:GITHUB_OUTPUT
 
       # Same entry point as install.ps1's last line, against this branch's code
-      # instead of the published package.
+      # instead of the published package. The spec must be relative: npx treats
+      # an absolute tarball path as a command and exits 0 without building.
       - name: npx the tarball
         shell: pwsh
         working-directory: ${{ runner.temp }}
-        run: npx.cmd --yes "${{ steps.pack.outputs.tarball }}"
+        run: npx.cmd --yes "./${{ steps.pack.outputs.tarball }}"
 
       - name: Install, then watch the app Squirrel launches
         shell: pwsh
@@ -49,19 +50,75 @@ jobs:
           } while (-not $exe -and (Get-Date) -lt $deadline)
           if (-not $exe) { throw 'Installer never produced app-*\Hikari.exe' }
           Write-Host "Installed: $($exe.FullName)"
-          $running = $null
+          # Helpers share the exe name (--type=...), and the --squirrel-install hook
+          # run quits by design, so pick the real app by its command line.
+          function Get-HikariMain {
+            Get-CimInstance Win32_Process -Filter "Name='Hikari.exe'" |
+              Where-Object { $_.CommandLine -notmatch '--type=|--squirrel-(install|updated|uninstall|obsolete)' } |
+              Select-Object -First 1
+          }
           do {
             Start-Sleep 5
-            # Electron's renderers share the exe name; the oldest is the main process.
-            $running = Get-Process Hikari -ErrorAction SilentlyContinue |
-              Sort-Object StartTime | Select-Object -First 1
+            $running = Get-HikariMain
           } while (-not $running -and (Get-Date) -lt $deadline)
-          if (-not $running) { $running = Start-Process $exe.FullName -PassThru }
+          if (-not $running) { Start-Process $exe.FullName; Start-Sleep 5; $running = Get-HikariMain }
+          Write-Host "Main process: $($running.CommandLine)"
           Start-Sleep 30
-          if (-not (Get-Process -Id $running.Id -ErrorAction SilentlyContinue)) {
+          if (-not $running -or -not (Get-Process -Id $running.ProcessId -ErrorAction SilentlyContinue)) {
+            Get-CimInstance Win32_Process -Filter "Name='Hikari.exe'" | ForEach-Object { Write-Host "still running: $($_.CommandLine)" }
+            Get-Content (Join-Path $env:APPDATA 'Hikari\Logs\errors.log') -Tail 30 -ErrorAction SilentlyContinue
             throw 'Hikari exited within 30s of first launch'
           }
           Get-Process Hikari -ErrorAction SilentlyContinue | Stop-Process -Force
+          "HIKARI_EXE=$($exe.FullName)" >> $env:GITHUB_ENV
+
+      # A Start-menu launch gets no developer PATH; tests/installed-app-smoke.mjs
+      # then drives the renderer over CDP.
+      - name: Opening page, Codex discovery, and live MCP from the installed app
+        shell: pwsh
+        env:
+          SMOKE_SHOT_DIR: ${{ runner.temp }}\smoke-shots
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          New-Item -ItemType Directory -Force $env:SMOKE_SHOT_DIR | Out-Null
+          function Start-Hikari {
+            $full = $env:PATH
+            $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+            Start-Process $env:HIKARI_EXE -ArgumentList '--remote-debugging-port=9333'
+            $env:PATH = $full
+          }
+          Start-Hikari
+          node tests/installed-app-smoke.mjs opening
+          # The folder picker is native; point Hikari at a workspace the way the picker would.
+          Get-Process Hikari -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep 5  # let the killed instance release its single-instance lock
+          $workspace = Join-Path $env:RUNNER_TEMP 'HikariWorkspace'
+          $config = Join-Path $env:APPDATA 'Hikari\Config'
+          New-Item -ItemType Directory -Force $workspace, $config | Out-Null
+          @{ storagePath = $workspace } | ConvertTo-Json | Set-Content (Join-Path $config 'last-storage-root.json')
+          Start-Hikari
+          node tests/installed-app-smoke.mjs codex-missing
+          powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+          node tests/installed-app-smoke.mjs codex-found
+          node tests/installed-app-smoke.mjs mcp $workspace
+          Get-Process Hikari -ErrorAction SilentlyContinue | Stop-Process -Force
+
+      - name: Hikari state on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          Get-CimInstance Win32_Process -Filter "Name='Hikari.exe'" | ForEach-Object { "running: $($_.CommandLine)" }
+          Get-ChildItem (Join-Path $env:APPDATA 'Hikari\Config') -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName }
+          Get-Content (Join-Path $env:APPDATA 'Hikari\Config\last-storage-root.json') -ErrorAction SilentlyContinue
+          Get-Content (Join-Path $env:APPDATA 'Hikari\Logs\errors.log') -Tail 40 -ErrorAction SilentlyContinue
+          try { (Invoke-WebRequest http://127.0.0.1:9333/json -UseBasicParsing).Content } catch { 'CDP: not listening' }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-screenshots
+          path: ${{ runner.temp }}/smoke-shots
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@v4
         if: always()

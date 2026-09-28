@@ -124,7 +124,7 @@ body {
   50% {
     transform: scale(1);
     opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 24px color-mix(in srgb, var(--theme-text-strong) 12%, transparent));
+    filter: brightness(0) invert(1) drop-shadow(0 0 24px var(--theme-fill-strong));
   }
 
   100% {
@@ -544,7 +544,7 @@ body.has-shared-left-rail-view .workspace-main {
 
 .universal-agent-chat-rail__toggle:hover,
 .universal-agent-chat-rail__toggle:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
+  background: var(--theme-accent-wash);
   outline: none;
 }
 
@@ -623,7 +623,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .universal-agent-chat-rail .agent-chat-item-user {
   padding: var(--space-8) var(--space-10);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
+  background: var(--theme-surface-muted);
 }
 
 .universal-agent-chat-rail .agent-composer-shell,
@@ -670,7 +670,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   border: 0;
   border-radius: 999px;
   padding: 5px 9px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 74%, transparent);
+  background: var(--theme-surface-muted);
   color: var(--theme-text-muted);
   font-size: var(--text-xs);
   line-height: 1.2;
@@ -680,7 +680,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 .agent-rail-quick-prompt:hover,
 .agent-rail-quick-prompt:focus-visible {
   color: var(--theme-text-strong);
-  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
+  background: var(--theme-accent-wash);
   outline: none;
 }
 
@@ -1103,7 +1103,7 @@ button:focus-visible {
 }
 
 .primary-btn:hover {
-  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+  background: var(--theme-accent-hover);
 }
 
 /*
@@ -1112,12 +1112,12 @@ button:focus-visible {
  * icon buttons set their own transparent background and keep only the hover.
  */
 .ghost-btn {
-  background: color-mix(in srgb, var(--theme-text) 6%, transparent);
+  background: var(--theme-fill);
   color: var(--theme-text);
 }
 
 .ghost-btn:hover {
-  background: color-mix(in srgb, var(--theme-text) 11%, transparent);
+  background: var(--theme-fill-strong);
 }
 
 /* Stroke icon inside a text button, drawn from the same Lucide set as the dock. */
@@ -1148,11 +1148,11 @@ a.ghost-btn {
 
 .danger-btn {
   color: var(--theme-danger);
-  background: color-mix(in srgb, var(--theme-danger) 9%, transparent);
+  background: var(--theme-danger-wash);
 }
 
 .danger-btn:hover {
-  background: color-mix(in srgb, var(--theme-danger) 15%, transparent);
+  background: var(--theme-danger-soft);
 }
 
 .row-action-icon-btn {
@@ -1180,7 +1180,7 @@ a.ghost-btn {
 
 .row-action-icon-btn:hover,
 .row-action-icon-btn:focus-visible {
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  background: var(--theme-surface-hover);
   color: var(--theme-text-strong);
 }
 
@@ -1190,7 +1190,7 @@ a.ghost-btn {
 
 .row-action-icon-btn-danger:hover,
 .row-action-icon-btn-danger:focus-visible {
-  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  background: var(--theme-danger-wash);
   color: var(--theme-danger);
 }
 
@@ -1347,15 +1347,15 @@ button:disabled {
 
 .selection-insight-anchor {
   border-radius: 0.45em;
-  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
-  text-decoration: underline dotted color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
+  background: var(--theme-accent-wash);
+  text-decoration: underline dotted var(--theme-accent-line);
   text-underline-offset: 2px;
   cursor: help;
 }
 
 .selection-insight-anchor:focus-visible,
 .selection-insight-anchor:hover {
-  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  background: var(--theme-accent-soft);
   outline: none;
 }
 

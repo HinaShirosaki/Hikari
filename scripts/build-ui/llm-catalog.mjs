@@ -1,71 +1,26 @@
-import path from 'node:path';
-import { readJson, toPosix, writeText } from './fs-helpers.mjs';
-import { CODEX_MODEL_CONFIG_PATH, MAIN_LLM_PROVIDER_MODULE_OUTPUT, RENDERER_LLM_PROVIDER_MODULE_OUTPUT, ROOT_DIR } from './paths.mjs';
+import { writeText } from './fs-helpers.mjs';
+import { MAIN_LLM_PROVIDER_MODULE_OUTPUT, RENDERER_LLM_PROVIDER_MODULE_OUTPUT } from './paths.mjs';
 
-function ensureCodexModelCatalogShape(catalog) {
-  if (!catalog || typeof catalog !== 'object' || Array.isArray(catalog)) {
-    throw new Error('codex-models.json must export an object');
-  }
-  if (!Object.prototype.hasOwnProperty.call(catalog, 'defaultModel')) {
-    throw new Error('codex-models.json requires a "defaultModel" field');
-  }
-  if (!Array.isArray(catalog.models) || !catalog.models.length) {
-    throw new Error('codex-models.json requires a non-empty "models" array');
-  }
-}
-
-function normalizeLlmProviderCatalog(catalog) {
-  ensureCodexModelCatalogShape(catalog);
-  const defaultModel = String(catalog.defaultModel || '').trim();
-  const models = catalog.models.map((modelEntry, modelIndex) => {
-        if (!modelEntry || typeof modelEntry !== 'object' || Array.isArray(modelEntry)) {
-          throw new Error(`Invalid Codex model entry at index ${modelIndex}`);
-        }
-        const modelId = String(modelEntry.id || '').trim();
-        const modelLabel = String(modelEntry.label || '').trim();
-        const reasoningEfforts = Array.isArray(modelEntry.reasoningEfforts)
-          ? modelEntry.reasoningEfforts.map((effort) => String(effort || '').trim().toLowerCase()).filter(Boolean)
-          : [];
-        const defaultReasoningEffort = String(modelEntry.defaultReasoningEffort || '').trim().toLowerCase();
-
-        if (!modelId || !modelLabel) {
-          throw new Error(`Codex model entry at index ${modelIndex} is missing a required field`);
-        }
-        if (defaultReasoningEffort && !reasoningEfforts.includes(defaultReasoningEffort)) {
-          throw new Error(`Codex model "${modelId}" has defaultReasoningEffort outside reasoningEfforts`);
-        }
-
-        return {
-          id: modelId,
-          label: modelLabel,
-          reasoningEfforts,
-          defaultReasoningEffort
-        };
-  });
-
-  if (!models.some((model) => model.id === defaultModel)) {
-    throw new Error(`defaultModel "${defaultModel}" does not match any Codex model id`);
-  }
-
-  return {
-    defaultProvider: 'codex',
-    providers: [{
-      id: 'codex',
-      key: 'CODEX',
-      label: 'Codex Agent (CLI)',
-      defaultEndpoint: '',
-      defaultModel,
-      modelPlaceholder: 'optional, e.g. gpt-5.4',
-      apiKeyPlaceholder: 'Handled by codex login',
-      requiresApiKey: false,
-      endpointHints: [],
-      models
-    }]
-  };
-}
+// No bundled models or default model: which models an account may use, and which
+// one is the default, is asked from Codex at runtime (app-server `model/list`).
+// A shipped list goes stale as soon as OpenAI retires a model.
+const CODEX_PROVIDER_CATALOG = {
+  defaultProvider: 'codex',
+  providers: [{
+    id: 'codex',
+    key: 'CODEX',
+    label: 'Codex Agent (CLI)',
+    defaultEndpoint: '',
+    defaultModel: '',
+    modelPlaceholder: 'Use the default model',
+    apiKeyPlaceholder: 'Handled by codex login',
+    requiresApiKey: false,
+    endpointHints: [],
+    models: []
+  }]
+};
 
 function buildLlmProviderModuleSource({ catalog, moduleType }) {
-  const sourcePath = toPosix(path.relative(ROOT_DIR, CODEX_MODEL_CONFIG_PATH));
   const rawProviders = JSON.stringify(catalog.providers, null, 2);
   const defaultProvider = JSON.stringify(catalog.defaultProvider);
   const providerEnumEntries = catalog.providers
@@ -131,7 +86,7 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
 
   return [
     '/* AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. */',
-    `/* Source config: ${sourcePath} */`,
+    '/* Source: scripts/build-ui/llm-catalog.mjs (models come from Codex at runtime) */',
     '',
     `const RAW_LLM_PROVIDER_CONFIGS = ${rawProviders};`,
     '',
@@ -287,7 +242,7 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
 }
 
 async function buildLlmProviderModules() {
-  const catalog = normalizeLlmProviderCatalog(await readJson(CODEX_MODEL_CONFIG_PATH));
+  const catalog = CODEX_PROVIDER_CATALOG;
   await writeText(
     MAIN_LLM_PROVIDER_MODULE_OUTPUT,
     buildLlmProviderModuleSource({ catalog, moduleType: 'cjs' })

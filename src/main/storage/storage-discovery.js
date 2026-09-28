@@ -40,14 +40,6 @@ function isBundleCandidateName(fileName) {
   return hasSupportedDataExtension(lower);
 }
 
-function isSqliteBundleCandidateName(fileName) {
-  const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === LEGACY_STORAGE_MANIFEST_FILE_NAME) {
-    return false;
-  }
-  return lower.endsWith('.index.sqlite');
-}
-
 function looksLikeHikariSnapshot(payload) {
   const source = ensureObject(payload);
   return [
@@ -64,7 +56,6 @@ function looksLikeHikariSnapshot(payload) {
 
 module.exports = {
   isBundleCandidateName,
-  isSqliteBundleCandidateName,
   looksLikeHikariSnapshot,
   normalizeBundleSummary,
   toPosixRelative

@@ -1,6 +1,6 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { mergeNotebookValues, pruneNotebookValuesForProtocol } from '../entry/entry-helpers.js';
-import { logNotebookPageEvent } from '../storage/page-log.js';
+import { logNotebookPageEvent } from '../../../services/notebook-page-log.js';
 import {
   areAllNotebookPlaceholdersFilled,
   generateNotebookPageName,

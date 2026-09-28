@@ -1,18 +1,18 @@
 'use strict';
 
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
-const { cloneJson } = require('../../lib/normalize.js');
+const {
+  asArray: defaultAsArray,
+  cloneJson,
+  ensureObject: defaultEnsureObject
+} = require('../../lib/normalize.js');
+const { createUniqueStrings } = require('../../lib/value-utils.js');
 
 const {
   normalizeToolArgumentsPayload,
   normalizeToolInvocationArgs,
   resolveCanonicalToolName
 } = require('./agent-tool-loading.js');
-
-// Return the input only when it is already an array; otherwise use an empty array fallback.
-function defaultAsArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 // Convert unknown input to a string without trimming or clipping payload fields.
 function defaultCleanText(value) {
@@ -21,11 +21,6 @@ function defaultCleanText(value) {
     return '';
   }
   return text;
-}
-
-// Keep only plain object-like values; everything else becomes an empty object.
-function defaultEnsureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 // Deep-clone JSON-safe data structures so downstream mutations do not affect source data.
@@ -60,24 +55,7 @@ function mergeObjects(baseValue, overrideValue) {
   return out;
 }
 
-// Deduplicate a list of strings while preserving order and enforcing a maximum output size.
-function uniqueStrings(values, max = 20) {
-  const seen = new Set();
-  const out = [];
-  defaultAsArray(values).forEach((value) => {
-    const normalized = defaultCleanText(value);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || out.length >= max) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
-}
+const uniqueStrings = createUniqueStrings(defaultCleanText, 0);
 
 // Generate a short human-readable summary from a tool execution result.
 function summarizeToolResult(toolName, result) {

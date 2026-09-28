@@ -3,39 +3,12 @@
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const { ensureObject } = require('../../lib/normalize.js');
+const { extractSourceDomain, safeHttpUrl: safeUrl } = require('../../lib/web-text.js');
 
 function clampInteger(value, fallback, min, max) {
   const parsed = Number(value);
   const normalized = Number.isInteger(parsed) ? parsed : fallback;
   return Math.max(min, Math.min(max, normalized));
-}
-
-function safeUrl(value) {
-  const raw = String(value || '').trim();
-  if (!raw) {
-    return '';
-  }
-  try {
-    const parsed = new URL(raw);
-    if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return '';
-    }
-    return parsed.toString();
-  } catch {
-    return '';
-  }
-}
-
-function extractSourceDomain(url) {
-  const normalized = safeUrl(url);
-  if (!normalized) {
-    return '';
-  }
-  try {
-    return String(new URL(normalized).hostname || '').toLowerCase();
-  } catch {
-    return '';
-  }
 }
 
 function createWebSearchRuntime(deps = {}) {

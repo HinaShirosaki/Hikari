@@ -14,25 +14,31 @@ const PAPERS_ROOT_FOLDER_NAME = 'Papers';
 const PROJECT_ROOT_FOLDER_NAME = 'Project';
 const PROJECT_SEQUENCE_FOLDER_NAME = 'Sequence';
 const PROTOCOL_ROOT_FOLDER_NAME = 'Protocol';
-const PROTOCOL_INDEX_FILE_NAME = 'protocol.index.sqlite';
 const ROOT_BUNDLE_BASE_NAME = 'hikari-data';
 const SAMPLES_ROOT_FOLDER_NAME = 'Samples';
-const SAMPLES_FILE_NAME = 'samples.json';
+// Snapshot collections stored one JSON file per record folder, found on load by
+// scanning the folder root (the way Protocol/<name>/protocol.json works).
+const RECORD_FOLDERS = {
+  assays: { rootKey: 'assaysRootPath', fileName: 'assay.json', key: 'assay', schemaName: 'hikari_assay', label: 'Assay' },
+  gelAnalyses: { rootKey: 'gelsRootPath', fileName: 'gel.json', key: 'gel', schemaName: 'hikari_gel', label: 'Gel' }
+};
 
 function hasSupportedDataExtension(filePath) {
   return /\.json$/i.test(String(filePath || '').trim());
 }
 
-function stripDataFileSuffix(filePath) {
-  return String(filePath || '').replace(/\.json$/i, '');
+function normalizeDataFilePath(filePath, fallbackPath = '') {
+  const preferred = String(filePath || '').trim();
+  const fallback = String(fallbackPath || '').trim();
+  const resolved = preferred || fallback;
+  if (!resolved) {
+    return '';
+  }
+  return hasSupportedDataExtension(resolved) ? resolved : `${resolved}.json`;
 }
 
-function stripSqliteBundleSuffix(filePath) {
-  const raw = String(filePath || '');
-  if (/\.index\.sqlite$/i.test(raw)) {
-    return raw.replace(/\.index\.sqlite$/i, '');
-  }
-  return raw;
+function stripDataFileSuffix(filePath) {
+  return String(filePath || '').replace(/\.json$/i, '');
 }
 
 function resolveDataFilePath(dataFilePath, fallbackDataFilePath = '') {
@@ -59,14 +65,11 @@ function resolveProtocolBundlePaths({ storagePath = '', basePath = '' } = {}) {
   }
   if (!rootPath) {
     return {
-      protocolRootPath: '',
-      sqlitePath: ''
+      protocolRootPath: ''
     };
   }
-  const protocolRootPath = path.join(rootPath, PROTOCOL_ROOT_FOLDER_NAME);
   return {
-    protocolRootPath,
-    sqlitePath: path.join(protocolRootPath, PROTOCOL_INDEX_FILE_NAME)
+    protocolRootPath: path.join(rootPath, PROTOCOL_ROOT_FOLDER_NAME)
   };
 }
 
@@ -95,7 +98,6 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
       knowledgeBaseRootPath: '',
       paperMarkdownRootPath: '',
       samplesRootPath: '',
-      samplesPath: '',
       chemicalsSqlitePath: ''
     };
   }
@@ -109,7 +111,6 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
     knowledgeBaseRootPath: path.join(rootPath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME),
     paperMarkdownRootPath: path.join(rootPath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PAPER_MARKDOWN_ROOT_FOLDER_NAME),
     samplesRootPath: path.join(rootPath, SAMPLES_ROOT_FOLDER_NAME),
-    samplesPath: path.join(rootPath, SAMPLES_ROOT_FOLDER_NAME, SAMPLES_FILE_NAME),
     chemicalsSqlitePath: path.join(rootPath, CHEMICALS_SQLITE_FILE_NAME)
   };
 }
@@ -129,12 +130,9 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
       knowledgeBaseRootPath: '',
       paperMarkdownRootPath: '',
       samplesRootPath: '',
-      samplesPath: '',
       protocolRootPath: '',
       protocolsPath: '',
       notebookPagesPath: '',
-      sqlitePath: '',
-      legacySqlitePath: '',
       chemicalsSqlitePath: ''
     };
   }
@@ -159,31 +157,11 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
     knowledgeBaseRootPath: storageLayout.knowledgeBaseRootPath,
     paperMarkdownRootPath: storageLayout.paperMarkdownRootPath,
     samplesRootPath: storageLayout.samplesRootPath,
-    samplesPath: storageLayout.samplesPath,
     protocolRootPath: protocolPaths.protocolRootPath,
     protocolsPath: protocolPaths.protocolRootPath,
     notebookPagesPath: `${resolvedBasePath}.notebook-pages.json`,
-    sqlitePath: protocolPaths.sqlitePath,
-    legacySqlitePath: `${resolvedBasePath}.index.sqlite`,
     chemicalsSqlitePath: storageLayout.chemicalsSqlitePath
   };
-}
-
-function getBundlePathsFromSqlitePath(sqlitePath, options = {}) {
-  const cleanedSqlitePath = cleanText(sqlitePath, 2400);
-  if (!cleanedSqlitePath) {
-    return getBundlePathsFromBasePath('');
-  }
-  const lowerSqlitePath = cleanedSqlitePath.toLowerCase();
-  if (lowerSqlitePath.endsWith(`/${PROTOCOL_ROOT_FOLDER_NAME.toLowerCase()}/${PROTOCOL_INDEX_FILE_NAME}`)) {
-    const storagePath = path.dirname(path.dirname(path.resolve(cleanedSqlitePath)));
-    const basePath = options?.basePath || path.join(storagePath, ROOT_BUNDLE_BASE_NAME);
-    return getBundlePathsFromBasePath(basePath, { storagePath });
-  }
-  if (!/\.index\.sqlite$/i.test(cleanedSqlitePath)) {
-    return getBundlePathsFromBasePath('');
-  }
-  return getBundlePathsFromBasePath(stripSqliteBundleSuffix(cleanedSqlitePath), options);
 }
 
 function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath = '' } = {}) {
@@ -212,12 +190,9 @@ function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath =
     knowledgeBaseRootPath: storageLayout.knowledgeBaseRootPath,
     paperMarkdownRootPath: storageLayout.paperMarkdownRootPath,
     samplesRootPath: storageLayout.samplesRootPath,
-    samplesPath: storageLayout.samplesPath,
     protocolRootPath: protocolPaths.protocolRootPath,
     protocolsPath: protocolPaths.protocolRootPath,
     notebookPagesPath: `${basePath}.notebook-pages.json`,
-    sqlitePath: protocolPaths.sqlitePath,
-    legacySqlitePath: `${basePath}.index.sqlite`,
     chemicalsSqlitePath: storageLayout.chemicalsSqlitePath
   };
 }
@@ -233,19 +208,17 @@ module.exports = {
   PAPER_MARKDOWN_ROOT_FOLDER_NAME,
   PROJECT_ROOT_FOLDER_NAME,
   PROJECT_SEQUENCE_FOLDER_NAME,
-  PROTOCOL_INDEX_FILE_NAME,
   PROTOCOL_ROOT_FOLDER_NAME,
+  RECORD_FOLDERS,
   ROOT_BUNDLE_BASE_NAME,
-  SAMPLES_FILE_NAME,
   SAMPLES_ROOT_FOLDER_NAME,
   getBundlePaths,
   getBundlePathsFromBasePath,
-  getBundlePathsFromSqlitePath,
   hasSupportedDataExtension,
+  normalizeDataFilePath,
   resolveStorageRootLayout,
   resolveStorageRootPath,
   resolveProtocolBundlePaths,
   resolveDataFilePath,
-  stripDataFileSuffix,
-  stripSqliteBundleSuffix
+  stripDataFileSuffix
 };

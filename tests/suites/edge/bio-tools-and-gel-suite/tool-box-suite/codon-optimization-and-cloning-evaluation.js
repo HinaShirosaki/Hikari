@@ -246,9 +246,7 @@ test('[EDGE] tool-box Protein to DNA result wraps responsively without fixed lin
     'src',
     'renderer',
     'modules',
-    'sequence-viewer',
-    'calculations',
-    'ui',
+    'tool-box',
     'translation-tool.js'
   ));
   const document = createMockDocument([
@@ -275,9 +273,7 @@ test('[EDGE] tool-box DNA to Protein result wraps responsively without fixed lin
     'src',
     'renderer',
     'modules',
-    'sequence-viewer',
-    'calculations',
-    'ui',
+    'tool-box',
     'translation-tool.js'
   ));
   const document = createMockDocument([

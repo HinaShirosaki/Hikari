@@ -1,6 +1,7 @@
 'use strict';
 
 const { asArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
+const { createUniqueStrings } = require('../../../lib/value-utils.js');
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -54,23 +55,20 @@ function buildWriteToolAnnotations(title = '') {
   });
 }
 
-function uniqueStrings(values = [], max = 20) {
-  const seen = new Set();
-  const out = [];
-  asArray(values).forEach((value) => {
-    const normalized = cleanText(value, 220);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || out.length >= max) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
+function resolveDirectToolPayload(result = {}) {
+  const source = ensureObject(result);
+  const resultPayload = ensureObject(source.result);
+  const outputPayload = ensureObject(source.output);
+  if (Object.keys(resultPayload).length) {
+    return resultPayload;
+  }
+  if (Object.keys(outputPayload).length) {
+    return outputPayload;
+  }
+  return source;
 }
+
+const uniqueStrings = createUniqueStrings(cleanText);
 
 function toIntegerInRange(value, fallback = 8, minimum = 1, maximum = 25) {
   const parsed = Number(value);
@@ -327,6 +325,7 @@ module.exports = {
   compactObject,
   buildReadOnlyToolAnnotations,
   buildWriteToolAnnotations,
+  resolveDirectToolPayload,
   uniqueStrings,
   toIntegerInRange,
   buildCommonLookupInputSchema,

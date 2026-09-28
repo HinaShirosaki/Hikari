@@ -1,6 +1,7 @@
 'use strict';
 
 const { asArray, cloneJson, ensureObject } = require('../../../lib/normalize.js');
+const { parseJsonObjectFromText } = require('../../../lib/llm/runtime-helpers.js');
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -8,34 +9,6 @@ function cleanText(value, maxLength = 2000) {
     return '';
   }
   return maxLength > 0 ? text.slice(0, maxLength) : text;
-}
-
-function parseJsonObjectFromText(raw = '') {
-  const text = String(raw || '').trim();
-  if (!text) {
-    return null;
-  }
-  const candidates = [text];
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (fenced?.[1]) {
-    candidates.push(fenced[1].trim());
-  }
-  const firstBrace = text.indexOf('{');
-  const lastBrace = text.lastIndexOf('}');
-  if (firstBrace >= 0 && lastBrace > firstBrace) {
-    candidates.push(text.slice(firstBrace, lastBrace + 1));
-  }
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed;
-      }
-    } catch {
-      // Try the next candidate.
-    }
-  }
-  return null;
 }
 
 function normalizeProtocolGenerationArtifact(payload = {}, { cleanText: clean = cleanText } = {}) {

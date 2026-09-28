@@ -2,44 +2,14 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('../storage-paths');
-const { asArray, cleanText, ensureObject, readJsonFile } = require('../storage-utils');
-const { hasOwn, readProtocolsFromSidecar } = require('./sqlite-inventory.js');
+const { SAMPLES_ROOT_FOLDER_NAME } = require('../storage-paths');
+const { readSampleContainers } = require('../sample-containers');
+const { cleanText, keepLatestById, readJsonFile, readRecordFile } = require('../storage-utils');
+const { readProtocolsFromSidecar } = require('./sqlite-inventory.js');
 
-async function hydrateSamplesRootFromStoragePath({
-  storagePath = ''
-} = {}) {
+function hydrateSamplesRootFromStoragePath({ storagePath = '' } = {}) {
   const resolvedStoragePath = cleanText(storagePath, 2400);
-  if (!resolvedStoragePath) {
-    return {
-      exists: false,
-      samples: [],
-      inventory: {},
-      inventoryFolders: {},
-      warnings: []
-    };
-  }
-
-  const samplesPath = path.join(resolvedStoragePath, SAMPLES_ROOT_FOLDER_NAME, SAMPLES_FILE_NAME);
-  const payload = await readJsonFile(samplesPath);
-  if (!payload.ok) {
-    return {
-      exists: false,
-      samples: [],
-      inventory: {},
-      inventoryFolders: {},
-      warnings: payload.exists && payload.error ? [payload.error] : []
-    };
-  }
-
-  const source = ensureObject(payload.data);
-  return {
-    exists: true,
-    samples: hasOwn(source, 'samples') ? asArray(source.samples) : [],
-    inventory: ensureObject(source.inventory),
-    inventoryFolders: ensureObject(source.inventoryFolders),
-    warnings: []
-  };
+  return readSampleContainers(resolvedStoragePath ? path.join(resolvedStoragePath, SAMPLES_ROOT_FOLDER_NAME) : '');
 }
 
 async function readProtocolDirectory(protocolRootPath) {
@@ -102,23 +72,44 @@ async function readProtocolDirectory(protocolRootPath) {
   }
 }
 
+// Scans <root>/*/<fileName> for { [key]: record }, the layout RECORD_FOLDERS
+// records are saved in. An unreadable root or file is a warning, never a throw.
+async function readRecordFolders(rootPath, { fileName, key }) {
+  const directoryPath = cleanText(rootPath, 2400);
+  const byId = new Map();
+  const warnings = [];
+  const result = () => ({ records: [...byId.values()].map((entry) => entry.value), warnings });
+  if (!directoryPath) {
+    return result();
+  }
+  let entries = [];
+  try {
+    entries = await fs.readdir(directoryPath, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      warnings.push(`Could not read ${directoryPath}: ${String(error?.message || error)}`);
+    }
+    return result();
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const found = await readRecordFile(path.join(directoryPath, entry.name, fileName), key, warnings);
+      if (found) {
+        keepLatestById(byId, found);
+      }
+    }
+  }
+  return result();
+}
+
 function getLegacyProtocolsFilePath(bundlePaths) {
   const basePath = cleanText(bundlePaths?.basePath, 2400);
   return basePath ? `${basePath}.protocols.json` : '';
 }
 
-function getLegacySqlitePath(bundlePaths) {
-  const explicitLegacyPath = cleanText(bundlePaths?.legacySqlitePath, 2400);
-  if (explicitLegacyPath) {
-    return explicitLegacyPath;
-  }
-  const basePath = cleanText(bundlePaths?.basePath, 2400);
-  return basePath ? `${basePath}.index.sqlite` : '';
-}
-
 module.exports = {
   getLegacyProtocolsFilePath,
-  getLegacySqlitePath,
   hydrateSamplesRootFromStoragePath,
-  readProtocolDirectory
+  readProtocolDirectory,
+  readRecordFolders
 };

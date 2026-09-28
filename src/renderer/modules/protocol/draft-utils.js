@@ -1,4 +1,12 @@
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
+import {
+  normalizeIsoTimestamp as normalizeSharedIsoTimestamp,
+  normalizeProtocolMaterials,
+  normalizeProtocolTroubleshooting,
+  uniquePlaceholderIds
+} from '../../../shared/protocol-normalization.mjs';
+
+import { createProtocolDraftImportHelpers } from './draft-import.js';
 
 export function createProtocolDraftHelpers({
   createId,
@@ -17,19 +25,9 @@ export function createProtocolDraftHelpers({
     };
   }
 
-  function normalizeIsoTimestamp(rawValue, fallback = '') {
-    const candidate = String(rawValue || '').trim();
-    if (!candidate) {
-      return fallback;
-    }
-
-    const timestamp = Date.parse(candidate);
-    if (!Number.isFinite(timestamp)) {
-      return fallback;
-    }
-
-    return new Date(timestamp).toISOString();
-  }
+  const normalizeIsoTimestamp = (rawValue, fallback = '') => (
+    normalizeSharedIsoTimestamp(rawValue, fallback, { maxLength: 0 })
+  );
 
   function parseTimestamp(rawValue) {
     const timestamp = Date.parse(String(rawValue || '').trim());
@@ -68,18 +66,9 @@ export function createProtocolDraftHelpers({
       .toLowerCase();
   }
 
-  function normalizeMaterials(rawMaterials) {
-    if (Array.isArray(rawMaterials)) {
-      return rawMaterials.map((item) => String(item || '').trim()).filter(Boolean);
-    }
-
-    const value = String(rawMaterials || '').trim();
-    if (!value) {
-      return [];
-    }
-
-    return parseBulletLines(value);
-  }
+  const normalizeMaterials = (rawMaterials) => normalizeProtocolMaterials(rawMaterials, {
+    itemMaxLength: 0
+  });
 
   function getStepText(step) {
     if (typeof step === 'string') {
@@ -91,7 +80,6 @@ export function createProtocolDraftHelpers({
   function cloneStep(step) {
     const stepText = getStepText(step);
     return {
-      id: String(step?.id || createId()),
       text: stepText,
       placeholders: Array.isArray(step?.placeholders)
         ? step.placeholders
@@ -175,32 +163,10 @@ export function createProtocolDraftHelpers({
     return { cleanedText: cleaned, placeholders };
   }
 
-  function normalizeTroubleshooting(rawTroubleshooting) {
-    if (Array.isArray(rawTroubleshooting)) {
-      return rawTroubleshooting
-        .filter((item) => item && typeof item === 'object')
-        .map((item) => {
-          const problem = String(item.problem || '').trim();
-          const possibleCause = String(item.possible_cause || item.possibleCause || '').trim();
-          const solution = String(item.solution || '').trim();
-          const parts = [];
-
-          if (problem) {
-            parts.push(`Problem: ${problem}`);
-          }
-          if (possibleCause) {
-            parts.push(`Possible cause: ${possibleCause}`);
-          }
-          if (solution) {
-            parts.push(`Solution: ${solution}`);
-          }
-          return parts.join('; ');
-        })
-        .filter(Boolean)
-        .join('\n');
-    }
-    return String(rawTroubleshooting || '').trim();
-  }
+  const normalizeTroubleshooting = (rawTroubleshooting) => normalizeProtocolTroubleshooting(
+    rawTroubleshooting,
+    { includeStringItems: false }
+  );
 
   function normalizeMethodStepEntries(rawSteps) {
     if (!Array.isArray(rawSteps)) {
@@ -239,7 +205,6 @@ export function createProtocolDraftHelpers({
       .map((text) => {
         const parsed = extractPlaceholdersFromText(text);
         return {
-          id: createId(),
           text: parsed.cleanedText || text,
           placeholders: parsed.placeholders
         };
@@ -270,7 +235,7 @@ export function createProtocolDraftHelpers({
       })
       .map((entry) => entry.step);
 
-    return sortedSteps
+    const steps = sortedSteps
       .map((rawStep) => {
         if (typeof rawStep === 'string') {
           const rawText = String(rawStep || '').trim();
@@ -279,7 +244,6 @@ export function createProtocolDraftHelpers({
           }
           const parsed = extractPlaceholdersFromText(rawText);
           return {
-            id: createId(),
             text: parsed.cleanedText || rawText,
             placeholders: parsed.placeholders
           };
@@ -302,7 +266,6 @@ export function createProtocolDraftHelpers({
 
         if (placeholders.length) {
           return {
-            id: String(rawStep.id || createId()),
             text: rawText,
             placeholders
           };
@@ -310,104 +273,25 @@ export function createProtocolDraftHelpers({
 
         const parsed = extractPlaceholdersFromText(rawText);
         return {
-          id: String(rawStep.id || createId()),
           text: parsed.cleanedText || rawText,
           placeholders: parsed.placeholders
         };
       })
       .filter(Boolean);
+    return uniquePlaceholderIds(steps, createId);
   }
 
-  function sanitizeIncomingProtocol(rawProtocol) {
-    if (!rawProtocol || typeof rawProtocol !== 'object') {
-      return null;
-    }
-
-    const name = String(rawProtocol.name || rawProtocol.title || '').trim();
-    if (!name) {
-      return null;
-    }
-
-    const nowIso = new Date().toISOString();
-    const parsedCreatedAt = Date.parse(String(rawProtocol.createdAt || '').trim());
-    const createdAt = Number.isFinite(parsedCreatedAt) ? new Date(parsedCreatedAt).toISOString() : nowIso;
-    const parsedUpdatedAt = Date.parse(String(rawProtocol.updatedAt || '').trim());
-    const updatedAt = Number.isFinite(parsedUpdatedAt) ? new Date(parsedUpdatedAt).toISOString() : createdAt;
-
-    return {
-      id: String(rawProtocol.id || createId()),
-      name,
-      createdAt,
-      updatedAt,
-      purpose: String(rawProtocol.purpose || '').trim(),
-      materials: normalizeMaterials(rawProtocol.materials),
-      steps: normalizeImportedProtocolStepEntries(rawProtocol.steps || rawProtocol.procedure),
-      troubleshooting: normalizeTroubleshooting(rawProtocol.troubleshooting)
-    };
-  }
-
-  function sanitizeIncomingProtocols(rawProtocols) {
-    if (Array.isArray(rawProtocols)) {
-      return rawProtocols.map((item) => sanitizeIncomingProtocol(item)).filter(Boolean);
-    }
-    const single = sanitizeIncomingProtocol(rawProtocols);
-    return single ? [single] : [];
-  }
-
-  function parseLooseJsonObjectOrArray(rawInput) {
-    const text = String(rawInput || '').trim();
-    if (!text) {
-      return null;
-    }
-
-    const candidates = [text];
-    const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-    if (fenceMatch?.[1]) {
-      candidates.push(String(fenceMatch[1]).trim());
-    }
-
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-      candidates.push(text.slice(firstBrace, lastBrace + 1));
-    }
-
-    const firstBracket = text.indexOf('[');
-    const lastBracket = text.lastIndexOf(']');
-    if (firstBracket >= 0 && lastBracket > firstBracket) {
-      candidates.push(text.slice(firstBracket, lastBracket + 1));
-    }
-
-    for (const candidate of candidates) {
-      try {
-        const parsed = JSON.parse(candidate);
-        if (Array.isArray(parsed) || (parsed && typeof parsed === 'object')) {
-          return parsed;
-        }
-      } catch {
-        // Try the next candidate.
-      }
-    }
-    return null;
-  }
-
-  function parseProtocolsFromJson(rawInput) {
-    const parsed = parseLooseJsonObjectOrArray(rawInput);
-    if (!parsed) {
-      return [];
-    }
-
-    if (Array.isArray(parsed)) {
-      return sanitizeIncomingProtocols(parsed);
-    }
-    if (Array.isArray(parsed.protocols)) {
-      return sanitizeIncomingProtocols(parsed.protocols);
-    }
-    if (parsed.protocol && typeof parsed.protocol === 'object') {
-      return sanitizeIncomingProtocols(parsed.protocol);
-    }
-    return sanitizeIncomingProtocols(parsed);
-  }
+  const {
+    parseLooseJsonObjectOrArray,
+    parseProtocolsFromJson,
+    sanitizeIncomingProtocol,
+    sanitizeIncomingProtocols
+  } = createProtocolDraftImportHelpers({
+    createId,
+    normalizeImportedProtocolStepEntries,
+    normalizeMaterials,
+    normalizeTroubleshooting
+  });
 
   function buildStepEntriesFromText(rawText, existingSteps = []) {
     const buckets = new Map();
@@ -441,7 +325,6 @@ export function createProtocolDraftHelpers({
       if (!step) {
         const parsed = extractPlaceholdersFromText(cleanedLine);
         step = {
-          id: createId(),
           text: parsed.cleanedText || cleanedLine,
           placeholders: parsed.placeholders
         };
