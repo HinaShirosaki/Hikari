@@ -129,7 +129,8 @@ function createMainServices(context = {}) {
     defaultDataFileName: DEFAULT_DATA_FILE_NAME,
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
-  const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
+  // Windows gets the multi-size .ico (tile-filling); macOS dev runs get the Dock-grid PNG.
+  const appIconPath = path.join(projectRoot, 'assets', processObject.platform === 'win32' ? 'icon.ico' : 'icon.png');
 
   // First, so everything constructed below is already covered.
   const errorReporting = createErrorReporting({
