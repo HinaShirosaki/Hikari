@@ -48,7 +48,7 @@ async function ensureLibraryDirectories(paths) {
   await fs.mkdir(paths.entriesRoot, { recursive: true });
 }
 
-// Names the library itself owns inside `SequenceViewer/`. A user folder taking
+// Names the library itself owns inside `DNA/`. A user folder taking
 // one of these would point at the store's own files.
 const RESERVED_LIBRARY_FOLDER_NAMES = new Set([
   'entries',

@@ -5,8 +5,8 @@ Mirrors the on-disk layout the app hydrates from:
   Project/<p>/MEMORY.md + Notebook/<page>/page.json
   Protocol/<p>/protocol.json
   Workflow/<tpl>/template.json + <run>/workflow.json
-  Samples/<zone>/<container>__<id>.json, Assays/<a>/assay.json, Gels/<g>/gel.json,
-  SequenceViewer/entries/*.gbk, Papers/ (+ <file>.pdf.json records), KnowledgeBase/, chat_log/,
+  Samples/<zone>/<container>__<id>.json, Plates/<a>/assay.json, Gels/<g>/gel.json,
+  DNA/entries/*.gbk, Papers/ (+ <file>.pdf.json records), KnowledgeBase/, chat_log/,
   hikari-chemicals.index.sqlite
 """
 import json, os, random, shutil, sqlite3, hashlib, math, textwrap
@@ -1833,7 +1833,7 @@ def write_sequences():
         insert_blocks = [(label, protein, extra) for label, protein, extra in blocks]
         sequence, features = build_plasmid(name, marker, insert_blocks, seed * 97)
         entry_id = f"seq_{ms(when)}_{''.join(RNG.choice('0123456789abcdef') for _ in range(8))}"
-        gbk_dir = os.path.join(ROOT, "SequenceViewer", "entries", entry_id)
+        gbk_dir = os.path.join(ROOT, "DNA", "entries", entry_id)
         gbk_path = os.path.join(gbk_dir, f"{sanitize(name)}.gbk")
         wtext(gbk_path, genbank_text(name, sequence, features,
                                      when.strftime("%d-%b-%Y").upper()))
@@ -1872,7 +1872,7 @@ def build_assay(index, name, when, project, notebook_entry, plate, sample_rows, 
             result_values[well] = fmt(model(label, conc, rng), 6)
 
     folder_name = folder(name, assay_id)
-    target = os.path.join(ROOT, "Assays", folder_name)
+    target = os.path.join(ROOT, "Plates", folder_name)
     definition = {
         "id": assay_id,
         "assayNumber": f"ASY-{index:06d}",
@@ -1938,10 +1938,10 @@ def build_assay(index, name, when, project, notebook_entry, plate, sample_rows, 
         "latestAnalysis": latest,
         "storageFolder": target,
         "definitionJsonPath": os.path.join(target, "assay-definition.json"),
-        "definitionJsonRelativePath": f"Assays/{folder_name}/assay-definition.json",
+        "definitionJsonRelativePath": f"Plates/{folder_name}/assay-definition.json",
         "analysisResultPath": os.path.join(target, "analysis-result.json"),
-        "analysisResultRelativePath": f"Assays/{folder_name}/analysis-result.json",
-        "analysisChartRelativePath": f"Assays/{folder_name}/analysis-chart.svg",
+        "analysisResultRelativePath": f"Plates/{folder_name}/analysis-result.json",
+        "analysisChartRelativePath": f"Plates/{folder_name}/analysis-chart.svg",
     })
     return record
 

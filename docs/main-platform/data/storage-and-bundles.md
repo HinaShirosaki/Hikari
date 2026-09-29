@@ -57,16 +57,16 @@ Every save rebuilds these from the snapshot. JSON is the only copy wherever a mo
 | Notebook pages | page folders under `Project/` and `Workflow/` |
 | Workflow templates, runs | `Workflow/<template>__<id>/template.json`, `Workflow/<template>__<id>/<run>__<id>/workflow.json` |
 | Personal inventory, samples | `Samples/<zone>/<container>__<id>.json` per container, `Samples/<zone>/folders.json`, `Samples/unplaced.json` (see below) |
-| Assays | `Assays/<name>__<id>/assay.json`, beside the assay's artifacts |
+| Plates (assays) | `Plates/<name>__<id>/assay.json`, beside the assay's artifacts |
 | Gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts |
 | Papers | `<file>.pdf.json` beside each stored PDF (under `Papers/`, `Project/<p>/Papers/`, `RelatedPapers/`): links, highlights, comments, bookmarks, summaries |
 | Chemicals | `hikari-chemicals.index.sqlite` (`inventory_chemicals`, `inventory_meta`) |
 
 Personal inventory is one file per container (`src/main/storage/sample-containers.js`). Each file holds the container's fields, its `wellCount`, and only the wells that hold a sample (or still carry legacy well text), with those samples inside the well entry; samples linked to a container but no well sit in the file's own `samples`. Loading rebuilds the full `wells` array from `wellCount`, so the renderer sees what it saved. Type-specific sample fields stay in each sample's `details`, which the agent inventory lookup searches and returns as a whole, so a new sample type or field needs no storage or search change. `folders.json` holds a zone's container folders, and `unplaced.json` the samples no container holds. A save deletes the file of a removed container, and a zone folder once it is empty.
 
-Hydration finds papers by walking the same folders paper discovery scans for PDFs and reading each PDF's `.json`; a record follows its PDF, so its `storedRelativePath` is taken from where the PDF actually is, and moving a stored file moves its record with it. It finds assays and gels by scanning `Assays/*/assay.json` and `Gels/*/gel.json`, and workflows by scanning `Workflow/*/template.json` and `Workflow/*/*/workflow.json`; there is no summary file or index. If two folders hold the same record id (a root saved by an older build, or a save interrupted between writing a renamed folder and pruning the old one), the most recently written file wins. A record whose `storageFolder` is already a folder under that root keeps it, so its record file sits next to its images and analysis results. Removing a record deletes only its record file (for workflows, `template.json` / `workflow.json`; results, notebook pages and `MEMORY.md` stay), and an assay or gel folder only once empty.
+Hydration finds papers by walking the same folders paper discovery scans for PDFs and reading each PDF's `.json`; a record follows its PDF, so its `storedRelativePath` is taken from where the PDF actually is, and moving a stored file moves its record with it. It finds assays and gels by scanning `Plates/*/assay.json` and `Gels/*/gel.json`, and workflows by scanning `Workflow/*/template.json` and `Workflow/*/*/workflow.json`; there is no summary file or index. If two folders hold the same record id (a root saved by an older build, or a save interrupted between writing a renamed folder and pruning the old one), the most recently written file wins. A record whose `storageFolder` is already a folder under that root keeps it, so its record file sits next to its images and analysis results. Removing a record deletes only its record file (for workflows, `template.json` / `workflow.json`; results, notebook pages and `MEMORY.md` stay), and an assay or gel folder only once empty.
 
-`KnowledgeBase/knowledge.index.sqlite`, `KnowledgeBase/experiments.sqlite` and `SequenceViewer/sequence-library.sqlite` are owned and written by their own modules.
+`KnowledgeBase/knowledge.index.sqlite`, `KnowledgeBase/experiments.sqlite` and `DNA/sequence-library.sqlite` are owned and written by their own modules.
 
 The chemicals index is the only copy of the lab chemical inventory, so an unreadable one is never overwritten (`chemical-index-guard.js`). Loading moves it aside to `hikari-chemicals.index.sqlite.corrupt-<time>` and the next save starts a new file; if it cannot be moved, chemical writes are refused until a later load reads it again, while the rest of each save still goes through. Either way the storage import returns an `alerts` entry, which the renderer shows as an error notice.
 
@@ -141,10 +141,10 @@ That means a load can succeed even when the primary JSON is intentionally missin
 It:
 
 - scans a storage root for bundle candidate files
-- decides whether the folder is one Hikari has used before by looking at the folder itself — any of `Protocol/`, `Project/`, `Samples/`, `Workflow/`, `SequenceViewer/`, `KnowledgeBase/`, or a snapshot `.json` — and reports that as `recognized`
+- decides whether the folder is one Hikari has used before by looking at the folder itself — any of `Protocol/`, `Project/`, `Samples/`, `Workflow/`, `DNA/`, `KnowledgeBase/`, or a snapshot `.json` — and reports that as `recognized`
 - hydrates each discovered bundle
 - merges protocols, notebook entries, chemicals, and inventory across bundles
-- summarizes the `SequenceViewer` SQLite library
+- summarizes the `DNA` SQLite library
 
 There is no marker or manifest file: the layout Hikari writes is the layout it reads. A `hikari-storage-manifest.json` left behind by builds before September 2026 is skipped during discovery and otherwise ignored.
 
