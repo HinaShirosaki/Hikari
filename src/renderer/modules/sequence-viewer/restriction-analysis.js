@@ -2,6 +2,7 @@ import { COMMERCIAL_RESTRICTION_ENZYMES } from './data/commercial-restriction-en
 import * as sharedRestrictionFeatures from './algorithms/restriction-features.js';
 import {
   FALLBACK_CHAR_ADVANCE_PX,
+  RESTRICTION_LABEL_GAP_PX,
   RESTRICTION_VENDOR_CODE_BY_KEY,
   STRAND_PAIR_ROW_GAP_PX
 } from './constants.js';
@@ -14,6 +15,8 @@ import {
 
 const COMMERCIAL_RESTRICTION_FEATURE_CACHE = new WeakMap();
 
+// IUPAC recognition site -> regex body (R = [AG], N = [ACGT], ...). Returns ''
+// for any unknown letter so a bad motif matches nothing.
 function motifToRegexBody(motif) {
   const normalized = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
   if (!normalized) {
@@ -42,6 +45,9 @@ function motifToRegexBody(motif) {
   return classes.join('');
 }
 
+// All (overlapping) motif matches via a zero-width lookahead. On a circular
+// sequence the first motifLength-1 bases are appended so a site spanning the
+// origin is found; such a hit is returned as two segments (end, then start).
 function findMotifHits(sequence, motif, topology = 'linear') {
   const text = normalizeSequenceText(sequence);
   const normalizedMotif = String(motif || '').toUpperCase().replace(/U/g, 'T').trim();
@@ -139,6 +145,10 @@ function describeRestrictionFeature(vendorCodes, enzymeCount, enzymeName) {
   return `Unique ${vendorLabel} restriction site recognized by ${String(enzymeName || '-')}.`;
 }
 
+// Unique cutters only: a site is kept when its motif (either strand; a
+// palindrome counts once) occurs exactly once in the sequence. One feature per
+// recognition site; isoschizomers are listed on it, and the name comes from the
+// enzyme sold by the most vendors (then the shortest name).
 export function buildCommercialRestrictionBaseFeatures(sequence, topology = 'linear') {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
@@ -269,6 +279,10 @@ export function buildCommercialRestrictionFeatures(sequence, topology = 'linear'
   return sharedRestrictionFeatures.buildCommercialRestrictionFeatures(sequence, topology, options);
 }
 
+// Cut position from a REBASE-style pattern, relative to the site start:
+//   "G^AATTC"  -> top strand cuts after 1 base, bottom mirrored (siteLength - 1)
+//   "(8/12)"   -> cuts outside the site, 8 / 12 bases past its end (type IIS)
+// sticky = the two strands are cut at different positions (overhang).
 function parseRestrictionCutDescriptor(feature) {
   const cutPattern = String(feature?.cut || '').trim().toUpperCase();
   if (!cutPattern) {
@@ -312,6 +326,8 @@ function parseRestrictionCutDescriptor(feature) {
   return null;
 }
 
+// Absolute top/bottom-strand cut indices for a feature; for a minus-strand hit
+// the offsets are mirrored across the site.
 export function resolveRestrictionCutBaseIndices(feature) {
   const descriptor = parseRestrictionCutDescriptor(feature);
   if (!descriptor) {
@@ -339,6 +355,9 @@ export function resolveRestrictionCutBaseIndices(feature) {
   };
 }
 
+// Scanning every enzyme is costly, so base features are cached per record
+// object (WeakMap) and recomputed only when its sequence or topology changes;
+// the vendor filter is applied on each call.
 export function getCommercialRestrictionFeaturesForRecord(record, options = {}) {
   if (!record?.sequence) {
     return [];
