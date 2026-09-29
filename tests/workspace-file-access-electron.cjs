@@ -66,6 +66,16 @@ async function call(args) {
   const result = await client.callTool({ name: 'workspace_files', arguments: args });
   return result.structuredContent || JSON.parse(result.content.find(item => item.type === 'text').text);
 }
+// A hidden window's first capture can come back empty on Windows; retry briefly.
+async function shot(dir, name) {
+  let png = Buffer.alloc(0);
+  for (let attempt = 0; attempt < 10 && !png.length; attempt++) {
+    if (attempt) await new Promise(resolve => setTimeout(resolve, 100));
+    png = (await win.webContents.capturePage()).toPNG();
+  }
+  assert.ok(png.length, `empty screenshot: ${name}`);
+  fs.writeFileSync(path.join(dir, name), png);
+}
 async function assertVisibleActions() {
   const bounds = await run(`Array.from(document.querySelectorAll('#agent-review-track [data-agent-review-card]:not([hidden]) [data-file-decision]')).map(button => {
     const r = button.getBoundingClientRect();
@@ -86,7 +96,7 @@ async function main() {
   // Real source markup/styles and controller modules; no fake DOM or fake IPC.
   fs.writeFileSync(fixture, `<!doctype html><html><head><link rel="stylesheet" href="${url('styles.css')}"></head>
     <body style="overflow:auto;padding:20px"><section id="settings-fixture" class="panel"><div id="setting-agent-file-access"></div></section>
-    ${agent}<p id="test-status" role="status"></p>
+    ${agent}
     <script type="module">
       import { createFileAccessSettings } from '${url('src/renderer/modules/settings/file-access-controller.js')}';
       import { createAgentReviewOverlayController } from '${url('src/renderer/modules/agent-chat/review-overlay.js')}';
@@ -94,10 +104,10 @@ async function main() {
       const get = id => document.getElementById(id);
       window.settings = createFileAccessSettings({ api: window.hikariApi, element: get('setting-agent-file-access'), escapeHtml: safe });
       window.review = createAgentReviewOverlayController({ dom: {
-        reviewOverlay: get('agent-review-overlay'), reviewTrack: get('agent-review-track'),
+        reviewOverlay: get('agent-review-overlay'), reviewTitle: get('agent-review-title'), reviewTrack: get('agent-review-track'),
         reviewPageLabel: get('agent-review-page-label'), reviewPrevBtn: get('agent-review-prev-btn'),
         reviewNextBtn: get('agent-review-next-btn'), reviewCloseBtn: get('agent-review-close-btn')
-      }, state: {}, safeText: safe, fileAccessApi: window.hikariApi, setStatus: text => { get('test-status').textContent = text; } });
+      }, state: {}, safeText: safe, fileAccessApi: window.hikariApi });
       get('agent-file-changes-btn').addEventListener('click', () => window.review.openFileChanges());
       await window.settings.render(); window.ready = true;
     </script></body></html>`);
@@ -115,38 +125,35 @@ async function main() {
   const proposal = await call(args);
   assert.equal(proposal.status, 'awaiting_approval', JSON.stringify(proposal));
   assert.equal(fs.existsSync(path.join(workspace, args.path)), false);
-  await waitFor(`document.querySelector('[data-file-decision="once"]')`);
   await run(`window.settings.render()`);
   await run(`new Promise(resolve => setTimeout(resolve, 150))`);
   assert.equal(await run(`document.querySelectorAll('#setting-agent-file-access script').length`), 0);
+  assert.equal(await run(`document.querySelectorAll('#setting-agent-file-access details, #setting-agent-file-access [data-agent-review-card]').length`), 0,
+    'Settings must not render file approval or history cards');
   const artifacts = path.resolve(__dirname, '../artifacts/workspace-file-access');
   fs.mkdirSync(artifacts, { recursive: true });
-  fs.writeFileSync(path.join(artifacts, 'settings-day.png'), (await win.webContents.capturePage()).toPNG());
+  await shot(artifacts, 'settings-day.png');
   await run(`document.body.classList.add('theme-night')`);
   await run(`new Promise(resolve => setTimeout(resolve, 150))`);
-  fs.writeFileSync(path.join(artifacts, 'settings-night.png'), (await win.webContents.capturePage()).toPNG());
+  await shot(artifacts, 'settings-night.png');
   await run(`document.getElementById('settings-fixture').hidden = true; document.getElementById('agent-view').classList.add('is-active'); window.review.openFileChanges()`);
   await waitFor(`!document.getElementById('agent-review-overlay').hidden`);
+  assert.equal(await run(`document.getElementById('agent-review-title').textContent`), 'Allow file change?');
+  assert.equal(await run(`document.getElementById('agent-review-track').textContent.includes(${JSON.stringify(workspace)})`), false,
+    'Compact approval must not repeat the absolute workspace path');
+  assert.equal(await run(`document.getElementById('agent-review-track').textContent.includes('unsafe()')`), false,
+    'Compact approval must not inline full file content');
   win.setContentSize(640, 800);
   await run(`new Promise(resolve => setTimeout(resolve, 150))`);
   await assertVisibleActions();
-  fs.writeFileSync(path.join(artifacts, 'approval-640.png'), (await win.webContents.capturePage()).toPNG());
-  await run(`window.review.close(); document.getElementById('settings-fixture').hidden = false; document.querySelector('#setting-agent-file-access [data-file-decision="once"]').click()`);
-  await waitFor(`document.querySelector('[data-file-decision="undo"]')`);
+  await shot(artifacts, 'approval-640.png');
+  await run(`document.querySelector('#agent-review-track [data-file-decision="once"]').click()`);
+  await waitFor(`document.querySelector('[data-hikari-transient-toast]')?.textContent === 'File change applied.'`);
   assert.equal(fs.readFileSync(path.join(workspace, args.path), 'utf8'), args.content);
   assert.equal((await call(args)).status, 'completed', 'stdio retries see the UI approval');
-  await run(`document.getElementById('settings-fixture').hidden = true; document.getElementById('agent-view').classList.add('is-active'); document.getElementById('agent-file-changes-btn').click()`);
-  await waitFor(`!document.getElementById('agent-review-overlay').hidden`);
-  for (const width of [1120, 640]) {
-    win.setContentSize(width, 800);
-    await run(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))`);
-    await assertVisibleActions();
-    await run(`new Promise(resolve => setTimeout(resolve, 150))`);
-    fs.writeFileSync(path.join(artifacts, `review-${width}.png`), (await win.webContents.capturePage()).toPNG());
-  }
-  await run(`document.querySelector('#agent-review-track [data-file-decision="undo"]').click()`);
-  await waitFor(`document.getElementById('test-status').textContent === 'File change restored.'`);
-  assert.equal(fs.existsSync(path.join(workspace, args.path)), false);
+  await run(`document.getElementById('agent-file-changes-btn').click()`);
+  await waitFor(`document.querySelector('[data-hikari-transient-toast]')?.textContent === 'No file changes are waiting for approval.'`);
+  assert.equal(await run(`document.getElementById('agent-review-overlay').hidden`), true, 'Completed changes must not appear as approval history');
   await run(`window.review.close(); document.getElementById('settings-fixture').hidden = false;
     const select = document.querySelector('[data-file-mode]'); select.value = 'workspace-write'; select.dispatchEvent(new Event('change', { bubbles: true }))`);
   await waitFor(`!document.querySelector('[data-file-mode]').disabled`);
@@ -156,17 +163,20 @@ async function main() {
   assert.equal((await call({ action: 'create', path: 'notes/automatic.txt', content: 'permitted', request_id: 'auto-1' })).status, 'completed');
   const trash = await call({ action: 'trash', path: 'notes/automatic.txt', request_id: 'trash-1' });
   assert.equal(trash.status, 'awaiting_approval');
+  await run(`document.getElementById('settings-fixture').hidden = true; window.review.openFileChanges()`);
   await waitFor(`document.querySelector('[data-file-id="${trash.proposal_id}"][data-file-decision="deny"]')`);
   await run(`document.querySelector('[data-file-id="${trash.proposal_id}"][data-file-decision="deny"]').click()`);
   await waitFor(`!document.querySelector('[data-file-id="${trash.proposal_id}"]')`);
   assert.equal(fs.readFileSync(path.join(workspace, 'notes/automatic.txt'), 'utf8'), 'permitted');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, root, rendered: ['day', 'night', '1120px', '640px'],
-    actualPreloadIpc: true, stdioHttpFileService: true, approveDenyUndo: true, modeInvalidation: true, artifacts }));
+  console.log(JSON.stringify({ ok: true, root, rendered: ['settings-day', 'settings-night', 'approval-640px'],
+    actualPreloadIpc: true, stdioHttpFileService: true, compactApproveDeny: true, settingsHistoryHidden: true,
+    completedHistoryHidden: true, modeInvalidation: true, artifacts }));
   await client.close(); client = null;
   await mcp.stop();
   win.destroy();
-  fs.rmSync(scratch, { recursive: true, force: true });
+  // Windows keeps the live profile locked until Electron exits; leave the temp dir then.
+  try { fs.rmSync(scratch, { recursive: true, force: true }); } catch { /* best-effort cleanup */ }
   app.quit();
 }
 main().catch(async error => { console.error(error); await client?.close(); await mcp.stop(); app.exit(1); });

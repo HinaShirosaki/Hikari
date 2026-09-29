@@ -2,7 +2,8 @@ import { trimText } from './shared.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
-import { renderFileChangePreview, decideFileChange } from './review-overlay/file-changes.js';
+import { renderFileChangePreview, decideFileChange, fileDecisionMessage } from './review-overlay/file-changes.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -59,6 +60,7 @@ export function createAgentReviewOverlayController({
     activeIndex = Math.min(Math.max(activeIndex, 0), reviewItems.length - 1);
     dom.reviewOverlay.hidden = false;
     dom.reviewOverlay.classList?.toggle('is-file-review', reviewItems[activeIndex]?.type === 'file-change');
+    if (dom.reviewTitle) dom.reviewTitle.textContent = reviewItems[activeIndex]?.type === 'file-change' ? 'Allow file change?' : 'Review changes';
     dom.reviewTrack.innerHTML = reviewItems.map((item) => {
       if (item.type === 'file-change') return renderFileChangePreview(item, safeText);
       if (item.type === 'protocol') {
@@ -208,17 +210,23 @@ export function createAgentReviewOverlayController({
     }
   }
 
-  async function openFileChanges() {
+  // The Agent view has no status pill (setStatus is a no-op there), so file
+  // review outcomes and errors go through the app-wide toast instead.
+  function notifyFile(text, ok = true) {
+    showTransientNotice(text, { type: ok ? 'success' : 'error' });
+  }
+
+  async function openFileChanges({ quietEmpty = false } = {}) {
     if (!fileAccessApi?.agentFilesStatus) return;
     try {
       const result = await fileAccessApi.agentFilesStatus();
-      if (!result?.ok) { setStatus?.(result?.error || 'File access is unavailable.'); return; }
+      if (!result?.ok) { notifyFile(result?.error || 'File access is unavailable.', false); return; }
       fileRootId = result.root_id;
       reviewItems = reviewItems.filter(item => item.type !== 'file-change');
-      reviewItems.push(...[...result.pending, ...result.history].map(change => ({ type: 'file-change', id: change.id, change })));
-      if (!reviewItems.length) setStatus?.('No file changes yet. Access is configured in Settings → Codex.');
+      reviewItems.push(...result.pending.map(change => ({ type: 'file-change', id: change.id, change })));
+      if (!result.pending.length && !quietEmpty) notifyFile('No file changes are waiting for approval.');
       render();
-    } catch (error) { setStatus?.(error.message); }
+    } catch (error) { notifyFile(error.message, false); }
   }
 
   async function decideFile(id, decision) {
@@ -227,9 +235,10 @@ export function createAgentReviewOverlayController({
     dom.reviewTrack?.querySelectorAll?.('[data-file-decision]').forEach(button => { button.disabled = true; });
     try {
       const result = await decideFileChange(fileAccessApi, fileRootId, id, decision);
-      setStatus?.(result?.ok ? (decision === 'undo' ? 'File change restored.' : decision === 'deny' ? 'File change denied.' : 'File change applied.') : result?.error || 'File change failed.');
-      await openFileChanges();
-    } catch (error) { setStatus?.(error.message); }
+      notifyFile(result?.ok ? (result.warning || fileDecisionMessage(decision))
+        : result?.error || 'File change failed.', Boolean(result?.ok && !result.warning));
+      await openFileChanges({ quietEmpty: true });
+    } catch (error) { notifyFile(error.message, false); }
     finally { fileDecisionPending = false; render(); }
   }
 

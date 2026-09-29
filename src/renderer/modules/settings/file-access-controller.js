@@ -1,5 +1,3 @@
-import { renderFileChangePreview, decideFileChange } from '../agent-chat/review-overlay/file-changes.js';
-
 export function createFileAccessSettings({ api, element, escapeHtml }) {
   let snapshot = null;
   let revision = 0;
@@ -29,11 +27,8 @@ export function createFileAccessSettings({ api, element, escapeHtml }) {
         </div>
         ${result.locations.length ? `<p class="small-note">Additional folders use the same mode: ${result.locations.map(item => escapeHtml(item.root)).join(', ')}</p>` : ''}
         ${result.folders.length ? `<p class="small-note">Remembered operations: ${result.folders.map(item => `${escapeHtml(item.action)} in ${escapeHtml(item.path)}`).join(', ')}</p>` : ''}
-        <p class="small-note" role="status">${escapeHtml(message)}</p>
-        <details ${result.pending.length ? 'open' : ''}><summary>File changes · ${result.pending.length} pending</summary>
-          <p class="small-note">Recent 50 changes. Recovery snapshots: ${escapeHtml(result.recovery_directory)}</p>
-          ${[...result.pending, ...result.history].map(change => renderFileChangePreview({ id: change.id, change }, escapeHtml)).join('') || '<p class="small-note">No file changes yet.</p>'}
-        </details>`;
+        ${result.pending.length ? `<p class="small-note">${result.pending.length} file ${result.pending.length === 1 ? 'change is' : 'changes are'} waiting for approval in Agent Chat.</p>` : ''}
+        <p class="small-note" role="status">${escapeHtml(message)}</p>`;
     } catch (error) {
       if (request === revision) element.innerHTML = `<p role="status">${escapeHtml(error.message)}</p>`;
     }
@@ -59,7 +54,6 @@ export function createFileAccessSettings({ api, element, escapeHtml }) {
     if (!button) return;
     if (button.hasAttribute('data-file-revoke')) void act(rootId => api.agentFilesSettings({ root_id: rootId, action: 'revoke' }));
     else if (button.hasAttribute('data-file-add-location')) void act(rootId => api.agentFilesAddLocation({ root_id: rootId }));
-    else if (button.dataset.fileDecision) void act(rootId => decideFileChange(api, rootId, button.dataset.fileId, button.dataset.fileDecision));
   });
   api?.onAgentFilesChanged?.(() => { if (!busy) void render(); });
   return { render };
