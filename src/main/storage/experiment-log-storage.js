@@ -2,6 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const { writeFileAtomic } = require('../lib/shared-json-file.js');
 
 const EXPERIMENT_LOG_SCHEMA = 'hikari_experiment_log';
 const EXPERIMENT_LOG_SCHEMA_VERSION = '1.0.0';
@@ -60,11 +61,7 @@ async function writeExperimentLogSidecar(filePath, snapshot, updatedAt) {
     return '';
   }
   await fs.mkdir(path.dirname(targetPath), { recursive: true });
-  await fs.writeFile(
-    targetPath,
-    JSON.stringify(buildExperimentLogSidecar(snapshot, updatedAt), null, 2),
-    'utf8'
-  );
+  await writeFileAtomic(fs, targetPath, JSON.stringify(buildExperimentLogSidecar(snapshot, updatedAt), null, 2));
   return targetPath;
 }
 

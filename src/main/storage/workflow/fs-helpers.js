@@ -5,6 +5,7 @@ const path = require('path');
 const { cleanText, ensureObject } = require('../storage-utils');
 const { buildEntryFolderName, buildNotebookPageFolderName } = require('./folder-names.js');
 const { isPathInside } = require('../../lib/path-safety.js');
+const { writeFileAtomic } = require('../../lib/shared-json-file.js');
 
 async function ensureFolder(targetPath) {
   if (!targetPath) {
@@ -15,7 +16,7 @@ async function ensureFolder(targetPath) {
 
 async function writeJsonFile(targetPath, payload) {
   await ensureFolder(path.dirname(targetPath));
-  await fs.writeFile(targetPath, JSON.stringify(payload, null, 2), 'utf8');
+  await writeFileAtomic(fs, targetPath, JSON.stringify(payload, null, 2));
 }
 
 function buildNotebookStorageFolder(runLayout, notebookEntry) {
