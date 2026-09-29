@@ -1,11 +1,12 @@
 # Hikari installer for Windows (PowerShell):
 #   iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 # Builds the native Hikari app on this machine and writes one installer to .\hikari-out\Hikari-win32-<arch>\HikariSetup.exe.
-# Without Node.js 20+ on PATH it downloads a private copy to %LOCALAPPDATA%\Hikari\node; nothing system-wide changes.
+# Without Node.js 20+ on PATH it downloads a private copy to %LOCALAPPDATA%\HikariNode; nothing system-wide changes.
 $ErrorActionPreference = 'Stop'
 
 $nodeDist = 'https://nodejs.org/dist/latest-v24.x'
-$hikariNode = if ($env:HIKARI_NODE_DIR) { $env:HIKARI_NODE_DIR } else { Join-Path $env:LOCALAPPDATA 'Hikari\node' }
+# Not under %LOCALAPPDATA%\Hikari: that is the Squirrel install root, which HikariSetup.exe deletes on every install.
+$hikariNode = if ($env:HIKARI_NODE_DIR) { $env:HIKARI_NODE_DIR } else { Join-Path $env:LOCALAPPDATA 'HikariNode' }
 
 function Test-Node {
   $node = Get-Command node -ErrorAction SilentlyContinue

@@ -30,7 +30,7 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
-No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\Hikari\node` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
+No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\HikariNode` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
 
 ```bash
 npx @hinashirosaki/hikari
@@ -340,7 +340,7 @@ Hikari keeps state in three layers:
 | Snapshot | `hikari-data.json` in the storage root | The saved record set |
 | Storage root | The folder you set in `Settings > Storage` | Every heavy file, in named subfolders |
 
-Inside the storage root you will find `Papers/` and `papers.md/`, `Assays/`, `Gels/`, `Samples/`, `Protocol/`, and `KnowledgeBase/`, alongside the snapshot file and the SQLite search indexes for chemicals and protocols.
+Inside the storage root you will find `Papers/` and `papers.md/`, `Plates/`, `Gels/`, `Samples/`, `Protocol/`, and `KnowledgeBase/`, alongside the snapshot file and the SQLite search indexes for chemicals and protocols.
 
 Notes:
 
