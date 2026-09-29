@@ -1,9 +1,20 @@
 'use strict';
 
-const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels');
+const { AGENT, AGENT_PROGRESS_EVENT, FILE_ACCESS } = require('../../../shared/ipc/channels');
 
 function createAgentApi(ipcRenderer) {
   return {
+    agentFilesStatus: () => ipcRenderer.invoke(FILE_ACCESS.STATUS),
+    agentFilesSettings: payload => ipcRenderer.invoke(FILE_ACCESS.SETTINGS, payload),
+    agentFilesReview: payload => ipcRenderer.invoke(FILE_ACCESS.REVIEW, payload),
+    agentFilesUndo: payload => ipcRenderer.invoke(FILE_ACCESS.UNDO, payload),
+    agentFilesAddLocation: payload => ipcRenderer.invoke(FILE_ACCESS.ADD_LOCATION, payload),
+    onAgentFilesChanged: handler => {
+      if (typeof handler !== 'function') return () => {};
+      const listener = () => handler();
+      ipcRenderer.on(FILE_ACCESS.CHANGED, listener);
+      return () => ipcRenderer.removeListener(FILE_ACCESS.CHANGED, listener);
+    },
     suggestNextExperiment: (payload) => ipcRenderer.invoke(AGENT.SUGGEST_EXPERIMENT, payload),
     agentHtmlPreview: (payload) => ipcRenderer.invoke(AGENT.HTML_PREVIEW, payload),
     agentChat: (payload) => ipcRenderer.invoke(AGENT.CHAT, payload),

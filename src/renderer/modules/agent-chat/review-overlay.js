@@ -2,6 +2,7 @@ import { trimText } from './shared.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
+import { renderFileChangePreview, decideFileChange } from './review-overlay/file-changes.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -14,16 +15,20 @@ export function createAgentReviewOverlayController({
   notebookActions,
   notebookDraftAdapter,
   protocolReviewAdapter,
+  fileAccessApi = null,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   let reviewItems = [];
   let activeIndex = 0;
+  let fileRootId = '';
+  let fileDecisionPending = false;
 
   function close() {
     reviewItems = [];
     activeIndex = 0;
     if (dom.reviewOverlay) {
       dom.reviewOverlay.hidden = true;
+      dom.reviewOverlay.classList?.remove('is-file-review');
     }
     if (dom.reviewTrack) {
       dom.reviewTrack.innerHTML = '';
@@ -53,7 +58,9 @@ export function createAgentReviewOverlayController({
     }
     activeIndex = Math.min(Math.max(activeIndex, 0), reviewItems.length - 1);
     dom.reviewOverlay.hidden = false;
+    dom.reviewOverlay.classList?.toggle('is-file-review', reviewItems[activeIndex]?.type === 'file-change');
     dom.reviewTrack.innerHTML = reviewItems.map((item) => {
+      if (item.type === 'file-change') return renderFileChangePreview(item, safeText);
       if (item.type === 'protocol') {
         return renderProtocolPreview(item, safeText);
       }
@@ -183,6 +190,11 @@ export function createAgentReviewOverlayController({
 
   function onTrackClick(event) {
     const target = event?.target;
+    const fileButton = target?.closest?.('[data-file-decision]');
+    if (fileButton && fileAccessApi) {
+      void decideFile(fileButton.dataset.fileId, fileButton.dataset.fileDecision);
+      return;
+    }
     const approveButton = target?.closest?.('[data-agent-review-approve]')
       || (target?.dataset?.agentReviewApprove ? target : null);
     if (approveButton) {
@@ -194,6 +206,31 @@ export function createAgentReviewOverlayController({
     if (rejectButton) {
       rejectItem(rejectButton.dataset.agentReviewReject);
     }
+  }
+
+  async function openFileChanges() {
+    if (!fileAccessApi?.agentFilesStatus) return;
+    try {
+      const result = await fileAccessApi.agentFilesStatus();
+      if (!result?.ok) { setStatus?.(result?.error || 'File access is unavailable.'); return; }
+      fileRootId = result.root_id;
+      reviewItems = reviewItems.filter(item => item.type !== 'file-change');
+      reviewItems.push(...[...result.pending, ...result.history].map(change => ({ type: 'file-change', id: change.id, change })));
+      if (!reviewItems.length) setStatus?.('No file changes yet. Access is configured in Settings → Codex.');
+      render();
+    } catch (error) { setStatus?.(error.message); }
+  }
+
+  async function decideFile(id, decision) {
+    if (fileDecisionPending) return;
+    fileDecisionPending = true;
+    dom.reviewTrack?.querySelectorAll?.('[data-file-decision]').forEach(button => { button.disabled = true; });
+    try {
+      const result = await decideFileChange(fileAccessApi, fileRootId, id, decision);
+      setStatus?.(result?.ok ? (decision === 'undo' ? 'File change restored.' : decision === 'deny' ? 'File change denied.' : 'File change applied.') : result?.error || 'File change failed.');
+      await openFileChanges();
+    } catch (error) { setStatus?.(error.message); }
+    finally { fileDecisionPending = false; render(); }
   }
 
   function openForMessage(message) {
@@ -220,6 +257,11 @@ export function createAgentReviewOverlayController({
       close();
     }
   });
+  dom.reviewOverlay?.ownerDocument?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape' && dom.reviewOverlay.hidden === false) {
+      close();
+    }
+  });
   dom.reviewPrevBtn?.addEventListener?.('click', () => {
     activeIndex = Math.max(0, activeIndex - 1);
     render();
@@ -230,6 +272,7 @@ export function createAgentReviewOverlayController({
   });
 
   return {
+    openFileChanges,
     close,
     reviewInline(messageId, itemId, decision) {
       // Resolve from current state on every click, so a stale approval control

@@ -5,6 +5,7 @@ import { createExternalSkillsController } from './external-skills-controller.js'
 import { createPluginsController } from './plugins-controller.js';
 import { createLlmModelCatalog } from './llm-model-catalog.js';
 import { createMcpToolsController } from './mcp-tools-controller.js';
+import { createFileAccessSettings } from './file-access-controller.js';
 import { getSettingsElements } from './dom.js';
 import { escapeHtml } from './html.js';
 import { showTransientNotice } from '../../lib/notify.js';
@@ -105,6 +106,11 @@ export function initSettings({
     state,
     persist,
     listElement: settingMcpToolsList,
+    escapeHtml
+  });
+  const fileAccessSettings = createFileAccessSettings({
+    api: window?.hikariApi,
+    element: document?.getElementById?.('setting-agent-file-access'),
     escapeHtml
   });
   const externalSkillsController = createExternalSkillsController({
@@ -422,6 +428,7 @@ export function initSettings({
     }
     renderCodexStatus();
     mcpToolsController.render();
+    void fileAccessSettings.render();
     externalSkillsController.render();
     pluginsController.render();
     sampleInventoryController.renderLocationList();

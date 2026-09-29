@@ -184,8 +184,21 @@ export function initAgentChat({
     notebookActions: historyController.notebookActions,
     notebookDraftAdapter,
     protocolReviewAdapter,
-    onAppendNotebookEntry
+    onAppendNotebookEntry,
+    fileAccessApi: api
   });
+
+  const fileChangesButton = rootDocument?.getElementById?.(`${idPrefix}-file-changes-btn`);
+  fileChangesButton?.addEventListener('click', () => { void reviewController.openFileChanges(); });
+  const refreshFileChanges = async () => {
+    if (!fileChangesButton || !api?.agentFilesStatus) return;
+    try {
+      const result = await api.agentFilesStatus();
+      fileChangesButton.textContent = result?.pending?.length ? `File changes (${result.pending.length})` : 'File changes';
+    } catch { /* Settings shows detailed access errors. */ }
+  };
+  api?.onAgentFilesChanged?.(() => { void refreshFileChanges(); });
+  void refreshFileChanges();
 
   requestController = createAgentRequestController({
     api,

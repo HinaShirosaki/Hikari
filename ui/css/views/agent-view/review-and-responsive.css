@@ -8,6 +8,40 @@
   display: none;
 }
 
+.agent-review-overlay.app-dialog-overlay.is-file-review {
+  /* File permissions are workspace-wide and must stay above the chat rails.
+     Fixed means viewport-relative, so drop the in-stage 18px offset and take
+     the app-wide one that clears the top bar. */
+  --app-dialog-safe-top: inherit;
+  position: fixed;
+  z-index: 2550;
+}
+
+.is-file-review .agent-review-card-header p,
+#setting-agent-file-access .small-note {
+  overflow-wrap: anywhere;
+}
+
+.agent-file-diff {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  max-height: 24rem;
+  overflow: auto;
+}
+
+#setting-agent-file-access .agent-review-card {
+  max-width: none;
+  height: auto;
+  margin-block: var(--space-12);
+}
+
+#setting-agent-file-access .agent-review-content {
+  max-height: 24rem;
+  overflow: auto;
+}
+
 .agent-review-dialog.app-dialog-surface {
   --app-dialog-width: 1120px;
   --app-dialog-max-height: 760px;

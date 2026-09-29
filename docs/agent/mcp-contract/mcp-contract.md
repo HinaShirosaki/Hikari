@@ -20,6 +20,20 @@ Notebook planning considers up to 60 past notebook records, 40 experiment candid
 
 Before starting a transfer, Hikari checks its paper index and saved download receipts. It verifies the PDF header and destination before reusing a file. Receipts are stored under the destination's `.hikari-downloads` folder before intake starts, so a later request after an app restart can reuse the PDF. Missing or invalid files allow a new transfer; different DOIs and different destination folders remain separate. Existing duplicate files are not removed.
 
+## Workspace file access
+
+`workspace_files` executes in Hikari's main process against the current storage root. A Hikari chat turn receives a short-lived capability; raw paths, snapshots and tool arguments cannot grant access. The CLI provider supplies this capability with a per-invocation `mcp_servers.hikari.env.HIKARI_FILE_ACCESS_TOKEN` override (empty for ungranted helpers), not shared configuration. Background runs receive read-only capabilities; external clients without a Hikari-issued turn capability cannot use this tool. Other existing MCP tools are unchanged.
+
+Settings → Codex → Agent file access selects **Read only · review changes** or **Workspace access**. Permissions are stored in application data, outside the selected root. Workspace access permits ordinary creates, edits and moves. Trash requires review unless the user remembers that operation for a particular folder. Additional folders are explicitly selected using Hikari's folder picker and use the same mode. Revoke grants returns to read-only and clears folder exceptions and additional locations. Changes invalidate existing turn capabilities and pending proposals; start a new turn afterwards.
+
+Actions: `status`, `list`, `read`, `search`, `create`, `write`, `mkdir`, `move`, `trash`. Paths use root-relative `/` separators. `write` requires `expected_hash` from `read`. Mutations require a unique `request_id`; retries use identical arguments. `awaiting_approval` means no file was changed. File changes in Agent Chat and Settings shows proposals and recovery actions. Approval and undo are authenticated, main-window-only IPC operations, never agent tools.
+
+The service rejects traversal, symlinks/junctions, hard links, private configuration and direct changes to managed records/indexes. It checks the real root and current root revision, revalidates proposals at application time, and refuses undo over subsequent changes. Folder operations are bounded at 1,000 entries and 8 MiB; individual reads/writes are limited to 8 MiB. Search returns bounded results with explicit truncation/skipped-path reporting. Recovery snapshots remain in application data. OS filesystem permissions and availability still apply.
+
+These restrictions govern `workspace_files`; they are not a claim that native Codex reads or other existing MCP tools have become confined to the selected root. Native CLI execution remains read-only. Simultaneous hostile filesystem changes by another local process require OS-level isolation beyond this application service.
+
+Recovery snapshots and a prepared journal record are saved before mutation. On restart, interrupted records are compared with the before/after hashes: completed changes retain Undo, unchanged operations are marked not applied, and mismatched/partially restored files require manual recovery. Settings shows the recovery directory and the most recent 50 changes; snapshots are retained until manually removed. Recovery covers file content and ordinary permission bits, not extended attributes, ACLs or original timestamps. It does not guarantee recovery from disk failure or power loss. Exclusive file creation requires hard-link support on the selected filesystem; unsupported filesystems return an error without overwriting a destination.
+
 ## Runtime config
 
 Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
@@ -55,6 +69,7 @@ enabled_tools = [
   "paper_intake_search_experiments",
   "paper_intake_list_project_summaries",
   "purchase_recommendation",
+  "workspace_files",
   "container",
   "assay_table",
   "plotly_graph",

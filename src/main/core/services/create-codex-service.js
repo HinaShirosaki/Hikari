@@ -40,6 +40,7 @@ function createMainCodexService({
   syncBundleFromSnapshot,
   mcpService,
   agentFoundation,
+  fileAccess,
   processObject = process,
   createWorkspaceInitializer = createCodexWorkspaceInitializer
 } = {}) {
@@ -171,11 +172,26 @@ function createMainCodexService({
   }
 
   async function requestCodexAgentText(input = {}) {
-    await workspaceInitializer.initialize({
-      cwd: input.cwd,
-      envOverrides: input.envOverrides
+    const envOverrides = { ...input.envOverrides };
+    let context = {};
+    try { context = ensurePlainObject(JSON.parse(envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT || envOverrides.HIKARI_CODEX_REQUEST_CONTEXT || '{}')); } catch { /* no file grant */ }
+    const agentSettings = context.snapshot?.settings?.agent || {};
+    const disabled = agentSettings.disabledMcpToolNames || agentSettings.disabled_mcp_tool_names || [];
+    const session = await fileAccess?.beginSession({
+      id: context.chatSessionId || context.traceRequestId,
+      write: Boolean(context.chatSessionId) && !context.snapshot?.scheduled_task && !context.snapshot?.scheduledTask,
+      enabled: !disabled.includes('workspace_files')
     });
-    return requestCodexCliText(input);
+    // Never persist a live capability in shared Codex config/request context.
+    // The provider binds it to this CLI invocation via a per-process override.
+    delete context.fileAccessToken;
+    envOverrides.HIKARI_FILE_ACCESS_TOKEN = session?.ok ? session.token : '';
+    envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT = JSON.stringify(context);
+    envOverrides.HIKARI_CODEX_REQUEST_CONTEXT = JSON.stringify(context);
+    try {
+      await workspaceInitializer.initialize({ cwd: input.cwd, envOverrides });
+      return await requestCodexCliText({ ...input, envOverrides });
+    } finally { if (session?.token) fileAccess.endSession(session.token); }
   }
 
   const codexAgentRuntime = createCodexAgentRuntime({

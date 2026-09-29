@@ -155,6 +155,13 @@ function parseRequestContext(value = '') {
   }
 }
 
+function withoutFileCapability(value) {
+  if (!value) return '';
+  const context = parseRequestContext(value);
+  delete context.fileAccessToken;
+  return JSON.stringify(context);
+}
+
 function buildHikariCodexMcpConfigBlock(options = {}) {
   const envEntries = {};
   const envSource = getMcpConfigEnvSource(options);
@@ -187,8 +194,8 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_TOKEN', mcpToken, 4000);
   addEnvEntry(envEntries, 'HIKARI_CODEX_MCP_HOST', mcpHostUrl, 2400);
   addEnvEntry(envEntries, 'HIKARI_CODEX_MCP_TOKEN', mcpToken, 4000);
-  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_REQUEST_CONTEXT', agentRequestContext || codexRequestContext, 120000);
-  addEnvEntry(envEntries, 'HIKARI_CODEX_REQUEST_CONTEXT', codexRequestContext || agentRequestContext, 120000);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_REQUEST_CONTEXT', withoutFileCapability(agentRequestContext || codexRequestContext), 120000);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_REQUEST_CONTEXT', withoutFileCapability(codexRequestContext || agentRequestContext), 120000);
   const envText = Object.entries(envEntries)
     .map(([key, value]) => `${key} = ${tomlString(value)}`)
     .join(', ');

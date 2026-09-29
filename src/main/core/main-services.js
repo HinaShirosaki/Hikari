@@ -1,5 +1,9 @@
 'use strict';
 
+const { createWorkspaceFileService } = require('../agent/file-access/service.js');
+const { registerAgentFileIpc } = require('../ipc/register-agent-file-ipc.js');
+const { FILE_ACCESS } = require('../../shared/ipc/channels');
+
 const {
   hasSupportedDataExtension,
   normalizeDataFilePath
@@ -214,7 +218,15 @@ function createMainServices(context = {}) {
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime
   });
 
+  const fileAccess = createWorkspaceFileService({
+    getStorageRoot: appPaths.getStorageRoot,
+    getStorageRootRevision: appPaths.getStorageRootRevision,
+    privateDirectory: appPaths.getCodexCliWorkingDirectory(),
+    onChange: () => getMainWindow()?.webContents?.send(FILE_ACCESS.CHANGED)
+  });
+  registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog });
   const mcp = createMainMcpService({
+    fileAccess,
     agentToolRuntime: agents.agentToolRuntime,
     ipcMain,
     getMainWindow,
@@ -223,6 +235,7 @@ function createMainServices(context = {}) {
   });
 
   codex = createMainCodexService({
+    fileAccess,
     cleanText,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
