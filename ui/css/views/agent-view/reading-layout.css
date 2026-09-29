@@ -251,9 +251,9 @@
 .agent-review-dialog .app-dialog-close-btn .agent-chat-icon,
 .home-agent-dialog .app-dialog-close-btn .agent-chat-icon { width: 1rem; height: 1rem; }
 .agent-conversation-shell .agent-user-question-card { gap: .75rem; padding: 1rem; border-radius: .8rem; }
-.agent-conversation-shell .agent-user-question-option { background: var(--theme-surface-subtle); border-radius: .45rem; }
+.agent-conversation-shell :is(.agent-user-question-option, .agent-user-question-custom) { background: var(--theme-surface-subtle); border-radius: .45rem; }
 .agent-conversation-shell .agent-user-question-options { gap: .4rem; }
-.agent-conversation-shell .agent-user-question-option span { font-weight: 500; }
+.agent-conversation-shell :is(.agent-user-question-option span, .agent-user-question-custom-field) { font-weight: 500; }
 
 @container agent-conversation (max-width: 32rem) {
   .agent-chat-history .agent-chat-row > .agent-chat-item-user { max-width: 94%; }

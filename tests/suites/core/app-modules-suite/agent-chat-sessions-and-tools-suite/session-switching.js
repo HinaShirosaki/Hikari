@@ -364,7 +364,7 @@ test('agent chat has no status pill or reserved row above the conversation', () 
   assert.doesNotMatch(agentViewCss, /\.agent-chat-stage > \.agent-conversation-shell\s*\{[^}]*grid-row:/s);
 });
 
-test('agent-chat creates project folders, custom folders, and project-scoped chats', async () => {
+test('agent-chat creates folders and defers project-scoped chat persistence until first send', async () => {
   const document = createMockDocument([
     'agent-project-select',
     'agent-session-rail',
@@ -421,7 +421,8 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
             updated_at: '2026-07-11T12:00:00.000Z'
           }
         };
-      }
+      },
+      agentChat: async () => ({ ok: false, canceled: true, error: 'Test request finished.' })
     }
   };
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
@@ -467,8 +468,20 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   trigger(sessionList, 'click', { target: iconTarget });
   await flushAsync();
   await flushAsync();
+  assert.equal(createPayload, null);
+  assert.equal(state.agentChat.currentSessionId, '');
+  assert.equal(state.agentChat.projectId, 'p1');
+  assert.equal(state.agentChat.messages.length, 0);
+  assert.equal(state.agentChat.sessions.length, 0);
+
+  document.getElementById('agent-message-input').value = 'Plan the Atlas experiment.';
+  trigger(document.getElementById('agent-send-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
   assert.equal(createPayload.projectId, 'p1');
   assert.equal(createPayload.projectName, 'Atlas');
+  assert.equal(createPayload.title, 'Plan the Atlas experiment.');
   assert.equal(state.agentChat.sessionFolderIds['chat-project'], 'project:p1');
 
   trigger(document.getElementById('agent-context-new-folder'), 'click');
@@ -486,7 +499,7 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
   assert.match(sessionList.innerHTML, /data-agent-folder-id="project:p2"/);
   assert.match(sessionList.innerHTML, />Second Study</);
 });
-test('agent-chat keeps the selected session intact when new-chat creation fails', async () => {
+test('agent-chat New Chat stays an unsaved blank draft until content is sent', async () => {
   const document = createMockDocument([
     'agent-project-select',
     'agent-session-status',
@@ -523,9 +536,13 @@ test('agent-chat keeps the selected session intact when new-chat creation fails'
       messages: originalMessages.map((message) => ({ ...message }))
     }
   };
+  let createSessionCalls = 0;
   const window = {
     hikariApi: {
-      agentChatLogCreateSession: async () => ({ ok: false, error: 'Storage is unavailable.' })
+      agentChatLogCreateSession: async () => {
+        createSessionCalls += 1;
+        return { ok: false, error: 'Storage is unavailable.' };
+      }
     }
   };
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
@@ -544,15 +561,113 @@ test('agent-chat keeps the selected session intact when new-chat creation fails'
   agent.render();
   document.getElementById('agent-message-input').value = 'Keep this draft too.';
   clickNewChatInFolder(document, 'project:project-next');
+  clickNewChatInFolder(document, 'project:project-next');
   await flushAsync();
   await flushAsync();
 
-  assert.equal(state.agentChat.currentSessionId, 'chat-existing');
-  assert.equal(state.agentChat.projectId, 'project-existing');
-  assert.deepEqual(state.agentChat.messages, originalMessages);
-  assert.equal(document.getElementById('agent-message-input').value, 'Keep this draft too.');
-  assert.match(document.getElementById('agent-chat-history').innerHTML, /Keep this answer/);
-  assert.match(document.getElementById('agent-session-status').textContent, /New chat failed/);
+  assert.equal(createSessionCalls, 0);
+  assert.equal(state.agentChat.currentSessionId, '');
+  assert.equal(state.agentChat.projectId, 'project-next');
+  assert.equal(state.agentChat.messages.length, 0);
+  assert.equal(state.agentChat.sessions.length, 1);
+  assert.equal(document.getElementById('agent-message-input').value, '');
+  assert.doesNotMatch(document.getElementById('agent-chat-history').innerHTML, /Keep this answer/);
+  assert.equal(document.getElementById('agent-session-status').textContent, '');
+});
+test('agent-chat keeps a new blank draft when an older session refresh or load finishes late', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-status'
+  ]);
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '/tmp/hikari-storage', agent: {} },
+    agentChat: { projectId: '', currentSessionId: '', sessions: [], messages: [] }
+  };
+  let releaseSessionList = null;
+  let releaseSessionLoad = null;
+  let getSessionCalls = 0;
+  let createSessionCalls = 0;
+  const window = {
+    hikariApi: {
+      agentChatLogListSessions: () => new Promise((resolve) => {
+        releaseSessionList = resolve;
+      }),
+      agentChatLogGetSession: () => {
+        getSessionCalls += 1;
+        return new Promise((resolve) => {
+          releaseSessionLoad = () => resolve({
+            ok: true,
+            session: { id: 'chat-existing', title: 'Existing chat' },
+            messages: [{ id: 'existing-message', role: 'assistant', text: 'Older history.' }]
+          });
+        });
+      },
+      agentChatLogCreateSession: async () => {
+        createSessionCalls += 1;
+        return { ok: true, session: { id: 'chat-unexpected', title: 'New Chat' } };
+      }
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: () => 'new-chat-race-id',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  assert.equal(typeof releaseSessionList, 'function');
+  clickNewChatInFolder(document, 'general');
+  await flushAsync();
+  releaseSessionList({
+    ok: true,
+    items: [{ id: 'chat-existing', title: 'Existing chat', message_count: 1 }]
+  });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(createSessionCalls, 0);
+  assert.equal(getSessionCalls, 0);
+  assert.equal(state.agentChat.currentSessionId, '');
+  assert.equal(state.agentChat.messages.length, 0);
+  assert.equal(state.agentChat.sessions.length, 1);
+  assert.doesNotMatch(document.getElementById('agent-chat-history').innerHTML, /Older history/);
+
+  trigger(document.getElementById('agent-session-list'), 'click', {
+    target: { dataset: { sessionId: 'chat-existing' } }
+  });
+  assert.equal(typeof releaseSessionLoad, 'function');
+  clickNewChatInFolder(document, 'general');
+  await flushAsync();
+  releaseSessionLoad();
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(createSessionCalls, 0);
+  assert.equal(getSessionCalls, 1);
+  assert.equal(state.agentChat.currentSessionId, '');
+  assert.equal(state.agentChat.messages.length, 0);
+  assert.doesNotMatch(document.getElementById('agent-chat-history').innerHTML, /Older history/);
 });
 test('agent-chat locks duplicate sends while the first session is being created', async () => {
   const document = createMockDocument([

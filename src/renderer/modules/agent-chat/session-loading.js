@@ -33,6 +33,11 @@ function createSessionLoading({
   let sessionLoadPromise = null;
   let activeSessionLoadId = '';
   let queuedSessionLoadId = '';
+  // True while New Chat's unsaved draft is showing. Bumping the revision on
+  // New Chat lets an in-flight loadChatSession detect it was superseded and
+  // leave the draft alone instead of swapping the old session back in.
+  let newChatDraftActive = false;
+  let sessionSelectionRevision = 0;
 
   async function loadChatSession(sessionId, options = {}) {
     ensureAgentState();
@@ -49,6 +54,7 @@ function createSessionLoading({
     }
     activeSessionLoadId = targetSessionId;
     queuedSessionLoadId = '';
+    const requestedSelectionRevision = sessionSelectionRevision;
     if (options.silent !== true) {
       setStatus('Loading chat history...');
     }
@@ -59,6 +65,18 @@ function createSessionLoading({
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to load chat session.');
       }
+      // A session load that started before the user chose New Chat must not
+      // replace the blank draft when its disk read finishes later.
+      if (newChatDraftActive && requestedSelectionRevision !== sessionSelectionRevision) {
+        upsertSessionSummary(result.session);
+        renderSessionList();
+        setSessionStatus('');
+        if (options.silent !== true) {
+          setStatus('New chat ready.');
+        }
+        return;
+      }
+      newChatDraftActive = false;
       const preserveLocalMessages = options.preserveLocalMessages === true
         && trimText(state.agentChat.currentSessionId, 120) === targetSessionId
         && asArray(state.agentChat.messages).length > 0;
@@ -148,7 +166,7 @@ function createSessionLoading({
       state.agentChat.sessions = asArray(result.items);
       sessionsLoaded = true;
       renderSessionList();
-      if (!state.agentChat.currentSessionId && state.agentChat.sessions.length) {
+      if (!state.agentChat.currentSessionId && state.agentChat.sessions.length && !newChatDraftActive) {
         await loadChatSession(state.agentChat.sessions[0].id, { silent: true, preserveLocalMessages: true });
       } else if (
         state.agentChat.currentSessionId
@@ -209,6 +227,7 @@ function createSessionLoading({
       throw new Error(result?.error || 'Failed to create chat session.');
     }
     state.agentChat.currentSessionId = trimText(result.session.id, 120);
+    newChatDraftActive = false;
     upsertSessionSummary(result.session);
     assignSessionToFolder(state.agentChat.currentSessionId, state.agentChat.selectedFolderId);
     renderSessionList();
@@ -216,11 +235,10 @@ function createSessionLoading({
     return state.agentChat.currentSessionId;
   }
 
-  async function createNewChatSession() {
+  async function startNewChatDraft() {
     ensureAgentState();
     const selectedFolder = getFolderById(state, state.agentChat.selectedFolderId)
       || getFolderById(state, GENERAL_CHAT_FOLDER_ID);
-    const nextProjectId = selectedFolder?.projectId || state.agentChat.projectId || '';
     const applySelectedProjectScope = () => {
       if (!selectedFolder?.projectId || state.agentChat.projectId === selectedFolder.projectId) {
         return;
@@ -230,57 +248,30 @@ function createSessionLoading({
       renderContextSummary();
       onProjectScopeChanged(selectedFolder.projectId);
     };
+    // New Chat opens an in-memory draft. The durable session is created by
+    // ensureCurrentChatSession only after the first non-empty message is sent.
+    sessionSelectionRevision += 1;
+    newChatDraftActive = true;
+    applySelectedProjectScope();
+    state.agentChat.messages = [];
+    state.agentChat.currentSessionId = '';
+    onActiveSessionChanged('');
+    persist();
+    renderSessionList();
+    renderHistory({ forceScroll: true });
     const storagePath = getStoragePath();
-    if (!storagePath || !api?.agentChatLogCreateSession) {
-      applySelectedProjectScope();
-      state.agentChat.messages = [];
-      state.agentChat.currentSessionId = '';
-      onActiveSessionChanged('');
-      persist();
-      renderSessionList();
-      renderHistory({ forceScroll: true });
-      setSessionStatus(storagePath
-        ? 'Persistent chat sessions are unavailable in this build.'
-        : 'Started a new local chat draft. Set Storage Folder Path to persist it.');
-      setStatus('New chat ready.');
-      return true;
-    }
-    try {
-      const projectName = asArray(state.projects).find((item) => item.id === nextProjectId)?.name || '';
-      const result = await api.agentChatLogCreateSession({
-        storagePath,
-        projectId: nextProjectId,
-        projectName,
-        title: 'New Chat'
-      });
-      if (!result?.ok || !result?.session?.id) {
-        throw new Error(result?.error || 'Failed to create chat session.');
-      }
-      // Do not discard the selected chat until the replacement session is durable.
-      applySelectedProjectScope();
-      state.agentChat.messages = [];
-      state.agentChat.currentSessionId = trimText(result.session.id, 120);
-      onActiveSessionChanged(state.agentChat.currentSessionId);
-      upsertSessionSummary(result.session);
-      assignSessionToFolder(state.agentChat.currentSessionId, selectedFolder?.id || GENERAL_CHAT_FOLDER_ID);
-      renderSessionList();
-      renderHistory({ forceScroll: true });
-      setSessionStatus('');
-      setStatus('New chat ready.');
-      return true;
-    } catch (error) {
-      setSessionStatus(`New chat failed: ${String(error?.message || error)}`);
-      showTransientNotice(`New chat failed: ${String(error?.message || error)}`, { type: 'error' });
-      setStatus('Error.');
-      return false;
-    }
+    setSessionStatus(!storagePath
+      ? 'Started a new local chat draft. Set Storage Folder Path to persist it.'
+      : (!api?.agentChatLogCreateSession ? 'Persistent chat sessions are unavailable in this build.' : ''));
+    setStatus('New chat ready.');
+    return true;
   }
 
   return {
     loadChatSession,
     refreshPersistentSessions,
     ensureCurrentChatSession,
-    createNewChatSession
+    startNewChatDraft
   };
 }
 
