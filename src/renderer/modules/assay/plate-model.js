@@ -56,6 +56,9 @@ export function buildAllWells(def) {
   return wells;
 }
 
+// Plate layout = sparse list of { well: 'B7', sampleId, concentration };
+// empty wells and wells outside the plate definition are dropped. Results are a
+// separate { [well]: rawValueString } map, also keyed by upper-case well id.
 export function normalizeLayout(layout, def) {
   const validIds = new Set(buildAllWells(def).map((item) => item.well));
   return (Array.isArray(layout) ? layout : [])
@@ -85,6 +88,8 @@ export function buildMappedWellSet(layout) {
   return new Set((layout || []).map((item) => String(item.well || '').trim().toUpperCase()).filter(Boolean));
 }
 
+// Only wells with a layout entry carry analysable results; readings from
+// unmapped wells (blanks the user never labelled) are ignored.
 export function filterResultsToMappedWells(results, layout) {
   const mapped = buildMappedWellSet(layout);
   if (!mapped.size) {
@@ -210,6 +215,8 @@ export function mergeAxisTemplateValues({ def, sampleAxis, sources }) {
   return merged;
 }
 
+// Per-well edits made on top of the axis template, kept separately so a
+// template change does not wipe them.
 export function normalizeManualWellOverrideMap(source, def) {
   const normalized = {};
   Object.entries(source || {}).forEach(([well, value]) => {
@@ -227,6 +234,11 @@ export function normalizeManualWellOverrideMap(source, def) {
   return normalized;
 }
 
+// Fills a layout from the axis template: sampleAxis ('row' or 'column') holds
+// one sample per line and the opposite axis one concentration per line, so
+// well (r, c) gets that row's and column's values. With both axes filled
+// (mappingMode 'auto') only wells with both values are created; 'union' also
+// keeps wells with just one.
 export function applyAxisTemplate({
   def,
   sampleAxis,

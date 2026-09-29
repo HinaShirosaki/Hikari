@@ -160,6 +160,8 @@ export function pruneNotebookValuesForProtocol(values, protocol) {
   }, {});
 }
 
+// Pages without notebookType predate the biology notebook and belong to the
+// old synthesis notebook.
 export function matchesNotebookType(entry, notebookType) {
   if (entry?.notebookType) {
     return entry.notebookType === notebookType;

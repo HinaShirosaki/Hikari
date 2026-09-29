@@ -19,6 +19,11 @@ import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
 
 export { mapExperimentDataToLlmJson };
 
+// One agent chat instance. Mounted three times (see module-manifests): the
+// Agent view, the shared right-rail chat whose scope follows the active paper,
+// notebook page or assay, and the Home experiment log. idPrefix picks the
+// instance's DOM ids; the last two get a scoped state proxy (scoped-state.js).
+// Returns a no-op render when its DOM is missing.
 export function initAgentChat({
   document: rootDocument = globalThis?.document || (typeof document !== 'undefined' ? document : null),
   windowObject = globalThis?.window || (typeof window !== 'undefined' ? window : null),

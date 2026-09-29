@@ -20,6 +20,10 @@ import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-
 import { createAssayFormAndList } from './workspace/form-and-list.js';
 import { createAssayNotebookLinks } from './workspace/notebook-links.js';
 
+// Assay view: plate layout (axis template + per-well overrides), result
+// import/entry, and analysis (grouping x model, see analysis/grouping.js).
+// `runtime` holds the plate being edited; it is copied onto the assay record
+// in state only when the user saves.
 export function initAssay({
   state,
   persist,

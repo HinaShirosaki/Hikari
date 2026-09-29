@@ -7,6 +7,10 @@ import {
   renderModuleManifests
 } from './manifest-runtime.js';
 
+// Builds every feature module from src/renderer/module-manifests/ and returns
+// the per-view render dispatch used by the navigation shell. All modules share
+// one manifestContext; `modules` is filled in as each manifest initializes, so a
+// manifest's createOptions can only see modules declared before it.
 export function createRendererModuleRuntime(config = {}) {
   const state = config?.state || {};
   const persist = config?.persist || (() => {});

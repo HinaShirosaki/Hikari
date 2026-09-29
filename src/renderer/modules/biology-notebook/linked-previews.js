@@ -19,6 +19,7 @@ export function formatLinkedPreviewTimestamp(rawValue) {
   return new Date(timestamp).toLocaleString();
 }
 
+// Most recently updated record (assay, gel) linked to the page, or null.
 export function findLatestLinkedRecord(items, notebookEntryId) {
   const targetEntryId = String(notebookEntryId || '').trim();
   if (!targetEntryId) {
@@ -39,6 +40,8 @@ function hashSampleId(sampleId) {
   return hash;
 }
 
+// Mini plate preview colours: hue identifies the sample (stable hash of its
+// id), and lightness encodes concentration (see buildConcentrationIntensityMap).
 function sampleHue(sampleId) {
   return (hashSampleId(sampleId) + 18) % 360;
 }
@@ -82,6 +85,9 @@ function parseConcentrationMagnitude(value) {
   return numeric * (scaleMap[unit] || 1);
 }
 
+// Maps each concentration string to an intensity in [0.28, 0.82]: linear in
+// the parsed magnitude when at least two values parse, otherwise by rank of
+// the distinct strings; a single value gets the mid tone.
 function buildConcentrationIntensityMap(layoutMap) {
   const rawValues = Object.values(layoutMap)
     .map((item) => String(item?.concentration || '').trim())

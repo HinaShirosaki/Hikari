@@ -48,6 +48,10 @@ function normalizeNotebookEntryStorage(entry, storagePath) {
   return nextEntry;
 }
 
+// Records store paths relative to the storage folder. When the folder moves
+// (or a workspace is opened on another machine), rebuild each absolute path
+// from the current root: notebook folders outside it are regenerated, file
+// records are re-joined from their relativePath. Runs before every persist.
 export function normalizeStateStoragePaths(state) {
   const storagePath = cleanPath(state?.settings?.storagePath);
   if (!state || typeof state !== 'object' || !storagePath) {

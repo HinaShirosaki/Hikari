@@ -110,6 +110,11 @@ function collectBranchGroup(rootId, context) {
   };
 }
 
+// Turns the free-form graph into a run order. The main path starts at the
+// top-left root and repeatedly follows the downstream block closest in height
+// (canvas position breaks ties). Every other block belongs to a branch: a
+// chain hanging off the nearest main-path ancestor (anchorIndex), which a run
+// only follows once it is activated (see isBranchActiveForEntry).
 export function buildWorkflowExecutionLayout(workflow = {}) {
   const blocks = Array.isArray(workflow?.blocks) ? workflow.blocks.slice() : [];
   const links = Array.isArray(workflow?.links) ? workflow.links.slice() : [];
@@ -214,6 +219,8 @@ export function getWorkflowStepState(entry, blockId) {
   };
 }
 
+// A branch is active if the run opted into it explicitly or already
+// completed any of its steps (so finished work never disappears).
 export function isBranchActiveForEntry(entry, branchGroup) {
   const explicitIds = new Set(Array.isArray(entry?.activeBranchRootIds) ? entry.activeBranchRootIds : []);
   if (explicitIds.has(branchGroup.rootId)) {
@@ -254,6 +261,8 @@ function getActiveUpstreamIds(entry, layout, blockId) {
   return (layout?.upstream?.get(blockId) || []).filter((upstreamId) => activeBlockIds.has(upstreamId));
 }
 
+// A step can be opened once it is on the active route and every active
+// upstream step is completed.
 export function isWorkflowStepOpenable(entry, layout, blockId) {
   const orderedIds = buildOrderedActiveBlockIds(layout, entry);
   const normalizedBlockId = String(blockId || '').trim();
@@ -264,6 +273,8 @@ export function isWorkflowStepOpenable(entry, layout, blockId) {
     .every((upstreamId) => getWorkflowStepState(entry, upstreamId).status === 'completed');
 }
 
+// Progress over active steps only. nextBlockId is the first step whose active
+// upstream steps are all done, else the first unfinished one.
 export function computeEntryProgress(entry, layout) {
   const orderedIds = buildOrderedActiveBlockIds(layout, entry);
   const activeBlockIds = new Set(orderedIds);

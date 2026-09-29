@@ -479,6 +479,10 @@ export function initSettings({
     await saveStoragePath(result.path);
   }
 
+  // Switching to a different storage folder is a workspace switch: the core
+  // (onStoragePathSaved) imports that folder and resets in-memory data to it.
+  // If the switch fails, the field reverts to the old path. Every outcome
+  // announces hikari:storage-changed so plugins re-read their context.
   async function saveStoragePath(path) {
     const nextPath = String(path || '').trim();
     const previousPath = String(state.settings?.storagePath || '').trim();

@@ -47,6 +47,9 @@ export function resolveInsightStorageFolder(context) {
   return '';
 }
 
+// Mirrors a record's insights to selection-insights.json in its storage folder
+// so they travel with the workspace. Best-effort: the answers already live on
+// the record in app state.
 export async function persistInsightSidecar({ api, context, insights }) {
   if (!api?.writeJsonFile) {
     return;

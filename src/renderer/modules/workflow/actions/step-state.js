@@ -86,6 +86,11 @@ function createWorkflowStepState({
     workflow.updatedAt = new Date().toISOString();
   }
 
+  // Each workflow step owns one notebook page (stepState.notebookEntryId).
+  // This creates or overwrites that page from the step's values/results, so
+  // the step state is the source of truth and the page is regenerated from it.
+  // notebookState: 'executed' once the step is completed, else 'planned'
+  // (options.executed overrides). Linked assays/gels are re-read each time.
   function upsertNotebookEntryForStep(workflow, entry, block, options = {}) {
     const stepState = ensureEntryStepState(entry, block.id);
     const now = new Date().toISOString();

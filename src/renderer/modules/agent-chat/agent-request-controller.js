@@ -18,6 +18,12 @@ import {
 } from './assistant-message-meta.js';
 import { showTransientNotice } from '../../lib/notify.js';
 
+// Sends chat turns to the main-process agent and folds the reply back in.
+// Several sessions can have a request running at once (runtime.activeRequests,
+// keyed by clientRequestId); the UI only reflects the request of the session
+// being viewed. A reply that lands after the user switched sessions is not
+// appended to the visible chat; it is picked up from the session log on disk
+// when that session is opened again. History is capped at the last 40 messages.
 export function createAgentRequestController(deps) {
   const {
     api,
@@ -88,6 +94,8 @@ export function createAgentRequestController(deps) {
     }
   }
 
+  // Stop is cooperative: main cancels, and the id lands here so the original
+  // sendMessage call ignores its late reply instead of appending it twice.
   function getCanceledRequestIds() {
     if (!(runtime.canceledClientRequestIds instanceof Set)) {
       runtime.canceledClientRequestIds = new Set();

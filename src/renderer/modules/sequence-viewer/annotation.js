@@ -213,6 +213,11 @@ function buildAlreadyPresentStatus(matchCount) {
   return `All ${safeCount.toLocaleString()} SQL-backed annotation match${safeCount === 1 ? '' : 'es'} ${safeCount === 1 ? 'is' : 'are'} already present on this sequence.`;
 }
 
+// "Annotate": main searches the stored feature library for DNA and protein
+// (CDS) matches in the open record. Features from a previous annotate run
+// (source sql_annotation_*) are replaced wholesale; user features are kept,
+// and a match identical to one of them (name, type, strand, segments) is not
+// added again. Saved immediately when the record is already in the library.
 export function createSequenceViewerAnnotationController(config = {}) {
   const state = config?.state || {};
   const getSelectedRecord = config?.getSelectedRecord || (() => null);

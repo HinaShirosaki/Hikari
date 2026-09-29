@@ -11,6 +11,7 @@ export function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+// 4 significant figures; switches to exponent form outside [1e-3, 1e4).
 export function formatSigFig(value, sigFigs = 4) {
   if (!Number.isFinite(value) || value === 0) {
     return '0';

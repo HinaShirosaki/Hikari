@@ -84,6 +84,8 @@ function toArrayBuffer(buffer) {
   return null;
 }
 
+// The parser is the renderer's ES module; main loads it with a dynamic import
+// so both processes parse sequence files with the same code.
 async function loadSequenceViewerParser() {
   if (!sequenceViewerParserPromise) {
     const parserPath = path.resolve(__dirname, '../../parsing.js');
@@ -236,6 +238,9 @@ async function resolveStoredSourcePath(libraryRoot, storedSourceRelPath = '') {
   return await fileExists(sourcePath) ? sourcePath : '';
 }
 
+// Where an alignment session's read file is: the recorded relative path if it
+// still exists, else <alignments>/<sessionId>/ (the original file name first,
+// then the highest-priority source file in that folder).
 async function resolveSessionSourcePath({ alignmentsDir, libraryRoot, session }) {
   const storedSourcePath = await resolveStoredSourcePath(libraryRoot, session?.storedSourceRelPath);
   if (storedSourcePath) {
@@ -296,6 +301,10 @@ async function hydrateAlignmentSessionFromSource({ alignmentsDir, libraryRoot, s
   };
 }
 
+// Rebuilds sessions from files on disk that the manifest does not list: every
+// session folder and every loose read file (.ab1, .fasta, .gb, ...) in the
+// alignments folder becomes a session, so a copied-in read shows up without an
+// import step. Ids are compared case-insensitively.
 async function discoverAlignmentSourceSessions({ alignmentsDir, libraryRoot, existingSessionIds = [] }) {
   const existingIds = new Set(
     (Array.isArray(existingSessionIds) ? existingSessionIds : [])

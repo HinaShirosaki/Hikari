@@ -14,6 +14,10 @@ import { createProtocolDetailPanels } from './detail-panels.js';
 import { createProtocolEditorActions } from './editor-actions.js';
 import { renderProtocolPlaceholderPresetButtons } from './placeholder-presets.js';
 
+// Protocol list + editor. The right panel is in one mode at a time
+// (localState.protocolDetailMode: 'empty' | 'view' | 'edit'). Polish (one-shot
+// LLM rewrite) and Generate (agent run with web/literature research) only fill
+// the editor form; nothing is saved until the user submits it.
 export function initProtocolManagement({
   state,
   persist,
@@ -48,6 +52,8 @@ export function initProtocolManagement({
     isCreateEditorMode: true,
     polishedProtocolDraft: null,
     protocolPolishSourceDraft: null,
+    // Bumped per request and on close; a reply whose token no longer matches
+    // is stale and dropped (see polish.js / generation.js).
     protocolPolishRequestToken: 0,
     isProtocolPolishPending: false,
     generatedProtocolDraft: null,

@@ -31,6 +31,8 @@ function asObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+// The agent runs through Codex only, so provider is forced and any API
+// endpoint/key left from older builds is dropped instead of persisted again.
 function normalizeLlmSettings(rawLlm) {
   const persistedCodexSettings = { ...rawLlm };
   delete persistedCodexSettings.api;
@@ -226,6 +228,10 @@ function normalizeGrowthMetrics(source) {
   };
 }
 
+// Every loaded state (cache, storage folder, import) passes through here, so a
+// missing or wrong-typed field is repaired once instead of guarded everywhere.
+// Unknown top-level keys pass through untouched; objectGraph and
+// synthesisChemistryDrafts are removed features and are dropped.
 export function normalizeState(parsed) {
   const source = { ...asObject(parsed) };
   delete source.objectGraph;

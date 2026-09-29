@@ -47,6 +47,8 @@ export function createPersonalInventoryContext({
     contextLocation: null,
     cloningSampleId: null
   };
+  // Chemical structures pasted into a "new sample" form before the sample
+  // exists, keyed by section::container::slot (see getPendingStructureKey).
   const pendingStructureDrafts = new Map();
   const folderTree = createFolderTreeState({ defaultExpanded: true });
   const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });

@@ -1,6 +1,8 @@
 import { concentrationToM, massToG, volumeToL } from '../molarity.js';
 import { buildResult, collectMissing, describeRawValue, formatAdaptiveConcentration, formatAdaptiveMass, formatAdaptiveVolume, withLabel } from './result-format.js';
 
+// The four Molarity tool modes. Each solves n = C x V = m / MW for one unknown
+// in base units (M, L, g) and formats the answer in an adaptive unit.
 function calculateMolarityMass({
   concentrationValue,
   concentrationUnit = 'mM',

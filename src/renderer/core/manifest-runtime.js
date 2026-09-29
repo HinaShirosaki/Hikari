@@ -54,6 +54,8 @@ function addManifestViewId(viewIds, viewId) {
   }
 }
 
+// A manifest may name its views four ways (viewIds, viewKeys, viewId, viewKey);
+// all are merged, deduped, and resolved against context.views.
 function resolveManifestViewIds(manifest, context) {
   const viewIds = [];
   const dynamicViewIds = typeof manifest.viewIds === 'function'
@@ -125,6 +127,8 @@ function getManifestBootOrder(manifest) {
   return Number.isFinite(bootOrder) ? bootOrder : null;
 }
 
+// Boot-time full render. Only manifests that declare a numeric bootOrder take
+// part; ties keep manifest-array order.
 export function renderModuleManifests(manifests, context) {
   manifests
     .map((manifest, index) => ({

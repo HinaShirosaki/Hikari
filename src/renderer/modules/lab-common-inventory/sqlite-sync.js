@@ -3,6 +3,8 @@ import { showTransientNotice } from '../../lib/notify.js';
 export function installChemicalSqliteSync(ctx) {
   const { state } = ctx;
 
+// Cheap fingerprint of everything written to the chemical SQLite bundle
+// (ids, codes, updatedAt, block count, code maps). Unchanged key = skip write.
 function buildChemicalSqliteSyncKey() {
   const storagePath = String(state.settings?.storagePath || '').trim();
   const summary = state.labInventory.chemicals
@@ -19,6 +21,8 @@ function buildChemicalSqliteSyncKey() {
   return `${storagePath}::${summary}::${state.labInventory.blocks.length}::${Number(state.labInventory.lastLocationNumber) || 0}::${locationCodeMapSummary}::${nextByLocationSummary}`;
 }
 
+// Chemicals are the one inventory store kept in SQLite; main owns the file.
+// The key is only recorded on success, so a failed write retries next time.
 async function syncChemicalSqliteBundle(force = false) {
   const storagePath = String(state.settings?.storagePath || '').trim();
   if (!storagePath || !window.hikariApi?.syncSqliteBundle) {

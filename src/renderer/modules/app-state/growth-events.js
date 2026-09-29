@@ -8,6 +8,8 @@ const COUNTER_EVENTS = new Set([
   'protocol_share_link_imported'
 ]);
 
+// Local usage log saved with app state (no code uploads it); capped at the last 500
+// events. Protocol-sharing events also bump a running counter.
 export function trackGrowthEvent(state, name, props = {}) {
   if (!state || typeof state !== 'object') {
     return;

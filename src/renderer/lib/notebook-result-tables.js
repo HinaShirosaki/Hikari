@@ -39,6 +39,9 @@ function buildRow(columns, rowId) {
   return row;
 }
 
+// Page result table: { columns: [{ field, title }], rows: [{ id, [field]: value }] }.
+// Cells are keyed by column field, not position, so reordering or deleting a
+// column never shifts data into the wrong column. Field names are sanitized.
 export function normalizeNotebookResultTable(rawTable) {
   const source = rawTable && typeof rawTable === 'object' ? rawTable : null;
   if (!source) {
@@ -100,6 +103,8 @@ export function cloneNotebookResultTable(rawTable) {
   return normalizeNotebookResultTable(rawTable);
 }
 
+// Pages once held a single `resultTable`; newer ones hold `resultTables`. Pass
+// both and this returns the array form, falling back to the legacy table.
 export function normalizeNotebookResultTables(rawTables, legacyTable = null) {
   const normalizedTables = Array.isArray(rawTables)
     ? rawTables.map((table) => normalizeNotebookResultTable(table)).filter(Boolean)

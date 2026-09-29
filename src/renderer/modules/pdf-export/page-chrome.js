@@ -27,6 +27,8 @@ import {
 import { drawHikariPdfCornerIcon } from './branding.js';
 import { printPdfBytes } from '../print/index.js';
 
+// Returns null (after a notice) when jsPDF is not loaded; callers bail out.
+// `margins` overrides the single `margin` per side (used for staple edges).
 function createContext({
   title,
   eyebrow = '',

@@ -78,6 +78,8 @@ function findHeaderIndex(headers, headerName) {
   const normalized = normalizeImportHeader(headerName);
   return headers.findIndex((header) => normalizeImportHeader(header) === normalized);
 }
+// Models sometimes return the mapping inverted ({ field: header }); if the key
+// is not a header but the value is, the pair is read the other way round.
 function applyLlmHeaderMapping(headers, inference, llmPayload) {
   const rawMapping = llmPayload?.mapping && typeof llmPayload.mapping === 'object'
     ? llmPayload.mapping
@@ -113,6 +115,10 @@ function applyLlmHeaderMapping(headers, inference, llmPayload) {
   inference.usedLlm = true;
   return inference;
 }
+// Header matching is local first (known header spellings). The LLM is asked
+// only when a column is left over or name/location is missing, and it can only
+// fill gaps: a field or column already mapped locally is never overridden.
+// An LLM failure is reported (llmError) but the local mapping still imports.
 async function inferChemicalImportHeaders(headers, rows) {
   const cleanHeaders = headers.map((header, index) => String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`);
   const inference = mapChemicalImportHeadersLocally(cleanHeaders);
