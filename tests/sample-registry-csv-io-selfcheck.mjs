@@ -61,6 +61,29 @@ const oob = { samples: [], inventory: {} };
 mergeSamplesFromCsv(oob, [{ code: 'X', name: 'X', section: 'S', container: 'B', container_type: 'box81', well: '999' }], makeId);
 assert.equal(oob.samples[0].inventoryLink.wellIndex, null);
 
+// A CSV that only renames keeps everything it does not mention, including the
+// type: falling back to plasmid would drop every antibody field.
+const kept = { samples: [{ id: 's1', code: 'AB-1', name: 'anti-GFP', type: 'antibody', lot: 'L123', concentration: '1 mg/mL', notes: 'WB only', details: { target: 'GFP', dilution: '1:1000' } }] };
+mergeSamplesFromCsv(kept, parseSamplesCsv('code,name\nAB-1,anti-GFP (renamed)\n'), makeId);
+assert.deepEqual(
+  (({ name, type, lot, concentration, notes, details }) => ({ name, type, lot, concentration, notes, details }))(kept.samples[0]),
+  { name: 'anti-GFP (renamed)', type: 'antibody', lot: 'L123', concentration: '1 mg/mL', notes: 'WB only', details: { target: 'GFP', dilution: '1:1000' } }
+);
+mergeSamplesFromCsv(kept, parseSamplesCsv('code,name,lot\nAB-1,anti-GFP,\n'), makeId);
+assert.equal(kept.samples[0].lot, ''); // a present-but-blank column still clears
+
+// Detail values are stored whole, e.g. an 800 nt oligo.
+const longOligo = 'ACGT'.repeat(200);
+const oligo = { samples: [] };
+mergeSamplesFromCsv(oligo, parseSamplesCsv(`code,name,type,sequence\nP-9,gBlock,primer,${longOligo}\n`), makeId);
+assert.equal(oligo.samples[0].details.sequence, longOligo);
+
+// Two different codes that reduce to the same allowed characters stay two samples.
+const clash = { samples: [] };
+const clashResult = mergeSamplesFromCsv(clash, parseSamplesCsv('code,name\nα-1,alpha\nβ-1,beta\nβ-1,beta again\n'), makeId);
+assert.deepEqual(clash.samples.map((s) => `${s.code}:${s.name}`), ['-1:alpha', '-1-2:beta again']);
+assert.deepEqual(clashResult.recoded, [{ from: 'β-1', to: '-1-2' }]);
+
 // Rows without a name are skipped; header-only yields nothing.
 assert.deepEqual(parseSamplesCsv('code,name\nX,'), []);
 assert.deepEqual(parseSamplesCsv('code,name'), []);
