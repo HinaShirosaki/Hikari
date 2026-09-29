@@ -1,6 +1,6 @@
 'use strict';
 
-const LIBRARY_FOLDER_NAME = 'SequenceViewer';
+const LIBRARY_FOLDER_NAME = 'DNA';
 const PROJECT_FOLDER_ID_PREFIX = 'project:';
 const DB_FILE_NAME = 'sequence-library.sqlite';
 const STATUS_SAVED = 'saved';

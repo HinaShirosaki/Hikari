@@ -25,6 +25,15 @@ const AGENT = Object.freeze({
   LOGS_REPLAY: 'agent:logs:replay'
 });
 
+const FILE_ACCESS = Object.freeze({
+  STATUS: 'agent-files:status',
+  SETTINGS: 'agent-files:settings',
+  REVIEW: 'agent-files:review',
+  UNDO: 'agent-files:undo',
+  ADD_LOCATION: 'agent-files:add-location',
+  CHANGED: 'agent-files:changed'
+});
+
 // One-way broadcast (main → renderer). Hyphenated, not colon-namespaced,
 // for legacy reasons — see naming note at top of file.
 const AGENT_PROGRESS_EVENT = 'agent-progress';
@@ -145,6 +154,7 @@ const LLM = Object.freeze({
 
 module.exports = {
   AGENT,
+  FILE_ACCESS,
   AGENT_PROGRESS_EVENT,
   STORAGE,
   SYSTEM,

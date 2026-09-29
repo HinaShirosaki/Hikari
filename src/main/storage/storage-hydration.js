@@ -140,7 +140,7 @@ async function hydrateSnapshotFromBundle({
     nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, paperRecords.records);
     migration.applied.push('paper_files');
   }
-  // Assays and gels live one record file per folder.
+  // Plates (assays) and gels live one record file per folder.
   for (const [snapshotKey, folders] of Object.entries(RECORD_FOLDERS)) {
     const found = await readRecordFolders(bundlePaths[folders.rootKey], folders);
     migration.warnings.push(...found.warnings);

@@ -101,21 +101,21 @@ function normalizeZipPath(basePath, target) {
   return resolved.join('/');
 }
 
+// <tag ...>body</tag> and the self-closing <tag .../>, which Excel writes for an
+// empty cell that only carries a style. A pattern that insisted on the closing
+// tag ran on into the next element, so a styled blank cell took its
+// neighbour's value and that value vanished from its own column.
+function xmlElements(xml, tag) {
+  const pattern = new RegExp(`<${tag}\\b([^>]*?)(?:/>|>([\\s\\S]*?)</${tag}>)`, 'g');
+  return [...String(xml || '').matchAll(pattern)].map((match) => ({ attrs: match[1], body: match[2] || '' }));
+}
+
+function elementText(xml) {
+  return xmlElements(xml, 't').map((element) => decodeXmlEntities(element.body)).join('');
+}
+
 function parseSharedStrings(xml) {
-  if (!xml) {
-    return [];
-  }
-  const strings = [];
-  const siMatches = xml.match(/<si\b[\s\S]*?<\/si>/g) || [];
-  siMatches.forEach((si) => {
-    const parts = [];
-    si.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g, (_match, text) => {
-      parts.push(decodeXmlEntities(text));
-      return '';
-    });
-    strings.push(parts.join(''));
-  });
-  return strings;
+  return xmlElements(xml, 'si').map((si) => elementText(si.body));
 }
 
 function parseWorkbookSheetTarget(entries) {
@@ -164,15 +164,9 @@ function columnIndexFromCellRef(ref) {
 function textFromCellXml(body, attrs, sharedStrings) {
   const type = attrs.t || '';
   if (type === 'inlineStr') {
-    const parts = [];
-    body.replace(/<t\b[^>]*>([\s\S]*?)<\/t>/g, (_match, text) => {
-      parts.push(decodeXmlEntities(text));
-      return '';
-    });
-    return parts.join('');
+    return elementText(body);
   }
-  const valueMatch = body.match(/<v\b[^>]*>([\s\S]*?)<\/v>/);
-  const raw = valueMatch ? decodeXmlEntities(valueMatch[1]) : '';
+  const raw = decodeXmlEntities(xmlElements(body, 'v')[0]?.body || '');
   if (type === 's') {
     return sharedStrings[Number(raw)] ?? '';
   }
@@ -183,22 +177,18 @@ function textFromCellXml(body, attrs, sharedStrings) {
 }
 
 function parseSheetXml(xml, sharedStrings) {
-  const rows = [];
-  const rowMatches = xml.match(/<row\b[^>]*>[\s\S]*?<\/row>/g) || [];
-  rowMatches.forEach((rowXml) => {
+  return xmlElements(xml, 'row').map((row) => {
     const cells = [];
     let sequentialColumn = 0;
-    rowXml.replace(/<c\b([^>]*)>([\s\S]*?)<\/c>/g, (_match, attrText, body) => {
+    xmlElements(row.body, 'c').forEach(({ attrs: attrText, body }) => {
       const attrs = parseXmlAttributes(attrText);
       const explicitIndex = columnIndexFromCellRef(attrs.r);
       const columnIndex = explicitIndex >= 0 ? explicitIndex : sequentialColumn;
       cells[columnIndex] = textFromCellXml(body, attrs, sharedStrings);
       sequentialColumn = columnIndex + 1;
-      return '';
     });
-    rows.push(cells);
+    return cells;
   });
-  return rows;
 }
 
 function parseXlsx(buffer) {

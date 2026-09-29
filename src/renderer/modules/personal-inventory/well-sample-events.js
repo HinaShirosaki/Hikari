@@ -108,6 +108,9 @@ export function bindWellSampleEvents(ctx) {
   // Persisted across renders on ctx so the drag-to-clone gesture survives the re-bind that happens after every renderSections().
   const dragClone = ctx._dragClone || (ctx._dragClone = { active: false, visited: new Set(), count: 0, suppressClick: false });
 
+  // Drag-to-clone: with a sample in clone mode, press on a well and drag across
+  // others; each well entered gets a copy (once per gesture). All copies are
+  // persisted together on mouseup.
   function applyDragClone(button) {
     const index = Number(button.dataset.wellIndex);
     if (dragClone.visited.has(index)) {

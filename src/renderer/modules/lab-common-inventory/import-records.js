@@ -20,6 +20,8 @@ function mappedImportValue(row, inference, field) {
   return cleanImportCell(row[index]);
 }
 
+// Accepts ISO dates, Excel serial day numbers (days since 1899-12-30), and
+// anything Date.parse understands; unparseable text is kept as typed.
 function normalizeImportedDate(value) {
   const raw = cleanImportCell(value);
   if (!raw) {
@@ -56,6 +58,8 @@ function ensureImportedLocation(location) {
   return cleanLocation;
 }
 
+// Which existing chemical an imported row updates, strongest key first:
+// CAS number, then catalog number (+ vendor if given), then name + location.
 function findExistingChemicalForImport(record) {
   const casKey = cleanImportCell(record.casNumber).toLowerCase();
   const catalogKey = cleanImportCell(record.catalogNumber).toLowerCase();

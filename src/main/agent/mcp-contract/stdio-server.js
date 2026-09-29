@@ -71,6 +71,8 @@ function getRequestContextFromEnv(env = process.env) {
     env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
       || env.HIKARI_CODEX_REQUEST_CONTEXT
   );
+  // A token embedded in a shared/stale request snapshot is never authority.
+  context.fileAccessToken = String(env.HIKARI_FILE_ACCESS_TOKEN || '');
   const persistedAgentSettings = getPersistedAgentSettingsFromEnv(env);
   if (!Object.keys(persistedAgentSettings).length) {
     return context;

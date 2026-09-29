@@ -51,6 +51,8 @@ export function summarizeModelFit(points, predictFn) {
   };
 }
 
+// Pools replicate wells: one point per distinct x, y = mean response, with n
+// and sd kept for error bars. Fits run on these means, not raw replicates.
 export function collectCurvePoints(sampleItems, xAccessor, options = {}) {
   const requireNonNegativeX = Boolean(options.requireNonNegativeX);
   const pointGroups = new Map();
@@ -87,6 +89,14 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+// Derivative-free fitter for the nonlinear models (4PL/5PL, hyperbola, Pade,
+// exponential): coordinate pattern search minimising sum of squared errors.
+// Each round nudges every parameter +/- its step and keeps any improvement;
+// a round with no improvement halves all steps. Stops after maxRounds or when
+// every step falls below minStep. Candidates are clamped to `bounds` and may
+// be repaired by normalizeParams (e.g. keep top > bottom).
+// ponytail: pattern search, not Levenberg-Marquardt; it can stop short on
+// badly scaled data. Raise maxRounds or swap in LM if fits look under-converged.
 export function optimizeModelParameters({
   initial,
   bounds,
@@ -164,6 +174,9 @@ export function optimizeModelParameters({
   return { params: best, error: bestErr };
 }
 
+// Gauss-Jordan elimination with partial pivoting; null if the matrix is
+// singular (pivot < 1e-12) or holds non-finite values. Used for polynomial
+// least-squares normal equations.
 export function solveLinearSystem(matrix, vector) {
   const n = Array.isArray(matrix) ? matrix.length : 0;
   if (!n || !Array.isArray(vector) || vector.length !== n) {

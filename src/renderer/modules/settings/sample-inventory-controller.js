@@ -38,6 +38,9 @@ export function createSampleInventorySettingsController({
     return Array.isArray(state.inventory?.[section]) ? state.inventory[section].length : 0;
   }
 
+  // Renaming a location moves its containers/folders to the new key and
+  // repoints samples. Same job as renameInventoryLocation in
+  // personal-inventory/container-context-menu.js; change both together.
   function migrateLocation(oldLocation, nextLocation) {
     const source = String(oldLocation || '').trim();
     const target = String(nextLocation || '').trim();
@@ -203,6 +206,7 @@ export function createSampleInventorySettingsController({
     notifyChanged();
   }
 
+  // Only custom types with no samples can be deleted; built-ins are permanent.
   function deleteSampleType(rawType) {
     const type = String(rawType || '').trim().toLowerCase();
     const entries = getEditableSampleTypeEntries(state.settings);

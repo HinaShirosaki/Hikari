@@ -108,6 +108,8 @@ export function resolveCodonProfile(profileKey = REVERSE_TRANSLATE_DEFAULT_ORGAN
   return CODON_USAGE_PROFILES[profileKey] || CODON_USAGE_PROFILES[REVERSE_TRANSLATE_DEFAULT_ORGANISM];
 }
 
+// Codons for a residue ranked by the organism's usage table; weight is the
+// rank inverted (most preferred = n ... least = 1), not the usage frequency.
 export function getCodonOptionsForResidue(residue, profileKey = REVERSE_TRANSLATE_DEFAULT_ORGANISM) {
   const codons = AMINO_ACID_TO_CODONS[residue];
   if (!codons || !codons.length) {
@@ -134,6 +136,8 @@ export function getCodonOptionsForResidue(residue, profileKey = REVERSE_TRANSLAT
   }));
 }
 
+// Only the newly added tail can create a site, so search from where a site
+// ending in the new codon could start.
 function introducesRestrictionSite(previousSequence, candidateSequence, expandedSites) {
   if (!expandedSites.length) {
     return false;
@@ -145,6 +149,13 @@ function introducesRestrictionSite(previousSequence, candidateSequence, expanded
   });
 }
 
+// Protein -> DNA picking preferred codons while avoiding given restriction
+// sites (both strands). Beam search over codon choices, one residue at a time;
+// score = sum of log(codon weight). A candidate that creates a forbidden site
+// is dropped. With sites to avoid, the beam keeps only the best state per DNA
+// suffix of (longest site - 1) bases: states with the same suffix face the
+// same future constraints, so the lower-scored one can never win. Fails with
+// 'restriction_conflict' if every path is blocked at some residue.
 export function reverseTranslateProteinSequence(proteinInput, options = {}) {
   const profileKey = CODON_USAGE_PROFILES[options.organism]
     ? options.organism

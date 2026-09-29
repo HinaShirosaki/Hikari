@@ -34,6 +34,7 @@ export function initLabNotebook({
   safeText,
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
+  onCreateLinkedGel,
   onProjectsChanged,
   onCreateWorkflowProcess = () => null,
   onOpenWorkflowProcess = () => {},
@@ -79,6 +80,7 @@ export function initLabNotebook({
     notebookType,
     onProjectsChanged,
     onCreateLinkedAssay,
+    onCreateLinkedGel,
     onOpenPaper,
     ...drafts,
     persistActiveEntrySampleLinks: (...args) => persistActiveEntrySampleLinks(...args),
@@ -494,6 +496,7 @@ export function initLabNotebook({
       && getCurrentDraftSnapshot() !== drafts.getSavedDraftSnapshot()
     ),
     openEntry: editEntry,
+    renderLinkedPreviews,
     appendAgentNotebookContent,
     openExperimentDialog,
     openProjectDashboard: showProjectDashboard,

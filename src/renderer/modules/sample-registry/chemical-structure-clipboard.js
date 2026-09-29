@@ -63,6 +63,11 @@ export function toChemicalStructureDraftFromCandidate(candidate) {
     : { smiles: '', molfile: parsed.source, imageDataUrl: '' };
 }
 
+// Gathers structure candidates from three sources: the paste event's
+// DataTransfer, the main-process clipboard reader (sees native formats such
+// as ChemDraw CDX that the web clipboard hides), and, only if main found
+// nothing, the async browser clipboard API. `formats` is kept for the
+// "nothing found" message.
 async function readChemicalStructureClipboardInternal({
   clipboardData = null,
   hikariApi = globalThis.window?.hikariApi,
@@ -82,6 +87,9 @@ async function readChemicalStructureClipboardInternal({
   };
 }
 
+// Candidates are tried richest format first (STRUCTURE_FORMAT_PRIORITY). Each
+// raw item may yield an image, a native CDX payload, and any CDXML / MOL /
+// InChI / SMILES text found inside it; duplicates are dropped.
 export function extractChemicalStructureCandidates(rawCandidates = []) {
   const parsed = [];
   const seen = new Set();

@@ -61,6 +61,7 @@ function createMainAppPaths(deps = {}) {
   // The user's storage root, seeded from the pointer file so services that
   // start before the renderer reports it already resolve the right folder.
   let storageRoot = null;
+  let storageRootRevision = 0;
 
   function getStorageRoot() {
     if (storageRoot === null) {
@@ -81,6 +82,7 @@ function createMainAppPaths(deps = {}) {
       return false;
     }
     storageRoot = next;
+    storageRootRevision += 1;
     return true;
   }
 
@@ -157,6 +159,7 @@ function createMainAppPaths(deps = {}) {
     getDefaultDataFilePath,
     getStorageRootPointerPath,
     getStorageRoot,
+    getStorageRootRevision: () => storageRootRevision,
     setStorageRoot,
     getScheduledTasksPath,
     getGenomeLibraryPath,

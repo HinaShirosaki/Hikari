@@ -2,6 +2,8 @@ function normalizeSource(text) {
   return String(text || '').replace(/\r\n?/g, '\n');
 }
 
+// Model output is untrusted: links may only be http(s) or mailto, so a
+// javascript: or file: href renders as plain text.
 function sanitizeUrl(url) {
   const value = String(url || '').trim();
   if (!/^(https?:|mailto:)/i.test(value)) {
@@ -10,6 +12,10 @@ function sanitizeUrl(url) {
   return value;
 }
 
+// Safety rule for the inline pass: code spans and links are rendered and
+// escaped first, then swapped out for @@MDTOKEN_n@@ markers; the rest of the
+// text is HTML-escaped as a whole before emphasis tags are added, and the
+// markers are swapped back last. No raw model text reaches the output unescaped.
 function createInlineRenderer(safeText) {
   return function renderInline(text) {
     const source = String(text || '');
@@ -85,6 +91,9 @@ function isListItem(line) {
   return /^\s*([-+*]|\d+\.)\s+/.test(String(line || ''));
 }
 
+// Small Markdown subset for chat replies: fenced code, pipe tables, headings,
+// rules, blockquotes (recursive), flat lists and paragraphs. Nested lists and
+// raw HTML are not supported (HTML is shown escaped).
 export function renderMarkdown(text, safeText) {
   const renderInline = createInlineRenderer(safeText);
   const source = normalizeSource(text).trim();

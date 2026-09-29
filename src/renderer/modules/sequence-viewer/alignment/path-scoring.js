@@ -1,5 +1,8 @@
 import { DEFAULT_GAP_EXTEND_SCORE, DEFAULT_GAP_OPEN_SCORE, DEFAULT_MATCH_SCORE, DEFAULT_MISMATCH_SCORE, NEGATIVE_INFINITY_SCORE, STATE_MATCH, STATE_QUERY_GAP, STATE_REFERENCE_GAP } from './constants.js';
 
+// Tie-breaking between equal-score paths: higher identity (matches/covered,
+// compared by cross-multiplying), then longer coverage, then more matches.
+// Returns > 0 when `right` is better.
 function compareAlignmentPath(left, right) {
   if (!left && !right) {
     return 0;
@@ -41,6 +44,15 @@ function chooseBestPath(candidates) {
   return best;
 }
 
+// Gotoh affine-gap alignment of a query (e.g. a Sanger read) against a
+// reference window. Semi-global: the whole query must align, but it may start
+// and end anywhere in the reference (row 0 and the final row are free), so
+// reference overhang costs nothing. Three DP matrices: M (bases aligned),
+// query-gap (query base vs '-'), reference-gap (reference base vs '-'); a gap
+// costs gapOpen for its first base and gapExtend after. Match/coverage counts
+// ride along each cell for tie-breaking. Returns aligned columns plus the
+// reference span, or null. Memory is O(query x window), hence the windowing
+// in the caller.
 function runSemiGlobalAffineAlignment(referenceWindow, querySequence, options = {}) {
   const matchScore = Number(options.matchScore) || DEFAULT_MATCH_SCORE;
   const mismatchScore = Number(options.mismatchScore) || DEFAULT_MISMATCH_SCORE;

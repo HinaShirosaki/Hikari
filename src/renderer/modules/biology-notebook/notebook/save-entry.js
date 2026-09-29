@@ -68,6 +68,9 @@ function createNotebookSaveEntry({
     const project = resolveViewerProject(editingEntry);
     const selectedProtocol = findSelectedProtocol();
     const baseProtocol = resolveViewerProtocol(editingEntry) || selectedProtocol;
+    // The page stores its own protocol snapshot: the in-page edited copy if
+    // the user is editing it, else a fresh copy of the protocol (or the page's
+    // previous snapshot if that protocol is gone).
     const protocol = protocolEditor.isEditing()
       ? protocolEditor.buildSnapshot(baseProtocol)
       : (cloneProtocolSnapshot(baseProtocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot) || null);
@@ -76,6 +79,7 @@ function createNotebookSaveEntry({
       return null;
     }
 
+    // Values are keyed by placeholder id; ids no longer in the snapshot drop.
     const values = pruneNotebookValuesForProtocol(
       mergeNotebookValues(editingEntry?.values, collectNotebookValues()),
       protocol
@@ -103,6 +107,8 @@ function createNotebookSaveEntry({
         entryId
       });
 
+    // Files are copied into storage before state changes, so a failed copy
+    // aborts the save with nothing half-written.
     let importedResultFileRecords = [];
     try {
       await ensureStorageFolderExists(storageFolder, window.hikariApi?.ensureStorageDirectory?.bind(window.hikariApi));
@@ -156,6 +162,8 @@ function createNotebookSaveEntry({
       ].filter(Boolean)))
     };
 
+    // Merge over the stored record so fields this editor does not own (links
+    // written by Gel, workflows, the agent) survive the save.
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
       : -1;

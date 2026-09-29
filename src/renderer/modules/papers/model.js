@@ -1,3 +1,6 @@
+// Library folders are not stored: every project is a folder, plus the user's
+// journal clubs. A paper belongs to one folder via linkedType + linkedId, and a
+// folder is addressed by the key "<type>:<id>".
 export function buildFolderKey(type, id) {
   const normalizedType = type === 'journal-club' ? 'journal-club' : 'project';
   const normalizedId = String(id || '').trim();
@@ -101,6 +104,10 @@ export function normalizeKeyFigures(paper) {
     .slice(0, 10);
 }
 
+// Derives the paper's readiness badge from what it has:
+//   deep_ready     PDF + at least one of summary / methods / reagents / figures
+//   uploaded_pdf   PDF only;  metadata_only  summary without a PDF
+//   unavailable    neither. A "Failed to summarize..." summary does not count.
 export function updatePaperAvailability(paper) {
   if (!paper || typeof paper !== 'object') {
     return;

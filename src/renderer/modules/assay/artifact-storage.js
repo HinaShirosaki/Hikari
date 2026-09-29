@@ -43,6 +43,8 @@ export function createAssayArtifactStorage({
     return String(state.settings?.storagePath || '').trim();
   }
 
+  // An assay linked to a notebook page lives inside that page's folder
+  // (<page>/plate/<name>__<id>); an unlinked one under <root>/Plates/.
   function buildAssayArtifactFolder(assay) {
     const storageRoot = getStorageRoot();
     if (!storageRoot || !assay) {
@@ -51,9 +53,9 @@ export function createAssayArtifactStorage({
     const linkedEntry = (state.notebookEntries || []).find((entry) => entry.id === assay.notebookEntryId);
     const folderName = `${sanitizeStorageName(assay.name || assay.assayNumber || assay.id, 'Assay')}__${sanitizeStorageName(assay.id, 'assay')}`;
     if (linkedEntry?.storageFolder) {
-      return `${String(linkedEntry.storageFolder).replace(/[\\/]+$/, '')}/assay/${folderName}`;
+      return `${String(linkedEntry.storageFolder).replace(/[\\/]+$/, '')}/plate/${folderName}`;
     }
-    return `${storageRoot.replace(/[\\/]+$/, '')}/Assays/${folderName}`;
+    return `${storageRoot.replace(/[\\/]+$/, '')}/Plates/${folderName}`;
   }
 
   async function persistAssayImageArtifact({ targetFolder, fileName, dataUrl }) {
@@ -72,6 +74,9 @@ export function createAssayArtifactStorage({
     return result?.ok ? result : null;
   }
 
+  // Writes the assay's on-disk record: assay-definition.json (plate setup),
+  // analysis-result.json (raw values + latest analysis) and analysis-chart.svg
+  // (the chart data URL is stripped from the JSON so it is not stored twice).
   async function persistAssayArtifacts(assayId) {
     const assay = getAssayById(assayId);
     const storageRoot = getStorageRoot();

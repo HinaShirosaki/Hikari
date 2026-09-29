@@ -3,7 +3,7 @@
 const path = require('path');
 const { cleanText } = require('./storage-utils');
 
-const ASSAYS_ROOT_FOLDER_NAME = 'Assays';
+const PLATES_ROOT_FOLDER_NAME = 'Plates';
 const CHEMICALS_SQLITE_FILE_NAME = 'hikari-chemicals.index.sqlite';
 const DASHBOARD_ROOT_FOLDER_NAME = 'Dashboard';
 const EXPERIMENT_LOG_FILE_NAME = 'experiment-log.json';
@@ -12,7 +12,7 @@ const KNOWLEDGE_BASE_ROOT_FOLDER_NAME = 'KnowledgeBase';
 const PAPER_MARKDOWN_ROOT_FOLDER_NAME = 'papers.md';
 const PAPERS_ROOT_FOLDER_NAME = 'Papers';
 const PROJECT_ROOT_FOLDER_NAME = 'Project';
-const PROJECT_SEQUENCE_FOLDER_NAME = 'Sequence';
+const PROJECT_SEQUENCE_FOLDER_NAME = 'DNA';
 const PROTOCOL_ROOT_FOLDER_NAME = 'Protocol';
 const ROOT_BUNDLE_BASE_NAME = 'hikari-data';
 const SAMPLES_ROOT_FOLDER_NAME = 'Samples';
@@ -106,7 +106,7 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
     dashboardRootPath: path.join(rootPath, DASHBOARD_ROOT_FOLDER_NAME),
     experimentLogPath: path.join(rootPath, DASHBOARD_ROOT_FOLDER_NAME, EXPERIMENT_LOG_FILE_NAME),
     papersRootPath: path.join(rootPath, PAPERS_ROOT_FOLDER_NAME),
-    assaysRootPath: path.join(rootPath, ASSAYS_ROOT_FOLDER_NAME),
+    assaysRootPath: path.join(rootPath, PLATES_ROOT_FOLDER_NAME),
     gelsRootPath: path.join(rootPath, GELS_ROOT_FOLDER_NAME),
     knowledgeBaseRootPath: path.join(rootPath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME),
     paperMarkdownRootPath: path.join(rootPath, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PAPER_MARKDOWN_ROOT_FOLDER_NAME),
@@ -198,7 +198,7 @@ function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath =
 }
 
 module.exports = {
-  ASSAYS_ROOT_FOLDER_NAME,
+  PLATES_ROOT_FOLDER_NAME,
   CHEMICALS_SQLITE_FILE_NAME,
   DASHBOARD_ROOT_FOLDER_NAME,
   EXPERIMENT_LOG_FILE_NAME,

@@ -28,6 +28,7 @@ function createNotebookControllers({
   notebookType,
   onProjectsChanged,
   onCreateLinkedAssay,
+  onCreateLinkedGel,
   onOpenPaper,
   getEditingEntryId,
   getActiveProjectDashboardId,
@@ -190,7 +191,8 @@ function createNotebookControllers({
     getPdfSettings: () => state.settings?.notebookPdf || {},
     previewImageLoader,
     resultFileAttachmentLoader,
-    onCreateLinkedAssay
+    onCreateLinkedAssay,
+    onCreateLinkedGel
   });
 
   const quickSampleController = createNotebookQuickSampleController({

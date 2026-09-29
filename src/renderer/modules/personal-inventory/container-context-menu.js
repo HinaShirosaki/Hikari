@@ -182,6 +182,7 @@ export function installContainerContextMenu(ctx) {
     return String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase();
   }
 
+  // Only an empty location can be deleted, and never the last one.
   function canDeleteLocation(section) {
     const locations = getLocationNames();
     const containers = Array.isArray(ctx.state.inventory?.[section]) ? ctx.state.inventory[section] : [];
@@ -189,6 +190,9 @@ export function installContainerContextMenu(ctx) {
     return locations.length > 1 && containers.length === 0 && folders.length === 0;
   }
 
+  // A location is a key in several maps, so renaming moves its containers and
+  // folders to the new key (merging if it exists) and rewrites every sample's
+  // inventoryLink.section. Names compare case-insensitively.
   function renameInventoryLocation(section, rawName) {
     const nextName = String(rawName || '').trim().replace(/\s+/g, ' ');
     const locations = getLocationNames();

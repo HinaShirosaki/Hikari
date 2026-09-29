@@ -24,6 +24,11 @@ async function persistForUpdatedRecord(ctx, context, updatedRecord, insights) {
   });
 }
 
+// Save a 'pending' answer first so the highlight and panel appear at once and
+// survive a reload, then fill in 'completed' or 'error'. The final update goes
+// through updateRecord against the latest record (the user may have edited the
+// page while waiting), and the UI refresh is skipped if they moved to another
+// record meanwhile.
 export async function runInsightAction(ctx, hostKey, selectionContext, actionType) {
   hideMenu(ctx);
   const registration = getHostRegistration(ctx, hostKey);

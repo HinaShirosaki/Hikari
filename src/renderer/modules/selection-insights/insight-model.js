@@ -81,6 +81,9 @@ export function buildErroredAnswer(actionType, errorMessage, pendingAnswer = nul
   };
 }
 
+// A selection is identified by segment + selected text + which occurrence of
+// that text inside the segment (1-based), so "Tris" twice in one step keeps
+// two separate insights.
 export function findInsightForSelection(insights, selectionContext) {
   const records = normalizeInsights(insights);
   if (selectionContext?.existingInsightId) {

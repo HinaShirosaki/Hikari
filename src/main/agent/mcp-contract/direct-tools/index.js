@@ -24,6 +24,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['../../../papers/store/intake/mcp/list-summaries.js', 'LIST_PROJECT_SUMMARIES_DEFINITION', 'callListProjectSummaries'],
   ['./purchase-recommendation.js', 'PURCHASE_RECOMMENDATION_MCP_TOOL', 'callPurchaseRecommendation'],
   ['./memory.js', 'MEMORY_MCP_TOOL', 'callMemory'],
+  ['./workspace-files.js', 'WORKSPACE_FILES_MCP_TOOL', 'callWorkspaceFiles'],
   ['./container.js', 'CONTAINER_MCP_TOOL', 'callContainer'],
   ['./assay-table.js', 'ASSAY_TABLE_MCP_TOOL', 'callAssayTable'],
   ['./assay-plot.js', 'ASSAY_PLOT_MCP_TOOL', 'callAssayPlot'],

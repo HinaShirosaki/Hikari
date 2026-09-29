@@ -113,7 +113,7 @@ function createColonyImageCropping({
     clearMarkersForImageChange();
     resetViewport();
     renderPreviewCanvas();
-    setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height}). Run auto count or click colonies to adjust.`);
+    setColonyStatus('');
     updateControlState();
   }
 
@@ -198,7 +198,7 @@ function createColonyImageCropping({
     resetViewport();
     destroyCropper();
     renderPreviewCanvas();
-    setColonyStatus(`Crop applied (${croppedCanvas.width}x${croppedCanvas.height}). Run auto count or click colonies to recount.`);
+    setColonyStatus('');
     updateControlState();
   }
 
@@ -226,7 +226,7 @@ function createColonyImageCropping({
     clearMarkersForImageChange();
     resetViewport();
     renderPreviewCanvas();
-    setColonyStatus(`Restored full image (${width}x${height}). Run auto count or click colonies to count.`);
+    setColonyStatus('');
     updateControlState();
   }
 

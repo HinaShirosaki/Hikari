@@ -32,6 +32,9 @@ export const BUNDLED_PLUGINS = Object.freeze([
   })
 ]);
 
+// Bundled definitions always replace a saved entry with the same id (so an app
+// update ships the new manifest); only the user's enabled flag carries over.
+// Bundled plugins come first, then user-installed ones.
 export function mergeBundledPluginEntries(entries = []) {
   const installed = Array.isArray(entries) ? entries : [];
   const byId = new Map(installed.map((entry) => [entry?.id, entry]));

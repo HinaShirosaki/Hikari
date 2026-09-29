@@ -41,6 +41,10 @@ export function normalizeNotebookToolCalculationTable(rawTable) {
   };
 }
 
+// A bench-tool result saved onto a notebook page: title/summary text plus an
+// optional table { caption, headers, metaRows, rows, footerRows } of strings.
+// Accepts both saved field names (result/formula/summary) and live calculator
+// ones (resultText/formulaText/summaryText). Invalid entries return null.
 export function normalizeNotebookToolCalculation(rawCalculation) {
   const source = rawCalculation && typeof rawCalculation === 'object' ? rawCalculation : null;
   if (!source) {

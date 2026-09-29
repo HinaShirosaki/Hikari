@@ -100,6 +100,11 @@ function createSearchController() {
   };
 }
 
+// Renderer entry point (called by renderer.js). Boot order matters:
+// state -> plugins -> undo/services -> modules -> navigation -> search, then
+// initApp() hydrates from the storage folder and opens the startup view.
+// `hikari:app-ready` fires whether or not boot succeeded (detail.error on
+// failure) so the loading cover always lifts.
 export function startHikariCore({
   documentObject = document,
   windowObject = window
@@ -191,6 +196,8 @@ export function startHikariCore({
     }
   }
 
+  // All module writes go through here. Once the undo service exists it saves via
+  // persistStateNow and records the change as an undo step (see undoService).
   function persist(options = {}) {
     return undoService ? undoService.persist(options) : persistStateNow();
   }
@@ -242,6 +249,7 @@ export function startHikariCore({
   });
 
   const moduleRegistry = createModuleRegistry({
+    pluginBridge,
     showView: viewController.showView,
     setSearchInputValue: viewController.setSearchInputValue,
     VIEWS
@@ -341,6 +349,9 @@ export function startHikariCore({
   });
   searchController.bind(topbarSearchController);
 
+  // Protocol files saved by another process (e.g. the agent) can arrive before
+  // hydration; applying them then would be overwritten by the hydrated state, so
+  // they queue until initApp drains them.
   let hydrationComplete = false;
   const pendingProtocolRecordEvents = [];
 

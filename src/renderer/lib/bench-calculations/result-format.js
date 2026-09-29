@@ -27,6 +27,10 @@ function describeRawValue(value, unit, label) {
   };
 }
 
+// Common shape for every bench calculator result. Missing inputs are not
+// errors: the calculator still returns formulaText with [placeholders] and
+// status 'formula', so the UI can show what is left to fill in. Status is
+// 'calculated' when complete, or 'warning' when set by the caller.
 function buildResult({
   type,
   mode = '',
@@ -71,6 +75,7 @@ function withLabel(item, label) {
   };
 }
 
+// Picks the largest unit the value reaches (units are ordered big -> small).
 function formatAdaptiveQuantity(value, units, zeroUnit) {
   const numericValue = Number(value);
   if (!Number.isFinite(numericValue) || numericValue === 0) {

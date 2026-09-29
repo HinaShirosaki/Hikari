@@ -60,7 +60,7 @@ export function getTypeFields(type) {
 export function normalizeSampleDetails(type, raw) {
   const details = {};
   getTypeFields(type).forEach(({ key }) => {
-    const value = String(raw?.[key] ?? '').trim().slice(0, 500);
+    const value = String(raw?.[key] ?? '').trim();
     if (value) {
       details[key] = value;
     }

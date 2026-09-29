@@ -16,6 +16,7 @@ export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['paper_intake_list_project_summaries', 'Project paper summaries', 'List ingested paper summaries for a project.', 'hikari-paper-retrieval'],
   ['purchase_recommendation', 'Purchase recommendation', 'Search and rank purchasable products.'],
   ['memory', 'Memory', 'Recall, store, and forget durable preferences and project facts.'],
+  ['workspace_files', 'Workspace files', 'Read ordinary files and request recoverable changes within granted folders.'],
   ['container', 'Container', 'Create and edit temporary exact-value containers.', 'hikari-container'],
   ['assay_table', 'Assay table', 'Create and transform scratch assay tables.', 'hikari-assay-plotly'],
   ['assay_plot', 'Assay plot', 'Style the live plot and edit labels, reference lines and bands.', 'hikari-assay-plotly'],

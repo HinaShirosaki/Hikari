@@ -8,13 +8,19 @@ const {
   normalizeProtocolTroubleshooting
 } = require('../../../shared/protocol-normalization.mjs');
 
-function cleanText(value, maxLength = 1200) {
-  const text = String(value || '').trim();
-  if (!text) {
-    return '';
-  }
-  return maxLength > 0 ? text.slice(0, maxLength) : text;
+// The length argument is ignored on purpose: an upsert writes this over the
+// user's protocol, and cutting it there loses their text.
+function cleanText(value) {
+  return String(value || '').trim();
 }
+
+// Fields an agent update may leave out; the stored value then stays. The
+// generation step fills every field, so omission is read from the raw input.
+const KEPT_WHEN_OMITTED = {
+  purpose: ['purpose', 'description'],
+  materials: ['materials'],
+  troubleshooting: ['troubleshooting', 'notes']
+};
 
 function safeParseJson(value, fallback = {}) {
   try {
@@ -26,7 +32,8 @@ function safeParseJson(value, fallback = {}) {
 }
 
 function slugText(value = '', fallback = 'protocol') {
-  return cleanText(value, 120)
+  return cleanText(value)
+    .slice(0, 120)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -100,13 +107,11 @@ function normalizeStepEntries(rawSteps = []) {
           .filter(Boolean)
       };
     })
-    .filter(Boolean)
-    .slice(0, 160);
+    .filter(Boolean);
 }
 
 const normalizeMaterials = (rawMaterials) => normalizeProtocolMaterials(rawMaterials, {
-  text: cleanText,
-  maxItems: 80
+  text: cleanText
 });
 const normalizeTroubleshooting = (rawTroubleshooting) => normalizeProtocolTroubleshooting(
   rawTroubleshooting,
@@ -117,7 +122,8 @@ function normalizeProtocolForSave(rawProtocol = {}, {
   existingProtocols = [],
   overwrite = false,
   upsert = false,
-  nowIso = new Date().toISOString()
+  nowIso = new Date().toISOString(),
+  sentProtocol = rawProtocol
 } = {}) {
   const source = ensureObject(rawProtocol);
   const steps = normalizeStepEntries(source.steps || source.procedure);
@@ -144,24 +150,37 @@ function normalizeProtocolForSave(rawProtocol = {}, {
   ) || nowIso;
   const updatedAt = normalizeIsoTimestamp(source.updatedAt, nowIso) || nowIso;
 
+  const normalized = {
+    id,
+    name,
+    createdAt,
+    updatedAt,
+    purpose: cleanText(source.purpose || source.description),
+    materials: normalizeMaterials(source.materials),
+    steps,
+    troubleshooting: normalizeTroubleshooting(source.troubleshooting),
+    ...(Array.isArray(source.aliases) ? { aliases: source.aliases.map((alias) => cleanText(alias)).filter(Boolean) } : {}),
+    ...(cleanText(source.projectId || source.project_id)
+      ? { projectId: cleanText(source.projectId || source.project_id) }
+      : {}),
+    ...(cleanText(source.projectName || source.project_name)
+      ? { projectName: cleanText(source.projectName || source.project_name) }
+      : {})
+  };
+  // An update rewrites what the agent sent; everything else on the stored
+  // protocol (aliases, selection insights, fields it left out) stays.
+  const protocol = shouldReplace ? { ...existingProtocol, ...normalized } : normalized;
+  if (shouldReplace) {
+    const sent = ensureObject(sentProtocol);
+    Object.entries(KEPT_WHEN_OMITTED).forEach(([field, keys]) => {
+      if (!keys.some((key) => key in sent) && field in existingProtocol) {
+        protocol[field] = existingProtocol[field];
+      }
+    });
+  }
+
   return {
-    protocol: {
-      id,
-      name,
-      createdAt,
-      updatedAt,
-      purpose: cleanText(source.purpose || source.description, 1200),
-      materials: normalizeMaterials(source.materials),
-      steps,
-      troubleshooting: normalizeTroubleshooting(source.troubleshooting),
-      ...(Array.isArray(source.aliases) ? { aliases: source.aliases.map((alias) => cleanText(alias, 120)).filter(Boolean) } : {}),
-      ...(cleanText(source.projectId || source.project_id, 120)
-        ? { projectId: cleanText(source.projectId || source.project_id, 120) }
-        : {}),
-      ...(cleanText(source.projectName || source.project_name, 220)
-        ? { projectName: cleanText(source.projectName || source.project_name, 220) }
-        : {})
-    },
+    protocol,
     existingIndex: shouldReplace ? existingIndexById : -1,
     replaced: shouldReplace
   };
@@ -263,7 +282,8 @@ function createProtocolSaveRuntime(deps = {}) {
       existingProtocols,
       overwrite: input.overwrite === true,
       upsert: input.upsert === true,
-      nowIso: now()
+      nowIso: now(),
+      sentProtocol: input.protocol
     });
     const protocol = normalizedSave.protocol;
 

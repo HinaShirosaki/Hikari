@@ -6,6 +6,8 @@ const path = require('node:path');
 const { createMockDocument, flushAsync, loadEsmStyleModule, trigger } = require('./support/runtime.js');
 
 const document = createMockDocument([]);
+const assayCalls = [];
+const gelCalls = [];
 document.getElementById('biology-notebook-quick-sample-overlay').hidden = true;
 
 const state = {
@@ -51,6 +53,8 @@ const notebook = notebookModule.initLabNotebook({
   createId: (() => { let index = 0; return () => `new-${index += 1}`; })(),
   safeText: (value) => String(value == null ? '' : value).replace(/[&<>"]/g, ''),
   notebookType: 'biology',
+  onCreateLinkedAssay: (payload) => assayCalls.push(payload),
+  onCreateLinkedGel: (payload) => gelCalls.push(payload),
   onNotebookEntriesChanged: () => {}
 });
 
@@ -72,6 +76,19 @@ function addSample(name) {
 
   trigger(rail, 'click', { target: { dataset: { notebookEntryId: 'n1' } } });
   await flushAsync();
+  trigger(document.getElementById('biology-notebook-add-assay-btn'), 'click');
+  trigger(document.getElementById('biology-notebook-add-gel-btn'), 'click');
+  await flushAsync();
+  assert.equal(assayCalls[0].notebookEntryId, 'n1');
+  assert.equal(assayCalls[0].projectId, 'p1');
+  assert.equal(gelCalls[0].notebookEntryId, 'n1');
+  state.assays.push({ id: 'a1', notebookEntryId: 'n1', name: 'Attached assay' });
+  state.settings.pluginStorage = { gel: { gelAnalyses: [
+    { id: 'g1', notebookEntryId: 'n1', name: 'Attached gel' }
+  ] } };
+  await notebook.renderLinkedPreviews();
+  assert.match(document.getElementById('biology-notebook-linked-results').innerHTML, /Attached assay/);
+  assert.match(document.getElementById('biology-notebook-linked-results').innerHTML, /Attached gel/);
   await addSample('Plasmid A');
   assert.equal(state.samples.length, 1);
   assert.equal(state.notebookEntries.length, 1, 'an open page takes the sample without creating another page');
@@ -81,6 +98,12 @@ function addSample(name) {
   await flushAsync();
   assert.equal(document.getElementById('biology-notebook-protocol-area').hidden, true);
   assert.equal(activeRows(), 0);
+
+  trigger(document.getElementById('biology-notebook-add-assay-btn'), 'click');
+  trigger(document.getElementById('biology-notebook-add-gel-btn'), 'click');
+  await flushAsync();
+  assert.equal(assayCalls.length, 1);
+  assert.equal(gelCalls.length, 1);
 
   await addSample('Plasmid B');
   assert.equal(state.notebookEntries.length, 1, 'the project dashboard must not mint a stray page');

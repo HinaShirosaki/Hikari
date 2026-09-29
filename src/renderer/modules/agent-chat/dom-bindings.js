@@ -18,6 +18,7 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     conversationShell: historyNode?.closest?.('.agent-conversation-shell') || null,
     scrollToBottomBtn: byId(id('scroll-to-bottom-btn')),
     reviewOverlay: byId(id('review-overlay')),
+    reviewTitle: byId(id('review-title')),
     reviewTrack: byId(id('review-track')),
     reviewCloseBtn: byId(id('review-close-btn')),
     reviewPrevBtn: byId(id('review-prev-btn')),

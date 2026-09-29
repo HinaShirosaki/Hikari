@@ -13,6 +13,9 @@ import { installLocationCodeHelpers } from './location-codes.js';
 import { installRenderAll } from './render-all.js';
 import { installChemicalSqliteSync } from './sqlite-sync.js';
 
+// Lab chemical inventory. Each install* adds its functions onto one shared
+// ctx, and later installers call earlier ones through ctx, so keep this order
+// (location codes and sync first, rendering and events last).
 export function initLabCommonInventory(options = {}) {
   const ctx = createLabCommonInventoryContext(options);
   ctx.ensureLabInventoryShape();

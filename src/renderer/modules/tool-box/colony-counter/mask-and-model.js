@@ -105,12 +105,7 @@ function createMaskAndModelCount({
 
       renderPreviewCanvas();
       renderColonySummary();
-      const maskText = result.maskSource === 'plate-model'
-        ? ` inside detected plate (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})`
-        : (hasActiveMask() ? ` inside mask (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})` : '');
-      const fallbackText = result.maskSource === 'none' ? ' Plate was not detected; counted the full image.' : '';
-      const countText = `Auto count: ${colonyState.markers.length} colon${colonyState.markers.length === 1 ? 'y' : 'ies'}${maskText}.`;
-      setColonyStatus(`${countText}${fallbackText}`);
+      setColonyStatus('');
     } catch (error) {
       setColonyStatus(error?.message || 'Auto count failed.', true);
       console.error('Colony auto count failed:', error);

@@ -19,6 +19,8 @@ function normalizeBufferUnitText(value) {
     .trim();
 }
 
+// Splits "12.5 mM" into { value: 12.5, unitText: 'mM' }. The first number
+// found wins; anything after it is the unit text.
 function parseBufferNumericPrefix(value) {
   const source = String(value ?? '').trim();
   const match = source.match(/([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?)/i);

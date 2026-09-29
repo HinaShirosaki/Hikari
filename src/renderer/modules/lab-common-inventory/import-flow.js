@@ -9,6 +9,9 @@ export function installImportFlow(ctx) {
   const syncChemicalSqliteBundle = (...args) => ctx.syncChemicalSqliteBundle(...args);
   const renderAll = (...args) => ctx.renderAll(...args);
 
+// Spreadsheet import: parse file -> map headers to chemical fields -> merge
+// rows into the inventory (update matches, create the rest) -> persist and
+// force a SQLite sync.
 async function onChemicalImportFileChange(event) {
   const file = event?.target?.files?.[0];
   if (!file) {

@@ -101,6 +101,14 @@ async function readJsonFile(filePath) {
   }
 }
 
+// A record file that no longer parses was skipped on load, so the save that
+// follows does not list it. Pruning it as "deleted" would turn a damaged file
+// into a lost one; it stays on disk for the user to recover.
+async function isUnreadableJsonFile(filePath) {
+  const payload = await readJsonFile(filePath);
+  return payload.exists && !payload.ok;
+}
+
 function normalizeFileTimestamp(stat) {
   const source = stat && typeof stat === 'object' ? stat : {};
   const time = source.mtime instanceof Date ? source.mtime : null;
@@ -153,6 +161,7 @@ module.exports = {
   cleanText,
   cloneJson,
   ensureObject,
+  isUnreadableJsonFile,
   keepLatestById,
   loadSqlJs,
   normalizeFileTimestamp,

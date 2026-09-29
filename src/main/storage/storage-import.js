@@ -99,7 +99,7 @@ const HIKARI_ROOT_FOLDER_NAMES = new Set([
   SAMPLES_ROOT_FOLDER_NAME,
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   'Workflow',
-  'SequenceViewer'
+  'DNA'
 ]);
 
 async function importStorageRootUnlocked({ storagePath = '', transformPaperRecordsToMarkdown = null } = {}) {

@@ -238,7 +238,7 @@ export function createAgentChatSessionManager(deps = {}) {
     loadChatSession,
     refreshPersistentSessions,
     ensureCurrentChatSession,
-    createNewChatSession
+    startNewChatDraft
   } = createSessionLoading({
     state,
     api,
@@ -264,7 +264,7 @@ export function createAgentChatSessionManager(deps = {}) {
       return newChatPromise;
     }
     onNewChatPendingChanged(true);
-    newChatPromise = createNewChatSession().finally(() => {
+    newChatPromise = startNewChatDraft().finally(() => {
       newChatPromise = null;
       onNewChatPendingChanged(false);
     });

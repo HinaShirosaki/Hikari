@@ -1,3 +1,5 @@
+// Ordinary least squares for the qPCR standard curve (Ct vs log10 quantity).
+// Returns null for fewer than one point or all-identical x values.
 export function linearRegression(xValues, yValues) {
   const n = xValues.length;
   if (!n || n !== yValues.length) {

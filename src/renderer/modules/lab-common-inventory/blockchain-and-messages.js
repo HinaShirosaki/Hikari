@@ -4,6 +4,9 @@ export function installBlockchainAndMessages(ctx) {
   const { createId, state } = ctx;
   const { chemicalImportStatus } = ctx.elements;
 
+// "Blockchain" is an append-only change log: each block stores the previous
+// block's hash, so an edited history shows a broken chain. The hash is a 32-bit
+// string hash for change detection, not cryptographic tamper-proofing.
 function simpleHash(text) {
   let hash = 0;
   for (let i = 0; i < text.length; i += 1) {
@@ -26,6 +29,8 @@ function appendBlock(action, payload) {
   state.labInventory.blocks.push(block);
 }
 
+// Queues an in-app message to every lab member with a Hikari email (except
+// the sender). Messages live in state.messages; nothing is emailed.
 function broadcastInventoryUpdate(chemical) {
   const recipients = Array.from(new Set(
     state.members

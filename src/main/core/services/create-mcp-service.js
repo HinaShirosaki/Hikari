@@ -7,14 +7,18 @@ function createMainMcpService({
   agentToolRuntime,
   ipcMain,
   getMainWindow,
+  fileAccess,
   getWorkingDirectory = () => process.cwd(),
   processObject = process,
   createMcpHost = createAgentMcpHost
 } = {}) {
   const plotBridge = createAssayPlotBridge({ ipcMain, getMainWindow });
   const mcpHost = createMcpHost({
-    runTool: (toolId, ...args) => toolId === 'assay-plot'
-      ? plotBridge.run(args[0]) : agentToolRuntime?.runAgentTool(toolId, ...args),
+    runTool: (toolId, ...args) => {
+      if (toolId === 'workspace-files') return fileAccess?.execute(args[0], args[2]?.fileAccessToken)
+        || { ok: false, status: 'unavailable', error: 'Workspace files is unavailable.' };
+      return toolId === 'assay-plot' ? plotBridge.run(args[0]) : agentToolRuntime?.runAgentTool(toolId, ...args);
+    },
     env: processObject.env,
     getSnapshot: () => ({}),
     getContextDefaults: () => ({

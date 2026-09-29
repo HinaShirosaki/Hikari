@@ -55,8 +55,8 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
         return {
           ok: true,
           id: 'recognized_backbone_host',
-          filePath: '/tmp/sequence-viewer-tests/SequenceViewer/protein-builder-backbones.json',
-          relativePath: 'SequenceViewer/protein-builder-backbones.json'
+          filePath: '/tmp/sequence-viewer-tests/DNA/protein-builder-backbones.json',
+          relativePath: 'DNA/protein-builder-backbones.json'
         };
       },
       sequenceLibraryRecognizeBackbone: async (payload) => {

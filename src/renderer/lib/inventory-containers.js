@@ -38,6 +38,7 @@ function getCanonicalContainerType(type = '') {
   return normalized === 'customgrid' ? 'customGrid' : normalized;
 }
 
+// Unknown container types fall back to box81, the historical default.
 export function normalizeContainerType(type = '') {
   const normalized = getCanonicalContainerType(type);
   return SUPPORTED_CONTAINER_TYPES.has(normalized) ? normalized : 'box81';
@@ -107,6 +108,7 @@ export function getContainerLayout(containerOrType) {
   };
 }
 
+// plate96 wells are named A1..H12; every grid box uses W1..Wn in row-major order.
 export function getWellName(containerOrType, index) {
   const type = getContainerType(containerOrType);
   if (type === 'plate96') {

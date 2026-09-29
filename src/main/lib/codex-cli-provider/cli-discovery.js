@@ -30,7 +30,7 @@ function discoveryContext(env = process.env, options = {}) {
   const local = getEnv('LOCALAPPDATA') || paths.join(home, 'AppData', 'Local');
   const roaming = getEnv('APPDATA') || paths.join(home, 'AppData', 'Roaming');
   const privateNode = platform === 'win32'
-    ? paths.join(local, 'Hikari', 'node', 'node.exe')
+    ? paths.join(local, 'HikariNode', 'node.exe')
     : paths.join(home, '.hikari', 'node', 'bin', 'node');
   const nodeDirs = platform === 'win32'
     ? [getEnv('NVM_SYMLINK'), paths.join(getEnv('ProgramFiles') || 'C:\\Program Files', 'nodejs'),

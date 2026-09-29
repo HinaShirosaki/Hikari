@@ -92,6 +92,7 @@ async function requestCodexCliText({
     model,
     reasoningEffort,
     enableWebSearch,
+    fileAccessToken: envOverrides.HIKARI_FILE_ACCESS_TOKEN || '',
     collectJsonEvents
   });
 
@@ -177,6 +178,7 @@ function buildRequestArgs({
   model,
   reasoningEffort,
   enableWebSearch,
+  fileAccessToken,
   collectJsonEvents
 }) {
   return cleanResumeSessionId
@@ -187,6 +189,7 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
+      fileAccessToken,
       streamJson: collectJsonEvents
     })
     : buildCodexCliExecArgs({
@@ -195,6 +198,7 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
+      fileAccessToken,
       streamJson: collectJsonEvents
     });
 }

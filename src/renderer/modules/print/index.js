@@ -49,6 +49,9 @@ function buildPrintHtmlDocument(bodyHtml, { title = 'Print', extraStyles = '' } 
 </html>`;
 }
 
+// Printing goes through a hidden iframe so only the document, not the app
+// chrome, reaches the print dialog. The frame is removed a few seconds after
+// print() returns, giving the dialog time to read it.
 function createPrintFrame() {
   const doc = getDocumentRef();
   if (!doc || !doc.body) {

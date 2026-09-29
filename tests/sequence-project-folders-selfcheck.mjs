@@ -1,8 +1,8 @@
 // Self-check for the sequence viewer's library folders.
 //
 // Every project gets a folder in the library rail and a real
-// `Project/<Name>/Sequence` directory; folders the user makes get a directory
-// under `SequenceViewer/` instead. The parts that can break quietly are the
+// `Project/<Name>/DNA` directory; folders the user makes get a directory
+// under `DNA/` instead. The parts that can break quietly are the
 // rail rows and their directories: a rename must move one folder rather than
 // leave two, a project row must not be renamed or deleted out from under its
 // project, and a listing must not rewrite the database when nothing changed.
@@ -24,8 +24,8 @@ const {
 } = require(path.join(libraryDir, 'index.js'));
 
 const storagePath = await fs.mkdtemp(path.join(os.tmpdir(), 'hikari-seq-projects-'));
-const sequenceDirFor = (folderName) => path.join(storagePath, 'Project', folderName, 'Sequence');
-const libraryDirFor = (folderName) => path.join(storagePath, 'SequenceViewer', folderName);
+const sequenceDirFor = (folderName) => path.join(storagePath, 'Project', folderName, 'DNA');
+const libraryDirFor = (folderName) => path.join(storagePath, 'DNA', folderName);
 const exists = (target) => fs.stat(target).then(() => true, () => false);
 const railNames = (result) => result.folders.map((folder) => folder.name).sort();
 
@@ -69,7 +69,7 @@ try {
   assert.deepEqual(railNames(listed), ['Assay Dev', 'Cloning', 'Gene Editing v2']);
 
   // A user folder lives under SequenceViewer. The project of the same name
-  // still owns its own `Project/Cloning/Sequence`; only the rail row is skipped,
+  // still owns its own `Project/Cloning/DNA`; only the rail row is skipped,
   // because the two directories have different owners.
   assert.ok(await exists(libraryDirFor('Cloning')));
   assert.ok(await exists(sequenceDirFor('Cloning')));
@@ -87,7 +87,7 @@ try {
     upsertSequenceFolder({ storagePath, name: 'entries' }),
     /reserved/i
   );
-  assert.ok(await exists(path.join(storagePath, 'SequenceViewer', 'entries')));
+  assert.ok(await exists(path.join(storagePath, 'DNA', 'entries')));
 
   // A project row is owned by its project; renaming or deleting it in the rail
   // would just be undone by the next listing, so both are refused.

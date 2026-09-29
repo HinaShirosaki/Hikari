@@ -5,6 +5,8 @@ function normalizeBufferCandidateName(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+// Stored chemical records come from several import formats, so accept the
+// common spellings of each field.
 function extractCompoundMw(record) {
   const source = record && typeof record === 'object' ? record : {};
   const keys = ['mw', 'molecularWeight', 'molecular_weight', 'formulaWeight', 'formula_weight', 'formulaMass', 'molarMass', 'fw'];
@@ -42,6 +44,9 @@ function inferCompoundForm(record) {
   return /\b(liquid|solution|ml|ul|l)\b/.test(formText) ? 'liquid' : 'solid';
 }
 
+// Ingredient suggestions for the buffer tool: the user's stored chemicals
+// merged with the built-in BUFFER_COMPOUNDS by case-insensitive name. A stored
+// record wins field by field; the built-in list only fills gaps it leaves.
 function buildBufferCandidates({ storedCompounds = [] } = {}) {
   const candidates = new Map();
 

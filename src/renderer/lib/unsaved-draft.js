@@ -16,6 +16,9 @@ function controlValue(control) {
   return String(control?.value ?? '');
 }
 
+// Unsaved-changes detection: modules snapshot a form (or draft object) when it
+// is opened or saved, and compare serialized snapshots later. File inputs are
+// compared by name/size/mtime since File objects never compare equal.
 export function snapshotFormControls(form, options = {}) {
   if (!form) {
     return [];
@@ -38,6 +41,8 @@ export function snapshotFormControls(form, options = {}) {
     }));
 }
 
+// Sets and Maps are sorted so two drafts with the same members serialize the
+// same regardless of insertion order. Returns '' if the value cannot serialize.
 export function serializeDraftSnapshot(value) {
   try {
     return JSON.stringify(value, (_key, item) => {

@@ -14,7 +14,7 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
-const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
@@ -69,24 +69,27 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
     const folderPath = path.join(protocolRootPath, folderName);
     const filePath = path.join(folderPath, PROTOCOL_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
-    await fs.writeFile(
-      filePath,
-      JSON.stringify({
-        schema_name: PROTOCOL_SIDECAR_SCHEMA,
-        schema_version: SIDECAR_SCHEMA_VERSION,
-        updated_at: updatedAt,
-        protocol
-      }, null, 2),
-      'utf8'
-    );
+    await writeFileAtomic(fs, filePath, JSON.stringify({
+      schema_name: PROTOCOL_SIDECAR_SCHEMA,
+      schema_version: SIDECAR_SCHEMA_VERSION,
+      updated_at: updatedAt,
+      protocol
+    }, null, 2));
     writtenPaths.push(filePath);
   }
 
+  // A deleted or renamed protocol loses its record file; the folder goes only
+  // once nothing else is in it, so files the user kept there survive.
   for (const entry of existingEntries) {
     if (!entry.isDirectory() || activeFolders.has(entry.name)) {
       continue;
     }
-    await fs.rm(path.join(protocolRootPath, entry.name), { recursive: true, force: true });
+    const filePath = path.join(protocolRootPath, entry.name, PROTOCOL_FILE_NAME);
+    if (await isUnreadableJsonFile(filePath)) {
+      continue;
+    }
+    await fs.rm(filePath, { force: true });
+    await fs.rmdir(path.join(protocolRootPath, entry.name)).catch(() => {});
   }
 
   return writtenPaths;
@@ -133,8 +136,9 @@ async function writeRecordFolders(rootPath, records, { fileName, key, schemaName
   }
   const entries = await fs.readdir(rootPath, { withFileTypes: true }).catch(() => []);
   for (const entry of entries) {
-    if (entry.isDirectory() && !activeFolders.has(entry.name)) {
-      await fs.rm(path.join(rootPath, entry.name, fileName), { force: true });
+    const filePath = path.join(rootPath, entry.name, fileName);
+    if (entry.isDirectory() && !activeFolders.has(entry.name) && !(await isUnreadableJsonFile(filePath))) {
+      await fs.rm(filePath, { force: true });
       await fs.rmdir(path.join(rootPath, entry.name)).catch(() => {});
     }
   }
@@ -204,16 +208,12 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
     const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
     const filePath = path.join(folderPath, 'page.json');
     await fs.mkdir(folderPath, { recursive: true });
-    await fs.writeFile(
-      filePath,
-      JSON.stringify({
-        schema_name: NOTEBOOK_SIDECAR_SCHEMA,
-        schema_version: SIDECAR_SCHEMA_VERSION,
-        updated_at: updatedAt,
-        notebookEntry: compactNotebookEntryForFolder(entry)
-      }, null, 2),
-      'utf8'
-    );
+    await writeFileAtomic(fs, filePath, JSON.stringify({
+      schema_name: NOTEBOOK_SIDECAR_SCHEMA,
+      schema_version: SIDECAR_SCHEMA_VERSION,
+      updated_at: updatedAt,
+      notebookEntry: compactNotebookEntryForFolder(entry)
+    }, null, 2));
     writtenPaths.push(filePath);
   }
   return writtenPaths;

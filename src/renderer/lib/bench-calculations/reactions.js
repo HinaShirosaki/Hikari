@@ -82,6 +82,9 @@ function describeReactionConcentration({
   return parsed;
 }
 
+// One reagent in a fixed-volume reaction (e.g. a PCR mix):
+// volume = final / stock x total, or a manual volume typed by the user, which
+// wins over the calculation.
 function calculateFixedReactionReagent({
   name,
   stockConcentration,
@@ -185,6 +188,9 @@ function calculateFixedReactionReagent({
   });
 }
 
+// Whole fixed-volume reaction: each reagent row, then the fill (water/buffer)
+// = total - sum(reagent volumes). The fill is only computed once every reagent
+// volume is known; until then result.fill.formula shows the pending sum.
 function calculateFixedReaction({
   totalVolumeValue,
   totalVolumeUnit = 'uL',

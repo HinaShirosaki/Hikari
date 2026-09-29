@@ -29,6 +29,8 @@ export function initExtinctionTool(options = {}) {
       const trp = counts.W || 0;
       const tyr = counts.Y || 0;
       const cys = counts.C || 0;
+      // Pace et al. (1995) coefficients at 280 nm: Trp 5500, Tyr 1490, and
+      // 125 per disulfide (cystine) for the oxidized form.
       const reduced = (5500 * trp) + (1490 * tyr);
       const oxidized = reduced + (125 * Math.floor(cys / 2));
 

@@ -131,6 +131,9 @@ function collectProtocolPayloads(source) {
   return protocols;
 }
 
+// Agent chat replies can carry generated protocols under several meta keys
+// (snake/camel case, nested under codex_agent). Collect them all, deduped by
+// id + name + step text, for the "review and save" card.
 export function collectProtocolGenerationPayloads(meta = {}) {
   const sources = [
     meta.protocol_generation,
@@ -167,6 +170,8 @@ const normalizeIsoTimestamp = (rawValue, fallback = '') => (
   normalizeSharedIsoTimestamp(rawValue, fallback, { text: trimText })
 );
 
+// Turns an approved agent protocol into a saved record: a colliding id gets a
+// fresh one, and a taken name gets an "(Agent Generated)" suffix.
 export function buildGeneratedProtocolRecord(protocol, { protocols = [], createId } = {}) {
   const normalizedProtocol = normalizeGeneratedProtocol(protocol);
   if (!normalizedProtocol) {
@@ -195,6 +200,8 @@ export function buildGeneratedProtocolRecord(protocol, { protocols = [], createI
   };
 }
 
+// What agent-chat uses to show and save generated protocols without importing
+// protocol-module internals.
 export function createProtocolAgentAdapter({ state, createId, onProtocolsChanged } = {}) {
   return {
     collectReviewProtocols: collectProtocolGenerationPayloads,
