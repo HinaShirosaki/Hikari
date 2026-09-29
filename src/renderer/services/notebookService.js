@@ -7,6 +7,7 @@ export function createNotebookService(registry) {
 
   function handleAgentNotebookEntriesChanged() {
     registry.get('biologyNotebook').renderEntries?.();
+    registry.get('biologyNotebook').renderLinkedPreviews?.();
     handleNotebookEntriesChanged();
   }
 

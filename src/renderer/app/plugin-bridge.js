@@ -15,6 +15,40 @@ export function createPluginBridge({
   // WindowProxy identity survives navigation, so a grant also needs the
   // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
+  // Notebook "Add gel" handoff, host side: queueNotebookGel remembers the page
+  // and pings the bundled Gel frame; Gel then pulls it with the internal
+  // gel.takeNotebookLink verb (takeNotebookGel). Pulling instead of pushing
+  // keeps the entry off postMessage to any frame but the verified bundled Gel,
+  // and clearing on take makes the link one-shot.
+  let pendingNotebookGel = null;
+
+  function queueNotebookGel({ notebookEntryId } = {}) {
+    const entry = asArray(state.notebookEntries).find((item) => item.id === notebookEntryId);
+    if (!entry) throw new Error('Open a saved notebook page before adding a gel.');
+    const targets = [...frames.entries()].filter(([, { plugin }]) => (
+      plugin.id === 'gel' && plugin.bundled === true && plugin.path === '@bundled/gel'
+    ));
+    if (!targets.length) throw new Error('Gel is still loading or unavailable. Try again after opening Gel.');
+    pendingNotebookGel = entry.id;
+    targets.forEach(([frame, { origin }]) => {
+      frame.postMessage({ hikari: PROTOCOL_MARKER, event: 'gel.notebookLink', payload: {} }, origin);
+    });
+  }
+
+  function takeNotebookGel() {
+    const entry = asArray(state.notebookEntries).find((item) => item.id === pendingNotebookGel);
+    pendingNotebookGel = null;
+    if (!entry) return null;
+    // Only the selected page's display/link metadata crosses the plugin boundary.
+    return {
+      id: entry.id,
+      projectId: entry.projectId || '',
+      projectName: entry.projectName || '',
+      experimentName: entry.experimentName || '',
+      protocolName: entry.protocolName || '',
+      notebookType: entry.notebookType || 'biology'
+    };
+  }
 
   function register(frameWindow, plugin, baseUrl) {
     const origin = pluginOrigin(baseUrl);
@@ -182,6 +216,7 @@ export function createPluginBridge({
         api,
         pluginUnsaved,
         pluginHistory,
+        takeNotebookGel,
         notify,
         frameWindow: event.source,
         windowObject
@@ -204,6 +239,7 @@ export function createPluginBridge({
   windowObject?.addEventListener?.('message', handleMessage);
   return {
     register,
+    queueNotebookGel,
     handleMessage,
     broadcast,
     broadcastAppContext,

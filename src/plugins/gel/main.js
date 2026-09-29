@@ -33,6 +33,33 @@ let unsubscribeContext = null;
 let leftRailController = null;
 let hostLayout = null;
 let pendingStorageRefresh = false;
+let notebookLinkRequest = null;
+
+// Notebook "Add gel" handoff, plugin side. The host's gel.notebookLink event
+// carries no data; we pull the queued page through the internal
+// gel.takeNotebookLink verb, which is one-shot (returns null once consumed).
+// Also called after start(), because the event can arrive before the workspace
+// is ready and is ignored then. The shared promise dedupes overlapping calls.
+function acceptNotebookLink() {
+  if (!workspaceReady || notebookLinkRequest) return notebookLinkRequest;
+  notebookLinkRequest = (async () => {
+    // Keep any existing Gel edits before starting a page-linked analysis.
+    if (gelController?.hasUnsavedChanges?.()) {
+      const saved = await gelController.saveUnsavedChanges();
+      if (!saved) throw new Error('Save the current gel before adding a notebook gel.');
+    }
+    const entry = await hikari.call('gel.takeNotebookLink');
+    if (!entry) return;
+    state.notebookEntries = [entry];
+    state.projects = entry.projectId ? [{ id: entry.projectId, name: entry.projectName }] : [];
+    gelController.startLinkedGel({ notebookEntryId: entry.id, projectId: entry.projectId });
+  })().catch((error) => {
+    showBanner(errorMessage(error), { kind: 'error', retry: acceptNotebookLink });
+  }).finally(() => { notebookLinkRequest = null; });
+  return notebookLinkRequest;
+}
+
+hikari?.on('gel.notebookLink', acceptNotebookLink);
 // What the last load reported. Held here rather than passed in, so a bare
 // showReadyState() from a theme or layout change keeps showing it instead of
 // silently clearing a warning the user has not acted on yet.
@@ -382,6 +409,7 @@ async function start() {
       pendingStorageRefresh = false;
       void refreshHostData({ announce: true });
     }
+    void acceptNotebookLink();
   })()
     .catch((error) => {
       workspaceReady = false;

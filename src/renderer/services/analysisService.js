@@ -15,6 +15,12 @@ export function createAnalysisService(registry) {
   }
 
   return {
+    // Queue before showing the view. Throws if no Gel frame is registered yet;
+    // a frame still starting up pulls the queued page once its workspace is ready.
+    openGelForNotebook: (payload) => {
+      registry.get('pluginBridge').queueNotebookGel(payload);
+      registry.get('showView')('plugin-gel-view');
+    },
     handleAssaysChanged,
     openAssayForNotebook
   };

@@ -32,6 +32,7 @@ export const biologyNotebookManifest = {
     notebookType: 'biology',
     importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
     onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
+    onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
     onProjectsChanged: rendererServices.project.handleProjectsChanged,
     onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
     onActiveNotebookPageChanged: () => {

@@ -13,6 +13,14 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // Every verb declares the permission it needs. A verb with an unlisted
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
+  // internal + bundledPluginId: only the bundled Gel plugin may call this, and
+  // it is hidden from the public verb list (see plugin-bridge.js).
+  'gel.takeNotebookLink': {
+    permission: '',
+    internal: true,
+    bundledPluginId: 'gel',
+    handler: (_params, { takeNotebookGel }) => takeNotebookGel()
+  },
   'app.info': {
     permission: '',
     handler: (_params, { plugin, state, windowObject }) => ({
@@ -238,7 +246,7 @@ const VERBS = {
 
   'storage.set': {
     permission: 'storage',
-    handler: (params, { state, persist, plugin }) => {
+    handler: (params, { state, persist, plugin, onNotebookEntriesChanged }) => {
       if (!Object.prototype.hasOwnProperty.call(params, 'value')) {
         throw new Error('storage.set needs a "value" property. Pass null explicitly to clear plugin storage.');
       }
@@ -267,6 +275,18 @@ const VERBS = {
       }
       settings.pluginStorage = stored;
       state.settings = settings;
+      const previousEntries = state.notebookEntries;
+      // Gel's blob is the source of truth for which gels belong to which page;
+      // mirror it onto entry.gelIds so notebook previews stay in sync. Rolled
+      // back with the rest of the state if persist() fails below.
+      const isBundledGel = plugin.id === 'gel' && plugin.bundled === true && plugin.path === '@bundled/gel';
+      if (isBundledGel) {
+        const gels = asArray(stored.gel?.gelAnalyses);
+        state.notebookEntries = asArray(state.notebookEntries).map((entry) => ({
+          ...entry,
+          gelIds: gels.filter((gel) => gel.notebookEntryId === entry.id).map((gel) => gel.id)
+        }));
+      }
       // barrier: a plugin's blob is the index for files it already wrote to the
       // storage folder. Undoing across it would revert the index while the
       // files stay on disk, and the frame is never told the rollback happened.
@@ -276,8 +296,10 @@ const VERBS = {
         if (hadStorage) settings.pluginStorage = previousStorage;
         else delete settings.pluginStorage;
         state.settings = previousSettings;
+        state.notebookEntries = previousEntries;
         throw error;
       }
+      if (isBundledGel) onNotebookEntriesChanged?.();
       return { bytes: size, limit: MAX_PLUGIN_STORAGE_CHARS };
     }
   },

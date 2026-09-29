@@ -69,6 +69,7 @@ function queryNotebookElements(doc = document) {
     notebookResultTableHost: doc.getElementById('biology-notebook-result-table'),
     notebookResultTableStatus: doc.getElementById('biology-notebook-result-table-status'),
     notebookAddAssayBtn: doc.getElementById('biology-notebook-add-assay-btn'),
+    notebookAddGelBtn: doc.getElementById('biology-notebook-add-gel-btn'),
     notebookAddSamplesBtn: doc.getElementById('biology-notebook-add-samples-btn'),
     notebookLinkedResults: doc.getElementById('biology-notebook-linked-results'),
     notebookToolCalculations: doc.getElementById('biology-notebook-tool-calculations'),
