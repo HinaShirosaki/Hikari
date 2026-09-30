@@ -581,13 +581,21 @@
                   Peak Min Distance (px)
                   <input id="colony-model-min-distance" type="number" min="1" max="50" step="1" value="3" />
                 </label>
-                <label>
-                  Mask Shape
-                  <select id="colony-mask-mode">
-                    <option value="rectangle">Rectangle</option>
-                    <option value="circle">Circle</option>
-                  </select>
-                </label>
+                <div class="colony-mask-shape">
+                  <span id="colony-mask-shape-label">Mask Shape</span>
+                  <div class="colony-mask-switch" role="radiogroup" aria-labelledby="colony-mask-shape-label">
+                    <label title="Rectangle">
+                      <input type="radio" name="colony-mask-mode" value="rectangle" checked />
+                      <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="6" width="16" height="12" rx="1.5"></rect></svg>
+                      <span class="sr-only">Rectangle</span>
+                    </label>
+                    <label title="Circle">
+                      <input type="radio" name="colony-mask-mode" value="circle" />
+                      <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7.5"></circle></svg>
+                      <span class="sr-only">Circle</span>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               <div class="form-actions">
