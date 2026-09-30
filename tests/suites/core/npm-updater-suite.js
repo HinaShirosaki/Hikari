@@ -234,19 +234,49 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     assert.equal(calls.quit, 1);
   });
 
-  test('npm updater on Windows (portable, any folder) swaps its own folder via a hidden helper after quit', async () => {
+  test('npm updater on Windows (portable, any folder) hands the swap to the new Hikari.exe at quit', async () => {
     const { result, calls, appDir } = await runWindowsUpdate({ setupInstall: false });
     assert.equal(result.action, 'restarting');
     const [build, helper] = calls.spawn;
-    const newApp = path.join(build.options.cwd, 'hikari-out', 'Hikari-win32-arm64', 'Hikari');
-    assert.equal(helper.command, 'powershell.exe');
-    const arg = (name) => helper.args[helper.args.indexOf(name) + 1];
-    assert.equal(arg('-HikariPid'), '4242');
-    assert.equal(arg('-App'), appDir);
-    assert.equal(arg('-New'), newApp);
-    assert.match(fs.readFileSync(arg('-File'), 'utf8'), /Wait-Process -Id \$HikariPid/);
+    assert.equal(helper.command, path.join(build.options.cwd, 'hikari-out', 'Hikari-win32-arm64', 'Hikari', 'Hikari.exe'));
+    assert.deepEqual(helper.args, [`--hikari-swap-into=${appDir}`, '--hikari-swap-after=4242']);
     assert.equal(helper.options.detached, true);
-    assert.equal(helper.options.windowsHide, true);
-    assert.equal(calls.relaunch, 0, 'the helper starts the new Hikari.exe, not app.relaunch()');
+    assert.equal(calls.relaunch, 0, 'the new Hikari.exe starts the updated copy, not app.relaunch()');
+  });
+
+  test('portable swap: the new build waits for the old app, replaces its folder in place, and starts it', async () => {
+    const { finishPortableUpdate } = require('../../../src/main/updater/finish-portable-update');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-swap-'));
+    const appDir = path.join(root, 'USB', 'Hikari');
+    const newDir = path.join(root, 'build', 'Hikari-win32-arm64', 'Hikari');
+    for (const [dir, version] of [[appDir, 'old'], [newDir, 'new']]) {
+      fs.mkdirSync(path.join(dir, 'resources'), { recursive: true });
+      fs.writeFileSync(path.join(dir, 'Hikari.exe'), version);
+      fs.writeFileSync(path.join(dir, 'resources', 'app.asar'), version);
+    }
+    const started = [];
+    let polls = 0;
+    const run = (fsImpl = fs) => finishPortableUpdate({
+      argv: ['Hikari.exe', `--hikari-swap-into=${appDir}`, '--hikari-swap-after=77'],
+      execPath: path.join(newDir, 'Hikari.exe'),
+      fs: fsImpl,
+      spawn: (command) => { started.push(command); return { unref() {} }; },
+      isRunning: () => ++polls < 3,
+      sleep: async () => {}
+    });
+
+    await run();
+    assert.equal(polls, 3, 'waits until the old app has exited');
+    assert.equal(fs.readFileSync(path.join(appDir, 'resources', 'app.asar'), 'utf8'), 'new');
+    assert.equal(fs.existsSync(`${appDir}.previous`), false);
+    assert.deepEqual(started, [path.join(appDir, 'Hikari.exe')]);
+    assert.match(fs.readFileSync(path.join(root, 'build', 'Hikari-win32-arm64', 'swap-portable.log'), 'utf8'), /updated/);
+
+    // A failed copy puts the old folder back and starts it.
+    fs.writeFileSync(path.join(appDir, 'Hikari.exe'), 'old');
+    await run({ ...fs, cpSync: () => { throw new Error('disk full'); } });
+    assert.equal(fs.readFileSync(path.join(appDir, 'Hikari.exe'), 'utf8'), 'old');
+    assert.equal(fs.existsSync(`${appDir}.previous`), false);
+    assert.equal(started.length, 2);
   });
 };

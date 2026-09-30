@@ -15,7 +15,7 @@ const NPM_UPDATE_METADATA_URL = 'https://registry.npmjs.org/@hinashirosaki%2fhik
 
 const { compareSemver, normalizeVersion } = require('./version.js');
 const { normalizeHttpsUrl, resolveNpmReleaseMetadata } = require('./release-metadata.js');
-const { PORTABLE_SWAP_SCRIPT, PORTABLE_WIN32_TARGET, findBuild, resolveNpxInvocation } = require('./installer.js');
+const { PORTABLE_WIN32_TARGET, findBuild, resolveNpxInvocation } = require('./installer.js');
 
 // The npm package is source that `npx @hinashirosaki/hikari` builds into a native
 // installer on this machine (bin/hikari.js). There are no hosted binaries and the
@@ -181,11 +181,10 @@ function createNpmUpdaterService(deps = {}) {
         spawn(prepared, [], { detached: true, stdio: 'ignore' }).unref();
         return;
       }
-      const script = path.join(path.dirname(path.dirname(prepared)), 'swap-portable.ps1');
-      fs.writeFileSync(script, PORTABLE_SWAP_SCRIPT);
-      spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', script,
-        '-HikariPid', String(pid), '-App', path.dirname(execPath), '-New', path.dirname(prepared)],
-      { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+      // Portable copy: the new build's Hikari.exe swaps itself in once this one
+      // has exited (finish-portable-update.js; Windows locks a running app's files).
+      spawn(prepared, [`--hikari-swap-into=${path.dirname(execPath)}`, `--hikari-swap-after=${pid}`],
+        { detached: true, stdio: 'ignore' }).unref();
       return;
     }
     // Hikari.app/Contents/MacOS/Hikari -> Hikari.app
