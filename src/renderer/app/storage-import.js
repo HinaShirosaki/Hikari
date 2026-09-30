@@ -184,8 +184,11 @@ export function createStorageImportController({
     state.settings.storageImport = buildStorageImportSummary(payload);
   }
 
-  function updateStorageImportError(message) {
-    showTransientNotice(String(message || 'Storage import failed.'), { type: 'error' });
+  // quiet: log only (launch reopen; the start page is the visible outcome).
+  function updateStorageImportError(message, quiet = false) {
+    const text = String(message || 'Storage import failed.');
+    if (quiet) windowObject.hikariApi?.reportError?.({ source: 'renderer:notice', message: text });
+    else showTransientNotice(text, { type: 'error' });
     const previous = state.settings.storageImport && typeof state.settings.storageImport === 'object'
       ? state.settings.storageImport
       : {};
@@ -237,10 +240,11 @@ export function createStorageImportController({
     const persistMergedState = options.persistMergedState === true;
     const resetWorkspace = options.resetWorkspace === true;
     const syncSidecars = options.syncSidecars === true;
+    const quietErrors = options.quietErrors === true;
     try {
       const ensured = await ensureStorageRootDirectory(resolvedStoragePath);
       if (!ensured.ok) {
-        updateStorageImportError(ensured.error || 'Unable to initialize the storage folder.');
+        updateStorageImportError(ensured.error || 'Unable to initialize the storage folder.', quietErrors);
         persistState(state);
         return {
           ok: false,
@@ -255,7 +259,7 @@ export function createStorageImportController({
 
       const result = await windowObject.hikariApi.importStorageRoot(resolvedStoragePath);
       if (!result?.ok) {
-        updateStorageImportError(result?.error || 'Storage import failed.');
+        updateStorageImportError(result?.error || 'Storage import failed.', quietErrors);
         persistState(state);
         return {
           ok: false,
@@ -292,7 +296,7 @@ export function createStorageImportController({
         sidecarSync
       };
     } catch (error) {
-      updateStorageImportError(error?.message || 'Storage import failed.');
+      updateStorageImportError(error?.message || 'Storage import failed.', quietErrors);
       persistState(state);
       return {
         ok: false,
@@ -323,7 +327,7 @@ export function createStorageImportController({
       }
       state.settings.storagePath = storagePath;
     }
-    return runStorageRootImport(storagePath, { persistMergedState: false, syncSidecars: true });
+    return runStorageRootImport(storagePath, { persistMergedState: false, syncSidecars: true, quietErrors: true });
   }
 
   return {

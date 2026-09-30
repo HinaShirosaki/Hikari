@@ -422,7 +422,7 @@ export function startHikariCore({
       || (hydration?.sidecarSync?.ok === false
         ? hydration.sidecarSync.error || 'Could not save the workspace.' : '');
     if (!String(state.settings?.storagePath || '').trim() || storageError) {
-      storageSetup.show(storageError);
+      storageSetup.show();
       return;
     }
     openStartupView();
