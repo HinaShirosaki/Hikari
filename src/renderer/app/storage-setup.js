@@ -6,14 +6,17 @@ export function createStorageSetup({ documentObject, windowObject, state, openSt
   const currentPath = documentObject.getElementById('storage-setup-path');
   let busy = false;
 
-  function show(error = '') {
+  // Launch with no workspace, or one that could not be reopened (e.g. macOS
+  // denied the folder): a clean start page. The reopen failure is already in the
+  // error notice/log; a stale path and raw EPERM text here only confuse.
+  function show() {
     appShell.hidden = true;
     appShell.inert = true;
     page.hidden = false;
-    currentPath.textContent = String(state.settings?.storagePath || '').trim();
-    currentPath.hidden = !currentPath.textContent;
-    status.textContent = error ? `Could not open your workspace. ${error}` : '';
-    status.dataset.error = String(Boolean(error));
+    currentPath.textContent = '';
+    currentPath.hidden = true;
+    status.textContent = '';
+    status.dataset.error = 'false';
     chooseButton.focus();
   }
 

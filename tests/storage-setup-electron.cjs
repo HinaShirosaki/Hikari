@@ -9,7 +9,7 @@ const os = require('node:os');
 
 const root = process.env.HIKARI_TEST_APP_ROOT || path.resolve(__dirname, '..');
 const fromApp = (file) => require(path.join(root, file));
-const { STORAGE } = fromApp('src/shared/ipc/channels.js');
+const { STORAGE, SYSTEM } = fromApp('src/shared/ipc/channels.js');
 const { registerDataIpc } = fromApp('src/main/ipc/register-data-ipc.js');
 const { createMainDataHelpers } = fromApp('src/main/data/data-helpers.js');
 const storage = fromApp('src/main/storage/index.js');
@@ -54,6 +54,8 @@ function registerChannels(value) {
   });
 }
 registerChannels(fromApp('src/shared/ipc/channels.js'));
+const reported = [];
+ipcMain.on(SYSTEM.REPORT_ERROR, (_event, payload) => reported.push(payload));
 
 let win;
 const run = (script) => win.webContents.executeJavaScript(script);
@@ -74,6 +76,13 @@ async function assertSetup() {
   assert.equal(await run(`!document.getElementById('storage-setup-page').hidden && document.querySelector('.app-shell').hidden && document.querySelector('.app-shell').inert`), true);
   assert.notEqual(await run(`localStorage.getItem('hikari_last_active_view_v1')`), 'setting-view');
 }
+// At launch the page is a clean start: no remembered path, no raw error from a failed reopen.
+async function assertLaunchSetup() {
+  await assertSetup();
+  assert.equal(await run(`document.getElementById('storage-setup-path').hidden`), true);
+  assert.equal(await run(`document.getElementById('storage-setup-status').textContent`), '');
+  assert.equal(await run(`Boolean(document.querySelector('[data-hikari-transient-toast]:not([hidden])'))`), false);
+}
 async function reload() {
   await win.loadFile(path.join(root, 'index.html'));
   await waitFor(`document.documentElement.classList.contains('app-ready') && !document.getElementById('app-loading-cover')`);
@@ -90,7 +99,7 @@ async function main() {
     if (event.level === 'error' && /Module .*failed|Failed to initialize Hikari/.test(event.message)) moduleErrors.push(event.message);
   });
   await reload();
-  await assertSetup();
+  await assertLaunchSetup();
   const artifacts = path.join(__dirname, '..', 'artifacts', 'storage-setup');
   fs.mkdirSync(artifacts, { recursive: true });
   fs.writeFileSync(path.join(artifacts, 'first-launch.png'), (await win.webContents.capturePage()).toPNG());
@@ -125,15 +134,18 @@ async function main() {
   assert.equal(await run(`document.getElementById('storage-setup-page').hidden`), true);
   assert.equal(await run(`JSON.parse(localStorage.getItem('hikari_state_v1')).settings.storagePath`), workspace);
   failureChannel = STORAGE.IMPORT_ROOT;
+  reported.length = 0;
   await reload();
-  await assertSetup();
+  await assertLaunchSetup();
+  // No toast at launch, but the reopen failure still reaches errors.log.
+  assert.ok(reported.some((entry) => entry?.source === 'renderer:notice' && /Storage fixture failure/.test(entry.message)));
   failureChannel = '';
   await clickChoose();
   assert.equal(await run(`document.getElementById('storage-setup-page').hidden`), true);
   // An unwritable remembered workspace also returns to setup.
   failureChannel = STORAGE.AUTO_SAVE;
   await reload();
-  await assertSetup();
+  await assertLaunchSetup();
   assert.deepEqual(moduleErrors, []);
   console.log('PASS: fresh launch, cancel, picker error, folder/import/save failures, retry, durable save, pointer recovery, and unavailable workspace');
   win.destroy();
