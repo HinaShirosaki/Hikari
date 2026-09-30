@@ -64,7 +64,17 @@ jobs:
           registry-url: https://registry.npmjs.org
       # Trusted publishing needs npm >= 11.5.1; Node 24 ships older.
       - run: npm install -g npm@latest
-      - run: npm publish --access public
+      # --tag latest: npm refuses a prerelease (1.1.0-beta.1) without an explicit
+      # tag, and install.sh/install.ps1 and the in-app updater all read `latest`.
+      # Skips a version that is already on npmjs (the first release was published
+      # by hand, since trusted publishing can only be set up once the package exists).
+      - run: |
+          version=$(node -p "require('./package.json').version")
+          if npm view "@hinashirosaki/hikari@$version" version >/dev/null 2>&1; then
+            echo "$version is already on npmjs; skipping"
+          else
+            npm publish --access public --tag latest
+          fi
 
   github-packages:
     needs: validate
@@ -79,6 +89,6 @@ jobs:
         with:
           node-version: '24'
           registry-url: https://npm.pkg.github.com
-      - run: npm publish
+      - run: npm publish --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
