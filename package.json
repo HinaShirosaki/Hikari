@@ -1,7 +1,7 @@
 {
   "name": "@hinashirosaki/hikari",
   "productName": "Hikari",
-  "version": "1.0.3",
+  "version": "1.1.0-beta.1",
   "description": "Electron shell for Hikari sub-app launcher",
   "author": "HinaShirosaki",
   "license": "Apache-2.0",
@@ -24,7 +24,14 @@
     "scripts/build-ui.mjs",
     "scripts/build-ui",
     "forge.config.js",
-    "THIRD-PARTY-NOTICES.md"
+    "THIRD-PARTY-NOTICES.md",
+    "!src/**/README.md",
+    "!src/**/Readme.md",
+    "!src/plugins/gel/ARCHITECTURE.md",
+    "!ui/**/Readme.md",
+    "!assets/icons/README.md",
+    "!assets/icons/dolphin-dna-icon*.png",
+    "!assets/loadingicon.png"
   ],
   "scripts": {
     "build:ui": "node scripts/build-ui.mjs",
