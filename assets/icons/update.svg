@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Original Hikari update glyph (arrow into a tray) for compact left-rail navigation. -->
+  <path d="M12 3.75v10.5" />
+  <path d="m7.75 10 4.25 4.25L16.25 10" />
+  <path d="M4.75 15.25v2.5c0 .83.67 1.5 1.5 1.5h11.5c.83 0 1.5-.67 1.5-1.5v-2.5" />
+</svg>

@@ -22,6 +22,7 @@ function registerSystemIpc(deps = {}) {
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = deps.getCodexCliWorkingDirectory;
   const errorReporting = deps.errorReporting || null;
+  const updater = deps.updater || null;
   const getCodexDesktopMcpSetupPrompt = typeof deps.getCodexDesktopMcpSetupPrompt === 'function'
     ? deps.getCodexDesktopMcpSetupPrompt
     : null;
@@ -295,6 +296,13 @@ function registerSystemIpc(deps = {}) {
     const error = await shell.openPath(thirdPartyNoticesPath);
     return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: thirdPartyNoticesPath };
   });
+
+  // Settings > Updates. Install resolves only when the build fails (the app
+  // restarts on success); the renderer shows 'installing' meanwhile.
+  const noUpdater = { configured: false, status: 'not-configured', error: '' };
+  ipcMain.handle(SYSTEM.UPDATE_STATUS, async () => updater?.getStatus() || noUpdater);
+  ipcMain.handle(SYSTEM.CHECK_FOR_UPDATES, async () => (updater ? updater.checkForUpdates({ prompt: false }) : noUpdater));
+  ipcMain.handle(SYSTEM.INSTALL_UPDATE, async () => (updater ? updater.installUpdate() : noUpdater));
 
   ipcMain.handle(SYSTEM.OPEN_EXTERNAL_URL, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});

@@ -416,6 +416,7 @@ function createMainServices(context = {}) {
     directLlmRegistry: agents.directLlmRegistry,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     errorReporting,
+    updater: npmUpdater,
     // Packaged builds ship the notices as an extraResource (see forge.config.js);
     // shell.openPath cannot open a file that lives inside app.asar.
     thirdPartyNoticesPath: path.join(app.isPackaged ? processObject.resourcesPath : projectRoot, 'THIRD-PARTY-NOTICES.md')

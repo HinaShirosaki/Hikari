@@ -20,7 +20,10 @@ function createSystemApi(ipcRenderer) {
     },
     reportError: (payload) => ipcRenderer.send(SYSTEM.REPORT_ERROR, payload),
     openLogsFolder: () => ipcRenderer.invoke(SYSTEM.OPEN_LOGS_FOLDER),
-    openThirdPartyNotices: () => ipcRenderer.invoke(SYSTEM.OPEN_THIRD_PARTY_NOTICES)
+    openThirdPartyNotices: () => ipcRenderer.invoke(SYSTEM.OPEN_THIRD_PARTY_NOTICES),
+    getUpdateStatus: () => ipcRenderer.invoke(SYSTEM.UPDATE_STATUS),
+    checkForUpdates: () => ipcRenderer.invoke(SYSTEM.CHECK_FOR_UPDATES),
+    installUpdate: () => ipcRenderer.invoke(SYSTEM.INSTALL_UPDATE)
   };
 }
 

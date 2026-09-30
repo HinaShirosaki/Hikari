@@ -22,6 +22,11 @@
                 Storage &amp; data
               </span>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="updates" aria-pressed="false">
+              <span>
+                Updates
+              </span>
+            </button>
           </div>
           <div class="settings-nav-group">
             <h3 class="settings-nav-heading">
@@ -203,6 +208,25 @@
             </button>
           </div>
         </details>
+      </section>
+      <section class="settings-section" data-settings-panel="updates" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Updates
+          </h3>
+          <p class="settings-description">
+            Get the newest Hikari. Installing downloads and builds it in the background, then restarts Hikari.
+          </p>
+        </div>
+        <p id="setting-update-status" class="small-note" role="status" aria-live="polite"></p>
+        <div class="form-actions">
+          <button type="button" id="check-updates-btn" class="ghost-btn">
+            Check for Updates
+          </button>
+          <button type="button" id="install-update-btn" class="primary-btn" disabled>
+            Install Update
+          </button>
+        </div>
       </section>
       <section class="settings-section" data-settings-panel="startup" hidden>
         <div class="settings-section-head">

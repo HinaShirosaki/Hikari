@@ -6,6 +6,7 @@ import { createPluginsController } from './plugins-controller.js';
 import { createLlmModelCatalog } from './llm-model-catalog.js';
 import { createMcpToolsController } from './mcp-tools-controller.js';
 import { createFileAccessSettings } from './file-access-controller.js';
+import { createUpdateSettings } from './update-controller.js';
 import { getSettingsElements } from './dom.js';
 import { escapeHtml } from './html.js';
 import { showTransientNotice } from '../../lib/notify.js';
@@ -42,6 +43,9 @@ export function initSettings({
     startupForm,
     openLogsFolderBtn,
     openThirdPartyNoticesBtn,
+    settingUpdateStatus,
+    checkUpdatesBtn,
+    installUpdateBtn,
     settingStartupDefaultView,
     settingStartupRememberLastView,
     notebookPdfForm,
@@ -112,6 +116,12 @@ export function initSettings({
     api: window?.hikariApi,
     element: document?.getElementById?.('setting-agent-file-access'),
     escapeHtml
+  });
+  const updateSettings = createUpdateSettings({
+    api: window?.hikariApi,
+    statusElement: settingUpdateStatus,
+    checkButton: checkUpdatesBtn,
+    installButton: installUpdateBtn
   });
   const externalSkillsController = createExternalSkillsController({
     state,
@@ -299,6 +309,7 @@ export function initSettings({
     if (activeSettingsPanel === 'llm') {
       void refreshCodexLoginStatus();
     }
+    if (activeSettingsPanel === 'updates') void updateSettings.refresh();
     if (
       activeSettingsPanel === 'skills'
       && !externalSkillsController.hasDiscoveredSkills()

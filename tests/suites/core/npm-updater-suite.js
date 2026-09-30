@@ -82,6 +82,65 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     assert.equal(fs.readFileSync(path.join(parked, 'Contents', 'version'), 'utf8'), '1.0.2');
   });
 
+  test('npm updater from Settings: a manual check never prompts, Install builds what it found, once', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-updater-manual-'));
+    const appBundle = path.join(root, 'Applications', 'Hikari.app');
+    fs.mkdirSync(path.join(appBundle, 'Contents', 'MacOS'), { recursive: true });
+    const calls = { dialogs: 0, builds: 0, quit: 0 };
+    const quitEvents = new EventEmitter();
+    let latest = '1.1.0-beta.1';
+    const app = {
+      isPackaged: true,
+      getVersion: () => '1.1.0-beta.1',
+      getPath: () => root,
+      once: (event, fn) => quitEvents.once(event, fn),
+      relaunch: () => {},
+      quit: () => { calls.quit += 1; quitEvents.emit('will-quit'); }
+    };
+    const dialog = {
+      showMessageBox: async () => { calls.dialogs += 1; return { response: 0 }; },
+      showErrorBox: (title, content) => assert.fail(content)
+    };
+    const fetchImpl = async () => ({
+      ok: true,
+      json: async () => ({ 'dist-tags': { latest }, versions: { [latest]: { version: latest } } })
+    });
+    let finishBuild;
+    const spawn = (command, args, options) => {
+      calls.builds += 1;
+      fs.mkdirSync(path.join(options.cwd, 'hikari-out', 'Hikari-darwin-arm64', 'Hikari.app', 'Contents'), { recursive: true });
+      const child = new EventEmitter();
+      finishBuild = () => child.emit('exit', 0, null);
+      return child;
+    };
+    const updater = createNpmUpdaterService({
+      app, dialog, fetchImpl, spawn, allowDevelopment: true, platform: 'darwin',
+      execPath: path.join(appBundle, 'Contents', 'MacOS', 'Hikari'), resolveNode: () => '/opt/homebrew/bin/node'
+    });
+
+    assert.equal((await updater.checkForUpdates({ prompt: false })).status, 'up-to-date');
+    assert.equal((await updater.installUpdate()).action, 'no-update');
+
+    latest = '1.1.0-beta.2';
+    const found = await updater.checkForUpdates({ prompt: false });
+    assert.equal(found.status, 'update-available');
+    assert.equal(found.latestVersion, '1.1.0-beta.2');
+    assert.equal(calls.dialogs, 0);
+
+    const first = updater.installUpdate();
+    const second = updater.installUpdate();
+    await new Promise(setImmediate);
+    assert.equal(updater.getStatus().status, 'installing');
+    assert.equal((await updater.checkForUpdates({ prompt: false })).status, 'installing');
+    finishBuild();
+    const [a, b] = await Promise.all([first, second]);
+    assert.equal(a.action, 'restarting');
+    assert.equal(b.action, 'restarting');
+    assert.equal(calls.builds, 1);
+    assert.equal(calls.quit, 1);
+    assert.equal(calls.dialogs, 0);
+  });
+
   test('npm updater on Windows runs the built HikariSetup.exe detached at quit and lets it relaunch', async () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-updater-win-'));
     const calls = { spawn: [], relaunch: 0, quit: 0 };
