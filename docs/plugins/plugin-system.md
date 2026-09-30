@@ -10,9 +10,11 @@ contract and lifecycle. Also see:
 
 - [**plugin-api.md**](plugin-api.md) — the host API reference (every verb,
   its permission, its exact request/response shape).
-- [**imagej-walkthrough.md**](imagej-walkthrough.md) — remote plugins: how
-  [`examples/plugins/imagej/`](../../examples/plugins/imagej/) embeds real
-  ImageJ, and where that trust boundary sits.
+- [**imagej-walkthrough.md**](imagej-walkthrough.md) — a case study of a
+  plugin with a heavy runtime (ImageJ in WebAssembly): why it needs a real
+  origin with storage, and what "runs locally" does and does not cover.
+- [**service-plugins.md**](service-plugins.md) — headless plugins that add a
+  capability, such as a file-format converter, to a built-in feature.
 
 ---
 
@@ -41,7 +43,7 @@ different install flow.
 | Scripts | classic or module (§5.4) | classic or module | (remote's own) | classic or module |
 | Has a view | yes (whole pane) | yes | yes | **no** — headless |
 | Host API | may hold permissions | may hold permissions | **never** | may hold permissions |
-| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — | [`dna-importer`](../../examples/plugins/dna-importer/) |
+| Example | [`hello-world`](../../examples/plugins/hello-world/), [`notebook-results`](../../examples/plugins/notebook-results/) | [`src/plugins/gel`](../../src/plugins/gel/) (bundled) | — | none in the repo; see [service-plugins.md](service-plugins.md) |
 
 **Which to write:**
 
@@ -81,14 +83,14 @@ subfolders resolve against the plugin folder. Both local and explicitly served
 plugins can use relative ES module imports (§5.4). There is no build step and
 no framework requirement.
 
-For a served plugin the whole folder is reachable over its loopback origin, so
-the folder is also the web root: `/ij153/ij.jar` means
-`<plugin folder>/ij153/ij.jar`. Nothing outside the folder is reachable (§4.4).
+Because every folder plugin is served over its own loopback origin, the folder
+is also the web root: `/lib/app.js` means `<plugin folder>/lib/app.js`. Nothing
+outside the folder is reachable (§4.4).
 
 ### 1.2 Remote plugin layout
 
 ```
-imagej/
+my-remote-app/
 └── plugin.json         <- REQUIRED, and that is the whole plugin
 ```
 
@@ -192,7 +194,7 @@ plugin may be one or the other, not both.
 
 ## 2. Installing and managing plugins
 
-1. **Settings** (gear app) → **Plugins**.
+1. **Settings** (gear app) → **Skills & plugins** → **Plugins**.
 2. **Add Plugin Folder**, pick the folder. It is validated against §1 on the
    spot; a rejected folder shows the exact reason in the status line.
 3. The plugin is saved as *enabled*. Click **Reload App** to boot it.
@@ -229,20 +231,23 @@ Installed plugins live in `state.settings.plugins`:
 
 ```json
 {
-  "id": "imagej",
-  "name": "ImageJ Measurements",
+  "id": "notebook-results",
+  "name": "Notebook Results",
   "version": "1.0.0",
-  "description": "Attach an ImageJ Results table to a notebook entry.",
+  "description": "Attach a results table to a notebook entry.",
   "permissions": ["notebook:read", "notebook:write"],
-  "path": "/Users/me/plugins/imagej",
-  "entryUrl": "file:///Users/me/plugins/imagej/index.html",
+  "path": "/Users/me/plugins/notebook-results",
+  "entryUrl": "file:///Users/me/plugins/notebook-results/index.html",
   "enabled": true
 }
 ```
 
 - `entryUrl` is computed once at install time in the main process
   (`url.pathToFileURL`), so the renderer never does path→URL conversion and
-  Windows paths are handled correctly.
+  Windows paths are handled correctly. The frame is never pointed at it: at
+  boot the folder is served over loopback (§4.4) and the frame loads that
+  address instead. `entryUrl` remains the record that the folder was
+  validated.
 - `normalizePluginEntries()` in
   [`state-normalizer.js`](../../src/renderer/modules/app-state/state-normalizer.js)
   re-validates the array on load: entries without an `id`/`entryUrl`, or with
@@ -402,7 +407,7 @@ constraints are in §5.2.
 
 ### 4.3 Settings panel
 
-- Markup: `data-settings-panel="plugins"` in
+- Markup: the **Plugins** block inside `data-settings-panel="skills"` (**Skills & plugins**) in
   [`ui/html/views/setting-view.html`](../../ui/html/views/setting-view.html)
   (`index.html` is generated — edit the fragment, then `npm run build:ui`).
 - Elements resolved in [`settings/dom.js`](../../src/renderer/modules/settings/dom.js).
@@ -482,8 +487,10 @@ app's own Content-Security-Policy decides whether that is allowed at all. The
 [`ui/html/shell/start.html`](../../ui/html/shell/start.html) therefore reads:
 
 ```
-frame-src 'self' blob: http://127.0.0.1:*;
+frame-src 'self' blob: http://127.0.0.1:* hikari-html:;
 ```
+
+(`hikari-html:` is the agent's sandboxed HTML preview, not a plugin.)
 
 There is no IPv6 counterpart: CSP `host-source` has no grammar for an address
 literal, so `http://[::1]:*` is discarded as invalid (with a console warning at
@@ -597,7 +604,7 @@ that calls `window.HikariPlugin.hikari`:
 | `Plugin folder must be named "X" to match the manifest id` | Rename the folder to the `id`, or change the `id` to the folder name. |
 | `plugin.json needs a "version" like "1.0.0"` | Three numeric parts. `"1.0"` and `"v1.0.0"` are rejected. |
 | `Unknown permission "…"` | Typo, or a capability that does not exist. Allowed names are in §1.2. |
-| Plugin added but not in navigation | Reload the app (Settings → Plugins → Reload App). |
+| Plugin added but not in navigation | Reload the app (Settings → Skills & plugins → Reload App). |
 | Local scripts fail to load | Reload with the current app version and check that the plugin folder still exists. All local assets now load from loopback (§5.4). |
 | Blank plugin view | Open DevTools; the page failed like any webpage would (bad script path, JS error). Paths inside the plugin must be relative. Add an in-frame loading/error state so users see the failure too. |
 | `…did not declare the "X" permission in plugin.json` | Add it to `permissions`, then **remove and re-add** the plugin — grants are snapshotted. |
@@ -702,52 +709,68 @@ Agent-facing tools live in the provider-neutral contract at
 
 2. **Register** in
    [`direct-tools/index.js`](../../src/main/agent/mcp-contract/direct-tools/index.js):
-   append `{ definition: MY_TOOL_MCP_TOOL, handler: callMyTool }` to
-   `DIRECT_MCP_TOOLS`. The stdio MCP server, tool router, and definition
-   listing all read that array.
+   add a `['./my-tool.js', 'MY_TOOL_MCP_TOOL', 'callMyTool']` row to the load
+   table. `loadDirectMcpTools()` requires each module on its own, so a tool
+   that fails to load is reported and skipped instead of taking the server
+   down. The stdio MCP server, tool router, and definition listing all read the
+   resulting `DIRECT_MCP_TOOLS`.
 3. **Expose to Codex** in
    [`instructions.js`](../../src/main/agent/mcp-contract/instructions.js): add
    `'my_tool'` to `HIKARI_MCP_TOOL_NAMES` (this becomes `enabled_tools` in the
    Codex `config.toml` written by `codex-agent/runtime-files.js`) and add a
    `` `${toolName('my_tool')}`: … `` bullet to
    `buildHikariAgentMcpInstructionBodyLines()`.
-4. **Keep [mcp-contract.md](../agent/mcp-contract/mcp-contract.md) in sync.**
+4. **Keep [mcp-contract.md](../agent/mcp-contract/mcp-contract.md) and
+   `mcp-contract.json` in sync.** Tests compare several snapshot entries with
+   the live definitions.
+
+New tools appear in **Settings > Tool access** automatically (the list is
+`HIKARI_MCP_TOOL_NAMES`), and a switched-off tool is left out of
+`enabled_tools`.
 
 Two shortcuts: tools already in the app tool catalog can be bridged via
 [`generic-app-tool.js`](../../src/main/agent/mcp-contract/direct-tools/generic-app-tool.js)
-instead of a hand-written definition; and a module can own a whole tool *group*
-in its own tree and spread it into the registry — the papers module does this
-with `PAPER_INTAKE_DIRECT_MCP_TOOLS` from
-`src/main/papers/store/intake/mcp-tools.js`, the pattern to copy.
+instead of a hand-written definition; and a module can own its tools
+in its own tree and point the load table at them — the papers module does this
+with the four files in `src/main/papers/store/intake/mcp/`, and the Sequence
+Viewer exports a whole group (`SEQUENCE_MCP_TOOLS`) through
+`direct-tools/sequence-tools.js`. Those are the patterns to copy.
 
 ### 8.4 Module-owned skills
 
 A skill is a `SKILL.md` (YAML frontmatter + markdown body) teaching the agent
 when and how to use a capability.
 
-**Official (module-owned) skills** ship with the app in `OFFICIAL_MCP_SKILLS`
-in
-[`official-mcp-skills.js`](../../src/main/agent/codex-agent/official-mcp-skills.js):
+**Official (module-owned) skills** ship with the app as folders under
+[`src/main/agent/codex-agent/official-skills/`](../../src/main/agent/codex-agent/official-skills/),
+read at startup by
+[`official-mcp-skills.js`](../../src/main/agent/codex-agent/official-mcp-skills.js)
+into `OFFICIAL_MCP_SKILLS`:
 
-1. Append an entry with a unique `id`, a `directory` (convention:
-   `hikari-<name>`), and `content` from
-   `buildSkillMarkdown({ id, name, description, body })`. Reference your MCP
-   tools via `buildHikariMcpToolName('my_tool')`.
-2. That's it — at agent startup and on storage-root sync the app releases every
-   official skill into `<workspace>/.agents/skills/<directory>/SKILL.md`
-   (`releaseOfficialMcpSkillsForWorkspace`). Release is idempotent: each
-   generated file carries a `HIKARI_OFFICIAL_MCP_SKILL:<id>` marker, and a file
-   *without* the marker (hand-edited by the user) is preserved, never
+1. Add `official-skills/hikari-<name>/SKILL.md` with `name`/`description`
+   frontmatter and a `<!-- HIKARI_OFFICIAL_MCP_SKILL:<name> -->` marker line.
+   Put long material in files beside it (for example `references/*.md`) and
+   link them from `SKILL.md`; they are released with it.
+2. If the skill depends on MCP tools, list them under its id in
+   `OFFICIAL_MCP_SKILL_TOOL_REQUIREMENTS`. When any of them is switched off in
+   **Settings > Tool access**, the skill is withdrawn from the workspace.
+3. That's it — at agent startup and on every storage-root save the app releases
+   each enabled official skill into
+   `<workspace>/.agents/skills/<directory>/SKILL.md` for the storage root and
+   each project folder (`releaseOfficialMcpSkillsForWorkspace`). Release is
+   idempotent: a file carrying the marker is Hikari's to update or withdraw, and
+   a file *without* it (hand-edited by the user) is preserved, never
    overwritten.
 
-The `paper-intake` skill is the reference example — the papers module owns both
-the MCP tools (§8.3) and the skill instructing the agent to run them.
+`hikari-paper-retrieval` and `hikari-sequence-viewer` are reference examples —
+their modules own both the MCP tools (§8.3) and the skill instructing the
+agent to use them.
 
 **External skills** are user-provided: any `<folder>/SKILL.md` under
 `~/.hikari/skills`, `~/.agents/skills`, `<workspace>/.agents/skills`, or
 `<workspace>/skills`, discovered at runtime by
 [`agent-skill-runtime.js`](../../src/main/agent/skills/agent-skill-runtime.js)
-and toggled in **Settings → External Skills**. Frontmatter (all optional except
+and toggled in **Settings → Skills & plugins**. Frontmatter (all optional except
 `name`/`description`):
 
 | Field | Meaning |
@@ -759,8 +782,8 @@ and toggled in **Settings → External Skills**. Frontmatter (all optional excep
 | `command-arg-mode` | How command arguments are passed (default `raw`). |
 | `metadata: {"openclaw": {"requires": {…}, "os": [...], "always": true}}` | Eligibility gates: required binaries/env/config, OS filter, always-on. |
 
-See [`skills/command-line/SKILL.md`](../../skills/command-line/SKILL.md) for a
-working example.
+The official skills under `official-skills/` show the `name`/`description`
+frontmatter and body layout; external skills use the same format.
 
 Rule of thumb: if the skill documents a capability your module ships, put it in
 `OFFICIAL_MCP_SKILLS` so it deploys and stays consistent with the code; use
@@ -818,12 +841,12 @@ external skill folders only for user- or site-specific additions.
 - Service plugins have their own suite — see
   [service-plugins.md §7](service-plugins.md#7-testing).
 
-The core contracts live in [`test.js`](../../test.js); copyable-client and Gel
-folder checks live in [`tests/`](../../tests/). For manual end-to-end checks, install
+The core contracts live in `tests/suites/core/plugin-system-suite/` (registered
+through [`test.js`](../../test.js)); copyable-client and Gel folder checks live in
+[`tests/`](../../tests/). For manual end-to-end checks, install
 [`examples/plugins/notebook-results/`](../../examples/plugins/notebook-results/)
-for the host API and [`examples/plugins/imagej/`](../../examples/plugins/imagej/)
-for a served plugin, then follow
-[imagej-walkthrough.md](imagej-walkthrough.md).
+for the host API, and open the bundled Gel plugin for a production-sized served
+plugin.
 
 `node tests/plugin-boundaries-selfcheck.mjs` covers origin revocation, service
 message routing, notebook fields, storage rollback, real filesystem symlinks,

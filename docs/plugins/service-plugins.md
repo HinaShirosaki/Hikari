@@ -7,9 +7,14 @@ capability that a built-in feature calls into.
 
 Today the one capability is **file conversion**: a service declares that it can
 turn one file extension into another, and a feature that opens files gains the
-ability to open the source format. The reference example,
-[`dna-importer`](../../examples/plugins/dna-importer/), lets the Sequence
-Viewer open `.dna` files by converting them to GenBank.
+ability to open the source format. The running example on this page,
+`dna-importer`, lets the Sequence Viewer open SnapGene `.dna` files by
+converting them to GenBank with Biopython through the `python` permission.
+
+> The `examples/plugins/dna-importer/` folder is no longer in the repository
+> (it needed a local Biopython install, so it was removed with its tests). The
+> service-plugin host tests still use `dna-importer` as a mock id, and the
+> manifest and API shapes below are current.
 
 Prerequisite: [plugin-system.md](plugin-system.md) for the folder contract.
 
@@ -62,7 +67,7 @@ A service may separately declare the `notifications` permission and call
 [`notifications.show`](plugin-api.md#notificationsshow--notifications). The
 toast is host-owned and attributed to the plugin; it does not unhide the frame
 or create a plugin view. Reserve it for a completion or recoverable error, not
-for per-file progress. The reference `dna-importer` service requests only
+for per-file progress. The `dna-importer` example requests only
 `python` and does not show notifications.
 
 The loopback origin lets packaged Electron load the script host and its sibling

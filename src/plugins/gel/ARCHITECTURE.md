@@ -4,7 +4,7 @@ Moved here from `docs/renderer/features/heavyweight-subsystems.md` when Gel
 stopped being a renderer module. Paths below are relative to the plugin-owned
 `workspace/` folder.
 
-Start in `gel/index.js`, but treat it as wiring rather than logic. The subsystem grew from a single controller into a **controller-orchestrated** design similar to `papers/`: `index.js` builds a shared `runtime` bag, constructs six controllers around it, injects cross-controller render callbacks, and binds every DOM event. Almost no analysis or rendering logic lives in `index.js` itself.
+Start in `workspace/index.js`, but treat it as wiring rather than logic. The subsystem grew from a single controller into a **controller-orchestrated** design similar to `papers/`: `index.js` builds a shared `runtime` bag, constructs six controllers around it, injects cross-controller render callbacks, and binds every DOM event. Almost no analysis or rendering logic lives in `index.js` itself.
 
 ### The `runtime` bag
 
@@ -75,6 +75,10 @@ not another implementation:
   `@bundled/gel` token.
 - `renderer/app/plugin-bridge.js` contains the identity-locked, one-time legacy
   migration into plugin storage.
+- `renderer/app/plugin-bridge.js` also runs the Notebook "Add gel" handoff:
+  `queueNotebookGel` holds the page and sends a data-less `gel.notebookLink`
+  event; the plugin (`main.js`) pulls the page with the internal, one-shot
+  `gel.takeNotebookLink` verb and starts a page-linked analysis.
 - `renderer/lib/gel-records.js` is a host-owned read model for displaying
   plugin records in existing notebook, project, PDF, home, and Agent surfaces.
 - `state.gelAnalyses` and its storage normalizers remain readable so pre-port

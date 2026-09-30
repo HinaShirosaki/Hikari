@@ -2,9 +2,10 @@
 
 `index.html` is generated from the files in this folder by `scripts/build-ui.mjs`.
 
-- `shell/`: global document wrapper pieces such as head tags and startup bootstrap hooks.
-- `views/`: per-view HTML fragments that are stitched into the generated root file.
-- `templates/`: reusable HTML fragments shared by the shell/view assembly.
+- `shell/`: `start.html` (head tags, the Content-Security-Policy, the topbar and dock, startup bootstrap hooks) and `end.html` (everything after the last view), named in `ui/config/html-order.json`.
+- `views/`: per-view HTML fragments that are stitched into the generated root file, in the `viewOrder` from `ui/config/app-registry.json`. Each must contain a `<section id="<viewId>" class="view">`.
+
+Plugin views are not here: the plugin loader creates their sections at runtime.
 
 Maintenance notes:
 

@@ -1,6 +1,6 @@
 # Storage And Bundles
 
-The data-persistence story in the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is built around a compact primary snapshot plus heavier sidecars.
+The data-persistence story in the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is built around a compact primary snapshot plus one JSON file per record in module-owned folders under the storage root, with SQLite only for the chemical inventory (and the paper and sequence indexes their own modules own).
 
 > Layout note: `data-helpers.js` and `data-snapshot-utils.js` live under `data/`, and the persistence engine is the `storage/` folder (entry: `storage/index.js`).
 
@@ -35,19 +35,13 @@ Internally those all funnel into:
 - `persistSnapshot(...)`
 - `loadSnapshot(...)`
 
-The key detail is that persistence is not “write one JSON file and stop.” A save also syncs the bundle sidecars and SQLite index through `syncBundleFromSnapshot(...)`.
+The key detail is that persistence is not “write one JSON file and stop.” A save also writes the record folders and the chemicals SQLite index through `syncBundleFromSnapshot(...)`. Production callers use the decorated version built in `core/main-services.js`, which also releases the official Codex skills into each project's `.agents/skills/` and requests project-memory conclusions.
 
 ## `storage/` is the persistence engine
 
-This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-discovery.js`, `storage-hydration.js`, `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage/index.js`.
+This folder defines the on-disk layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-discovery.js`, `storage-hydration.js` (+ `hydration/`), `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `chemical-index-guard.js`, `sample-containers.js`, `experiment-log-storage.js`, `workflow-storage.js` (+ `workflow/`), `paper-discovery.js`, and `sequence-library-summary.js` — re-exported from `storage/index.js`.
 
-Given a base data file, it derives:
-
-- the primary data file
-- `*.protocols.json`
-- the `Samples/` container files
-
-`getBundlePaths(...)` is the shared path builder used throughout the folder. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
+`getBundlePaths(...)` is the shared path builder used throughout the folder. Given the snapshot path (or just the storage root), it resolves every root folder below: `Protocol/`, `Samples/`, `Plates/`, `Gels/`, `Papers/`, `KnowledgeBase/` and its `papers.md/`, `Dashboard/experiment-log.json`, and `hikari-chemicals.index.sqlite`. It still reports the old `<snapshot>.notebook-pages.json` path so a save can delete it and a load can read it once.
 
 Every save rebuilds these from the snapshot. JSON is the only copy wherever a module's records have a folder layout; SQLite is kept only where a module still reads or searches through it:
 
@@ -58,9 +52,11 @@ Every save rebuilds these from the snapshot. JSON is the only copy wherever a mo
 | Workflow templates, runs | `Workflow/<template>__<id>/template.json`, `Workflow/<template>__<id>/<run>__<id>/workflow.json` |
 | Personal inventory, samples | `Samples/<zone>/<container>__<id>.json` per container, `Samples/<zone>/folders.json`, `Samples/unplaced.json` (see below) |
 | Plates (assays) | `Plates/<name>__<id>/assay.json`, beside the assay's artifacts |
-| Gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts |
+| Legacy gels | `Gels/<name>__<id>/gel.json`, beside the gel's artifacts. These are `state.gelAnalyses` records from before Gel became a plugin; nothing writes new ones, and the Gel plugin imports them. The plugin keeps its own records in `settings.pluginStorage.gel` (inside the snapshot) and its files under `Plugins/gel/` |
 | Papers | `<file>.pdf.json` beside each stored PDF (under `Papers/`, `Project/<p>/Papers/`, `RelatedPapers/`): links, highlights, comments, bookmarks, summaries |
 | Chemicals | `hikari-chemicals.index.sqlite` (`inventory_chemicals`, `inventory_meta`) |
+| Home experiment log | `Dashboard/experiment-log.json` (the `settings.dashboard` quick-log draft and entries) |
+| Project memory | `Project/<project>/MEMORY.md` (generated; see `src/main/project-memory/`), `Project/<project>/.hikari/research-memory.json` (cached notebook conclusions), plus empty `Project/<project>/.agents/skills/` and `Project/<project>/DNA/` folders |
 
 Personal inventory is one file per container (`src/main/storage/sample-containers.js`). Each file holds the container's fields, its `wellCount`, and only the wells that hold a sample (or still carry legacy well text), with those samples inside the well entry; samples linked to a container but no well sit in the file's own `samples`. Loading rebuilds the full `wells` array from `wellCount`, so the renderer sees what it saved. Type-specific sample fields stay in each sample's `details`, which the agent inventory lookup searches and returns as a whole, so a new sample type or field needs no storage or search change. `folders.json` holds a zone's container folders, and `unplaced.json` the samples no container holds. A save deletes the file of a removed container, and a zone folder once it is empty.
 
@@ -69,8 +65,6 @@ Hydration finds papers by walking the same folders paper discovery scans for PDF
 `KnowledgeBase/knowledge.index.sqlite`, `KnowledgeBase/experiments.sqlite` and `DNA/sequence-library.sqlite` are owned and written by their own modules.
 
 The chemicals index is the only copy of the lab chemical inventory, so an unreadable one is never overwritten (`chemical-index-guard.js`). Loading moves it aside to `hikari-chemicals.index.sqlite.corrupt-<time>` and the next save starts a new file; if it cannot be moved, chemical writes are refused until a later load reads it again, while the rest of each save still goes through. Either way the storage import returns an `alerts` entry, which the renderer shows as an error notice.
-
-For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.json`. 
 
 ### Paper knowledge storage
 
@@ -112,27 +106,38 @@ The tool opens a disposable in-memory snapshot and never persists changes or acc
 
 ## Write path
 
-`syncBundleFromSnapshot(...)` writes:
+`syncBundleFromSnapshot(...)` writes, in order:
 
-1. protocol folders
-2. notebook-page folders
-3. one file per personal-inventory container
-4. one record file per assay and gel folder, and one beside each stored paper PDF
-5. the chemicals SQLite index
+1. the root folders (`Papers/`, `Plates/`, `Gels/`, `KnowledgeBase/papers.md/`, `Samples/`) and the official Codex skills at the root
+2. protocol folders (pruning folders for removed protocols)
+3. notebook-page folders (entries that belong to a workflow are written by the workflow sync instead)
+4. per-project `MEMORY.md`, skills, and `DNA/` folders
+5. one file per personal-inventory container
+6. the Home experiment log
+7. one record file per assay and gel folder, and one beside each stored paper PDF
+8. the chemicals SQLite index (skipped, not failed, when the guard has refused it)
+9. the workflow root (`Workflow/` templates, runs, run notebook pages, and related papers)
+
+It also deletes a leftover `<snapshot>.notebook-pages.json` from older builds.
+
+`syncSqliteBundleFromSnapshot(...)` (the `storage:sync-sqlite-bundle` channel) rewrites only the chemicals index, so Chemicals edits can persist without a full save.
 
 ## Read path
 
 `hydrateSnapshotFromBundle(...)` rehydrates the compact snapshot by layering in:
 
-1. protocol sidecar JSON
-2. legacy notebook-page sidecar JSON, if present
+1. `Protocol/*/protocol.json` (or, when that folder is absent, a legacy `<snapshot>.protocols.json`)
+2. a legacy `<snapshot>.notebook-pages.json`, if present
 3. personal-inventory container files
-4. the chemicals SQLite index
-5. assay and gel record folders, and paper records beside their PDFs
+4. the Home experiment log
+5. `Project/` notebook-page folders and project records
+6. the `Workflow/` root: templates, runs, their notebook pages, and related papers
+7. the chemicals SQLite index (through `chemical-index-guard.js`)
+8. paper records beside their PDFs, and assay and gel record folders
 
 It also returns a `migration` summary that reports which fallback or hydration sources were used.
 
-That means a load can succeed even when the primary JSON is intentionally missing heavy fields, because those fields are reconstructed from the bundle.
+That means a load can succeed even when the primary JSON is intentionally missing heavy fields, because those fields are reconstructed from the folders. Records found in more than one place are merged by id.
 
 ## Import path
 
@@ -157,7 +162,7 @@ This is best thought of as a discovery and migration helper, not part of the rou
 The persistence model here is trading simplicity for scalability:
 
 - the main JSON remains light enough to save and load comfortably
-- the sidecars keep large structured collections out of the primary snapshot
-- the SQLite index makes lookup-oriented features fast
+- one file per record keeps large structured collections out of the primary snapshot, sits next to the record's own artifacts, and stays readable (and recoverable) without Hikari
+- the chemicals SQLite index makes inventory search fast
 
 That is why several seemingly unrelated helpers share the `storage/index.js` public surface. The `storage/` package is the center of gravity for the app's durable data layout.

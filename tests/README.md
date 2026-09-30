@@ -1,6 +1,9 @@
 # Test Suite Structure
 
-The test runner entrypoint remains `test.js`.
+The test runner entrypoint remains `test.js`. Run it with Node.js 24, as CI
+does: the vendored pdf.js needs `Promise.try`, and on Node 22 the PDF suites
+crash the runner. The `*-selfcheck` scripts that launch Electron need the
+Electron binary that `npm ci` downloads.
 
 ## Running a subset
 
@@ -18,17 +21,35 @@ npm test                      # build:ui + everything
 npm run test:checks           # checks + selfchecks, no suites
 ```
 
-The first-launch workspace page has a desktop integration check:
+## Electron and installed-app checks
+
+`tests/*-electron.cjs` scripts drive a real Electron window and are not part of
+`test.js` (the file name does not end in `-selfcheck`). Run one after building
+the UI:
 
 ```
 npm run build:ui
 node node_modules/electron/cli.js tests/storage-setup-electron.cjs
 ```
 
-It uses an isolated temporary profile and real storage IPC/import/save handlers,
-with a simulated folder picker. It covers cancellation, failures, retry, saving,
-and recovery after clearing renderer storage. Set `HIKARI_TEST_APP_ROOT` to a
-packaged `app.asar` path to exercise packaged sources instead.
+`storage-setup-electron.cjs` covers the first-launch workspace page with an
+isolated temporary profile and real storage IPC/import/save handlers, with a
+simulated folder picker: cancellation, failures, retry, saving, and recovery
+after clearing renderer storage. Set `HIKARI_TEST_APP_ROOT` to a packaged
+`app.asar` path to exercise packaged sources instead. Other Electron scripts
+cover agent chat rendering, the Home notebook agent, HTML and image output,
+notebook suggestions and drafts, selection insights, spreadsheet fill,
+sequence CDS properties and MCP, sample suggestions, the assay chart, and the
+plugin runtime.
+
+CI (`.github/workflows/ci.yml`, macOS) runs `npm test`, then
+`tests/hikari-mcp-launch-selfcheck.js` against Electron's embedded Node (the
+packaged `--hikari-mcp-stdio` path), then `storage-setup-electron.cjs`.
+
+`tests/installed-app-smoke.mjs` drives an installed build over the Chrome
+DevTools protocol (`--remote-debugging-port=9333`): the opening page, Codex CLI
+discovery, and a live MCP round trip. The Windows install smoke workflow runs
+it; it is not part of `test.js`.
 
 Every test reports as one `PASS [group] name` or `FAIL [group] name` line,
 followed by a `passed/total` summary and a `SLOW` list of the ten slowest. The
@@ -43,11 +64,15 @@ Suites are organized by domain under `tests/suites/`:
 - `core/app-modules-suite.js`: loader for renderer module suites under `core/app-modules-suite/`
 - `core/app-modules-suite/*.js`: renderer module behavior tests for lab/project/protocol/inventory/assay/gel/chat workflows
 - `core/module-services-suite.js`: renderer cross-module service-layer behavior
-- `core/codex-cli-provider-suite.js`: loader for Codex CLI provider suites under `core/codex-cli-provider-suite/`
+- `core/codex-cli-provider-suite.js`: loader for Codex CLI provider suites under `core/codex-cli-provider-suite/` (including the MCP gateway tool surface)
 - `core/contracts-suite.js`: UI/IPC contract checks, wiring checks, and packaging/config assertions
-- `edge/platform-and-regression-suite.js`: state normalization, export contracts, platform edge cases, and static guards
+- `core/npm-updater-suite.js`: release metadata, version comparison, and the update flow
+- `core/plugin-system-suite/plugin-system.js`: plugin folder contract, sandbox decision, bridge permission gate, plugin server, and service plugins
+- `edge/platform-and-regression-suite.js` (+ `edge/platform-and-regression-suite/`): state normalization, data-file path normalization, module boundary guards, export contracts, and platform edge cases
 - `edge/bio-tools-and-gel-suite.js`: loader for edge suites under `edge/bio-tools-and-gel-suite/`
 - `edge/bio-tools-and-gel-suite/*.js`: sequence-viewer, tool-box calculators, and gel-analysis edge coverage
+
+Shared helpers live in `tests/support/` and fixtures in `tests/fixtures/`.
 
 Loader files:
 

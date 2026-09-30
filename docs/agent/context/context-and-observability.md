@@ -4,7 +4,7 @@ Production Agent context is intentionally small: renderer-facing chat sessions, 
 
 ## `context/agent-chat-log.js`
 
-The chat-log runtime manages:
+The chat-log runtime (with its helpers in `context/chat-log/`) manages:
 
 - session creation and indexing;
 - per-session JSONL rows;

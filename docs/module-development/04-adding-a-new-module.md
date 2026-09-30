@@ -9,7 +9,7 @@ This walks through every file you need to touch to add a new view called `My Fea
 | 1 | `ui/html/views/my-feature-view.html` | create view fragment |
 | 2 | `ui/css/views/my-feature-view.css` | create stylesheet |
 | 3 | `assets/icons/my-feature.svg` | drop the dock icon |
-| 4 | `ui/config/app-registry.json` | declare the view key/id, subtitle, dock entry, label, and aliases |
+| 4 | `ui/config/app-registry.json` | declare the view key/id, subtitle, dock entry, label, and aliases, and add the view to `viewOrder` |
 | 5 | `src/renderer/modules/my-feature/` | controller |
 | 6 | `src/renderer/module-manifests/my-feature.js` | declare init + registry key + render hooks |
 | 7 *(optional)* | `src/renderer/services/myFeatureService.js` | only if other modules need to react to your changes |
@@ -115,6 +115,10 @@ Add a new entry to `apps[]`:
   "searchInputId": ""
 }
 ```
+
+Add `"my-feature-view"` to the `viewOrder[]` array too; the build requires every app and supplemental view to appear there exactly once, and uses that order to stitch `index.html`.
+
+Set `"agentChatRail": true` if the view should get the scoped agent chat side rail (Notebook, Plate, and Papers use it).
 
 If you want this in the always-visible dock (not the overflow "More" menu), set `"placement": "dock"` and add the id to `dockOrder[]` at the top of the file. The build asserts `dockOrder.length === count(apps with placement=dock)` and that every dock id is also in `dockOrder`.
 
@@ -262,13 +266,13 @@ export const myFeatureManifest = {
 
 The `key` is the registry key other modules will use. `viewKey` points at the matching `VIEWS.<KEY>` entry and lets the runtime add the normal `renderView()` dispatcher. Use `viewIds` when one module owns multiple route ids, and `navigationAliases` when one route should highlight or title itself as another route.
 
-Then export it from [src/renderer/module-manifests/index.js](../../src/renderer/module-manifests/index.js), usually in the group that matches when it should initialize:
+Then add it to [src/renderer/module-manifests/index.js](../../src/renderer/module-manifests/index.js), usually in the group that matches when it should initialize. Each group loads its manifests one at a time through `loadManifests`, so a manifest that fails to import is logged and skipped rather than breaking the renderer:
 
 ```js
-export const inventoryModuleManifests = [
+export const inventoryModuleManifests = await loadManifests([
   // ...
-  myFeatureManifest
-];
+  ['./my-feature.js', 'myFeatureManifest']
+]);
 ```
 
 If you want your module to also render at app boot, add `bootOrder`. The runtime uses `renderAll` when present and otherwise falls back to `render`. For modules that are only event/tool wiring, omit `viewKey`, route render hooks, and `bootOrder`.

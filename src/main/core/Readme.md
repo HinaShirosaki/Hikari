@@ -12,14 +12,17 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 
 ## Startup order
 
-1. app metadata and paths
-2. storage plus sequence APIs
+1. app metadata, paths, and local error reporting
+2. the data facade, storage, and sequence-library APIs
 3. agent chat logging / chat-log transform monitor
 4. npm update checks (`main/updater/`)
 5. provider-neutral agent foundation (`core/services/create-agent-services.js`)
 6. provider-neutral MCP host
-7. Codex runtime and workspace initializer
-8. data, agent, and system IPC registration
+7. Codex runtime and workspace initializer, notebook suggestions
+8. scheduled tasks, the genome library, and bioinformatics clients
+9. IPC registration: plugin, data, agent, genome, bioinformatics, scheduled-task, python, system
+
+`start()` then starts the chat-log monitor, the npm updater, the MCP host, and scheduled tasks. `shutdown()` stops bioinformatics, scheduled tasks, MCP, the updater, and agent logging, in that order.
 
 Every `start()` step is best-effort: a failed integration is logged with `console.warn` and must not prevent the main window from working. `shutdown()` stops services in reverse order, logging failures without blocking the rest.
 

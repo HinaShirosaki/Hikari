@@ -12,6 +12,8 @@ Current flow:
 
 1. `src/renderer/renderer.js` calls `startHikariCore()` directly.
 2. `startHikariCore()` boots state, services, manifest-declared modules, storage, navigation, and search.
-3. `module-runtime.js` composes feature manifests while `app/` owns navigation and shared shell behavior.
+3. `module-runtime.js` composes feature manifests, and `manifest-runtime.js` fences each manifest's `init` and `render` so one failing module is logged and skipped instead of taking the shell down. `app/` owns navigation, search, plugins, storage setup, and shared shell behavior.
+
+The full boot order is in [docs/renderer/architecture/boot-and-shell.md](../../../docs/renderer/architecture/boot-and-shell.md).
 
 Module registration and route metadata live in `src/renderer/module-manifests/`; the core does not maintain a second feature switchboard.

@@ -91,7 +91,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 
 ### 📊 Analysis built in
 
-**Cloning and primer design**, plate assays with **curve fitting**, gel **band quantification**, a colony counter, and ten bench calculators.
+**Cloning and primer design**, plate assays with **curve fitting**, gel **band quantification**, a colony counter, and eight bench calculators.
 
 </td>
 </tr>
@@ -107,13 +107,13 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 </td>
 <td width="50%" valign="top">
 <img src="docs/screenshots/sequence-detail.png" alt="Annotated sequence in the Sequence Viewer" /><br/>
-<b>Sequence Viewer</b>: annotation, restriction sites, alignment, and cloning design
+<b>DNA</b> (Sequence Viewer): annotation, restriction sites, alignment, and cloning design
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
 <img src="docs/screenshots/assay-layout.png" alt="96-well assay plate layout with a BSA standard" /><br/>
-<b>Assay</b>: plate layouts, spreadsheet formulas, and curve fitting
+<b>Plate</b> (Assay): plate layouts, spreadsheet formulas, and curve fitting
 </td>
 <td width="50%" valign="top">
 <img src="docs/screenshots/gel-analysis.png" alt="Gel analysis with detected lanes and an intensity trace" /><br/>

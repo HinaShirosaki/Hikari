@@ -1,8 +1,15 @@
-# Walkthrough: running ImageJ locally
+# Case study: running ImageJ as a plugin
 
-ImageJ is the reference example for **served plugins** — the kind Hikari
-delivers over `http://127.0.0.1:<port>` instead of `file://`, so the plugin
-gets a real origin with working storage.
+ImageJ is a useful stress test for the plugin sandbox: it is a large Java
+application with a real runtime behind it. This page records what running it
+as a Hikari plugin requires and what "runs locally" does and does not mean.
+
+> The `examples/plugins/imagej/` folder this page used to link is no longer in
+> the repository. It downloaded a 59 MB runtime, so it was removed along with
+> its tests (`.gitignore` still lists the path for local copies). The manifest
+> and code excerpts below are enough to rebuild it. For an in-repo plugin with
+> a comparable amount of code, read the bundled Gel plugin in
+> [`src/plugins/gel/`](../../src/plugins/gel/).
 
 The manifest is four lines:
 
@@ -15,47 +22,36 @@ The manifest is four lines:
 }
 ```
 
-Source: [`examples/plugins/imagej/`](../../examples/plugins/imagej/). Run
-`./fetch-imagej.sh` once to download the compiled ImageJ, install the folder,
-reload, and **More → ImageJ** is real ImageJ 1.53m — File, Edit, Image,
-Process, Analyze, Plugins, Window, Help — with your images staying on your
-machine. ImageJ fills the whole pane — the host draws no chrome around a plugin
-frame ([plugin-system.md §4.1](plugin-system.md#41-boot-sequence)), so what you
-see is ImageJ's own window and nothing else.
-
-The interesting part is why `"serve": true` is load-bearing, because the same
-reasoning applies to anything with a real runtime behind it.
+`"serve": true` is now a compatibility no-op: every folder plugin is served
+over its own `http://127.0.0.1:<port>` origin ([plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin)).
+Once installed, **More → ImageJ** is real ImageJ 1.53m — File, Edit, Image,
+Process, Analyze, Plugins, Window, Help — filling the whole pane, since the host
+draws no chrome around a plugin frame
+([plugin-system.md §4.1](plugin-system.md#41-boot-sequence)).
 
 ---
 
-## 1. Why a local plugin cannot run it
+## 1. Why it needs a real origin
 
 ImageJ is Java. In a browser that means
 [ImageJ.JS](https://github.com/imjoy-team/imagej.js) — ImageJ compiled to
 WebAssembly by [CheerpJ](https://cheerpj.com/) — and CheerpJ keeps its virtual
 filesystem in **IndexedDB**.
 
-A local plugin is an opaque origin, and an opaque origin has no storage.
-Probing Hikari's local sandbox string gives:
+Earlier Hikari builds loaded plugins without `serve: true` from an opaque
+`file:` origin, and an opaque origin has no storage:
 
 ```
 origin:              "null"
 localStorage:        BLOCKED: SecurityError
 indexedDB:           BLOCKED: SecurityError
-SharedArrayBuffer:   absent
-crossOriginIsolated: false
 WebAssembly:         present
 ```
 
-WebAssembly is available; the storage CheerpJ needs is not. And it does not
-degrade gracefully — loading ImageJ.JS in that sandbox reaches `loader present`
-and then stops. `cheerpjInit` never resolves, and CheerpJ never even logs that
-it started initializing. Nothing times out; the plugin just sits there.
-
-## 2. What `serve: true` changes
-
-Serving the folder over loopback gives the frame a real origin. The same page,
-same sandbox flags plus `allow-same-origin`, on `http://127.0.0.1:<port>`:
+CheerpJ does not degrade gracefully there: loading reaches `loader present` and
+stops, `cheerpjInit` never resolves, and nothing times out. That failure is why
+Hikari now serves every folder plugin over loopback. On a real origin the same
+page boots:
 
 ```
 origin:            http://127.0.0.1:59543
@@ -63,14 +59,13 @@ indexedDB:         OK
 loader present | cheerpjInit resolved | display created | runMain called
 ```
 
-ImageJ boots. The `allow-same-origin` flag is safe here because the frame's
-origin is the loopback port, not Hikari's `file://` — verified from the host
-side, which sees `contentDocument: null` and `localStorage: SecurityError` on
-the frame. Each served plugin gets its own port, so they are isolated from each
-other too, not just from the host. Details in
-[plugin-system.md §5.1](plugin-system.md#51-why-served-and-remote-plugins-may-use-allow-same-origin).
+The frame carries `allow-same-origin`, which is safe because its origin is the
+loopback port, not Hikari's `file://` — the host sees `contentDocument: null`
+and `localStorage: SecurityError` on the frame. Each plugin gets its own port,
+so plugins are isolated from each other as well as from the host. Details in
+[plugin-system.md §5.1](plugin-system.md#51-why-plugin-frames-may-use-allow-same-origin).
 
-## 3. What is local and what is not
+## 2. What is local and what is not
 
 Be precise about this, because "runs locally" is half true:
 
@@ -84,13 +79,15 @@ The runtime is the one piece that cannot be bundled. ImageJ.JS is MIT, but it
 is a shell around CheerpJ, and [CheerpJ's
 licensing](https://cheerpj.com/docs/licensing.html) makes the runtime free only
 when loaded from their CDN — self-hosting it requires a commercial license. So
-**fully offline ImageJ is not something this repo can ship**, and the plugin
-needs internet on first run.
+**fully offline ImageJ is not something Hikari can ship**, and the plugin needs
+internet on first run. (The host's Content-Security-Policy does not block this:
+its `frame-src` only decides which origin the frame may load, and the plugin
+server sends no CSP of its own.)
 
 What you do get, compared with embedding a hosted ImageJ: your images stay
 local, and the app code sits in a folder you can read.
 
-## 4. The plugin
+## 3. The plugin
 
 `index.html` loads the CheerpJ runtime from the CDN and its own `main.js`:
 
@@ -114,36 +111,30 @@ cheerpjCreateDisplay(-1, -1, document.getElementById('imagej-container'));
 cheerpjRunMain('ij.ImageJ', '/app/ij153/ij-1.53m.jar');
 ```
 
-It checks `location.protocol === 'file:'` first and says so plainly, because
-the failure mode otherwise is a frame that hangs with no error — exactly the
-symptom from §1.
+Check `location.protocol === 'file:'` first and say so plainly: if the page is
+ever opened outside the plugin server, the failure mode is a frame that hangs
+with no error.
 
-The 59 MB of jars are downloaded by `fetch-imagej.sh` rather than vendored, and
-`ij153/` is gitignored.
+Download the ImageJ jars into `ij153/` yourself rather than committing them.
 
-## 5. Install and check
+## 4. Install and check
 
-1. `cd examples/plugins/imagej && ./fetch-imagej.sh`
-2. **Settings → Plugins → Add Plugin Folder**, select that folder.
-3. **Reload App**, then **More → ImageJ**. First boot takes 20–30 seconds while
+1. **Settings → Skills & plugins → Add Plugin Folder**, select the folder.
+2. **Reload App**, then **More → ImageJ**. First boot takes 20–30 seconds while
    the JVM loads.
-4. **File → Open Samples → Blobs**, then **Analyze → Analyze Particles** to
+3. **File → Open Samples → Blobs**, then **Analyze → Analyze Particles** to
    confirm it is a real, working ImageJ.
 
 To get measurements into a notebook entry, use the
 [`notebook-results`](../../examples/plugins/notebook-results/) plugin — paste
-the Results table there. ImageJ itself holds no host permissions; it is a
-served plugin and *could*, but this one declares none, so it has no route into
-your data.
+the Results table there. ImageJ itself declares no host permissions, so it has
+no route into your data.
 
-## 6. When to reach for `serve: true`
+## 5. Lessons for other runtime-heavy plugins
 
-Use it when the plugin needs storage — `localStorage`, `IndexedDB`, a
-WebAssembly runtime with a filesystem, a large asset tree it fetches at
-runtime. The tell is a library that works in a normal browser tab and
-mysteriously hangs or throws `SecurityError` as a local plugin.
-
-Do **not** use it just because it sounds more capable. A plain local plugin has
-a smaller attack surface: no server, no `allow-same-origin`, no storage to
-leak. Reach for serving when the opaque origin actually blocks you, which you
-will know because something breaks.
+- A library that works in a normal browser tab should now work in a plugin,
+  because the frame has a real origin with `localStorage` and `IndexedDB`.
+- Anything the plugin fetches from the network makes it depend on that network,
+  so say so in the plugin's description.
+- Declare no permissions unless the plugin needs Hikari data. A plugin with no
+  permissions cannot read or write anything in Hikari, however large it is.

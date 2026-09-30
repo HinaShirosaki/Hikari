@@ -14,13 +14,13 @@ The completed dependency bag is passed to `registerAgentIpc(...)`. Paper-owned r
 
 ## `agent:chat`
 
-`src/main/ipc/register-agent-ipc/agent-chat-handler.js` registers the main request endpoint. Before invoking the controller it:
+`src/main/ipc/register-agent-ipc/agent-chat-handler.js` registers `agent:chat` and `agent:chat:cancel` and keeps a map of active requests so a cancel can abort the right one. The request pipeline itself is `createAgentChatRequestHandler(...)` in `src/main/agent/runtime/agent-chat-request.js`. Before invoking the controller it:
 
 - normalizes the payload and execution flags;
 - creates a request id and lifecycle recorder;
 - creates or resumes the renderer-facing chat session;
 - appends the user request to the Agent and session logs;
-- installs progress and cancellation handling.
+- installs progress (`agent-progress` events to the renderer) and cancellation handling.
 
 ## Controller routing
 
@@ -43,9 +43,9 @@ Codex uses the MCP server for local lookups and structured app actions. The allo
 
 ## Direct tools
 
-The direct MCP surface currently includes inventory and chemical lookup, notebook and protocol lookup, notebook drafts, protocol generation, literature search, paper download/analysis/intake lookup, purchase recommendation, scratch containers, assay tables, Plotly graphs, and user clarification.
+The direct MCP surface currently includes inventory and chemical lookup, notebook and protocol lookup, notebook drafts and append proposals (plus background notebook suggestions), protocol generation, literature search, paper download/analysis, intake search and the experiments SQL query, purchase recommendation, long-term memory, scratch containers, assay tables, live Plate chart styling, Plotly graphs, image and interactive-HTML output, the Sequence Viewer plasmid and primer tools, and user clarification. Tools switched off in **Settings > Tool access** are removed from the list Codex sees. The full list is in [mcp-contract.md](../mcp-contract/mcp-contract.md#mcp-tools).
 
-Tool wrappers own their schemas and annotations. Deterministic implementation runtimes live under `src/main/agent/tools/`, except paper behavior, which lives under `src/main/papers/`.
+Tool wrappers own their schemas and annotations. Deterministic implementation runtimes live under `src/main/agent/tools/`, except paper behavior, which lives under `src/main/papers/`, and the sequence tools, which live with the Sequence Viewer's main-process half.
 
 ## Response emission
 
@@ -61,4 +61,4 @@ The session's `messages` projection is UI-facing. Its `rows` preserve request, r
 
 ## Related endpoints
 
-The registrar also exposes chat-session create/list/get endpoints, lifecycle request listing, and lifecycle replay. Their channel names are centralized in `src/shared/ipc/channels.js`.
+The registrar also exposes chat-session create/list/get endpoints, lifecycle request listing, lifecycle replay, skill listing, protocol generation, and background experiment suggestions (`agent:suggest-experiment`, see [notebook-suggestions.md](../mcp-contract/notebook-suggestions.md)). The HTML preview channel (`agent:html-preview`) is registered by `src/main/agent/html-output/preview-service.js`. Channel names are centralized in `src/shared/ipc/channels.js`.

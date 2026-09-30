@@ -16,7 +16,7 @@ src/renderer/modules/my-feature/
   Readme.md         # short maintenance note
 ```
 
-[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box/index.js](../../src/renderer/modules/tool-box/index.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) is a legacy composition-root pattern, not the default for new views.
+[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) composes several independent mini-tools from its `index.js`; follow that shape only when a view really is a collection of unrelated panels.
 
 The feature entry exports a single function named `init<Name>` (camel-cased, capitalized after `init`):
 
@@ -35,15 +35,20 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | --- | --- | --- | --- |
 | `state` | object | `loadState()` | the single mutable state object — mutate in place, then call `persist()` |
 | `persist` | `() => void` | renderer core | records an undo checkpoint, normalizes storage paths, writes localStorage, and auto-saves to disk when configured |
-| `createId` | `() => string` | `utils.js` | timestamp+random ID generator for new entities |
-| `safeText` | `(value) => string` | `utils.js` | HTML-escape helper, use whenever you build innerHTML |
-| `cssEscape` | `(value) => string` | `utils.js` | escapes a value for use inside a CSS attribute selector |
-| `notebookType` | string | constant per call site | e.g. `'biology'` for the notebook module |
+| `createId` | `() => string` | `lib/app-utils.js` | timestamp+random ID generator for new entities |
+| `safeText` | `(value) => string` | `lib/app-utils.js` | HTML-escape helper, use whenever you build innerHTML |
+| `cssEscape` | `(value) => string` | `lib/app-utils.js` | escapes a value for use inside a CSS attribute selector |
 | `apiBridge` | object \| null | `window.hikariApi` | IPC bridge exposed by the preload script |
 | `getApiBridge` | `() => object \| null` | factory | use this if you may need the bridge after lazy initialization |
 | `rootDocument` | Document | `globalThis.document` | useful when supporting iframes or off-screen render in tests |
+| `windowObject` | Window | `globalThis.window` | for events and timers, so tests can inject a fake window |
+| `showView`, `views` | function, object | navigation shell, `modules/views.js` | switch views by `VIEWS` key |
+| `rendererServices` | object | `services/index.js` | the fan-out services; manifests pick the callbacks they pass on |
+| `modules` | object | module runtime | the APIs of modules initialized so far (read it lazily, inside callbacks) |
+| `pluginServices` | object | `app/plugin-services.js` | capabilities registered by service plugins (e.g. file converters) |
+| `onStoragePathSaved` | function | renderer core | re-imports the storage root after Settings saves a new one |
 | `selectionInsightsController` | object | `selection-insights/index.js` | optional: text selection insights service |
-| `trackGrowthEvent` | function | `app-state.js` | append a growth event to `state.growthMetrics` |
+| `trackGrowthEvent` | function | `modules/app-state/` | append a growth event to `state.growthMetrics` |
 | `onXxxChanged` | function | `rendererServices.<area>` | the **important** one: cross-module fan-out callbacks (see below) |
 | `onOpen<Other>` | function | renderer core | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
 
@@ -127,7 +132,7 @@ This keeps `renderAll()` safe.
 
 ## State contract
 
-There is one state object. It is loaded through the stable [app-state.js](../../src/renderer/modules/app-state/index.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
+There is one state object. It is loaded through the stable [app-state/index.js](../../src/renderer/modules/app-state/index.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
 
 Rules:
 
@@ -160,10 +165,10 @@ Inside the module you only call `onMyFeatureChanged()`. You don't know (or care)
 
 The services are defined in [src/renderer/services/](../../src/renderer/services/):
 
-- `protocolService.js` — `handleProtocolsChanged`, `handleProtocolsImported`, `handleExternalProtocolRecordSaved`, `openProtocol`, `importProtocolsFromJson`, `createDraftFromPaper`
-- `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`
-- `projectService.js` — `handleProjectsChanged`
-- `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
+- `protocolService.js` — `handleProtocolsChanged`, `handleProtocolsImported`, `handleExternalProtocolRecordSaved`, `saveProtocolRecord`, `openProtocol`, `importProtocolsFromJson`, `createDraftFromPaper`
+- `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`, `logPageEvent`
+- `projectService.js` — `handleProjectsChanged`, `ensureProjectRecord`
+- `inventoryService.js` — `handleSamplesChanged`, `handleSampleInventorySettingsChanged`, `openSampleSearch`
 - `analysisService.js` — `handleAssaysChanged`, `openAssayForNotebook`
 - `modules/sequence-viewer/service.js` — `openFromToolBox` (destination-owned handoff service)
 
@@ -195,7 +200,7 @@ protocol.renderList?.();
 `registry.get` always returns an object (the empty frozen sentinel `{}` if missing), so optional chaining is enough. The keys come from `manifest.key`. Current keys:
 
 ```
-biologyNotebook, protocol, agentChat, workflowManagement,
+biologyNotebook, protocol, agentChat, agentChatRail, workflowManagement,
 papers, labCommonInventory, personalInventory, sampleRegistry, assay,
 sequenceViewer, toolBox, settings, homeDashboard
 ```
@@ -208,10 +213,10 @@ For anything that crosses the renderer/main boundary — file system, agent call
 
 ```js
 const bridge = getApiBridge();
-const result = await bridge?.runScript?.('extract-feature', payload);
+const bytes = await bridge?.readFileBytes?.(storedFilePath);
 ```
 
-The full surface is documented in [docs/main-platform/](../main-platform/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
+Every bridge method returns a promise, and most resolve `{ ok: false, error }` instead of throwing, so check the result. The full surface is listed per domain in `src/main/preload/api/`; the main-process side is documented in [docs/main-platform/ipc/ipc-registrars.md](../main-platform/ipc/ipc-registrars.md). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
 
 ## Lifecycle and rendering
 

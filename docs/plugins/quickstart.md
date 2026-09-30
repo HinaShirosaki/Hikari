@@ -117,7 +117,7 @@ permission to `plugin.json`; permissions are listed in
 
 ## 3. Install and reload
 
-1. Open **Settings → Plugins → Add Plugin Folder**.
+1. Open **Settings → Skills & plugins → Add Plugin Folder**.
 2. Select `my-plugin/`.
 3. Check the displayed name, version, and host access.
 4. Click **Reload App**.

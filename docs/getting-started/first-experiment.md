@@ -33,7 +33,7 @@ Hikari needs a storage root before it can write records and attachments to disk.
 2. Choose your `Hikari Tutorial` folder or an existing Hikari workspace. You can create a folder in the picker.
 3. Wait for Hikari to open the workspace. If the folder cannot be opened or saved, the page shows an error so you can retry.
 
-To change folders later, open **Settings > Storage**, click **Select Folder**, and choose the new folder. The chosen path appears under **Root Folder Path**.
+To change folders later, open **Settings > Storage & data**, click **Select Folder**, and choose the new folder. The chosen path appears under **Root Folder Path**.
 
 Do not move or rename the folder while Hikari is running. For real work, back up the entire folder rather than only the `hikari-data.json` snapshot; attachments and module artifacts live beside it.
 
@@ -42,13 +42,13 @@ Do not move or rename the folder while Hikari is running. For real work, back up
 Projects group notebook pages and the work linked to them.
 
 1. Open **Notebook** from the dock.
-2. Click the **+** button in the top bar. Its tooltip and accessible name are **Add a project**.
+2. Click the **+** button in the top bar. Its tooltip and accessible name are **New project**.
 3. Enter:
 
-   - **Project Name:** `GFP expression pilot`
-   - **Description:** `Small pilot comparing GFP expression across two replicate cultures.`
+   - **Project name:** `GFP expression pilot`
+   - **Add a description** (optional; expand it first): `Small pilot comparing GFP expression across two replicate cultures.`
 
-4. Click **Add Project**.
+4. Click **Create project**.
 
 The new project appears in the Notebook rail and opens its project dashboard.
 
@@ -115,7 +115,7 @@ Protocols are reusable records. Starting an experiment from one creates a notebo
 
 4. Click **Save Protocol**.
 
-Text in square brackets becomes an interactive bar in a notebook experiment. You can type those markers directly, use the preset buttons above **Steps**, or enter a custom name such as `strain` beside **Insert Interactive Bar**.
+Text in square brackets becomes an interactive bar in a notebook experiment. You can type those markers directly, use the preset buttons above **Steps**, or type a custom bar name such as `strain` in the **Custom** field and click **Insert**.
 
 ## 5. Start the notebook experiment
 
@@ -166,8 +166,8 @@ You have completed the core Hikari loop: reusable records fed a project-scoped e
 
 ## Where to go next
 
-- Link an assay, gel, or attachment from the notebook page.
-- Import a sequence into **Sequence Viewer** and save it to the sequence library.
+- Link a **Plate** assay, gel, or attachment from the notebook page.
+- Import a sequence into **DNA** (the Sequence Viewer) and save it to the sequence library.
 - Add a paper PDF and link it to **GFP expression pilot**.
 - Configure Codex only when you are ready to use **Agent**, protocol generation, or paper analysis; none of those features are required for local record keeping.
 

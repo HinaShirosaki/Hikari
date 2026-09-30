@@ -3,11 +3,11 @@
 `index.js` is the public renderer entry point. It composes the assay view, keeps the exported contract small, and delegates domain behavior to focused modules.
 
 - `artifact-storage.js`: folder-backed assay artifacts, analysis JSON, chart SVG persistence, and result-file attachment metadata.
-- `analysis-view.js`: analysis workflow controller, result summaries, analysis table rendering, and direct Plotly lifecycle ownership.
+- `analysis-view.js` plus `analysis-view/`: analysis workflow controller, result summaries, analysis table rendering, the derived-plate grid, and direct Plotly lifecycle ownership.
 - `analysis-chart-model.js`: pure chart-model selection for Assay analysis results.
-- `derived-plate.js`: pure plate transforms plus the well-reference grammar. The active UI stores one formula per transformed cell; bare references and `Table1` read Plate Results, while `Table2` reads computed transformed cells with cycle detection. Legacy guided-step and global-formula specs remain readable. Analysis reads the transformed numeric plate whenever cell formulas are active.
+- `derived-plate.js` plus `derived-plate/`: pure plate transforms plus the well-reference grammar. The active UI stores one formula per transformed cell; bare references and `Table1` read Plate Results, while `Table2` reads computed transformed cells with cycle detection. Legacy guided-step and global-formula specs remain readable. Analysis reads the transformed numeric plate whenever cell formulas are active.
 - The spreadsheet-style formula language lives in `src/renderer/lib/formula.js` — tokenizer, recursive-descent parser, and AST evaluator, shared with notebook result tables. Never uses `eval`. Function names and arity are checked at parse time so typos surface while typing. `derived-plate.js` supplies the plate-specific `resolveRef`.
-- `plotly/`: Assay-owned Plotly rendering and figure formatting. `plotly-renderer.js` draws and exports the figure; `chart-style-model.js` / `chart-style-store.js` hold the style state and the rendered-figure context the controls key off; `chart-controls.js` is the tabbed Format rail page; `chart-presets.js` stores named styles; `chart-style-pickers.js` and `chart-text-controls.js` are the shared visual pickers.
+- `plotly/`: Assay-owned Plotly rendering and figure formatting. `plotly-renderer.js` draws and exports the figure; `chart-style-model.js` / `chart-style-store.js` hold the style state and the rendered-figure context the controls key off; `chart-controls.js` is the tabbed Format rail page; `chart-presets.js` stores named styles; `chart-style-pickers.js` and `chart-text-controls.js` are the shared visual pickers; `plot-agent-controller.js` applies the agent's `assay_plot` read/update requests to the live chart.
 - `analysis/`: pure analysis math. `grouping.js` owns the analysis spec (`groupBy` / `xAxis` / `analysis` plus modifiers), legacy method migration, and the grouping every analysis shares; `grouped-summary.js` is the one summary table; `curve-fit.js` is the one curve runner (linear / sigmoidal / hyperbola / polynomial / Pade); `dose-response.js` is normalize-to-baseline; `curve-fitters.js` holds the fitters themselves.
 - `layout-manager.js` plus `layout/`: plate definition, concentration fill, CSV mapping, preview events, and layout state restoration.
 - `plate-preview-renderer.js`: HTML generation for the editable plate grid.
@@ -19,6 +19,9 @@
 - `plate-model.js`: plate definitions, well IDs, layout normalization, and axis template helpers.
 - `numbering.js`: assay number allocation and previews.
 - `ui/`: browser-view rendering and top-level event bindings.
+- `workspace/`: the analyze workspace, the assay form and list, and notebook links.
+- `agent/`: the context the agent rail reads for the open plate.
+- `public-api.js`: the narrow surface other features import.
 - `dom.js`: DOM node collection for `assay-view.html`.
 - `shared.js`: small text, CSV, axis, numeric, and filename helpers.
 - `concentration-utils.js`: concentration parsing and volume formatting helpers.

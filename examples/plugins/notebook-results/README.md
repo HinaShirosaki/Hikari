@@ -13,13 +13,14 @@ its private loopback server; ES modules are supported too. The UI keeps loading,
 and in-progress states visible instead of leaving a blank or double-submitting
 an attachment.
 
-> Looking for ImageJ itself? That is [`../imagej/`](../imagej/), a *remote*
-> plugin that embeds the real application. Remote plugins cannot hold host
-> permissions, which is why importing results is a separate local plugin.
+> Running ImageJ itself as a plugin is covered in the
+> [ImageJ case study](../../../docs/plugins/imagej-walkthrough.md). That plugin
+> declares no host permissions, which is why importing its results is this
+> separate plugin.
 
 ## Install
 
-1. **Settings → Plugins → Add Plugin Folder**, select this folder.
+1. **Settings → Skills & plugins → Add Plugin Folder**, select this folder.
 2. Confirm the row reads `Host access: notebook:read, notebook:write`.
 3. **Reload App**, then open **More → Notebook Results Import**.
 
@@ -45,4 +46,4 @@ Paste this, choose an entry, click **Attach**:
 | `style.css` | All styling — plugins inherit nothing from the host. |
 
 Start a plugin: [`docs/plugins/quickstart.md`](../../../docs/plugins/quickstart.md).
-ImageJ walkthrough: [`docs/plugins/imagej-walkthrough.md`](../../../docs/plugins/imagej-walkthrough.md).
+ImageJ case study: [`docs/plugins/imagej-walkthrough.md`](../../../docs/plugins/imagej-walkthrough.md).

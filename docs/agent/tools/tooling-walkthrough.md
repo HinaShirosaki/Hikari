@@ -47,8 +47,8 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 
 | Tool name | File | What it does |
 | --- | --- | --- |
-| `inventory-lookup` | `tools/agent-inventory-lookup.js` | query local inventory with SQLite-first, snapshot-fallback behavior |
-| `notebook-lookup` | `tools/agent-notebook-lookup.js` | search notebook pages or retrieve one structured page by stable id, with storage-access coverage |
+| `inventory-lookup` | `tools/agent-inventory-lookup.js` | search chemicals in the chemicals SQLite index and samples/containers in the loaded snapshot |
+| `notebook-lookup` | `tools/agent-notebook-lookup.js` | search notebook pages in the loaded snapshot or retrieve one structured page by stable id, with storage-access coverage |
 | `protocol-matching` | `tools/agent-protocol-matching.js` | rank local protocols and break close ties with an LLM when needed |
 | `notebook-generation` | `tools/agent-notebook-generation.js` | resolve placeholders and build a notebook payload from a selected protocol |
 | `notebook-draft` | `tools/agent-notebook-draft.js` | infer the next likely experiment and prepare a planned notebook draft |
@@ -59,26 +59,24 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 | `memory` | `context/agent-memory.js` | sparse long-term memory with `remember`, `recall`, `forget`, and `list` actions |
 | `container` | `tools/agent-container.js` | manage temporary exact string/number containers |
 | `assay-table` | `tools/agent-assay-table.js` | create and transform scratch assay tables |
-| `plotly-graph` | `tools/agent-plotly-graph.js` | create, update, read, and inspect Plotly figure specifications |
+| `plotly-graph` | `tools/agent-plotly-graph.js` (+ `agent-plotly-figure.js`) | create, update, read, and inspect Plotly figure specifications |
 | `literature-search` | `src/main/papers/search/agent-literature-search.js` | search PubMed, Europe PMC, Crossref, UniProt, or web RSS results |
 | `purchase-recommendation` | `tools/agent-purchase-recommendation.js` | discover products, enforce explicit requirements, and rank valid candidates |
 | `paper-download` | `src/main/papers/download/agent-paper-download.js` | locate PDF URLs, download papers, track progress, and fall back to browser-assisted download |
 | `paper-analysis` | `src/main/papers/analysis/agent-paper-analysis.js` | run one Codex CLI paper read, hydrate exact lines, and attach local comments |
-| `paper-search` | `src/main/papers/retrieve/agent-paper-wiki-search.js` | full-text search across locally transformed paper Markdown |
+| `paper-search` | `src/main/papers/retrieve/agent-paper-wiki-search.js` | full-text search across locally transformed paper Markdown (internal only; not an MCP tool) |
 | `protocol-generation` | `tools/agent-protocol-generation.js` | normalize supplied protocol JSON into an import-ready protocol payload and optionally save it |
 
 ## Tool group walkthrough
 
 ## Lookup tools
 
-`agent-inventory-lookup.js` and `agent-notebook-lookup.js` are deterministic and data-local. They share storage primitives but own their lookup behavior independently.
+`agent-inventory-lookup.js` and `agent-notebook-lookup.js` are deterministic and data-local. They share storage primitives (`agent-lookup-support.js`) but own their lookup behavior independently.
 
-Both tools:
+Both tools normalize queries from tool arguments and request context. Since storage moved to one JSON file per record, only chemicals still have a SQLite index:
 
-- normalize queries from tool arguments and request context
-- search SQLite indexes
-- fall back to hydrated snapshot JSON
-- optionally backfill SQLite to reduce future fallback work
+- `inventory-lookup` searches chemicals in `hikari-chemicals.index.sqlite` (`inventory-lookup/sqlite-search.js`) and samples/containers in the hydrated snapshot (`inventory-lookup/snapshot-search.js`). Sample type-specific fields are searched inside each sample's `details`.
+- `notebook-lookup` searches the hydrated snapshot's notebook entries; it never writes a SQLite index (`backfilled_sql` is always `false`).
 
 ## Protocol and notebook tools
 
@@ -126,8 +124,12 @@ The sub-agent runtime is also action-based:
 
 That means sub-agents are not only a standalone tool. They are also the execution-tracking primitive for managed Python tasks.
 
+## MCP-only tools
+
+MCP names do not map one-to-one onto executors. `chemical_lookup` reuses the `inventory-lookup` executor and `protocol_lookup` reuses `protocol-matching`. `assay_plot` calls an `assay-plot` tool id that `core/services/create-mcp-service.js` routes to the renderer through the assay plot bridge rather than to this catalog. Some tools have no executor and run in their `mcp-contract/direct-tools/` wrapper or in the owning feature: `notebook_append` and `notebook_suggest` (review-card proposals; `notebook_suggest` reuses the notebook-draft path), `image_output` and `html_output` (artifact publishing), the `paper_intake_*` and `paper_experiments_sql` tools (`src/main/papers/store/intake/mcp/`), and the `sequence_*` tools (`src/renderer/modules/sequence-viewer/main-process/mcp/`). See [mcp-contract.md](../mcp-contract/mcp-contract.md).
+
 ## Smoke tests
 
-`agent-tool-smoke-test.js` is a test-only runtime that creates many concrete tools directly and exercises them with lightweight fixtures or mocked structured responders.
+`tests/support/agent-tool-smoke-test/` is a test-only runtime that creates many concrete tools directly and exercises them with lightweight fixtures or mocked structured responders.
 
 It is useful for exercising tool runtimes in isolation with lightweight fixtures, independent of the live executor wired up for `agent:chat`.
