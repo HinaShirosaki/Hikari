@@ -13,21 +13,28 @@ function resolveNpxInvocation(nodeBinary, platform) {
   return { command: paths.join(nodeDir, 'npx'), args: [] };
 }
 
-const INSTALLER_PATTERNS = {
-  darwin: /\.zip$/iu,
-  win32: /Setup\.exe$/iu
+// What bin/dist.js leaves in <out>/Hikari-<platform>-<arch>/: the app bundle
+// itself on macOS (forge package), the Squirrel setup on Windows.
+const BUILD_TARGETS = {
+  darwin: 'Hikari.app',
+  win32: 'HikariSetup.exe'
 };
 
-function findInstaller(makeDir, platform, fs = nodeFs) {
-  const pattern = INSTALLER_PATTERNS[platform];
+function findBuild(outDir, platform, fs = nodeFs) {
+  const target = BUILD_TARGETS[platform];
+  if (!target) {
+    return '';
+  }
   let entries = [];
   try {
-    entries = fs.readdirSync(makeDir, { recursive: true });
+    entries = fs.readdirSync(outDir).map(String);
   } catch {
     entries = [];
   }
-  const match = entries.map(String).find((entry) => pattern?.test(entry));
-  return match ? path.join(makeDir, match) : '';
+  const match = entries.find((entry) => (
+    entry.startsWith(`Hikari-${platform}-`) && fs.existsSync(path.join(outDir, entry, target))
+  ));
+  return match ? path.join(outDir, match, target) : '';
 }
 
-module.exports = { findInstaller, resolveNpxInvocation };
+module.exports = { findBuild, resolveNpxInvocation };
