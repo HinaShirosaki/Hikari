@@ -29,7 +29,6 @@ export function initColonyCounterTool() {
   const colonyModelThresholdInput = document.getElementById('colony-model-threshold');
   const colonyModelMinDistanceInput = document.getElementById('colony-model-min-distance');
   const colonyAutoCountBtn = document.getElementById('colony-auto-count-btn');
-  const colonyMaskModeSelect = document.getElementById('colony-mask-mode');
   const colonyStartMaskBtn = document.getElementById('colony-start-mask-btn');
   const colonyClearMaskBtn = document.getElementById('colony-clear-mask-btn');
   const colonyRunBtn = document.getElementById('colony-run-btn');
@@ -113,7 +112,7 @@ export function initColonyCounterTool() {
   } = createColonyViewport({
     state: colonyState,
     getPreviewCanvas: () => colonyPreviewCanvas,
-    getMaskMode: () => colonyMaskModeSelect?.value
+    getMaskMode: () => document.querySelector('input[name="colony-mask-mode"]:checked')?.value
   });
 
   function getCountedMarkers() {
