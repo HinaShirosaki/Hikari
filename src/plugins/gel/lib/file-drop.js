@@ -31,6 +31,7 @@ function hasFileTransfer(dataTransfer) {
     .includes('files');
 }
 
+// Same matching rules as <input accept>: ".ext", "type/*", or an exact MIME.
 export function fileMatchesAccept(file, accept = '') {
   const acceptList = normalizeAcceptList(accept);
   if (!acceptList.length) {
@@ -56,6 +57,8 @@ export function filterAcceptedFiles(files, accept = '') {
   return asArray(files).filter((file) => fileMatchesAccept(file, accept));
 }
 
+// FileList is read-only; the only way to set input.files is through a fresh
+// DataTransfer. Returns false where DataTransfer cannot be constructed.
 export function mergeFilesIntoInput(input, files, { append = true } = {}) {
   if (!input || !files) {
     return false;
@@ -81,6 +84,8 @@ export function mergeFilesIntoInput(input, files, { append = true } = {}) {
   }
 }
 
+// Makes an element accept dropped files. Non-file drags (text, rail rows) are
+// ignored so they keep their own handlers. Returns an unbind function.
 export function bindFileDropTarget({
   target,
   accept = '',
@@ -95,6 +100,8 @@ export function bindFileDropTarget({
     return () => {};
   }
 
+  // dragenter/dragleave fire for every child element crossed, so count depth
+  // and only clear the highlight when the drag has really left the target.
   let dragDepth = 0;
   target.classList?.add?.('app-file-drop-target');
 

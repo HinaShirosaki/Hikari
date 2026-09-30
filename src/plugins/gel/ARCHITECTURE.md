@@ -75,6 +75,10 @@ not another implementation:
   `@bundled/gel` token.
 - `renderer/app/plugin-bridge.js` contains the identity-locked, one-time legacy
   migration into plugin storage.
+- `renderer/app/plugin-bridge.js` also runs the Notebook "Add gel" handoff:
+  `queueNotebookGel` holds the page and sends a data-less `gel.notebookLink`
+  event; the plugin (`main.js`) pulls the page with the internal, one-shot
+  `gel.takeNotebookLink` verb and starts a page-linked analysis.
 - `renderer/lib/gel-records.js` is a host-owned read model for displaying
   plugin records in existing notebook, project, PDF, home, and Agent surfaces.
 - `state.gelAnalyses` and its storage normalizers remain readable so pre-port

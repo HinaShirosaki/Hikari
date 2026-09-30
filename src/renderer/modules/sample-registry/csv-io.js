@@ -175,14 +175,31 @@ export function mergeSamplesFromCsv(state, rows, makeId = defaultMakeId) {
   }
   let created = 0;
   let updated = 0;
+  const recoded = [];
+  const rawCodeByCode = new Map();
+  const codeByRawCode = new Map();
   for (const row of rows) {
     const name = String(row.name || '').trim();
     if (!name) {
       continue;
     }
-    const code = normalizeCsvCode(row.code) || `S-${makeId()}`;
-    // ponytail: keep whatever type string is given (formatted); display-time normalizeSampleType maps unknowns.
-    const type = String(row.type || '').trim().toLowerCase().replace(/\s+/g, '_') || 'plasmid';
+    const rawCode = String(row.code || '').trim();
+    let code = codeByRawCode.get(rawCode) || normalizeCsvCode(rawCode) || `S-${makeId()}`;
+    // Codes keep only [A-Za-z0-9._-], so two different codes in one file can
+    // reduce to the same one ("α-1" and "β-1"). The later row gets its own code
+    // rather than overwriting the sample the earlier row wrote.
+    if (rawCodeByCode.has(code) && rawCodeByCode.get(code) !== rawCode) {
+      let suffix = 2;
+      while (rawCodeByCode.has(`${code}-${suffix}`)) {
+        suffix += 1;
+      }
+      recoded.push({ from: rawCode, to: `${code}-${suffix}` });
+      code = `${code}-${suffix}`;
+    }
+    rawCodeByCode.set(code, rawCode);
+    if (rawCode) {
+      codeByRawCode.set(rawCode, code);
+    }
     const index = state.samples.findIndex((item) => item.code === code);
     const base = index >= 0 ? state.samples[index] : {
       id: `sample-${makeId()}`,
@@ -192,15 +209,20 @@ export function mergeSamplesFromCsv(state, rows, makeId = defaultMakeId) {
       compoundStructure: null,
       cellPassage: null
     };
+    // Columns absent from the CSV keep their stored value; present ones win,
+    // and a present-but-blank cell clears. A blank type keeps the stored one:
+    // falling back to plasmid would drop every field of the real type.
+    const column = (key) => (key in row ? String(row[key] || '').trim() : String(base[key] || ''));
+    // ponytail: keep whatever type string is given (formatted); display-time normalizeSampleType maps unknowns.
+    const type = String(row.type || '').trim().toLowerCase().replace(/\s+/g, '_') || base.type || 'plasmid';
     const record = {
       ...base,
       code,
       name,
       type,
-      lot: String(row.lot || '').trim(),
-      concentration: String(row.concentration || '').trim(),
-      notes: String(row.notes || '').trim(),
-      // Columns absent from the CSV keep their stored value; present ones win.
+      lot: column('lot'),
+      concentration: column('concentration'),
+      notes: column('notes'),
       details: normalizeSampleDetails(type, { ...base.details, ...row }),
       updatedAt: new Date().toISOString()
     };
@@ -213,5 +235,5 @@ export function mergeSamplesFromCsv(state, rows, makeId = defaultMakeId) {
       created += 1;
     }
   }
-  return { created, updated };
+  return { created, updated, recoded };
 }

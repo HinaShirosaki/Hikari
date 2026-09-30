@@ -40,6 +40,8 @@ async function readAssetBytes(relativePath) {
   return result.bytes;
 }
 
+// fetch() of a file:// asset fails in some packaged builds; fall back to
+// reading the bytes through the main process.
 async function fetchLocalArrayBuffer(relativePath) {
   try {
     const response = await fetch(assetUrl(relativePath));
@@ -76,6 +78,10 @@ async function fetchModelMetadata(relativePath) {
   }
 }
 
+// Loads onnxruntime-web and both U-Nets once per session (cached promise):
+// plate_unet segments the dish, colony_heatmap_unet outputs a per-pixel
+// "colony centre" heatmap. Model settings come from the sidecar .json files,
+// falling back to FALLBACK_METADATA.
 async function loadModelRuntime() {
   if (!modelRuntimePromise) {
     modelRuntimePromise = (async () => {
@@ -109,6 +115,8 @@ async function loadModelRuntime() {
   return modelRuntimePromise;
 }
 
+// Resizes the image to the model's square input and packs it as planar
+// float RGB in [0,1], shape [1, 3, imgSize, imgSize] (all R, then G, then B).
 function buildInputTensor(ort, sourceCanvas, imgSize) {
   const inputCanvas = document.createElement('canvas');
   inputCanvas.width = imgSize;
@@ -183,6 +191,10 @@ function normalizeMinDistance(value, fallback) {
   return Math.min(50, Math.max(1, number));
 }
 
+// Colony detection from the heatmap: a pixel is a peak if it is >= threshold
+// and no pixel within minDistance (a square window) is higher. Touching peak
+// pixels (plateaus) are merged by flood fill into one colony at their centroid,
+// scored by the highest value. O(width x height x minDistance^2).
 function findHeatmapPeaks(heatmap, width, height, threshold, minDistance) {
   const total = width * height;
   const peakMask = new Uint8Array(total);
@@ -279,6 +291,8 @@ function findHeatmapPeaks(heatmap, width, height, threshold, minDistance) {
   return peaks;
 }
 
+// Plate detection: bounding box of the largest connected region above
+// threshold (8-connected flood fill). Smaller blobs, like glare, are ignored.
 function findLargestMaskBox(probabilities, width, height, threshold) {
   const total = width * height;
   const visited = new Uint8Array(total);
@@ -398,6 +412,10 @@ async function detectPlateMask(sourceCanvas, threshold) {
   };
 }
 
+// Counts colonies on an image. Only colonies inside the plate are kept: a mask
+// the user drew wins, otherwise the plate model's detected circle is used, and
+// with neither every peak counts. Coordinates are returned in source-image
+// pixels.
 export async function countColoniesWithModel(sourceCanvas, options = {}) {
   if (!sourceCanvas?.width || !sourceCanvas?.height) {
     throw new Error('Load a plate image before running the colony model.');

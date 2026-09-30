@@ -13,6 +13,7 @@ const BUFFER_VOLUME_FACTORS_L = {
   L: 1
 };
 
+// Below this (1 fL) a computed volume is float noise and rounds to 0.
 const VOLUME_EPSILON_L = 1e-15;
 const ADAPTIVE_VOLUME_UNITS = [
   { unit: 'L', factor: 1 },

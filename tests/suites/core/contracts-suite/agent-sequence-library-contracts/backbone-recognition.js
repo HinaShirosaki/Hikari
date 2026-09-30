@@ -3,7 +3,7 @@ module.exports = function registerAgentSequenceLibraryContractsBackboneRecogniti
   const __dirname = context.__dirname || process.cwd();
 
   const { assert, fsPromises, path, test, sequenceLibrary } = scope;
-    test('sequence library helper upserts recognized backbones into the SequenceViewer JSON store', async () => {
+    test('sequence library helper upserts recognized backbones into the DNA JSON store', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-store-'));
       try {
         const backbonePayload = {
@@ -44,10 +44,10 @@ module.exports = function registerAgentSequenceLibraryContractsBackboneRecogniti
           storagePath: storageRoot,
           backbone: backbonePayload
         });
-        assert.equal(upserted.relativePath, 'SequenceViewer/protein-builder-backbones.json');
+        assert.equal(upserted.relativePath, 'DNA/protein-builder-backbones.json');
         assert.equal(upserted.entry.backboneName, 'Backbone (HostVector)');
 
-        const storePath = path.join(storageRoot, 'SequenceViewer', 'protein-builder-backbones.json');
+        const storePath = path.join(storageRoot, 'DNA', 'protein-builder-backbones.json');
         const store = JSON.parse(await fsPromises.readFile(storePath, 'utf8'));
         assert.equal(store.schema_name, 'hikari_recognized_backbone_store');
         assert.equal(store.backbones.length, 1);
@@ -68,7 +68,7 @@ module.exports = function registerAgentSequenceLibraryContractsBackboneRecogniti
 
         const listed = await sequenceLibrary.listRecognizedBackbones({ storagePath: storageRoot });
         assert.equal(listed.results.length, 1);
-        assert.equal(listed.results[0].relativePath, 'SequenceViewer/protein-builder-backbones.json');
+        assert.equal(listed.results[0].relativePath, 'DNA/protein-builder-backbones.json');
         assert.equal(listed.results[0].insertionOffset, 16);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });

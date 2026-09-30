@@ -207,6 +207,8 @@ export function createProtocolPolishController({
     };
   }
 
+  // Side-by-side "polish": one LLM call rewrites the editor draft; the user
+  // compares and applies it. Applying keeps the draft's id and timestamps.
   async function onPolishProtocol() {
     if (localState.isProtocolPolishPending) {
       return;

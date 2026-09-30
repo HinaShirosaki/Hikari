@@ -35,6 +35,11 @@ export function mapNotebookEntryForLookupBridge(entry) {
   };
 }
 
+// Trimmed copy of app state sent with each agent request so tools can answer
+// without a round-trip. Scoped to one project when projectId is set, and
+// capped per collection (e.g. last 120 pages, 500 protocols) to bound the
+// payload. Full notebook pages are not sent: notebook_lookup_bridge carries
+// short summaries, with `complete: false` when older pages were cut.
 export function buildStateSnapshot(state, projectId) {
   const agentChatContext = state.agentChatContext && typeof state.agentChatContext === 'object'
     ? state.agentChatContext

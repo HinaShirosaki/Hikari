@@ -1,6 +1,10 @@
 import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
 import { extractStructuredThinkingTrace, summarizeCodexAgent, summarizeInventoryLookup, summarizeNotebookAppend, summarizeNotebookDraft, summarizeNotebookLookup, summarizeProtocolGeneration, summarizePurchaseRecommendation, summarizeScienceResult } from './response/result-summaries.js';
 
+// Flattens the main-process agent result into one renderer shape. Tool results
+// arrive under snake_case keys (protocol_to_notebook, notebook_draft, ...),
+// sometimes camelCase or nested under codex_agent. A clarifying question is
+// kept only while the agent status says it is waiting for the user.
 export function normalizeAgentResponse(result) {
   const protocolWorkflow = result?.protocol_to_notebook && typeof result.protocol_to_notebook === 'object'
     ? result.protocol_to_notebook

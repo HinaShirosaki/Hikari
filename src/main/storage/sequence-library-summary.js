@@ -5,7 +5,7 @@ const { readSqlRows } = require('./storage-sql-read');
 const { cleanText, loadSqlJs } = require('./storage-utils');
 
 async function summarizeSequenceLibrary(storagePath) {
-  const sequenceDbPath = path.join(storagePath, 'SequenceViewer', 'sequence-library.sqlite');
+  const sequenceDbPath = path.join(storagePath, 'DNA', 'sequence-library.sqlite');
   const summary = {
     exists: false,
     path: sequenceDbPath,

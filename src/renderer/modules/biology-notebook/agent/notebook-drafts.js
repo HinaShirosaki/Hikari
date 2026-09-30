@@ -26,6 +26,8 @@ export function findNotebookEntryByProposalId(notebookEntries, proposalId) {
   )) || null;
 }
 
+// A draft maps to at most one page: matched by the agent's proposal id first
+// (stable across retries), then by the template's entry id.
 export function findNotebookEntryForDraft(notebookEntries, draft) {
   const byProposalId = findNotebookEntryByProposalId(
     notebookEntries,
@@ -185,6 +187,12 @@ function notifyNotebookEntriesChanged(callback) {
   }
 }
 
+// Agent notebook drafts come in two save modes:
+//   auto_save_draft      -> saved straight away as an executed page (here)
+//   confirm_before_save  -> shown for review; createPlannedNotebookPage saves
+//                           it as a 'planned' page once the user accepts.
+// Both need a project and protocol binding; otherwise nothing is saved and
+// save.status explains why. Callers persist.
 export function applyNotebookDraftAutoSave(rawDraft, requestText, options = {}) {
   const draft = normalizeNotebookDraft(rawDraft);
   if (!draft || draft.save.mode !== 'auto_save_draft') {
@@ -242,6 +250,8 @@ export function applyNotebookDraftAutoSave(rawDraft, requestText, options = {}) 
   };
 }
 
+// Idempotent: accepting the same proposal twice returns the existing page
+// (status 'already_created') instead of creating a duplicate.
 export function createPlannedNotebookPage(rawDraft, requestText, options = {}) {
   const draft = normalizeNotebookDraft(rawDraft);
   if (!draft || draft.save.mode !== 'confirm_before_save') {

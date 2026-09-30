@@ -36,6 +36,11 @@ function renderAttributes(attributes = {}) {
     .join('');
 }
 
+// Expand/collapse memory for a folder tree. Only the exceptions to
+// defaultExpanded are stored (collapsed keys when default-open, expanded keys
+// when default-closed), so a newly created folder takes the default without a
+// write. Pass the get/set pairs to persist the set in app state; otherwise it
+// lives in memory. prune() drops keys for folders that no longer exist.
 export function createFolderTreeState({
   defaultExpanded = true,
   getExpandedKeys = null,
@@ -131,6 +136,9 @@ export function createFolderTreeState({
   };
 }
 
+// Shared markup for a folder row plus its children container. The disclosure
+// button carries data-folder-tree-toggle; list-level click handlers read it
+// with getFolderTreeToggleKey rather than binding per-row listeners.
 export function renderFolderTreeNode({
   key = '',
   expanded = false,

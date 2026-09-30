@@ -59,11 +59,14 @@ export function bindSampleRegistryEvents(ctx) {
         showTransientNotice('Import failed: no rows with a "name" column were found.', { type: 'error' });
         return;
       }
-      const { created, updated } = mergeSamplesFromCsv(ctx.state, rows);
+      const { created, updated, recoded } = mergeSamplesFromCsv(ctx.state, rows);
       ctx.persist();
       renderLinkedContainerOptions(ctx);
       renderList(ctx);
-      setSampleCsvStatus(ctx, `Imported ${created + updated} samples (${created} new, ${updated} updated).`);
+      const recodedNote = recoded.length
+        ? ` Renamed codes that clashed with an earlier row: ${recoded.map(({ from, to }) => `${from} → ${to}`).join(', ')}.`
+        : '';
+      setSampleCsvStatus(ctx, `Imported ${created + updated} samples (${created} new, ${updated} updated).${recodedNote}`);
     } catch (error) {
       setSampleCsvStatus(ctx, `Import failed: ${error?.message || 'could not read the CSV file.'}`, true);
       showTransientNotice(`Import failed: ${error?.message || 'could not read the CSV file.'}`, { type: 'error' });

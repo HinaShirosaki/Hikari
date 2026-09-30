@@ -6,6 +6,10 @@ import {
   parseConcentrationMagnitude
 } from './concentration-utils.js';
 
+// Groups the plate layout into one dilution series per sample, ordered along
+// the concentration axis. The chain runs up to the last well with a positive
+// concentration; later wells (e.g. a 0 vehicle control) are "trailing" and
+// left out of the recipe.
 export function buildSerialDilutionGroups({
   layout,
   sampleAxis,
@@ -91,6 +95,14 @@ export function buildSerialDilutionGroups({
     });
 }
 
+// Serial-dilution recipe where every well ends with volumePerWellUl.
+// Solved from the last well backwards: each well is prepared with extra volume
+// equal to what it hands on to the next well, so
+//   prep_i  = finalVolume + transfer_out_i
+//   in_i    = ratio_i * prep_i   (ratio_i = C_i / C_{i-1}, must be < 1)
+//   buffer_i = prep_i - in_i
+// The last well prepares the same way and discards its surplus so all wells
+// match. Well 0 is made from stock with C_0 / C_stock of its prep volume.
 export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText, concentrationUnit = '' }) {
   const notes = [];
   const trailingOtherEntries = group.trailingEntries.filter((entry) => entry.magnitude !== 0);

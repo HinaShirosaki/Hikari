@@ -8,12 +8,10 @@ const {
   uniquePlaceholderIds
 } = require('../../../shared/protocol-normalization.mjs');
 
-function cleanText(value, maxLength = 1200) {
-  const text = String(value || '').trim();
-  if (!text) {
-    return '';
-  }
-  return maxLength > 0 ? text.slice(0, maxLength) : text;
+// The length argument is ignored on purpose: this output replaces the user's
+// protocol on an update, and cutting it there loses their text.
+function cleanText(value) {
+  return String(value || '').trim();
 }
 
 function parseJsonObject(raw = '') {
@@ -229,8 +227,7 @@ function createProtocolGenerationRuntime(deps = {}) {
           placeholders: parsed.placeholders
         };
       })
-      .filter(Boolean)
-      .slice(0, 120);
+      .filter(Boolean);
     return uniquePlaceholderIds(steps, () => createGeneratedId('ph'));
   }
 
@@ -262,7 +259,7 @@ function createProtocolGenerationRuntime(deps = {}) {
       createdAt,
       updatedAt,
       purpose: cleanText(source.purpose || inputSource.purpose || inputSource.message, 600),
-      materials: normalizeMaterials(source.materials || inputSource.materials).slice(0, 60),
+      materials: normalizeMaterials(source.materials || inputSource.materials),
       steps,
       troubleshooting: normalizeTroubleshooting(
         source.troubleshooting || source.notes || payloadSource.notes || inputSource.troubleshooting

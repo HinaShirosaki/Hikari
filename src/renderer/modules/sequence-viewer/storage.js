@@ -1,11 +1,10 @@
-import { parseGenBankLocationSegments } from './parsing/genbank.js';
+import { parseGenBankLocationSegments, sanitizeGenbankToken } from './parsing/genbank.js';
 import {
   getFeatureTypeGenbankKey,
   normalizeFeatureType
 } from './feature-types.js';
 import {
   clamp,
-  normalizeRecordName,
   normalizeSequenceText,
   normalizeTopology
 } from './shared.js';
@@ -54,6 +53,11 @@ function wrapGenbankLine(value, firstPrefix, continuationPrefix = firstPrefix, w
     if (splitAt <= 0 || splitAt < Math.floor(available * 0.35)) {
       splitAt = available;
     }
+    // Never between the two quotes of a "" escape: the reader would take the
+    // first one as the end of the value.
+    while (splitAt > 1 && remaining[splitAt - 1] === '"' && remaining[splitAt] === '"') {
+      splitAt -= 1;
+    }
 
     const chunk = remaining.slice(0, splitAt);
     lines.push(`${prefix}${chunk}`);
@@ -62,15 +66,6 @@ function wrapGenbankLine(value, firstPrefix, continuationPrefix = firstPrefix, w
   }
 
   return lines;
-}
-
-function sanitizeGenbankToken(value, fallback = 'sequence', maxLength = 16) {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/\s+/g, '_')
-    .replace(/[^A-Za-z0-9_.-]/g, '_')
-    .slice(0, maxLength);
-  return cleaned || fallback;
 }
 
 function sanitizeGenbankFeatureType(type) {
@@ -87,12 +82,14 @@ function sanitizeGenbankFeatureType(type) {
   return normalizeFeatureType(cleaned || 'misc_feature');
 }
 
+// GenBank has no line breaks inside a qualifier, so those become spaces; a
+// literal " is escaped as "" and comes back intact.
 function sanitizeGenbankQualifierValue(value) {
   return String(value ?? '')
     .replace(/\r?\n/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-    .replace(/"/g, '\'');
+    .replace(/"/g, '""');
 }
 
 function sanitizeGenbankProteinQualifierValue(value) {
@@ -185,7 +182,7 @@ export function buildRecordGenbankText(record) {
   const locusName = sanitizeGenbankToken(record?.name || 'sequence', 'sequence', 16);
   const dateStamp = toGenbankDate(new Date());
   const sourceFormat = String(record?.sourceFormat || '').trim().toUpperCase() || 'SEQUENCE_VIEWER';
-  const definition = normalizeRecordName(record?.description || record?.name || '.', '.');
+  const definition = String(record?.description || record?.name || '').trim().replace(/\s+/g, ' ') || '.';
   const features = Array.isArray(record?.features) ? record.features : [];
   const lines = [
     `LOCUS       ${locusName.padEnd(16, ' ')}${String(sequence.length).padStart(11, ' ')} bp    DNA     ${topology.padEnd(8, ' ')} SYN ${dateStamp}`,

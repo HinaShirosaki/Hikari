@@ -6,6 +6,8 @@ export function sanitizeFolderName(value) {
     .replace(/^_+|_+$/g, '');
 }
 
+// On-disk layout: <root>/Project/<project>/Notebook/<protocol>__<entryId>.
+// The entry id suffix keeps two pages with the same protocol name apart.
 export function buildNotebookFolderPath({ storagePath, projectName, protocolName, entryId } = {}) {
   const rootPath = String(storagePath || '').trim();
   if (!rootPath) {
@@ -30,6 +32,7 @@ export function joinStoragePath(rootPath, relativePath) {
   return `${root}/${relative}`;
 }
 
+// Compares with a trailing "/" so "/data/root2" is not inside "/data/root".
 export function isPathInsideRoot(rootPath, targetPath) {
   const root = normalizeStoragePath(rootPath);
   const target = normalizeStoragePath(targetPath);

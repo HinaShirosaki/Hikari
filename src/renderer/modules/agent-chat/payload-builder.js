@@ -25,6 +25,7 @@ export function createAgentPayloadBuilder({
       : 4000;
   }
 
+  // Same shape and limits as normalizeHiddenContext in scoped-state.js.
   function normalizeHiddenContext(context = {}) {
     const source = context && typeof context === 'object' ? context : {};
     const text = trimText(source.text, getHiddenContextTextLimit(source));
@@ -70,6 +71,9 @@ export function createAgentPayloadBuilder({
     ].slice(0, 3);
   }
 
+  // A one-shot hidden context for the next message (e.g. "Ask about this
+  // selection"); consumeHiddenContexts clears it once the message is sent.
+  // The scope's automatic contexts come first; three in total at most.
   function primeHiddenContext(context = {}) {
     const normalized = normalizeHiddenContext(context);
     if (!normalized) {

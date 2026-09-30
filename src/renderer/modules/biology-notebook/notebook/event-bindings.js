@@ -231,6 +231,10 @@ function bindNotebookEvents({
     toolSidebarController.clearSelection();
     void linkedWorkActions.onAddAssayClick();
   });
+  elements.notebookAddGelBtn?.addEventListener('click', () => {
+    toolSidebarController.clearSelection();
+    void linkedWorkActions.onAddGelClick();
+  });
   elements.notebookAddSamplesBtn?.addEventListener('click', () => {
     toolSidebarController.clearSelection();
     quickSampleController.open();

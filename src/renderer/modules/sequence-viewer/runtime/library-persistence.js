@@ -14,6 +14,10 @@ import {
 export function createLibraryPersistenceActions(ctx) {
   const { state, actions, controllers } = ctx;
 
+  // Every library write sends the record rendered as GenBank text (the .gbk
+  // on disk is the durable copy) plus summary fields for the library index.
+  // Entries are 'temporary' (auto-kept, e.g. opened files) until the user
+  // explicitly saves them, which marks them 'saved'.
   async function persistRecordToLibrary(record, persistOptions = {}) {
     const bridge = actions.getBridge();
     const storagePath = actions.getStoragePath();
@@ -67,6 +71,8 @@ export function createLibraryPersistenceActions(ctx) {
     };
   }
 
+  // Feature edits autosave only for records already in the library; an
+  // unsaved record keeps them in memory until the user saves.
   async function persistFeatureMutation(record, actionLabel, mutationOptions = {}) {
     if (!state.activeEntryId) {
       actions.setStatus(`${actionLabel} Save the record to persist changes.`);

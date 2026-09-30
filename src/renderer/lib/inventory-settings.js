@@ -58,6 +58,8 @@ export function normalizeSampleInventoryLocations(rawValue) {
   return locations.length ? locations : [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS];
 }
 
+// Configured locations plus any location that still holds containers, so
+// removing a location in settings never hides stored samples.
 export function getSampleInventoryLocationNames(settings = {}, inventory = {}) {
   const configured = normalizeSampleInventoryLocations(settings?.sampleInventoryLocations);
   const inventoryNames = inventory && typeof inventory === 'object' && !Array.isArray(inventory)
@@ -86,6 +88,9 @@ export function getSampleInventoryLocationDisplay(locationName = '') {
   };
 }
 
+// Unknown types collapse to 'other'; legacy 'compound' is read as 'chemical'.
+// User-defined types keep a 'custom_' prefix so they never collide with a
+// future built-in type.
 export function normalizeSampleType(type) {
   const key = String(type || '').trim().toLowerCase();
   if (!key) {

@@ -1,3 +1,6 @@
+// Plain copy of a protocol (name, steps, placeholders) for storing on a page
+// or record, so later edits to the protocol do not rewrite past pages.
+// Placeholders without an id get a positional one.
 export function cloneProtocolSnapshot(protocol) {
   if (!protocol || typeof protocol !== 'object') {
     return null;

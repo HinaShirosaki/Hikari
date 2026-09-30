@@ -95,6 +95,11 @@ function renderPaperCard(paper = {}) {
   ].join('');
 }
 
+// Project dashboard card for scheduled paper finding. Schedules are main-
+// process scheduled tasks (one per project, matched by project id in the task
+// metadata); each run asks the agent to search the web for papers matching the
+// project's requirements and returns metadata-only cards (no PDF download).
+// This controller only edits the schedule and shows the last run's results.
 export function createProjectPaperFinderController({
   host,
   state,
@@ -263,6 +268,8 @@ export function createProjectPaperFinderController({
     );
   }
 
+  // loadRevision guards against a slow task list for a project the user has
+  // already navigated away from.
   async function load(project) {
     activeProject = project && typeof project === 'object' ? project : null;
     activeTask = null;

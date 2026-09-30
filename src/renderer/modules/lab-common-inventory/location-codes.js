@@ -20,6 +20,10 @@ export function casCodeNumber(casNumber) {
   return ((hash >>> 0) % CAS_CODE_SPAN) + CAS_CODE_MIN;
 }
 
+// Chemical location codes look like "B123456": a letter (or AA, AB...) per
+// storage location plus a number. The number comes from the CAS hash when
+// there is a CAS, otherwise the next free sequential number for that location.
+// Letters are assigned once per location and kept in locationCodeMap.
 export function installLocationCodeHelpers(ctx) {
   const { state } = ctx;
   const ensureLabInventoryShape = () => ctx.ensureLabInventoryShape();
@@ -113,6 +117,8 @@ function assignLocationCode(location, existingCode = '', casNumber = '') {
   state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, nextNumber);
   return `${letter}${nextNumber}`;
 }
+// Re-derives every chemical's code and repairs the per-location counters;
+// returns true if anything changed so the caller knows to persist.
 function ensureChemicalCodes() {
   ensureLabInventoryShape();
   const nextMap = {};

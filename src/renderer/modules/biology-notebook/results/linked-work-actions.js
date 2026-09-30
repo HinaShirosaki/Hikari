@@ -16,7 +16,8 @@ export function createLinkedWorkActions({
   getPdfSettings,
   previewImageLoader,
   resultFileAttachmentLoader,
-  onCreateLinkedAssay
+  onCreateLinkedAssay,
+  onCreateLinkedGel
 } = {}) {
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
@@ -32,6 +33,16 @@ export function createLinkedWorkActions({
       projectId: entry.projectId,
       notebookType: entry.notebookType || notebookType
     });
+  }
+
+  async function onAddGelClick() {
+    const entry = await ensureEntry();
+    if (!entry || typeof onCreateLinkedGel !== 'function') return;
+    try {
+      await onCreateLinkedGel({ notebookEntryId: entry.id });
+    } catch (error) {
+      showTransientNotice(error?.message || 'Could not open Gel.', { type: 'error' });
+    }
   }
 
   async function exportEntryPdf(entryId, { print = false } = {}) {
@@ -134,6 +145,7 @@ export function createLinkedWorkActions({
 
   return {
     onAddAssayClick,
+    onAddGelClick,
     exportEntryPdf,
     exportProjectPagesPdf
   };

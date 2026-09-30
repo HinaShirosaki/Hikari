@@ -19,6 +19,8 @@ export function formatDateLocal(date) {
   return `${year}-${month}-${day}`;
 }
 
+// YYYY-MM-DD as a local-midnight Date (Date.parse would read it as UTC and
+// shift the day west of Greenwich). Rejects impossible dates like 02-30.
 export function parseLocalDate(dateString) {
   const raw = String(dateString || '').trim();
   const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -201,6 +203,10 @@ function hasSampleReference(state, sample) {
   });
 }
 
+// Older builds stored passage reminders as placeholder cell_line samples.
+// Only samples that look auto-generated (code derived from the name, no lot,
+// notes, location, links or structure, and never referenced by a notebook
+// page) are treated as reminders; anything a user touched stays a sample.
 function isLegacyDashboardPassageSample(state, sample) {
   if (!sample || typeof sample !== 'object' || Array.isArray(sample)) {
     return false;
@@ -362,6 +368,8 @@ export function ensureDashboardState(state) {
   return changed;
 }
 
+// One-time move of those placeholder samples into dashboard.passageReminders,
+// guarded by legacyPassageSamplesMigrated. Returns true if it ran.
 export function migrateLegacyPassageSamples(state) {
   ensureDashboardState(state);
   const dashboard = state.settings.dashboard;

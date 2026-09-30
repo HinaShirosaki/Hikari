@@ -6,11 +6,11 @@
 
 The sequence library lives under the chosen storage root in a dedicated folder:
 
-- `SequenceViewer/sequence-library.sqlite`
-- `SequenceViewer/entries/<entry-id>/...`
-- `SequenceViewer/<folder>/` — one directory per library folder the user creates in the rail (renamed along with the folder; removed only once empty)
-- `SequenceViewer/protein-builder-backbones.json` and `SequenceViewer/protein-builder/backbones/` — recognized backbones saved from Protein Builder
-- `Project/<project>/Sequence/` — each project's sequence folder, beside its `Notebook/` folder; the library rail mirrors these as project folders
+- `DNA/sequence-library.sqlite`
+- `DNA/entries/<entry-id>/...`
+- `DNA/<folder>/` — one directory per library folder the user creates in the rail (renamed along with the folder; removed only once empty)
+- `DNA/protein-builder-backbones.json` and `DNA/protein-builder/backbones/` — recognized backbones saved from Protein Builder
+- `Project/<project>/DNA/` — each project's sequence folder, beside its `Notebook/` folder; the library rail mirrors these as project folders
 
 Each entry stores:
 
@@ -51,7 +51,7 @@ This function (in `entry-upsert.js`) is the heart of the library.
 It:
 
 1. validates that GBK and HTML content exist
-2. ensures the `SequenceViewer` directories exist
+2. ensures the `DNA` directories exist
 3. loads or creates the SQLite database
 4. resolves the entry id and final display name
 5. writes the GBK and HTML files into the entry folder

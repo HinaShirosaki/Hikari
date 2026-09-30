@@ -27,6 +27,9 @@ function splitTopLevelArguments(raw) {
   return parts.map((part) => part.trim()).filter(Boolean);
 }
 
+// GenBank locations are 1-based inclusive; segments here are 0-based,
+// end-exclusive. start > end means the feature wraps the origin of a circular
+// sequence, so it becomes two segments (start..end-of-sequence, 0..end).
 function normalizeFeatureRange(startRaw, endRaw, sequenceLength, strand) {
   const len = Math.max(0, Number(sequenceLength) || 0);
   if (!len) {
@@ -58,6 +61,8 @@ function normalizeFeatureRange(startRaw, endRaw, sequenceLength, strand) {
   ];
 }
 
+// "123", "10..200", "<10..>200", "102^103", or "ACC:10..20" (the accession
+// prefix is ignored). Fuzzy-end markers are dropped: only the numbers are used.
 function parseSimpleLocationAtom(atom, sequenceLength, strand = 1) {
   const raw = String(atom || '').trim();
   if (!raw) {
@@ -77,6 +82,8 @@ function parseSimpleLocationAtom(atom, sequenceLength, strand = 1) {
   return normalizeFeatureRange(numbers[0], numbers[0], sequenceLength, strand);
 }
 
+// Recursive location grammar: complement(...) flips the strand, join/order
+// concatenate their parts, anything else is a simple range.
 function parseGenBankLocationSegments(rawExpression, sequenceLength, strand = 1) {
   const expression = String(rawExpression || '').replace(/\s+/g, '');
   if (!expression) {
@@ -99,6 +106,32 @@ function parseGenBankLocationSegments(rawExpression, sequenceLength, strand = 1)
   return parseSimpleLocationAtom(expression, sequenceLength, strand);
 }
 
+// The LOCUS name: GenBank allows 16 characters and no spaces.
+function sanitizeGenbankToken(value, fallback = 'sequence', maxLength = 16) {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/[^A-Za-z0-9_.-]/g, '_')
+    .slice(0, maxLength);
+  return cleaned || fallback;
+}
+
+// Labels, notes and the definition are the file's own text: undo the line
+// wrapping, never cut it (normalizeRecordName caps record names at 120).
+function unwrapText(value, fallback = '') {
+  return String(value || '').trim().replace(/\s+/g, ' ') || fallback;
+}
+
+// A literal " inside a qualifier value is written "", so the value ends on an
+// odd run of trailing quotes, never on the second quote of an escape.
+function closesQualifierValue(text) {
+  return (text.length - text.replace(/"+$/, '').length) % 2 === 1;
+}
+
+function unescapeQualifierText(text) {
+  return text.replace(/""/g, '"');
+}
+
 function parseFeatureQualifier(line) {
   const token = String(line || '').trim().replace(/^\//, '');
   if (!token) {
@@ -111,24 +144,17 @@ function parseFeatureQualifier(line) {
   }
 
   const key = token.slice(0, equalIndex).trim().toLowerCase();
-  let value = token.slice(equalIndex + 1).trim();
+  const value = token.slice(equalIndex + 1).trim();
 
-  const quoted = value.startsWith('"');
-  if (quoted) {
-    value = value.slice(1);
+  if (!value.startsWith('"')) {
+    return { key, value: value.endsWith('"') ? value.slice(0, -1) : value, openQuote: false };
   }
-
-  let openQuote = false;
-  if (value.endsWith('"')) {
-    value = value.slice(0, -1);
-  } else if (quoted) {
-    openQuote = true;
-  }
-
+  const quotedText = value.slice(1);
+  const closed = closesQualifierValue(quotedText);
   return {
     key,
-    value,
-    openQuote
+    value: unescapeQualifierText(closed ? quotedText.slice(0, -1) : quotedText),
+    openQuote: !closed
   };
 }
 
@@ -193,12 +219,8 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
     }
 
     if (current.pendingQualifierKey) {
-      let text = continuation;
-      let closed = false;
-      if (text.endsWith('"')) {
-        text = text.slice(0, -1);
-        closed = true;
-      }
+      const closed = closesQualifierValue(continuation);
+      const text = unescapeQualifierText(closed ? continuation.slice(0, -1) : continuation);
       const previous = current.qualifiers[current.pendingQualifierKey];
       if (Array.isArray(previous)) previous[previous.length - 1] = [previous.at(-1), text].filter(Boolean).join(' ');
       else current.qualifiers[current.pendingQualifierKey] = [previous, text].filter(Boolean).join(' ');
@@ -225,22 +247,19 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
         start: segment.start,
         end: segment.end
       }));
-      const name = normalizeRecordName(
+      const name = unwrapText(
         entry.qualifiers.label
           || entry.qualifiers.gene
           || entry.qualifiers.locus_tag
           || entry.qualifiers.product
-          || entry.type
-          || `feature_${index + 1}`,
+          || entry.type,
         `feature_${index + 1}`
       );
 
-      const description = normalizeRecordName(
+      const description = unwrapText(
         entry.qualifiers.note
           || entry.qualifiers.product
           || entry.qualifiers.function
-          || '',
-        ''
       );
       const translation = normalizeProteinTranslation(entry.qualifiers.translation || '');
       // A primer_bind written by this app carries the oligo it was designed as,
@@ -300,10 +319,15 @@ function parseGenBankRecords(rawInput) {
     const featuresMatch = block.match(/^\s*FEATURES\b([\s\S]*?)(?=^\s*ORIGIN\b)/im);
     const features = parseGenBankFeatureEntries(featuresMatch?.[1] || '', sequence.length);
 
+    // Hikari writes the record name as DEFINITION when there is no description,
+    // and LOCUS is that same name shortened; anything else is a real description.
+    const definition = unwrapText(block.match(/^DEFINITION[ \t]+(.*(?:\r?\n {12}.*)*)/m)?.[1]);
+    const description = definition === '.' || sanitizeGenbankToken(definition, '') === locusMatch?.[1] ? '' : definition;
+
     records.push({
       id: `genbank_${records.length + 1}`,
       name,
-      description: '',
+      description,
       sourceFormat: 'genbank',
       topology,
       sequence,
@@ -326,5 +350,6 @@ function parseGenBankRecords(rawInput) {
 
 export {
   parseGenBankLocationSegments,
-  parseGenBankRecords
+  parseGenBankRecords,
+  sanitizeGenbankToken
 };

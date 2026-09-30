@@ -49,7 +49,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
         const tempList = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'temporary' });
         assert.equal(tempList.entries.length, 1);
 
-        const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+        const sqlitePath = path.join(storageRoot, 'DNA', 'sequence-library.sqlite');
         const stat = await fsPromises.stat(sqlitePath);
         assert.equal(stat.isFile(), true);
       } finally {
@@ -59,7 +59,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
     test('sequence library helper recovers valid GBK entry folders missing from sqlite', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-recovery-'));
       try {
-        const entriesRoot = path.join(storageRoot, 'SequenceViewer', 'entries');
+        const entriesRoot = path.join(storageRoot, 'DNA', 'entries');
         const recoveredId = 'seq_1777332124519_recovered';
         const invalidId = 'seq_1777332124520_invalid';
         await fsPromises.mkdir(path.join(entriesRoot, recoveredId), { recursive: true });
@@ -204,7 +204,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
 
         // Previews render from the .gbk now, so no preview document is written.
         const entryFiles = await fsPromises.readdir(
-          path.join(storageRoot, 'SequenceViewer', 'entries', saved.entry.id)
+          path.join(storageRoot, 'DNA', 'entries', saved.entry.id)
         );
         assert.equal(entryFiles.some((name) => name.endsWith('.gbk')), true);
         assert.equal(entryFiles.some((name) => name.endsWith('.html')), false);
@@ -226,7 +226,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
           gbkText: 'LOCUS       AlignmentHost    12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n'
         });
 
-        const alignmentsDir = path.join(storageRoot, 'SequenceViewer', 'entries', saved.entry.id, 'alignments');
+        const alignmentsDir = path.join(storageRoot, 'DNA', 'entries', saved.entry.id, 'alignments');
         const manifestSessionDir = path.join(alignmentsDir, 'legacy_manifest_session');
         const folderOnlySessionDir = path.join(alignmentsDir, 'folder_only_session');
         await fsPromises.mkdir(manifestSessionDir, { recursive: true });
@@ -363,7 +363,7 @@ module.exports = function registerAgentSequenceLibraryContractsSequenceLibrarySt
 
         const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-utils.js'));
         const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-sql-read.js'));
-        const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+        const sqlitePath = path.join(storageRoot, 'DNA', 'sequence-library.sqlite');
         const bytes = await fsPromises.readFile(sqlitePath);
         const SQL = await loadSqlJs();
         const db = new SQL.Database(new Uint8Array(bytes));
@@ -514,7 +514,7 @@ ORIGIN
 //
 `
         });
-        const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+        const sqlitePath = path.join(storageRoot, 'DNA', 'sequence-library.sqlite');
         const sequenceLibraryDatabase = require(path.join(
           __dirname,
           'src',
@@ -595,7 +595,7 @@ ORIGIN
     test('sequence library helper lists recognized backbone artifacts with insertion metadata', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-listed-backbone-artifacts-'));
       try {
-        const artifactDir = path.join(storageRoot, 'SequenceViewer', 'protein-builder', 'backbones');
+        const artifactDir = path.join(storageRoot, 'DNA', 'protein-builder', 'backbones');
         await fsPromises.mkdir(artifactDir, { recursive: true });
         await fsPromises.writeFile(path.join(artifactDir, 'host.recognized-backbone.json'), JSON.stringify({
           schema_name: 'hikari_recognized_backbone',

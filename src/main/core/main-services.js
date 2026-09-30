@@ -1,5 +1,9 @@
 'use strict';
 
+const { createWorkspaceFileService } = require('../agent/file-access/service.js');
+const { registerAgentFileIpc } = require('../ipc/register-agent-file-ipc.js');
+const { FILE_ACCESS } = require('../../shared/ipc/channels');
+
 const {
   hasSupportedDataExtension,
   normalizeDataFilePath
@@ -125,7 +129,8 @@ function createMainServices(context = {}) {
     defaultDataFileName: DEFAULT_DATA_FILE_NAME,
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
-  const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
+  // Windows gets the multi-size .ico (tile-filling); macOS dev runs get the Dock-grid PNG.
+  const appIconPath = path.join(projectRoot, 'assets', processObject.platform === 'win32' ? 'icon.ico' : 'icon.png');
 
   // First, so everything constructed below is already covered.
   const errorReporting = createErrorReporting({
@@ -214,7 +219,15 @@ function createMainServices(context = {}) {
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime
   });
 
+  const fileAccess = createWorkspaceFileService({
+    getStorageRoot: appPaths.getStorageRoot,
+    getStorageRootRevision: appPaths.getStorageRootRevision,
+    privateDirectory: appPaths.getCodexCliWorkingDirectory(),
+    onChange: () => getMainWindow()?.webContents?.send(FILE_ACCESS.CHANGED)
+  });
+  registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog });
   const mcp = createMainMcpService({
+    fileAccess,
     agentToolRuntime: agents.agentToolRuntime,
     ipcMain,
     getMainWindow,
@@ -223,6 +236,7 @@ function createMainServices(context = {}) {
   });
 
   codex = createMainCodexService({
+    fileAccess,
     cleanText,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,

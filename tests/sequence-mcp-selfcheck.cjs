@@ -155,7 +155,7 @@ test('folder preservation, rollback, concurrent retries, and index recovery', ()
   assert.equal(results[0].ok, true, JSON.stringify(results));
   assert.equal(results[0].entry_id, results[1].entry_id);
   assert.equal(results[0].folder_id, folder.folder.id);
-  const dbPath = path.join(root, 'SequenceViewer', 'sequence-library.sqlite');
+  const dbPath = path.join(root, 'DNA', 'sequence-library.sqlite');
   await fs.rm(dbPath);
   const recovered = await call('sequence_get', { entry_id: results[0].entry_id });
   assert.equal(recovered.status, 'temporary');
@@ -180,17 +180,17 @@ test('circular feature index, duplicate qualifiers, artifact manifest and copied
   assert.deepEqual(value.record.features[0].qualifiers.db_xref, ['GeneID:1', 'GeneID:2']);
   assert.equal(value.record.features[0].qualifiers.pseudo, 'true');
   const { openDatabase, readRows } = require('../src/renderer/modules/sequence-viewer/main-process/sequence-library/database');
-  const db = await openDatabase(path.join(root, 'SequenceViewer/sequence-library.sqlite'));
+  const db = await openDatabase(path.join(root, 'DNA/sequence-library.sqlite'));
   try { assert.equal(readRows(db, 'SELECT sequence FROM sequence_features')[0].sequence, 'ATGGAACGTTTTAAATAA'); } finally { db.close(); }
   const built = await call('sequence_protein_build', { request_id: 'export-build', parts: [{ kind: 'custom', amino_acids: 'MHHHHHH' }] });
   assert.equal(built.ok, true, JSON.stringify(built));
   const changed = await call('sequence_feature_edit', { entry_id: parent.entry_id, expected_revision: parent.revision, feature_ref: parent.features.items[0].feature_ref, operation: 'replace', mode: 'annotation_only', feature: { name: 'kept' }, request_id: 'export-edit' });
-  const entries = (await fs.readdir(path.join(root, 'SequenceViewer', 'entries'), { recursive: true })).map((p) => String(p).split(path.sep).join('/'));
+  const entries = (await fs.readdir(path.join(root, 'DNA', 'entries'), { recursive: true })).map((p) => String(p).split(path.sep).join('/'));
   assert.ok(entries.some(e => e.endsWith(`.constructs/${built.construct_id}.json`)));
   assert.ok(entries.some(e => e.endsWith(`${changed.entry_id}/agent-design.json`)));
   const copy = await fs.mkdtemp(path.join(os.tmpdir(), 'sequence-bundle-copy-'));
   try {
-    await fs.cp(path.join(root, 'SequenceViewer'), path.join(copy, 'SequenceViewer'), { recursive: true });
+    await fs.cp(path.join(root, 'DNA'), path.join(copy, 'DNA'), { recursive: true });
     const loaded = await store.load(copy, changed.entry_id);
     assert.equal(loaded.entry.name, changed.name);
     assert.deepEqual(loaded.record.features[0].qualifiers.db_xref, ['GeneID:1', 'GeneID:2']);
@@ -208,7 +208,7 @@ test('index publication failure rolls back new files, and promotion retains prov
   try { result = await call('sequence_feature_edit', args); } finally { fs.rename = rename; }
   assert.equal(result.ok, false);
   assert.equal((await call('sequence_list')).total, 1);
-  const dirs = await fs.readdir(path.join(root, 'SequenceViewer/entries'));
+  const dirs = await fs.readdir(path.join(root, 'DNA/entries'));
   assert.deepEqual(dirs, ['parent']);
   const success = await call('sequence_feature_edit', args);
   assert.equal(success.ok, true, JSON.stringify(success));
@@ -296,7 +296,7 @@ test('feature insertions, overlaps, and exact discontinuous deletion preserve DN
 
 test('concurrent dead-owner recovery keeps library writers serialized', () => fixture(async ({ root }) => {
   const { withLibraryLock } = require('../src/renderer/modules/sequence-viewer/main-process/sequence-library/operation-lock');
-  const lockPath = path.join(root, 'SequenceViewer', '.operation-lock');
+  const lockPath = path.join(root, 'DNA', '.operation-lock');
   await fs.mkdir(lockPath, { recursive: true });
   await fs.writeFile(path.join(lockPath, 'owner'), '2147483647');
   let active = 0;

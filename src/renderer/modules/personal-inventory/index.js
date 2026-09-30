@@ -7,6 +7,13 @@ import { installSectionNavigation } from './section-navigation.js';
 import { installStructureActions } from './structure-actions.js';
 import { installStructureState } from './structure-state.js';
 
+// Sample storage (freezers, boxes, plates). Data model:
+//   state.inventory[location]        -> containers { id, type, folderId, wells }
+//   state.inventoryFolders[location] -> folders { id, parentFolderId }
+//   sample.inventoryLink             -> { section: location, containerId, wellIndex }
+// Samples live in state.samples and point at their slot; containers never
+// list their samples. wellIndex is null for a single (non-grid) container.
+// install* functions share one ctx; later ones call earlier ones through it.
 export function initPersonalInventory(options = {}) {
   const ctx = createPersonalInventoryContext(options);
   installStructureState(ctx);

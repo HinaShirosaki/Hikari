@@ -118,6 +118,11 @@ function summarizeImportMatrix(matrix) {
   };
 }
 
+// Heuristic score for "this block is the plate readout". Rewards mostly
+// numeric, densely filled blocks, and blocks framed by plate headers (1..N
+// above, A..H or 1..N to the left). Penalises blocks whose own first row or
+// column is such a header, i.e. a window shifted one cell onto the labels.
+// Blocks that are mostly text are rejected outright (null).
 function scoreImportCandidate({ matrix, rows, startRowIndex, startColumnIndex, rowCount, columnCount }) {
   const stats = summarizeImportMatrix(matrix);
   if (!stats.nonBlankCount || !stats.numericCount) {
@@ -174,6 +179,13 @@ function scoreImportCandidate({ matrix, rows, startRowIndex, startColumnIndex, r
   };
 }
 
+// Finds where a plate-reader export keeps its rows x columns matrix: slides a
+// plate-sized window over every sheet, scores each position, and keeps those
+// scoring >= 35. Returns up to 12, best first: the best per sheet always, plus
+// any other within 18 points of the overall best, so the user can pick among
+// multiple reads (e.g. two wavelengths) in one file.
+// ponytail: brute-force window scan, O(sheet cells x plate cells); fine for
+// reader exports, slow on a huge spreadsheet.
 export function detectAssayResultMatrixCandidates(tables, def) {
   const rowCount = Number(def?.rows);
   const columnCount = Number(def?.columns);
@@ -241,6 +253,8 @@ export function detectAssayResultMatrixCandidates(tables, def) {
   return selected.slice(0, 12);
 }
 
+// The block of the plate to import into: the bounding box of mapped wells,
+// or the whole plate when nothing is mapped yet.
 export function getAssayResultImportTarget(layout, fallbackDef) {
   const mappedCells = (Array.isArray(layout) ? layout : [])
     .map((item) => parseWellId(item?.well))

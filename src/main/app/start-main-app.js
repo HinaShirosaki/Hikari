@@ -139,7 +139,9 @@ function startMainApp() {
 
   app.whenReady()
     .then(async () => {
-      if (process.platform === 'darwin' && app.dock) {
+      // Packaged builds keep the bundle's .icns, which macOS masks and sizes like
+      // every other Dock icon; only `electron .` needs Hikari's icon pushed in.
+      if (process.platform === 'darwin' && app.dock && !app.isPackaged) {
         // A missing icon asset is cosmetic; it must not abort startup.
         try {
           app.dock.setIcon(mainServices.appIconPath);

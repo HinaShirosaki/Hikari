@@ -93,6 +93,9 @@ function ensurePaperAgentChatSessions(rootState) {
   return rootState.paperAgentChatSessions;
 }
 
+// Hidden context is page text sent to the model but not shown in the chat.
+// Whole notebook/assay pages get a 40k-char budget, a text selection 4k; at
+// most three are kept per request.
 function normalizeHiddenContext(context = {}) {
   const source = context && typeof context === 'object' ? context : {};
   const kind = trimText(source.kind || 'selection', 80);
@@ -227,6 +230,12 @@ function normalizeScopeContext(context = {}) {
   return normalizePaperAgentContext(context);
 }
 
+// Lets the same agent-chat code run as a right-rail chat per paper, notebook
+// page, assay, or the Home experiment log. It returns a Proxy of the root state
+// where `state.agentChat` reads and writes the chat for the current scope
+// (rootState.paperAgentChatSessions[scopeKey], despite the name used for all
+// scopes) instead of the main Agent view's chat. `agentChatContext` exposes
+// the normalized scope, and every other property passes through unchanged.
 export function createScopedAgentChatState(rootState, options = {}) {
   const getRawScopeContext = typeof options.getScopeContext === 'function'
     ? options.getScopeContext

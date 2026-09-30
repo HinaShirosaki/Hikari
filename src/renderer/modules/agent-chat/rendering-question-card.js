@@ -42,7 +42,7 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
       <p class="agent-user-question-kicker">Clarification Needed</p>
       <h4>${safeText(question.question)}</h4>
       ${question.context ? `<p class="agent-user-question-context">${safeText(question.context)}</p>` : ''}
-      ${options.length ? `
+      ${options.length || question.allow_custom ? `
         <div class="agent-user-question-options">
           ${options.map((option) => `
             <button
@@ -56,30 +56,30 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
               ${option.description ? `<small>${safeText(option.description)}</small>` : ''}
             </button>
           `).join('')}
-        </div>
-      ` : ''}
-      ${question.allow_custom ? `
-        <div class="agent-user-question-custom">
-          <label class="agent-user-question-custom-field">
-            <span>Other</span>
-            <input
-              type="text"
-              data-agent-question-custom-input="${safeText(messageKey)}"
-              placeholder="${safeText(question.placeholder)}"
-              ${disabledAttr}
-            />
-          </label>
-          <button
-            type="button"
-            class="primary-btn agent-send-icon-btn"
-            data-agent-question-submit="${safeText(messageKey)}"
-            aria-label="${safeText(question.submit_label)}"
-            title="${safeText(question.submit_label)}"
-            ${disabledAttr}
-          >
-            ${renderAgentChatIcon('send', { className: 'agent-send-icon' })}
-            <span class="sr-only">${safeText(question.submit_label)}</span>
-          </button>
+          ${question.allow_custom ? `
+            <div class="agent-user-question-custom">
+              <label class="agent-user-question-custom-field">
+                <span>Other</span>
+                <input
+                  type="text"
+                  data-agent-question-custom-input="${safeText(messageKey)}"
+                  placeholder="${safeText(question.placeholder)}"
+                  ${disabledAttr}
+                />
+              </label>
+              <button
+                type="button"
+                class="primary-btn agent-send-icon-btn"
+                data-agent-question-submit="${safeText(messageKey)}"
+                aria-label="${safeText(question.submit_label)}"
+                title="${safeText(question.submit_label)}"
+                ${disabledAttr}
+              >
+                ${renderAgentChatIcon('send', { className: 'agent-send-icon' })}
+                <span class="sr-only">${safeText(question.submit_label)}</span>
+              </button>
+            </div>
+          ` : ''}
         </div>
       ` : ''}
     </section>

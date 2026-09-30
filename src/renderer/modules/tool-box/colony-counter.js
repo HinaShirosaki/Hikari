@@ -133,14 +133,9 @@ export function initColonyCounterTool() {
     const maskNote = hasMask && total !== count
       ? `<p class="small-note">${count} of ${total} marker${total === 1 ? '' : 's'} are inside the active mask.</p>`
       : '';
-    const modelNote = colonyState.lastModelStats
-      ? `<p class="small-note">Model threshold ${colonyState.lastModelStats.threshold.toFixed(2)}, min distance ${colonyState.lastModelStats.minDistance}px, ${Math.round(colonyState.lastModelStats.elapsedMs).toLocaleString()} ms.${colonyState.lastModelStats.maskSource === 'plate-model' ? ' Plate detected automatically.' : ''}</p>`
-      : '';
     colonySummary.innerHTML = `
       <p><strong>${label}:</strong> ${count}</p>
       ${maskNote}
-      ${modelNote}
-      <p class="small-note">Left-click to add a marker. Right-click to remove the nearest marker. Draw a mask to count only colonies inside it.</p>
     `;
   }
 

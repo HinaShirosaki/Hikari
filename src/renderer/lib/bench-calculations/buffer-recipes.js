@@ -23,6 +23,12 @@ function describeManualQuantity(value) {
   };
 }
 
+// One buffer ingredient. The branch is picked by the final concentration kind:
+// - stock given: volume of stock to add (C1V1 = C2V2)
+// - molar: mass = M x L x MW
+// - mass/volume or % m/v: mass directly; % v/v: volume directly
+// - % m/m and fold without a stock cannot be solved and report what is missing
+// A manual quantity overrides all of them.
 function calculateBufferIngredient({
   name,
   form,
@@ -159,6 +165,9 @@ function calculateBufferIngredient({
   });
 }
 
+// Full buffer recipe: every ingredient, then solvent = target volume minus
+// liquid additions (masses are assumed not to add volume). With no rows it
+// still returns one blank ingredient so the UI shows the formula template.
 function calculateBufferRecipe({
   volumeMl,
   volumeValue,

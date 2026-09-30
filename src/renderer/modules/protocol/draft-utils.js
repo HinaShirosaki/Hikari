@@ -106,6 +106,8 @@ export function createProtocolDraftHelpers({
     };
   }
 
+  // Stored step -> editor text: {{ph:id}} tokens become [name]. Older steps with
+  // placeholders but no tokens get them appended at the end.
   function stepToEditableLine(step) {
     const source = getStepText(step);
     const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
@@ -148,6 +150,7 @@ export function createProtocolDraftHelpers({
       .join('\n');
   }
 
+  // Editor text -> stored step: every [name] becomes a new {{ph:id}} token.
   function extractPlaceholdersFromText(rawText) {
     const placeholders = [];
     const cleaned = String(rawText || '')
@@ -293,6 +296,10 @@ export function createProtocolDraftHelpers({
     normalizeTroubleshooting
   });
 
+  // Rebuilds steps from the editor text. A line that still matches an existing
+  // step (ignoring bullets, spacing, case) reuses that step and its placeholder
+  // ids, so notebook values recorded against it survive the edit. Only new or
+  // changed lines get fresh ids. Duplicate lines are matched in order.
   function buildStepEntriesFromText(rawText, existingSteps = []) {
     const buckets = new Map();
 

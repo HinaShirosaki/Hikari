@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { MEMORY_FILE_NAME, buildWorkflowMemoryMarkdown } = require('../../project-memory');
-const { asArray, cleanText, ensureObject } = require('../storage-utils');
+const { asArray, cleanText, ensureObject, isUnreadableJsonFile } = require('../storage-utils');
 const { NOTEBOOK_PAGE_FILE_NAME, RELATED_PAPERS_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
 const { buildTemplateFolderName, buildWorkflowFolderLayout, collectLinkedNotebookIds, resolveWorkflowStoragePaths } = require('./folder-names.js');
 const { buildNotebookStorageFolder, ensureFolder, writeJsonFile } = require('./fs-helpers.js');
@@ -16,14 +16,19 @@ async function pruneDeletedWorkflowRecords(workflowRootPath, activeTemplateFolde
   const listFolders = async (folderPath) => (await fs.readdir(folderPath, { withFileTypes: true }).catch(() => []))
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name);
+  const pruneRecordFile = async (filePath) => {
+    if (!(await isUnreadableJsonFile(filePath))) {
+      await fs.rm(filePath, { force: true });
+    }
+  };
   for (const templateFolder of await listFolders(workflowRootPath)) {
     const templateFolderPath = path.join(workflowRootPath, templateFolder);
     if (!activeTemplateFolders.has(templateFolder)) {
-      await fs.rm(path.join(templateFolderPath, TEMPLATE_METADATA_FILE_NAME), { force: true });
+      await pruneRecordFile(path.join(templateFolderPath, TEMPLATE_METADATA_FILE_NAME));
     }
     for (const runFolder of await listFolders(templateFolderPath)) {
       if (!activeRunFolders.has(`${templateFolder}/${runFolder}`)) {
-        await fs.rm(path.join(templateFolderPath, runFolder, WORKFLOW_METADATA_FILE_NAME), { force: true });
+        await pruneRecordFile(path.join(templateFolderPath, runFolder, WORKFLOW_METADATA_FILE_NAME));
       }
     }
   }

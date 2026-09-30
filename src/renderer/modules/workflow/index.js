@@ -12,6 +12,9 @@ import { createWorkflowGraphController } from './graph-controller.js';
 import { createWorkflowActions } from './actions.js';
 import { createWorkflowRuntime, resolveDefaultAssigneeId } from './state.js';
 
+// Workflow view: template graph editor (graph-controller), workflow list, and
+// the execution board where each entry (run) records step results. Without
+// its DOM (e.g. in a test shell) it returns no-op renderers.
 export function initWorkflowManagement({
   state,
   persist,

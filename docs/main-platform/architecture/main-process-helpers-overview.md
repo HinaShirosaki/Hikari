@@ -66,7 +66,7 @@ The primary JSON file is intentionally not the whole truth: it is the small top-
 
 The sequence feature set is its own subdomain under the storage root, not mixed into the general snapshot:
 
-- `src/renderer/modules/sequence-viewer/main-process/sequence-library/` manages a dedicated SQLite database (`SequenceViewer/sequence-library.sqlite`) plus per-entry files
+- `src/renderer/modules/sequence-viewer/main-process/sequence-library/` manages a dedicated SQLite database (`DNA/sequence-library.sqlite`) plus per-entry files
 - `src/renderer/modules/sequence-viewer/main-process/sequence-library/backbone-service.js` runs the process-neutral recognition algorithm from its sibling `algorithms/` folder against the stored library
 - `register-data-ipc/register-sequence-library-ipc.js` exposes both through `sequence-library:*` endpoints
 

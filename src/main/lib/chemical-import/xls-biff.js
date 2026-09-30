@@ -36,28 +36,76 @@ function readBiff8String(buffer, offset, characterCount = null) {
   };
 }
 
+// SST text runs on from the SST record into the CONTINUE records after it. A
+// string cut mid-characters resumes after a one-byte flag giving the width of
+// the rest; gluing the records together read that flag as a character and
+// misaligned every string after it.
 function parseSst(records) {
-  const parts = [];
-  records.forEach((record, index) => {
-    parts.push(index === 0 ? record.data.subarray(8) : record.data);
-  });
-  const data = Buffer.concat(parts);
+  const chunks = records.map((record) => record.data);
+  let chunkIndex = 0;
+  let data = chunks[0];
+  let offset = 8;
+  const nextChunk = () => {
+    chunkIndex += 1;
+    data = chunks[chunkIndex] || Buffer.alloc(0);
+    offset = 0;
+    return chunkIndex < chunks.length;
+  };
+  const skip = (length) => {
+    let remaining = length;
+    while (remaining > data.length - offset) {
+      remaining -= data.length - offset;
+      if (!nextChunk()) {
+        return;
+      }
+    }
+    offset += remaining;
+  };
+  const uniqueCount = data.length >= 8 ? data.readUInt32LE(4) : 0;
   const strings = [];
-  let offset = 0;
-  while (offset + 3 <= data.length) {
-    try {
-      const parsed = readBiff8String(data, offset);
-      strings.push(parsed.text);
-      if (parsed.nextOffset <= offset) {
+  try {
+    while (!uniqueCount || strings.length < uniqueCount) {
+      if (offset >= data.length && !nextChunk()) {
         break;
       }
-      offset = parsed.nextOffset;
-    } catch {
-      break;
+      const charCount = data.readUInt16LE(offset);
+      const options = data[offset + 2];
+      offset += 3;
+      const richTextRuns = options & 0x08 ? data.readUInt16LE(offset) : 0;
+      offset += options & 0x08 ? 2 : 0;
+      const phoneticBytes = options & 0x04 ? data.readUInt32LE(offset) : 0;
+      offset += options & 0x04 ? 4 : 0;
+      let wide = (options & 0x01) === 0x01;
+      let remaining = charCount;
+      let text = '';
+      while (remaining > 0) {
+        if (offset >= data.length) {
+          if (!nextChunk()) {
+            break;
+          }
+          wide = (data[0] & 0x01) === 0x01;
+          offset = 1;
+        }
+        const width = wide ? 2 : 1;
+        const count = Math.min(remaining, Math.floor((data.length - offset) / width));
+        if (!count) {
+          offset = data.length;
+          continue;
+        }
+        text += data.toString(wide ? 'utf16le' : 'latin1', offset, offset + (count * width));
+        offset += count * width;
+        remaining -= count;
+      }
+      strings.push(text);
+      skip((richTextRuns * 4) + phoneticBytes);
     }
+  } catch {
+    // A malformed table keeps the strings read before the damage.
   }
   return strings;
 }
+
+const BIFF_ERROR_TEXT = { 0x00: '#NULL!', 0x07: '#DIV/0!', 0x0F: '#VALUE!', 0x17: '#REF!', 0x1D: '#NAME?', 0x24: '#NUM!', 0x2A: '#N/A' };
 
 function decodeRk(raw) {
   let value;
@@ -175,13 +223,23 @@ function applyBiffCellRecord(rows, record, sharedStrings) {
     const parsed = readBiff8String(data, 6);
     setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), parsed.text);
   } else if (record.id === 0x0205 && data.length >= 8) {
-    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data[6] ? 'TRUE' : 'FALSE');
+    const value = data[7] ? BIFF_ERROR_TEXT[data[6]] || '#ERROR' : (data[6] ? 'TRUE' : 'FALSE');
+    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), value);
   } else if (record.id === 0x0006 && data.length >= 14) {
-    const marker = data[12];
-    if (marker !== 0xFF) {
-      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data.readDoubleLE(6));
+    const row = data.readUInt16LE(0);
+    const col = data.readUInt16LE(2);
+    if (data.readUInt16LE(12) !== 0xFFFF) {
+      setBiffCell(rows, row, col, data.readDoubleLE(6));
+    } else if (data[6] === 0x00) {
+      // A text result is not in the FORMULA record: the STRING record after it holds it.
+      return { row, col };
+    } else if (data[6] === 0x01) {
+      setBiffCell(rows, row, col, data[8] ? 'TRUE' : 'FALSE');
+    } else if (data[6] === 0x02) {
+      setBiffCell(rows, row, col, BIFF_ERROR_TEXT[data[8]] || '#ERROR');
     }
   }
+  return null;
 }
 
 function parseBiffWorkbookSheets(workbookStream) {
@@ -191,6 +249,7 @@ function parseBiffWorkbookSheets(workbookStream) {
   const sheets = [];
   let activeRows = null;
   let activeSheetIndex = -1;
+  let pendingFormulaCell = null;
 
   for (const record of records) {
     if (record.id === 0x0809) {
@@ -212,7 +271,12 @@ function parseBiffWorkbookSheets(workbookStream) {
     if (!activeRows) {
       continue;
     }
-    applyBiffCellRecord(activeRows, record, sharedStrings);
+    if (record.id === 0x0207 && pendingFormulaCell && record.data.length >= 3) {
+      setBiffCell(activeRows, pendingFormulaCell.row, pendingFormulaCell.col, readBiff8String(record.data, 0).text);
+      pendingFormulaCell = null;
+      continue;
+    }
+    pendingFormulaCell = applyBiffCellRecord(activeRows, record, sharedStrings) || pendingFormulaCell;
   }
 
   if (activeRows) {

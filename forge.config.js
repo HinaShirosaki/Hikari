@@ -15,7 +15,7 @@ if (process.platform === 'darwin') {
 if (process.platform === 'win32') {
   makers.push({
     name: '@electron-forge/maker-squirrel',
-    config: { name: 'hikari', setupExe: 'HikariSetup.exe' } // nupkg id; the scoped npm name has a '/'
+    config: { name: 'hikari', setupExe: 'HikariSetup.exe', setupIcon: './assets/icon.ico' } // nupkg id; the scoped npm name has a '/'
   });
 }
 
@@ -33,7 +33,7 @@ module.exports = {
   // Set by bin/hikari.js so `npx @hinashirosaki/hikari` writes next to the caller, not into the npx cache.
   outDir: process.env.HIKARI_OUT_DIR,
   packagerConfig: {
-    // Native exports of assets/icon.svg; Packager selects .icns or .ico.
+    // Built from assets/icon.svg by scripts/build-icons.cjs; Packager selects .icns or .ico.
     icon: './assets/icon',
     // Shipped outside app.asar so Settings can open it with the system viewer.
     extraResource: ['./THIRD-PARTY-NOTICES.md'],

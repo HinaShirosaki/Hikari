@@ -27,6 +27,11 @@ function extractBase64Payload(dataUrl) {
   return commaIndex < 0 ? '' : source.slice(commaIndex + 1).trim();
 }
 
+// On-disk layout for workflow runs, under the storage folder:
+//   Workflow/<template>__<id>/<workflow>__<id>/
+//     Results/<entry>__<id>/<step>__<blockId>/ResultFiles/<imported files>
+//     Notebook/<entry>__<id>/Notebook_Page__<pageId>/
+// Names are sanitized; the id suffix keeps renamed or same-named items apart.
 export function createWorkflowArtifactStorage({
   state,
   renderer,

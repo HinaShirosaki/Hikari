@@ -1,5 +1,12 @@
 import { BLOCK_TYPES } from './constants.js';
 
+// Workflow data model:
+//   template -> reusable graph: blocks (protocol or free-text steps with x/y
+//               canvas positions) + directed links between blocks.
+//   workflow -> a copy of a template's graph (fresh ids) plus `entries`.
+//   entry    -> one run of the workflow (e.g. one sample batch): per-block
+//               stepStates keyed by block id, and which optional branches the
+//               run opted into (activeBranchRootIds).
 export function createEmptyDraft() {
   return {
     id: '',
@@ -99,6 +106,9 @@ function normalizeImportedFileRecord(rawRecord) {
   };
 }
 
+// Status is one of not_done | pending | completed | failed. Legacy states
+// with only completedAt count as completed; `notes` is the old name of
+// `result`, `gelIds` of `gelAnalysisIds`.
 export function normalizeWorkflowStepState(rawState = {}) {
   const completedAt = normalizeIsoTimestamp(rawState?.completedAt);
   const updatedAt = normalizeIsoTimestamp(rawState?.updatedAt, completedAt);
@@ -130,6 +140,8 @@ export function normalizeWorkflowStepState(rawState = {}) {
   };
 }
 
+// Step states for blocks that no longer exist are dropped, and duplicate or
+// missing entry ids are regenerated.
 export function normalizeWorkflowEntries(rawEntries, blocks, createId) {
   const validBlockIds = new Set((Array.isArray(blocks) ? blocks : []).map((block) => block.id));
   const seen = new Set();
@@ -333,6 +345,8 @@ export function createWorkflowModel(options = {}) {
     };
   }
 
+  // New workflow from a template: every block and link gets a new id (links
+  // remapped through blockIdMap) so edits never leak back into the template.
   function instantiateTemplate(template, name) {
     const blockIdMap = new Map();
 

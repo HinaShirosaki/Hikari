@@ -1,6 +1,10 @@
 import { resetForm } from './sample-form.js';
 import { renderList } from './sample-list.js';
 
+// "Add samples" from a notebook page: remember which page asked (in
+// settings.pendingNotebookSampleCapture, so it survives navigation) and open a
+// blank sample form. The next saved sample is linked back to that page by
+// appendPendingNotebookSampleCapture.
 export function startNotebookSampleCapture(ctx, context = {}) {
   ctx.state.settings = ctx.state.settings && typeof ctx.state.settings === 'object' ? ctx.state.settings : {};
   const existingCapture = ctx.state.settings.pendingNotebookSampleCapture || {};

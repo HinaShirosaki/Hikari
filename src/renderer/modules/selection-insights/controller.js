@@ -11,6 +11,13 @@ import {
 } from './controller-ui.js';
 import { cleanText } from './text-utils.js';
 
+// Selection insights: select text on a notebook page or protocol, pick "What is
+// it?" or "Where to buy?", and a one-shot LLM answer is saved against that
+// exact selection and shown as a highlight with a hover panel.
+// A host registers { key, host, getContext }; getContext returns the record
+// being viewed plus updateRecord/ensureRecord hooks so this module never
+// reaches into notebook or protocol state directly. Elements marked with
+// data-selection-segment-id are the selectable segments.
 export function createSelectionInsightsController({
   state,
   persist,

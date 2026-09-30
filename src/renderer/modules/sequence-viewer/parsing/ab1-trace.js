@@ -22,6 +22,9 @@ function readUint16Be(view, offset) {
   return view.getUint16(offset, false);
 }
 
+// ABIF (Applied Biosystems .ab1) is a big-endian tagged container: a header
+// directory entry at byte 6 points to a table of 28-byte entries, each a
+// (4-char tag name, tag number) pair plus type/size and a data offset.
 function parseAbifDirectoryEntry(view, offset) {
   return {
     name: String.fromCharCode(
@@ -40,6 +43,8 @@ function parseAbifDirectoryEntry(view, offset) {
   };
 }
 
+// Data of 4 bytes or fewer is stored inline in the entry's offset field
+// rather than at dataOffset.
 function getAbifEntryData(buffer, entry) {
   const safeEntry = entry && typeof entry === 'object' ? entry : null;
   if (!safeEntry) {
@@ -148,6 +153,10 @@ function normalizeAb1BaseOrder(rawValue) {
   return cleaned.split('');
 }
 
+// Chromatogram: DATA9-12 are the analysed (processed) channels, DATA1-4 the
+// raw ones as fallback; FWO_ gives which base each channel is (default GATC).
+// PLOC is the trace x position of every base call. Tag number 2 is the
+// basecaller-edited copy and is preferred over 1 (PBAS/PCON/PLOC alike).
 function buildAb1TracePayload(buffer, directoryMap, sequenceLength, warnings) {
   const baseOrderEntry = getAbifEntryByPreference(directoryMap, 'FWO_1', 'FWO_2');
   const baseOrder = normalizeAb1BaseOrder(
@@ -203,6 +212,7 @@ function buildAb1TracePayload(buffer, directoryMap, sequenceLength, warnings) {
   };
 }
 
+// PCON Phred scores -> FASTQ-style quality string (Phred + 33, capped at 93).
 function sanitizeAb1QualityBytes(bytes, sequenceLength, warnings) {
   const safeBytes = bytes instanceof Uint8Array ? bytes : new Uint8Array(0);
   if (!safeBytes.length || !sequenceLength) {

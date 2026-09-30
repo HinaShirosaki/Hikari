@@ -208,7 +208,7 @@
 .tool-box-reaction-sheet-wrap {
   max-width: 100%;
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 0;
 }
 
 .tool-box-buffer-sheet input[type="number"] {
@@ -313,8 +313,10 @@
 }
 
 .tool-box-buffer-meta-row th,
+.tool-box-buffer-header-row th,
 .tool-box-buffer-adjustment-row th,
 .tool-box-reaction-meta-row th,
+.tool-box-reaction-header-row th,
 .tool-box-reaction-solvent-row th {
   padding: var(--space-8) 9px;
 }

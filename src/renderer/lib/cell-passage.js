@@ -1,3 +1,5 @@
+// A passage schedule needs a YYYY-MM-DD last date and a positive interval;
+// otherwise null (no schedule). passageNumber and deferredUntilDate are optional.
 export function normalizeCellPassage(rawValue) {
   if (!rawValue || typeof rawValue !== 'object') {
     return null;

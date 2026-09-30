@@ -48,6 +48,9 @@ function linkedSamplesAt(state, selectedContainer, wellIndex) {
   });
 }
 
+// "Add samples" dialog on a notebook page: create a sample, optionally place
+// it in a container slot, and link it to the page in one step (the page is
+// saved first via ensureEntry if it is new).
 export function createNotebookQuickSampleController({
   doc = (typeof document !== 'undefined' ? document : null),
   state,
@@ -118,6 +121,7 @@ export function createNotebookQuickSampleController({
     return getContainerWellName(container, index) || getWellName(container, index);
   }
 
+  // First empty well, falling back to well 0 when the box is full.
   function firstAvailableWell(containerItem) {
     if (!containerItem || !isMultiWellContainer(containerItem.container)) {
       return null;
@@ -360,6 +364,8 @@ export function createNotebookQuickSampleController({
       }
       state.samples = asArray(state.samples);
       state.samples.push(record);
+      // onCreated writes the page link and persists; if it fails, take the
+      // sample back out so no unlinked sample is left behind.
       try {
         await onCreated?.({ entry, record, ...capture });
       } catch (error) {

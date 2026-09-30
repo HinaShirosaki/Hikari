@@ -4,6 +4,11 @@ import { concentrationToM } from '../molarity.js';
 import { BUFFER_MASS_FACTORS_G, BUFFER_VOLUME_FACTORS_L } from './constants.js';
 import { buildParsedBufferConcentration, formatPercentUnit, inferPercentKind, normalizeBufferUnitText, normalizeMassVolumeUnit, normalizeMolarityUnit, parseBufferNumericPrefix } from './units.js';
 
+// Parses user text like "50 mM", "2x", "1% w/v", "10 mg/mL" into
+// { kind, value, unit, explicitUnit, ... }. `value` is normalized per kind:
+// molar -> M, massVolume -> g/L, percent and fold -> the number as typed.
+// Only compare two values with bufferConcentrationsCompatible() first.
+// Checks run in order: fold, percent, mass/volume, then molarity/defaults.
 function parseBufferConcentration(value, options = {}) {
   const parsed = parseBufferNumericPrefix(value);
   if (!parsed) {
@@ -123,6 +128,8 @@ function parseBufferConcentration(value, options = {}) {
   });
 }
 
+// Turns one parsed side into parse defaults for the other, so a bare number
+// inherits its partner's unit (stock "10 mg/mL" makes final "1" mean 1 mg/mL).
 function bufferConcentrationDefaultsFrom(parsed, fallback = {}) {
   if (!parsed || parsed.missing) {
     return fallback;

@@ -19,6 +19,11 @@ import { createPaperResearchBrief } from './research-brief.js';
 import { createPapersWorkspaceControls } from './workspace-controls.js';
 import { createPaperAgentChatContextGetter } from './agent-context.js';
 
+// Papers view: library rail (folders = projects + journal clubs), pdf.js
+// viewer with highlights/comments, and LLM summaries/extractions. PDFs live
+// under the storage folder; papers found on disk but missing from state are
+// merged in by a scan whenever the view opens (management/discover-stored.js).
+// Sub-controllers share one `context` object and are wired onto it below.
 export function initPapersManagement({
   state,
   persist,

@@ -334,6 +334,9 @@ export function createProtocolGenerationController({
     renderComposerAttachments();
   }
 
+  // Runs the main-process protocol agent with the prompt, the current editor
+  // draft and attachments, then previews the result for the user to apply.
+  // Closing the overlay or starting again invalidates the in-flight reply.
   async function onGenerateProtocol() {
     if (localState.isProtocolGenerationPending) {
       return;

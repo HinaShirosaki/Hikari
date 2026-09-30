@@ -1,3 +1,4 @@
+// 0 -> A, 25 -> Z, 26 -> AA (spreadsheet-style, bijective base 26).
 export function toRowLabel(rowIndex) {
   let value = Number(rowIndex) + 1;
   let label = '';

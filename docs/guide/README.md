@@ -30,7 +30,7 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
-No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\Hikari\node` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
+No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\HikariNode` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
 
 ```bash
 npx @hinashirosaki/hikari
@@ -360,14 +360,14 @@ Most records are plain JSON files, one per record, so the folder is readable wit
 | `hikari-data.json` | The compact snapshot |
 | `Protocol/<name>__<id>/protocol.json` | One protocol per folder |
 | `Project/<project>/Notebook/<page>__<id>/page.json` | Notebook pages, grouped by project |
-| `Project/<project>/MEMORY.md`, `.agents/skills/`, `Sequence/` | The agent's per-project memory and skills, and the project's sequence folder |
+| `Project/<project>/MEMORY.md`, `.agents/skills/`, `DNA/` | The agent's per-project memory and skills, and the project's sequence folder |
 | `Samples/<zone>/<container>__<id>.json`, `folders.json`, `unplaced.json` | Samples, one file per storage container |
-| `Assays/<name>__<id>/assay.json` | Plate assays, next to their analysis JSON, chart SVGs, and result files |
+| `Plates/<name>__<id>/assay.json` | Plate assays, next to their analysis JSON, chart SVGs, and result files |
 | `Gels/<name>__<id>/gel.json` | Gel records from builds before Gel became a plugin (kept so the Gel plugin can import them) |
 | `Workflow/<template>__<id>/template.json`, `…/<run>__<id>/workflow.json` | Workflow templates and runs |
 | `Papers/` (and `Project/<project>/Papers/`) | Stored PDFs; each has a `<file>.pdf.json` record beside it with comments, highlights, and summaries |
 | `KnowledgeBase/papers.md/`, `knowledge.index.sqlite`, `experiments.sqlite` | Parsed paper Markdown and figures, the paper identity index, and extracted experiments |
-| `SequenceViewer/sequence-library.sqlite` | The sequence library |
+| `DNA/sequence-library.sqlite` | The sequence library |
 | `hikari-chemicals.index.sqlite` | The chemical inventory (the only copy; SQLite is kept here for fast search) |
 | `Dashboard/experiment-log.json` | The Home experiment log |
 | `Plugins/<plugin-id>/` | Files that plugins save. The Gel plugin keeps its images and exports under `Plugins/gel/`; each plugin's small record store rides in the snapshot's `settings.pluginStorage` |
@@ -445,7 +445,7 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 | Workflows | `modules/workflow/` | `src/main/storage/workflow/` |
 | Agent | `modules/agent-chat/` | `src/main/agent/` |
 | Sequence Viewer | `modules/sequence-viewer/` | `modules/sequence-viewer/main-process/` |
-| Assay | `modules/assay/` | `src/main/storage/` (`Assays/` folders) |
+| Assay | `modules/assay/` | `src/main/storage/` (`Plates/` folders) |
 | Tools | `modules/tool-box/` | — |
 | Settings | `modules/settings/` | `src/main/ipc/register-system-ipc.js`, `src/main/lib/codex-cli-provider/` |
 | Gel (plugin) | `src/plugins/gel/` | `src/main/ipc/register-plugin-ipc.js` (served on its own loopback origin) |

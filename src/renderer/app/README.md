@@ -39,6 +39,7 @@ exception); they get what they need through their manifest options.
 - `plugin-bridge.js` + `plugin-bridge/verbs.js`, `plugin-bridge/helpers.js`:
   the permission-gated `postMessage` API. Every verb names the permission it
   needs; frames are identified by `contentWindow`, never by message content.
+  It also queues the Notebook "Add gel" page for the bundled Gel frame to pull.
 - `plugin-origin.js`: accepts only the private loopback origin main assigned.
 - `plugin-services.js`: hidden service-plugin frames and the capability
   registry (file converters) other features query.

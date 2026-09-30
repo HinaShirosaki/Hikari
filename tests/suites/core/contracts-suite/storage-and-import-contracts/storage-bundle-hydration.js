@@ -637,6 +637,50 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('a record file that no longer parses survives the save after the load that skipped it', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-unreadable-record-'));
+      const dataFilePath = path.join(tempDir, 'example.json');
+      try {
+        await bundleHelpers.syncBundleFromSnapshot({
+          dataFilePath,
+          snapshot: {
+            protocols: [
+              { id: 'p1', name: 'Miniprep', steps: ['Spin'] },
+              { id: 'p2', name: 'Western blot', steps: ['Transfer'] },
+              { id: 'p3', name: 'Retired', steps: ['Nothing'] }
+            ],
+            assays: [{ id: 'a1', name: 'Plate one' }, { id: 'a2', name: 'Plate two' }],
+            inventory: { Freezer: [{ id: 'box-1', name: 'Box one', type: 'single' }, { id: 'box-2', name: 'Box two', type: 'single' }] }
+          }
+        });
+        const paths = bundleHelpers.getBundlePaths({ dataFilePath });
+        const damaged = [
+          path.join(paths.protocolsPath, 'Western_blot__p2', 'protocol.json'),
+          path.join(paths.assaysRootPath, 'Plate_two__a2', 'assay.json'),
+          path.join(paths.samplesRootPath, 'Freezer', 'Box_two__box-2.json')
+        ];
+        for (const file of damaged) {
+          await fsPromises.writeFile(file, '{"cut short');
+        }
+        const userFile = path.join(paths.protocolsPath, 'Western_blot__p2', 'blot.png');
+        await fsPromises.writeFile(userFile, 'user file');
+
+        const { snapshot } = await bundleHelpers.hydrateSnapshotFromBundle({ dataFilePath, snapshot: {} });
+        assert.deepEqual(snapshot.protocols.map((protocol) => protocol.id).sort(), ['p1', 'p3']);
+        // The user deletes p3; the damaged records were only skipped on load.
+        snapshot.protocols = snapshot.protocols.filter((protocol) => protocol.id !== 'p3');
+        await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot });
+
+        for (const file of damaged) {
+          assert.equal(await fsPromises.readFile(file, 'utf8'), '{"cut short');
+        }
+        await fsPromises.access(userFile);
+        await assert.rejects(fsPromises.access(path.join(paths.protocolsPath, 'Retired__p3')));
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
     test('storage-root-only sync and import does not require hikari-data.json', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-root-only-sync-'));
@@ -654,7 +698,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
 
         await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: sourceSnapshot });
         await assert.rejects(fsPromises.access(path.join(tempDir, 'Papers', 'papers.index.sqlite')));
-        for (const moduleFile of ['Samples/Freezer/Protein_box__box-1.json', 'Assays/Binding_assay__assay-1/assay.json', 'Gels/SDS-PAGE__gel-1/gel.json']) {
+        for (const moduleFile of ['Samples/Freezer/Protein_box__box-1.json', 'Plates/Binding_assay__assay-1/assay.json', 'Gels/SDS-PAGE__gel-1/gel.json']) {
           await fsPromises.access(path.join(tempDir, moduleFile));
         }
         await assert.rejects(fsPromises.access(path.join(tempDir, 'Protocol', 'protocol.index.sqlite')));
@@ -861,7 +905,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         // A record keeps the folder its artifacts are in.
         await fsPromises.access(path.join(artifactFolder, 'gel.json'));
         // An older copy of assay-1 in a later-sorting folder must not win.
-        const staleAssayFile = path.join(tempDir, 'Assays', 'zzz_Old__assay-1', 'assay.json');
+        const staleAssayFile = path.join(tempDir, 'Plates', 'zzz_Old__assay-1', 'assay.json');
         await fsPromises.mkdir(path.dirname(staleAssayFile), { recursive: true });
         await fsPromises.writeFile(staleAssayFile, JSON.stringify({ assay: { id: 'assay-1', name: 'Stale' } }));
         await fsPromises.utimes(staleAssayFile, new Date('2020-01-01'), new Date('2020-01-01'));
@@ -871,7 +915,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         assert.deepEqual(imported.statePatch.gelAnalyses.map((gel) => gel.id), ['gel-1']);
 
         await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: { ...snapshot, assays: [snapshot.assays[0]], gelAnalyses: [] } });
-        await assert.rejects(fsPromises.access(path.join(tempDir, 'Assays', 'Kinetics__assay-2')), 'an emptied record folder is removed');
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'Plates', 'Kinetics__assay-2')), 'an emptied record folder is removed');
         await assert.rejects(fsPromises.access(path.join(artifactFolder, 'gel.json')));
         assert.equal(await fsPromises.readFile(path.join(artifactFolder, 'source.png'), 'utf8'), 'image bytes', 'artifacts survive');
         imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });

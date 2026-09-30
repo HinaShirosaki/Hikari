@@ -49,6 +49,12 @@ import {
 } from './figures.js';
 import { loadHikariPdfIconDataUrl } from './branding.js';
 
+// PDF export for protocols, notebook pages, project page bundles and assay
+// definitions, drawn with jsPDF.
+// Writers share one ctx (see page-chrome createContext) holding the doc and a
+// running y cursor in points; each writer calls ensureSpace() before drawing so
+// content breaks onto a new page instead of running off the bottom. Footers
+// ("Page n of N") are drawn last in finishAndSave, once the page count is known.
 export function exportProtocolPdf(protocol, { print = false } = {}) {
   if (!protocol) {
     return false;

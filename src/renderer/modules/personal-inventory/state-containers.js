@@ -34,6 +34,8 @@ export function createContainerStateHelpers({ state, uiState }) {
     });
   }
 
+  // Also treats orphans (parent deleted) and self-parented folders as roots,
+  // so a damaged tree still shows every folder instead of hiding some.
   function getRootFolders(section) {
     const folders = getFolders(section);
     const folderIds = new Set(folders.map((folder) => String(folder?.id || '')).filter(Boolean));

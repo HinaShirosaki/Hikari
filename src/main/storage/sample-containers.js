@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
-const { asArray, cleanText, ensureObject, keepLatestById, readJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, isUnreadableJsonFile, keepLatestById, readJsonFile, sanitizeFolderName } = require('./storage-utils');
 
 // Personal inventory on disk, one file per container:
 //   Samples/<zone>/<container>__<id>.json  the container, its wellCount, and only
@@ -154,7 +154,7 @@ async function writeSampleContainers(samplesRootPath, snapshot, updatedAt) {
   // These files are the only copy, so a deleted container, zone or folder list
   // must lose its file or the next load would bring it back.
   const pruneJson = async (filePath) => {
-    if (filePath.endsWith('.json') && !writtenPaths.has(path.resolve(filePath))) {
+    if (filePath.endsWith('.json') && !writtenPaths.has(path.resolve(filePath)) && !(await isUnreadableJsonFile(filePath))) {
       await fs.rm(filePath, { force: true });
     }
   };

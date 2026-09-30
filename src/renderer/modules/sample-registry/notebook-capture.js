@@ -11,6 +11,9 @@ function appendNotebookResultLine(source, line) {
   return current ? `${current}\n${cleanLine}` : cleanLine;
 }
 
+// Links a just-saved sample to the page that started the capture: appends a
+// sampleLink and a timestamped note to the page result, then clears the
+// pending capture (also cleared if the page is gone). Caller persists.
 export function appendPendingNotebookSampleCapture(ctx, record) {
   const capture = ctx.state.settings?.pendingNotebookSampleCapture;
   const built = buildNotebookSampleCapture(ctx, record, capture);

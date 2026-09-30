@@ -1,3 +1,5 @@
+// Lenient JSON parse for model output: tries the raw text, then a ```json
+// fence, then the outermost [...] and {...} spans. Returns {} if nothing parses.
 export function parseJsonFromText(raw) {
   const clean = String(raw || '').trim();
   if (!clean) {

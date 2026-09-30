@@ -40,12 +40,20 @@ function appendCodexProjectMemoryConfigArgs(args) {
   return args;
 }
 
+function appendFileAccessToken(args, token = '') {
+  // Always override, including for helpers with no grant. A concurrent turn may
+  // rewrite config.toml, but it cannot grant its capability to this invocation.
+  const value = /^[a-f0-9-]{36}$/u.test(token) ? token : '';
+  args.push('-c', `mcp_servers.hikari.env.HIKARI_FILE_ACCESS_TOKEN=${JSON.stringify(value)}`);
+}
+
 function buildCodexCliExecArgs({
   outputFile = '',
   outputSchemaFile = '',
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
+  fileAccessToken = '',
   streamJson = false
 } = {}) {
   const catalog = getCodexCliCatalog();
@@ -70,6 +78,7 @@ function buildCodexCliExecArgs({
   }
   appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
   appendCodexProjectMemoryConfigArgs(args);
+  appendFileAccessToken(args, fileAccessToken);
   args.push('-');
   return args;
 }
@@ -82,6 +91,7 @@ function buildCodexCliExecResumeArgs({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
+  fileAccessToken = '',
   streamJson = false
 } = {}) {
   const catalog = getCodexCliCatalog();
@@ -106,6 +116,7 @@ function buildCodexCliExecResumeArgs({
   }
   appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
   appendCodexProjectMemoryConfigArgs(args);
+  appendFileAccessToken(args, fileAccessToken);
   const cleanSessionId = normalizeCodexSessionId(sessionId);
   if (cleanSessionId) {
     args.push(cleanSessionId);

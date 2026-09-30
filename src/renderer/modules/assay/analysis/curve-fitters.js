@@ -5,6 +5,11 @@ import {
   solveLinearSystem
 } from './shared.js';
 
+// Each fit*Curve takes pooled points [{ x, y }] and returns { modelLabel,
+// equation, parameters (display text), predict(x) } or null when there are too
+// few points or the fit fails. Nonlinear models start from data-derived
+// guesses and bounds, then run optimizeModelParameters.
+// Polynomial: least squares via the normal equations (sum x^(i+j)) a = sum x^i y.
 export function fitPolynomialCurve(points, degree) {
   if (!Array.isArray(points) || points.length < degree + 1 || degree < 1) {
     return null;
@@ -72,6 +77,9 @@ export function fitLineCurve(points, modelLabel = 'Line', xTerm = 'x') {
   };
 }
 
+// Logistic in x exactly as the chosen X axis supplies it: on a log10
+// concentration axis `mid` is log10(EC50/IC50). hill > 0 means rising (EC50),
+// hill < 0 falling (IC50); curve-fit.js reports `mid` as x50.
 export function sigmoid4CurvePoint(x, params) {
   const exponent = params.hill * (params.mid - x);
   const denominator = 1 + Math.exp(exponent);

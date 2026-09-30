@@ -72,6 +72,51 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.equal(second.text, `Add {{ph:${second.placeholders[0].id}}} enzyme.`);
     });
 
+    test('an agent protocol update keeps the stored protocol whole', async () => {
+      const { createProtocolSaveRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-save.js'));
+      const stored = {
+        id: 'p1',
+        name: 'Western blot',
+        createdAt: '2025-01-01T00:00:00.000Z',
+        purpose: 'P'.repeat(900),
+        materials: Array.from({ length: 75 }, (_unused, index) => `Material ${index}`),
+        steps: Array.from({ length: 130 }, (_unused, index) => ({ text: `Step ${index} ${'x'.repeat(index === 1 ? 2500 : 5)}`, placeholders: [] })),
+        troubleshooting: 'T'.repeat(7000),
+        aliases: ['WB'],
+        selectionInsights: [{ id: 'insight-1' }]
+      };
+      let written = null;
+      const runtime = createProtocolSaveRuntime({
+        protocolGenerationRuntime: agentProtocolGeneration.createProtocolGenerationRuntime(),
+        hydrateSnapshotFromBundle: async ({ snapshot }) => ({ snapshot }),
+        syncBundleFromSnapshot: async ({ snapshot }) => {
+          written = snapshot.protocols[0];
+          return {};
+        },
+        getDefaultDataFilePath: () => 'data.json'
+      });
+      const save = (protocol) => runtime.saveProtocol({ protocol, save: true, upsert: true }, { snapshot: { protocols: [stored] } });
+
+      const { aliases: _aliases, selectionInsights: _insights, ...resent } = stored;
+      assert.equal((await save(resent)).status, 'updated');
+      assert.equal(written.purpose.length, 900);
+      assert.equal(written.materials.length, 75);
+      assert.equal(written.steps.length, 130);
+      assert.equal(written.steps[1].text.length, stored.steps[1].text.length);
+      assert.equal(written.troubleshooting.length, 7000);
+      assert.deepEqual(written.aliases, ['WB']);
+      assert.deepEqual(written.selectionInsights, [{ id: 'insight-1' }]);
+      assert.equal(written.createdAt, stored.createdAt);
+
+      // Fields the agent left out keep their stored value; a sent blank clears.
+      await save({ id: 'p1', name: 'Western blot', steps: ['Transfer'] });
+      assert.equal(written.troubleshooting, stored.troubleshooting);
+      assert.equal(written.purpose, stored.purpose);
+      assert.equal(written.steps.length, 1);
+      await save({ id: 'p1', name: 'Western blot', steps: ['Transfer'], troubleshooting: '' });
+      assert.equal(written.troubleshooting, '');
+    });
+
     test('protocol generation prompt documents deterministic protocol json normalization', () => {
       const runtime = agentProtocolGeneration.createProtocolGenerationRuntime();
       const prompt = runtime.buildPrompt({
