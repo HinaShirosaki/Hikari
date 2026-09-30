@@ -12,8 +12,9 @@
 - `sample-inventory-controller.js`: location and sample-type vocabulary settings (**Locations & samples**), including location migration and custom sample types.
 - `preferred-journals.js`: the preferred-journal list (**Papers**).
 - `notebook-pdf-controller.js`: notebook PDF export defaults (**Notebook PDF**).
+- `update-controller.js`: the **Updates** panel: Check for Updates / Install Update, rendering the main-process updater's status.
 - `html.js`: local markup escaping.
 
-Panels are grouped in the rail as Workspace (Appearance, Startup, Storage & data), Lab preferences (Locations & samples, Papers, Notebook PDF), and Agent & extensions (Codex, Tool access, Skills & plugins).
+Panels are grouped in the rail as Workspace (Appearance, Startup, Storage & data, Updates), Lab preferences (Locations & samples, Papers, Notebook PDF), and Agent & extensions (Codex, Tool access, Skills & plugins).
 
 Keep new settings families in focused controllers rather than adding another long section to `index.js`.

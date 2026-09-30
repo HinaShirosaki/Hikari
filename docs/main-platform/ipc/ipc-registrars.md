@@ -128,6 +128,7 @@ The Codex endpoints wrap the Codex CLI provider helpers. The direct endpoints ex
 - `system:open-external-url`
 - `system:report-error` (one-way; appends renderer errors to `Logs/errors.log` through `lib/error-reporting.js`)
 - `system:open-logs-folder`, `system:open-third-party-notices`
+- `system:update-status`, `system:check-for-updates`, `system:install-update` — **Settings > Updates**, backed by the npm updater (`updater/create-npm-updater-service.js`). A manual check never shows the update dialog; install builds what the last check found and restarts the app, so it only resolves if the build fails
 - `system:app-close-requested` / `system:app-close-response` — the unsaved-changes quit handshake, driven from `app/start-main-app.js`
 
 ## Practical takeaway

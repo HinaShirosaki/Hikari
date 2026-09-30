@@ -64,7 +64,10 @@ const SYSTEM = Object.freeze({
   APP_CLOSE_RESPONSE: 'system:app-close-response',
   REPORT_ERROR: 'system:report-error',
   OPEN_LOGS_FOLDER: 'system:open-logs-folder',
-  OPEN_THIRD_PARTY_NOTICES: 'system:open-third-party-notices'
+  OPEN_THIRD_PARTY_NOTICES: 'system:open-third-party-notices',
+  UPDATE_STATUS: 'system:update-status',
+  CHECK_FOR_UPDATES: 'system:check-for-updates',
+  INSTALL_UPDATE: 'system:install-update'
 });
 
 const PLUGINS = Object.freeze({

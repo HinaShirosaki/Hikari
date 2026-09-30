@@ -624,6 +624,7 @@
 }
 #setting-view [data-settings-target="startup"] { --settings-nav-icon: url("../../../assets/icons/home.svg"); }
 #setting-view [data-settings-target="storage"] { --settings-nav-icon: url("../../../assets/icons/folder.svg"); }
+#setting-view [data-settings-target="updates"] { --settings-nav-icon: url("../../../assets/icons/update.svg"); }
 #setting-view [data-settings-target="locations"] { --settings-nav-icon: url("../../../assets/icons/sample-inventory.svg"); }
 #setting-view [data-settings-target="preferred-journal"] { --settings-nav-icon: url("../../../assets/icons/papers.svg"); }
 #setting-view [data-settings-target="notebook-pdf"] { --settings-nav-icon: url("../../../assets/icons/biology-notebook.svg"); }

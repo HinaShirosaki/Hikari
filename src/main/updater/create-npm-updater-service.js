@@ -54,6 +54,8 @@ function createNpmUpdaterService(deps = {}) {
   let activeAbortController = null;
   let checkPromise = null;
   let buildProcess = null;
+  let pendingRelease = null;
+  let installPromise = null;
   let status = {
     configured: Boolean(updateUrl),
     status: updateUrl ? 'idle' : 'not-configured',
@@ -185,7 +187,13 @@ function createNpmUpdaterService(deps = {}) {
     }
   }
 
-  async function installUpdate(release) {
+  // One install at a time: the startup dialog and Settings > Updates share it.
+  function installUpdate(release) {
+    installPromise ||= runInstall(release).finally(() => { installPromise = null; });
+    return installPromise;
+  }
+
+  async function runInstall(release) {
     updateStatus({ status: 'installing', error: '' });
     let prepared;
     try {
@@ -267,6 +275,7 @@ function createNpmUpdaterService(deps = {}) {
       }
 
       const checkedAt = new Date().toISOString();
+      pendingRelease = comparison > 0 ? release : null;
       if (comparison <= 0) {
         return updateStatus({
           status: 'up-to-date',
@@ -299,6 +308,9 @@ function createNpmUpdaterService(deps = {}) {
   }
 
   function checkForUpdates(options = {}) {
+    if (installPromise) {
+      return Promise.resolve(getStatus());
+    }
     if (checkPromise) {
       return checkPromise;
     }
@@ -306,6 +318,15 @@ function createNpmUpdaterService(deps = {}) {
     return checkPromise.finally(() => {
       checkPromise = null;
     });
+  }
+
+  // Settings > Updates "Install Update": installs what the last check found.
+  async function installAvailableUpdate() {
+    if (!installPromise && (status.status !== 'update-available' || !pendingRelease)) {
+      return { ...getStatus(), action: 'no-update' };
+    }
+    const action = await installUpdate(pendingRelease);
+    return { ...getStatus(), action };
   }
 
   function start() {
@@ -353,6 +374,7 @@ function createNpmUpdaterService(deps = {}) {
   return {
     checkForUpdates,
     getStatus,
+    installUpdate: installAvailableUpdate,
     start,
     stop
   };

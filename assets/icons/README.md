@@ -25,5 +25,5 @@ The More button in `ui/html/shell/start.html` uses Lucide's `layout-grid` glyph.
 SVG paths are unchanged; root attributes are normalized to the app's
 `currentColor`, 24-unit view box, 1.5-unit stroke weight, and shared icon sizing.
 
-The folder glyph (`folder.svg`) and the remaining PNG/SVG marks
+The folder and update glyphs (`folder.svg`, `update.svg`) and the remaining PNG/SVG marks
 (`hikari*.svg`, `dolphin-dna-icon*.png`) are Hikari's own artwork.
