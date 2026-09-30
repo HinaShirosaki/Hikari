@@ -15,12 +15,14 @@ const NPM_UPDATE_METADATA_URL = 'https://registry.npmjs.org/@hinashirosaki%2fhik
 
 const { compareSemver, normalizeVersion } = require('./version.js');
 const { normalizeHttpsUrl, resolveNpmReleaseMetadata } = require('./release-metadata.js');
-const { findInstaller, resolveNpxInvocation } = require('./installer.js');
+const { findBuild, resolveNpxInvocation } = require('./installer.js');
 
 // The npm package is source that `npx @hinashirosaki/hikari` builds into a native
 // installer on this machine (bin/hikari.js). There are no hosted binaries and the
 // app is ad-hoc signed, so Electron's autoUpdater (Squirrel) is not an option;
 // the in-app update runs that same build and swaps the result in.
+// Flow: one "Update / Later" question; Update builds in the background, then
+// installs and restarts. The quit goes through the window's unsaved-changes check.
 function createNpmUpdaterService(deps = {}) {
   const app = deps.app || {};
   const dialog = deps.dialog || null;
@@ -46,7 +48,6 @@ function createNpmUpdaterService(deps = {}) {
   const execPath = deps.execPath || process.execPath;
   const fs = deps.fs || nodeFs;
   const spawn = deps.spawn || childProcess.spawn;
-  const execFileSync = deps.execFileSync || childProcess.execFileSync;
   const resolveNode = deps.resolveNode || (() => resolveCodexNodeBinary('', process.env));
 
   let startupTimer = null;
@@ -115,7 +116,7 @@ function createNpmUpdaterService(deps = {}) {
   }
 
   // Runs the published installer build (`npx @hinashirosaki/hikari@<version>`)
-  // in a temp dir and returns the built installer path.
+  // in a temp dir and returns the built Hikari.app (macOS) or HikariSetup.exe (Windows).
   async function buildUpdate(release) {
     const node = resolveNode();
     if (!node) {
@@ -136,7 +137,10 @@ function createNpmUpdaterService(deps = {}) {
         buildProcess = spawn(command, [...args, '--yes', `${NPM_PACKAGE_NAME}@${release.version}`], {
           cwd: buildDir,
           env,
-          stdio: ['ignore', logFd, logFd]
+          stdio: ['ignore', logFd, logFd],
+          // Windows: without this, the background build opens a console window
+          // (closing it kills the update); npm's own children inherit the hidden one.
+          windowsHide: true
         });
         buildProcess.on('error', reject);
         buildProcess.on('exit', (code, signal) => {
@@ -151,27 +155,11 @@ function createNpmUpdaterService(deps = {}) {
     } finally {
       fs.closeSync(logFd);
     }
-    const installer = findInstaller(path.join(buildDir, 'hikari-out', 'make'), platform, fs);
-    if (!installer) {
-      throw new Error(`The Hikari build produced no installer. Log: ${logPath}`);
+    const build = findBuild(path.join(buildDir, 'hikari-out'), platform, fs);
+    if (!build) {
+      throw new Error(`The Hikari build produced no app. Log: ${logPath}`);
     }
-    return installer;
-  }
-
-  // Everything that can fail happens here, while the app is still running and
-  // can show an error; applyUpdate() at quit time only renames.
-  function prepareUpdate(installer) {
-    if (platform !== 'darwin') {
-      return installer;
-    }
-    const extractDir = path.join(path.dirname(installer), 'extracted');
-    // ditto keeps the framework symlinks and code signature; Node zip libraries don't.
-    execFileSync('ditto', ['-x', '-k', installer, extractDir]);
-    const bundle = fs.readdirSync(extractDir).find((name) => name.endsWith('.app'));
-    if (!bundle) {
-      throw new Error(`No .app bundle inside ${installer}.`);
-    }
-    return path.join(extractDir, bundle);
+    return build;
   }
 
   function applyUpdate(prepared) {
@@ -199,17 +187,9 @@ function createNpmUpdaterService(deps = {}) {
 
   async function installUpdate(release) {
     updateStatus({ status: 'installing', error: '' });
-    void showMessage({
-      type: 'info',
-      title: 'Updating Hikari',
-      message: `Hikari ${release.version} is downloading and building in the background.`,
-      detail: 'This takes a few minutes. You can keep working; Hikari will ask before restarting.',
-      buttons: ['OK'],
-      noLink: true
-    });
     let prepared;
     try {
-      prepared = prepareUpdate(await buildUpdate(release));
+      prepared = await buildUpdate(release);
     } catch (error) {
       const message = String(error?.message || error);
       updateStatus({ status: 'error', error: message });
@@ -225,19 +205,9 @@ function createNpmUpdaterService(deps = {}) {
         dialog.showErrorBox?.('Hikari update failed', `${error?.message || error}\nThe built app is at ${prepared}.`);
       }
     });
-    const result = await showMessage({
-      type: 'info',
-      title: 'Hikari Update Ready',
-      message: `Hikari ${release.version} is ready.`,
-      detail: 'Restart Hikari to finish the update. If you restart later, the update is applied when Hikari quits.',
-      buttons: ['Restart Now', 'Later'],
-      defaultId: 0,
-      cancelId: 1,
-      noLink: true
-    });
-    if (result?.response !== 0) {
-      return 'apply-on-quit';
-    }
+    // Windows: HikariSetup.exe launches the new version itself once it has installed.
+    // ponytail: if the user cancels the unsaved-changes prompt, the relaunch and
+    // the swap stay armed and happen on their next quit.
     if (platform === 'darwin') {
       app.relaunch();
     }
@@ -253,7 +223,10 @@ function createNpmUpdaterService(deps = {}) {
       type: 'info',
       title: 'Hikari Update Available',
       message: `Hikari ${release.version} is available.`,
-      detail: release.releaseNotes || `You are currently using Hikari ${status.currentVersion}.`,
+      detail: [
+        release.releaseNotes || `You are using Hikari ${status.currentVersion}.`,
+        'Update downloads and installs it in the background (a few minutes; you can keep working), then restarts Hikari.'
+      ].join('\n\n'),
       buttons: ['Update', 'Later'],
       defaultId: 0,
       cancelId: 1,
@@ -390,7 +363,7 @@ module.exports = {
   NPM_UPDATE_METADATA_URL,
   compareSemver,
   createNpmUpdaterService,
-  findInstaller,
+  findBuild,
   resolveNpmReleaseMetadata,
   resolveNpxInvocation
 };
