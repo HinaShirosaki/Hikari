@@ -9,7 +9,8 @@ const command = process.platform === 'darwin' ? 'package' : 'make';
 const cli = require.resolve('@electron-forge/cli/dist/electron-forge.js');
 const outputRoot = path.resolve(process.env.HIKARI_OUT_DIR || 'out');
 // Squirrel needs RELEASES and .nupkg while making its self-contained setup EXE.
-// Build those in a private staging directory so only the installer is delivered.
+// Build those in a private staging directory; deliver the installer plus the
+// packaged app as a portable folder (Hikari\\Hikari.exe) that runs from anywhere.
 const staging = process.platform === 'win32'
   ? fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-dist-')) : null;
 try {
@@ -31,6 +32,9 @@ try {
       fs.mkdirSync(destination, { recursive: true });
       fs.copyFileSync(installer, path.join(destination, 'HikariSetup.exe'));
       console.log(`Hikari installer: ${path.join(destination, 'HikariSetup.exe')}`);
+      // forge make packages the app to <staging>/Hikari-win32-<arch> before making the installer.
+      fs.cpSync(path.join(staging, `Hikari-win32-${arch}`), path.join(destination, 'Hikari'), { recursive: true });
+      console.log(`Hikari portable: ${path.join(destination, 'Hikari', 'Hikari.exe')}`);
     }
   }
 } finally {

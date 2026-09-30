@@ -1,6 +1,6 @@
 # Hikari installer for Windows (PowerShell):
 #   iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
-# Builds the native Hikari app on this machine and writes one installer to .\hikari-out\Hikari-win32-<arch>\HikariSetup.exe.
+# Builds the native Hikari app on this machine into .\hikari-out\Hikari-win32-<arch>\: a portable Hikari\Hikari.exe (runs from any folder) and HikariSetup.exe.
 # Without Node.js 20+ on PATH it downloads a private copy to %LOCALAPPDATA%\HikariNode; nothing system-wide changes.
 $ErrorActionPreference = 'Stop'
 

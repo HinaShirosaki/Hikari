@@ -20,7 +20,10 @@ const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
 run('npm install --include=dev --no-audit --no-fund --allow-git=all');
 run('npm run dist');
 
-const output = process.platform === 'darwin'
-  ? path.join(process.env.HIKARI_OUT_DIR, `Hikari-darwin-${process.arch}`, 'Hikari.app')
-  : path.join(process.env.HIKARI_OUT_DIR, `Hikari-win32-${process.arch}`, 'HikariSetup.exe');
-console.log(`\nHikari: ${output}`);
+if (process.platform === 'darwin') {
+  console.log(`\nHikari: ${path.join(process.env.HIKARI_OUT_DIR, `Hikari-darwin-${process.arch}`, 'Hikari.app')}`);
+} else {
+  const out = path.join(process.env.HIKARI_OUT_DIR, `Hikari-win32-${process.arch}`);
+  console.log(`\nHikari (portable, runs from any folder): ${path.join(out, 'Hikari', 'Hikari.exe')}`);
+  console.log(`Hikari installer: ${path.join(out, 'HikariSetup.exe')}`);
+}

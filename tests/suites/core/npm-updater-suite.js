@@ -23,6 +23,9 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     fs.writeFileSync(path.join(out, 'Hikari-win32-x64', 'HikariSetup.exe'), '');
     assert.equal(findBuild(out, 'darwin'), path.join(out, 'Hikari-darwin-arm64', 'Hikari.app'));
     assert.equal(findBuild(out, 'win32'), path.join(out, 'Hikari-win32-x64', 'HikariSetup.exe'));
+    fs.mkdirSync(path.join(out, 'Hikari-win32-x64', 'Hikari'));
+    fs.writeFileSync(path.join(out, 'Hikari-win32-x64', 'Hikari', 'Hikari.exe'), '');
+    assert.equal(findBuild(out, 'win32', fs, path.join('Hikari', 'Hikari.exe')), path.join(out, 'Hikari-win32-x64', 'Hikari', 'Hikari.exe'));
     assert.equal(findBuild(out, 'linux'), '');
     assert.equal(findBuild(path.join(out, 'missing'), 'darwin'), '');
   });
@@ -78,8 +81,42 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     assert.equal(calls.relaunch, 1);
     assert.equal(calls.quit, 1);
     assert.equal(fs.readFileSync(path.join(appBundle, 'Contents', 'version'), 'utf8'), '1.0.3');
-    const parked = path.join(build.options.cwd, 'hikari-out', 'Hikari-darwin-arm64', 'Hikari.app.previous');
-    assert.equal(fs.readFileSync(path.join(parked, 'Contents', 'version'), 'utf8'), '1.0.2');
+    assert.equal(fs.existsSync(`${appBundle}.previous`), false, 'the parked old bundle is removed after the swap');
+  });
+
+  test('npm updater on macOS updates an app on another drive than the build (copies with ditto)', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-updater-xdev-'));
+    const appBundle = path.join(root, 'Volumes', 'External', 'Hikari.app');
+    fs.mkdirSync(path.join(appBundle, 'Contents', 'MacOS'), { recursive: true });
+    fs.writeFileSync(path.join(appBundle, 'Contents', 'version'), 'old');
+    const quitEvents = new EventEmitter();
+    const ditto = [];
+    // The build dir is "another drive": moving out of it fails like a real cross-device rename.
+    const xdevFs = { ...fs, renameSync: (from, to) => {
+      if (from.includes('hikari-update-')) throw Object.assign(new Error('EXDEV: cross-device link not permitted'), { code: 'EXDEV' });
+      return fs.renameSync(from, to);
+    } };
+    const updater = createNpmUpdaterService({
+      app: { isPackaged: true, getVersion: () => '1.1.0-beta.2', getPath: () => root, once: (e, fn) => quitEvents.once(e, fn),
+        relaunch: () => {}, quit: () => quitEvents.emit('will-quit') },
+      dialog: { showMessageBox: async () => ({ response: 0 }), showErrorBox: (title, content) => assert.fail(content) },
+      fetchImpl: async () => ({ ok: true, json: async () => ({ 'dist-tags': { latest: '1.1.0-beta.3' }, versions: { '1.1.0-beta.3': { version: '1.1.0-beta.3' } } }) }),
+      spawn: (command, args, options) => {
+        const built = path.join(options.cwd, 'hikari-out', 'Hikari-darwin-arm64', 'Hikari.app', 'Contents');
+        fs.mkdirSync(built, { recursive: true });
+        fs.writeFileSync(path.join(built, 'version'), 'new');
+        const child = new EventEmitter();
+        setImmediate(() => child.emit('exit', 0, null));
+        return child;
+      },
+      execFileSync: (command, [from, to]) => { ditto.push(command); fs.cpSync(from, to, { recursive: true }); },
+      fs: xdevFs, allowDevelopment: true, platform: 'darwin',
+      execPath: path.join(appBundle, 'Contents', 'MacOS', 'Hikari'), resolveNode: () => '/opt/homebrew/bin/node'
+    });
+    assert.equal((await updater.checkForUpdates()).action, 'restarting');
+    assert.deepEqual(ditto, ['ditto']);
+    assert.equal(fs.readFileSync(path.join(appBundle, 'Contents', 'version'), 'utf8'), 'new');
+    assert.equal(fs.existsSync(`${appBundle}.previous`), false);
   });
 
   test('npm updater from Settings: a manual check never prompts, Install builds what it found, once', async () => {
@@ -141,13 +178,18 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     assert.equal(calls.dialogs, 0);
   });
 
-  test('npm updater on Windows runs the built HikariSetup.exe detached at quit and lets it relaunch', async () => {
+  // Runs one Windows update. A setup install has Update.exe beside app-<version>;
+  // a portable copy is just a folder with Hikari.exe, anywhere.
+  async function runWindowsUpdate({ setupInstall }) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-updater-win-'));
+    const appDir = setupInstall ? path.join(root, 'hikari', 'app-1.1.0-beta2') : path.join(root, 'D-drive', 'Tools', 'Hikari');
+    fs.mkdirSync(appDir, { recursive: true });
+    if (setupInstall) fs.writeFileSync(path.join(root, 'hikari', 'Update.exe'), '');
     const calls = { spawn: [], relaunch: 0, quit: 0 };
     const quitEvents = new EventEmitter();
     const app = {
       isPackaged: true,
-      getVersion: () => '1.1.0-beta.1',
+      getVersion: () => '1.1.0-beta.2',
       getPath: () => root,
       once: (event, fn) => quitEvents.once(event, fn),
       relaunch: () => { calls.relaunch += 1; },
@@ -156,35 +198,55 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     const dialog = { showMessageBox: async () => ({ response: 0 }), showErrorBox: (title, content) => assert.fail(content) };
     const fetchImpl = async () => ({
       ok: true,
-      json: async () => ({ 'dist-tags': { latest: '1.1.0-beta.2' }, versions: { '1.1.0-beta.2': { version: '1.1.0-beta.2' } } })
+      json: async () => ({ 'dist-tags': { latest: '1.1.0-beta.3' }, versions: { '1.1.0-beta.3': { version: '1.1.0-beta.3' } } })
     });
     const spawn = (command, args, options) => {
       calls.spawn.push({ command, args, options });
       const child = new EventEmitter();
       if (options.cwd) {
         const out = path.join(options.cwd, 'hikari-out', 'Hikari-win32-arm64');
-        fs.mkdirSync(out, { recursive: true });
+        fs.mkdirSync(path.join(out, 'Hikari'), { recursive: true });
         fs.writeFileSync(path.join(out, 'HikariSetup.exe'), '');
+        fs.writeFileSync(path.join(out, 'Hikari', 'Hikari.exe'), '');
         setImmediate(() => child.emit('exit', 0, null));
       }
       child.unref = () => {};
       return child;
     };
-
     const updater = createNpmUpdaterService({
-      app, dialog, fetchImpl, spawn, allowDevelopment: true, platform: 'win32',
-      execPath: 'C:\\Users\\me\\AppData\\Local\\hikari\\app-1.1.0-beta1\\Hikari.exe',
+      app, dialog, fetchImpl, spawn, allowDevelopment: true, platform: 'win32', pid: 4242,
+      execPath: path.join(appDir, 'Hikari.exe'),
       resolveNode: () => 'C:\\Users\\me\\AppData\\Local\\HikariNode\\node.exe'
     });
     const result = await updater.checkForUpdates();
+    return { result, calls, appDir };
+  }
 
+  test('npm updater on Windows (setup install) runs the built HikariSetup.exe detached at quit and lets it relaunch', async () => {
+    const { result, calls } = await runWindowsUpdate({ setupInstall: true });
     assert.equal(result.action, 'restarting');
     const [build, setup] = calls.spawn;
-    assert.deepEqual(build.args.slice(-2), ['--yes', '@hinashirosaki/hikari@1.1.0-beta.2']);
+    assert.deepEqual(build.args.slice(-2), ['--yes', '@hinashirosaki/hikari@1.1.0-beta.3']);
     assert.equal(build.options.windowsHide, true);
     assert.equal(setup.command, path.join(build.options.cwd, 'hikari-out', 'Hikari-win32-arm64', 'HikariSetup.exe'));
     assert.equal(setup.options.detached, true);
     assert.equal(calls.relaunch, 0);
     assert.equal(calls.quit, 1);
+  });
+
+  test('npm updater on Windows (portable, any folder) swaps its own folder via a hidden helper after quit', async () => {
+    const { result, calls, appDir } = await runWindowsUpdate({ setupInstall: false });
+    assert.equal(result.action, 'restarting');
+    const [build, helper] = calls.spawn;
+    const newApp = path.join(build.options.cwd, 'hikari-out', 'Hikari-win32-arm64', 'Hikari');
+    assert.equal(helper.command, 'powershell.exe');
+    const arg = (name) => helper.args[helper.args.indexOf(name) + 1];
+    assert.equal(arg('-HikariPid'), '4242');
+    assert.equal(arg('-App'), appDir);
+    assert.equal(arg('-New'), newApp);
+    assert.match(fs.readFileSync(arg('-File'), 'utf8'), /Wait-Process -Id \$HikariPid/);
+    assert.equal(helper.options.detached, true);
+    assert.equal(helper.options.windowsHide, true);
+    assert.equal(calls.relaunch, 0, 'the helper starts the new Hikari.exe, not app.relaunch()');
   });
 };
