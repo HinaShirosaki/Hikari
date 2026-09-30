@@ -15,7 +15,7 @@ const NPM_UPDATE_METADATA_URL = 'https://registry.npmjs.org/@hinashirosaki%2fhik
 
 const { compareSemver, normalizeVersion } = require('./version.js');
 const { normalizeHttpsUrl, resolveNpmReleaseMetadata } = require('./release-metadata.js');
-const { findBuild, resolveNpxInvocation } = require('./installer.js');
+const { PORTABLE_WIN32_TARGET, findBuild, resolveNpxInvocation } = require('./installer.js');
 
 // The npm package is source that `npx @hinashirosaki/hikari` builds into a native
 // installer on this machine (bin/hikari.js). There are no hosted binaries and the
@@ -48,6 +48,8 @@ function createNpmUpdaterService(deps = {}) {
   const execPath = deps.execPath || process.execPath;
   const fs = deps.fs || nodeFs;
   const spawn = deps.spawn || childProcess.spawn;
+  const execFileSync = deps.execFileSync || childProcess.execFileSync;
+  const pid = deps.pid || process.pid;
   const resolveNode = deps.resolveNode || (() => resolveCodexNodeBinary('', process.env));
 
   let startupTimer = null;
@@ -157,17 +159,32 @@ function createNpmUpdaterService(deps = {}) {
     } finally {
       fs.closeSync(logFd);
     }
-    const build = findBuild(path.join(buildDir, 'hikari-out'), platform, fs);
+    const target = platform === 'win32' && !isSquirrelInstall() ? PORTABLE_WIN32_TARGET : undefined;
+    const build = findBuild(path.join(buildDir, 'hikari-out'), platform, fs, target);
     if (!build) {
       throw new Error(`The Hikari build produced no app. Log: ${logPath}`);
     }
     return build;
   }
 
+  // Setup.exe installs keep Update.exe beside the app-<version> folder
+  // (%LocalAppData%\\hikari); anything else is a portable copy.
+  function isSquirrelInstall() {
+    return fs.existsSync(path.join(path.dirname(path.dirname(execPath)), 'Update.exe'));
+  }
+
+  // The app updates where it is, whatever folder or drive that is.
   function applyUpdate(prepared) {
     if (platform === 'win32') {
-      // Squirrel installs to %LocalAppData%\\hikari and launches the new version itself.
-      spawn(prepared, [], { detached: true, stdio: 'ignore' }).unref();
+      if (isSquirrelInstall()) {
+        // Squirrel installs to %LocalAppData%\\hikari and launches the new version itself.
+        spawn(prepared, [], { detached: true, stdio: 'ignore' }).unref();
+        return;
+      }
+      // Portable copy: the new build's Hikari.exe swaps itself in once this one
+      // has exited (finish-portable-update.js; Windows locks a running app's files).
+      spawn(prepared, [`--hikari-swap-into=${path.dirname(execPath)}`, `--hikari-swap-after=${pid}`],
+        { detached: true, stdio: 'ignore' }).unref();
       return;
     }
     // Hikari.app/Contents/MacOS/Hikari -> Hikari.app
@@ -175,16 +192,25 @@ function createNpmUpdaterService(deps = {}) {
     if (!appBundle.endsWith('.app')) {
       throw new Error(`${execPath} is not inside an app bundle.`);
     }
-    // ponytail: rename swap only (same volume as temp); an app on another volume
-    // gets the error dialog with the built bundle path for a manual install.
-    const parked = path.join(path.dirname(prepared), `${path.basename(appBundle)}.previous`);
+    // Parked beside the app, so this rename works on any drive.
+    const parked = `${appBundle}.previous`;
+    fs.rmSync(parked, { recursive: true, force: true });
     fs.renameSync(appBundle, parked);
     try {
-      fs.renameSync(prepared, appBundle);
+      try {
+        fs.renameSync(prepared, appBundle);
+      } catch (error) {
+        if (error?.code !== 'EXDEV') throw error;
+        // The app is on another drive than the build: copy. ditto keeps the
+        // bundle's symlinks, modes and code signature.
+        execFileSync('ditto', [prepared, appBundle]);
+      }
     } catch (error) {
+      fs.rmSync(appBundle, { recursive: true, force: true });
       fs.renameSync(parked, appBundle);
       throw error;
     }
+    fs.rmSync(parked, { recursive: true, force: true });
   }
 
   // One install at a time: the startup dialog and Settings > Updates share it.

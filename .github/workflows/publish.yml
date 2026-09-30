@@ -27,13 +27,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run dist
-      - name: Verify single installer output
+      - name: Verify installer and portable app output
         shell: pwsh
         run: |
-          $files = @(Get-ChildItem out -Recurse -File)
-          if ($files.Count -ne 1 -or $files[0].Name -ne 'HikariSetup.exe' -or $files[0].Length -eq 0) {
-            throw 'Expected only one nonempty HikariSetup.exe in out'
-          }
+          $setup = Get-Item out/Hikari-win32-x64/HikariSetup.exe -ErrorAction SilentlyContinue
+          if (-not $setup -or $setup.Length -eq 0) { throw 'Expected a nonempty out/Hikari-win32-x64/HikariSetup.exe' }
+          if (-not (Test-Path out/Hikari-win32-x64/Hikari/Hikari.exe)) { throw 'Expected the portable out/Hikari-win32-x64/Hikari/Hikari.exe' }
       - uses: actions/upload-artifact@v4
         with:
           name: Hikari-Windows-x64

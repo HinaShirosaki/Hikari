@@ -14,14 +14,15 @@ function resolveNpxInvocation(nodeBinary, platform) {
 }
 
 // What bin/dist.js leaves in <out>/Hikari-<platform>-<arch>/: the app bundle
-// itself on macOS (forge package), the Squirrel setup on Windows.
+// itself on macOS (forge package); on Windows the Squirrel setup and, for
+// portable copies, the packaged app folder.
 const BUILD_TARGETS = {
   darwin: 'Hikari.app',
   win32: 'HikariSetup.exe'
 };
+const PORTABLE_WIN32_TARGET = path.join('Hikari', 'Hikari.exe');
 
-function findBuild(outDir, platform, fs = nodeFs) {
-  const target = BUILD_TARGETS[platform];
+function findBuild(outDir, platform, fs = nodeFs, target = BUILD_TARGETS[platform]) {
   if (!target) {
     return '';
   }
@@ -37,4 +38,4 @@ function findBuild(outDir, platform, fs = nodeFs) {
   return match ? path.join(outDir, match, target) : '';
 }
 
-module.exports = { findBuild, resolveNpxInvocation };
+module.exports = { PORTABLE_WIN32_TARGET, findBuild, resolveNpxInvocation };

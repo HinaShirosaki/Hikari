@@ -40,7 +40,7 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
-You do not need Node.js. The script builds a native app for your OS and CPU and writes it to `./hikari-out/`. If you already have Node.js 20+, `npx @hinashirosaki/hikari` does the same thing.
+You do not need Node.js. The script builds a native app for your OS and CPU and writes it to `./hikari-out/`: `Hikari.app` on macOS; on Windows a portable `Hikari\Hikari.exe` (runs from any folder) and `HikariSetup.exe` (installs it with shortcuts). Hikari updates itself wherever you keep it. If you already have Node.js 20+, `npx @hinashirosaki/hikari` does the same thing.
 
 Then open Hikari, click **Choose Folder**, and follow the **[15-minute first experiment tutorial](docs/getting-started/first-experiment.md)**.
 
