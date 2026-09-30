@@ -122,6 +122,7 @@ module.exports = function registerNpmUpdaterSuite(context = {}) {
     assert.equal(result.action, 'restarting');
     const [build, setup] = calls.spawn;
     assert.deepEqual(build.args.slice(-2), ['--yes', '@hinashirosaki/hikari@1.1.0-beta.2']);
+    assert.equal(build.options.windowsHide, true);
     assert.equal(setup.command, path.join(build.options.cwd, 'hikari-out', 'Hikari-win32-arm64', 'HikariSetup.exe'));
     assert.equal(setup.options.detached, true);
     assert.equal(calls.relaunch, 0);

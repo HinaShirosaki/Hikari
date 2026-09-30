@@ -137,7 +137,10 @@ function createNpmUpdaterService(deps = {}) {
         buildProcess = spawn(command, [...args, '--yes', `${NPM_PACKAGE_NAME}@${release.version}`], {
           cwd: buildDir,
           env,
-          stdio: ['ignore', logFd, logFd]
+          stdio: ['ignore', logFd, logFd],
+          // Windows: without this, the background build opens a console window
+          // (closing it kills the update); npm's own children inherit the hidden one.
+          windowsHide: true
         });
         buildProcess.on('error', reject);
         buildProcess.on('exit', (code, signal) => {
