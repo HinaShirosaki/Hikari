@@ -6,7 +6,7 @@
 
 ### Your whole lab bench in one desktop app, and all of it stays on your machine.
 
-Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in one workspace.<br/>
+The AI-native lab workspace, with an agent that runs experiments with you.<br/>
 **No account. No server. No API key.**
 
 <p>
