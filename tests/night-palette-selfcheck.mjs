@@ -299,7 +299,12 @@ const FIXED_ACROSS_THEMES = new Set([
   '--theme-hikari-rainbow-cyan', '--theme-hikari-rainbow-blue',
   '--theme-hikari-rainbow-violet',
   // Fixed-value scientific canvases, per ui/css/Readme.md.
-  '--tool-box-canvas-background', '--tool-box-canvas-border'
+  '--tool-box-canvas-background', '--tool-box-canvas-border',
+  // Self-consistent chips: each pins its own light fill AND its own dark ink.
+  '--biology-notebook-suggestion-ink', '--biology-notebook-suggestion-violet',
+  '--biology-notebook-suggestion-blue', '--biology-notebook-suggestion-green',
+  '--biology-notebook-suggestion-yellow', '--biology-notebook-suggestion-orange',
+  '--biology-notebook-suggestion-red'
 ]);
 
 const RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\s*\(|hsla?\s*\(/;

@@ -285,17 +285,23 @@
   color: var(--theme-success);
 }
 
-/* A suggestion is not a page yet: an accent wash and italic muted text set it
-   apart without a second color scheme. */
+/* A suggestion is not a page yet: a gentle rainbow wash (the Hikari mark's
+   spectrum) and italic text set it apart from real pages. */
 #biology-notebook-view .biology-notebook-page-row.is-suggested {
-  background: var(--theme-accent-wash) !important;
-  color: var(--theme-text-muted) !important;
+  background: linear-gradient(100deg,
+    var(--biology-notebook-suggestion-violet),
+    var(--biology-notebook-suggestion-blue),
+    var(--biology-notebook-suggestion-green),
+    var(--biology-notebook-suggestion-yellow),
+    var(--biology-notebook-suggestion-orange),
+    var(--biology-notebook-suggestion-red)) !important;
+  color: var(--biology-notebook-suggestion-ink) !important;
   font-style: italic;
 }
 
 #biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-name,
 #biology-notebook-view .biology-notebook-page-row.is-suggested .biology-notebook-page-badge {
-  color: var(--theme-text-muted) !important;
+  color: var(--biology-notebook-suggestion-ink) !important;
   font-weight: 400 !important;
 }
 
