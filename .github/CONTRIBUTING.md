@@ -19,6 +19,24 @@ npm start
 
 Read [docs/README.md](../docs/README.md) for the architecture, and [docs/module-development/](../docs/module-development/README.md) if you are adding a feature module.
 
+### macOS package signing
+
+`npm run make` signs the completed bundle with an available Developer ID Application
+certificate, or an Apple Development certificate for local builds. Keeping the
+same signing identity lets Keychain recognize rebuilt versions of Hikari. You can
+pin a certificate by its full name or SHA-1 hash:
+
+```bash
+HIKARI_MAC_SIGN_IDENTITY='Developer ID Application: Your Name (TEAMID)' npm run make
+```
+
+Use `security find-identity -v -p codesigning` to list certificates. A certificate
+that was explicitly requested must be available; packaging fails otherwise.
+Machines without a certificate use ad hoc signing and may ask for Keychain access
+after every rebuild. `HIKARI_MAC_SIGN_IDENTITY=-` explicitly selects that mode.
+Apple Development signing is for local verification; public macOS distribution
+requires Developer ID signing and notarization.
+
 ## Pull requests
 
 1. Branch from `main` (`feat/…`, `fix/…`, `chore/…`).

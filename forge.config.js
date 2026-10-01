@@ -2,6 +2,7 @@ const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { resolveMacSigningOptions } = require('./bin/mac-signing');
 
 const makers = [];
 
@@ -21,6 +22,9 @@ if (process.platform === 'win32') {
 
 module.exports = {
   hooks: {
+    prePackage(config, platform) {
+      if (platform === 'darwin') config.packagerConfig.osxSign = resolveMacSigningOptions();
+    },
     async packageAfterExtract(_config, buildPath, _electronVersion, platform) {
       if (platform !== 'darwin') return;
       // Keep Electron's notices in the bundle, before packaging/signing it.
@@ -36,14 +40,9 @@ module.exports = {
     // Built from assets/icon.svg by scripts/build-icons.cjs; Packager selects .icns or .ico.
     icon: './assets/icon',
     // Sign after Packager updates the bundle metadata and creates app.asar.
-    // The fuse plugin's earlier arm64 signature is invalidated by those steps.
-    osxSign: {
-      identity: '-',
-      identityValidation: false,
-      preAutoEntitlements: false,
-      preEmbedProvisioningProfile: false,
-      optionsForFile: () => ({ hardenedRuntime: false, timestamp: 'none' })
-    },
+    // prePackage chooses a persistent certificate when one is available; forcing
+    // ad hoc signing gives every rebuild a different Keychain identity.
+    osxSign: {},
     // Shipped outside app.asar so Settings can open it with the system viewer.
     extraResource: ['./THIRD-PARTY-NOTICES.md'],
     asar: {
@@ -127,8 +126,6 @@ module.exports = {
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
       // Off: the streaming validator aborts the main process on a partial read
       // of a packed asar file (string_view::substr out-of-range -> LOG(FATAL)).
-      // The app is ad-hoc signed, so anyone who can rewrite app.asar can rewrite
-      // Info.plist's hash too — this bought no tamper protection, only crashes.
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false,
       [FuseV1Options.OnlyLoadAppFromAsar]: true
     })
