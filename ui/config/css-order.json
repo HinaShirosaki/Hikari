@@ -5,6 +5,7 @@
     "ui/css/base/core.css",
     "ui/css/themes/modes.css",
     "ui/css/views/assay-plate-palette.css",
+    "ui/css/views/biology-notebook-palette.css",
     "ui/css/views/papers-palette.css",
     "ui/css/views/sequence-viewer-palette.css",
     "ui/css/views/tool-box-palette.css"

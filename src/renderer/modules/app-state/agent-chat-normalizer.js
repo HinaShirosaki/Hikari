@@ -54,6 +54,7 @@ function normalizeAssayScopeKey(context = {}) {
 
 export function normalizeScopeKey(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
+  if (scopeType === 'plugin') return `plugin:${trimText(context.pluginId, 100) || 'workspace'}`;
   if (scopeType === 'home') return 'home:experiment-log';
   if (scopeType === 'notebook') {
     return normalizeNotebookScopeKey(context);
@@ -71,6 +72,7 @@ function normalizeStoredScopeKey(value) {
   }
   if (
     raw === 'home:experiment-log'
+    || raw.startsWith('plugin:')
     || raw === DEFAULT_NOTEBOOK_SCOPE_KEY
     || raw === DEFAULT_ASSAY_SCOPE_KEY
     || raw.startsWith('paper:')

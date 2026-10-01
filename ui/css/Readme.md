@@ -36,6 +36,7 @@ tint steps at the end of `base/palette.css` (`--theme-fill`, `--theme-*-wash`,
 percentage in a view. Extra colors belong in a dedicated module palette:
 
 - `views/assay-plate-palette.css` — assay plates and labware previews
+- `views/biology-notebook-palette.css` — rainbow wash on agent-suggested notebook items
 - `views/papers-palette.css` — PDF highlights
 - `views/sequence-viewer-palette.css` — biological sequence features
 - `views/tool-box-palette.css` — fixed-color scientific canvases

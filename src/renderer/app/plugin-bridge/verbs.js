@@ -13,6 +13,18 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // Every verb declares the permission it needs. A verb with an unlisted
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
+  'agent.respond': {
+    permission: 'agent:canvas',
+    handler: (params, { respondCanvas, frameWindow }) => respondCanvas(params, frameWindow)
+  },
+  'agent.chat': {
+    permission: 'agent:chat',
+    handler: (params, { onPluginPrompt, plugin }) => {
+      if (typeof params.message !== 'string' || !params.message.trim() || params.message.length > 3000) throw new Error('Enter a message in at most 3000 characters.');
+      if (!onPluginPrompt) throw new Error('Codex chat is unavailable.');
+      return onPluginPrompt(plugin, params.message.trim());
+    }
+  },
   // internal + bundledPluginId: only the bundled Gel plugin may call this, and
   // it is hidden from the public verb list (see plugin-bridge.js).
   'gel.takeNotebookLink': {

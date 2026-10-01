@@ -75,7 +75,9 @@ const PLUGINS = Object.freeze({
   SERVE_FOLDER: 'plugins:serve-folder',
   READ_FILE: 'plugins:read-file',
   WRITE_FILE: 'plugins:write-file',
-  EXPORT_FILE: 'plugins:export-file'
+  EXPORT_FILE: 'plugins:export-file',
+  CANVAS_REQUEST: 'plugins:canvas-request',
+  CANVAS_RESPONSE: 'plugins:canvas-response'
 });
 
 const PYTHON = Object.freeze({

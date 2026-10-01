@@ -26,6 +26,7 @@ const buildImageOutputMcpResponse = loadOptionalResponseBuilder(
   './direct-tools/image-output.js',
   'buildImageOutputMcpResponse'
 );
+const buildPluginCanvasMcpResponse = loadOptionalResponseBuilder('./direct-tools/plugin-canvas.js', 'buildPluginCanvasMcpResponse');
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
@@ -182,6 +183,8 @@ function createAgentMcpStdioServer(deps = {}) {
       && typeof buildHtmlOutputMcpResponse === 'function'
       && result?.ok === true
       && result.html_artifact?.html) return buildHtmlOutputMcpResponse(result);
+    if (toolName === 'plugin_canvas' && typeof buildPluginCanvasMcpResponse === 'function'
+      && result?.ok === true && Array.isArray(result.previews)) return buildPluginCanvasMcpResponse(result);
     if (toolName === 'image_output'
       && typeof buildImageOutputMcpResponse === 'function'
       && result?.ok === true

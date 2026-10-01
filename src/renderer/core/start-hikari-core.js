@@ -27,6 +27,7 @@ import { createStorageImportController } from '../app/storage-import.js';
 import { createStorageSetup } from '../app/storage-setup.js';
 import { installPlugins } from '../app/plugin-loader.js';
 import { createPluginBridge } from '../app/plugin-bridge.js';
+import { createPluginPromptHandler } from '../app/plugin-agent.js';
 import { createPluginServiceRegistry } from '../app/plugin-services.js';
 import {
   buildSearchScopeMap,
@@ -120,9 +121,15 @@ export function startHikariCore({
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
     onFrameHistoryChanged: () => undoService?.syncButtons?.(),
+    onPluginPrompt: createPluginPromptHandler({ state,
+      getNavigation: () => navigationShell, getModuleRuntime: () => moduleRuntime }),
     notify: showTransientNotice,
     windowObject,
     api: windowObject.hikariApi || null
+  });
+  windowObject.hikariApi?.onPluginCanvasRequest?.(async (request) => {
+    const result = await pluginBridge.requestCanvas(request);
+    windowObject.hikariApi?.respondToPluginCanvasRequest?.({ id: request.id, result });
   });
   // Service plugins register their converters here; the sequence viewer (and
   // any future consumer) reaches them through the module runtime below.

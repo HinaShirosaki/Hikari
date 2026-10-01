@@ -36,6 +36,13 @@ Recovery snapshots and a prepared journal record are saved before mutation. On r
 
 ## Runtime config
 
+`plugin_canvas` routes agent requests to enabled installed plugins with
+`agent:canvas` permission. Start with `{plugin_id:"your-plugin",request:{action:"read"}}`
+and follow the returned plugin-owned schema and instructions. Render returns
+native images even when the workspace is hidden. Optional image assets are read
+from Hikari storage, with format and size checks. Plugins keep scene logic and
+rendering inside their own installable folders.
+
 Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
 
 ```toml
@@ -67,6 +74,7 @@ enabled_tools = [
   "container",
   "assay_table",
   "assay_plot",
+  "plugin_canvas",
   "plotly_graph",
   "image_output",
   "html_output",

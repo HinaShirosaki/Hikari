@@ -124,7 +124,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Overnight incubation** — named incubators (managed from the widget itself) with an optional reminder date for tomorrow.
 - **Paper finder** — results of the scheduled literature sweeps you set up from a Notebook project, against your preferred journals, with a **Find papers now** button and one-click download into the library (see [`Papers`](#papers)).
 
-![Hikari Home dashboard with teaching-lab reminders](../screenshots/home.png)
+![Hikari Home dashboard with timers and passage and incubation reminders](../screenshots/home.png)
 
 ### Protocols
 
@@ -153,7 +153,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **PDF export** — export an entry, with its tables and previews, as a PDF.
 - **Agent rail** — a project-scoped assistant panel docked beside the entry.
 
-![Notebook entry with a yeast growth protocol and observations](../screenshots/notebook-entry.png)
+![Notebook page with an SDS-PAGE protocol and a result table](../screenshots/notebook-entry.png)
 
 ![Project dashboard for a fictional yeast growth practical](../screenshots/notebook-project-dashboard.png)
 
@@ -170,7 +170,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Scheduled finding** — recurring searches against the journals configured in `Settings > Preferred Journals`, surfaced on `Home`.
 - **Agent rail** — the assistant panel, scoped to the open paper and project.
 
-![Papers PDF viewer showing a fictional yeast growth teaching handout](../screenshots/papers-viewer.png)
+![Papers PDF viewer showing a fictional thermal shift teaching handout](../screenshots/papers-viewer.png)
 
 ### Samples
 
@@ -220,7 +220,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 Backend details are in [`docs/agent/README.md`](../agent/README.md).
 
-![Agent workspace with a scripted teaching-lab example conversation](../screenshots/agent-chat.png)
+![Agent chat rail with a scripted example conversation beside a notebook page](../screenshots/agent-chat.png)
 
 ### Sequence Viewer
 
@@ -235,7 +235,7 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 - **Protein Builder** — assemble a protein from blocks and build the DNA sequence back out.
 - **Cloning design** — plan a Gibson/HR assembly or a vector insert, design primers, and export IDT bulk-input blocks or CSV.
 
-![Annotated synthetic classroom reporter sequence](../screenshots/sequence-detail.png)
+![Annotated plasmid sequence in the Sequence Viewer](../screenshots/sequence-detail.png)
 
 ### Assay
 
@@ -251,7 +251,7 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 - **Artifacts** — analysis JSON, chart SVG, and attached result files stored under the storage root.
 - **Agent rail** — the assistant panel, scoped to the open plate.
 
-![Assay plate mapped with synthetic BSA standard concentrations](../screenshots/assay-layout.png)
+![Assay plate mapped with a synthetic inhibitor dilution series](../screenshots/assay-layout.png)
 
 ### Tools
 
@@ -306,7 +306,7 @@ Plugin workspaces run in a sandboxed iframe with a declared permission list, and
 
 It requests only `storage`, `files`, `downloads`, and `layout` — it has no notebook, project, sample, or protocol access. `Notebook` and `Agent` can still *display* saved gel records by reading the plugin's persisted index; that one-way read does not grant the iframe anything.
 
-![Gel workspace with a synthetic teaching gel and detected lanes](../screenshots/gel-analysis.png)
+![Gel workspace with a synthetic SDS-PAGE gel and detected lanes](../screenshots/gel-analysis.png)
 
 ## AI and Agent Setup
 

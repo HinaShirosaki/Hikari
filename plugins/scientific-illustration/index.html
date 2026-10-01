@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Scientific Illustration</title>
+  <link rel="stylesheet" href="vendor/palette.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="illustration-workspace left-rail-template">
+    <aside class="illustrations-rail left-rail-template__rail app-left-rail" data-sync-left-rail aria-label="Illustrations">
+      <div class="rail-heading"><h1>Illustrations</h1><button id="new-illustration" class="icon-button" type="button" title="New illustration" aria-label="New illustration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+      <input id="illustration-search" type="search" placeholder="Search illustrations" aria-label="Search illustrations">
+      <div id="illustrations" class="illustration-list" aria-label="Saved illustrations"></div>
+      <p id="illustration-count" class="rail-note"></p>
+    </aside>
+    <section class="workspace left-rail-template__main" aria-label="Illustration editor">
+      <header class="toolbar">
+        <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
+        <div class="toolbar-actions">
+          <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
+          <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
+          <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
+            <button id="duplicate-illustration" type="button">Duplicate illustration</button>
+          </div></details>
+          <details class="popover" id="export-menu"><summary class="export-button">Export <span data-icon="down"></span></summary><div class="popover-panel">
+            <button id="export-svg" type="button">SVG <small>Editable figure</small></button>
+            <button id="export-png" type="button">PNG <small>Image</small></button>
+          </div></details>
+        </div>
+      </header>
+      <div class="work-area">
+        <section class="canvas-column" aria-label="Illustration canvases">
+          <div class="canvas-heading">
+            <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
+            <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
+              <option value="1200x800">Landscape · 1200 × 800</option>
+              <option value="800x1200">Portrait · 800 × 1200</option>
+              <option value="1000x1000">Square · 1000 × 1000</option>
+              <option value="1600x900">Widescreen · 1600 × 900</option>
+              <option value="500x350">Small · 500 × 350</option>
+              <option value="custom">Custom…</option>
+            </select>
+            <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
+              <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
+            </div></details>
+            <button id="toggle-scratch" class="scratch-toggle" type="button" aria-expanded="false" aria-controls="scratch-workspace">Scratch</button>
+          </div>
+          <div class="canvases">
+            <div class="main-stage-wrap">
+              <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
+              <div id="canvas-empty" class="canvas-empty" hidden><strong>Start with an idea</strong><span>Describe your figure below, or add a layer.</span></div>
+            </div>
+            <section id="scratch-workspace" aria-label="Scratch workspace" hidden>
+              <div class="scratch-heading canvas-heading"><button type="button" data-canvas="scratch" aria-pressed="false">Scratch canvas</button><span id="scratch-size"></span><button type="button" id="place-scratch">Copy to main</button><button id="close-scratch" class="icon-button" data-icon="close" type="button" aria-label="Close scratch canvas" title="Close scratch canvas"></button></div>
+              <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
+            </section>
+          </div>
+          <form id="prompt-form" class="prompt">
+            <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
+            <div class="prompt-actions">
+              <label class="complexity-control" for="complexity">Complexity<select id="complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
+              <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
+            </div>
+          </form>
+        </section>
+        <aside class="inspector" aria-label="Layers and properties">
+          <div class="inspector-heading"><h2>Layers</h2><span id="layer-count"></span><details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
+            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
+          </div></details></div>
+          <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
+          <div id="layers" role="list" aria-label="Figure layers"></div>
+          <p id="selection-hint" class="selection-hint">Select a component to edit it.</p>
+          <form id="properties" hidden>
+            <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
+            <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
+              <label class="sr-only" for="label-content">Label text</label><textarea id="label-content" name="text" rows="2" maxlength="3000" placeholder="Label text"></textarea>
+              <div class="font-row"><label class="sr-only" for="text-font">Font</label><input id="text-font" name="fontFamily" list="fonts" maxlength="100" title="Font"><datalist id="fonts"><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Georgia</option><option>Verdana</option><option>Courier New</option></datalist><label class="size-field"><span class="sr-only">Font size</span><input name="fontSize" type="number" min="4" max="300" step="any" required title="Font size in pixels"><span>px</span></label><input name="color" type="color" aria-label="Text color" title="Text color"></div>
+              <div class="text-toolbar"><div class="format-group" role="group" aria-label="Text formatting"><button type="button" data-text-style="bold" aria-label="Bold" title="Bold" aria-pressed="false"><b>B</b></button><button type="button" data-text-style="italic" aria-label="Italic" title="Italic" aria-pressed="false"><i>I</i></button><button type="button" data-text-style="underline" aria-label="Underline" title="Underline" aria-pressed="false"><u>U</u></button></div><div class="format-group" role="group" aria-label="Text alignment"><button type="button" data-align="start" data-icon="alignLeft" aria-label="Align left" title="Align left" aria-pressed="false"></button><button type="button" data-align="middle" data-icon="alignCenter" aria-label="Align center" title="Align center" aria-pressed="false"></button><button type="button" data-align="end" data-icon="alignRight" aria-label="Align right" title="Align right" aria-pressed="false"></button></div></div>
+              <div class="field-grid"><label>Weight<select name="fontWeight"><option value="100">Thin</option><option value="200">Extra light</option><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option><option value="900">Black</option></select></label><label>Anchor<select name="anchor"><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select></label></div>
+            </fieldset>
+            <fieldset id="vector-properties" hidden><legend class="sr-only">Vector</legend>
+              <div class="field-grid"><label>Fill<input name="fill" placeholder="Original" title="Hex color or none. Clear to restore the original."></label><label>Stroke<input name="stroke" placeholder="Original" title="Hex color or none. Clear to restore the original."></label></div>
+              <label class="inline-field">Stroke width<input name="strokeWidth" type="number" min="0" max="50" step="any" placeholder="Original"></label>
+              <button type="button" id="edit-artwork" class="secondary-button">Edit SVG source</button>
+            </fieldset>
+            <button type="button" id="replace-raster" class="secondary-button" hidden>Replace artwork…</button>
+            <div class="field-grid object-basics"><label>Rotation<span class="unit-field"><input name="rotation" type="number" min="-360" max="360" step="any" required><span>°</span></span></label><label>Opacity<input name="opacity" type="number" min="0" max="1" step="0.05" required></label></div>
+            <details class="geometry-options"><summary>Position &amp; size</summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label>Width<input name="width" type="number" min="1" max="8000" step="any" required></label><label>Height<input name="height" type="number" min="1" max="8000" step="any" required></label></div><label>Canvas<select name="canvas"><option value="main">Main</option><option value="scratch">Scratch</option></select></label></details>
+            <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer"></button></div>
+            <button type="button" id="transfer" class="transfer-button">Copy to scratch</button>
+          </form>
+        </aside>
+      </div>
+      <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>
+    </section>
+  </main>
+  <dialog id="source-dialog"><form id="source-form"><h2>Text-free SVG artwork</h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source">Cancel</button><button type="submit">Apply artwork</button></div></form></dialog>
+  <dialog id="raster-dialog"><form id="raster-form"><h2>Import raster artwork</h2><p>Use an image with no baked-in labels. Labels belong in separate text layers.</p><label class="check"><input id="text-free" type="checkbox" required>I inspected this image and it contains no text.</label><p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster">Cancel</button><button type="submit">Add artwork</button></div></form></dialog>
+  <script src="hikari.js"></script>
+  <script type="module" src="main.mjs"></script>
+</body>
+</html>

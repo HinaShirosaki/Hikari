@@ -71,6 +71,8 @@ module.exports = {
       /^\/docs($|\/)/,
       /^\/artifacts($|\/)/,
       /^\/examples($|\/)/,
+      // Installable plugins are distributed separately from the app.
+      /^\/plugins($|\/)/,
       /^\/reports($|\/)/,
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,

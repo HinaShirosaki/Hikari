@@ -92,4 +92,4 @@ function buildImageOutputMcpResponse(result) {
   };
 }
 
-module.exports = { IMAGE_OUTPUT_MCP_TOOL, MAX_IMAGE_BYTES, callImageOutput, buildImageOutputMcpResponse };
+module.exports = { IMAGE_OUTPUT_MCP_TOOL, MAX_IMAGE_BYTES, imageMimeType, callImageOutput, buildImageOutputMcpResponse };

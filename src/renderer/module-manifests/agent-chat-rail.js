@@ -4,6 +4,8 @@ import { createScopedAgentChatState } from '../modules/agent-chat/scoped-state.j
 function createAgentRailScopeContextGetter(modules, rootDocument, views = {}) {
   return () => {
     const activeViewId = String(rootDocument?.body?.dataset?.activeView || '').trim();
+    const pluginView = rootDocument?.getElementById?.(activeViewId);
+    if (pluginView?.dataset?.pluginId) return { scopeType: 'plugin', pluginId: pluginView.dataset.pluginId, pluginName: pluginView.dataset.pluginName };
     if (activeViewId === views.BIOLOGY_NOTEBOOK) {
       return modules?.biologyNotebook?.getAgentChatContext?.() || {
         scopeType: 'notebook'

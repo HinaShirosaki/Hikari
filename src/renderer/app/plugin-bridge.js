@@ -8,6 +8,7 @@ export function createPluginBridge({
   persist,
   onNotebookEntriesChanged,
   onFrameHistoryChanged = null,
+  onPluginPrompt = null,
   notify = null,
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
@@ -15,6 +16,27 @@ export function createPluginBridge({
   // WindowProxy identity survives navigation, so a grant also needs the
   // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
+  const canvasRequests = new Map();
+  function requestCanvas({ id, plugin_id: pluginId, request, assets, deadline }) {
+    const target = [...frames.entries()].find(([, { plugin }]) => plugin.id === pluginId
+      && plugin.enabled !== false && asArray(plugin.permissions).includes('agent:canvas'));
+    if (!target) return Promise.resolve({ ok: false, status: 'unavailable', error: 'Enable the requested local plugin with agent:canvas permission and reload Hikari.' });
+    const [frame, registration] = target;
+    return new Promise(resolve => {
+      const finish = result => { windowObject.clearTimeout(timer); canvasRequests.delete(id); resolve(result); };
+      const timer = windowObject.setTimeout(() => finish({ ok: false, status: 'acknowledgement_timeout', error: 'The canvas frame did not acknowledge the request. Read again or retry identical arguments.' }), Math.max(1, deadline - Date.now()));
+      canvasRequests.set(id, { frame, registration, finish });
+      try { frame.postMessage({ hikari: PROTOCOL_MARKER, event: 'agent.canvas', payload: { id, request, assets, deadline } }, registration.origin); }
+      catch (error) { finish({ ok: false, status: 'unavailable', error: error.message }); }
+    });
+  }
+  function respondCanvas({ id, result }, frame) {
+    const entry = canvasRequests.get(id);
+    if (!entry || entry.frame !== frame || frames.get(frame) !== entry.registration) throw new Error('Unknown canvas request.');
+    if (!result || typeof result.ok !== 'boolean') throw new Error('Invalid canvas response.');
+    entry.finish(result);
+    return { acknowledged: true };
+  }
   // Notebook "Add gel" handoff, host side: queueNotebookGel remembers the page
   // and pings the bundled Gel frame; Gel then pulls it with the internal
   // gel.takeNotebookLink verb (takeNotebookGel). Pulling instead of pushing
@@ -217,6 +239,8 @@ export function createPluginBridge({
         pluginUnsaved,
         pluginHistory,
         takeNotebookGel,
+        respondCanvas,
+        onPluginPrompt,
         notify,
         frameWindow: event.source,
         windowObject
@@ -239,6 +263,7 @@ export function createPluginBridge({
   windowObject?.addEventListener?.('message', handleMessage);
   return {
     register,
+    requestCanvas,
     queueNotebookGel,
     handleMessage,
     broadcast,
