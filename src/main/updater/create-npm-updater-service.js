@@ -13,16 +13,19 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 15000;
 // Registry metadata for the published package (scoped name, so the '/' is encoded).
 const NPM_UPDATE_METADATA_URL = 'https://registry.npmjs.org/@hinashirosaki%2fhikari';
 
-const { compareSemver, normalizeVersion } = require('./version.js');
+const { compareSemver, normalizeVersion, satisfiesRange } = require('./version.js');
 const { normalizeHttpsUrl, resolveNpmReleaseMetadata } = require('./release-metadata.js');
-const { PORTABLE_WIN32_TARGET, findBuild, resolveNpxInvocation } = require('./installer.js');
+const { PORTABLE_WIN32_TARGET, findBuild, resolveNpmInvocation, resolveNpxInvocation } = require('./installer.js');
+const { MANIFEST_FILE, getAppCodeRoot, getLoadedAppCode, listAppCode } = require('./app-code.js');
 
 // The npm package is source that `npx @hinashirosaki/hikari` builds into a native
 // installer on this machine (bin/hikari.js). There are no hosted binaries and the
-// app is ad-hoc signed, so Electron's autoUpdater (Squirrel) is not an option;
-// the in-app update runs that same build and swaps the result in.
-// Flow: one "Update / Later" question; Update builds in the background, then
-// installs and restarts. The quit goes through the window's unsaved-changes check.
+// app is ad-hoc signed, so Electron's autoUpdater (Squirrel) is not an option.
+// A release that runs on this build's Electron is installed app-only: npm fetches
+// its files into <userData>/app-code and the next start runs them (app-code.js).
+// Otherwise the in-app update runs the full build and swaps the result in.
+// Flow: one "Update / Later" question; Update installs in the background, then
+// restarts. The quit goes through the window's unsaved-changes check.
 function createNpmUpdaterService(deps = {}) {
   const app = deps.app || {};
   const dialog = deps.dialog || null;
@@ -51,6 +54,11 @@ function createNpmUpdaterService(deps = {}) {
   const execFileSync = deps.execFileSync || childProcess.execFileSync;
   const pid = deps.pid || process.pid;
   const resolveNode = deps.resolveNode || (() => resolveCodexNodeBinary('', process.env));
+  const electronVersion = Object.prototype.hasOwnProperty.call(deps, 'electronVersion')
+    ? deps.electronVersion
+    : process.versions.electron;
+  const getLoaded = deps.getLoadedAppCode || getLoadedAppCode;
+  const warn = deps.warn || console.warn;
 
   let startupTimer = null;
   let activeAbortController = null;
@@ -119,27 +127,29 @@ function createNpmUpdaterService(deps = {}) {
       : dialog.showMessageBox(options);
   }
 
-  // Runs the published installer build (`npx @hinashirosaki/hikari@<version>`)
-  // in a temp dir and returns the built Hikari.app (macOS) or HikariSetup.exe (Windows).
-  async function buildUpdate(release) {
+  function requireNode() {
     const node = resolveNode();
     if (!node) {
       throw new Error('Node.js 20+ was not found. Install Node.js (or run the Hikari install script), then try again.');
     }
-    const tempDir = typeof app.getPath === 'function' ? app.getPath('temp') : os.tmpdir();
-    // ponytail: the build dir (deps + old bundle) is left for the OS temp cleaner.
-    const buildDir = fs.mkdtempSync(path.join(tempDir, 'hikari-update-'));
-    const logPath = path.join(buildDir, 'update.log');
-    const logFd = fs.openSync(logPath, 'a');
-    const { command, args } = resolveNpxInvocation(node, platform);
+    return node;
+  }
+
+  // Desktop launches have a minimal PATH; npm's `#!/usr/bin/env node` needs this Node.
+  function nodeEnv(node) {
     const env = { ...process.env };
-    // Desktop launches have a minimal PATH; npx's `#!/usr/bin/env node` needs this Node.
     const pathKey = Object.keys(env).find((key) => key.toUpperCase() === 'PATH') || 'PATH';
     env[pathKey] = `${path.dirname(node)}${path.delimiter}${env[pathKey] || ''}`;
+    return env;
+  }
+
+  // Runs one update step with its output appended to update.log; stop() kills it.
+  async function runLogged(what, command, args, { cwd, env, logPath }) {
+    const logFd = fs.openSync(logPath, 'a');
     try {
       await new Promise((resolve, reject) => {
-        buildProcess = spawn(command, [...args, '--yes', `${NPM_PACKAGE_NAME}@${release.version}`], {
-          cwd: buildDir,
+        buildProcess = spawn(command, args, {
+          cwd,
           env,
           stdio: ['ignore', logFd, logFd],
           // Windows: without this, the background build opens a console window
@@ -152,13 +162,88 @@ function createNpmUpdaterService(deps = {}) {
           if (code === 0) {
             resolve();
           } else {
-            reject(new Error(`The Hikari build exited with ${signal || code}. Log: ${logPath}`));
+            reject(new Error(`${what} exited with ${signal || code}. Log: ${logPath}`));
           }
         });
       });
     } finally {
       fs.closeSync(logFd);
     }
+  }
+
+  function canInstallAppCode(release) {
+    return satisfiesRange(electronVersion, release.electronRange);
+  }
+
+  // App-only update: npm installs the release's files and runtime dependencies
+  // (no Electron, Forge or packaging), its UI is built in place, and main.js runs
+  // it from the next start. The folder is renamed into place only when complete.
+  async function installAppCode(release) {
+    const node = requireNode();
+    const root = getAppCodeRoot(app);
+    fs.mkdirSync(root, { recursive: true });
+    for (const name of fs.readdirSync(root)) {
+      // An earlier install that did not finish.
+      if (name.startsWith('.')) await fs.promises.rm(path.join(root, name), { recursive: true, force: true });
+    }
+    const staging = fs.mkdtempSync(path.join(root, '.install-'));
+    const logPath = path.join(staging, 'update.log');
+    const env = nodeEnv(node);
+    const npm = resolveNpmInvocation(node, platform);
+    await runLogged('Installing Hikari', npm.command, [
+      ...npm.args, 'install', `${NPM_PACKAGE_NAME}@${release.version}`, '--prefix', staging,
+      '--omit=dev', '--ignore-scripts', '--no-audit', '--no-fund'
+    ], { cwd: staging, env, logPath });
+    const appDir = path.join(staging, 'node_modules', ...NPM_PACKAGE_NAME.split('/'));
+    await runLogged('Building the Hikari UI', node, [path.join(appDir, 'scripts', 'build-ui.mjs')],
+      { cwd: appDir, env, logPath });
+    // What npm actually installed decides, not the registry's summary.
+    const installed = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'));
+    const electron = String(installed.devDependencies?.electron || '');
+    if (installed.version !== release.version || !satisfiesRange(electronVersion, electron)) {
+      throw new Error(`npm installed Hikari ${installed.version} for Electron ${electron || 'unknown'}; `
+        + `expected ${release.version} for Electron ${electronVersion}. Log: ${logPath}`);
+    }
+    fs.writeFileSync(path.join(staging, MANIFEST_FILE), JSON.stringify({
+      version: installed.version,
+      electron,
+      entry: path.relative(staging, path.join(appDir, installed.main || 'src/main/main.js'))
+    }, null, 2));
+    const target = path.join(root, installed.version);
+    await fs.promises.rm(target, { recursive: true, force: true });
+    // Windows: a virus scan of the new files can block the rename for a moment.
+    for (let attempt = 1; ; attempt += 1) {
+      try {
+        fs.renameSync(staging, target);
+        return;
+      } catch (error) {
+        if (attempt === 20) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+  }
+
+  // Copies that will not run again: not newer than what runs now. Best effort.
+  async function pruneAppCode() {
+    const running = getLoaded()?.dir;
+    for (const copy of listAppCode(getAppCodeRoot(app), fs)) {
+      if (copy.dir !== running && compareSemver(copy.version, status.currentVersion) <= 0) {
+        await fs.promises.rm(copy.dir, { recursive: true, force: true });
+      }
+    }
+  }
+
+  // Runs the published installer build (`npx @hinashirosaki/hikari@<version>`)
+  // in a temp dir and returns the built Hikari.app (macOS) or HikariSetup.exe (Windows).
+  async function buildUpdate(release) {
+    const node = requireNode();
+    const tempDir = typeof app.getPath === 'function' ? app.getPath('temp') : os.tmpdir();
+    // ponytail: the build dir (deps + old bundle) is left for the OS temp cleaner.
+    const buildDir = fs.mkdtempSync(path.join(tempDir, 'hikari-update-'));
+    const logPath = path.join(buildDir, 'update.log');
+    const { command, args } = resolveNpxInvocation(node, platform);
+    await runLogged('The Hikari build', command, [...args, '--yes', `${NPM_PACKAGE_NAME}@${release.version}`],
+      { cwd: buildDir, env: nodeEnv(node), logPath });
     const target = platform === 'win32' && !isSquirrelInstall() ? PORTABLE_WIN32_TARGET : undefined;
     const build = findBuild(path.join(buildDir, 'hikari-out'), platform, fs, target);
     if (!build) {
@@ -220,7 +305,21 @@ function createNpmUpdaterService(deps = {}) {
   }
 
   async function runInstall(release) {
-    updateStatus({ status: 'installing', error: '' });
+    if (canInstallAppCode(release)) {
+      updateStatus({ status: 'installing', installKind: 'app', error: '' });
+      try {
+        await installAppCode(release);
+        updateStatus({ status: 'ready', error: '' });
+        // ponytail: if the user cancels the unsaved-changes prompt, the relaunch
+        // stays armed and happens on their next quit.
+        app.relaunch();
+        app.quit();
+        return 'restarting';
+      } catch (error) {
+        warn(`App-only update to Hikari ${release.version} failed; rebuilding the whole app instead.`, error);
+      }
+    }
+    updateStatus({ status: 'installing', installKind: 'full', error: '' });
     let prepared;
     try {
       prepared = await buildUpdate(release);
@@ -259,7 +358,7 @@ function createNpmUpdaterService(deps = {}) {
       message: `Hikari ${release.version} is available.`,
       detail: [
         release.releaseNotes || `You are using Hikari ${status.currentVersion}.`,
-        'Update downloads and installs it in the background (a few minutes; you can keep working), then restarts Hikari.'
+        `Update downloads and installs it in the background (${canInstallAppCode(release) ? 'under a minute' : 'a few minutes'}; you can keep working), then restarts Hikari.`
       ].join('\n\n'),
       buttons: ['Update', 'Later'],
       defaultId: 0,
@@ -378,6 +477,7 @@ function createNpmUpdaterService(deps = {}) {
     });
     startupTimer = setTimeout(() => {
       startupTimer = null;
+      void pruneAppCode().catch((error) => warn('Could not remove old Hikari app code:', error));
       void checkForUpdates();
     }, startupDelayMs);
     startupTimer.unref?.();

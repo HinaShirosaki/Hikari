@@ -6,14 +6,14 @@
 
 ### Your whole lab bench in one desktop app, and all of it stays on your machine.
 
-Protocols, notebook, papers, samples, sequences, assays, and an AI assistant in one workspace.<br/>
+The AI-native lab workspace, with an agent that runs experiments with you.<br/>
 **No account. No server. No API key.**
 
 <p>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows-555?style=flat-square" alt="macOS | Windows" />
   <img src="https://img.shields.io/badge/local--first-no%20backend-7C3AED?style=flat-square" alt="local-first, no backend" />
   <img src="https://img.shields.io/badge/AI-no%20API%20key-10A37F?style=flat-square" alt="AI with no API key" />
-  <img src="https://img.shields.io/badge/version-1.0.3-0EA5E9?style=flat-square" alt="version 1.0.3" />
+  <img src="https://img.shields.io/npm/v/@hinashirosaki/hikari?style=flat-square&color=0EA5E9&label=version" alt="npm version" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0 license" /></a>
 </p>
 

@@ -6,7 +6,7 @@ function describe(update = {}) {
     case 'checking': return 'Checking for updates…';
     case 'up-to-date': return `Hikari is up to date. ${current}`;
     case 'update-available': return `Hikari ${update.latestVersion} is available. ${current}`;
-    case 'installing': return `Downloading and installing Hikari ${update.latestVersion}. This takes a few minutes; you can keep working. Hikari restarts when it is done.`;
+    case 'installing': return `Downloading and installing Hikari ${update.latestVersion}. This takes ${update.installKind === 'app' ? 'under a minute' : 'a few minutes'}; you can keep working. Hikari restarts when it is done.`;
     case 'ready': return 'Restarting Hikari…';
     case 'error': return `Could not update: ${update.error || 'unknown error'}`;
     case 'development-disabled': return 'Updates are available in the installed app, not in a development run.';

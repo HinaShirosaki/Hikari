@@ -46,7 +46,9 @@ function resolveNpmReleaseMetadata(metadata = {}) {
   return {
     version,
     releaseUrl,
-    releaseNotes
+    releaseNotes,
+    // The Electron the release is built with; decides whether it can run on this one.
+    electronRange: String(release.devDependencies?.electron || '').trim()
   };
 }
 

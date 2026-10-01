@@ -5,3 +5,4 @@ This folder contains ad hoc fixture generators and architectural diagnostics. Th
 - `dependency-report/` compares a Git baseline with the working tree and emits dependency-split reports.
 - `test-fixtures/make-testdata7.py` creates the local, gitignored `TestData7/` fixture.
 - `generate-hikari-summary-pdf.py` recreates the historical one-page application summary artifact.
+- `vm-test/` checks app-only updates end to end in a fresh macOS (tart) or Windows (UTM) VM; see its README.
