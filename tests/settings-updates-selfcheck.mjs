@@ -55,4 +55,12 @@ createUpdateSettings({ api: { getUpdateStatus: async () => ({ status: 'developme
 await flush();
 assert.match(dev.textContent, /installed app/);
 
+const appOnly = element();
+createUpdateSettings({
+  api: { getUpdateStatus: async () => ({ status: 'installing', installKind: 'app', latestVersion: '1.2.0' }) },
+  statusElement: appOnly, checkButton: element(), installButton: element()
+}).refresh();
+await flush();
+assert.match(appOnly.textContent, /Hikari 1\.2\.0\. This takes under a minute/, 'an app-only update is quick');
+
 console.log('settings updates panel ok');

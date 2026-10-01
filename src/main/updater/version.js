@@ -70,4 +70,24 @@ function compareSemver(leftVersion, rightVersion) {
   return comparePrerelease(left.prerelease, right.prerelease);
 }
 
-module.exports = { compareSemver, normalizeVersion, parseSemver };
+// Enough of npm's range syntax for package.json's electron entry: ^x.y.z, ~x.y.z,
+// >=x.y.z or an exact version. Anything else counts as not satisfied, which
+// makes the updater rebuild the whole app.
+function satisfiesRange(version, range) {
+  const match = String(range || '').trim().match(/^(\^|~|>=|=)?\s*(\S+)$/);
+  const current = parseSemver(version);
+  const floor = match && parseSemver(match[2]);
+  if (!current || !floor || compareSemver(version, match[2]) < 0) {
+    return false;
+  }
+  switch (match[1] || '=') {
+    case '>=': return true;
+    case '=': return compareSemver(version, match[2]) === 0;
+    case '~': return current.major === floor.major && current.minor === floor.minor;
+    default: return floor.major > 0
+      ? current.major === floor.major
+      : current.major === 0 && current.minor === floor.minor;
+  }
+}
+
+module.exports = { compareSemver, normalizeVersion, parseSemver, satisfiesRange };
