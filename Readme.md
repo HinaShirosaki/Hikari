@@ -102,7 +102,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/notebook-entry.png" alt="Notebook entry with a yeast growth protocol" /><br/>
+<img src="docs/screenshots/notebook-entry.png" alt="Notebook page with an SDS-PAGE protocol and a result table" /><br/>
 <b>Notebook</b>: experiment records that snapshot the protocol you ran
 </td>
 <td width="50%" valign="top">
@@ -112,7 +112,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/assay-layout.png" alt="96-well assay plate layout with a BSA standard" /><br/>
+<img src="docs/screenshots/assay-layout.png" alt="96-well plate layout with an inhibitor dilution series" /><br/>
 <b>Plate</b> (Assay): plate layouts, spreadsheet formulas, and curve fitting
 </td>
 <td width="50%" valign="top">
@@ -126,8 +126,8 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 <b>Papers</b>: a local PDF library with comments, summaries, and method extraction
 </td>
 <td width="50%" valign="top">
-<img src="docs/screenshots/agent-chat.png" alt="Agent chat scoped to a project" /><br/>
-<b>Agent</b>: a project-scoped assistant grounded in your records
+<img src="docs/screenshots/agent-chat.png" alt="Agent chat rail beside a notebook page" /><br/>
+<b>Agent</b>: a chat rail scoped to the page you are on, grounded in your records
 </td>
 </tr>
 <tr>
