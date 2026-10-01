@@ -2,7 +2,7 @@
 
 const { createWorkspaceFileService } = require('../agent/file-access/service.js');
 const { registerAgentFileIpc } = require('../ipc/register-agent-file-ipc.js');
-const { FILE_ACCESS } = require('../../shared/ipc/channels');
+const { FILE_ACCESS, LLM } = require('../../shared/ipc/channels');
 
 const {
   hasSupportedDataExtension,
@@ -74,6 +74,9 @@ const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transform
 const { createBioinformaticsService } = require('../bioinformatics');
 const { createAgentLogService } = require('./services/create-agent-log-service');
 const { createNpmUpdaterService } = require('../updater/create-npm-updater-service');
+const { createCodexCliUpdater } = require('../lib/codex-cli-provider/cli-updater');
+const { setCodexCliUpdater } = require('../lib/codex-cli-provider/cli-maintenance');
+const { invalidateCodexCliCatalog } = require('../lib/codex-cli-provider/catalog');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
 const { createGenomeService } = require('../genome/create-genome-service');
@@ -248,6 +251,18 @@ function createMainServices(context = {}) {
     agentFoundation: agents,
     processObject
   });
+
+  const codexCliUpdater = createCodexCliUpdater({
+    env: processObject.env,
+    platform: processObject.platform,
+    arch: processObject.arch,
+    onUpdated: (status) => {
+      invalidateCodexCliCatalog();
+      const window = getMainWindow();
+      if (window && !window.isDestroyed()) window.webContents.send(LLM.CODEX_CLI_UPDATED, status);
+    }
+  });
+  setCodexCliUpdater(codexCliUpdater);
 
   const scheduledTasks = createScheduledTaskService({
     fs,
@@ -433,6 +448,7 @@ function createMainServices(context = {}) {
   }
 
   async function start() {
+    codexCliUpdater.start();
     await bestEffort('html-preview', async () => {
       installHtmlPreviewService({ protocol: context.protocol, ipcMain, getMainWindow });
     });
@@ -466,6 +482,7 @@ function createMainServices(context = {}) {
   // Reverse start order; each failure is logged without blocking the rest.
   async function shutdown() {
     const stops = [
+      ['codex-cli-updater', () => codexCliUpdater.stop()],
       ['bioinformatics', () => bioinformatics.stop()],
       ['scheduled-tasks', () => scheduledTasks.stop()],
       ['mcp', () => mcp.stop()],

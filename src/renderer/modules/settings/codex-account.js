@@ -89,6 +89,12 @@ function createCodexAccountSettings({
       settingCodexStatus.textContent = codexLoginConfig.source === 'env'
         ? 'OpenAI account: connected through an environment token.'
         : 'OpenAI account: connected.';
+      if (codexLoginConfig.cliVersion) {
+        settingCodexStatus.textContent += ` Codex CLI ${codexLoginConfig.cliVersion}; updates automatically.`;
+      }
+      if (codexLoginConfig.cliUpdateError) {
+        settingCodexStatus.textContent += ` Automatic update failed: ${codexLoginConfig.cliUpdateError}`;
+      }
       return;
     }
 
@@ -119,8 +125,14 @@ function createCodexAccountSettings({
     if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
     try {
       const result = await window.hikariApi.getCodexLlmStatus();
+      const previousStatus = codexLoginConfig;
       codexLoginConfig = normalizeCodexLoginStatus(result);
       renderCodexStatus();
+      if (codexLoginConfig.loggedIn && codexLoginConfig.cliAvailable !== false
+        && (!previousStatus.loggedIn || previousStatus.cliVersion !== codexLoginConfig.cliVersion
+          || !llmModelCatalog?.hasCodexModels?.())) {
+        await refreshCodexCatalog();
+      }
       return codexLoginConfig;
     } catch {
       renderCodexStatus('Failed to load Codex login status.');

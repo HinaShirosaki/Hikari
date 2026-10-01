@@ -1,0 +1,29 @@
+import { element } from './artwork.mjs';
+
+const paths = {
+  plus: ['M12 5v14M5 12h14'],
+  undo: ['M9 5 4 10l5 5', 'M4 10h10a6 6 0 0 1 0 12'],
+  redo: ['m15 5 5 5-5 5', 'M20 10H10a6 6 0 0 0 0 12'],
+  more: ['M5 12h.01M12 12h.01M19 12h.01'],
+  down: ['m7 10 5 5 5-5'],
+  close: ['m6 6 12 12M6 18 18 6'],
+  copy: ['M8 8h12v12H8z', 'M16 8V4H4v12h4'],
+  up: ['m7 13 5-5 5 5', 'M12 8v12M5 4h14'],
+  lower: ['m7 11 5 5 5-5', 'M12 4v12M5 20h14'],
+  trash: ['M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7'],
+  eye: ['M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z', 'M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0'],
+  hidden: ['m3 3 18 18M10.6 5.1 12 5c6 0 10 7 10 7a20 20 0 0 1-3.1 3.9M6.2 6.2A23 23 0 0 0 2 12s4 7 10 7a12 12 0 0 0 5.8-1.8'],
+  alignLeft: ['M4 5h16M4 10h10M4 15h16M4 20h10'],
+  alignCenter: ['M4 5h16M7 10h10M4 15h16M7 20h10'],
+  alignRight: ['M4 5h16M10 10h10M4 15h16M10 20h10'],
+  arrow: ['M12 19V5m-6 6 6-6 6 6'],
+  image: ['M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5', 'M8 7h.01']
+};
+export function icon(name) {
+  const svg = element('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', class: 'ui-icon' });
+  for (const d of paths[name] || paths.image) svg.append(element('path', { d }));
+  return svg;
+}
+export function mountIcons(root = document) {
+  root.querySelectorAll('[data-icon]').forEach(node => node.prepend(icon(node.dataset.icon)));
+}

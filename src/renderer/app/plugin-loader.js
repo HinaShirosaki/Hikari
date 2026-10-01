@@ -172,6 +172,8 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
 
       const section = documentObject.createElement('section');
       section.id = viewId;
+      section.setAttribute('data-plugin-id', plugin.id);
+      section.setAttribute('data-plugin-name', plugin.name || plugin.id);
       section.className = 'view plugin-view';
       section.setAttribute('aria-label', plugin.name || plugin.id);
 
@@ -244,7 +246,7 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
           ? [...plugin.aliases]
           : [],
         searchInputId: '',
-        agentChatRail: false,
+        agentChatRail: !isRemote && Array.isArray(plugin.permissions) && plugin.permissions.includes('agent:chat'),
         hiddenFromNavigation: false
       });
       installed.push(viewId);

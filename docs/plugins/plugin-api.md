@@ -546,6 +546,44 @@ unreachable.
 
 ---
 
+### `agent.chat` — *`agent:chat`*
+
+Submit `{message}` (up to 3000 characters) to the installed local plugin's own
+Agent Chat rail. The host opens its view and saves the conversation in a
+`plugin:<id>` scope. This permission enables the rail. Submission returns
+`{ok:true}` after acceptance, or `{ok:false,reason}` if busy, unavailable, or a
+composer draft/attachments prevent submission. Model credentials stay in Hikari.
+
+### `agent.respond` — *`agent:canvas`*
+
+Complete an `agent.canvas` request with `{id,result}`; `result.ok` is boolean.
+Only the registered frame and origin that received it may respond. Unknown,
+late, duplicate and cross-plugin replies are rejected.
+
+### `agent.canvas` event — *`agent:canvas`*
+
+The generic `plugin_canvas` MCP tool routes `{id,request,assets,deadline}` to the
+enabled local plugin named by `plugin_id`. Start with `request:{action:"read"}`
+and return a plugin-owned request schema and instructions as `agent_contract`.
+Plugins own validation, edits, durable persistence and rendering. Check the
+30-second `deadline` before edits. Use revisions, atomic saves and idempotent
+request IDs. Render while hidden and return
+`previews:[{canvas,width,height,mime_type,data_url}]` for native MCP images.
+The host validates PNG/JPEG/WebP bytes: 5 MiB each, at most eight previews.
+`assets` maps image IDs to `{mime_type,data_url}` for storage-confined paths
+provided by the agent (5 MiB each, 8 MiB combined). No host filesystem paths or
+plugin modules cross the API.
+
+```js
+hikari.on('agent.canvas', async ({id,request,assets,deadline}) => {
+  const result = await myWorkspace.request(request, deadline, assets);
+  await hikari.call('agent.respond', {id,result});
+});
+await hikari.call('agent.chat', {message:'Read my plugin contract and draw a cell.'});
+```
+
+---
+
 ## 5. What the API deliberately does not do
 
 Absent by design, not oversight. If you need one of these, the extension
@@ -561,12 +599,14 @@ rather than a plugin.
   write the app's settings, cannot learn the storage root, and cannot reach a
   file outside `<storage root>/Plugins/<its id>/`. `downloads.save` can write
   elsewhere only after the user chooses the exact destination in a save dialog.
-- **No agent, LLM, or network verbs.** A plugin can `fetch()` on its own like
-  any webpage; the host will not proxy it. `python.run` is compute, not a
+- **No raw model or network proxy.** `agent.chat` uses the normal chat workflow;
+  `agent.canvas` exposes the plugin's own scene. Provider credentials stay in
+  Hikari. The host provides no arbitrary network proxy. `python.run` is compute, not a
   network door — but note it runs on the host with whatever the host's
   interpreter can reach, which is why it is a permission of its own.
 - **No data subscriptions.** All the host pushes is the safe `app.context`
-  snapshot and the parameterless `app.save` / `app.undo` / `app.redo` commands.
+  snapshot, `app.save` / `app.undo` / `app.redo` commands, and permission-gated
+  `agent.canvas` requests.
   Protocol, notebook, project, and sample data remain request/response.
 - **No cross-plugin calls.**
 

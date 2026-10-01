@@ -17,6 +17,7 @@ const {
 } = require('./paths');
 const { buildCodexCommandEnv } = require('./runtime-home');
 const { cleanText } = require('./utils');
+const { ensureCodexCliUpdated } = require('./cli-maintenance');
 
 function extractCodexLoginUrl(text = '') {
   const match = String(text || '').match(/https:\/\/auth\.openai\.com\/oauth\/authorize\?[^\s]+/i);
@@ -24,6 +25,7 @@ function extractCodexLoginUrl(text = '') {
 }
 
 async function launchCodexCliLogin({ cwd = process.cwd() } = {}) {
+  await ensureCodexCliUpdated();
   invalidateCodexLoginStatusCache();
   const safeCwd = resolveWorkingDirectory(cwd);
   const env = await buildCodexCommandEnv(safeCwd);

@@ -79,6 +79,9 @@ function registerSystemIpc(deps = {}) {
       message: status.message || '',
       cliAvailable: status.cliAvailable,
       cliPath: cleanText(status.cliPath, 2400),
+      cliVersion: cleanText(status.cliVersion, 80),
+      cliUpdateStatus: cleanText(status.cliUpdateStatus, 80),
+      cliUpdateError: cleanText(status.cliUpdateError, 400),
       cliMessage: cleanText(status.cliMessage, 2400),
       cliInstallCommand: cleanText(status.cliInstallCommand, 2400),
       cliInstallShell: cleanText(status.cliInstallShell, 80)

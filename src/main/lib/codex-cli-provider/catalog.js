@@ -3,6 +3,7 @@
 const { spawn } = require('node:child_process');
 const { resolveCodexInvocation } = require('./paths');
 const { cleanText, safeParseJson } = require('./utils');
+const { ensureCodexCliUpdated } = require('./cli-maintenance');
 
 const CODEX_MODEL_LIST_TIMEOUT_MS = 20000;
 const EMPTY_CATALOG = Object.freeze({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' });
@@ -53,6 +54,8 @@ function catalogFromCodexModelList(entries = []) {
 // Asks `codex app-server` for every model (hidden ones too, so a saved choice such
 // as a reserve model still validates) over its JSON-RPC stdio protocol.
 function listCodexModels({ env = process.env, timeoutMs = CODEX_MODEL_LIST_TIMEOUT_MS } = {}) {
+  const managedHome = String(env.HIKARI_CODEX_HOME || '').trim();
+  if (managedHome) env = { ...env, CODEX_HOME: managedHome };
   return new Promise((resolve, reject) => {
     const invocation = resolveCodexInvocation(env);
     const child = spawn(invocation.command, [...invocation.argsPrefix, 'app-server'], { env, stdio: 'pipe' });
@@ -102,12 +105,23 @@ function listCodexModels({ env = process.env, timeoutMs = CODEX_MODEL_LIST_TIMEO
 }
 
 async function requestCodexCliCatalog({ listModels = listCodexModels, ...options } = {}) {
+  await ensureCodexCliUpdated();
+  // The renderer can ask before desktop startup has seeded the managed login.
+  // Reuse the same home preparation as execution on that first request.
+  if (listModels === listCodexModels && !options.env && process.env.HIKARI_CODEX_HOME) {
+    const { buildCodexCommandEnv } = require('./runtime-home');
+    options.env = await buildCodexCommandEnv(process.env.HIKARI_APP_DATA_ROOT || process.cwd());
+  }
   codexCatalog = catalogFromCodexModelList(await listModels(options));
   return codexCatalog;
 }
 
 function getCodexCliCatalog() {
   return codexCatalog;
+}
+
+function invalidateCodexCliCatalog() {
+  codexCatalog = EMPTY_CATALOG;
 }
 
 function findCodexCliModelConfig(model = '', catalog = null) {
@@ -173,6 +187,7 @@ module.exports = {
   getCodexCliCatalog,
   getCodexCliModel,
   getCodexCliReasoningEffort,
+  invalidateCodexCliCatalog,
   normalizeCodexCliModel,
   normalizeCodexCliReasoningEffort,
   requestCodexCliCatalog,

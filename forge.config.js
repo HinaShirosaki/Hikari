@@ -35,6 +35,15 @@ module.exports = {
   packagerConfig: {
     // Built from assets/icon.svg by scripts/build-icons.cjs; Packager selects .icns or .ico.
     icon: './assets/icon',
+    // Sign after Packager updates the bundle metadata and creates app.asar.
+    // The fuse plugin's earlier arm64 signature is invalidated by those steps.
+    osxSign: {
+      identity: '-',
+      identityValidation: false,
+      preAutoEntitlements: false,
+      preEmbedProvisioningProfile: false,
+      optionsForFile: () => ({ hardenedRuntime: false, timestamp: 'none' })
+    },
     // Shipped outside app.asar so Settings can open it with the system viewer.
     extraResource: ['./THIRD-PARTY-NOTICES.md'],
     asar: {
@@ -71,6 +80,8 @@ module.exports = {
       /^\/docs($|\/)/,
       /^\/artifacts($|\/)/,
       /^\/examples($|\/)/,
+      // Installable plugins are distributed separately from the app.
+      /^\/plugins($|\/)/,
       /^\/reports($|\/)/,
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,

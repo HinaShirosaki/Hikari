@@ -2,6 +2,7 @@
 
 const { createAgentMcpHost } = require('../../agent/mcp-contract/host.js');
 const { createAssayPlotBridge } = require('./assay-plot-bridge.js');
+const { createPluginCanvasBridge } = require('./plugin-canvas-bridge.js');
 
 function createMainMcpService({
   agentToolRuntime,
@@ -13,10 +14,12 @@ function createMainMcpService({
   createMcpHost = createAgentMcpHost
 } = {}) {
   const plotBridge = createAssayPlotBridge({ ipcMain, getMainWindow });
+  const canvasBridge = createPluginCanvasBridge({ ipcMain, getMainWindow });
   const mcpHost = createMcpHost({
     runTool: (toolId, ...args) => {
       if (toolId === 'workspace-files') return fileAccess?.execute(args[0], args[2]?.fileAccessToken)
         || { ok: false, status: 'unavailable', error: 'Workspace files is unavailable.' };
+      if (toolId === 'plugin-canvas') return canvasBridge.run(args[0]);
       return toolId === 'assay-plot' ? plotBridge.run(args[0]) : agentToolRuntime?.runAgentTool(toolId, ...args);
     },
     env: processObject.env,
@@ -44,6 +47,7 @@ function createMainMcpService({
 
   async function stop() {
     plotBridge.close();
+    canvasBridge.close();
     await mcpHost.close();
   }
 

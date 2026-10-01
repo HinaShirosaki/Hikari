@@ -26,7 +26,9 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'downloads',
   'python',
   'notifications',
-  'layout'
+  'layout',
+  'agent:chat',
+  'agent:canvas'
 ]);
 
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {

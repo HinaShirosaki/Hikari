@@ -6,6 +6,12 @@ function createLlmApi(ipcRenderer) {
   return {
     getCodexLlmStatus: () => ipcRenderer.invoke(LLM.CODEX_STATUS),
     getCodexLlmCatalog: () => ipcRenderer.invoke(LLM.CODEX_CATALOG),
+    onCodexCliUpdated: (handler) => {
+      if (typeof handler !== 'function') return () => {};
+      const listener = (_event, status) => handler(status);
+      ipcRenderer.on(LLM.CODEX_CLI_UPDATED, listener);
+      return () => ipcRenderer.removeListener(LLM.CODEX_CLI_UPDATED, listener);
+    },
     loginCodexLlm: () => ipcRenderer.invoke(LLM.CODEX_LOGIN),
     clearCodexLlmLogin: () => ipcRenderer.invoke(LLM.CODEX_CLEAR_LOGIN),
     setCodexLlmModel: (model) => ipcRenderer.invoke(LLM.CODEX_SET_MODEL, { model }),
