@@ -25,6 +25,7 @@ const {
   readCodexCliOAuthProfile
 } = require('./auth-profile');
 const { cleanText } = require('./utils');
+const { ensureCodexCliUpdated, getCodexCliUpdateStatus } = require('./cli-maintenance');
 
 async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
   invalidateCodexLoginStatusCache();
@@ -63,9 +64,16 @@ async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
 }
 
 async function getCodexLoginStatus(options = {}) {
+  await ensureCodexCliUpdated();
   const status = await readCodexLoginStatus(options);
+  const update = getCodexCliUpdateStatus();
   // Do not cache discovery: an install or removal must be reflected immediately.
-  return { ...status, ...getCodexCliAvailability() };
+  return {
+    ...status, ...getCodexCliAvailability(),
+    cliVersion: update.currentVersion || '',
+    cliUpdateStatus: update.status || '',
+    cliUpdateError: update.error || ''
+  };
 }
 
 async function readCodexLoginStatus({ forceRefresh = false } = {}) {

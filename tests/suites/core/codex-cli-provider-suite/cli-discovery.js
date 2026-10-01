@@ -20,11 +20,37 @@ module.exports = function registerCliDiscovery(context = {}) {
         statSync(name) { return entries.has(key(name)) ? { isFile: () => true, mode: 0o755 } : missing(); },
         readdirSync(name) { return directories[name] || []; },
         realpathSync(name) { return name; },
+        readFileSync(name) { return entries.has(key(name)) ? entries.get(key(name)) : missing(); },
         openSync(name) { return entries.has(key(name)) ? name : missing(); },
         readSync(name, buffer) { return buffer.write(entries.get(key(name)) || 'native'); },
         closeSync() {}
       }
     };
+  }
+
+  for (const platform of ['darwin', 'win32']) {
+    for (const arch of ['arm64', 'x64']) {
+      test(`Codex discovery prefers the updated managed ${platform}/${arch} CLI and honors explicit overrides`, () => {
+        const { codexManagedRoot, codexReleaseTarget } = require('../../../../src/main/lib/codex-cli-provider/cli-managed');
+        const p = platform === 'win32' ? path.win32 : path.posix;
+        const home = p.join(fixture(platform).home, 'Hikari', 'codex-cli-home');
+        const env = { HIKARI_CODEX_HOME: home };
+        const root = codexManagedRoot(env, { platform });
+        const target = codexReleaseTarget(platform, arch);
+        const managed = p.join(root, 'releases', `0.159.3-${target}`, 'bin', platform === 'win32' ? 'codex.exe' : 'codex');
+        const external = platform === 'win32' ? 'D:\\Tools\\codex.exe' : '/opt/homebrew/bin/codex';
+        const options = { ...fixture(platform, {
+          [p.join(root, 'current.json')]: JSON.stringify({ version: '0.159.3', target }),
+          [managed]: '', [external]: ''
+        }), arch };
+        env[platform === 'win32' ? 'Path' : 'PATH'] = p.dirname(external);
+        assert.equal(resolveCodexBinary(env, options), managed);
+        assert.deepEqual(resolveCodexInvocation(env, options), { command: managed, argsPrefix: [] });
+        assert.equal(resolveCodexBinary({ ...env, HIKARI_CODEX_CLI: external }, options), external);
+        assert.equal(resolveCodexBinary({ ...env, HIKARI_CODEX_BIN: external }, options), external);
+        assert.equal(resolveCodexBinary(env, { ...options, fs: fixture(platform, { [external]: '' }).fs }), external);
+      });
+    }
   }
 
   for (const platform of ['darwin', 'win32']) {

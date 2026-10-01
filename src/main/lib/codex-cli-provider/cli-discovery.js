@@ -3,6 +3,7 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { readCodexManagedInstall } = require('./cli-managed');
 
 // Keep discovery independent of shell startup files: desktop launches often have
 // a minimal PATH. Options also let the Windows filesystem be tested on macOS.
@@ -71,6 +72,8 @@ function resolveCodexBinary(env = process.env, options = {}) {
     if (/[/\\]/u.test(explicit)) return explicit;
     return commandCandidates(explicit, ctx.pathDirs, ctx).find((item) => ctx.isFile(item)) || explicit;
   }
+  const managed = readCodexManagedInstall(env, options);
+  if (managed) return managed.binary;
   const execPath = options.processExecPath ?? process.execPath;
   const resourcePath = options.resourcesPath ?? process.resourcesPath;
   const candidates = commandCandidates('codex', [

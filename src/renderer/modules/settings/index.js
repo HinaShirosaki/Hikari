@@ -281,6 +281,7 @@ export function initSettings({
     void refreshCodexLoginStatus();
   });
   void externalSkillsController.refresh();
+  window.hikariApi?.onCodexCliUpdated?.(() => { void refreshCodexLoginStatus(); });
   void refreshCodexCatalog();
   void refreshCodexLoginStatus();
   activateSettingsPanel(activeSettingsPanel);

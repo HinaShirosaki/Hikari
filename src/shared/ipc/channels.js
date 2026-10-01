@@ -145,6 +145,7 @@ const PAPER_FINDING = Object.freeze({
 const LLM = Object.freeze({
   CODEX_STATUS: 'llm:codex-status',
   CODEX_CATALOG: 'llm:codex-catalog',
+  CODEX_CLI_UPDATED: 'llm:codex-cli-updated',
   CODEX_LOGIN: 'llm:codex-login',
   CODEX_CLEAR_LOGIN: 'llm:codex-clear-login',
   CODEX_SET_MODEL: 'llm:codex-set-model',
