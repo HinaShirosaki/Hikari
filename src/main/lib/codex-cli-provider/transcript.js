@@ -27,14 +27,14 @@ function readTranscriptTimestampMs(event = {}) {
   return Number.isFinite(timestampMs) ? timestampMs : 0;
 }
 
-async function findCodexSessionTranscriptPath(sessionId = '', cwd = '') {
+async function findCodexSessionTranscriptPath(sessionId = '', cwd = '', env = process.env) {
   const cleanSessionId = normalizeCodexSessionId(sessionId);
   if (!cleanSessionId) {
     return '';
   }
   const roots = [...new Set([
-    resolveCodexCliRuntimeHomeDirectory(cwd),
-    ...getCodexCliCandidateHomeDirectories()
+    resolveCodexCliRuntimeHomeDirectory(cwd, env),
+    ...getCodexCliCandidateHomeDirectories(env)
   ].map((value) => String(value || '').trim()).filter(Boolean))];
   const queue = roots.map((root) => path.join(root, 'sessions'));
   let visited = 0;
@@ -64,6 +64,7 @@ async function findCodexSessionTranscriptPath(sessionId = '', cwd = '') {
 async function replayCodexSessionProgressFromTranscript({
   sessionId = '',
   cwd = '',
+  env = process.env,
   onStream = null,
   seenProgressEvents = new Set(),
   seenDisplayEvents = new Set(),
@@ -72,7 +73,7 @@ async function replayCodexSessionProgressFromTranscript({
   if (!sessionId || typeof onStream !== 'function') {
     return '';
   }
-  const transcriptPath = await findCodexSessionTranscriptPath(sessionId, cwd);
+  const transcriptPath = await findCodexSessionTranscriptPath(sessionId, cwd, env);
   if (!transcriptPath) {
     return '';
   }
@@ -129,6 +130,7 @@ async function replayCodexSessionProgressFromTranscript({
 
 function createCodexSessionTranscriptFollower({
   cwd = '',
+  env = process.env,
   getSessionId = null,
   onJsonEvent = null,
   minTimestampMs = Date.now() - 2000,
@@ -158,7 +160,7 @@ function createCodexSessionTranscriptFollower({
         return;
       }
       if (!transcriptPath) {
-        transcriptPath = await findCodexSessionTranscriptPath(sessionId, cwd);
+        transcriptPath = await findCodexSessionTranscriptPath(sessionId, cwd, env);
         if (!transcriptPath) {
           return;
         }

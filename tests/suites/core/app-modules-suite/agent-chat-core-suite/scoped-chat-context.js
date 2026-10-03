@@ -1067,4 +1067,50 @@ test('unscoped session prompts do not masquerade as paper sessions', () => {
   assert.equal(agentFlags.paperSessionPrompt, undefined);
   assert.equal(agentFlags.paperSession, undefined);
 });
+
+test('plugin item chats keep separate history and sessions through saved-state normalization', () => {
+  const scopedModule = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/agent-chat/scoped-state.js'));
+  const root = { settings: {}, paperAgentChatSessions: {
+    'plugin:scientific-illustration': { currentSessionId: 'legacy', messages: [{ text: 'Legacy shared history' }] }
+  } };
+  let itemId = 'figure-a', title = 'Figure A';
+  const chat = scopedModule.createScopedAgentChatState(root, { getScopeContext: () => ({
+    scopeType: 'plugin', pluginId: 'scientific-illustration', pluginContextId: itemId,
+    pluginContextTitle: title, pluginCanvasIllustrationId: itemId
+  }) });
+  assert.equal(chat.agentChat.messages.length, 0);
+  chat.agentChat = { currentSessionId: 'session-a', sessions: [{ id: 'session-a', codex_session_id: 'codex-a' }],
+    messages: [{ text: 'Only figure A' }] };
+  itemId = 'figure-b'; title = 'Figure B';
+  assert.equal(chat.agentChat.messages.length, 0);
+  assert.equal(chat.agentChat.currentSessionId, '');
+  chat.agentChat = { currentSessionId: 'session-b', sessions: [{ id: 'session-b' }], messages: [{ text: 'Only figure B' }] };
+  root.paperAgentChatSessions = scopedModule.normalizePaperAgentChatSessions(JSON.parse(JSON.stringify(root.paperAgentChatSessions)));
+  itemId = 'figure-a'; title = 'Renamed figure';
+  assert.equal(chat.agentChat.messages[0].text, 'Only figure A');
+  assert.equal(chat.agentChat.currentSessionId, 'session-a');
+  assert.equal(chat.agentChat.sessions[0].codex_session_id, 'codex-a');
+  assert.match(chat.agentChatContext.sessionPrompt, /Renamed figure/);
+  assert.match(chat.agentChatContext.sessionPrompt, /"illustration_id":"figure-a"/);
+  assert.equal(root.paperAgentChatSessions['plugin:scientific-illustration'].currentSessionId, 'legacy');
+});
+
+test('plugin chat removes generic suggestions and restores them in other scopes', () => {
+  const document = createMockDocument(['agent-rail-chat-history', 'agent-rail-message-input',
+    'agent-rail-send-btn', 'agent-rail-quick-prompts']);
+  const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  quickPrompts.innerHTML = '<button data-agent-suggest-prompt="old">Old</button>';
+  const state = { projects: [], settings: {}, agentChat: { messages: [], sessions: [] },
+    agentChatContext: { scopeType: 'plugin', pluginId: 'scientific-illustration' } };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/agent-chat/index.js'), { document, window: {} });
+  const agent = agentModule.initAgentChat({ idPrefix: 'agent-rail', state, persist: () => {},
+    createId: () => 'message', safeText: shared.safeText });
+  agent.render();
+  assert.equal(quickPrompts.hidden, true);
+  assert.equal([...quickPrompts.querySelectorAll('[data-agent-suggest-prompt]')].every(button => button.hidden), true);
+  state.agentChatContext = { scopeType: 'paper', paperId: 'paper-a' };
+  agent.render();
+  assert.equal(quickPrompts.hidden, false);
+  assert.equal(quickPrompts.querySelector('[data-agent-suggest-prompt]').textContent, 'Generate protocol');
+});
 };

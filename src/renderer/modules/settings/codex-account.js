@@ -3,6 +3,7 @@ import {
 } from '../codex-model-catalog.generated.js';
 import { normalizeCodexLoginStatus } from './llm-model-catalog.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { isCodexConnected, setAgentAvailability } from '../../lib/agent-availability.js';
 
 // Codex account panel: login status polling, the login/logout flow, the desktop
 // MCP prompt, and saving the LLM provider/model selection.
@@ -37,6 +38,8 @@ function createCodexAccountSettings({
     message: 'Checking Codex login...'
   };
   let codexLoginRefreshTimers = [];
+  let codexStatusRevision = 0;
+  let clearingCodexLogin = false;
 
   function clearCodexLoginRefreshTimers() {
     codexLoginRefreshTimers.forEach((timerId) => {
@@ -57,14 +60,15 @@ function createCodexAccountSettings({
       return;
     }
     settingCodexAuthControls.hidden = false;
+    const connected = isCodexConnected(codexLoginConfig);
     if (startCodexLoginBtn) {
-      startCodexLoginBtn.hidden = codexLoginConfig.loggedIn && codexLoginConfig.cliAvailable !== false;
+      startCodexLoginBtn.hidden = connected;
       startCodexLoginBtn.disabled = codexLoginConfig.cliAvailable === false;
     }
     if (clearCodexLoginBtn) {
       clearCodexLoginBtn.hidden = !codexLoginConfig.loggedIn && codexLoginConfig.source !== 'stored';
       clearCodexLoginBtn.disabled = codexLoginConfig.source === 'env';
-      clearCodexLoginBtn.textContent = codexLoginConfig.loggedIn ? 'Sign out' : 'Clear saved login';
+      clearCodexLoginBtn.textContent = connected ? 'Sign out' : 'Clear saved login';
     }
 
     const cliMissing = codexLoginConfig.cliAvailable === false;
@@ -85,7 +89,7 @@ function createCodexAccountSettings({
       return;
     }
 
-    if (codexLoginConfig.loggedIn) {
+    if (connected) {
       settingCodexStatus.textContent = codexLoginConfig.source === 'env'
         ? 'OpenAI account: connected through an environment token.'
         : 'OpenAI account: connected.';
@@ -117,7 +121,11 @@ function createCodexAccountSettings({
   }
 
   async function refreshCodexLoginStatus() {
+    if (clearingCodexLogin) return codexLoginConfig;
+    const revision = ++codexStatusRevision;
     if (!window.hikariApi?.getCodexLlmStatus) {
+      codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
+      setAgentAvailability(false);
       renderCodexStatus('Codex login is unavailable.');
       showTransientNotice('Codex login is unavailable.', { type: 'error' });
       return codexLoginConfig;
@@ -125,21 +133,26 @@ function createCodexAccountSettings({
     if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
     try {
       const result = await window.hikariApi.getCodexLlmStatus();
+      if (revision !== codexStatusRevision) return codexLoginConfig;
       const previousStatus = codexLoginConfig;
       codexLoginConfig = normalizeCodexLoginStatus(result);
+      setAgentAvailability(isCodexConnected(codexLoginConfig));
       renderCodexStatus();
-      if (codexLoginConfig.loggedIn && codexLoginConfig.cliAvailable !== false
-        && (!previousStatus.loggedIn || previousStatus.cliVersion !== codexLoginConfig.cliVersion
+      if (isCodexConnected(codexLoginConfig)
+        && (!isCodexConnected(previousStatus) || previousStatus.cliVersion !== codexLoginConfig.cliVersion
           || !llmModelCatalog?.hasCodexModels?.())) {
         await refreshCodexCatalog();
       }
       return codexLoginConfig;
     } catch {
+      if (revision !== codexStatusRevision) return codexLoginConfig;
+      codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
+      setAgentAvailability(false);
       renderCodexStatus('Failed to load Codex login status.');
       showTransientNotice('Failed to load Codex login status.', { type: 'error' });
       return codexLoginConfig;
     } finally {
-      if (checkCodexCliBtn) checkCodexCliBtn.disabled = false;
+      if (checkCodexCliBtn && revision === codexStatusRevision) checkCodexCliBtn.disabled = false;
     }
   }
 
@@ -173,6 +186,7 @@ function createCodexAccountSettings({
   }
 
   async function onClearCodexLogin() {
+    if (clearingCodexLogin) return;
     clearCodexLoginRefreshTimers();
     if (!window.hikariApi?.clearCodexLlmLogin) {
       renderCodexStatus('Codex login reset is unavailable.');
@@ -180,15 +194,28 @@ function createCodexAccountSettings({
       return;
     }
 
-    const result = await window.hikariApi.clearCodexLlmLogin();
-    if (!result?.ok) {
-      renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
-      showTransientNotice(result?.error || 'Failed to clear the saved Codex login.', { type: 'error' });
-      return;
-    }
+    // Invalidate earlier checks and keep focus/poll refreshes out of this transition.
+    codexStatusRevision += 1;
+    clearingCodexLogin = true;
+    if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
+    try {
+      const result = await window.hikariApi.clearCodexLlmLogin();
+      if (!result?.ok) {
+        renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
+        showTransientNotice(result?.error || 'Failed to clear the saved Codex login.', { type: 'error' });
+        return;
+      }
 
-    codexLoginConfig = normalizeCodexLoginStatus(result?.status);
-    renderCodexStatus(result?.message || 'Cleared the saved Codex login.');
+      codexLoginConfig = normalizeCodexLoginStatus(result?.status);
+      setAgentAvailability(isCodexConnected(codexLoginConfig));
+      renderCodexStatus(result?.message || 'Cleared the saved Codex login.');
+    } catch {
+      renderCodexStatus('Failed to clear the saved Codex login.');
+      showTransientNotice('Failed to clear the saved Codex login.', { type: 'error' });
+    } finally {
+      clearingCodexLogin = false;
+      if (checkCodexCliBtn) checkCodexCliBtn.disabled = false;
+    }
   }
 
   function renderCodexDesktopMcpStatus(message = '', stateName = '') {
@@ -355,7 +382,7 @@ function createCodexAccountSettings({
         renderForms();
       }
       const status = await refreshCodexLoginStatus();
-      if (status.loggedIn !== true && status.cliAvailable !== false) {
+      if (!isCodexConnected(status) && status.cliAvailable !== false) {
         await startCodexLoginFlow();
       }
     } catch {

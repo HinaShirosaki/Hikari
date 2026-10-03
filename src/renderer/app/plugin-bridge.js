@@ -9,6 +9,7 @@ export function createPluginBridge({
   onNotebookEntriesChanged,
   onFrameHistoryChanged = null,
   onPluginPrompt = null,
+  onPluginChatContext = null,
   notify = null,
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
@@ -17,7 +18,7 @@ export function createPluginBridge({
   // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
   const canvasRequests = new Map();
-  function requestCanvas({ id, plugin_id: pluginId, request, assets, deadline }) {
+  function requestCanvas({ id, plugin_id: pluginId, request, assets, deadline, inspectionRunId }) {
     const target = [...frames.entries()].find(([, { plugin }]) => plugin.id === pluginId
       && plugin.enabled !== false && asArray(plugin.permissions).includes('agent:canvas'));
     if (!target) return Promise.resolve({ ok: false, status: 'unavailable', error: 'Enable the requested local plugin with agent:canvas permission and reload Hikari.' });
@@ -26,7 +27,7 @@ export function createPluginBridge({
       const finish = result => { windowObject.clearTimeout(timer); canvasRequests.delete(id); resolve(result); };
       const timer = windowObject.setTimeout(() => finish({ ok: false, status: 'acknowledgement_timeout', error: 'The canvas frame did not acknowledge the request. Read again or retry identical arguments.' }), Math.max(1, deadline - Date.now()));
       canvasRequests.set(id, { frame, registration, finish });
-      try { frame.postMessage({ hikari: PROTOCOL_MARKER, event: 'agent.canvas', payload: { id, request, assets, deadline } }, registration.origin); }
+      try { frame.postMessage({ hikari: PROTOCOL_MARKER, event: 'agent.canvas', payload: { id, request, assets, deadline, inspectionRunId } }, registration.origin); }
       catch (error) { finish({ ok: false, status: 'unavailable', error: error.message }); }
     });
   }
@@ -168,7 +169,10 @@ export function createPluginBridge({
   }
 
   function broadcastAppContext(changed = '') {
-    broadcast('app.context', buildPluginAppContext(state, changed, windowObject));
+    frames.forEach(({ plugin, origin }, frameWindow) => {
+      frameWindow?.postMessage?.({ hikari: PROTOCOL_MARKER, event: 'app.context',
+        payload: buildPluginAppContext(state, changed, windowObject, plugin.id) }, origin);
+    });
   }
 
   function handleMessage(event) {
@@ -241,6 +245,7 @@ export function createPluginBridge({
         takeNotebookGel,
         respondCanvas,
         onPluginPrompt,
+        onPluginChatContext,
         notify,
         frameWindow: event.source,
         windowObject
@@ -261,6 +266,7 @@ export function createPluginBridge({
   }
 
   windowObject?.addEventListener?.('message', handleMessage);
+  windowObject?.document?.addEventListener?.('hikari:agent-chat-rail-state', () => broadcastAppContext('layout'));
   return {
     register,
     requestCanvas,

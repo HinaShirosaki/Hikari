@@ -3,6 +3,7 @@ import { createAppDock } from './navigation-shell/app-dock.js';
 import { createAgentChatRail } from './navigation-shell/agent-rail.js';
 import { createSearchSuggestions } from './navigation-shell/search-suggestions.js';
 import { runSearchInput } from '../lib/search-field-lens.js';
+import { AGENT_AVAILABILITY_EVENT, isAgentAvailable, isAgentOffline } from '../lib/agent-availability.js';
 
 export { isAgentChatRailAvailable } from './navigation-shell/agent-rail.js';
 
@@ -136,6 +137,7 @@ export function createNavigationShell({
     pageTitle,
     pageSubtitle,
     expandedDockApps,
+    isAppShown: (app) => app.viewId !== VIEWS.AGENT || isAgentAvailable(documentObject),
     normalize,
     getActiveViewId,
     getAppForView,
@@ -220,7 +222,8 @@ export function createNavigationShell({
 
 
   function showView(viewId) {
-    const nextView = normalize(viewId);
+    const requestedView = normalize(viewId);
+    const nextView = requestedView === VIEWS.AGENT && isAgentOffline(documentObject) ? VIEWS.HOME : requestedView;
     if (lastViewPersistenceEnabled) {
       rememberLastActiveView(nextView);
     }
@@ -259,6 +262,26 @@ export function createNavigationShell({
     syncSharedLeftRailShellChrome();
   }
 
+  function syncAgentAvailability() {
+    const activeViewId = getActiveViewId();
+    if (activeViewId === VIEWS.AGENT && isAgentOffline(documentObject)) {
+      showView(VIEWS.HOME);
+      return;
+    }
+    // Connection changes affect shell chrome, not the active editor's draft.
+    const activeNavView = resolveNavigationViewId(activeViewId);
+    const expanded = agentChatRailRuntime.syncState(activeNavView);
+    renderAppNavigation(activeNavView);
+    syncNavigationState(activeNavView);
+    closeMoreMenu();
+    // Only an open list is refreshed; collapsed search keeps its text and must stay closed.
+    if (getSuggestionsState().open) refreshSearchSuggestions();
+    if (expanded) moduleRuntime.renderAgentChatRail?.();
+    sharedLeftRailRuntime.ensureHandles();
+    sharedLeftRailRuntime.syncWidth();
+    syncSharedLeftRailShellChrome();
+  }
+
   function initNavigation() {
     const handleNavClick = (event) => {
       const target = event.target;
@@ -285,6 +308,7 @@ export function createNavigationShell({
       }
     });
     agentChatRailRuntime.init();
+    documentObject.addEventListener(AGENT_AVAILABILITY_EVENT, syncAgentAvailability);
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');

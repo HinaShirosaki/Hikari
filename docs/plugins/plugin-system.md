@@ -134,6 +134,7 @@ Source of truth:
 | `name` | string | **yes** | Display name in navigation and Settings. Max 120 chars. |
 | `version` | string | **yes** | `major.minor.patch`. Shown in Settings; Hikari does not currently act on it. |
 | `description` | string | no | Shown in Settings and as the view subtitle. Max 400 chars. |
+| `icon` | string | no | Relative SVG file path inside the plugin folder, e.g. `icon.svg`. Maximum 32 KiB. Displayed as a monochrome image mask in the dock and More menu; use a square view box, transparent background, and simple strokes. Refreshed on app reload. SVG markup is never inserted into the host document. |
 | `permissions` | string[] | no | Host API capabilities. Defaults to `[]`. Rejected alongside `embed`. |
 | `serve` | boolean | no | Legacy explicit opt-in to loopback delivery; local folders now receive this automatically. Rejected alongside `embed`. |
 | `embed` | string | no | Absolute **https** URL. Makes this a remote plugin: `index.html` is not required and host permissions are refused. |

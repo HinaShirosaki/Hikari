@@ -18,7 +18,7 @@ const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
 const { getCodexLoginStatus } = require('./login');
 const { resolveWorkingDirectory } = require('./paths');
 const { createCodexJsonEventHandler } = require('./request-stream');
-const { buildCodexCommandEnv } = require('./runtime-home');
+const { prepareCodexRuntime, resolveCodexRequestSelection } = require('./runtime-gateway');
 const {
   extractCodexSessionIdFromText,
   normalizeCodexSessionId
@@ -35,6 +35,7 @@ async function requestCodexCliText({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
+  enableImageGeneration = false,
   cwd = '',
   timeoutMs = DEFAULT_TIMEOUT_MS,
   fileName = '',
@@ -61,7 +62,9 @@ async function requestCodexCliText({
     await ensureCodexCliWorkingDirectoryGuidance(safeCwd, { envOverrides });
   }
 
-  const loginStatus = await getCodexLoginStatus({ cwd: safeCwd });
+  const runtime = await prepareCodexRuntime({ cwd: safeCwd, envOverrides });
+  const selection = resolveCodexRequestSelection({ runtime, model, reasoningEffort });
+  const loginStatus = await getCodexLoginStatus({ runtime });
   if (!loginStatus.loggedIn) {
     throw new Error(loginStatus.message || 'Codex ChatGPT OAuth credentials are not configured.');
   }
@@ -75,7 +78,7 @@ async function requestCodexCliText({
     imageUrl,
     attachments,
     outputSchema,
-    envOverrides
+    runtime
   });
   const streamingEnabled = stream === true && typeof onStream === 'function';
   const cleanResumeSessionId = normalizeCodexSessionId(resumeSessionId);
@@ -92,13 +95,16 @@ async function requestCodexCliText({
     model,
     reasoningEffort,
     enableWebSearch,
+    enableImageGeneration,
     fileAccessToken: envOverrides.HIKARI_FILE_ACCESS_TOKEN || '',
-    collectJsonEvents
+    collectJsonEvents,
+    selection
   });
 
   const transcriptFollower = streamingEnabled
     ? createCodexSessionTranscriptFollower({
       cwd: safeCwd,
+      env: runtime.env,
       getSessionId: streamHandler.getCodexSessionId,
       onJsonEvent: streamHandler.handleJsonEvent,
       minTimestampMs: requestStartedAtMs - 2000,
@@ -112,6 +118,7 @@ async function requestCodexCliText({
         args,
         cwd: safeCwd,
         env: requestState.env,
+        invocation: runtime.invocation,
         input: requestState.promptWithAttachments,
         timeoutMs,
         onJsonEvent: collectJsonEvents ? streamHandler.handleJsonEvent : null
@@ -128,7 +135,8 @@ async function requestCodexCliText({
       safeCwd,
       onStream,
       streamHandler,
-      requestStartedAtMs
+      requestStartedAtMs,
+      runtime
     });
   } finally {
     await removeFileIfExists(requestState.outputSchemaFile).catch(() => {});
@@ -144,7 +152,7 @@ async function prepareCodexRequest({
   imageUrl,
   attachments,
   outputSchema,
-  envOverrides
+  runtime
 }) {
   const stagedAttachments = await stageCodexPromptAttachments({
     cwd,
@@ -157,14 +165,8 @@ async function prepareCodexRequest({
   const promptWithAttachments = buildCodexPromptWithStagedAttachments(cleanPrompt, stagedAttachments);
   const outputFile = await createCodexOutputFilePath(cwd);
   const outputSchemaFile = await stageCodexOutputSchema(cwd, outputSchema);
-  const baseEnv = await buildCodexCommandEnv(cwd, {
-    envOverrides
-  });
   return {
-    env: {
-      ...baseEnv,
-      ...(envOverrides && typeof envOverrides === 'object' ? envOverrides : {})
-    },
+    env: runtime.env,
     outputFile,
     outputSchemaFile,
     promptWithAttachments
@@ -178,8 +180,10 @@ function buildRequestArgs({
   model,
   reasoningEffort,
   enableWebSearch,
+  enableImageGeneration,
   fileAccessToken,
-  collectJsonEvents
+  collectJsonEvents,
+  selection
 }) {
   return cleanResumeSessionId
     ? buildCodexCliExecResumeArgs({
@@ -189,8 +193,10 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
+      enableImageGeneration,
       fileAccessToken,
-      streamJson: collectJsonEvents
+      streamJson: collectJsonEvents,
+      selection
     })
     : buildCodexCliExecArgs({
       outputFile,
@@ -198,8 +204,10 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
+      enableImageGeneration,
       fileAccessToken,
-      streamJson: collectJsonEvents
+      streamJson: collectJsonEvents,
+      selection
     });
 }
 
@@ -212,7 +220,8 @@ async function readCodexRequestResult({
   safeCwd,
   onStream,
   streamHandler,
-  requestStartedAtMs
+  requestStartedAtMs,
+  runtime
 }) {
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
   let outputText = '';
@@ -230,6 +239,7 @@ async function readCodexRequestResult({
     await replayCodexSessionProgressFromTranscript({
       sessionId: codexSessionId,
       cwd: safeCwd,
+      env: runtime.env,
       onStream,
       seenProgressEvents: streamHandler.getSeenProgressEvents(),
       seenDisplayEvents: streamHandler.getSeenDisplayEvents(),
@@ -248,7 +258,8 @@ async function readCodexRequestResult({
       metadata: {
         session_id: normalizeCodexSessionId(codexSessionId),
         resumed_session_id: cleanResumeSessionId,
-        command: cleanResumeSessionId ? 'exec resume' : 'exec'
+        command: cleanResumeSessionId ? 'exec resume' : 'exec',
+        ...runtime.diagnostics
       }
     };
   }

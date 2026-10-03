@@ -98,7 +98,8 @@ await hikari.call('app.info');
 //   appearance: { mode: 'day', fontSize: 16 },
 //   storage: { configured: true },
 //   layout: {
-//     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980 }
+//     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false },
+//     agentChatRail: { expanded: false, available: true }
 //   }
 // }
 ```
@@ -108,7 +109,17 @@ actions without revealing the user's storage path.
 
 `layout.leftRail` is safe presentation context for plugins that draw their own
 two-pane workspace. It reports the host's current persisted rail width and
-clamping limits; it does not expose host DOM or settings.
+clamping limits. `foldable` indicates that the host supports folding; `folded`
+is the saved preference for the calling plugin's rail. Folding is independent
+per plugin, while expanded widths stay shared. This context exposes no host DOM.
+`layout.agentChatRail.expanded` reports whether the host's chat rail is open
+for the active workspace. Opening, folding or navigating between workspaces
+publishes an `app.context` event with `changed:"layout"`. Plugins can use this
+to hide a redundant composer while keeping figure controls visible.
+`layout.agentChatRail.available` is `false` while Codex is not connected in
+Settings; the host then hides its chat and AI actions, and `agent.chat` returns
+`{ok:false,reason:"unavailable"}`, so hide any prompt UI too. Connecting or
+disconnecting publishes the same `changed:"layout"` event.
 
 ### 2.1 `app.context` event — *no permission required*
 
@@ -202,6 +213,24 @@ between a save that fails and a save they saw coming.
 ---
 
 ## 3. Write verbs
+
+### `app.setLeftRailFolded` — `layout`
+
+Saves the calling plugin's navigation-rail preference in Hikari. The plugin
+renders its own rail using the returned state; the host never manipulates its
+iframe DOM. The registered plugin identity supplies the scope, so callers
+cannot fold another plugin's rail. The expanded width stays unchanged.
+
+```js
+const { leftRail } = await hikari.call('app.setLeftRailFolded', { folded: true });
+// leftRail.folded === true; false opens the rail again.
+```
+
+`folded` must be a boolean. `app.info` and `app.context` expose
+`layout.leftRail.foldable` and `layout.leftRail.folded`; each frame receives its
+own saved fold state. Changes publish `changed: 'layout'`. Check `foldable`
+before showing a toggle when supporting older Hikari builds. Folding is a view
+preference and does not change figure data, exports or agent canvas coordinates.
 
 ### `app.setLeftRailWidth` — `layout`
 
@@ -550,9 +579,25 @@ unreachable.
 
 Submit `{message}` (up to 3000 characters) to the installed local plugin's own
 Agent Chat rail. The host opens its view and saves the conversation in a
-`plugin:<id>` scope. This permission enables the rail. Submission returns
+`plugin:<id>` scope, or `plugin:<id>:item:<context.id>` when the plugin supplies
+`context:{id,title,canvasIllustrationId}`. The optional context is selected
+before submission; its fields follow `agent.setContext`. This permission enables the rail. Submission returns
 `{ok:true}` after acceptance, or `{ok:false,reason}` if busy, unavailable, or a
 composer draft/attachments prevent submission. Model credentials stay in Hikari.
+
+### `agent.setContext` — *`agent:chat`*
+
+Select the plugin's current item with `{id,title,canvasIllustrationId}` so its
+chat follows selection even before a message is sent. `id` is required and
+contains 1–100 letters, numbers, underscores or hyphens; `title` is optional
+and at most 200 characters. The host uses the calling plugin's own ID; plugins
+cannot select another plugin's chat. Each item gets separate messages, saved
+chat sessions, Codex continuation and composer drafts. New or duplicated items
+start with empty chats. The optional `canvasIllustrationId` pins canvas reads
+and mandatory inspection to that illustration; it uses the same ID format.
+Selection updates the visible rail when this plugin is active and returns
+`{ok:true,contextId}`. Call after opening/selecting an item and after renaming
+it. Plugin chats show no generic suggested prompts.
 
 ### `agent.respond` — *`agent:canvas`*
 
@@ -562,7 +607,7 @@ late, duplicate and cross-plugin replies are rejected.
 
 ### `agent.canvas` event — *`agent:canvas`*
 
-The generic `plugin_canvas` MCP tool routes `{id,request,assets,deadline}` to the
+The generic `plugin_canvas` MCP tool routes `{id,request,assets,deadline,inspectionRunId}` to the
 enabled local plugin named by `plugin_id`. Start with `request:{action:"read"}`
 and return a plugin-owned request schema and instructions as `agent_contract`.
 Plugins own validation, edits, durable persistence and rendering. Check the
@@ -570,13 +615,34 @@ Plugins own validation, edits, durable persistence and rendering. Check the
 request IDs. Render while hidden and return
 `previews:[{canvas,width,height,mime_type,data_url}]` for native MCP images.
 The host validates PNG/JPEG/WebP bytes: 5 MiB each, at most eight previews.
-`assets` maps image IDs to `{mime_type,data_url}` for storage-confined paths
-provided by the agent (5 MiB each, 8 MiB combined). No host filesystem paths or
-plugin modules cross the API.
+`assets` maps image IDs to `{mime_type,data_url}` (5 MiB each, 8 MiB combined).
+The MCP caller supplies `assets:[{id,path,source?}]`: `source:"storage"` (default)
+confines paths to Hikari storage; `source:"codex"` confines paths to the
+Hikari-managed `CODEX_HOME/generated_images` folder and accepts the exact native
+`image_gen` output path. The root comes from host configuration, never request
+context. Root and file symlink escapes are rejected. Native imports require no
+shell copy. Plugins persist the embedded bytes with their scene. Canvas chat
+turns enable Codex's native `image_generation` feature on fresh and resumed
+runs; the plugin must report unavailable generation rather than change providers.
+No host filesystem paths or plugin modules cross the iframe API.
+
+Canvas plugins can require inspection before their Hikari chat run completes.
+Return `inspection:{required:true}` and `illustration_id` from `read`. The host
+generates an opaque `inspectionRunId` for that run and forwards it with all
+canvas events, outside the agent-authored request. The plugin owns its render
+receipts and review validation. The host then calls
+`request:{action:"inspection_status",illustration_id}` and accepts completion
+only when `ok:true`, the illustration ID matches, and
+`inspection:{required:true,complete:true,revision}` matches the response's
+current `revision`. Missing inspection triggers one model continuation, then
+an incomplete result if still missing. Plugins without this opt-in retain
+their existing completion behavior. Keep receipts ephemeral and scoped to the
+run, illustration and revision; do not expose them through read/status calls.
+This completion gate applies to the plugin's Hikari chat, not external MCP clients.
 
 ```js
-hikari.on('agent.canvas', async ({id,request,assets,deadline}) => {
-  const result = await myWorkspace.request(request, deadline, assets);
+hikari.on('agent.canvas', async ({id,request,assets,deadline,inspectionRunId}) => {
+  const result = await myWorkspace.request(request, deadline, assets, {inspectionRunId});
   await hikari.call('agent.respond', {id,result});
 });
 await hikari.call('agent.chat', {message:'Read my plugin contract and draw a cell.'});

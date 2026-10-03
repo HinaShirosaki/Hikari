@@ -210,8 +210,13 @@ function normalizeScopeContext(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
   if (scopeType === 'plugin') {
     const pluginId = trimText(context.pluginId, 100);
+    const pluginContextId = trimText(context.pluginContextId, 100);
+    const pluginContextTitle = trimText(context.pluginContextTitle, 200);
+    const pluginCanvasIllustrationId = trimText(context.pluginCanvasIllustrationId, 100);
+    const readRequest = { action: 'read', ...(pluginCanvasIllustrationId ? { illustration_id: pluginCanvasIllustrationId } : {}) };
     return { scopeType: 'plugin', pluginId, pluginName: trimText(context.pluginName, 200),
-      sessionPrompt: `You are working in the installed plugin ${trimText(context.pluginName, 200) || pluginId} (${pluginId}). Use plugin_canvas with plugin_id:"${pluginId}" and request:{action:"read"} to discover its request schema and instructions before editing. Follow the plugin-owned contract. Render previews to inspect your actual output and iterate. Preserve existing user edits and unrelated objects.` };
+      pluginContextId, pluginContextTitle, pluginCanvasIllustrationId,
+      sessionPrompt: `You are working in the installed plugin ${trimText(context.pluginName, 200) || pluginId} (${pluginId}). ${pluginContextId ? `This chat belongs only to item ${JSON.stringify(pluginContextId)} (${JSON.stringify(pluginContextTitle)}). ` : ''}Use plugin_canvas with plugin_id:${JSON.stringify(pluginId)} and request:${JSON.stringify(readRequest)} to discover its request schema and instructions before editing. Follow the plugin-owned contract. Render previews to inspect your actual output and iterate. Preserve existing user edits and unrelated objects.` };
   }
   if (scopeType === 'home') {
     return {

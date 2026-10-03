@@ -207,6 +207,8 @@ test('biology-notebook page naming uses the chosen Codex model once and skips ge
     'cancel-biology-notebook-edit-btn',
     'biology-notebook-entry-list'
   ]);
+  // Page names are generated only while Codex is connected.
+  document.body.dataset = { agentAvailability: 'connected' };
   const protocolSnapshot = {
     id: 'protocol-1',
     name: 'Transformation',

@@ -5,6 +5,7 @@ import {
   resolveSessionFolderId
 } from './session-folders.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
 
 // Reading chat sessions off disk and creating new ones. Owns the in-flight
 // promises so a second click cannot start a duplicate load or session.
@@ -42,6 +43,7 @@ function createSessionLoading({
   async function loadChatSession(sessionId, options = {}) {
     ensureAgentState();
     const targetSessionId = trimText(sessionId, 120);
+    const requestedScopeKey = normalizeScopeKey(state.agentChatContext || {});
     const storagePath = getStoragePath();
     if (!targetSessionId || !storagePath || !api?.agentChatLogGetSession) {
       return;
@@ -62,6 +64,7 @@ function createSessionLoading({
       storagePath,
       sessionId: targetSessionId
     }).then((result) => {
+      if (normalizeScopeKey(state.agentChatContext || {}) !== requestedScopeKey) return;
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to load chat session.');
       }
@@ -118,7 +121,8 @@ function createSessionLoading({
       sessionLoadPromise = null;
       activeSessionLoadId = '';
       queuedSessionLoadId = '';
-      if (nextSessionId && nextSessionId !== targetSessionId) {
+      if (nextSessionId && nextSessionId !== targetSessionId
+        && normalizeScopeKey(state.agentChatContext || {}) === requestedScopeKey) {
         void loadChatSession(nextSessionId, options);
       }
     });
@@ -197,6 +201,7 @@ function createSessionLoading({
 
   async function ensureCurrentChatSession(messageText = '') {
     ensureAgentState();
+    const requestedScopeKey = normalizeScopeKey(state.agentChatContext || {});
     if (trimText(state.agentChat.currentSessionId, 120)) {
       return state.agentChat.currentSessionId;
     }
@@ -226,6 +231,7 @@ function createSessionLoading({
     if (!result?.ok || !result?.session?.id) {
       throw new Error(result?.error || 'Failed to create chat session.');
     }
+    if (normalizeScopeKey(state.agentChatContext || {}) !== requestedScopeKey) return '';
     state.agentChat.currentSessionId = trimText(result.session.id, 120);
     newChatDraftActive = false;
     upsertSessionSummary(result.session);

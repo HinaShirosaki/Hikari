@@ -1,6 +1,7 @@
 import { buildFolderKey, updatePaperAvailability } from './model.js';
 import { buildPaperStorageFolder, fileToBytes } from './storage.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 
 // Adding a PDF to the library: resolve the destination folder, copy the bytes
 // into storage, and kick off the automatic intake pipeline.
@@ -189,7 +190,9 @@ function createPaperUploadActions({
         relativePath: uploaded.storedRelativePath,
         paperTitle: uploaded.title,
         linkedType: uploaded.linkedType,
-        linkedName: uploaded.linkedName
+        linkedName: uploaded.linkedName,
+        // Without Codex only the Markdown and figures are written; the model step is skipped.
+        paperIntake: isAgentAvailable(windowRef?.document)
       }).catch((error) => ({ ok: false, error: String(error?.message || error) }));
 
       // The paper may have been deleted while intake was running.

@@ -9,15 +9,11 @@ const CODEX_PROJECT_MEMORY_FILE = 'MEMORY.md';
 const CODEX_AGENTS_FOLDER_NAME = '.agents';
 const CODEX_SKILLS_FOLDER_NAME = 'skills';
 const CODEX_PROJECT_DOC_MAX_BYTES = 65536;
-const CODEX_MODELS_CACHE_FILE = 'models_cache.json';
 const CODEX_CONFIG_FILE = 'config.toml';
 const CODEX_RUNTIME_HOME_DIR_NAME = 'codex-cli-home';
 const CODEX_RUNTIME_HOME_FILES = Object.freeze([
   'auth.json',
   CODEX_CONFIG_FILE,
-  CODEX_MODELS_CACHE_FILE,
-  'installation_id',
-  'version.json',
   '.codex-global-state.json'
 ]);
 const CODEX_RUNTIME_HOME_DIRS = Object.freeze([
@@ -34,7 +30,6 @@ module.exports = {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_CONFIG_FILE,
   CODEX_LOGIN_LAUNCH_GRACE_MS,
-  CODEX_MODELS_CACHE_FILE,
   CODEX_PROJECT_DOC_MAX_BYTES,
   CODEX_PROJECT_MEMORY_FILE,
   CODEX_RUNTIME_HOME_DIR_NAME,

@@ -1,5 +1,7 @@
 'use strict';
 
+const { randomUUID } = require('node:crypto');
+
 // chat_log/index.json is read-modify-written by two independent modules (the chat-log
 // runtime and the transform monitor). Serialize those cycles per path and replace the
 // file via rename so a concurrent writer can neither tear it nor clobber the other's update.
@@ -17,7 +19,9 @@ function withFileLock(filePath, task) {
 }
 
 async function writeFileAtomic(runtimeFs, filePath, content) {
-  const temporaryPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  // Independent saves can enter during the same millisecond. Each writer must
+  // own its temporary file through rename and failure cleanup.
+  const temporaryPath = `${filePath}.${process.pid}.${randomUUID()}.tmp`;
   try {
     await runtimeFs.writeFile(temporaryPath, content, 'utf8');
     await runtimeFs.rename(temporaryPath, filePath);

@@ -7,7 +7,7 @@ module.exports = function registerCliUpdater(context = {}) {
   const crypto = require('node:crypto');
   const { execFileSync } = require('node:child_process');
   const { createCodexCliUpdater } = require('../../../../src/main/lib/codex-cli-provider/cli-updater');
-  const { readCodexManagedInstall, codexManagedRoot, codexReleaseTarget } = require('../../../../src/main/lib/codex-cli-provider/cli-managed');
+  const { readCodexManagedInstall, codexManagedRoot, codexStandaloneRoot, codexReleaseTarget } = require('../../../../src/main/lib/codex-cli-provider/cli-managed');
   const { resolveCodexBinary } = require('../../../../src/main/lib/codex-cli-provider/cli-discovery');
   const { setCodexCliUpdater } = require('../../../../src/main/lib/codex-cli-provider/cli-maintenance');
   const { requestCodexCliCatalog } = require('../../../../src/main/lib/codex-cli-provider/catalog');
@@ -23,8 +23,10 @@ module.exports = function registerCliUpdater(context = {}) {
     const metadata = { tag_name: `rust-v${version}`, assets: [{ name: `codex-package-${target}.tar.gz`, digest: `sha256:${'a'.repeat(64)}` }] };
     let checks = 0;
     let installs = 0;
+    let nativeUpdates = 0;
     const deps = {
       env,
+      updateNative: async () => { nativeUpdates++; },
       fetchImpl: async () => { checks++; return { ok: true, json: async () => metadata }; },
       installRelease: async (release, staging) => {
         installs++;
@@ -33,7 +35,7 @@ module.exports = function registerCliUpdater(context = {}) {
         return packageDir;
       }
     };
-    return { tmp, env, target, metadata, deps, counts: () => ({ checks, installs }), clean: () => fs.rmSync(tmp, { recursive: true, force: true }) };
+    return { tmp, env, target, metadata, deps, counts: () => ({ checks, installs }), nativeUpdates: () => nativeUpdates, clean: () => fs.rmSync(tmp, { recursive: true, force: true }) };
   }
 
   function writeCli(directory, selectedVersion) {
@@ -79,7 +81,7 @@ process.stdin.on('data', chunk => {
       assert.equal(changed, 1);
       await updater.ensureLatest();
       assert.deepEqual(f.counts(), { checks: 1, installs: 1 });
-      assert.deepEqual(fs.readdirSync(codexManagedRoot(f.env)).sort(), ['current.json', 'releases']);
+      assert.deepEqual(fs.readdirSync(codexStandaloneRoot(f.env)).sort(), ['auto-update-version', 'current', 'releases']);
     } finally { setCodexCliUpdater(null); await updater.stop(); f.clean(); }
   });
 
@@ -92,7 +94,8 @@ process.stdin.on('data', chunk => {
       assert.notEqual(resolveCodexBinary(f.env), previous);
       assert.equal(execFileSync(previous, ['--version'], { encoding: 'utf8' }).trim(), 'codex-cli 0.157.1');
       await updater.ensureLatest({ force: true });
-      assert.deepEqual(f.counts(), { checks: 2, installs: 1 });
+      assert.deepEqual(f.counts(), { checks: 1, installs: 1 });
+      assert.equal(f.nativeUpdates(), 1);
     } finally { f.clean(); }
   });
 
@@ -140,6 +143,64 @@ process.stdin.on('data', chunk => {
     } finally { f.clean(); }
   });
 
+  test('Native update failures restore the selected release without invoking the bootstrap downloader', async () => {
+    const f = fixture();
+    try {
+      await createCodexCliUpdater(f.deps).ensureLatest();
+      const previous = readCodexManagedInstall(f.env);
+      const root = codexStandaloneRoot(f.env);
+      const invalid = path.join(root, 'releases', `0.160.0-${f.target}`);
+      writeCli(invalid, '0.157.1');
+      let changed = 0;
+      const updater = createCodexCliUpdater({ ...f.deps, onUpdated: () => changed++, updateNative: async () => {
+        fs.unlinkSync(path.join(root, 'current'));
+        fs.symlinkSync(invalid, path.join(root, 'current'));
+      } });
+      assert.match((await updater.ensureLatest()).error, /runnable selected release/);
+      assert.equal(readCodexManagedInstall(f.env).binary, previous.binary);
+      assert.equal(fs.readFileSync(path.join(root, 'auto-update-version'), 'utf8'), `${previous.version}-${f.target}`);
+      assert.equal(changed, 0);
+      assert.deepEqual(f.counts(), { checks: 1, installs: 1 });
+      const offline = createCodexCliUpdater({ ...f.deps, updateNative: async () => { throw new Error('offline'); } });
+      assert.equal((await offline.ensureLatest()).error, 'offline');
+      assert.equal(readCodexManagedInstall(f.env).binary, previous.binary);
+      assert.deepEqual(f.counts(), { checks: 1, installs: 1 });
+    } finally { f.clean(); }
+  });
+
+  test('A CLI lacking native self-update is bootstrapped once into the standard layout', async () => {
+    const f = fixture();
+    try {
+      f.metadata.tag_name = 'rust-v0.157.1';
+      await createCodexCliUpdater(f.deps).ensureLatest();
+      const previous = readCodexManagedInstall(f.env).binary;
+      f.metadata.tag_name = `rust-v${version}`;
+      const updater = createCodexCliUpdater({ ...f.deps, updateNative: async () => {
+        const error = new Error('unsupported'); error.stderr = "error: unrecognized subcommand 'update'"; throw error;
+      } });
+      assert.equal((await updater.ensureLatest()).currentVersion, version);
+      assert.equal(readCodexManagedInstall(f.env).method, 'standalone');
+      assert.equal(fs.existsSync(previous), true);
+      assert.deepEqual(f.counts(), { checks: 2, installs: 2 });
+    } finally { f.clean(); }
+  });
+
+  test('The Windows junction replacement branch preserves the immutable old release', async () => {
+    const { replaceSelection } = require('../../../../src/main/lib/codex-cli-provider/cli-standalone-layout');
+    const f = fixture();
+    try {
+      await createCodexCliUpdater(f.deps).ensureLatest();
+      const previous = readCodexManagedInstall(f.env).binary;
+      const root = codexStandaloneRoot(f.env);
+      const destination = path.join(root, 'releases', `0.160.0-${f.target}`);
+      writeCli(destination, '0.160.0');
+      await replaceSelection(root, destination, 'win32');
+      assert.equal(fs.realpathSync(path.join(root, 'current')), fs.realpathSync(destination));
+      assert.equal(fs.existsSync(previous), true);
+      assert.equal(fs.readdirSync(root).some(name => name.startsWith('.hikari-current')), false);
+    } finally { f.clean(); }
+  });
+
   test('Codex updater startup checks again hourly and cancels unfinished installs on shutdown', async () => {
     const f = fixture();
     let clock = 0;
@@ -149,24 +210,25 @@ process.stdin.on('data', chunk => {
       await updater.ensureLatest();
       clock += 60 * 60 * 1000;
       await updater.ensureLatest();
-      assert.deepEqual(f.counts(), { checks: 2, installs: 1 });
+      assert.deepEqual(f.counts(), { checks: 1, installs: 1 });
+      assert.equal(f.nativeUpdates(), 1);
       await updater.stop();
       clock += 60 * 60 * 1000;
       await updater.ensureLatest();
-      assert.equal(f.counts().checks, 2);
+      assert.equal(f.counts().checks, 1);
       let began;
       const started = new Promise(resolve => { began = resolve; });
       const cancellable = createCodexCliUpdater({ ...f.deps, installRelease: (_release, _staging, { signal }) => {
         began();
         return new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true }));
       } });
-      fs.rmSync(path.join(codexManagedRoot(f.env), 'current.json'));
+      fs.rmSync(path.join(codexStandaloneRoot(f.env), 'current'));
       const pending = cancellable.ensureLatest();
       await started;
       await cancellable.stop();
       assert.equal((await pending).status, 'error');
       assert.equal(readCodexManagedInstall(f.env), null);
-      assert.equal(fs.readdirSync(codexManagedRoot(f.env)).some(name => name.startsWith('.staging')), false);
+      assert.equal(fs.readdirSync(codexStandaloneRoot(f.env)).some(name => name.startsWith('.staging')), false);
     } finally { await updater.stop(); f.clean(); }
   });
 
@@ -214,7 +276,7 @@ process.stdin.on('data', chunk => {
       fs.writeFileSync(binary, source);
       const catalog = await requestCodexCliCatalog({ env: { ...f.env, HIKARI_CODEX_CLI: binary, CODEX_HOME: path.join(f.tmp, 'native-home') } });
       assert.equal(catalog.defaultModel, 'gpt-6.1-sol');
-      assert.equal(fs.readFileSync(capture, 'utf8'), f.env.HIKARI_CODEX_HOME);
+      assert.equal(fs.readFileSync(capture, 'utf8'), fs.realpathSync(f.env.HIKARI_CODEX_HOME));
     } finally { f.clean(); }
   });
 

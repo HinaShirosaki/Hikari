@@ -463,6 +463,8 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       );
       assert.deepEqual(checkedContainer, containerDefinition);
       assert.deepEqual(checkedPlotlyGraph, plotlyGraphDefinition);
+      assert.deepEqual(checkedContract.mcp.tools.find((tool) => tool.name === 'plugin_canvas'), mcpTools.find((tool) => tool.name === 'plugin_canvas'));
+      assert.match(checkedContract.agent_mcp_instructions, /`plugin_canvas`: read, edit, and render installed local plugins with agent:canvas permission\./);
       assert.match(
         checkedContract.agent_mcp_instructions,
         /`container`: store, name, list, read, update,[^\n]+optional source provenance/

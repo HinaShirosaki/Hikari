@@ -14,6 +14,7 @@
 
 const crypto = require('node:crypto');
 const { ensureObject } = require('../lib/normalize.js');
+const { withFileLock, writeFileAtomic } = require('../lib/shared-json-file');
 
 const FILE_VERSION = 1;
 const MAX_GENOMES = 32;
@@ -47,34 +48,44 @@ function createGenomeService({
   }
 
   let cache = null;
+  let cachePath = '';
+  const libraryLoads = new Map();
 
-  async function readLibrary() {
-    if (cache) {
+  async function readLibrary(target = path.resolve(getGenomeLibraryPath())) {
+    if (cache && cachePath === target) {
       return cache;
     }
-    try {
-      const raw = await fs.promises.readFile(getGenomeLibraryPath(), 'utf8');
-      const parsed = JSON.parse(raw);
-      cache = {
-        version: FILE_VERSION,
-        genomes: Array.isArray(parsed?.genomes) ? parsed.genomes : []
-      };
-    } catch {
-      // A missing or unreadable library file just means nothing has been connected yet.
-      cache = { version: FILE_VERSION, genomes: [] };
+    if (!libraryLoads.has(target)) {
+      const load = (async () => {
+        let library;
+        try {
+          const raw = await fs.promises.readFile(target, 'utf8');
+          const parsed = JSON.parse(raw);
+          library = { version: FILE_VERSION, genomes: Array.isArray(parsed?.genomes) ? parsed.genomes : [] };
+        } catch (error) {
+          if (error?.code !== 'ENOENT') throw error;
+          library = { version: FILE_VERSION, genomes: [] };
+        }
+        cache = library;
+        cachePath = target;
+        return library;
+      })();
+      libraryLoads.set(target, load);
     }
-    return cache;
+    try { return await libraryLoads.get(target); }
+    finally { libraryLoads.delete(target); }
   }
 
   function reload() {
     cache = null;
+    cachePath = '';
   }
 
-  async function writeLibrary(library) {
-    cache = library;
-    const target = getGenomeLibraryPath();
+  async function writeLibrary(target, library) {
     await fs.promises.mkdir(path.dirname(target), { recursive: true });
-    await fs.promises.writeFile(target, `${JSON.stringify(library, null, 2)}\n`, 'utf8');
+    await writeFileAtomic(fs.promises, target, `${JSON.stringify(library, null, 2)}\n`);
+    cache = library;
+    cachePath = target;
   }
 
   // Metadata only. Sequence records stay out of the list payload because a scaffold-heavy
@@ -152,6 +163,7 @@ function createGenomeService({
   // Register a genome file that is already on disk. Not exposed over IPC on purpose — the
   // renderer must go through addGenome so the path always comes from a user-driven picker.
   async function registerGenomePath(payload = {}) {
+    const target = path.resolve(getGenomeLibraryPath());
     const input = ensureObject(payload);
     const filePath = cleanText(input.filePath, 4096);
     if (!filePath) {
@@ -171,14 +183,6 @@ function createGenomeService({
       throw new Error('The selected genome path is not a file.');
     }
 
-    const library = await readLibrary();
-    if (library.genomes.some((genome) => genome.filePath === filePath)) {
-      throw new Error('That genome file is already connected.');
-    }
-    if (library.genomes.length >= MAX_GENOMES) {
-      throw new Error(`The genome library holds at most ${MAX_GENOMES} genomes. Remove one first.`);
-    }
-
     const records = await indexGenomeFile(filePath);
     if (!records.length) {
       throw new Error('No FASTA sequences were found in that file.');
@@ -193,11 +197,22 @@ function createGenomeService({
       addedAt: new Date(now()).toISOString(),
       records
     };
-    await writeLibrary({
-      version: FILE_VERSION,
-      genomes: [...library.genomes, genome]
+    return withFileLock(target, async () => {
+      // Indexing can take minutes. Read and validate the current collection at
+      // commit time, so indexing cannot resurrect a removed registration.
+      const library = await readLibrary(target);
+      if (library.genomes.some((item) => item.filePath === filePath)) {
+        throw new Error('That genome file is already connected.');
+      }
+      if (library.genomes.length >= MAX_GENOMES) {
+        throw new Error(`The genome library holds at most ${MAX_GENOMES} genomes. Remove one first.`);
+      }
+      await writeLibrary(target, { version: FILE_VERSION, genomes: [...library.genomes, genome] });
+      return {
+        ...summarize(genome, false),
+        sequences: genome.records.map(record => ({ name: record.name, length: record.length }))
+      };
     });
-    return getGenome({ id: genome.id });
   }
 
   async function addGenome(payload = {}) {
@@ -217,14 +232,15 @@ function createGenomeService({
 
   async function removeGenome(payload = {}) {
     const id = cleanText(ensureObject(payload).id, 160);
-    const library = await readLibrary();
-    const remaining = library.genomes.filter((genome) => genome.id !== id);
-    if (remaining.length === library.genomes.length) {
-      return { removed: false };
-    }
-    // Only the registration is dropped. The user's genome file is theirs and is left alone.
-    await writeLibrary({ version: FILE_VERSION, genomes: remaining });
-    return { removed: true };
+    const target = path.resolve(getGenomeLibraryPath());
+    return withFileLock(target, async () => {
+      const library = await readLibrary(target);
+      const remaining = library.genomes.filter((genome) => genome.id !== id);
+      if (remaining.length === library.genomes.length) return { removed: false };
+      // Only the registration is dropped. The user's FASTA is left alone.
+      await writeLibrary(target, { version: FILE_VERSION, genomes: remaining });
+      return { removed: true };
+    });
   }
 
   function readByteRange(filePath, start, end) {

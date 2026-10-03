@@ -8,8 +8,8 @@ const {
   getCodexCliCandidateHomeDirectories
 } = require('./paths');
 
-function readCodexCliAuthFile() {
-  const candidates = getCodexCliCandidateHomeDirectories();
+function readCodexCliAuthFile(env = process.env) {
+  const candidates = getCodexCliCandidateHomeDirectories(env);
   for (const homeDirectory of candidates) {
     try {
       const authPath = path.join(homeDirectory, 'auth.json');
@@ -56,8 +56,8 @@ function isCodexCliAccessTokenExpired(accessToken = '') {
   return Boolean(expiresAt && Date.now() >= expiresAt);
 }
 
-function readCodexCliOAuthProfile() {
-  const authFileState = readCodexCliAuthFile();
+function readCodexCliOAuthProfile(env = process.env) {
+  const authFileState = readCodexCliAuthFile(env);
   const authFile = authFileState?.authFile;
   const authMode = cleanText(authFile?.auth_mode, 40).toLowerCase();
   const accessToken = cleanText(authFile?.tokens?.access_token, 20000);
@@ -71,7 +71,7 @@ function readCodexCliOAuthProfile() {
     accountId,
     expiresAt,
     expired: Boolean(expiresAt && Date.now() >= expiresAt),
-    sourcePath: cleanText(authFileState?.sourcePath, 2400) || getCodexCliAuthFilePath()
+    sourcePath: cleanText(authFileState?.sourcePath, 2400) || getCodexCliAuthFilePath(env)
   };
 }
 

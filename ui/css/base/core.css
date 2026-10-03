@@ -1328,6 +1328,12 @@ button:focus-visible {
   opacity: 0.58;
 }
 
+/* AI controls appear only once Settings confirms Codex is connected
+   (src/renderer/lib/agent-availability.js). */
+body:not([data-agent-availability="connected"]) :is(.hikari-agent-action, [data-requires-agent]) {
+  display: none !important;
+}
+
 a.ghost-btn {
   display: inline-flex;
   align-items: center;

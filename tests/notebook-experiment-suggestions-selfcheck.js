@@ -94,7 +94,14 @@ async function run() {
   assert.equal(metadata.downloaded_papers.length, 0);
   assert.equal(metadata.papers_read_count, 0);
 
-  const { createExperimentSuggestions } = esm('modules/biology-notebook/project/experiment-suggestions.js');
+  const suggestionsPath = path.join(__dirname, '../src/renderer/modules/biology-notebook/project/experiment-suggestions.js');
+  const offline = loadEsmStyleModule(suggestionsPath).createExperimentSuggestions({
+    state: JSON.parse(JSON.stringify(snapshot)), api: { suggestNextExperiment: async () => assert.fail('Codex is not connected') }
+  });
+  assert.equal(await offline.suggest('p', { automatic: true }), null, 'No suggestion runs while Codex is not connected');
+  const { createExperimentSuggestions } = loadEsmStyleModule(suggestionsPath, {
+    document: { body: { dataset: { agentAvailability: 'connected' } } }
+  });
   const { normalizeNotebookState, resolveEntryExecutedAt } = esm('modules/biology-notebook/entry/entry-helpers.js');
   let calls = 0, persisted = '', activeId = '', opened = '';
   const state = JSON.parse(JSON.stringify(snapshot));

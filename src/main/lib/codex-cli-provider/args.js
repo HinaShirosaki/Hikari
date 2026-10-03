@@ -4,29 +4,19 @@ const {
   CODEX_PROJECT_DOC_MAX_BYTES,
   CODEX_PROJECT_MEMORY_FILE
 } = require('./constants');
-const {
-  getCodexCliCatalog,
-  resolveCodexCliModel,
-  resolveCodexCliReasoningEffort
-} = require('./catalog');
+const { getCodexCliCatalog } = require('./catalog');
+const { resolveCodexRequestSelection } = require('./runtime-gateway');
 const { normalizeCodexSessionId } = require('./session-id');
 
 function appendCodexCliModelArgs(args, {
   model = '',
   reasoningEffort = '',
-  catalog = null
+  catalog = null,
+  selection = null
 } = {}) {
-  const resolvedCatalog = catalog && typeof catalog === 'object'
-    ? catalog
-    : getCodexCliCatalog();
-  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog);
-  if (resolvedModel) {
-    args.push('-m', resolvedModel);
-  }
-  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel, resolvedCatalog);
-  if (resolvedReasoningEffort) {
-    args.push('-c', `model_reasoning_effort=${resolvedReasoningEffort}`);
-  }
+  const resolved = selection || resolveCodexRequestSelection({ model, reasoningEffort, catalog });
+  if (resolved.model) args.push('-m', resolved.model);
+  if (resolved.reasoningEffort) args.push('-c', `model_reasoning_effort=${resolved.reasoningEffort}`);
   return args;
 }
 
@@ -53,16 +43,21 @@ function buildCodexCliExecArgs({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
+  enableImageGeneration = false,
   fileAccessToken = '',
+  catalog = getCodexCliCatalog(),
+  selection = null,
   streamJson = false
 } = {}) {
-  const catalog = getCodexCliCatalog();
   const args = [
     '-a', 'never',
     '-s', 'read-only'
   ];
   if (enableWebSearch === true) {
     args.push('--search');
+  }
+  if (enableImageGeneration === true) {
+    args.push('-c', 'features.image_generation=true');
   }
   args.push(
     'exec',
@@ -76,7 +71,7 @@ function buildCodexCliExecArgs({
   if (outputSchemaFile) {
     args.push('--output-schema', outputSchemaFile);
   }
-  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog, selection });
   appendCodexProjectMemoryConfigArgs(args);
   appendFileAccessToken(args, fileAccessToken);
   args.push('-');
@@ -91,16 +86,21 @@ function buildCodexCliExecResumeArgs({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
+  enableImageGeneration = false,
   fileAccessToken = '',
+  catalog = getCodexCliCatalog(),
+  selection = null,
   streamJson = false
 } = {}) {
-  const catalog = getCodexCliCatalog();
   const args = [
     '-a', 'never',
     '-s', 'read-only'
   ];
   if (enableWebSearch === true) {
     args.push('--search');
+  }
+  if (enableImageGeneration === true) {
+    args.push('-c', 'features.image_generation=true');
   }
   args.push(
     'exec',
@@ -114,7 +114,7 @@ function buildCodexCliExecResumeArgs({
   if (outputSchemaFile) {
     args.push('--output-schema', outputSchemaFile);
   }
-  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog, selection });
   appendCodexProjectMemoryConfigArgs(args);
   appendFileAccessToken(args, fileAccessToken);
   const cleanSessionId = normalizeCodexSessionId(sessionId);

@@ -201,6 +201,7 @@ function createMainCodexService({
     recordLifecycleEvent: agentFoundation.observability.recordLifecycleEvent,
     getWorkingDirectory: getCodexCliWorkingDirectory,
     prepareProjectWorkspace,
+    requestPluginCanvas: mcpService?.requestPluginCanvas,
     runTool: agentFoundation.agentToolRuntime.runAgentTool
   });
   const runScheduledTask = createCodexScheduledTaskRunner({ cleanText, codexAgentRuntime });

@@ -54,7 +54,11 @@ function normalizeAssayScopeKey(context = {}) {
 
 export function normalizeScopeKey(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
-  if (scopeType === 'plugin') return `plugin:${trimText(context.pluginId, 100) || 'workspace'}`;
+  if (scopeType === 'plugin') {
+    const pluginKey = `plugin:${trimText(context.pluginId, 100) || 'workspace'}`;
+    const itemId = trimText(context.pluginContextId, 100);
+    return itemId ? `${pluginKey}:item:${itemId}` : pluginKey;
+  }
   if (scopeType === 'home') return 'home:experiment-log';
   if (scopeType === 'notebook') {
     return normalizeNotebookScopeKey(context);

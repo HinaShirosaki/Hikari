@@ -1,4 +1,10 @@
 /* Plugin views are frame-owned surfaces; the host supplies only sizing. */
+.workspace-main:has(> .plugin-view.is-active) {
+  /* The iframe supplies its own header spacing. Extra host padding leaves
+     a blank band above it and reduces the usable workspace height. */
+  padding-top: 0;
+}
+
 .workspace-main > .plugin-view.is-active {
   display: flex;
   height: 100%;

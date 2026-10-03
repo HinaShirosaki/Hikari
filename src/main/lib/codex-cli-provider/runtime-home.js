@@ -1,19 +1,19 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const { constants } = require('node:fs');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const {
   ensureHikariCodexAgentsFile,
   ensureHikariCodexMcpConfig
 } = require('../../agent/codex-agent/runtime-files.js');
 const {
   CODEX_CONFIG_FILE,
-  CODEX_MODELS_CACHE_FILE,
   CODEX_RUNTIME_HOME_DIRS,
   CODEX_RUNTIME_HOME_FILES
 } = require('./constants');
 const {
-  copyFileIfChanged,
   copyPathIfMissing,
   getPathStats,
   isDirectoryLike,
@@ -24,73 +24,6 @@ const {
   resolveCodexCliRuntimeHomeDirectory,
   resolveWorkingDirectory
 } = require('./paths');
-
-const SUPPORTED_CODEX_CLI_REASONING_EFFORTS = new Set([
-  'none', 'minimal', 'low', 'medium', 'high', 'xhigh'
-]);
-
-function normalizeCodexCliModelsCache(rawValue = '') {
-  try {
-    const parsed = JSON.parse(String(rawValue || ''));
-    if (!Array.isArray(parsed?.models)) {
-      return String(rawValue || '');
-    }
-    let changed = false;
-    const models = parsed.models.map((entry) => {
-      if (!entry || typeof entry !== 'object') {
-        return entry;
-      }
-      let nextEntry = entry;
-      if (!Object.prototype.hasOwnProperty.call(entry, 'supports_reasoning_summaries')) {
-        nextEntry = {
-          ...nextEntry,
-          supports_reasoning_summaries: Boolean(String(entry.default_reasoning_summary || '').trim())
-        };
-        changed = true;
-      }
-      if (!Array.isArray(entry.supported_reasoning_levels)) {
-        return nextEntry;
-      }
-      const supportedReasoningLevels = entry.supported_reasoning_levels.filter((level) => (
-        SUPPORTED_CODEX_CLI_REASONING_EFFORTS.has(String(level?.effort || '').trim().toLowerCase())
-      ));
-      if (supportedReasoningLevels.length === entry.supported_reasoning_levels.length) {
-        return nextEntry;
-      }
-      changed = true;
-      nextEntry = {
-        ...nextEntry,
-        supported_reasoning_levels: supportedReasoningLevels
-      };
-      const defaultReasoningEffort = String(entry.default_reasoning_level || '').trim().toLowerCase();
-      if (!SUPPORTED_CODEX_CLI_REASONING_EFFORTS.has(defaultReasoningEffort)) {
-        nextEntry.default_reasoning_level = String(supportedReasoningLevels.at(-1)?.effort || '');
-      }
-      return nextEntry;
-    });
-    return changed
-      ? `${JSON.stringify({ ...parsed, models }, null, 2)}\n`
-      : String(rawValue || '');
-  } catch {
-    return String(rawValue || '');
-  }
-}
-
-async function copyCompatibleCodexCliModelsCache(sourcePath = '', targetPath = '') {
-  try {
-    const source = await fs.readFile(sourcePath, 'utf8');
-    const compatible = normalizeCodexCliModelsCache(source);
-    const current = await fs.readFile(targetPath, 'utf8').catch(() => '');
-    if (current === compatible) {
-      return false;
-    }
-    await fs.mkdir(path.dirname(targetPath), { recursive: true });
-    await fs.writeFile(targetPath, compatible, 'utf8');
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function syncCodexCliRuntimePluginCacheEntry(sourcePath = '', targetPath = '', depth = 0) {
   const sourceStats = await getPathStats(sourcePath, { followSymlink: true });
@@ -148,7 +81,7 @@ async function syncCodexCliRuntimePluginCache(sourceHome = '', runtimeHome = '')
 async function writeRuntimeGuidance(runtimeHome = '', cwd = '', options = {}) {
   await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
     workspace: resolveWorkingDirectory(cwd),
-    envOverrides: options.envOverrides,
+    envOverrides: { ...options.env, ...options.envOverrides, HIKARI_CODEX_HOME: runtimeHome },
     dataFilePath: options.dataFilePath,
     storagePath: options.storagePath,
     mcpHostUrl: options.mcpHostUrl,
@@ -157,8 +90,24 @@ async function writeRuntimeGuidance(runtimeHome = '', cwd = '', options = {}) {
   await ensureHikariCodexAgentsFile(runtimeHome).catch(() => '');
 }
 
+async function seedRuntimeFile(source, target) {
+  const existing = await getPathStats(target);
+  if (existing?.isSymbolicLink()) {
+    // Detach links left by older runtime preparation before editing/refreshed login.
+    const temporary = `${target}.${randomUUID()}`;
+    try {
+      await fs.writeFile(temporary, await fs.readFile(target), { mode: 0o600, flag: 'wx' });
+      await fs.rename(temporary, target);
+    } finally { await fs.rm(temporary, { force: true }).catch(() => {}); }
+    return;
+  }
+  if (existing) return;
+  try { await fs.copyFile(source, target, constants.COPYFILE_EXCL); }
+  catch (error) { if (!['ENOENT', 'EEXIST'].includes(error.code)) throw error; }
+}
+
 async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
-  const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd);
+  const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd, options.env);
   if (!runtimeHome) {
     return '';
   }
@@ -167,7 +116,7 @@ async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
     fs.mkdir(path.join(runtimeHome, dirName), { recursive: true }).catch(() => {})
   )));
 
-  const sourceHome = getNativeCodexCliHomeDirectory();
+  const sourceHome = getNativeCodexCliHomeDirectory(options.env);
   if (!sourceHome) {
     await writeRuntimeGuidance(runtimeHome, cwd, options);
     return runtimeHome;
@@ -180,17 +129,14 @@ async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
   }
 
   await Promise.all(CODEX_RUNTIME_HOME_FILES
-    .filter((fileName) => fileName !== CODEX_MODELS_CACHE_FILE)
     .map((fileName) => (
-    copyFileIfChanged(
+    seedRuntimeFile(
       path.join(resolvedSource, fileName),
       path.join(resolvedTarget, fileName)
     )
   )));
-  await copyCompatibleCodexCliModelsCache(
-    path.join(resolvedSource, CODEX_MODELS_CACHE_FILE),
-    path.join(resolvedTarget, CODEX_MODELS_CACHE_FILE)
-  );
+  // The selected CLI owns its model cache/version and refreshed OAuth tokens.
+  // Seed login/config once; never import another client's model capabilities.
   await syncCodexCliRuntimePluginCache(resolvedSource, resolvedTarget);
   await writeRuntimeGuidance(runtimeHome, cwd, options);
   return runtimeHome;
@@ -198,22 +144,22 @@ async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
 
 async function buildCodexCommandEnv(cwd = '', options = {}) {
   const env = {
-    ...process.env
+    ...(options.env || process.env)
   };
   const runtimeHome = await ensureCodexCliRuntimeHome(cwd, {
-    envOverrides: options.envOverrides
+    envOverrides: options.envOverrides,
+    env
   });
   if (runtimeHome) {
     env.CODEX_HOME = runtimeHome;
+    env.HIKARI_CODEX_HOME = runtimeHome;
   }
   return env;
 }
 
 module.exports = {
   buildCodexCommandEnv,
-  copyCompatibleCodexCliModelsCache,
   ensureCodexCliRuntimeHome,
-  normalizeCodexCliModelsCache,
   syncCodexCliRuntimePluginCache,
   syncCodexCliRuntimePluginCacheEntry
 };

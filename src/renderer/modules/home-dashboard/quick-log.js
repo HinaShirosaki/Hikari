@@ -1,5 +1,6 @@
 import { ensureDashboardState, formatDateLocal, quickLogId } from './utils.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 
 const DRAFT_SAVE_DELAY_MS = 400;
 
@@ -231,7 +232,12 @@ export function initQuickLogWidget({
       return;
     }
     event.preventDefault();
-    void onSendToAgent();
+    // Without Codex the shortcut saves locally, the only action left on screen.
+    if (isAgentAvailable(quickLogInput.ownerDocument)) {
+      void onSendToAgent();
+    } else {
+      onSave();
+    }
   }
 
   function onBlur(event) {

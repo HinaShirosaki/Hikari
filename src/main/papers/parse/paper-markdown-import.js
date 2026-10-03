@@ -282,6 +282,7 @@ async function transformPaperPdfToMarkdown({
   pdfTextExtractionRuntime = null,
   paperKnowledgeDatabaseRuntime = null,
   skipExistingMarkdown = true,
+  paperIntake = true,
   source = 'auto-discovery'
 } = {}) {
   const storagePathText = cleanText(storagePath, 2400);
@@ -358,6 +359,7 @@ async function transformPaperPdfToMarkdown({
     linked_type: normalizedPaper.linkedType || normalizedPaper.linked_type,
     linked_name: normalizedPaper.linkedName || normalizedPaper.linked_name,
     source,
+    paper_intake: paperIntake,
     use_llm_rewrite: false,
     allow_fallback_markdown: true,
     max_pages: 500,
@@ -375,6 +377,7 @@ async function transformPaperRecordsToMarkdown({
   pdfTextExtractionRuntime = null,
   paperKnowledgeDatabaseRuntime = null,
   skipExistingMarkdown = true,
+  paperIntake = true,
   source = 'auto-discovery'
 } = {}) {
   const rows = asArray(papers);
@@ -396,6 +399,7 @@ async function transformPaperRecordsToMarkdown({
         paper,
         paperKnowledgeDatabaseRuntime: sharedRuntime,
         skipExistingMarkdown,
+        paperIntake,
         source
       });
       if (result?.skipped) {

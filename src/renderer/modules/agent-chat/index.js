@@ -16,6 +16,7 @@ import { renderAgentChat } from './render-cycle.js';
 import { mapExperimentDataToLlmJson } from './state-snapshot.js';
 import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index.js';
 import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
+import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -216,6 +217,7 @@ export function initAgentChat({
     payloadBuilder,
     attachmentsController,
     sessionManager,
+    refreshPersistentSessionsOnReply: loadPersistentSessions,
     buildSyncedStateSnapshot: syncStateSnapshot,
     ensureAgentState: shell.ensureAgentState,
     renderContextSummary: shell.renderContextSummary,
@@ -227,7 +229,26 @@ export function initAgentChat({
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message)
   });
 
+  const pluginDrafts = new Map();
+  let renderedScopeKey = '', renderedScopeType = '';
   const render = () => {
+    const context = state.agentChatContext || {};
+    const scopeKey = normalizeScopeKey(context);
+    if (renderedScopeKey && renderedScopeKey !== scopeKey
+      && (renderedScopeType === 'plugin' || context.scopeType === 'plugin')) {
+      // Composer contents belong to the figure too. Preserve drafts while
+      // switching, and never submit another figure's attachments or context.
+      pluginDrafts.set(renderedScopeKey, { text: dom.input.value,
+        attachments: attachmentsController.getAttachments(), contexts: payloadBuilder.getPrimedHiddenContexts() });
+      const draft = pluginDrafts.get(scopeKey);
+      dom.input.value = draft?.text || '';
+      attachmentsController.reset();
+      for (const attachment of draft?.attachments || []) attachmentsController.addAttachment(attachment, { announce: false });
+      payloadBuilder.consumeHiddenContexts();
+      for (const hiddenContext of draft?.contexts || []) payloadBuilder.primeHiddenContext(hiddenContext);
+    }
+    renderedScopeKey = scopeKey; renderedScopeType = context.scopeType || '';
+    shell.syncActiveRequestState();
     renderAgentChat({
       api,
       state,
@@ -280,10 +301,11 @@ export function initAgentChat({
 
     dom.input.value = text;
     shell.syncComposerHeight();
+    const submittedScopeKey = normalizeScopeKey(state.agentChatContext || {});
     return new Promise((resolve) => {
       let accepted = false;
       const clearInjectedDraft = () => {
-        if (String(dom.input?.value || '') !== text) {
+        if (normalizeScopeKey(state.agentChatContext || {}) !== submittedScopeKey || String(dom.input?.value || '') !== text) {
           return;
         }
         dom.input.value = '';

@@ -11,6 +11,28 @@ import { pluginOrigin } from './plugin-origin.js';
 
 const PLUGIN_ICON_MARKUP = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v4" /><path d="M15 4v4" /><path d="M7 8h10v4a5 5 0 0 1-10 0Z" /><path d="M12 17v3" /></svg>';
 
+export function pluginIconMarkup(iconDataUrl) {
+  // Only a bounded base64 image enters the CSS mask. Plugin SVG code never
+  // becomes host DOM; image mode disables scripts and external resources.
+  if (typeof iconDataUrl !== 'string' || iconDataUrl.length > 43718 || (iconDataUrl.length - 26) % 4 !== 0
+    || !/^data:image\/svg\+xml;base64,[A-Za-z0-9+/]+={0,2}$/.test(iconDataUrl)) return PLUGIN_ICON_MARKUP;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" data-plugin-icon="true" style="mask: url('${iconDataUrl}') center / contain no-repeat"><rect width="24" height="24" fill="currentColor" /></svg>`;
+}
+
+// Refresh from the installed folder on every boot so replacing a plugin's
+// assets works without reinstalling it. This updates navigation artwork only;
+// stored permissions and plugin identity remain the original installation.
+export async function loadPluginIcons({ plugins, appRegistry, api }) {
+  if (!Array.isArray(plugins) || typeof api?.inspectPluginFolder !== 'function') return;
+  await Promise.allSettled(plugins.filter(plugin => !plugin.bundled && plugin.enabled !== false && plugin.path && !plugin.service)
+    .map(async plugin => {
+      const app = appRegistry.find(entry => entry.id === `plugin-${plugin.id}`);
+      if (!app) return;
+      const inspected = await api.inspectPluginFolder(plugin.path);
+      app.iconMarkup = pluginIconMarkup(inspected?.ok && inspected.id === plugin.id ? inspected.iconDataUrl : '');
+    }));
+}
+
 const LOCAL_SANDBOX = 'allow-scripts allow-forms allow-modals allow-popups';
 const REMOTE_SANDBOX = `${LOCAL_SANDBOX} allow-same-origin`;
 
@@ -235,12 +257,11 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
         viewId,
         subtitle: plugin.description || '',
         icon: plugin.bundled === true ? String(plugin.icon || '') : '',
-        // Only source-owned bundled definitions may inject host SVG markup.
-        // Installed plugin manifests are untrusted and always keep the generic
-        // plug icon so an SVG cannot execute in the host document.
+        // Only bundled definitions inject SVG markup. Installed artwork is
+        // displayed in image mode using a host-owned currentColor mask.
         iconMarkup: plugin.bundled === true && String(plugin.iconMarkup || '').trim()
           ? String(plugin.iconMarkup).trim()
-          : PLUGIN_ICON_MARKUP,
+          : pluginIconMarkup(plugin.iconDataUrl),
         placement: plugin.bundled === true && plugin.placement === 'dock' ? 'dock' : 'more',
         aliases: plugin.bundled === true && Array.isArray(plugin.aliases)
           ? [...plugin.aliases]

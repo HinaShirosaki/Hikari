@@ -5,6 +5,8 @@ const { ensurePathWithinRoot, pathExists } = require('../../lib/path-safety.js')
 
 const { transformPaperPdfToMarkdown } = require('../../papers/parse/paper-markdown-import.js');
 const { PAPER_RECORD_FILE_SUFFIX } = require('../../storage/paper-discovery.js');
+const { writeFileAtomic } = require('../../lib/shared-json-file');
+const { withStorageRootWrite } = require('../../storage/write-coordinator');
 
 // Filesystem work behind the storage IPC handlers. fs, text cleanup, and the
 // paper knowledge runtime are injected so the registrar owns all of the wiring.
@@ -213,6 +215,8 @@ function createStorageFileHelpers({
       },
       paperKnowledgeDatabaseRuntime,
       skipExistingMarkdown: false,
+      // The renderer turns the model step off while Codex is not connected.
+      paperIntake: payload?.paperIntake !== false,
       source: 'manual-import'
     }).catch((error) => ({
       ok: false,
@@ -353,6 +357,7 @@ function createStorageFileHelpers({
     const targetFolderInput = String(payload?.targetFolder || '').trim();
     const fileName = sanitizeImportedFileName(payload?.fileName || 'data.json');
     const data = payload?.data;
+    const content = JSON.stringify(data ?? null, null, 2);
 
     if (!storagePath) {
       throw new Error('Missing storage path.');
@@ -363,10 +368,11 @@ function createStorageFileHelpers({
 
     const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
     const targetFilePath = path.join(resolvedTargetFolder, fileName);
-    await fs.writeFile(targetFilePath, JSON.stringify(data ?? null, null, 2), 'utf8');
+    await withStorageRootWrite(resolvedStoragePath, async () => {
+      await fs.mkdir(resolvedTargetFolder, { recursive: true });
+      await writeFileAtomic(fs, targetFilePath, content);
+    });
 
     return {
       filePath: targetFilePath,

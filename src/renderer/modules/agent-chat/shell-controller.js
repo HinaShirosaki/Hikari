@@ -22,6 +22,7 @@ const QUICK_PROMPT_PRESETS = {
     ]
   },
   home: { ariaLabel: 'Notebook experiment', placeholder: 'Add experiment details…', prompts: [] },
+  plugin: { ariaLabel: 'Plugin chat', placeholder: 'Describe what you want to create or change…', prompts: [] },
   paper: {
     ariaLabel: 'Common paper prompts',
     placeholder: 'Ask Hikari about this paper.',
@@ -265,7 +266,7 @@ export function createAgentChatShellController({
       ? state.agentChatContext
       : {};
     const scopeType = trimText(context.scopeType, 80);
-    if (scopeType === 'home' || scopeType === 'notebook' || scopeType === 'paper' || scopeType === 'assay') {
+    if (scopeType === 'home' || scopeType === 'plugin' || scopeType === 'notebook' || scopeType === 'paper' || scopeType === 'assay') {
       return scopeType;
     }
     return 'workspace';
@@ -284,6 +285,7 @@ export function createAgentChatShellController({
       return;
     }
     dom.quickPrompts.setAttribute?.('aria-label', preset.ariaLabel);
+    dom.quickPrompts.hidden = preset.prompts.length === 0;
     const doc = dom.quickPrompts.ownerDocument;
     const buttons = Array.from(dom.quickPrompts.querySelectorAll?.('[data-agent-suggest-prompt]') || []);
     while (buttons.length < preset.prompts.length && doc?.createElement) {

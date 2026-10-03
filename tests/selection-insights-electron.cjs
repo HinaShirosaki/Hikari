@@ -27,6 +27,7 @@ if (!process.versions.electron) {
   import {getSelectionContext} from '${url('src/renderer/modules/selection-insights/controller-selection.js')}';
   import {runInsightAction} from '${url('src/renderer/modules/selection-insights/controller-actions.js')}';
   const check=(value,message)=>{if(!value)throw new Error(message)};
+  document.body.dataset.agentAvailability='connected';
   const records={}; let requests=0; let pending=[]; const sidecars=[];
   window.hikariApi={runDirectLlmPrompt:()=>{requests++;return new Promise((resolve,reject)=>pending.push({resolve,reject}))}};
   const controller=createSelectionInsightsController({state:{settings:{}},createId:()=>crypto.randomUUID(),api:{writeJsonFile:async data=>sidecars.push(data)}});

@@ -2,6 +2,7 @@ import { CHEMICAL_IMPORT_FIELDS, normalizeImportFieldKey, normalizeImportHeader 
 import { guessChemicalImportField } from './import-field-guessing.js';
 import { parseJsonFromText } from '../../lib/json.js';
 import { requestDirectLlm } from '../../services/direct-llm.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 export function installImportHeaderMapping(ctx) {
   const { state } = ctx;
 function mapChemicalImportHeadersLocally(headers) {
@@ -119,13 +120,14 @@ function applyLlmHeaderMapping(headers, inference, llmPayload) {
 // only when a column is left over or name/location is missing, and it can only
 // fill gaps: a field or column already mapped locally is never overridden.
 // An LLM failure is reported (llmError) but the local mapping still imports.
+// Without Codex the local mapping is used as is, with no warning.
 async function inferChemicalImportHeaders(headers, rows) {
   const cleanHeaders = headers.map((header, index) => String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`);
   const inference = mapChemicalImportHeadersLocally(cleanHeaders);
   const needsLlm = inference.unmappedHeaders.length > 0
     || inference.fieldToColumn.name == null
     || inference.fieldToColumn.location == null;
-  if (!needsLlm) {
+  if (!needsLlm || !isAgentAvailable()) {
     return inference;
   }
   try {

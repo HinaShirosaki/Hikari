@@ -1,5 +1,9 @@
 'use strict';
 
+const { writeFileAtomic } = require('../lib/shared-json-file');
+const { getBundlePaths } = require('../storage/storage-paths');
+const { withStorageRootWrite } = require('../storage/write-coordinator');
+
 function defaultCleanText(value) {
   const text = String(value || '');
   if (!text) {
@@ -26,9 +30,7 @@ function createMainDataHelpers(deps = {}) {
   // on the same filesystem (Windows included). `.tmp` keeps the partial file
   // outside the .json extension filter.
   async function writeSnapshotAtomically(filePath, snapshot) {
-    const tempPath = `${filePath}.tmp`;
-    await fs.writeFile(tempPath, serializeSnapshot(snapshot), 'utf8');
-    await fs.rename(tempPath, filePath);
+    await writeFileAtomic(fs, filePath, serializeSnapshot(snapshot));
   }
   const writeSnapshot = typeof deps.writeSnapshot === 'function'
     ? deps.writeSnapshot
@@ -98,12 +100,14 @@ function createMainDataHelpers(deps = {}) {
     };
   }
 
-  async function persistSnapshot({
+  async function persistSnapshotUnlocked({
     targetPath,
     snapshot,
     ensureDirectory = false,
     includeFilePathOnError = false,
-    writeDataFile = true
+    writeDataFile = true,
+    staleDataFilePath = '',
+    fallbackDataFilePath
   }) {
     try {
       if (writeDataFile && !targetPath) {
@@ -118,8 +122,11 @@ function createMainDataHelpers(deps = {}) {
       const bundleSync = await syncBundleFromSnapshot({
         dataFilePath: targetPath,
         snapshot,
-        fallbackDataFilePath: getDefaultDataFilePath()
+        fallbackDataFilePath
       });
+      if (!writeDataFile && staleDataFilePath) {
+        await fs.rm(staleDataFilePath, { force: true }).catch(() => {});
+      }
       return {
         ok: true,
         filePath: targetPath,
@@ -138,6 +145,17 @@ function createMainDataHelpers(deps = {}) {
     }
   }
 
+  function persistSnapshot(input) {
+    const snapshot = structuredClone(input.snapshot);
+    const fallbackDataFilePath = getDefaultDataFilePath();
+    const { storageRootPath } = getBundlePaths({
+      dataFilePath: input.targetPath,
+      fallbackDataFilePath,
+      storagePath: snapshot.settings?.storagePath
+    });
+    return withStorageRootWrite(storageRootPath, () => persistSnapshotUnlocked({ ...input, snapshot, fallbackDataFilePath }));
+  }
+
   async function loadSnapshot({
     targetPath,
     allowMissing = false,
@@ -146,33 +164,41 @@ function createMainDataHelpers(deps = {}) {
     try {
       const raw = await fs.readFile(targetPath, 'utf8');
       const parsed = JSON.parse(raw);
-      const hydrated = await hydrateSnapshotFromBundle({
+      const fallbackDataFilePath = getDefaultDataFilePath();
+      const { storageRootPath } = getBundlePaths({
         dataFilePath: targetPath,
-        snapshot: parsed,
-        fallbackDataFilePath: getDefaultDataFilePath()
+        fallbackDataFilePath,
+        storagePath: parsed?.settings?.storagePath
       });
-      let loadSync = null;
-      try {
-        loadSync = await syncBundleFromSnapshot({
+      return await withStorageRootWrite(storageRootPath, async () => {
+        const hydrated = await hydrateSnapshotFromBundle({
           dataFilePath: targetPath,
-          snapshot: hydrated.snapshot,
-          fallbackDataFilePath: getDefaultDataFilePath()
+          snapshot: parsed,
+          fallbackDataFilePath
         });
-      } catch {
-        loadSync = null;
-      }
-      const sidecarSource = {
-        bundlePaths: hasObjectKeys(loadSync?.bundlePaths) ? loadSync.bundlePaths : hydrated.bundlePaths,
-        sidecarPaths: hasObjectKeys(loadSync?.sidecarPaths) ? loadSync.sidecarPaths : hydrated.sidecarPaths
-      };
-      return {
-        ok: true,
-        filePath: targetPath,
-        data: hydrated.snapshot,
-        sidecarPaths: sidecarSource.sidecarPaths || {},
-        bundlePaths: sidecarSource.bundlePaths || hydrated.bundlePaths,
-        migration: hydrated.migration
-      };
+        let loadSync = null;
+        try {
+          loadSync = await syncBundleFromSnapshot({
+            dataFilePath: targetPath,
+            snapshot: hydrated.snapshot,
+            fallbackDataFilePath
+          });
+        } catch {
+          loadSync = null;
+        }
+        const sidecarSource = {
+          bundlePaths: hasObjectKeys(loadSync?.bundlePaths) ? loadSync.bundlePaths : hydrated.bundlePaths,
+          sidecarPaths: hasObjectKeys(loadSync?.sidecarPaths) ? loadSync.sidecarPaths : hydrated.sidecarPaths
+        };
+        return {
+          ok: true,
+          filePath: targetPath,
+          data: hydrated.snapshot,
+          sidecarPaths: sidecarSource.sidecarPaths || {},
+          bundlePaths: sidecarSource.bundlePaths || hydrated.bundlePaths,
+          migration: hydrated.migration
+        };
+      });
     } catch (error) {
       if (allowMissing && error?.code === 'ENOENT') {
         return { ok: true, filePath: targetPath, data: null };
@@ -217,11 +243,9 @@ function createMainDataHelpers(deps = {}) {
       snapshot,
       ensureDirectory: true,
       includeFilePathOnError: true,
-      writeDataFile: target.writeDataFile
+      writeDataFile: target.writeDataFile,
+      staleDataFilePath: target.staleDataFilePath
     });
-    if (result.ok && !target.writeDataFile && target.staleDataFilePath) {
-      await fs.rm(target.staleDataFilePath, { force: true }).catch(() => {});
-    }
     return result;
   }
 

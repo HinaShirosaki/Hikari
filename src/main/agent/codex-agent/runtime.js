@@ -24,6 +24,7 @@ const {
   normalizeRecoveryConversation
 } = require('./session-recovery.js');
 const { callProtocolGeneration } = require('../mcp-contract/direct-tools/protocol-generation.js');
+const { beginPluginInspection } = require('./plugin-inspection.js');
 const {
   resolveProtocolGenerationArtifact
 } = require('../runtime/artifact-recovery/protocol-generation.js');
@@ -96,6 +97,7 @@ function createCodexAgentRuntime(deps = {}) {
       recordLifecycleEvent
     });
     let streamProgress = createStreamProgress();
+    const heldAnswerEvents = new Map();
 
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'codex_agent_started',
@@ -121,6 +123,10 @@ function createCodexAgentRuntime(deps = {}) {
     });
 
     throwIfAgentRequestAborted('Agent request stopped before starting Codex agent.');
+    if (input.agent?.pluginCanvasId && !isHikariMcpToolEnabled('plugin_canvas', { snapshot: input.snapshot })) {
+      return { ok: false, provider: 'codex', model, error: 'Enable Plugin canvases in Settings to inspect this illustration.' };
+    }
+    const inspection = await beginPluginInspection(input, deps.requestPluginCanvas);
     const buildCodexRequest = ({
       requestPrompt,
       requestInput,
@@ -129,7 +135,8 @@ function createCodexAgentRuntime(deps = {}) {
       const mcpContextJson = JSON.stringify(buildCodexMcpContext({
         ...requestInput,
         cwd,
-        model
+        model,
+        pluginInspectionRunId: inspection?.runId
       }, { cleanText }));
       return {
         prompt: requestPrompt,
@@ -137,10 +144,25 @@ function createCodexAgentRuntime(deps = {}) {
         reasoningEffort,
         cwd,
         enableWebSearch: input.enableWebSearch !== false && input.enable_web_search !== false,
+        enableImageGeneration: Boolean(input.agent?.pluginCanvasId),
         attachments: asArray(input.attachments),
         timeoutMs,
         stream: true,
-        onStream: streamProgress.emitStreamProgress,
+        onStream: event => {
+          // Hold assistant prose until the completion gate passes. Tool/thinking
+          // progress still streams; a premature "Done" cannot become the answer.
+          const kind = event.display_kind || event.displayKind;
+          if (inspection && (event.type === 'codex_stream'
+            || (event.type === 'codex_cli_display' && ['assistant', 'message'].includes(kind))
+            || /final_answer$/.test(event.event_type || event.eventType || ''))) {
+            // Stream events carry accumulated text. Keep only the latest event
+            // of each type so a long answer does not grow a quadratic buffer.
+            heldAnswerEvents.delete(event.type);
+            heldAnswerEvents.set(event.type, event);
+            return;
+          }
+          streamProgress.emitStreamProgress(event);
+        },
         resumeSessionId: requestResumeSessionId,
         returnMetadata: true,
         envOverrides: {
@@ -180,6 +202,7 @@ function createCodexAgentRuntime(deps = {}) {
       // The failed attempt may have streamed artifacts before dying; a fresh
       // handler keeps them from merging into the recovered turn's result.
       streamProgress = createStreamProgress();
+      heldAnswerEvents.clear();
       recordLifecycleEvent(lifecycleRecorder, {
         stage: 'codex_agent_session_recovery',
         status: 'started',
@@ -207,6 +230,36 @@ function createCodexAgentRuntime(deps = {}) {
       }));
     }
     throwIfAgentRequestAborted('Agent request stopped after Codex agent completed.');
+
+    if (inspection) {
+      let verification = await inspection.verify();
+      if (!verification.ok) {
+        throwIfAgentRequestAborted('Agent request stopped before inspecting the illustration.');
+        streamProgress.publishCodexProgress({ stage: 'codex_canvas_inspection', status: 'started',
+          routing_intent: 'codex_agent', message: 'Checking the latest illustration before completion.' });
+        const sessionId = codexTextResult?.metadata?.session_id || codexTextResult?.metadata?.sessionId || activeResumeSessionId;
+        streamProgress = createStreamProgress();
+        heldAnswerEvents.clear();
+        // One bounded continuation; repeated refusal/errors leave saved work
+        // intact and return an explicit incomplete result instead of success.
+        codexTextResult = await requestCodexAgentText(buildCodexRequest({
+          requestPrompt: inspection.followUp,
+          requestInput: effectiveInput,
+          requestResumeSessionId: sessionId || ''
+        }));
+        throwIfAgentRequestAborted('Agent request stopped after inspecting the illustration.');
+        verification = await inspection.verify();
+      }
+      if (!verification.ok) {
+        recordLifecycleEvent(lifecycleRecorder, { stage: 'codex_canvas_inspection', status: 'failed',
+          routing_intent: 'codex_agent', message: verification.error });
+        return { ok: false, status: 'inspection_required', provider: 'codex', model,
+          codex_session_id: cleanText(codexTextResult?.metadata?.session_id || activeResumeSessionId, 240),
+          error: `Canvas work is saved, but completion is blocked: ${verification.error}` };
+      }
+      for (const event of heldAnswerEvents.values()) streamProgress.emitStreamProgress(event);
+      heldAnswerEvents.clear();
+    }
 
     const rawText = typeof codexTextResult === 'string'
       ? codexTextResult

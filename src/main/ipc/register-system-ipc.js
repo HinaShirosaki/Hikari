@@ -75,6 +75,7 @@ function registerSystemIpc(deps = {}) {
       loggedIn: status.loggedIn === true,
       source: cleanText(status.source, 80) || 'none',
       expired: status.expired === true,
+      canRefresh: status.canRefresh === true,
       sourcePath: cleanText(status.sourcePath, 2400),
       message: status.message || '',
       cliAvailable: status.cliAvailable,
@@ -130,6 +131,8 @@ function registerSystemIpc(deps = {}) {
           loggedIn: status.loggedIn === true,
           source: cleanText(status.source, 80) || 'none',
           expired: status.expired === true,
+          canRefresh: status.canRefresh === true,
+          cliAvailable: status.cliAvailable,
           sourcePath: cleanText(status.sourcePath, 2400),
           message: cleanText(status.message, 2400)
         }

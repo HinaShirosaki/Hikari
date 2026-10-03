@@ -18,6 +18,7 @@ const { asArray, cleanText, ensureObject, isUnreadableJsonFile, sanitizeFolderNa
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
+const { withStorageRootWrite } = require('./write-coordinator');
 const { PAPER_RECORD_FILE_SUFFIX } = require('./paper-discovery');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
@@ -255,7 +256,7 @@ async function writeProjectMemoryFiles(
   return writtenPaths;
 }
 
-async function syncBundleFromSnapshot({
+async function syncBundleFromSnapshotUnlocked({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = '',
@@ -346,7 +347,7 @@ async function syncBundleFromSnapshot({
 }
 
 // Only the chemical inventory syncs on its own; the other indexes follow full saves.
-async function syncSqliteBundleFromSnapshot({
+async function syncSqliteBundleFromSnapshotUnlocked({
   sqlitePath,
   snapshot
 } = {}) {
@@ -361,6 +362,24 @@ async function syncSqliteBundleFromSnapshot({
   return {
     sqlitePath: targetSqlitePath
   };
+}
+
+function syncBundleFromSnapshot(input = {}) {
+  const snapshot = structuredClone(ensureObject(input.snapshot));
+  const captured = { ...input, snapshot };
+  const paths = getBundlePaths({ ...captured, storagePath: snapshot.settings?.storagePath });
+  return withStorageRootWrite(paths.storageRootPath, () => (
+    syncBundleFromSnapshotUnlocked(captured)
+  ));
+}
+
+function syncSqliteBundleFromSnapshot(input = {}) {
+  const snapshot = structuredClone(ensureObject(input.snapshot));
+  const sqlitePath = String(input.sqlitePath || '').trim();
+  const captured = { ...input, sqlitePath, snapshot };
+  return withStorageRootWrite(sqlitePath ? path.dirname(sqlitePath) : '', () => (
+    syncSqliteBundleFromSnapshotUnlocked(captured)
+  ));
 }
 
 module.exports = {

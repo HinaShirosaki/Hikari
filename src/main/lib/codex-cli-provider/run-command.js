@@ -14,10 +14,10 @@ const { looksLikeJsonLine } = require('./event-values');
 const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
 const {
   createCodexCliNotFoundError,
-  resolveCodexInvocation,
   resolveWorkingDirectory
 } = require('./paths');
 const { cleanText, safeParseJson } = require('./utils');
+const { resolveCodexRuntimeInvocation } = require('./runtime-gateway');
 
 function normalizeCodexCommandTimeoutMs(timeoutMs = DEFAULT_TIMEOUT_MS) {
   if (timeoutMs === null) {
@@ -34,6 +34,7 @@ async function runCodexCommand({
   args,
   cwd,
   env = process.env,
+  invocation = resolveCodexRuntimeInvocation(env),
   input = '',
   timeoutMs = DEFAULT_TIMEOUT_MS,
   onJsonEvent = null
@@ -42,7 +43,6 @@ async function runCodexCommand({
   await ensureCodexCliWorkingDirectoryGuidance(safeCwd, { env });
   return new Promise((resolve, reject) => {
     throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI.');
-    const invocation = resolveCodexInvocation(env);
     const child = spawn(invocation.command, [...invocation.argsPrefix, ...args], {
       cwd: safeCwd,
       env,

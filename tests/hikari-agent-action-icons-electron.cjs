@@ -43,7 +43,7 @@ if (!process.versions.electron) {
             .qa-grid #home-view, .qa-grid #home-view .home-tile { display: contents; }
           </style>
         </head>
-        <body>
+        <body data-agent-availability="connected">
           <main class="qa-surface">
             <h1>Hikari model actions</h1>
             <div class="qa-grid">

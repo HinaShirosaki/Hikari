@@ -1,9 +1,8 @@
 'use strict';
 
 const { spawn } = require('node:child_process');
-const { resolveCodexInvocation } = require('./paths');
 const { cleanText, safeParseJson } = require('./utils');
-const { ensureCodexCliUpdated } = require('./cli-maintenance');
+const { prepareCodexRuntime, normalizeCodexCliModel, normalizeCodexCliReasoningEffort } = require('./runtime-gateway');
 
 const CODEX_MODEL_LIST_TIMEOUT_MS = 20000;
 const EMPTY_CATALOG = Object.freeze({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' });
@@ -11,16 +10,8 @@ const EMPTY_CATALOG = Object.freeze({ ok: false, models: [], defaultModel: '', d
 // Hikari ships no model list: Codex says which models the signed-in account may
 // use and which one is the default. Kept from the last successful request.
 let codexCatalog = EMPTY_CATALOG;
-let configuredCodexModel = '';
-let configuredCodexReasoningEffort = '';
-
-function normalizeCodexCliModel(model = '') {
-  return String(cleanText(model, 120) || '').trim();
-}
-
-function normalizeCodexCliReasoningEffort(reasoningEffort = '') {
-  return String(cleanText(reasoningEffort, 40) || '').trim().toLowerCase();
-}
+let catalogIdentity = '';
+let catalogGeneration = 0;
 
 // Maps app-server `model/list` entries to Hikari's catalog shape.
 function catalogFromCodexModelList(entries = []) {
@@ -53,12 +44,12 @@ function catalogFromCodexModelList(entries = []) {
 
 // Asks `codex app-server` for every model (hidden ones too, so a saved choice such
 // as a reserve model still validates) over its JSON-RPC stdio protocol.
-function listCodexModels({ env = process.env, timeoutMs = CODEX_MODEL_LIST_TIMEOUT_MS } = {}) {
+function listCodexModels({ env = process.env, invocation, cwd,
+  timeoutMs = CODEX_MODEL_LIST_TIMEOUT_MS } = {}) {
   const managedHome = String(env.HIKARI_CODEX_HOME || '').trim();
   if (managedHome) env = { ...env, CODEX_HOME: managedHome };
   return new Promise((resolve, reject) => {
-    const invocation = resolveCodexInvocation(env);
-    const child = spawn(invocation.command, [...invocation.argsPrefix, 'app-server'], { env, stdio: 'pipe' });
+    const child = spawn(invocation.command, [...invocation.argsPrefix, 'app-server'], { env, cwd, windowsHide: true, stdio: 'pipe' });
     const entries = [];
     let buffer = '';
     let stderr = '';
@@ -104,95 +95,39 @@ function listCodexModels({ env = process.env, timeoutMs = CODEX_MODEL_LIST_TIMEO
   });
 }
 
-async function requestCodexCliCatalog({ listModels = listCodexModels, ...options } = {}) {
-  await ensureCodexCliUpdated();
-  // The renderer can ask before desktop startup has seeded the managed login.
-  // Reuse the same home preparation as execution on that first request.
-  if (listModels === listCodexModels && !options.env && process.env.HIKARI_CODEX_HOME) {
-    const { buildCodexCommandEnv } = require('./runtime-home');
-    options.env = await buildCodexCommandEnv(process.env.HIKARI_APP_DATA_ROOT || process.cwd());
+async function requestCodexCliCatalog({ listModels = listCodexModels, runtime, ...options } = {}) {
+  let generation = ++catalogGeneration;
+  try {
+    runtime ||= listModels === listCodexModels ? await prepareCodexRuntime(options) : null;
+    generation = ++catalogGeneration;
+    const catalog = catalogFromCodexModelList(await listModels({ ...options, ...runtime }));
+    if (generation === catalogGeneration) {
+      codexCatalog = catalog;
+      catalogIdentity = runtime?.identity || '';
+    }
+    return catalog;
+  } catch (error) {
+    if (generation === catalogGeneration) { codexCatalog = EMPTY_CATALOG; catalogIdentity = ''; }
+    throw error;
   }
-  codexCatalog = catalogFromCodexModelList(await listModels(options));
-  return codexCatalog;
 }
 
-function getCodexCliCatalog() {
+function getCodexCliCatalog(runtime) {
+  if (runtime && runtime.identity !== catalogIdentity) return EMPTY_CATALOG;
   return codexCatalog;
 }
 
 function invalidateCodexCliCatalog() {
   codexCatalog = EMPTY_CATALOG;
-}
-
-function findCodexCliModelConfig(model = '', catalog = null) {
-  const models = Array.isArray(catalog?.models) ? catalog.models : [];
-  const target = normalizeCodexCliModel(model);
-  if (!target) {
-    return null;
-  }
-  return models.find((entry) => entry.id === target) || null;
-}
-
-function getCodexCliModel() {
-  return configuredCodexModel;
-}
-
-function setCodexCliModel(model = '') {
-  configuredCodexModel = normalizeCodexCliModel(model);
-  return configuredCodexModel;
-}
-
-function getCodexCliReasoningEffort() {
-  return configuredCodexReasoningEffort;
-}
-
-function setCodexCliReasoningEffort(reasoningEffort = '') {
-  configuredCodexReasoningEffort = normalizeCodexCliReasoningEffort(reasoningEffort);
-  return configuredCodexReasoningEffort;
-}
-
-// '' means "no -m": Codex then runs its own current default model.
-function resolveCodexCliModel(model = '', catalog = null) {
-  const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : getCodexCliCatalog();
-  const chosen = normalizeCodexCliModel(model) || configuredCodexModel;
-  // A saved choice Codex no longer offers would fail every turn; use Codex's default.
-  if (chosen && resolvedCatalog.models?.length && !findCodexCliModelConfig(chosen, resolvedCatalog)) {
-    return '';
-  }
-  return chosen;
-}
-
-function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalog = null) {
-  const resolvedCatalog = catalog && typeof catalog === 'object' ? catalog : getCodexCliCatalog();
-  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog) || resolvedCatalog.defaultModel;
-  const modelConfig = findCodexCliModelConfig(resolvedModel, resolvedCatalog);
-  const explicitEffort = normalizeCodexCliReasoningEffort(reasoningEffort);
-
-  if (modelConfig?.reasoningEfforts?.length) {
-    if (modelConfig.reasoningEfforts.includes(explicitEffort)) {
-      return explicitEffort;
-    }
-    if (modelConfig.reasoningEfforts.includes(configuredCodexReasoningEffort)) {
-      return configuredCodexReasoningEffort;
-    }
-    return modelConfig.defaultReasoningEffort || '';
-  }
-
-  return explicitEffort || configuredCodexReasoningEffort;
+  catalogIdentity = '';
+  catalogGeneration++;
 }
 
 module.exports = {
   catalogFromCodexModelList,
-  findCodexCliModelConfig,
   getCodexCliCatalog,
-  getCodexCliModel,
-  getCodexCliReasoningEffort,
   invalidateCodexCliCatalog,
   normalizeCodexCliModel,
   normalizeCodexCliReasoningEffort,
   requestCodexCliCatalog,
-  resolveCodexCliModel,
-  resolveCodexCliReasoningEffort,
-  setCodexCliModel,
-  setCodexCliReasoningEffort
 };

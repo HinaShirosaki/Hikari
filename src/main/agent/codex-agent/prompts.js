@@ -242,7 +242,8 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     snapshot: contextSnapshot,
     dataFilePath,
     fallbackDataFilePath,
-    traceRequestId: cleanText(input.traceContext?.requestId, 120)
+    traceRequestId: cleanText(input.traceContext?.requestId, 120),
+    ...(input.pluginInspectionRunId ? { pluginInspectionRunId: cleanText(input.pluginInspectionRunId, 100) } : {})
   };
 }
 

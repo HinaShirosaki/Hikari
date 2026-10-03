@@ -10,12 +10,15 @@ const {
 } = require('./codex-cli-provider/args');
 const {
   getCodexCliCatalog,
+  requestCodexCliCatalog
+} = require('./codex-cli-provider/catalog');
+const {
   getCodexCliModel,
   getCodexCliReasoningEffort,
-  requestCodexCliCatalog,
+  prepareCodexRuntime,
   setCodexCliModel,
   setCodexCliReasoningEffort
-} = require('./codex-cli-provider/catalog');
+} = require('./codex-cli-provider/runtime-gateway');
 const {
   extractCodexJsonEventProgress,
   extractCodexJsonEventThinking,
@@ -68,6 +71,7 @@ module.exports = {
   launchCodexCliLogin,
   readCodexCliOAuthProfile,
   requestCodexCliCatalog,
+  prepareCodexRuntime,
   resolveCodexCliRuntimeHomeDirectory,
   setCodexCliModel,
   setCodexCliReasoningEffort,

@@ -77,6 +77,7 @@ export function buildHighlightPopoverMarkup(highlight = {}) {
         type="button"
         class="ghost-btn papers-selection-action-btn"
         data-paper-highlight-ask
+        data-requires-agent
         aria-label="Ask Hikari about highlighted text"
         title="Ask Hikari"
       >
