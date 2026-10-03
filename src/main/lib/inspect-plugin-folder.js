@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const { readPluginIcon } = require('./plugin-icon');
 
 const PLUGIN_ENTRY_FILE = 'index.html';
 const PLUGIN_MANIFEST_FILE = 'plugin.json';
@@ -210,12 +211,20 @@ async function inspectPluginFolder({ fs, folderPath }) {
     };
   }
 
+  let iconDataUrl = '';
+  try {
+    iconDataUrl = await readPluginIcon({ fs, folderPath: cleanPath, icon: manifest.icon });
+  } catch (error) {
+    return { ok: false, error: `Invalid plugin icon: ${error.message}` };
+  }
+
   return {
     ok: true,
     id,
     name,
     version,
     description: cleanText(manifest.description),
+    iconDataUrl,
     permissions,
     path: cleanPath,
     entryUrl,

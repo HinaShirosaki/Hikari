@@ -47,9 +47,7 @@ const {
 const {
   releaseOfficialMcpSkillsForWorkspace
 } = require('../agent/codex-agent/official-mcp-skills.js');
-const {
-  transformPaperRecordsToMarkdown
-} = require('../papers/parse/paper-markdown-import.js');
+const { createPaperImportTransformer } = require('./services/create-paper-import-transformer.js');
 const {
   normalizePaperFindingRunResult
 } = require('../papers/finding/paper-finding-task.js');
@@ -217,8 +215,9 @@ function createMainServices(context = {}) {
     ...input,
     reasoningEffort: 'low'
   });
-  const transformPaperRecordsWithAgentRuntime = (input = {}) => transformPaperRecordsToMarkdown({
-    ...input,
+  const transformPaperRecordsWithAgentRuntime = createPaperImportTransformer({
+    getCodexLoginStatus,
+    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime
   });
 

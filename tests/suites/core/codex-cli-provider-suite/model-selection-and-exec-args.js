@@ -107,6 +107,7 @@ module.exports = function registerCodexCliProviderSuiteModelSelectionAndExecArgs
       // A minimal app-server: answers initialize, then model/list in two pages.
       fs.writeFileSync(fakeCodex, `
 const fs = require('node:fs');
+if (process.argv.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }
 const pages = { '': { data: [${JSON.stringify(codexModelList[0])}], nextCursor: 'p2' }, p2: { data: ${JSON.stringify(codexModelList.slice(1))}, nextCursor: null } };
 let buffer = '';
 process.stdin.on('data', (chunk) => {
@@ -124,7 +125,7 @@ process.stdin.on('data', (chunk) => {
       process.env.HIKARI_CODEX_CLI = fakeCodex;
       try {
         const provider = loadProvider();
-        const catalog = await provider.requestCodexCliCatalog();
+        const catalog = await provider.requestCodexCliCatalog({ env: { ...process.env, HIKARI_CODEX_HOME: tmpDir } });
         const requests = fs.readFileSync(capturePath, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
         assert.deepEqual(requests.map((request) => request.method), ['initialize', 'initialized', 'model/list', 'model/list']);
         assert.equal(requests.filter((request) => request.method === 'model/list').every((request) => request.params.includeHidden === true), true);
@@ -183,16 +184,16 @@ process.stdin.on('data', (chunk) => {
         provider.setCodexCliModel('');
       });
     });
-    test('codex cli provider lets codex pick its default for a choice codex no longer lists', () => {
+    test('codex cli provider preserves a chosen model even when codex does not list it', () => {
       return withCodexHome({}, async () => {
         const provider = loadProvider();
         await useCodexCatalog(provider);
-        // The saved choice is kept; only the exec args fall back.
+        // A missing catalog entry must not silently replace the requested model.
         assert.equal(provider.setCodexCliModel('gpt-4.1-mini'), 'gpt-4.1-mini');
         provider.setCodexCliReasoningEffort('xhigh');
         const retired = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
-        assert.equal(retired.includes('-m'), false);
-        // The effort is checked against Codex's default model instead.
+        assert.equal(retired[retired.indexOf('-m') + 1], 'gpt-4.1-mini');
+        // Codex validates the effort when the model is absent from its catalog.
         assert.equal(retired[retired.indexOf('-c') + 1], 'model_reasoning_effort=xhigh');
 
         const args = provider.buildCodexCliExecArgs({
@@ -311,8 +312,10 @@ process.stdin.on('data', (chunk) => {
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
         assert.equal(runtimeHome, path.join(workspaceDir, 'Config', 'codex-cli-home'));
         assert.equal(fs.existsSync(path.join(runtimeHome, 'auth.json')), true);
+        assert.equal(fs.lstatSync(path.join(runtimeHome, 'auth.json')).isSymbolicLink(), false);
+        assert.equal(fs.readFileSync(path.join(sourceHome, 'config.toml'), 'utf8'), 'model = "gpt-5.4"\n');
         assert.equal(fs.existsSync(path.join(runtimeHome, 'config.toml')), true);
-        assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), true);
+        assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), false);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'skills')), true);
         assert.equal(
           fs.existsSync(path.join(runtimeHome, 'plugins', 'cache', 'openai-bundled', 'browser', '1.0.0', '.mcp.json')),
@@ -351,7 +354,7 @@ process.stdin.on('data', (chunk) => {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
-    test('codex cli runtime cache removes reasoning levels unsupported by the bundled CLI', async () => {
+    test('codex cli runtime keeps its own cache and refreshed login instead of importing client capabilities', async () => {
       const sourceHome = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-source-'));
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-workspace-'));
       const previousCodexHome = process.env.CODEX_HOME;
@@ -376,13 +379,16 @@ process.stdin.on('data', (chunk) => {
       try {
         const provider = loadProvider();
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
-        const copied = JSON.parse(fs.readFileSync(path.join(runtimeHome, 'models_cache.json'), 'utf8'));
-        assert.deepEqual(
-          copied.models[0].supported_reasoning_levels.map((level) => level.effort),
-          ['high', 'xhigh']
-        );
-        assert.equal(copied.models[0].default_reasoning_level, 'xhigh');
-        assert.equal(copied.models[0].supports_reasoning_summaries, true);
+        assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), false);
+        fs.writeFileSync(path.join(runtimeHome, 'models_cache.json'), JSON.stringify(modelsCache));
+        fs.writeFileSync(path.join(sourceHome, 'auth.json'), '{"tokens":{"access_token":"stale"}}');
+        fs.symlinkSync(path.join(sourceHome, 'auth.json'), path.join(runtimeHome, 'auth.json'));
+        await provider.ensureCodexCliRuntimeHome(workspaceDir);
+        assert.equal(fs.lstatSync(path.join(runtimeHome, 'auth.json')).isSymbolicLink(), false);
+        fs.writeFileSync(path.join(runtimeHome, 'auth.json'), '{"tokens":{"access_token":"refreshed"}}');
+        await provider.ensureCodexCliRuntimeHome(workspaceDir);
+        assert.deepEqual(JSON.parse(fs.readFileSync(path.join(runtimeHome, 'models_cache.json'))), modelsCache);
+        assert.equal(JSON.parse(fs.readFileSync(path.join(runtimeHome, 'auth.json'))).tokens.access_token, 'refreshed');
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;

@@ -127,6 +127,8 @@ async function verifyPlacement({ tool, evaluate, check, win, pause, temp }) {
   check(await evaluate('document.getElementById("prompt").tagName==="TEXTAREA" && document.getElementById("complexity").tagName==="SELECT" && document.getElementById("properties").tagName==="FORM"'), 'Logical item IDs cannot shadow editor controls');
   check(await evaluate('(()=>{const ids=[...document.querySelectorAll("[id]")].map(n=>n.id);return new Set(ids).size===ids.length})()'), 'User-facing IDs remain unique after placing reserved-name objects');
   const requests = await win.webContents.executeJavaScript('qaRequests.length');
+  await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
+  for (let i = 0; i < 50 && await evaluate('document.getElementById("prompt-form").hidden'); i += 1) await pause(20);
   await evaluate('document.getElementById("prompt").value="Move the rectangle";document.getElementById("prompt-form").requestSubmit()');
   for (let i = 0; i < 50 && await win.webContents.executeJavaScript('qaRequests.length') === requests; i += 1) await pause(50);
   check(await win.webContents.executeJavaScript('qaRequests.length') === requests + 1, 'Agent chat still submits after an item is named prompt');

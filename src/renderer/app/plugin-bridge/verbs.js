@@ -1,6 +1,6 @@
 import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../../lib/notebook-result-tables.js';
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
-import { setSharedLeftRailWidth } from '../shared-left-rail.js';
+import { LAYOUT_VERBS } from './layout-verbs.js';
 import { asArray } from '../../lib/normalize.js';
 import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
 
@@ -13,6 +13,7 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // Every verb declares the permission it needs. A verb with an unlisted
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
+  ...LAYOUT_VERBS,
   'agent.respond': {
     permission: 'agent:canvas',
     handler: (params, { respondCanvas, frameWindow }) => respondCanvas(params, frameWindow)
@@ -22,7 +23,14 @@ const VERBS = {
     handler: (params, { onPluginPrompt, plugin }) => {
       if (typeof params.message !== 'string' || !params.message.trim() || params.message.length > 3000) throw new Error('Enter a message in at most 3000 characters.');
       if (!onPluginPrompt) throw new Error('Codex chat is unavailable.');
-      return onPluginPrompt(plugin, params.message.trim());
+      return onPluginPrompt(plugin, params.message.trim(), params.context);
+    }
+  },
+  'agent.setContext': {
+    permission: 'agent:chat',
+    handler: (params, { onPluginChatContext, plugin }) => {
+      if (!onPluginChatContext) throw new Error('Item-scoped plugin chat is unavailable in this build.');
+      return onPluginChatContext(plugin, params);
     }
   },
   // internal + bundledPluginId: only the bundled Gel plugin may call this, and
@@ -39,26 +47,8 @@ const VERBS = {
       host: 'hikari',
       pluginId: plugin.id,
       permissions: asArray(plugin.permissions),
-      ...buildPluginAppContext(state, '', windowObject)
+      ...buildPluginAppContext(state, '', windowObject, plugin.id)
     })
-  },
-
-  'app.setLeftRailWidth': {
-    // Not permission-free: this writes the host's documentElement CSS variable and
-    // the host's localStorage, and the resulting layout event is broadcast to every
-    // other plugin frame.
-    permission: 'layout',
-    handler: (params, { windowObject }) => {
-      if (typeof params?.width !== 'number' || !Number.isFinite(params.width)) {
-        throw new Error('app.setLeftRailWidth requires a finite numeric "width".');
-      }
-      return {
-        leftRail: setSharedLeftRailWidth(params.width, {
-          document: windowObject?.document,
-          windowObject
-        })
-      };
-    }
   },
 
   // Host-owned UI with explicit attribution. A plugin cannot pass its own

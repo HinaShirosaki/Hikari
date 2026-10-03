@@ -1,7 +1,8 @@
 {
   "id": "scientific-illustration",
   "name": "Scientific Illustration",
-  "version": "1.3.2",
+  "version": "1.3.16",
+  "icon": "icon.svg",
   "description": "Assemble editable scientific figures with Codex, a main canvas, and a component scratch canvas.",
   "serve": true,
   "permissions": ["storage", "files", "downloads", "agent:chat", "agent:canvas", "layout"]

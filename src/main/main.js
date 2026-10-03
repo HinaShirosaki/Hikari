@@ -1,5 +1,10 @@
 'use strict';
 
+// Cookies are Chromium's only Keychain-encrypted data, and Hikari doesn't need
+// them protected. Ad hoc builds change identity on every update, so the real
+// Keychain would ask for access after each one.
+if (process.platform === 'darwin') require('electron').app.commandLine.appendSwitch('use-mock-keychain');
+
 // Branch before loading application services or taking the single-instance lock.
 if (process.argv.some((arg) => arg.startsWith('--hikari-swap-into='))) {
   // Windows portable update: this new build copies itself over the old app folder.

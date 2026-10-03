@@ -1,3 +1,6 @@
+import { RESIZE_HANDLES, resizeCursor } from './geometry.mjs';
+import { selectionBounds } from './grouping.mjs';
+
 const NS = 'http://www.w3.org/2000/svg';
 const TAGS = new Set(['svg', 'g', 'defs', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop']);
 const ATTRIBUTES = new Set(['id', 'viewBox', 'xmlns', 'width', 'height', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'cx', 'cy', 'r', 'rx', 'ry', 'd', 'points', 'transform', 'color', 'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'clip-path', 'clip-rule', 'mask', 'maskUnits', 'maskContentUnits', 'clipPathUnits', 'gradientUnits', 'gradientTransform', 'spreadMethod', 'offset', 'stop-color', 'stop-opacity', 'fx', 'fy', 'fr', 'preserveAspectRatio', 'vector-effect']);
@@ -59,6 +62,12 @@ export function element(tag, attrs = {}, text) {
   return node;
 }
 
+export function stretchSvg(source) {
+  const svg = new DOMParser().parseFromString(source, 'image/svg+xml').documentElement;
+  svg.setAttribute('preserveAspectRatio', 'none');
+  return new XMLSerializer().serializeToString(svg);
+}
+
 function vectorArtwork(object, namespace) {
   const svg = new DOMParser().parseFromString(object.svg, 'image/svg+xml').documentElement;
   // Imported gradient/clip IDs must not collide between independently placed assets.
@@ -116,21 +125,35 @@ export function objectGroup(object, interactive = false, scope = 'thumbnail') {
   return group;
 }
 
-export function scene(documentState, canvas, { interactive = false, selectedId = '' } = {}) {
+export function scene(documentState, canvas, { interactive = false, selectedId = '', selectedIds = [] } = {}) {
   const { width, height, background } = documentState.canvases[canvas];
   const svg = element('svg', { xmlns: NS, viewBox: `0 0 ${width} ${height}`, width, height, role: 'img', 'aria-label': `${canvas} illustration canvas` });
   svg.append(element('rect', { width, height, fill: background, 'pointer-events': 'none' }));
-  for (const object of documentState.objects.filter(obj => obj.canvas === canvas && obj.visible)) svg.append(objectGroup(object, interactive, canvas));
+  const groups = (documentState.groups || []).filter(group => group.canvas === canvas);
+  if (groups.length) svg.append(element('metadata', { 'data-illustration-groups': 'true' }, JSON.stringify(groups)));
+  for (const object of documentState.objects.filter(obj => obj.canvas === canvas && obj.visible)) {
+    const group = objectGroup(object, interactive, canvas), membership = groups.find(group => group.ids.includes(object.id));
+    if (membership) group.dataset.groupId = membership.id;
+    svg.append(group);
+  }
   if (interactive) {
-    const selected = documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
+    const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas);
+    const selected = members.length > 1 && members.some(object => object.visible)
+      ? { ...selectionBounds(members), id: 'selection' }
+      : documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
     if (selected) {
       const { x, y, width: w, height: h, rotation } = selected;
       const handles = element('g', { transform: `translate(${x} ${y}) rotate(${rotation} ${w / 2} ${h / 2})`, class: 'selection', 'pointer-events': 'none' });
       handles.append(element('rect', { width: w, height: h, fill: 'none', stroke: '#3977c3', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }));
-      const resize = element('rect', { x: w - 6, y: h - 6, width: 12, height: 12, fill: '#ffffff', stroke: '#3977c3', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'all', class: 'resize-handle' });
-      resize.dataset.resizeId = selected.id;
-      resize.dataset.cornerX = w; resize.dataset.cornerY = h;
-      handles.append(resize); svg.append(handles);
+      for (const [direction, [horizontal, vertical]] of Object.entries(RESIZE_HANDLES)) {
+        const cx = (horizontal + 1) * w / 2, cy = (vertical + 1) * h / 2;
+        const resize = element('rect', { x: cx - 6, y: cy - 6, width: 12, height: 12, fill: '#ffffff', stroke: '#3977c3', 'vector-effect': 'non-scaling-stroke', 'pointer-events': 'all', class: 'resize-handle' });
+        resize.style.cursor = resizeCursor(direction, rotation);
+        resize.dataset.resizeId = selected.id; resize.dataset.resizeDirection = direction;
+        resize.dataset.cornerX = cx; resize.dataset.cornerY = cy;
+        handles.append(resize);
+      }
+      svg.append(handles);
     }
   }
   return svg;

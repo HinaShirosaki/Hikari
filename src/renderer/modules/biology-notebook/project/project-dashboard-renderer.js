@@ -160,7 +160,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
       return `<option value="${day}">${day}</option>`;
     }).join('');
     return `
-      <section class="panel project-paper-finder-panel" aria-labelledby="project-paper-finder-heading">
+      <section class="panel project-paper-finder-panel" aria-labelledby="project-paper-finder-heading" data-requires-agent>
         <div class="project-panel-head project-paper-finder-head">
           <div class="project-panel-copy">
             <h3 id="project-paper-finder-heading">Paper Finder</h3>
@@ -395,14 +395,14 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
           <h2>${escapeText(heading)}</h2>
         </div>
         <div class="project-dashboard-actions">
-          <div class="project-experiment-suggestions">
+          <div class="project-experiment-suggestions" data-requires-agent>
             <button type="button" class="ghost-btn hikari-agent-action" data-suggest-experiment="${escapeText(project.id)}">Suggest next experiment</button>
           </div>
           ${includeEditAction ? `
             <button type="button" class="ghost-btn" data-project-edit="${escapeText(project.id)}">Edit Project</button>
           ` : ''}
         </div>
-        <span class="small-note project-experiment-suggestion-status" role="status" aria-live="polite" data-experiment-suggestion-status></span>
+        <span class="small-note project-experiment-suggestion-status" role="status" aria-live="polite" data-experiment-suggestion-status data-requires-agent></span>
       </section>
       ${renderProcesses(project)}
       ${renderStats(summary)}

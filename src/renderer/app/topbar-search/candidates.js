@@ -1,4 +1,5 @@
 import { asArray } from '../../lib/normalize.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 import { joinSublabel, protocolSearchText } from './scoring.js';
 
 // Builds the searchable candidate list the topbar scores against: every app,
@@ -226,7 +227,7 @@ function createSearchCandidates({
   }
 
   function buildAppSuggestionCandidates() {
-    return appSuggestionEntries.map((entry, index) => ({
+    return appSuggestionEntries.filter((entry) => entry.viewId !== VIEWS.AGENT || isAgentAvailable()).map((entry, index) => ({
       id: `app-${index}`,
       target: entry.target,
       text: entry.aliasText,

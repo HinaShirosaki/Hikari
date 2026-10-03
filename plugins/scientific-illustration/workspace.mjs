@@ -2,6 +2,7 @@ import { createDocument, normalizeDocument, applyOperations, readDocument, valid
 import { validateSvg, renderPreview, svgSource } from './artwork.mjs';
 import { CANVAS_TOOL_CONTRACT } from './agent/canvas-contract.mjs';
 import { agentInstructions } from './agent/workflow.mjs';
+import { createInspectionTracker } from './inspection.mjs';
 import { LIBRARY_PATH, LIBRARY_ACTIONS, normalizeLibrary, readLibrary, nextScenePath, validateLibraryRequest } from './library.mjs';
 
 export function encodeText(text) {
@@ -25,6 +26,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   let tail = Promise.resolve();
   let library;
   let scratchVisible = false;
+  const inspections = createInspectionTracker();
   const readView = () => ({ scratch_visible: scratchVisible });
   const undoStack = [], redoStack = [];
   const enqueue = work => {
@@ -59,7 +61,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       documentState = next; library = nextLibrary; publish(); onStatus('Saved');
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
   }
-  async function apply(args, deadline = Infinity) {
+  async function apply(args, deadline = Infinity, importedIds = []) {
     const hash = await signature(args);
     const receipt = documentState.receipts.find(item => item.id === args.request_id);
     if (receipt) return receipt.hash === hash
@@ -69,8 +71,19 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     const next = applyOperations(documentState, args.operations, validateSvg);
     // Decode raster bytes before persistence: invalid/truncated images fail the
     // entire batch, and no inaccessible asset can break future readback.
+    // Newly imported images fit their box to the image's aspect ratio (keeping
+    // width); manual resizing afterwards may still stretch them deliberately.
+    const imported = new Set(importedIds);
     await Promise.all(next.objects.filter(obj => obj.type === 'raster').map(obj => new Promise((resolve, reject) => {
-      const image = new Image(); image.onload = () => image.naturalWidth * image.naturalHeight <= 64000000 ? resolve() : reject(new Error('Raster images must be at most 64 megapixels.'));
+      const image = new Image(); image.onload = () => {
+        const { naturalWidth: w, naturalHeight: h } = image;
+        if (w * h > 64000000) return reject(new Error('Raster images must be at most 64 megapixels.'));
+        if (imported.has(obj.id)) {
+          obj.height = Math.max(1, obj.width * h / w);
+          if (obj.height > 8000) { obj.width = Math.max(1, 8000 * w / h); obj.height = 8000; }
+        }
+        resolve();
+      };
       image.onerror = () => reject(new Error(`Could not decode raster artwork ${obj.name}.`)); image.src = obj.dataUrl;
     })));
     if (Date.now() >= deadline) return failure('expired', 'The request expired before application. Read the figure again.');
@@ -111,8 +124,8 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       return { ok: true, status: args.action === 'open' ? 'opened' : 'created', illustration_id: id, ...readLibrary(library), ...readDocument(documentState) };
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
   }
-  async function request(input, deadline = Infinity, assets = {}) {
-    let args;
+  async function request(input, deadline = Infinity, assets = {}, { inspectionRunId = '' } = {}) {
+    let args; const importedIds = [];
     try {
       args = JSON.parse(JSON.stringify(input));
       if (LIBRARY_ACTIONS.includes(args.action)) validateLibraryRequest(args);
@@ -126,6 +139,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
           const asset = Object.hasOwn(assets, operation.raster_asset) && assets[operation.raster_asset];
           if (!asset?.data_url) throw new Error(`Missing raster asset: ${operation.raster_asset}`);
           target.dataUrl = asset.data_url;
+          importedIds.push(operation.op === 'upsert' ? target.id : operation.id);
           delete operation.raster_asset;
         }
         const { illustration_id: _illustrationId, ...drawingRequest } = args;
@@ -137,17 +151,24 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         if (Date.now() >= deadline) return failure('expired', 'The request expired.');
         if (LIBRARY_ACTIONS.includes(args.action)) return await libraryAction(args, deadline);
         if (args.illustration_id && args.illustration_id !== library.activeId) return { ...failure('illustration_changed', 'Another illustration is open. List and open the intended illustration before editing.'), ...readLibrary(library) };
+        if (args.action === 'inspection_status') return { ok: true, status: 'inspection_status', illustration_id: library.activeId,
+          revision: documentState.revision, inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId) };
+        if (args.action === 'inspect') return inspections.inspect(library.activeId, documentState.revision, inspectionRunId, args);
         if (args.action === 'scratch') {
           scratchVisible = args.visible; onViewChange(readView());
           return { ok: true, status: 'view_updated', illustration_id: library.activeId, revision: documentState.revision, ...readView() };
         }
-        if (args.action === 'apply') return await apply(args, deadline);
+        if (args.action === 'apply') return await apply(args, deadline, importedIds);
         if (args.action === 'render') {
           const canvases = !args.canvas || args.canvas === 'both' ? CANVASES : [args.canvas];
-          return { ok: true, status: 'rendered', illustration_id: library.activeId, revision: documentState.revision, ...readView(), previews: await Promise.all(canvases.map(key => renderPreview(documentState, key))) };
+          const previews = await Promise.all(canvases.map(key => renderPreview(documentState, key)));
+          if (Date.now() >= deadline) return failure('expired', 'The render expired. Render both canvases again before inspecting.');
+          return { ok: true, status: 'rendered', illustration_id: library.activeId, revision: documentState.revision, ...readView(), previews,
+            inspection: inspections.rendered(library.activeId, documentState.revision, inspectionRunId, canvases) };
         }
         return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readView(),
-          agent_contract: { tool: 'plugin_canvas', plugin_id: 'scientific-illustration', request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity) } };
+          inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId),
+          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
     }).catch(error => failure('unavailable', error.message));
   }

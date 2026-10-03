@@ -27,6 +27,7 @@ export function normalizeCodexLoginStatus(rawStatus) {
     loggedIn: source.loggedIn === true,
     source: String(source.source || '').trim().toLowerCase() || 'none',
     expired: source.expired === true,
+    canRefresh: source.canRefresh === true,
     sourcePath: String(source.sourcePath || '').trim(),
     cliAvailable: typeof source.cliAvailable === 'boolean' ? source.cliAvailable : null,
     cliVersion: String(source.cliVersion || '').trim(),

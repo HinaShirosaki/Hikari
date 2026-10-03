@@ -2,6 +2,10 @@ import { element } from './artwork.mjs';
 
 const paths = {
   plus: ['M12 5v14M5 12h14'],
+  minus: ['M5 12h14'],
+  rail: ['m14 6-6 6 6 6'],
+  layers: ['m12 3 9 5-9 5-9-5 9-5Z', 'm3 12 9 5 9-5M3 16l9 5 9-5'],
+  download: ['M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5'],
   undo: ['M9 5 4 10l5 5', 'M4 10h10a6 6 0 0 1 0 12'],
   redo: ['m15 5 5 5-5 5', 'M20 10H10a6 6 0 0 0 0 12'],
   more: ['M5 12h.01M12 12h.01M19 12h.01'],

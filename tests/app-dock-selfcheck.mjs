@@ -99,4 +99,14 @@ windowObject.innerWidth = 4000;
 navigate(activeViewId);
 assert.equal(moreBtn.hidden, true);
 assert.deepEqual(ids(), expectedOrder, 'widening restores the full original order');
-console.log('PASS app dock: original order, responsive overflow, selected-module promotion, aliases, and keyboard focus');
+const offlineDock = createAppDock({
+  documentObject, windowObject, dockNav, moreMenu, moreBtn, expandedDockApps,
+  isAppShown: (app) => app.id !== 'agent',
+  getActiveViewId: () => activeViewId,
+  pageTitle, TITLES: {}, normalize: (id) => id, resolveNavigationViewId,
+  getAppForView: (id) => apps.find((app) => app.viewId === resolveNavigationViewId(id))
+});
+offlineDock.renderAppNavigation(activeViewId);
+assert.deepEqual(ids(), expectedOrder.filter((id) => id !== 'agent'), 'a hidden module leaves the dock and More');
+assert.equal(moreMenu.children.length, 0);
+console.log('PASS app dock: original order, responsive overflow, selected-module promotion, aliases, keyboard focus, and hidden modules');

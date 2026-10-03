@@ -12,12 +12,10 @@ const {
 } = require('./login-state');
 const {
   createCodexCliNotFoundError,
-  resolveCodexInvocation,
   resolveWorkingDirectory
 } = require('./paths');
-const { buildCodexCommandEnv } = require('./runtime-home');
 const { cleanText } = require('./utils');
-const { ensureCodexCliUpdated } = require('./cli-maintenance');
+const { prepareCodexRuntime } = require('./runtime-gateway');
 
 function extractCodexLoginUrl(text = '') {
   const match = String(text || '').match(/https:\/\/auth\.openai\.com\/oauth\/authorize\?[^\s]+/i);
@@ -25,10 +23,8 @@ function extractCodexLoginUrl(text = '') {
 }
 
 async function launchCodexCliLogin({ cwd = process.cwd() } = {}) {
-  await ensureCodexCliUpdated();
   invalidateCodexLoginStatusCache();
   const safeCwd = resolveWorkingDirectory(cwd);
-  const env = await buildCodexCommandEnv(safeCwd);
   const activeLogin = getActiveCodexLogin();
   if (activeLogin?.child && activeLogin.finished !== true) {
     const knownUrl = cleanText(activeLogin.loginUrl, 8000) || OPENAI_CODEX_LOGIN_URL;
@@ -40,7 +36,7 @@ async function launchCodexCliLogin({ cwd = process.cwd() } = {}) {
     };
   }
 
-  const invocation = resolveCodexInvocation(env);
+  const { env, invocation } = await prepareCodexRuntime({ cwd: safeCwd });
   const child = spawn(invocation.command, [...invocation.argsPrefix, 'login'], {
     cwd: safeCwd,
     env,

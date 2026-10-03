@@ -1,4 +1,5 @@
 import { showTransientNotice } from '../../../lib/notify.js';
+import { isAgentAvailable } from '../../../lib/agent-availability.js';
 import { mergeNotebookValues, pruneNotebookValuesForProtocol } from '../entry/entry-helpers.js';
 import { logNotebookPageEvent } from '../../../services/notebook-page-log.js';
 import {
@@ -128,7 +129,7 @@ function createNotebookPageNaming({
   }
 
   function maybeGenerateNotebookPageName({ protocol: protocolOverride = null, values: valuesOverride = null } = {}) {
-    if (!window.hikariApi?.runDirectLlmPrompt || getExperimentNameSourceDraft() !== 'protocol') {
+    if (!window.hikariApi?.runDirectLlmPrompt || !isAgentAvailable() || getExperimentNameSourceDraft() !== 'protocol') {
       return Promise.resolve(null);
     }
     const entry = getActiveEntry();

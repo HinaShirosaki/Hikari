@@ -37,7 +37,7 @@
           <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
             <div class="home-tile-head">
               <h2 id="dashboard-quicklog-heading">Experiment log</h2>
-              <button type="button" id="home-agent-reopen-btn" class="home-link-btn" hidden>Continue notebook review</button>
+              <button type="button" id="home-agent-reopen-btn" class="home-link-btn" data-requires-agent hidden>Continue notebook review</button>
             </div>
             <textarea
               id="dashboard-quick-log-input"
@@ -67,7 +67,7 @@
         </div>
 
         <div class="home-column home-column-read">
-          <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
+          <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading" data-requires-agent>
             <div class="home-tile-head">
               <div class="home-tile-titles">
                 <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
@@ -276,7 +276,7 @@
         </div>
       </div>
 
-      <div id="home-agent-overlay" class="home-agent-overlay app-dialog-overlay" hidden>
+      <div id="home-agent-overlay" class="home-agent-overlay app-dialog-overlay" data-requires-agent hidden>
         <section class="home-agent-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="home-agent-title">
           <header class="app-dialog-head">
             <h3 id="home-agent-title">Prepare notebook page</h3>

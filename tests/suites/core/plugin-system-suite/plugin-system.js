@@ -735,7 +735,9 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
     width: 280,
     min: 240,
     max: 400,
-    mobileBreakpoint: 980
+    mobileBreakpoint: 980,
+    foldable: true,
+    folded: false
   });
   assert.equal(send(reader, 'app.setLeftRailWidth', { width: '360' }).ok, false, 'layout writes require a number');
   // The rail write touches host CSS, host localStorage, and every other frame, so it
@@ -749,6 +751,20 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   assert.equal(railStyles.get('--shared-left-rail-width'), '360px');
   assert.equal(railStorage.get('hikari_shared_left_rail_width_v2'), '360');
   assert.equal(layoutEvents.at(-1).type, 'hikari:left-rail-width-changed');
+
+  assert.equal(send(reader, 'app.setLeftRailFolded', { folded: 'true' }).ok, false, 'folding requires a boolean');
+  assert.equal(send(reader, 'app.setLeftRailFolded', {}).ok, false, 'folding requires an explicit state');
+  assert.equal(send(noLayout, 'app.setLeftRailFolded', { folded: true }).ok, false, 'folding requires layout permission');
+  const foldedRail = send(reader, 'app.setLeftRailFolded', { folded: true, pluginId: 'no-layout' });
+  assert.equal(foldedRail.ok, true);
+  assert.equal(foldedRail.result.leftRail.folded, true);
+  assert.equal(foldedRail.result.leftRail.width, 360, 'folding preserves expanded width');
+  assert.equal(railStorage.get('hikari_plugin_left_rail_folded_v1:reader'), 'true');
+  assert.equal(send(noLayout, 'app.info').result.layout.leftRail.folded, false, 'a plugin cannot fold another plugin rail');
+  bridge.broadcastAppContext('layout');
+  assert.equal(reader.replies.at(-1).payload.layout.leftRail.folded, true);
+  assert.equal(noLayout.replies.at(-1).payload.layout.leftRail.folded, false, 'context events carry each recipient rail state');
+  assert.equal(send(reader, 'app.setLeftRailFolded', { folded: false }).result.leftRail.folded, false);
 
   // Declared read/write permissions do not imply unrelated ones.
   const denied = send(reader, 'protocols.list');
@@ -984,6 +1000,7 @@ test('plugin system: app context events and user-mediated downloads stay permiss
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
   );
   const exports = [];
+  const documentListeners = new Map(), bodyClasses = new Set();
   const state = {
     settings: {
       storagePath: '/root',
@@ -998,7 +1015,10 @@ test('plugin system: app context events and user-mediated downloads stay permiss
         return { ok: true, fileName: payload.fileName };
       }
     },
-    windowObject: { addEventListener() {} }
+    windowObject: { addEventListener() {}, document: {
+      body: { classList: { contains: name => bodyClasses.has(name) } },
+      addEventListener: (name, handler) => documentListeners.set(name, handler)
+    } }
   });
   const makeFrame = () => {
     const replies = [];
@@ -1015,6 +1035,15 @@ test('plugin system: app context events and user-mediated downloads stay permiss
   })();
   assert.deepEqual(info.result.appearance, { mode: 'night', fontSize: 18 });
   assert.deepEqual(info.result.storage, { configured: true });
+  assert.equal(info.result.layout.agentChatRail.expanded, false);
+  bodyClasses.add('has-agent-chat-rail-expanded');
+  documentListeners.get('hikari:agent-chat-rail-state')();
+  assert.equal(exporter.replies.at(-1).event, 'app.context');
+  assert.equal(exporter.replies.at(-1).payload.changed, 'layout');
+  assert.equal(exporter.replies.at(-1).payload.layout.agentChatRail.expanded, true);
+  bodyClasses.delete('has-agent-chat-rail-expanded');
+  documentListeners.get('hikari:agent-chat-rail-state')();
+  assert.equal(exporter.replies.at(-1).payload.layout.agentChatRail.expanded, false);
 
   bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN,
     source: reader,
@@ -1325,6 +1354,30 @@ test('plugin system: a frame with unsaved work reaches the host quit guard', asy
   push(false);
   assert.equal(await saved, true);
   assert.deepEqual(bridge.getUnsavedSources(), []);
+});
+
+test('plugin chat context updates only its owning view and validates item identifiers', async () => {
+  const { createPluginChatContextHandler } = await import(pathToFileURL(path.join(__dirname, 'src/renderer/app/plugin-agent.js')));
+  const ownView = { dataset: { pluginId: 'drawing-plugin' } };
+  const otherView = { dataset: { pluginId: 'other-plugin', pluginChatContextId: 'unchanged' } };
+  const documentObject = { body: { dataset: { activeView: 'plugin-drawing-plugin-view' } },
+    getElementById: id => ({ 'plugin-drawing-plugin-view': ownView, 'plugin-other-plugin-view': otherView })[id] };
+  let renders = 0;
+  const update = createPluginChatContextHandler({ documentObject,
+    getModuleRuntime: () => ({ modules: { agentChatRail: { render: () => { renders += 1; } } } }) });
+  const plugin = { id: 'drawing-plugin' };
+  assert.equal(update(plugin, { id: 'figure-1', title: 'First figure', canvasIllustrationId: 'figure-1' }).ok, true);
+  assert.equal(ownView.dataset.pluginChatContextId, 'figure-1');
+  assert.equal(ownView.dataset.pluginCanvasIllustrationId, 'figure-1');
+  assert.equal(otherView.dataset.pluginChatContextId, 'unchanged');
+  assert.equal(renders, 1);
+  for (const context of [{}, { id: '../other' }, { id: 'x'.repeat(101) }, { id: 'ok', title: {} }, { id: 'ok', canvasIllustrationId: '../bad' }]) {
+    assert.throws(() => update(plugin, context));
+  }
+  assert.equal(ownView.dataset.pluginChatContextId, 'figure-1');
+  documentObject.body.dataset.activeView = 'plugin-other-plugin-view';
+  update(plugin, { id: 'figure-2' });
+  assert.equal(renders, 1, 'Inactive plugins cannot change the visible chat');
 });
 
 };

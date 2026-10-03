@@ -10,7 +10,7 @@
 </head>
 <body>
   <main class="illustration-workspace left-rail-template">
-    <aside class="illustrations-rail left-rail-template__rail app-left-rail" data-sync-left-rail aria-label="Illustrations">
+    <aside id="illustrations-rail" class="illustrations-rail left-rail-template__rail app-left-rail" data-sync-left-rail aria-label="Illustrations">
       <div class="rail-heading"><h1>Illustrations</h1><button id="new-illustration" class="icon-button" type="button" title="New illustration" aria-label="New illustration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
       <input id="illustration-search" type="search" placeholder="Search illustrations" aria-label="Search illustrations">
       <div id="illustrations" class="illustration-list" aria-label="Saved illustrations"></div>
@@ -18,14 +18,22 @@
     </aside>
     <section class="workspace left-rail-template__main" aria-label="Illustration editor">
       <header class="toolbar">
+        <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden></button>
         <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
         <div class="toolbar-actions">
+          <label class="complexity-control" for="complexity"><span class="sr-only">Illustration complexity</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
           <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
           <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
+          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
+            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
+          </div></details>
+          <button id="toggle-layers" class="panel-toggle" data-icon="layers" type="button" title="Show layers and properties" aria-label="Show layers and properties" aria-expanded="false" aria-controls="layer-inspector"><span>Layers</span></button>
           <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
+            <button id="menu-group-selection" type="button" disabled>Group selection <small>⌘G / Ctrl+G</small></button>
+            <button id="menu-ungroup-selection" type="button" disabled>Ungroup <small>⌘⇧G / Ctrl+Shift+G</small></button>
             <button id="duplicate-illustration" type="button">Duplicate illustration</button>
           </div></details>
-          <details class="popover" id="export-menu"><summary class="export-button">Export <span data-icon="down"></span></summary><div class="popover-panel">
+          <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export"><span class="export-mark" data-icon="download"></span><span class="export-label">Export</span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
             <button id="export-svg" type="button">SVG <small>Editable figure</small></button>
             <button id="export-png" type="button">PNG <small>Image</small></button>
           </div></details>
@@ -33,7 +41,17 @@
       </header>
       <div class="work-area">
         <section class="canvas-column" aria-label="Illustration canvases">
-          <div class="canvas-heading">
+          <div class="canvases">
+            <div class="main-stage-wrap">
+              <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
+              <div id="canvas-empty" class="canvas-empty" hidden><strong>Start with an idea</strong><span id="canvas-empty-hint">Describe your figure below, or add a layer.</span></div>
+            </div>
+            <section id="scratch-workspace" aria-label="Scratch workspace" hidden>
+              <div class="scratch-heading canvas-heading"><button type="button" data-canvas="scratch" aria-pressed="false">Scratch canvas</button><span id="scratch-size"></span><button type="button" id="place-scratch">Copy to main</button><button id="close-scratch" class="icon-button" data-icon="close" type="button" aria-label="Close scratch canvas" title="Close scratch canvas"></button></div>
+              <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
+            </section>
+          </div>
+          <div class="canvas-heading canvas-controls">
             <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
             <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
               <option value="1200x800">Landscape · 1200 × 800</option>
@@ -46,33 +64,25 @@
             <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
               <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
             </div></details>
-            <button id="toggle-scratch" class="scratch-toggle" type="button" aria-expanded="false" aria-controls="scratch-workspace">Scratch</button>
-          </div>
-          <div class="canvases">
-            <div class="main-stage-wrap">
-              <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
-              <div id="canvas-empty" class="canvas-empty" hidden><strong>Start with an idea</strong><span>Describe your figure below, or add a layer.</span></div>
+            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
+              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
+              <output id="zoom-level" aria-label="Zoom level">100%</output>
+              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
+              <button id="zoom-fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true">Fit</button>
             </div>
-            <section id="scratch-workspace" aria-label="Scratch workspace" hidden>
-              <div class="scratch-heading canvas-heading"><button type="button" data-canvas="scratch" aria-pressed="false">Scratch canvas</button><span id="scratch-size"></span><button type="button" id="place-scratch">Copy to main</button><button id="close-scratch" class="icon-button" data-icon="close" type="button" aria-label="Close scratch canvas" title="Close scratch canvas"></button></div>
-              <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
-            </section>
+            <button id="toggle-scratch" class="scratch-toggle" type="button" aria-expanded="false" aria-controls="scratch-workspace">Scratch</button>
           </div>
           <form id="prompt-form" class="prompt">
             <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
-            <div class="prompt-actions">
-              <label class="complexity-control" for="complexity">Complexity<select id="complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
-              <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
-            </div>
+            <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
           </form>
         </section>
-        <aside class="inspector" aria-label="Layers and properties">
-          <div class="inspector-heading"><h2>Layers</h2><span id="layer-count"></span><details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
-            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
-          </div></details></div>
+        <aside id="layer-inspector" class="inspector" aria-label="Layers and properties" hidden inert>
+          <div class="inspector-heading"><h2>Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close layers and properties" aria-label="Close layers and properties"></button></div>
+          <div class="group-actions" role="group" aria-label="Grouping"><button id="group-selection" type="button" title="Group selection (⌘G / Ctrl+G)" disabled>Group</button><button id="ungroup-selection" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" disabled>Ungroup</button></div>
           <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
           <div id="layers" role="list" aria-label="Figure layers"></div>
-          <p id="selection-hint" class="selection-hint">Select a component to edit it.</p>
+          <p id="selection-hint" class="selection-hint">Shift-click to select more. Select a child layer to edit it individually.</p>
           <form id="properties" hidden>
             <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
             <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>

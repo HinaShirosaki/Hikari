@@ -10,6 +10,7 @@ import {
   cancelHidePanel
 } from './controller-ui.js';
 import { cleanText, isElementNode } from './text-utils.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 
 export function bindHostListeners(ctx, hostKey, host) {
   if (!host || host.dataset.selectionInsightsBound === 'true') {
@@ -18,7 +19,8 @@ export function bindHostListeners(ctx, hostKey, host) {
   host.dataset.selectionInsightsBound = 'true';
 
   host.addEventListener('contextmenu', (event) => {
-    const selectionContext = getSelectionContext(ctx, hostKey);
+    // Without Codex the native context menu stays; saved insights still open on hover.
+    const selectionContext = isAgentAvailable(ctx.rootDocument) ? getSelectionContext(ctx, hostKey) : null;
     if (!selectionContext) {
       hideMenu(ctx);
       return;

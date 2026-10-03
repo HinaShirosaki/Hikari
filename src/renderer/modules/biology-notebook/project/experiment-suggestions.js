@@ -1,5 +1,6 @@
 import { buildNotebookEntryFromDraft, normalizeNotebookDraft } from '../agent/notebook-drafts.js';
 import { showTransientNotice } from '../../../lib/notify.js';
+import { isAgentAvailable } from '../../../lib/agent-availability.js';
 
 export function createExperimentSuggestions({
   state, persist, createId, host, acceptButton, api,
@@ -21,7 +22,8 @@ export function createExperimentSuggestions({
 
   async function suggest(projectId, { automatic = false, completedEntry = null } = {}) {
     const project = state.projects?.find((item) => item.id === projectId);
-    if (!project || runs.get(projectId)?.busy) return null;
+    // Also stops the automatic run after an executed entry while Codex is offline.
+    if (!project || runs.get(projectId)?.busy || !isAgentAvailable(host?.ownerDocument)) return null;
     const paused = pauses()[projectId];
     const resumes = paused && completedEntry?.projectId === projectId
       && completedEntry.notebookState === 'executed' && !completedEntry.agentDraftMeta?.source

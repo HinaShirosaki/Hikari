@@ -17,6 +17,8 @@ import {
   buildAssistantResponseMessage
 } from './assistant-message-meta.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
+import { createScopedAgentChatState } from './scoped-state.js';
 
 // Sends chat turns to the main-process agent and folds the reply back in.
 // Several sessions can have a request running at once (runtime.activeRequests,
@@ -76,7 +78,8 @@ export function createAgentRequestController(deps) {
   }
 
   function isRequestVisible(request) {
-    return trimText(request?.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120);
+    return trimText(request?.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120)
+      && (!request.scopeKey || request.scopeKey === normalizeScopeKey(state.agentChatContext || {}));
   }
 
   function setRequestStatus(request, text) {
@@ -123,20 +126,19 @@ export function createAgentRequestController(deps) {
     const htmlArtifacts = request?.liveAssistantMessage?.meta?.html_artifacts || [];
     const imageArtifacts = request?.liveAssistantMessage?.meta?.image_artifacts || [];
     clearLiveAssistantState(request);
-    if (!isRequestVisible(request)) {
-      return false;
-    }
     const stoppedMessage = buildStoppedAssistantMessage(requestText, message, createId);
     stoppedMessage.meta.html_artifacts = htmlArtifacts;
     stoppedMessage.meta.image_artifacts = imageArtifacts;
-    state.agentChat.messages.push(stoppedMessage);
-    state.agentChat.messages = state.agentChat.messages.slice(-40);
-    persist();
-    sessionManager.renderSessionList();
-    renderHistoryView({ forceScroll: true });
-    return true;
+    return persistAssistantMessage(request, stoppedMessage);
   }
   function persistAssistantMessage(request, message) {
+    if (request.originState && !isRequestVisible(request)) {
+      const chat = request.originState.agentChat;
+      if (trimText(chat.currentSessionId, 120) !== trimText(request.sessionId, 120)) return false;
+      request.originState.agentChat = { ...chat, messages: [...chat.messages, message].slice(-40) };
+      persist();
+      return false;
+    }
     if (!isRequestVisible(request)) {
       return false;
     }
@@ -165,6 +167,11 @@ export function createAgentRequestController(deps) {
     }
 
     ensureAgentState();
+    const scopeContext = state.agentChatContext ? { ...state.agentChatContext } : null;
+    const scopeKey = normalizeScopeKey(scopeContext || {});
+    const originState = scopeContext?.scopeType === 'plugin' && state.__agentChatRootState
+      ? createScopedAgentChatState(state.__agentChatRootState, { getScopeContext: () => scopeContext }) : null;
+    const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts });
     runtime.stopRequested = false;
     runtime.stopInProgress = false;
     runtime.sendPending = true;
@@ -182,6 +189,10 @@ export function createAgentRequestController(deps) {
     let request = null;
     try {
       currentSessionId = await sessionManager.ensureCurrentChatSession(messageText);
+      if (scopeKey !== normalizeScopeKey(state.agentChatContext || {})) {
+        runtime.sendPending = false; syncRequestUiState();
+        return { ok: false, reason: 'scope_changed' };
+      }
       requestSessionId = trimText(currentSessionId || state.agentChat.currentSessionId, 120);
       if (requestSessionId && !trimText(state.agentChat.currentSessionId, 120)) {
         state.agentChat.currentSessionId = requestSessionId;
@@ -208,6 +219,8 @@ export function createAgentRequestController(deps) {
       request = {
         clientRequestId,
         sessionId: requestSessionId,
+        scopeKey,
+        originState,
         requestText: messageText,
         liveAssistantMessage: buildLiveAssistantPlaceholder(clientRequestId, messageText, createId),
         stopRequested: false,
@@ -242,7 +255,7 @@ export function createAgentRequestController(deps) {
         conversation,
         stateSnapshot,
         llm: payloadBuilder.buildAgentLlmPayload(),
-        agent: payloadBuilder.buildAgentFlagsPayload({ hiddenContexts })
+        agent: agentFlags
       });
       if (wasRequestCanceled(clientRequestId)) {
         return;
@@ -259,7 +272,13 @@ export function createAgentRequestController(deps) {
         const sessionId = trimText(result.chat_session.id || result.chat_session.session_id, 120);
         if (sessionId) {
           request.sessionId = sessionId;
-          sessionManager.upsertSessionSummary(result.chat_session);
+          if (isRequestVisible(request)) sessionManager.upsertSessionSummary(result.chat_session);
+          else if (request.originState) {
+            const chat = request.originState.agentChat;
+            request.originState.agentChat = { ...chat,
+              sessions: [result.chat_session, ...chat.sessions.filter(session => session.id !== sessionId)] };
+            persist();
+          }
         }
       }
       const response = normalizeAgentResponse(result);
@@ -276,7 +295,7 @@ export function createAgentRequestController(deps) {
       if (persistAssistantMessage(request, assistantMessage)) {
         openReviewForMessage(assistantMessage);
       }
-      if (request.sessionId) {
+      if (request.sessionId && deps.refreshPersistentSessionsOnReply !== false && isRequestVisible(request)) {
         void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }
       setRequestStatus(request, response.userQuestion?.question ? 'Waiting for your answer.' : 'Complete.');

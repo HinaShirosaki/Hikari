@@ -1,11 +1,13 @@
 import { initAgentChat } from '../modules/agent-chat/index.js';
 import { createScopedAgentChatState } from '../modules/agent-chat/scoped-state.js';
 
-function createAgentRailScopeContextGetter(modules, rootDocument, views = {}) {
+export function createAgentRailScopeContextGetter(modules, rootDocument, views = {}) {
   return () => {
     const activeViewId = String(rootDocument?.body?.dataset?.activeView || '').trim();
     const pluginView = rootDocument?.getElementById?.(activeViewId);
-    if (pluginView?.dataset?.pluginId) return { scopeType: 'plugin', pluginId: pluginView.dataset.pluginId, pluginName: pluginView.dataset.pluginName };
+    if (pluginView?.dataset?.pluginId) return { scopeType: 'plugin', pluginId: pluginView.dataset.pluginId,
+      pluginName: pluginView.dataset.pluginName, pluginContextId: pluginView.dataset.pluginChatContextId,
+      pluginContextTitle: pluginView.dataset.pluginChatContextTitle, pluginCanvasIllustrationId: pluginView.dataset.pluginCanvasIllustrationId };
     if (activeViewId === views.BIOLOGY_NOTEBOOK) {
       return modules?.biologyNotebook?.getAgentChatContext?.() || {
         scopeType: 'notebook'

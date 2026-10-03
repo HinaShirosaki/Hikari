@@ -53,6 +53,16 @@ module.exports = function registerCliDiscovery(context = {}) {
     }
   }
 
+  test('The Codex gateway normalizes Windows npm command, script, and Node paths without a shell', () => {
+    const { resolveCodexRuntimeInvocation } = require('../../../../src/main/lib/codex-cli-provider/runtime-gateway');
+    const shim = 'C:\\Tools With Spaces\\codex.cmd';
+    const script = 'C:\\Tools With Spaces\\node_modules\\@openai\\codex\\bin\\codex.js';
+    const node = 'C:\\Runtime With Spaces\\node.exe';
+    const options = fixture('win32', { [shim]: '', [script]: '', [node]: '' });
+    const invocation = resolveCodexRuntimeInvocation({ HIKARI_CODEX_CLI: ` "${shim}" `, HIKARI_CODEX_NODE_PATH: `"${node}"` }, options);
+    assert.deepEqual(invocation, { command: node, argsPrefix: [script] });
+  });
+
   for (const platform of ['darwin', 'win32']) {
     const p = platform === 'win32' ? path.win32 : path.posix;
     const base = fixture(platform);

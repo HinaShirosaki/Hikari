@@ -88,6 +88,7 @@ module.exports = function registerCodexCliProviderSuiteAuthAndSessionTranscripts
         '#!/usr/bin/env node',
         "const fs = require('node:fs');",
         'const args = process.argv.slice(2);',
+        "if (args.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }",
         'let stdin = "";',
         "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
         "process.stdin.on('end', () => {",
@@ -350,7 +351,7 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
       try {
         const provider = loadProvider();
         const profile = provider.readCodexCliOAuthProfile();
-        const status = await provider.getCodexLoginStatus({ forceRefresh: true });
+        const status = await provider.getCodexLoginStatus({ forceRefresh: true, env: { ...process.env, HIKARI_CODEX_HOME: tmpDir } });
         assert.equal(profile.authMode, 'chatgpt');
         assert.equal(profile.accessToken, accessToken);
         assert.equal(profile.accountId, 'acct-123');
@@ -358,7 +359,7 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
         assert.equal(status.loggedIn, true);
         assert.equal(status.source, 'stored');
         assert.equal(status.expired, false);
-        assert.equal(status.sourcePath, path.join(tmpDir, 'auth.json'));
+        assert.equal(status.sourcePath, fs.realpathSync(path.join(tmpDir, 'auth.json')));
         assert.match(String(status.message || ''), /auth\.json/i);
       } finally {
         if (typeof previousCodexHome === 'string') {
@@ -444,7 +445,7 @@ https://auth.openai.com/oauth/authorize?response_type=code&client_id=test-client
 
       try {
         const provider = loadProvider();
-        const status = await provider.getCodexLoginStatus({ forceRefresh: true });
+        const status = await provider.getCodexLoginStatus({ forceRefresh: true, env: { ...process.env, HIKARI_CODEX_HOME: tmpDir } });
         assert.equal(status.loggedIn, false);
         assert.equal(status.source, 'stored');
         assert.equal(status.expired, true);

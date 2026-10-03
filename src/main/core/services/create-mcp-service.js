@@ -19,7 +19,7 @@ function createMainMcpService({
     runTool: (toolId, ...args) => {
       if (toolId === 'workspace-files') return fileAccess?.execute(args[0], args[2]?.fileAccessToken)
         || { ok: false, status: 'unavailable', error: 'Workspace files is unavailable.' };
-      if (toolId === 'plugin-canvas') return canvasBridge.run(args[0]);
+      if (toolId === 'plugin-canvas') return canvasBridge.run({ ...args[0], inspectionRunId: args[2]?.pluginInspectionRunId || '' });
       return toolId === 'assay-plot' ? plotBridge.run(args[0]) : agentToolRuntime?.runAgentTool(toolId, ...args);
     },
     env: processObject.env,
@@ -55,6 +55,7 @@ function createMainMcpService({
     getLastInitialization: () => lastInitialization,
     initialize,
     mcpHost,
+    requestPluginCanvas: args => canvasBridge.run(args),
     stop
   };
 }

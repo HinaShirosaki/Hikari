@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { ensureObject } = require('../lib/normalize.js');
+const { writeFileAtomic } = require('../lib/shared-json-file');
 const {
   FILE_VERSION,
   MAX_TIMER_DELAY_MS,
@@ -38,6 +39,7 @@ function createScheduledTaskService({
   const timers = new Map();
   const runningTaskIds = new Set();
   let loaded = false;
+  let loadedPath = '';
   let loadPromise = null;
   let started = false;
   let writeQueue = Promise.resolve();
@@ -50,11 +52,10 @@ function createScheduledTaskService({
     publicTask
   } = createTaskNormalizers({ now, cleanText, createId, runningTaskIds });
 
-  async function loadTasks() {
-    if (loaded) {
+  async function loadTasks(configPath) {
+    if (loaded && loadedPath === configPath) {
       return;
     }
-    const configPath = getScheduledTasksPath();
     let parsed = { tasks: [] };
     try {
       const raw = await fs.readFile(configPath, 'utf8');
@@ -91,39 +92,47 @@ function createScheduledTaskService({
       tasks.set(task.id, task);
     });
     loaded = true;
+    loadedPath = configPath;
   }
 
-  async function ensureLoaded() {
-    if (loaded) {
+  async function ensureLoaded(configPath = path.resolve(getScheduledTasksPath())) {
+    if (loaded && loadedPath === configPath) {
       return;
     }
     if (!loadPromise) {
-      loadPromise = loadTasks().finally(() => {
+      loadPromise = loadTasks(configPath).finally(() => {
         loadPromise = null;
       });
     }
     await loadPromise;
   }
 
-  async function persistTasks() {
-    const configPath = getScheduledTasksPath();
+  async function persistTasks(configPath) {
     const snapshot = {
       version: FILE_VERSION,
       updated_at: currentIso(),
       tasks: Array.from(tasks.values()).map((task) => cloneJson(task))
     };
-    writeQueue = writeQueue.catch(() => {}).then(async () => {
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      const temporaryPath = `${configPath}.${process.pid}.tmp`;
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await writeFileAtomic(fs, configPath, JSON.stringify(snapshot, null, 2));
+  }
+
+  // Queue the mutation and rollback as well as the write. Capturing a later
+  // snapshot before a failed mutation rolls back can resurrect that mutation.
+  function transaction(work, configPath = path.resolve(getScheduledTasksPath())) {
+    const current = writeQueue.then(async () => {
+      await ensureLoaded(configPath);
+      const previous = new Map([...tasks].map(([id, task]) => [id, cloneJson(task)]));
       try {
-        await fs.writeFile(temporaryPath, JSON.stringify(snapshot, null, 2), 'utf8');
-        await fs.rename(temporaryPath, configPath);
+        return await work(configPath);
       } catch (error) {
-        await fs.rm(temporaryPath, { force: true }).catch(() => {});
+        tasks.clear();
+        previous.forEach((task, id) => tasks.set(id, task));
         throw error;
       }
     });
-    await writeQueue;
+    writeQueue = current.catch(() => {});
+    return current;
   }
 
   function clearTaskTimer(taskId) {
@@ -174,22 +183,22 @@ function createScheduledTaskService({
     });
   }
 
-  async function listTasks() {
-    await ensureLoaded();
+  async function listTasks(configPath) {
+    await ensureLoaded(configPath);
     return Array.from(tasks.values())
       .map(publicTask)
       .sort((left, right) => left.created_at.localeCompare(right.created_at));
   }
 
-  async function getTask(taskId) {
-    await ensureLoaded();
+  async function getTask(taskId, configPath) {
+    await ensureLoaded(configPath);
     const id = cleanText(taskId, 160);
     const task = tasks.get(id);
     return task ? publicTask(task) : null;
   }
 
-  async function createTask(input = {}) {
-    await ensureLoaded();
+  async function createTask(input = {}, configPath) {
+    await ensureLoaded(configPath);
     const task = normalizeTask(input);
     if (!task.id || tasks.has(task.id)) {
       throw new Error('Could not allocate a unique scheduled task id.');
@@ -197,7 +206,7 @@ function createScheduledTaskService({
     task.next_run_at = computeNextRunAt(task);
     tasks.set(task.id, task);
     try {
-      await persistTasks();
+      await persistTasks(configPath);
     } catch (error) {
       tasks.delete(task.id);
       throw error;
@@ -206,8 +215,8 @@ function createScheduledTaskService({
     return publicTask(task);
   }
 
-  async function updateTask(taskId, updates = {}) {
-    await ensureLoaded();
+  async function updateTask(taskId, updates = {}, configPath) {
+    await ensureLoaded(configPath);
     const id = cleanText(taskId, 160);
     const existing = tasks.get(id);
     if (!existing) {
@@ -221,7 +230,7 @@ function createScheduledTaskService({
     });
     tasks.set(id, updated);
     try {
-      await persistTasks();
+      await persistTasks(configPath);
     } catch (error) {
       tasks.set(id, existing);
       throw error;
@@ -230,8 +239,8 @@ function createScheduledTaskService({
     return publicTask(updated);
   }
 
-  async function deleteTask(taskId) {
-    await ensureLoaded();
+  async function deleteTask(taskId, configPath) {
+    await ensureLoaded(configPath);
     const id = cleanText(taskId, 160);
     const existing = tasks.get(id);
     if (!existing) {
@@ -240,7 +249,7 @@ function createScheduledTaskService({
     clearTaskTimer(id);
     tasks.delete(id);
     try {
-      await persistTasks();
+      await persistTasks(configPath);
     } catch (error) {
       tasks.set(id, existing);
       armTask(existing);
@@ -267,39 +276,48 @@ function createScheduledTaskService({
     );
   }
 
-  async function runTask(taskId, { trigger = 'manual' } = {}) {
-    await ensureLoaded();
-    const id = cleanText(taskId, 160);
-    const task = tasks.get(id);
-    if (!task) {
-      return null;
-    }
-    if (trigger === 'schedule' && !task.enabled) {
-      return { task: publicTask(task), run: null };
-    }
-    if (runningTaskIds.has(id)) {
-      const error = new Error('Scheduled task is already running.');
-      error.code = 'TASK_ALREADY_RUNNING';
-      throw error;
-    }
+  function commitRun(id, run, configPath) {
+    return transaction(async () => {
+      const currentTask = tasks.get(id);
+      if (!currentTask || currentTask.last_run?.id !== run.id) return null;
+      currentTask.last_run = cloneJson(run);
+      currentTask.updated_at = run.completed_at;
+      if (currentTask.schedule.kind === 'once') currentTask.enabled = false;
+      currentTask.next_run_at = computeNextRunAt(currentTask);
+      await persistTasks(configPath);
+      return { ...publicTask(currentTask), is_running: false };
+    }, configPath);
+  }
 
-    runningTaskIds.add(id);
-    clearTaskTimer(id);
-    const run = {
-      id: cleanText(createId(), 160),
-      trigger: trigger === 'schedule' ? 'schedule' : 'manual',
-      status: 'running',
-      started_at: currentIso(),
-      completed_at: '',
-      text: '',
-      error: ''
-    };
-    task.last_run = run;
-    task.updated_at = currentIso();
+  async function runTask(taskId, { trigger = 'manual' } = {}) {
+    const configPath = path.resolve(getScheduledTasksPath());
+    const id = cleanText(taskId, 160);
+    let run = null;
 
     try {
-      await persistTasks();
-      const result = await runCodexTask(publicTask(task));
+      const task = await transaction(async () => {
+        const currentTask = tasks.get(id);
+        if (!currentTask) return null;
+        if (trigger === 'schedule' && !currentTask.enabled) return publicTask(currentTask);
+        if (runningTaskIds.has(id)) {
+          throw Object.assign(new Error('Scheduled task is already running.'), { code: 'TASK_ALREADY_RUNNING' });
+        }
+        runningTaskIds.add(id);
+        clearTaskTimer(id);
+        run = {
+          id: cleanText(createId(), 160), trigger: trigger === 'schedule' ? 'schedule' : 'manual',
+          status: 'running', started_at: currentIso(), completed_at: '', text: '', error: ''
+        };
+        currentTask.last_run = cloneJson(run);
+        currentTask.updated_at = currentIso();
+        await persistTasks(configPath);
+        return publicTask(currentTask);
+      }, configPath);
+      if (!task) return null;
+      if (!run) return { task, run: null };
+      // Inference stays outside the transaction so editing another task does
+      // not wait for a model run. Only its state transitions take the queue.
+      const result = await runCodexTask(task);
       const text = extractCodexText(result);
       if (!text) {
         throw new Error('Codex scheduled task returned an empty response.');
@@ -308,7 +326,7 @@ function createScheduledTaskService({
       run.completed_at = currentIso();
       run.text = cleanText(text, 20000);
       if (typeof normalizeRunResult === 'function') {
-        const normalizedResult = await normalizeRunResult(publicTask(task), text, {
+        const normalizedResult = await normalizeRunResult(task, text, {
           completedAt: run.completed_at,
           completed_at: run.completed_at
         });
@@ -316,22 +334,14 @@ function createScheduledTaskService({
           run.result = cloneJson(normalizedResult);
         }
       }
-      const currentTask = tasks.get(id);
-      if (currentTask) {
-        currentTask.last_run = run;
-        currentTask.updated_at = run.completed_at;
-        if (currentTask.schedule.kind === 'once') {
-          currentTask.enabled = false;
-        }
-        currentTask.next_run_at = computeNextRunAt(currentTask);
-        await persistTasks();
-      }
+      const currentTask = await commitRun(id, run, configPath);
       return {
-        task: currentTask ? { ...publicTask(currentTask), is_running: false } : null,
+        task: currentTask,
         run: cloneJson(run),
         text
       };
     } catch (rawError) {
+      if (!run) throw rawError;
       // ponytail: a rejection with a primitive would throw on the property
       // assignment below under strict mode, wrap it instead.
       const error = rawError instanceof Error
@@ -340,37 +350,28 @@ function createScheduledTaskService({
       run.status = 'failed';
       run.completed_at = currentIso();
       run.error = cleanText(error.message, 2400) || 'Codex scheduled task failed.';
-      const currentTask = tasks.get(id);
-      if (currentTask) {
-        currentTask.last_run = run;
-        currentTask.updated_at = run.completed_at;
-        if (currentTask.schedule.kind === 'once') {
-          currentTask.enabled = false;
-        }
-        currentTask.next_run_at = computeNextRunAt(currentTask);
-        await persistTasks().catch((persistError) => {
-          consoleObject.error(`Failed to persist scheduled task "${id}" failure:`, persistError);
-        });
-      }
+      await commitRun(id, run, configPath).catch((persistError) => {
+        consoleObject.error(`Failed to persist scheduled task "${id}" failure:`, persistError);
+      });
       error.scheduledTaskRun = cloneJson(run);
       throw error;
     } finally {
-      runningTaskIds.delete(id);
-      const currentTask = tasks.get(id);
-      if (currentTask) {
-        armTask(currentTask);
+      if (run) {
+        runningTaskIds.delete(id);
+        const currentTask = loadedPath === configPath && path.resolve(getScheduledTasksPath()) === configPath ? tasks.get(id) : null;
+        if (currentTask) armTask(currentTask);
       }
     }
   }
 
-  async function start() {
-    await ensureLoaded();
+  async function start(configPath) {
+    await ensureLoaded(configPath);
     started = true;
     armAllTasks();
     return {
       ok: true,
       task_count: tasks.size,
-      config_path: getScheduledTasksPath()
+      config_path: configPath
     };
   }
 
@@ -384,14 +385,16 @@ function createScheduledTaskService({
   async function reload() {
     const wasStarted = started;
     await stop();
-    loaded = false;
-    tasks.clear();
-    return wasStarted ? start() : ensureLoaded();
+    return transaction(async (configPath) => {
+      loaded = false;
+      tasks.clear();
+      return wasStarted ? start(configPath) : ensureLoaded(configPath);
+    });
   }
 
   // Patches the stored result of one specific run; a newer run's results are left alone.
-  async function updateRunResult(taskId, runId, update) {
-    await ensureLoaded();
+  async function updateRunResult(taskId, runId, update, configPath) {
+    await ensureLoaded(configPath);
     const task = tasks.get(cleanText(taskId, 160));
     const run = task?.last_run;
     if (!run?.result || !runId || run.id !== runId) {
@@ -402,21 +405,27 @@ function createScheduledTaskService({
       return null;
     }
     run.result = cloneJson(next);
-    await persistTasks();
+    await persistTasks(configPath);
     return publicTask(task);
   }
 
   return {
-    createTask,
-    deleteTask,
-    getTask,
-    listTasks,
+    createTask: (input = {}) => {
+      const captured = cloneJson(input);
+      return transaction(configPath => createTask(captured, configPath));
+    },
+    deleteTask: (id) => transaction(configPath => deleteTask(id, configPath)),
+    getTask: (id) => transaction(configPath => getTask(id, configPath)),
+    listTasks: () => transaction(listTasks),
     reload,
     runTask,
-    start,
+    start: () => transaction(start),
     stop,
-    updateRunResult,
-    updateTask
+    updateRunResult: (id, runId, update) => transaction(configPath => updateRunResult(id, runId, update, configPath)),
+    updateTask: (id, input = {}) => {
+      const captured = cloneJson(input);
+      return transaction(configPath => updateTask(id, captured, configPath));
+    }
   };
 }
 

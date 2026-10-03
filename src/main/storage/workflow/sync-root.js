@@ -8,6 +8,7 @@ const { NOTEBOOK_PAGE_FILE_NAME, RELATED_PAPERS_FILE_NAME, TEMPLATE_METADATA_FIL
 const { buildTemplateFolderName, buildWorkflowFolderLayout, collectLinkedNotebookIds, resolveWorkflowStoragePaths } = require('./folder-names.js');
 const { buildNotebookStorageFolder, ensureFolder, writeJsonFile } = require('./fs-helpers.js');
 const { collectRelatedPaperData, collectWorkflowSummary, compactNotebookEntry, compactWorkflowRecord, resolveWorkflowTemplateRecord } = require('./record-compaction.js');
+const { withStorageRootWrite } = require('../write-coordinator');
 
 // Loading finds templates and runs by their record files, so a deleted one
 // loses only its template.json / workflow.json. Its results, notebook pages and
@@ -34,7 +35,7 @@ async function pruneDeletedWorkflowRecords(workflowRootPath, activeTemplateFolde
   }
 }
 
-async function syncWorkflowRootFromSnapshot({
+async function syncWorkflowRootFromSnapshotUnlocked({
   storagePath = '',
   snapshot = {}
 } = {}) {
@@ -187,6 +188,13 @@ async function syncWorkflowRootFromSnapshot({
       papers: paperIdsWritten.size
     }
   };
+}
+
+function syncWorkflowRootFromSnapshot(input = {}) {
+  const snapshot = structuredClone(ensureObject(input.snapshot));
+  const storagePath = cleanText(input.storagePath, 2400) || cleanText(snapshot.settings?.storagePath, 2400);
+  const captured = { ...input, storagePath, snapshot };
+  return withStorageRootWrite(storagePath, () => syncWorkflowRootFromSnapshotUnlocked(captured));
 }
 
 module.exports = {

@@ -1,5 +1,6 @@
-import { getSharedLeftRailLayout } from '../shared-left-rail.js';
+import { getPluginLeftRailLayout } from '../plugin-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 
 const PROTOCOL_MARKER = 1;
 const MAX_LIST_SIZE = 500;
@@ -76,7 +77,7 @@ function text(value, maxLength = 4000) {
   return String(value ?? '').trim().slice(0, maxLength);
 }
 
-function buildPluginAppContext(state, changed = '', windowObject = globalThis.window) {
+function buildPluginAppContext(state, changed = '', windowObject = globalThis.window, pluginId = '') {
   const settings = asObject(state?.settings);
   const appearance = asObject(settings.appearance);
   const requestedMode = text(appearance.mode, 20).toLowerCase();
@@ -90,10 +91,11 @@ function buildPluginAppContext(state, changed = '', windowObject = globalThis.wi
       configured: Boolean(text(settings.storagePath, 2400))
     },
     layout: {
-      leftRail: getSharedLeftRailLayout({
-        document: windowObject?.document,
-        windowObject
-      })
+      agentChatRail: {
+        expanded: windowObject?.document?.body?.classList?.contains('has-agent-chat-rail-expanded') === true,
+        available: isAgentAvailable(windowObject?.document)
+      },
+      leftRail: getPluginLeftRailLayout(pluginId, { windowObject })
     }
   };
   const normalizedChange = text(changed, 40);

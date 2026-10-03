@@ -25,9 +25,9 @@ import {
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
 import { createStorageSetup } from '../app/storage-setup.js';
-import { installPlugins } from '../app/plugin-loader.js';
+import { installPlugins, loadPluginIcons } from '../app/plugin-loader.js';
 import { createPluginBridge } from '../app/plugin-bridge.js';
-import { createPluginPromptHandler } from '../app/plugin-agent.js';
+import { createPluginPromptHandler, createPluginChatContextHandler } from '../app/plugin-agent.js';
 import { createPluginServiceRegistry } from '../app/plugin-services.js';
 import {
   buildSearchScopeMap,
@@ -116,13 +116,16 @@ export function startHikariCore({
   // The bridge is built here too so each frame can be registered as it mounts;
   // its dependencies are resolved lazily because rendererServices does not
   // exist yet and no plugin message can arrive before boot finishes.
+  const setPluginChatContext = createPluginChatContextHandler({ documentObject,
+    getModuleRuntime: () => moduleRuntime });
   const pluginBridge = createPluginBridge({
     state,
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
     onFrameHistoryChanged: () => undoService?.syncButtons?.(),
     onPluginPrompt: createPluginPromptHandler({ state,
-      getNavigation: () => navigationShell, getModuleRuntime: () => moduleRuntime }),
+      getNavigation: () => navigationShell, getModuleRuntime: () => moduleRuntime, setChatContext: setPluginChatContext }),
+    onPluginChatContext: setPluginChatContext,
     notify: showTransientNotice,
     windowObject,
     api: windowObject.hikariApi || null
@@ -421,6 +424,7 @@ export function startHikariCore({
     }
     undoService.reset();
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
+    await loadPluginIcons({ plugins: state.settings?.plugins, appRegistry: APP_REGISTRY, api: windowObject.hikariApi });
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
     renderAll();

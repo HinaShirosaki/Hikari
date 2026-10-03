@@ -15,6 +15,7 @@ export function initPluginLeftRailResizer({
   windowObject = globalThis.window,
   initialLayout = null,
   commitWidth = async () => null,
+  commitFolded = async () => null,
   onCommitError = () => {}
 } = {}) {
   const root = documentObject?.documentElement;
@@ -32,6 +33,8 @@ export function initPluginLeftRailResizer({
   let activeResize = null;
   let destroyed = false;
   let commitVersion = 0;
+  let folded = false, foldable = false, folding = false;
+  const toggle = documentObject.getElementById?.('toggle-illustrations');
   let constraints = {
     width: DEFAULT_WIDTH,
     min: DEFAULT_MIN,
@@ -59,6 +62,7 @@ export function initPluginLeftRailResizer({
   }
 
   function applyContext(context = {}) {
+    if (destroyed) return constraints.width;
     const leftRail = context?.leftRail && typeof context.leftRail === 'object'
       ? context.leftRail
       : context;
@@ -74,10 +78,44 @@ export function initPluginLeftRailResizer({
     if (constraints.max < constraints.min) {
       constraints.max = constraints.min;
     }
+    if (typeof leftRail.foldable === 'boolean') foldable = leftRail.foldable;
+    if (typeof leftRail.folded === 'boolean') folded = leftRail.folded;
+    syncFoldState();
     if (activeResize) {
       return activeResize.currentWidth;
     }
     return applyWidth(constraints.width);
+  }
+
+  function syncFoldState() {
+    const hidden = foldable && folded;
+    if (hidden && activeResize) finishResize({ shouldCommit: false });
+    if (hidden && rail?.contains(documentObject.activeElement)) toggle?.focus({ preventScroll: true });
+    layout?.classList.toggle('is-left-rail-folded', hidden);
+    if (rail) { rail.hidden = hidden; rail.inert = hidden; }
+    if (handle) handle.hidden = hidden;
+    if (toggle) {
+      toggle.hidden = !foldable;
+      toggle.setAttribute('aria-busy', String(folding));
+      toggle.setAttribute('aria-expanded', String(!hidden));
+      toggle.setAttribute('aria-label', hidden ? 'Show illustrations' : 'Hide illustrations');
+      toggle.title = hidden ? 'Show illustrations' : 'Hide illustrations';
+    }
+  }
+
+  async function onFoldClick() {
+    if (!foldable || folding || destroyed) return;
+    const request = commitVersion += 1;
+    folding = true; syncFoldState();
+    try {
+      const result = await commitFolded(!folded);
+      if (!destroyed && request === commitVersion && result?.leftRail) applyContext(result.leftRail);
+    } catch (error) {
+      if (!destroyed) onCommitError(error);
+    } finally {
+      folding = false;
+      if (!destroyed) syncFoldState();
+    }
   }
 
   function removeDocumentListeners() {
@@ -130,7 +168,7 @@ export function initPluginLeftRailResizer({
   }
 
   function onPointerDown(event) {
-    if (windowObject.innerWidth <= constraints.mobileBreakpoint || !rail) {
+    if (windowObject.innerWidth <= constraints.mobileBreakpoint || !rail || (foldable && folded)) {
       return;
     }
     event?.preventDefault?.();
@@ -162,6 +200,7 @@ export function initPluginLeftRailResizer({
     handle.setAttribute('data-shared-left-rail-handle', 'true');
     handle.addEventListener('pointerdown', onPointerDown);
     layout.append(handle);
+    syncFoldState();
     return handle;
   }
 
@@ -177,6 +216,8 @@ export function initPluginLeftRailResizer({
     commitVersion += 1;
     finishResize({ shouldCommit: false });
     windowObject.removeEventListener?.('resize', onResize);
+    toggle?.removeEventListener('click', onFoldClick);
+    foldable = false; syncFoldState();
     handle?.removeEventListener?.('pointerdown', onPointerDown);
     handle?.remove?.();
     handle = null;
@@ -186,6 +227,7 @@ export function initPluginLeftRailResizer({
 
   applyContext(initialLayout || {});
   ensureHandle();
+  toggle?.addEventListener('click', onFoldClick);
   windowObject.addEventListener('resize', onResize);
 
   return {

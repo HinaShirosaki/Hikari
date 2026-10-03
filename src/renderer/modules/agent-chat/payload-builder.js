@@ -131,6 +131,10 @@ export function createAgentPayloadBuilder({
         .filter(Boolean),
       ...(hiddenContexts.length ? { hiddenContexts } : {}),
       ...(sessionPrompt ? { sessionPrompt } : {}),
+      ...(agentContext.scopeType === 'plugin' && state.settings?.plugins?.some(plugin =>
+        plugin.id === agentContext.pluginId && plugin.enabled !== false && plugin.permissions?.includes('agent:canvas'))
+        ? { pluginCanvasId: trimText(agentContext.pluginId, 100),
+          ...(agentContext.pluginCanvasIllustrationId ? { pluginCanvasIllustrationId: trimText(agentContext.pluginCanvasIllustrationId, 100) } : {}) } : {}),
       ...(sessionPrompt && isPaperSession ? {
         paperSessionPrompt: sessionPrompt,
         paperSession: {

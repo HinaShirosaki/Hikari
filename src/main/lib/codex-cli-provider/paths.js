@@ -46,35 +46,35 @@ function resolveWorkingDirectory(cwd = '') {
   return resolved || os.homedir() || process.cwd();
 }
 
-function getNativeCodexCliHomeDirectory() {
-  const configuredHome = String(process.env.CODEX_HOME || '').trim();
+function getNativeCodexCliHomeDirectory(env = process.env) {
+  const configuredHome = String(env.CODEX_HOME || '').trim();
   if (configuredHome) {
     return configuredHome;
   }
   return path.join(os.homedir(), '.codex');
 }
 
-function getCodexCliHomeDirectory() {
-  const appManagedHome = String(process.env.HIKARI_CODEX_HOME || '').trim();
+function getCodexCliHomeDirectory(env = process.env) {
+  const appManagedHome = String(env.HIKARI_CODEX_HOME || '').trim();
   if (appManagedHome) {
     return appManagedHome;
   }
-  return getNativeCodexCliHomeDirectory();
+  return getNativeCodexCliHomeDirectory(env);
 }
 
-function getCodexCliCandidateHomeDirectories() {
+function getCodexCliCandidateHomeDirectories(env = process.env) {
   return [...new Set([
-    getCodexCliHomeDirectory(),
-    getNativeCodexCliHomeDirectory()
+    getCodexCliHomeDirectory(env),
+    getNativeCodexCliHomeDirectory(env)
   ].map((value) => String(value || '').trim()).filter(Boolean))];
 }
 
-function getCodexCliAuthFilePath() {
-  return path.join(getCodexCliHomeDirectory(), 'auth.json');
+function getCodexCliAuthFilePath(env = process.env) {
+  return path.join(getCodexCliHomeDirectory(env), 'auth.json');
 }
 
-function resolveCodexCliRuntimeHomeDirectory(cwd = '') {
-  const explicit = String(process.env.HIKARI_CODEX_HOME || '').trim();
+function resolveCodexCliRuntimeHomeDirectory(cwd = '', env = process.env) {
+  const explicit = String(env.HIKARI_CODEX_HOME || '').trim();
   if (explicit) {
     return explicit;
   }

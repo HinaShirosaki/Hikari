@@ -18,7 +18,7 @@ async function main() {
   const url = file => pathToFileURL(path.join(root, file)).href;
   const view = fs.readFileSync(path.join(root, 'ui/html/views/home-view.html'), 'utf8');
   const fixture = path.join(scratch, 'home.html');
-  fs.writeFileSync(fixture, `<link rel="stylesheet" href="${url('styles.css')}"><body class="theme-day" data-active-view="home-view">${view}</body>`);
+  fs.writeFileSync(fixture, `<link rel="stylesheet" href="${url('styles.css')}"><body class="theme-day" data-active-view="home-view" data-agent-availability="connected">${view}</body>`);
   const win = new BrowserWindow({ width: 1100, height: 850, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
   await win.loadFile(fixture);
   const result = await win.webContents.executeJavaScript(`(async () => {

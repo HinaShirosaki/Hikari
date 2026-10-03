@@ -2,6 +2,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
   const registerParts = [
     require('./codex-cli-provider-suite/cli-discovery.js'),
     require('./codex-cli-provider-suite/cli-updater.js'),
+    require('./codex-cli-provider-suite/runtime-consistency.js'),
     require('./codex-cli-provider-suite/mcp-startup.js'),
     require('./codex-cli-provider-suite/model-selection-and-exec-args.js'),
     require('./codex-cli-provider-suite/mcp-gateway-tool-surface.js'),

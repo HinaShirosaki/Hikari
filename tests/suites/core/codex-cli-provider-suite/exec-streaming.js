@@ -52,7 +52,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         fs.writeFileSync(path.join(tmpDir, 'auth.json'), JSON.stringify(authFile, null, 2), 'utf8');
       }
       process.env.CODEX_HOME = tmpDir;
-      delete process.env.HIKARI_CODEX_HOME;
+      process.env.HIKARI_CODEX_HOME = tmpDir;
       const cleanup = () => {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -88,6 +88,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         '#!/usr/bin/env node',
         "const fs = require('node:fs');",
         'const args = process.argv.slice(2);',
+        "if (args.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }",
         'let stdin = "";',
         "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
         "process.stdin.on('end', () => {",
@@ -118,6 +119,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         '#!/usr/bin/env node',
         "const fs = require('node:fs');",
         'const args = process.argv.slice(2);',
+        "if (args.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }",
         'let stdin = "";',
         "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
         "process.stdin.on('end', () => {",
@@ -174,6 +176,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
             prompt: 'Return OK only.',
             cwd: workspaceDir,
             enableWebSearch: true,
+            enableImageGeneration: true,
             outputSchema: {
               type: 'object',
               additionalProperties: false,
@@ -193,6 +196,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(workspaceDir));
           assert.equal(captured.args.includes('exec'), true);
           assert.equal(captured.args.includes('--search'), true);
+          assert.equal(captured.args.includes('features.image_generation=true'), true);
           assert.equal(captured.args.includes('non_prefixed_mcp_tool_names'), false);
           assert.equal(captured.args.includes('--output-last-message'), true);
           assert.equal(captured.args.includes('--output-schema'), true);

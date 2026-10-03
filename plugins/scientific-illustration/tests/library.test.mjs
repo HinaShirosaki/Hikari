@@ -4,7 +4,6 @@ import { createWorkspace, encodeText } from '../workspace.mjs';
 import { createDocument } from '../model.mjs';
 import { normalizeLibrary } from '../library.mjs';
 import { COMPLEXITY_LEVELS, COMPLEXITY_PROFILES } from '../complexity.mjs';
-import { drawingPrompt } from '../agent/workflow.mjs';
 
 function fixture(legacy) {
   const files = new Map(legacy ? [['workspace.json', encodeText(JSON.stringify(legacy))]] : []);
@@ -84,12 +83,19 @@ test('invalid complexity rejects the entire edit without writing', async () => {
   assert.equal(workspace.getDocument().title, current.title);
 });
 
-test('every complexity prompt fits the host limit with the longest user input and illustration ID', () => {
+test('every complexity exposes drawing and inspection rules through the canvas contract', async () => {
+  const host = fixture(), workspace = host.open(); await workspace.ready;
   for (const complexity of COMPLEXITY_LEVELS) {
-    const prompt = drawingPrompt('i'.repeat(100), complexity, 'x'.repeat(2300));
-    assert.ok(prompt.length <= 3000, `${complexity}: ${prompt.length} characters`);
-    assert.ok(prompt.includes(`Complexity: ${COMPLEXITY_PROFILES[complexity].label};`));
-    assert.ok(prompt.endsWith('x'.repeat(2300)));
+    const current = await workspace.request({ action: 'read' });
+    assert.ok((await workspace.request({ action: 'apply', expected_revision: current.revision,
+      request_id: crypto.randomUUID(), operations: [{ op: 'complexity', complexity }] })).ok);
+    const { instructions } = (await workspace.request({ action: 'read' })).agent_contract;
+    assert.ok(instructions.includes(`Complexity: ${COMPLEXITY_PROFILES[complexity].label}.`));
+    assert.match(instructions, /every label must be an independent text object/);
+    assert.match(instructions, /Use SVG by default/);
+    assert.match(instructions, /Codex-provided built-in image_gen/);
+    assert.match(instructions, /render BOTH canvases/);
+    assert.match(instructions, /call action:"inspect"/);
   }
 });
 

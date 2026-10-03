@@ -10,6 +10,7 @@ function createAppDock({
   pageTitle,
   pageSubtitle,
   expandedDockApps,
+  isAppShown = () => true,
   normalize,
   getActiveViewId,
   getAppForView,
@@ -21,6 +22,7 @@ function createAppDock({
   let renderedSignature = '';
 
   function getDockCapacity(activeViewId = getActiveViewId()) {
+    const apps = expandedDockApps.filter(isAppShown);
     const viewportWidth = windowObject.innerWidth || documentObject.documentElement?.clientWidth || 0;
     const topbar = documentObject.querySelector('.topbar');
     const brand = documentObject.querySelector('.topbar-brand');
@@ -77,10 +79,10 @@ function createAppDock({
     const requiredWidth = (count, overflow) => padding + count * buttonWidth
       + Math.max(0, count - 1) * navGap + labelExtra
       + (overflow ? buttonWidth + dividerWidth + 2 * dockGap : 0);
-    if (requiredWidth(expandedDockApps.length, false) <= availableWidth) {
-      return expandedDockApps.length;
+    if (requiredWidth(apps.length, false) <= availableWidth) {
+      return apps.length;
     }
-    let count = expandedDockApps.length - 1;
+    let count = apps.length - 1;
     while (count > 1 && requiredWidth(count, true) > availableWidth) {
       count -= 1;
     }
@@ -90,14 +92,15 @@ function createAppDock({
   function getRenderedDockState(activeViewId) {
     const capacity = getDockCapacity(activeViewId);
     const activeApp = getAppForView(activeViewId);
-    let visibleApps = expandedDockApps.slice(0, capacity);
-    if (activeApp && expandedDockApps.some((app) => app.id === activeApp.id)
+    const apps = expandedDockApps.filter(isAppShown);
+    let visibleApps = apps.slice(0, capacity);
+    if (activeApp && apps.some((app) => app.id === activeApp.id)
       && !visibleApps.some((app) => app.id === activeApp.id) && visibleApps.length) {
       visibleApps = [...visibleApps.slice(0, -1), activeApp]
-        .sort((left, right) => expandedDockApps.indexOf(left) - expandedDockApps.indexOf(right));
+        .sort((left, right) => apps.indexOf(left) - apps.indexOf(right));
     }
     const visibleIds = new Set(visibleApps.map((app) => app.id));
-    return { visibleApps, overflowApps: expandedDockApps.filter((app) => !visibleIds.has(app.id)) };
+    return { visibleApps, overflowApps: apps.filter((app) => !visibleIds.has(app.id)) };
   }
 
   function createInlineIcon(iconMarkup) {
@@ -193,7 +196,7 @@ function createAppDock({
 
   function renderAppNavigation(activeViewId = getActiveViewId()) {
     const { visibleApps, overflowApps } = getRenderedDockState(activeViewId);
-    const signature = JSON.stringify([visibleApps.map((app) => app.id), overflowApps.map((app) => app.id)]);
+    const signature = JSON.stringify([visibleApps.map((app) => [app.id, app.iconMarkup]), overflowApps.map((app) => [app.id, app.iconMarkup])]);
     if (signature === renderedSignature) {
       return;
     }

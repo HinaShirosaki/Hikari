@@ -22,7 +22,7 @@ if (!process.versions.electron) {
     const fixture = path.join(temp, 'fixture.html');
     const artifacts = path.join(root, 'artifacts/notebook-experiment-suggestions');
     fs.mkdirSync(artifacts, { recursive: true });
-    fs.writeFileSync(fixture, `<!doctype html><html><head><link rel="stylesheet" href="${url('styles.css')}"><style>body{display:block;padding:1rem}#biology-notebook-view{height:calc(100vh - 2rem)}</style></head><body>${fs.readFileSync(path.join(root, 'ui/html/views/biology-notebook-view.html'), 'utf8')}</body></html>`);
+    fs.writeFileSync(fixture, `<!doctype html><html><head><link rel="stylesheet" href="${url('styles.css')}"><style>body{display:block;padding:1rem}#biology-notebook-view{height:calc(100vh - 2rem)}</style></head><body data-agent-availability="connected">${fs.readFileSync(path.join(root, 'ui/html/views/biology-notebook-view.html'), 'utf8')}</body></html>`);
     const win = new BrowserWindow({ width: 1320, height: 860, show: false, webPreferences: { contextIsolation: true, sandbox: false } });
     const bootstrap = `(async () => {
       const {initLabNotebook} = await import(${JSON.stringify(url('src/renderer/modules/biology-notebook/index.js'))});

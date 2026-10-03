@@ -13,7 +13,7 @@ const {
 const {
   getEnabledHikariMcpToolNames
 } = require('../mcp-contract/tool-availability.js');
-const { resolveCodexBinary, resolveCodexNodeBinary } = require('../../lib/codex-cli-provider/paths.js');
+const { resolveCodexMcpNodeBinary } = require('../../lib/codex-cli-provider/runtime-gateway.js');
 const { isFilesystemRoot } = require('../../lib/path-safety.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
@@ -84,8 +84,7 @@ function resolveHikariCodexMcpInvocation(options = {}) {
     Object.keys(env).filter((key) => key.toLowerCase() === 'path').forEach((key) => delete env[key]);
     env.PATH = options.envPath;
   }
-  const node = resolveCodexNodeBinary('', env, options)
-    || resolveCodexNodeBinary(resolveCodexBinary(env, options), env, options);
+  const node = resolveCodexMcpNodeBinary(env, options);
   if (node) return { command: node, args: [serverPath] };
 
   // Standalone Codex does not install Node. Packaged Hikari can run its own
@@ -170,6 +169,8 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
   addEnvEntry(envEntries, 'HIKARI_CODEX_MCP', '1', 40);
   addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_WORKSPACE', options.workspace, 2400);
   addEnvEntry(envEntries, 'HIKARI_CODEX_WORKSPACE', options.workspace, 2400);
+  // Bind native-image imports to this managed runtime, never to agent context.
+  addEnvEntry(envEntries, 'HIKARI_CODEX_HOME', readFirstEnvValue(envSource, ['HIKARI_CODEX_HOME']), 2400);
   addEnvEntry(envEntries, 'HIKARI_AGENT_DATA_FILE', options.dataFilePath, 2400);
   addEnvEntry(envEntries, 'HIKARI_AGENT_STORAGE_PATH', options.storagePath, 2400);
   const mcpHostUrl = options.mcpHostUrl

@@ -1,4 +1,5 @@
 import { renderAgentChatIcon } from '../../modules/agent-chat/icons.js';
+import { isAgentAvailable } from '../../lib/agent-availability.js';
 
 export function isAgentChatRailAvailable(app, view) {
   return app?.agentChatRail === true && view?.dataset?.agentChatRail !== 'disabled';
@@ -22,8 +23,11 @@ export function createAgentChatRail({
 
   function isEnabledForView(viewId) {
     const app = getAppForView(viewId);
-    const view = documentObject.getElementById(resolveNavigationViewId(viewId));
-    return isAgentChatRailAvailable(app, view);
+    const navViewId = resolveNavigationViewId(viewId);
+    const view = documentObject.getElementById(navViewId);
+    // Without Codex only Papers keeps the rail, for its PDF toolbar and paper panels.
+    return isAgentChatRailAvailable(app, view)
+      && (isAgentAvailable(documentObject) || navViewId === VIEWS.PAPERS);
   }
 
   function toggleIcon(isExpanded) {
@@ -33,7 +37,7 @@ export function createAgentChatRail({
   }
 
   function syncExpansion(enabled) {
-    const visibleExpanded = enabled && expanded;
+    const visibleExpanded = enabled && expanded && isAgentAvailable(documentObject);
     const viewId = getActiveViewId();
     const isPapers = viewId === VIEWS.PAPERS;
     documentObject.body.classList.toggle('has-agent-chat-rail-expanded', visibleExpanded);
