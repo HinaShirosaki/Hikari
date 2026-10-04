@@ -19,6 +19,12 @@ function blocks(source, kind = 'field') {
   return found;
 }
 
+// The final section marker of a document and where the text after it starts.
+function lastSection(source) {
+  const closing = [...source.matchAll(/^<!-- \/hikari-(field|derived):([a-z-]+) -->[ \t]*(?:\r?\n|$)/gm)].at(-1);
+  return closing && { kind: closing[1], key: closing[2], end: closing.index + closing[0].length };
+}
+
 function decode(value, escaped = false) {
   const source = escaped ? value.replace(/\\([\\`*_[\]#!])/g, '$1') : value;
   return source.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
@@ -112,6 +118,10 @@ function parseSteps(body, original) {
 function readDocumentRecord(source, record, kind) {
   if (!source.includes(documentMarker(kind))) throw new Error(`Missing ${kind} Markdown document marker`);
   const found = blocks(source);
+  // Text typed after a page's final notes section belongs to those notes.
+  const last = lastSection(source);
+  const tail = last?.kind === 'field' ? source.slice(last.end).replace(/\r\n/g, '\n').trim() : '';
+  if (tail) found.set(last.key, { ...found.get(last.key), body: `${found.get(last.key).body}\n\n${tail}` });
   const expected = fieldsForRecord(record, kind);
   const next = structuredClone(record);
   for (const [key, baseline] of Object.entries(expected)) {
@@ -179,6 +189,21 @@ function preserveDocument(previous, rendered) {
       if (!old) throw new Error(`Missing Markdown ${kind} section: ${key}`);
       // A function replacement keeps `$$`, `$&` and `$'` in prose literal.
       if (old.body !== updated.body) result = result.replace(old.source, () => updated.source);
+    }
+  }
+  // A page ends with its notes. Text typed after them was read into the
+  // notes, so it is dropped here; older pages are reordered to match.
+  const target = lastSection(rendered);
+  const last = lastSection(result);
+  if (target?.kind === 'field' && last) {
+    if (last.kind === 'field' && last.key === target.key) {
+      if (result.slice(last.end).trim()) result = `${result.slice(0, last.end)}\n`;
+    } else {
+      const moved = blocks(result).get(target.key).source;
+      const start = result.indexOf(moved);
+      result = result.slice(0, start) + result.slice(start + moved.length).replace(/^\n/, '');
+      const end = lastSection(result).end;
+      result = `${result.slice(0, end)}\n${moved}${result.slice(end)}`;
     }
   }
   return result;

@@ -7,7 +7,7 @@ const { writeFileAtomic } = require('../../lib/shared-json-file');
 const { array, inline, label, object, section } = require('./format');
 const { notebookContext, resolveLocalPath } = require('./context');
 const { GENERATED_MARKER, renderNotebook, renderProtocol } = require('./render');
-const { derivedBlock, documentMarker, preserveDocument } = require('./document-fields');
+const { block, derivedBlock, documentMarker, fieldsForRecord, preserveDocument } = require('./document-fields');
 const { checkpointMarker } = require('../../lib/record-markdown/checkpoint');
 
 const ASSET_FOLDER = '.hikari-markdown';
@@ -127,6 +127,8 @@ async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, st
     return `![${inline([...new Set(names)].join(', '))}](<${ASSET_FOLDER}/${asset.name}>)`;
   }).join('\n\n'));
   markdown += canonical ? derivedBlock('images', imageSection) : imageSection;
+  // A page ends with its notes, where people add to a document.
+  if (canonical && kind === 'notebook') markdown += block('field', 'result', fieldsForRecord(object(payload.notebookEntry), 'notebook').result);
   if (previous.includes(documentMarker(kind))) {
     if (!canonical) throw new Error(`Cannot regenerate a migrated document as an export: ${markdownPath}`);
     markdown = preserveDocument(previous, markdown);

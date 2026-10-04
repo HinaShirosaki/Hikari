@@ -220,9 +220,9 @@ function renderNotebook(payload, linked, options) {
       'executedAt', 'createdAt', 'updatedAt', 'protocolSnapshot', 'values', 'result', 'resultTable', 'resultTables',
       'toolCalculations', 'sampleLinks', 'resultFileRecords', 'resultFiles', 'workflowContext', 'agentDraftStatus', 'agentDraftMeta'], 2);
   if (!options.canonical) return before + section('Notes and results', html(entry.result)) + after;
+  // The notes field is appended after the images, so a page ends with its notes.
   return `${GENERATED_MARKER}\n${documentMarker('notebook')}\n\n`
     + derivedBlock('metadata', before.slice(GENERATED_MARKER.length).trimStart())
-    + block('field', 'result', fieldsForRecord(entry, 'notebook').result)
     + derivedBlock('context', after);
 }
 

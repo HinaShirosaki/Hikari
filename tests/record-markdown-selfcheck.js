@@ -663,7 +663,7 @@ test('Markdown edits reach app hydration, storage import, agent lookup and memor
   assert.match(memory.corpus, /External unique result/);
 }));
 
-test('stale autosaves merge external prose, retain annotations and refresh scientific tables', async () => fixture(async root => {
+test('stale autosaves merge external prose, keep text added at the end as notes and refresh scientific tables', async () => fixture(async root => {
   const snapshot = await prepare(root);
   const saved = await syncBundleFromSnapshot({ snapshot });
   const notebookFile = saved.sidecarPaths.notebookPageFolderPaths[0];
@@ -674,9 +674,9 @@ test('stale autosaves merge external prose, retain annotations and refresh scien
   await syncBundleFromSnapshot({ snapshot });
   await syncBundleFromSnapshot({ snapshot });
   const loaded = await readRecordDocument(notebookFile, 'notebook');
-  assert.equal(loaded.data.notebookEntry.result, 'Edited outside the app.');
+  assert.equal(loaded.data.notebookEntry.result, 'Edited outside the app.\n\n## Personal annotation\n\nKeep this custom section.');
   assert.equal(loaded.data.notebookEntry.resultTables[0].rows[0].v, '99');
-  assert.match(await read(pageMd), /Keep this custom section/);
+  assert.equal((await read(pageMd)).split('Keep this custom section').length, 2);
   assert.match(await read(pageMd), /\| 99 \|/);
   assert.equal(snapshot.notebookEntries[0].result, 'Results\nSecond line with **emphasis** and `code`.');
   assertReadableMarkdown(await read(pageMd));
@@ -989,4 +989,29 @@ test('an unchanged record keeps its files while changed context still rewrites t
   await fs.rm(path.join(assetFolder, asset));
   await syncBundleFromSnapshot({ snapshot });
   assert.ok((await fs.stat(path.join(assetFolder, asset))).isFile());
+}));
+
+test('notes typed at the end of a page reach the app, and older pages move their notes to the end', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot });
+  const pageMd = saved.sidecarPaths.notebookPageFolderPaths[0].replace(/\.json$/, '.md');
+  const protocolMd = saved.sidecarPaths.protocolFilePaths[0].replace(/\.json$/, '.md');
+  const sections = source => [...source.matchAll(/^<!-- hikari-(?:field|derived):([a-z-]+) -->$/gm)].map(match => match[1]);
+  assert.deepEqual(sections(await read(pageMd)), ['metadata', 'context', 'images', 'result']);
+  // A page written before the notes moved, with text typed at its end.
+  const current = await read(pageMd);
+  const notes = blocks(current).get('result').source;
+  const older = current.replace(notes, '').replace('<!-- hikari-derived:context -->', () => `${notes}\n<!-- hikari-derived:context -->`);
+  await fs.writeFile(pageMd, `${older}\nTyped at the end of the page.\n`);
+  await fs.appendFile(protocolMd, '\nProtocol remark outside its sections.\n');
+  await syncBundleFromSnapshot({ snapshot });
+  assert.deepEqual(sections(await read(pageMd)), ['metadata', 'context', 'images', 'result']);
+  const hydrated = (await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } })).snapshot;
+  assert.equal(hydrated.notebookEntries[0].result, `${snapshot.notebookEntries[0].result}\n\nTyped at the end of the page.`);
+  assert.equal(hydrated.protocols[0].troubleshooting, snapshot.protocols[0].troubleshooting);
+  await syncBundleFromSnapshot({ snapshot: hydrated });
+  const final = await read(pageMd);
+  assert.equal(final.split('Typed at the end of the page.').length, 2);
+  assert.match(blocks(final).get('result').body, /Typed at the end of the page\.$/);
+  assert.match(await read(protocolMd), /Protocol remark outside its sections/);
 }));
