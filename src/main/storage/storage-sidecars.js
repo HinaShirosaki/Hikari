@@ -48,7 +48,7 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
   };
 }
 
-async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdownWarnings) {
+async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdownWarnings, skippedRecords) {
   const protocols = asArray(snapshot.protocols).map((rawProtocol) => ensureObject(rawProtocol));
   if (!protocolRootPath) {
     return [];
@@ -72,7 +72,7 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
       updated_at: updatedAt,
       protocol
     };
-    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'protocol', snapshot, storageRoot: path.dirname(protocolRootPath) }, markdownWarnings);
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'protocol', snapshot, storageRoot: path.dirname(protocolRootPath) }, markdownWarnings, skippedRecords);
     Object.assign(protocol, saved.record);
     writtenPaths.push(filePath);
   }
@@ -177,7 +177,7 @@ function compactNotebookEntryForFolder(entry) {
   };
 }
 
-async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, markdownWarnings) {
+async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, markdownWarnings, skippedRecords) {
   const writtenPaths = [];
   const notebookEntries = asArray(snapshot.notebookEntries)
     .map((entry) => ensureObject(entry))
@@ -192,8 +192,8 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, ma
       updated_at: updatedAt,
       notebookEntry: compactNotebookEntryForFolder(entry)
     };
-    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot, storageRoot: storageRootPath }, markdownWarnings);
-    Object.assign(entry, saved.record, { storageFolder: folderPath, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot, storageRoot: storageRootPath }, markdownWarnings, skippedRecords);
+    if (!saved.skipped) Object.assign(entry, saved.record, { storageFolder: folderPath, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
     writtenPaths.push(filePath);
   }
   return writtenPaths;
@@ -259,7 +259,8 @@ async function syncBundleFromSnapshotUnlocked({
   }
   const updatedAt = new Date().toISOString();
   const markdownWarnings = [];
-  await preflightDocuments(await snapshotDocumentInputs(storageRootPath, safeSnapshot));
+  const skippedRecords = [];
+  preflightDocuments(await snapshotDocumentInputs(storageRootPath, safeSnapshot));
   await fs.mkdir(storageRootPath, { recursive: true });
   await releaseOfficialMcpSkillsForWorkspace(storageRootPath, { snapshot: safeSnapshot });
   if (bundlePaths.dataFilePath) {
@@ -272,9 +273,9 @@ async function syncBundleFromSnapshotUnlocked({
     bundlePaths.paperMarkdownRootPath ? fs.mkdir(bundlePaths.paperMarkdownRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.samplesRootPath ? fs.mkdir(bundlePaths.samplesRootPath, { recursive: true }) : Promise.resolve()
   ]);
-  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt, markdownWarnings);
+  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt, markdownWarnings, skippedRecords);
   const notebookPageFolderPaths = bundlePaths.storageRootPath
-    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt, markdownWarnings)
+    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt, markdownWarnings, skippedRecords)
     : [];
   const projectMemoryFilePaths = bundlePaths.storageRootPath
     ? await writeProjectMemoryFiles(
@@ -316,6 +317,7 @@ async function syncBundleFromSnapshotUnlocked({
       notebookPagesPath: '',
       notebookPageFolderPaths,
       markdownWarnings: [...markdownWarnings, ...workflowSync.markdownWarnings],
+      skippedRecords: [...skippedRecords, ...workflowSync.skippedRecords],
       projectMemoryFilePaths,
       experimentLogPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,

@@ -17,17 +17,15 @@ async function prepareRecordDocument(input) {
   const source = await existingMarkdown(markdownPathFor(input.filePath));
   const prior = await readRecordCheckpoint(input.filePath, source);
   if (prior.checkpointError) throw new Error(prior.checkpointError);
-  if (prior.exists && !prior.ok) throw new Error(`Cannot replace unreadable record ${input.filePath}: ${prior.error}`);
   const key = recordKey(input.kind);
   if (prior.ok && prior.data[key]?.id !== payload[key]?.id) throw new Error(`Record identity changed at ${input.filePath}`);
-  if (prior.data?.document && !source.includes(documentMarker(input.kind))) {
-    throw new Error(`Missing migrated Markdown at ${markdownPathFor(input.filePath)}. Restore it before saving.`);
-  }
+  // A deleted document is rewritten from this record. A missing or unreadable
+  // companion is rebuilt from it as well, while the document's prose still wins.
   if (source.includes(documentMarker(input.kind))) {
-    if (!prior.ok) throw new Error(`Missing companion record for ${markdownPathFor(input.filePath)}`);
-    validateDocument(source, prior.data[key], input.kind);
-    const incoming = { ...payload[key], markdownRevision: payload[key].markdownRevision || prior.data.document?.legacyRevision };
-    payload[key] = await mergeDocumentRecord(source, prior.data[key], incoming, input.kind);
+    const baseline = prior.ok ? prior.data[key] : payload[key];
+    validateDocument(source, baseline, input.kind);
+    const incoming = { ...payload[key], markdownRevision: payload[key].markdownRevision || prior.data?.document?.legacyRevision };
+    payload[key] = await mergeDocumentRecord(source, baseline, incoming, input.kind);
   }
   return { payload, prior, source };
 }
@@ -43,6 +41,7 @@ async function writeRecordDocument(input) {
       if (error.code !== 'EEXIST') throw error;
     });
   }
+  if (prior.exists && !prior.ok) await fs.copyFile(input.filePath, input.filePath.replace(/\.json$/, '.unreadable.json'));
   const markdownPath = markdownPathFor(input.filePath);
   payload.document = { format: documentMarker(input.kind), file: path.basename(markdownPath) };
   const checkpoint = structuredClone(payload);
@@ -71,20 +70,29 @@ async function writeRecordDocument(input) {
   return { markdownPath, record: payload[recordKey(input.kind)] };
 }
 
-async function writeRecordDocumentSafely(input, warnings) {
+async function writeRecordDocumentSafely(input, warnings, skipped) {
   try { return await writeRecordDocument(input); }
   catch (error) {
     // A colliding user document must not block older JSON-only workspaces.
-    // Migrated documents and conflicts fail the save and remain untouched.
     const prior = await readJsonFile(input.filePath);
+    const record = input.payload[recordKey(input.kind)];
     if (!prior.data?.document && /user-owned Markdown/.test(error.message)) {
       const warning = `Markdown migration skipped for ${input.filePath}: ${error.message}`;
       warnings.push(warning);
       console.warn(warning);
       await writeFileAtomic(fs, input.filePath, JSON.stringify(input.payload, null, 2));
-      return { markdownPath: '', record: input.payload[recordKey(input.kind)] };
+      return { markdownPath: '', record };
     }
-    throw error;
+    // Anything else skips only this record and leaves its files untouched, so
+    // one damaged or conflicting document cannot stop the rest of the save.
+    const name = record.name || record.experimentName || record.protocolName || record.id;
+    const file = input.storageRoot ? path.relative(input.storageRoot, markdownPathFor(input.filePath)) : markdownPathFor(input.filePath);
+    const message = error.code === 'MARKDOWN_CONFLICT'
+      ? `"${name}" was changed in Hikari and in ${file}, so it was not saved. Delete the file to keep Hikari's version, or restart Hikari to load the file's version.`
+      : `"${name}" was not saved: ${error.message.replace(/\.$/, '')}. Fix ${file}, or delete it so Hikari rewrites it.`;
+    skipped.push({ kind: input.kind, id: record.id, message });
+    console.warn(message);
+    return { markdownPath: '', record, skipped: true };
   }
 }
 

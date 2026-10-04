@@ -31,7 +31,7 @@ The audit repaired thirteen defects:
 2. The revision-history limit rejected edits after a large queued typing burst.
 3. Editing a step replaced only the first occurrence of a repeated parameter.
 4. A failed JSON checkpoint paired new Markdown step positions with old parameter metadata.
-5. A later notebook conflict allowed earlier protocol and exported-snapshot writes.
+5. A later notebook conflict allowed earlier protocol and exported-snapshot writes. (Superseded on October 4, 2026: a conflicting or damaged document now skips only its own record while the rest of the workspace saves; see storage-and-bundles.md.)
 6. Damaged derived-section markers were accepted during reads.
 7. Snapshot-only workflow migration omitted metadata required to discover its pages.
 8. Notebook folder scans skipped a first-save recovery checkpoint before `page.json` existed.

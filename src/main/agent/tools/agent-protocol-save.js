@@ -310,6 +310,10 @@ function createProtocolSaveRuntime(deps = {}) {
       fallbackDataFilePath,
       snapshot: nextSnapshot
     });
+    const skipped = asArray(syncResult?.sidecarPaths?.skippedRecords).find(record => record.kind === 'protocol' && record.id === protocol.id);
+    if (skipped) {
+      return { ok: false, status: 'error', error: skipped.message };
+    }
     const persistedProtocol = asArray(syncResult?.markdownRecords?.protocols).find(record => record.id === protocol.id) || protocol;
     const payload = {
       protocol: cloneJson(persistedProtocol, {}),

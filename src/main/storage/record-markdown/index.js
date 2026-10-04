@@ -119,7 +119,7 @@ async function writeRecordMarkdown({ filePath, payload, kind, snapshot = {}, sto
   const folderPath = path.dirname(filePath);
   const markdownPath = path.join(folderPath, kind === 'protocol' ? 'protocol.md' : 'page.md');
   const previous = await existingMarkdown(markdownPath);
-  if (expectedSource !== undefined && previous !== expectedSource) throw new Error(`Markdown changed while saving ${markdownPath}. Reload before saving.`);
+  if (expectedSource !== undefined && previous !== expectedSource) throw new Error(`Markdown changed while saving ${markdownPath}`);
   const linked = kind === 'notebook' ? await notebookContext(object(payload.notebookEntry), snapshot, storageRoot) : null;
   const sources = [payload, ...(linked ? [linked] : [])];
   const images = collectImages(sources);
@@ -149,7 +149,7 @@ async function writeRecordMarkdown({ filePath, payload, kind, snapshot = {}, sto
     }
   }
   const imageState = await writeImages(folderPath, images.assets);
-  if (canonical && await existingMarkdown(markdownPath) !== previous) throw new Error(`Markdown changed while saving ${markdownPath}. Reload before saving.`);
+  if (canonical && await existingMarkdown(markdownPath) !== previous) throw new Error(`Markdown changed while saving ${markdownPath}`);
   if (markdown !== previous) await writeFileAtomic(fs, markdownPath, markdown);
   await finishImages(imageState, images.assets);
   return markdownPath;

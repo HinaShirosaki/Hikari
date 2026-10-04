@@ -1,4 +1,5 @@
 import { createMarkdownRevision, fieldsForRecord } from '../../shared/record-markdown/fields.mjs';
+import { showTransientNotice } from '../lib/notify.js';
 
 const queues = new WeakMap();
 const revisionKey = revision => JSON.stringify(revision);
@@ -43,9 +44,13 @@ export async function syncMarkdownRecordState(api, state, filePath = '') {
     }
     const result = await api.autoSaveDataFile(snapshot, filePath);
     if (result?.ok) {
+      const skipped = result.sidecarPaths?.skippedRecords || [];
+      const notSaved = new Set(skipped.map(record => `${record.kind}:${record.id}`));
       const active = new Set();
       for (const item of submitted) {
         active.add(item.identity);
+        // A skipped record was not written; its next save needs the old baseline.
+        if (notSaved.has(item.identity)) continue;
         const history = queue.revisions.get(item.identity)?.history || new Set();
         if (item.before) history.add(revisionKey(item.before));
         history.add(revisionKey(item.revision));
@@ -55,6 +60,13 @@ export async function syncMarkdownRecordState(api, state, filePath = '') {
         if (live && JSON.stringify(fieldsForRecord(live, item.kind)) === item.fields) live.markdownRevision = item.revision;
       }
       for (const identity of queue.revisions.keys()) if (!active.has(identity)) queue.revisions.delete(identity);
+      // Warn when the problems change or a skipped record gets more unsaved
+      // edits, rather than on every autosave.
+      const notice = skipped.map(record => record.message).join('\n');
+      const unsaved = notice ? JSON.stringify(submitted.filter(item => notSaved.has(item.identity))
+        .map(item => snapshot[item.key].find(record => record.id === item.id))) : '';
+      if (notice && notice + unsaved !== queue.skippedNotice) showTransientNotice(notice, { type: 'error', durationMs: 15000 });
+      queue.skippedNotice = notice + unsaved;
     }
     return result;
   };

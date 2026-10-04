@@ -50,6 +50,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
     return {
       workflowRootPath: '',
       markdownWarnings: [],
+      skippedRecords: [],
       summary: {
         workflowTemplates: 0,
         workflows: 0,
@@ -59,7 +60,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
     };
   }
 
-  await preflightDocuments(workflowDocumentInputs(rootPaths.storagePath, safeSnapshot));
+  preflightDocuments(workflowDocumentInputs(rootPaths.storagePath, safeSnapshot));
   await ensureFolder(rootPaths.workflowRootPath);
   const templateById = new Map();
   asArray(safeSnapshot.workflowTemplates).forEach((template) => {
@@ -101,6 +102,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
 
   const notebookIdsWritten = new Set();
   const markdownWarnings = [];
+  const skippedRecords = [];
   const paperIdsWritten = new Set();
 
   for (const rawWorkflow of asArray(safeSnapshot.workflows)) {
@@ -159,7 +161,8 @@ async function syncWorkflowRootFromSnapshotUnlocked({
         workflowId,
         notebookEntry: compactEntry
       };
-      const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot: safeSnapshot, storageRoot: rootPaths.storagePath }, markdownWarnings);
+      const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot: safeSnapshot, storageRoot: rootPaths.storagePath }, markdownWarnings, skippedRecords);
+      if (saved.skipped) continue;
       Object.assign(notebookEntry, saved.record, { storageFolder: notebookFolder, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
       const notebookId = cleanText(notebookEntry?.id, 220);
       if (notebookId) {
@@ -185,6 +188,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
   return {
     workflowRootPath: rootPaths.workflowRootPath,
     markdownWarnings,
+    skippedRecords,
     summary: {
       workflowTemplates: templatesForStorage.size,
       workflows: asArray(safeSnapshot.workflows).length,

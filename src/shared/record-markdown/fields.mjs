@@ -160,7 +160,7 @@ async function mergeDocumentRecord(source, baseline, incoming, kind) {
   for (const key of Object.keys(baselineRevision.fields)) {
     if (disk[key] === before[key]) continue;
     if (proposed[key] !== before[key] && proposed[key] !== disk[key]) {
-      throw new Error(`Markdown conflict in ${key}. Reload the document before saving.`);
+      throw Object.assign(new Error(`Markdown conflict in ${key}`), { code: 'MARKDOWN_CONFLICT' });
     }
     if (key === 'name') next.name = current.name;
     else if (key === 'purpose') { next.purpose = current.purpose; delete next.description; }

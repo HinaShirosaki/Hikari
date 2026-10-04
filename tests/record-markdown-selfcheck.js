@@ -163,7 +163,7 @@ test('an interrupted JSON checkpoint cannot bind new step positions to the old s
   assert.deepEqual((await readRecordDocument(filePath, 'protocol')).data.protocol.steps, changed.protocol.steps);
 }));
 
-test('a later notebook conflict leaves earlier protocol edits and the exported snapshot untouched', async () => fixture(async root => {
+test('a notebook conflict skips only that page while the protocol and export still save', async () => fixture(async root => {
   const snapshot = await prepare(root);
   const target = path.join(root, 'export.json');
   const helpers = createMainDataHelpers({ fs, path, hasSupportedDataExtension: () => true, syncBundleFromSnapshot });
@@ -172,13 +172,16 @@ test('a later notebook conflict leaves earlier protocol edits and the exported s
   const protocolFile = saved.sidecarPaths.protocolFilePaths[0];
   const notebookFile = saved.sidecarPaths.notebookPageFolderPaths[0];
   await editField(notebookFile.replace(/\.json$/, '.md'), 'result', '## Notes and results\n\nExternal competing result.');
-  const before = await Promise.all([read(target), read(protocolFile), read(protocolFile.replace(/\.json$/, '.md'))]);
-  snapshot.protocols[0].purpose = 'New purpose rejected with the whole save.';
+  const notebookBefore = await Promise.all([read(notebookFile), read(notebookFile.replace(/\.json$/, '.md'))]);
+  snapshot.protocols[0].purpose = 'New purpose saved despite the notebook conflict.';
   snapshot.notebookEntries[0].result = 'Competing app result.';
-  const failed = await helpers.saveSelectedDataFile({ data: snapshot, filePath: target });
-  assert.equal(failed.ok, false);
-  assert.match(failed.error, /Markdown conflict/);
-  assert.deepEqual(await Promise.all([read(target), read(protocolFile), read(protocolFile.replace(/\.json$/, '.md'))]), before);
+  const result = await helpers.saveSelectedDataFile({ data: snapshot, filePath: target });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.sidecarPaths.skippedRecords.map(record => [record.kind, record.id]), [['notebook', 'n1']]);
+  assert.match(result.sidecarPaths.skippedRecords[0].message, /changed in Hikari and in .*page\.md/);
+  assert.deepEqual(await Promise.all([read(notebookFile), read(notebookFile.replace(/\.json$/, '.md'))]), notebookBefore);
+  assert.equal((await readRecordDocument(protocolFile, 'protocol')).data.protocol.purpose, snapshot.protocols[0].purpose);
+  assert.match(await read(target), /New purpose saved despite the notebook conflict/);
 }));
 
 test('damaged derived section markers are reported during consumption', async () => fixture(async root => {
@@ -261,8 +264,10 @@ test('first workflow-page checkpoint failure is recoverable through normal folde
     if (to.endsWith('/page.json')) throw new Error('Injected first workflow checkpoint failure');
     return rename(from, to);
   };
-  try { await assert.rejects(syncWorkflowRootFromSnapshot({ snapshot: state, storagePath: root }), /Injected first workflow/); }
-  finally { fs.rename = rename; }
+  try {
+    const result = await syncWorkflowRootFromSnapshot({ snapshot: state, storagePath: root });
+    assert.match(result.skippedRecords[0].message, /Injected first workflow/);
+  } finally { fs.rename = rename; }
   const loaded = await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } });
   assert.equal(loaded.snapshot.notebookEntries.length, 1);
   assert.equal(loaded.snapshot.notebookEntries[0].result, state.notebookEntries[0].result);
@@ -329,6 +334,23 @@ test('agent protocol save returns and emits the merged record that consumers wil
   assert.equal(result.protocol.purpose, disk.purpose);
   assert.equal(emitted.protocol.purpose, disk.purpose);
   assert.deepEqual(result.protocol.markdownRevision.fields, disk.markdownRevision.fields);
+}));
+
+test('an agent protocol save that is skipped reports failure instead of success', async () => fixture(async root => {
+  const state = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot: state });
+  const file = saved.sidecarPaths.protocolFilePaths[0];
+  let emitted = null;
+  const runtime = createProtocolSaveRuntime({ hydrateSnapshotFromBundle, emitProtocolSaved: payload => { emitted = payload; },
+    syncBundleFromSnapshot: async input => {
+      await editField(file.replace(/\.json$/, '.md'), 'purpose', '## Purpose\n\nExternal purpose while the agent saves.');
+      return syncBundleFromSnapshot(input);
+    } });
+  const result = await runtime.saveProtocol({ protocol: { id: 'p1', name: 'Protein assay', purpose: 'Agent purpose.', steps: state.protocols[0].steps }, upsert: true }, { snapshot: state });
+  assert.equal(result.ok, false);
+  assert.match(result.error, /changed in Hikari and in/);
+  assert.equal(emitted, null);
+  assert.equal((await readRecordDocument(file, 'protocol')).data.protocol.purpose, 'External purpose while the agent saves.');
 }));
 
 test('unknown step anchors recover the checkpoint rather than dropping parameter identities', async () => fixture(async root => {
@@ -658,7 +680,7 @@ test('stale autosaves merge external prose, retain annotations and refresh scien
   assertReadableMarkdown(await read(pageMd));
 }));
 
-test('concurrent prose edits fail the save without overwriting either document', async () => fixture(async root => {
+test('concurrent prose edits skip the record without overwriting either document', async () => fixture(async root => {
   const snapshot = await prepare(root);
   const saved = await syncBundleFromSnapshot({ snapshot });
   const filePath = saved.sidecarPaths.notebookPageFolderPaths[0];
@@ -667,7 +689,8 @@ test('concurrent prose edits fail the save without overwriting either document',
   const jsonBefore = await read(filePath);
   const markdownBefore = await read(markdownPath);
   snapshot.notebookEntries[0].result = 'Competing app edit.';
-  await assert.rejects(syncBundleFromSnapshot({ snapshot }), /Markdown conflict in result/);
+  const result = await syncBundleFromSnapshot({ snapshot });
+  assert.match(result.sidecarPaths.skippedRecords[0].message, /changed in Hikari and in/);
   assert.equal(await read(filePath), jsonBefore);
   assert.equal(await read(markdownPath), markdownBefore);
 }));
@@ -702,23 +725,37 @@ test('migration materializes documents from snapshot-only legacy roots without c
   assert.equal(hydrated.snapshot.notebookEntries[0].result, snapshot.notebookEntries[0].result);
 }));
 
-test('missing or malformed migrated Markdown recovers JSON with warnings and cannot be overwritten by autosave', async () => fixture(async root => {
+test('damaged Markdown is kept and reported, and deleting it lets Hikari rewrite it', async () => fixture(async root => {
   const snapshot = await prepare(root);
   const saved = await syncBundleFromSnapshot({ snapshot });
   const filePath = saved.sidecarPaths.notebookPageFolderPaths[0];
   const markdownPath = filePath.replace(/\.json$/, '.md');
-  const original = await read(markdownPath);
-  await fs.writeFile(markdownPath, original.replace('<!-- /hikari-field:result -->', '<!-- damaged marker -->'));
+  const damaged = (await read(markdownPath)).replace('<!-- /hikari-field:result -->', '<!-- damaged marker -->');
+  await fs.writeFile(markdownPath, damaged);
   let loaded = await readRecordDocument(filePath, 'notebook');
   assert.equal(loaded.data.notebookEntry.result, snapshot.notebookEntries[0].result);
   assert.match(loaded.warnings[0], /Incomplete Markdown field section/);
-  await assert.rejects(syncBundleFromSnapshot({ snapshot }), /Incomplete Markdown field section/);
+  const result = await syncBundleFromSnapshot({ snapshot });
+  assert.match(result.sidecarPaths.skippedRecords[0].message, /Incomplete Markdown field section markers\. Fix .*page\.md, or delete it/);
+  assert.equal(await read(markdownPath), damaged);
   await fs.rm(markdownPath);
   loaded = await readRecordDocument(filePath, 'notebook');
   assert.equal(loaded.warnings.length, 1);
-  await assert.rejects(syncBundleFromSnapshot({ snapshot }), /Missing migrated Markdown/);
-  await rebuildRecordMarkdown(root);
+  snapshot.notebookEntries[0].result = 'Saved after the damaged file was deleted.';
+  assert.deepEqual((await syncBundleFromSnapshot({ snapshot })).sidecarPaths.skippedRecords, []);
   assert.ok((await read(markdownPath)).includes(documentMarker('notebook')));
+  assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, snapshot.notebookEntries[0].result);
+}));
+
+test('an unreadable companion is rebuilt from Hikari\'s copy and kept aside', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot });
+  const filePath = saved.sidecarPaths.notebookPageFolderPaths[0];
+  await editField(filePath.replace(/\.json$/, '.md'), 'result', '## Notes and results\n\nEdited before the companion was damaged.');
+  await fs.writeFile(filePath, '{"notebookEntry": {"id": "n1", "res');
+  assert.deepEqual((await syncBundleFromSnapshot({ snapshot })).sidecarPaths.skippedRecords, []);
+  assert.equal(await read(filePath.replace(/\.json$/, '.unreadable.json')), '{"notebookEntry": {"id": "n1", "res');
+  assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'Edited before the companion was damaged.');
 }));
 
 test('workflow page prose also loads from Markdown and survives stale workflow saves', async () => fixture(async root => {
@@ -753,7 +790,16 @@ test('renderer save revisions protect stale state after another client checkpoin
   await syncMarkdownRecordState(api, snapshot);
   assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'External edit checkpointed by another client.');
   snapshot.notebookEntries[0].result = 'Competing editor change.';
-  await assert.rejects(syncMarkdownRecordState(api, snapshot), /Markdown conflict in result/);
+  const baseline = snapshot.notebookEntries[0].markdownRevision;
+  const result = await syncMarkdownRecordState(api, snapshot);
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.sidecarPaths.skippedRecords.map(record => record.id), ['n1']);
+  assert.deepEqual(snapshot.notebookEntries[0].markdownRevision, baseline);
+  assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'External edit checkpointed by another client.');
+  // Deleting the conflicting file keeps the editor's version.
+  await fs.rm(markdownPath);
+  await syncMarkdownRecordState(api, snapshot);
+  assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'Competing editor change.');
 }));
 
 test('queued renderer saves keep their order and acknowledge only the current state', async () => fixture(async root => {
@@ -869,4 +915,32 @@ test('documents reformatted by Prettier keep their fields and step identities', 
   assert.equal(loaded.snapshot.protocols[0].name, snapshot.protocols[0].name);
   assert.deepEqual(loaded.snapshot.protocols[0].steps, snapshot.protocols[0].steps);
   assert.equal(loaded.snapshot.notebookEntries[0].result, snapshot.notebookEntries[0].result);
+}));
+
+test('skipped records are announced when the problem or the unsaved record changes', async () => fixture(async root => {
+  const { syncMarkdownRecordState } = await import('../src/renderer/services/markdown-record-storage.js');
+  const shown = [];
+  globalThis.document = { querySelector: () => null, body: { appendChild() {} },
+    createElement: () => ({ style: {}, hidden: true, setAttribute() {}, set textContent(text) { shown.push(text); } }) };
+  try {
+    const snapshot = await prepare(root);
+    snapshot.notebookEntries.push({ id: 'n2', projectName: 'Protein project', protocolName: 'Second', result: 'Second page.' });
+    const api = { autoSaveDataFile: async data => ({ ok: true, ...await syncBundleFromSnapshot({ snapshot: data }) }) };
+    const filePath = (await syncMarkdownRecordState(api, snapshot)).sidecarPaths.notebookPageFolderPaths[0];
+    const markdownPath = filePath.replace(/\.json$/, '.md');
+    await fs.writeFile(markdownPath, (await read(markdownPath)).replace('<!-- /hikari-field:result -->', ''));
+    await syncMarkdownRecordState(api, snapshot);
+    await syncMarkdownRecordState(api, snapshot);
+    snapshot.notebookEntries[1].result = 'Edit to another page.';
+    await syncMarkdownRecordState(api, snapshot);
+    assert.equal(shown.length, 1);
+    snapshot.notebookEntries[0].result = 'More notes that are not saved yet.';
+    await syncMarkdownRecordState(api, snapshot);
+    assert.equal(shown.length, 2);
+    assert.match(shown[1], /"Experiment A" was not saved/);
+    await fs.rm(markdownPath);
+    await syncMarkdownRecordState(api, snapshot);
+    assert.equal(shown.length, 2);
+    assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'More notes that are not saved yet.');
+  } finally { delete globalThis.document; }
 }));

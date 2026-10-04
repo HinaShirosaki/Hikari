@@ -186,7 +186,7 @@ export function startHikariCore({
   let moduleRuntime = null;
   let undoService = null;
   let navigationShell = null;
-  let markdownSaveError = '';
+  let saveError = '';
 
   function persistStateNow() {
     normalizeStateStoragePaths(state);
@@ -200,12 +200,12 @@ export function startHikariCore({
           if (result && result.ok === false) {
             console.warn('Auto-save to the storage folder failed:', result.error);
             const message = String(result.error || '').replace(/^Error:\s*/, '');
-            if (/Markdown/.test(message) && markdownSaveError !== message) {
-              markdownSaveError = message;
+            if (saveError !== message) {
+              saveError = message;
               showTransientNotice(message, { type: 'error' });
             }
           } else {
-            markdownSaveError = '';
+            saveError = '';
           }
         })
         .catch((error) => {
