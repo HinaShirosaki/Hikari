@@ -82,18 +82,12 @@ async function missingFiles(sources, storageRoot) {
   return unavailable;
 }
 
-async function writeImages(folderPath, assets) {
-  const assetFolder = path.join(folderPath, ASSET_FOLDER);
-  let previous = {};
-  try {
-    const stat = await fs.lstat(assetFolder);
-    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error(`Expected an ordinary generated image directory: ${assetFolder}`);
-    previous = JSON.parse(await fs.readFile(path.join(assetFolder, 'manifest.json'), 'utf8'));
-  } catch (error) {
-    if (error.code !== 'ENOENT') throw error;
-  }
+async function writeImages(folderPath, assets, previous) {
   if (!assets.size && !previous.generator) return;
-  await fs.mkdir(assetFolder, { recursive: true });
+  const assetFolder = path.join(folderPath, ASSET_FOLDER);
+  const stat = await fs.lstat(assetFolder).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+  if (stat && (!stat.isDirectory() || stat.isSymbolicLink())) throw new Error(`Expected an ordinary generated image directory: ${assetFolder}`);
+  if (!stat) await fs.mkdir(assetFolder, { recursive: true });
   for (const asset of assets.values()) {
     const filePath = path.join(assetFolder, asset.name);
     let current;
@@ -106,8 +100,10 @@ async function writeImages(folderPath, assets) {
 async function finishImages(state, assets) {
   if (!state) return;
   const { assetFolder, previous } = state;
-  const names = [...assets.keys()];
-  await writeFileAtomic(fs, path.join(assetFolder, 'manifest.json'), JSON.stringify({ generator: GENERATED_MARKER, files: names }, null, 2));
+  const manifest = { generator: GENERATED_MARKER, files: [...assets.keys()] };
+  if (JSON.stringify(manifest) !== JSON.stringify(previous)) {
+    await writeFileAtomic(fs, path.join(assetFolder, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  }
   if (previous.generator === GENERATED_MARKER) {
     for (const name of array(previous.files)) {
       if (/^[a-f0-9]{64}\.[a-z]+$/.test(name) && !assets.has(name)) await fs.rm(path.join(assetFolder, name), { force: true });
@@ -115,11 +111,12 @@ async function finishImages(state, assets) {
   }
 }
 
-async function writeRecordMarkdown({ filePath, payload, kind, snapshot = {}, storageRoot, canonical = false, expectedSource, transaction }) {
+// Rendering only reads, so a caller can compare the result before writing.
+async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, storageRoot, canonical = false, expectedSource }) {
   const folderPath = path.dirname(filePath);
   const markdownPath = path.join(folderPath, kind === 'protocol' ? 'protocol.md' : 'page.md');
-  const previous = await existingMarkdown(markdownPath);
-  if (expectedSource !== undefined && previous !== expectedSource) throw new Error(`Markdown changed while saving ${markdownPath}`);
+  // A writer passes the Markdown it already read; commit re-checks it before writing.
+  const previous = expectedSource ?? await existingMarkdown(markdownPath);
   const linked = kind === 'notebook' ? await notebookContext(object(payload.notebookEntry), snapshot, storageRoot) : null;
   const sources = [payload, ...(linked ? [linked] : [])];
   const images = collectImages(sources);
@@ -134,25 +131,35 @@ async function writeRecordMarkdown({ filePath, payload, kind, snapshot = {}, sto
     if (!canonical) throw new Error(`Cannot regenerate a migrated document as an export: ${markdownPath}`);
     markdown = preserveDocument(previous, markdown);
   }
-  if (transaction) {
-    markdown = markdown.replace(/^<!-- hikari-checkpoint:[a-f0-9-]+ -->\r?\n/gm, '')
-      .replace(documentMarker(kind), `${documentMarker(kind)}\n${checkpointMarker(transaction)}`);
-  }
+  const manifest = await fs.readFile(path.join(folderPath, ASSET_FOLDER, 'manifest.json'), 'utf8')
+    .then(JSON.parse, error => { if (error.code === 'ENOENT') return {}; throw error; });
   // Manual annotations can reference extracted images; keep those assets too.
   if (canonical) {
-    const oldManifest = await fs.readFile(path.join(folderPath, ASSET_FOLDER, 'manifest.json'), 'utf8')
-      .then(JSON.parse, error => { if (error.code === 'ENOENT') return {}; throw error; });
-    for (const name of array(oldManifest.files)) {
+    for (const name of array(manifest.files)) {
       if (/^[a-f0-9]{64}\.[a-z]+$/.test(name) && markdown.includes(`${ASSET_FOLDER}/${name}`) && !images.assets.has(name)) {
         images.assets.set(name, { name, bytes: await fs.readFile(path.join(folderPath, ASSET_FOLDER, name)), labels: [] });
       }
     }
   }
-  const imageState = await writeImages(folderPath, images.assets);
-  if (canonical && await existingMarkdown(markdownPath) !== previous) throw new Error(`Markdown changed while saving ${markdownPath}`);
-  if (markdown !== previous) await writeFileAtomic(fs, markdownPath, markdown);
-  await finishImages(imageState, images.assets);
+  return { folderPath, markdownPath, previous, markdown, assets: images.assets, manifest };
+}
+
+async function commitRecordMarkdown({ folderPath, markdownPath, previous, markdown, assets, manifest }, { kind, canonical = false, transaction }) {
+  if (transaction) {
+    markdown = markdown.replace(/^<!-- hikari-checkpoint:[a-f0-9-]+ -->\r?\n/gm, '')
+      .replace(documentMarker(kind), `${documentMarker(kind)}\n${checkpointMarker(transaction)}`);
+  }
+  const imageState = await writeImages(folderPath, assets, manifest);
+  if (markdown !== previous) {
+    if (canonical && await existingMarkdown(markdownPath) !== previous) throw new Error(`Markdown changed while saving ${markdownPath}`);
+    await writeFileAtomic(fs, markdownPath, markdown);
+  }
+  await finishImages(imageState, assets);
   return markdownPath;
+}
+
+async function writeRecordMarkdown(input) {
+  return commitRecordMarkdown(await renderRecordMarkdown(input), input);
 }
 
 async function removeGeneratedMarkdown(recordPath) {
@@ -199,4 +206,4 @@ async function removeGeneratedMarkdownSafely(recordPath, warnings) {
   }
 }
 
-module.exports = { GENERATED_MARKER, existingMarkdown, writeRecordMarkdown, writeRecordMarkdownSafely, removeGeneratedMarkdownSafely };
+module.exports = { GENERATED_MARKER, commitRecordMarkdown, existingMarkdown, renderRecordMarkdown, writeRecordMarkdown, writeRecordMarkdownSafely, removeGeneratedMarkdownSafely };

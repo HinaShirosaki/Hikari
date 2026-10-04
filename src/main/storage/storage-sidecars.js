@@ -14,7 +14,7 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
-const { asArray, cleanText, ensureObject, isUnreadableJsonFile, readJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, readJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
@@ -58,14 +58,12 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
   const existingFoldersById = await protocolFoldersById(protocolRootPath);
   const activeFolders = new Set();
   const writtenPaths = [];
-  for (let index = 0; index < protocols.length; index += 1) {
-    const protocol = protocols[index];
+  await forEachInBatches(protocols, async (protocol, index) => {
     // Stable folders preserve document edits, attachments and citations on rename.
     const folderName = existingFoldersById.get(protocol.id) || buildProtocolFolderName(protocol, index);
     activeFolders.add(folderName);
-    const folderPath = path.join(protocolRootPath, folderName);
-    const filePath = path.join(folderPath, PROTOCOL_FILE_NAME);
-    await fs.mkdir(folderPath, { recursive: true });
+    const filePath = path.join(protocolRootPath, folderName, PROTOCOL_FILE_NAME);
+    writtenPaths.push(filePath);
     const payload = {
       schema_name: PROTOCOL_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
@@ -74,8 +72,7 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
     };
     const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'protocol', snapshot, storageRoot: path.dirname(protocolRootPath) }, markdownWarnings, skippedRecords);
     Object.assign(protocol, saved.record);
-    writtenPaths.push(filePath);
-  }
+  });
 
   // A deleted or renamed protocol loses its record file; the folder goes only
   // once nothing else is in it, so files the user kept there survive.
@@ -185,10 +182,10 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, ma
   const notebookEntries = asArray(snapshot.notebookEntries)
     .map((entry) => ensureObject(entry))
     .filter((entry) => !isWorkflowNotebookEntry(entry));
-  for (const entry of notebookEntries) {
+  await forEachInBatches(notebookEntries, async (entry) => {
     const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
     const filePath = path.join(folderPath, 'page.json');
-    await fs.mkdir(folderPath, { recursive: true });
+    writtenPaths.push(filePath);
     const payload = {
       schema_name: NOTEBOOK_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
@@ -197,8 +194,7 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, ma
     };
     const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot, storageRoot: storageRootPath }, markdownWarnings, skippedRecords);
     if (!saved.skipped) Object.assign(entry, saved.record, { storageFolder: folderPath, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
-    writtenPaths.push(filePath);
-  }
+  });
   return writtenPaths;
 }
 

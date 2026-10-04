@@ -154,6 +154,14 @@ function keepLatestById(byId, found, value = found.record) {
   }
 }
 
+// ponytail: fixed batches overlap the file I/O of several records; a worker
+// pool would only matter if one slow record holding up its batch ever does.
+async function forEachInBatches(items, work, size = 8) {
+  for (let start = 0; start < items.length; start += size) {
+    await Promise.all(items.slice(start, start + size).map((item, offset) => work(item, start + offset)));
+  }
+}
+
 module.exports = {
   SQLJS_WASM_JS_PATH,
   asArray,
@@ -161,6 +169,7 @@ module.exports = {
   cleanText,
   cloneJson,
   ensureObject,
+  forEachInBatches,
   isUnreadableJsonFile,
   keepLatestById,
   loadSqlJs,

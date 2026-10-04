@@ -203,7 +203,9 @@ test('every interrupted record write returns a coherent old or new pair and supp
       const filePath = path.join(folder, 'protocol.json');
       const old = { id: 'p', name: 'Fault test', purpose: 'Old', steps: [{ id: 's1', text: 'Add {{ph:x}}.', placeholders: [{ id: 'x', name: 'Amount' }] }], image: dataUrl };
       if (existing) await writeRecordDocument({ filePath, payload: { protocol: old }, kind: 'protocol', storageRoot: root });
-      const next = { ...old, purpose: 'New', steps: [{ id: 's0', text: 'Prepare.', placeholders: [] }, ...old.steps] };
+      // A new image makes the manifest change too, so every write phase runs.
+      const next = { ...old, purpose: 'New', image: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E',
+        steps: [{ id: 's0', text: 'Prepare.', placeholders: [] }, ...old.steps] };
       const rename = fs.rename;
       fs.rename = async (from, to) => {
         if (to.endsWith(`/${phase}`)) throw Object.assign(new Error(`Injected ${phase}`), { code: 'EIO' });
@@ -966,4 +968,25 @@ test('a copied protocol folder is reported and kept while the original keeps loa
     assert.match(await read(path.join(copy, 'protocol.md')), /Variant purpose/);
     assert.equal((await readJson(path.join(copy, 'protocol.json'))).protocol.id, 'p1');
   }
+}));
+
+test('an unchanged record keeps its files while changed context still rewrites them', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot });
+  const [protocolJson, pageJson] = [saved.sidecarPaths.protocolFilePaths[0], saved.sidecarPaths.notebookPageFolderPaths[0]];
+  const files = [protocolJson, protocolJson.replace(/\.json$/, '.md'), pageJson, pageJson.replace(/\.json$/, '.md')];
+  const stamps = () => Promise.all(files.map(async file => (await fs.stat(file)).mtimeMs));
+  const before = await stamps();
+  await new Promise(resolve => setTimeout(resolve, 20));
+  await syncBundleFromSnapshot({ snapshot });
+  assert.deepEqual(await stamps(), before);
+  snapshot.samples[0].details.lot = 'Lot changed';
+  await syncBundleFromSnapshot({ snapshot });
+  assert.match(await read(files[3]), /Lot changed/);
+  // Images of an unchanged record are still restored.
+  const assetFolder = path.join(path.dirname(pageJson), '.hikari-markdown');
+  const asset = (await fs.readdir(assetFolder)).find(name => name.endsWith('.png'));
+  await fs.rm(path.join(assetFolder, asset));
+  await syncBundleFromSnapshot({ snapshot });
+  assert.ok((await fs.stat(path.join(assetFolder, asset))).isFile());
 }));

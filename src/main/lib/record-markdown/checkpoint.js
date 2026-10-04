@@ -13,7 +13,10 @@ async function captureCheckpoint(filePath, source) {
   const paths = [filePath, pendingPathFor(filePath)];
   for (let attempt = 0; attempt < 3; attempt++) {
     const before = await Promise.all(paths.map(readOptional));
-    const markdown = source === undefined ? await readOptional(filePath.replace(/\.json$/, '.md')) : source;
+    // A writer passes Markdown it read beforehand, so a second read here
+    // would not cover that read; only readers need the stability check.
+    if (source !== undefined) return { raw: before[0], pendingRaw: before[1], source };
+    const markdown = await readOptional(filePath.replace(/\.json$/, '.md'));
     const after = await Promise.all(paths.map(readOptional));
     if (before.every((raw, index) => raw === after[index])) return { raw: before[0], pendingRaw: before[1], source: markdown };
   }

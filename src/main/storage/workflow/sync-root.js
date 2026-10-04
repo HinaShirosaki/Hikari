@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { MEMORY_FILE_NAME, buildWorkflowMemoryMarkdown } = require('../../project-memory');
-const { asArray, cleanText, ensureObject, isUnreadableJsonFile } = require('../storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile } = require('../storage-utils');
 const { NOTEBOOK_PAGE_FILE_NAME, RELATED_PAPERS_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
 const { buildTemplateFolderName, buildWorkflowFolderLayout, collectLinkedNotebookIds, resolveWorkflowStoragePaths } = require('./folder-names.js');
 const { buildNotebookStorageFolder, ensureFolder, writeJsonFile } = require('./fs-helpers.js');
@@ -151,7 +151,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
       paperExperimentLinks: relatedPapers.paperExperimentLinks
     });
 
-    for (const notebookEntry of notebookEntries) {
+    await forEachInBatches(notebookEntries, async (notebookEntry) => {
       const notebookFolder = buildNotebookStorageFolder(runLayout, notebookEntry);
       const compactEntry = compactNotebookEntry(notebookEntry);
       compactEntry.storageFolder = '';
@@ -162,13 +162,13 @@ async function syncWorkflowRootFromSnapshotUnlocked({
         notebookEntry: compactEntry
       };
       const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot: safeSnapshot, storageRoot: rootPaths.storagePath }, markdownWarnings, skippedRecords);
-      if (saved.skipped) continue;
+      if (saved.skipped) return;
       Object.assign(notebookEntry, saved.record, { storageFolder: notebookFolder, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
       const notebookId = cleanText(notebookEntry?.id, 220);
       if (notebookId) {
         notebookIdsWritten.add(notebookId);
       }
-    }
+    });
 
     await fs.writeFile(
       path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),

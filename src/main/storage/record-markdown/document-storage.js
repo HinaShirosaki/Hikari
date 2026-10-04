@@ -7,7 +7,7 @@ const { readJsonFile } = require('../storage-utils');
 const { createMarkdownRevision, documentMarker, mergeDocumentRecord, validateDocument } = require('./document-fields');
 const { readRecordDocument } = require('../../lib/record-markdown/read');
 const { pendingPathFor, readRecordCheckpoint } = require('../../lib/record-markdown/checkpoint');
-const { existingMarkdown, writeRecordMarkdown } = require('./index');
+const { commitRecordMarkdown, existingMarkdown, renderRecordMarkdown } = require('./index');
 
 const recordKey = kind => kind === 'protocol' ? 'protocol' : 'notebookEntry';
 const markdownPathFor = filePath => filePath.replace(/\.json$/, '.md');
@@ -34,7 +34,6 @@ async function prepareRecordDocument(input) {
 // companion JSON advances, so an interrupted save still has recoverable text.
 async function writeRecordDocument(input) {
   const { payload, prior, source } = await prepareRecordDocument(input);
-  await fs.mkdir(path.dirname(input.filePath), { recursive: true });
   if (prior.ok && !prior.data.document) {
     const backup = input.filePath.replace(/\.json$/, '.pre-markdown.json');
     await fs.copyFile(input.filePath, backup, fs.constants.COPYFILE_EXCL).catch(error => {
@@ -59,12 +58,21 @@ async function writeRecordDocument(input) {
     if (kept || prior.data.document?.legacyRevision) checkpoint.document.legacyRevision = merged;
   }
   delete checkpoint[key].markdownRevision;
-  const transaction = globalThis.crypto.randomUUID();
-  const pendingPath = pendingPathFor(input.filePath);
-  await writeFileAtomic(fs, pendingPath, JSON.stringify({ version: 1, transaction, checkpoint }, null, 2));
-  await writeRecordMarkdown({ ...input, payload, canonical: true, expectedSource: source, transaction });
-  await writeFileAtomic(fs, input.filePath, JSON.stringify(checkpoint, null, 2));
-  await fs.rm(pendingPath, { force: true });
+  const rendered = await renderRecordMarkdown({ ...input, payload, canonical: true, expectedSource: source });
+  // An unchanged record keeps its files, so a save does not rewrite every
+  // document or make open editors report a change. Images are still checked.
+  const stable = data => JSON.stringify({ ...data, updated_at: undefined, exportedAt: undefined });
+  if (prior.ok && !prior.recovered && rendered.markdown === rendered.previous && stable(prior.data) === stable(checkpoint)) {
+    await commitRecordMarkdown(rendered, { kind: input.kind, canonical: true });
+  } else {
+    const transaction = globalThis.crypto.randomUUID();
+    const pendingPath = pendingPathFor(input.filePath);
+    await fs.mkdir(path.dirname(input.filePath), { recursive: true });
+    await writeFileAtomic(fs, pendingPath, JSON.stringify({ version: 1, transaction, checkpoint }, null, 2));
+    await commitRecordMarkdown(rendered, { kind: input.kind, canonical: true, transaction });
+    await writeFileAtomic(fs, input.filePath, JSON.stringify(checkpoint, null, 2));
+    await fs.rm(pendingPath, { force: true });
+  }
   payload[key].markdownRevision = await createMarkdownRevision(payload[key], input.kind);
   payload[key].markdownRevision.origin = globalThis.crypto.randomUUID();
   return { markdownPath, record: payload[recordKey(input.kind)] };
