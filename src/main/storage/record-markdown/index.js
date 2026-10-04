@@ -17,10 +17,14 @@ const IMAGE_EXTENSIONS = {
   'image/heic': 'heic', 'image/heif': 'heif'
 };
 
+// Editors may add a BOM or front matter above the marker line; the document
+// stays Hikari's, as it is for the reader.
+const isGeneratedMarkdown = source => source.replace(/^\uFEFF/, '').split(/\r?\n/).includes(GENERATED_MARKER);
+
 async function existingMarkdown(filePath) {
   try {
     const source = await fs.readFile(filePath, 'utf8');
-    if (!source.startsWith(`${GENERATED_MARKER}\n`) && !source.startsWith(`${GENERATED_MARKER}\r\n`)) {
+    if (!isGeneratedMarkdown(source)) {
       throw new Error(`Cannot regenerate ${filePath}: it contains user-owned Markdown. Move or rename it first.`);
     }
     return source;
@@ -155,7 +159,7 @@ async function removeGeneratedMarkdown(recordPath) {
   const markdownPath = recordPath.replace(/\.json$/, '.md');
   try {
     const source = await fs.readFile(markdownPath, 'utf8');
-    if (source.startsWith(`${GENERATED_MARKER}\n`) || source.startsWith(`${GENERATED_MARKER}\r\n`)) {
+    if (isGeneratedMarkdown(source)) {
       await fs.rm(markdownPath, { force: true });
       const assetFolder = path.join(path.dirname(markdownPath), ASSET_FOLDER);
       try {

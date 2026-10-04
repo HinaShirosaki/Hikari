@@ -11,7 +11,8 @@ function blocks(source, kind = 'field') {
   const pattern = new RegExp(`^<!-- hikari-${kind}:([a-z-]+) -->\\r?\\n([\\s\\S]*?)^<!-- /hikari-${kind}:\\1 -->[ \\t]*(?:\\r?\\n|$)`, 'gm');
   for (const match of source.matchAll(pattern)) {
     if (found.has(match[1])) throw new Error(`Duplicate Markdown section: ${match[1]}`);
-    found.set(match[1], { body: match[2].replace(/\r\n/g, '\n').trimEnd(), source: match[0] });
+    // Formatters such as Prettier add a blank line after each marker.
+    found.set(match[1], { body: match[2].replace(/\r\n/g, '\n').replace(/^(?:[ \t]*\n)+/, '').trimEnd(), source: match[0] });
   }
   const starts = source.match(new RegExp(`^<!-- /?hikari-${kind}:`, 'gm')) || [];
   if (starts.length !== found.size * 2) throw new Error(`Incomplete Markdown ${kind} section markers`);
@@ -50,7 +51,10 @@ function fieldsForRecord(record, kind) {
 }
 
 function parseSteps(body, original) {
-  const source = content(body);
+  // Editors hide step markers. A marker belongs to the next item even across
+  // blank lines; a marker whose item was deleted is a deleted step.
+  const source = content(body).replace(/^(<!-- hikari-step:\d+ -->)\n(?:[ \t]*\n)*(?=\d+[.)] )|^<!-- hikari-step:\d+ -->(?:\n|(?![\s\S]))/gm,
+    (_match, marker) => marker ? `${marker}\n` : '');
   if (!source.trim()) return [];
   const pattern = /(?:^|\n)(?:<!-- hikari-step:(\d+) -->\n)?\d+[.)] ([\s\S]*?)(?=\n(?:<!-- hikari-step:\d+ -->\n)?\d+[.)] |$)/g;
   const matches = [...source.matchAll(pattern)];
@@ -173,7 +177,8 @@ function preserveDocument(previous, rendered) {
     for (const [key, updated] of blocks(rendered, kind)) {
       const old = oldBlocks.get(key);
       if (!old) throw new Error(`Missing Markdown ${kind} section: ${key}`);
-      if (old.body !== updated.body) result = result.replace(old.source, updated.source);
+      // A function replacement keeps `$$`, `$&` and `$'` in prose literal.
+      if (old.body !== updated.body) result = result.replace(old.source, () => updated.source);
     }
   }
   return result;

@@ -812,3 +812,61 @@ test('an existing record without client metadata can still accept its first edit
   assert.equal(loaded.protocols[0].purpose, snapshot.protocols[0].purpose);
   assert.equal(loaded.notebookEntries[0].result, snapshot.notebookEntries[0].result);
 }));
+
+test('dollar replacement patterns in edited prose stay literal', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  await syncBundleFromSnapshot({ snapshot });
+  snapshot.notebookEntries[0].result = "Display $$E = mc^2$$; split with cut -d $'\\t'; R: df$`col` and $&.";
+  snapshot.protocols[0].purpose = "Costs $$5 per $' well";
+  await syncBundleFromSnapshot({ snapshot });
+  await syncBundleFromSnapshot({ snapshot });
+  const loaded = await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } });
+  assert.doesNotMatch(loaded.migration.warnings.join('\n'), /Could not load/);
+  assert.equal(loaded.snapshot.notebookEntries[0].result, snapshot.notebookEntries[0].result);
+  assert.equal(loaded.snapshot.protocols[0].purpose, snapshot.protocols[0].purpose);
+}));
+
+test('a BOM or front matter added by an editor keeps the document saveable', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot });
+  const pageMd = saved.sidecarPaths.notebookPageFolderPaths[0].replace(/\.json$/, '.md');
+  const protocolMd = saved.sidecarPaths.protocolFilePaths[0].replace(/\.json$/, '.md');
+  await fs.writeFile(pageMd, `---\ntags: [western]\n---\n${await read(pageMd)}`);
+  await fs.writeFile(protocolMd, `﻿${await read(protocolMd)}`);
+  await editField(pageMd, 'result', '## Notes and results\n\nEdited below front matter.');
+  snapshot.protocols[0].troubleshooting = 'Edited in Hikari.';
+  await syncBundleFromSnapshot({ snapshot });
+  const loaded = (await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } })).snapshot;
+  assert.equal(loaded.notebookEntries[0].result, 'Edited below front matter.');
+  assert.equal(loaded.protocols[0].troubleshooting, 'Edited in Hikari.');
+  assert.match(await read(pageMd), /^---\ntags: \[western\]\n---\n/);
+  assert.ok((await read(protocolMd)).startsWith('﻿'));
+}));
+
+test('step markers left behind by editors attach to their item or delete the step', async () => fixture(async root => {
+  const filePath = path.join(root, 'protocol.json');
+  const steps = [{ id: 'a', text: 'Mix.', placeholders: [] }, { id: 'b', text: 'Spin.', placeholders: [] },
+    { id: 'c', text: 'Add {{ph:v}}.', placeholders: [{ id: 'v', name: 'Volume' }] }, { id: 'd', text: 'Read.', placeholders: [] }];
+  await writeRecordDocument({ filePath, payload: { protocol: { id: 'p', name: 'Markers', steps } }, kind: 'protocol', storageRoot: root });
+  // Steps 2 and 4 were deleted around hidden markers; step 3's marker gained a blank line.
+  await editField(filePath.replace(/\.json$/, '.md'), 'steps', '## Steps\n\n<!-- hikari-step:0 -->\n1. Mix.\n\n<!-- hikari-step:1 -->\n\n<!-- hikari-step:2 -->\n\n2. Add [Volume] slowly.\n\n<!-- hikari-step:3 -->');
+  const loaded = await readRecordDocument(filePath, 'protocol');
+  assert.deepEqual(loaded.warnings, []);
+  assert.deepEqual(loaded.data.protocol.steps.map(step => [step.id, step.text]), [['a', 'Mix.'], ['c', 'Add {{ph:v}} slowly.']]);
+}));
+
+test('documents reformatted by Prettier keep their fields and step identities', async () => fixture(async root => {
+  const snapshot = await prepare(root);
+  const saved = await syncBundleFromSnapshot({ snapshot });
+  // Prettier puts a blank line after every comment line, including field and step markers.
+  for (const file of [saved.sidecarPaths.protocolFilePaths[0], saved.sidecarPaths.notebookPageFolderPaths[0]]) {
+    const md = file.replace(/\.json$/, '.md');
+    await fs.writeFile(md, (await read(md)).replace(/^(<!-- hikari-[^\n]* -->)\n(?!\n)/gm, '$1\n\n'));
+  }
+  await syncBundleFromSnapshot({ snapshot: (await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } })).snapshot });
+  const loaded = await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } });
+  assert.doesNotMatch(loaded.migration.warnings.join('\n'), /Could not load/);
+  assert.equal(loaded.snapshot.protocols[0].name, snapshot.protocols[0].name);
+  assert.deepEqual(loaded.snapshot.protocols[0].steps, snapshot.protocols[0].steps);
+  assert.equal(loaded.snapshot.notebookEntries[0].result, snapshot.notebookEntries[0].result);
+}));
