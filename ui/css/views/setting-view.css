@@ -114,6 +114,31 @@
 
 #setting-view .settings-codex-account-row p { margin: 0; }
 
+#setting-view .settings-codex-usage { margin: 0 0 var(--space-20); }
+#setting-view .settings-codex-usage h4 { margin: 0; }
+#setting-view .settings-codex-usage-windows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-16);
+  margin: var(--space-12) 0;
+}
+#setting-view .settings-codex-usage-window { min-width: 0; }
+#setting-view .settings-codex-usage-window progress {
+  display: block;
+  appearance: none;
+  width: 100%;
+  height: var(--space-6);
+  margin: var(--space-8) 0;
+  border: 0;
+  background: var(--theme-border-soft);
+  accent-color: var(--theme-accent);
+}
+#setting-view .settings-codex-usage-window progress[hidden] { display: none; }
+#setting-view .settings-codex-usage-window progress::-webkit-progress-bar { background: var(--theme-border-soft); }
+#setting-view .settings-codex-usage-window progress::-webkit-progress-value { background: var(--theme-accent); }
+#setting-view .settings-codex-usage-window progress::-moz-progress-bar { background: var(--theme-accent); }
+#setting-view .settings-codex-usage-window p { margin: 0; }
+
 #setting-view .settings-codex-model-fields {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
@@ -145,6 +170,7 @@
 
 @media (max-width: 600px) {
   #setting-view .settings-codex-model-fields { grid-template-columns: minmax(0, 1fr); }
+  #setting-view .settings-codex-usage-windows { grid-template-columns: minmax(0, 1fr); }
 }
 
 #setting-view .settings-codex-desktop-mcp-actions {

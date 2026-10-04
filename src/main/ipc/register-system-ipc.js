@@ -8,6 +8,7 @@ function registerSystemIpc(deps = {}) {
   const launchCodexCliLogin = deps.launchCodexCliLogin;
   const clearCodexCliStoredLogin = deps.clearCodexCliStoredLogin;
   const getCodexLoginStatus = deps.getCodexLoginStatus;
+  const requestCodexCliUsage = deps.requestCodexCliUsage;
   const requestCodexCliCatalog = typeof deps.requestCodexCliCatalog === 'function'
     ? deps.requestCodexCliCatalog
     : (async () => ({ ok: false, models: [], defaultModel: '', defaultReasoningEffort: '' }));
@@ -87,6 +88,17 @@ function registerSystemIpc(deps = {}) {
       cliInstallCommand: cleanText(status.cliInstallCommand, 2400),
       cliInstallShell: cleanText(status.cliInstallShell, 80)
     };
+  });
+
+  ipcMain.handle(LLM.CODEX_USAGE, async () => {
+    if (typeof requestCodexCliUsage !== 'function') {
+      return { ok: false, error: 'Codex account usage is unavailable.' };
+    }
+    try {
+      return await requestCodexCliUsage({ cwd: getCodexCliWorkingDirectory() });
+    } catch (error) {
+      return { ok: false, error: cleanText(error?.message, 400) || 'Failed to load Codex account usage.' };
+    }
   });
 
   ipcMain.handle(LLM.CODEX_LOGIN, async () => {

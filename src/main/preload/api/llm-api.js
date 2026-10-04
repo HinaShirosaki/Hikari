@@ -6,6 +6,7 @@ function createLlmApi(ipcRenderer) {
   return {
     getCodexLlmStatus: () => ipcRenderer.invoke(LLM.CODEX_STATUS),
     getCodexLlmCatalog: () => ipcRenderer.invoke(LLM.CODEX_CATALOG),
+    getCodexLlmUsage: () => ipcRenderer.invoke(LLM.CODEX_USAGE),
     onCodexCliUpdated: (handler) => {
       if (typeof handler !== 'function') return () => {};
       const listener = (_event, status) => handler(status);

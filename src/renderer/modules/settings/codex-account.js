@@ -4,6 +4,7 @@ import {
 import { normalizeCodexLoginStatus } from './llm-model-catalog.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { isCodexConnected, setAgentAvailability } from '../../lib/agent-availability.js';
+import { createCodexUsageSettings } from './codex-usage.js';
 
 // Codex account panel: login status polling, the login/logout flow, the desktop
 // MCP prompt, and saving the LLM provider/model selection.
@@ -14,6 +15,9 @@ function createCodexAccountSettings({
   renderForms,
   renderReasoningEffortOptions,
   settingCodexStatus,
+  settingCodexUsage,
+  settingCodexUsageStatus,
+  refreshCodexUsageBtn,
   settingCodexInstall,
   settingCodexInstallCommand,
   settingCodexInstallHelp,
@@ -40,6 +44,8 @@ function createCodexAccountSettings({
   let codexLoginRefreshTimers = [];
   let codexStatusRevision = 0;
   let clearingCodexLogin = false;
+  const usage = createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
+    refreshCodexUsageBtn, isConnected: () => !clearingCodexLogin && isCodexConnected(codexLoginConfig) });
 
   function clearCodexLoginRefreshTimers() {
     codexLoginRefreshTimers.forEach((timerId) => {
@@ -126,6 +132,7 @@ function createCodexAccountSettings({
     if (!window.hikariApi?.getCodexLlmStatus) {
       codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
       setAgentAvailability(false);
+      usage.clear();
       renderCodexStatus('Codex login is unavailable.');
       showTransientNotice('Codex login is unavailable.', { type: 'error' });
       return codexLoginConfig;
@@ -138,6 +145,8 @@ function createCodexAccountSettings({
       codexLoginConfig = normalizeCodexLoginStatus(result);
       setAgentAvailability(isCodexConnected(codexLoginConfig));
       renderCodexStatus();
+      if (isCodexConnected(codexLoginConfig)) void usage.refresh();
+      else usage.clear();
       if (isCodexConnected(codexLoginConfig)
         && (!isCodexConnected(previousStatus) || previousStatus.cliVersion !== codexLoginConfig.cliVersion
           || !llmModelCatalog?.hasCodexModels?.())) {
@@ -148,6 +157,7 @@ function createCodexAccountSettings({
       if (revision !== codexStatusRevision) return codexLoginConfig;
       codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
       setAgentAvailability(false);
+      usage.clear();
       renderCodexStatus('Failed to load Codex login status.');
       showTransientNotice('Failed to load Codex login status.', { type: 'error' });
       return codexLoginConfig;
@@ -197,6 +207,7 @@ function createCodexAccountSettings({
     // Invalidate earlier checks and keep focus/poll refreshes out of this transition.
     codexStatusRevision += 1;
     clearingCodexLogin = true;
+    usage.clear('Signing out…');
     if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
     try {
       const result = await window.hikariApi.clearCodexLlmLogin();
@@ -214,6 +225,8 @@ function createCodexAccountSettings({
       showTransientNotice('Failed to clear the saved Codex login.', { type: 'error' });
     } finally {
       clearingCodexLogin = false;
+      if (isCodexConnected(codexLoginConfig)) void usage.refresh();
+      else usage.clear();
       if (checkCodexCliBtn) checkCodexCliBtn.disabled = false;
     }
   }
@@ -426,6 +439,7 @@ function createCodexAccountSettings({
     scheduleCodexLoginStatusRefresh,
     renderCodexStatus,
     refreshCodexLoginStatus,
+    refreshCodexUsage: usage.refresh,
     onStartCodexLogin,
     onClearCodexLogin,
     renderCodexDesktopMcpStatus,

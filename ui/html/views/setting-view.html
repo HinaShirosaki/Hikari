@@ -521,6 +521,31 @@
               </div>
             </div>
           </div>
+          <section id="setting-codex-usage" class="settings-codex-usage" aria-labelledby="setting-codex-usage-title" aria-busy="false">
+            <div class="settings-codex-account-row">
+              <h4 id="setting-codex-usage-title">Account usage</h4>
+              <button type="button" id="refresh-codex-usage-btn" class="ghost-btn" disabled>Refresh usage</button>
+            </div>
+            <div class="settings-codex-usage-windows">
+              <div class="settings-codex-usage-window" data-codex-usage-window="fiveHour">
+                <div class="settings-codex-account-row">
+                  <span>5-hour usage</span>
+                  <span data-codex-usage-value>Unavailable</span>
+                </div>
+                <progress max="100" aria-label="5-hour usage" hidden></progress>
+                <p class="small-note" data-codex-usage-reset></p>
+              </div>
+              <div class="settings-codex-usage-window" data-codex-usage-window="weekly">
+                <div class="settings-codex-account-row">
+                  <span>Weekly usage</span>
+                  <span data-codex-usage-value>Unavailable</span>
+                </div>
+                <progress max="100" aria-label="Weekly usage" hidden></progress>
+                <p class="small-note" data-codex-usage-reset></p>
+              </div>
+            </div>
+            <p id="setting-codex-usage-status" class="small-note" aria-live="polite">Sign in to view account usage.</p>
+          </section>
           <form id="llm-form" class="stack-form settings-preference-form">
             <div class="settings-codex-model-fields">
               <div class="settings-row">

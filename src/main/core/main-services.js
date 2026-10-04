@@ -15,6 +15,7 @@ const {
   getCodexCliReasoningEffort,
   getCodexLoginStatus,
   requestCodexCliCatalog,
+  requestCodexCliUsage,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText
@@ -420,6 +421,7 @@ function createMainServices(context = {}) {
     clearCodexCliStoredLogin,
     getCodexLoginStatus,
     requestCodexCliCatalog,
+    requestCodexCliUsage,
     getCodexCliModel,
     getCodexCliReasoningEffort,
     launchCodexCliLogin,
