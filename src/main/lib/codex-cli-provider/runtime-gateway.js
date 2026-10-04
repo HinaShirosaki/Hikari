@@ -63,8 +63,12 @@ function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalo
 function normalizeExecutablePath(binary, options = {}) {
   const fileSystem = options.fs || fs;
   const paths = (options.platform || process.platform) === 'win32' ? path.win32 : path;
-  try { return fileSystem.realpathSync(binary); }
-  catch {
+  try {
+    const real = fileSystem.realpathSync(binary);
+    // Multicall shims (Volta, mise) dispatch on their invoked name; keep it.
+    const name = (value) => paths.basename(value).toLowerCase();
+    return name(real) === name(binary) ? real : paths.resolve(options.cwd || process.cwd(), binary);
+  } catch {
     // Preserve an unresolved command so setup reports it; explicit relative
     // paths become absolute and can never change meaning with the request cwd.
     return /[/\\]/u.test(binary) ? paths.resolve(options.cwd || process.cwd(), binary) : binary;

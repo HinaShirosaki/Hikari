@@ -130,14 +130,22 @@ if (!args.includes('app-server')) {
     if (process.platform === 'win32') return; // Junction/npm variants are checked with platform fixtures below.
     const f = fixture();
     try {
-      const alias = path.join(f.tmp, 'Codex With Spaces');
+      const alias = path.join(f.tmp, 'Codex With Spaces', path.basename(f.current));
+      fs.mkdirSync(path.dirname(alias));
       fs.symlinkSync(f.current, alias);
       const expected = fs.realpathSync(f.current);
-      for (const value of [` "${alias}" `, path.relative(process.cwd(), alias), '~/Codex With Spaces']) {
+      for (const value of [` "${alias}" `, path.relative(process.cwd(), alias), `~/Codex With Spaces/${path.basename(f.current)}`]) {
         const invocation = resolveCodexRuntimeInvocation({ ...f.env, HIKARI_CODEX_CLI: value }, { homeDir: f.tmp });
         assert.equal(invocation.command, expected);
         assert.equal(Object.isFrozen(invocation), true);
       }
+      // A multicall shim (Volta's codex -> volta-shim) must keep the name it dispatches on.
+      const shim = path.join(f.tmp, 'volta-shim');
+      fs.copyFileSync(f.current, shim);
+      fs.chmodSync(shim, 0o755);
+      fs.symlinkSync(shim, path.join(f.tmp, 'codex'));
+      assert.equal(resolveCodexRuntimeInvocation({ ...f.env, HIKARI_CODEX_CLI: path.join(f.tmp, 'codex') }).command,
+        path.join(f.tmp, 'codex'));
       assert.equal(resolveCodexRuntimeInvocation({ ...f.env, HIKARI_CODEX_CLI: './missing-codex' }).command,
         path.resolve('missing-codex'));
     } finally { f.clean(); }

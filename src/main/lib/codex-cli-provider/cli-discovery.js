@@ -33,11 +33,16 @@ function discoveryContext(env = process.env, options = {}) {
   const privateNode = platform === 'win32'
     ? paths.join(local, 'HikariNode', 'node.exe')
     : paths.join(home, '.hikari', 'node', 'bin', 'node');
+  // Homebrew's versioned node@NN formulae are keg-only (not linked into bin).
+  const homebrewNodeKegs = (prefix) => versions(paths.join(prefix, 'opt'), 'bin')
+    .filter((dir) => /^node(@\d+)?$/u.test(paths.basename(paths.dirname(dir))));
   const nodeDirs = platform === 'win32'
-    ? [getEnv('NVM_SYMLINK'), paths.join(getEnv('ProgramFiles') || 'C:\\Program Files', 'nodejs'),
+    ? [getEnv('NVM_SYMLINK'), 'C:\\nvm4w\\nodejs', paths.join(getEnv('ProgramFiles') || 'C:\\Program Files', 'nodejs'),
       paths.join(local, 'Programs', 'nodejs'), ...versions(getEnv('NVM_HOME') || paths.join(roaming, 'nvm')),
+      ...versions(paths.join(local, 'nvm')),
       ...versions(paths.join(getEnv('FNM_DIR') || paths.join(roaming, 'fnm'), 'node-versions'), 'installation')]
     : ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin', '/usr/bin',
+      ...homebrewNodeKegs('/opt/homebrew'), ...homebrewNodeKegs('/usr/local'),
       ...versions(paths.join(getEnv('NVM_DIR') || paths.join(home, '.nvm'), 'versions', 'node'), 'bin'),
       ...versions(paths.join(home, '.local', 'share', 'fnm', 'node-versions'), 'installation/bin'),
       ...versions(paths.join(getEnv('FNM_DIR') || paths.join(getEnv('XDG_DATA_HOME') || paths.join(home, '.local', 'share'), 'fnm'), 'node-versions'), 'installation/bin'),
@@ -45,7 +50,8 @@ function discoveryContext(env = process.env, options = {}) {
   const installDirs = [getEnv('CODEX_INSTALL_DIR'), paths.join(home, '.local', 'bin')];
   if (platform === 'win32') {
     installDirs.unshift(paths.join(local, 'Programs', 'OpenAI', 'Codex', 'bin'));
-    installDirs.push(paths.join(roaming, 'npm'), paths.join(local, 'Volta', 'bin'));
+    installDirs.push(paths.join(roaming, 'npm'), paths.join(local, 'Volta', 'bin'),
+      paths.join(local, 'Microsoft', 'WinGet', 'Links'), paths.join(getEnv('SCOOP') || paths.join(home, 'scoop'), 'shims'));
   } else {
     installDirs.push('/opt/homebrew/bin', '/usr/local/bin', paths.join(home, '.npm-global', 'bin'));
   }

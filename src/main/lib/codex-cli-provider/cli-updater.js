@@ -50,7 +50,9 @@ function createCodexCliUpdater(deps = {}) {
     timeout.unref?.();
     try {
       const previous = readCodexManagedInstall(env, installOptions);
-      if (previous?.method === 'standalone') {
+      // Not on Windows: Codex's install.ps1 always prepends the install
+      // directory to the user's persistent PATH, exposing Hikari's private CLI.
+      if (previous?.method === 'standalone' && platform !== 'win32') {
         clearTimeout(timeout);
         status.status = 'updating';
         timeout = setTimeout(() => controller?.abort(), 5 * 60 * 1000);
@@ -75,8 +77,8 @@ function createCodexCliUpdater(deps = {}) {
           // A pre-self-update CLI is bootstrapped once, then updates natively.
         }
       }
-      // Bootstrap only: existing Hikari releases predate Codex's standalone
-      // ownership layout. Keep them intact while adopting that layout.
+      // First install, Windows updates, and existing Hikari releases that
+      // predate Codex's standalone layout (kept intact while adopting it).
       const metadata = await fetchCodexRelease(fetchImpl, signal);
       clearTimeout(timeout);
       const release = resolveCodexRelease(metadata, target);
@@ -84,6 +86,10 @@ function createCodexCliUpdater(deps = {}) {
       const installed = readCodexManagedInstall(env, installOptions);
       const reuse = installed && compareCodexVersions(installed.version, release.version) >= 0
         && await readVersion(installed.binary, { env, signal }) === installed.version;
+      if (reuse && installed.method === 'standalone') {
+        status.status = 'up-to-date';
+        return getStatus();
+      }
       const selectedVersion = reuse ? installed.version : release.version;
       status.status = 'updating';
       timeout = setTimeout(() => controller?.abort(), 5 * 60 * 1000);
