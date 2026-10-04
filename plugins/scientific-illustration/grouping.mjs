@@ -2,16 +2,18 @@
 // Components retain their own geometry, artwork and editable text.
 import { RESIZE_HANDLES } from './geometry.mjs';
 
+export function objectCorners(object) {
+  const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
+  const cx = object.x + object.width / 2, cy = object.y + object.height / 2;
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => ({
+    x: cx + x * object.width / 2 * cos - y * object.height / 2 * sin,
+    y: cy + x * object.width / 2 * sin + y * object.height / 2 * cos
+  }));
+}
+
 export function selectionBounds(objects) {
   if (!objects.length) return null;
-  const points = objects.flatMap(object => {
-    const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
-    const cx = object.x + object.width / 2, cy = object.y + object.height / 2;
-    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => ({
-      x: cx + x * object.width / 2 * cos - y * object.height / 2 * sin,
-      y: cy + x * object.width / 2 * sin + y * object.height / 2 * cos
-    }));
-  });
+  const points = objects.flatMap(objectCorners);
   const x = Math.min(...points.map(point => point.x)), y = Math.min(...points.map(point => point.y));
   return { x, y, width: Math.max(...points.map(point => point.x)) - x,
     height: Math.max(...points.map(point => point.y)) - y, rotation: 0 };

@@ -24,13 +24,19 @@
           <label class="complexity-control" for="complexity"><span class="sr-only">Illustration complexity</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
           <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
           <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
+          <div class="toolbar-group-actions" role="group" aria-label="Grouping">
+            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
+            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
+          </div>
           <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
             <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
           </div></details>
-          <button id="toggle-layers" class="panel-toggle" data-icon="layers" type="button" title="Show layers and properties" aria-label="Show layers and properties" aria-expanded="false" aria-controls="layer-inspector"><span>Layers</span></button>
+          <div id="component-panel-switch" class="component-panel-switch" role="group" aria-label="Component panels">
+            <button id="layers-tab" type="button" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties">Layers</button>
+            <button id="assets-tab" type="button" aria-pressed="false" aria-expanded="false" aria-controls="assets-panel" title="Show reusable assets">Assets</button>
+          </div>
           <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
-            <button id="menu-group-selection" type="button" disabled>Group selection <small>⌘G / Ctrl+G</small></button>
-            <button id="menu-ungroup-selection" type="button" disabled>Ungroup <small>⌘⇧G / Ctrl+Shift+G</small></button>
+            <button id="menu-save-selection-asset" type="button" disabled>Save selection as asset…</button>
             <button id="duplicate-illustration" type="button">Duplicate illustration</button>
           </div></details>
           <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export"><span class="export-mark" data-icon="download"></span><span class="export-label">Export</span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
@@ -52,6 +58,10 @@
             </section>
           </div>
           <div class="canvas-heading canvas-controls">
+            <select id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
+              <option value="pointer">Select &amp; move · V</option>
+              <option value="freehand">Freehand select · L</option>
+            </select>
             <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
             <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
               <option value="1200x800">Landscape · 1200 × 800</option>
@@ -78,11 +88,12 @@
           </form>
         </section>
         <aside id="layer-inspector" class="inspector" aria-label="Layers and properties" hidden inert>
-          <div class="inspector-heading"><h2>Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close layers and properties" aria-label="Close layers and properties"></button></div>
-          <div class="group-actions" role="group" aria-label="Grouping"><button id="group-selection" type="button" title="Group selection (⌘G / Ctrl+G)" disabled>Group</button><button id="ungroup-selection" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" disabled>Ungroup</button></div>
+          <div class="inspector-heading"><h2 id="component-panel-title">Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close component panel" aria-label="Close component panel"></button></div>
+          <section id="layers-panel" role="region" aria-labelledby="layers-tab" hidden inert>
+          <div class="selection-actions" role="group" aria-label="Selection actions"><button id="save-selection-asset" type="button" disabled>Save as asset…</button></div>
           <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
           <div id="layers" role="list" aria-label="Figure layers"></div>
-          <p id="selection-hint" class="selection-hint">Shift-click to select more. Select a child layer to edit it individually.</p>
+          <p id="selection-hint" class="selection-hint">Drag empty space to select. Drag selected components to move; use handles to resize. Shift adds; Alt selects a group member.</p>
           <form id="properties" hidden>
             <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
             <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
@@ -102,6 +113,13 @@
             <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer"></button></div>
             <button type="button" id="transfer" class="transfer-button">Copy to scratch</button>
           </form>
+          </section>
+          <section id="assets-panel" role="region" aria-labelledby="assets-tab" hidden inert>
+            <input id="asset-search" type="search" placeholder="Search assets" aria-label="Search reusable assets">
+            <p id="assets-hint" class="selection-hint">Select components or a group, then choose Save as asset.</p>
+            <div id="saved-assets" role="list" aria-label="Reusable components"></div>
+            <p id="assets-empty" class="layers-empty">Your reusable components will appear here.</p>
+          </section>
         </aside>
       </div>
       <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>
@@ -109,6 +127,7 @@
   </main>
   <dialog id="source-dialog"><form id="source-form"><h2>Text-free SVG artwork</h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source">Cancel</button><button type="submit">Apply artwork</button></div></form></dialog>
   <dialog id="raster-dialog"><form id="raster-form"><h2>Import raster artwork</h2><p>Use an image with no baked-in labels. Labels belong in separate text layers.</p><label class="check"><input id="text-free" type="checkbox" required>I inspected this image and it contains no text.</label><p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster">Cancel</button><button type="submit">Add artwork</button></div></form></dialog>
+  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title">Save reusable component</h2><label>Name<input id="asset-name" maxlength="200" required></label><p>Artwork and labels stay separate and editable. Saved copies are available in every illustration.</p><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button">Cancel</button><button id="confirm-save-asset" type="submit">Save asset</button></div></form></dialog>
   <script src="hikari.js"></script>
   <script type="module" src="main.mjs"></script>
 </body>

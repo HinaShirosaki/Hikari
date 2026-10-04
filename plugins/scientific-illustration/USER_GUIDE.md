@@ -15,8 +15,9 @@ one, the title field to rename it, and **Figure options → Duplicate illustrati
 the entire figure. Search filters titles; selecting a row opens its main and
 scratch contents. Each illustration saves independently. Your existing figure
 is added to this library automatically. The canvas uses the full editing width
-when a figure opens. **Layers** in the top toolbar opens layers and properties
-beside it; the panel's **Close** button returns that space to the canvas. At
+when a figure opens. The **Layers / Assets** switch in the top toolbar opens
+either panel in the shared rail beside it. Click the active button again or
+the panel's **Close** button to return that space to the canvas. At
 narrow widths this panel overlays the canvas and scrolls independently. The UI follows Hikari's day/night appearance and font scale, and
 shares its left rail width. Drag the rail divider to resize. Use the chevron
 beside the figure title to
@@ -50,8 +51,24 @@ retain their screen size at every zoom. Layer rows show component previews and a
 on hover or keyboard focus. Main and scratch layers are grouped separately.
 Use **+** in the top toolbar for text labels, vector components, or imported artwork.
 
+Use the **Selection tool** dropdown below the canvas to choose **Select & move**
+(V or M) or **Freehand select** (L). Select & move combines rectangle selection,
+movement and resizing in one tool: drag empty space to select an area, drag a
+component to move it, and drag a resize handle to adjust its size. Dragging one
+member of a selection moves all its selected components together.
+Drag to outline components on the main or scratch canvas; a freehand path
+closes automatically on release. Components whose boxes touch the region are
+selected, including rotated components. Hidden standalone layers are excluded.
+Groups select together; hold Alt to select only the touched members. Each selected
+component has its own outline; the outer frame moves and resizes the full selection.
+Shift adds to the current selection. Escape cancels a gesture and keeps the
+previous selection.
+Freehand selection also allows dragging selected components to move them.
+Resize handles work in both tools, so there is no need to switch tools after selecting.
+The region is temporary and never appears in exports or agent readback.
+
 The inspector shows the selected component's relevant controls first. Select a
-canvas object and open **Layers**, or select its layer row. Selecting or dragging
+canvas object and open **Layers** from the toolbar, or select its layer row. Selecting or dragging
 on the canvas keeps the current panel layout steady. Double-click a label to
 open its independent text controls, then use the compact font,
 size, color, bold/italic/underline, alignment, weight and anchor controls.
@@ -172,6 +189,53 @@ or scientific uncertainty.
 
 ## Agent tools
 
+### Reusable components
+
+Select one layer, a group, or several layers on one canvas. Choose **Save as
+asset…** in Layers, or **Figure options → Save selection as asset…**, and give
+it a name. The **Layers / Assets** switch in the toolbar opens either panel;
+clicking its active button again closes the rail. Only one panel is visible
+at a time. **Assets** provides searchable
+previews. Click an asset to place an editable
+copy on the active canvas. Large assets fit within 70% of the destination;
+smaller assets keep their saved size. Copies get fresh IDs and keep their
+rotations, relative positions, paint order, raster bytes, and text formatting.
+Multiple components form one named group with independently editable children.
+Remove an asset with its trash control; already placed copies are retained.
+
+Saved assets are shared across this plugin's illustrations and survive reloads.
+They live in the selected Hikari storage root, rather than inside the installable
+plugin folder. Saving captures a snapshot: subsequent source edits do not update
+the asset. To save a revised version, save the edited components under a new name.
+
+The current canvas `read` includes `reusable_assets` metadata and
+`assets_revision`. The agent can use these requests through `plugin_canvas`:
+
+| Action | Fields and result |
+| --- | --- |
+| `asset_list` | Takes only `action`; returns asset names, IDs, dimensions, layer counts/types and `assets_revision`. |
+| `asset_read` | `asset_id`, optional `include_assets:true`; returns `component` with relative object coordinates, SVG and text properties. Raster bytes are omitted by default. |
+| `asset_render` | `asset_id`; returns a native PNG preview up to 400 pixels. Does not satisfy or invalidate canvas inspection. |
+| `asset_save` | `illustration_id`, `expected_revision`, `expected_assets_revision`, unique `request_id`, `name`, and either component/group `id` or component `ids`. Saves without altering canvas geometry or revision. |
+| `asset_delete` | `asset_id`, `expected_assets_revision`, unique `request_id`. Removes only the saved snapshot. |
+
+Insert through normal revision-guarded `apply`, for example:
+
+```json
+{"op":"insert_asset","asset_id":"id-from-asset-list","canvas":"main","x":100,"y":120,"width":300}
+```
+
+The position is the top-left of the complete rotated selection bounds. Width
+and height scale all members and text fonts proportionally; omit both for native
+size, and omit x/y to center the copy. `apply.inserted_assets` returns component
+IDs, group ID (null for a single component), and final bounds. Insertions are
+atomic with other operations, undoable, and require a new canvas inspection.
+Asset save/delete use a separate library revision and retain the last 64 request
+receipts for retry safety. The library holds up to 100 assets of up to 200 layers
+and 12 million serialized characters each. The canonical `reusable-assets.json`
+index commits immutable `assets/<id>/component.json` snapshots only after they
+have been written successfully. Failed index writes preserve the prior library.
+
 `plugin_canvas` is available through Hikari's MCP server and can be
 disabled in Settings. Pass `plugin_id:"scientific-illustration"` and wrap every
 action in `request`. A read returns `agent_contract` with this plugin's schema
@@ -198,8 +262,9 @@ prevents canvas readback. Scratch visibility is temporary and resets on
 selection/reload.
 
 Shift-click on the canvas or in Layers to select multiple components on the
-same canvas. Use **Group** in Layers or **Figure options → Group selection**
-(⌘G / Ctrl+G); use **Ungroup** (⌘⇧G / Ctrl+Shift+G) to release them. A group
+same canvas. Use the **Group** button in the top toolbar (⌘G / Ctrl+G);
+use its adjacent **Ungroup** button (⌘⇧G / Ctrl+Shift+G) to release them. Both
+buttons work while the Layers rail is closed and enable when the selection allows the action. A group
 has one selection frame with eight handles. Drag or use arrow keys to move
 it; resizing or changing its width/height scales the entire group
 proportionally, including text fonts. Text keeps its fixed ratio. Select a

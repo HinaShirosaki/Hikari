@@ -133,11 +133,22 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
   if (groups.length) svg.append(element('metadata', { 'data-illustration-groups': 'true' }, JSON.stringify(groups)));
   for (const object of documentState.objects.filter(obj => obj.canvas === canvas && obj.visible)) {
     const group = objectGroup(object, interactive, canvas), membership = groups.find(group => group.ids.includes(object.id));
+    if (interactive) group.setAttribute('aria-pressed', String(selectedIds.includes(object.id) || selectedId === object.id));
     if (membership) group.dataset.groupId = membership.id;
     svg.append(group);
   }
   if (interactive) {
     const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas);
+    if (members.length > 1) {
+      const outlines = element('g', { class: 'selection-members', 'pointer-events': 'none', 'aria-hidden': 'true' });
+      for (const object of members.filter(object => object.visible)) {
+        outlines.append(element('rect', { width: object.width, height: object.height,
+          transform: `translate(${object.x} ${object.y}) rotate(${object.rotation} ${object.width / 2} ${object.height / 2})`,
+          fill: 'none', stroke: '#3977c3', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke',
+          class: 'selection-member', 'data-selected-object-id': object.id }));
+      }
+      svg.append(outlines);
+    }
     const selected = members.length > 1 && members.some(object => object.visible)
       ? { ...selectionBounds(members), id: 'selection' }
       : documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);

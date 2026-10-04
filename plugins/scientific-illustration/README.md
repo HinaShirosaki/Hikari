@@ -18,11 +18,29 @@ The main canvas assembles the final figure. The smaller scratch canvas opens
 only when you or the agent summon it for component work, and closes without
 losing its contents. Vector, raster, and text layers remain independently editable by
 you and Codex. SVG artwork is text-free; labels are separate text objects.
-Shift-click components to select several, then use Group in Layers or Figure
-options (⌘G / Ctrl+G). Ungroup uses ⌘⇧G / Ctrl+Shift+G. Groups move and resize
+Shift-click components to select several, then use the toolbar's Group button
+(⌘G / Ctrl+G). The adjacent Ungroup button uses ⌘⇧G / Ctrl+Shift+G. Groups move and resize
 proportionally together; child layers remain editable in Layers. Alt-click
 on the canvas selects an individual group member. Groups persist with each
 illustration and are available through the agent's canvas API.
+The selection-tool dropdown below the canvas offers **Select & move (V)** and
+**Freehand (L)**. Select & move combines rectangle selection and movement:
+drag empty space to select touched components, then drag a selected component
+to move the whole selection. Freehand draws a lasso and also lets you drag
+selected components to move them. Resize handles work in both tools. Shift
+adds to the selection; Alt selects group members individually. M also opens
+Select & move. Escape cancels a selection gesture.
+Selection respects rotated bounds and zoom, without changing saved artwork.
+Each selected component has its own outline inside one shared move/resize frame.
+Select a component, several layers or a group and choose **Save as asset…**
+in Layers. **Assets** in the toolbar provides search and previews; click an asset
+to insert an independent editable copy on the active canvas. Saved components
+are shared across all illustrations in this plugin's current Hikari storage.
+Vectors, embedded raster images and separate text labels retain their relative
+placement and styling. Multi-layer copies become a movable group; editing or
+deleting a copy never changes the saved original. Codex uses the same library
+through `asset_list`, `asset_read`, `asset_render`, `asset_save`, `asset_delete`
+and the `insert_asset` apply operation. No extra host API or permission is needed.
 The left rail lists saved illustrations with search, creation, duplication,
 and selection. The chevron beside the figure title hides or shows the rail;
 Hikari saves that preference through the `layout` API. Existing single-figure
@@ -30,9 +48,12 @@ workspaces migrate automatically.
 The main canvas has a compact prompt below it while the agent rail is closed.
 Opening chat hides that prompt and gives its space back to the canvas, so only
 one composer is visible. Complexity stays in the toolbar in both states.
-The canvas uses the full editing width by default. **Layers** opens a compact
-panel with component previews, visibility and property controls; closing it
-gives that space back to the canvas. Adding a layer or double-clicking a text
+The canvas uses the full editing width by default. The **Layers / Assets** switch
+in the toolbar opens either panel in the shared editing rail. Only one panel
+can be open at a time. Clicking its active button again folds the rail and
+gives that space back to the canvas. The switch stays visible at narrow widths.
+Layers provides component previews, visibility and property controls.
+Adding a layer or double-clicking a text
 label opens its controls. Canvas size, zoom and scratch sit in a slim strip
 below the canvas. At narrow widths the panel overlays the canvas and scrolls
 independently.
