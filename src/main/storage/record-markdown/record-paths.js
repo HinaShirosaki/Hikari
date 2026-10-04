@@ -8,19 +8,30 @@ const { buildWorkflowFolderLayout, collectLinkedNotebookIds } = require('../work
 const { buildNotebookStorageFolder } = require('../workflow/fs-helpers');
 const { resolveWorkflowTemplateRecord } = require('../workflow/record-compaction');
 
+// Copying a folder in Finder or Explorer repeats its protocol ID. The folder
+// Hikari named for the protocol owns the ID; readers skip copies and the
+// writer never prunes them.
+function protocolFolderRank(folderName, protocol) {
+  if (folderName === buildProtocolFolderName(protocol)) return 0;
+  return folderName.endsWith(`__${sanitizeFolderName(protocol.id)}`) ? 1 : 2;
+}
+
 async function protocolFoldersById(protocolRootPath) {
-  const folders = new Map();
+  const owners = new Map();
   for (const entry of await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(error => {
     if (error.code === 'ENOENT') return [];
     throw error;
   })) {
     if (!entry.isDirectory()) continue;
     try {
-      const payload = JSON.parse(await fs.readFile(path.join(protocolRootPath, entry.name, 'protocol.json'), 'utf8'));
-      if (payload.protocol?.id) folders.set(payload.protocol.id, entry.name);
+      const protocol = JSON.parse(await fs.readFile(path.join(protocolRootPath, entry.name, 'protocol.json'), 'utf8')).protocol;
+      if (!protocol?.id) continue;
+      const rank = protocolFolderRank(entry.name, protocol);
+      const owner = owners.get(protocol.id);
+      if (!owner || rank < owner.rank || (rank === owner.rank && entry.name < owner.folder)) owners.set(protocol.id, { folder: entry.name, rank });
     } catch { /* Unreadable records are retained by the writer. */ }
   }
-  return folders;
+  return new Map([...owners].map(([id, owner]) => [id, owner.folder]));
 }
 
 function buildProtocolFolderName(protocol, index = 0) {

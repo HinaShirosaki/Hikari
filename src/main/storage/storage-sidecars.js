@@ -14,7 +14,7 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
-const { asArray, cleanText, ensureObject, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, isUnreadableJsonFile, readJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
@@ -79,12 +79,15 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
 
   // A deleted or renamed protocol loses its record file; the folder goes only
   // once nothing else is in it, so files the user kept there survive.
+  const activeIds = new Set(protocols.map((protocol) => protocol.id).filter(Boolean));
   for (const entry of existingEntries) {
     if (!entry.isDirectory() || activeFolders.has(entry.name)) {
       continue;
     }
     const filePath = path.join(protocolRootPath, entry.name, PROTOCOL_FILE_NAME);
-    if (await isUnreadableJsonFile(filePath)) {
+    const stored = await readJsonFile(filePath);
+    // Unreadable records and copies of a protocol still in use are kept.
+    if ((stored.exists && !stored.ok) || activeIds.has(stored.data?.protocol?.id)) {
       continue;
     }
     await fs.rm(filePath, { force: true });

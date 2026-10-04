@@ -944,3 +944,26 @@ test('skipped records are announced when the problem or the unsaved record chang
     assert.equal((await readRecordDocument(filePath, 'notebook')).data.notebookEntry.result, 'More notes that are not saved yet.');
   } finally { delete globalThis.document; }
 }));
+
+test('a copied protocol folder is reported and kept while the original keeps loading', async () => fixture(async root => {
+  const snapshot = { settings: { storagePath: root }, protocols: [{ id: 'p1', name: 'Miniprep', purpose: 'Original purpose', steps: [{ text: 'Lyse.', placeholders: [] }] }] };
+  const original = path.dirname((await syncBundleFromSnapshot({ snapshot })).sidecarPaths.protocolFilePaths[0]);
+  const copies = [`${original} copy`, path.join(root, 'Protocol', 'Miniprep_v2__p1')];
+  for (const copy of copies) {
+    await fs.cp(original, copy, { recursive: true });
+    await editField(path.join(copy, 'protocol.md'), 'purpose', '## Purpose\n\nVariant purpose.');
+  }
+  const imported = await importStorageRoot({ storagePath: root });
+  assert.deepEqual(imported.statePatch.protocols.map(protocol => protocol.purpose), ['Original purpose']);
+  assert.equal(imported.alerts.length, 2);
+  assert.ok(imported.alerts.every(alert => /has the same ID as "Miniprep__p1"/.test(alert)));
+  const hydrated = (await hydrateSnapshotFromBundle({ snapshot: { settings: { storagePath: root } } })).snapshot;
+  assert.deepEqual(hydrated.protocols.map(protocol => protocol.purpose), ['Original purpose']);
+  await syncBundleFromSnapshot({ snapshot: { ...imported.statePatch, settings: { storagePath: root } } });
+  await syncBundleFromSnapshot({ snapshot: hydrated });
+  assert.match(await read(path.join(original, 'protocol.md')), /Original purpose/);
+  for (const copy of copies) {
+    assert.match(await read(path.join(copy, 'protocol.md')), /Variant purpose/);
+    assert.equal((await readJson(path.join(copy, 'protocol.json'))).protocol.id, 'p1');
+  }
+}));

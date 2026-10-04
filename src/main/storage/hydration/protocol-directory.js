@@ -7,6 +7,7 @@ const { readSampleContainers } = require('../sample-containers');
 const { cleanText, keepLatestById, readJsonFile, readRecordFile } = require('../storage-utils');
 const { readProtocolsFromSidecar } = require('./sqlite-inventory.js');
 const { readRecordDocument } = require('../record-markdown/document-storage');
+const { protocolFoldersById } = require('../record-markdown/record-paths');
 
 function hydrateSamplesRootFromStoragePath({ storagePath = '' } = {}) {
   const resolvedStoragePath = cleanText(storagePath, 2400);
@@ -35,8 +36,10 @@ async function readProtocolDirectory(protocolRootPath) {
       };
     }
     const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    const owners = await protocolFoldersById(directoryPath);
     const protocols = [];
     const warnings = [];
+    const duplicates = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) {
         continue;
@@ -45,7 +48,14 @@ async function readProtocolDirectory(protocolRootPath) {
       const payload = await readRecordDocument(filePath, 'protocol');
       warnings.push(...payload.warnings);
       if (payload.ok) {
-        protocols.push(...readProtocolsFromSidecar(payload.data));
+        for (const protocol of readProtocolsFromSidecar(payload.data)) {
+          const owner = owners.get(protocol?.id);
+          if (owner && owner !== entry.name) {
+            duplicates.push(`Protocol folder "${entry.name}" has the same ID as "${owner}", so Hikari loaded only "${owner}" and left the copy untouched. To keep the copy as its own protocol, give it a new "id" in its protocol.json.`);
+            continue;
+          }
+          protocols.push(protocol);
+        }
       } else if (payload.exists && payload.error) {
         warnings.push(payload.error);
       }
@@ -54,7 +64,8 @@ async function readProtocolDirectory(protocolRootPath) {
       exists: true,
       ok: protocols.length > 0,
       data: protocols,
-      error: warnings.join('; ')
+      error: [...warnings, ...duplicates].join('; '),
+      duplicates
     };
   } catch (error) {
     if (error?.code === 'ENOENT') {
