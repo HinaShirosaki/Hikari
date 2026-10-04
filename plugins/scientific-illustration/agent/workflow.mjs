@@ -27,5 +27,5 @@ Generated component standard:
 Import: supply the image as a plugin_canvas asset (source:"codex" for image_gen output) and reference its id as raster_asset in an upsert/update. Image generation must come from Codex: do not configure another provider, request an API key or call an image API from scripts. If image_gen is unavailable or fails, say so and use SVG or user-provided artwork; never silently switch providers.`;
 
 export function agentInstructions(complexity) {
-  return `${AGENT_INSTRUCTIONS}\n\n${RENDERER_INSTRUCTIONS}\n\n${complexityInstructions(complexity)}`;
+  return `${AGENT_INSTRUCTIONS}\n\nReusable components: read includes reusable_assets and assets_revision, shared across illustrations. Inspect a matching saved component with asset_read/asset_render before reusing it through apply insert_asset. Copies keep separate editable artwork and labels; apply returns inserted_assets with fresh component/group IDs. When asked to save a component for future use, use asset_save with a name and component/group id or component ids, illustration_id, expected_revision, expected_assets_revision and unique request_id. Saving a snapshot leaves the figure unchanged.\n\n${RENDERER_INSTRUCTIONS}\n\n${complexityInstructions(complexity)}`;
 }

@@ -14,6 +14,8 @@ const { verifyTextResize } = require('./scientific-illustration-text-resize.cjs'
 const { verifyRailFolding } = require('./scientific-illustration-rail.cjs');
 const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
+const { verifyReusableAssets } = require('./scientific-illustration-assets.cjs');
+const { verifyAreaSelection } = require('./scientific-illustration-selection.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
@@ -117,6 +119,18 @@ async function run() {
     await verifyGrouping({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Scientific Illustration grouping: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
+  if (process.env.HIKARI_ASSETS_QA_ONLY === '1') {
+    await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Scientific Illustration reusable assets: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
+  if (process.env.HIKARI_SELECTION_QA_ONLY === '1') {
+    await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Scientific Illustration area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   let current = await tool({ action: 'read' });
@@ -467,6 +481,8 @@ async function run() {
     } });
   const accepted = await doesInspect.run(agentInput);
   check(accepted.ok && modelCalls === 2, 'Completion succeeds only after the follow-up inspection reaches the canvas');
+  await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
+  await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
   check(errors.length === 0, errors.join('\n'));
   console.log(`Scientific Illustration host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
 }

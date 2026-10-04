@@ -5,7 +5,7 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   const measure = () => evaluate(`(() => {
     const box=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}};
     const work=document.querySelector('.work-area').getBoundingClientRect(),panel=document.getElementById('layer-inspector');
-    return {stage:box('main-canvas'),panel:box('layer-inspector'),work:{width:work.width,height:work.height},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('toggle-layers').getAttribute('aria-expanded')};
+    return {stage:box('main-canvas'),panel:box('layer-inspector'),work:{width:work.width,height:work.height},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('layers-tab').getAttribute('aria-expanded')};
   })()`);
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
@@ -32,7 +32,7 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   check(Math.abs(closed.stage.width - opened.stage.width - opened.panel.width - 12) < 1, 'Desktop Layers docks beside the canvas using only its panel width and gutter');
   await fs.writeFile(path.join(temp, 'canvas-layout-properties.png'), (await win.webContents.capturePage()).toPNG());
   await evaluate('document.getElementById("close-layers").click()'); await pause(80);
-  check(await evaluate('document.activeElement.id==="toggle-layers"') && (await measure()).stage.width === closed.stage.width,
+  check(await evaluate('document.activeElement.id==="layers-tab"') && (await measure()).stage.width === closed.stage.width,
     'Closing the property panel restores canvas width and returns focus to its reopen button');
   win.webContents.debugger.attach('1.3');
   try {
@@ -50,12 +50,16 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   const narrow = [];
   for (const width of [980, 720, 480, 320]) {
     win.setSize(width, 800); await pause(80);
-    await evaluate('document.getElementById("toggle-layers").click()'); await pause(80);
+    await evaluate('document.getElementById("layers-tab").click()'); await pause(80);
     const value = await measure(); narrow.push({ width, ...value });
     check(!value.hidden && value.panel.right <= width && value.panel.width > 200 && value.stage.width === value.work.width,
       `${width}px Layers overlays in bounds without reducing the canvas width`);
     check(await evaluate('document.documentElement.scrollWidth<=innerWidth && document.querySelector(".canvas-controls").getBoundingClientRect().bottom<=innerHeight && document.getElementById("complexity").getBoundingClientRect().width>=60'),
       `${width}px keeps the canvas controls inside the bounded workspace`);
+    check(await evaluate('["group-selection","ungroup-selection"].every(id=>{const button=document.getElementById(id),r=button.getBoundingClientRect();return button.closest(".toolbar") && r.width===30 && r.height===30 && r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=document.querySelector(".toolbar").getBoundingClientRect().bottom})'),
+      `${width}px keeps both grouping toolbar buttons visible and in bounds`);
+    check(await evaluate('["layers-tab","assets-tab"].every(id=>{const button=document.getElementById(id),r=button.getBoundingClientRect();return button.closest(".toolbar") && r.width>35 && r.height>=26 && r.left>=0 && r.right<=innerWidth && getComputedStyle(button).visibility==="visible" && r.bottom<=document.querySelector(".toolbar").getBoundingClientRect().bottom})'),
+      `${width}px keeps both Layers and Assets labels visible in the toolbar`);
     await evaluate('document.getElementById("close-layers").click();document.getElementById("canvas-size").value="custom";document.getElementById("canvas-size").dispatchEvent(new Event("change",{bubbles:true}))'); await pause(80);
     check(await evaluate('(()=>{const r=document.querySelector(".canvas-options .popover-panel").getBoundingClientRect();return r.top>=0&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.activeElement===document.getElementById("canvas-properties").elements.width})()'),
       `${width}px custom size opens upward in bounds with keyboard focus`);

@@ -18,7 +18,12 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['action'],
     properties: {
-      action: { type: 'string', enum: ['list', 'create', 'open', 'duplicate', 'read', 'render', 'apply', 'scratch', 'inspect'] }, canvas: { type: 'string', enum: ['main', 'scratch', 'both'], description: 'For render; defaults to both, including hidden scratch.' },
+      action: { type: 'string', enum: ['list', 'create', 'open', 'duplicate', 'read', 'render', 'apply', 'scratch', 'inspect', 'asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_delete'] }, canvas: { type: 'string', enum: ['main', 'scratch', 'both'], description: 'For render; defaults to both, including hidden scratch.' },
+      asset_id: { type: 'string', maxLength: 100, description: 'Reusable asset ID from read.reusable_assets or asset_list. asset_read returns editable component sources; asset_render returns a PNG preview without changing canvas inspection.' },
+      expected_assets_revision: { type: 'string', maxLength: 100, description: 'Required by asset_save and asset_delete; obtain from read or asset_list. Asset library is shared across illustrations.' },
+      name: { type: 'string', minLength: 1, maxLength: 200, description: 'Required for asset_save. Short searchable name for the saved component snapshot.' },
+      id: { type: 'string', maxLength: 100, description: 'asset_save: component or group ID, instead of ids.' },
+      ids: { type: 'array', minItems: 1, maxItems: 200, items: { type: 'string', maxLength: 100 }, description: 'asset_save: distinct component IDs on one canvas, instead of id. Preserves paint order, relative geometry and separate text layers. Saving does not edit the figure.' },
       inspection_id: { type: 'string', maxLength: 100, description: 'For inspect: returned by rendering both canvases at the current revision in this run. Any edit, undo/redo, reload or new run requires a fresh render.' },
       review: { type: 'object', additionalProperties: false, required: ['layout', 'labels', 'artwork', 'science'], description: 'For inspect: what you observed in the rendered images.', properties: {
         layout: { type: 'string', minLength: 1, maxLength: 1000, description: 'Placement, scale, clipping and overlaps on main and scratch.' },
@@ -30,11 +35,16 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
       illustration_id: { type: 'string', maxLength: 100, description: 'Required for open/duplicate. Use on read/render/apply/scratch/inspect to pin the active illustration; a changed selection returns illustration_changed.' },
       title: { type: 'string', maxLength: 200, description: 'Optional title for create/duplicate. Rename existing figures using apply title operation.' },
       expected_library_revision: { type: 'string', maxLength: 100, description: 'Required for create/open/duplicate; obtain from list or read. List takes only action.' },
-      include_assets: { type: 'boolean', description: 'Read only: include raster data URLs. SVG sources are always returned.' },
+      include_assets: { type: 'boolean', description: 'read/asset_read only: include raster data URLs. SVG sources are always returned.' },
       expected_revision: { type: 'string', maxLength: 100 }, request_id: { type: 'string', maxLength: 100 },
       operations: { type: 'array', minItems: 1, maxItems: 100, items: {
         type: 'object', additionalProperties: false, required: ['op'], properties: {
-          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'group', 'ungroup', 'transform'] },
+          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'group', 'ungroup', 'transform', 'insert_asset'] },
+          asset_id: { type: 'string', maxLength: 100, description: 'insert_asset: saved reusable asset ID. Creates independent editable components with fresh IDs; multiple components become one named group. apply returns inserted_assets with ids, group_id and bounds. Deleting the saved asset never changes placed copies.' },
+          x: { type: 'number', description: 'insert_asset: left of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
+          y: { type: 'number', description: 'insert_asset: top of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
+          width: { type: 'number', minimum: 1, description: 'insert_asset: proportional size of the complete selection bounds. Set width or height, or both at the same scale. Text fonts scale proportionally; rotations and internal placement are preserved. Defaults to saved size.' },
+          height: { type: 'number', minimum: 1, description: 'insert_asset: proportional height of the complete selection bounds.' },
           object: { type: 'object', additionalProperties: false, required: ['id', 'type'], properties: objectProperties },
           id: { type: 'string', maxLength: 100, description: 'Component ID, or group ID for update/delete/transfer/ungroup/transform. group requires an unused ID.' },
           name: { type: 'string', maxLength: 200, description: 'Optional group name for group.' },
