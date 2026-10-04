@@ -306,7 +306,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
 
   messageInput.value = 'Give me next steps for p1.';
   trigger(sendBtn, 'click');
-  await flushAsync();
+  for (let attempt = 0; attempt < 30 && !payloadSeen; attempt++) await flushAsync();
   await flushAsync();
 
   assert.equal(payloadSeen.llm.model, 'gpt-5');

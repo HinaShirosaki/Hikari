@@ -358,8 +358,8 @@ Most records are plain JSON files, one per record, so the folder is readable wit
 | Path in the storage root | What it holds |
 | --- | --- |
 | `hikari-data.json` | The compact snapshot |
-| `Protocol/<name>__<id>/protocol.json` | One protocol per folder |
-| `Project/<project>/Notebook/<page>__<id>/page.json` | Notebook pages, grouped by project |
+| `Protocol/<name>__<id>/protocol.md` | Readable protocol; companion JSON retains interactive state and recovery text |
+| `Project/<project>/Notebook/<page>__<id>/page.md` | Readable notebook pages, grouped by project, with structured JSON companions |
 | `Project/<project>/MEMORY.md`, `.agents/skills/`, `DNA/` | The agent's per-project memory and skills, and the project's sequence folder |
 | `Samples/<zone>/<container>__<id>.json`, `folders.json`, `unplaced.json` | Samples, one file per storage container |
 | `Plates/<name>__<id>/assay.json` | Plate assays, next to their analysis JSON, chart SVGs, and result files |

@@ -5,6 +5,7 @@ import { normalizeCodexLoginStatus } from './llm-model-catalog.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { isCodexConnected, setAgentAvailability } from '../../lib/agent-availability.js';
 import { createCodexUsageSettings } from './codex-usage.js';
+import { syncMarkdownRecordState } from '../../services/markdown-record-storage.js';
 
 // Codex account panel: login status polling, the login/logout flow, the desktop
 // MCP prompt, and saving the LLM provider/model selection.
@@ -275,7 +276,7 @@ function createCodexAccountSettings({
       const storagePath = String(state.settings?.storagePath || '').trim();
       let dataFilePath = '';
       if (storagePath && window.hikariApi?.autoSaveDataFile) {
-        const syncResult = await window.hikariApi.autoSaveDataFile(state, '');
+        const syncResult = await syncMarkdownRecordState(window.hikariApi, state);
         dataFilePath = String(syncResult?.filePath || '').trim();
       }
       if (!window.hikariApi?.getCodexDesktopMcpSetupPrompt) {

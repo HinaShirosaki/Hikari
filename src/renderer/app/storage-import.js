@@ -1,4 +1,5 @@
 import { defaultState } from '../modules/app-state/index.js';
+import { syncMarkdownRecordState } from '../services/markdown-record-storage.js';
 import { showTransientNotice } from '../lib/notify.js';
 import { migrateProteinBuilderCloningNotebookState } from '../services/notebook-record-compat.js';
 import { mergePaperExperimentLinks } from '../../shared/paper-experiment-links.mjs';
@@ -222,7 +223,7 @@ export function createStorageImportController({
       return { ok: false, skipped: true };
     }
     try {
-      return await windowObject.hikariApi.autoSaveDataFile(state, '');
+      return await syncMarkdownRecordState(windowObject.hikariApi, state);
     } catch (error) {
       return {
         ok: false,

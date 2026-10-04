@@ -113,6 +113,7 @@ function createWorkflowStepState({
       .filter((item) => item.notebookEntryId === notebookId)
       .map((item) => item.id);
     const notebookEntry = {
+      markdownRevision: existing?.markdownRevision,
       ...(existing || {}),
       id: notebookId,
       notebookType: 'biology',

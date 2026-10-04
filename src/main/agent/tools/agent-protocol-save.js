@@ -310,8 +310,9 @@ function createProtocolSaveRuntime(deps = {}) {
       fallbackDataFilePath,
       snapshot: nextSnapshot
     });
+    const persistedProtocol = asArray(syncResult?.markdownRecords?.protocols).find(record => record.id === protocol.id) || protocol;
     const payload = {
-      protocol: cloneJson(protocol, {}),
+      protocol: cloneJson(persistedProtocol, {}),
       dataFilePath,
       storagePath: cleanText(nextSnapshot?.settings?.storagePath || syncResult?.bundlePaths?.storageRootPath, 2400),
       sidecarPaths: cloneJson(syncResult?.sidecarPaths, {}),
@@ -322,10 +323,10 @@ function createProtocolSaveRuntime(deps = {}) {
     return {
       ok: true,
       status: normalizedSave.replaced ? 'updated' : 'saved',
-      protocol,
+      protocol: persistedProtocol,
       sidecar_paths: payload.sidecarPaths,
       bundle_paths: payload.bundlePaths,
-      summary: `${normalizedSave.replaced ? 'Updated' : 'Saved'} protocol "${protocol.name}" in the Protocols module.`
+      summary: `${normalizedSave.replaced ? 'Updated' : 'Saved'} protocol "${persistedProtocol.name}" in the Protocols module.`
     };
   }
 

@@ -1,6 +1,6 @@
 // Notebook page activity log. Appends one JSONL record per user action
 // to {storageFolder}/page.log so each saved notebook page has its own
-// audit trail next to its page.json.
+// audit trail next to its page.md and structured companion.
 
 import { isPathInsideRoot } from '../lib/storage-paths.js';
 

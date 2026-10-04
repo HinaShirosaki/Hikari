@@ -20,21 +20,15 @@ const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
 const { withStorageRootWrite } = require('./write-coordinator');
 const { PAPER_RECORD_FILE_SUFFIX } = require('./paper-discovery');
+const { removeGeneratedMarkdownSafely } = require('./record-markdown');
+const { writeRecordDocumentSafely } = require('./record-markdown/document-storage');
+const { buildNotebookPageFolderPath, buildProtocolFolderName, isWorkflowNotebookEntry, protocolFoldersById, snapshotDocumentInputs } = require('./record-markdown/record-paths');
+const { preflightDocuments } = require('./record-markdown/preflight');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
 const PROTOCOL_FILE_NAME = 'protocol.json';
-
-function buildProtocolFolderName(protocol, index = 0) {
-  const source = ensureObject(protocol);
-  const id = cleanText(source.id, 220);
-  const name = cleanText(source.name, 220);
-  if (name || id) {
-    return `${sanitizeFolderName(name, 'Protocol')}__${sanitizeFolderName(id, `protocol_${index + 1}`)}`;
-  }
-  return sanitizeFolderName(`protocol_${index + 1}`, `protocol_${index + 1}`);
-}
 
 function buildProtocolsSidecar(snapshot, updatedAt) {
   return {
@@ -54,28 +48,32 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
   };
 }
 
-async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
+async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdownWarnings) {
   const protocols = asArray(snapshot.protocols).map((rawProtocol) => ensureObject(rawProtocol));
   if (!protocolRootPath) {
     return [];
   }
   await fs.mkdir(protocolRootPath, { recursive: true });
   const existingEntries = await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(() => []);
+  const existingFoldersById = await protocolFoldersById(protocolRootPath);
   const activeFolders = new Set();
   const writtenPaths = [];
   for (let index = 0; index < protocols.length; index += 1) {
     const protocol = protocols[index];
-    const folderName = buildProtocolFolderName(protocol, index);
+    // Stable folders preserve document edits, attachments and citations on rename.
+    const folderName = existingFoldersById.get(protocol.id) || buildProtocolFolderName(protocol, index);
     activeFolders.add(folderName);
     const folderPath = path.join(protocolRootPath, folderName);
     const filePath = path.join(folderPath, PROTOCOL_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
-    await writeFileAtomic(fs, filePath, JSON.stringify({
+    const payload = {
       schema_name: PROTOCOL_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
       updated_at: updatedAt,
       protocol
-    }, null, 2));
+    };
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'protocol', snapshot, storageRoot: path.dirname(protocolRootPath) }, markdownWarnings);
+    Object.assign(protocol, saved.record);
     writtenPaths.push(filePath);
   }
 
@@ -90,6 +88,7 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
       continue;
     }
     await fs.rm(filePath, { force: true });
+    await removeGeneratedMarkdownSafely(filePath, markdownWarnings);
     await fs.rmdir(path.join(protocolRootPath, entry.name)).catch(() => {});
   }
 
@@ -170,37 +169,15 @@ async function writePaperRecordFiles(storageRootPath, papers, updatedAt) {
   }
 }
 
-function isWorkflowNotebookEntry(entry) {
-  const workflowContext = ensureObject(entry?.workflowContext);
-  return Boolean(
-    cleanText(workflowContext.workflowId, 220)
-    || cleanText(workflowContext.workflowEntryId, 220)
-    || cleanText(workflowContext.workflowBlockId, 220)
-  );
-}
-
-function buildNotebookPageFolderPath(storageRootPath, entry) {
-  const normalizedEntry = ensureObject(entry);
-  const existingStorageFolder = cleanText(normalizedEntry.storageFolder, 2400);
-  if (existingStorageFolder && isPathInside(storageRootPath, existingStorageFolder)) {
-    return path.resolve(existingStorageFolder);
-  }
-  const projectFolder = sanitizeFolderName(normalizedEntry.projectName || 'Untitled_Project', 'Untitled_Project');
-  const pageFolder = `${sanitizeFolderName(
-    normalizedEntry.protocolName || normalizedEntry.id || 'Notebook_Page',
-    'Notebook_Page'
-  )}__${sanitizeFolderName(normalizedEntry.id, 'page')}`;
-  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder);
-}
-
 function compactNotebookEntryForFolder(entry) {
   return {
     ...ensureObject(entry),
+    storageDocumentFile: undefined,
     storageFolder: ''
   };
 }
 
-async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
+async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, markdownWarnings) {
   const writtenPaths = [];
   const notebookEntries = asArray(snapshot.notebookEntries)
     .map((entry) => ensureObject(entry))
@@ -209,12 +186,14 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
     const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
     const filePath = path.join(folderPath, 'page.json');
     await fs.mkdir(folderPath, { recursive: true });
-    await writeFileAtomic(fs, filePath, JSON.stringify({
+    const payload = {
       schema_name: NOTEBOOK_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
       updated_at: updatedAt,
       notebookEntry: compactNotebookEntryForFolder(entry)
-    }, null, 2));
+    };
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot, storageRoot: storageRootPath }, markdownWarnings);
+    Object.assign(entry, saved.record, { storageFolder: folderPath, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
     writtenPaths.push(filePath);
   }
   return writtenPaths;
@@ -279,6 +258,8 @@ async function syncBundleFromSnapshotUnlocked({
     };
   }
   const updatedAt = new Date().toISOString();
+  const markdownWarnings = [];
+  await preflightDocuments(await snapshotDocumentInputs(storageRootPath, safeSnapshot));
   await fs.mkdir(storageRootPath, { recursive: true });
   await releaseOfficialMcpSkillsForWorkspace(storageRootPath, { snapshot: safeSnapshot });
   if (bundlePaths.dataFilePath) {
@@ -291,9 +272,9 @@ async function syncBundleFromSnapshotUnlocked({
     bundlePaths.paperMarkdownRootPath ? fs.mkdir(bundlePaths.paperMarkdownRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.samplesRootPath ? fs.mkdir(bundlePaths.samplesRootPath, { recursive: true }) : Promise.resolve()
   ]);
-  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt);
+  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt, markdownWarnings);
   const notebookPageFolderPaths = bundlePaths.storageRootPath
-    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt)
+    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt, markdownWarnings)
     : [];
   const projectMemoryFilePaths = bundlePaths.storageRootPath
     ? await writeProjectMemoryFiles(
@@ -328,11 +309,13 @@ async function syncBundleFromSnapshotUnlocked({
   });
   return {
     bundlePaths,
+    markdownRecords: { protocols: safeSnapshot.protocols, notebookEntries: safeSnapshot.notebookEntries },
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
       protocolFilePaths,
       notebookPagesPath: '',
       notebookPageFolderPaths,
+      markdownWarnings: [...markdownWarnings, ...workflowSync.markdownWarnings],
       projectMemoryFilePaths,
       experimentLogPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,

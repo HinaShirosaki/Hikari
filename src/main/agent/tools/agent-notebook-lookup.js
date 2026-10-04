@@ -261,14 +261,15 @@ function createAgentNotebookLookupRuntime(deps = {}) {
     const appliedSources = asArray(context.migration?.applied);
     return {
       items,
-      source: 'fallback_json',
+      source: appliedSources.includes('notebook_markdown') ? 'markdown' : 'fallback_json',
       sources: uniqueStrings([
         ...(asArray(snapshot?.notebookEntries).length ? ['request_snapshot'] : []),
         ...(Number(context.liveNotebookBridge?.entryCount) > 0 ? ['live_notebook_bridge'] : []),
         ...(context.loadedDataFile ? ['data_file'] : []),
         ...(appliedSources.includes('notebook_sidecar') ? ['notebook_sidecar'] : []),
         ...(appliedSources.includes('project_root_storage') ? ['project_storage'] : []),
-        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : [])
+        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : []),
+        ...(appliedSources.includes('notebook_markdown') ? ['notebook_markdown'] : [])
       ], 10),
       candidateCount: asArray(context.hydratedSnapshot?.notebookEntries).length,
       access: {

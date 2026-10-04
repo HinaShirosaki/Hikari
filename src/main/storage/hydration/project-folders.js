@@ -2,7 +2,8 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { asArray, cleanText, ensureObject, readJsonFile } = require('../storage-utils');
+const { asArray, cleanText, ensureObject } = require('../storage-utils');
+const { readRecordDocument } = require('../record-markdown/document-storage');
 const { buildProjectFolderDisplayName, buildProjectFolderFallbackId, buildProjectIdResolverByFolder, parseProjectMemoryMarkdown, pickLatestTimestamp } = require('./project-memory.js');
 const { isPermissionDeniedError } = require('./sqlite-inventory.js');
 
@@ -23,6 +24,7 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
   const notebookRootPath = path.join(projectFolderPath, 'Notebook');
   const notebookEntries = [];
   const warnings = [];
+  const seen = new Set();
   const defaultProjectId = cleanText(defaults.projectId, 220);
   const defaultProjectName = cleanText(defaults.projectName, 320);
 
@@ -42,10 +44,14 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
         await walk(absPath);
         continue;
       }
-      if (!entry.isFile() || entry.name !== 'page.json') {
+      if (!entry.isFile() || !['page.json', 'page.json.pending'].includes(entry.name)) {
         continue;
       }
-      const payload = await readJsonFile(absPath);
+      const filePath = absPath.replace(/\.pending$/, '');
+      if (seen.has(filePath)) continue;
+      seen.add(filePath);
+      const payload = await readRecordDocument(filePath, 'notebook');
+      warnings.push(...payload.warnings);
       if (!payload.ok) {
         if (payload.exists && payload.error) {
           warnings.push(payload.error);
@@ -62,7 +68,8 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
         id: notebookId,
         projectId: cleanText(notebookEntry.projectId, 220) || defaultProjectId,
         projectName: cleanText(notebookEntry.projectName, 320) || defaultProjectName,
-        storageFolder: path.dirname(absPath)
+        storageFolder: path.dirname(absPath),
+        storageDocumentFile: payload.markdownLoaded ? 'page.md' : 'page.json'
       });
     }
   }

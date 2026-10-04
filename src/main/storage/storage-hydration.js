@@ -38,13 +38,15 @@ async function hydrateSnapshotFromBundle({
   }
 
   const protocolSidecar = await readProtocolDirectory(bundlePaths.protocolsPath);
+  if (protocolSidecar.error) migration.warnings.push(protocolSidecar.error);
   if (protocolSidecar.ok) {
     nextSnapshot.protocols = Array.isArray(protocolSidecar.data)
       ? protocolSidecar.data
       : readProtocolsFromSidecar(protocolSidecar.data);
     migration.applied.push('protocol_sidecar');
+    if (nextSnapshot.protocols.some(record => record.markdownRevision)) migration.applied.push('protocol_markdown');
   } else if (protocolSidecar.exists && protocolSidecar.error) {
-    migration.warnings.push(protocolSidecar.error);
+    // Preserve snapshot recovery when every protocol document is unreadable.
   } else {
     const legacyProtocolSidecar = await readJsonFile(getLegacyProtocolsFilePath(bundlePaths));
     if (legacyProtocolSidecar.ok) {
@@ -104,6 +106,7 @@ async function hydrateSnapshotFromBundle({
       nextSnapshot.projects = mergeRecordsById(nextSnapshot.projects, projectHydrated.projects, 'project');
       nextSnapshot.notebookEntries = mergeRecordsById(nextSnapshot.notebookEntries, projectHydrated.notebookEntries, 'notebook');
       migration.applied.push('project_root_storage');
+      if (projectHydrated.notebookEntries.some(entry => entry.storageDocumentFile === 'page.md')) migration.applied.push('notebook_markdown');
     }
 
     const workflowHydrated = await hydrateWorkflowRootFromStoragePath({
@@ -124,6 +127,7 @@ async function hydrateSnapshotFromBundle({
         workflowHydrated.paperExperimentLinks
       );
       migration.applied.push('workflow_root_storage');
+      if (workflowHydrated.notebookEntries.some(entry => entry.storageDocumentFile === 'page.md') && !migration.applied.includes('notebook_markdown')) migration.applied.push('notebook_markdown');
     }
   }
 

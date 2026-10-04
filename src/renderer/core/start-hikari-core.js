@@ -18,6 +18,7 @@ import {
   SHARED_LEFT_RAIL_CHANGED_EVENT
 } from '../app/shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
+import { syncMarkdownRecordState } from '../services/markdown-record-storage.js';
 import {
   applyAppearanceSnapshot,
   createNavigationShell,
@@ -185,19 +186,26 @@ export function startHikariCore({
   let moduleRuntime = null;
   let undoService = null;
   let navigationShell = null;
+  let markdownSaveError = '';
 
   function persistStateNow() {
     normalizeStateStoragePaths(state);
     persistState(state);
     if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
-      windowObject.hikariApi
-        .autoSaveDataFile(state, '')
+      syncMarkdownRecordState(windowObject.hikariApi, state)
         .then((result) => {
           // autoSaveDataFile resolves { ok:false, error } on a write failure (it
           // does not throw), so the result must be inspected — otherwise a failed
           // durable save to the storage folder is lost silently.
           if (result && result.ok === false) {
             console.warn('Auto-save to the storage folder failed:', result.error);
+            const message = String(result.error || '').replace(/^Error:\s*/, '');
+            if (/Markdown/.test(message) && markdownSaveError !== message) {
+              markdownSaveError = message;
+              showTransientNotice(message, { type: 'error' });
+            }
+          } else {
+            markdownSaveError = '';
           }
         })
         .catch((error) => {

@@ -6,6 +6,7 @@ const { SAMPLES_ROOT_FOLDER_NAME } = require('../storage-paths');
 const { readSampleContainers } = require('../sample-containers');
 const { cleanText, keepLatestById, readJsonFile, readRecordFile } = require('../storage-utils');
 const { readProtocolsFromSidecar } = require('./sqlite-inventory.js');
+const { readRecordDocument } = require('../record-markdown/document-storage');
 
 function hydrateSamplesRootFromStoragePath({ storagePath = '' } = {}) {
   const resolvedStoragePath = cleanText(storagePath, 2400);
@@ -41,7 +42,8 @@ async function readProtocolDirectory(protocolRootPath) {
         continue;
       }
       const filePath = path.join(directoryPath, entry.name, 'protocol.json');
-      const payload = await readJsonFile(filePath);
+      const payload = await readRecordDocument(filePath, 'protocol');
+      warnings.push(...payload.warnings);
       if (payload.ok) {
         protocols.push(...readProtocolsFromSidecar(payload.data));
       } else if (payload.exists && payload.error) {

@@ -116,14 +116,14 @@ function createMainDataHelpers(deps = {}) {
       if (writeDataFile && ensureDirectory) {
         await fs.mkdir(path.dirname(targetPath), { recursive: true });
       }
-      if (writeDataFile) {
-        await writeSnapshot(targetPath, snapshot);
-      }
       const bundleSync = await syncBundleFromSnapshot({
         dataFilePath: targetPath,
         snapshot,
         fallbackDataFilePath
       });
+      if (writeDataFile) {
+        await writeSnapshot(targetPath, { ...snapshot, ...bundleSync.markdownRecords });
+      }
       if (!writeDataFile && staleDataFilePath) {
         await fs.rm(staleDataFilePath, { force: true }).catch(() => {});
       }

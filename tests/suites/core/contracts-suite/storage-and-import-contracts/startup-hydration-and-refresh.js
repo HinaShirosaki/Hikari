@@ -279,7 +279,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
       assert.equal(rendererSource.includes('hydrateStateFromDataFile'), false);
       assert.match(rendererSource, /syncStateSidecarsFromStorageRoot/);
-      assert.match(rendererSource, /autoSaveDataFile\(state,\s*''\)/);
+      assert.match(rendererSource, /syncMarkdownRecordState\(windowObject\.hikariApi,\s*state\)/);
       assert.match(rendererSource, /syncSidecars:\s*true/);
       assert.match(rendererSource, /async function initApp\(\)\s*\{[\s\S]*?await storageImportController\.hydrateStateFromStorageRoot\(\);/);
       assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);

@@ -51,7 +51,7 @@ async function hydrateWorkflowRootFromStoragePath({
     }
     const workflowFolderPath = path.join(rootPaths.workflowRootPath, ...relativeFolderPath.split('/').filter(Boolean));
     try {
-      const notebookEntries = await readNotebookEntriesForWorkflowFolder(workflowFolderPath);
+      const notebookEntries = await readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings);
       notebookEntries.forEach((entry) => {
         const notebookId = cleanText(entry?.id, 220);
         if (notebookId) {

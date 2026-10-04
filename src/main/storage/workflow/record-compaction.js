@@ -33,6 +33,7 @@ function compactNotebookEntry(entry) {
     .filter(Boolean);
   return {
     ...source,
+    storageDocumentFile: undefined,
     storageFolder: '',
     resultFileRecords,
     resultFiles: resultFileRecords.length
