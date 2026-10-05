@@ -1,9 +1,11 @@
-import { createDocument, normalizeDocument, applyOperations, readDocument, validateRequest, CANVASES } from './model.mjs';
+import { createDocument, normalizeDocument, applyOperations, readDocument, validateRequest, CANVASES, MAX_DOCUMENT_CHARS } from './model.mjs';
 import { validateSvg, renderPreview, svgSource } from './artwork.mjs';
 import { CANVAS_TOOL_CONTRACT } from './agent/canvas-contract.mjs';
 import { agentInstructions } from './agent/workflow.mjs';
 import { createInspectionTracker } from './inspection.mjs';
 import { LIBRARY_PATH, LIBRARY_ACTIONS, normalizeLibrary, readLibrary, nextScenePath, validateLibraryRequest } from './library.mjs';
+import { ASSETS_PATH, ASSET_ACTIONS, createAssetLibrary, normalizeAssetLibrary, readAssetLibrary, validateAssetRequest,
+  snapshotAsset, normalizeAsset, readAsset, instantiateAsset, assetPreviewDocument } from './reusable-assets.mjs';
 
 export function encodeText(text) {
   const bytes = new TextEncoder().encode(text);
@@ -20,11 +22,12 @@ async function signature(value) {
 }
 const failure = (status, error) => ({ ok: false, status, error });
 
-export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange = () => {}, onViewChange = () => {}, onHistoryChange = () => {}, onStatus = () => {} }) {
+export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange = () => {}, onAssetsChange = () => {}, onViewChange = () => {}, onHistoryChange = () => {}, onStatus = () => {} }) {
   let documentState;
   let ready;
   let tail = Promise.resolve();
   let library;
+  let assetLibrary;
   let scratchVisible = false;
   const inspections = createInspectionTracker();
   const readView = () => ({ scratch_visible: scratchVisible });
@@ -48,6 +51,53 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   async function readJson(path) {
     return JSON.parse(decodeText((await hikari.call('files.read', { path })).dataBase64));
   }
+  async function loadAsset(id) {
+    const entry = assetLibrary.assets.find(asset => asset.id === id);
+    if (!entry) throw new Error('This reusable asset does not exist. Refresh Assets.');
+    return normalizeAsset(await readJson(entry.path), validateSvg);
+  }
+  async function assetAction(args, deadline) {
+    if (args.action === 'asset_list') return { ok: true, status: 'asset_list', ...readAssetLibrary(assetLibrary) };
+    if (['asset_read', 'asset_render'].includes(args.action)) {
+      const asset = await loadAsset(args.asset_id);
+      if (args.action === 'asset_read') return { ok: true, status: 'asset_read', asset_id: args.asset_id,
+        component: readAsset(asset, args.include_assets), ...readAssetLibrary(assetLibrary) };
+      const preview = await renderPreview(assetPreviewDocument(asset), 'main', 400);
+      if (Date.now() >= deadline) return failure('expired', 'The asset preview expired.');
+      return { ok: true, status: 'asset_render', asset_id: args.asset_id, previews: [{ ...preview, canvas: 'asset' }] };
+    }
+    const hash = await signature(args), receipt = assetLibrary.receipts.find(item => item.id === args.request_id);
+    if (receipt) return receipt.hash === hash
+      ? { ok: true, status: 'already_applied', asset_id: receipt.assetId, ...readAssetLibrary(assetLibrary) }
+      : failure('request_id_conflict', 'This request_id was already used with different arguments.');
+    if (args.expected_assets_revision !== assetLibrary.revision) return { ...failure('revision_conflict', 'The reusable assets changed. List them again.'), ...readAssetLibrary(assetLibrary) };
+    let asset, entry;
+    if (args.action === 'asset_save') {
+      if (args.illustration_id !== library.activeId) return { ...failure('illustration_changed', 'Another illustration is open. Reopen the intended illustration before saving components.'), ...readLibrary(library) };
+      if (args.expected_revision !== documentState.revision) return { ...failure('revision_conflict', 'The figure changed. Read it again before saving components.'), revision: documentState.revision };
+      if (assetLibrary.assets.length >= 100) return failure('limit', 'Save up to 100 reusable assets. Remove an unused asset first.');
+      asset = snapshotAsset(documentState, args, validateSvg);
+      const id = crypto.randomUUID();
+      entry = { id, name: asset.name, path: `assets/${id}/component.json`, width: asset.width, height: asset.height,
+        objectCount: asset.objects.length, types: [...new Set(asset.objects.map(object => object.type))], updatedAt: new Date().toISOString() };
+    } else {
+      entry = assetLibrary.assets.find(item => item.id === args.asset_id);
+      if (!entry) return failure('not_found', 'This reusable asset does not exist.');
+    }
+    const next = { ...assetLibrary, revision: crypto.randomUUID(), assets: asset ? [...assetLibrary.assets, entry] : assetLibrary.assets.filter(item => item.id !== entry.id),
+      receipts: [...assetLibrary.receipts, { id: args.request_id, hash, assetId: entry.id }].slice(-64) };
+    if (Date.now() >= deadline) return failure('expired', 'The asset request expired before saving.');
+    await hikari.call('app.setUnsaved', { unsaved: true });
+    try {
+      if (asset) await writeJson(entry.path, asset);
+      await writeJson(ASSETS_PATH, next);
+      assetLibrary = next; onAssetsChange(readAssetLibrary(assetLibrary)); onStatus(asset ? 'Asset saved' : 'Asset removed');
+      // No file-removal verb is needed. Reclaim deleted bytes only after the
+      // index commits; failure here cannot invalidate the committed library.
+      if (!asset) await writeJson(entry.path, { deleted: true }).catch(() => {});
+      return { ok: true, status: asset ? 'asset_saved' : 'asset_deleted', persisted: true, asset_id: entry.id, ...readAssetLibrary(assetLibrary) };
+    } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
+  }
   async function save(next) {
     onStatus('Saving…');
     await hikari.call('app.setUnsaved', { unsaved: true });
@@ -65,10 +115,21 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     const hash = await signature(args);
     const receipt = documentState.receipts.find(item => item.id === args.request_id);
     if (receipt) return receipt.hash === hash
-      ? { ok: true, status: 'already_applied', illustration_id: library.activeId, applied_revision: receipt.revision, ...readDocument(documentState), ...readLibrary(library) }
+      ? { ok: true, status: 'already_applied', illustration_id: library.activeId, applied_revision: receipt.revision, inserted_assets: receipt.inserted_assets || [], ...readDocument(documentState), ...readLibrary(library) }
       : failure('request_id_conflict', 'This request_id was already used with different arguments.');
     if (documentState.revision !== args.expected_revision) return { ...failure('revision_conflict', 'The user or another request changed the figure. Read it again before applying.'), revision: documentState.revision };
-    const next = applyOperations(documentState, args.operations, validateSvg);
+    const operations = [], insertedAssets = [];
+    const placementDocument = { ...documentState, canvases: { ...documentState.canvases } };
+    for (const operation of args.operations) {
+      if (operation.op !== 'insert_asset') {
+        operations.push(operation);
+        if (operation.op === 'canvas' && CANVASES.includes(operation.canvas)) placementDocument.canvases[operation.canvas] = { ...placementDocument.canvases[operation.canvas], ...operation.patch };
+        continue;
+      }
+      const instance = instantiateAsset(await loadAsset(operation.asset_id), operation, placementDocument);
+      operations.push(...instance.operations); insertedAssets.push(instance.inserted);
+    }
+    const next = applyOperations(documentState, operations, validateSvg);
     // Decode raster bytes before persistence: invalid/truncated images fail the
     // entire batch, and no inaccessible asset can break future readback.
     // Newly imported images fit their box to the image's aspect ratio (keeping
@@ -88,10 +149,11 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     })));
     if (Date.now() >= deadline) return failure('expired', 'The request expired before application. Read the figure again.');
     const previous = documentState;
-    next.receipts = [...next.receipts, { id: args.request_id, hash, revision: next.revision }].slice(-64);
+    next.receipts = [...next.receipts, { id: args.request_id, hash, revision: next.revision, inserted_assets: insertedAssets }].slice(-64);
+    if (JSON.stringify(next).length > MAX_DOCUMENT_CHARS) throw new Error('The illustration is too large. Use smaller assets.');
     await save(next);
     undoStack.push(previous); if (undoStack.length > 25) undoStack.shift(); redoStack.length = 0; reportHistory();
-    return { ok: true, status: 'applied', persisted: true, illustration_id: library.activeId, ...readDocument(documentState), ...readLibrary(library) };
+    return { ok: true, status: 'applied', persisted: true, illustration_id: library.activeId, inserted_assets: insertedAssets, ...readDocument(documentState), ...readLibrary(library) };
   }
   async function libraryAction(args, deadline) {
     if (args.action === 'list') return { ok: true, status: 'listed', ...readLibrary(library) };
@@ -129,6 +191,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     try {
       args = JSON.parse(JSON.stringify(input));
       if (LIBRARY_ACTIONS.includes(args.action)) validateLibraryRequest(args);
+      else if (ASSET_ACTIONS.includes(args.action)) validateAssetRequest(args);
       else {
         if (args.illustration_id !== undefined && (typeof args.illustration_id !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(args.illustration_id))) throw new Error('Invalid illustration_id.');
         for (const operation of args.operations || []) {
@@ -150,6 +213,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       try {
         if (Date.now() >= deadline) return failure('expired', 'The request expired.');
         if (LIBRARY_ACTIONS.includes(args.action)) return await libraryAction(args, deadline);
+        if (ASSET_ACTIONS.includes(args.action)) return await assetAction(args, deadline);
         if (args.illustration_id && args.illustration_id !== library.activeId) return { ...failure('illustration_changed', 'Another illustration is open. List and open the intended illustration before editing.'), ...readLibrary(library) };
         if (args.action === 'inspection_status') return { ok: true, status: 'inspection_status', illustration_id: library.activeId,
           revision: documentState.revision, inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId) };
@@ -166,7 +230,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
           return { ok: true, status: 'rendered', illustration_id: library.activeId, revision: documentState.revision, ...readView(), previews,
             inspection: inspections.rendered(library.activeId, documentState.revision, inspectionRunId, canvases) };
         }
-        return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readView(),
+        return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary), ...readView(),
           inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId),
           agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
@@ -196,12 +260,26 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         illustrations: [{ id, title: documentState.title, path, updatedAt: new Date().toISOString() }] });
       if (!stored?.workspacePath) await writeJson(path, documentState);
       await writeJson(LIBRARY_PATH, library);
-      await hikari.call('storage.set', { value: { version: 2, libraryPath: LIBRARY_PATH } });
     }
+    if (stored?.assetsPath) {
+      if (stored.assetsPath !== ASSETS_PATH) throw new Error('Invalid reusable asset library path.');
+      assetLibrary = normalizeAssetLibrary(await readJson(ASSETS_PATH));
+    } else {
+      assetLibrary = createAssetLibrary(); await writeJson(ASSETS_PATH, assetLibrary);
+      await hikari.call('storage.set', { value: { version: 2, libraryPath: LIBRARY_PATH, assetsPath: ASSETS_PATH } });
+    }
+    onAssetsChange(readAssetLibrary(assetLibrary));
     publish(); onStatus('Saved');
   })();
   ready.catch(error => onStatus(`Could not open illustration: ${error.message}`));
-  return { ready, request, history, getDocument: () => documentState, getLibrary: () => library && readLibrary(library), getView: readView,
+  return { ready, request, history, getDocument: () => documentState, getLibrary: () => library && readLibrary(library), getAssets: () => assetLibrary && readAssetLibrary(assetLibrary), getView: readView,
+    async manageAsset(action, params = {}) { return enqueue(async () => {
+      try {
+        const args = { action, ...(action === 'asset_save' ? { illustration_id: library.activeId, expected_revision: documentState.revision } : {}),
+          ...params, expected_assets_revision: assetLibrary.revision, request_id: crypto.randomUUID() };
+        validateAssetRequest(args); return await assetAction(args, Infinity);
+      } catch (error) { onStatus(error.message); return failure('failed', error.message); }
+    }); },
     async manage(action, id, title) { return enqueue(async () => {
       try {
         const args = { action, ...(id ? { illustration_id: id } : {}), ...(title ? { title } : {}),

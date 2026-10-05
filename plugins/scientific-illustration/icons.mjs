@@ -8,6 +8,8 @@ const paths = {
   download: ['M12 3v12m-4-4 4 4 4-4M4 16v5h16v-5'],
   undo: ['M9 5 4 10l5 5', 'M4 10h10a6 6 0 0 1 0 12'],
   redo: ['m15 5 5 5-5 5', 'M20 10H10a6 6 0 0 0 0 12'],
+  group: ['M3 3h18v18H3z', 'M7 7h6v6H7zM11 11h6v6h-6z'],
+  ungroup: ['M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4', 'M7 7h6v6H7zM11 11h6v6h-6z'],
   more: ['M5 12h.01M12 12h.01M19 12h.01'],
   down: ['m7 10 5 5 5-5'],
   close: ['m6 6 12 12M6 18 18 6'],
