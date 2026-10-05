@@ -26,6 +26,7 @@ export function initProtocolManagement({
   onProtocolsChanged,
   logNotebookPageEvent,
   selectionInsightsController = null,
+  contextActions = null,
   __globals = {}
 }) {
   const documentRef = __globals.document || globalThis.document;
@@ -215,7 +216,11 @@ export function initProtocolManagement({
     onEditProtocol: editProtocol,
     onDeleteProtocol: deleteProtocol,
     onExportProtocol,
+    contextActions,
     syncSelectionAfterMutation
+  });
+  documentRef?.addEventListener?.('hikari:context-actions-changed', () => {
+    if (localState.activeMenuProtocolId) listController.renderList();
   });
 
   polishController = createProtocolPolishController({

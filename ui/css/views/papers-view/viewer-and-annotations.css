@@ -659,6 +659,12 @@
   height: 19px;
 }
 
+.papers-selection-action-icon--context {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+
 .papers-selection-action-icon .papers-selection-action-accent {
   stroke: var(--theme-accent);
   stroke-width: 2.4;

@@ -7,6 +7,7 @@ import { createAnalysisService } from './analysisService.js';
 import { createSequenceService } from '../modules/sequence-viewer/service.js';
 import { createUndoService } from './undoService.js';
 import { createUnsavedChangesService } from './unsavedChangesService.js';
+import { createContextActionService } from './contextActionService.js';
 
 export {
   createModuleRegistry,
@@ -22,6 +23,7 @@ export {
 
 export function createRendererServices(registry, options = {}) {
   return {
+    contextActions: createContextActionService(registry),
     protocol: createProtocolService(registry, options.protocol || {}),
     notebook: createNotebookService(registry),
     project: createProjectService(registry, options.project || {}),

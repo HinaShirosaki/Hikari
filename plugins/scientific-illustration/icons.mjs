@@ -1,6 +1,11 @@
 import { element } from './artwork.mjs';
 
 const paths = {
+  pointer: ['M5 3v17l5-5 4 7 3-2-4-7h7Z'],
+  lasso: ['M7 18c-4-2-5-5-3-9S13 3 18 6s4 9-1 12-10 3-10 0 4-3 5-1-1 5-4 5'],
+  assets: ['M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
+  scratch: ['M3 4h18v16H3zM15 4v16M3 14h12'],
+  fit: ['M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6'],
   plus: ['M12 5v14M5 12h14'],
   minus: ['M5 12h14'],
   rail: ['m14 6-6 6 6 6'],

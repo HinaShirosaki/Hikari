@@ -126,6 +126,7 @@ export function startHikariCore({
     onPluginPrompt: createPluginPromptHandler({ state,
       getNavigation: () => navigationShell, getModuleRuntime: () => moduleRuntime, setChatContext: setPluginChatContext }),
     onPluginChatContext: setPluginChatContext,
+    onPluginActivate: plugin => navigationShell?.showView(`plugin-${plugin.id}-view`),
     notify: showTransientNotice,
     windowObject,
     api: windowObject.hikariApi || null

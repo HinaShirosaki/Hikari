@@ -15,13 +15,10 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
       void cache.get(id).then(url => { if (image.isConnected) image.src = url; }).catch(() => { image.hidden = true; });
     }
   }, { root: $('saved-assets') });
-  function show() { showAssets(); }
   async function insert(entry, button) {
     const illustrationId = getIllustrationId(), canvas = getCanvas(); button.disabled = true;
     try {
-      const current = await workspace.request({ action: 'read', illustration_id: illustrationId });
-      if (!current.ok) throw new Error(current.error);
-      const dimensions = current.canvases[canvas];
+      const current = workspace.getDocument(), dimensions = current.canvases[canvas];
       // Keep native size unless the component would crowd the destination.
       const scale = Math.min(1, dimensions.width * .7 / entry.width, dimensions.height * .7 / entry.height);
       const result = await workspace.request({ action: 'apply', illustration_id: illustrationId, expected_revision: current.revision, request_id: crypto.randomUUID(),
@@ -80,7 +77,7 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
     try {
       const result = await workspace.manageAsset('asset_save', { ...saveSelection, name: $('asset-name').value });
       if (!result.ok) throw new Error(result.error);
-      $('save-asset-dialog').close(); show(); status('Asset saved for future illustrations');
+      $('save-asset-dialog').close(); showAssets(); status('Asset saved for future illustrations');
     } catch (error) { $('asset-save-error').textContent = error.message; }
     finally { button.disabled = false; }
   });

@@ -8,12 +8,12 @@ const { callImageOutput, imageMimeType, MAX_IMAGE_BYTES } = require('./image-out
 
 const PLUGIN_CANVAS_MCP_TOOL = Object.freeze({
   name: 'plugin_canvas',
-  description: 'Read, edit and render an installed local plugin with agent:canvas permission. Begin with plugin_id and request:{action:"read"} to discover its own request schema and instructions. Render returns native images for visual inspection, even while the view is hidden. Assets import PNG/JPEG/WebP from Hikari storage or Codex native image generation (5 MiB each, 8 MiB combined). Use source:"codex" and the exact output path from Codex image_gen; no shell copy is needed. The host never imports plugin modules.',
+  description: 'Read, edit and render an installed local plugin with agent:canvas permission. Begin with plugin_id and request:{action:"read"} to discover its own request schema and instructions. Render returns native images for visual inspection, even while the view is hidden. Assets import PNG/JPEG/WebP from Hikari storage or Codex native image generation (5 MiB each; no per-call asset count or combined-byte quota). Use source:"codex" and the exact output path from Codex image_gen; no shell copy is needed. Plugins validate their saved scene size. The host never imports plugin modules.',
   annotations: buildWriteToolAnnotations('Installed plugin canvases'),
   inputSchema: { type: 'object', additionalProperties: false, required: ['plugin_id', 'request'], properties: {
     plugin_id: { type: 'string', minLength: 1, maxLength: 100, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' },
     request: { type: 'object', description: 'Plugin-owned request. Start with {action:"read"}.' },
-    assets: { type: 'array', maxItems: 8, items: { type: 'object', additionalProperties: false, required: ['id', 'path'], properties: {
+    assets: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'path'], properties: {
       id: { type: 'string', minLength: 1, maxLength: 100 },
       path: { type: 'string', minLength: 1, maxLength: 2400, description: 'Image path. Default: inside Hikari storage. With source:"codex": exact absolute native output path, or path relative to the managed Codex generated_images folder.' },
       source: { type: 'string', enum: ['storage', 'codex'], description: 'Defaults to storage. codex reads only the Hikari-managed CODEX_HOME/generated_images folder; imported bytes persist in the plugin scene.' }
@@ -27,7 +27,6 @@ async function callPluginCanvas(input = {}, context = {}, deps = {}) {
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(input.plugin_id)) return fail('invalid_arguments', 'plugin_id must be a kebab-case plugin ID.');
   if (JSON.stringify(input.request).length > 12000000) return fail('invalid_arguments', 'Plugin requests must be at most 12 million characters.');
   const assets = Object.create(null);
-  let size = 0;
   for (const asset of input.assets || []) {
     if (Object.hasOwn(assets, asset.id)) return fail('invalid_arguments', 'Asset IDs must be unique.');
     let imageDeps = deps;
@@ -50,9 +49,7 @@ async function callPluginCanvas(input = {}, context = {}, deps = {}) {
     }
     const image = await callImageOutput({ path: asset.path, alt: 'Plugin canvas asset' }, context, imageDeps);
     if (!image.ok) return fail(image.status, image.error);
-    size += image.image_artifact.byte_length;
-    if (size > 8 * 1024 * 1024) return fail('invalid_arguments', 'Combined assets must be at most 8 MiB.');
-    assets[asset.id] = { mime_type: image.image_artifact.mime_type, data_url: image.image_artifact.data_url };
+    assets[asset.id] = { mime_type: image.image_artifact.mime_type, data_url: image.image_artifact.data_url, source: asset.source || 'storage' };
   }
   const result = await runAppTool({ runTool: deps.runTool, toolId: 'plugin-canvas', args: { plugin_id: input.plugin_id, request: input.request, assets }, context });
   if (result?.ok && result.previews !== undefined) {

@@ -48,13 +48,14 @@ export function transformSelection(objects, patch) {
   }));
 }
 
-export function resizeSelection(objects, direction, dx, dy) {
-  const box = selectionBounds(objects), [horizontal, vertical] = RESIZE_HANDLES[direction];
+export function resizeSelection(objects, direction, dx, dy, box = selectionBounds(objects)) {
+  const original = selectionBounds(objects), [horizontal, vertical] = RESIZE_HANDLES[direction];
   const factor = horizontal && vertical
     ? 1 + (horizontal * dx * box.width + vertical * dy * box.height) / (box.width ** 2 + box.height ** 2)
     : 1 + (horizontal ? horizontal * dx / box.width : vertical * dy / box.height);
   const limits = scaleLimits(objects), scale = Math.max(limits.min, Math.min(limits.max, factor));
   const width = box.width * scale, height = box.height * scale;
-  return { x: box.x + (horizontal - 1) * (width - box.width) / 2,
-    y: box.y + (vertical - 1) * (height - box.height) / 2, width, height };
+  return { x: box.x + (horizontal - 1) * (width - box.width) / 2 + (original.x - box.x) * scale,
+    y: box.y + (vertical - 1) * (height - box.height) / 2 + (original.y - box.y) * scale,
+    width: original.width * scale, height: original.height * scale };
 }

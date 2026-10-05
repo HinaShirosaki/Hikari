@@ -10,6 +10,7 @@ export function createProtocolListController({
   onEditProtocol,
   onDeleteProtocol,
   onExportProtocol,
+  contextActions = null,
   syncSelectionAfterMutation
 }) {
   function ensureProtocolTimestamps() {
@@ -134,6 +135,7 @@ export function createProtocolListController({
             <div class="protocol-action-menu protocol-preview-block" role="menu">
               <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="edit" data-protocol-id="${protocol.id}">Edit</button>
               <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="export" data-protocol-id="${protocol.id}">Export PDF</button>
+              ${(contextActions?.list('protocol') || []).map(action => `<button type="button" class="ghost-btn protocol-action-item" data-protocol-action="plugin" data-context-action="${safeText(action.key)}" data-protocol-id="${protocol.id}" ${action.requiresAgent ? 'data-requires-agent' : ''}>${safeText(action.label)}</button>`).join('')}
               <button type="button" class="ghost-btn protocol-action-item protocol-action-item-danger" data-protocol-action="delete" data-protocol-id="${protocol.id}">Delete</button>
             </div>
           ` : ''}
@@ -195,10 +197,18 @@ export function createProtocolListController({
     });
 
     ui.protocolList.querySelectorAll('[data-protocol-action]').forEach((button) => {
-      button.addEventListener('click', () => {
+      button.addEventListener('click', async () => {
         const action = String(button.dataset.protocolAction || '');
         const protocolId = String(button.dataset.protocolId || '');
         localState.activeMenuProtocolId = '';
+
+        if (action === 'plugin') {
+          const key = button.dataset.contextAction;
+          renderList();
+          const result = await contextActions.invoke(key, { kind: 'protocol', protocolId });
+          if (!result.ok) globalThis.alert?.(result.error || 'Could not open the plugin action.');
+          return;
+        }
 
         if (action === 'edit') {
           renderList();

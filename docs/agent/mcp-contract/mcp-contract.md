@@ -40,13 +40,13 @@ Recovery snapshots and a prepared journal record are saved before mutation. On r
 `agent:canvas` permission. Start with `{plugin_id:"your-plugin",request:{action:"read"}}`
 and follow the returned plugin-owned schema and instructions. Render returns
 native images even when the workspace is hidden. Optional PNG/JPEG/WebP assets
-(5 MiB each, 8 MiB per call) come from Hikari storage (`source:"storage"`, the
+(5 MiB each, without a per-call count or combined-byte quota) come from Hikari storage (`source:"storage"`, the
 default) or from Codex image generation (`source:"codex"`, the exact output
 path inside the managed `CODEX_HOME/generated_images` folder; no copy needed).
 Chats started from a canvas plugin enable Codex image generation. When the
 plugin's `read` reports `inspection.required`, the run cannot complete until its
 `inspect` succeeds for the latest revision. Plugins
-keep scene logic and rendering inside their own installable folders.
+keep scene logic, saved scene size validation and rendering inside their own installable folders.
 
 Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
 

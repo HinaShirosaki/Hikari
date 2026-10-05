@@ -49,6 +49,7 @@ export const papersManifest = {
     document: rootDocument,
     window: windowObject,
     onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper,
+    contextActions: rendererServices.contextActions,
     onActivePaperChanged: () => {
       modules?.agentChatRail?.render?.();
     },

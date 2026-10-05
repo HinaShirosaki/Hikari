@@ -183,7 +183,7 @@ test('failed multi-operation insertion leaves all scene objects and files unchan
 
 test('asset persistence corruption is reported without silently clearing the library', async () => {
   const host = fixture(), w = host.open(); await w.ready; await seed(w); await w.request(await saveArgs(w));
-  const bad = { ...host.json(ASSETS_PATH), assets: [{ ...host.json(ASSETS_PATH).assets[0], path: '../secret.json' }] };
+  const bad = { ...host.json(ASSETS_PATH), assets: [{ ...host.json(ASSETS_PATH).assets[0], id: '../secret' }] };
   host.files.set(ASSETS_PATH, encodeText(JSON.stringify(bad))); const writes = host.writes.length;
   await assert.rejects(host.open().ready, /Invalid reusable asset entry/); assert.equal(host.writes.length, writes);
   assert.throws(() => normalizeAssetLibrary(bad), /Invalid reusable asset entry/);

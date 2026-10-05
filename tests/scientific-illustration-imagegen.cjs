@@ -26,8 +26,25 @@ async function fixture(t) {
   const importAsset = (asset, context) => gateway.callGatewayTool('plugin_canvas', {
     plugin_id: 'scientific-illustration', request: { action: 'apply' }, assets: [{ id: 'component', ...asset }]
   }, context);
-  return { temp, storage, home, generated, nativePath, calls, importAsset };
+  return { temp, storage, home, generated, nativePath, calls, importAsset, gateway };
 }
+
+test('native image imports have no per-call asset-count or aggregate-byte quota', async t => {
+  const f = await fixture(t);
+  const assets = Array.from({ length: 12 }, (_, index) => ({ id: `component-${index}`, source: 'codex', path: f.nativePath }));
+  const input = { plugin_id: 'scientific-illustration', request: { action: 'apply' }, assets };
+  assert.equal((await f.gateway.callGatewayTool('plugin_canvas', input)).ok, true);
+  assert.equal(Object.keys(f.calls.at(-1).assets).length, 12);
+  // Valid image header, padded fixture bytes. No live generation or decoder here.
+  const large = Buffer.alloc(4600000); png.copy(large);
+  await fs.writeFile(path.join(f.generated, 'large.png'), large);
+  assert.equal((await f.gateway.callGatewayTool('plugin_canvas', { ...input,
+    assets: assets.slice(0, 2).map(asset => ({ ...asset, path: 'large.png' })) })).ok, true);
+  assert.equal(Object.keys(f.calls.at(-1).assets).length, 2);
+  const calls = f.calls.length;
+  assert.equal((await f.gateway.callGatewayTool('plugin_canvas', { ...input, assets: [assets[0], assets[0]] })).status, 'invalid_arguments');
+  assert.equal(f.calls.length, calls, 'Duplicate asset IDs still reject before canvas mutation');
+});
 
 test('fresh and resumed canvas requests enable native image generation without relaxing the sandbox', () => {
   for (const build of [buildCodexCliExecArgs, buildCodexCliExecResumeArgs]) {
@@ -53,9 +70,11 @@ test('native outputs outside Hikari storage import as embedded bytes using exact
   for (const sourcePath of [f.nativePath, 'component.png']) {
     assert.equal((await f.importAsset({ source: 'codex', path: sourcePath })).ok, true);
     assert.equal(f.calls.at(-1).assets.component.data_url, `data:image/png;base64,${png.toString('base64')}`);
+    assert.equal(f.calls.at(-1).assets.component.source, 'codex', 'Plugin can identify the authenticated image source');
     assert.equal(f.calls.at(-1).assets.component.path, undefined, 'Plugin receives bytes, no host path');
   }
   assert.equal((await f.importAsset({ path: 'supplied.png' })).ok, true);
+  assert.equal(f.calls.at(-1).assets.component.source, 'storage');
   assert.equal((await f.importAsset({ source: 'storage', path: f.nativePath })).status, 'invalid_path');
   assert.equal((await callImageOutput({ path: f.nativePath, alt: 'component' }, {}, { workspacePath: f.storage })).status,
     'invalid_path', 'General image output remains confined to Hikari storage');

@@ -106,6 +106,42 @@ function textArtwork(object) {
   return text;
 }
 
+let textMeasureSurface;
+const textBoundsCache = new Map();
+export function clearTextBounds() { textBoundsCache.clear(); }
+function localTextBounds(object) {
+  const key = JSON.stringify([object.text, object.fontFamily, object.fontSize, object.fontWeight,
+    object.italic, object.underline, object.align, object.anchor, object.width, object.height]);
+  if (textBoundsCache.has(key)) return textBoundsCache.get(key);
+  if (!textMeasureSurface) {
+    textMeasureSurface = element('svg', { width: 0, height: 0, 'aria-hidden': 'true' });
+    // Measure at a larger scale to avoid rounding whole font pixels in figure
+    // units; selection stays precise even at the editor's maximum 8x zoom.
+    textMeasureSurface.style.cssText = 'position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;overflow:hidden;transform:scale(16);transform-origin:0 0';
+    document.body.append(textMeasureSurface);
+  }
+  const text = textArtwork(object);
+  textMeasureSurface.append(text);
+  const measured = text.getBBox(); text.remove();
+  // Empty labels retain a tiny target; their authored layout box is never an
+  // invisible obstacle over nearby artwork. Multiline text uses the full union.
+  const box = { x: measured.x, y: measured.y, width: Math.max(1, measured.width), height: Math.max(1, measured.height) };
+  if (textBoundsCache.size >= 512) textBoundsCache.clear();
+  textBoundsCache.set(key, box);
+  return box;
+}
+
+// Editing bounds are separate from the saved layout box, which determines
+// text alignment, anchoring and rotation. No saved label or export moves.
+export function interactionBox(object) {
+  if (object.type !== 'text') return object;
+  const box = localTextBounds(object), angle = object.rotation * Math.PI / 180;
+  const dx = box.x + box.width / 2 - object.width / 2, dy = box.y + box.height / 2 - object.height / 2;
+  return { ...object, width: box.width, height: box.height,
+    x: object.x + object.width / 2 + dx * Math.cos(angle) - dy * Math.sin(angle) - box.width / 2,
+    y: object.y + object.height / 2 + dx * Math.sin(angle) + dy * Math.cos(angle) - box.height / 2 };
+}
+
 export function objectGroup(object, interactive = false, scope = 'thumbnail') {
   // Length-prefix the logical ID so hyphens cannot merge two different pairs.
   // Scopes also separate canvas objects from their layer thumbnails.
@@ -115,7 +151,8 @@ export function objectGroup(object, interactive = false, scope = 'thumbnail') {
   if (interactive) {
     group.setAttribute('role', 'button'); group.setAttribute('tabindex', '0');
     group.setAttribute('aria-label', `${object.name}, ${object.type}`);
-    group.append(element('rect', { width: object.width, height: object.height, fill: 'transparent', 'pointer-events': 'all', class: 'object-hit' }));
+    const box = object.type === 'text' ? localTextBounds(object) : { x: 0, y: 0, width: object.width, height: object.height };
+    group.append(element('rect', { ...box, fill: 'transparent', 'pointer-events': 'all', class: 'object-hit' }));
   }
   const artwork = object.type === 'vector' ? vectorArtwork(object, namespace)
     : object.type === 'text' ? textArtwork(object)
@@ -138,7 +175,7 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
     svg.append(group);
   }
   if (interactive) {
-    const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas);
+    const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas).map(interactionBox);
     if (members.length > 1) {
       const outlines = element('g', { class: 'selection-members', 'pointer-events': 'none', 'aria-hidden': 'true' });
       for (const object of members.filter(object => object.visible)) {
@@ -149,9 +186,10 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
       }
       svg.append(outlines);
     }
+    const single = documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
     const selected = members.length > 1 && members.some(object => object.visible)
       ? { ...selectionBounds(members), id: 'selection' }
-      : documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
+      : single && interactionBox(single);
     if (selected) {
       const { x, y, width: w, height: h, rotation } = selected;
       const handles = element('g', { transform: `translate(${x} ${y}) rotate(${rotation} ${w / 2} ${h / 2})`, class: 'selection', 'pointer-events': 'none' });

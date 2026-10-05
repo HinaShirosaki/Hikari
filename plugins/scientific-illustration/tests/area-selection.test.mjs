@@ -54,3 +54,12 @@ test('empty, single-point and collinear gestures select nothing', () => {
     assert.deepEqual(regionSelection(scene, 'main', polygon), []);
   }
 });
+
+test('measured text bounds exclude blank layout space and include overflowing glyphs without mutating the model', () => {
+  const scene = document(object('label', 10, 10, 300, 160, { type: 'text' }));
+  const before = JSON.stringify(scene);
+  const getBounds = o => ({ ...o, x: 290, y: 30, width: 80, height: 24 });
+  assert.deepEqual(regionSelection(scene, 'main', rectangle(15, 15, 100, 100), { getBounds }), []);
+  assert.deepEqual(regionSelection(scene, 'main', rectangle(340, 30, 10, 10), { getBounds }), ['label']);
+  assert.equal(JSON.stringify(scene), before);
+});

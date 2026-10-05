@@ -99,7 +99,8 @@ await hikari.call('app.info');
 //   storage: { configured: true },
 //   layout: {
 //     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false },
-//     agentChatRail: { expanded: false, available: true }
+//     agentChatRail: { expanded: false, available: true },
+//     workspaceTools: { available: true }
 //   }
 // }
 ```
@@ -213,6 +214,87 @@ between a save that fails and a save they saw coming.
 ---
 
 ## 3. Write verbs
+
+### `app.setContextActions` / `app.readContextAction` / `app.respondContextAction` — `layout`
+
+`app.setContextActions` registers up to eight declarative actions in the saved
+Protocol `…` menu and the paper PDF text-selection toolbar. Actions belong to
+the registered plugin frame and disappear when it reloads or loses its origin
+grant. Hikari renders their labels as text and supplies the toolbar icon.
+
+```js
+await hikari.call('app.setContextActions', { actions: [
+  { id: 'generate-illustration', label: 'Generate illustration',
+    contexts: ['protocol', 'paper-selection'], requiresAgent: true }
+] });
+hikari.on('app.contextAction', async ({ id, actionId }) => {
+  const source = await hikari.call('app.readContextAction', { id });
+  // Plugin owns creating its item, saving the source and building the prompt.
+  await createItemFromSource(source);
+  await hikari.call('app.respondContextAction', { id, result: { ok: true } });
+});
+```
+
+The user click opens the plugin workspace and grants only that selected source
+for this handoff. `app.readContextAction` takes the event's correlation ID, not
+an arbitrary record ID or file path. Protocol data is a snapshot of the saved
+record. Paper data includes its selected text and page, display metadata, and
+the saved Markdown read from the paper's recorded KnowledgeBase path (including
+title-named files). It includes `markdownStatus`, `markdownRelativePath` and
+`markdownTruncated`; unavailable context is explicit. Markdown is bounded at
+200,000 characters, and passages at 30,000. Source documents are reference data,
+not instructions for the plugin or agent.
+
+`app.respondContextAction` consumes the grant with `result:{ok:true}` or
+`result:{ok:false,error:"…"}`. Acknowledge source acceptance within 30 seconds;
+do not wait for a model run to finish. Other frames, revoked registrations,
+storage-folder changes and expired handoffs cannot read the source. These
+user-initiated grants need no library-wide read permission. Older hosts reject
+these verbs; plugins should retain their standalone workflow in that case.
+
+### `app.setWorkspaceTools` — `layout`
+
+Registers up to 24 controls in Hikari's shared right toolbar, beside the existing
+agent chat toggle. Only the active plugin's controls appear. The plugin retains
+its editor and panels; the host renders buttons from a fixed icon catalog and
+sends `app.workspaceTool` events to the registered frame and origin.
+
+```js
+await hikari.call('app.setWorkspaceTools', { tools: [
+  { id: 'layers', label: 'Layers', icon: 'layers', group: 'panels', expanded: false },
+  { id: 'zoom', kind: 'output', label: '100%', group: 'zoom' }
+] });
+hikari.on('app.workspaceTool', ({ id, y }) => {
+  // Open the existing panel or menu. y is relative to the plugin view.
+});
+```
+
+Each button has a unique lowercase `id`, a `label` (1–100 characters), and an
+`icon`: `pointer`, `lasso`, `plus`, `undo`, `redo`, `group`, `ungroup`, `layers`,
+`assets`, `scratch`, `minus`, or `fit`. Optional boolean `disabled`, `pressed`,
+and `expanded` fields mirror editor state. `group` separates related tools.
+An item with `kind:"output"` displays its label without accepting clicks.
+HTML, custom SVG, and arbitrary fields are rejected. Updates replace the
+configuration; an empty list clears it. Optional `focusId` returns keyboard
+focus to an enabled button, including when closing a plugin-owned panel.
+
+Check `app.info.layout.workspaceTools.available` before registering on older
+hosts and provide local controls when unavailable. Tools remain available when
+Codex is disconnected. The configuration is presentation state and does not
+change the plugin's stored artwork or canvas coordinate system.
+
+### `app.setAgentChatExpanded` — `agent:chat`
+
+Opens or folds the existing chat rail for the active plugin. An inactive plugin
+cannot change another workspace's rail. Use this to coordinate tool panels with
+chat; `app.context.layout.agentChatRail.expanded` reports the resulting state.
+
+```js
+await hikari.call('app.setAgentChatExpanded', { expanded: false });
+```
+
+`expanded` must be boolean. Opening requires the host's normal Codex availability
+gate. This call reuses the plugin's existing item-scoped conversation.
 
 ### `app.setLeftRailFolded` — `layout`
 
@@ -615,7 +697,8 @@ Plugins own validation, edits, durable persistence and rendering. Check the
 request IDs. Render while hidden and return
 `previews:[{canvas,width,height,mime_type,data_url}]` for native MCP images.
 The host validates PNG/JPEG/WebP bytes: 5 MiB each, at most eight previews.
-`assets` maps image IDs to `{mime_type,data_url}` (5 MiB each, 8 MiB combined).
+`assets` maps image IDs to `{mime_type,data_url,source}` (5 MiB each, with no per-call
+asset-count or combined-byte quota). Plugins validate their saved scene size.
 The MCP caller supplies `assets:[{id,path,source?}]`: `source:"storage"` (default)
 confines paths to Hikari storage; `source:"codex"` confines paths to the
 Hikari-managed `CODEX_HOME/generated_images` folder and accepts the exact native
