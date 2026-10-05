@@ -1,22 +1,31 @@
 import { createWorkspace, encodeText } from './workspace.mjs';
-import { scene, renderPreview, objectGroup, element, stretchSvg } from './artwork.mjs';
+import { scene, renderPreview, objectGroup, element, stretchSvg, interactionBox, clearTextBounds } from './artwork.mjs';
 import { initPluginLeftRailResizer } from './left-rail.mjs';
 import { icon, mountIcons } from './icons.mjs';
 import { COMPLEXITY_PROFILES } from './complexity.mjs';
-import { resizeObject, scaleTextObject } from './geometry.mjs';
+import { imageGenerationSummary } from './image-generation.mjs';
+import { resizeObject, scaleTextObject, resizeAnchor } from './geometry.mjs';
 import { createCanvasViewport } from './viewport.mjs';
 import { selectionBounds, resizeSelection, transformSelection } from './grouping.mjs';
 import { initAssetsPanel } from './assets-panel.mjs';
 import { createComponentRail } from './component-rail.mjs';
 import { rectanglePoints, regionSelection } from './area-selection.mjs';
+import { createWorkspaceTools } from './workspace-tools.mjs';
+import { installSourceActions } from './source-context.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
 const properties = $('properties');
-let assetsPanel;
-const componentRail = createComponentRail({ document, onChange: name => { if (name === 'assets') assetsPanel?.render(); } });
+let assetsPanel, workspaceTools;
+const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
+  if (name === 'assets') assetsPanel?.render();
+  if (name && workspaceTools?.isHosted()) void hikari.call('app.setAgentChatExpanded', { expanded: false }).catch(() => {});
+  workspaceTools?.sync();
+} });
 mountIcons();
 let selectedId = '', selectedIds = [], activeCanvas = 'main', illustrationId = '', state, drag = null, pendingRaster = null, replaceRasterId = '', sourceTarget = null;
+let chatExpanded = false, canDraw = true;
+let imagePreferenceSave = Promise.resolve(), pendingImagePreference = null;
 let areaDrag = null;
 const status = text => { $('status').textContent = text; };
 let chatContextKey = '';
@@ -30,7 +39,7 @@ function syncChatContext(id, title) {
 }
 const workspace = createWorkspace({ hikari, onChange: render, onLibraryChange: renderIllustrations, onViewChange: renderView,
   onAssetsChange: library => assetsPanel?.render(library),
-  onHistoryChange: ({ canUndo, canRedo }) => { $('undo').disabled = !canUndo; $('redo').disabled = !canRedo; }, onStatus: status });
+  onHistoryChange: ({ canUndo, canRedo }) => { $('undo').disabled = !canUndo; $('redo').disabled = !canRedo; workspaceTools?.sync(); }, onStatus: status });
 const leftRail = initPluginLeftRailResizer({ commitWidth: width => hikari.call('app.setLeftRailWidth', { width }),
   commitFolded: folded => hikari.call('app.setLeftRailFolded', { folded }), onCommitError: error => status(error.message) });
 const selected = () => selectedIds.length === 1 ? state?.objects.find(obj => obj.id === selectedId) : undefined;
@@ -94,6 +103,7 @@ function renderZoom() {
   $('zoom-out').disabled = view.scale <= 0.1;
   $('zoom-in').disabled = view.scale >= 8;
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
+  workspaceTools?.sync();
 }
 const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); });
 function renderCanvas(canvas, documentState = state) {
@@ -105,6 +115,10 @@ function renderCanvas(canvas, documentState = state) {
   if (focusedId && selectedIds.includes(focusedId)) stage.querySelector(`[data-object-id="${focusedId}"]`)?.focus({ preventScroll: true });
   if (areaDrag?.canvas === canvas) renderSelectionRegion();
 }
+document.fonts.addEventListener('loadingdone', () => {
+  clearTextBounds();
+  if (state && !drag && !areaDrag) for (const canvas of ['main', 'scratch']) renderCanvas(canvas);
+});
 for (const [id, factor] of [['zoom-out', 1 / 1.25], ['zoom-in', 1.25]]) {
   $(id).addEventListener('click', () => {
     if (drag || areaDrag) return;
@@ -163,8 +177,9 @@ function render(next, id = illustrationId) {
   $('figure-title').value = state.title;
   $('complexity').value = state.complexity;
   $('complexity').title = COMPLEXITY_PROFILES[state.complexity].summary;
+  renderImagePreference(pendingImagePreference?.id === id ? pendingImagePreference.percent : state.imageGenerationPercent);
   $('canvas-empty').hidden = state.objects.some(object => object.canvas === 'main');
-  $('prompt').placeholder = state.objects.length ? 'Describe a change…' : 'Describe your figure…';
+  syncComposer();
   $('place-scratch').disabled = !state.objects.some(object => object.canvas === 'scratch');
   document.querySelectorAll('button[data-canvas]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvas === activeCanvas)));
   renderLayers(); renderProperties();
@@ -300,7 +315,7 @@ function renderProperties() {
   const canUngroup = state.groups.some(group => group.ids.every(id => selectedIds.includes(id)));
   $('ungroup-selection').disabled = !canUngroup;
   for (const id of ['save-selection-asset', 'menu-save-selection-asset']) $(id).disabled = !selectedIds.length;
-  $('selection-hint').hidden = Boolean(object) || !state.objects.length;
+  workspaceTools?.sync();
   if (!object) return;
   $('selection-type').textContent = object.type === 'group' ? `${selectedIds.length} layers` : object.type === 'text' ? 'Text' : object.type === 'vector' ? 'Vector' : 'Image';
   properties.elements.name.disabled = object.type === 'group' && !group;
@@ -514,7 +529,12 @@ function setSelectionTool(mode) {
   cancelAreaSelection();
   $('selection-tool').value = mode;
   for (const canvas of ['main', 'scratch']) $(`${canvas}-canvas`).dataset.selectionTool = mode;
+  $('pointer-tool').setAttribute('aria-pressed', String(mode === 'pointer'));
+  $('freehand-tool').setAttribute('aria-pressed', String(mode === 'freehand'));
+  workspaceTools?.sync();
 }
+$('pointer-tool').addEventListener('click', () => setSelectionTool('pointer'));
+$('freehand-tool').addEventListener('click', () => setSelectionTool('freehand'));
 $('selection-tool').addEventListener('change', event => setSelectionTool(event.target.value));
 setSelectionTool('pointer');
 for (const key of ['main', 'scratch']) {
@@ -557,7 +577,8 @@ for (const key of ['main', 'scratch']) {
     }
     const objects = selectedObjects(), object = objects.length === 1 ? objects[0] : selectionTarget();
     if (!object) return;
-    drag = { pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), ids: [...selectedIds], start, revision: state.revision, resizing: hit.dataset.resizeDirection, preview: null };
+    const boxes = objects.map(interactionBox);
+    drag = { pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start, revision: state.revision, resizing: hit.dataset.resizeDirection, preview: null };
     if (drag.resizing && object.type === 'vector') drag.resizeSvg = stretchSvg(object.svg);
     render(state); stage.setPointerCapture(event.pointerId); event.preventDefault();
   });
@@ -567,7 +588,15 @@ for (const key of ['main', 'scratch']) {
     const current = point(stage.querySelector('svg'), event), dx = current.x - drag.start.x, dy = current.y - drag.start.y;
     let patch;
     if (drag.resizing) {
-      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy) : resizeObject(drag.object, drag.resizing, dx, dy);
+      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy, drag.bounds) : resizeObject(drag.object, drag.resizing, dx, dy, drag.bounds);
+      if (drag.objects.some(object => object.type === 'text')) {
+        // Browser glyph metrics can round at fractional font sizes. Measure
+        // the resized label again so its actual opposite handle stays fixed.
+        const previews = drag.objects.length > 1 ? transformSelection(drag.objects, patch) : [{ ...drag.object, ...patch }];
+        const boxes = previews.map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
+        const before = resizeAnchor(drag.bounds, drag.resizing), after = resizeAnchor(box, drag.resizing);
+        patch.x += before.x - after.x; patch.y += before.y - after.y;
+      }
       if (drag.resizeSvg && (patch.width !== drag.object.width || patch.height !== drag.object.height)) patch.svg = drag.resizeSvg;
     }
     else patch = { x: Math.max(-16000, Math.min(16000, drag.object.x + dx)), y: Math.max(-16000, Math.min(16000, drag.object.y + dy)) };
@@ -581,7 +610,7 @@ for (const key of ['main', 'scratch']) {
       updateSelectionRegion(event, true);
       const finished = areaDrag;
       const polygon = finished.mode === 'rectangle' ? rectanglePoints(finished.start, finished.end) : finished.points;
-      const ids = finished.moved ? regionSelection(state, key, polygon, { individual: finished.individual })
+      const ids = finished.moved ? regionSelection(state, key, polygon, { individual: finished.individual, getBounds: interactionBox })
         : finished.hitId ? !finished.individual && state.groups.find(group => group.ids.includes(finished.hitId))?.ids || [finished.hitId] : [];
       cancelAreaSelection();
       setSelection(finished.additive ? [...finished.ids, ...ids] : ids); render(state); return;
@@ -627,13 +656,18 @@ document.addEventListener('keydown', event => {
     if (areaDrag) { cancelAreaSelection(); event.preventDefault(); return; }
     if (document.querySelector('dialog[open]')) return;
     const menu = document.querySelector('.popover[open]');
-    if (menu) { menu.open = false; menu.querySelector('summary').focus(); event.preventDefault(); return; }
+    if (menu) {
+      menu.open = false;
+      if (menu.id === 'add-menu') workspaceTools.focus('add-menu');
+      else menu.querySelector('summary').focus();
+      event.preventDefault(); return;
+    }
     if (selectedIds.length) { setSelection([]); drag = null; render(state); event.preventDefault(); }
     return;
   }
   if (event.target.closest('input, textarea, select')) return;
   if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
-    const mode = { v: 'pointer', m: 'pointer', l: 'freehand' }[event.key.toLowerCase()];
+    const mode = { v: 'pointer', l: 'freehand' }[event.key.toLowerCase()];
     if (mode && !drag) { setSelectionTool(mode); event.preventDefault(); return; }
   }
   if (areaDrag) return;
@@ -665,6 +699,48 @@ async function exportFigure(format) {
 }
 $('export-svg').addEventListener('click', () => void exportFigure('svg')); $('export-png').addEventListener('click', () => void exportFigure('png'));
 $('complexity').addEventListener('change', event => void edit([{ op: 'complexity', complexity: event.target.value }]));
+function chosenImagePercent() {
+  const slider = $('image-generation-percent');
+  // Keep existing/API targets exact until the user chooses a slider step.
+  return $('image-generation-enabled').checked ? Number(slider.dataset.percent ?? slider.value) : null;
+}
+function renderImagePreference(percent) {
+  const enabled = percent !== null;
+  $('image-generation-enabled').checked = enabled;
+  $('image-generation-percent').disabled = !enabled;
+  $('image-generation-percent').value = enabled ? percent : 50;
+  $('image-generation-percent').dataset.percent = enabled ? percent : 50;
+  $('image-generation-value').textContent = enabled ? `${percent}%` : 'Auto';
+  $('image-generation-summary').textContent = imageGenerationSummary(percent);
+}
+function saveImagePreference() {
+  const preference = { id: illustrationId, percent: chosenImagePercent() };
+  pendingImagePreference = preference;
+  imagePreferenceSave = imagePreferenceSave.then(async () => {
+    // Serialize rapid toggle/slider edits and pin their originating figure.
+    const current = await workspace.request({ action: 'read', illustration_id: preference.id });
+    if (!current.ok) throw new Error(current.error);
+    const result = await workspace.request({ action: 'apply', illustration_id: preference.id, expected_revision: current.revision,
+      request_id: crypto.randomUUID(), operations: [{ op: 'image_generation', imageGenerationPercent: preference.percent }] });
+    if (!result.ok) throw new Error(result.error);
+  }).catch(error => status(error.message)).finally(() => {
+    if (pendingImagePreference === preference) {
+      pendingImagePreference = null;
+      if (state && illustrationId === preference.id) renderImagePreference(state.imageGenerationPercent);
+    }
+  });
+}
+$('image-generation-enabled').addEventListener('change', () => {
+  renderImagePreference(chosenImagePercent()); saveImagePreference();
+});
+function showImageSliderPercent() {
+  const slider = $('image-generation-percent');
+  slider.dataset.percent = slider.value;
+  $('image-generation-value').textContent = `${slider.value}%`;
+  $('image-generation-summary').textContent = imageGenerationSummary(Number(slider.value));
+}
+$('image-generation-percent').addEventListener('input', showImageSliderPercent);
+$('image-generation-percent').addEventListener('change', () => { showImageSliderPercent(); saveImagePreference(); });
 $('prompt').addEventListener('input', () => { $('prompt').style.height = 'auto'; $('prompt').style.height = `${Math.min(120, $('prompt').scrollHeight)}px`; });
 $('prompt').addEventListener('keydown', event => {
   if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); $('prompt-form').requestSubmit(); }
@@ -676,10 +752,13 @@ $('prompt-form').addEventListener('submit', async event => {
     const prompt = $('prompt').value.trim();
     if (!prompt || prompt.length > 2300) throw new Error('Describe a figure in at most 2300 characters.');
     const complexity = $('complexity').value;
+    const imageGenerationPercent = chosenImagePercent();
+    await imagePreferenceSave;
     // Read after queued edits so a level selected just before Send is durable.
     const current = await workspace.request({ action: 'read', illustration_id: illustrationId });
     if (!current.ok) throw new Error(current.error);
     if (current.complexity !== complexity) throw new Error('The complexity changed or could not be saved. Check the selected level and try again.');
+    if (current.imageGenerationPercent !== imageGenerationPercent) throw new Error('The image generation preference changed or could not be saved. Check Figure options and try again.');
     // Hikari's item-scoped agent context directs Codex to read the canvas contract.
     // Keep that context out of the user message and its visible chat history.
     const result = await hikari.call('agent.chat', { message: prompt,
@@ -695,21 +774,29 @@ $('prompt-form').addEventListener('submit', async event => {
   finally { $('generate').disabled = false; }
 });
 hikari.on('agent.canvas', async ({ id, request, assets, deadline, inspectionRunId }) => {
-  const result = await workspace.request(request, deadline, assets, { inspectionRunId });
+  const result = await workspace.request(request, deadline, assets, { inspectionRunId, agentRequest: true });
   await hikari.call('agent.respond', { id, result }).catch(error => status(error.message));
 });
-function theme(info) {
-  const chatExpanded = info?.layout?.agentChatRail?.expanded === true;
-  // Hosts without Codex report available:false; older hosts omit the field.
-  const canDraw = info?.layout?.agentChatRail?.available !== false;
-  $('prompt-form').hidden = chatExpanded || !canDraw;
+function syncComposer() {
+  const hasComponents = Boolean(state?.objects.length);
+  $('prompt-form').hidden = !state || hasComponents || chatExpanded || !canDraw;
   $('canvas-empty-hint').textContent = !canDraw ? 'Add a layer to start your figure.'
-    : chatExpanded ? 'Describe your figure in the agent chat, or add a layer.' : 'Describe your figure below, or add a layer.';
+    : hasComponents ? 'Continue your figure in the agent chat, or add a layer.'
+      : chatExpanded ? 'Describe your figure in the agent chat, or add a layer.' : 'Describe your figure below, or add a layer.';
+}
+function theme(info) {
+  chatExpanded = info?.layout?.agentChatRail?.expanded === true;
+  if (chatExpanded) componentRail.close();
+  workspaceTools.connect(info);
+  // Hosts without Codex report available:false; older hosts omit the field.
+  canDraw = info?.layout?.agentChatRail?.available !== false;
+  syncComposer();
   document.body.classList.toggle('theme-night', info?.appearance?.mode === 'night');
   document.documentElement.style.setProperty('--app-font-size', `${info?.appearance?.fontSize || 16}px`);
   leftRail.applyContext(info?.layout?.leftRail || {});
   if (Array.isArray(info?.permissions) && !info.permissions.includes('layout')) leftRail.destroy();
 }
+workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) for (const canvas of ['main', 'scratch']) renderCanvas(canvas); } });
 hikari.on('app.context', info => { theme(info); if (info.changed === 'storage') location.reload(); });
 void hikari.call('app.info').then(theme).catch(() => {});
 hikari.on('app.undo', () => void workspace.history('undo').catch(error => status(error.message)));
@@ -717,3 +804,4 @@ hikari.on('app.redo', () => void workspace.history('redo').catch(error => status
 hikari.on('app.save', () => void workspace.flush().then(() => hikari.call('app.setUnsaved', { unsaved: false })).catch(error => status(error.message)));
 // A narrow public controller is useful for same-origin integration fixtures.
 window.illustrationWorkspace = workspace;
+void installSourceActions({ hikari, workspace, beforeCreate: () => imagePreferenceSave, status });

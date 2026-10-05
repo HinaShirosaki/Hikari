@@ -91,6 +91,7 @@ function buildPluginAppContext(state, changed = '', windowObject = globalThis.wi
       configured: Boolean(text(settings.storagePath, 2400))
     },
     layout: {
+      workspaceTools: { available: Boolean(windowObject?.document?.getElementById?.('plugin-workspace-tools')) },
       agentChatRail: {
         expanded: windowObject?.document?.body?.classList?.contains('has-agent-chat-rail-expanded') === true,
         available: isAgentAvailable(windowObject?.document)

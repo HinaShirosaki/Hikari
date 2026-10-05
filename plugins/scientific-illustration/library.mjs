@@ -1,8 +1,10 @@
 // The index is the commit point. Alternating scene files let an index-write
 // failure preserve the prior scene without needing host transaction APIs.
+import { validId } from './model.mjs';
+import { normalizeSourceContext } from './source-context.mjs';
+
 export const LIBRARY_PATH = 'library.json';
 export const LIBRARY_ACTIONS = ['list', 'create', 'open', 'duplicate'];
-const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
 export function normalizeLibrary(raw) {
   if (raw?.version !== 1 || !validId(raw.revision) || !Array.isArray(raw.illustrations)
     || !raw.illustrations.length || raw.illustrations.length > 100) throw new Error('Invalid illustration library.');
@@ -23,7 +25,7 @@ export function nextScenePath(entry) {
 }
 export function validateLibraryRequest(args) {
   if (!args || typeof args !== 'object' || Array.isArray(args) || !LIBRARY_ACTIONS.includes(args.action)) throw new Error('Invalid library action.');
-  const allowed = ['action', 'illustration_id', 'title', 'expected_library_revision', 'request_id'];
+  const allowed = ['action', 'illustration_id', 'title', 'source', 'expected_library_revision', 'request_id'];
   if (Object.keys(args).some(key => !allowed.includes(key))) throw new Error('Unknown library request field.');
   if (args.action === 'list') {
     if (Object.keys(args).length !== 1) throw new Error('List takes only action.');
@@ -32,6 +34,10 @@ export function validateLibraryRequest(args) {
   if (!validId(args.expected_library_revision) || !validId(args.request_id)) throw new Error('Read the library first; supply expected_library_revision and a unique request_id.');
   if (['open', 'duplicate'].includes(args.action) && !validId(args.illustration_id)) throw new Error('Select an illustration_id from the library.');
   if (args.action === 'create' && args.illustration_id !== undefined) throw new Error('Create assigns a new illustration_id.');
+  if (args.source !== undefined) {
+    if (args.action !== 'create') throw new Error('Source context can only be attached to a new illustration.');
+    normalizeSourceContext(args.source);
+  }
   if (args.action === 'open' && args.title !== undefined) throw new Error('Use a title operation to rename an illustration.');
   if (args.title !== undefined && (typeof args.title !== 'string' || args.title.length > 200)) throw new Error('Title must be at most 200 characters.');
 }

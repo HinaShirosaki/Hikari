@@ -2,6 +2,26 @@ import { setSharedLeftRailWidth } from '../shared-left-rail.js';
 import { getPluginLeftRailLayout, setPluginLeftRailFolded } from '../plugin-left-rail.js';
 
 export const LAYOUT_VERBS = {
+  'app.setContextActions': {
+    permission: 'layout',
+    handler: (params, { contextActions, frameWindow }) => contextActions.set(params, frameWindow)
+  },
+  'app.readContextAction': {
+    permission: 'layout',
+    handler: (params, { contextActions, frameWindow }) => contextActions.read(params, frameWindow)
+  },
+  'app.respondContextAction': {
+    permission: 'layout',
+    handler: (params, { contextActions, frameWindow }) => contextActions.respond(params, frameWindow)
+  },
+  'app.setWorkspaceTools': {
+    permission: 'layout',
+    handler: (params, { workspaceTools, frameWindow }) => workspaceTools.set(params, frameWindow)
+  },
+  'app.setAgentChatExpanded': {
+    permission: 'agent:chat',
+    handler: (params, { workspaceTools, frameWindow }) => workspaceTools.setChatExpanded(params, frameWindow)
+  },
   'app.setLeftRailWidth': {
     permission: 'layout',
     handler: (params, { plugin, windowObject }) => {

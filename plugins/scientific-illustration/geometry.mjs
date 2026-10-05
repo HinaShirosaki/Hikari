@@ -3,6 +3,13 @@ export const RESIZE_HANDLES = {
   se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0]
 };
 
+export function resizeAnchor(box, direction) {
+  const [horizontal, vertical] = RESIZE_HANDLES[direction];
+  const angle = box.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
+  return { x: box.x + box.width / 2 - horizontal * box.width / 2 * cos + vertical * box.height / 2 * sin,
+    y: box.y + box.height / 2 - horizontal * box.width / 2 * sin - vertical * box.height / 2 * cos };
+}
+
 export function scaleTextObject(object, factor) {
   // Clamp a single scale so dimensions and typography reach their limits
   // together without changing the label's proportions.
@@ -16,7 +23,7 @@ export function scaleTextObject(object, factor) {
   };
 }
 
-export function resizeObject(object, direction, dx, dy) {
+export function resizeObject(object, direction, dx, dy, box = object) {
   const [horizontal, vertical] = RESIZE_HANDLES[direction];
   const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
   const localX = dx * cos + dy * sin, localY = -dx * sin + dy * cos;
@@ -25,9 +32,12 @@ export function resizeObject(object, direction, dx, dy) {
     // Project a corner drag onto its original diagonal. Edge drags scale
     // from their active axis, keeping the opposite edge midpoint fixed.
     const factor = horizontal && vertical
-      ? 1 + (horizontal * localX * object.width + vertical * localY * object.height) / (object.width ** 2 + object.height ** 2)
-      : 1 + (horizontal ? horizontal * localX / object.width : vertical * localY / object.height);
+      ? 1 + (horizontal * localX * box.width + vertical * localY * box.height) / (box.width ** 2 + box.height ** 2)
+      : 1 + (horizontal ? horizontal * localX / box.width : vertical * localY / box.height);
     size = scaleTextObject(object, factor);
+    const scale = size.width / object.width;
+    const anchor = resizeAnchor(box, direction);
+    return { ...size, x: anchor.x + (object.x - anchor.x) * scale, y: anchor.y + (object.y - anchor.y) * scale };
   } else {
     size = {
       width: horizontal ? Math.min(8000, Math.max(1, object.width + horizontal * localX)) : object.width,

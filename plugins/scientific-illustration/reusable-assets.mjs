@@ -1,32 +1,31 @@
 // Saved components are immutable snapshots. The index is the commit point;
 // placed copies never depend on the original illustration or asset file.
-import { normalizeObject, MAX_DOCUMENT_CHARS, CANVASES } from './model.mjs';
+import { normalizeObject, MAX_DOCUMENT_CHARS, CANVASES, validId, record, fields } from './model.mjs';
 import { selectionBounds, transformSelection } from './grouping.mjs';
 
 export const ASSETS_PATH = 'reusable-assets.json';
 export const ASSET_ACTIONS = ['asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_delete'];
-const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
-const fields = (value, allowed) => {
-  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key => !allowed.includes(key))) throw new Error('Unknown reusable asset request field.');
-};
+export const assetPath = id => `assets/${id}/component.json`;
 const validName = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
 export const createAssetLibrary = () => ({ version: 1, revision: crypto.randomUUID(), assets: [], receipts: [] });
 
 export function normalizeAssetLibrary(raw) {
-  if (raw?.version !== 1 || !validId(raw.revision) || !Array.isArray(raw.assets) || raw.assets.length > 100) throw new Error('Invalid reusable asset library.');
+  if (raw?.version !== 1 || !validId(raw.revision) || !Array.isArray(raw.assets)) throw new Error('Invalid reusable asset library.');
   const assets = raw.assets.map(entry => {
-    if (!validId(entry.id) || !validName(entry.name) || entry.path !== `assets/${entry.id}/component.json`
-      || !Number.isFinite(entry.width) || entry.width <= 0 || !Number.isFinite(entry.height) || entry.height <= 0
-      || !Number.isInteger(entry.objectCount) || entry.objectCount < 1 || entry.objectCount > 200
-      || !Array.isArray(entry.types) || entry.types.some(type => !['vector', 'raster', 'text'].includes(type))) throw new Error('Invalid reusable asset entry.');
-    return { id: entry.id, name: entry.name, path: entry.path, width: entry.width, height: entry.height,
-      objectCount: entry.objectCount, types: [...new Set(entry.types)], updatedAt: String(entry.updatedAt || '') };
+    if (!validId(entry.id) || !validName(entry.name) || !Number.isFinite(entry.width) || entry.width <= 0 || !Number.isFinite(entry.height) || entry.height <= 0
+      || !Number.isInteger(entry.objectCount) || entry.objectCount < 1 || entry.objectCount > 200) throw new Error('Invalid reusable asset entry.');
+    if (entry.fingerprint !== undefined && !/^[a-f0-9]{64}$/.test(entry.fingerprint)) throw new Error('Invalid asset fingerprint.');
+    if (entry.origin !== undefined && !['manual', 'codex', 'storage', 'agent', 'agent-group'].includes(entry.origin)) throw new Error('Invalid asset origin.');
+    return { id: entry.id, name: entry.name, width: entry.width, height: entry.height,
+      objectCount: entry.objectCount, updatedAt: String(entry.updatedAt || ''),
+      ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), ...(entry.origin ? { origin: entry.origin } : {}) };
   });
   if (new Set(assets.map(entry => entry.id)).size !== assets.length) throw new Error('Duplicate reusable asset IDs.');
+  if (JSON.stringify(assets).length > MAX_DOCUMENT_CHARS) throw new Error('The reusable asset index is too large. Remove unused assets.');
   return { version: 1, revision: raw.revision, assets, receipts: Array.isArray(raw.receipts) ? raw.receipts.slice(-64) : [] };
 }
 export function readAssetLibrary(library) {
-  return { assets_revision: library.revision, reusable_assets: library.assets.map(({ path: _path, ...entry }) => ({ ...entry, types: [...entry.types] })) };
+  return { assets_revision: library.revision, reusable_assets: library.assets.map(entry => ({ ...entry })) };
 }
 
 export function validateAssetRequest(args) {
@@ -39,7 +38,7 @@ export function validateAssetRequest(args) {
     return;
   }
   fields(args, ['action', 'expected_assets_revision', 'request_id', ...(args.action === 'asset_save'
-    ? ['illustration_id', 'expected_revision', 'name', 'id', 'ids'] : ['asset_id'])]);
+    ? ['illustration_id', 'expected_revision', 'name', 'id', 'ids', 'raster_asset', 'textFree'] : ['asset_id'])]);
   if (!validId(args.expected_assets_revision) || !validId(args.request_id)) throw new Error('Supply expected_assets_revision from asset_list/read and a unique request_id.');
   if (args.action === 'asset_delete') {
     if (!validId(args.asset_id)) throw new Error('Choose an asset_id from asset_list.');
@@ -47,10 +46,27 @@ export function validateAssetRequest(args) {
   }
   if (!validId(args.illustration_id) || !validId(args.expected_revision)) throw new Error('Asset save requires illustration_id and expected_revision from read.');
   if (!validName(args.name)) throw new Error('Give the asset a name of 1–200 characters.');
-  if ((args.id !== undefined) === (args.ids !== undefined)) throw new Error('Save takes either a component/group id or component ids.');
+  if ([args.id, args.ids, args.raster_asset].filter(value => value !== undefined).length !== 1) throw new Error('Save takes a component/group id, component ids, or raster_asset.');
+  if (args.raster_asset !== undefined && (!validId(args.raster_asset) || args.textFree !== true)) throw new Error('Raster asset save requires raster_asset and textFree: true.');
+  if (args.raster_asset === undefined && args.textFree !== undefined) throw new Error('textFree is only supported with raster_asset.');
   if (args.id !== undefined && !validId(args.id)) throw new Error('Invalid component/group id.');
   if (args.ids !== undefined && (!Array.isArray(args.ids) || !args.ids.length || args.ids.length > 200
     || args.ids.some(id => !validId(id)) || new Set(args.ids).size !== args.ids.length)) throw new Error('Select 1–200 distinct component ids.');
+}
+
+// Content keys ignore component IDs and canvas translation. The saved snapshot
+// keeps full precision, names, editable layers and original paint order.
+export function assetContent(asset) {
+  if (asset.objects.length === 1 && asset.objects[0].type === 'raster') {
+    const object = asset.objects[0];
+    return { raster: object.dataUrl, rotation: object.rotation, opacity: object.opacity, visible: object.visible,
+      aspectRatio: Math.round(object.width / object.height * 1e6) / 1e6 };
+  }
+  return asset.objects.map(({ id, name, canvas, ...object }) => Object.fromEntries(Object.entries(object)
+    .map(([key, value]) => [key, typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value])));
+}
+export function compoundGroups(document) {
+  return document.groups.filter(group => document.objects.filter(object => group.ids.includes(object.id) && object.type !== 'text').length >= 2);
 }
 
 export function snapshotAsset(document, args, validateSvg) {
@@ -81,7 +97,7 @@ export function readAsset(asset, includeAssets = false) {
   }) };
 }
 export function instantiateAsset(asset, operation, document) {
-  fields(operation, ['op', 'asset_id', 'canvas', 'x', 'y', 'width', 'height']);
+  fields(record(operation, 'insert_asset'), ['op', 'asset_id', 'canvas', 'x', 'y', 'width', 'height']);
   if (!validId(operation.asset_id) || !CANVASES.includes(operation.canvas)) throw new Error('insert_asset requires asset_id and canvas: main or scratch.');
   const { width: cw, height: ch } = document.canvases[operation.canvas];
   const { width, height, x, y } = operation;

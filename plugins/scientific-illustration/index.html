@@ -20,22 +20,33 @@
       <header class="toolbar">
         <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden></button>
         <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
+        <div class="canvas-heading canvas-controls">
+          <select hidden id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
+            <option value="pointer">Select &amp; move · V</option>
+            <option value="freehand">Freehand select · L</option>
+          </select>
+          <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
+          <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
+            <option value="1200x800">Landscape · 1200 × 800</option>
+            <option value="800x1200">Portrait · 800 × 1200</option>
+            <option value="1000x1000">Square · 1000 × 1000</option>
+            <option value="1600x900">Widescreen · 1600 × 900</option>
+            <option value="500x350">Small · 500 × 350</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
+            <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
+          </div></details>
+
+        </div>
         <div class="toolbar-actions">
           <label class="complexity-control" for="complexity"><span class="sr-only">Illustration complexity</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
-          <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
-          <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
-          <div class="toolbar-group-actions" role="group" aria-label="Grouping">
-            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
-            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
-          </div>
-          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
-            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
-          </div></details>
-          <div id="component-panel-switch" class="component-panel-switch" role="group" aria-label="Component panels">
-            <button id="layers-tab" type="button" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties">Layers</button>
-            <button id="assets-tab" type="button" aria-pressed="false" aria-expanded="false" aria-controls="assets-panel" title="Show reusable assets">Assets</button>
-          </div>
           <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
+            <section class="image-generation-control" aria-label="Image generation">
+              <label class="image-generation-toggle" for="image-generation-enabled"><span>Image generation</span><input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help"></label>
+              <div class="image-generation-range"><label class="sr-only" for="image-generation-percent">Image-generated content percentage</label><input id="image-generation-percent" type="range" min="0" max="100" step="25" value="50" disabled list="image-generation-steps" aria-describedby="image-generation-help"><output id="image-generation-value" for="image-generation-percent">Auto</output><datalist id="image-generation-steps"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist></div>
+              <p id="image-generation-help"><span id="image-generation-summary">Automatic · SVG first</span>. Boxes and arrows stay SVG; labels stay editable text.</p>
+            </section>
             <button id="menu-save-selection-asset" type="button" disabled>Save selection as asset…</button>
             <button id="duplicate-illustration" type="button">Duplicate illustration</button>
           </div></details>
@@ -57,32 +68,7 @@
               <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
             </section>
           </div>
-          <div class="canvas-heading canvas-controls">
-            <select id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
-              <option value="pointer">Select &amp; move · V</option>
-              <option value="freehand">Freehand select · L</option>
-            </select>
-            <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
-            <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
-              <option value="1200x800">Landscape · 1200 × 800</option>
-              <option value="800x1200">Portrait · 800 × 1200</option>
-              <option value="1000x1000">Square · 1000 × 1000</option>
-              <option value="1600x900">Widescreen · 1600 × 900</option>
-              <option value="500x350">Small · 500 × 350</option>
-              <option value="custom">Custom…</option>
-            </select>
-            <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
-              <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
-            </div></details>
-            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
-              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
-              <output id="zoom-level" aria-label="Zoom level">100%</output>
-              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
-              <button id="zoom-fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true">Fit</button>
-            </div>
-            <button id="toggle-scratch" class="scratch-toggle" type="button" aria-expanded="false" aria-controls="scratch-workspace">Scratch</button>
-          </div>
-          <form id="prompt-form" class="prompt">
+          <form id="prompt-form" class="prompt" hidden>
             <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
             <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
           </form>
@@ -93,7 +79,6 @@
           <div class="selection-actions" role="group" aria-label="Selection actions"><button id="save-selection-asset" type="button" disabled>Save as asset…</button></div>
           <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
           <div id="layers" role="list" aria-label="Figure layers"></div>
-          <p id="selection-hint" class="selection-hint">Drag empty space to select. Drag selected components to move; use handles to resize. Shift adds; Alt selects a group member.</p>
           <form id="properties" hidden>
             <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
             <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
@@ -120,6 +105,30 @@
             <div id="saved-assets" role="list" aria-label="Reusable components"></div>
             <p id="assets-empty" class="layers-empty">Your reusable components will appear here.</p>
           </section>
+        </aside>
+        <aside id="workspace-tools" class="workspace-tools" role="toolbar" aria-label="Illustration tools" aria-orientation="vertical">
+          <button id="pointer-tool" class="icon-button" data-icon="pointer" type="button" title="Select and move (V)" aria-label="Select and move" aria-pressed="true"></button>
+          <button id="freehand-tool" class="icon-button" data-icon="lasso" type="button" title="Freehand selection (L)" aria-label="Freehand selection" aria-pressed="false"></button>
+          <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
+          <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
+          <div class="toolbar-group-actions" role="group" aria-label="Grouping">
+            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
+            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
+          </div>
+          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
+            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
+          </div></details>
+          <div id="component-panel-switch" class="component-panel-switch" role="group" aria-label="Component panels">
+            <button id="layers-tab" class="icon-button" data-icon="layers" type="button" aria-label="Layers and properties" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties"><span class="sr-only">Layers</span></button>
+            <button id="assets-tab" class="icon-button" data-icon="assets" type="button" aria-label="Reusable assets" aria-pressed="false" aria-expanded="false" aria-controls="assets-panel" title="Show reusable assets"><span class="sr-only">Assets</span></button>
+          </div>
+            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
+              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
+              <output id="zoom-level" aria-label="Zoom level">100%</output>
+              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
+              <button id="zoom-fit" class="icon-button" data-icon="fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true"><span class="sr-only">Fit</span></button>
+            </div>
+            <button id="toggle-scratch" class="scratch-toggle icon-button" data-icon="scratch" title="Scratch canvas" aria-label="Scratch canvas" type="button" aria-expanded="false" aria-controls="scratch-workspace"><span class="sr-only">Scratch</span></button>
         </aside>
       </div>
       <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>

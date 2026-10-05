@@ -34,12 +34,12 @@ export function rectanglePoints(start, end) {
 
 // The region and the component boxes use canvas coordinates. Even-odd fill
 // matches the visible lasso, including concave and self-crossing paths.
-export function regionSelection(document, canvas, polygon, { individual = false } = {}) {
+export function regionSelection(document, canvas, polygon, { individual = false, getBounds = object => object } = {}) {
   if (polygon.length < 3) return [];
   const second = polygon.find(p => Math.hypot(p.x - polygon[0].x, p.y - polygon[0].y) > EPSILON);
   if (!second || !polygon.some(p => Math.abs(cross(polygon[0], second, p)) > EPSILON)) return [];
   const ids = new Set(document.objects.filter(object => object.canvas === canvas && object.visible
-    && overlaps(polygon, objectCorners(object))).map(object => object.id));
+    && overlaps(polygon, objectCorners(getBounds(object)))).map(object => object.id));
   if (!individual) {
     for (const group of document.groups || []) {
       if (group.ids.some(id => ids.has(id))) group.ids.forEach(id => ids.add(id));

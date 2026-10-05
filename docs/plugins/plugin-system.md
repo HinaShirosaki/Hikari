@@ -163,7 +163,7 @@ full list on the plugin's row in Settings before enabling it.
 | `notifications` | Ask Hikari to show an attributed, transient success or error toast ([plugin-api.md `notifications.show`](plugin-api.md#notificationsshow--notifications)). Grants no control over markup, placement, actions, or persistence. |
 | `agent:chat` | Submit prompts to the plugin's independent Agent Chat rail. |
 | `agent:canvas` | Receive `plugin_canvas` requests through `agent.canvas` and acknowledge with `agent.respond`. The plugin owns its scene contract. |
-| `layout` | Commit the shared left-rail width used by plugin and built-in workspaces ([plugin-api.md `app.setLeftRailWidth`](plugin-api.md#appsetleftrailwidth--layout)). |
+| `layout` | Configure shared workspace tools and the plugin's navigation-rail layout ([plugin API layout verbs](plugin-api.md#appsetworkspacetools--layout)). |
 
 Declare the narrowest set that works. There is deliberately no permission for
 creating or deleting records, reading settings, or directly touching the filesystem —

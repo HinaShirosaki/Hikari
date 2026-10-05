@@ -11,7 +11,8 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   const create = async title => {
     const r = await read();
     const result = await tool({ action: 'create', title, expected_library_revision: r.library_revision, request_id: randomUUID() });
-    check(result.ok, result.error || 'Create reusable component test figure'); return result;
+    check(result.ok, result.error || 'Create reusable component test figure');
+    await tool({ action: 'asset_list' }); return result;
   };
   const apply = async operations => {
     const r = await read(), args = { action: 'apply', illustration_id: r.illustration_id, expected_revision: r.revision, request_id: randomUUID(), operations };
@@ -43,7 +44,8 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   await evaluate('document.querySelector("[data-layer-id=asset-source-group] .layer-select").click();document.getElementById("save-selection-asset").click()');
   check(await evaluate('document.getElementById("save-asset-dialog").open && document.getElementById("asset-name").value==="Cell component"'), 'UI saving a selected group opens its named snapshot dialog');
   await evaluate('document.getElementById("asset-name").value="Reusable cell";document.getElementById("save-asset-form").requestSubmit()'); await settle(); await pause(80);
-  let list = await tool({ action: 'asset_list' }), entry = list.reusable_assets[0];
+  let list = await tool({ action: 'asset_list' }), entry = list.reusable_assets.find(asset => asset.name === 'Reusable cell');
+  const otherAssetIds = list.reusable_assets.filter(asset => asset.id !== entry?.id).map(asset => asset.id);
   check(list.ok && entry?.name === 'Reusable cell' && entry.objectCount === 3, 'UI save persists vector, raster and text as one reusable asset');
   const afterSave = await read();
   check(afterSave.revision === before.revision && afterSave.inspection.complete && JSON.stringify(afterSave.objects) === JSON.stringify(before.objects), 'Saving leaves scene coordinates, revision and completed inspection intact');
@@ -60,7 +62,7 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
     return value;
   };
   const assetsOpen = await expectRail('assets');
-  check(await evaluate('document.querySelectorAll(".toolbar #component-panel-switch button").length===2 && !document.querySelector("#layer-inspector #layers-tab, #layer-inspector #assets-tab") && !document.getElementById("toggle-components") && !document.getElementById("browse-assets")'), 'Layers and Assets share one toolbar switch with no duplicate panel tabs or toggle');
+  check(await evaluate('document.querySelectorAll("#workspace-tools #component-panel-switch button").length===2 && !document.querySelector("#layer-inspector #layers-tab, #layer-inspector #assets-tab") && !document.getElementById("toggle-components") && !document.getElementById("browse-assets")'), 'Layers and Assets share one toolbar switch with no duplicate panel tabs or toggle');
   await clickSwitch('layers'); const layersOpen = await expectRail('layers');
   check(Math.abs(assetsOpen.width-layersOpen.width)<1 && Math.abs(assetsOpen.canvasWidth-layersOpen.canvasWidth)<1, 'Layers and Assets use the same rail width without taking extra canvas space');
   await clickSwitch('assets'); await expectRail('assets');
@@ -100,7 +102,7 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   await create('Reuse in a new figure');
   await evaluate(openAssets+'document.getElementById("assets-tab").dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowLeft",bubbles:true}))');
   check(await evaluate('document.activeElement.id==="layers-tab" && !document.getElementById("layers-panel").hidden'), 'The toolbar switch supports keyboard navigation');
-  await evaluate(openAssets+'document.querySelector(".asset-insert").click()'); await settle(); await pause(80);
+  await evaluate(openAssets+`document.querySelector('[data-saved-asset="${entry.id}"] .asset-insert').click()`); await settle(); await pause(80);
   let placed = await read();
   check(placed.objects.length === 3 && placed.groups[0]?.name === 'Reusable cell' && placed.objects.every(o => !before.objects.some(old => old.id === o.id)), 'User inserts a fresh editable group into a different illustration');
   check(placed.objects.every((o, i) => o.rotation === before.objects[i].rotation && Math.abs(o.width-before.objects[i].width)<1e-8 && Math.abs(o.height-before.objects[i].height)<1e-8)
@@ -135,11 +137,13 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   for (let i = 0; i < 100; i++) { if (await evaluate('!window.assetsQaBeforeReload && Boolean(window.illustrationWorkspace?.getDocument())').catch(() => false)) break; await pause(40); }
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
   placed = await read(); list = await tool({ action: 'asset_list' });
-  check(list.reusable_assets[0]?.id === entry.id, `Saved asset survives plugin reload: ${JSON.stringify(list)}`);
+  check(list.reusable_assets.some(asset => asset.id === entry.id), 'Saved asset survives plugin reload');
   check(JSON.stringify(placed.objects) === JSON.stringify(beforeReload.objects), 'Independently inserted copies survive plugin reload');
   check((await tool(scaled.args)).status === 'already_applied', 'Insertion idempotency survives reload with its original IDs');
-  await evaluate(openAssets+'document.querySelector(".asset-remove").click()'); await settle();
-  check((await tool({ action: 'asset_list' })).reusable_assets.length === 0 && JSON.stringify((await read()).objects) === JSON.stringify(placed.objects), 'User removes a saved asset without changing any placed copy');
+  await evaluate(openAssets+`document.querySelector('[data-saved-asset="${entry.id}"] .asset-remove').click()`); await settle();
+  const remaining = await tool({ action: 'asset_list' });
+  check(!remaining.reusable_assets.some(asset => asset.id === entry.id) && otherAssetIds.every(id => remaining.reusable_assets.some(asset => asset.id === id))
+    && JSON.stringify((await read()).objects) === JSON.stringify(placed.objects), 'User removes one saved asset without changing other assets or any placed copy');
   check((await tool(scaled.args)).status === 'already_applied', 'Retrying a committed insertion after asset removal never reimports or duplicates it');
   const afterDelete = await tool({ action: 'render', canvas: 'both' });
   check(afterDelete.ok && afterDelete.content.filter(c => c.type === 'image').length === 2, 'Placed raster bytes remain renderable after their saved asset is removed');

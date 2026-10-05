@@ -1,13 +1,13 @@
 // Layers and Assets occupy one rail. A single state owns visibility, focus
-// and every entry point. The toolbar switch opens, switches or folds the rail.
-export function createComponentRail({ document, onChange = () => {} }) {
+// and every entry point. Right toolbar buttons open, switch or fold the rail.
+export function createComponentRail({ document, onChange = () => {}, focusTab = name => document.getElementById(`${name}-tab`).focus({ preventScroll: true }) }) {
   const $ = id => document.getElementById(id), names = ['layers', 'assets'];
   const rail = $('layer-inspector');
   let active = null, lastPanel = 'layers';
-  function openPanel(name, focusTab = false) {
+  function openPanel(name, focusTabRequested = false) {
     const previous = active, focused = document.activeElement;
-    if (!name && rail.contains(focused)) $(`${lastPanel}-tab`).focus({ preventScroll: true });
-    else if (name && (focusTab || (previous && previous !== name && $(`${previous}-panel`).contains(focused)))) $(`${name}-tab`).focus({ preventScroll: true });
+    if (!name && rail.contains(focused)) focusTab(lastPanel);
+    else if (name && (focusTabRequested || (previous && previous !== name && $(`${previous}-panel`).contains(focused)))) focusTab(name);
     active = name;
     if (active) lastPanel = active;
     rail.hidden = !active; rail.inert = !active;
@@ -30,7 +30,7 @@ export function createComponentRail({ document, onChange = () => {} }) {
   }
   $('close-layers').addEventListener('click', () => openPanel(null));
   $('component-panel-switch').addEventListener('keydown', event => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation();
     const focusedPanel = event.target.closest('button')?.id === 'assets-tab' ? 'assets' : 'layers';
     const name = event.key === 'Home' ? 'layers' : event.key === 'End' ? 'assets' : focusedPanel === 'layers' ? 'assets' : 'layers';

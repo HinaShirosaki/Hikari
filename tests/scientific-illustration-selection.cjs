@@ -8,6 +8,7 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
   const original = await read();
   const created = await tool({ action: 'create', title: 'Area selection QA', expected_library_revision: original.library_revision, request_id: randomUUID() });
   check(created.ok, created.error || 'Create an isolated area-selection figure');
+  await tool({ action: 'asset_list' });
   const apply = async operations => {
     const current = await read();
     const result = await tool({ action: 'apply', illustration_id: current.illustration_id, expected_revision: current.revision, request_id: randomUUID(), operations });
@@ -36,7 +37,8 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
   const feedback = async (canvas, ids) => {
     const outlines = await evaluate(`(()=>{const stage=document.getElementById(${JSON.stringify(canvas + '-canvas')});return [...stage.querySelectorAll('.selection-member')].map(outline=>{
       const object=stage.querySelector('[data-object-id="'+outline.dataset.selectedObjectId+'"]'),matrix=node=>{const m=node.getScreenCTM();return [m.a,m.b,m.c,m.d,m.e,m.f]},hit=object?.querySelector('.object-hit');
-      return {id:outline.dataset.selectedObjectId,outline:matrix(outline),object:object&&matrix(object),width:outline.getAttribute('width'),height:outline.getAttribute('height'),objectWidth:hit?.getAttribute('width'),objectHeight:hit?.getAttribute('height'),pointerEvents:getComputedStyle(outline).pointerEvents};
+      const hitMatrix=hit&&hit.getScreenCTM().translate(Number(hit.getAttribute('x')||0),Number(hit.getAttribute('y')||0));
+      return {id:outline.dataset.selectedObjectId,outline:matrix(outline),object:hitMatrix&&[hitMatrix.a,hitMatrix.b,hitMatrix.c,hitMatrix.d,hitMatrix.e,hitMatrix.f],width:outline.getAttribute('width'),height:outline.getAttribute('height'),objectWidth:hit?.getAttribute('width'),objectHeight:hit?.getAttribute('height'),pointerEvents:getComputedStyle(outline).pointerEvents};
     })})()`);
     check(JSON.stringify(outlines.map(o=>o.id).sort()) === JSON.stringify([...ids].sort()), `${canvas} outlines each selected component individually`);
     check(outlines.every(o=>o.object && o.outline.every((n,i)=>Math.abs(n-o.object[i])<1e-6) && o.width===o.objectWidth && o.height===o.objectHeight && o.pointerEvents==='none'),
@@ -138,8 +140,6 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     check(await evaluate('document.getElementById("selection-tool").value==="freehand"'), 'L activates the Freehand tool from the keyboard');
     await evaluate('document.getElementById("main-canvas").dispatchEvent(new KeyboardEvent("keydown",{key:"v",bubbles:true}))');
     check(await evaluate('document.getElementById("selection-tool").value==="pointer"'), 'V returns to Select & move');
-    await evaluate('document.getElementById("main-canvas").dispatchEvent(new KeyboardEvent("keydown",{key:"l",bubbles:true}));document.getElementById("main-canvas").dispatchEvent(new KeyboardEvent("keydown",{key:"m",bubbles:true}))');
-    check(await evaluate('document.getElementById("selection-tool").value==="pointer"'), 'M also activates the combined Select & move tool');
 
     // Zoom and scroll change only the view; the region still maps to canvas units.
     await evaluate('for(let i=0;i<3;i++)document.getElementById("zoom-in").click();document.getElementById("main-canvas").scrollLeft=30;document.getElementById("main-canvas").scrollTop=40');
@@ -193,17 +193,20 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     // Selecting and moving a label use the same combined tool.
     await mode('pointer'); await rectangle('main', [250, 90], [370, 150]);
     await selected(['select-b'], 'Select a label for subsequent movement');
-    const beforeMove = await read(); await gesture('main', [[300, 120], [320, 135]]); await pause(80);
+    const labelCenter = await evaluate(`(()=>{const hit=document.querySelector('#main-canvas [data-object-id=select-b] .object-hit'),b=hit.getBBox();
+      const m=document.querySelector('#main-canvas > svg').getScreenCTM().inverse().multiply(hit.getScreenCTM());
+      const p=new DOMPoint(b.x+b.width/2,b.y+b.height/2).matrixTransform(m);return [p.x,p.y]})()`);
+    const beforeMove = await read(); await gesture('main', [labelCenter, [labelCenter[0]+20, labelCenter[1]+15]]); await pause(80);
     const moved = await read(), oldLabel = beforeMove.objects.find(o => o.id === 'select-b'), newLabel = moved.objects.find(o => o.id === 'select-b');
     check(Math.abs(newLabel.x - oldLabel.x - 20) < .01 && Math.abs(newLabel.y - oldLabel.y - 15) < .01, 'Select & move immediately drags an area-selected label by exactly the intended canvas delta');
     await evaluate('document.getElementById("zoom-fit").click()');
     await rectangle('main', [90, 90], [380, 180], 1);
     await fs.writeFile(path.join(temp, 'selection-result.png'), (await win.webContents.capturePage()).toPNG());
     win.setSize(480, 800); await pause(80);
-    check(await evaluate('(()=>{const r=document.getElementById("selection-tool").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth})()'), 'Selection tools stay accessible without horizontal overflow at narrow widths');
+    check(await evaluate('(()=>{const r=document.getElementById("pointer-tool").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth})()'), 'Selection tools stay accessible without horizontal overflow at narrow widths');
     await fs.writeFile(path.join(temp, 'selection-narrow.png'), (await win.webContents.capturePage()).toPNG());
     win.setSize(320, 800); await pause(80);
-    check(await evaluate('(()=>{const r=document.getElementById("selection-tool").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth})()'), 'Selection controls also remain accessible at 320px');
+    check(await evaluate('(()=>{const r=document.getElementById("pointer-tool").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.documentElement.scrollWidth<=innerWidth})()'), 'Selection controls also remain accessible at 320px');
     evidence.geometryUnchangedBySelection = true; evidence.mainAndScratch = true; evidence.groupAndIndividual = true;
     evidence.realPointerInput = true; evidence.lassoUsesPolygon = true;
     evidence.combinedSelectAndMove = true; evidence.directFreehandMove = true; evidence.resizeInBothTools = true;

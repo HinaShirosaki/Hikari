@@ -29,6 +29,7 @@
     "ui/css/overrides/universal-dialogs.css",
     "ui/css/overrides/universal-left-rail-lists.css",
     "ui/css/components/draft-review.css",
-    "ui/css/components/agent-rail-composer.css"
+    "ui/css/components/agent-rail-composer.css",
+    "ui/css/components/plugin-workspace-tools.css"
   ]
 }

@@ -1,0 +1,25 @@
+/* Plugin tools use the same outer strip as Papers and the shared chat. */
+.plugin-workspace-tools { display: flex; flex-direction: column; align-items: center; gap: .2rem; flex-shrink: 0; }
+.plugin-workspace-tool, body.has-plugin-workspace-tools .universal-agent-chat-rail__toggle {
+  position: relative; inset: auto; display: grid; place-items: center; flex: 0 0 2.125rem;
+  width: 2.125rem; min-width: 2.125rem; height: 2.125rem; padding: 0; border: 0; border-radius: .45rem;
+  background: transparent; color: var(--theme-text-muted); cursor: pointer;
+}
+.plugin-workspace-tool svg { width: 1.125rem; height: 1.125rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.plugin-workspace-tool.is-group-start { margin-top: .5rem; }
+.plugin-workspace-tool:is(:hover, [aria-pressed="true"], [aria-expanded="true"]) { background: var(--theme-surface-subtle); color: var(--theme-text); }
+.plugin-workspace-tool:focus-visible { outline: .125rem solid var(--theme-focus); outline-offset: .125rem; }
+.plugin-workspace-tool:disabled { opacity: .35; cursor: default; }
+output.plugin-workspace-tool { font-size: .625rem; font-variant-numeric: tabular-nums; height: 1.1rem; flex-basis: 1.1rem; cursor: default; }
+body.has-plugin-workspace-tools .universal-agent-chat-rail { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; padding: .875rem 0 0; border-top: 0; background: var(--theme-surface); }
+body.has-plugin-workspace-tools .universal-agent-chat-rail__tools { display: flex; flex-direction: column; align-items: center; gap: .625rem; min-height: 0; min-width: 0; overflow-y: auto; scrollbar-width: none; padding: .375rem .25rem; grid-column: 1; grid-row: 1; }
+body.has-plugin-workspace-tools.has-agent-chat-rail-expanded .workspace-shell { grid-template-columns: minmax(0, 1fr) calc(var(--agent-chat-rail-width) + var(--agent-chat-rail-collapsed-width)); grid-template-rows: minmax(0, 1fr); }
+body.has-plugin-workspace-tools.has-agent-chat-rail-expanded .universal-agent-chat-rail { grid-template-columns: minmax(0, 1fr) var(--agent-chat-rail-collapsed-width); }
+body.has-plugin-workspace-tools.has-agent-chat-rail-expanded .universal-agent-chat-rail__tools { grid-column: 2; border-left: 1px solid var(--theme-border-soft); }
+body.has-plugin-workspace-tools.has-agent-chat-rail-expanded .universal-agent-chat-rail__content { grid-column: 1; grid-row: 1; padding: .7rem .875rem .875rem; }
+body.has-plugin-workspace-tools .universal-agent-chat-rail__header { padding-right: 0; }
+@media (max-width: 60rem) {
+  body.has-plugin-workspace-tools.has-agent-chat-rail .workspace-shell { grid-template-columns: minmax(0, 1fr) var(--agent-chat-rail-collapsed-width); grid-template-rows: minmax(0, 1fr); }
+  body.has-plugin-workspace-tools .universal-agent-chat-rail { border-left: 1px solid var(--theme-border-soft); border-top: 0; }
+  body.has-plugin-workspace-tools.has-agent-chat-rail-expanded .workspace-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(16rem, 42vh); }
+}

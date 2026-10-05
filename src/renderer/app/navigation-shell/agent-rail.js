@@ -25,8 +25,9 @@ export function createAgentChatRail({
     const app = getAppForView(viewId);
     const navViewId = resolveNavigationViewId(viewId);
     const view = documentObject.getElementById(navViewId);
-    // Without Codex only Papers keeps the rail, for its PDF toolbar and paper panels.
-    return isAgentChatRailAvailable(app, view)
+    // Papers and registered plugin tools keep the strip usable without Codex.
+    const hasTools = documentObject.getElementById('plugin-workspace-tools')?.dataset.viewId === navViewId;
+    return hasTools || isAgentChatRailAvailable(app, view)
       && (isAgentAvailable(documentObject) || navViewId === VIEWS.PAPERS);
   }
 
@@ -37,8 +38,9 @@ export function createAgentChatRail({
   }
 
   function syncExpansion(enabled) {
-    const visibleExpanded = enabled && expanded && isAgentAvailable(documentObject);
     const viewId = getActiveViewId();
+    const chatEnabled = isAgentChatRailAvailable(getAppForView(viewId), documentObject.getElementById(resolveNavigationViewId(viewId)));
+    const visibleExpanded = enabled && expanded && chatEnabled && isAgentAvailable(documentObject);
     const isPapers = viewId === VIEWS.PAPERS;
     documentObject.body.classList.toggle('has-agent-chat-rail-expanded', visibleExpanded);
     if (rail) {
@@ -47,6 +49,7 @@ export function createAgentChatRail({
       rail.dataset.state = visibleExpanded ? 'expanded' : 'collapsed';
     }
     if (toggleButton) {
+      toggleButton.hidden = !chatEnabled;
       toggleButton.innerHTML = toggleIcon(visibleExpanded);
       toggleButton.setAttribute('aria-expanded', String(visibleExpanded));
       const label = isPapers
@@ -95,6 +98,10 @@ export function createAgentChatRail({
     toggleButton?.addEventListener('click', () => setExpanded(!expanded));
     documentObject.addEventListener('hikari:open-agent-chat-rail', open);
     documentObject.addEventListener('hikari:close-agent-chat-rail', () => setExpanded(false));
+    documentObject.addEventListener('hikari:workspace-tools-changed', () => {
+      syncState(getActiveViewId());
+      sharedLeftRailRuntime.syncWidth();
+    });
     documentObject.addEventListener('hikari:agent-chat-rail-availability-changed', () => {
       syncState(getActiveViewId());
       sharedLeftRailRuntime.syncWidth();

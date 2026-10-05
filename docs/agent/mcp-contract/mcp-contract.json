@@ -1279,7 +1279,7 @@
       },
       {
         "name": "plugin_canvas",
-        "description": "Read, edit and render an installed local plugin with agent:canvas permission. Begin with plugin_id and request:{action:\"read\"} to discover its own request schema and instructions. Render returns native images for visual inspection, even while the view is hidden. Assets import PNG/JPEG/WebP from Hikari storage or Codex native image generation (5 MiB each, 8 MiB combined). Use source:\"codex\" and the exact output path from Codex image_gen; no shell copy is needed. The host never imports plugin modules.",
+        "description": "Read, edit and render an installed local plugin with agent:canvas permission. Begin with plugin_id and request:{action:\"read\"} to discover its own request schema and instructions. Render returns native images for visual inspection, even while the view is hidden. Assets import PNG/JPEG/WebP from Hikari storage or Codex native image generation (5 MiB each; no per-call asset count or combined-byte quota). Use source:\"codex\" and the exact output path from Codex image_gen; no shell copy is needed. Plugins validate their saved scene size. The host never imports plugin modules.",
         "annotations": {
           "title": "Installed plugin canvases",
           "readOnlyHint": false,
@@ -1307,7 +1307,6 @@
             },
             "assets": {
               "type": "array",
-              "maxItems": 8,
               "items": {
                 "type": "object",
                 "additionalProperties": false,

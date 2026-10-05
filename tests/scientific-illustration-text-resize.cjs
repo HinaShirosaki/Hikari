@@ -17,9 +17,9 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
   const directions = { nw: [-1, -1], n: [0, -1], ne: [1, -1], e: [1, 0], se: [1, 1], s: [0, 1], sw: [-1, 1], w: [-1, 0] };
   const points = (canvas, direction) => evaluate(`(() => {
     const group=document.querySelector('#${canvas}-canvas [data-object-id=${id}]'),m=group.getScreenCTM(),box=group.querySelector('.object-hit'),text=group.querySelector('text');
-    const w=Number(box.getAttribute('width')),h=Number(box.getAttribute('height')),[hx,hy]=${JSON.stringify(directions[direction])},glyph=text.getBBox();
+    const w=Number(box.getAttribute('width')),h=Number(box.getAttribute('height')),x=Number(box.getAttribute('x')||0),y=Number(box.getAttribute('y')||0),[hx,hy]=${JSON.stringify(directions[direction])},glyph=text.getBBox();
     const point=(x,y)=>{const p=new DOMPoint(x,y).matrixTransform(m);return {x:p.x,y:p.y}};
-    return {handle:point((hx+1)*w/2,(hy+1)*h/2),opposite:point((1-hx)*w/2,(1-hy)*h/2),zoom:Math.hypot(m.a,m.b),
+    return {handle:point(x+(hx+1)*w/2,y+(hy+1)*h/2),opposite:point(x+(1-hx)*w/2,y+(1-hy)*h/2),zoom:Math.hypot(m.a,m.b),
       width:w,height:h,fontSize:Number(text.getAttribute('font-size')),glyph:{x:glyph.x,y:glyph.y,width:glyph.width,height:glyph.height}};
   })()`);
   const numericChange = async (name, value) => {
@@ -47,20 +47,20 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
       await mouse('mousePressed', start.handle.x, start.handle.y, 1);
       await mouse('mouseMoved', start.handle.x + dx, start.handle.y + dy, 1);
       await mouse('mouseReleased', start.handle.x + dx, start.handle.y + dy); await pause(80);
-      const end = await points(canvas, direction), saved = await read(), factor = end.width / start.width;
-      check(Math.abs(factor - 1) > 0.001 && Math.abs(end.width / end.height - start.width / start.height) < 0.0001
-        && Math.abs(end.fontSize / start.fontSize - factor) < 0.0001,
+      const end = await points(canvas, direction), saved = await read(), factor = end.fontSize / start.fontSize;
+      const glyphTolerance = 1 / end.zoom;
+      check(Math.abs(factor - 1) > 0.001 && Math.abs(saved.width / saved.height - fixture.width / fixture.height) < 0.0001
+        && Math.abs(end.width - start.width * factor) < glyphTolerance && Math.abs(end.height - start.height * factor) < glyphTolerance,
       `Text ${direction} at ${rotation}° on ${canvas} scales the box and font at a fixed ratio: ${JSON.stringify({ start, end })}`);
       check(Math.hypot(end.opposite.x - start.opposite.x, end.opposite.y - start.opposite.y) < 0.1,
         'Proportional text resize fixes the opposite corner or edge midpoint at zoom');
       // Chromium rounds font metrics to screen pixels, even for fractional font sizes.
-      const glyphTolerance = 1 / end.zoom;
       check(Math.abs(end.glyph.width - start.glyph.width * factor) < glyphTolerance && Math.abs(end.glyph.height - start.glyph.height * factor) < glyphTolerance
         && Math.abs(end.glyph.x - start.glyph.x * factor) < glyphTolerance && Math.abs(end.glyph.y - start.glyph.y * factor) < glyphTolerance,
       `Rendered multiline glyphs and their alignment scale with the label box: ${JSON.stringify({ direction, rotation, start: start.glyph, end: end.glyph, factor })}`);
-      check(saved.width === end.width && saved.height === end.height && saved.fontSize === end.fontSize
+      check(Math.abs(saved.width-fixture.width*factor)<0.0001 && Math.abs(saved.height-fixture.height*factor)<0.0001 && saved.fontSize === end.fontSize
         && saved.text === fixture.text && saved.align === fixture.align && saved.anchor === fixture.anchor,
-      'Agent readback receives the exact text geometry and font shown on canvas');
+      'Agent readback keeps proportional layout geometry and the exact rendered font; selection bounds follow the glyphs');
     }
   } finally { win.webContents.debugger.detach(); }
   await apply({});

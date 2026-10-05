@@ -25,9 +25,45 @@ export const installPdfViewerSelectionMenuController = (ctx) => {
     ) {
       return;
     }
+    renderContextActions();
     selectionMenu.hidden = false;
     ctx.positionFloatingElement(selectionMenu, state.pendingSelection.clientRect);
   }
+
+  function renderContextActions() {
+    if (!selectionMenu) return;
+    selectionMenu.querySelectorAll?.('[data-plugin-context-action]')?.forEach(node => node.remove());
+    const doc = selectionMenu.ownerDocument;
+    for (const action of state.getContextActions?.() || []) {
+      const button = doc.createElement('button');
+      button.type = 'button'; button.className = 'ghost-btn papers-selection-action-btn';
+      button.dataset.pluginContextAction = action.key;
+      button.dataset.hoverCaption = action.label;
+      button.setAttribute('aria-label', action.label);
+      if (action.requiresAgent) button.setAttribute('data-requires-agent', '');
+      // Host-owned icon: plugin actions supply labels and IDs, never SVG/HTML.
+      button.innerHTML = '<svg class="papers-selection-action-icon papers-selection-action-icon--context" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg>';
+      button.addEventListener('pointerdown', event => event.preventDefault());
+      button.addEventListener('click', async () => {
+        const selection = state.pendingSelection;
+        if (!selection || !state.onContextAction) return;
+        const paperId = state.paperId;
+        button.disabled = true;
+        try {
+          const result = await state.onContextAction(action.key, { paperId, text: selection.text, pageNumber: selection.pageNumber });
+          if (result?.ok === false) { ctx.setStatus(result.error || 'Could not open the plugin action.'); return; }
+          if (state.paperId === paperId && state.pendingSelection === selection) {
+            clearSelection(); state.pendingSelection = null; ctx.refreshToolbar();
+          }
+        } catch (error) { ctx.setStatus(error.message); }
+        finally { button.disabled = false; }
+      });
+      selectionMenu.append(button);
+    }
+  }
+  selectionMenu?.ownerDocument?.addEventListener('hikari:context-actions-changed', () => {
+    if (!selectionMenu.hidden) renderContextActions();
+  });
 
   function hideSelectionCommentPopover() {
     state.pendingCommentSelection = null;

@@ -32,6 +32,7 @@ export function initPapersManagement({
   onCreateProtocolDraft,
   onActivePaperChanged = () => {},
   onAskSelectedText = () => {},
+  contextActions = null,
   document: providedDocument = null,
   window: providedWindow = null,
   createPdfViewer = createPapersPdfViewer
@@ -259,6 +260,9 @@ export function initPapersManagement({
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),
     onSelectionSearch: (...args) => context.searchSelectedTextInPapers?.(...args),
     onSelectionAsk: (...args) => context.askAgentAboutSelection?.(...args),
+    getContextActions: () => contextActions?.list('paper-selection') || [],
+    onContextAction: (key, selection) => contextActions?.invoke(key, { kind: 'paper-selection', ...selection })
+      || Promise.resolve({ ok: false, error: 'Plugin context actions are unavailable.' }),
     onExternalLink: openPdfExternalWebsite,
     onClose: (...args) => {
       context.comments?.onViewerClose(...args);
