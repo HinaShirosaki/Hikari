@@ -3,7 +3,7 @@ import { reverseComplementDna } from '../calculations/sequence.js';
 import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, fragmentPrimerConfig, resolveFragmentPrimerTemplate, summarizePrimerPlan } from './primer-records.js';
-import { designOligoAssembly, prependOligoAssemblySteps, withOligoAssemblyTemplate } from './oligo-assembly.js';
+import { prepareUntemplatedInsert, prependOligoAssemblySteps, withOligoAssemblyTemplate } from './oligo-assembly.js';
 import { designWithThresholdFallback } from './strategy.js';
 import { sequenceContainsSite } from './restriction-ligation.js';
 
@@ -135,10 +135,7 @@ export function buildGoldenGatePlan(payload = {}) {
 
   const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
   const design = designWithThresholdFallback((thresholds) => {
-    const preparation = insertTemplateDesign.requiresOligoAssembly
-      ? designOligoAssembly(insertFragment, thresholds, config)
-      : { feasible: true, primers: [] };
-    if (!preparation.feasible) return preparation;
+    const preparation = prepareUntemplatedInsert(insertFragment, insertTemplateDesign, thresholds, config);
     // Candidate windows come from the desired fragments, while uniqueness is
     // checked against the DNA actually present in each PCR tube. The insert
     // tube holds the donor when one is given, otherwise this record -- the
@@ -212,17 +209,17 @@ export function buildGoldenGatePlan(payload = {}) {
       })
     ];
     const primers = [...preparation.primers,
-      ...withOligoAssemblyTemplate(routePrimers.slice(0, 2), insertTemplateDesign, insertFragment),
+      ...withOligoAssemblyTemplate(routePrimers.slice(0, 2), preparation, insertFragment),
       ...routePrimers.slice(2)];
     return {
       feasible: true,
       primers,
       // What the stated insert template could not confirm advises the plan
       // rather than blocking it, so it has to reach the plan's warnings.
-      warnings: (asArray(insertTemplateDesign.warnings).length
+      warnings: [...preparation.warnings, ...(asArray(insertTemplateDesign.warnings).length
         ? asArray(insertTemplateDesign.warnings)
         : [insertForward.specificityWarning, insertReverse.specificityWarning]
-      ).filter(Boolean),
+      )].filter(Boolean),
       ...summarizePrimerPlan(primers)
     };
   });
@@ -249,7 +246,7 @@ export function buildGoldenGatePlan(payload = {}) {
       ligationTemperatureC: 16
     }],
     stepByStepProcedure: prependOligoAssemblySteps(buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang,
-      insertTemplateDesign.requiresOligoAssembly ? 'the oligo assembly product' : insertTemplateName), design.primers),
+      design.primers.some((primer) => primer.pcrStage === 'oligo-assembly') ? 'the oligo assembly product' : insertTemplateName), design.primers),
     warnings
   };
 

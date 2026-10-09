@@ -1,6 +1,6 @@
 import { reverseComplementDna } from '../calculations/sequence.js';
 import { cloningPrimerTm } from '../calculations/oligo.js';
-import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
+import { CLONING_PRIMER_TM_THRESHOLDS, DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { buildPrimerRecord } from './primer-records.js';
 import { countPrimerBindingSites, evaluatePrimerQuality } from './primer-quality.js';
@@ -106,8 +106,31 @@ export function designOligoAssembly(fragment, thresholds, config = {}) {
   return { feasible: true, primers, warnings: [] };
 }
 
-export function withOligoAssemblyTemplate(primers, templateDesign, fragment) {
-  if (!templateDesign.requiresOligoAssembly) return primers;
+// A hard sequence is a note on the plan, not a dead end: an insert that cannot
+// be tiled into quality-clean oligos is ordered as synthetic DNA, which is what
+// the route did before oligo preparation existed.
+export function prepareUntemplatedInsert(fragment, templateDesign, thresholds, config) {
+  if (!templateDesign?.requiresOligoAssembly) return { prepared: false, primers: [], warnings: [] };
+  // The oligo pool is annealed in its own tube, so it picks its own overlap
+  // window instead of failing a route whose primers clear a stricter one.
+  let design = designOligoAssembly(fragment, thresholds, config);
+  for (const level of Object.values(CLONING_PRIMER_TM_THRESHOLDS)) {
+    if (design.feasible) break;
+    design = designOligoAssembly(fragment, level, config);
+  }
+  if (design.feasible) return { prepared: true, primers: design.primers, warnings: [] };
+  return {
+    prepared: false,
+    primers: [],
+    warnings: [
+      ...asArray(design.warnings),
+      `${String(fragment?.name || 'Insert').trim()} must be ordered as synthetic DNA before assembly; the listed primers assume that synthesized fragment is available.`
+    ]
+  };
+}
+
+export function withOligoAssemblyTemplate(primers, preparation, fragment) {
+  if (!preparation.prepared) return primers;
   return primers.map((primer) => ({
     ...primer,
     template_kind: 'hypothetical_intermediate',

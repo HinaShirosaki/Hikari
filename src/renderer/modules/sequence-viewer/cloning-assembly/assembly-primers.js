@@ -4,7 +4,7 @@ import { asArray, normalizeSequence } from './sequence-utils.js';
 import { describeBindingWindowFailure, selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, fragmentPrimerConfig, resolveFragmentPrimerTemplate } from './primer-records.js';
 import { resolveRestrictionRecognitionSequence } from './restriction-ligation.js';
-import { designOligoAssembly, withOligoAssemblyTemplate } from './oligo-assembly.js';
+import { prepareUntemplatedInsert, withOligoAssemblyTemplate } from './oligo-assembly.js';
 
 export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluation, thresholds, config) {
   const inserts = asArray(fragmentMap?.fragments).filter((fragment) => fragment.role !== 'backbone');
@@ -26,10 +26,7 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
       warnings: asArray(templateDesign.blockingWarnings || templateDesign.warnings)
     };
   }
-  const preparation = templateDesign.requiresOligoAssembly
-    ? designOligoAssembly(insert, thresholds, config)
-    : { feasible: true, primers: [] };
-  if (!preparation.feasible) return preparation;
+  const preparation = prepareUntemplatedInsert(insert, templateDesign, thresholds, config);
   const clampSequence = normalizeSequence(config?.primerClampSequence || DEFAULT_CLONING_PREFERENCES.primerClampSequence);
   const forwardSite = resolveRestrictionRecognitionSequence(selectedSites[0], host?.sequence || '');
   const reverseSite = resolveRestrictionRecognitionSequence(selectedSites[1], host?.sequence || '');
@@ -107,14 +104,14 @@ export function designRestrictionLigationPrimers(fragmentMap, restrictionEvaluat
 
   return {
     feasible: true,
-    primers: [...preparation.primers, ...withOligoAssemblyTemplate(primers, templateDesign, insert)],
+    primers: [...preparation.primers, ...withOligoAssemblyTemplate(primers, preparation, insert)],
     // What the stated template could not confirm belongs in the plan's warnings,
     // not buried on one primer row: it used to block the route outright, so it
     // has to stay just as visible now that it only advises.
-    warnings: (asArray(templateDesign.warnings).length
+    warnings: [...preparation.warnings, ...(asArray(templateDesign.warnings).length
       ? asArray(templateDesign.warnings)
       : [forwardBinding.specificityWarning, reverseBinding.specificityWarning]
-    ).filter(Boolean)
+    )].filter(Boolean)
   };
 }
 
@@ -138,13 +135,8 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
     }
     const templateNotes = asArray(templateDesign.warnings);
     notes.push(...templateNotes);
-    const preparation = templateDesign.requiresOligoAssembly
-      ? designOligoAssembly(fragment, thresholds, config)
-      : { feasible: true, primers: [] };
-    if (!preparation.feasible) {
-      blockers.push(...preparation.warnings);
-      return;
-    }
+    const preparation = prepareUntemplatedInsert(fragment, templateDesign, thresholds, config);
+    notes.push(...preparation.warnings);
     // Use complete target-strand tails from junction selection: an added flank
     // can move between the neighboring PCRs without moving either template core.
     const previousOverlap = previousJunction && previousJunction.mode === 'primer-introduced'
@@ -232,7 +224,7 @@ export function designAssemblyPrimersForRoute(fragments, junctions, thresholds, 
         warnings: reverseWarnings
       })
     ];
-    primers.push(...preparation.primers, ...withOligoAssemblyTemplate(fragmentPrimers, templateDesign, fragment));
+    primers.push(...preparation.primers, ...withOligoAssemblyTemplate(fragmentPrimers, preparation, fragment));
   });
 
   if (!primers.length || blockers.length) {
