@@ -186,7 +186,6 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   });
 
   let persistCalls = 0;
-  let sampleChangedCalls = 0;
   const state = {
     samples: [
       {
@@ -236,10 +235,7 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
     },
     createId: () => 'container-x',
     safeText: shared.safeText,
-    cssEscape: shared.cssEscape,
-    onSamplesChanged: () => {
-      sampleChangedCalls += 1;
-    }
+    cssEscape: shared.cssEscape
   });
 
   personalInventory.renderSections();
@@ -298,7 +294,6 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   assert.equal(state.samples[0].inventoryLink.containerId, 'box-1');
   assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
   assert.ok(persistCalls >= 1);
-  assert.equal(sampleChangedCalls, 1);
 });
 test('personal-inventory creates a linked sample from the side editor for an empty cell', () => {
   const document = createMockDocument([
@@ -316,8 +311,6 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   });
 
   let persistCalls = 0;
-  let sampleChangedCalls = 0;
-  const recordedSamples = [];
   const state = {
     samples: [],
     inventory: {
@@ -343,13 +336,7 @@ test('personal-inventory creates a linked sample from the side editor for an emp
     },
     createId: () => 'container-y',
     safeText: shared.safeText,
-    cssEscape: shared.cssEscape,
-    onSamplesChanged: () => {
-      sampleChangedCalls += 1;
-    },
-    onSampleRecorded: (sample) => {
-      recordedSamples.push(sample);
-    }
+    cssEscape: shared.cssEscape
   });
 
   personalInventory.renderSections();
@@ -393,9 +380,6 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.equal(state.samples[0].inventoryLink.containerId, 'box-2');
   assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
   assert.ok(persistCalls >= 1);
-  assert.equal(sampleChangedCalls, 1);
-  assert.equal(recordedSamples.length, 1);
-  assert.equal(recordedSamples[0], state.samples[0]);
 });
 test('personal-inventory single container uses the same labeled set-samples form as a grid cell', () => {
   const document = createMockDocument([
@@ -481,7 +465,7 @@ test('personal-inventory sample editor actions are compact accessible icons', ()
     'personal-inventory',
     'detail-well-editor.js'
   ), 'utf8');
-  const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'personal-inventory-view.css'), 'utf8');
+  const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sample-registry-view.css'), 'utf8');
   const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
 
   assert.match(singleEditorSource, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
@@ -490,9 +474,9 @@ test('personal-inventory sample editor actions are compact accessible icons', ()
   assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
   assert.match(coreCss, /\.lab-add-icon-btn\s*\{[^}]*width:\s*36px;[^}]*min-width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*0;/s);
   assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-delete="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
   assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-unlink="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
+  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-delete="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
   assert.doesNotMatch(singleEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
   assert.doesNotMatch(wellEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
   assert.match(css, /\.inventory-sample-editor-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
@@ -681,7 +665,7 @@ test('personal-inventory keeps folders nestable while physical containers remain
 
   assert.equal(state.inventory['-20 Degree'].length, 1);
   assert.equal(state.inventory['-20 Degree'][0].id, 'container-created');
-  assert.equal(state.samples[0].inventoryLink, null);
+  assert.deepEqual(state.samples, [], 'a deleted container takes its samples with it');
   assert.equal(persistCalls, 3);
   assert.equal(inventoryChangedCalls, 3);
   assert.equal(containerContextMenu.hidden, true);
@@ -731,7 +715,6 @@ test('personal-inventory ignores copied images while preserving chemical sample 
   });
 
   let persistCalls = 0;
-  let sampleChangedCalls = 0;
   const state = {
     samples: [],
     inventory: {
@@ -757,10 +740,7 @@ test('personal-inventory ignores copied images while preserving chemical sample 
     },
     createId: () => 'container-z',
     safeText: shared.safeText,
-    cssEscape: shared.cssEscape,
-    onSamplesChanged: () => {
-      sampleChangedCalls += 1;
-    }
+    cssEscape: shared.cssEscape
   });
 
   personalInventory.renderSections();
@@ -798,59 +778,9 @@ test('personal-inventory ignores copied images while preserving chemical sample 
   assert.equal(state.samples[0].compoundStructure, null);
   assert.doesNotMatch(inventorySections.innerHTML, /data:image\/png;base64,NOTEPNG/);
   assert.ok(persistCalls >= 1);
-  assert.equal(sampleChangedCalls, 1);
-});
-test('sample-registry applies pasted SMILES and MOL/SDF but ignores copied images', async () => {
-  const compoundActions = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sample-registry', 'compound-actions.js'));
-  const molfile = [
-    'ethanol',
-    '  Hikari',
-    '',
-    '  3  2  0  0  0  0            999 V2000',
-    '    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',
-    '    1.2000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',
-    '    2.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0',
-    '  1  2  1  0  0  0  0',
-    '  2  3  1  0  0  0  0',
-    'M  END'
-  ].join('\n');
-  const createCtx = () => ({
-    compoundStructureDraft: { smiles: '', molfile: '', imageDataUrl: '' },
-    dom: {
-      sampleCompoundFields: new MockElement('sample-compound-fields'),
-      sampleCompoundPreview: new MockElement('sample-compound-preview'),
-      sampleCompoundPreviewImage: new MockElement('sample-compound-preview-image'),
-      sampleCompoundSmilesInput: new MockElement('sample-compound-smiles'),
-      sampleCompoundStatus: new MockElement('sample-compound-status'),
-      sampleTypeInput: { value: 'chemical' }
-    }
-  });
-
-  const smilesCtx = createCtx();
-  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(smilesCtx, [
-    { source: 'SMILES: CCO', sourceFormat: 'text', clipboardFormat: 'text/plain' }
-  ], ['text/plain']), true);
-  assert.equal(smilesCtx.compoundStructureDraft.smiles, 'CCO');
-  assert.equal(smilesCtx.dom.sampleCompoundSmilesInput.value, 'CCO');
-  assert.match(smilesCtx.dom.sampleCompoundStatus.textContent, /SMILES pasted/);
-
-  const molCtx = createCtx();
-  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(molCtx, [
-    { source: molfile, sourceFormat: 'molfile', clipboardFormat: 'chemical/x-mdl-molfile' }
-  ], ['chemical/x-mdl-molfile']), true);
-  assert.equal(molCtx.compoundStructureDraft.molfile.includes('M  END'), true);
-  assert.equal(molCtx.dom.sampleCompoundSmilesInput.value, 'Molfile only');
-  assert.match(molCtx.dom.sampleCompoundStatus.textContent, /MOL\/SDF structure pasted/);
-
-  const imageCtx = createCtx();
-  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(imageCtx, [
-    { source: 'data:image/png;base64,PASTEPNG', sourceFormat: 'image', imageDataUrl: 'data:image/png;base64,PASTEPNG', clipboardFormat: 'image/png' }
-  ], ['image/png']), false);
-  assert.equal(imageCtx.compoundStructureDraft.imageDataUrl, '');
-  assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /No MOL, SDF, or SMILES structure data/);
 });
 test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and images', async () => {
-  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sample-registry', 'chemical-structure-clipboard.js'));
+  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'chemical-structure-clipboard.js'));
   const molfile = [
     'ethanol',
     '  Hikari',

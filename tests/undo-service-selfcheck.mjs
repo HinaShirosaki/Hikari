@@ -101,7 +101,7 @@ function makeHarness() {
 
   assert.ok(service.redo(), 'external write destroyed the redo stack');
   assert.equal(state.value, 1, 'redo did not reapply the user edit');
-  assert.equal(state.external, undefined, 'redo snapshot unexpectedly carried external data');
+  assert.equal(state.external, 'agent-record', 'redo discarded an unrelated external update');
 }
 
 // --- barrier drops history rather than desynchronizing from disk -------------

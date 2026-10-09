@@ -25,14 +25,35 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   ]);
   const initial = await read(), beforeImage = await tool({ action: 'render', canvas: 'both' });
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer-select[aria-pressed=true]")].map(b=>b.closest("[data-layer-id]").dataset.layerId)');
+  const clickToolbar = async id => {
+    const target = await evaluate(`(()=>{const r=document.getElementById(${JSON.stringify(id)}).getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+    win.webContents.debugger.attach('1.3');
+    try {
+      for (const type of ['mousePressed', 'mouseReleased']) await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type, ...target, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
+      await pause(80);
+    } finally { win.webContents.debugger.detach(); }
+  };
+  check(await evaluate('document.getElementById("group-selection").disabled && document.getElementById("ungroup-selection").disabled'), 'Grouping toolbar disables both actions without a selection');
+  await evaluate('document.querySelector("[data-layer-id=group-a] .layer-select").click()');
+  check(await evaluate('document.getElementById("group-selection").disabled && document.getElementById("ungroup-selection").disabled'), 'An independent single layer cannot be grouped or ungrouped');
   await evaluate('document.querySelector("[data-layer-id=group-a] .layer-select").click();document.querySelector("[data-layer-id=group-b] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}));document.querySelector("[data-layer-id=group-text] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}));document.querySelector("[data-layer-id=group-image] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}))');
   check((await selection()).length === 4, 'Shift-click selects four independent layer types');
   check(await evaluate('!document.getElementById("group-selection").disabled && document.querySelectorAll("#main-canvas .resize-handle").length===8'), 'Multi-selection has group controls and eight shared handles');
-  await evaluate('document.getElementById("group-selection").click()'); await pause(80);
+  await evaluate('document.getElementById("close-layers").click()');
+  await clickToolbar('group-selection');
   let grouped = await read(), group = grouped.groups[0];
   check(group?.ids.length === 4 && JSON.stringify(grouped.objects) === JSON.stringify(initial.objects), 'UI grouping preserves every object property');
+  check(await evaluate('document.getElementById("layer-inspector").hidden && document.getElementById("group-selection").disabled && !document.getElementById("ungroup-selection").disabled'), 'Toolbar grouping works with Layers closed and switches enabled actions');
   const afterImage = await tool({ action: 'render', canvas: 'both' });
   check(JSON.stringify(beforeImage.content.filter(c => c.type === 'image')) === JSON.stringify(afterImage.content.filter(c => c.type === 'image')), 'Grouping leaves both rendered canvases pixel-identical');
+  await fs.writeFile(path.join(temp, 'grouping-toolbar.png'), (await win.webContents.capturePage()).toPNG());
+  await clickToolbar('ungroup-selection');
+  const toolbarUngrouped = await read();
+  check(toolbarUngrouped.groups.length === 0 && JSON.stringify(toolbarUngrouped.objects) === JSON.stringify(initial.objects), 'Toolbar ungrouping releases children without changing geometry or styling');
+  check(await evaluate('document.getElementById("layer-inspector").hidden && !document.getElementById("group-selection").disabled && document.getElementById("ungroup-selection").disabled'), 'Toolbar ungrouping keeps Layers closed and restores Group for the retained selection');
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
+  check((await read()).groups[0]?.id === group.id && await evaluate('document.getElementById("group-selection").disabled && !document.getElementById("ungroup-selection").disabled'), 'Undo restores group membership and toolbar availability');
+  await evaluate('document.getElementById("layers-tab").click()');
   await evaluate('document.querySelector("#properties [name=name]").value="ER component";document.querySelector("#properties [name=name]").dispatchEvent(new Event("change",{bubbles:true}))'); await pause(80);
   grouped = await read(); group = grouped.groups[0];
   check(group.name === 'ER component' && await evaluate(`Boolean(document.querySelector('[data-layer-id="${group.id}"] .layer-select'))`), 'Named group is shown above its independently selectable child rows');
@@ -85,9 +106,9 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   await apply([{ op: 'delete', id: scratchGroup.id }]);
   await evaluate(`document.querySelector('[data-layer-id="${group.id}"] .layer-select').click();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'g',ctrlKey:true,shiftKey:true,bubbles:true}))`); await pause(80);
   const ungrouped = await read(); check(ungrouped.groups.length === 0 && JSON.stringify(ungrouped.objects) === JSON.stringify(edited.objects), 'Ctrl-Shift-G ungroups without moving or flattening children');
-  await evaluate('document.getElementById("undo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
   check((await read()).groups[0].id === group.id, 'Undo restores grouping');
-  await evaluate('document.getElementById("redo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("redo")'); await pause(80);
   check((await read()).groups.length === 0, 'Redo restores ungrouping');
   await evaluate('document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"g",metaKey:true,bubbles:true}))'); await pause(80);
   const regrouped = await read(); check(regrouped.groups.length === 1, 'Command-G groups the retained multi-selection');

@@ -65,6 +65,18 @@
 #setting-view .settings-section-head h3 { margin: 0; font-size: var(--text-xl); }
 #setting-view .settings-description { margin: 0; color: var(--theme-text-muted); }
 #setting-view .settings-subsection { display: grid; gap: var(--space-10); }
+#setting-view .settings-cloud-drive { display: grid; gap: var(--space-10); padding: var(--space-16) 0; border-top: 1px solid var(--theme-border-soft); min-width: 0; }
+#setting-view .settings-cloud-drive-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-8); }
+#setting-view .settings-cloud-drive-identity { display: flex; align-items: center; gap: var(--space-12); min-width: 0; }
+#setting-view .settings-cloud-drive-identity > div { min-width: 0; }
+#setting-view .settings-cloud-drive-icon { display: block; width: 28px; height: 28px; flex: none; object-fit: contain; }
+#setting-view .settings-cloud-drive p { margin: 0; overflow-wrap: anywhere; }
+#setting-view .settings-cloud-drive [hidden] { display: none; }
+#setting-view .settings-cloud-drive select { width: 100%; min-width: 0; margin: var(--space-6) 0 var(--space-10); }
+#setting-view .settings-cloud-conflicts { padding: var(--space-12); border: 1px solid var(--theme-border-soft); border-radius: 8px; }
+#setting-view .settings-cloud-conflicts ul { font-size: var(--text-sm); overflow-wrap: anywhere; }
+#cloud-drive-sync-dialog { max-width: min(420px, calc(100vw - 48px)); padding: var(--space-24); border: 1px solid var(--theme-border-soft); border-radius: 12px; background: var(--theme-panel); color: var(--theme-text-strong); }
+#cloud-drive-sync-dialog::backdrop { background: var(--theme-overlay); }
 #setting-view h4 { margin: 0; font-size: var(--text-md); font-weight: 600; }
 #setting-view .settings-subsection + .settings-subsection {
   padding-top: var(--space-16);
@@ -650,6 +662,7 @@
 }
 #setting-view [data-settings-target="startup"] { --settings-nav-icon: url("../../../assets/icons/home.svg"); }
 #setting-view [data-settings-target="storage"] { --settings-nav-icon: url("../../../assets/icons/folder.svg"); }
+#setting-view [data-settings-target="cloud-drives"] { --settings-nav-icon: url("../../../assets/icons/cloud-drive.svg"); }
 #setting-view [data-settings-target="updates"] { --settings-nav-icon: url("../../../assets/icons/update.svg"); }
 #setting-view [data-settings-target="locations"] { --settings-nav-icon: url("../../../assets/icons/sample-inventory.svg"); }
 #setting-view [data-settings-target="preferred-journal"] { --settings-nav-icon: url("../../../assets/icons/papers.svg"); }
@@ -657,6 +670,7 @@
 #setting-view [data-settings-target="llm"] { --settings-nav-icon: url("../../../assets/icons/agent.svg"); }
 #setting-view [data-settings-target="mcp-tools"] { --settings-nav-icon: url("../../../assets/icons/tools.svg"); }
 #setting-view [data-settings-target="skills"] { --settings-nav-icon: url("../../../assets/icons/workflows.svg"); }
+#setting-view [data-settings-target="plugins"] { --settings-nav-icon: url("../../../assets/icons/tools.svg"); }
 #setting-view .settings-nav-item.is-active {
   background: var(--hikari-left-rail-list-selected) !important;
   color: var(--theme-text-strong) !important;

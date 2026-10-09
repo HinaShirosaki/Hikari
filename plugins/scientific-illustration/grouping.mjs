@@ -2,16 +2,18 @@
 // Components retain their own geometry, artwork and editable text.
 import { RESIZE_HANDLES } from './geometry.mjs';
 
+export function objectCorners(object) {
+  const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
+  const cx = object.x + object.width / 2, cy = object.y + object.height / 2;
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => ({
+    x: cx + x * object.width / 2 * cos - y * object.height / 2 * sin,
+    y: cy + x * object.width / 2 * sin + y * object.height / 2 * cos
+  }));
+}
+
 export function selectionBounds(objects) {
   if (!objects.length) return null;
-  const points = objects.flatMap(object => {
-    const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
-    const cx = object.x + object.width / 2, cy = object.y + object.height / 2;
-    return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => ({
-      x: cx + x * object.width / 2 * cos - y * object.height / 2 * sin,
-      y: cy + x * object.width / 2 * sin + y * object.height / 2 * cos
-    }));
-  });
+  const points = objects.flatMap(objectCorners);
   const x = Math.min(...points.map(point => point.x)), y = Math.min(...points.map(point => point.y));
   return { x, y, width: Math.max(...points.map(point => point.x)) - x,
     height: Math.max(...points.map(point => point.y)) - y, rotation: 0 };
@@ -46,13 +48,14 @@ export function transformSelection(objects, patch) {
   }));
 }
 
-export function resizeSelection(objects, direction, dx, dy) {
-  const box = selectionBounds(objects), [horizontal, vertical] = RESIZE_HANDLES[direction];
+export function resizeSelection(objects, direction, dx, dy, box = selectionBounds(objects)) {
+  const original = selectionBounds(objects), [horizontal, vertical] = RESIZE_HANDLES[direction];
   const factor = horizontal && vertical
     ? 1 + (horizontal * dx * box.width + vertical * dy * box.height) / (box.width ** 2 + box.height ** 2)
     : 1 + (horizontal ? horizontal * dx / box.width : vertical * dy / box.height);
   const limits = scaleLimits(objects), scale = Math.max(limits.min, Math.min(limits.max, factor));
   const width = box.width * scale, height = box.height * scale;
-  return { x: box.x + (horizontal - 1) * (width - box.width) / 2,
-    y: box.y + (vertical - 1) * (height - box.height) / 2, width, height };
+  return { x: box.x + (horizontal - 1) * (width - box.width) / 2 + (original.x - box.x) * scale,
+    y: box.y + (vertical - 1) * (height - box.height) / 2 + (original.y - box.y) * scale,
+    width: original.width * scale, height: original.height * scale };
 }

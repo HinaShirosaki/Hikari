@@ -1,5 +1,6 @@
 import { createSelectionInsightsController } from '../modules/selection-insights/index.js';
 import { rendererModuleManifests } from '../module-manifests/index.js';
+import { createModuleHistoryRuntime } from './module-history-runtime.js';
 import {
   createManifestNavigationAliases,
   createManifestRenderEntries,
@@ -42,6 +43,7 @@ export function createRendererModuleRuntime(config = {}) {
   const manifestContext = {
     state,
     persist,
+    getModuleHistory: config.getModuleHistory,
     createId,
     safeText,
     cssEscape,
@@ -52,6 +54,7 @@ export function createRendererModuleRuntime(config = {}) {
     showView,
     views,
     onStoragePathSaved,
+    runCloudSync: config.runCloudSync,
     rootDocument,
     windowObject,
     apiBridge,
@@ -74,6 +77,7 @@ export function createRendererModuleRuntime(config = {}) {
   }
 
   return {
+    ...createModuleHistoryRuntime(rendererModuleManifests, manifestContext),
     modules,
     navigationViewAliases,
     renderAll,

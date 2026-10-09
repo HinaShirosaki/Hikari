@@ -47,22 +47,39 @@ test('plugin icons are optional, bounded SVG files confined to the installed fol
   }
 });
 
-test('icon refresh loads assets for existing installs without changing permissions or identity', async () => {
-  const plugin = { id: manifest.id, path: '/installed/icon-plugin', permissions: ['storage'] };
-  const app = { id: `plugin-${manifest.id}`, iconMarkup: pluginIconMarkup('') };
+test('presentation refresh updates existing install names and icons without changing permission grants or identity', async () => {
+  const plugin = { id: manifest.id, name: 'Previous name', path: '/installed/icon-plugin', permissions: ['storage'] };
+  const disabled = { ...plugin, enabled: false };
+  const app = { id: `plugin-${manifest.id}`, viewId: `plugin-${manifest.id}-view`, label: plugin.name, iconMarkup: pluginIconMarkup('') };
+  const attributes = new Map(), frameAttributes = new Map();
+  const frame = { setAttribute: (key, value) => frameAttributes.set(key, value) };
+  const section = { setAttribute: (key, value) => attributes.set(key, value), querySelector: () => frame };
+  const documentObject = { getElementById: id => id === app.viewId ? section : null };
   let reads = 0;
   const api = { inspectPluginFolder: async () => {
     reads += 1;
     return { ok: true, ...manifest, permissions: ['files'], iconDataUrl: dataUrl };
   } };
   const before = structuredClone(plugin);
-  await loadPluginIcons({ plugins: [plugin, { ...plugin, bundled: true }, { ...plugin, enabled: false }, { ...plugin, service: {} }], appRegistry: [app], api });
-  assert.equal(reads, 1);
+  await loadPluginIcons({ plugins: [plugin, { ...plugin, bundled: true }, disabled, { ...plugin, service: {} }], appRegistry: [app], api, documentObject });
+  assert.equal(reads, 2);
   assert.match(app.iconMarkup, /data-plugin-icon/);
-  assert.deepEqual(plugin, before);
-  for (const inspected of [{ ok: false }, { ok: true, id: 'different', iconDataUrl: dataUrl }]) {
-    await loadPluginIcons({ plugins: [plugin], appRegistry: [app], api: { inspectPluginFolder: async () => inspected } });
+  assert.deepEqual(plugin, { ...before, name: manifest.name });
+  assert.equal(disabled.name, manifest.name, 'Disabled install names also refresh in Settings');
+  assert.equal(disabled.enabled, false);
+  assert.equal(app.label, manifest.name);
+  assert.equal(attributes.get('aria-label'), manifest.name);
+  assert.equal(attributes.get('data-plugin-name'), manifest.name);
+  assert.equal(frame.title, frameAttributes.get('aria-label'));
+  assert.match(frame.title, /Icon plugin/);
+  assert.match(frame.title, /storage/);
+  assert.doesNotMatch(frame.title, /files/);
+  for (const inspected of [{ ok: false, name: 'Rejected name' }, { ok: true, id: 'different', name: 'Different plugin', iconDataUrl: dataUrl }]) {
+    await loadPluginIcons({ plugins: [plugin], appRegistry: [app], api: { inspectPluginFolder: async () => inspected }, documentObject });
     assert.doesNotMatch(app.iconMarkup, /data-plugin-icon/);
+    assert.equal(plugin.name, manifest.name);
+    assert.equal(app.label, manifest.name);
+    assert.equal(attributes.get('aria-label'), manifest.name);
   }
   await loadPluginIcons({ plugins: [plugin], appRegistry: [app], api: { inspectPluginFolder: async () => { throw new Error('unavailable'); } } });
   await loadPluginIcons({ plugins: [plugin], appRegistry: [app] });

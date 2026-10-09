@@ -35,12 +35,12 @@ builds. Minified bundles keep their upstream licence header inside the file.
 | ↳ qcms (wasm) | — | MIT | Mozilla Corporation; Mozilla Foundation | `vendor/pdfjs/web/wasm/LICENSE_QCMS`, `LICENSE_PDFJS_QCMS` |
 | sql.js (SQLite 3.49.1 compiled to wasm) | — | MIT; SQLite is public domain | sql.js authors | `vendor/sqljs/LICENSE.sqljs` |
 | Tabulator | 6.2.4 | MIT | Oli Folkerd | `vendor/tabulator/LICENSE`, `src/plugins/gel/vendor/tabulator/LICENSE` |
-| Cropper.js | 1.6.2 | MIT | Chen Fengyuan | Header of `vendor/cropperjs/cropper.min.js` |
+| Cropper.js | 1.6.2 | MIT | Chen Fengyuan | Headers of `vendor/cropperjs/cropper.min.js`, `src/plugins/gel/vendor/cropperjs/cropper.min.js`, and `plugins/scientific-illustration/vendor/cropperjs/cropper.min.js` |
 | jsPDF (and the libraries it bundles) | 4.2.0 | MIT | James Hall, yWorks GmbH, Lukas Holländer, contributors | Header of `vendor/jspdf.umd.min.js` |
 | Plotly.js (and the libraries it bundles) | 3.6.0 | MIT | Plotly, Inc. | Header of `vendor/plotly/plotly.min.js` |
 | ONNX Runtime Web | 1.26.0 | MIT | Microsoft Corporation | `vendor/onnxruntime/README.md`, header of `ort.wasm.min.mjs` |
 | UTIF.js | — | MIT | Photopea | `vendor/utif/LICENSE`, `src/plugins/gel/vendor/utif/LICENSE` |
-| PptxGenJS (bundles JSZip, MIT) | 4.0.1 | MIT | Brent Ely | `src/plugins/gel/vendor/pptxgenjs/LICENSE` |
+| PptxGenJS (bundles JSZip, MIT) | 4.0.1 | MIT | Brent Ely | `src/plugins/gel/vendor/pptxgenjs/LICENSE`, `plugins/scientific-illustration/vendor/pptxgenjs/LICENSE` |
 
 ## Fonts
 
@@ -186,6 +186,12 @@ and BLAST, UniProt (data licensed CC BY 4.0), Europe PMC, PubMed Central, and
 Crossref. Their terms of use apply to those requests.
 
 ## Trademarks
+
+Google Drive and its product logo are trademarks of Google LLC. The Dropbox name
+and glyph are trademarks of Dropbox, Inc. Hikari uses these marks to identify
+the corresponding cloud-drive integrations. See the
+[Google Drive branding guide](https://developers.google.com/workspace/drive/api/guides/branding)
+and [Dropbox developer branding guide](https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/branding-guide).
 
 Product and company names are used only to describe compatibility and are the
 property of their respective owners. In particular: Gibson Assembly® and Q5® are

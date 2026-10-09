@@ -140,6 +140,9 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
   }
 
   if (!templateSequence.length) {
+    if (source === 'oligo_assembly' || source === 'sequence_viewer_edit') {
+      return { ...untemplatedDesign(desiredSequence, []), requiresOligoAssembly: true };
+    }
     const isDeclaredPhysicalFragment = !source
       || source === 'provided_fragment'
       || source === 'physical_fragment'
@@ -161,6 +164,9 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
   const { core, templateSequence: strandTemplate } =
     findTemplateCoreOnEitherStrand(desiredSequence, templateSequence, Boolean(fragment?.metadata?.specificityCircular));
   if (!core || core.length < TEMPLATE_SEED_LENGTH) {
+    if (source === 'sequence_viewer_edit') {
+      return { ...untemplatedDesign(desiredSequence, []), requiresOligoAssembly: true };
+    }
     return untemplatedDesign(desiredSequence, [
       `${templateName || 'The stated template'} does not visibly carry this fragment; its primers were designed off the assembled sequence. Confirm the template before ordering.`
     ]);
@@ -180,6 +186,9 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
 
 export function fragmentPrimerConfig(fragment, config = {}) {
   const metadata = fragment?.metadata || {};
+  if (resolveFragmentPrimerTemplate(fragment).requiresOligoAssembly) {
+    return { ...config, specificitySequence: normalizeSequence(fragment.sequence), specificityCircular: false };
+  }
   return metadata.specificitySequence
     ? { ...config, specificitySequence: metadata.specificitySequence, specificityCircular: Boolean(metadata.specificityCircular) }
     : config;
@@ -207,6 +216,7 @@ export function forwardReversePairs(primers) {
 
 export function summarizePrimerPlan(primers, overlaps = []) {
   const safePrimers = asArray(primers);
+  overlaps = [...asArray(overlaps), ...safePrimers.flatMap((primer) => asArray(primer.overlapSummary))];
   const tmValues = safePrimers.map((primer) => Number(primer?.tm) || 0);
   const sortedTm = [...tmValues].sort((left, right) => left - right);
 
@@ -250,7 +260,8 @@ export function summarizePrimerPlan(primers, overlaps = []) {
       rightFragmentId: item.rightFragmentId,
       overlapLength: item.overlapLength,
       overlapTm: item.overlapTm,
-      mode: item.mode
+      mode: item.mode,
+      ...(item.overlapGroup ? { overlapGroup: item.overlapGroup } : {})
     }))
   };
 }

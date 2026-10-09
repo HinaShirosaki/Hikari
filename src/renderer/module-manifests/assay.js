@@ -2,6 +2,8 @@ import { initAssay } from '../modules/assay/index.js';
 
 export const assayManifest = {
   key: 'assay',
+  historyStateKeys: ['assays'],
+  renderHistory: ({ modules }) => modules.assay.restoreHistory(),
   init: initAssay,
   viewKey: 'ASSAY',
   bootOrder: 70,

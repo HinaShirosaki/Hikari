@@ -38,7 +38,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         services.notebook.handleNotebookEntriesChanged();
         services.notebook.handleAgentNotebookEntriesChanged();
         services.project.handleProjectsChanged();
-        services.inventory.handleSamplesChanged();
+        services.inventory.handleSampleInventorySettingsChanged();
         services.analysis.handleAssaysChanged();
         services.sequence.openFromToolBox({ sequence: 'ATGC' });
       });
@@ -302,7 +302,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(agentRender.calls.length, 1);
     });
 
-    test('inventory service refreshes sample registry and opens the container-first sample workspace', () => {
+    test('inventory service opens the container-first sample workspace', () => {
       const servicesModule = loadServicesModule();
       const showView = createSpy('showView');
       const setSearchInputValue = createSpy('setSearchInputValue');
@@ -311,12 +311,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         setSearchInputValue
       });
       const services = servicesModule.createRendererServices(registry);
-
-      const sampleRegistryRender = createSpy('sampleRegistryRender');
-      registry.register('sampleRegistry', { render: sampleRegistryRender });
-
-      services.inventory.handleSamplesChanged();
-      assert.equal(sampleRegistryRender.calls.length, 1);
 
       services.inventory.openSampleSearch('HEK293');
       assert.deepEqual(showView.calls, [['sample-registry-view']]);
@@ -417,8 +411,8 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       };
       const savedKeys = [];
       const dirty = new Map([
-        ['sampleRegistry', true],
-        ['protocol', true]
+        ['protocol', true],
+        ['assay', true]
       ]);
       const moduleRegistry = {
         get(key) {
@@ -446,7 +440,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       service.handleCloseRequested();
       assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
       assert.equal(elements.get('unsaved-changes-list').children.length, 2);
-      assert.deepEqual(renderedLabels(), ['Sample', 'Protocol']);
+      assert.deepEqual(renderedLabels(), ['Protocol', 'Plate']);
       assert.equal(elements.get('unsaved-changes-save-btn').textContent, 'Save 2 & Quit');
 
       elements.get('unsaved-changes-close-btn').click();
@@ -458,30 +452,30 @@ module.exports = function registerModuleServicesSuite(context = {}) {
 
       await service.saveAndQuit();
 
-      assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
+      assert.deepEqual(savedKeys, ['protocol', 'assay']);
       assert.deepEqual(responses, ['pending', 'cancel', 'pending', 'quit']);
       assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
 
       // Unchecked editors stay dirty: the app quits and drops their work.
-      dirty.set('sampleRegistry', true);
       dirty.set('protocol', true);
+      dirty.set('assay', true);
       savedKeys.length = 0;
       created.length = 0;
 
       service.handleCloseRequested();
-      const protocolBox = renderedBoxes()[1];
-      protocolBox.checked = false;
-      protocolBox.change();
+      const assayBox = renderedBoxes()[1];
+      assayBox.checked = false;
+      assayBox.change();
       assert.equal(elements.get('unsaved-changes-save-btn').textContent, 'Save & Quit');
 
       await service.saveAndQuit();
 
-      assert.deepEqual(savedKeys, ['sampleRegistry']);
-      assert.equal(dirty.get('protocol'), true);
+      assert.deepEqual(savedKeys, ['protocol']);
+      assert.equal(dirty.get('assay'), true);
       assert.deepEqual(responses, ['pending', 'cancel', 'pending', 'quit', 'pending', 'quit']);
 
       // Nothing checked leaves the primary action unavailable.
-      dirty.set('sampleRegistry', true);
+      dirty.set('protocol', true);
       created.length = 0;
       service.handleCloseRequested();
       renderedBoxes().forEach((box) => {

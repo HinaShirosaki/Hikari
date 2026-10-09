@@ -94,7 +94,7 @@ function protocolBody(protocol, values) {
 // encodings or duplicate artifact records as metadata in the document.
 function readableDetails(value) {
   if (Array.isArray(value)) return value.map(readableDetails);
-  if (!value || typeof value !== 'object') return /^data:image\//i.test(text(value)) ? '' : value;
+  if (!value || typeof value !== 'object') return /^(?:hikari-image-unavailable:)?data:image\//i.test(text(value)) ? '' : value;
   return Object.fromEntries(Object.entries(value).filter(([key]) =>
     !/^(?:id|storageFolder|storageDocumentFile|markdownRevision|artifactDefinition|artifactAnalysis)$/.test(key)
     && !/(?:Id|Ids|Path|RelativePath|DataUrl)$/.test(key))
@@ -130,6 +130,10 @@ function calculations(entry) {
   }).join('');
 }
 
+function linkedRecordHeader(title, metadata) {
+  return `### ${inline(title)}\n\n${properties(metadata)}\n\n`;
+}
+
 function assayBody(assay, options) {
   const layout = array(assay.wellLayout);
   const results = object(assay.resultValues);
@@ -140,11 +144,11 @@ function assayBody(assay, options) {
     return [well, item.sampleId, item.concentration, results[well]];
   });
   const analysis = object(assay.latestAnalysis);
-  return section(assay.name || assay.id || 'Assay', properties({
+  return linkedRecordHeader(assay.name || assay.id || 'Assay', {
     assayNumber: assay.assayNumber, plate: assay.plateLabel || assay.plateType,
     project: assay.projectName, updatedAt: assay.updatedAt, sampleAxis: assay.sampleAxis,
     concentrationAxis: assay.concentrationAxis, concentrationUnit: assay.concentrationUnit
-  }), 3)
+  })
     + section('Plate layout and measurements', table(['Well', 'Sample', `Concentration${assay.concentrationUnit ? ` (${assay.concentrationUnit})` : ''}`, 'Measured value'], rows), 4)
     + section('Serial dilution', Object.entries(object(assay.serialDilutionSummary || assay.serialDilution)).map(([key, value]) => section(label(key), context(value, 6), 5)).join(''), 4)
     + section('Analysis', context(readableDetails(analysis), 5), 4)
@@ -161,7 +165,7 @@ function assayBody(assay, options) {
 }
 
 function gelBody(gel, options) {
-  return section(gel.name || gel.id || 'Gel', properties({ analysisType: gel.analysisType, imageName: gel.imageName, updatedAt: gel.updatedAt }), 3)
+  return linkedRecordHeader(gel.name || gel.id || 'Gel', { analysisType: gel.analysisType, imageName: gel.imageName, updatedAt: gel.updatedAt })
     + image(`${gel.name || 'Gel'} preview`, gel.previewImagePath || gel.sourceImagePath, gel.previewImageDataUrl || gel.sourceImageDataUrl, options)
     + section('Parameters', context(gel.parameters, 5), 4)
     + section('Gel analysis', Object.entries(object(gel.report)).map(([key, value]) => section(label(key), context(readableDetails(value), 6), 5)).join(''), 4)

@@ -1,6 +1,7 @@
 import { getPluginLeftRailLayout } from '../plugin-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
+import { workspaceToolIcons } from '../plugin-workspace-tool-icons.js';
 
 const PROTOCOL_MARKER = 1;
 const MAX_LIST_SIZE = 500;
@@ -91,6 +92,10 @@ function buildPluginAppContext(state, changed = '', windowObject = globalThis.wi
       configured: Boolean(text(settings.storagePath, 2400))
     },
     layout: {
+      workspaceTools: {
+        available: Boolean(windowObject?.document?.getElementById?.('plugin-workspace-tools')),
+        icons: [...workspaceToolIcons]
+      },
       agentChatRail: {
         expanded: windowObject?.document?.body?.classList?.contains('has-agent-chat-rail-expanded') === true,
         available: isAgentAvailable(windowObject?.document)

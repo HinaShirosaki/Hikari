@@ -119,7 +119,7 @@ Download the ImageJ jars into `ij153/` yourself rather than committing them.
 
 ## 4. Install and check
 
-1. **Settings → Skills & plugins → Add Plugin Folder**, select the folder.
+1. **Settings → Plugins → Add Plugin Folder**, select the folder.
 2. **Reload App**, then **More → ImageJ**. First boot takes 20–30 seconds while
    the JVM loads.
 3. **File → Open Samples → Blobs**, then **Analyze → Analyze Particles** to

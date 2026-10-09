@@ -81,6 +81,22 @@ test('group resize rejects stretching and out-of-limit fonts instead of silently
   const resized = transformSelection(objects, tiny); close(resized[1].fontSize, 4);
 });
 
+test('mixed selections resize around their visible bounds rather than oversized text layout boxes', () => {
+  const objects = fixture().objects.slice(0, 2);
+  const glyph = { ...objects[1], x: 260, y: 180, width: 25, height: 24 };
+  const visible = selectionBounds([objects[0], glyph]), original = selectionBounds(objects);
+  for (const [direction, [hx, hy]] of Object.entries(RESIZE_HANDLES)) {
+    const patch = resizeSelection(objects, direction, hx * visible.width / 2, hy * visible.height / 2, visible);
+    const after = transformSelection(objects, patch), scale = after[1].fontSize / objects[1].fontSize;
+    close(scale, 1.5);
+    const glyphAfter = { ...glyph, x: patch.x + (glyph.x - original.x) * scale, y: patch.y + (glyph.y - original.y) * scale, width: glyph.width * scale, height: glyph.height * scale };
+    const bounds = selectionBounds([after[0], glyphAfter]);
+    close(visible.x + (1 - hx) * visible.width / 2, bounds.x + (1 - hx) * bounds.width / 2);
+    close(visible.y + (1 - hy) * visible.height / 2, bounds.y + (1 - hy) * bounds.height / 2);
+    close(after[1].width / after[1].height, objects[1].width / objects[1].height);
+  }
+});
+
 test('individual editing stays independent and moving/deleting a member prunes stale groups', () => {
   const before = group(fixture());
   const edited = applyOperations(before, [{ op: 'update', id: 'label', patch: { text: 'Rough ER', x: 280 } }]);

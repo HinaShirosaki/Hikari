@@ -52,7 +52,7 @@ async function readWorkflowFolders(workflowRootPath) {
   return result(true);
 }
 
-async function readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings = []) {
+async function readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings = [], alerts = []) {
   const notebookRoot = path.join(workflowFolderPath, 'Notebook');
   const out = [];
   const seen = new Set();
@@ -72,14 +72,15 @@ async function readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings
         await walk(absPath);
         continue;
       }
-      if (!entry.isFile() || ![NOTEBOOK_PAGE_FILE_NAME, `${NOTEBOOK_PAGE_FILE_NAME}.pending`].includes(entry.name)) {
+      if (!entry.isFile() || ![NOTEBOOK_PAGE_FILE_NAME, 'page.json', 'page.json.pending'].includes(entry.name)) {
         continue;
       }
-      const filePath = absPath.replace(/\.pending$/, '');
+      const filePath = absPath.replace(/\.json(?:\.pending)?$/, '.md');
       if (seen.has(filePath)) continue;
       seen.add(filePath);
       const payload = await readRecordDocument(filePath, 'notebook');
       warnings.push(...payload.warnings);
+      alerts.push(...payload.alerts);
       if (!payload.ok) {
         if (payload.exists && payload.error) warnings.push(payload.error);
         continue;

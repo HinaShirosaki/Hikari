@@ -1,7 +1,7 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import {
   getContainerLayout,
-  getWellName,
+  getContainerWellName,
   isMultiWellContainer
 } from '../../../lib/inventory-containers.js';
 import {
@@ -9,13 +9,8 @@ import {
   getSampleInventoryLocationDisplay,
   getSampleInventoryLocationNames
 } from '../../../lib/inventory-settings.js';
-import {
-  buildLocationFromInventoryLink,
-  buildNotebookSampleCapture,
-  getContainerWellName,
-  makeDefaultCode,
-  normalizeCode
-} from '../../sample-registry/public-api.js';
+import { buildSampleLocation, makeDefaultSampleCode, normalizeSampleCode } from '../../../lib/sample-records.js';
+import { buildNotebookSampleCapture } from './notebook-capture-record.js';
 import { asArray } from '../../../lib/normalize.js';
 
 function listContainers(inventory = {}) {
@@ -48,9 +43,9 @@ function linkedSamplesAt(state, selectedContainer, wellIndex) {
   });
 }
 
-// "Add samples" dialog on a notebook page: create a sample, optionally place
-// it in a container slot, and link it to the page in one step (the page is
-// saved first via ensureEntry if it is new).
+// "Add samples" dialog on a notebook page: create a sample in a container slot
+// and link it to the page in one step (the page is saved first via ensureEntry
+// if it is new). A sample only exists inside a container, so one is required.
 export function createNotebookQuickSampleController({
   doc = (typeof document !== 'undefined' ? document : null),
   state,
@@ -117,10 +112,6 @@ export function createNotebookQuickSampleController({
     return layout.rows * layout.cols;
   }
 
-  function getWellLabel(container, index) {
-    return getContainerWellName(container, index) || getWellName(container, index);
-  }
-
   // First empty well, falling back to well 0 when the box is full.
   function firstAvailableWell(containerItem) {
     if (!containerItem || !isMultiWellContainer(containerItem.container)) {
@@ -163,7 +154,7 @@ export function createNotebookQuickSampleController({
     }
     const containerName = selectedContainer.container.name || 'Container';
     const positionLabel = isMultiWellContainer(selectedContainer.container)
-      ? (Number.isInteger(selectedWellIndex) ? getWellLabel(selectedContainer.container, selectedWellIndex) : 'Select position')
+      ? (Number.isInteger(selectedWellIndex) ? getContainerWellName(selectedContainer.container, selectedWellIndex) : 'Select position')
       : 'Single position';
     gridLabel.textContent = `${containerName} · ${positionLabel}`;
   }
@@ -204,7 +195,7 @@ export function createNotebookQuickSampleController({
     grid.style.setProperty('--quick-sample-grid-aspect-x', String(layout.cols));
     grid.style.setProperty('--quick-sample-grid-aspect-y', String(layout.rows));
     grid.innerHTML = Array.from({ length: count }, (_item, index) => {
-      const label = getWellLabel(container, index);
+      const label = getContainerWellName(container, index);
       const occupied = linkedSamplesAt(state, selectedContainer, index).length;
       const selected = index === selectedWellIndex;
       return `
@@ -229,10 +220,9 @@ export function createNotebookQuickSampleController({
   function renderContainerOptions(previousKey = '') {
     const locationContainers = containers.filter((item) => item.section === selectedLocation);
     if (containerSelect) {
-      containerSelect.innerHTML = [
-        '<option value="">No container</option>',
-        ...locationContainers.map((item) => `<option value="${safeText(item.key)}">${safeText(item.container.name || 'Container')}</option>`)
-      ].join('');
+      containerSelect.innerHTML = locationContainers
+        .map((item) => `<option value="${safeText(item.key)}">${safeText(item.container.name || 'Container')}</option>`)
+        .join('');
     }
     const next = findContainer(locationContainers, previousKey) || locationContainers[0] || null;
     selectContainer(next?.key || '');
@@ -296,10 +286,10 @@ export function createNotebookQuickSampleController({
   }
 
   function uniqueGeneratedCode() {
-    let code = makeDefaultCode();
+    let code = makeDefaultSampleCode();
     let attempt = 1;
     while (asArray(state?.samples).some((sample) => sample?.code === code)) {
-      code = `${makeDefaultCode()}-${attempt}`;
+      code = `${makeDefaultSampleCode()}-${attempt}`;
       attempt += 1;
     }
     return code;
@@ -313,7 +303,11 @@ export function createNotebookQuickSampleController({
       nameInput?.focus?.();
       return null;
     }
-    const requestedCode = normalizeCode(codeInput?.value);
+    if (!selectedContainer) {
+      setStatus('Choose a container for this sample.', true);
+      return null;
+    }
+    const requestedCode = normalizeSampleCode(codeInput?.value);
     if (requestedCode && asArray(state?.samples).some((sample) => sample?.code === requestedCode)) {
       setStatus(`Sample code ${requestedCode} already exists.`, true);
       codeInput?.focus?.();
@@ -329,9 +323,7 @@ export function createNotebookQuickSampleController({
         return null;
       }
       const nowIso = new Date().toISOString();
-      const linkedPosition = selectedContainer
-        ? (isMultiWellContainer(selectedContainer.container) ? String(selectedWellIndex) : 'single')
-        : '';
+      const wellIndex = isMultiWellContainer(selectedContainer.container) ? selectedWellIndex : null;
       const record = {
         id: String(createId?.() || `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`),
         code: requestedCode || uniqueGeneratedCode(),
@@ -341,14 +333,8 @@ export function createNotebookQuickSampleController({
         concentration: String(concentrationInput?.value || '').trim(),
         notes: '',
         cellPassage: null,
-        location: selectedContainer ? buildLocationFromInventoryLink(selectedContainer, linkedPosition) : null,
-        inventoryLink: selectedContainer
-          ? {
-            section: selectedContainer.section,
-            containerId: selectedContainer.container.id,
-            wellIndex: isMultiWellContainer(selectedContainer.container) ? selectedWellIndex : null
-          }
-          : null,
+        location: buildSampleLocation(selectedContainer.section, selectedContainer.container, wellIndex),
+        inventoryLink: { section: selectedContainer.section, containerId: selectedContainer.container.id, wellIndex },
         chemicalLinks: [],
         compoundStructure: null,
         updatedAt: nowIso

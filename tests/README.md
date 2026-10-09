@@ -21,6 +21,18 @@ npm test                      # build:ui + everything
 npm run test:checks           # checks + selfchecks, no suites
 ```
 
+## Protocol/notebook MCP after Markdown migration
+
+`node tests/record-markdown-mcp-selfcheck.js` migrates disposable legacy records and checks
+the actual MCP server, registered executors, Markdown reads, rich content,
+drafts, approval saves, append guards, and damaged-file warnings.
+`node tests/record-markdown-mcp-selfcheck.js --http` additionally uses a child stdio server
+and an authenticated loopback HTTP app host; it requires permission to listen.
+The selfcheck runs automatically in `test.js` and covers text queries combined
+with filters, experiment-title search, and filter-only calls with unrelated chat
+context. See `docs/main-platform/data/record-markdown-mcp-test.md` for results
+and the live-connection repair.
+
 ## Electron and installed-app checks
 
 `tests/*-electron.cjs` scripts drive a real Electron window and are not part of
@@ -32,6 +44,40 @@ npm run build:ui
 node node_modules/electron/cli.js tests/storage-setup-electron.cjs
 ```
 
+`HIKARI_POWERPOINT_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks Figura's PPTX export through the real save IPC using disposable artwork.
+It inspects separate SVG/raster components and native text boxes, layer order,
+geometry, opacity, WebP conversion, and cancellation/failure/retry. Set
+`HIKARI_PLUGIN_QA_ROOT` to a packaged `Resources/app.asar` to test its host too.
+
+`HIKARI_ROTATION_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks Figura's rotation handle with native pointer input, text and mixed groups,
+Shift snapping, keyboard repeats, cancellation, concurrent edits, undo, Scratch,
+zoom and panning at desktop and narrow widths. It also runs the existing move and
+resize checks. Use `HIKARI_PLUGIN_QA_ROOT` for packaged-host compatibility.
+
+`HIKARI_CLIPBOARD_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks Figura component/group copy and paste with native Ctrl/Command keyboard
+input and isolated clipboard events, preserving the system clipboard. It covers
+snapshot independence, media, typography, grouping, undo/redo, rapid pastes,
+Scratch, cross-illustration paste, text fields, malformed input, failure/retry,
+and persistence. Use `HIKARI_PLUGIN_QA_ROOT` for packaged-host compatibility.
+
+`HIKARI_HISTORY_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks real system Undo/Redo clicks through the history service and plugin API,
+including button availability, frame keyboard shortcuts, text-field undo,
+failure/retry, module isolation, and illustration changes. The shared-tools
+fixture also checks that toolbar actions retain the system history target.
+Packaged-host fixtures use the updated source focus delegate with the packaged
+history service and bridge; this does not update the running installed app.
+
+`node tests/module-history-selfcheck.mjs` covers independent module histories,
+linked changes, external updates, workspace resets, and draft protection.
+`node node_modules/electron/cli.js tests/module-history-electron.cjs` loads the
+real renderer modules with a temporary profile and stubbed storage IPC. It
+checks module routing, Inventory's shared history, editor refreshes, and
+workspace history resets without touching saved workspaces.
+
 `storage-setup-electron.cjs` covers the first-launch workspace page with an
 isolated temporary profile and real storage IPC/import/save handlers, with a
 simulated folder picker: cancellation, failures, retry, saving, and recovery
@@ -41,6 +87,14 @@ cover agent chat rendering, the Home notebook agent, HTML and image output,
 notebook suggestions and drafts, selection insights, spreadsheet fill,
 sequence CDS properties and MCP, sample suggestions, the assay chart, and the
 plugin runtime.
+
+`cloud-drive-electron.cjs` exercises Google Drive and Dropbox controls through
+real preload/storage/cloud IPC with in-memory providers and a temporary profile.
+It checks sign-in cancellation, workspace linking, upload/download, conflicts,
+offline retry, disconnection, and responsive layout. `cloud-drive-selfcheck.js`
+adds provider HTTP, credential, OAuth callback, and two-device sync checks. These
+fixtures do not sign in to live accounts; see `docs/main-platform/data/cloud-drives.md`
+for OAuth application configuration and the limits of this verification.
 
 CI (`.github/workflows/ci.yml`, macOS) runs `npm test`, then
 `tests/hikari-mcp-launch-selfcheck.js` against Electron's embedded Node (the

@@ -39,19 +39,21 @@ async function readProtocolDirectory(protocolRootPath) {
     const owners = await protocolFoldersById(directoryPath);
     const protocols = [];
     const warnings = [];
+    const alerts = [];
     const duplicates = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) {
         continue;
       }
-      const filePath = path.join(directoryPath, entry.name, 'protocol.json');
+      const filePath = path.join(directoryPath, entry.name, 'protocol.md');
       const payload = await readRecordDocument(filePath, 'protocol');
       warnings.push(...payload.warnings);
+      alerts.push(...payload.alerts);
       if (payload.ok) {
         for (const protocol of readProtocolsFromSidecar(payload.data)) {
           const owner = owners.get(protocol?.id);
           if (owner && owner !== entry.name) {
-            duplicates.push(`Protocol folder "${entry.name}" has the same ID as "${owner}", so Hikari loaded only "${owner}" and left the copy untouched. To keep the copy as its own protocol, give it a new "id" in its protocol.json.`);
+            duplicates.push(`Protocol folder "${entry.name}" has the same ID as "${owner}", so Hikari loaded only "${owner}" and left the copy untouched. To keep the copy as its own protocol, give it a new "id" in its Markdown record metadata.`);
             continue;
           }
           protocols.push(protocol);
@@ -65,7 +67,7 @@ async function readProtocolDirectory(protocolRootPath) {
       ok: protocols.length > 0,
       data: protocols,
       error: [...warnings, ...duplicates].join('; '),
-      duplicates
+      alerts: [...alerts, ...duplicates]
     };
   } catch (error) {
     if (error?.code === 'ENOENT') {

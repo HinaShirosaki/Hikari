@@ -14,7 +14,7 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
-const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, readJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
@@ -24,11 +24,12 @@ const { removeGeneratedMarkdownSafely } = require('./record-markdown');
 const { writeRecordDocumentSafely } = require('./record-markdown/document-storage');
 const { buildNotebookPageFolderPath, buildProtocolFolderName, isWorkflowNotebookEntry, protocolFoldersById, snapshotDocumentInputs } = require('./record-markdown/record-paths');
 const { preflightDocuments } = require('./record-markdown/preflight');
+const { readRecordDocument } = require('./record-markdown/document-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
-const PROTOCOL_FILE_NAME = 'protocol.json';
+const PROTOCOL_FILE_NAME = 'protocol.md';
 
 function buildProtocolsSidecar(snapshot, updatedAt) {
   return {
@@ -55,7 +56,7 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
   }
   await fs.mkdir(protocolRootPath, { recursive: true });
   const existingEntries = await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(() => []);
-  const existingFoldersById = await protocolFoldersById(protocolRootPath);
+  const existingFoldersById = await protocolFoldersById(protocolRootPath, protocols);
   const activeFolders = new Set();
   const writtenPaths = [];
   await forEachInBatches(protocols, async (protocol, index) => {
@@ -82,13 +83,13 @@ async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdow
       continue;
     }
     const filePath = path.join(protocolRootPath, entry.name, PROTOCOL_FILE_NAME);
-    const stored = await readJsonFile(filePath);
+    const stored = await readRecordDocument(filePath, 'protocol');
     // Unreadable records and copies of a protocol still in use are kept.
     if ((stored.exists && !stored.ok) || activeIds.has(stored.data?.protocol?.id)) {
       continue;
     }
-    await fs.rm(filePath, { force: true });
     await removeGeneratedMarkdownSafely(filePath, markdownWarnings);
+    await fs.rm(filePath.replace(/\.md$/, '.json'), { force: true });
     await fs.rmdir(path.join(protocolRootPath, entry.name)).catch(() => {});
   }
 
@@ -181,10 +182,10 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, ma
   const writtenPaths = [];
   const notebookEntries = asArray(snapshot.notebookEntries)
     .map((entry) => ensureObject(entry))
-    .filter((entry) => !isWorkflowNotebookEntry(entry));
+    .filter((entry) => !isWorkflowNotebookEntry(entry, snapshot.workflows));
   await forEachInBatches(notebookEntries, async (entry) => {
     const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
-    const filePath = path.join(folderPath, 'page.json');
+    const filePath = path.join(folderPath, 'page.md');
     writtenPaths.push(filePath);
     const payload = {
       schema_name: NOTEBOOK_SIDECAR_SCHEMA,
@@ -285,7 +286,6 @@ async function syncBundleFromSnapshotUnlocked({
       typeof getAgentMemoryFilePath === 'function' ? cleanText(getAgentMemoryFilePath(), 2400) : ''
     )
     : [];
-  await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
   await writeSampleContainers(bundlePaths.samplesRootPath, safeSnapshot, updatedAt);
   const experimentLogPath = await writeExperimentLogSidecar(
     bundlePaths.experimentLogPath,
@@ -307,6 +307,13 @@ async function syncBundleFromSnapshotUnlocked({
     storagePath: safeSnapshot?.settings?.storagePath,
     snapshot: safeSnapshot
   });
+  const allSkipped = [...skippedRecords, ...workflowSync.skippedRecords];
+  for (const [kind, file] of [['notebook', bundlePaths.notebookPagesPath], ['protocol', bundlePaths.basePath ? `${bundlePaths.basePath}.protocols.json` : '']]) {
+    if (!file || allSkipped.some(record => record.kind === kind)) continue;
+    await fs.copyFile(file, file.replace(/\.json$/, '.pre-markdown.json'), fs.constants.COPYFILE_EXCL)
+      .catch(error => { if (!['ENOENT', 'EEXIST'].includes(error.code)) throw error; });
+    await fs.rm(file, { force: true });
+  }
   return {
     bundlePaths,
     markdownRecords: { protocols: safeSnapshot.protocols, notebookEntries: safeSnapshot.notebookEntries },

@@ -1320,7 +1320,7 @@ test('plugin system: every public verb and host event is documented', async () =
     );
   });
   // Events have no table to enumerate them, so they are listed here.
-  ['app.context', 'app.save', 'app.undo', 'app.redo'].forEach((event) => {
+  ['app.context', 'app.save', 'app.undo', 'app.redo', 'app.workspaceTool', 'app.contextAction', 'agent.canvas'].forEach((event) => {
     assert.ok(api.includes(`\`${event}\``), `plugin-api.md does not document the "${event}" event`);
   });
 });

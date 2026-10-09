@@ -1,18 +1,7 @@
-import { getWellName } from './constants.js';
+import { getContainerWellName } from '../../lib/inventory-containers.js';
 import { getSampleInventoryLocationNames } from '../../lib/inventory-settings.js';
 
 export function createContainerStateHelpers({ state, uiState }) {
-  function getWellLabel(container, index) {
-    const rawWell = Array.isArray(container?.wells) ? container.wells[index] : null;
-    if (rawWell && typeof rawWell === 'object') {
-      const explicitName = String(rawWell.name || '').trim();
-      if (explicitName) {
-        return explicitName;
-      }
-    }
-    return getWellName(container, index);
-  }
-
   function getContainer(section, containerId) {
     return (state.inventory?.[section] || []).find((item) => item.id === containerId);
   }
@@ -129,7 +118,7 @@ export function createContainerStateHelpers({ state, uiState }) {
   }
 
   return {
-    getWellLabel,
+    getWellLabel: getContainerWellName,
     getContainer,
     getFolders,
     getFolder,

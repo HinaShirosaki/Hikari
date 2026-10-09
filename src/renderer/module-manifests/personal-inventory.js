@@ -2,24 +2,22 @@ import { initPersonalInventory } from '../modules/personal-inventory/index.js';
 
 export const personalInventoryManifest = {
   key: 'personalInventory',
+  historyStateKeys: ['samples', 'inventory', 'inventoryFolders', 'settings'],
   init: initPersonalInventory,
-  viewKey: 'PERSONAL_INVENTORY',
+  viewKey: 'SAMPLE_REGISTRY',
+  bootOrder: 60,
   createOptions: ({
     state,
     persist,
     createId,
     safeText,
-    cssEscape,
-    rendererServices,
-    modules
+    cssEscape
   }) => ({
     state,
     persist,
     createId,
     safeText,
-    cssEscape,
-    onSamplesChanged: rendererServices.inventory.handleSamplesChanged,
-    onSampleRecorded: (sample) => modules.sampleRegistry?.captureRecordedSample?.(sample)
+    cssEscape
   }),
   render: ({ modules }) => {
     modules.personalInventory.renderSections();

@@ -1,6 +1,6 @@
 # Storage
 
-This folder owns the storage-root layout: protocols and notebook prose live in Markdown with structured JSON companions, other records use their module-owned folders, and loading rebuilds the snapshot from those folders. It also keeps the chemicals SQLite index and imports existing roots. The full layout and save/load order are in [docs/main-platform/data/storage-and-bundles.md](../../../docs/main-platform/data/storage-and-bundles.md).
+This folder owns the storage-root layout: protocols and notebooks live in self-contained Markdown with hidden typed YAML state, assays and gels use JSON, and loading rebuilds the snapshot from those folders. It also keeps the chemicals SQLite index and imports existing roots. The full layout and save/load order are in [docs/main-platform/data/storage-and-bundles.md](../../../docs/main-platform/data/storage-and-bundles.md).
 
 ## Module map
 
@@ -21,7 +21,7 @@ This folder owns the storage-root layout: protocols and notebook prose live in M
 - `storage-sidecars.js`
   - `syncBundleFromSnapshot`: protocol folders, notebook page folders, project memory, sample containers, the experiment log, assay/gel record folders, paper records beside PDFs, the chemicals index, and the workflow root. Agent-owned workspace skill release is supplied by the main composition root instead of imported here.
 - `record-markdown/`
-  - Migrates and saves readable `protocol.md` / `page.md`, including linked assay/gel context and file/image links. `document-storage.js` merges external prose edits, backs up legacy JSON, and stages a recoverable checkpoint before replacing Markdown and JSON. `preflight.js` rejects ambiguous destinations before a save writes anything; a record whose document is damaged or conflicting is skipped and reported in `skippedRecords` while the rest of the save continues. `rebuild.js` supports explicit migration and regeneration without touching indexes, creating missing legacy workflow metadata when needed for discovery.
+  - Migrates and saves readable `protocol.md` / `page.md`, including linked assay/gel context and file/image links. `document-storage.js` merges external prose edits and commits text and hidden typed YAML metadata in one atomic Markdown replacement; legacy JSON is backed up and retired afterwards. `preflight.js` rejects ambiguous destinations before a save writes anything; a record whose document is damaged or conflicting is skipped and reported in `skippedRecords` while the rest of the save continues. `rebuild.js` supports explicit migration and regeneration without touching indexes, creating missing legacy workflow metadata when needed for discovery.
   - The neutral reader is `main/lib/record-markdown/read.js`; the document codec is `shared/record-markdown/`. Storage hydration and project-memory validation use the same reader. Renderer autosaves use `services/markdown-record-storage.js` to carry document revisions and preserve save order.
 - `storage-hydration.js` and `hydration/`
   - Snapshot hydration from protocol folders, project/notebook folders, sample containers, the experiment log, the workflow root, the chemicals index, paper records, assay/gel folders, and legacy `*.protocols.json` / `*.notebook-pages.json` files.

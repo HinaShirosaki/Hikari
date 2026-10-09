@@ -33,11 +33,13 @@ const NOTEBOOK_LOOKUP_MCP_TOOL = Object.freeze({
 });
 
 async function callNotebookLookup(input = {}, context = {}, deps = {}) {
-  const query = normalizeLookupQuery(input, context);
   const limit = toIntegerInRange(input.limit, 8, 1, 25);
   const projectName = cleanText(input.project_name || input.projectName, 220);
   const protocolName = cleanText(input.protocol_name || input.protocolName, 220);
   const notebookState = cleanText(input.notebook_state || input.notebookState, 80).toLowerCase();
+  const query = projectName || protocolName || notebookState
+    ? cleanText(input.query, 300)
+    : normalizeLookupQuery(input, context);
   const detail = cleanText(input.detail, 40).toLowerCase() === 'full' ? 'full' : 'summary';
   if (!query && !projectName && !protocolName && !notebookState) {
     return {
@@ -61,15 +63,18 @@ async function callNotebookLookup(input = {}, context = {}, deps = {}) {
   const result = await runAppTool({
     runTool: deps.runTool,
     toolId: 'notebook-lookup',
-    args: compactObject({
-      query,
-      limit,
-      project_name: projectName,
-      protocol_name: protocolName,
-      notebook_state: notebookState,
-      detail,
-      parser_payload: parserPayload
-    }),
+    args: {
+      ...compactObject({
+        limit,
+        project_name: projectName,
+        protocol_name: protocolName,
+        notebook_state: notebookState,
+        detail,
+        parser_payload: parserPayload
+      }),
+      // Retain an empty query so a filter-only lookup cannot search chat text.
+      query
+    },
     context
   });
   const envelope = normalizeToolEnvelope(result);

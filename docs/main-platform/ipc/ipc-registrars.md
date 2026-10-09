@@ -15,7 +15,7 @@ registerPythonIpc(pythonDependencies);
 registerSystemIpc(systemDependencies);
 ```
 
-There is no compatibility aggregator. Two more handlers are installed outside `src/main/ipc/` because they belong to a single service: the agent HTML preview (`AGENT.HTML_PREVIEW`, in `src/main/agent/html-output/preview-service.js`) and the assay plot bridge (`ASSAY.PLOT_REQUEST` / `PLOT_RESPONSE`, in `src/main/core/services/assay-plot-bridge.js`).
+There is no compatibility aggregator. Three more handlers are installed outside `src/main/ipc/` because they belong to a single service: the agent HTML preview (`AGENT.HTML_PREVIEW`, in `src/main/agent/html-output/preview-service.js`), the assay plot bridge (`ASSAY.PLOT_REQUEST` / `PLOT_RESPONSE`, in `src/main/core/services/assay-plot-bridge.js`), and the plugin canvas bridge that carries `plugin_canvas` MCP calls to plugin frames (`PLUGINS.CANVAS_REQUEST` / `CANVAS_RESPONSE`, in `src/main/core/services/plugin-canvas-bridge.js`).
 
 ## Channel source of truth
 

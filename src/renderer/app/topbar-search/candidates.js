@@ -199,7 +199,7 @@ function createSearchCandidates({
     });
 
     const personalInventoryTarget = {
-      viewId: VIEWS.PERSONAL_INVENTORY,
+      viewId: VIEWS.SAMPLE_REGISTRY,
       inputId: '',
       label: 'Containers'
     };

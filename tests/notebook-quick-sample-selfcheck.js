@@ -86,6 +86,9 @@ const controller = quickSampleModule.createNotebookQuickSampleController({
   trigger(document.getElementById('biology-notebook-quick-sample-location-list'), 'click', { target: locationTarget('Room Temp') });
   assert.equal(document.getElementById('biology-notebook-quick-sample-container').value, '');
   assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Choose a container');
+  document.getElementById('biology-notebook-quick-sample-name').value = 'Homeless sample';
+  assert.equal(await controller.submit(), null, 'a sample needs a container');
+  assert.equal(state.samples.length, 1);
   trigger(document.getElementById('biology-notebook-quick-sample-location-list'), 'click', { target: locationTarget('-20 Degree') });
   assert.equal(document.getElementById('biology-notebook-quick-sample-container').value, '-20 Degree::box-1');
   assert.equal(document.getElementById('biology-notebook-quick-sample-grid-label').textContent, 'Cloning Box · W2');

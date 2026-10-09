@@ -36,6 +36,7 @@ function createAgentChatOptions({
 
 export const agentChatManifest = {
   key: 'agentChat',
+  historyStateKeys: ['agentChat'],
   init: initAgentChat,
   viewKey: 'AGENT',
   bootOrder: 120,

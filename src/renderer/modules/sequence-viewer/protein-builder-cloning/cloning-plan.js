@@ -52,8 +52,8 @@ function proteinPartTemplate(part = {}) {
 // Preserve one physical source per fragment. A construct assembled from two
 // donor plasmids must yield two PCR fragments instead of pretending that the
 // longest donor contains the complete concatenated insert. Short untemplated
-// tags/linkers can ride on the next primer; longer generated blocks become an
-// explicit synthesis fragment.
+// tags/linkers can ride on the next primer; longer generated blocks are built
+// from overlapping oligos within the selected assembly route.
 function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein Builder Insert') {
   const desiredSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
   const parts = asArray(dnaConstruct?.parts)
@@ -76,7 +76,7 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
       name: constructName,
       type: 'insert',
       sequence: desiredSequence,
-      metadata: { source: 'synthesis', partCount: 0 }
+      metadata: { source: 'oligo_assembly', partCount: 0 }
     }];
   }
   const declaredLength = parts.reduce((sum, part) => sum + part.sequence.length, 0);
@@ -105,9 +105,9 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
       const prefix = desiredSequence.slice(cursor, templateStart);
       if (prefix.length > MAX_PRIMER_ENCODED_PART_LENGTH) {
         anchored.push({
-          name: 'Synthetic block',
+          name: 'Insert block',
           sequence: prefix,
-          metadata: { source: 'synthesis', templateName: 'Ordered synthetic DNA' }
+          metadata: { source: 'oligo_assembly', templateName: 'Oligo assembly product' }
         });
       }
       anchored.push({
@@ -130,14 +130,14 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
         anchored[anchored.length - 1].sequence += suffix;
       } else if (suffix.length) {
         anchored.push({
-          name: 'Synthetic block',
+          name: 'Insert block',
           sequence: suffix,
-          metadata: { source: 'synthesis', templateName: 'Ordered synthetic DNA' }
+          metadata: { source: 'oligo_assembly', templateName: 'Oligo assembly product' }
         });
       }
       return anchored.map((fragment, index) => ({
         id: `protein_builder_insert_${index + 1}`,
-        name: fragment.name,
+        name: fragment.metadata.source === 'oligo_assembly' ? `Insert block ${index + 1}` : fragment.name,
         type: 'insert',
         sequence: fragment.sequence,
         metadata: { ...fragment.metadata, partCount: parts.length }
@@ -147,14 +147,14 @@ function buildProteinInsertFragments(dnaConstruct = {}, constructName = 'Protein
 
   // No usable anchor: either no part names a physical template, or a templated
   // part does not sit where the construct says it does. Both mean the parts no
-  // longer describe the sequence being built, so it is one ordered synthetic
-  // fragment -- splitting it further would only ask for more gBlocks.
+  // longer describe the sequence being built, so prepare the complete insert
+  // from overlapping oligos before the selected cloning reaction.
   return [{
     id: 'protein_builder_insert_1',
     name: constructName,
     type: 'insert',
     sequence: desiredSequence,
-    metadata: { source: 'synthesis', partCount: parts.length, templateName: 'Ordered synthetic DNA' }
+    metadata: { source: 'oligo_assembly', partCount: parts.length, templateName: 'Oligo assembly product' }
   }];
 }
 

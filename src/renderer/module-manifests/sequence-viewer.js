@@ -15,6 +15,7 @@ function initSequenceViewerWithRoutes(options) {
 
 export const sequenceViewerManifest = {
   key: 'sequenceViewer',
+  historyStateKeys: ['protocols', 'projects', 'notebookEntries'],
   init: initSequenceViewerWithRoutes,
   viewKey: 'SEQUENCE_VIEWER',
   viewIds: [

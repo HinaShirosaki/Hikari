@@ -12,7 +12,7 @@ in `api/`, plus `platform` (`process.platform`):
 | --- | --- | --- |
 | `storage-api.js` | `autoSaveDataFile`, `importStorageRoot`, `pickStorageDirectory`, `storeImportedFile`, `readFileBytes`, `transformStoredPaperPdf`, `onProtocolRecordSaved`, `onPaperFileSaved` | `STORAGE` |
 | `system-api.js` | `openExternalUrl`, `openLogsFolder`, `openThirdPartyNotices`, `getUpdateStatus`, `checkForUpdates`, `installUpdate`, `reportError`, `onAppCloseRequested`, `respondToAppClose` | `SYSTEM` |
-| `plugin-api.js` | `inspectPluginFolder`, `servePluginFolder`, `readPluginFile`, `writePluginFile`, `exportPluginFile` | `PLUGINS` |
+| `plugin-api.js` | `inspectPluginFolder`, `servePluginFolder`, `readPluginFile`, `writePluginFile`, `exportPluginFile`, `onPluginCanvasRequest`, `respondToPluginCanvasRequest` | `PLUGINS` |
 | `chemical-clipboard-api.js` | `readChemicalClipboard`, `writeTextToClipboard` | none (Electron `clipboard` / `nativeImage` in the preload) |
 | `assay-api.js` | `parseAssayResultImportFile`, `onAssayPlotRequest`, `respondToAssayPlotRequest` | `ASSAY` |
 | `inventory-api.js` | `parseChemicalImportFile` | `INVENTORY` |

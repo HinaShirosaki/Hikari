@@ -91,3 +91,20 @@ test('vector and raster width resizing remains independent of height', () => {
     assert.deepEqual(resizeObject(object, 'e', 40, 20), { width: 200, height: 100, x: 40, y: 20 });
   }
 });
+
+test('all text handles resize from tight, offset glyph bounds while preserving the authored layout', () => {
+  for (const rotation of [0, 37, 90]) for (const [direction, [hx, hy]] of Object.entries(RESIZE_HANDLES)) {
+    const object = { type: 'text', x: 150, y: 220, width: 300, height: 160, fontSize: 20, rotation };
+    const box = { x: 210, y: 250, width: 50, height: 24, rotation };
+    const anchor = worldPoint(box, -hx, -hy), angle = rotation * Math.PI / 180;
+    const dx = hx * box.width / 2, dy = hy * box.height / 2;
+    const after = { ...object, ...resizeObject(object, direction, dx * Math.cos(angle) - dy * Math.sin(angle), dx * Math.sin(angle) + dy * Math.cos(angle), box) };
+    const scale = after.fontSize / object.fontSize;
+    close(scale, 1.5); close(after.width, object.width * scale); close(after.height, object.height * scale);
+    close(after.x, anchor.x + (object.x - anchor.x) * scale);
+    close(after.y, anchor.y + (object.y - anchor.y) * scale);
+    const glyphAfter = { ...box, x: anchor.x + (box.x - anchor.x) * scale, y: anchor.y + (box.y - anchor.y) * scale, width: box.width * scale, height: box.height * scale };
+    const fixed = worldPoint(glyphAfter, -hx, -hy);
+    close(fixed.x, anchor.x); close(fixed.y, anchor.y);
+  }
+});

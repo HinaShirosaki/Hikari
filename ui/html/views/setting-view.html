@@ -22,6 +22,11 @@
                 Storage &amp; data
               </span>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="cloud-drives" aria-pressed="false">
+              <span>
+                Cloud drives
+              </span>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="updates" aria-pressed="false">
               <span>
                 Updates
@@ -64,7 +69,12 @@
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="skills" aria-pressed="false">
               <span>
-                Skills &amp; plugins
+                External skills
+              </span>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="plugins" aria-pressed="false">
+              <span>
+                Plugins
               </span>
             </button>
           </div>
@@ -208,6 +218,89 @@
             </button>
           </div>
         </details>
+      </section>
+      <section id="setting-cloud-drives" class="settings-section" data-settings-panel="cloud-drives" hidden>
+        <div class="settings-section-head">
+          <h3>Cloud drives</h3>
+          <p class="settings-description">Connect this workspace to Google Drive or Dropbox. Your workspace stays available offline.</p>
+        </div>
+        <p class="small-note">Hikari creates a cloud folder for you, or you can connect a Hikari cloud workspace from another device. Saved changes upload automatically. Use Sync now to download changes.</p>
+        <div class="settings-subsection">
+          <div class="settings-cloud-drive" data-cloud-provider="google-drive" aria-label="Google Drive">
+            <div class="settings-cloud-drive-head">
+              <div class="settings-cloud-drive-identity">
+                <img class="settings-cloud-drive-icon" src="./assets/icons/google-drive.png" width="28" height="28" alt="" aria-hidden="true" />
+                <div><h4>Google Drive</h4><p class="small-note" data-cloud-account>Not signed in</p></div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="connect">Sign in</button>
+                <button type="button" class="ghost-btn" data-cloud-action="cancel" hidden>Cancel sign-in</button>
+                <button type="button" class="ghost-btn" data-cloud-action="disconnect" hidden>Sign out</button>
+              </div>
+            </div>
+            <p class="small-note" data-cloud-workspace></p>
+            <div data-cloud-link-controls hidden>
+              <label>Cloud workspace
+                <select aria-label="Google Drive cloud workspace"><option value="">Create a new cloud workspace</option></select>
+              </label>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="refresh">Refresh list</button>
+                <button type="button" class="primary-btn" data-cloud-action="link">Connect workspace</button>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="primary-btn" data-cloud-action="sync" hidden>Sync now</button>
+              <button type="button" class="ghost-btn" data-cloud-action="unlink" hidden>Disconnect workspace</button>
+            </div>
+            <p class="small-note" data-cloud-status role="status" aria-live="polite"></p>
+            <div class="settings-cloud-conflicts" data-cloud-conflicts hidden>
+              <p data-cloud-conflict-count></p><ul></ul>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="keep-local">Keep local changes</button>
+                <button type="button" class="ghost-btn" data-cloud-action="keep-cloud">Use cloud changes</button>
+              </div>
+            </div>
+          </div>
+          <div class="settings-cloud-drive" data-cloud-provider="dropbox" aria-label="Dropbox">
+            <div class="settings-cloud-drive-head">
+              <div class="settings-cloud-drive-identity">
+                <img class="settings-cloud-drive-icon" src="./assets/icons/dropbox.svg" width="28" height="28" alt="" aria-hidden="true" />
+                <div><h4>Dropbox</h4><p class="small-note" data-cloud-account>Not signed in</p></div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="connect">Sign in</button>
+                <button type="button" class="ghost-btn" data-cloud-action="cancel" hidden>Cancel sign-in</button>
+                <button type="button" class="ghost-btn" data-cloud-action="disconnect" hidden>Sign out</button>
+              </div>
+            </div>
+            <p class="small-note" data-cloud-workspace></p>
+            <div data-cloud-link-controls hidden>
+              <label>Cloud workspace
+                <select aria-label="Dropbox cloud workspace"><option value="">Create a new cloud workspace</option></select>
+              </label>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="refresh">Refresh list</button>
+                <button type="button" class="primary-btn" data-cloud-action="link">Connect workspace</button>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="primary-btn" data-cloud-action="sync" hidden>Sync now</button>
+              <button type="button" class="ghost-btn" data-cloud-action="unlink" hidden>Disconnect workspace</button>
+            </div>
+            <p class="small-note" data-cloud-status role="status" aria-live="polite"></p>
+            <div class="settings-cloud-conflicts" data-cloud-conflicts hidden>
+              <p data-cloud-conflict-count></p><ul></ul>
+              <div class="form-actions">
+                <button type="button" class="ghost-btn" data-cloud-action="keep-local">Keep local changes</button>
+                <button type="button" class="ghost-btn" data-cloud-action="keep-cloud">Use cloud changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <dialog id="cloud-drive-sync-dialog" aria-labelledby="cloud-drive-sync-title">
+          <h3 id="cloud-drive-sync-title">Syncing your workspace</h3>
+          <p role="status">Saving local changes and checking cloud versions. Please wait…</p>
+        </dialog>
       </section>
       <section class="settings-section" data-settings-panel="updates" hidden>
         <div class="settings-section-head">
@@ -650,10 +743,10 @@
       <section class="settings-section" data-settings-panel="skills" hidden>
         <div class="settings-section-head">
           <h3>
-            Skills &amp; plugins
+            External skills
           </h3>
           <p class="settings-description">
-            Manage the capabilities you add to Hikari.
+            Manage the skill folders available to the agent.
           </p>
         </div>
         <div class="stack-form">
@@ -671,9 +764,16 @@
           <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite">
           </div>
         </div>
-        <h4>
-          Plugins
-        </h4>
+      </section>
+      <section class="settings-section" data-settings-panel="plugins" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Plugins
+          </h3>
+          <p class="settings-description">
+            Add and manage Hikari extensions.
+          </p>
+        </div>
         <div class="stack-form">
           <div class="form-actions">
             <button type="button" id="setting-plugins-add-btn" class="primary-btn">

@@ -370,7 +370,8 @@ export function initAssay({
     resetForm,
     startNewAssay,
     onListClick,
-    render
+    render,
+    restoreHistory
   } = createAssayFormAndList({
     state,
     persist,
@@ -452,6 +453,7 @@ export function initAssay({
       || Boolean(savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot)
     ),
     render,
+    restoreHistory,
     renderProjectOptions,
     renderNotebookOptions,
     renderList,

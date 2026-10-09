@@ -170,7 +170,7 @@ async function renderProjectMemoryInput(input, { writePrunedCache = false, reset
 // reports both as {}. Conflating them is what made a failed read re-ask the model
 // on every single save, so the caller needs to tell them apart.
 async function readCurrentNotebookMemorySource(input, requestedSource) {
-  const loaded = await readRecordDocument(requestedSource.pageFilePath.replace(/\.md$/, '.json'), 'notebook');
+  const loaded = await readRecordDocument(requestedSource.pageFilePath, 'notebook');
   if (!loaded.ok || loaded.warnings.length) return { unverifiable: true, source: null };
   return {
     unverifiable: false,

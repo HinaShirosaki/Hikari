@@ -2,7 +2,12 @@ import { array, html, inline, object, text } from './format.mjs';
 
 const DOCUMENT_VERSION = 1;
 const documentMarker = kind => `<!-- hikari-document:${kind}:v${DOCUMENT_VERSION} -->`;
-const block = (kind, key, body) => `<!-- hikari-${kind}:${key} -->\n${body.trimEnd()}\n<!-- /hikari-${kind}:${key} -->\n\n`;
+// A blank line before the closing marker keeps formatters such as Prettier
+// from reading it as part of a list item that ends the section.
+const block = (kind, key, body) => {
+  const content = body.trimEnd();
+  return `<!-- hikari-${kind}:${key} -->\n${content ? `${content}\n` : ''}\n<!-- /hikari-${kind}:${key} -->\n\n`;
+};
 const fieldBlock = (key, title, body, level = 2) => block('field', key, `${'#'.repeat(level)} ${title}\n\n${body}`);
 const derivedBlock = (key, body) => block('derived', key, body);
 
@@ -120,8 +125,8 @@ function readDocumentRecord(source, record, kind) {
   const found = blocks(source);
   // Text typed after a page's final notes section belongs to those notes.
   const last = lastSection(source);
-  const tail = last?.kind === 'field' ? source.slice(last.end).replace(/\r\n/g, '\n').trim() : '';
-  if (tail) found.set(last.key, { ...found.get(last.key), body: `${found.get(last.key).body}\n\n${tail}` });
+  const tail = kind === 'notebook' && last ? source.slice(last.end).replace(/\r\n/g, '\n').trim() : '';
+  if (tail && found.has('result')) found.set('result', { ...found.get('result'), body: `${found.get('result').body}\n\n${tail}` });
   const expected = fieldsForRecord(record, kind);
   const next = structuredClone(record);
   for (const [key, baseline] of Object.entries(expected)) {
@@ -187,8 +192,10 @@ function preserveDocument(previous, rendered) {
     for (const [key, updated] of blocks(rendered, kind)) {
       const old = oldBlocks.get(key);
       if (!old) throw new Error(`Missing Markdown ${kind} section: ${key}`);
-      // A function replacement keeps `$$`, `$&` and `$'` in prose literal.
-      if (old.body !== updated.body) result = result.replace(old.source, () => updated.source);
+      // Older sections lack the blank line before their closing marker; they
+      // are rewritten once. A function replacement keeps `$$`, `$&` and `$'` literal.
+      const unspaced = /\n\n<!-- \//.test(updated.source) && !/\n[ \t]*\r?\n<!-- \//.test(old.source);
+      if (old.body !== updated.body || unspaced) result = result.replace(old.source, () => updated.source);
     }
   }
   // A page ends with its notes. Text typed after them was read into the
@@ -203,7 +210,7 @@ function preserveDocument(previous, rendered) {
       const start = result.indexOf(moved);
       result = result.slice(0, start) + result.slice(start + moved.length).replace(/^\n/, '');
       const end = lastSection(result).end;
-      result = `${result.slice(0, end)}\n${moved}${result.slice(end)}`;
+      result = `${result.slice(0, end)}\n${moved}`;
     }
   }
   return result;

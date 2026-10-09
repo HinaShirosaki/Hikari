@@ -1,18 +1,22 @@
 // Scene data is shared by manual controls and the agent. Artwork and labels
 // never share a layer. DOM validation of SVG happens in artwork.mjs.
 import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY } from './complexity.mjs';
+import { imageGenerationPercent } from './image-generation.mjs';
+import { normalizeSourceContext } from './source-context.mjs';
 import { selectionBounds, transformSelection } from './grouping.mjs';
+import { rotateComponents } from './rotation.mjs';
 export const CANVASES = ['main', 'scratch'];
 export const MAX_DOCUMENT_CHARS = 12000000;
 export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
 export const TEXT_FIELDS = ['text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline'];
 const clone = value => JSON.parse(JSON.stringify(value));
+export const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
 
-function record(value, label) {
+export function record(value, label) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object.`);
   return value;
 }
-function fields(value, allowed) {
+export function fields(value, allowed) {
   const invalid = Object.keys(value).find(key => !allowed.includes(key));
   if (invalid) throw new Error(`Unknown field: ${invalid}.`);
 }
@@ -33,14 +37,14 @@ export function color(value, allowNone = false) {
   throw new Error('Use a hex color (#rrggbb or #rrggbbaa).');
 }
 export function createDocument() {
-  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY,
+  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null,
     canvases: { main: { width: 1200, height: 800, background: '#ffffff' }, scratch: { width: 500, height: 350, background: '#ffffff' } },
     objects: [], groups: [], receipts: [] };
 }
 export function normalizeObject(raw, validateSvg = value => value) {
   record(raw, 'Object'); fields(raw, OBJECT_FIELDS);
   const type = choice(raw.type, ['vector', 'raster', 'text'], 'type');
-  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(raw.id || '')) throw new Error('Object id must be 1–100 letters, numbers, underscores or hyphens.');
+  if (!validId(raw.id)) throw new Error('Object id must be 1–100 letters, numbers, underscores or hyphens.');
   const result = { id: raw.id, name: string(raw.name ?? raw.id, 'name', 200), type,
     canvas: choice(raw.canvas ?? 'main', CANVASES, 'canvas'),
     x: number(raw.x ?? 0, 'x', -16000, 16000), y: number(raw.y ?? 0, 'y', -16000, 16000),
@@ -83,7 +87,7 @@ export function normalizeDocument(raw, validateSvg) {
   const used = new Set(objects.map(object => object.id)), members = new Set();
   const groups = (raw.groups || []).map(group => {
     record(group, 'Group'); fields(group, ['id', 'name', 'canvas', 'ids']);
-    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(group.id || '') || used.has(group.id)) throw new Error('Group IDs must be unique and use 1–100 letters, numbers, underscores or hyphens.');
+    if (!validId(group.id) || used.has(group.id)) throw new Error('Group IDs must be unique and use 1–100 letters, numbers, underscores or hyphens.');
     used.add(group.id);
     const canvas = choice(group.canvas, CANVASES, 'Group canvas');
     if (!Array.isArray(group.ids) || group.ids.length < 2 || new Set(group.ids).size !== group.ids.length) throw new Error('Groups need at least two distinct component IDs.');
@@ -95,7 +99,14 @@ export function normalizeDocument(raw, validateSvg) {
   });
   const result = { version: 1, revision: string(raw.revision, 'revision', 100), title: string(raw.title, 'title', 200),
     complexity: choice(raw.complexity ?? DEFAULT_COMPLEXITY, COMPLEXITY_LEVELS, 'complexity'),
+    imageGenerationPercent: imageGenerationPercent(raw.imageGenerationPercent),
     canvases: Object.fromEntries(CANVASES.map(key => [key, normalizeCanvas(raw.canvases?.[key])])), objects, groups, receipts: (raw.receipts || []).slice(-64) };
+  if (raw.source !== undefined) result.source = normalizeSourceContext(raw.source);
+  if (raw.pendingAssetGroups !== undefined) {
+    if (!Array.isArray(raw.pendingAssetGroups) || raw.pendingAssetGroups.length > 100 || raw.pendingAssetGroups.some(id => !validId(id))
+      || new Set(raw.pendingAssetGroups).size !== raw.pendingAssetGroups.length) throw new Error('Invalid pending asset groups.');
+    result.pendingAssetGroups = raw.pendingAssetGroups.filter(id => groups.some(group => group.id === id));
+  }
   if (JSON.stringify(result).length > MAX_DOCUMENT_CHARS) throw new Error('The illustration is too large. Use smaller raster assets.');
   return result;
 }
@@ -154,10 +165,11 @@ export function applyOperations(document, operations, validateSvg) {
   };
   for (const operation of operations) {
     record(operation, 'Operation');
-    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'name']);
+    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'name', 'degrees', 'pivot']);
+    if (operation.op !== 'rotate' && (operation.degrees !== undefined || operation.pivot !== undefined)) throw new Error('Rotation fields require the rotate operation.');
     const group = next.groups.find(item => item.id === operation.id);
     if (operation.op === 'group') {
-      if (!/^[a-zA-Z0-9_-]{1,100}$/.test(operation.id || '') || next.objects.some(item => item.id === operation.id) || group) throw new Error('Group requires an unused group ID.');
+      if (!validId(operation.id) || next.objects.some(item => item.id === operation.id) || group) throw new Error('Group requires an unused group ID.');
       const ids = operation.ids;
       if (!Array.isArray(ids) || ids.length < 2 || new Set(ids).size !== ids.length || ids.some(id => !next.objects.some(object => object.id === id))) throw new Error('Group requires at least two distinct existing component IDs.');
       const canvas = next.objects.find(object => object.id === ids[0]).canvas;
@@ -173,6 +185,19 @@ export function applyOperations(document, operations, validateSvg) {
       if ((operation.id !== undefined) === (operation.ids !== undefined)) throw new Error('Transform takes either a group id or component ids.');
       if (operation.id !== undefined && !group) throw new Error(`Group ${operation.id} does not exist.`);
       transform(group ? group.ids : operation.ids, operation.patch);
+    } else if (operation.op === 'rotate') {
+      if ((operation.id !== undefined) === (operation.ids !== undefined)) throw new Error('Rotate takes either an object/group id or component ids.');
+      const ids = group?.ids || (operation.id !== undefined ? [operation.id] : operation.ids);
+      if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) throw new Error('Rotate requires distinct component IDs.');
+      const objects = ids.map(id => {
+        const object = next.objects.find(item => item.id === id);
+        if (!object) throw new Error(`Object ${id} does not exist.`);
+        return object;
+      });
+      const degrees = number(operation.degrees, 'degrees', -360, 360);
+      if (operation.pivot !== undefined) { record(operation.pivot, 'Rotation pivot'); fields(operation.pivot, ['x', 'y']); }
+      const rotated = new Map(rotateComponents(objects, degrees, operation.pivot).map(object => [object.id, object]));
+      next.objects = next.objects.map(object => rotated.get(object.id) || object);
     } else if (operation.op === 'upsert') {
       const object = normalizeObject(operation.object, validateSvg);
       const index = next.objects.findIndex(item => item.id === object.id);
@@ -199,7 +224,7 @@ export function applyOperations(document, operations, validateSvg) {
       if (group) {
         const canvas = choice(operation.canvas, CANVASES, 'canvas');
         if (operation.copy) {
-          if (!/^[a-zA-Z0-9_-]{1,100}$/.test(operation.new_id || '') || next.groups.some(item => item.id === operation.new_id) || next.objects.some(item => item.id === operation.new_id)) throw new Error('Copy requires an unused new_id.');
+          if (!validId(operation.new_id) || next.groups.some(item => item.id === operation.new_id) || next.objects.some(item => item.id === operation.new_id)) throw new Error('Copy requires an unused new_id.');
           const copies = next.objects.filter(object => group.ids.includes(object.id)).map(object => normalizeObject({ ...object, canvas, id: `object-${crypto.randomUUID()}` }, validateSvg));
           next.objects.push(...copies); next.groups.push({ ...group, id: operation.new_id, canvas, ids: copies.map(object => object.id) });
         } else {
@@ -225,6 +250,10 @@ export function applyOperations(document, operations, validateSvg) {
       next.objects = [...next.objects.filter(obj => obj.canvas !== key), ...operation.ids.map(id => objects.find(obj => obj.id === id))];
     } else if (operation.op === 'title') next.title = string(operation.title, 'title', 200);
     else if (operation.op === 'complexity') next.complexity = choice(operation.complexity, COMPLEXITY_LEVELS, 'complexity');
+    else if (operation.op === 'image_generation') {
+      if (!Object.hasOwn(operation, 'imageGenerationPercent')) throw new Error('image_generation requires imageGenerationPercent (0–100 or null).');
+      next.imageGenerationPercent = imageGenerationPercent(operation.imageGenerationPercent);
+    }
     else throw new Error(`Unknown operation: ${operation.op}.`);
     pruneGroups();
   }

@@ -147,6 +147,28 @@ module.exports = function registerCliDiscovery(context = {}) {
       assert.equal(resolveCodexBinary({}, fixture('darwin', { [binary]: '' })), binary);
     }
   });
+  test('npm Codex under a keg-only Homebrew node@NN runs with that Node', () => {
+    const script = '/opt/homebrew/lib/node_modules/@openai/codex/bin/codex.js';
+    const options = fixture('darwin', { '/opt/homebrew/bin/codex': '#!/usr/bin/env node\n', '/opt/homebrew/opt/node@24/bin/node': '' },
+      { '/opt/homebrew/opt': ['git', 'node@22', 'node@24', 'nodenv'] });
+    options.fs.realpathSync = (name) => name === '/opt/homebrew/bin/codex' ? script : name;
+    assert.deepEqual(resolveCodexInvocation({ PATH: '/usr/bin:/bin' }, options),
+      { command: '/opt/homebrew/opt/node@24/bin/node', argsPrefix: ['/opt/homebrew/bin/codex'] });
+  });
+  test('Windows winget, scoop and nvm-windows installs are found without the user PATH', () => {
+    const home = 'C:\\Users\\Test User';
+    const env = { LOCALAPPDATA: `${home}\\AppData\\Local`, APPDATA: `${home}\\AppData\\Roaming` };
+    for (const binary of [`${home}\\AppData\\Local\\Microsoft\\WinGet\\Links\\codex.exe`, `${home}\\scoop\\shims\\codex.exe`]) {
+      assert.equal(resolveCodexBinary(env, fixture('win32', { [binary]: '' })), binary);
+    }
+    const nvm = `${home}\\AppData\\Local\\nvm\\v24.21.0`;
+    for (const dir of ['C:\\nvm4w\\nodejs', nvm]) {
+      const options = fixture('win32', { [`${dir}\\codex.cmd`]: '', [`${dir}\\node_modules\\@openai\\codex\\bin\\codex.js`]: '', [`${dir}\\node.exe`]: '' },
+        { [`${home}\\AppData\\Local\\nvm`]: ['v24.21.0'] });
+      assert.deepEqual(resolveCodexInvocation(env, options),
+        { command: `${dir}\\node.exe`, argsPrefix: [`${dir}\\node_modules\\@openai\\codex\\bin\\codex.js`] });
+    }
+  });
   test('custom standalone install directory is discoverable on both platforms', () => {
     for (const platform of ['darwin', 'win32']) {
       const p = platform === 'win32' ? path.win32 : path.posix;

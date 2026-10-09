@@ -1,11 +1,6 @@
 export function createInventoryService(registry) {
-  function handleSamplesChanged() {
-    registry.get('sampleRegistry').render?.();
-  }
-
   function handleSampleInventorySettingsChanged() {
     registry.get('personalInventory').renderSections?.();
-    registry.get('sampleRegistry').render?.();
     registry.get('protocol').renderPlaceholderPresets?.();
   }
 
@@ -18,7 +13,6 @@ export function createInventoryService(registry) {
   }
 
   return {
-    handleSamplesChanged,
     handleSampleInventorySettingsChanged,
     openSampleSearch
   };

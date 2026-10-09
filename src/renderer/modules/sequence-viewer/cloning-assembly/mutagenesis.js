@@ -18,7 +18,7 @@ export function designMutagenesisPrimers(templateSequence, normalizedEdit, thres
       ...simpleDesign,
       warnings: [
         ...simpleDesign.warnings,
-        `The ${addedSequence.length}-nt edit may not fit the complementary whole-plasmid primer route. Use Q5/KLD split-tail primers, Gibson/In-Fusion, or a synthesized fragment.`
+        `The ${addedSequence.length}-nt edit may not fit the complementary whole-plasmid primer route. Use Q5/KLD split-tail primers, or prepare the insert from overlapping oligos within a Gibson/In-Fusion design.`
       ]
     };
   }

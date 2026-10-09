@@ -9,6 +9,7 @@ const { notebookContext, resolveLocalPath } = require('./context');
 const { GENERATED_MARKER, renderNotebook, renderProtocol } = require('./render');
 const { block, derivedBlock, documentMarker, fieldsForRecord, preserveDocument } = require('./document-fields');
 const { checkpointMarker } = require('../../lib/record-markdown/checkpoint');
+const { embedRecordMetadata } = require('../../lib/record-markdown/metadata');
 
 const ASSET_FOLDER = '.hikari-markdown';
 const IMAGE_EXTENSIONS = {
@@ -112,7 +113,7 @@ async function finishImages(state, assets) {
 }
 
 // Rendering only reads, so a caller can compare the result before writing.
-async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, storageRoot, canonical = false, expectedSource }) {
+async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, storageRoot, canonical = false, expectedSource, checkpoint }) {
   const folderPath = path.dirname(filePath);
   const markdownPath = path.join(folderPath, kind === 'protocol' ? 'protocol.md' : 'page.md');
   // A writer passes the Markdown it already read; commit re-checks it before writing.
@@ -133,13 +134,16 @@ async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, st
     if (!canonical) throw new Error(`Cannot regenerate a migrated document as an export: ${markdownPath}`);
     markdown = preserveDocument(previous, markdown);
   }
+  if (checkpoint) markdown = embedRecordMetadata(markdown, checkpoint, kind, images.embeddedImages);
   const manifest = await fs.readFile(path.join(folderPath, ASSET_FOLDER, 'manifest.json'), 'utf8')
     .then(JSON.parse, error => { if (error.code === 'ENOENT') return {}; throw error; });
   // Manual annotations can reference extracted images; keep those assets too.
   if (canonical) {
     for (const name of array(manifest.files)) {
       if (/^[a-f0-9]{64}\.[a-z]+$/.test(name) && markdown.includes(`${ASSET_FOLDER}/${name}`) && !images.assets.has(name)) {
-        images.assets.set(name, { name, bytes: await fs.readFile(path.join(folderPath, ASSET_FOLDER, name)), labels: [] });
+        // A referenced image that went missing keeps its reference until restored.
+        const bytes = await fs.readFile(path.join(folderPath, ASSET_FOLDER, name)).catch(error => { if (error.code === 'ENOENT') return null; throw error; });
+        if (bytes) images.assets.set(name, { name, bytes, labels: [] });
       }
     }
   }

@@ -32,6 +32,35 @@ async function title(workspace, name, extra = {}) {
     expected_revision: current.revision, request_id: crypto.randomUUID(), operations: [{ op: 'title', title: name }], ...extra });
 }
 
+test('image generation preference follows the figure through history, duplication and reload', async () => {
+  const host = fixture(), workspace = host.open(); await workspace.ready;
+  const empty = await workspace.request({ action: 'read' });
+  assert.ok((await workspace.request({ action: 'apply', expected_revision: empty.revision,
+    request_id: crypto.randomUUID(), operations: [{ op: 'upsert', object: { id: 'existing-label', type: 'text', text: 'Keep this label', x: 75, y: 80 } }] })).ok);
+  const original = await workspace.request({ action: 'read' });
+  assert.equal(original.imageGenerationPercent, null);
+  for (const percent of [0, 75, 100, null, 60]) {
+    const current = await workspace.request({ action: 'read' });
+    const changed = await workspace.request({ action: 'apply', illustration_id: original.illustration_id,
+      expected_revision: current.revision, request_id: crypto.randomUUID(), operations: [{ op: 'image_generation', imageGenerationPercent: percent }] });
+    assert.ok(changed.ok, changed.error);
+    const read = await workspace.request({ action: 'read' });
+    assert.equal(read.imageGenerationPercent, percent);
+    assert.match(read.agent_contract.instructions, percent === null ? /Image generation: Automatic/ : new RegExp(`Image generation target: ${percent}%`));
+    assert.deepEqual(read.objects, original.objects);
+    assert.deepEqual(read.canvases, original.canvases);
+  }
+  await workspace.history('undo'); assert.equal(workspace.getDocument().imageGenerationPercent, null);
+  await workspace.history('redo'); assert.equal(workspace.getDocument().imageGenerationPercent, 60);
+  const copy = await workspace.manage('duplicate', original.illustration_id);
+  assert.equal(copy.imageGenerationPercent, 60);
+  assert.equal((await workspace.manage('create')).imageGenerationPercent, null);
+  await workspace.manage('open', original.illustration_id);
+  const reloaded = host.open(); await reloaded.ready;
+  assert.equal((await reloaded.request({ action: 'read' })).imageGenerationPercent, 60);
+  assert.equal((await reloaded.manage('open', copy.illustration_id)).imageGenerationPercent, 60);
+});
+
 test('migrates a legacy scene without changing its artwork or original file', async () => {
   const legacy = createDocument(); legacy.title = 'Existing figure';
   delete legacy.complexity;

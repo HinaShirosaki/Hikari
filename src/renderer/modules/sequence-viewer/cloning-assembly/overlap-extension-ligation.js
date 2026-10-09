@@ -5,6 +5,7 @@ import { designAssemblyPrimersForRoute } from './assembly-primers.js';
 import { evaluateOverlapPcr } from './overlap-evaluation.js';
 import { summarizePrimerPlan } from './primer-records.js';
 import { designWithThresholdFallback } from './strategy.js';
+import { prependOligoAssemblySteps } from './oligo-assembly.js';
 import {
   expandRestrictionFeatureVariants,
   normalizeVendorFilter,
@@ -192,9 +193,8 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
     return infeasible(describeMissingSite(upstreamRanked, 'upstream'));
   }
 
-  // No template named is a note on the insert primers, not a blocked route: the
-  // user picks the template in Vector Builder / Protein Builder, and the design
-  // proceeds off the assembled sequence either way.
+  // With no donor, the shared primer designer prepares a de-novo insert from
+  // overlapping oligos before the insert/flank PCRs.
   const insertTemplate = donorSequence || normalizeSequence(payload?.insertTemplate || '');
 
   const clamp = normalizeSequence(config.primerClampSequence || DEFAULT_CLONING_PREFERENCES.primerClampSequence);
@@ -280,16 +280,16 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
       warnings
     },
     restrictionEnzymeSelection: enzymes,
-    stepByStepProcedure: buildProcedure({
+    stepByStepProcedure: prependOligoAssemblySteps(buildProcedure({
       recordName,
-      templateName: donorName || recordName,
+      templateName: design.primers.find((primer) => primer.templateId === 'oe_insert' && primer.templateSourceLabel)?.templateSourceLabel || donorName || recordName,
       upstreamSite: upstream.feature,
       downstreamSite: downstream.feature,
       upstreamLength: fragments[0].sequence.length,
       insertLength: insert.length,
       downstreamLength: fragments[2].sequence.length,
       fusionLength
-    }),
+    }), design.primers),
     warnings
   };
 

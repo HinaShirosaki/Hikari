@@ -2,6 +2,8 @@ import { initWorkflowManagement } from '../modules/workflow/index.js';
 
 export const workflowManagementManifest = {
   key: 'workflowManagement',
+  historyStateKeys: ['workflows', 'workflowTemplates', 'notebookEntries', 'projects'],
+  renderHistory: ({ modules }) => modules.workflowManagement.restoreHistory?.(),
   init: initWorkflowManagement,
   viewKey: 'WORKFLOW_MANAGEMENT',
   bootOrder: 30,

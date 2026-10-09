@@ -17,10 +17,10 @@ Whatever the shape, feature modules follow the same house style:
 1. capture DOM nodes once
 2. bind event listeners once
 3. read and mutate the shared `state` object directly
-4. call the shared `persist()` callback after mutations (the renderer core owns undo checkpoints and storage — see [boot-and-shell.md](../architecture/boot-and-shell.md))
+4. call the module-bound `persist()` callback after mutations (each module has its own history; the renderer core owns storage — see [boot-and-shell.md](../architecture/boot-and-shell.md))
 5. expose a compact API such as `render()` / `renderList()`
 
-Modules do **not** own their own persistence; `persist()` records undo state, normalizes storage paths, writes local storage, and optionally auto-saves the `.json` snapshot.
+Each module owns an independent undo/redo history through its bound `persist()` callback. Disk persistence remains shared: the core normalizes storage paths, writes local storage, and optionally auto-saves through the main process.
 
 ## Manifest families
 
@@ -30,20 +30,20 @@ Modules do **not** own their own persistence; `persist()` records undo state, no
 | --- | --- | --- |
 | `foundation` | `biologyNotebook`, `protocol` | core record-keeping that other features link into |
 | `collaboration` | `agentChat`, `agentChatRail`, `workflowManagement`, `papers` | assistant, workflows, and shared research surfaces |
-| `inventory` | `labCommonInventory`, `personalInventory`, `sampleRegistry` | chemicals, storage containers, and samples |
+| `inventory` | `labCommonInventory`, `personalInventory` | chemicals, and samples in storage containers |
 | `analysis` | `assay` | plate data capture and analysis |
 | `sequence` | `sequenceViewer` | sequence import, library, inspection, and analysis |
 | `utility` | `toolBox`, `settings`, `homeDashboard` | calculators, configuration, and the dashboard |
 
 `module-manifests/index.js` imports each manifest on its own, so a manifest that fails to load (missing file, syntax error) is logged and skipped instead of taking down the whole renderer; `core/manifest-runtime.js` fences each module's `init` and `render` the same way.
 
-Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a `createOptions(...)` factory that picks what the module receives from the shared runtime context, and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
+Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a `createOptions(...)` factory that picks what the module receives from the shared runtime context, and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `personalInventory` (60) → `assay` (70) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
 
 `agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in every view whose app-registry entry sets `agentChatRail: true` (today Notebook, Plate, and Papers). The Home manifest builds a third, independent chat instance through `agent-chat/public-api.js` for its **Prepare notebook page** dialog, so Home never imports Agent Chat internals.
 
 ## A few wrinkles worth knowing
 
-- `personalInventory` and `sampleRegistry` intentionally share one workspace. The shell treats `sample-registry-view` as a composite view and renders both on open (see [boot-and-shell.md](../architecture/boot-and-shell.md)).
+- The **Samples** app is `personalInventory`, rendered into `sample-registry-view` (the view id is kept so saved startup and last-view settings still resolve). Every sample lives in a container.
 - The wet-lab notebook entry export is still named `initLabNotebook` even though it now lives in `modules/biology-notebook/`. There is no separate synthesis notebook anymore.
 - Project creation, selection, and dashboards are part of Biology Notebook (`modules/biology-notebook/project/`); there is no standalone Projects view or manifest.
 - Legacy Collaboration Management and Lab Management source was removed because neither workspace was registered in a manifest or navigation surface.

@@ -93,6 +93,8 @@ export function createPapersPdfViewerContext(elements = {}) {
     onSelectionComment: typeof elements.onSelectionComment === 'function' ? elements.onSelectionComment : null,
     onSelectionSearch: typeof elements.onSelectionSearch === 'function' ? elements.onSelectionSearch : null,
     onSelectionAsk: typeof elements.onSelectionAsk === 'function' ? elements.onSelectionAsk : null,
+    getContextActions: typeof elements.getContextActions === 'function' ? elements.getContextActions : () => [],
+    onContextAction: typeof elements.onContextAction === 'function' ? elements.onContextAction : null,
     onBookmarksResolved: typeof elements.onBookmarksResolved === 'function' ? elements.onBookmarksResolved : null,
     onExternalLink: typeof elements.onExternalLink === 'function' ? elements.onExternalLink : null,
     onClose: typeof elements.onClose === 'function' ? elements.onClose : null

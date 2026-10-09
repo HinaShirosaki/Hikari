@@ -57,7 +57,20 @@ export async function syncMarkdownRecordState(api, state, filePath = '') {
         trimHistory(queue, history, item.revision);
         queue.revisions.set(item.identity, { latest: item.revision, history });
         const live = (state[item.key] || []).find(record => record.id === item.id);
-        if (live && JSON.stringify(fieldsForRecord(live, item.kind)) === item.fields) live.markdownRevision = item.revision;
+        if (live && JSON.stringify(fieldsForRecord(live, item.kind)) === item.fields) {
+          const saved = result.markdownRecords?.[item.key]?.find(record => record.id === item.id);
+          // Only an unchanged live record takes the merged prose. The history
+          // keeps what this client sent, so a save edited or queued before
+          // this acknowledgment rebases to that text and keeps the merged edit.
+          if (saved) {
+            for (const field of Object.keys(fieldsForRecord(saved, item.kind))) {
+              if (Object.hasOwn(saved, field)) live[field] = structuredClone(saved[field]);
+              else delete live[field];
+            }
+            if (item.kind === 'protocol' && !Object.hasOwn(saved, 'description')) delete live.description;
+            live.markdownRevision = { ...await createMarkdownRevision(saved, item.kind), origin: item.revision.origin };
+          } else live.markdownRevision = item.revision;
+        }
       }
       for (const identity of queue.revisions.keys()) if (!active.has(identity)) queue.revisions.delete(identity);
       // Warn when the problems change or a skipped record gets more unsaved

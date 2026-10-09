@@ -2,6 +2,8 @@ import { asArray } from '../lib/normalize.js';
 import { PLUGIN_SAVE_TIMEOUT_MS, PROTOCOL_MARKER, buildPluginAppContext, text } from './plugin-bridge/helpers.js';
 import { VERBS } from './plugin-bridge/verbs.js';
 import { pluginOrigin } from './plugin-origin.js';
+import { createPluginWorkspaceTools } from './plugin-workspace-tools.js';
+import { createPluginContextActions } from './plugin-context-actions.js';
 
 export function createPluginBridge({
   state,
@@ -10,6 +12,7 @@ export function createPluginBridge({
   onFrameHistoryChanged = null,
   onPluginPrompt = null,
   onPluginChatContext = null,
+  onPluginActivate = null,
   notify = null,
   windowObject = globalThis.window,
   api = windowObject?.hikariApi || null
@@ -17,6 +20,9 @@ export function createPluginBridge({
   // WindowProxy identity survives navigation, so a grant also needs the
   // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
+  const workspaceTools = createPluginWorkspaceTools({ windowObject, getRegistration: frame => frames.get(frame) });
+  const contextActions = createPluginContextActions({ state, windowObject, api,
+    getRegistration: frame => frames.get(frame), activate: onPluginActivate });
   const canvasRequests = new Map();
   function requestCanvas({ id, plugin_id: pluginId, request, assets, deadline, inspectionRunId }) {
     const target = [...frames.entries()].find(([, { plugin }]) => plugin.id === pluginId
@@ -76,6 +82,8 @@ export function createPluginBridge({
   function register(frameWindow, plugin, baseUrl) {
     const origin = pluginOrigin(baseUrl);
     if (frameWindow && plugin && origin) {
+      workspaceTools.clear(frameWindow);
+      contextActions.clear(frameWindow);
       frames.set(frameWindow, { plugin, origin });
     }
   }
@@ -189,6 +197,8 @@ export function createPluginBridge({
     }
     if (event.origin !== registration.origin) {
       frames.delete(event.source);
+      workspaceTools.clear(event.source);
+      contextActions.clear(event.source);
       frameHistory.delete(event.source);
       onFrameHistoryChanged?.();
       // The document that reported unsaved work is gone, so the host can no
@@ -248,7 +258,9 @@ export function createPluginBridge({
         onPluginChatContext,
         notify,
         frameWindow: event.source,
-        windowObject
+        windowObject,
+        workspaceTools,
+        contextActions
       });
       // Filesystem verbs are async; the rest stay synchronous so a reply still
       // lands in the same turn as the request.
@@ -269,6 +281,7 @@ export function createPluginBridge({
   windowObject?.document?.addEventListener?.('hikari:agent-chat-rail-state', () => broadcastAppContext('layout'));
   return {
     register,
+    contextActions,
     requestCanvas,
     queueNotebookGel,
     handleMessage,

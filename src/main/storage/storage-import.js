@@ -65,7 +65,7 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
     protocols: found.data,
     protocolRootPath,
     warnings: found.error ? [found.error] : [],
-    alerts: asArray(found.duplicates)
+    alerts: asArray(found.alerts)
   };
 }
 
@@ -413,7 +413,9 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     lastSavedAt: newestSnapshot?.modifiedAt ? new Date(newestSnapshot.modifiedAt).toISOString() : '',
     warnings: allWarnings,
     // Problems the user must see, not just a line in the import summary.
-    alerts: [...takeChemicalIndexAlerts(rootLayout.chemicalsSqlitePath), ...asArray(protocolRoot.alerts)],
+    alerts: [...takeChemicalIndexAlerts(rootLayout.chemicalsSqlitePath),
+      ...[...asArray(protocolRoot.alerts), ...asArray(projectRoot?.alerts), ...asArray(workflowRoot?.alerts)]
+        .map((message) => message.split(`${resolvedStoragePath}${path.sep}`).join(''))],
     bundles: bundleSummaries,
     sequenceLibrary
   };

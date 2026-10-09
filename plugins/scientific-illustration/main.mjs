@@ -1,29 +1,37 @@
 import { createWorkspace, encodeText } from './workspace.mjs';
-import { scene, renderPreview, objectGroup, element, stretchSvg } from './artwork.mjs';
+import { scene, renderPreview, objectGroup, element, stretchSvg, interactionBox, clearTextBounds, validateSvg } from './artwork.mjs';
 import { initPluginLeftRailResizer } from './left-rail.mjs';
 import { icon, mountIcons } from './icons.mjs';
 import { COMPLEXITY_PROFILES } from './complexity.mjs';
-import { resizeObject, scaleTextObject } from './geometry.mjs';
+import { imageGenerationSummary } from './image-generation.mjs';
+import { resizeObject, scaleTextObject, resizeAnchor } from './geometry.mjs';
 import { createCanvasViewport } from './viewport.mjs';
 import { selectionBounds, resizeSelection, transformSelection } from './grouping.mjs';
+import { initAssetsPanel } from './assets-panel.mjs';
+import { initArtworkImport } from './artwork-import.mjs';
+import { initCanvasCrop } from './canvas-crop.mjs';
+import { createComponentRail } from './component-rail.mjs';
+import { rectanglePoints, regionSelection } from './area-selection.mjs';
+import { createWorkspaceTools } from './workspace-tools.mjs';
+import { installSourceActions } from './source-context.mjs';
+import { exportPowerPoint } from './powerpoint.mjs';
+import { angleDelta, rotateComponents } from './rotation.mjs';
+import { installCanvasClipboard } from './clipboard.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
 const properties = $('properties');
-// This panel only changes the editing view, never the saved scene or previews.
-function showInspector(open) {
-  const panel = $('layer-inspector'), toggle = $('toggle-layers');
-  if (!open && panel.contains(document.activeElement)) toggle.focus({ preventScroll: true });
-  panel.hidden = !open; panel.inert = !open;
-  document.querySelector('.work-area').classList.toggle('is-inspector-open', open);
-  toggle.setAttribute('aria-expanded', String(open));
-  toggle.setAttribute('aria-label', open ? 'Hide layers and properties' : 'Show layers and properties');
-  toggle.title = open ? 'Hide layers and properties' : 'Show layers and properties';
-}
-$('toggle-layers').addEventListener('click', () => showInspector($('layer-inspector').hidden));
-$('close-layers').addEventListener('click', () => showInspector(false));
+let assetsPanel, workspaceTools, artworkImport, canvasCrop;
+const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
+  if (name === 'assets') assetsPanel?.render();
+  if (name && workspaceTools?.isHosted()) void hikari.call('app.setAgentChatExpanded', { expanded: false }).catch(() => {});
+  workspaceTools?.sync();
+} });
 mountIcons();
-let selectedId = '', selectedIds = [], activeCanvas = 'main', illustrationId = '', state, drag = null, pendingRaster = null, replaceRasterId = '', sourceTarget = null;
+let selectedId = '', selectedIds = [], activeCanvas = 'main', illustrationId = '', state, drag = null, sourceTarget = null;
+let chatExpanded = false, canDraw = true;
+let imagePreferenceSave = Promise.resolve(), pendingImagePreference = null;
+let areaDrag = null;
 const status = text => { $('status').textContent = text; };
 let chatContextKey = '';
 function syncChatContext(id, title) {
@@ -35,13 +43,28 @@ function syncChatContext(id, title) {
   });
 }
 const workspace = createWorkspace({ hikari, onChange: render, onLibraryChange: renderIllustrations, onViewChange: renderView,
-  onHistoryChange: ({ canUndo, canRedo }) => { $('undo').disabled = !canUndo; $('redo').disabled = !canRedo; }, onStatus: status });
+  onAssetsChange: library => assetsPanel?.render(library),
+  onStatus: status });
 const leftRail = initPluginLeftRailResizer({ commitWidth: width => hikari.call('app.setLeftRailWidth', { width }),
   commitFolded: folded => hikari.call('app.setLeftRailFolded', { folded }), onCommitError: error => status(error.message) });
 const selected = () => selectedIds.length === 1 ? state?.objects.find(obj => obj.id === selectedId) : undefined;
 const selectedObjects = () => state?.objects.filter(object => selectedIds.includes(object.id)) || [];
 const selectedGroup = () => state?.groups.find(group => group.ids.length === selectedIds.length && group.ids.every(id => selectedIds.includes(id)));
+assetsPanel = initAssetsPanel({ workspace, getSelection: () => ({ ids: selectedIds, name: selectionTarget()?.name || 'Component' }),
+  getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId, selectCopies: ids => select(ids, { reveal: false }), showAssets: () => componentRail.open('assets'), status });
+artworkImport = initArtworkImport({ workspace, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
+  getSelected: selected, select, showAssets: () => componentRail.open('assets'), status });
+canvasCrop = initCanvasCrop({ workspace, getSelected: selected, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
+  onStart: () => { artworkImport.close(); componentRail.close(); },
+  onActiveChange: (active, focus) => { $('crop-raster').setAttribute('aria-pressed', String(active)); workspaceTools?.sync(); if (focus) workspaceTools?.focus('crop-raster'); },
+  select: id => select(id, { reveal: false }), status });
 function setSelection(ids) { selectedIds = [...new Set(ids)]; selectedId = selectedIds[0] || ''; }
+function cancelRotation() {
+  if (!drag?.rotating) return;
+  const stage = $(`${drag.canvas}-canvas`), pointerId = drag.pointerId;
+  drag = null;
+  if (stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+}
 function selectionTarget() {
   const objects = selectedObjects();
   if (objects.length < 2) return selected();
@@ -63,8 +86,8 @@ async function ungroupSelection() {
   const groups = state?.groups.filter(group => group.ids.every(id => selectedIds.includes(id))) || [];
   if (groups.length) await edit(groups.map(group => ({ op: 'ungroup', id: group.id })));
 }
-for (const id of ['group-selection', 'menu-group-selection']) $(id).addEventListener('click', () => void groupSelection());
-for (const id of ['ungroup-selection', 'menu-ungroup-selection']) $(id).addEventListener('click', () => void ungroupSelection());
+$('group-selection').addEventListener('click', () => void groupSelection());
+$('ungroup-selection').addEventListener('click', () => void ungroupSelection());
 const newId = () => `object-${crypto.randomUUID()}`;
 const numeric = new Set(['x', 'y', 'width', 'height', 'rotation', 'opacity', 'fontSize', 'fontWeight', 'strokeWidth']);
 // Native disclosures keep less-used actions out of the canvas workspace.
@@ -89,6 +112,29 @@ function syncSelectionSize(stage) {
     handle.setAttribute('x', Number(handle.dataset.cornerX) - size / 2);
     handle.setAttribute('y', Number(handle.dataset.cornerY) - size / 2);
   }
+  const frame = svg.querySelector('.selection'), rotate = frame?.querySelector('.rotation-handle');
+  if (!rotate) return;
+  const w = Number(frame.dataset.selectionWidth), h = Number(frame.dataset.selectionHeight), gap = 28 / scale;
+  const frameMatrix = frame.getScreenCTM(), area = stage.getBoundingClientRect(), margin = 13;
+  const candidates = [[w / 2, -gap, w / 2, 0], [w / 2, h + gap, w / 2, h],
+    [w + gap, h / 2, w, h / 2], [-gap, h / 2, 0, h / 2], [w / 2, gap, w / 2, 0]];
+  let placement = drag?.rotating && drag.canvas === stage.dataset.canvas ? drag.handlePlacement : undefined;
+  if (!placement) placement = candidates.find(([x, y]) => {
+    const p = new DOMPoint(x, y).matrixTransform(frameMatrix);
+    return p.x >= area.left + margin && p.x <= area.left + stage.clientWidth - margin
+      && p.y >= area.top + margin && p.y <= area.top + stage.clientHeight - margin;
+  });
+  if (!placement) {
+    const p = new DOMPoint(...candidates[0].slice(0, 2)).matrixTransform(frameMatrix);
+    const clamped = new DOMPoint(Math.max(area.left + margin, Math.min(area.left + stage.clientWidth - margin, p.x)),
+      Math.max(area.top + margin, Math.min(area.top + stage.clientHeight - margin, p.y))).matrixTransform(frameMatrix.inverse());
+    placement = [clamped.x, clamped.y, w / 2, 0];
+  }
+  const [x, y, anchorX, anchorY] = placement, stem = frame.querySelector('.rotation-stem');
+  rotate.setAttribute('transform', `translate(${x} ${y})`); rotate.dataset.placement = JSON.stringify(placement);
+  rotate.querySelector('.rotation-hit').setAttribute('r', 12 / scale);
+  rotate.querySelector('.rotation-knob').setAttribute('r', 6 / scale);
+  for (const [key, value] of Object.entries({ x1: anchorX, y1: anchorY, x2: x, y2: y })) stem.setAttribute(key, value);
 }
 function renderZoom() {
   const view = viewport.get($(`${activeCanvas}-canvas`));
@@ -97,19 +143,31 @@ function renderZoom() {
   $('zoom-out').disabled = view.scale <= 0.1;
   $('zoom-in').disabled = view.scale >= 8;
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
+  workspaceTools?.sync();
 }
 const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); });
 function renderCanvas(canvas, documentState = state) {
-  const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId;
+  const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId,
+    focusedRotation = document.activeElement?.dataset.rotateId;
   const pan = { x: stage.scrollLeft, y: stage.scrollTop };
-  stage.replaceChildren(scene(documentState, canvas, { interactive: true, selectedId: selectedIds.length === 1 ? selectedId : '', selectedIds }));
+  const selectionBox = drag?.rotating && drag.canvas === canvas && drag.objects.length > 1
+    ? { ...drag.bounds, id: 'selection', rotation: drag.rotationDelta || 0 } : undefined;
+  stage.replaceChildren(scene(documentState, canvas, { interactive: true, selectedId: selectedIds.length === 1 ? selectedId : '', selectedIds, selectionBox }));
+  stage.classList.toggle('is-rotating', Boolean(drag?.rotating && drag.canvas === canvas));
   viewport.layout(stage);
   if (viewport.get(stage).zoom !== null) { stage.scrollLeft = pan.x; stage.scrollTop = pan.y; }
+  syncSelectionSize(stage);
   if (focusedId && selectedIds.includes(focusedId)) stage.querySelector(`[data-object-id="${focusedId}"]`)?.focus({ preventScroll: true });
+  if (focusedRotation) stage.querySelector(`[data-rotate-id="${focusedRotation}"]`)?.focus({ preventScroll: true });
+  if (areaDrag?.canvas === canvas) renderSelectionRegion();
 }
+document.fonts.addEventListener('loadingdone', () => {
+  clearTextBounds();
+  if (state && !drag && !areaDrag) for (const canvas of ['main', 'scratch']) renderCanvas(canvas);
+});
 for (const [id, factor] of [['zoom-out', 1 / 1.25], ['zoom-in', 1.25]]) {
   $(id).addEventListener('click', () => {
-    if (drag) return;
+    if (drag || areaDrag) return;
     const stage = $(`${activeCanvas}-canvas`);
     const object = stage.querySelector(`[data-object-id="${selectedId}"]`), box = object?.getBoundingClientRect();
     const area = stage.getBoundingClientRect();
@@ -128,7 +186,7 @@ for (const [id, factor] of [['zoom-out', 1 / 1.25], ['zoom-in', 1.25]]) {
     }
   });
 }
-$('zoom-fit').addEventListener('click', () => { if (!drag) viewport.fit($(`${activeCanvas}-canvas`)); });
+$('zoom-fit').addEventListener('click', () => { if (!drag && !areaDrag) viewport.fit($(`${activeCanvas}-canvas`)); });
 const pendingCanvasFits = new Set();
 let canvasFitFrame = 0;
 const canvasObserver = new ResizeObserver(entries => {
@@ -141,6 +199,10 @@ const canvasObserver = new ResizeObserver(entries => {
   });
 });
 for (const canvas of ['main', 'scratch']) canvasObserver.observe($(`${canvas}-canvas`));
+for (const canvas of ['main', 'scratch']) {
+  const stage = $(`${canvas}-canvas`);
+  stage.addEventListener('scroll', () => syncSelectionSize(stage), { passive: true });
+}
 
 async function edit(operations, revision = state?.revision) {
   if (!revision) return status('The illustration is still opening.');
@@ -149,9 +211,15 @@ async function edit(operations, revision = state?.revision) {
   return result;
 }
 function render(next, id = illustrationId) {
+  if (drag?.rotating && (next.revision !== drag.revision || id !== illustrationId
+    || activeCanvas !== drag.canvas || JSON.stringify(selectedIds) !== JSON.stringify(drag.ids))) cancelRotation();
+  canvasCrop?.onDocumentChange(next, id);
+  if (areaDrag && (id !== illustrationId || activeCanvas !== areaDrag.canvas || next.revision !== areaDrag.revision)) cancelAreaSelection();
   if (id !== illustrationId) {
-    illustrationId = id; setSelection([]); activeCanvas = 'main'; drag = null; pendingRaster = null;
-    showInspector(false);
+    illustrationId = id; setSelection([]); activeCanvas = 'main'; drag = null;
+    componentRail.close();
+    assetsPanel?.closeSave();
+    artworkImport?.close();
     viewport.reset();
     $('source-dialog').close(); $('raster-dialog').close(); $('prompt').value = ''; $('prompt').style.height = '';
   }
@@ -163,11 +231,13 @@ function render(next, id = illustrationId) {
   $('figure-title').value = state.title;
   $('complexity').value = state.complexity;
   $('complexity').title = COMPLEXITY_PROFILES[state.complexity].summary;
+  renderImagePreference(pendingImagePreference?.id === id ? pendingImagePreference.percent : state.imageGenerationPercent);
   $('canvas-empty').hidden = state.objects.some(object => object.canvas === 'main');
-  $('prompt').placeholder = state.objects.length ? 'Describe a change…' : 'Describe your figure…';
+  syncComposer();
   $('place-scratch').disabled = !state.objects.some(object => object.canvas === 'scratch');
   document.querySelectorAll('button[data-canvas]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.canvas === activeCanvas)));
   renderLayers(); renderProperties();
+  if (componentRail.getActive() === 'assets') assetsPanel?.render();
   renderCanvasProperties();
   renderZoom();
 }
@@ -190,6 +260,7 @@ function renderView({ scratch_visible: visible }) {
   document.querySelector('.workspace').classList.toggle('has-scratch', visible);
   $('toggle-scratch').setAttribute('aria-expanded', String(visible));
   if (!visible && activeCanvas === 'scratch') {
+    cancelAreaSelection();
     activeCanvas = 'main'; setSelection([]); drag = null;
     if (state) render(state);
   }
@@ -294,10 +365,12 @@ function renderLayers() {
 }
 function renderProperties() {
   const object = selectionTarget(), group = selectedGroup(); properties.hidden = !object;
-  for (const id of ['group-selection', 'menu-group-selection']) $(id).disabled = !canGroup();
+  $('group-selection').disabled = !canGroup();
   const canUngroup = state.groups.some(group => group.ids.every(id => selectedIds.includes(id)));
-  for (const id of ['ungroup-selection', 'menu-ungroup-selection']) $(id).disabled = !canUngroup;
-  $('selection-hint').hidden = Boolean(object) || !state.objects.length;
+  $('ungroup-selection').disabled = !canUngroup;
+  for (const id of ['save-selection-asset', 'menu-save-selection-asset']) $(id).disabled = !selectedIds.length;
+  $('crop-raster').disabled = object?.type !== 'raster';
+  workspaceTools?.sync();
   if (!object) return;
   $('selection-type').textContent = object.type === 'group' ? `${selectedIds.length} layers` : object.type === 'text' ? 'Text' : object.type === 'vector' ? 'Vector' : 'Image';
   properties.elements.name.disabled = object.type === 'group' && !group;
@@ -316,7 +389,8 @@ function renderProperties() {
     if (input.type === 'checkbox') input.checked = Boolean(object[input.name]);
     else input.value = object[input.name] ?? '';
   }
-  $('text-properties').hidden = object.type !== 'text'; $('vector-properties').hidden = object.type !== 'vector'; $('replace-raster').hidden = object.type !== 'raster';
+  $('text-properties').hidden = object.type !== 'text'; $('vector-properties').hidden = object.type !== 'vector';
+  $('replace-raster').hidden = object.type !== 'raster';
   properties.querySelectorAll('[data-text-style]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.textStyle === 'bold' ? object.fontWeight >= 700 : Boolean(object[button.dataset.textStyle]))));
   properties.querySelectorAll('[data-align]').forEach(button => button.setAttribute('aria-pressed', String(object.align === button.dataset.align)));
   const siblings = state.objects.filter(item => item.canvas === object.canvas);
@@ -324,7 +398,7 @@ function renderProperties() {
   $('transfer').textContent = object.canvas === 'main' ? 'Copy to scratch' : 'Copy to main';
 }
 function select(id, { reveal = true, additive = false } = {}) {
-  if (reveal) showInspector(true);
+  if (reveal) componentRail.open('layers');
   const ids = Array.isArray(id) ? id : [id], canvas = state.objects.find(object => object.id === ids[0])?.canvas;
   if (canvas !== activeCanvas) { activeCanvas = canvas || activeCanvas; setSelection([]); }
   setSelection(additive ? ids.every(id => selectedIds.includes(id)) ? selectedIds.filter(id => !ids.includes(id)) : [...selectedIds, ...ids] : ids);
@@ -389,7 +463,6 @@ $('add-vector').addEventListener('click', async () => {
   if ((await edit([{ op: 'upsert', object: { id, type: 'vector', name: 'Component', canvas: activeCanvas, x: 40, y: 40, width: 160, height: 100,
     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect x="3" y="3" width="154" height="94" rx="18" fill="#dce9e0" stroke="#587a64" stroke-width="3"/></svg>' } }]))?.ok) select(id);
 });
-for (const [button, direction] of [['undo', 'undo'], ['redo', 'redo']]) $(button).addEventListener('click', () => void workspace.history(direction).catch(error => status(error.message)));
 function selectionUnits() {
   const groups = state.groups.filter(group => group.ids.every(id => selectedIds.includes(id)));
   return [...groups.map(group => group.id), ...selectedIds.filter(id => !groups.some(group => group.ids.includes(id)))];
@@ -450,53 +523,79 @@ $('source-form').addEventListener('submit', async event => {
   const result = await edit([{ op: 'update', id: sourceTarget.id, patch: { svg: $('svg-source').value } }], sourceTarget.revision);
   if (result?.ok) $('source-dialog').close(); else $('source-error').textContent = result?.error || 'Could not update the artwork.';
 });
-$('import').addEventListener('click', () => { replaceRasterId = ''; $('asset-input').click(); });
-$('replace-raster').addEventListener('click', () => { replaceRasterId = selectedId; $('asset-input').click(); });
-async function importRaster() {
-  const { file, dataUrl, revision, canvas, replaceId } = pendingRaster;
-  const id = replaceId || newId();
-  const operation = replaceId ? { op: 'update', id, patch: { dataUrl, textFree: true } }
-    : { op: 'upsert', object: { id, type: 'raster', name: file.name, canvas, x: 25, y: 25, width: 240, height: 180, dataUrl, textFree: true } };
-  const result = await edit([operation], revision);
-  if (result?.ok) { pendingRaster = null; $('raster-dialog').close(); select(id); }
-  else $('raster-error').textContent = result?.error || 'Could not import the artwork.';
-}
-$('asset-input').addEventListener('change', async () => {
-  const file = $('asset-input').files[0]; $('asset-input').value = ''; if (!file || !state) return;
-  if (file.size > 5 * 1024 * 1024) return status('Artwork must be at most 5 MiB.');
-  const revision = state.revision, canvas = activeCanvas, replaceId = replaceRasterId;
-  if (file.type === 'image/svg+xml' || /\.svg$/i.test(file.name)) {
-    if (replaceId) return status('Use PNG, JPEG, or WebP to replace raster artwork.');
-    const id = newId();
-    if ((await edit([{ op: 'upsert', object: { id, type: 'vector', name: file.name, canvas, x: 25, y: 25, width: 240, height: 180, svg: await file.text() } }], revision))?.ok) select(id);
-  } else {
-    const dataUrl = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsDataURL(file); }).catch(() => '');
-    pendingRaster = { file, dataUrl, revision, canvas, replaceId }; $('text-free').checked = false; $('raster-error').textContent = ''; $('raster-dialog').showModal();
-  }
-});
-$('cancel-raster').addEventListener('click', () => { pendingRaster = null; $('raster-dialog').close(); });
-$('raster-form').addEventListener('submit', event => { event.preventDefault(); if ($('text-free').checked && pendingRaster) void importRaster(); });
 
 // Drag previews are transient. The final edit uses the revision captured on
 // pointer-down, so an intervening agent edit cannot be silently overwritten.
 function point(svg, event) { return new DOMPoint(event.clientX, event.clientY).matrixTransform(svg.getScreenCTM().inverse()); }
+function cancelAreaSelection() {
+  if (!areaDrag) return;
+  const { canvas, pointerId } = areaDrag; areaDrag = null;
+  const stage = $(`${canvas}-canvas`);
+  stage.classList.remove('is-area-selecting'); stage.querySelector('.selection-region')?.remove();
+  if (stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+}
+function renderSelectionRegion() {
+  if (!areaDrag) return;
+  const svg = $(`${areaDrag.canvas}-canvas`).querySelector('svg');
+  let region = svg.querySelector('.selection-region');
+  if (!region) { region = element('polygon', { class: 'selection-region', 'pointer-events': 'none', 'vector-effect': 'non-scaling-stroke', 'fill-rule': 'evenodd', 'aria-hidden': 'true' }); svg.append(region); }
+  const points = areaDrag.mode === 'rectangle' ? rectanglePoints(areaDrag.start, areaDrag.end) : areaDrag.points;
+  region.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' '));
+}
+function updateSelectionRegion(event, final = false) {
+  const current = point($(`${areaDrag.canvas}-canvas`).querySelector('svg'), event);
+  areaDrag.end = current;
+  areaDrag.moved ||= Math.hypot(event.clientX - areaDrag.screen.x, event.clientY - areaDrag.screen.y) >= 4;
+  if (areaDrag.mode === 'freehand') {
+    const previous = areaDrag.points.at(-1), matrix = $(`${areaDrag.canvas}-canvas`).querySelector('svg').getScreenCTM();
+    if (final || Math.hypot(current.x - previous.x, current.y - previous.y) * Math.hypot(matrix.a, matrix.b) >= 2) areaDrag.points.push(current);
+    // Bound preview and hit-testing costs during long drawing gestures.
+    if (areaDrag.points.length > 2048) areaDrag.points = areaDrag.points.filter((_, index) => index === 0 || index % 2 || index === areaDrag.points.length - 1);
+  }
+  renderSelectionRegion();
+}
+function setSelectionTool(mode) {
+  cancelAreaSelection();
+  $('selection-tool').value = mode;
+  for (const canvas of ['main', 'scratch']) $(`${canvas}-canvas`).dataset.selectionTool = mode;
+  $('pointer-tool').setAttribute('aria-pressed', String(mode === 'pointer'));
+  $('freehand-tool').setAttribute('aria-pressed', String(mode === 'freehand'));
+  workspaceTools?.sync();
+}
+$('pointer-tool').addEventListener('click', () => setSelectionTool('pointer'));
+$('freehand-tool').addEventListener('click', () => setSelectionTool('freehand'));
+$('selection-tool').addEventListener('change', event => setSelectionTool(event.target.value));
+setSelectionTool('pointer');
 for (const key of ['main', 'scratch']) {
   const stage = $(`${key}-canvas`);
   let lastClick = null;
   stage.addEventListener('wheel', event => {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
-    if (!state || drag) return;
+    if (!state || drag || areaDrag) return;
     if (activeCanvas !== key) { activeCanvas = key; setSelection([]); render(state); }
     viewport.zoom(stage, Math.exp(-Math.max(-100, Math.min(100, event.deltaY)) * 0.002), { x: event.clientX, y: event.clientY });
   }, { passive: false });
   stage.addEventListener('pointerdown', event => {
-    if (!state || event.button !== 0) return;
-    const hit = event.target.closest('[data-object-id], [data-resize-id]');
-    if (!hit) { lastClick = null; activeCanvas = key; setSelection([]); render(state); return; }
-    const id = hit.dataset.objectId || hit.dataset.resizeId;
+    if (!state || event.button !== 0 || drag || areaDrag || !event.isPrimary) return;
+    const hit = event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id]');
+    const mode = $('selection-tool').value;
+    // Select & move uses a rectangle on empty space. Freehand still permits
+    // moving selected members, and resize handles always take precedence.
+    const movingSelection = activeCanvas === key && selectedIds.includes(hit?.dataset.objectId) && !event.shiftKey;
+    if (!hit || mode === 'freehand' && !hit.dataset.resizeDirection && !hit.dataset.rotateId && !movingSelection) {
+      lastClick = null;
+      if (activeCanvas !== key) { activeCanvas = key; setSelection([]); render(state); }
+      const start = point(stage.querySelector('svg'), event);
+      areaDrag = { canvas: key, pointerId: event.pointerId, mode: mode === 'pointer' ? 'rectangle' : mode, start, end: start, points: [start],
+        screen: { x: event.clientX, y: event.clientY }, moved: false, revision: state.revision, ids: [...selectedIds], additive: event.shiftKey, individual: event.altKey,
+        hitId: hit?.dataset.objectId || '' };
+      stage.classList.add('is-area-selecting'); renderSelectionRegion();
+      stage.focus({ preventScroll: true }); stage.setPointerCapture(event.pointerId); event.preventDefault(); return;
+    }
+    const id = hit.dataset.objectId || hit.dataset.resizeId || hit.dataset.rotateId;
     const start = point(stage.querySelector('svg'), event);
-    if (hit.dataset.resizeDirection) {
+    if (hit.dataset.resizeDirection || hit.dataset.rotateId) {
       activeCanvas = key;
     } else {
       const group = !event.altKey && state.groups.find(group => group.ids.includes(id));
@@ -507,16 +606,43 @@ for (const key of ['main', 'scratch']) {
     }
     const objects = selectedObjects(), object = objects.length === 1 ? objects[0] : selectionTarget();
     if (!object) return;
-    drag = { pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), ids: [...selectedIds], start, revision: state.revision, resizing: hit.dataset.resizeDirection, preview: null };
+    const boxes = objects.map(interactionBox);
+    drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start, revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), preview: null };
+    if (drag.rotating) {
+      drag.pivot = { x: drag.bounds.x + drag.bounds.width / 2, y: drag.bounds.y + drag.bounds.height / 2 };
+      drag.lastAngle = Math.atan2(start.y - drag.pivot.y, start.x - drag.pivot.x) * 180 / Math.PI;
+      drag.totalAngle = 0; drag.handlePlacement = JSON.parse(hit.dataset.placement);
+    }
     if (drag.resizing && object.type === 'vector') drag.resizeSvg = stretchSvg(object.svg);
-    render(state); stage.setPointerCapture(event.pointerId); event.preventDefault();
+    render(state);
+    if (drag.rotating || document.activeElement?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) stage.focus({ preventScroll: true });
+    stage.setPointerCapture(event.pointerId); event.preventDefault();
   });
   stage.addEventListener('pointermove', event => {
+    if (areaDrag?.canvas === key && areaDrag.pointerId === event.pointerId) { updateSelectionRegion(event); return; }
     if (!drag || drag.pointerId !== event.pointerId) return;
     const current = point(stage.querySelector('svg'), event), dx = current.x - drag.start.x, dy = current.y - drag.start.y;
+    if (drag.rotating) {
+      if (Math.hypot(current.x - drag.pivot.x, current.y - drag.pivot.y) < 1e-6) return;
+      const angle = Math.atan2(current.y - drag.pivot.y, current.x - drag.pivot.x) * 180 / Math.PI;
+      drag.totalAngle += angleDelta(drag.lastAngle, angle); drag.lastAngle = angle;
+      const base = drag.objects.length === 1 ? drag.object.rotation : 0;
+      drag.rotationDelta = event.shiftKey ? Math.round((base + drag.totalAngle) / 15) * 15 - base : drag.totalAngle;
+      drag.preview = rotateComponents(drag.objects, drag.rotationDelta, drag.pivot);
+      renderCanvas(key, { ...state, objects: state.objects.map(object => drag.preview.find(preview => preview.id === object.id) || object) });
+      return;
+    }
     let patch;
     if (drag.resizing) {
-      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy) : resizeObject(drag.object, drag.resizing, dx, dy);
+      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy, drag.bounds) : resizeObject(drag.object, drag.resizing, dx, dy, drag.bounds);
+      if (drag.objects.some(object => object.type === 'text')) {
+        // Browser glyph metrics can round at fractional font sizes. Measure
+        // the resized label again so its actual opposite handle stays fixed.
+        const previews = drag.objects.length > 1 ? transformSelection(drag.objects, patch) : [{ ...drag.object, ...patch }];
+        const boxes = previews.map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
+        const before = resizeAnchor(drag.bounds, drag.resizing), after = resizeAnchor(box, drag.resizing);
+        patch.x += before.x - after.x; patch.y += before.y - after.y;
+      }
       if (drag.resizeSvg && (patch.width !== drag.object.width || patch.height !== drag.object.height)) patch.svg = drag.resizeSvg;
     }
     else patch = { x: Math.max(-16000, Math.min(16000, drag.object.x + dx)), y: Math.max(-16000, Math.min(16000, drag.object.y + dy)) };
@@ -525,9 +651,27 @@ for (const key of ['main', 'scratch']) {
     renderCanvas(key, { ...state, objects: state.objects.map(obj => previews.find(preview => preview.id === obj.id) || obj) });
   });
   const finish = event => {
+    if (areaDrag?.canvas === key && areaDrag.pointerId === event.pointerId) {
+      if (event.type === 'pointercancel' || event.type === 'lostpointercapture') { cancelAreaSelection(); return; }
+      updateSelectionRegion(event, true);
+      const finished = areaDrag;
+      const polygon = finished.mode === 'rectangle' ? rectanglePoints(finished.start, finished.end) : finished.points;
+      const ids = finished.moved ? regionSelection(state, key, polygon, { individual: finished.individual, getBounds: interactionBox })
+        : finished.hitId ? !finished.individual && state.groups.find(group => group.ids.includes(finished.hitId))?.ids || [finished.hitId] : [];
+      cancelAreaSelection();
+      setSelection(finished.additive ? [...finished.ids, ...ids] : ids); render(state); return;
+    }
     if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.type === 'lostpointercapture' && !drag.rotating) return;
     const finished = drag; drag = null;
-    if (event.type === 'pointercancel') { lastClick = null; render(state); return; }
+    if (event.type === 'pointercancel' || event.type === 'lostpointercapture') { lastClick = null; render(state); return; }
+    if (finished.rotating) {
+      lastClick = null;
+      const degrees = angleDelta(0, finished.rotationDelta || 0);
+      if (Math.abs(degrees) < 1e-8) { render(state); return; }
+      void edit([{ op: 'rotate', ids: finished.ids, degrees, pivot: finished.pivot }], finished.revision);
+      return;
+    }
     if (!finished.preview) {
       render(state);
       // Cancelling pointer-down's default prevents synthetic mouse clicks.
@@ -544,12 +688,14 @@ for (const key of ['main', 'scratch']) {
     void edit([finished.objects.length > 1 ? { op: 'transform', ids: finished.ids, patch: finished.preview }
       : { op: 'update', id: finished.objects[0].id, patch: finished.preview }], finished.revision);
   };
-  stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish);
+  stage.tabIndex = 0;
+  stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish); stage.addEventListener('lostpointercapture', finish);
   stage.addEventListener('focusin', event => {
     const id = event.target.dataset.objectId;
     if (id && !selectedIds.includes(id)) select(state.groups.find(group => group.ids.includes(id))?.ids || id, { reveal: false });
   });
   stage.addEventListener('dblclick', event => {
+    if ($('selection-tool').value !== 'pointer') return;
     // Selection redraws the SVG during pointer-down. Chromium can deliver the
     // resulting double-click to the stage after that original node is replaced.
     const hit = event.target.closest('[data-object-id]')
@@ -558,23 +704,74 @@ for (const key of ['main', 'scratch']) {
     if (id) editLabel(id);
   });
 }
+let keyboardRotation = Promise.resolve();
+function rotateWithKeyboard(degrees) {
+  const id = illustrationId, canvas = activeCanvas, ids = JSON.stringify(selectedIds);
+  keyboardRotation = keyboardRotation.then(async () => {
+    if (id !== illustrationId || canvas !== activeCanvas || ids !== JSON.stringify(selectedIds) || drag) return;
+    const boxes = selectedObjects().map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
+    if (box) await edit([{ op: 'rotate', ids: [...selectedIds], degrees,
+      pivot: { x: box.x + box.width / 2, y: box.y + box.height / 2 } }]);
+  }).catch(error => status(error.message));
+}
+const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
+  canHandle: event => {
+    const target = event.target?.closest ? event.target : document.activeElement;
+    return Boolean(state) && !drag && !areaDrag && !document.querySelector('dialog[open], #canvas-crop-overlay')
+      && !target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+      && !target?.isContentEditable;
+  },
+  getSelection: () => ({ scene: state, ids: [...selectedIds] }),
+  paste: async (snapshot, offset) => {
+    const id = illustrationId, canvas = activeCanvas;
+    const result = await workspace.paste(snapshot, { illustrationId: id, canvas, offset });
+    if (!result.ok) { status(result.error); return; }
+    if (id === illustrationId && canvas === activeCanvas) select(result.pasted_ids, { reveal: false });
+    status('Components pasted');
+  }
+});
 document.addEventListener('keydown', event => {
+  if (canvasCrop?.handleKey(event)) return;
+  if (canvasClipboard.handleKey(event)) return;
   if (event.key === 'Escape') {
+    if (areaDrag) { cancelAreaSelection(); event.preventDefault(); return; }
+    if (drag?.rotating) {
+      cancelRotation();
+      render(state); event.preventDefault(); return;
+    }
     if (document.querySelector('dialog[open]')) return;
     const menu = document.querySelector('.popover[open]');
-    if (menu) { menu.open = false; menu.querySelector('summary').focus(); event.preventDefault(); return; }
+    if (menu) {
+      menu.open = false;
+      if (menu.id === 'add-menu') workspaceTools.focus('add-menu');
+      else menu.querySelector('summary').focus();
+      event.preventDefault(); return;
+    }
     if (selectedIds.length) { setSelection([]); drag = null; render(state); event.preventDefault(); }
     return;
   }
-  if (event.target.closest('input, textarea, select')) return;
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); void workspace.history(event.shiftKey ? 'redo' : 'undo').catch(error => status(error.message)); return; }
+  if (event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
+  if (event.target.closest('[data-rotate-id]') && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) {
+    event.preventDefault();
+    if (!drag) rotateWithKeyboard((['ArrowLeft', 'ArrowDown'].includes(event.key) ? -1 : 1)
+      * (event.shiftKey || ['Enter', ' '].includes(event.key) ? 15 : 1));
+    return;
+  }
+  if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) {
+    const mode = { v: 'pointer', l: 'freehand' }[event.key.toLowerCase()];
+    if (mode && !drag) { setSelectionTool(mode); event.preventDefault(); return; }
+  }
+  if (areaDrag) return;
+  if (!event.defaultPrevented && !event.altKey && (event.metaKey || event.ctrlKey) && ['z', 'y'].includes(event.key.toLowerCase())) {
+    event.preventDefault(); void workspace.history(event.shiftKey || event.key.toLowerCase() === 'y' ? 'redo' : 'undo').catch(error => status(error.message)); return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'g') { event.preventDefault(); void (event.shiftKey ? ungroupSelection() : groupSelection()); return; }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'a' && event.target.closest('.canvas-stage, #layers')) {
     event.preventDefault(); select(state.objects.filter(object => object.canvas === activeCanvas && object.visible).map(object => object.id), { reveal: false }); return;
   }
   const object = selectionTarget(); if (!object) return;
   if (event.key === 'Enter' && object.type === 'text' && (event.target.dataset.objectId || event.target.closest('.layer-select'))) {
-    event.preventDefault(); showInspector(true); $('label-content').focus(); $('label-content').select(); return;
+    event.preventDefault(); componentRail.open('layers'); $('label-content').focus(); $('label-content').select(); return;
   }
   if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelection(); return; }
   const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
@@ -583,18 +780,69 @@ document.addEventListener('keydown', event => {
     void edit([object.type === 'group' ? transformOperation(patch) : { op: 'update', id: object.id, patch }]);
   }
 });
+let exporting = false;
 async function exportFigure(format) {
+  if (exporting) return;
+  exporting = true;
+  const buttons = ['export-svg', 'export-png', 'export-pptx'].map($);
+  buttons.forEach(button => { button.disabled = true; });
   try {
     await workspace.ready;
     const documentState = workspace.getDocument();
-    const dataBase64 = format === 'svg' ? encodeText(await workspace.exportSvg('main'))
+    if (format === 'pptx') status('Preparing PowerPoint…');
+    const dataBase64 = format === 'pptx' ? await exportPowerPoint(documentState)
+      : format === 'svg' ? encodeText(await workspace.exportSvg('main'))
       : (await renderPreview(documentState, 'main', 8000)).data_url.split(',')[1];
     const result = await hikari.call('downloads.save', { fileName: `${documentState.title || 'figure'}.${format}`, dataBase64 });
     status(result.saved ? `Exported ${format.toUpperCase()}` : 'Export canceled');
   } catch (error) { status(error.message); }
+  finally { exporting = false; buttons.forEach(button => { button.disabled = false; }); }
 }
 $('export-svg').addEventListener('click', () => void exportFigure('svg')); $('export-png').addEventListener('click', () => void exportFigure('png'));
+$('export-pptx').addEventListener('click', () => void exportFigure('pptx'));
 $('complexity').addEventListener('change', event => void edit([{ op: 'complexity', complexity: event.target.value }]));
+function chosenImagePercent() {
+  const slider = $('image-generation-percent');
+  // Keep existing/API targets exact until the user chooses a slider step.
+  return $('image-generation-enabled').checked ? Number(slider.dataset.percent ?? slider.value) : null;
+}
+function renderImagePreference(percent) {
+  const enabled = percent !== null;
+  $('image-generation-enabled').checked = enabled;
+  $('image-generation-percent').disabled = !enabled;
+  $('image-generation-percent').value = enabled ? percent : 50;
+  $('image-generation-percent').dataset.percent = enabled ? percent : 50;
+  $('image-generation-value').textContent = enabled ? `${percent}%` : 'Auto';
+  $('image-generation-summary').textContent = imageGenerationSummary(percent);
+}
+function saveImagePreference() {
+  const preference = { id: illustrationId, percent: chosenImagePercent() };
+  pendingImagePreference = preference;
+  imagePreferenceSave = imagePreferenceSave.then(async () => {
+    // Serialize rapid toggle/slider edits and pin their originating figure.
+    const current = await workspace.request({ action: 'read', illustration_id: preference.id });
+    if (!current.ok) throw new Error(current.error);
+    const result = await workspace.request({ action: 'apply', illustration_id: preference.id, expected_revision: current.revision,
+      request_id: crypto.randomUUID(), operations: [{ op: 'image_generation', imageGenerationPercent: preference.percent }] });
+    if (!result.ok) throw new Error(result.error);
+  }).catch(error => status(error.message)).finally(() => {
+    if (pendingImagePreference === preference) {
+      pendingImagePreference = null;
+      if (state && illustrationId === preference.id) renderImagePreference(state.imageGenerationPercent);
+    }
+  });
+}
+$('image-generation-enabled').addEventListener('change', () => {
+  renderImagePreference(chosenImagePercent()); saveImagePreference();
+});
+function showImageSliderPercent() {
+  const slider = $('image-generation-percent');
+  slider.dataset.percent = slider.value;
+  $('image-generation-value').textContent = `${slider.value}%`;
+  $('image-generation-summary').textContent = imageGenerationSummary(Number(slider.value));
+}
+$('image-generation-percent').addEventListener('input', showImageSliderPercent);
+$('image-generation-percent').addEventListener('change', () => { showImageSliderPercent(); saveImagePreference(); });
 $('prompt').addEventListener('input', () => { $('prompt').style.height = 'auto'; $('prompt').style.height = `${Math.min(120, $('prompt').scrollHeight)}px`; });
 $('prompt').addEventListener('keydown', event => {
   if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); $('prompt-form').requestSubmit(); }
@@ -606,10 +854,13 @@ $('prompt-form').addEventListener('submit', async event => {
     const prompt = $('prompt').value.trim();
     if (!prompt || prompt.length > 2300) throw new Error('Describe a figure in at most 2300 characters.');
     const complexity = $('complexity').value;
+    const imageGenerationPercent = chosenImagePercent();
+    await imagePreferenceSave;
     // Read after queued edits so a level selected just before Send is durable.
     const current = await workspace.request({ action: 'read', illustration_id: illustrationId });
     if (!current.ok) throw new Error(current.error);
     if (current.complexity !== complexity) throw new Error('The complexity changed or could not be saved. Check the selected level and try again.');
+    if (current.imageGenerationPercent !== imageGenerationPercent) throw new Error('The image generation preference changed or could not be saved. Check Figure options and try again.');
     // Hikari's item-scoped agent context directs Codex to read the canvas contract.
     // Keep that context out of the user message and its visible chat history.
     const result = await hikari.call('agent.chat', { message: prompt,
@@ -625,21 +876,29 @@ $('prompt-form').addEventListener('submit', async event => {
   finally { $('generate').disabled = false; }
 });
 hikari.on('agent.canvas', async ({ id, request, assets, deadline, inspectionRunId }) => {
-  const result = await workspace.request(request, deadline, assets, { inspectionRunId });
+  const result = await workspace.request(request, deadline, assets, { inspectionRunId, agentRequest: true });
   await hikari.call('agent.respond', { id, result }).catch(error => status(error.message));
 });
-function theme(info) {
-  const chatExpanded = info?.layout?.agentChatRail?.expanded === true;
-  // Hosts without Codex report available:false; older hosts omit the field.
-  const canDraw = info?.layout?.agentChatRail?.available !== false;
-  $('prompt-form').hidden = chatExpanded || !canDraw;
+function syncComposer() {
+  const hasComponents = Boolean(state?.objects.length);
+  $('prompt-form').hidden = !state || hasComponents || chatExpanded || !canDraw;
   $('canvas-empty-hint').textContent = !canDraw ? 'Add a layer to start your figure.'
-    : chatExpanded ? 'Describe your figure in the agent chat, or add a layer.' : 'Describe your figure below, or add a layer.';
+    : hasComponents ? 'Continue your figure in the agent chat, or add a layer.'
+      : chatExpanded ? 'Describe your figure in the agent chat, or add a layer.' : 'Describe your figure below, or add a layer.';
+}
+function theme(info) {
+  chatExpanded = info?.layout?.agentChatRail?.expanded === true;
+  if (chatExpanded) componentRail.close();
+  workspaceTools.connect(info);
+  // Hosts without Codex report available:false; older hosts omit the field.
+  canDraw = info?.layout?.agentChatRail?.available !== false;
+  syncComposer();
   document.body.classList.toggle('theme-night', info?.appearance?.mode === 'night');
   document.documentElement.style.setProperty('--app-font-size', `${info?.appearance?.fontSize || 16}px`);
   leftRail.applyContext(info?.layout?.leftRail || {});
   if (Array.isArray(info?.permissions) && !info.permissions.includes('layout')) leftRail.destroy();
 }
+workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) for (const canvas of ['main', 'scratch']) renderCanvas(canvas); } });
 hikari.on('app.context', info => { theme(info); if (info.changed === 'storage') location.reload(); });
 void hikari.call('app.info').then(theme).catch(() => {});
 hikari.on('app.undo', () => void workspace.history('undo').catch(error => status(error.message)));
@@ -647,3 +906,4 @@ hikari.on('app.redo', () => void workspace.history('redo').catch(error => status
 hikari.on('app.save', () => void workspace.flush().then(() => hikari.call('app.setUnsaved', { unsaved: false })).catch(error => status(error.message)));
 // A narrow public controller is useful for same-origin integration fixtures.
 window.illustrationWorkspace = workspace;
+void installSourceActions({ hikari, workspace, beforeCreate: () => imagePreferenceSave, status });

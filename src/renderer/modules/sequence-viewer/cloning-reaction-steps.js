@@ -238,7 +238,7 @@ const STRATEGY_ALIASES = {
   'overlap-pcr': 'overlap-fusion-only'
 };
 
-export function buildCloningReactionSteps({ strategy = '', displayPlan = {}, pcrPrograms = [] } = {}) {
+function buildDownstreamReactionSteps({ strategy = '', displayPlan = {}, pcrPrograms = [] } = {}) {
   const raw = cleanText(strategy, 80);
   const name = STRATEGY_ALIASES[raw] || raw;
   if (name === 'overlap-fusion-only') {
@@ -266,4 +266,45 @@ export function buildCloningReactionSteps({ strategy = '', displayPlan = {}, pcr
     return [overlapFusionStep(pcrPrograms), digestionStep(displayPlan), ligationStep()];
   }
   return [];
+}
+
+function buildOligoAssemblyReactionSteps(displayPlan) {
+  const primers = asArray(displayPlan.primers).length ? displayPlan.primers
+    : asArray(displayPlan.plans).flatMap((entry) => asArray(entry?.plan?.primerOligoPlan?.primers));
+  const groups = new Map();
+  primers.filter((primer) => primer.pcrStage === 'oligo-assembly').forEach((primer) => {
+    if (!groups.has(primer.groupLabel)) groups.set(primer.groupLabel, []);
+    groups.get(primer.groupLabel).push(primer);
+  });
+  return [...groups.entries()].map(([label, oligos], index) => {
+    const overlaps = oligos.flatMap((primer) => asArray(primer.overlapSummary));
+    const lowestTm = Math.min(...overlaps.map((overlap) => overlap.overlapTm));
+    const annealing = Math.round(lowestTm);
+    const length = oligos[0].ampliconLength;
+    const extensionSeconds = Math.max(30, Math.ceil(length / 1000 * 30 / 5) * 5);
+    return {
+      id: `oligo-assembly-${index + 1}`,
+      name: label,
+      purpose: `Build the ${length} bp insert from overlapping oligos, then use the product as the template for its separate outer-primer PCR before cloning.`,
+      totalVolume: '50 uL',
+      reagents: [
+        { rowIndex: 1, name: '5x polymerase buffer', stockConcentration: '5x', finalConcentration: '1x' },
+        { rowIndex: 2, name: 'dNTP mix', stockConcentration: '10 mM', finalConcentration: '0.2 mM' },
+        { rowIndex: 3, name: 'High-fidelity DNA polymerase', manualVolumeValue: '0.5 uL' },
+        ...oligos.map((primer, oligoIndex) => ({ rowIndex: oligoIndex + 4, name: primer.name, stockConcentration: '10 uM', finalConcentration: '0.05 uM' }))
+      ],
+      steps: [
+        `Combine all ${oligos.length} oligos at equal concentration with buffer, dNTPs, and high-fidelity polymerase; no donor DNA or outer PCR primers go in this reaction.`,
+        `Start with 98 C for 30 s, then 10 cycles of 98 C for 10 s, approximately ${annealing} C for 20 s, and 72 C for ${extensionSeconds} s; finish at 72 C for 2 min.`,
+        `The annealing estimate uses the lowest designed overlap Tm (${lowestTm.toFixed(1)} C). Optimize with a gradient for the polymerase, salt conditions, and oligo concentration used.`,
+        'Transfer a small aliquot of this assembly product to a fresh outer-primer PCR using the insert primer pair and program in the design page. Do not carry the complete oligo pool into the cloning reaction.',
+        `Verify and purify the full-length insert amplicon before the selected cloning reaction, then sequence the complete insert in the final clone.`
+      ],
+      materials: [...oligos.map((primer) => primer.name), 'High-fidelity DNA polymerase', '5x polymerase buffer', 'dNTP mix', 'Nuclease-free water']
+    };
+  });
+}
+
+export function buildCloningReactionSteps(args = {}) {
+  return [...buildOligoAssemblyReactionSteps(args.displayPlan || {}), ...buildDownstreamReactionSteps(args)];
 }

@@ -26,6 +26,8 @@ Every user-facing feature is a **folder module** (`modules/<feature>/index.js`) 
 | `app/storage-import.js`, `app/storage-import-merge.js` | Main path | storage-root hydration and merge into renderer state |
 | `app/storage-setup.js` | Main path | the first-launch **Choose Folder** workspace page |
 | `app/plugin-loader.js`, `app/plugin-bridge.js` + `app/plugin-bridge/`, `app/plugin-services.js`, `app/plugin-origin.js` | Main path | plugin install, the permission-gated `postMessage` bridge, and the service-plugin registry |
+| `app/plugin-workspace-tools.js`, `app/plugin-context-actions.js` + `app/plugin-action-context.js`, `app/plugin-agent.js`, `app/plugin-left-rail.js` | Main path | bridge services: right-toolbar controls, Protocol/PDF context actions and their one-shot source handoff, plugin chat prompts and item context, and per-plugin rail folding |
+| `app/plugin-history.js` | Main path | Routes system undo/redo to the active plugin frame or its shared toolbar; releases hidden and removed editors so other modules retain their own history |
 | `app/shared-left-rail.js` | Cross-cutting | resizable/collapsible left rails shared by every workspace |
 | `app/appearance.js`, `app/dialog-layout.js`, `app/icon-button-captions.js`, `app/error-reporting.js` | Cross-cutting | theme application, dialog placement, icon-button captions, renderer error forwarding |
 
@@ -41,7 +43,9 @@ Every user-facing feature is a **folder module** (`modules/<feature>/index.js`) 
 | `services/inventoryService.js` | Cross-cutting | sample-registry refresh and sample-search handoff |
 | `services/analysisService.js` | Cross-cutting | assay updates back into project summaries |
 | `modules/sequence-viewer/service.js` | Cross-cutting | toolbox-to-sequence-viewer handoff, owned by the destination feature |
-| `services/undoService.js` | Main path | global undo/redo; wraps `persist()` |
+| `services/undoService.js` | Main path | shared undo/redo controls over module-owned stacks; binds `persist()` to the initiating module |
+| `services/history-patches.js` | Main path | field/record changes, conflict checks, and linked-record protection for history restoration |
+| `core/module-history-runtime.js` | Main path | active module/rail routing and targeted, draft-aware restore hooks |
 | `services/unsavedChangesService.js` | Main path | the quit-time unsaved-changes dialog |
 | `services/notebook-page-log.js` | Cross-cutting | append-only `page.log` per notebook page |
 | `services/notebook-record-compat.js` | Cross-cutting | reads persisted Sequence Viewer cloning records inside notebook entries |
@@ -59,8 +63,7 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 | `workflowManagement` | `WORKFLOW_MANAGEMENT` | `modules/workflow/index.js` | workflow model, graph editor, list rendering, actions |
 | `papers` | `PAPERS` | `modules/papers/index.js` | library rail, PDF viewer, comments, LLM helpers |
 | `labCommonInventory` | `LAB_COMMON_INVENTORY` | `modules/lab-common-inventory/index.js` | shared chemical inventory ("Chemicals") |
-| `personalInventory` | `PERSONAL_INVENTORY` | `modules/personal-inventory/index.js` | container-centric storage workspace |
-| `sampleRegistry` | `SAMPLE_REGISTRY` | `modules/sample-registry/index.js` | sample-centric registry workspace |
+| `personalInventory` | `SAMPLE_REGISTRY` | `modules/personal-inventory/index.js` | the Samples app: containers and the samples inside them |
 | `assay` | `ASSAY` | `modules/assay/index.js` | plate layout, result grid, charts, analysis math |
 | `sequenceViewer` | `SEQUENCE_VIEWER` | `modules/sequence-viewer/index.js` | import, library, detail, alignment, annotation, cloning, Protein Builder, Vector Builder |
 | `toolBox` | `TOOL_BOX` | `modules/tool-box/index.js` | eight calculators plus the lazy-loaded colony counter |
@@ -77,7 +80,7 @@ These files expose a deliberate secondary API or compose features that do not us
 | --- | --- | --- |
 | `modules/agent-chat/public-api.js` | Support | `initAgentChat`, scoped chat state, and the response/state-snapshot surface used outside Agent Chat |
 | `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
-| `modules/assay/public-api.js`, `modules/workflow/public-api.js`, `modules/sample-registry/public-api.js` | Support | narrow APIs other features import instead of reaching into the folder |
+| `modules/assay/public-api.js`, `modules/workflow/public-api.js` | Support | narrow APIs other features import instead of reaching into the folder |
 
 ## Cross-cutting libraries and adapters
 
@@ -93,7 +96,7 @@ These files expose a deliberate secondary API or compose features that do not us
 | `lib/notebook-tool-calculations.js` | Cross-cutting | notebook calculation normalization and rendering model |
 | `lib/inventory-settings.js` | Cross-cutting | inventory location and sample-type settings normalization |
 | `services/direct-llm.js` | Cross-cutting | direct (non-agent) LLM request helper and provider settings builder |
-| `modules/sample-registry/chemical-structure-clipboard.js` | Feature-owned | reads chemical-structure candidates; Personal Inventory uses it through `sample-registry/public-api.js` |
+| `modules/personal-inventory/chemical-structure-clipboard.js` | Feature-owned | reads chemical-structure candidates for the sample editors |
 | `modules/biology-notebook/linked-previews.js` | Feature-owned | builds linked assay/gel/record preview models for notebook entries |
 | `services/notebook-note-tools.js` | Cross-cutting | LLM note-clarification helpers |
 | `lib/notify.js` | Cross-cutting | app-wide transient notices |

@@ -1,6 +1,25 @@
 # Protocol and notebook Markdown pressure test
 
-Verified against the working source on October 3, 2026. Destructive and failure-injection checks used disposable workspaces. The existing TestData3 workspace was inspected read-only.
+Verified against the working source on October 4, 2026. Destructive and failure-injection checks used disposable workspaces. TestData3 was copied to a temporary workspace for migration and save/load checks; the live workspace was not changed.
+
+## Self-contained Markdown verification — October 4
+
+Protocols and notebook pages now store both readable content and hidden typed YAML state in one Markdown file. No active protocol/notebook JSON companion is written or needed. Assays and gels keep JSON storage; explicit JSON imports/exports remain supported.
+
+- **71/71 focused checks** passed across standalone storage, migration and Markdown regression tests.
+- After the final workflow routing repair, **190/190 related storage, workflow and notebook test-runner entries** passed.
+- The complete test runner passed **1,288/1,295 entries** in the restricted sandbox. The seven checks requiring local-server or Electron startup access then passed **7/7** in permitted execution.
+- Native Electron creation/editing, external Markdown changes, WebCrypto/IPC saves, reload, import, agent lookup and two real PDF exports passed.
+- Production dependency resolution and the npm package file list include the YAML reader and migration command. Source layout, DOM IDs, focused lint and whitespace checks passed.
+- A disposable TestData3 copy migrated **68 protocols + 212 notebook documents**. All **280 documents** retained their scientific record state, including duplicate notebook copies, after removing ephemeral revision/location timestamps. Hydration before and after migration also matched without warnings. Each active record JSON was retired; assays and gels retained their JSON files. A first ordinary save refreshed five documents with current app metadata; a subsequent reload/save rewrote **zero** Markdown documents.
+
+The new checks cover fresh-process consumption without JSON, exact typed table/formula/calculation state, parameter identities, historical protocol snapshots, files, extracted image reconstruction, moved workspaces, old paired documents, pending-checkpoint recovery, failed Markdown renames, malformed/aliased metadata, record-level skip behavior, root backup discovery, live acknowledgment of merged external notes, and repeated workflow saves.
+
+The workspace audit also found older workflow pages whose workflow context was absent. Their workflow links now identify them as workflow pages so the project and workflow writers do not both save the same document. Renamed old protocols whose companion disappeared preserve their original Markdown and authored notes. A single atomic Markdown commit removes the former gap between Markdown and companion replacement.
+
+## Earlier paired-storage audit — October 3
+
+The following coverage and results document the earlier Markdown/JSON implementation. The self-contained checks above supersede its companion/checkpoint behavior.
 
 ## Production and consumption coverage
 
@@ -57,6 +76,7 @@ Explicit JSON exports now contain the merged record; successful record writes re
 
 ```sh
 node --test tests/record-markdown-selfcheck.js
+node --test tests/record-markdown-standalone-selfcheck.js tests/record-markdown-migration-selfcheck.js
 node tests/record-markdown-electron.cjs
 node test.js
 npm run build:ui
@@ -66,4 +86,4 @@ npm run check:source-layout
 
 The Electron check uses a temporary profile/storage root and removes it afterward. Electron startup and local test servers need execution permissions unavailable in the restricted sandbox; the permitted runs passed.
 
-Markdown owns protocol prose and notebook notes. Tables, calculations, historical snapshots, assays and gels are readable derived context; edit their structured state through Hikari. Failure injection demonstrates process/write-error recovery, not hardware power-loss guarantees. A multi-record save can stop partway through a filesystem failure; record checkpoints stay coherent and document conflicts are checked before writes. Storage-root queues serialize writers within the main process; run standalone maintenance commands with Hikari closed, as documented. The packaged app was not rebuilt or release-tested.
+Markdown owns protocol prose and notebook notes and contains their complete typed state in hidden YAML. Tables, calculations, historical snapshots, assays and gels remain readable derived context; edit their structured state through Hikari. Failure injection demonstrates process/write-error recovery, not hardware power-loss guarantees. A multi-record save can stop partway through a filesystem failure; individual records stay coherent and conflicting or damaged documents are skipped while other records save. Storage-root queues serialize writers within the main process; run standalone maintenance commands with Hikari closed, as documented. The packaged app was not rebuilt or release-tested.

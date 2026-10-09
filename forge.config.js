@@ -79,6 +79,7 @@ module.exports = {
       /^\/docs($|\/)/,
       /^\/artifacts($|\/)/,
       /^\/examples($|\/)/,
+      /^\/website($|\/)/,
       // Installable plugins are distributed separately from the app.
       /^\/plugins($|\/)/,
       /^\/reports($|\/)/,
@@ -103,6 +104,8 @@ module.exports = {
       /^\/TestData5($|\/)/,
       /^\/TestData6($|\/)/,
       /^\/TestData7($|\/)/,
+      /^\/testdata[^/]*($|\/)/i,
+      /^\/\.env(?:\.[^/]*)?$/,
 
       // ML training workspace (runtime uses vendor/colony-counter instead)
       /^\/colony-counter($|\/)/,

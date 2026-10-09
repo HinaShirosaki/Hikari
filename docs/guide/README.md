@@ -89,7 +89,7 @@ npx @hinashirosaki/hikari
 
 ## App Surface
 
-Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces live behind the **More** button at the end of the dock. Two dock labels are shorter than the workspace names used in these docs: **Plate** is the Assay workspace and **DNA** is the Sequence Viewer.
+Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces follow it and move behind the **More** button at the end of the dock when space runs out. Two dock labels are shorter than the workspace names used in these docs: **Plate** is the Assay workspace and **DNA** is the Sequence Viewer.
 
 > **Screenshots:** Each workspace below is shown with neutral demonstration data in an isolated browser preview of the app. The example conversation, teaching handout, sequence, assay values, and gel image are synthetic; they are not research results. [Capture notes](../screenshots/README.md).
 
@@ -287,17 +287,18 @@ The Settings rail has three groups.
 | | Notebook PDF | Layout options for notebook PDF export. |
 | Agent & extensions | Codex | Codex CLI install/sign-in status, model choice, and reasoning effort. |
 | | Tool access | Turn individual Hikari MCP tools on or off for the agent. |
-| | Skills & plugins | External agent skill folders, and user plugin folders (add, enable/disable, remove). |
+| | External skills | External agent skill folders (refresh, enable/disable). |
+| | Plugins | User plugin folders (add, enable/disable, remove). |
 
 ![Settings appearance controls with the day theme selected](../screenshots/settings-appearance.png)
 
 ## Plugins
 
-Plugin workspaces run in a sandboxed iframe with a declared permission list, and appear behind the dock's **More** button. See [`docs/plugins/plugin-system.md`](../plugins/plugin-system.md) for the folder format and install flow.
+Plugin workspaces run in a sandboxed iframe with a declared permission list, and appear after the built-in apps in the dock, behind its **More** button when the dock runs out of room. See [`docs/plugins/plugin-system.md`](../plugins/plugin-system.md) for the folder format and install flow.
 
 ### Gel (bundled)
 
-[`src/plugins/gel`](../../src/plugins/gel/) ships with the app and cannot be removed, only turned off in `Settings > Skills & plugins`.
+[`src/plugins/gel`](../../src/plugins/gel/) ships with the app and cannot be removed, only turned off in `Settings > Plugins`.
 
 - Image and TIFF ingestion, crop, free rotation, and enhancement.
 - Lane segmentation, ladder calibration, band quantification, and peak editing.
@@ -440,7 +441,7 @@ Renderer workspaces are folder modules under `src/renderer/modules/<feature>/ind
 | Protocols | `modules/protocol/` | `src/main/storage/` (`Protocol/` folders) |
 | Notebook | `modules/biology-notebook/` | — |
 | Papers | `modules/papers/` | `src/main/papers/` (search, download, parse, retrieve, analysis, finding) |
-| Samples | `modules/sample-registry/` + `modules/personal-inventory/` | `src/main/storage/sample-containers.js` |
+| Samples | `modules/personal-inventory/` | `src/main/storage/sample-containers.js` |
 | Chemicals | `modules/lab-common-inventory/` | `src/main/storage/` (chemicals index) |
 | Workflows | `modules/workflow/` | `src/main/storage/workflow/` |
 | Agent | `modules/agent-chat/` | `src/main/agent/` |

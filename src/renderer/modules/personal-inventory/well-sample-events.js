@@ -1,57 +1,20 @@
-import { readTypeFieldsFrom } from '../sample-registry/type-fields.js';
+import { containerToCsv, mergeContainerCsv, parseContainerCsv } from './csv-io.js';
+import { readTypeFieldsFrom } from './type-fields.js';
 
-// CSV columns: well,code,name,type,lot,concentration,notes (header required, "well" matches the well label e.g. A1 or W3)
 function importContainerCsv(ctx, section, container, csvText) {
-  const { helpers, persist, state } = ctx;
-  helpers.ensureSamples();
-  const lines = csvText.split(/\r\n|\r|\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length < 2) {
-    return;
-  }
-  const header = lines[0].split(',').map((cell) => cell.trim().toLowerCase());
-  const wellIndex = header.indexOf('well');
-  if (wellIndex < 0) {
-    ctx.uiState.wellEditorStatus = 'Import CSV needs a "well" column.';
-    return;
-  }
-  lines.slice(1).forEach((line) => {
-    const cells = line.split(',').map((cell) => cell.trim());
-    const wellLabel = cells[wellIndex];
-    const targetIndex = (container.wells || []).findIndex((_well, index) => (
-      helpers.getWellLabel(container, index).toLowerCase() === wellLabel.toLowerCase()
-    ));
-    const name = header.indexOf('name') >= 0 ? cells[header.indexOf('name')] : '';
-    if (targetIndex < 0 || !name) {
-      return;
+  try {
+    const { created, updated, skipped, recoded } = mergeContainerCsv(ctx.state, section, container, parseContainerCsv(csvText));
+    const notes = [
+      skipped ? ` Skipped ${skipped} row${skipped === 1 ? '' : 's'} whose well is not in this container.` : '',
+      recoded.length ? ` Renamed codes that clashed with an earlier row: ${recoded.map(({ from, to }) => `${from} → ${to}`).join(', ')}.` : ''
+    ].join('');
+    ctx.uiState.wellEditorStatus = `Imported ${created + updated} samples (${created} new, ${updated} updated).${notes}`;
+    if (created || updated) {
+      ctx.persist();
     }
-    const code = header.indexOf('code') >= 0 ? helpers.normalizeSampleCode(cells[header.indexOf('code')]) : '';
-    const sample = {
-      id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
-      code: code || helpers.makeDefaultSampleCode(),
-      name,
-      type: helpers.normalizeSampleType(header.indexOf('type') >= 0 ? cells[header.indexOf('type')] : 'plasmid'),
-      lot: header.indexOf('lot') >= 0 ? cells[header.indexOf('lot')] : '',
-      concentration: header.indexOf('concentration') >= 0 ? cells[header.indexOf('concentration')] : '',
-      notes: header.indexOf('notes') >= 0 ? cells[header.indexOf('notes')] : '',
-      location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
-      inventoryLink: { section, containerId: container.id, wellIndex: targetIndex },
-      chemicalLinks: [],
-      compoundStructure: null,
-      updatedAt: new Date().toISOString()
-    };
-    state.samples.push(sample);
-  });
-  ctx.uiState.wellEditorStatus = 'Imported samples from CSV.';
-  persist();
-  ctx.notifySamplesChanged();
-}
-
-function escapeCsvValue(value) {
-  const text = String(value || '');
-  if (/[",\r\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
+  } catch (error) {
+    ctx.uiState.wellEditorStatus = `Import failed: ${error?.message || 'could not read the CSV file.'}`;
   }
-  return text;
 }
 
 function safeFilePart(text, fallback) {
@@ -64,30 +27,7 @@ function safeFilePart(text, fallback) {
 }
 
 function exportContainerCsv(ctx, section, container) {
-  const { helpers } = ctx;
-  const columns = ['well', 'code', 'name', 'type', 'lot', 'concentration', 'notes'];
-  const rows = [columns.join(',')];
-  (container.wells || []).forEach((_well, index) => {
-    const wellLabel = helpers.getWellLabel(container, index);
-    const linkedSamples = helpers.getLinkedSamples(section, container.id, index);
-    if (!linkedSamples.length) {
-      rows.push([wellLabel, '', '', '', '', '', ''].map(escapeCsvValue).join(','));
-      return;
-    }
-    linkedSamples.forEach((sample) => {
-      rows.push([
-        wellLabel,
-        sample.code,
-        sample.name,
-        sample.type,
-        sample.lot,
-        sample.concentration,
-        sample.notes
-      ].map(escapeCsvValue).join(','));
-    });
-  });
-
-  const blob = new Blob([`\uFEFF${rows.join('\r\n')}`], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob([`\uFEFF${containerToCsv(ctx.state.samples, section, container)}`], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   link.download = `${safeFilePart(section, 'inventory')}-${safeFilePart(container.name, 'container')}.csv`;
@@ -101,7 +41,6 @@ export function bindWellSampleEvents(ctx) {
   const { inventorySections } = ctx.elements;
   const pendingStructureDrafts = ctx.pendingStructureDrafts;
   const renderSections = () => ctx.renderSections();
-  const notifySamplesChanged = () => ctx.notifySamplesChanged();
   const isChemicalSampleType = (...args) => ctx.isChemicalSampleType(...args);
   const normalizeStructureData = (...args) => ctx.normalizeStructureData(...args);
   const getPendingStructureKey = (...args) => ctx.getPendingStructureKey(...args);
@@ -149,7 +88,6 @@ export function bindWellSampleEvents(ctx) {
       if (dragClone.count > 0) {
         uiState.wellEditorStatus = `Cloned ${sample ? (sample.code || sample.name) : 'sample'} into ${dragClone.count} well${dragClone.count === 1 ? '' : 's'}.`;
         persist();
-        notifySamplesChanged();
       }
       renderSections();
     });
@@ -253,24 +191,22 @@ export function bindWellSampleEvents(ctx) {
       uiState.editingSampleId = sample.id;
       uiState.wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });
 
-  inventorySections.querySelectorAll('[data-well-sample-unlink]').forEach((button) => {
+  // A sample only exists inside a container, so removing it from its slot deletes it.
+  inventorySections.querySelectorAll('[data-well-sample-delete]').forEach((button) => {
     button.addEventListener('click', () => {
       helpers.ensureSamples();
-      const sample = helpers.getSampleById(button.dataset.wellSampleUnlink);
+      const sample = helpers.getSampleById(button.dataset.wellSampleDelete);
       if (!sample) {
         return;
       }
-      sample.inventoryLink = null;
-      sample.updatedAt = new Date().toISOString();
+      state.samples = state.samples.filter((item) => item !== sample);
       uiState.editingSampleId = '';
-      uiState.wellEditorStatus = `Unlinked sample ${sample.code || sample.name || sample.id}.`;
+      uiState.wellEditorStatus = `Deleted sample ${sample.code || sample.name || sample.id}.`;
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });
@@ -384,11 +320,7 @@ export function bindWellSampleEvents(ctx) {
       state.samples.push(sample);
       uiState.editingSampleId = sample.id;
       uiState.wellEditorStatus = `Created sample ${sample.code}.`;
-      // Before persist: this mutates notebookEntries and clears
-      // pendingNotebookSampleCapture, and nothing else saves afterwards.
-      ctx.notifySampleRecorded(sample);
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });

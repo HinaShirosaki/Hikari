@@ -23,6 +23,7 @@ Folder READMEs with more detail: [`papers/`](../../src/main/papers/README.md), [
 1. [Main-process helper overview](./architecture/main-process-helpers-overview.md)
 2. [IPC registrars](./ipc/ipc-registrars.md)
 3. [Storage and bundles](./data/storage-and-bundles.md)
+   - [Google Drive and Dropbox workspace sync](./data/cloud-drives.md)
 4. [Sequence library](./sequences/sequence-library.md)
 5. [Module map](./reference/module-map.md)
 

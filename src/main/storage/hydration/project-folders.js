@@ -24,6 +24,7 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
   const notebookRootPath = path.join(projectFolderPath, 'Notebook');
   const notebookEntries = [];
   const warnings = [];
+  const alerts = [];
   const seen = new Set();
   const defaultProjectId = cleanText(defaults.projectId, 220);
   const defaultProjectName = cleanText(defaults.projectName, 320);
@@ -44,14 +45,15 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
         await walk(absPath);
         continue;
       }
-      if (!entry.isFile() || !['page.json', 'page.json.pending'].includes(entry.name)) {
+      if (!entry.isFile() || !['page.md', 'page.json', 'page.json.pending'].includes(entry.name)) {
         continue;
       }
-      const filePath = absPath.replace(/\.pending$/, '');
+      const filePath = absPath.replace(/\.json(?:\.pending)?$/, '.md');
       if (seen.has(filePath)) continue;
       seen.add(filePath);
       const payload = await readRecordDocument(filePath, 'notebook');
       warnings.push(...payload.warnings);
+      alerts.push(...payload.alerts);
       if (!payload.ok) {
         if (payload.exists && payload.error) {
           warnings.push(payload.error);
@@ -77,7 +79,8 @@ async function readNotebookEntriesForProjectFolder(projectFolderPath, defaults =
   await walk(notebookRootPath);
   return {
     notebookEntries,
-    warnings
+    warnings,
+    alerts
   };
 }
 
@@ -123,6 +126,7 @@ async function hydrateProjectRootFromStoragePath({
   const projectMap = new Map();
   const notebookMap = new Map();
   const warnings = [];
+  const alerts = [];
   let discoveredProjectFolder = false;
 
   for (const entry of projectFolders) {
@@ -157,6 +161,7 @@ async function hydrateProjectRootFromStoragePath({
           warnings.push(String(warning));
         }
       });
+      alerts.push(...asArray(hydratedProject.alerts));
 
       let projectId = knownProjectId || cleanText(memoryRecord.id, 220);
       let projectName = cleanText(memoryRecord.name, 320);
@@ -194,7 +199,8 @@ async function hydrateProjectRootFromStoragePath({
     exists: discoveredProjectFolder || notebookMap.size > 0 || projectMap.size > 0,
     projects: [...projectMap.values()],
     notebookEntries: [...notebookMap.values()],
-    warnings
+    warnings,
+    alerts
   };
 }
 

@@ -656,7 +656,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         });
         const paths = bundleHelpers.getBundlePaths({ dataFilePath });
         const damaged = [
-          path.join(paths.protocolsPath, 'Western_blot__p2', 'protocol.json'),
+          path.join(paths.protocolsPath, 'Western_blot__p2', 'protocol.md'),
           path.join(paths.assaysRootPath, 'Plate_two__a2', 'assay.json'),
           path.join(paths.samplesRootPath, 'Freezer', 'Box_two__box-2.json')
         ];
@@ -763,7 +763,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         const nextSnapshot = { ...imported.statePatch, settings: { storagePath: stuck.root }, protocols: [{ id: 'protocol-1', name: 'Still saved' }] };
         await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: nextSnapshot });
         assert.deepEqual(await fsPromises.readFile(stuck.file), stuck.damaged, 'a full save leaves the unreadable file alone');
-        await fsPromises.access(path.join(stuck.root, 'Protocol', 'Still_saved__protocol-1', 'protocol.json'));
+        await fsPromises.access(path.join(stuck.root, 'Protocol', 'Still_saved__protocol-1', 'protocol.md'));
         await assert.rejects(
           bundleHelpers.syncSqliteBundleFromSnapshot({ sqlitePath: stuck.file, snapshot: nextSnapshot }),
           (error) => error.code === 'CHEMICAL_INDEX_UNREADABLE'
@@ -1146,7 +1146,7 @@ module.exports = function registerStorageAndImportContractsStorageBundleHydratio
         await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'MEMORY.md'));
         await fsPromises.access(path.join(folderLayout.workflowFolderPath, 'workflow.json'));
         await fsPromises.access(path.join(folderLayout.relatedPapersFolderPath, 'related-papers.json'));
-        await fsPromises.access(path.join(notebookFolder, 'page.json'));
+        await fsPromises.access(path.join(notebookFolder, 'page.md'));
         await assert.rejects(fsPromises.access(path.join(folderLayout.workflowRootPath, 'workflow-status.sqlite')), 'workflows are found by folder scan, not an index');
         await fsPromises.access(path.join(tempDir, 'Dashboard', 'experiment-log.json'));
 

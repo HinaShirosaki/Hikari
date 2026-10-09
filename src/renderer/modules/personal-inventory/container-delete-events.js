@@ -10,12 +10,10 @@ export function deleteContainer(ctx, section, id) {
   }
 
   state.inventory[section] = containers.filter((item) => String(item?.id || '') !== String(id));
-  state.samples = (state.samples || []).map((sample) => {
+  // Samples only exist inside a container, so they go with it (undo restores both).
+  state.samples = (state.samples || []).filter((sample) => {
     const link = sample.inventoryLink;
-    if (!link || link.section !== section || String(link.containerId || '') !== String(id)) {
-      return sample;
-    }
-    return { ...sample, inventoryLink: null, updatedAt: new Date().toISOString() };
+    return !link || link.section !== section || String(link.containerId || '') !== String(id);
   });
 
   if (

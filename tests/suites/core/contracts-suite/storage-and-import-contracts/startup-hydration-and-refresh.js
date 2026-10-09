@@ -45,6 +45,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
         { window: windowStub, document: documentStub }
       );
       const alert = 'The chemical inventory file could not be read, so it was moved aside.';
+      const second = 'Could not load Project/A/Notebook/B/page.md: bad YAML. The file was left unchanged.';
       const controller = createStorageImportController({
         state: structuredClone(shared.defaultState),
         persist: () => {},
@@ -53,13 +54,14 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
         windowObject: {
           hikariApi: {
             ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
-            importStorageRoot: async () => ({ ok: true, statePatch: {}, alerts: [alert] })
+            importStorageRoot: async () => ({ ok: true, statePatch: {}, alerts: [alert, second] })
           }
         }
       });
       const result = await controller.runStorageRootImport('/root', {});
       assert.equal(result.ok, true);
-      assert.deepEqual(JSON.parse(JSON.stringify(reported)), [{ source: 'renderer:notice', message: alert }]);
+      // One notice: a second notice would replace the first on screen.
+      assert.deepEqual(JSON.parse(JSON.stringify(reported)), [{ source: 'renderer:notice', message: `${alert}\n\n${second}` }]);
     });
     test('storage root refresh clears cached module data before importing a changed root', async () => {
       const { createStorageImportController } = loadEsmStyleModule(

@@ -17,7 +17,6 @@
     "home-view",
     "protocol-management-view",
     "biology-notebook-view",
-    "personal-inventory-view",
     "sample-registry-view",
     "assay-view",
     "lab-common-inventory-view",
@@ -214,11 +213,6 @@
     }
   ],
   "supplementalViews": [
-    {
-      "viewKey": "PERSONAL_INVENTORY",
-      "viewId": "personal-inventory-view",
-      "subtitle": "Record and manage samples directly inside storage containers."
-    },
     {
       "viewId": "sequence-viewer-detail-view",
       "subtitle": "Sequence records, annotations, overlays, and detail views.",

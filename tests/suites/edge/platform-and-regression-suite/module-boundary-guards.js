@@ -24,7 +24,6 @@ const moduleExportContracts = [
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
   ['src/renderer/modules/biology-notebook/project/project-controller.js', 'createNotebookProjectController', 'function'],
   ['src/renderer/modules/protocol/index.js', 'initProtocolManagement', 'function'],
-  ['src/renderer/modules/sample-registry/index.js', 'initSampleRegistry', 'function'],
   ['src/renderer/modules/settings/index.js', 'initSettings', 'function'],
   ['src/renderer/modules/tool-box/index.js', 'initToolBox', 'function'],
   ['src/renderer/modules/workflow/index.js', 'initWorkflowManagement', 'function']

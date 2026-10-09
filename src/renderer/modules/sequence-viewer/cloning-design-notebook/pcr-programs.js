@@ -114,7 +114,7 @@ function resolveAmpliconLength(displayPlan = {}, source = {}, record = {}, group
 
 function groupPrimers(primers = []) {
   const groups = new Map();
-  asArray(primers).forEach((primer) => {
+  asArray(primers).filter((primer) => primer.pcrStage !== 'oligo-assembly').forEach((primer) => {
     const label = cleanText(primer?.groupLabel, 120) || 'PCR';
     if (!groups.has(label)) {
       groups.set(label, []);
@@ -143,6 +143,7 @@ function buildSequenceViewerPcrPrograms({ displayPlan = {}, source = {}, record 
     }
     return {
       label,
+      templateSourceLabel: primers.find((primer) => primer.templateSourceLabel)?.templateSourceLabel || '',
       polymerase: isQ5Kld ? 'Q5 Hot Start High-Fidelity 2X Master Mix' : 'Q5 High-Fidelity DNA Polymerase (or validated equivalent)',
       reactionFormulation: isQ5Kld ? '2x-master-mix' : 'standalone-polymerase',
       primerNames,
@@ -159,6 +160,8 @@ function buildSequenceViewerPcrPrograms({ displayPlan = {}, source = {}, record 
         { label: 'Hold', temperature: '4 C', time: 'hold', cycles: '1' }
       ],
       notes: [
+        primers.some((primer) => primer.templateSourceLabel)
+          ? `Template: ${primers.find((primer) => primer.templateSourceLabel).templateSourceLabel}. Run the separate oligo assembly reaction before this outer-primer PCR.` : '',
         `Ta is estimated from the lowest primer binding Tm (${formatNumber(lowestPrimerTm, 1)} C) plus 3 C for Q5-style high-fidelity PCR.`,
         'Binding Tm uses a SantaLucia nearest-neighbour estimate at 0.5 uM primer and 80 mM sodium-equivalent salt.',
         `Extension is estimated at 30 s/kb for the planned ${formatBp(ampliconLength)} amplicon. Adjust to the polymerase data sheet.`,

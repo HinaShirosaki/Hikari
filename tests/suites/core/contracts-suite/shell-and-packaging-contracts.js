@@ -13,9 +13,8 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       const navViews = new Set((registry.apps || []).map((app) => app.viewId));
 
       const nonHomeViews = viewValues.filter((value) => value !== shared.VIEWS.HOME);
-      const navRequiredViews = nonHomeViews.filter((value) => value !== shared.VIEWS.PERSONAL_INVENTORY);
       const missingSections = nonHomeViews.filter((value) => !sectionViews.has(value));
-      const missingNav = navRequiredViews.filter((value) => !navViews.has(value));
+      const missingNav = nonHomeViews.filter((value) => !navViews.has(value));
       const unknownNav = [...navViews].filter((value) => !viewValues.includes(value));
 
       assert.deepEqual(missingSections, []);

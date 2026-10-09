@@ -6,23 +6,13 @@ import {
   getSampleTypeLabels,
   normalizeConfiguredSampleType
 } from '../../lib/inventory-settings.js';
+import { buildSampleLocation, makeDefaultSampleCode, normalizeSampleCode } from '../../lib/sample-records.js';
 
-export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
+export function createSampleStateHelpers({ state, safeText }) {
   function ensureSamples() {
     if (!Array.isArray(state.samples)) {
       state.samples = [];
     }
-  }
-
-  function makeDefaultSampleCode() {
-    return `S-${Date.now().toString().slice(-6)}`;
-  }
-
-  function normalizeSampleCode(value) {
-    return String(value || '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-zA-Z0-9._-]/g, '');
   }
 
   function getSampleById(sampleId) {
@@ -36,22 +26,6 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     return Object.entries(location)
       .filter(([key]) => key !== 'storageType')
       .every(([, value]) => !String(value || '').trim());
-  }
-
-  function buildAutoLocationFromLink(section, container, index) {
-    if (section === '4 Degree') {
-      return { storageType: 'fridge', fridge: '4 Degree', shelf: container.name || '' };
-    }
-    if (section === 'Room Temp') {
-      return { storageType: 'rt_cabinet', cabinet: 'Room Temp', slot: container.name || '' };
-    }
-    return {
-      storageType: 'freezer',
-      freezer: section,
-      rack: '',
-      box: container.name || '',
-      position: Number.isInteger(index) && index >= 0 ? getWellLabel(container, index) : ''
-    };
   }
 
   function normalizeSampleType(type) {
@@ -91,7 +65,7 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     normalizeSampleCode,
     getSampleById,
     isLocationEmpty,
-    buildAutoLocationFromLink,
+    buildAutoLocationFromLink: buildSampleLocation,
     normalizeSampleType,
     getSampleTypeColor,
     getSampleTypeLabel,

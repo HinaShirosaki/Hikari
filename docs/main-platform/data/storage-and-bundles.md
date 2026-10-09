@@ -1,6 +1,6 @@
 # Storage And Bundles
 
-The data-persistence story in the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is built around a compact primary snapshot plus one JSON file per record in module-owned folders under the storage root, with SQLite only for the chemical inventory (and the paper and sequence indexes their own modules own).
+The data-persistence story in the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is built around a compact primary snapshot plus one self-contained Markdown file per protocol/notebook record and JSON files for other module records under the storage root, with SQLite for the chemical inventory and module-owned paper and sequence indexes.
 
 > Layout note: `data-helpers.js` and `data-snapshot-utils.js` live under `data/`, and the persistence engine is the `storage/` folder (entry: `storage/index.js`).
 
@@ -43,12 +43,12 @@ This folder defines the on-disk layout. Its work is split across focused modules
 
 `getBundlePaths(...)` is the shared path builder used throughout the folder. Given the snapshot path (or just the storage root), it resolves every root folder below: `Protocol/`, `Samples/`, `Plates/`, `Gels/`, `Papers/`, `KnowledgeBase/` and its `papers.md/`, `Dashboard/experiment-log.json`, and `hikari-chemicals.index.sqlite`. It still reports the old `<snapshot>.notebook-pages.json` path so a save can delete it and a load can read it once.
 
-Every save updates these from the snapshot. Protocol and notebook text is read from Markdown; companion JSON keeps structured state and a recovery checkpoint. Other modules retain their existing JSON or SQLite storage:
+Every save updates these from the snapshot. Protocol and notebook Markdown stores both readable content and hidden typed YAML state. Other modules retain their existing JSON or SQLite storage:
 
 | Data | Stored as |
 | --- | --- |
-| Protocols | `Protocol/<name>__<id>/protocol.md`, with `protocol.json` for structured state and recovery |
-| Notebook pages | `page.md` and companion `page.json` in page folders under `Project/` and `Workflow/` |
+| Protocols | Self-contained `Protocol/<name>__<id>/protocol.md` |
+| Notebook pages | Self-contained `page.md` in page folders under `Project/` and `Workflow/` |
 | Workflow templates, runs | `Workflow/<template>__<id>/template.json`, `Workflow/<template>__<id>/<run>__<id>/workflow.json` |
 | Personal inventory, samples | `Samples/<zone>/<container>__<id>.json` per container, `Samples/<zone>/folders.json`, `Samples/unplaced.json` (see below) |
 | Plates (assays) | `Plates/<name>__<id>/assay.json`, beside the assay's artifacts |
@@ -66,21 +66,23 @@ Hydration finds papers by walking the same folders paper discovery scans for PDF
 
 ### Protocol and notebook Markdown
 
-`storage/record-markdown/` saves `protocol.md` and `page.md`, including workflow notebook pages. Markdown is authoritative for protocol name/purpose/materials/steps/troubleshooting and notebook notes/results. All folder hydration and storage-root import paths read those fields back from Markdown, so renderer views, search, agent lookup/matching, cloning workflows and PDF exports receive the current text through their existing record APIs. JSON input to agent tools and the protocol importer remains a supported transport format; its records are saved through the same Markdown boundary.
+`storage/record-markdown/` saves self-contained `protocol.md` and `page.md`, including workflow notebook pages. No active protocol/notebook JSON companions are written or required. Folder hydration, storage-root import, renderer views, search, agent lookup/matching, cloning workflows and PDF exports consume the records from these documents. JSON input to agent tools and the protocol importer, and explicit JSON snapshot exports, remain supported transport formats. Assays and gels retain their own JSON storage.
 
-Companion JSON retains IDs, timestamps, placeholder bindings and values, historical protocol snapshots, typed tables/formulas, bench calculation inputs/outputs, samples, links and attachments. Its prose is a recovery checkpoint, not the reading source after migration. Editing a rendered table, snapshot, or assay/gel section in Markdown does not change interactive structured state; edit those through Hikari. Editable prose uses invisible `hikari-field` comments, and derived sections use `hikari-derived` comments. Preserve these comments when editing with a text editor. A notebook page ends with its notes, so text added at the end of `page.md` becomes part of the notes and moves inside that section on the next save; pages written with the notes in the middle are reordered on their next save. Other extra sections outside the marked blocks are retained on save.
+An invisible `hikari-record:v2` HTML comment holds typed YAML metadata: IDs, timestamps, placeholder bindings and values, historical protocol snapshots, tables/formulas, bench calculation inputs/outputs, samples, links, attachments and the prose baseline used for conflict detection. This keeps the document lossless without showing source-JSON dumps. Images use `!hikari/image` references to extracted binary files rather than base64 blobs. Editable prose uses `hikari-field` comments; generated context uses `hikari-derived` comments. Preserve these comments and the YAML metadata when editing. Rendered tables, snapshots and assay/gel sections remain presentations of structured state; edit them through Hikari's controls. A notebook ends with its notes, and text appended at EOF is read into the notes before the next save, including pages made by the older layout.
 
 The readable sections include protocol purpose/materials/steps/troubleshooting, named parameters and entered values, the notebook's historical protocol snapshot, execution and workflow metadata, notes/results, all result tables, buffer and reaction calculation inputs and saved output tables (including metadata/footer rows), sample details, linked assay wells and measurements, serial dilution and analysis, gel parameters/reports, and file/image attachments. Table cells preserve saved values and formulas, rather than recalculating scientific results during storage writes. Additional scientific details and provenance render as text, sections and tables without truncation. Markdown omits source JSON dumps, internal identifiers, and storage metadata.
 
-Links use paths relative to the Markdown file. Attached images remain in their original location; embedded image data URLs are extracted to content-addressed files in `.hikari-markdown/` beside the Markdown and displayed as images. The original data URLs remain in the companion JSON. Gel plugin paths resolve under `Plugins/gel/`, and its report and parameter JSON artifacts supplement the compact plugin record. Missing linked records or unreadable linked JSON are identified in the Markdown.
+Links use paths relative to the Markdown file. Attached images remain in their original location; embedded image data URLs are extracted to content-addressed files in `.hikari-markdown/` beside the Markdown and displayed as images. Loading reconstructs image data from those files and checks the content hashes and document-folder confinement. A missing or changed image file does not stop its record from loading: the record loads without that image and keeps its `!hikari/image` reference across saves, so restoring the file brings the image back. Gel plugin paths resolve under `Plugins/gel/`, and its report and parameter JSON artifacts supplement the compact plugin record. Missing linked records or unreadable linked JSON are identified in the Markdown.
 
-Migrated Markdown has both the ownership marker `hikari-generated:record-markdown:v1` and a `hikari-document:protocol:v1` or `hikari-document:notebook:v1` marker. Legacy JSON-only records continue to load and migrate on the next sidecar refresh/save. Existing JSON records receive a one-time `protocol.pre-markdown.json` / `page.pre-markdown.json` backup. New records immediately get Markdown and companion JSON. Saves remain in the storage-root write queue, and Markdown is replaced atomically before its JSON checkpoint advances.
+Markdown has the ownership marker `hikari-generated:record-markdown:v1`, a `hikari-document:protocol:v1` or `hikari-document:notebook:v1` marker, and its embedded `hikari-record:v2` state. Legacy JSON-only records and older paired Markdown/JSON records continue to load and migrate automatically on workspace startup or the next save. Existing per-record JSON receives a one-time `*.pre-markdown.json` backup and is removed only after the self-contained Markdown is durable. A companion whose record differs from that backup is also kept as `*.pre-v2.json`; when both backups differ from it, the JSON stays in place. New records immediately get Markdown alone. Retired aggregate sidecars and the old default autosave snapshot are also backed up; backup files are excluded from active bundle discovery. Migration failures retain legacy input for retry.
 
-A save leaves a record's files untouched when neither its Markdown nor its companion would change, so open editors do not see a change on every autosave. Before replacing Markdown, the writer stages the matching complete record in `protocol.json.pending` or `page.json.pending`. An invisible checkpoint marker identifies that staged record. If a write stops between Markdown and JSON replacement, readers recover the matching staged record, including the new step order, parameter IDs and typed data. Successful saves remove the pending file. Readers verify that companion and pending contents stayed stable across the Markdown read. Keep a pending file when recovering an interrupted save; an ordinary successful save completes it. Recovery preserves a coherent individual record, while a filesystem failure can still interrupt a multi-record workspace save.
+A single atomic Markdown replacement commits both text and structured state, so a reader sees a coherent old or new record. Unchanged documents retain their content and modification times while extracted images are checked. Images are written before the document; obsolete generated images are pruned afterwards. A failure in image-manifest cleanup after the document committed is acknowledged as a saved record. Older `*.json.pending` transactions remain supported during migration and are retired after the new document commits. Complete workspace saves remain serialized by the storage-root queue; a filesystem failure can still interrupt a multi-record save.
 
-Renderer autosaves, startup refresh, Agent Chat sync and Codex setup sync carry field revisions. External prose changes merge when the app has not changed the same field. A record whose document cannot be saved (the same field changed in Hikari and in the file, damaged section markers, or a write error) is skipped and reported in `sidecarPaths.skippedRecords`: its files stay untouched, the rest of the workspace still saves, and the renderer keeps that record's baseline and warns until the problem is resolved. Deleting the file keeps Hikari's version; restarting Hikari loads the file's version. Repeated stale saves cannot erase external changes. Missing migrated Markdown loads its JSON checkpoint with a warning and is rewritten from Hikari's copy on the next save. A missing or unreadable companion is rebuilt from Hikari's copy, the document's prose still merges, and an unreadable companion is kept as `*.unreadable.json`. An unrelated pre-existing Markdown file is preserved and that legacy record stays JSON-backed with `sidecarPaths.markdownWarnings`. Protocol renames retain the existing folder and links; deletion removes only owned documents/assets, preserving user files and migration backups. Notebook documents follow existing notebook retention behavior.
+A record that does not load, such as one with damaged YAML metadata, stays out of the workspace and is left unchanged on disk; later saves neither rewrite nor delete it. The storage import returns an `alerts` entry for it and for each problem found while loading a record (an unavailable image, damaged section markers, a recovered save). The renderer shows all alerts together in one error notice.
 
-Duplicate IDs and colliding destinations in a save are rejected before it writes anything. A protocol folder copied in Finder or Explorer repeats its protocol's ID: the folder Hikari named for that protocol keeps loading, and the copy is left untouched, never pruned, and reported when the workspace opens. Give the copy a new `id` in its `protocol.json` to keep it as a separate protocol. An explicit JSON export is written after bundle sync and includes the effective merged prose. Protocol editor and service updates retain other producers' scientific metadata; agent saves return and emit the merged saved record with its current revision. LF and CRLF documents are supported, and queued renderer saves retain any baseline still needed by pending edits.
+Renderer autosaves, startup refresh, Agent Chat sync and Codex setup sync carry field revisions. External prose changes merge when the app has not changed the same field, and the effective saved prose and revision are acknowledged back into still-matching live state. A conflicting, damaged or unwritable record is skipped and reported in `sidecarPaths.skippedRecords`; other records continue saving and that record retains its baseline. Unrelated user-owned Markdown is never overwritten or bypassed by writing a new JSON companion. Deleting a damaged document while Hikari still holds the record lets its next save rewrite it; restarting loads the saved document. Protocol renames retain folders and links, including upgrades of older documents whose JSON companion disappeared while Hikari was open. Deletion removes only owned documents/assets and preserves user files and migration backups. Notebook documents follow existing retention behavior.
+
+Duplicate IDs and colliding destinations in a save are rejected before it writes anything. Copied protocol folders use a shared ownership rule on load/save, are reported when opened, and remain untouched. Give a copy a new `id` in its YAML record metadata to keep it as a separate protocol. An explicit JSON export includes the effective merged prose. Protocol editor and service updates retain scientific metadata; agent saves return and emit the merged saved record with its current revision. LF, CRLF, front matter and editor-added blank lines are supported. Unsupported or damaged metadata and YAML aliases are rejected without replacing the document.
 
 The producer/consumer audit is:
 
@@ -100,6 +102,15 @@ To migrate saved records immediately, close Hikari and run:
 node scripts/maintenance/migrate-record-markdown.js /path/to/workspace
 ```
 
+The command also accepts an old snapshot/sidecar JSON file or an individual `{protocol: ...}` / `{notebookEntry: ...}` record:
+
+```sh
+npm run migrate:markdown -- /path/to/old-snapshot.json --dry-run
+npm run migrate:markdown -- /path/to/old-snapshot.json
+```
+
+`--dry-run` validates and reports planned counts without writing files. Add `--json` to return a machine-readable report with all output paths. Standalone JSON files create the current layout in their parent directory; files already under `Protocol/`, `Project/` or `Workflow/` resolve against that workspace and preserve existing record locations. File input migrates its own records and reads sibling snapshots/artifacts for linked context. Legacy `notebookPages` and wrapped records are supported; invalid collections, missing or duplicate IDs, and colliding destinations stop conversion before writes.
+
 This validates every source and output before writing, backs up legacy per-page JSON, and also materializes documents from snapshot-only or legacy aggregate roots. It preserves original snapshots and leaves SQLite and unrelated files alone. It is safe to repeat and preserves authored prose and extra sections.
 
 Snapshot-only workflow migrations also create missing template/run metadata so ordinary folder hydration discovers the new pages. Existing template/run metadata is retained.
@@ -110,7 +121,7 @@ To regenerate Markdown for saved records immediately, close the app and run:
 node scripts/maintenance/rebuild-record-markdown.js /path/to/workspace
 ```
 
-The regeneration command reads saved records and linked context, refreshes derived sections while preserving authored prose/annotations, and writes only Markdown and extracted images. It can explicitly restore missing Markdown from the JSON checkpoint; that restoration uses the last checkpoint text. It does not rewrite JSON or migrate SQLite indexes.
+The regeneration command reads saved records and linked context and refreshes derived sections while preserving authored prose/annotations. It writes self-contained Markdown and extracted images, and retires legacy record JSON after backing it up. If only a legacy JSON record remains, it can restore Markdown from that record's last saved text. It does not migrate SQLite indexes.
 
 Pressure-test coverage and recovery limits are recorded in [record-markdown-pressure-test.md](record-markdown-pressure-test.md).
 
@@ -168,7 +179,7 @@ The tool opens a disposable in-memory snapshot and never persists changes or acc
 8. the chemicals SQLite index (skipped, not failed, when the guard has refused it)
 9. the workflow root (`Workflow/` templates, runs, run notebook pages, and related papers)
 
-It also deletes a leftover `<snapshot>.notebook-pages.json` from older builds.
+It also backs up and retires leftover `<snapshot>.protocols.json` and `<snapshot>.notebook-pages.json` from older builds after all corresponding records save successfully.
 
 `syncSqliteBundleFromSnapshot(...)` (the `storage:sync-sqlite-bundle` channel) rewrites only the chemicals index, so Chemicals edits can persist without a full save.
 
@@ -176,12 +187,12 @@ It also deletes a leftover `<snapshot>.notebook-pages.json` from older builds.
 
 `hydrateSnapshotFromBundle(...)` rehydrates the compact snapshot by layering in:
 
-1. `Protocol/*/protocol.md` plus its JSON companion (or a legacy `<snapshot>.protocols.json`)
+1. self-contained `Protocol/*/protocol.md`, with fallback to legacy record JSON or `<snapshot>.protocols.json`
 2. a legacy `<snapshot>.notebook-pages.json`, if present
 3. personal-inventory container files
 4. the Home experiment log
-5. `Project/` notebook-page Markdown/companions and project records
-6. the `Workflow/` root: templates, runs, their notebook-page Markdown/companions, and related papers
+5. `Project/` notebook-page Markdown and project records, with legacy record JSON fallback
+6. the `Workflow/` root: templates, runs, their notebook-page Markdown (or legacy JSON), and related papers
 7. the chemicals SQLite index (through `chemical-index-guard.js`)
 8. paper records beside their PDFs, and assay and gel record folders
 

@@ -1,11 +1,10 @@
-import { readTypeFieldsFrom } from '../sample-registry/type-fields.js';
+import { readTypeFieldsFrom } from './type-fields.js';
 
 export function bindSingleSampleEvents(ctx) {
   const { helpers, persist, state, uiState } = ctx;
   const { inventorySections } = ctx.elements;
   const pendingStructureDrafts = ctx.pendingStructureDrafts;
   const renderSections = () => ctx.renderSections();
-  const notifySamplesChanged = () => ctx.notifySamplesChanged();
   const isChemicalSampleType = (...args) => ctx.isChemicalSampleType(...args);
   const normalizeStructureData = (...args) => ctx.normalizeStructureData(...args);
   const getPendingStructureKey = (...args) => ctx.getPendingStructureKey(...args);
@@ -66,24 +65,22 @@ export function bindSingleSampleEvents(ctx) {
       uiState.editingSampleId = sample.id;
       uiState.wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });
 
-  inventorySections.querySelectorAll('[data-single-sample-unlink]').forEach((button) => {
+  // A sample only exists inside a container, so removing it from its slot deletes it.
+  inventorySections.querySelectorAll('[data-single-sample-delete]').forEach((button) => {
     button.addEventListener('click', () => {
       helpers.ensureSamples();
-      const sample = helpers.getSampleById(button.dataset.singleSampleUnlink);
+      const sample = helpers.getSampleById(button.dataset.singleSampleDelete);
       if (!sample) {
         return;
       }
-      sample.inventoryLink = null;
-      sample.updatedAt = new Date().toISOString();
+      state.samples = state.samples.filter((item) => item !== sample);
       uiState.editingSampleId = '';
-      uiState.wellEditorStatus = `Unlinked sample ${sample.code || sample.name || sample.id}.`;
+      uiState.wellEditorStatus = `Deleted sample ${sample.code || sample.name || sample.id}.`;
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });
@@ -140,11 +137,7 @@ export function bindSingleSampleEvents(ctx) {
       state.samples.push(sample);
       uiState.editingSampleId = sample.id;
       uiState.wellEditorStatus = `Created sample ${sample.code}.`;
-      // Before persist: this mutates notebookEntries and clears
-      // pendingNotebookSampleCapture, and nothing else saves afterwards.
-      ctx.notifySampleRecorded(sample);
       persist();
-      notifySamplesChanged();
       renderSections();
     });
   });

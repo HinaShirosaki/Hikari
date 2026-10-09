@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, protocol, session, shell } = require('electron');
+const { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, protocol, safeStorage, session, shell } = require('electron');
 const path = require('path');
 const fs = require('node:fs/promises');
 
@@ -32,6 +32,7 @@ function startMainApp() {
     dialog,
     ipcMain,
     session,
+    safeStorage,
     shell,
     fs,
     path,

@@ -4,6 +4,7 @@ import { buildMegaprimerRestrictionPlan } from '../cloning-assembly/megaprimer-r
 import { buildQ5KldPlan } from '../cloning-assembly/q5-kld-mutagenesis.js';
 import { buildGoldenGatePlan } from '../cloning-assembly/golden-gate.js';
 import { buildOverlapExtensionLigationPlan } from '../cloning-assembly/overlap-extension-ligation.js';
+import { prependOligoAssemblySteps } from '../cloning-assembly/oligo-assembly.js';
 import { clamp, cleanText, normalizeSequenceText } from '../shared.js';
 import { describeEditTarget, renamePrimers } from '../primer-naming.js';
 import { asArray } from '../../../lib/normalize.js';
@@ -188,7 +189,7 @@ function buildDisplayPlan(args = {}) {
       } : {}
     });
     if (plan && inFusion) {
-      plan.stepByStepProcedure = IN_FUSION_PROCEDURE;
+      plan.stepByStepProcedure = prependOligoAssemblySteps(IN_FUSION_PROCEDURE, plan.primerOligoPlan?.primers);
       plan.recommendedAssemblyStrategy = STRATEGY_IN_FUSION;
     }
     return {
@@ -321,7 +322,7 @@ function buildRoutePlan({ strategy, source, record, range, donor }) {
       allowExistingTerminalOverlap: false
     });
     const plan = inFusionAssembly
-      ? { ...inFusionAssembly, stepByStepProcedure: IN_FUSION_PROCEDURE }
+      ? { ...inFusionAssembly, stepByStepProcedure: prependOligoAssemblySteps(IN_FUSION_PROCEDURE, inFusionAssembly.primerOligoPlan?.primers) }
       : inFusionAssembly;
     return {
       strategy,

@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const { legacyPathFor, readMarkdownCheckpoint } = require('./metadata');
 
 const checkpointMarker = transaction => `<!-- hikari-checkpoint:${transaction} -->`;
 const pendingPathFor = filePath => `${filePath}.pending`;
@@ -26,7 +27,12 @@ async function captureCheckpoint(filePath, source) {
 // A pending checkpoint is written before Markdown changes. Its marker travels
 // with that Markdown, so even an interrupted rename has the matching IDs and
 // typed data. An uncommitted pending file never replaces the old companion.
-async function readRecordCheckpoint(filePath, source) {
+async function readRecordCheckpoint(filePath, source, fallback) {
+  try {
+    const standalone = await readMarkdownCheckpoint(filePath, source, fallback);
+    if (standalone) return standalone;
+  } catch (error) { return { exists: true, ok: false, error: error.message, source, metadataError: true }; }
+  filePath = legacyPathFor(filePath);
   let captured;
   try { captured = await captureCheckpoint(filePath, source); }
   catch (error) { return { exists: true, ok: false, error: error.message }; }
@@ -39,6 +45,7 @@ async function readRecordCheckpoint(filePath, source) {
   } catch (error) {
     result = { exists: error.code !== 'ENOENT', ok: false, error: error.code === 'ENOENT' ? '' : error.message };
   }
+  if (!result.ok && captured.source) result = { ...result, exists: true, error: result.error || 'Markdown record is missing its embedded scientific state and legacy JSON is unavailable' };
   try {
     if (captured.pendingRaw === null) return { ...result, source: captured.source };
     const pending = JSON.parse(captured.pendingRaw);

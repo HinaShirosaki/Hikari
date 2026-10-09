@@ -5,13 +5,13 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   const measure = () => evaluate(`(() => {
     const box=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}};
     const work=document.querySelector('.work-area').getBoundingClientRect(),panel=document.getElementById('layer-inspector');
-    return {stage:box('main-canvas'),panel:box('layer-inspector'),work:{width:work.width,height:work.height},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('toggle-layers').getAttribute('aria-expanded')};
+    return {stage:box('main-canvas'),panel:box('layer-inspector'),tools:box('workspace-tools'),work:{width:work.width,height:work.height,gap:parseFloat(getComputedStyle(document.querySelector('.work-area')).columnGap)},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('layers-tab').getAttribute('aria-expanded')};
   })()`);
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
   await pause(80);
   const before = await tool({ action: 'read' }), images = await tool({ action: 'render', canvas: 'both' }), closed = await measure();
-  check(closed.hidden && closed.inert && closed.expanded === 'false' && closed.stage.width === closed.work.width,
+  check(closed.hidden && closed.inert && closed.expanded === 'false' && Math.abs(closed.stage.width+closed.tools.width+8-closed.work.width)<1,
     'Closed Layers releases the entire editing width and removes its controls from focus');
   check(closed.stage.height > closed.work.height * 0.85, 'The main stage dominates the editing height');
   const matrix = () => evaluate('(()=>{const m=document.querySelector("#main-canvas > svg").getScreenCTM();return [m.a,m.d,m.e,m.f]})()');
@@ -29,10 +29,10 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
       `Double-clicking text opens its independent editing controls and focuses the label: ${JSON.stringify({target, panel:await measure(), focus:await evaluate('document.activeElement.id')})}`);
   } finally { win.webContents.debugger.detach(); }
   const opened = await measure();
-  check(Math.abs(closed.stage.width - opened.stage.width - opened.panel.width - 12) < 1, 'Desktop Layers docks beside the canvas using only its panel width and gutter');
+  check(Math.abs(closed.stage.width - opened.stage.width - opened.panel.width - 2*opened.work.gap + closed.work.gap) < 1, 'Desktop Layers docks beside the canvas using only its panel width and gutters');
   await fs.writeFile(path.join(temp, 'canvas-layout-properties.png'), (await win.webContents.capturePage()).toPNG());
   await evaluate('document.getElementById("close-layers").click()'); await pause(80);
-  check(await evaluate('document.activeElement.id==="toggle-layers"') && (await measure()).stage.width === closed.stage.width,
+  check(await evaluate('document.activeElement.id==="layers-tab"') && (await measure()).stage.width === closed.stage.width,
     'Closing the property panel restores canvas width and returns focus to its reopen button');
   win.webContents.debugger.attach('1.3');
   try {
@@ -50,15 +50,19 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   const narrow = [];
   for (const width of [980, 720, 480, 320]) {
     win.setSize(width, 800); await pause(80);
-    await evaluate('document.getElementById("toggle-layers").click()'); await pause(80);
+    await evaluate('document.getElementById("layers-tab").click()'); await pause(80);
     const value = await measure(); narrow.push({ width, ...value });
-    check(!value.hidden && value.panel.right <= width && value.panel.width > 200 && value.stage.width === value.work.width,
+    check(!value.hidden && value.panel.right <= width && value.panel.width > 200 && Math.abs(value.stage.width+value.tools.width+8-value.work.width)<1,
       `${width}px Layers overlays in bounds without reducing the canvas width`);
     check(await evaluate('document.documentElement.scrollWidth<=innerWidth && document.querySelector(".canvas-controls").getBoundingClientRect().bottom<=innerHeight && document.getElementById("complexity").getBoundingClientRect().width>=60'),
       `${width}px keeps the canvas controls inside the bounded workspace`);
+    check(await evaluate('["group-selection","ungroup-selection"].every(id=>{const button=document.getElementById(id),r=button.getBoundingClientRect();return button.closest("#workspace-tools") && r.width===30 && r.height===30 && r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight})'),
+      `${width}px keeps both grouping toolbar buttons visible and in bounds`);
+    check(await evaluate('["layers-tab","assets-tab"].every(id=>{const button=document.getElementById(id),r=button.getBoundingClientRect();return button.closest("#workspace-tools") && r.width===30 && r.height===30 && r.left>=0 && r.right<=innerWidth && getComputedStyle(button).visibility==="visible" && r.bottom<=innerHeight})'),
+      `${width}px keeps Layers and Assets accessible in the right toolbar`);
     await evaluate('document.getElementById("close-layers").click();document.getElementById("canvas-size").value="custom";document.getElementById("canvas-size").dispatchEvent(new Event("change",{bubbles:true}))'); await pause(80);
     check(await evaluate('(()=>{const r=document.querySelector(".canvas-options .popover-panel").getBoundingClientRect();return r.top>=0&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.activeElement===document.getElementById("canvas-properties").elements.width})()'),
-      `${width}px custom size opens upward in bounds with keyboard focus`);
+      `${width}px custom size opens below the top controls in bounds with keyboard focus`);
     await evaluate('document.querySelector(".canvas-options").open=false');
   }
   await fs.writeFile(path.join(temp, 'canvas-layout-narrow.png'), (await win.webContents.capturePage()).toPNG());

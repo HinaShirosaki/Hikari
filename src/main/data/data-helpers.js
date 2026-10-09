@@ -124,12 +124,17 @@ function createMainDataHelpers(deps = {}) {
       if (writeDataFile) {
         await writeSnapshot(targetPath, { ...snapshot, ...bundleSync.markdownRecords });
       }
-      if (!writeDataFile && staleDataFilePath) {
-        await fs.rm(staleDataFilePath, { force: true }).catch(() => {});
+      if (!writeDataFile && staleDataFilePath && !bundleSync.sidecarPaths?.skippedRecords?.length) {
+        // Retire old autosave snapshots only after every document was saved.
+        // Recovery copies are never rediscovered as active bundles.
+        if (fs.copyFile) await fs.copyFile(staleDataFilePath, staleDataFilePath.replace(/\.json$/, '.pre-markdown.json'), require('node:fs').constants.COPYFILE_EXCL)
+          .catch(error => { if (!['ENOENT', 'EEXIST'].includes(error.code)) throw error; });
+        await fs.rm(staleDataFilePath, { force: true });
       }
       return {
         ok: true,
         filePath: targetPath,
+        markdownRecords: bundleSync.markdownRecords,
         sidecarPaths: bundleSync.sidecarPaths || {},
         bundlePaths: bundleSync.bundlePaths
       };

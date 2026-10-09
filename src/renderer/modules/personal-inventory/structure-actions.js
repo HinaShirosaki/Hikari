@@ -1,12 +1,11 @@
 import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
-} from '../sample-registry/public-api.js';
+} from './chemical-structure-clipboard.js';
 import { showTransientNotice } from '../../lib/notify.js';
 
 export function installStructureActions(ctx) {
   const { helpers, pendingStructureDrafts, persist } = ctx;
-  const notifySamplesChanged = () => ctx.notifySamplesChanged();
 
 async function applyStructurePasteCandidates(candidates, formats = []) {
   const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
@@ -75,7 +74,6 @@ function applyCapturedStructureDraft(draft) {
       sample.compoundStructure = normalized;
       sample.updatedAt = new Date().toISOString();
       persist();
-      notifySamplesChanged();
     }
     if (!normalized) {
       showTransientNotice('No structure detected.', { type: 'error' });

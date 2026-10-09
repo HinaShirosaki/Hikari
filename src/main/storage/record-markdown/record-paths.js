@@ -7,6 +7,7 @@ const { isPathInside } = require('../../lib/path-safety');
 const { buildWorkflowFolderLayout, collectLinkedNotebookIds } = require('../workflow/folder-names');
 const { buildNotebookStorageFolder } = require('../workflow/fs-helpers');
 const { resolveWorkflowTemplateRecord } = require('../workflow/record-compaction');
+const { readRecordDocument } = require('../../lib/record-markdown/read');
 
 // Copying a folder in Finder or Explorer repeats its protocol ID. The folder
 // Hikari named for the protocol owns the ID; readers skip copies and the
@@ -16,7 +17,7 @@ function protocolFolderRank(folderName, protocol) {
   return folderName.endsWith(`__${sanitizeFolderName(protocol.id)}`) ? 1 : 2;
 }
 
-async function protocolFoldersById(protocolRootPath) {
+async function protocolFoldersById(protocolRootPath, knownProtocols = []) {
   const owners = new Map();
   for (const entry of await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(error => {
     if (error.code === 'ENOENT') return [];
@@ -24,12 +25,23 @@ async function protocolFoldersById(protocolRootPath) {
   })) {
     if (!entry.isDirectory()) continue;
     try {
-      const protocol = JSON.parse(await fs.readFile(path.join(protocolRootPath, entry.name, 'protocol.json'), 'utf8')).protocol;
+      const loaded = await readRecordDocument(path.join(protocolRootPath, entry.name, 'protocol.md'), 'protocol');
+      let protocol = loaded.data?.protocol;
+      // Upgrade older Markdown after its companion was lost while the app
+      // still has the record. Renamed protocols retain their original folder.
+      if (!protocol && loaded.exists) {
+        const candidates = asArray(knownProtocols).filter(record => record.id && entry.name.endsWith(`__${sanitizeFolderName(record.id)}`));
+        if (candidates.length > 1) throw new Error(`Ambiguous protocol folder ${entry.name}`);
+        protocol = candidates[0];
+      }
       if (!protocol?.id) continue;
       const rank = protocolFolderRank(entry.name, protocol);
       const owner = owners.get(protocol.id);
       if (!owner || rank < owner.rank || (rank === owner.rank && entry.name < owner.folder)) owners.set(protocol.id, { folder: entry.name, rank });
-    } catch { /* Unreadable records are retained by the writer. */ }
+    } catch (error) {
+      if (/Ambiguous protocol folder/.test(error.message)) throw error;
+      // Unreadable records are retained by the writer.
+    }
   }
   return new Map([...owners].map(([id, owner]) => [id, owner.folder]));
 }
@@ -43,9 +55,10 @@ function buildProtocolFolderName(protocol, index = 0) {
     : sanitizeFolderName(`protocol_${index + 1}`, `protocol_${index + 1}`);
 }
 
-function isWorkflowNotebookEntry(entry) {
+function isWorkflowNotebookEntry(entry, workflows = []) {
   const context = ensureObject(entry?.workflowContext);
-  return Boolean(cleanText(context.workflowId, 220) || cleanText(context.workflowEntryId, 220) || cleanText(context.workflowBlockId, 220));
+  return Boolean(cleanText(context.workflowId, 220) || cleanText(context.workflowEntryId, 220) || cleanText(context.workflowBlockId, 220))
+    || asArray(workflows).some(workflow => cleanText(workflow.id, 220) && collectLinkedNotebookIds(workflow).includes(cleanText(entry?.id, 220)));
 }
 
 function buildNotebookPageFolderPath(root, entry) {
@@ -64,7 +77,7 @@ function workflowDocumentInputs(root, snapshot) {
     const layout = buildWorkflowFolderLayout({ storagePath: root, template, workflow });
     const linked = collectLinkedNotebookIds(workflow);
     return asArray(snapshot.notebookEntries).filter(entry => linked.includes(cleanText(entry?.id, 220))).map(entry => ({
-      kind: 'notebook', filePath: path.join(buildNotebookStorageFolder(layout, entry), 'page.json'), payload: { notebookEntry: entry }
+      kind: 'notebook', filePath: path.join(buildNotebookStorageFolder(layout, entry), 'page.md'), payload: { notebookEntry: entry }
     }));
   });
 }
@@ -79,12 +92,12 @@ async function snapshotDocumentInputs(root, snapshot) {
     }
   }
   const protocolRoot = path.join(root, 'Protocol');
-  const folders = await protocolFoldersById(protocolRoot);
+  const folders = await protocolFoldersById(protocolRoot, snapshot.protocols);
   return [
     ...asArray(snapshot.protocols).map((protocol, index) => ({ kind: 'protocol',
-      filePath: path.join(protocolRoot, folders.get(protocol.id) || buildProtocolFolderName(protocol, index), 'protocol.json'), payload: { protocol } })),
-    ...asArray(snapshot.notebookEntries).filter(entry => !isWorkflowNotebookEntry(entry)).map(entry => ({ kind: 'notebook',
-      filePath: path.join(buildNotebookPageFolderPath(root, entry), 'page.json'), payload: { notebookEntry: entry } })),
+      filePath: path.join(protocolRoot, folders.get(protocol.id) || buildProtocolFolderName(protocol, index), 'protocol.md'), payload: { protocol } })),
+    ...asArray(snapshot.notebookEntries).filter(entry => !isWorkflowNotebookEntry(entry, snapshot.workflows)).map(entry => ({ kind: 'notebook',
+      filePath: path.join(buildNotebookPageFolderPath(root, entry), 'page.md'), payload: { notebookEntry: entry } })),
     ...workflowDocumentInputs(root, snapshot)
   ];
 }

@@ -19,7 +19,6 @@ export function createTopbarSearchController({
   setSearchInputValue,
   topbarSearchInput,
   apps = [],
-  normalizeViewId: normalizeAppViewId = (viewId) => viewId,
   openItemHandlers = {},
   windowObject: _windowObject = window
 }) {
@@ -27,7 +26,7 @@ export function createTopbarSearchController({
     ? openItemHandlers
     : {};
   const appSuggestionEntries = asArray(apps).filter((app) => app?.hiddenFromNavigation !== true).map((app) => {
-    const viewId = normalizeAppViewId(app?.viewId);
+    const viewId = app?.viewId;
     const aliases = asArray(app?.aliases);
     return {
       app,

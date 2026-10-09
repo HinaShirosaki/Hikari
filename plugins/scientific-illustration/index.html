@@ -4,8 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Scientific Illustration</title>
+  <title>Figura</title>
   <link rel="stylesheet" href="vendor/palette.css">
+  <link rel="stylesheet" href="vendor/cropperjs/cropper.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -20,22 +21,40 @@
       <header class="toolbar">
         <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden></button>
         <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
+        <div class="canvas-heading canvas-controls">
+          <select hidden id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
+            <option value="pointer">Select &amp; move · V</option>
+            <option value="freehand">Freehand select · L</option>
+          </select>
+          <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
+          <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
+            <option value="1200x800">Landscape · 1200 × 800</option>
+            <option value="800x1200">Portrait · 800 × 1200</option>
+            <option value="1000x1000">Square · 1000 × 1000</option>
+            <option value="1600x900">Widescreen · 1600 × 900</option>
+            <option value="500x350">Small · 500 × 350</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
+            <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
+          </div></details>
+
+        </div>
         <div class="toolbar-actions">
           <label class="complexity-control" for="complexity"><span class="sr-only">Illustration complexity</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
-          <button id="undo" class="icon-button" data-icon="undo" type="button" title="Undo (⌘Z / Ctrl+Z)" aria-label="Undo" disabled></button>
-          <button id="redo" class="icon-button" data-icon="redo" type="button" title="Redo (⌘⇧Z / Ctrl+Shift+Z)" aria-label="Redo" disabled></button>
-          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
-            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
-          </div></details>
-          <button id="toggle-layers" class="panel-toggle" data-icon="layers" type="button" title="Show layers and properties" aria-label="Show layers and properties" aria-expanded="false" aria-controls="layer-inspector"><span>Layers</span></button>
           <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
-            <button id="menu-group-selection" type="button" disabled>Group selection <small>⌘G / Ctrl+G</small></button>
-            <button id="menu-ungroup-selection" type="button" disabled>Ungroup <small>⌘⇧G / Ctrl+Shift+G</small></button>
+            <section class="image-generation-control" aria-label="Image generation">
+              <label class="image-generation-toggle" for="image-generation-enabled"><span>Image generation</span><input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help"></label>
+              <div class="image-generation-range"><label class="sr-only" for="image-generation-percent">Image-generated content percentage</label><input id="image-generation-percent" type="range" min="0" max="100" step="25" value="50" disabled list="image-generation-steps" aria-describedby="image-generation-help"><output id="image-generation-value" for="image-generation-percent">Auto</output><datalist id="image-generation-steps"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist></div>
+              <p id="image-generation-help"><span id="image-generation-summary">Automatic · SVG first</span>. Boxes and arrows stay SVG; labels stay editable text.</p>
+            </section>
+            <button id="menu-save-selection-asset" type="button" disabled>Save selection as asset…</button>
             <button id="duplicate-illustration" type="button">Duplicate illustration</button>
           </div></details>
           <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export"><span class="export-mark" data-icon="download"></span><span class="export-label">Export</span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
             <button id="export-svg" type="button">SVG <small>Editable figure</small></button>
             <button id="export-png" type="button">PNG <small>Image</small></button>
+            <button id="export-pptx" type="button">PowerPoint <small>Adjustable components</small></button>
           </div></details>
         </div>
       </header>
@@ -51,38 +70,16 @@
               <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
             </section>
           </div>
-          <div class="canvas-heading canvas-controls">
-            <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
-            <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
-              <option value="1200x800">Landscape · 1200 × 800</option>
-              <option value="800x1200">Portrait · 800 × 1200</option>
-              <option value="1000x1000">Square · 1000 × 1000</option>
-              <option value="1600x900">Widescreen · 1600 × 900</option>
-              <option value="500x350">Small · 500 × 350</option>
-              <option value="custom">Custom…</option>
-            </select>
-            <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size and background" aria-label="Custom canvas size and background"></summary><div class="popover-panel">
-              <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div><label class="color-field">Background<input name="background" type="color"></label></form>
-            </div></details>
-            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
-              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
-              <output id="zoom-level" aria-label="Zoom level">100%</output>
-              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
-              <button id="zoom-fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true">Fit</button>
-            </div>
-            <button id="toggle-scratch" class="scratch-toggle" type="button" aria-expanded="false" aria-controls="scratch-workspace">Scratch</button>
-          </div>
-          <form id="prompt-form" class="prompt">
+          <form id="prompt-form" class="prompt" hidden>
             <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
             <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
           </form>
         </section>
         <aside id="layer-inspector" class="inspector" aria-label="Layers and properties" hidden inert>
-          <div class="inspector-heading"><h2>Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close layers and properties" aria-label="Close layers and properties"></button></div>
-          <div class="group-actions" role="group" aria-label="Grouping"><button id="group-selection" type="button" title="Group selection (⌘G / Ctrl+G)" disabled>Group</button><button id="ungroup-selection" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" disabled>Ungroup</button></div>
-          <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
+          <div class="inspector-heading"><h2 id="component-panel-title">Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close component panel" aria-label="Close component panel"></button></div>
+          <section id="layers-panel" role="region" aria-labelledby="layers-tab" hidden inert>
+          <div class="selection-actions" role="group" aria-label="Selection actions"><button id="save-selection-asset" type="button" disabled>Save as asset…</button></div>
           <div id="layers" role="list" aria-label="Figure layers"></div>
-          <p id="selection-hint" class="selection-hint">Shift-click to select more. Select a child layer to edit it individually.</p>
           <form id="properties" hidden>
             <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
             <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
@@ -102,14 +99,55 @@
             <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer"></button></div>
             <button type="button" id="transfer" class="transfer-button">Copy to scratch</button>
           </form>
+          </section>
+          <section id="assets-panel" role="region" aria-labelledby="assets-tab" hidden inert>
+            <button id="import-asset" type="button" class="secondary-button">Import asset…</button>
+            <input id="asset-search" type="search" placeholder="Search assets" aria-label="Search reusable assets">
+            <p id="assets-hint" class="selection-hint">Select components or a group, then choose Save as asset.</p>
+            <div id="saved-assets" role="list" aria-label="Reusable components"></div>
+            <p id="assets-empty" class="layers-empty">Your reusable components will appear here.</p>
+          </section>
+        </aside>
+        <aside id="workspace-tools" class="workspace-tools" role="toolbar" aria-label="Illustration tools" aria-orientation="vertical">
+          <button id="pointer-tool" class="icon-button" data-icon="pointer" type="button" title="Select and move (V)" aria-label="Select and move" aria-pressed="true"></button>
+          <button id="freehand-tool" class="icon-button" data-icon="lasso" type="button" title="Freehand selection (L)" aria-label="Freehand selection" aria-pressed="false"></button>
+          <div class="toolbar-group-actions" role="group" aria-label="Grouping">
+            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
+            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
+          </div>
+          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
+            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
+          </div></details>
+          <button id="crop-raster" class="icon-button" data-icon="crop" type="button" title="Crop selected image" aria-label="Crop selected image" aria-pressed="false" disabled></button>
+          <div id="component-panel-switch" class="component-panel-switch" role="group" aria-label="Component panels">
+            <button id="layers-tab" class="icon-button" data-icon="layers" type="button" aria-label="Layers and properties" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties"><span class="sr-only">Layers</span></button>
+            <button id="assets-tab" class="icon-button" data-icon="assets" type="button" aria-label="Reusable assets" aria-pressed="false" aria-expanded="false" aria-controls="assets-panel" title="Show reusable assets"><span class="sr-only">Assets</span></button>
+          </div>
+            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
+              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
+              <output id="zoom-level" aria-label="Zoom level">100%</output>
+              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
+              <button id="zoom-fit" class="icon-button" data-icon="fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true"><span class="sr-only">Fit</span></button>
+            </div>
+            <button id="toggle-scratch" class="scratch-toggle icon-button" data-icon="scratch" title="Scratch canvas" aria-label="Scratch canvas" type="button" aria-expanded="false" aria-controls="scratch-workspace"><span class="sr-only">Scratch</span></button>
         </aside>
       </div>
       <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>
     </section>
   </main>
   <dialog id="source-dialog"><form id="source-form"><h2>Text-free SVG artwork</h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source">Cancel</button><button type="submit">Apply artwork</button></div></form></dialog>
-  <dialog id="raster-dialog"><form id="raster-form"><h2>Import raster artwork</h2><p>Use an image with no baked-in labels. Labels belong in separate text layers.</p><label class="check"><input id="text-free" type="checkbox" required>I inspected this image and it contains no text.</label><p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster">Cancel</button><button type="submit">Add artwork</button></div></form></dialog>
+  <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
+  <dialog id="raster-dialog" aria-labelledby="raster-title"><form id="raster-form">
+    <h2 id="raster-title">Import artwork</h2>
+    <label id="import-asset-name-field" hidden>Name<input id="import-asset-name" maxlength="200"></label>
+    <div id="raster-preview-shell"><img id="raster-preview" alt="Artwork preview"></div>
+    <p id="raster-dimensions" role="status"></p>
+    <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required>I inspected this image and it contains no text. Labels belong in separate text layers.</label>
+    <p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster">Cancel</button><button id="confirm-raster" type="submit">Add artwork</button></div>
+  </form></dialog>
+  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title">Save reusable component</h2><label>Name<input id="asset-name" maxlength="200" required></label><p>Artwork and labels stay separate and editable. Saved copies are available in every illustration.</p><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button">Cancel</button><button id="confirm-save-asset" type="submit">Save asset</button></div></form></dialog>
   <script src="hikari.js"></script>
+  <script src="vendor/cropperjs/cropper.min.js"></script>
   <script type="module" src="main.mjs"></script>
 </body>
 </html>

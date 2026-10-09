@@ -11,13 +11,28 @@ const { randomUUID } = require('node:crypto');
 const { verifyPlacement } = require('./scientific-illustration-placement.cjs');
 const { verifyCanvasInteraction } = require('./scientific-illustration-interaction.cjs');
 const { verifyTextResize } = require('./scientific-illustration-text-resize.cjs');
+const { verifyTextBounds } = require('./scientific-illustration-text-bounds.cjs');
 const { verifyRailFolding } = require('./scientific-illustration-rail.cjs');
 const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
+const { verifyReusableAssets } = require('./scientific-illustration-assets.cjs');
+const { verifyAreaSelection } = require('./scientific-illustration-selection.cjs');
+const { verifySharedWorkspaceTools } = require('./scientific-illustration-workspace-tools.cjs');
+const { verifyImageGenerationPreference } = require('./scientific-illustration-image-preference.cjs');
+const { verifySourceActions } = require('./scientific-illustration-source-actions.cjs');
+const { verifyAutomaticAssets } = require('./scientific-illustration-auto-assets.cjs');
+const { verifyImportCrop } = require('./scientific-illustration-import-crop.cjs');
+const { verifyPowerPoint } = require('./scientific-illustration-powerpoint.cjs');
+const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
+const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
+const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
 const runtime = path.resolve(process.env.HIKARI_PLUGIN_QA_ROOT || repo);
+const sharedToolsQA = process.env.HIKARI_SHARED_TOOLS_QA_ONLY === '1';
+const sourceActionsQA = process.env.HIKARI_SOURCE_ACTIONS_QA_ONLY === '1';
+const automaticAssetsQA = process.env.HIKARI_AUTOMATIC_ASSETS_QA_ONLY === '1';
 const { registerPluginIpc } = require(path.join(runtime, 'src/main/ipc/register-plugin-ipc.js'));
 const { createMainMcpService } = require(path.join(runtime, 'src/main/core/services/create-mcp-service.js'));
 const { createAgentMcpStdioServer } = require(path.join(runtime, 'src/main/agent/mcp-contract/stdio-server.js'));
@@ -37,15 +52,32 @@ async function waitFor(predicate, message) {
 async function run() {
   await app.whenReady();
   const storage = path.join(temp, 'storage'); await fs.mkdir(storage);
+  if (sourceActionsQA) {
+    const folder = path.join(storage, 'KnowledgeBase/papers.md/source-fixture');
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(path.join(folder, 'Receptor uptake.md'), '# Receptor uptake\n\nThe ligand binds one membrane receptor. The occupied receptor enters a clathrin-coated vesicle.\n\nOnly the receptor and ligand are internalized; no kinase cascade is described.');
+    const { STORAGE } = require(path.join(runtime, 'src/shared/ipc/channels.js'));
+    ipcMain.handle(STORAGE.READ_FILE_BYTES, async (_event, payload) => {
+      if (payload.path !== path.join(folder, 'Receptor uptake.md')) return { ok: false, error: 'ENOENT' };
+      return { ok: true, bytes: await fs.readFile(payload.path) };
+    });
+  }
   const pluginPath = path.join(temp, 'installed', 'scientific-illustration');
-  await fs.cp(path.join(repo, 'plugins/scientific-illustration'), pluginPath, { recursive: true });
+  await fs.cp(process.env.HIKARI_PLUGIN_QA_SOURCE || path.join(repo, 'plugins/scientific-illustration'), pluginPath, { recursive: true });
   registry = registerPluginIpc({ ipcMain, session, fs, dialog: { ...dialog,
-    showSaveDialog: async options => ({ canceled: false, filePath: path.join(temp, path.basename(options.defaultPath)) }) } });
+    showSaveDialog: async options => {
+      const mode = await win?.webContents.executeJavaScript('window.qaExportDialogMode || ""');
+      if (mode === 'cancel') return { canceled: true };
+      if (mode === 'fail') throw new Error('Injected export disk failure');
+      return { canceled: false, filePath: path.join(temp, path.basename(options.defaultPath)) };
+    } } });
   const url = relative => pathToFileURL(path.join(runtime, relative)).href;
   await fs.writeFile(path.join(temp, 'host.mjs'), `
     // This fixture supplies a connected, local stub agent.
     document.body.dataset.agentAvailability='connected';
     import { createPluginBridge } from ${JSON.stringify(url('src/renderer/app/plugin-bridge.js'))};
+    import { createUndoService } from ${JSON.stringify(url('src/renderer/services/undoService.js'))};
+    import { createPluginHistoryDelegate } from ${JSON.stringify(pathToFileURL(path.join(repo, 'src/renderer/app/plugin-history.js')).href)};
     import { installPlugins } from ${JSON.stringify(url('src/renderer/app/plugin-loader.js'))};
     import { createPluginPromptHandler, createPluginChatContextHandler } from ${JSON.stringify(url('src/renderer/app/plugin-agent.js'))};
     import { createAgentRailScopeContextGetter } from ${JSON.stringify(url('src/renderer/module-manifests/agent-chat-rail.js'))};
@@ -71,19 +103,40 @@ async function run() {
     railRuntime.init();window.qaRailRuntime=railRuntime;
     const setChatContext=createPluginChatContextHandler({documentObject:document,getModuleRuntime:()=>({modules:{agentChatRail:rail}})});
     const prompt=createPluginPromptHandler({state:qaState,setChatContext,getNavigation:()=>({showView:id=>{document.body.dataset.activeView=id;railRuntime.syncState(id);},openAgentChatRail:()=>{window.qaRailOpened=true;railRuntime.open();}}),getModuleRuntime:()=>({modules:{agentChatRail:rail}})});
+    let historyService;
     const bridge=createPluginBridge({state:qaState,windowObject:window,persist:()=>{},onPluginPrompt:prompt,onPluginChatContext:setChatContext,
-      api:{...hikariApi,writePluginFile:payload=>failSave||(failIndex&&payload.path==='library.json')?Promise.resolve({ok:false,error:'Injected disk failure'}):hikariApi.writePluginFile(payload)}});
+      onFrameHistoryChanged:()=>historyService?.syncButtons(),
+      onPluginActivate:plugin=>{document.body.dataset.activeView='plugin-'+plugin.id+'-view';railRuntime.syncState(document.body.dataset.activeView);},
+      api:{...hikariApi,writePluginFile:payload=>failSave||(failIndex&&payload.path==='library.json')||(window.qaFailAssets&&payload.path==='reusable-assets.json')||(window.qaFailGroupAck&&payload.path.startsWith('illustrations/'))?Promise.resolve({ok:false,error:'Injected disk failure'}):hikariApi.writePluginFile(payload)}});
     window.qaBridge=bridge;
+    window.qaHostHistoryState={value:0};
+    window.qaHistoryDelegate=createPluginHistoryDelegate({documentObject:document,windowObject:window,bridge,onChange:()=>historyService?.syncButtons()});
+    window.qaUndoService=historyService=createUndoService({state:qaHostHistoryState,persistState:()=>{},renderAll:()=>{},documentObject:document,delegate:qaHistoryDelegate});
     window.addEventListener('hikari:left-rail-width-changed',()=>bridge.broadcastAppContext('layout'));
     hikariApi.onPluginCanvasRequest(async request=>hikariApi.respondToPluginCanvasRequest({id:request.id,result:await bridge.requestCanvas(request)}));
     installPlugins({state:qaState,documentObject:document,appRegistry:qaRegistry,bridge,api:hikariApi});
+    document.body.dataset.activeView=qaRegistry[0].viewId;
+    document.getElementById(qaRegistry[0].viewId).classList.add('is-active');
+    railRuntime.syncState(qaRegistry[0].viewId);
   `);
-  await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><style>body{margin:0}.workspace-main{height:100vh}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style><div hidden><select id="agent-rail-project-select"></select><div id="agent-rail-chat-history"></div><textarea id="agent-rail-message-input"></textarea><button id="agent-rail-send-btn">Send</button><div id="agent-rail-quick-prompts"><button data-agent-suggest-prompt="Summarize workspace">Old prompt</button></div><div id="agent-rail-session-list"></div><p id="agent-rail-status"></p></div><div class="workspace-main"></div><script type="module" src="host.mjs"></script>`);
+  const historyControls='<div class="topbar-history-controls" role="group" aria-label="Undo and redo" style="position:fixed;left:16px;bottom:16px;z-index:1000"><button id="global-undo-btn" aria-label="Undo" disabled>↶</button><button id="global-redo-btn" aria-label="Redo" disabled>↷</button></div>';
+  if (sharedToolsQA) {
+    // Packages contain the generated shell rather than the UI source fragments.
+    const shellPath = path.join(runtime, 'ui/html/shell/end.html');
+    const shell = fsSync.readFileSync(fsSync.existsSync(shellPath) ? shellPath : path.join(runtime, 'index.html'), 'utf8');
+    const railStart = shell.indexOf('<aside id="universal-agent-chat-rail"');
+    const railMarkup = shell.slice(railStart, shell.indexOf('</aside>', railStart) + 8);
+    await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><link rel="stylesheet" href="${url('styles.css')}"><style>body{margin:0;height:100vh}.workspace-main{height:100%;padding:0}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div class="workspace-shell"><div class="workspace-main"></div>${railMarkup}</div><script type="module" src="host.mjs"></script>`);
+  } else {
+  await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><style>body{margin:0}.workspace-main{height:100vh}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div hidden><select id="agent-rail-project-select"></select><div id="agent-rail-chat-history"></div><textarea id="agent-rail-message-input"></textarea><button id="agent-rail-send-btn">Send</button><div id="agent-rail-quick-prompts"><button data-agent-suggest-prompt="Summarize workspace">Old prompt</button></div><div id="agent-rail-session-list"></div><p id="agent-rail-status"></p></div><div class="workspace-main"></div><script type="module" src="host.mjs"></script>`);
+  }
   win = new BrowserWindow({ show: false, width: 1300, height: 1000, webPreferences: {
     // Hidden fixtures still need animation frames for layout/context observers.
     backgroundThrottling: false, contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(runtime, 'src/main/preload.js') } });
   const errors = [];
-  win.webContents.on('console-message', event => { if (event.level === 'error' && !event.message.includes('Content-Security-Policy')) errors.push(event.message); });
+  win.webContents.on('console-message', event => { if (event.level === 'error' && !event.message.includes('Content-Security-Policy')) {
+    errors.push(event.message); if (sourceActionsQA) console.error('Source QA renderer:', event.message);
+  } });
   service = createMainMcpService({ ipcMain, getMainWindow: () => win, createMcpHost: options => {
     runTool = options.runTool; return { close: async () => {} }; } });
   await win.loadFile(path.join(temp, 'index.html'));
@@ -94,7 +147,7 @@ async function run() {
   }
   check(frame, `Plugin failed to load: ${errors.join('\n')}`);
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
-  check(await evaluate('document.getElementById("undo").disabled && document.getElementById("redo").disabled && !document.getElementById("canvas-empty").hidden'), 'Empty workspace presents a starting point and disabled history controls');
+  check(await evaluate('!document.querySelector("#undo,#redo") && !document.getElementById("canvas-empty").hidden') && await win.webContents.executeJavaScript('document.getElementById("global-undo-btn").disabled && document.getElementById("global-redo-btn").disabled'), 'Empty workspace uses disabled system history controls without duplicate plugin buttons');
   check(await evaluate('document.getElementById("layer-inspector").hidden && document.getElementById("layer-inspector").inert'), 'New illustrations start with the canvas dominant and Layers folded');
   await fs.writeFile(path.join(temp, 'empty.png'), (await win.webContents.capturePage()).toPNG());
   check(await win.webContents.executeJavaScript('qaInspected.permissions.includes("agent:chat") && qaInspected.permissions.includes("agent:canvas") && qaInspected.permissions.includes("layout")'), 'Installer IPC accepts agent and existing layout permissions');
@@ -104,7 +157,7 @@ async function run() {
   const nativeHome = path.join(temp, 'codex-home');
   const nativeImageFolder = path.join(nativeHome, 'generated_images');
   await fs.mkdir(nativeImageFolder, { recursive: true });
-  const mcpEnv = { HIKARI_CODEX_HOME: nativeHome };
+  const mcpEnv = { HIKARI_CODEX_HOME: nativeHome, ...(automaticAssetsQA ? { HIKARI_CODEX_REQUEST_CONTEXT: JSON.stringify({ pluginInspectionRunId: 'automatic-assets-run' }) } : {}) };
   server = createAgentMcpStdioServer({ runTool, workspacePath: storage, env: mcpEnv });
   client = new Client({ name: 'illustration-host-qa', version: '1' });
   const [ct, st] = InMemoryTransport.createLinkedPair(); await server.connect(st); await client.connect(ct);
@@ -113,10 +166,65 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (sourceActionsQA) {
+    await verifySourceActions({ tool, evaluate, check, win, pause, temp, runtime });
+    check(errors.length === 0, `No renderer errors: ${errors.join('\n')}`);
+    console.log(JSON.stringify({ ok: true, sourceActions: true, checks, temp })); return;
+  }
+  if (automaticAssetsQA) {
+    await verifyAutomaticAssets({ tool, evaluate, check, win, pause, temp, runtime, nativeImageFolder });
+    check(errors.length === 0, `No renderer errors: ${errors.join('\n')}`);
+    console.log(JSON.stringify({ ok: true, automaticAssets: true, checks, temp })); return;
+  }
+  if (process.env.HIKARI_ASSET_IMPORT_QA_ONLY === '1') {
+    await verifyImportCrop({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura asset import/crop: ${checks} checks passed. Screenshots: ${temp}`); return;
+  }
+  if (process.env.HIKARI_POWERPOINT_QA_ONLY === '1') {
+    await verifyPowerPoint({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura PowerPoint export: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_ROTATION_QA_ONLY === '1') {
+    await verifyRotation({ tool, evaluate, check, win, pause, temp });
+    await verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura rotation and canvas interaction: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_CLIPBOARD_QA_ONLY === '1') {
+    await verifyClipboard({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura clipboard: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_HISTORY_QA_ONLY === '1') {
+    await verifySystemHistory({ tool, evaluate, check, win, pause });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura system history: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  await verifyImageGenerationPreference({ tool, evaluate, check, win, pause, temp });
+  if (sharedToolsQA) {
+    await verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura shared tools: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
   if (process.env.HIKARI_GROUPING_QA_ONLY === '1') {
     await verifyGrouping({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
-    console.log(`Scientific Illustration grouping: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    console.log(`Figura grouping: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
+  if (process.env.HIKARI_ASSETS_QA_ONLY === '1') {
+    await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura reusable assets: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
+  if (process.env.HIKARI_SELECTION_QA_ONLY === '1') {
+    await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   let current = await tool({ action: 'read' });
@@ -137,6 +245,11 @@ async function run() {
   current = await tool(apply([{ op: 'upsert', object: nativeObject, raster_asset: 'native-image' },
     { op: 'upsert', object: { id: 'native-label', type: 'text', text: 'Component', x: 38, y: 120 } }]), nativeAssets);
   check(current.ok && current.objects.length === 2 && current.objects[0].type === 'raster', 'Native Codex file imports from outside Hikari storage with a separate text label');
+  const multipleAssets = Array.from({ length: 12 }, (_, i) => ({ id: `native-image-${i}`, source: 'codex', path: nativeImagePath }));
+  current = await tool(apply(multipleAssets.map((asset, i) => ({ op: 'upsert', raster_asset: asset.id,
+    object: { ...nativeObject, id: `native-component-${i}`, x: 20 + i * 15, width: 12, height: 12 } }))), multipleAssets);
+  check(current.ok && current.objects.filter(object => object.type === 'raster').length === 13, 'One real MCP request imports more than eight native generated assets and persists each editable raster');
+  current = await tool(apply(multipleAssets.map((asset, i) => ({ op: 'delete', id: `native-component-${i}` }))));
   check(current.objects[0].width === 120 && current.objects[0].height === 120, 'Raster import fits the box height to the image aspect ratio');
   check(await evaluate('document.querySelector("#scratch-canvas [data-object-id=native-component] image").getAttribute("href").startsWith("data:image/png;base64,")'), 'Native raster paints as embedded image bytes on scratch');
   current = await tool(apply([{ op: 'transfer', id: 'native-component', canvas: 'main' },
@@ -184,6 +297,11 @@ async function run() {
   await win.webContents.executeJavaScript('document.querySelector("iframe").hidden=true');
   check((await tool({ action: 'render' })).content.filter(item => item.type === 'image').length === 2, 'Agent sees hidden canvases');
   await win.webContents.executeJavaScript('document.querySelector("iframe").hidden=false');
+  await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
+  check(await evaluate('document.getElementById("prompt-form").hidden && document.getElementById("prompt-form").getBoundingClientRect().height===0'), 'A populated illustration has no bottom composer even with chat folded');
+  const promptSceneObjects = current.objects;
+  current = await tool(apply(current.objects.map(object => ({ op: 'delete', id: object.id }))));
+  await waitFor(async () => await evaluate('!document.getElementById("prompt-form").hidden'), 'Removing all components did not restore the starting composer');
   const userPrompts = [
     'Draw a cell with separate labels',
     'Draw a cell.\nUse the title "Cell cycle" and separate SVG arrows.',
@@ -192,13 +310,15 @@ async function run() {
   for (const [index, complexity] of ['simple', 'standard', 'detailed'].entries()) {
     await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
     await waitFor(async () => await evaluate('!document.getElementById("prompt-form").hidden'), 'Closed chat did not restore compact canvas composer');
-    await evaluate(`document.getElementById("complexity").value=${JSON.stringify(complexity)};document.getElementById("complexity").dispatchEvent(new Event("change",{bubbles:true}));document.getElementById("prompt").value=${JSON.stringify(userPrompts[index])};document.getElementById("prompt-form").requestSubmit()`);
+    const imagePercent = [0, 50, 100][index];
+    await evaluate(`document.getElementById("complexity").value=${JSON.stringify(complexity)};document.getElementById("complexity").dispatchEvent(new Event("change",{bubbles:true}));document.getElementById("image-generation-enabled").checked=true;document.getElementById("image-generation-percent").value=${JSON.stringify(String(imagePercent))};document.getElementById("image-generation-percent").dispatchEvent(new Event("change",{bubbles:true}));document.getElementById("prompt").value=${JSON.stringify(userPrompts[index])};document.getElementById("prompt-form").requestSubmit()`);
     await waitFor(async () => await win.webContents.executeJavaScript(`qaRequests.length===${index + 1}`), 'Complexity prompt did not reach the agent');
     await waitFor(async () => await evaluate('!document.getElementById("generate").disabled'), 'Prompt submission did not finish');
     await pause(100);
     current = await tool({ action: 'read' });
     const label = complexity[0].toUpperCase() + complexity.slice(1);
     check(current.complexity === complexity && current.agent_contract.instructions.includes(`Complexity: ${label}.`), `${complexity} complexity saves before Send and exposes matching instructions on read`);
+    check(current.imageGenerationPercent === imagePercent && current.agent_contract.instructions.includes(`Image generation target: ${imagePercent}%`), `${imagePercent}% target selected immediately before Send saves and reaches the agent's read contract`);
     check(await win.webContents.executeJavaScript(`qaRequests[${index}].message===${JSON.stringify(userPrompts[index])}
       &&qaRequests[${index}].conversation.filter(message=>message.role==="user").at(-1).text===${JSON.stringify(userPrompts[index])}
       &&qaScopedState.agentChat.messages.filter(message=>message.role==="user").at(-1).text===${JSON.stringify(userPrompts[index])}
@@ -210,7 +330,7 @@ async function run() {
   check(await win.webContents.executeJavaScript('qaRequests[0].agent.pluginCanvasId==="scientific-illustration"'), 'Plugin chat carries structured canvas scope for completion enforcement');
   check(await win.webContents.executeJavaScript(`qaState.paperAgentChatSessions[${JSON.stringify(`plugin:scientific-illustration:item:${current.illustration_id}`)}].messages.some(message=>message.role==="assistant" && message.text==="Fixture response")`), 'Fixture model response is saved in the illustration chat');
   check(await win.webContents.executeJavaScript(`qaRequests.every(request=>request.chatSessionId===qaRequests[0].chatSessionId && request.agent.pluginCanvasIllustrationId===${JSON.stringify(current.illustration_id)})`), 'Same figure reuses only its own saved session and pins its canvas target');
-  check(await win.webContents.executeJavaScript('document.getElementById("agent-rail-quick-prompts").hidden && [...document.querySelectorAll("[data-agent-suggest-prompt]")].every(button=>button.hidden)'), 'Scientific Illustration hides all prefilled prompt suggestions');
+  check(await win.webContents.executeJavaScript('document.getElementById("agent-rail-quick-prompts").hidden && [...document.querySelectorAll("[data-agent-suggest-prompt]")].every(button=>button.hidden)'), 'Figura hides all prefilled prompt suggestions');
   await waitFor(async () => await evaluate('document.getElementById("prompt-form").hidden'), 'Opening the host rail did not hide the redundant prompt');
   check(await evaluate('document.getElementById("prompt-form").getBoundingClientRect().height===0 && document.querySelector(".toolbar #complexity").getBoundingClientRect().height>0 && document.getElementById("prompt").value===""'), 'Open rail removes the canvas prompt and keeps complexity in the toolbar; accepted prompts clear');
   check((await evaluate('HikariPlugin.hikari.call("app.info")')).layout.agentChatRail.expanded, 'Plugin can read the actual host rail expansion state');
@@ -227,6 +347,24 @@ async function run() {
   await waitFor(async () => await evaluate('!document.getElementById("prompt-form").hidden'), 'Closing chat did not restore the unsent draft');
   check(await evaluate('document.getElementById("prompt").value==="Unsent canvas idea"'), 'Toggling chat preserves an unsent canvas draft');
   await evaluate('document.getElementById("prompt").value=""');
+  current = await tool(apply(promptSceneObjects.map(object => ({ op: 'upsert', object }))));
+  check(await evaluate('document.getElementById("prompt-form").hidden'), 'Adding components hides the starting composer without a host layout event');
+  await evaluate('illustrationWorkspace.history("undo")');
+  await waitFor(async () => await evaluate('!document.getElementById("prompt-form").hidden'), 'Undo to an empty illustration did not restore the starting composer');
+  await evaluate('illustrationWorkspace.history("redo")');
+  await waitFor(async () => await evaluate('document.getElementById("prompt-form").hidden'), 'Redo to a populated illustration did not hide the starting composer');
+  current = await tool({ action: 'read' });
+  current = await tool(apply(current.objects.filter(object => object.canvas === 'main').map(object => ({ op: 'delete', id: object.id }))));
+  check(current.objects.length===1 && current.objects[0].canvas==='scratch' && await evaluate('document.getElementById("prompt-form").hidden && document.getElementById("scratch-workspace").hidden'), 'Hidden scratch components also keep the illustration composer closed');
+  current = await tool(apply(promptSceneObjects.filter(object => object.canvas === 'main').map(object => ({ op: 'upsert', object }))));
+  await win.webContents.executeJavaScript('qaRailRuntime.open()');
+  await waitFor(async () => (await evaluate('HikariPlugin.hikari.call("app.info")')).layout.agentChatRail.expanded, 'Chat rail did not open for an existing illustration');
+  const beforeRailEdit = await win.webContents.executeJavaScript('qaRequests.length');
+  check((await win.webContents.executeJavaScript('qaRail.submitExternalMessage("Move the existing cell slightly right",{waitForCompletion:true})')).ok, 'Existing illustration accepts an edit through its agent rail');
+  check(await win.webContents.executeJavaScript(`qaRequests.length===${beforeRailEdit+1} && qaRequests.at(-1).agent.pluginCanvasIllustrationId===${JSON.stringify(current.illustration_id)}`), 'Rail edit retains the correct illustration scope');
+  await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
+  await pause(80);
+  check(await evaluate('document.getElementById("prompt-form").hidden'), 'Folding chat after an existing-figure edit does not restore the bottom composer');
   await win.webContents.executeJavaScript('window.failSave=true');
   check(!(await tool(apply([{ op: 'title', title: 'Unsaved' }]))).ok, 'Disk failures are reported');
   await win.webContents.executeJavaScript('window.failSave=false');
@@ -235,7 +373,7 @@ async function run() {
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').fontSize === 36, 'User controls and agent share editable text objects');
   check(await evaluate('!document.getElementById("text-properties").hidden && document.getElementById("vector-properties").hidden && !document.querySelector(".geometry-options").open'), 'Selected text shows formatting before optional geometry');
-  check(await evaluate('!document.getElementById("undo").disabled && document.getElementById("redo").disabled'), 'History controls reflect available edits');
+  check(await win.webContents.executeJavaScript('(()=>{const history=qaBridge.getFrameHistory(document.querySelector("iframe.plugin-frame").contentWindow);return history.canUndo && !history.canRedo})()'), 'Plugin API reports available edits to system history');
   for (const style of ['bold', 'italic', 'underline']) {
     await evaluate(`document.querySelector('[data-text-style="${style}"]').click()`);
     current = await tool({ action: 'read' });
@@ -244,10 +382,10 @@ async function run() {
   current = await tool({ action: 'read' });
   const formatted = current.objects.find(object => object.id === 'label');
   check(formatted.fontWeight === 700 && formatted.italic && formatted.underline && formatted.align === 'end', 'Compact text formatting updates independent layer properties');
-  await evaluate('document.getElementById("undo").click()');
+  await evaluate('illustrationWorkspace.history("undo")');
   current = await tool({ action: 'read' });
-  check(current.objects.find(object => object.id === 'label').align === 'middle' && await evaluate('!document.getElementById("redo").disabled'), 'Undo restores formatting and enables redo');
-  await evaluate('document.getElementById("redo").click()');
+  check(current.objects.find(object => object.id === 'label').align === 'middle' && await win.webContents.executeJavaScript('qaBridge.getFrameHistory(document.querySelector("iframe.plugin-frame").contentWindow).canRedo'), 'Undo restores formatting and reports redo to Hikari');
+  await evaluate('illustrationWorkspace.history("redo")');
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').align === 'end', 'Redo restores formatting');
   current = await tool(apply([{ op: 'update', id: 'label', patch: { fontWeight: 600, italic: false, underline: false, align: 'middle' } }]));
@@ -298,6 +436,7 @@ async function run() {
   current = await tool(apply([{ op: 'title', title: 'Cell signaling' }]));
   const originalId = current.illustration_id;
   const originalChatSession = await win.webContents.executeJavaScript('qaScopedState.agentChat.currentSessionId');
+  const originalReplyCount = await win.webContents.executeJavaScript('qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length');
   await win.webContents.executeJavaScript('document.getElementById("agent-rail-message-input").value="Unsent figure-specific change"');
   await scratch(true);
   const revision = current.revision; await evaluate('location.reload()'); await pause(350);
@@ -320,6 +459,7 @@ async function run() {
   await waitFor(async () => (await tool({ action: 'list' })).illustrations.length === 3, 'New illustration did not save');
   current = await tool({ action: 'read' });
   check(current.objects.length === 0, 'New illustration starts with two empty canvases');
+  check(await evaluate('!document.getElementById("prompt-form").hidden'), 'Switching to a new empty illustration restores its starting composer');
   const freshFigureId = current.illustration_id;
   check(await win.webContents.executeJavaScript('qaScopedState.agentChat.messages.length===0 && !qaScopedState.agentChat.currentSessionId'), 'New illustrations also start with empty chats');
   const beforeDelayedCreate = await win.webContents.executeJavaScript('qaRequests.length');
@@ -328,9 +468,10 @@ async function run() {
   let pendingSelection = await tool({ action: 'list' });
   await tool({ action: 'open', illustration_id: originalId, expected_library_revision: pendingSelection.library_revision, request_id: randomUUID() });
   await waitFor(async () => await win.webContents.executeJavaScript(`qaScopedState.agentChatContext.pluginContextId===${JSON.stringify(originalId)}`), 'Selection did not change during session creation');
+  check(await evaluate('document.getElementById("prompt-form").hidden'), 'Switching back to an existing illustration hides the starting composer');
   await win.webContents.executeJavaScript('window.qaDelaySession=false;window.qaReleaseSession()');
   await waitFor(async () => await win.webContents.executeJavaScript('Boolean(window.qaDelayedSubmit)'), 'Delayed submission did not settle');
-  check(await win.webContents.executeJavaScript(`!qaDelayedSubmit.ok && qaRequests.length===${beforeDelayedCreate} && qaScopedState.agentChat.currentSessionId===${JSON.stringify(originalChatSession)} && qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length===3`), 'Switching during session creation cannot submit against or overwrite another figure');
+  check(await win.webContents.executeJavaScript(`!qaDelayedSubmit.ok && qaRequests.length===${beforeDelayedCreate} && qaScopedState.agentChat.currentSessionId===${JSON.stringify(originalChatSession)} && qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length===${originalReplyCount}`), 'Switching during session creation cannot submit against or overwrite another figure');
   pendingSelection = await tool({ action: 'list' });
   current = await tool({ action: 'open', illustration_id: freshFigureId, expected_library_revision: pendingSelection.library_revision, request_id: randomUUID() });
   await waitFor(async () => await win.webContents.executeJavaScript(`qaScopedState.agentChatContext.pluginContextId===${JSON.stringify(freshFigureId)}`), 'Selection did not return to new figure');
@@ -347,7 +488,7 @@ async function run() {
   current = await tool({ action: 'read' });
   check(current.revision === revision && current.objects.length === 3, 'Selecting an illustration restores its own editable objects');
   await waitFor(async () => await win.webContents.executeJavaScript(`qaScopedState.agentChatContext.pluginContextId===${JSON.stringify(originalId)}`), 'Chat did not follow original figure');
-  check(await win.webContents.executeJavaScript(`qaScopedState.agentChat.currentSessionId===${JSON.stringify(originalChatSession)} && qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length===3 && document.getElementById("agent-rail-message-input").value==="Unsent figure-specific change"`), 'Returning to the figure restores its own history, Codex session and draft');
+  check(await win.webContents.executeJavaScript(`qaScopedState.agentChat.currentSessionId===${JSON.stringify(originalChatSession)} && qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length===${originalReplyCount} && document.getElementById("agent-rail-message-input").value==="Unsent figure-specific change"`), 'Returning to the figure restores its own history, Codex session and draft');
   await win.webContents.executeJavaScript('document.getElementById("agent-rail-message-input").value="";window.qaDelayReply=true');
   check((await win.webContents.executeJavaScript('qaRail.submitExternalMessage("Add an arrow to this figure")')).ok, 'A figure-specific delayed request is accepted');
   await waitFor(async () => await win.webContents.executeJavaScript('Boolean(window.qaReleaseReply)'), 'Delayed agent reply did not start');
@@ -356,7 +497,7 @@ async function run() {
   await waitFor(async () => await win.webContents.executeJavaScript(`qaScopedState.agentChatContext.pluginContextId===${JSON.stringify(freshFigureId)}`), 'Chat did not switch during request');
   await win.webContents.executeJavaScript('window.qaDelayReply=false;window.qaReleaseReply()');
   await pause(100);
-  check(await win.webContents.executeJavaScript(`qaScopedState.agentChat.currentSessionId===${JSON.stringify(freshChatSession)} && qaScopedState.agentChat.messages.length===2 && qaScopedState.agentChat.sessions.length===1 && qaState.paperAgentChatSessions[${JSON.stringify(`plugin:scientific-illustration:item:${originalId}`)}].messages.filter(message=>message.role==="assistant").length===4`), 'A late response stays with its originating figure and does not import shared session lists');
+  check(await win.webContents.executeJavaScript(`qaScopedState.agentChat.currentSessionId===${JSON.stringify(freshChatSession)} && qaScopedState.agentChat.messages.length===2 && qaScopedState.agentChat.sessions.length===1 && qaState.paperAgentChatSessions[${JSON.stringify(`plugin:scientific-illustration:item:${originalId}`)}].messages.filter(message=>message.role==="assistant").length===${originalReplyCount+1}`), 'A late response stays with its originating figure and does not import shared session lists');
   check(await win.webContents.executeJavaScript('!document.getElementById("agent-rail-send-btn").disabled'), 'A running request in another figure does not lock the new chat');
   selection = await tool({ action: 'list' });
   current = await tool({ action: 'open', illustration_id: originalId, expected_library_revision: selection.library_revision, request_id: randomUUID() });
@@ -414,11 +555,12 @@ async function run() {
   win.setSize(320, 800); await pause(100);
   for (const expanded of [false, true]) {
     await win.webContents.executeJavaScript(`qaRailRuntime.setExpanded(${expanded})`); await pause(50);
-    check(await evaluate(`document.documentElement.scrollWidth<=innerWidth && document.getElementById("complexity").getBoundingClientRect().right<=innerWidth && document.getElementById("prompt-form").hidden===${expanded}`), `320px layout keeps controls in bounds with chat ${expanded ? 'open' : 'closed'}`);
+    check(await evaluate('document.documentElement.scrollWidth<=innerWidth && document.getElementById("complexity").getBoundingClientRect().right<=innerWidth && document.getElementById("prompt-form").hidden'), `320px populated layout keeps controls in bounds without a bottom composer with chat ${expanded ? 'open' : 'closed'}`);
   }
   await fs.writeFile(path.join(temp, 'narrow.png'), (await win.webContents.capturePage()).toPNG());
   await verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp });
   await verifyTextResize({ tool, evaluate, check, win, pause, temp });
+  await verifyTextBounds({ tool, evaluate, check, win, pause, temp });
   await verifyGrouping({ tool, evaluate, check, win, pause, temp });
   await verifyPlacement({ tool, evaluate, check, win, pause, temp });
   const review = { layout: 'Inspected both previews for clipping and overlap.', labels: 'Text stays separate and legible.',
@@ -436,7 +578,7 @@ async function run() {
   check((await inspect(reviewedImages)).inspection.complete, 'Agent review completes the inspection for that revision');
   current = await tool(apply([{ op: 'title', title: 'Changed after inspection' }]));
   check(!(await inspect(reviewedImages)).ok && !(await tool({ action: 'inspection_status' })).inspection.complete, 'An edit invalidates the prior inspection');
-  await evaluate('document.getElementById("undo").click()'); current = await tool({ action: 'read' });
+  await evaluate('illustrationWorkspace.history("undo")'); current = await tool({ action: 'read' });
   check(!current.inspection.complete, 'Undo still requires a fresh inspection');
   const beforeReload = await tool({ action: 'render', canvas: 'both' }); await inspect(beforeReload);
   await evaluate('location.reload()'); await pause(350);
@@ -458,6 +600,7 @@ async function run() {
     requestCodexAgentText: async args => {
       modelCalls += 1; Object.assign(mcpEnv, args.envOverrides);
       current = await tool({ action: 'read' });
+      await tool({ action: 'asset_list' });
       if (modelCalls === 1) await tool(apply([{ op: 'title', title: 'Mandatory inspection fixture' }]));
       else {
         const result = await inspect(await tool({ action: 'render', canvas: 'both' }));
@@ -467,8 +610,11 @@ async function run() {
     } });
   const accepted = await doesInspect.run(agentInput);
   check(accepted.ok && modelCalls === 2, 'Completion succeeds only after the follow-up inspection reaches the canvas');
+  delete mcpEnv.HIKARI_CODEX_REQUEST_CONTEXT;
+  await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
+  await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
   check(errors.length === 0, errors.join('\n'));
-  console.log(`Scientific Illustration host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+  console.log(`Figura host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
 }
 const timeout = setTimeout(() => { console.error('Plugin test timed out'); app.exit(1); }, 120000);
 run().then(() => 0, error => { console.error(error.stack || error); return 1; }).then(async code => {

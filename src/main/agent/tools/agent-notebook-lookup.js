@@ -292,6 +292,7 @@ function createAgentNotebookLookupRuntime(deps = {}) {
   }
 
   async function execute({
+    query: explicitQuery,
     message = '',
     parserPayload = {},
     snapshot = {},
@@ -306,10 +307,11 @@ function createAgentNotebookLookupRuntime(deps = {}) {
     detail = 'summary'
   } = {}) {
     const entities = ensureObject(ensureObject(parserPayload).entities);
+    // An explicit query, including an empty one, stays separate from filters.
     // Note: requested_output ('notebook_lookup') is a routing sentinel, not a search term,
     // so it must never seed the query — otherwise filter-only calls (e.g. notebook_state
     // alone) search for "notebook_lookup" and drop the very entries they should list.
-    const query = cleanText(
+    const query = typeof explicitQuery === 'string' ? cleanText(explicitQuery, 300) : cleanText(
       protocolName
         || entities.protocol_name
         || entities.notebook_name

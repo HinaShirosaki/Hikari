@@ -51,6 +51,9 @@ function uniqueName(name, used) {
 export function renamePrimers(primers, context = {}) {
   const used = new Set();
   return asArray(primers).map((primer) => {
+    if (primer.pcrStage === 'oligo-assembly') {
+      return { ...primer, name: uniqueName(primer.name, used) };
+    }
     const base = String(primer?.name || '').replace(/[_ ]([FR])$/, '');
     const role = String(primer?.role || '').toLowerCase();
     const direction = directionOf(primer);

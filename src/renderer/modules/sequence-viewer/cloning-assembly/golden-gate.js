@@ -2,7 +2,8 @@ import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { reverseComplementDna } from '../calculations/sequence.js';
 import { asArray, describeAmbiguousDna, normalizeSequence } from './sequence-utils.js';
 import { selectBindingWindow } from './overlap-windows.js';
-import { buildPrimerRecord, resolveFragmentPrimerTemplate, summarizePrimerPlan } from './primer-records.js';
+import { buildPrimerRecord, fragmentPrimerConfig, resolveFragmentPrimerTemplate, summarizePrimerPlan } from './primer-records.js';
+import { designOligoAssembly, prependOligoAssemblySteps, withOligoAssemblyTemplate } from './oligo-assembly.js';
 import { designWithThresholdFallback } from './strategy.js';
 import { sequenceContainsSite } from './restriction-ligation.js';
 
@@ -118,10 +119,10 @@ export function buildGoldenGatePlan(payload = {}) {
   ) {
     return infeasible('The native 4 nt junction overhangs are identical, reverse-complementary, or self-complementary. Shift the insert boundaries before using Golden Gate.');
   }
-  // A missing or mismatched insert template is reported by the resolver as a
-  // note on the primers; `insert` is already known to be non-empty here, so the
-  // resolver has no failing branch left to check.
-  const insertTemplateDesign = resolveFragmentPrimerTemplate({
+  // A de-novo insert gets its own oligo preparation. A declared donor retains
+  // its template provenance and the resolver's notes.
+  const insertFragment = {
+    id: 'golden_gate_insert',
     name: 'Golden Gate insert',
     sequence: insert,
     metadata: {
@@ -129,21 +130,26 @@ export function buildGoldenGatePlan(payload = {}) {
       templateSequence: insertTemplateSequence,
       templateName: insertTemplateName
     }
-  });
+  };
+  const insertTemplateDesign = resolveFragmentPrimerTemplate(insertFragment);
 
   const baseTail = `${buildTypeIisFlank(config)}${enzyme.site}${SPACER_BASE.repeat(enzyme.spacer)}`;
   const design = designWithThresholdFallback((thresholds) => {
+    const preparation = insertTemplateDesign.requiresOligoAssembly
+      ? designOligoAssembly(insertFragment, thresholds, config)
+      : { feasible: true, primers: [] };
+    if (!preparation.feasible) return preparation;
     // Candidate windows come from the desired fragments, while uniqueness is
     // checked against the DNA actually present in each PCR tube. The insert
     // tube holds the donor when one is given, otherwise this record -- the
     // pre-edit vector is the backbone's template, and never carries the insert.
-    const insertConfig = {
+    const insertConfig = fragmentPrimerConfig(insertFragment, {
       ...config,
       specificitySequence: donorSequence || normalizeSequence(payload?.insertTemplateHostSequence || '') || insertTemplateSequence,
       specificityCircular: donorSequence
         ? String(payload?.donor?.topology || 'circular').toLowerCase() !== 'linear'
         : Boolean(payload?.insertTemplateCircular)
-    };
+    });
     const backboneConfig = {
       ...config,
       specificitySequence: vectorTemplateSequence,
@@ -159,7 +165,7 @@ export function buildGoldenGatePlan(payload = {}) {
     if (!insertForward || !insertReverse || !backboneForward || !backboneReverse) {
       return { feasible: false, warnings: ['No complete, unique insert/backbone primer set matched the current threshold band for the Golden Gate tails.'] };
     }
-    const primers = [
+    const routePrimers = [
       buildPrimerRecord({
         name: 'gg_insert_F',
         role: 'golden-gate-forward',
@@ -205,6 +211,9 @@ export function buildGoldenGatePlan(payload = {}) {
         warnings: [`${enzyme.name} cut exposes the matched ${upstreamOverhang} junction overhang.`]
       })
     ];
+    const primers = [...preparation.primers,
+      ...withOligoAssemblyTemplate(routePrimers.slice(0, 2), insertTemplateDesign, insertFragment),
+      ...routePrimers.slice(2)];
     return {
       feasible: true,
       primers,
@@ -239,7 +248,8 @@ export function buildGoldenGatePlan(payload = {}) {
       digestTemperatureC: enzyme.digestTemperatureC,
       ligationTemperatureC: 16
     }],
-    stepByStepProcedure: buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang, insertTemplateName),
+    stepByStepProcedure: prependOligoAssemblySteps(buildProcedure(recordName, enzyme, upstreamOverhang, downstreamOverhang,
+      insertTemplateDesign.requiresOligoAssembly ? 'the oligo assembly product' : insertTemplateName), design.primers),
     warnings
   };
 
