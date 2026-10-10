@@ -12,6 +12,8 @@ import { buildProteinBuilderCloningPlan } from '../src/renderer/modules/sequence
 import { buildAssembledPlasmidPayload } from '../src/renderer/modules/sequence-viewer/protein-builder/assembly-payload.js';
 import { createProteinBuilderConfirmationActions } from '../src/renderer/modules/sequence-viewer/runtime/protein-builder-confirmation.js';
 import { translateDnaSequence } from '../src/renderer/modules/sequence-viewer/calculations/sequence.js';
+import { createMockDocument } from './support/runtime.js';
+import { getSequenceViewerElements } from '../src/renderer/modules/sequence-viewer/dom.js';
 
 function dna(length, seed) {
   let state = seed >>> 0, out = '';
@@ -203,4 +205,71 @@ test('late confirmation cannot replace a newly selected sequence or change its a
   assert.equal(state.records[1], other);
   assert.equal(state.activeEntryId, 'other');
   assert.equal(activated, false);
+});
+
+test('Needs review enables confirmation, saves generated primers, and retains the review status', async () => {
+  const lib = library({ vector: record('Parent vector', fixture.backbone), donor: fixture.donor });
+  const elements = getSequenceViewerElements(createMockDocument());
+  const state = { records: [fixture.product], selectedRecordIndex: 0, cloningDesign: {} };
+  const statuses = [];
+  let release;
+  let attemptedWrites = 0;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const bridge = { ...lib.bridge, async sequenceLibraryUpsert(payload) {
+    attemptedWrites += 1;
+    await gate;
+    return lib.bridge.sequenceLibraryUpsert(payload);
+  } };
+  const controller = createSequenceViewerCloningDesignController({
+    elements, state, getSelectedRecord: () => state.records[0],
+    getCloningDesignSource: () => fixture.source,
+    getBridge: () => bridge, getStoragePath: () => '/tmp/library',
+    setStatus: (message) => statuses.push(message)
+  });
+  controller.render();
+  const reviewPlan = { ...fixture.plan, feasible: false, warnings: ['Review this primer pair before use.'] };
+  state.cloningDesign.displayPlan = reviewPlan;
+  controller.render();
+  assert.match(elements.cloningDesignResult.innerHTML, /Needs review/);
+  assert.match(elements.cloningDesignResult.innerHTML, /Review this primer pair before use/);
+  assert.equal(elements.cloningDesignConfirmBtn.disabled, false);
+  assert.equal(elements.cloningDesignResult.innerHTML.includes('Order Primers'), false);
+
+  const pending = controller.confirmDesign();
+  assert.equal(elements.cloningDesignConfirmBtn.disabled, true);
+  assert.equal(elements.cloningDesignConfirmBtn.textContent, 'Confirming…');
+  assert.equal(await controller.confirmDesign(), null);
+  assert.equal(attemptedWrites, 1, 'a double click must not save twice');
+  release();
+  const result = await pending;
+  assert.ok(result.productEntry);
+  assert.equal(result.productEntry.status, 'temporary');
+  assert.equal(result.productPlaced, reviewPlan.primers.length);
+  assert.deepEqual(primerNames(reload(lib, result.productEntry.id)), reviewPlan.primers.map((primer) => primer.name).sort());
+  assert.equal(state.cloningDesign.displayPlan, reviewPlan);
+  assert.equal(state.cloningDesign.displayPlan.feasible, false);
+  assert.ok(statuses.some((message) => message.includes('Design still needs review')));
+  assert.equal(elements.cloningDesignConfirmBtn.disabled, false);
+});
+
+test('confirmation rejects a design without primers and a design for a different sequence', async () => {
+  const lib = library({});
+  const elements = getSequenceViewerElements(createMockDocument());
+  const state = { records: [fixture.product], selectedRecordIndex: 0, cloningDesign: {} };
+  const controller = createSequenceViewerCloningDesignController({
+    elements, state, getSelectedRecord: () => state.records[0],
+    getCloningDesignSource: () => fixture.source,
+    getBridge: () => lib.bridge, getStoragePath: () => '/tmp/library'
+  });
+  controller.render();
+  state.cloningDesign.displayPlan = { feasible: false, primers: [] };
+  controller.render();
+  assert.equal(elements.cloningDesignConfirmBtn.disabled, true);
+  assert.equal(await controller.confirmDesign(), null);
+  state.cloningDesign.displayPlan = fixture.plan;
+  state.records[0] = record('Different sequence', dna(500, 727));
+  controller.render();
+  assert.equal(elements.cloningDesignConfirmBtn.disabled, true);
+  assert.equal(await controller.confirmDesign(), null);
+  assert.equal(lib.writes.length, 0);
 });
