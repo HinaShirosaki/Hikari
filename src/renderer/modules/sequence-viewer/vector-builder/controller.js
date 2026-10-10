@@ -19,6 +19,12 @@ const EDITING_ELEMENT_MAP = {
   sequenceEditNote: 'vectorBuilderSequenceEditNote',
   sequenceEditInputWrap: 'vectorBuilderSequenceEditInputWrap',
   sequenceEditTextarea: 'vectorBuilderSequenceEditTextarea',
+  sequenceEditTagWrap: 'vectorBuilderSequenceEditTagWrap',
+  sequenceEditTagSelect: 'vectorBuilderSequenceEditTagSelect',
+  sequenceEditTagOptions: 'vectorBuilderSequenceEditTagOptions',
+  sequenceEditTagOrfSelect: 'vectorBuilderSequenceEditTagOrfSelect',
+  sequenceEditTagOrientation: 'vectorBuilderSequenceEditTagOrientation',
+  sequenceEditTagPreview: 'vectorBuilderSequenceEditTagPreview',
   sequenceEditDeleteMessage: 'vectorBuilderSequenceEditDeleteMessage',
   sequenceEditConfirmBtn: 'vectorBuilderSequenceEditConfirm',
   // Typing must not open the base editor over the Replace Feature dialog.
@@ -136,6 +142,8 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     elements: editingElements,
     state: editingState,
     getSelectedRecord,
+    getSelectedFeature: (record) => getFeatureByIndex(record, vb().selectedFeatureIndex),
+    getVisibleFeatures,
     // Keyboard edits target what the right-click menu would: a drag selection,
     // else the selected feature's span, else nothing (insert at the caret).
     getSequenceSelectionRange: (record) => {

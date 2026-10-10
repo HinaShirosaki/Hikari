@@ -7,9 +7,9 @@ import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
 import { designWithThresholdFallback } from './strategy.js';
 
 // Q5 / KLD site-directed mutagenesis (NEBaseChanger style). Two *non-overlapping*
-// back-to-back (divergent) primers amplify the whole plasmid exponentially. A
-// short edit rides on the forward 5' tail; a longer edit can be distributed
-// across both 5' tails. The linear product is then circularised with KLD
+// back-to-back (divergent) primers amplify the whole plasmid exponentially.
+// Insertions are distributed across the two 5' tails to minimize the longer
+// primer and balance the pair. The linear product is then circularised with KLD
 // (Kinase-Ligase-DpnI). This differs from the QuikChange
 // whole-plasmid route, which uses overlapping complementary primers + DpnI only.
 
@@ -22,11 +22,30 @@ const EDIT_LABELS = {
 
 // For circular templates the annealing regions may need to wrap past the origin,
 // so extend the flanks with a copy of the plasmid; linear templates cannot wrap.
-function flankWindows(sequence, startIndex, endIndex, circular) {
+function flankWindows(sequence, startIndex, endIndex, circular, maxPrimerLength) {
   const extension = circular ? sequence : '';
-  const downstream = `${sequence.slice(endIndex)}${extension}`.slice(0, 60);
+  const windowLength = Math.max(60, Number(maxPrimerLength) || DEFAULT_CLONING_PREFERENCES.maxPrimerLength);
+  const downstream = `${sequence.slice(endIndex)}${extension}`.slice(0, windowLength);
   const upstreamFull = `${extension}${sequence.slice(0, startIndex)}`;
-  return { downstream, upstream: upstreamFull.slice(-60) };
+  return { downstream, upstream: upstreamFull.slice(-windowLength) };
+}
+
+function q5BindingThresholds(thresholds, config) {
+  return {
+    ...thresholds,
+    primerLength: {
+      ...thresholds.primerLength,
+      max: Math.max(thresholds.primerLength.max, Number(config.maxPrimerLength) || DEFAULT_CLONING_PREFERENCES.maxPrimerLength)
+    }
+  };
+}
+
+function selectQ5BindingWindow(sequence, direction, thresholds, tailLength, config) {
+  // AT-rich vector leaders may need more than the shared 32-40 nt annealing
+  // limit. Extend only a failed window, keeping Tm, specificity and the full
+  // oligo length cap (including its insertion tail) unchanged.
+  return selectBindingWindow(sequence, direction, thresholds, tailLength, config)
+    || selectBindingWindow(sequence, direction, q5BindingThresholds(thresholds, config), tailLength, config);
 }
 
 function buildProcedure(recordName, editLabel, changeTail, splitTail = false) {
@@ -84,7 +103,7 @@ export function buildQ5KldPlan(payload = {}) {
 
   const editLabel = EDIT_LABELS[normalizedEdit.type] || 'edit';
   const changeTail = normalizedEdit.type === 'deletion' ? '' : normalizeSequence(normalizedEdit.editedSequence || '');
-  const { downstream, upstream } = flankWindows(originalSequence, normalizedEdit.startIndex, normalizedEdit.endIndex, circular);
+  const { downstream, upstream } = flankWindows(originalSequence, normalizedEdit.startIndex, normalizedEdit.endIndex, circular, config.maxPrimerLength);
   let selectedSplitTail = false;
 
   const design = designWithThresholdFallback((thresholds) => {
@@ -103,14 +122,19 @@ export function buildQ5KldPlan(payload = {}) {
       const downstreamAddedSequence = changeTail.slice(split);
       const forwardTail = downstreamAddedSequence;
       const reverseTail = reverseComplementDna(upstreamAddedSequence);
-      const forwardBinding = selectBindingWindow(downstream, 'forward', thresholds, forwardTail.length, specificityConfig);
-      const reverseBinding = selectBindingWindow(upstream, 'reverse', thresholds, reverseTail.length, specificityConfig);
+      const forwardBinding = selectQ5BindingWindow(downstream, 'forward', thresholds, forwardTail.length, specificityConfig);
+      const reverseBinding = selectQ5BindingWindow(upstream, 'reverse', thresholds, reverseTail.length, specificityConfig);
       if (!forwardBinding || !reverseBinding) {
         return;
       }
       const totalForwardLength = forwardTail.length + forwardBinding.length;
       const totalReverseLength = reverseTail.length + reverseBinding.length;
-      const score = Math.abs(totalForwardLength - totalReverseLength)
+      const score = normalizedEdit.type === 'insertion'
+        ? Math.max(totalForwardLength, totalReverseLength) * 1000
+          + (totalForwardLength + totalReverseLength) * 10
+          + Math.abs(totalForwardLength - totalReverseLength)
+          + Math.abs(forwardBinding.tm - reverseBinding.tm)
+        : Math.abs(totalForwardLength - totalReverseLength)
         + Math.max(totalForwardLength, totalReverseLength) * 0.05
         + Math.abs(forwardBinding.tm - reverseBinding.tm)
         + (split > 0 ? 1000 : 0);
@@ -120,8 +144,9 @@ export function buildQ5KldPlan(payload = {}) {
     });
     if (!best) {
       // Probe with no tail: the most room a binding window can get here.
-      const reason = describeBindingWindowFailure(downstream, 'forward', thresholds, 0, specificityConfig)
-        || describeBindingWindowFailure(upstream, 'reverse', thresholds, 0, specificityConfig);
+      const extendedThresholds = q5BindingThresholds(thresholds, specificityConfig);
+      const reason = describeBindingWindowFailure(downstream, 'forward', extendedThresholds, 0, specificityConfig)
+        || describeBindingWindowFailure(upstream, 'reverse', extendedThresholds, 0, specificityConfig);
       return {
         feasible: false,
         warnings: [

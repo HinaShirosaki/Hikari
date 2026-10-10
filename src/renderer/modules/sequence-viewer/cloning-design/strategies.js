@@ -25,8 +25,12 @@ function cloningStrategyUsesInsertRange(strategy) {
 // donor picker appear together.
 const cloningStrategyUsesDonor = cloningStrategyUsesInsertRange;
 
+function canConfirmCloningDesignPlan(displayPlan) {
+  return Boolean(asArray(displayPlan?.primers).length);
+}
+
 function isCloningDesignPlanActionable(displayPlan) {
-  return Boolean(displayPlan?.feasible && asArray(displayPlan?.primers).length);
+  return Boolean(displayPlan?.feasible && canConfirmCloningDesignPlan(displayPlan));
 }
 
 const IN_FUSION_PROCEDURE = Object.freeze([
@@ -87,5 +91,6 @@ export {
   STRATEGY_WHOLE_PLASMID,
   cloningStrategyUsesDonor,
   cloningStrategyUsesInsertRange,
+  canConfirmCloningDesignPlan,
   isCloningDesignPlanActionable
 };

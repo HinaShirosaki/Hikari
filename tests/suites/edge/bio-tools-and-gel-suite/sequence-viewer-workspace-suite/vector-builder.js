@@ -856,6 +856,37 @@ test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in stran
   assert.deepEqual(await insertTenBases(1, 'insert-bases-three'), ['His6 (7..24)', 'Terminator (41..60)']);
 });
 
+test('[EDGE] vector builder insert dialogs encode library tags in the selected CDS orientation', async () => {
+  const { reverseComplementDna, translateDnaSequence } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js')
+  );
+  for (const strand of [1, -1]) {
+    for (const side of ['five', 'three']) {
+      const feature = { name: 'Target CDS', type: 'CDS', strand, source: 'external', segments: [{ start: 6, end: 24 }] };
+      const { document } = bootVectorBuilder([feature]);
+      const map = document.getElementById('sequence-viewer-vector-builder-map');
+      trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+      trigger(document.getElementById('sequence-viewer-vector-builder-context-menu'), 'click', {
+        target: contextActionTarget(`insert-bases-${side}`)
+      });
+      const prefix = 'sequence-viewer-vector-builder-sequence-edit';
+      assert.equal(document.getElementById(`${prefix}-tag-wrap`).hidden, false);
+      assert.equal(document.getElementById(`${prefix}-tag-orf`).value, '0');
+      const tag = document.getElementById(`${prefix}-tag-select`);
+      tag.value = 'tag:flag';
+      trigger(tag, 'change');
+      const dna = document.getElementById(`${prefix}-textarea`).value;
+      assert.equal(translateDnaSequence(strand === -1 ? reverseComplementDna(dna) : dna).protein, 'DYKDDDDK');
+      trigger(document.getElementById(`${prefix}-form`), 'submit', { preventDefault() {} });
+      await flushAsync();
+      assert.equal(document.getElementById(`${prefix}-overlay`).hidden, true);
+      // The actual sequence edit retains the 5'/3' menu's strand-aware anchor.
+      const atStart = (strand === 1) === (side === 'five');
+      assert.ok(map.innerHTML.includes(`Target CDS (${atStart ? '31..48' : '7..24'})`));
+    }
+  }
+});
+
 test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and keeps both boxes in step', () => {
   const { document } = bootVectorBuilder([
     { name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
