@@ -7,8 +7,6 @@ export function createPersonalInventoryContext({
   persist,
   createId,
   safeText,
-  onSamplesChanged,
-  onSampleRecorded,
   onInventoryChanged
 }) {
   const elements = {
@@ -63,16 +61,6 @@ export function createPersonalInventoryContext({
     pendingStructureDrafts,
     helpers,
     structurePasteContext: null,
-    notifySamplesChanged() {
-      if (typeof onSamplesChanged === 'function') {
-        onSamplesChanged();
-      }
-    },
-    notifySampleRecorded(sample) {
-      if (typeof onSampleRecorded === 'function') {
-        onSampleRecorded(sample);
-      }
-    },
     notifyInventoryChanged() {
       if (typeof onInventoryChanged === 'function') {
         onInventoryChanged();

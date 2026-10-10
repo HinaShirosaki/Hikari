@@ -2,6 +2,7 @@ import { initLabCommonInventory } from '../modules/lab-common-inventory/index.js
 
 export const labCommonInventoryManifest = {
   key: 'labCommonInventory',
+  historyStateKeys: ['labInventory'],
   init: initLabCommonInventory,
   viewKey: 'LAB_COMMON_INVENTORY',
   bootOrder: 40,

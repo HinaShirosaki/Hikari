@@ -28,7 +28,8 @@ const paths = {
   alignCenter: ['M4 5h16M7 10h10M4 15h16M7 20h10'],
   alignRight: ['M4 5h16M10 10h10M4 15h16M10 20h10'],
   arrow: ['M12 19V5m-6 6 6-6 6 6'],
-  image: ['M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5', 'M8 7h.01']
+  image: ['M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5', 'M8 7h.01'],
+  crop: ['M6 3v15h15M3 6h15v15']
 };
 export function icon(name) {
   const svg = element('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', class: 'ui-icon' });

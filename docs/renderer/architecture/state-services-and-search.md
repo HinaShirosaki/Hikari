@@ -45,7 +45,7 @@ There are two persistence layers to keep in mind:
 1. `persistState(state)` in `modules/app-state/index.js`
    - writes the local renderer snapshot to `localStorage`
 2. `persist()` in `core/start-hikari-core.js`
-   - creates an undo checkpoint through `undoService`
+   - records changes in the initiating module's history through `undoService`
    - normalizes persisted storage paths
    - writes local storage
    - optionally auto-saves the `.json` snapshot through the main-process bridge
@@ -83,7 +83,7 @@ That gives the renderer a light dependency-injection layer without requiring dir
 | `protocolService.js` | protocol imports, external saved-protocol merges, share/import refreshes, and paper-to-protocol draft creation |
 | `notebookService.js` | rerender notebooks, workflows, and assay links when notebook pages change |
 | `projectService.js` | rerender all project-bound views when projects change |
-| `inventoryService.js` | rerender sample registry and route dashboard sample-search handoffs |
+| `inventoryService.js` | rerender Samples (and protocol placeholder presets) after sample settings change, and route dashboard sample-search handoffs |
 | `analysisService.js` | update project notebook rollups after assay changes |
 | `modules/sequence-viewer/service.js` | hand off external payloads into the sequence viewer and open the detail view (built by `services/index.js` as `rendererServices.sequence`, but owned by the feature) |
 
@@ -91,7 +91,7 @@ Two more services are created by the core rather than by `createRendererServices
 
 | Service | Main job |
 | --- | --- |
-| `undoService.js` | global undo/redo over persisted state snapshots; wraps `persist()`, coalesces edits to the same field, skips external (main-process) writes, and lets a focused plugin frame claim the undo buttons |
+| `undoService.js` | routes shared controls to independent module histories; records field/record patches, coalesces same-field edits, invalidates overlapping external changes, and delegates to focused plugin editors |
 | `unsavedChangesService.js` | answers main's close request: asks registered editors for unsaved changes (and plugin frames through the bridge), shows the quit dialog, replies quit or cancel |
 
 The rest of the folder is shared adapters rather than fan-out services:

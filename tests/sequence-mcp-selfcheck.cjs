@@ -250,13 +250,15 @@ test('all seven primer routes validate physical products; missing donors and cor
   const patch = { start: 350, end: 350, sequence: insert };
   const desired = model.applyPatches(original, [patch]).record;
   const absent = model.comparePrimerRoutes(original, desired, [patch], ['golden-gate', 'overlap-extension'], null);
-  // Naming no template only advises the interactive designer; the MCP contract
-  // still refuses the route, because it holds the templates and could not
-  // reconstruct the product or verify a binding site on any of them.
+  // Naming no template makes the interactive designer prepare the insert from
+  // overlapping oligos; the MCP contract still refuses the route, because it
+  // holds the templates and could not reconstruct the product or verify a
+  // binding site for the oligo pool on any of them.
   assert.equal(absent.status, 'no_feasible_design');
   assert.ok(absent.routes.every(r => !r.feasible
     && r.stages[0].product_matches === false
-    && r.stages[0].warnings.some(w => /names no PCR template/.test(w))));
+    && r.stages[0].primers.some(p => p.pcrStage === 'oligo-assembly' && !p.binding_verified)
+    && r.stages[0].warnings.some(w => /oligo \d+: a unique physical-template binding site was not verified/.test(w))));
   const donor = { id: 'donor', name: 'Donor', sequence: randomDna(1780).slice(1680) + insert + randomDna(1880).slice(1780), topology: 'linear' };
   const designs = model.comparePrimerRoutes(original, desired, [patch], undefined, donor);
   for (const method of ['gibson', 'in-fusion', 'golden-gate', 'overlap-extension']) assert.equal(designs.routes.find(r => r.method === method).feasible, true, method);

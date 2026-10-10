@@ -14,27 +14,22 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
-const { asArray, cleanText, ensureObject, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
 const { withStorageRootWrite } = require('./write-coordinator');
 const { PAPER_RECORD_FILE_SUFFIX } = require('./paper-discovery');
+const { removeGeneratedMarkdownSafely } = require('./record-markdown');
+const { writeRecordDocumentSafely } = require('./record-markdown/document-storage');
+const { buildNotebookPageFolderPath, buildProtocolFolderName, isWorkflowNotebookEntry, protocolFoldersById, snapshotDocumentInputs } = require('./record-markdown/record-paths');
+const { preflightDocuments } = require('./record-markdown/preflight');
+const { readRecordDocument } = require('./record-markdown/document-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
-const PROTOCOL_FILE_NAME = 'protocol.json';
-
-function buildProtocolFolderName(protocol, index = 0) {
-  const source = ensureObject(protocol);
-  const id = cleanText(source.id, 220);
-  const name = cleanText(source.name, 220);
-  if (name || id) {
-    return `${sanitizeFolderName(name, 'Protocol')}__${sanitizeFolderName(id, `protocol_${index + 1}`)}`;
-  }
-  return sanitizeFolderName(`protocol_${index + 1}`, `protocol_${index + 1}`);
-}
+const PROTOCOL_FILE_NAME = 'protocol.md';
 
 function buildProtocolsSidecar(snapshot, updatedAt) {
   return {
@@ -54,42 +49,47 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
   };
 }
 
-async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt) {
+async function writeProtocolFiles(protocolRootPath, snapshot, updatedAt, markdownWarnings, skippedRecords) {
   const protocols = asArray(snapshot.protocols).map((rawProtocol) => ensureObject(rawProtocol));
   if (!protocolRootPath) {
     return [];
   }
   await fs.mkdir(protocolRootPath, { recursive: true });
   const existingEntries = await fs.readdir(protocolRootPath, { withFileTypes: true }).catch(() => []);
+  const existingFoldersById = await protocolFoldersById(protocolRootPath, protocols);
   const activeFolders = new Set();
   const writtenPaths = [];
-  for (let index = 0; index < protocols.length; index += 1) {
-    const protocol = protocols[index];
-    const folderName = buildProtocolFolderName(protocol, index);
+  await forEachInBatches(protocols, async (protocol, index) => {
+    // Stable folders preserve document edits, attachments and citations on rename.
+    const folderName = existingFoldersById.get(protocol.id) || buildProtocolFolderName(protocol, index);
     activeFolders.add(folderName);
-    const folderPath = path.join(protocolRootPath, folderName);
-    const filePath = path.join(folderPath, PROTOCOL_FILE_NAME);
-    await fs.mkdir(folderPath, { recursive: true });
-    await writeFileAtomic(fs, filePath, JSON.stringify({
+    const filePath = path.join(protocolRootPath, folderName, PROTOCOL_FILE_NAME);
+    writtenPaths.push(filePath);
+    const payload = {
       schema_name: PROTOCOL_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
       updated_at: updatedAt,
       protocol
-    }, null, 2));
-    writtenPaths.push(filePath);
-  }
+    };
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'protocol', snapshot, storageRoot: path.dirname(protocolRootPath) }, markdownWarnings, skippedRecords);
+    Object.assign(protocol, saved.record);
+  });
 
   // A deleted or renamed protocol loses its record file; the folder goes only
   // once nothing else is in it, so files the user kept there survive.
+  const activeIds = new Set(protocols.map((protocol) => protocol.id).filter(Boolean));
   for (const entry of existingEntries) {
     if (!entry.isDirectory() || activeFolders.has(entry.name)) {
       continue;
     }
     const filePath = path.join(protocolRootPath, entry.name, PROTOCOL_FILE_NAME);
-    if (await isUnreadableJsonFile(filePath)) {
+    const stored = await readRecordDocument(filePath, 'protocol');
+    // Unreadable records and copies of a protocol still in use are kept.
+    if ((stored.exists && !stored.ok) || activeIds.has(stored.data?.protocol?.id)) {
       continue;
     }
-    await fs.rm(filePath, { force: true });
+    await removeGeneratedMarkdownSafely(filePath, markdownWarnings);
+    await fs.rm(filePath.replace(/\.md$/, '.json'), { force: true });
     await fs.rmdir(path.join(protocolRootPath, entry.name)).catch(() => {});
   }
 
@@ -170,53 +170,32 @@ async function writePaperRecordFiles(storageRootPath, papers, updatedAt) {
   }
 }
 
-function isWorkflowNotebookEntry(entry) {
-  const workflowContext = ensureObject(entry?.workflowContext);
-  return Boolean(
-    cleanText(workflowContext.workflowId, 220)
-    || cleanText(workflowContext.workflowEntryId, 220)
-    || cleanText(workflowContext.workflowBlockId, 220)
-  );
-}
-
-function buildNotebookPageFolderPath(storageRootPath, entry) {
-  const normalizedEntry = ensureObject(entry);
-  const existingStorageFolder = cleanText(normalizedEntry.storageFolder, 2400);
-  if (existingStorageFolder && isPathInside(storageRootPath, existingStorageFolder)) {
-    return path.resolve(existingStorageFolder);
-  }
-  const projectFolder = sanitizeFolderName(normalizedEntry.projectName || 'Untitled_Project', 'Untitled_Project');
-  const pageFolder = `${sanitizeFolderName(
-    normalizedEntry.protocolName || normalizedEntry.id || 'Notebook_Page',
-    'Notebook_Page'
-  )}__${sanitizeFolderName(normalizedEntry.id, 'page')}`;
-  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder);
-}
-
 function compactNotebookEntryForFolder(entry) {
   return {
     ...ensureObject(entry),
+    storageDocumentFile: undefined,
     storageFolder: ''
   };
 }
 
-async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
+async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt, markdownWarnings, skippedRecords) {
   const writtenPaths = [];
   const notebookEntries = asArray(snapshot.notebookEntries)
     .map((entry) => ensureObject(entry))
-    .filter((entry) => !isWorkflowNotebookEntry(entry));
-  for (const entry of notebookEntries) {
+    .filter((entry) => !isWorkflowNotebookEntry(entry, snapshot.workflows));
+  await forEachInBatches(notebookEntries, async (entry) => {
     const folderPath = buildNotebookPageFolderPath(storageRootPath, entry);
-    const filePath = path.join(folderPath, 'page.json');
-    await fs.mkdir(folderPath, { recursive: true });
-    await writeFileAtomic(fs, filePath, JSON.stringify({
+    const filePath = path.join(folderPath, 'page.md');
+    writtenPaths.push(filePath);
+    const payload = {
       schema_name: NOTEBOOK_SIDECAR_SCHEMA,
       schema_version: SIDECAR_SCHEMA_VERSION,
       updated_at: updatedAt,
       notebookEntry: compactNotebookEntryForFolder(entry)
-    }, null, 2));
-    writtenPaths.push(filePath);
-  }
+    };
+    const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot, storageRoot: storageRootPath }, markdownWarnings, skippedRecords);
+    if (!saved.skipped) Object.assign(entry, saved.record, { storageFolder: folderPath, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
+  });
   return writtenPaths;
 }
 
@@ -279,6 +258,9 @@ async function syncBundleFromSnapshotUnlocked({
     };
   }
   const updatedAt = new Date().toISOString();
+  const markdownWarnings = [];
+  const skippedRecords = [];
+  preflightDocuments(await snapshotDocumentInputs(storageRootPath, safeSnapshot));
   await fs.mkdir(storageRootPath, { recursive: true });
   await releaseOfficialMcpSkillsForWorkspace(storageRootPath, { snapshot: safeSnapshot });
   if (bundlePaths.dataFilePath) {
@@ -291,9 +273,9 @@ async function syncBundleFromSnapshotUnlocked({
     bundlePaths.paperMarkdownRootPath ? fs.mkdir(bundlePaths.paperMarkdownRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.samplesRootPath ? fs.mkdir(bundlePaths.samplesRootPath, { recursive: true }) : Promise.resolve()
   ]);
-  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt);
+  const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt, markdownWarnings, skippedRecords);
   const notebookPageFolderPaths = bundlePaths.storageRootPath
-    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt)
+    ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt, markdownWarnings, skippedRecords)
     : [];
   const projectMemoryFilePaths = bundlePaths.storageRootPath
     ? await writeProjectMemoryFiles(
@@ -304,7 +286,6 @@ async function syncBundleFromSnapshotUnlocked({
       typeof getAgentMemoryFilePath === 'function' ? cleanText(getAgentMemoryFilePath(), 2400) : ''
     )
     : [];
-  await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
   await writeSampleContainers(bundlePaths.samplesRootPath, safeSnapshot, updatedAt);
   const experimentLogPath = await writeExperimentLogSidecar(
     bundlePaths.experimentLogPath,
@@ -326,13 +307,23 @@ async function syncBundleFromSnapshotUnlocked({
     storagePath: safeSnapshot?.settings?.storagePath,
     snapshot: safeSnapshot
   });
+  const allSkipped = [...skippedRecords, ...workflowSync.skippedRecords];
+  for (const [kind, file] of [['notebook', bundlePaths.notebookPagesPath], ['protocol', bundlePaths.basePath ? `${bundlePaths.basePath}.protocols.json` : '']]) {
+    if (!file || allSkipped.some(record => record.kind === kind)) continue;
+    await fs.copyFile(file, file.replace(/\.json$/, '.pre-markdown.json'), fs.constants.COPYFILE_EXCL)
+      .catch(error => { if (!['ENOENT', 'EEXIST'].includes(error.code)) throw error; });
+    await fs.rm(file, { force: true });
+  }
   return {
     bundlePaths,
+    markdownRecords: { protocols: safeSnapshot.protocols, notebookEntries: safeSnapshot.notebookEntries },
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
       protocolFilePaths,
       notebookPagesPath: '',
       notebookPageFolderPaths,
+      markdownWarnings: [...markdownWarnings, ...workflowSync.markdownWarnings],
+      skippedRecords: [...skippedRecords, ...workflowSync.skippedRecords],
       projectMemoryFilePaths,
       experimentLogPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,

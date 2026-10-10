@@ -69,6 +69,7 @@ export function normalizeExternalProtocolRecord(protocol, options = {}) {
     name,
     createdAt,
     updatedAt,
+    ...(protocol.markdownRevision ? { markdownRevision: structuredClone(protocol.markdownRevision) } : {}),
     purpose: String(protocol.purpose || protocol.description || '').trim(),
     materials: normalizeProtocolMaterials(protocol.materials),
     steps,
@@ -91,7 +92,7 @@ export function upsertProtocolRecord(protocols, protocol) {
   }
   const existingIndex = protocols.findIndex((item) => String(item?.id || '') === protocol.id);
   if (existingIndex >= 0) {
-    protocols[existingIndex] = protocol;
+    protocols[existingIndex] = { ...protocols[existingIndex], ...protocol };
   } else {
     protocols.push(protocol);
   }

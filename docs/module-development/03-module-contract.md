@@ -34,7 +34,7 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | Option | Type | Source | Meaning |
 | --- | --- | --- | --- |
 | `state` | object | `loadState()` | the single mutable state object — mutate in place, then call `persist()` |
-| `persist` | `() => void` | renderer core | records an undo checkpoint, normalizes storage paths, writes localStorage, and auto-saves to disk when configured |
+| `persist` | `(options?) => void` | module history | records a transaction in this module's history, normalizes storage paths, writes localStorage, and auto-saves to disk when configured |
 | `createId` | `() => string` | `lib/app-utils.js` | timestamp+random ID generator for new entities |
 | `safeText` | `(value) => string` | `lib/app-utils.js` | HTML-escape helper, use whenever you build innerHTML |
 | `cssEscape` | `(value) => string` | `lib/app-utils.js` | escapes a value for use inside a CSS attribute selector |
@@ -53,6 +53,16 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | `onOpen<Other>` | function | renderer core | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
 
 Look at [src/renderer/module-manifests/assay.js](../../src/renderer/module-manifests/assay.js) or [src/renderer/module-manifests/biology-notebook.js](../../src/renderer/module-manifests/biology-notebook.js) for the preferred wiring shape. Project creation and project dashboards are owned by the Biology Notebook's `project/` package; there is no separate project manifest. If your module needs several other modules to already exist, put that dependency in the manifest `createOptions` callback; the runtime passes the shared `modules` object after each group is initialized.
+
+Each initialized module exposes `module.history` with `persist`, `undo`, `redo`, and `getHistoryState`. The manifest runtime binds `persist` before calling `createOptions`; retain that callback for asynchronous work instead of choosing an owner from the current view at completion.
+
+History records the field and record changes made by one `persist()` call. Update all records belonging to one action before persisting, including links into another module. Records with IDs are addressed by ID, so independent edits and additions in other modules survive undo. An overlapping edit from another module or an external writer invalidates the affected history; disjoint histories remain available. Save acknowledgments (`markdownRevision`) are not undoable content.
+
+Manifests declare `historyStateKeys` for refreshing a visible module after another editor, such as the agent rail, restores related records. `renderHistory` can override the ordinary renderer; restoration is independent of `bootOrder`. Hidden, unrelated modules are not rerendered. Editors that report `hasUnsavedChanges()` retain their drafts and block restoration that would rerender them until the draft is saved or discarded. Native text undo remains local to focused input fields.
+
+The default history owner is the manifest key. Set `historyOwner` only when multiple implementations belong to one user-facing module and should share its history. Global controls follow the active module, or the focused agent rail/plugin. Empty module history never falls back to another module.
+
+Use `persist({ external: true })` for outside updates and `persist({ barrier: true })` for irreversible file side effects. A barrier clears the initiating module's history and any overlapping histories. Workspace replacement uses `persist({ resetHistory: true })` or the core reset hook to clear all histories; a changed storage root also resets automatically. Local file editors and plugin canvases need their own history implementation for data outside the shared renderer state; a persistence callback cannot reverse filesystem side effects.
 
 A typical module signature:
 
@@ -201,7 +211,7 @@ protocol.renderList?.();
 
 ```
 biologyNotebook, protocol, agentChat, agentChatRail, workflowManagement,
-papers, labCommonInventory, personalInventory, sampleRegistry, assay,
+papers, labCommonInventory, personalInventory, assay,
 sequenceViewer, toolBox, settings, homeDashboard
 ```
 

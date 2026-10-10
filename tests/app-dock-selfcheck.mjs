@@ -31,7 +31,7 @@ const windowObject = { innerWidth: 4000 };
 const dock = createAppDock({
   documentObject, windowObject, dockNav, moreMenu, moreBtn, expandedDockApps,
   getActiveViewId: () => activeViewId,
-  pageTitle, TITLES: {}, normalize: (id) => id, resolveNavigationViewId,
+  pageTitle, TITLES: {}, resolveNavigationViewId,
   getAppForView: (id) => apps.find((app) => app.viewId === resolveNavigationViewId(id))
 });
 const navigate = (id) => {
@@ -103,7 +103,7 @@ const offlineDock = createAppDock({
   documentObject, windowObject, dockNav, moreMenu, moreBtn, expandedDockApps,
   isAppShown: (app) => app.id !== 'agent',
   getActiveViewId: () => activeViewId,
-  pageTitle, TITLES: {}, normalize: (id) => id, resolveNavigationViewId,
+  pageTitle, TITLES: {}, resolveNavigationViewId,
   getAppForView: (id) => apps.find((app) => app.viewId === resolveNavigationViewId(id))
 });
 offlineDock.renderAppNavigation(activeViewId);

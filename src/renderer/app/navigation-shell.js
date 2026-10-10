@@ -9,26 +9,17 @@ export { isAgentChatRailAvailable } from './navigation-shell/agent-rail.js';
 
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 
-export function normalizeViewId(VIEWS, viewId) {
-  return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
-}
-
 export function applyAppearanceSnapshot(appearance, rootDocument = document) {
   return applyAppearanceToDocument(appearance, rootDocument, 16);
 }
 
-function createNavigationAliasMap(aliases, normalize) {
+function createNavigationAliasMap(aliases) {
   const entries = aliases instanceof Map
     ? Array.from(aliases.entries())
     : Array.isArray(aliases)
       ? aliases
       : Object.entries(aliases || {});
-  return new Map(entries
-    .map(([sourceViewId, navigationViewId]) => [
-      normalize(sourceViewId),
-      normalize(navigationViewId)
-    ])
-    .filter(([sourceViewId, navigationViewId]) => sourceViewId && navigationViewId));
+  return new Map(entries.filter(([sourceViewId, navigationViewId]) => sourceViewId && navigationViewId));
 }
 
 export function createNavigationShell({
@@ -45,16 +36,12 @@ export function createNavigationShell({
   documentObject = document,
   windowObject = window
 }) {
-  const normalize = (viewId) => normalizeViewId(VIEWS, viewId);
-  const navigationAliases = createNavigationAliasMap(navigationViewAliases, normalize);
-  const resolveNavigationViewId = (viewId) => {
-    const normalizedViewId = normalize(viewId);
-    return navigationAliases.get(normalizedViewId) || normalizedViewId;
-  };
+  const navigationAliases = createNavigationAliasMap(navigationViewAliases);
+  const resolveNavigationViewId = (viewId) => navigationAliases.get(viewId) || viewId;
   const appsById = new Map(APP_REGISTRY.map((app) => [app.id, app]));
-  const appsByViewId = new Map(APP_REGISTRY.map((app) => [normalize(app.viewId), app]));
+  const appsByViewId = new Map(APP_REGISTRY.map((app) => [app.viewId, app]));
   const navigationApps = APP_REGISTRY.filter((app) => app.hiddenFromNavigation !== true);
-  const validStartupViewIds = new Set(navigationApps.map((app) => normalize(app.viewId)));
+  const validStartupViewIds = new Set(navigationApps.map((app) => app.viewId));
   const dockApps = APP_DOCK_ORDER
     .map((id) => appsById.get(id))
     .filter((app) => app && app.hiddenFromNavigation !== true);
@@ -77,7 +64,7 @@ export function createNavigationShell({
   let lastViewPersistenceEnabled = false;
 
   function isValidStartupViewId(viewId) {
-    return validStartupViewIds.has(normalize(String(viewId || '').trim()));
+    return validStartupViewIds.has(String(viewId || '').trim());
   }
 
   function rememberLastActiveView(viewId) {
@@ -85,7 +72,7 @@ export function createNavigationShell({
       return;
     }
     try {
-      windowObject.localStorage.setItem(LAST_ACTIVE_VIEW_STORAGE_KEY, normalize(viewId));
+      windowObject.localStorage.setItem(LAST_ACTIVE_VIEW_STORAGE_KEY, viewId);
     } catch {}
   }
 
@@ -95,7 +82,7 @@ export function createNavigationShell({
       if (!isValidStartupViewId(storedViewId)) {
         return '';
       }
-      return normalize(storedViewId);
+      return storedViewId;
     } catch {
       return '';
     }
@@ -105,7 +92,7 @@ export function createNavigationShell({
     const startupSettings = state.settings?.startup || {};
     const configuredDefaultView = String(startupSettings.defaultViewId || '').trim();
     const defaultViewId = isValidStartupViewId(configuredDefaultView)
-      ? normalize(configuredDefaultView)
+      ? configuredDefaultView
       : VIEWS.HOME;
     if (startupSettings.rememberLastView === true) {
       const rememberedViewId = readLastActiveView();
@@ -138,7 +125,6 @@ export function createNavigationShell({
     pageSubtitle,
     expandedDockApps,
     isAppShown: (app) => app.viewId !== VIEWS.AGENT || isAgentAvailable(documentObject),
-    normalize,
     getActiveViewId,
     getAppForView,
     resolveNavigationViewId
@@ -190,11 +176,7 @@ export function createNavigationShell({
   }
 
   function getActiveViewId() {
-    const activeViews = views.filter((view) => view.classList.contains('is-active')).map((view) => view.id);
-    if (activeViews.includes(VIEWS.SAMPLE_REGISTRY) || activeViews.includes(VIEWS.PERSONAL_INVENTORY)) {
-      return VIEWS.SAMPLE_REGISTRY;
-    }
-    return activeViews[0] || VIEWS.HOME;
+    return views.find((view) => view.classList.contains('is-active'))?.id || VIEWS.HOME;
   }
 
   const agentChatRailRuntime = createAgentChatRail({
@@ -222,8 +204,7 @@ export function createNavigationShell({
 
 
   function showView(viewId) {
-    const requestedView = normalize(viewId);
-    const nextView = requestedView === VIEWS.AGENT && isAgentOffline(documentObject) ? VIEWS.HOME : requestedView;
+    const nextView = viewId === VIEWS.AGENT && isAgentOffline(documentObject) ? VIEWS.HOME : viewId;
     if (lastViewPersistenceEnabled) {
       rememberLastActiveView(nextView);
     }
@@ -232,12 +213,8 @@ export function createNavigationShell({
       documentObject.body.classList.remove('sequence-viewer-fixed-scroll');
     }
 
-    const showContainerWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
     views.forEach((view) => {
-      const active = showContainerWorkspace
-        ? view.id === VIEWS.PERSONAL_INVENTORY
-        : view.id === nextView;
-      view.classList.toggle('is-active', active);
+      view.classList.toggle('is-active', view.id === nextView);
     });
 
     const activeNavView = resolveNavigationViewId(nextView);
@@ -466,7 +443,6 @@ export function createNavigationShell({
     enableLastViewPersistence,
     getActiveViewId,
     initNavigation,
-    normalizeViewId: normalize,
     openAgentChatRail: agentChatRailRuntime.open,
     renderAppNavigation,
     resolveStartupViewId,

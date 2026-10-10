@@ -56,7 +56,7 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
       row.append(button, remove); $('saved-assets').append(row); observer.observe(image);
     }
     $('assets-hint').textContent = library.reusable_assets.length
-      ? `Click to insert on ${getCanvas() === 'main' ? 'Main' : 'Scratch'}. Copies stay editable.` : 'Select components or a group, then choose Save as asset.';
+      ? `Click to insert on ${getCanvas() === 'main' ? 'Main' : 'Scratch'}. Copies stay editable.` : 'Import artwork, or select components and choose Save as asset.';
     $('assets-empty').hidden = entries.length > 0;
     $('assets-empty').textContent = library.reusable_assets.length ? 'No assets match your search.' : 'Your reusable components will appear here.';
     if (focusedId && action) ($('saved-assets').querySelector(`[data-saved-asset="${focusedId}"] [data-asset-action="${action}"]`) || $('asset-search')).focus({ preventScroll: true });

@@ -5,11 +5,7 @@ import { createSampleRenderingStateHelpers } from './state-sample-rendering.js';
 
 export function createPersonalInventoryStateHelpers({ state, safeText, uiState }) {
   const containerHelpers = createContainerStateHelpers({ state, uiState });
-  const sampleHelpers = createSampleStateHelpers({
-    state,
-    safeText,
-    getWellLabel: containerHelpers.getWellLabel
-  });
+  const sampleHelpers = createSampleStateHelpers({ state, safeText });
   const sampleRenderingHelpers = createSampleRenderingStateHelpers({
     state,
     safeText,

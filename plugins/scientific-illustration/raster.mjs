@@ -17,6 +17,20 @@ export function fitRasterBox(width, height, requestedWidth = width) {
   return { width: width * scale, height: height * scale };
 }
 
+// Keep a crop at its original visual position, including stretched/rotated layers.
+export function cropRasterPatch(object, image, crop) {
+  if (![image.width, image.height, crop.width, crop.height].every(value => Number.isFinite(value) && value > 0)
+    || ![crop.x, crop.y].every(value => Number.isFinite(value) && value >= 0)
+    || crop.x + crop.width > image.width || crop.y + crop.height > image.height) throw new Error('Choose a crop inside the image.');
+  const width = object.width * crop.width / image.width, height = object.height * crop.height / image.height;
+  if (width < 1 || height < 1) throw new Error('The crop is too small for this layer. Select a larger area.');
+  const dx = object.width * (crop.x + crop.width / 2) / image.width - object.width / 2;
+  const dy = object.height * (crop.y + crop.height / 2) / image.height - object.height / 2;
+  const radians = object.rotation * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+  return { x: object.x + object.width / 2 + dx * cos - dy * sin - width / 2,
+    y: object.y + object.height / 2 + dx * sin + dy * cos - height / 2, width, height };
+}
+
 export async function prepareRaster(dataUrl, { trim = false } = {}) {
   const image = await new Promise((resolve, reject) => {
     const image = new Image(); image.onload = () => resolve(image);

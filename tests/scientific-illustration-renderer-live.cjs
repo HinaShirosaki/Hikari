@@ -192,7 +192,7 @@ async function run() {
       const result = await agent.run({ model, reasoningEffort: 'low', timeoutMs: 540000,
         cwd: storage, snapshot, enableWebSearch: false, chatSessionId: randomUUID(), message,
         agent: { pluginCanvasId: 'scientific-illustration', pluginCanvasIllustrationId: current.illustration_id,
-          sessionPrompt: 'Use plugin_canvas to read the Scientific Illustration plugin-owned contract before drawing. Follow its renderer, independent layers and mandatory visual inspection instructions. Work only in this illustration. This is a short disposable test: at most one native image-generation attempt for the figure; report a failed attempt instead of repeatedly retrying.' } });
+          sessionPrompt: 'Use plugin_canvas to read the Figura plugin-owned contract before drawing. Follow its renderer, independent layers and mandatory visual inspection instructions. Work only in this illustration. This is a short disposable test: at most one native image-generation attempt for the figure; report a failed attempt instead of repeatedly retrying.' } });
       const summary = await snapshotRun(id, result, activeInspectionRunId);
       assert.equal(summary.ok, true, summary.error || `${id} agent failed`);
       assert.equal(summary.inspection.complete, true, 'Mandatory agent inspection must pass');

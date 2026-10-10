@@ -4,7 +4,7 @@ import { resolvePcrTargets } from './cloning-plan.js';
 import { clampTemperature, formatBp, formatDuration, formatNumber, formatPrimerRole, formatStrategyName, roundToFiveSeconds } from './formatting.js';
 
 function buildProteinBuilderPcrProgram(plan = {}) {
-  const primers = asArray(plan?.primerOligoPlan?.primers);
+  const primers = asArray(plan?.primerOligoPlan?.primers).filter((primer) => primer.pcrStage !== 'oligo-assembly');
   const primerTms = primers
     .map((primer) => Number(primer?.tm))
     .filter((tm) => Number.isFinite(tm) && tm > 0);
@@ -31,6 +31,8 @@ function buildProteinBuilderPcrProgram(plan = {}) {
       { label: 'Hold', temperature: '4 C', time: 'hold', cycles: '1' }
     ],
     notes: [
+      ...[...new Set(primers.map((primer) => primer.templateSourceLabel).filter(Boolean))]
+        .map((label) => `Template: ${label}. Prepare it in the separate oligo assembly reaction before outer-primer PCR.`),
       `Annealing temperature is estimated from the lowest primer binding Tm (${formatNumber(lowestPrimerTm, 1)} C) plus 3 C for Q5-style high-fidelity PCR.`,
       'Binding Tm uses a SantaLucia nearest-neighbour estimate at 0.5 uM primer and 80 mM sodium-equivalent salt.',
       `Extension is estimated at 30 s/kb for the longest planned PCR target (${formatBp(longestAmpliconLength)}). Adjust to the polymerase data sheet.`

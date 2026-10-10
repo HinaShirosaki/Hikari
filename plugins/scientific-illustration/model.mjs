@@ -4,6 +4,7 @@ import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY } from './complexity.mjs';
 import { imageGenerationPercent } from './image-generation.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
 import { selectionBounds, transformSelection } from './grouping.mjs';
+import { rotateComponents } from './rotation.mjs';
 export const CANVASES = ['main', 'scratch'];
 export const MAX_DOCUMENT_CHARS = 12000000;
 export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
@@ -164,7 +165,8 @@ export function applyOperations(document, operations, validateSvg) {
   };
   for (const operation of operations) {
     record(operation, 'Operation');
-    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'name']);
+    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'name', 'degrees', 'pivot']);
+    if (operation.op !== 'rotate' && (operation.degrees !== undefined || operation.pivot !== undefined)) throw new Error('Rotation fields require the rotate operation.');
     const group = next.groups.find(item => item.id === operation.id);
     if (operation.op === 'group') {
       if (!validId(operation.id) || next.objects.some(item => item.id === operation.id) || group) throw new Error('Group requires an unused group ID.');
@@ -183,6 +185,19 @@ export function applyOperations(document, operations, validateSvg) {
       if ((operation.id !== undefined) === (operation.ids !== undefined)) throw new Error('Transform takes either a group id or component ids.');
       if (operation.id !== undefined && !group) throw new Error(`Group ${operation.id} does not exist.`);
       transform(group ? group.ids : operation.ids, operation.patch);
+    } else if (operation.op === 'rotate') {
+      if ((operation.id !== undefined) === (operation.ids !== undefined)) throw new Error('Rotate takes either an object/group id or component ids.');
+      const ids = group?.ids || (operation.id !== undefined ? [operation.id] : operation.ids);
+      if (!Array.isArray(ids) || !ids.length || new Set(ids).size !== ids.length) throw new Error('Rotate requires distinct component IDs.');
+      const objects = ids.map(id => {
+        const object = next.objects.find(item => item.id === id);
+        if (!object) throw new Error(`Object ${id} does not exist.`);
+        return object;
+      });
+      const degrees = number(operation.degrees, 'degrees', -360, 360);
+      if (operation.pivot !== undefined) { record(operation.pivot, 'Rotation pivot'); fields(operation.pivot, ['x', 'y']); }
+      const rotated = new Map(rotateComponents(objects, degrees, operation.pivot).map(object => [object.id, object]));
+      next.objects = next.objects.map(object => rotated.get(object.id) || object);
     } else if (operation.op === 'upsert') {
       const object = normalizeObject(operation.object, validateSvg);
       const index = next.objects.findIndex(item => item.id === object.id);

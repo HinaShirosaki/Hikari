@@ -15,6 +15,83 @@ function operandText(part, parentPrecedence, { rightSide = false, operator = '' 
   return tighter || sameButOrderMatters ? `(${part.text})` : part.text;
 }
 
+function numberPart(value) {
+  return {
+    value,
+    text: formatNotebookTableNumber(value),
+    precedence: value < 0 ? UNARY_PRECEDENCE : ATOM_PRECEDENCE
+  };
+}
+
+function productText(factors) {
+  if (factors.length === 1) {
+    return factors[0];
+  }
+  return {
+    text: factors.map((factor) => operandText(factor, OPERATOR_PRECEDENCE['*'])).join('*'),
+    precedence: OPERATOR_PRECEDENCE['*']
+  };
+}
+
+// Collect numeric factors across a product or quotient, even when an unknown splits
+// them: 5000/(100*E1) becomes 50/E1. Only numbers are combined; cancelling an unknown
+// would hide division by zero once that cell is filled in.
+function simplifyProduct(left, right, operator, fallback) {
+  const leftProduct = left.product || { numerator: [left], denominator: [] };
+  // Keep a quotient used as a divisor intact: A/(B/C) must still be undefined at C=0.
+  const rightProduct = right.product && (operator === '*' || !right.product.denominator.length)
+    ? right.product
+    : { numerator: [right], denominator: [] };
+  const product = {
+    numerator: [...leftProduct.numerator, ...(operator === '*' ? rightProduct.numerator : rightProduct.denominator)],
+    denominator: [...leftProduct.denominator, ...(operator === '*' ? rightProduct.denominator : rightProduct.numerator)]
+  };
+  const unchanged = { ...fallback, product };
+  const isNumeric = (factor) => typeof factor.value === 'number';
+  const numbers = [...product.numerator, ...product.denominator].filter(isNumeric);
+  if (!numbers.length || numbers.some((factor) => !Number.isFinite(factor.value))
+    || product.denominator.some((factor) => isNumeric(factor) && factor.value === 0)) {
+    return unchanged;
+  }
+  const multiplyNumbers = (factors) => factors.filter(isNumeric).reduce((value, factor) => value * factor.value, 1);
+  const coefficient = multiplyNumbers(product.numerator) / multiplyNumbers(product.denominator);
+  if (!Number.isFinite(coefficient) || (coefficient === 0 && numbers.every((factor) => factor.value !== 0))
+    || (numbers.length === 1 && coefficient !== 1)) {
+    return unchanged;
+  }
+
+  // Keep the symbolic factors in their original order and put the combined number
+  // where the first numerator number was, so D3*0.18 remains familiar as values arrive.
+  const numerator = [];
+  let placedNumber = false;
+  product.numerator.forEach((factor) => {
+    if (!isNumeric(factor)) {
+      numerator.push(factor);
+    } else if (!placedNumber && coefficient !== 1) {
+      numerator.push(numberPart(coefficient));
+      placedNumber = true;
+    }
+  });
+  if (!placedNumber && coefficient !== 1) {
+    numerator.unshift(numberPart(coefficient));
+  }
+  if (!numerator.length) {
+    numerator.push(numberPart(1));
+  }
+  const denominator = product.denominator.filter((factor) => !isNumeric(factor));
+  const top = productText(numerator);
+  if (!denominator.length) {
+    return { ...top, known: false, product };
+  }
+  const precedence = OPERATOR_PRECEDENCE['/'];
+  return {
+    known: false,
+    text: `${operandText(top, precedence)}/${operandText(productText(denominator), precedence, { rightSide: true, operator: '/' })}`,
+    precedence,
+    product
+  };
+}
+
 function simplifyNode(node, context) {
   const known = { known: true };
 
@@ -53,13 +130,18 @@ function simplifyNode(node, context) {
         return known;
       }
       const precedence = OPERATOR_PRECEDENCE[node.op] || 1;
-      const leftText = operandText(textPartOf(node.left, left, context), precedence, { operator: node.op });
+      const leftPart = textPartOf(node.left, left, context);
+      const rightPart = textPartOf(node.right, right, context);
+      const leftText = operandText(leftPart, precedence, { operator: node.op });
       const rightText = operandText(
-        textPartOf(node.right, right, context),
+        rightPart,
         precedence,
         { rightSide: true, operator: node.op }
       );
-      return { known: false, text: `${leftText}${node.op}${rightText}`, precedence };
+      const result = { known: false, text: `${leftText}${node.op}${rightText}`, precedence };
+      return node.op === '*' || node.op === '/'
+        ? simplifyProduct(leftPart, rightPart, node.op, result)
+        : result;
     }
 
     case 'call': {
@@ -93,11 +175,8 @@ function textPartOf(node, part, context) {
     };
   }
   const value = evaluateFormula(node, context.numeric);
-  return {
-    text: formatNotebookTableNumber(value),
-    // A folded negative has to survive sitting next to an operator: 2-(-3).
-    precedence: value < 0 ? UNARY_PRECEDENCE : ATOM_PRECEDENCE
-  };
+  // A folded negative has to survive sitting next to an operator: 2-(-3).
+  return numberPart(value);
 }
 
 // `resolve(node)` reports whether a reference has a value yet: { known: true } or

@@ -119,9 +119,9 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   const exactPreview = await tool({ action: 'render', canvas: 'both' });
   check(JSON.stringify(exactPreview.content.filter(c => c.type === 'image')) === JSON.stringify(beforePreview.content.filter(c => c.type === 'image')), 'Reinserting at original rotated bounds produces byte-identical main and scratch renders');
   check(!(await read()).inspection.complete, 'Inserting a saved asset requires fresh final canvas inspection');
-  await evaluate('document.getElementById("undo").click()'); await settle();
+  await evaluate('illustrationWorkspace.history("undo")'); await settle();
   check((await read()).objects.length === 0, 'Undo removes the inserted group atomically');
-  await evaluate('document.getElementById("redo").click()'); await settle();
+  await evaluate('illustrationWorkspace.history("redo")'); await settle();
   check((await read()).objects.length === 3, 'Redo restores the saved component as editable layers');
   const scaled = await apply([{ op: 'insert_asset', asset_id: entry.id, canvas: 'scratch', x: 20, y: 30, width: width * .5 }]);
   check(scaled.result.inserted_assets[0].canvas === 'scratch' && scaled.result.objects.filter(o => o.canvas === 'scratch').every((o,i) => Math.abs(o.width-before.objects[i].width*.5)<1e-8 && o.rotation === before.objects[i].rotation)

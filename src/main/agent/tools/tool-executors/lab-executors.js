@@ -65,6 +65,7 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
     const parserPayload = resolveToolParserPayload(args, context);
     const entities = ensureObject(parserPayload?.entities);
     const result = await notebookLookupRuntime.execute({
+      query: typeof args?.query === 'string' ? args.query : undefined,
       message: cleanText(args?.query || context?.message, 3200),
       parserPayload,
       snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},

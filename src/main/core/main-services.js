@@ -2,7 +2,9 @@
 
 const { createWorkspaceFileService } = require('../agent/file-access/service.js');
 const { registerAgentFileIpc } = require('../ipc/register-agent-file-ipc.js');
-const { FILE_ACCESS, LLM } = require('../../shared/ipc/channels');
+const { FILE_ACCESS, LLM, STORAGE } = require('../../shared/ipc/channels');
+const { createCloudDriveService } = require('../cloud-drive/service');
+const { registerCloudDriveIpc } = require('../ipc/register-cloud-drive-ipc');
 
 const {
   hasSupportedDataExtension,
@@ -15,6 +17,7 @@ const {
   getCodexCliReasoningEffort,
   getCodexLoginStatus,
   requestCodexCliCatalog,
+  requestCodexCliUsage,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText
@@ -305,6 +308,19 @@ function createMainServices(context = {}) {
   });
 
   // IPC registration (before app ready).
+  const cloudDrive = createCloudDriveService({
+    directory: path.join(appPaths.getCodexCliWorkingDirectory(), 'Config', 'cloud-drive'),
+    safeStorage: context.safeStorage,
+    getStorageRoot: appPaths.getStorageRoot,
+    openExternal: url => shell.openExternal(url),
+    env: processObject.env,
+    onChange: () => {
+      const window = getMainWindow();
+      if (window && !window.isDestroyed()) window.webContents.send(STORAGE.CLOUD_CHANGED);
+    }
+  });
+  registerCloudDriveIpc({ ipcMain, cloudDrive, getMainWindow });
+
   registerPluginIpc({
     ipcMain,
     session,
@@ -325,6 +341,7 @@ function createMainServices(context = {}) {
     DEFAULT_DATA_FILE_NAME,
     hasSupportedDataExtension,
     mainDataHelpers,
+    onWorkspaceSaved: cloudDrive.schedule,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
     getStorageRoot: appPaths.getStorageRoot,
@@ -420,6 +437,7 @@ function createMainServices(context = {}) {
     clearCodexCliStoredLogin,
     getCodexLoginStatus,
     requestCodexCliCatalog,
+    requestCodexCliUsage,
     getCodexCliModel,
     getCodexCliReasoningEffort,
     launchCodexCliLogin,
@@ -481,6 +499,7 @@ function createMainServices(context = {}) {
   // Reverse start order; each failure is logged without blocking the rest.
   async function shutdown() {
     const stops = [
+      ['cloud-drive', () => cloudDrive.stop()],
       ['codex-cli-updater', () => codexCliUpdater.stop()],
       ['bioinformatics', () => bioinformatics.stop()],
       ['scheduled-tasks', () => scheduledTasks.stop()],

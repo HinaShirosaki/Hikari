@@ -1,4 +1,5 @@
 import { defaultState } from '../modules/app-state/index.js';
+import { syncMarkdownRecordState } from '../services/markdown-record-storage.js';
 import { showTransientNotice } from '../lib/notify.js';
 import { migrateProteinBuilderCloningNotebookState } from '../services/notebook-record-compat.js';
 import { mergePaperExperimentLinks } from '../../shared/paper-experiment-links.mjs';
@@ -34,7 +35,6 @@ const WORKSPACE_STATE_KEYS = [
 ];
 
 const WORKSPACE_SETTINGS_KEYS = [
-  'pendingNotebookSampleCapture',
   'storageImport',
   'dashboard',
   // A plugin's blob indexes files under <root>/Plugins/<id>/, so it belongs to
@@ -222,7 +222,7 @@ export function createStorageImportController({
       return { ok: false, skipped: true };
     }
     try {
-      return await windowObject.hikariApi.autoSaveDataFile(state, '');
+      return await syncMarkdownRecordState(windowObject.hikariApi, state);
     } catch (error) {
       return {
         ok: false,
@@ -270,12 +270,15 @@ export function createStorageImportController({
 
       mergeStorageImportPatch(result.statePatch);
       updateStorageImportState(result);
-      (Array.isArray(result.alerts) ? result.alerts : []).forEach((message) => {
-        showTransientNotice(message, { type: 'error', durationMs: 20000 });
-      });
+      // One notice for all alerts: each notice replaces the one on screen.
+      const alerts = Array.isArray(result.alerts) ? result.alerts : [];
+      if (alerts.length) {
+        const more = alerts.length > 5 ? `\n\n…and ${alerts.length - 5} more.` : '';
+        showTransientNotice(`${alerts.slice(0, 5).join('\n\n')}${more}`, { type: 'error', durationMs: 20000 });
+      }
       let sidecarSync = null;
       if (persistMergedState) {
-        persist();
+        persist({ resetHistory: true });
       } else {
         normalizeStateStoragePaths(state);
         persistState(state);

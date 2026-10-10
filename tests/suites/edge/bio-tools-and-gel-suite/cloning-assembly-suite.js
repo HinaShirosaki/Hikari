@@ -390,13 +390,12 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(cloningDesign.isCloningDesignPlanActionable({ feasible: true, primers: [{ name: 'complete' }] }), true);
     });
 
-    test('[EDGE] Golden Gate names the missing donor instead of blocking a de novo insert', () => {
+    test('[EDGE] Golden Gate prepares a de novo insert from overlapping oligos', () => {
       const cloningDesign = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design.js')
       );
       // A real insertion edit: the pre-edit vector cannot carry the insert. The
-      // template is the user's declared choice, so the route still designs off
-      // the assembled sequence and says what it could not confirm.
+      // insert is prepared from oligos before the Type IIS-tailed outer PCR.
       const planFor = (seed) => {
         const gene = filler(240, (seed * 7) + 1);
         const vector = filler(900, (seed * 13) + 5);
@@ -425,8 +424,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         }
       }
       assert.ok(fixture, 'expected a fixture with a usable Type IIS enzyme');
-      assert.equal(fixture.plan.primers.length, 4);
-      assert.match(fixture.plan.warnings.join(' '), /names no PCR template|off the assembled sequence/i);
+      assert.equal(fixture.plan.primers.filter((primer) => primer.pcrStage !== 'oligo-assembly').length, 4);
+      assert.ok(fixture.plan.primers.some((primer) => primer.pcrStage === 'oligo-assembly'));
+      assert.ok(fixture.plan.primers.filter((primer) => primer.template_kind === 'hypothetical_intermediate').every((primer) => primer.templateEntryId === ''));
     });
 
     test('[EDGE] an AT-rich Gibson seam splits its overlap across both primers', () => {
@@ -1627,7 +1627,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(restriction.restrictionEndsAreCrossCompatible(bamHI, bglII), true);
     });
 
-    test('[EDGE] restriction primers anneal to the stated insert template and flag its absence', () => {
+    test('[EDGE] restriction primers use the donor or prepare the insert from oligos', () => {
       const assemblyPrimers = loadEsmStyleModule(path.join(cloningAssemblyPath, 'assembly-primers.js'));
       const hostSequence = 'AAAAGAATTCCCCCCCCGGATCCTTTT';
       const ecoStart = hostSequence.indexOf('GAATTC');
@@ -1658,8 +1658,9 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         config
       );
       assert.equal(missingTemplate.feasible, true);
-      assert.equal(missingTemplate.primers.length, 2);
-      assert.match(missingTemplate.warnings.join(' '), /names no PCR template/i);
+      assert.equal(missingTemplate.primers.filter((primer) => primer.pcrStage !== 'oligo-assembly').length, 2);
+      assert.ok(missingTemplate.primers.some((primer) => primer.pcrStage === 'oligo-assembly'));
+      assert.equal(missingTemplate.primers.at(-1).template_kind, 'hypothetical_intermediate');
 
       const donorBacked = assemblyPrimers.designRestrictionLigationPrimers(
         fragmentMap({
@@ -2017,10 +2018,12 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         donor: null
       });
 
-      // Without the block list there is no template for the untemplated 5' blocks,
-      // which the plan has to say even though it no longer refuses to design.
+      // Without block provenance the complete insert requires oligo assembly.
+      // Repetitive tags can make that preparation fail the specificity checks.
       const flat = planFor(base);
-      assert.equal(flat.warnings.some((warning) => /names no PCR template/.test(warning)), true);
+      assert.equal(flat.warnings.some((warning) => /names no PCR template/.test(warning)), false);
+      assert.ok(flat.primers.some((primer) => primer.pcrStage === 'oligo-assembly')
+        || flat.warnings.some((warning) => /overlapping oligos/.test(warning)));
 
       const split = planFor({
         ...base,

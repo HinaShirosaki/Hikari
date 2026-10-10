@@ -9,6 +9,7 @@ import { evaluateSiteDirectedMutagenesis } from './site-mutagenesis-evaluation.j
 import { buildAlternateStrategyRecommendation, buildGlobalWarnings, chooseAssemblyStrategy } from './strategy.js';
 import { buildAssemblyDesign, buildProcedureSteps, buildValidationPlan } from './procedure.js';
 import { designCloningPrimers } from './primer-design.js';
+import { prependOligoAssemblySteps } from './oligo-assembly.js';
 
 const ROUTE_THRESHOLD_LEVELS = [
   ['strict', CLONING_PRIMER_TM_THRESHOLDS.strict],
@@ -161,11 +162,11 @@ export function assembleCloningPlan(payload = {}) {
     route.warnings = primerOligoPlan.warnings;
     assembledVectorDesign = buildAssemblyDesign(recommendedStrategy, orderedFragmentMap, routeEvaluations, normalizedResultSequence);
   }
-  const stepByStepProcedure = buildProcedureSteps(
+  const stepByStepProcedure = prependOligoAssemblySteps(buildProcedureSteps(
     recommendedStrategy?.name,
     assembledVectorDesign,
     orderedFragmentMap
-  );
+  ), primerOligoPlan.primers);
   const validationPlan = buildValidationPlan(
     recommendedStrategy?.name,
     orderedFragmentMap

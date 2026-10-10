@@ -13,13 +13,17 @@ function maxForwardReverseTmDifference(primers) {
 }
 
 function overlapTmSpread(overlapSummary) {
-  const tms = asArray(overlapSummary)
-    .map((item) => Number(item?.overlapTm))
-    .filter((value) => Number.isFinite(value) && value > 0);
-  if (tms.length < 2) {
-    return 0;
-  }
-  return Math.max(...tms) - Math.min(...tms);
+  const groups = new Map();
+  asArray(overlapSummary).forEach((item) => {
+    const tm = Number(item?.overlapTm);
+    if (!Number.isFinite(tm) || tm <= 0) return;
+    const key = item.overlapGroup || 'cloning assembly';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(tm);
+  });
+  // Oligo preparation and downstream assembly are separate reactions with
+  // different temperature windows. Balance overlaps within each tube.
+  return Math.max(0, ...[...groups.values()].map((tms) => Math.max(...tms) - Math.min(...tms)));
 }
 
 // A feasible design from a callback still has to clear the active level's

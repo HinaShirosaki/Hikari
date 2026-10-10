@@ -37,6 +37,7 @@ async function hydrateWorkflowRootFromStoragePath({
   }
 
   const warnings = [...folderData.warnings];
+  const alerts = [];
   const workflowTemplates = folderData.templates;
   const workflows = folderData.workflowRows;
 
@@ -51,7 +52,7 @@ async function hydrateWorkflowRootFromStoragePath({
     }
     const workflowFolderPath = path.join(rootPaths.workflowRootPath, ...relativeFolderPath.split('/').filter(Boolean));
     try {
-      const notebookEntries = await readNotebookEntriesForWorkflowFolder(workflowFolderPath);
+      const notebookEntries = await readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings, alerts);
       notebookEntries.forEach((entry) => {
         const notebookId = cleanText(entry?.id, 220);
         if (notebookId) {
@@ -90,7 +91,8 @@ async function hydrateWorkflowRootFromStoragePath({
     notebookEntries: [...notebookMap.values()],
     papers: [...paperMap.values()],
     paperExperimentLinks: [...paperLinkMap.values()],
-    warnings
+    warnings,
+    alerts
   };
 }
 
@@ -112,7 +114,8 @@ async function importWorkflowRoot({
       notebookEntries: hydrated.notebookEntries.length,
       papers: hydrated.papers.length
     },
-    warnings: hydrated.warnings || []
+    warnings: hydrated.warnings || [],
+    alerts: hydrated.alerts || []
   };
 }
 

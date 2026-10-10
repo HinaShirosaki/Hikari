@@ -1,5 +1,6 @@
 import { buildStateSnapshot } from './state-snapshot.js';
 import { trimText } from './shared.js';
+import { syncMarkdownRecordState } from '../../services/markdown-record-storage.js';
 
 export const buildSyncedStateSnapshot = async ({
   api,
@@ -10,7 +11,7 @@ export const buildSyncedStateSnapshot = async ({
   const storagePath = trimText(state.settings?.storagePath, 1200);
   const persistableState = state?.__agentChatRootState || state;
   if (api?.autoSaveDataFile && storagePath) {
-    syncResult = await api.autoSaveDataFile(persistableState, '');
+    syncResult = await syncMarkdownRecordState(api, persistableState);
     if (!syncResult?.ok) {
       throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
     }

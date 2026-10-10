@@ -420,20 +420,23 @@
 .sequence-viewer-seq-text-content {
   display: inline-flex;
   align-items: baseline;
-  gap: var(--sequence-viewer-nt-gap);
+  gap: 0;
   user-select: none;
 }
 
 .sequence-viewer-seq-run {
   display: inline-flex;
   align-items: baseline;
-  gap: var(--sequence-viewer-nt-gap);
+  gap: 0;
   border-radius: 3px;
 }
 
 .sequence-viewer-seq-base {
   display: inline-block;
   min-width: 1ch;
+  /* Each base owns its spacing so measured advances include the final gap
+     and annotation edges sit equally far from the first and last letters. */
+  padding-inline: calc(var(--sequence-viewer-nt-gap) / 2);
   text-align: center;
   line-height: 1.28;
 }

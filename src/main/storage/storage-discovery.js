@@ -31,7 +31,7 @@ function normalizeBundleSummary(snapshot) {
 
 function isBundleCandidateName(fileName) {
   const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === LEGACY_STORAGE_MANIFEST_FILE_NAME) {
+  if (!lower || lower === LEGACY_STORAGE_MANIFEST_FILE_NAME || /\.(?:pre-markdown|unreadable)\.json$/.test(lower)) {
     return false;
   }
   if (lower.endsWith('.index.sqlite')) {

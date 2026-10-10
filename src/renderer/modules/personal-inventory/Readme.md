@@ -1,6 +1,9 @@
 # Personal Inventory Module
 
-This folder contains the split implementation of the personal inventory renderer.
+The **Samples** app (`sample-registry-view`): storage containers and the
+samples inside them. Every sample lives in a container: deleting a sample's
+slot entry or its container deletes the sample, and the notebook's Add Samples
+dialog requires one.
 
 - `constants.js`: shared labels, colors, section metadata, and container layout helpers.
 - `state.js`: composes state-derived helper groups.
@@ -17,6 +20,10 @@ This folder contains the split implementation of the personal inventory renderer
 - `container-form.js`, `container-context-menu.js`, `container-rename-events.js`, `container-delete-events.js`, `folder-actions.js`: container create/edit, right-click menu, inline rename, delete, and container folders.
 - `structure-state.js`, `structure-actions.js`, `structure-bindings.js`: chemical-structure state, actions, and bindings.
 - `well-sample-events.js`, `single-sample-events.js`, `events.js`: multi-well and single-tube editor events, and the remaining top-level bindings.
+- `type-fields.js`: type-specific sample fields, stored flat on `sample.details`, so a new sample type or field needs no storage or search change.
+- `name-suggestions.js`: plasmid name suggestions from the sequence library (circular and linear entries, since the library has no plasmid flag).
+- `chemical-structure-clipboard.js`: reads ChemDraw/MOL/SMILES or an image from the clipboard through `hikariApi.readChemicalClipboard`.
+- `csv-io.js`: per-container CSV import/export keyed by well label; import upserts by sample code.
 
 Containers are saved one file per container under `Samples/<zone>/` in the storage root (`src/main/storage/sample-containers.js`).
 

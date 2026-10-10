@@ -13,8 +13,9 @@ const { isBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary }
 const { getBundlePaths, KNOWLEDGE_BASE_ROOT_FOLDER_NAME, PROJECT_ROOT_FOLDER_NAME, PROTOCOL_ROOT_FOLDER_NAME, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { importWorkflowRoot } = require('./workflow-storage');
-const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile, toPosixRelative } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, parseJsonObject, toPosixRelative } = require('./storage-utils');
 const { addPaperExperimentLinks } = require('../../shared/paper-experiment-links.mjs');
+const { readProtocolDirectory } = require('./hydration/protocol-directory');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -58,38 +59,13 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
       protocolRootPath: ''
     };
   }
-  let entries = [];
-  try {
-    entries = await fs.readdir(protocolRootPath, { withFileTypes: true });
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return {
-        protocols: [],
-        protocolRootPath
-      };
-    }
-    throw error;
-  }
-
-  const protocols = [];
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-    const filePath = path.join(protocolRootPath, entry.name, 'protocol.json');
-    const payload = await readJsonFile(filePath);
-    if (!payload.ok) {
-      continue;
-    }
-    const protocol = ensureObject(payload.data?.protocol);
-    if (Object.keys(protocol).length) {
-      protocols.push(protocol);
-    }
-  }
+  const found = await readProtocolDirectory(protocolRootPath);
 
   return {
-    protocols,
-    protocolRootPath
+    protocols: found.data,
+    protocolRootPath,
+    warnings: found.error ? [found.error] : [],
+    alerts: asArray(found.alerts)
   };
 }
 
@@ -308,6 +284,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   }
 
   const protocolRoot = await importProtocolRoot({ storagePath: resolvedStoragePath });
+  warnings.push(...asArray(protocolRoot.warnings));
   mergeByIdMap(protocolMap, protocolRoot.protocols, 'protocol');
   const projectRoot = await hydrateProjectRootFromStoragePath({
     storagePath: resolvedStoragePath,
@@ -436,7 +413,9 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     lastSavedAt: newestSnapshot?.modifiedAt ? new Date(newestSnapshot.modifiedAt).toISOString() : '',
     warnings: allWarnings,
     // Problems the user must see, not just a line in the import summary.
-    alerts: takeChemicalIndexAlerts(rootLayout.chemicalsSqlitePath),
+    alerts: [...takeChemicalIndexAlerts(rootLayout.chemicalsSqlitePath),
+      ...[...asArray(protocolRoot.alerts), ...asArray(projectRoot?.alerts), ...asArray(workflowRoot?.alerts)]
+        .map((message) => message.split(`${resolvedStoragePath}${path.sep}`).join(''))],
     bundles: bundleSummaries,
     sequenceLibrary
   };

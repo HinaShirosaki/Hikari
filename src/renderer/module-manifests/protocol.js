@@ -2,6 +2,7 @@ import { initProtocolManagement } from '../modules/protocol/index.js';
 
 export const protocolManifest = {
   key: 'protocol',
+  historyStateKeys: ['protocols'],
   init: initProtocolManagement,
   viewKey: 'PROTOCOL_MANAGEMENT',
   bootOrder: 10,
@@ -33,5 +34,8 @@ export const protocolManifest = {
   }),
   render: ({ modules }) => {
     modules.protocol.renderList();
+  },
+  renderHistory: ({ modules }) => {
+    modules.protocol.restoreHistory();
   }
 };

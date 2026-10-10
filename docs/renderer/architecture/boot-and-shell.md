@@ -59,7 +59,7 @@ The important pattern is that feature modules are created before async hydration
 
 `app/navigation-shell/app-dock.js` then computes:
 
-- the visible dock apps and the **More** overflow menu (plugin workspaces always live there)
+- the visible dock apps and the **More** overflow menu (plugin workspaces come after the built-in apps, so they overflow first)
 - responsive dock capacity based on viewport width
 - which app to highlight for aliases like `assay`, `papers`, or `dna`
 
@@ -80,7 +80,7 @@ It does more than toggle classes:
 
 Examples:
 
-- opening `sample-registry-view` renders both the personal-inventory container workspace and the sample registry list, because those two modules share one workspace
+- opening `sample-registry-view` (the **Samples** app) renders the Personal Inventory container workspace
 - opening the special sequence-detail pseudo-view still highlights the **DNA** app in navigation
 - opening `agent-view` rerenders only the agent UI instead of rerendering the whole app
 
@@ -88,7 +88,7 @@ Examples:
 
 ## State replacement and persistence
 
-The renderer core owns the shared `persist()` callback. It goes through the undo service (which records a checkpoint, coalescing edits to the same field) and then:
+The renderer core owns the shared `persist()` callback. Module constructors receive a version bound to their history owner. It goes through the undo service (which records field/record changes in that module's stack, coalescing edits to the same field) and then:
 
 - normalizes storage paths
 - writes `localStorage`

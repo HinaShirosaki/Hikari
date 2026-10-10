@@ -53,7 +53,7 @@ The pre-seeded keys (passed in by the renderer core as `uiBridge`):
 | `setSearchInputValue` | `(inputId, value) => boolean`, used to drive in-view search inputs |
 | `VIEWS` | the `VIEWS` constants map |
 
-After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
+After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `assay`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
 
 When **inside** a feature module, prefer the injected callback over `registry.get(...)`. The registry exists so service files can fan out without each module knowing about the others.
 

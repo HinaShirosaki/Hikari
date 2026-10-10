@@ -69,16 +69,12 @@ function sameExcept(actual, previous, allowed) {
   const omit = value => Object.fromEntries(Object.entries(value).filter(([key]) => !allowed.includes(key)));
   assert.deepEqual(omit(actual), omit(previous));
 }
-async function submit(id, prompt, source) {
-  activeRun = { id, prompt, source, started_at: new Date().toISOString() };
+async function submit(id, prompt) {
+  activeRun = { id, prompt, source: 'agent-rail', started_at: new Date().toISOString() };
   evidence.runs.push(activeRun); await save();
-  if (source === 'plugin-composer') {
-    await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
-    await waitFor(() => evaluate('!document.getElementById("prompt-form").hidden'), 'Plugin composer did not reopen');
-    await evaluate(`document.getElementById('prompt').value=${JSON.stringify(prompt)};document.getElementById('prompt-form').requestSubmit()`);
-  } else {
-    await win.webContents.executeJavaScript(`document.getElementById('agent-rail-message-input').value=${JSON.stringify(prompt)};document.getElementById('agent-rail-send-btn').click()`);
-  }
+  assert.ok(await evaluate('document.getElementById("prompt-form").hidden'), 'Existing illustrations must use the rail composer');
+  await win.webContents.executeJavaScript('qaRailRuntime.open()');
+  await win.webContents.executeJavaScript(`document.getElementById('agent-rail-message-input').value=${JSON.stringify(prompt)};document.getElementById('agent-rail-send-btn').click()`);
   await waitFor(() => Boolean(activeRun.request), 'User prompt did not reach the real agent IPC');
   await waitFor(() => Boolean(activeRun.result || activeRun.error), 'Live edit timed out', 420000);
   if (activeRun.error) throw new Error(activeRun.error);
@@ -202,7 +198,7 @@ async function run() {
   const before = await snapshot('before');
   evidence.target_illustration_id = targetId;
   const prompt = 'In this existing illustration, move the round vesicle and its label 60 canvas units to the right. Rename the label "Transport vesicle", make the label purple (#7c3aed), and widen its text box only if needed to fit. Recolor only the vesicle\'s large outer circle fill to pale purple (#c4b5fd), preserving the dark border, white inner ring and orange cargo dots. Keep every other component, the canvas size, title and complexity unchanged.';
-  const after = await submit('edit', prompt, 'plugin-composer');
+  const after = await submit('edit', prompt);
   assert.deepEqual(after.objects.map(object => object.id), before.objects.map(object => object.id));
   check(true, 'Edit preserves every object ID and paint order');
   const previous = Object.fromEntries(before.objects.map(object => [object.id, object]));
@@ -221,7 +217,7 @@ async function run() {
   assert.deepEqual(after.canvases, before.canvases); assert.deepEqual(after.groups, before.groups);
   check(after.title === before.title && after.complexity === before.complexity, 'Canvas sizes, groups, title and complexity remain unchanged');
   const followup = 'Now make that Transport vesicle label bold (weight 700) and reduce its font size to 22. Keep its position, color and all other artwork unchanged.';
-  const followed = await submit('followup', followup, 'agent-rail');
+  const followed = await submit('followup', followup);
   const changedLabel = followed.objects.find(object => object.id === 'label-vesicle');
   check(changedLabel.fontWeight === 700 && changedLabel.fontSize === 22, 'Follow-up prompt updates the existing label through the agent rail');
   sameExcept(changedLabel, edited['label-vesicle'], ['fontWeight', 'fontSize']);
@@ -238,7 +234,7 @@ async function run() {
   await canvas({ action: 'open', illustration_id: targetId, expected_library_revision: listing.library_revision, request_id: randomUUID() });
   await fs.writeFile(path.join(output, 'workspace.png'), (await win.webContents.capturePage()).toPNG());
   evidence.ok = true; evidence.completed_at = new Date().toISOString(); await save();
-  await fs.writeFile(path.join(output, 'report.md'), `# Live existing-illustration edit QA\n\nPassed ${evidence.checks.length} checks with ${model} (Codex CLI ${version}) and installed Scientific Illustration ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Hidden Electron source-host fixture; real plugin prompt form, host bridge, scoped chat, request builder, preload IPC, Codex agent runtime and live MCP. Chat log persistence and unrelated controller routing use the fixture. User artwork/storage were never opened or edited.\n\n## Initial prompt\n\n${prompt}\n\n## Follow-up in agent rail\n\n${followup}\n\nBoth requests modified the same existing illustration. All nine object IDs and paint order survived. Seven unrelated components and the second saved illustration stayed identical. Both live agent runs rendered main and scratch and submitted inspection for the latest revision.\n\nEvidence: evaluation.json, before.json, edit.json, followup.json and their main/scratch PNGs.\n`);
+  await fs.writeFile(path.join(output, 'report.md'), `# Live existing-illustration edit QA\n\nPassed ${evidence.checks.length} checks with ${model} (Codex CLI ${version}) and installed Figura ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Hidden Electron source-host fixture; real plugin workspace, scoped chat rail, request builder, preload IPC, Codex agent runtime and live MCP. Chat log persistence and unrelated controller routing use the fixture. User artwork/storage were never opened or edited.\n\n## Initial prompt\n\n${prompt}\n\n## Follow-up in agent rail\n\n${followup}\n\nBoth requests modified the same existing illustration. All nine object IDs and paint order survived. Seven unrelated components and the second saved illustration stayed identical. Both live agent runs rendered main and scratch and submitted inspection for the latest revision.\n\nEvidence: evaluation.json, before.json, edit.json, followup.json and their main/scratch PNGs.\n`);
   console.log(`Passed ${evidence.checks.length} live edit checks. Evidence: ${output}`);
 }
 run().catch(async error => {

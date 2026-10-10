@@ -41,8 +41,13 @@ special unsandboxed UI path.
   path in renderer state; keep using `@bundled/<id>`.
 - Use only the public API documented in
   [`docs/plugins/plugin-api.md`](../../docs/plugins/plugin-api.md). An
-  identity-locked migration verb is acceptable only for a one-time move of
-  data previously owned by Hikari; it is not public plugin API.
+  identity-locked verb (`internal: true` plus `bundledPluginId` in
+  [`plugin-bridge/verbs.js`](../renderer/app/plugin-bridge/verbs.js)) is
+  acceptable only for a one-time move of data previously owned by Hikari
+  (`migration.importLegacyGel`) or a host handoff the public API cannot express
+  (`gel.takeNotebookLink`, pulled after the data-less `gel.notebookLink`
+  event). Such verbs are not public plugin API: they are left out of
+  `PLUGIN_BRIDGE_VERBS` and answer `Unknown verb` to every other frame.
 - Keep plugin UI code self-contained. Do not import renderer DOM, state, or
   controllers across the iframe boundary.
 - A plugin-owned left rail can mirror normal module sizing without crossing the

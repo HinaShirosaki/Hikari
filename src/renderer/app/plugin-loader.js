@@ -20,16 +20,28 @@ export function pluginIconMarkup(iconDataUrl) {
 }
 
 // Refresh from the installed folder on every boot so replacing a plugin's
-// assets works without reinstalling it. This updates navigation artwork only;
+// name or artwork works without reinstalling it. Only presentation is updated;
 // stored permissions and plugin identity remain the original installation.
-export async function loadPluginIcons({ plugins, appRegistry, api }) {
+export async function loadPluginIcons({ plugins, appRegistry, api, documentObject = globalThis.document }) {
   if (!Array.isArray(plugins) || typeof api?.inspectPluginFolder !== 'function') return;
-  await Promise.allSettled(plugins.filter(plugin => !plugin.bundled && plugin.enabled !== false && plugin.path && !plugin.service)
+  await Promise.allSettled(plugins.filter(plugin => !plugin.bundled && plugin.path && !plugin.service)
     .map(async plugin => {
       const app = appRegistry.find(entry => entry.id === `plugin-${plugin.id}`);
-      if (!app) return;
       const inspected = await api.inspectPluginFolder(plugin.path);
-      app.iconMarkup = pluginIconMarkup(inspected?.ok && inspected.id === plugin.id ? inspected.iconDataUrl : '');
+      const matches = inspected?.ok && inspected.id === plugin.id;
+      if (app) app.iconMarkup = pluginIconMarkup(matches ? inspected.iconDataUrl : '');
+      if (!matches || typeof inspected.name !== 'string' || !inspected.name.trim()) return;
+      plugin.name = inspected.name;
+      if (app) app.label = inspected.name;
+      const section = documentObject?.getElementById?.(app?.viewId || pluginViewId(plugin.id));
+      section?.setAttribute('data-plugin-name', plugin.name);
+      section?.setAttribute('aria-label', plugin.name);
+      const frame = section?.querySelector?.('.plugin-frame');
+      if (frame) {
+        const summary = describePlugin(plugin, { isRemote: isSameOriginSafeUrl(plugin.embedUrl) });
+        frame.title = summary;
+        frame.setAttribute('aria-label', summary);
+      }
     }));
 }
 

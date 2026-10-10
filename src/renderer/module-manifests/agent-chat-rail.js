@@ -24,7 +24,9 @@ export function createAgentRailScopeContextGetter(modules, rootDocument, views =
 
 export const agentChatRailManifest = {
   key: 'agentChatRail',
+  historyStateKeys: ['paperAgentChatSessions'],
   init: initAgentChat,
+  renderHistory: ({ modules }) => modules.agentChatRail.render(),
   createOptions: ({
     state,
     persist,

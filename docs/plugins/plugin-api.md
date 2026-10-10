@@ -1,9 +1,13 @@
 # Hikari Plugin Host API
 
-The host API is how a sandboxed plugin reads and writes Hikari data. It uses a
-`postMessage` request/response protocol plus a small host-event channel between
-the plugin's iframe and the host page, implemented in
-[`src/renderer/app/plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js).
+The host API is how a sandboxed plugin reads and writes Hikari data, fits into
+Hikari's shell, and works with the agent. It uses a `postMessage`
+request/response protocol plus a small host-event channel between the plugin's
+iframe and the host page. The dispatcher is
+[`src/renderer/app/plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js);
+the verbs are defined in
+[`plugin-bridge/verbs.js`](../../src/renderer/app/plugin-bridge/verbs.js) and
+[`plugin-bridge/layout-verbs.js`](../../src/renderer/app/plugin-bridge/layout-verbs.js).
 
 Start with [quickstart.md](quickstart.md) for a copyable plugin. Use
 [plugin-system.md](plugin-system.md) for the complete folder contract and how
@@ -13,6 +17,33 @@ Start with [quickstart.md](quickstart.md) for a copyable plugin. Use
 manifest) cannot hold permissions and its frame is never registered with the
 bridge, so none of this applies to it — the API is absent there, not merely
 denied. See [plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin).
+
+## At a glance
+
+| Verb or event | Permission | What it does | See |
+| --- | --- | --- | --- |
+| `app.info` | — | Handshake: plugin id, granted permissions, appearance, storage, and layout context | [§2](#2-read-verbs) |
+| `app.context` event | — | Appearance, storage, or layout changed | [§2](#2-read-verbs) |
+| `protocols.list`, `protocols.get` | `protocols:read` | Protocol summaries; one protocol in full | [§2](#2-read-verbs) |
+| `projects.list` | `projects:read` | Project ids and names | [§2](#2-read-verbs) |
+| `samples.list` | `samples:read` | Sample ids, names, and types | [§2](#2-read-verbs) |
+| `notebook.list`, `notebook.get` | `notebook:read` | Notebook summaries; one entry in full | [§2](#2-read-verbs) |
+| `storage.get`, `storage.set` | `storage` | The plugin's own JSON blob | [§2](#2-read-verbs), [§3](#3-write-verbs) |
+| `notifications.show` | `notifications` | An attributed, transient toast | [§3](#3-write-verbs) |
+| `app.setUnsaved`, `app.save` event | — | Join the quit guard for unsaved work | [§3](#3-write-verbs) |
+| `app.setHistory`, `app.undo` / `app.redo` events | — | Drive Hikari's undo and redo buttons | [§3](#3-write-verbs) |
+| `files.write`, `files.read` | `files` | Files in the plugin's own storage folder | [§3](#3-write-verbs) |
+| `downloads.save` | `downloads` | Export bytes through a native save dialog | [§3](#3-write-verbs) |
+| `python.run` | `python` | Run Python in a throwaway sandbox | [§3](#3-write-verbs) |
+| `notebook.appendResult` | `notebook:write` | Append text or a table to an existing notebook entry | [§3](#3-write-verbs) |
+| `app.setLeftRailWidth`, `app.setLeftRailFolded` | `layout` | The shared left-rail width; this plugin's fold state | [§4](#4-layout-and-host-ui-verbs) |
+| `app.setWorkspaceTools`, `app.workspaceTool` event | `layout` | Buttons in Hikari's right toolbar | [§4](#4-layout-and-host-ui-verbs) |
+| `app.setContextActions`, `app.contextAction` event, `app.readContextAction`, `app.respondContextAction` | `layout` | Actions in the Protocol `…` menu and the PDF selection toolbar, with a one-shot handoff of the selected source | [§4](#4-layout-and-host-ui-verbs) |
+| `agent.chat`, `agent.setContext`, `app.setAgentChatExpanded` | `agent:chat` | Submit to, scope, and open or fold the plugin's chat rail | [§5](#5-agent-verbs) |
+| `agent.canvas` event, `agent.respond` | `agent:canvas` | Serve the agent's `plugin_canvas` requests | [§5](#5-agent-verbs) |
+
+Verbs reserved for the bundled Gel plugin are not part of this API; see
+[`src/plugins/README.md`](../../src/plugins/README.md).
 
 ---
 
@@ -39,7 +70,7 @@ Both kinds now use loopback delivery and may also load relative ES modules; see
 
 `hikari.call(verb, params)` resolves with the verb's result or rejects with an
 `Error` carrying the host's message. Calls time out after 10 s — the host
-stays silent for unregistered frames (§4), so without a timeout a call from a
+stays silent for unregistered frames (§6), so without a timeout a call from a
 disabled plugin, or from the page opened directly in a browser, would hang
 forever. The client rejects immediately for an empty verb, non-object params,
 an unavailable parent frame, or a value that `postMessage` cannot clone.
@@ -50,9 +81,13 @@ or on a subprocess get 10 minutes instead — `downloads.save`, `files.write`,
 `files.read`, and `python.run`. There is no cancel message, so a client that
 gave up early would report failure for work the host goes on to finish.
 
-`hikari.on(event, listener)` subscribes to the host's events: the context
-snapshot in §2.1, and the `app.save` / `app.undo` / `app.redo` commands in §3.1
-and §3.2. It returns an unsubscribe function.
+`hikari.on(event, listener)` subscribes to host events and returns an
+unsubscribe function. The events are `app.context` (§2.1), `app.save` (§3.1),
+`app.undo` / `app.redo` (§3.2), `app.workspaceTool` (§4.1),
+`app.contextAction` (§4.2), and `agent.canvas` (§5.1). `app.context` and
+`app.save` go to every registered frame, undo and redo to the focused frame,
+and the rest only to the frame that registered the tool or action, or that
+holds `agent:canvas`.
 
 ### 1.1 The raw protocol
 
@@ -100,7 +135,7 @@ await hikari.call('app.info');
 //   layout: {
 //     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false },
 //     agentChatRail: { expanded: false, available: true },
-//     workspaceTools: { available: true }
+//     workspaceTools: { available: true, icons: ['pointer', 'lasso', /* … */ 'crop', 'fit'] }
 //   }
 // }
 ```
@@ -121,6 +156,10 @@ to hide a redundant composer while keeping figure controls visible.
 Settings; the host then hides its chat and AI actions, and `agent.chat` returns
 `{ok:false,reason:"unavailable"}`, so hide any prompt UI too. Connecting or
 disconnecting publishes the same `changed:"layout"` event.
+`layout.workspaceTools.available` is `true` when the host has the shared right
+toolbar used by `app.setWorkspaceTools` (§4). `layout.workspaceTools.icons`
+lists the icon names accepted by that host. Older hosts omit this list and
+support the icons in §4 except `crop`; use `fit` for Crop on those hosts.
 
 ### 2.1 `app.context` event — *no permission required*
 
@@ -215,124 +254,6 @@ between a save that fails and a save they saw coming.
 
 ## 3. Write verbs
 
-### `app.setContextActions` / `app.readContextAction` / `app.respondContextAction` — `layout`
-
-`app.setContextActions` registers up to eight declarative actions in the saved
-Protocol `…` menu and the paper PDF text-selection toolbar. Actions belong to
-the registered plugin frame and disappear when it reloads or loses its origin
-grant. Hikari renders their labels as text and supplies the toolbar icon.
-
-```js
-await hikari.call('app.setContextActions', { actions: [
-  { id: 'generate-illustration', label: 'Generate illustration',
-    contexts: ['protocol', 'paper-selection'], requiresAgent: true }
-] });
-hikari.on('app.contextAction', async ({ id, actionId }) => {
-  const source = await hikari.call('app.readContextAction', { id });
-  // Plugin owns creating its item, saving the source and building the prompt.
-  await createItemFromSource(source);
-  await hikari.call('app.respondContextAction', { id, result: { ok: true } });
-});
-```
-
-The user click opens the plugin workspace and grants only that selected source
-for this handoff. `app.readContextAction` takes the event's correlation ID, not
-an arbitrary record ID or file path. Protocol data is a snapshot of the saved
-record. Paper data includes its selected text and page, display metadata, and
-the saved Markdown read from the paper's recorded KnowledgeBase path (including
-title-named files). It includes `markdownStatus`, `markdownRelativePath` and
-`markdownTruncated`; unavailable context is explicit. Markdown is bounded at
-200,000 characters, and passages at 30,000. Source documents are reference data,
-not instructions for the plugin or agent.
-
-`app.respondContextAction` consumes the grant with `result:{ok:true}` or
-`result:{ok:false,error:"…"}`. Acknowledge source acceptance within 30 seconds;
-do not wait for a model run to finish. Other frames, revoked registrations,
-storage-folder changes and expired handoffs cannot read the source. These
-user-initiated grants need no library-wide read permission. Older hosts reject
-these verbs; plugins should retain their standalone workflow in that case.
-
-### `app.setWorkspaceTools` — `layout`
-
-Registers up to 24 controls in Hikari's shared right toolbar, beside the existing
-agent chat toggle. Only the active plugin's controls appear. The plugin retains
-its editor and panels; the host renders buttons from a fixed icon catalog and
-sends `app.workspaceTool` events to the registered frame and origin.
-
-```js
-await hikari.call('app.setWorkspaceTools', { tools: [
-  { id: 'layers', label: 'Layers', icon: 'layers', group: 'panels', expanded: false },
-  { id: 'zoom', kind: 'output', label: '100%', group: 'zoom' }
-] });
-hikari.on('app.workspaceTool', ({ id, y }) => {
-  // Open the existing panel or menu. y is relative to the plugin view.
-});
-```
-
-Each button has a unique lowercase `id`, a `label` (1–100 characters), and an
-`icon`: `pointer`, `lasso`, `plus`, `undo`, `redo`, `group`, `ungroup`, `layers`,
-`assets`, `scratch`, `minus`, or `fit`. Optional boolean `disabled`, `pressed`,
-and `expanded` fields mirror editor state. `group` separates related tools.
-An item with `kind:"output"` displays its label without accepting clicks.
-HTML, custom SVG, and arbitrary fields are rejected. Updates replace the
-configuration; an empty list clears it. Optional `focusId` returns keyboard
-focus to an enabled button, including when closing a plugin-owned panel.
-
-Check `app.info.layout.workspaceTools.available` before registering on older
-hosts and provide local controls when unavailable. Tools remain available when
-Codex is disconnected. The configuration is presentation state and does not
-change the plugin's stored artwork or canvas coordinate system.
-
-### `app.setAgentChatExpanded` — `agent:chat`
-
-Opens or folds the existing chat rail for the active plugin. An inactive plugin
-cannot change another workspace's rail. Use this to coordinate tool panels with
-chat; `app.context.layout.agentChatRail.expanded` reports the resulting state.
-
-```js
-await hikari.call('app.setAgentChatExpanded', { expanded: false });
-```
-
-`expanded` must be boolean. Opening requires the host's normal Codex availability
-gate. This call reuses the plugin's existing item-scoped conversation.
-
-### `app.setLeftRailFolded` — `layout`
-
-Saves the calling plugin's navigation-rail preference in Hikari. The plugin
-renders its own rail using the returned state; the host never manipulates its
-iframe DOM. The registered plugin identity supplies the scope, so callers
-cannot fold another plugin's rail. The expanded width stays unchanged.
-
-```js
-const { leftRail } = await hikari.call('app.setLeftRailFolded', { folded: true });
-// leftRail.folded === true; false opens the rail again.
-```
-
-`folded` must be a boolean. `app.info` and `app.context` expose
-`layout.leftRail.foldable` and `layout.leftRail.folded`; each frame receives its
-own saved fold state. Changes publish `changed: 'layout'`. Check `foldable`
-before showing a toggle when supporting older Hikari builds. Folding is a view
-preference and does not change figure data, exports or agent canvas coordinates.
-
-### `app.setLeftRailWidth` — `layout`
-
-Commits the final width of a plugin-owned left rail to Hikari's shared layout
-preference. Clamp locally while the pointer moves so dragging stays smooth;
-call the host only once on pointer-up. The host clamps again, persists the
-accepted value, applies it to built-in modules, and broadcasts an
-`app.context` event with `changed: 'layout'`.
-
-```js
-const { leftRail } = await hikari.call('app.setLeftRailWidth', { width: 336 });
-// { width: 336, min: 240, max: 400, mobileBreakpoint: 980 }
-```
-
-`width` must be a finite JSON number. It grants no access to settings or host
-content, but it does write the host's `--shared-left-rail-width` variable and the
-host's stored layout preference (which survives a restart), and the resulting
-`app.context` broadcast reaches every other registered plugin frame — so it is
-gated on the `layout` permission rather than being free.
-
 ### `notifications.show` — `notifications`
 
 Asks Hikari to show a transient host toast. Use it for a user-relevant success
@@ -388,7 +309,8 @@ the whole window close in Electron, with no dialog and no error — the red X
 simply stops working. Push the flag up and let the host ask.
 
 With the flag set, the host names the plugin (by its manifest `name`) in the
-unsaved-changes dialog at quit time and offers to save it.
+unsaved-changes dialog at quit time and offers to save it. Workspace cloud sync
+also refuses to start until the flag clears.
 
 ### 3.1 `app.save` event — *no permission required*
 
@@ -425,7 +347,10 @@ await hikari.call('app.setHistory', { canUndo: true, canRedo: false });
 
 The buttons follow focus. The host remembers the last focused plugin frame and
 reads the depth *that* frame reported, so a frame the user is not editing in
-does not light them up.
+does not light them up. A plugin's shared workspace toolbar (§4.1) also selects
+that editor as the history target; clicking Hikari's system history buttons
+keeps that target. Switching views or removing the frame releases the claim.
+Plugins can use these system buttons without adding their own undo/redo controls.
 
 ### 3.2 `app.undo` / `app.redo` events — *no permission required*
 
@@ -632,42 +557,233 @@ and its dependent views — the user sees the new rows without reloading.
 
 ---
 
-## 4. Errors and access control
+## 4. Layout and host UI verbs
 
-Every request is checked in this order:
+These verbs let a plugin fit into Hikari's shell without touching host DOM. The
+plugin keeps its own editor, panels, and state; Hikari renders only what a call
+describes — text labels and icons from its own catalog — and sends
+interactions back to the frame and origin that registered them. No field takes
+HTML or SVG, and unknown fields are rejected. Workspace tools and context
+actions are registered per frame: each call replaces that frame's previous set,
+and Hikari drops the set when the frame's origin grant is revoked (§6).
 
-1. **Protocol marker.** No `hikari: 1` → ignored silently.
-2. **Frame identity.** The host looks up `event.source` — the actual
-   `contentWindow` the message arrived from — in its registry of installed
-   plugins. An unrecognized frame gets **no reply at all**, not even an error.
-   Identity is never read from the payload, so a plugin cannot claim another
-   plugin's id to borrow its permissions. The message origin must also match
-   the loopback origin assigned before loading; a mismatch revokes the grant
-   without replying.
-3. **Verb exists.** → `Unknown verb "X".`
-4. **Permission declared.** → `Plugin "X" did not declare the "Y" permission in
-   plugin.json.` Remember that grants are snapshotted at install time: adding
-   the permission to the manifest requires a remove + re-add to take effect.
-5. **Handler runs.** Any thrown error is returned as
-   `{ ok: false, error: <message> }`; the host never crashes on plugin input.
+Older hosts answer `Unknown verb "…"`. Keep a local fallback — your own toolbar
+or entry point — and switch to the host surface once a call succeeds.
 
-Because `permission` is declared per verb in the `VERBS` table, adding a
-handler is not enough to expose data — an entry with an unlisted permission is
-unreachable.
+### `app.setLeftRailWidth` — `layout`
+
+Commits the final width of a plugin-owned left rail to Hikari's shared layout
+preference. Clamp locally while the pointer moves so dragging stays smooth;
+call the host only once on pointer-up. The host clamps again, persists the
+accepted value, applies it to built-in modules, and broadcasts an
+`app.context` event with `changed: 'layout'`.
+
+```js
+const { leftRail } = await hikari.call('app.setLeftRailWidth', { width: 336 });
+// { width: 336, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false }
+```
+
+`width` must be a finite JSON number. It grants no access to settings or host
+content, but it does write the host's `--shared-left-rail-width` variable and the
+host's stored layout preference (which survives a restart), and the resulting
+`app.context` broadcast reaches every other registered plugin frame — so it is
+gated on the `layout` permission rather than being free.
+
+### `app.setLeftRailFolded` — `layout`
+
+Saves the calling plugin's navigation-rail preference in Hikari. The plugin
+renders its own rail using the returned state; the host never manipulates its
+iframe DOM. The registered plugin identity supplies the scope, so callers
+cannot fold another plugin's rail. The expanded width stays unchanged.
+
+```js
+const { leftRail } = await hikari.call('app.setLeftRailFolded', { folded: true });
+// leftRail.folded === true; false opens the rail again.
+```
+
+`folded` must be a boolean. `app.info` and `app.context` expose
+`layout.leftRail.foldable` and `layout.leftRail.folded`; each frame receives its
+own saved fold state. Changes publish `changed: 'layout'`. Check `foldable`
+before showing a toggle when supporting older Hikari builds. Folding is a view
+preference and does not change figure data, exports or agent canvas coordinates.
+
+### `app.setWorkspaceTools` — `layout`
+
+Registers up to 24 controls in Hikari's shared right toolbar, beside the
+agent chat toggle. Only the active plugin's controls appear, and they stay
+available when Codex is disconnected. The plugin retains the panels and menus
+its controls open.
+
+```js
+await hikari.call('app.setWorkspaceTools', { tools: [
+  { id: 'select', label: 'Select & move (V)', icon: 'pointer', group: 'tools', pressed: true },
+  { id: 'layers', label: 'Layers', icon: 'layers', group: 'panels', expanded: false },
+  { id: 'zoom', kind: 'output', label: '100%', group: 'zoom' }
+] });
+// { mounted: true }
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string | Required and unique: a lower-case letter, then letters, digits, or hyphens, at most 64 characters. |
+| `label` | string | Required, 1–100 characters. A button's tooltip and accessible name; an output's visible text. |
+| `icon` | string | Required for buttons: `pointer`, `lasso`, `plus`, `undo`, `redo`, `group`, `ungroup`, `layers`, `assets`, `scratch`, `minus`, `crop`, or `fit`. |
+| `kind` | string | `button` (default) or `output`, which displays its label without accepting clicks. |
+| `group` | string | Optional, at most 40 characters. A change of group between adjacent tools starts a separator. |
+| `disabled`, `pressed`, `expanded` | boolean | Optional. Mirror editor state; `pressed` and `expanded` become `aria-pressed` and `aria-expanded`. |
+
+The only params are `tools` and an optional `focusId`. Each call replaces the
+whole configuration, so send the full list when editor state changes; an empty
+list clears it. `focusId` returns keyboard focus to an enabled button,
+including when closing a plugin-owned panel. Arrow Up/Down, Home, and End move
+focus between the enabled buttons.
+
+Check `app.info.layout.workspaceTools.available` (and that `layout` was
+granted) before hiding your local controls; without the toolbar the call
+rejects with `Workspace tools are unavailable in this host.` The configuration
+is presentation state and does not change the plugin's stored artwork or
+canvas coordinate system.
+
+Choose icons from `app.info.layout.workspaceTools.icons` before submitting a
+configuration. An unsupported icon rejects the whole list. Hosts without that
+capability list accept the original icons above except `crop`.
+
+### 4.1 `app.workspaceTool` event — `layout`
+
+```js
+hikari.on('app.workspaceTool', ({ id, y }) => {
+  // Open the existing panel or menu. y is relative to the plugin view.
+});
+```
+
+Sent to the registering frame and origin when the user clicks one of its
+enabled buttons. `y` is the click's vertical position in CSS pixels from the
+top of the plugin view, for placing a menu beside the toolbar; clamp it,
+because keyboard activation reports no pointer position.
+
+### `app.setContextActions` — `layout`
+
+Registers up to eight declarative actions in two host surfaces: the `…` menu of
+a saved protocol in **Protocols** (`protocol`) and the text-selection toolbar of
+a paper PDF in **Papers** (`paper-selection`). Hikari renders the label as text
+and supplies the toolbar icon.
+
+```js
+await hikari.call('app.setContextActions', { actions: [
+  { id: 'generate-illustration', label: 'Generate illustration',
+    contexts: ['protocol', 'paper-selection'], requiresAgent: true }
+] });
+// { registered: 1 }
+```
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | string | Required and unique; same format as a workspace tool `id`. |
+| `label` | string | Required, 1–100 characters. |
+| `contexts` | string[] | Required: `protocol`, `paper-selection`, or both. |
+| `requiresAgent` | boolean | Optional. Hides the action, and refuses a click, while Codex is not connected. |
+
+`actions` is the only param, and an empty list withdraws the actions.
+Re-registering cancels a handoff still pending for this frame. Plugin frames
+load at boot, so register at startup and the actions are available before the
+user opens the plugin.
+
+### 4.2 `app.contextAction` event — `layout`
+
+When the user picks an action, Hikari opens the plugin's view and sends:
+
+```js
+hikari.on('app.contextAction', async ({ id, actionId, context }) => {
+  // context is { kind: 'protocol' } or { kind: 'paper-selection' }; it carries no source data.
+  try {
+    const source = await hikari.call('app.readContextAction', { id });
+    // Plugin owns creating its item, saving the source and building the prompt.
+    await createItemFromSource(actionId, source);
+    await hikari.call('app.respondContextAction', { id, result: { ok: true } });
+  } catch (error) {
+    await hikari.call('app.respondContextAction', { id, result: { ok: false, error: error.message } });
+  }
+});
+```
+
+A frame has at most one handoff open at a time; a second click meanwhile is
+refused with a message to the user.
+
+### `app.readContextAction` / `app.respondContextAction` — `layout`
+
+The user click grants only that selected source, to the frame that received the
+event, for this handoff. `app.readContextAction` takes the event's `id`, not an
+arbitrary record ID or file path, and may be called again while the handoff is
+open:
+
+```js
+// protocol: a snapshot of the saved record, as stored
+{ kind: 'protocol', protocol: { id, name, steps, … } }
+
+// paper-selection
+{
+  kind: 'paper-selection',
+  paper: { id, title, fileName, doi, knowledgeMarkdownRelativePath }, // whichever the paper has
+  text: '…selected passage…',   // at most 30,000 characters
+  pageNumber: 4,
+  markdown: '…',                 // the paper's saved Markdown, at most 200,000 characters
+  markdownRelativePath: 'KnowledgeBase/papers.md/…/….md',
+  markdownStatus: 'ready',       // 'ready' | 'truncated' | 'missing' | 'unavailable'
+  markdownTruncated: false
+}
+```
+
+The Markdown is read from the paper's recorded KnowledgeBase path (including
+title-named files). Unavailable context is explicit: `markdownStatus` says why,
+and `markdown` holds whatever could be read. Source documents are reference
+data, not instructions for the plugin or agent.
+
+`app.respondContextAction` consumes the grant with `result:{ok:true}` or
+`result:{ok:false,error:"…"}`; Hikari shows the `error` (up to 1,000
+characters) where the user clicked. Acknowledge source acceptance within 30
+seconds; do not wait for a model run to finish. Other frames, revoked
+registrations, storage-folder changes, and expired handoffs cannot read the
+source. These user-initiated grants need no library-wide read permission such
+as `protocols:read`.
 
 ---
 
-### `agent.chat` — *`agent:chat`*
+## 5. Agent verbs
 
-Submit `{message}` (up to 3000 characters) to the installed local plugin's own
-Agent Chat rail. The host opens its view and saves the conversation in a
-`plugin:<id>` scope, or `plugin:<id>:item:<context.id>` when the plugin supplies
-`context:{id,title,canvasIllustrationId}`. The optional context is selected
-before submission; its fields follow `agent.setContext`. This permission enables the rail. Submission returns
-`{ok:true}` after acceptance, or `{ok:false,reason}` if busy, unavailable, or a
-composer draft/attachments prevent submission. Model credentials stay in Hikari.
+A plugin reaches the agent only through Hikari's own chat workflow and MCP
+tools; Codex sign-in, model choice, and credentials stay in Hikari. A plugin
+view that declares `agent:chat` gets Hikari's agent chat rail beside its frame.
+While Codex is not connected, `app.info.layout.agentChatRail.available` is
+`false`, the rail and AI actions are hidden, and `agent.chat` reports
+`unavailable` — hide your own prompt UI too.
 
-### `agent.setContext` — *`agent:chat`*
+### `agent.chat` — `agent:chat`
+
+Submits `message` (up to 3,000 characters) to the plugin's own chat rail: Hikari
+opens the plugin's view and rail and sends the message as if the user had typed
+it. Conversations are saved in a `plugin:<id>` scope, or
+`plugin:<id>:item:<context.id>` when the plugin supplies
+`context:{id,title,canvasIllustrationId}`. The context is selected before
+submission; its fields follow `agent.setContext`.
+
+```js
+const result = await hikari.call('agent.chat', {
+  message: 'Draw a T cell meeting an antigen-presenting cell.',
+  context: { id: 'fig_7', title: 'Antigen presentation', canvasIllustrationId: 'fig_7' }
+});
+// { ok: true, clientRequestId, sessionId } once the turn is accepted
+// { ok: false, reason: 'busy' }
+```
+
+The call resolves when Hikari accepts the turn, not when the agent finishes.
+A refusal resolves with `ok: false` instead of rejecting. `reason` is
+`unavailable` (Codex is not connected), `busy` (a turn is already running),
+`composer_not_empty` (the user has a draft, attachments, or pending context in
+the composer), or `session_error` / `request_error` / `scope_changed` (the turn
+did not start). A plugin that also declares `agent:canvas` gets
+`{ok:false,error}` while **Settings → Tool access → Plugin canvases** is off.
+
+### `agent.setContext` — `agent:chat`
 
 Select the plugin's current item with `{id,title,canvasIllustrationId}` so its
 chat follows selection even before a message is sent. `id` is required and
@@ -681,36 +797,72 @@ Selection updates the visible rail when this plugin is active and returns
 `{ok:true,contextId}`. Call after opening/selecting an item and after renaming
 it. Plugin chats show no generic suggested prompts.
 
-### `agent.respond` — *`agent:canvas`*
+### `app.setAgentChatExpanded` — `agent:chat`
 
-Complete an `agent.canvas` request with `{id,result}`; `result.ok` is boolean.
-Only the registered frame and origin that received it may respond. Unknown,
-late, duplicate and cross-plugin replies are rejected.
+Opens or folds the existing chat rail for the active plugin. An inactive plugin
+cannot change another workspace's rail. Use this to coordinate tool panels with
+chat; `app.context.layout.agentChatRail.expanded` reports the resulting state.
 
-### `agent.canvas` event — *`agent:canvas`*
+```js
+await hikari.call('app.setAgentChatExpanded', { expanded: false });
+// { expanded: false }
+```
 
-The generic `plugin_canvas` MCP tool routes `{id,request,assets,deadline,inspectionRunId}` to the
-enabled local plugin named by `plugin_id`. Start with `request:{action:"read"}`
-and return a plugin-owned request schema and instructions as `agent_contract`.
-Plugins own validation, edits, durable persistence and rendering. Check the
-30-second `deadline` before edits. Use revisions, atomic saves and idempotent
-request IDs. Render while hidden and return
+`expanded` must be boolean and is the only param. The result is the rail's
+actual state: opening still reports `false` while Codex is not connected. This
+call reuses the plugin's existing item-scoped conversation.
+
+### 5.1 `agent.canvas` event — `agent:canvas`
+
+The generic `plugin_canvas` MCP tool lets the agent read, edit, and render a
+plugin's own scene. Each call is routed to the enabled local plugin named by
+`plugin_id` and arrives as `{id,request,assets,deadline,inspectionRunId}`:
+
+```js
+hikari.on('agent.canvas', async ({id,request,assets,deadline,inspectionRunId}) => {
+  const result = await myWorkspace.request(request, deadline, assets, {inspectionRunId});
+  await hikari.call('agent.respond', {id,result});
+});
+await hikari.call('agent.chat', {message:'Read my plugin contract and draw a cell.'});
+```
+
+Start with `request:{action:"read"}` and return a plugin-owned request schema
+and instructions as `agent_contract`. Plugins own validation, edits, durable
+persistence and rendering; requests are at most 12,000,000 characters of JSON.
+Check the 30-second `deadline` (epoch milliseconds) before edits — after it the
+agent receives `status:"acknowledgement_timeout"`. Use revisions, atomic saves
+and idempotent request IDs. Render while hidden and return
 `previews:[{canvas,width,height,mime_type,data_url}]` for native MCP images.
 The host validates PNG/JPEG/WebP bytes: 5 MiB each, at most eight previews.
-`assets` maps image IDs to `{mime_type,data_url,source}` (5 MiB each, with no per-call
-asset-count or combined-byte quota). Plugins validate their saved scene size.
-The MCP caller supplies `assets:[{id,path,source?}]`: `source:"storage"` (default)
-confines paths to Hikari storage; `source:"codex"` confines paths to the
-Hikari-managed `CODEX_HOME/generated_images` folder and accepts the exact native
-`image_gen` output path. The root comes from host configuration, never request
-context. Root and file symlink escapes are rejected. Native imports require no
-shell copy. Plugins persist the embedded bytes with their scene. Canvas chat
-turns enable Codex's native `image_generation` feature on fresh and resumed
-runs; the plugin must report unavailable generation rather than change providers.
-No host filesystem paths or plugin modules cross the iframe API.
+A request for a plugin that is not enabled, lacks `agent:canvas`, or is not
+running returns `status:"unavailable"` without reaching any frame.
+
+`assets` maps image IDs to `{mime_type,data_url,source}` (5 MiB each, with no
+per-call asset-count or combined-byte quota). Plugins validate their saved
+scene size. The MCP caller supplies `assets:[{id,path,source?}]`:
+`source:"storage"` (default) confines paths to Hikari storage; `source:"codex"`
+confines paths to the Hikari-managed `CODEX_HOME/generated_images` folder and
+accepts the exact native `image_gen` output path. The root comes from host
+configuration, never request context. Root and file symlink escapes are
+rejected. Native imports require no shell copy. Plugins persist the embedded
+bytes with their scene. Canvas chat turns enable Codex's native
+`image_generation` feature on fresh and resumed runs; the plugin must report
+unavailable generation rather than change providers. No host filesystem paths
+or plugin modules cross the iframe API.
+
+### `agent.respond` — `agent:canvas`
+
+Complete an `agent.canvas` request with `{id,result}`; `result.ok` is boolean,
+and the rest of `result` is returned to the agent. Only the registered frame and
+origin that received it may respond. Unknown, late, duplicate and cross-plugin
+replies are rejected. Returns `{acknowledged:true}`.
+
+### 5.2 Inspection before completion
 
 Canvas plugins can require inspection before their Hikari chat run completes.
-Return `inspection:{required:true}` and `illustration_id` from `read`. The host
+At the start of each run Hikari sends `request:{action:"read"}` (with
+`illustration_id` when `agent.setContext` pinned one). Return
+`inspection:{required:true}` and `illustration_id` to opt in. The host
 generates an opaque `inspectionRunId` for that run and forwards it with all
 canvas events, outside the agent-authored request. The plugin owns its render
 receipts and review validation. The host then calls
@@ -723,17 +875,39 @@ their existing completion behavior. Keep receipts ephemeral and scoped to the
 run, illustration and revision; do not expose them through read/status calls.
 This completion gate applies to the plugin's Hikari chat, not external MCP clients.
 
-```js
-hikari.on('agent.canvas', async ({id,request,assets,deadline,inspectionRunId}) => {
-  const result = await myWorkspace.request(request, deadline, assets, {inspectionRunId});
-  await hikari.call('agent.respond', {id,result});
-});
-await hikari.call('agent.chat', {message:'Read my plugin contract and draw a cell.'});
-```
+---
+
+## 6. Errors and access control
+
+Every request is checked in this order:
+
+1. **Protocol marker.** No `hikari: 1` → ignored silently. A message with a
+   `call` field belongs to the service-plugin protocol
+   ([service-plugins.md](service-plugins.md)) and is ignored here too.
+2. **Frame identity.** The host looks up `event.source` — the actual
+   `contentWindow` the message arrived from — in its registry of installed
+   plugins. An unrecognized frame gets **no reply at all**, not even an error.
+   Identity is never read from the payload, so a plugin cannot claim another
+   plugin's id to borrow its permissions. The message origin must also match
+   the loopback origin assigned before loading; a mismatch revokes the grant
+   without replying.
+3. **Verb exists.** → `Unknown verb "X".` A verb reserved for the bundled Gel
+   plugin gets the same answer from every other frame.
+4. **Permission declared.** → `Plugin "X" did not declare the "Y" permission in
+   plugin.json.` Remember that grants are snapshotted at install time: adding
+   the permission to the manifest requires a remove + re-add to take effect.
+5. **Params are an object.** → `Plugin call "X" needs an object for params.`
+   Omitted params count as `{}`.
+6. **Handler runs.** Any thrown error is returned as
+   `{ ok: false, error: <message> }`; the host never crashes on plugin input.
+
+Because `permission` is declared per verb in the `VERBS` table, adding a
+handler is not enough to expose data — an entry with an unlisted permission is
+unreachable.
 
 ---
 
-## 5. What the API deliberately does not do
+## 7. What the API deliberately does not do
 
 Absent by design, not oversight. If you need one of these, the extension
 probably belongs as a built-in module
@@ -747,24 +921,32 @@ rather than a plugin.
 - **No settings, and no direct filesystem access.** A plugin cannot read or
   write the app's settings, cannot learn the storage root, and cannot reach a
   file outside `<storage root>/Plugins/<its id>/`. `downloads.save` can write
-  elsewhere only after the user chooses the exact destination in a save dialog.
+  elsewhere only after the user chooses the exact destination in a save dialog,
+  and a context action hands over only the protocol or paper passage the user
+  clicked.
+- **No plugin markup in host UI.** Workspace tools and context actions are
+  declarative: Hikari draws text labels and its own icons, in the two places
+  §4 describes and nowhere else.
 - **No raw model or network proxy.** `agent.chat` uses the normal chat workflow;
   `agent.canvas` exposes the plugin's own scene. Provider credentials stay in
   Hikari. The host provides no arbitrary network proxy. `python.run` is compute, not a
   network door — but note it runs on the host with whatever the host's
   interpreter can reach, which is why it is a permission of its own.
 - **No data subscriptions.** All the host pushes is the safe `app.context`
-  snapshot, `app.save` / `app.undo` / `app.redo` commands, and permission-gated
-  `agent.canvas` requests.
+  snapshot, `app.save` / `app.undo` / `app.redo` commands, clicks on the
+  plugin's own tools and actions, and permission-gated `agent.canvas` requests.
   Protocol, notebook, project, and sample data remain request/response.
 - **No cross-plugin calls.**
 
 ---
 
-## 6. Adding a verb
+## 8. Adding a verb
 
-In [`plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js), add to the
-`VERBS` table:
+Add an entry to the `VERBS` table in
+[`plugin-bridge/verbs.js`](../../src/renderer/app/plugin-bridge/verbs.js), or
+to `LAYOUT_VERBS` in
+[`plugin-bridge/layout-verbs.js`](../../src/renderer/app/plugin-bridge/layout-verbs.js)
+for a layout or host-UI verb:
 
 ```js
 'samples.get': {
@@ -773,9 +955,12 @@ In [`plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js), add to the
 }
 ```
 
-The handler receives
-`(params, { state, persist, plugin, onNotebookEntriesChanged, api, notify, windowObject })`.
-Rules:
+The handler receives `(params, context)`. `context` carries `state`, `persist`,
+`plugin` (the registered record), `frameWindow`, `windowObject`, `api` (the
+preload API), `notify`, and `onNotebookEntriesChanged`, plus the bridge
+services `pluginUnsaved`, `pluginHistory`, `workspaceTools`, `contextActions`,
+`onPluginPrompt`, `onPluginChatContext`, `respondCanvas`, and
+`takeNotebookGel`. Rules:
 
 - **Copy and clamp what you return.** Handlers build fresh objects with `text()`
   length caps rather than returning live state objects — a reply crosses into
@@ -784,8 +969,19 @@ Rules:
 - **Throw on bad input.** The dispatcher converts throws into
   `{ ok: false, error }`; do not return sentinel values.
 - **Call `persist()` after mutating**, plus the relevant re-render callback.
+- **Slow verbs need a longer client timeout.** A verb that can outlast 10 s
+  belongs in `SLOW_VERBS` in the copyable
+  [`hikari.js`](../../examples/plugins/notebook-results/hikari.js).
+- **Bundled-only verbs** set `internal: true` and `bundledPluginId`. They are
+  left out of `PLUGIN_BRIDGE_VERBS` and answer `Unknown verb` to every other
+  frame; [`src/plugins/README.md`](../../src/plugins/README.md) says when one
+  is acceptable.
 - **Introducing a new capability?** Add it to `PLUGIN_PERMISSIONS` in
   [`inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js),
   or manifests requesting it will be rejected at install time. Then document it
-  in [plugin-system.md §1.5](plugin-system.md#15-permissions) and here, and
-  extend the bridge test in [`test.js`](../../test.js).
+  in [plugin-system.md §1.5](plugin-system.md#15-permissions) and here.
+- **Document and test it.** `every public verb and host event is documented`
+  in
+  [`plugin-system-suite/plugin-system.js`](../../tests/suites/core/plugin-system-suite/plugin-system.js)
+  fails until each public verb has a `###` heading here; add a new host event
+  to that test's event list. Bridge tests live in the same suite.

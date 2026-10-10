@@ -51,7 +51,7 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   const toolbarUngrouped = await read();
   check(toolbarUngrouped.groups.length === 0 && JSON.stringify(toolbarUngrouped.objects) === JSON.stringify(initial.objects), 'Toolbar ungrouping releases children without changing geometry or styling');
   check(await evaluate('document.getElementById("layer-inspector").hidden && !document.getElementById("group-selection").disabled && document.getElementById("ungroup-selection").disabled'), 'Toolbar ungrouping keeps Layers closed and restores Group for the retained selection');
-  await evaluate('document.getElementById("undo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
   check((await read()).groups[0]?.id === group.id && await evaluate('document.getElementById("group-selection").disabled && !document.getElementById("ungroup-selection").disabled'), 'Undo restores group membership and toolbar availability');
   await evaluate('document.getElementById("layers-tab").click()');
   await evaluate('document.querySelector("#properties [name=name]").value="ER component";document.querySelector("#properties [name=name]").dispatchEvent(new Event("change",{bubbles:true}))'); await pause(80);
@@ -106,9 +106,9 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   await apply([{ op: 'delete', id: scratchGroup.id }]);
   await evaluate(`document.querySelector('[data-layer-id="${group.id}"] .layer-select').click();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'g',ctrlKey:true,shiftKey:true,bubbles:true}))`); await pause(80);
   const ungrouped = await read(); check(ungrouped.groups.length === 0 && JSON.stringify(ungrouped.objects) === JSON.stringify(edited.objects), 'Ctrl-Shift-G ungroups without moving or flattening children');
-  await evaluate('document.getElementById("undo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
   check((await read()).groups[0].id === group.id, 'Undo restores grouping');
-  await evaluate('document.getElementById("redo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("redo")'); await pause(80);
   check((await read()).groups.length === 0, 'Redo restores ungrouping');
   await evaluate('document.body.dispatchEvent(new KeyboardEvent("keydown",{key:"g",metaKey:true,bubbles:true}))'); await pause(80);
   const regrouped = await read(); check(regrouped.groups.length === 1, 'Command-G groups the retained multi-selection');

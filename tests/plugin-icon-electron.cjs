@@ -32,7 +32,7 @@ async function run() {
   const csp = source.match(/<meta http-equiv="Content-Security-Policy"[\s\S]*?>/)[0];
   await fs.writeFile(path.join(temp, 'host.html'), `<!DOCTYPE html><html><head>${csp}<link rel="stylesheet" href="${url('styles.css')}"><style>
     body{min-width:0}.topbar{position:relative}.preview{display:grid;grid-template-columns:180px 1fr;gap:36px;align-items:center;padding:52px 64px}.preview-mark svg{width:150px;height:150px;color:var(--theme-text-strong)}.preview h2{margin:0 0 8px}.preview p{margin:0;color:var(--theme-text-muted)}.samples{display:flex;gap:24px;align-items:center;margin-top:28px;color:var(--theme-text-muted)}.sample{display:flex;gap:12px;align-items:center}.sample svg{width:22px;height:22px}.sample.active{color:var(--theme-text-strong)}#probe{position:absolute;width:24px;height:24px;bottom:8px;right:8px;opacity:0}
-    </style></head><body><header class="topbar"><div class="topbar-brand"><h1>Hikari</h1></div><div class="app-dock"><nav id="app-dock-nav"></nav><span class="app-dock-divider"></span><button id="app-more-btn" class="app-nav-btn">More</button><div id="app-more-menu" class="app-more-menu" hidden></div></div><div class="topbar-tools"><input placeholder="Search Hikari"></div></header><main class="preview"><div class="preview-mark"></div><div><h2>Scientific Illustration</h2><p>A cell diagram and drawing pen.</p><div class="samples"><span class="sample"></span><span class="sample active"></span></div></div></main><div id="probe"></div><script type="module" src="host.mjs"></script></body></html>`);
+    </style></head><body><header class="topbar"><div class="topbar-brand"><h1>Hikari</h1></div><div class="app-dock"><nav id="app-dock-nav"></nav><span class="app-dock-divider"></span><button id="app-more-btn" class="app-nav-btn">More</button><div id="app-more-menu" class="app-more-menu" hidden></div></div><div class="topbar-tools"><input placeholder="Search Hikari"></div></header><main class="preview"><div class="preview-mark"></div><div><h2>Figura</h2><p>A cell diagram and drawing pen.</p><div class="samples"><span class="sample"></span><span class="sample active"></span></div></div></main><div id="probe"></div><script type="module" src="host.mjs"></script></body></html>`);
   await fs.writeFile(path.join(temp, 'host.mjs'), `
     import { createAppDock } from ${JSON.stringify(url('src/renderer/app/navigation-shell/app-dock.js'))};
     import { loadPluginIcons, pluginIconMarkup } from ${JSON.stringify(url('src/renderer/app/plugin-loader.js'))};
@@ -40,14 +40,17 @@ async function run() {
     import { applyAppearanceToDocument } from ${JSON.stringify(url('src/renderer/app/appearance.js'))};
     window.inspected=await hikariApi.inspectPluginFolder(${JSON.stringify(folder)});
     if(!inspected.ok) throw new Error(inspected.error);
-    const entry={id:'plugin-scientific-illustration',viewId:'plugin-scientific-illustration-view',label:'Scientific Illustration',iconMarkup:pluginIconMarkup('')};
+    const entry={id:'plugin-scientific-illustration',viewId:'plugin-scientific-illustration-view',label:'Previous plugin name',iconMarkup:pluginIconMarkup('')};
+    window.installedPlugin={id:'scientific-illustration',name:entry.label,path:${JSON.stringify(folder)},permissions:['storage']};
+    const section=document.createElement('section');section.id=entry.viewId;section.hidden=true;
+    const frame=document.createElement('iframe');frame.className='plugin-frame';section.append(frame);document.body.append(section);
     window.apps=[...APP_REGISTRY.filter(app=>!app.hiddenFromNavigation),entry];
     window.activeViewId=entry.viewId;
-    window.dock=createAppDock({documentObject:document,windowObject:window,TITLES:{},dockNav:document.getElementById('app-dock-nav'),appDockDivider:document.querySelector('.app-dock-divider'),moreBtn:document.getElementById('app-more-btn'),moreMenu:document.getElementById('app-more-menu'),expandedDockApps:apps,normalize:id=>id,getActiveViewId:()=>activeViewId,getAppForView:id=>apps.find(app=>app.viewId===id),resolveNavigationViewId:id=>id});
+    window.dock=createAppDock({documentObject:document,windowObject:window,TITLES:{},dockNav:document.getElementById('app-dock-nav'),appDockDivider:document.querySelector('.app-dock-divider'),moreBtn:document.getElementById('app-more-btn'),moreMenu:document.getElementById('app-more-menu'),expandedDockApps:apps,getActiveViewId:()=>activeViewId,getAppForView:id=>apps.find(app=>app.viewId===id),resolveNavigationViewId:id=>id});
     window.navigate=id=>{activeViewId=id;dock.renderAppNavigation(id);dock.syncNavigationState(id);};
     navigate(activeViewId);
-    // Simulate an existing install: only id/path are stored, no icon metadata.
-    await loadPluginIcons({plugins:[{id:'scientific-illustration',path:${JSON.stringify(folder)}}],appRegistry:apps,api:hikariApi});
+    // Simulate an existing install with a cached name and original permission grants.
+    await loadPluginIcons({plugins:[installedPlugin],appRegistry:apps,api:hikariApi,documentObject:document});
     navigate(activeViewId);
     window.setTheme=mode=>applyAppearanceToDocument({mode},document,16);
     setTheme('day');
@@ -69,6 +72,9 @@ async function run() {
   const evaluate = code => win.webContents.executeJavaScript(code);
   check(await evaluate('Boolean(window.iconReady)'), 'fixture loaded through real manifest IPC');
   const selected = '[data-app-id="plugin-scientific-illustration"]';
+  check(await evaluate(`inspected.name==='Figura' && installedPlugin.name==='Figura' && document.querySelector('#app-dock-nav ${selected}').getAttribute('aria-label')==='Figura'`), 'Existing install names refresh to Figura in Settings and navigation');
+  check(await evaluate(`(()=>{const section=document.getElementById('plugin-scientific-illustration-view'),frame=section.querySelector('iframe');return section.getAttribute('aria-label')==='Figura'&&frame.title.startsWith('Figura')&&frame.title===frame.getAttribute('aria-label')})()`), 'The view and iframe accessible names refresh with the manifest');
+  check(await evaluate(`installedPlugin.id==='scientific-illustration' && installedPlugin.permissions.join(',')==='storage'`), 'The rename preserves plugin identity and original permission grants');
   check(await evaluate(`document.querySelector('#app-dock-nav ${selected} svg').dataset.pluginIcon==='true'`), 'existing installation refreshes its dock icon');
   check(await evaluate(`document.querySelector('#app-dock-nav ${selected}').getAttribute('aria-current')==='page'`), 'active plugin is promoted into the dock');
   for (const mode of ['day', 'night']) {
@@ -84,7 +90,7 @@ async function run() {
   }
   await evaluate('setTheme("day");navigate("home-view");dock.toggleMoreMenu(true)'); await pause(100);
   check(await evaluate(`document.querySelector('#app-more-menu ${selected} svg').dataset.pluginIcon==='true'`), 'More menu uses the same icon');
-  check(await evaluate(`document.querySelector('#app-more-menu ${selected}').getAttribute('aria-label')==='Scientific Illustration'`), 'icon-only entry keeps its accessible name');
+  check(await evaluate(`document.querySelector('#app-more-menu ${selected}').getAttribute('aria-label')==='Figura'`), 'icon-only entry keeps its accessible name');
   await fs.writeFile(path.join(temp, 'more.png'), (await win.webContents.capturePage()).toPNG());
   await pause(300);
   check(await evaluate('!window.iconExecuted && !document.querySelector("#probe script,#probe foreignObject,#probe image")'), 'hostile SVG code stays out of host DOM and cannot execute');

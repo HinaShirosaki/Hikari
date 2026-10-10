@@ -120,6 +120,13 @@ export function getWellName(containerOrType, index) {
   return `W${index + 1}`;
 }
 
+// A well's own name when it has one, else its default label.
+export function getContainerWellName(container, index) {
+  const rawWell = Array.isArray(container?.wells) ? container.wells[index] : null;
+  const explicitName = rawWell && typeof rawWell === 'object' ? String(rawWell.name || '').trim() : '';
+  return explicitName || getWellName(container, index);
+}
+
 export function createDefaultWells(containerOrType) {
   if (!isMultiWellContainer(containerOrType)) {
     return [];

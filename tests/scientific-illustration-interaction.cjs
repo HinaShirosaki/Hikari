@@ -105,10 +105,10 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   await evaluate('(()=>{const width=document.querySelector("#properties [name=width]");width.value="260";width.dispatchEvent(new Event("change",{bubbles:true}))})()'); await pause(80);
   let resized = (await read()).objects.find(object => object.id === 'resize-fixture');
   check(resized.width === 260 && resized.height === 80 && resized.svg.includes('preserveAspectRatio="none"'), 'Numeric width also stretches artwork independently of height');
-  await evaluate('document.getElementById("undo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
   resized = (await read()).objects.find(object => object.id === 'resize-fixture');
   check(resized.width === 130 && resized.height === 80 && resized.svg.includes('preserveAspectRatio="xMidYMid meet"'), 'Undo restores the original source aspect ratio with its geometry');
-  await evaluate('document.getElementById("redo").click()'); await pause(80);
+  await evaluate('illustrationWorkspace.history("redo")'); await pause(80);
   resized = (await read()).objects.find(object => object.id === 'resize-fixture');
   check(resized.width === 260 && resized.svg.includes('preserveAspectRatio="none"'), 'Redo restores free stretching and its geometry');
   await evaluate('document.getElementById("main-canvas").scrollTo(120,100)');

@@ -11,7 +11,6 @@ function createAppDock({
   pageSubtitle,
   expandedDockApps,
   isAppShown = () => true,
-  normalize,
   getActiveViewId,
   getAppForView,
   resolveNavigationViewId
@@ -232,7 +231,7 @@ function createAppDock({
     const activeNavView = resolveNavigationViewId(activeViewId);
     const activeApp = getAppForView(activeNavView);
     appNavButtons.forEach((button) => {
-      const buttonView = normalize(button.dataset.view);
+      const buttonView = button.dataset.view;
       button.classList.toggle('is-active', buttonView === activeNavView);
       if (buttonView === activeNavView) {
         button.setAttribute('aria-current', 'page');

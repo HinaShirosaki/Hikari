@@ -41,6 +41,7 @@ function createProtocolEditorActions({
     const createdAt = draftHelpers.normalizeIsoTimestamp(localState.currentProtocolDraft.createdAt, nowIso);
     const existingProtocol = state.protocols.find((item) => item.id === localState.currentProtocolDraft.id) || null;
     const protocol = {
+      ...existingProtocol,
       id: localState.currentProtocolDraft.id || createId(),
       name: editorDraft.name,
       purpose: editorDraft.purpose,
@@ -49,8 +50,12 @@ function createProtocolEditorActions({
       troubleshooting: editorDraft.troubleshooting,
       createdAt,
       updatedAt: nowIso,
+      markdownRevision: existingProtocol?.markdownRevision,
       selectionInsights: cloneSelectionInsights(existingProtocol?.selectionInsights)
     };
+    // Purpose is owned by this editor; its legacy alias must not resurrect text
+    // when the user intentionally clears the field.
+    delete protocol.description;
 
     const index = state.protocols.findIndex((item) => item.id === protocol.id);
     if (index >= 0) {

@@ -5,6 +5,7 @@ import { agentInstructions } from './agent/workflow.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
 import { createInspectionTracker } from './inspection.mjs';
 import { prepareRaster, fitRasterBox } from './raster.mjs';
+import { instantiateClipboard } from './clipboard.mjs';
 import { LIBRARY_PATH, LIBRARY_ACTIONS, normalizeLibrary, readLibrary, nextScenePath, validateLibraryRequest } from './library.mjs';
 import { ASSETS_PATH, ASSET_ACTIONS, assetPath, createAssetLibrary, normalizeAssetLibrary, readAssetLibrary, validateAssetRequest,
   snapshotAsset, normalizeAsset, readAsset, instantiateAsset, assetPreviewDocument, assetContent, compoundGroups } from './reusable-assets.mjs';
@@ -352,6 +353,37 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   })();
   ready.catch(error => onStatus(`Could not open illustration: ${error.message}`));
   return { ready, request, history, getDocument: () => documentState, getLibrary: () => library && readLibrary(library), getAssets: () => assetLibrary && readAssetLibrary(assetLibrary), getView: readView,
+    async paste(snapshot, { illustrationId, canvas, offset = 15 }) {
+      // Capture the clipboard before joining the shared persistence queue.
+      const copied = structuredClone(snapshot);
+      return enqueue(async () => {
+        try {
+          if (illustrationId !== library.activeId) return failure('illustration_changed', 'Another illustration is open. Paste into the active illustration.');
+          const instance = instantiateClipboard(copied, canvas, offset, validateSvg);
+          // A single local action can contain all 200 objects plus their groups;
+          // scene validation still enforces the shared size and object limits.
+          const result = await apply({ action: 'apply', expected_revision: documentState.revision,
+            request_id: crypto.randomUUID(), operations: instance.operations });
+          return { ...result, pasted_ids: instance.ids };
+        } catch (error) { onStatus(error.message); return failure('failed', error.message); }
+      });
+    },
+    async importAsset(input) { return enqueue(async () => {
+      try {
+        let asset;
+        if (input.type === 'raster') {
+          if (input.textFree !== true) throw new Error('Confirm that imported artwork contains no text.');
+          asset = rasterComponent(await prepareRaster(input.dataUrl), input.name.trim());
+        } else if (input.type === 'vector') {
+          const svg = validateSvg(input.svg), box = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement.getAttribute('viewBox').trim().split(/[\s,]+/).map(Number);
+          asset = normalizeAsset({ version: 1, name: input.name.trim(), objects: [{ id: `vector-${crypto.randomUUID()}`, name: input.name.trim(),
+            type: 'vector', canvas: 'main', x: 0, y: 0, ...fitRasterBox(box[2], box[3]), svg }] }, validateSvg);
+        } else throw new Error('Import SVG, PNG, JPEG, or WebP artwork.');
+        const [saved] = await saveAutomaticAssets([{ asset, origin: 'manual' }], Infinity);
+        onStatus(saved.reused ? 'This asset is already saved' : 'Asset imported');
+        return { ok: true, status: 'asset_imported', persisted: true, ...saved, ...readAssetLibrary(assetLibrary) };
+      } catch (error) { onStatus(error.message); return failure('failed', error.message); }
+    }); },
     async manageAsset(action, params = {}) { return enqueue(async () => {
       try {
         const args = { action, ...(action === 'asset_save' ? { illustration_id: library.activeId, expected_revision: documentState.revision } : {}),

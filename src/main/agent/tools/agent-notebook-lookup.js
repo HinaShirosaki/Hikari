@@ -261,14 +261,15 @@ function createAgentNotebookLookupRuntime(deps = {}) {
     const appliedSources = asArray(context.migration?.applied);
     return {
       items,
-      source: 'fallback_json',
+      source: appliedSources.includes('notebook_markdown') ? 'markdown' : 'fallback_json',
       sources: uniqueStrings([
         ...(asArray(snapshot?.notebookEntries).length ? ['request_snapshot'] : []),
         ...(Number(context.liveNotebookBridge?.entryCount) > 0 ? ['live_notebook_bridge'] : []),
         ...(context.loadedDataFile ? ['data_file'] : []),
         ...(appliedSources.includes('notebook_sidecar') ? ['notebook_sidecar'] : []),
         ...(appliedSources.includes('project_root_storage') ? ['project_storage'] : []),
-        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : [])
+        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : []),
+        ...(appliedSources.includes('notebook_markdown') ? ['notebook_markdown'] : [])
       ], 10),
       candidateCount: asArray(context.hydratedSnapshot?.notebookEntries).length,
       access: {
@@ -291,6 +292,7 @@ function createAgentNotebookLookupRuntime(deps = {}) {
   }
 
   async function execute({
+    query: explicitQuery,
     message = '',
     parserPayload = {},
     snapshot = {},
@@ -305,10 +307,11 @@ function createAgentNotebookLookupRuntime(deps = {}) {
     detail = 'summary'
   } = {}) {
     const entities = ensureObject(ensureObject(parserPayload).entities);
+    // An explicit query, including an empty one, stays separate from filters.
     // Note: requested_output ('notebook_lookup') is a routing sentinel, not a search term,
     // so it must never seed the query — otherwise filter-only calls (e.g. notebook_state
     // alone) search for "notebook_lookup" and drop the very entries they should list.
-    const query = cleanText(
+    const query = typeof explicitQuery === 'string' ? cleanText(explicitQuery, 300) : cleanText(
       protocolName
         || entities.protocol_name
         || entities.notebook_name

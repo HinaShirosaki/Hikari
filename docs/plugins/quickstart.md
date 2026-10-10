@@ -117,11 +117,12 @@ permission to `plugin.json`; permissions are listed in
 
 ## 3. Install and reload
 
-1. Open **Settings → Skills & plugins → Add Plugin Folder**.
+1. Open **Settings → Plugins → Add Plugin Folder**.
 2. Select `my-plugin/`.
 3. Check the displayed name, version, and host access.
 4. Click **Reload App**.
-5. Open the plugin from **More** or topbar search.
+5. Open the plugin from the dock (or **More** on a narrow window) or topbar
+   search.
 
 Manifest and permission changes require removing and re-adding the plugin
 because grants are snapshotted at install time. HTML, CSS, and JavaScript edits
@@ -156,8 +157,8 @@ Important contracts:
   `files.write`; do not reconstruct it.
 - A rejected call means the operation did not complete. Do not update the UI
   to “saved” before the promise resolves.
-- Listen for `app.context` to react when appearance or storage availability
-  changes.
+- Listen for `app.context` to react when appearance, storage availability, or
+  layout (rail width, chat rail state) changes.
 - To use Hikari's transient toast, declare `notifications` and call
   `notifications.show`. Use it for a completed success or recoverable error,
   not repeated progress; Hikari attributes every toast to the installed plugin.
@@ -165,6 +166,22 @@ Important contracts:
   `app.info.layout.leftRail`, resize locally during pointer movement, and call
   `app.setLeftRailWidth` once when the drag settles. This keeps it aligned with
   the persisted width used by built-in modules.
+
+When the basics work, the same client reaches further:
+
+- Add `"icon": "icon.svg"` to `plugin.json` to replace the generic plug in
+  navigation — a square, single-color SVG of at most 32 KiB.
+- Declare `layout` to put buttons in Hikari's right toolbar
+  (`app.setWorkspaceTools`) or actions in the Protocol `…` menu and the PDF
+  selection toolbar (`app.setContextActions`). Keep your own controls as the
+  fallback for older Hikari builds.
+- Declare `agent:chat` for a chat rail beside your view, and `agent:canvas` to
+  let the agent edit and render your plugin's scene. Hide prompt UI while
+  `app.info.layout.agentChatRail.available` is `false`.
+
+See [plugin-api.md §4–§5](plugin-api.md#4-layout-and-host-ui-verbs) for those
+verbs, and [`plugins/scientific-illustration`](../../plugins/scientific-illustration/)
+for a plugin that uses all of them.
 
 ## 5. Make the UI failure-safe
 

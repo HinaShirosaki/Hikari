@@ -43,6 +43,7 @@ const {
 } = require('./codex-cli-provider/paths');
 const { readCodexCliOAuthProfile } = require('./codex-cli-provider/auth-profile');
 const { requestCodexCliText } = require('./codex-cli-provider/request');
+const { requestCodexCliUsage } = require('./codex-cli-provider/usage');
 const { ensureCodexCliRuntimeHome } = require('./codex-cli-provider/runtime-home');
 const { extractCodexJsonEventSessionId } = require('./codex-cli-provider/session-id');
 
@@ -71,6 +72,7 @@ module.exports = {
   launchCodexCliLogin,
   readCodexCliOAuthProfile,
   requestCodexCliCatalog,
+  requestCodexCliUsage,
   prepareCodexRuntime,
   resolveCodexCliRuntimeHomeDirectory,
   setCodexCliModel,

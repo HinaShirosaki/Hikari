@@ -117,16 +117,17 @@ function isEligibleNotebookMemoryEntry(entry = {}) {
 }
 
 function resolveNotebookPageFilePath(storageRootPath, entry = {}) {
+  const fileName = entry.storageDocumentFile === 'page.md' ? 'page.md' : 'page.json';
   const existingStorageFolder = cleanText(entry?.storageFolder, 2400);
   if (existingStorageFolder && isPathInside(storageRootPath, existingStorageFolder)) {
-    return path.join(path.resolve(existingStorageFolder), 'page.json');
+    return path.join(path.resolve(existingStorageFolder), fileName);
   }
   const projectFolder = sanitizeFolderName(entry?.projectName || 'Untitled_Project', 'Untitled_Project');
   const pageFolder = `${sanitizeFolderName(
     entry?.protocolName || entry?.id || 'Notebook_Page',
     'Notebook_Page'
   )}__${sanitizeFolderName(entry?.id, 'page')}`;
-  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder, 'page.json');
+  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder, fileName);
 }
 
 function buildNotebookMemorySource(storageRootPath, projectRecord, entry = {}) {

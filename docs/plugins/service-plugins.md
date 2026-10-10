@@ -105,7 +105,9 @@ from a replacement origin fails pending calls and revokes the runtime.
 The registry accepts a conversion declaration at boot so the file picker can
 offer `.dna` immediately, but it does not post bytes until `service:ready`
 arrives. A startup failure is therefore reported as a service-start error,
-instead of waiting for a misleading per-file conversion timeout.
+instead of waiting for a misleading per-file conversion timeout: a conversion
+that arrives first waits up to 10 seconds, then fails with
+`The "<id>" service did not start.`
 
 A service worker is a few lines — listen, convert, reply:
 

@@ -372,6 +372,35 @@ assert.equal(pending('=SUM(A1:A2)+D3').text, '28+D3', 'a range that is fully fil
 assert.equal(pending('=LOG10(D3)+A1').text, 'LOG10(D3)+10', 'a call waiting on a cell is left standing');
 assert.equal(pending('=MEAN(A1:A2, D3)').text, 'MEAN(A1:A2, D3)', 'a partly filled argument list stays symbolic');
 
+assert.equal(pending('=1000*A1/(100*D3)').text, '100/D3', 'numeric factors fold across a symbolic denominator');
+assert.equal(pending('=A1*D3/100').text, '0.1*D3', 'numeric factors fold across a symbolic numerator');
+assert.equal(pending('=D3*A1/100').text, 'D3*0.1', 'symbolic factors keep their order');
+assert.equal(pending('=A1*D3/A1').text, 'D3', 'a unit coefficient disappears');
+assert.equal(pending('=1000*A1/(100*(D3+1))').text, '100/(D3+1)', 'a sum in the denominator keeps its grouping');
+assert.equal(pending('=A1*(D3+1)/100').text, '0.1*(D3+1)', 'a sum in the numerator keeps its grouping');
+assert.equal(pending('=D3/(D3/2)').text, 'D3/(D3/2)', 'nested division is kept so zero stays undefined');
+assert.equal(pending('=D3/D3').text, 'D3/D3', 'unknown factors are not cancelled');
+assert.equal(pending('=0*D3').text, '0*D3', 'zero times an unknown still waits for the unknown');
+assert.equal(pending('=D3/(0*A1)').text, 'D3/0', 'a zero denominator is not erased');
+
+// Read the displayed expression back as a formula after the missing measurement
+// arrives. Its number (or error) must agree with the original, including at zero.
+for (const formula of [
+  '=1000*A1/(100*D3)', '=A1*D3/100', '=D3*A1/100', '=A1*D3/A1',
+  '=1000*A1/(100*(D3+1))', '=A1*(D3+1)/100', '=A1*(D3/2)/100',
+  '=D3/(D3/2)', '=D3/D3', '=0*D3', '=D3/(0*A1)', '=A1*D3^2/100'
+]) {
+  const displayed = pending(formula).text;
+  for (const measurement of ['0', '-1', '0.25', '8']) {
+    const evaluated = (source) => {
+      const table = pendingTable(source);
+      table.rows[2][table.columns[3].field] = measurement;
+      return cellAt(table, 0, 2).text;
+    };
+    assert.equal(evaluated(`=${displayed}`), evaluated(formula), `${formula} agrees after D3=${measurement}`);
+  }
+}
+
 // Once everything is filled in, the cell goes back to being a number.
 assert.equal(pending('=A1+A2').text, '28', 'a fully filled formula still computes');
 assert.equal(pending('=A1+A2').pending, undefined, 'a computed cell is not flagged as waiting');
@@ -454,11 +483,18 @@ assert.equal(molarity({ C: '5', D: '1', E: '50' }).B.text, '100', 'MW comes back
 // Two filled columns cannot give a number, so both unknowns show what is left of the
 // arithmetic -- the loop between them is "not determined yet", not a circular reference.
 const twoKnown = molarity({ B: '100', C: '5' });
-assert.equal(twoKnown.D.text, '5000/(100*E1)', 'the volume column states its own formula');
-assert.equal(twoKnown.E.text, '5000/(100*D1)', 'the molarity column states its own formula');
+assert.equal(twoKnown.D.text, '50/E1', 'the volume column reduces the known numeric factors');
+assert.equal(twoKnown.E.text, '50/D1', 'the molarity column reduces the known numeric factors');
 assert.equal(twoKnown.D.pending, true, 'a column waiting on another is pending');
 assert.equal(twoKnown.D.error, null, 'waiting on the other unknown is not an error');
 assert.equal(twoKnown.B.text, '100', 'a typed column stays exactly as typed');
+
+const knownMwAndVolume = molarity({ B: '100', D: '1' });
+assert.equal(knownMwAndVolume.C.text, '0.1*E1', 'the weight formula reduces its coefficient');
+assert.equal(knownMwAndVolume.E.text, '10*C1', 'the molarity formula reduces its coefficient');
+const knownWeightAndMolarity = molarity({ C: '5', E: '50' });
+assert.equal(knownWeightAndMolarity.B.text, '100/D1', 'MW reduces a numeric factor after the unknown');
+assert.equal(knownWeightAndMolarity.D.text, '100/B1', 'volume reduces a numeric factor after the unknown');
 
 // The formula belongs to the table, not to the cells: nothing is stored, so a value is
 // typed into an empty editor and clearing it hands the cell back to the formula.
@@ -543,5 +579,15 @@ assert.equal(
   '50',
   'the molarity is still 50 mM once the volume column is kept in uL'
 );
+
+const partialMicrolitres = (() => {
+  const table = createMolarityNotebookResultTable(null, 1);
+  table.rows[0][table.columns[1].field] = '100';
+  table.rows[0][table.columns[2].field] = '5';
+  const switched = setNotebookResultTableColumnUnit(table, 3, 'uL');
+  return { table: switched, cells: computeNotebookResultTable(switched).byRowId[switched.rows[0].id] };
+})();
+assert.equal(partialMicrolitres.cells[partialMicrolitres.table.columns[3].field].text, '50000/E1', 'a pending volume reduces the converted unit factor');
+assert.equal(partialMicrolitres.cells[partialMicrolitres.table.columns[4].field].text, '50000/D1', 'a pending molarity reduces the converted unit factor');
 
 console.log('notebook table formula self-check passed');

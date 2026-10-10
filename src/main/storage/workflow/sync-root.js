@@ -3,12 +3,15 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { MEMORY_FILE_NAME, buildWorkflowMemoryMarkdown } = require('../../project-memory');
-const { asArray, cleanText, ensureObject, isUnreadableJsonFile } = require('../storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile } = require('../storage-utils');
 const { NOTEBOOK_PAGE_FILE_NAME, RELATED_PAPERS_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
 const { buildTemplateFolderName, buildWorkflowFolderLayout, collectLinkedNotebookIds, resolveWorkflowStoragePaths } = require('./folder-names.js');
 const { buildNotebookStorageFolder, ensureFolder, writeJsonFile } = require('./fs-helpers.js');
 const { collectRelatedPaperData, collectWorkflowSummary, compactNotebookEntry, compactWorkflowRecord, resolveWorkflowTemplateRecord } = require('./record-compaction.js');
 const { withStorageRootWrite } = require('../write-coordinator');
+const { writeRecordDocumentSafely } = require('../record-markdown/document-storage');
+const { preflightDocuments } = require('../record-markdown/preflight');
+const { workflowDocumentInputs } = require('../record-markdown/record-paths');
 
 // Loading finds templates and runs by their record files, so a deleted one
 // loses only its template.json / workflow.json. Its results, notebook pages and
@@ -46,6 +49,8 @@ async function syncWorkflowRootFromSnapshotUnlocked({
   if (!rootPaths.workflowRootPath) {
     return {
       workflowRootPath: '',
+      markdownWarnings: [],
+      skippedRecords: [],
       summary: {
         workflowTemplates: 0,
         workflows: 0,
@@ -55,6 +60,7 @@ async function syncWorkflowRootFromSnapshotUnlocked({
     };
   }
 
+  preflightDocuments(workflowDocumentInputs(rootPaths.storagePath, safeSnapshot));
   await ensureFolder(rootPaths.workflowRootPath);
   const templateById = new Map();
   asArray(safeSnapshot.workflowTemplates).forEach((template) => {
@@ -95,6 +101,8 @@ async function syncWorkflowRootFromSnapshotUnlocked({
   }
 
   const notebookIdsWritten = new Set();
+  const markdownWarnings = [];
+  const skippedRecords = [];
   const paperIdsWritten = new Set();
 
   for (const rawWorkflow of asArray(safeSnapshot.workflows)) {
@@ -126,18 +134,6 @@ async function syncWorkflowRootFromSnapshotUnlocked({
     const portableWorkflow = compactWorkflowRecord(workflow);
 
     await ensureFolder(runLayout.workflowFolderPath);
-    await fs.writeFile(
-      path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),
-      buildWorkflowMemoryMarkdown({
-        workflow,
-        template,
-        project,
-        workflowSummary,
-        notebookEntries,
-        relatedPapers: relatedPapers.papers
-      }),
-      'utf8'
-    );
     await writeJsonFile(path.join(runLayout.workflowFolderPath, WORKFLOW_METADATA_FILE_NAME), {
       exportedAt: new Date().toISOString(),
       template: ensureObject(template),
@@ -155,20 +151,30 @@ async function syncWorkflowRootFromSnapshotUnlocked({
       paperExperimentLinks: relatedPapers.paperExperimentLinks
     });
 
-    for (const notebookEntry of notebookEntries) {
+    await forEachInBatches(notebookEntries, async (notebookEntry) => {
       const notebookFolder = buildNotebookStorageFolder(runLayout, notebookEntry);
       const compactEntry = compactNotebookEntry(notebookEntry);
       compactEntry.storageFolder = '';
-      await writeJsonFile(path.join(notebookFolder, NOTEBOOK_PAGE_FILE_NAME), {
+      const filePath = path.join(notebookFolder, NOTEBOOK_PAGE_FILE_NAME);
+      const payload = {
         exportedAt: new Date().toISOString(),
         workflowId,
         notebookEntry: compactEntry
-      });
+      };
+      const saved = await writeRecordDocumentSafely({ filePath, payload, kind: 'notebook', snapshot: safeSnapshot, storageRoot: rootPaths.storagePath }, markdownWarnings, skippedRecords);
+      if (saved.skipped) return;
+      Object.assign(notebookEntry, saved.record, { storageFolder: notebookFolder, storageDocumentFile: saved.markdownPath ? 'page.md' : 'page.json' });
       const notebookId = cleanText(notebookEntry?.id, 220);
       if (notebookId) {
         notebookIdsWritten.add(notebookId);
       }
-    }
+    });
+
+    await fs.writeFile(
+      path.join(runLayout.workflowFolderPath, MEMORY_FILE_NAME),
+      buildWorkflowMemoryMarkdown({ workflow, template, project, workflowSummary, notebookEntries, relatedPapers: relatedPapers.papers }),
+      'utf8'
+    );
 
     relatedPapers.papers.forEach((paper) => {
       const paperId = cleanText(paper?.id, 220);
@@ -181,6 +187,8 @@ async function syncWorkflowRootFromSnapshotUnlocked({
   await pruneDeletedWorkflowRecords(rootPaths.workflowRootPath, activeTemplateFolders, activeRunFolders);
   return {
     workflowRootPath: rootPaths.workflowRootPath,
+    markdownWarnings,
+    skippedRecords,
     summary: {
       workflowTemplates: templatesForStorage.size,
       workflows: asArray(safeSnapshot.workflows).length,

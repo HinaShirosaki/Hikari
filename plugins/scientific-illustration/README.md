@@ -1,4 +1,4 @@
-# Scientific Illustration
+# Figura
 
 An installable Hikari plugin for editable scientific figures. This folder is the
 complete plugin: no npm install, build step, or application-source imports.
@@ -10,8 +10,8 @@ Hikari's other module icons. A host with plugin-icon support loads it from
 the manifest on app reload and adapts its color to the current theme.
 
 1. Use a Hikari build with the public `agent:chat` and `agent:canvas` plugin APIs.
-2. In **Settings → Skills & plugins**, add this plugin folder and enable it.
-3. Reload Hikari, configure storage, and open **More → Scientific Illustration**.
+2. In **Settings → Plugins**, add this plugin folder and enable it.
+3. Reload Hikari, configure storage, and open **More → Figura**.
 4. Sign in to Codex, describe your figure, and choose **Draw with Codex**.
 
 On a host with the context-action API, **Protocol → … → Generate illustration**
@@ -33,10 +33,15 @@ proportionally together; child layers remain editable in Layers. Alt-click
 on the canvas selects an individual group member. Groups persist with each
 illustration and are available through the agent's canvas API.
 The compact right toolbar offers **Select & move (V)** and **Freehand (L)**,
-adding layers, undo/redo, grouping, Layers, Assets, Scratch, and zoom controls.
+adding layers, cropping, grouping, Layers, Assets, Scratch, and zoom controls.
 It shares Hikari's outer strip with the folded agent chat rail. Opening Layers
-or Assets folds chat; opening chat folds the component panel. Older hosts use
-the plugin's local right toolbar.
+or Assets folds chat; opening chat folds the component panel. Hosts without a
+shared toolbar use the plugin's local right toolbar. Older hosts with the shared
+strip use a compatible glyph for Crop so all controls stay beside chat.
+Undo and redo use Hikari's system buttons through the existing plugin API:
+`app.setHistory` reports availability, and `app.undo` / `app.redo` restore Figura's
+own saved scene history. ⌘/Ctrl+Z, ⌘/Ctrl+Shift+Z and Ctrl+Y work inside the canvas;
+text fields keep native text undo. Figura has no duplicate undo/redo icons.
 Select & move combines rectangle selection and movement:
 drag empty space to select touched components, then drag a selected component
 to move the whole selection. Freehand draws a lasso and also lets you drag
@@ -48,6 +53,15 @@ Select a component, several layers or a group and choose **Save as asset…**
 in Layers. **Assets** in the toolbar provides search and previews; click an asset
 to insert an independent editable copy on the active canvas. Saved components
 are shared across all illustrations in this plugin's current Hikari storage.
+**Assets → Import asset…** saves SVG, PNG, JPEG, or WebP files directly to that
+library. Select a placed image
+and use the toolbar's **Crop selected image** button to crop directly in the
+canvas with the bundled Cropper.js 1.6.2 (MIT); no crop dialog, network or npm
+install is needed. Crop boxes can be dragged or entered in pixels. Apply keeps
+its position and rotation and supports
+undo/redo. Transparent pixels remain transparent. Raster imports require
+text-free review, and labels stay independent. The original reusable asset
+stays intact; save the cropped selection as a new asset if needed.
 Vectors, embedded raster images and separate text labels retain their relative
 placement and styling. Multi-layer copies become a movable group; editing or
 deleting a copy never changes the saved original. Codex uses the same library
@@ -55,7 +69,7 @@ through `asset_list`, `asset_read`, `asset_render`, `asset_save`, `asset_delete`
 and the `insert_asset` apply operation. No extra host API or permission is needed.
 Before every drawing or edit, Codex must check `asset_list` and inspect plausible
 matches before creating new artwork. Each image-generation result is saved with
-a descriptive name, including unused candidates. PNG imports trim fully
+a descriptive name, including unused candidates. Agent PNG imports trim fully
 transparent outer pixels while retaining faint visible edges; original Codex
 files stay intact. Direct raster imports are archived automatically. Final
 inspection archives compound groups with at least two artwork layers and their
@@ -81,11 +95,27 @@ Scratch are in the right toolbar. At narrow widths the panel overlays the canvas
 independently.
 Zoom controls and Fit adjust the editing view independently for each canvas.
 Eight resize handles work along corners and edges, including rotated layers.
+The attached circular rotation handle turns artwork, labels, or selected groups
+directly on either canvas. Shift snaps to 15°; Escape cancels the gesture. Keyboard
+focus supports 1° arrow-key steps and 15° steps with Shift. Rotations save as one
+undoable edit with independently editable member geometry.
+Ctrl+C / Ctrl+V (⌘C / ⌘V on macOS) copy and paste selected components or groups
+into the active canvas, including another illustration. Copies retain their
+artwork, labels, formatting, rotations and group membership, get fresh IDs,
+and paste with a small cascading offset. Each paste is one undoable edit.
 Manual resize stretches SVG artwork with the box; width and height are independent.
 Text resizing keeps a fixed aspect ratio and scales the font with the label box.
 Text selection and hit targets follow the rendered label, including multiline
 and rotated text, while the saved layout box retains its alignment and anchor.
 View zoom leaves saved geometry, exports and agent previews unchanged.
+
+**Export → PowerPoint** writes a `.pptx` with one slide sized to the main canvas.
+Visible artwork components remain individual SVG or raster objects; labels are
+native editable text boxes. Placement, rotation, opacity, and layer order are
+preserved. Group members stay independent in the slide. WebP is converted to
+PNG, and SVG includes a PNG fallback for older readers. PowerPoint uses installed
+fonts; its Convert to Shape feature can expose an SVG component's internal paths.
+PptxGenJS is bundled locally, so this export also works offline.
 
 The canvas-size dropdown provides common formats and custom dimensions for
 the active canvas, preserving the placed components' positions and sizes.

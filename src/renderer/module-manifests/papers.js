@@ -29,6 +29,7 @@ function openPaperAgentChatWithSelection({
 
 export const papersManifest = {
   key: 'papers',
+  historyStateKeys: ['papers', 'paperExperimentLinks', 'journalClubs', 'projects'],
   init: initPapersManagement,
   viewKey: 'PAPERS',
   bootOrder: 110,

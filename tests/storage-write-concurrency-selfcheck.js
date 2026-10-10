@@ -10,6 +10,7 @@ const { PassThrough } = require('node:stream');
 const { createMainDataHelpers } = require('../src/main/data/data-helpers');
 const { syncBundleFromSnapshot, syncSqliteBundleFromSnapshot } = require('../src/main/storage/storage-sidecars');
 const { syncWorkflowRootFromSnapshot } = require('../src/main/storage/workflow-storage');
+const { readRecordDocument } = require('../src/main/lib/record-markdown/read');
 const { readSqliteBundleIndex } = require('../src/main/storage/storage-sql-read');
 const { createStorageFileHelpers } = require('../src/main/ipc/register-data-ipc/storage-files');
 const { createGenomeService } = require('../src/main/genome/create-genome-service');
@@ -65,7 +66,7 @@ test('workspace saves retain newer records, freeze queued inputs, and allow anot
     const [olderResult, newerResult] = await Promise.all([older, newer]);
     assert.equal(olderResult.ok, true);
     assert.equal(newerResult.ok, true);
-    assert.equal((await readJson(newerResult.sidecarPaths.protocolFilePaths[0])).protocol.id, 'new-protocol');
+    assert.equal((await readRecordDocument(newerResult.sidecarPaths.protocolFilePaths[0], 'protocol')).data.protocol.id, 'new-protocol');
     const plateFolders = await fsp.readdir(path.join(root, 'Plates'));
     assert.equal((await readJson(path.join(root, 'Plates', plateFolders[0], 'assay.json'))).assay.id, 'new-assay');
     assert.equal((await readJson(path.join(root, 'Samples', 'unplaced.json'))).samples[0].id, 'new-sample');

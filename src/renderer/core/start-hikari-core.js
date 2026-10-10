@@ -18,15 +18,16 @@ import {
   SHARED_LEFT_RAIL_CHANGED_EVENT
 } from '../app/shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
+import { syncMarkdownRecordState } from '../services/markdown-record-storage.js';
 import {
   applyAppearanceSnapshot,
-  createNavigationShell,
-  normalizeViewId
+  createNavigationShell
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
 import { createStorageSetup } from '../app/storage-setup.js';
 import { installPlugins, loadPluginIcons } from '../app/plugin-loader.js';
 import { createPluginBridge } from '../app/plugin-bridge.js';
+import { createPluginHistoryDelegate } from '../app/plugin-history.js';
 import { createPluginPromptHandler, createPluginChatContextHandler } from '../app/plugin-agent.js';
 import { createPluginServiceRegistry } from '../app/plugin-services.js';
 import {
@@ -120,7 +121,7 @@ export function startHikariCore({
     getModuleRuntime: () => moduleRuntime });
   const pluginBridge = createPluginBridge({
     state,
-    persist,
+    persist: (options = {}) => persist({ ...options, owner: '', external: true }),
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
     onFrameHistoryChanged: () => undoService?.syncButtons?.(),
     onPluginPrompt: createPluginPromptHandler({ state,
@@ -155,15 +156,8 @@ export function startHikariCore({
   windowObject.addEventListener?.(SHARED_LEFT_RAIL_CHANGED_EVENT, () => {
     pluginBridge.broadcastAppContext('layout');
   });
-  const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
-  const globalViewAliases = buildViewAliasMap({
-    apps: APP_REGISTRY,
-    normalizeViewId: normalizeAppViewId
-  });
-  const searchScopeTargets = buildSearchScopeMap({
-    apps: APP_REGISTRY,
-    normalizeViewId: normalizeAppViewId
-  });
+  const globalViewAliases = buildViewAliasMap({ apps: APP_REGISTRY });
+  const searchScopeTargets = buildSearchScopeMap({ apps: APP_REGISTRY });
 
   applyAppearanceSnapshot(state.settings?.appearance, documentObject);
 
@@ -186,19 +180,30 @@ export function startHikariCore({
   let moduleRuntime = null;
   let undoService = null;
   let navigationShell = null;
+  let saveError = '';
+  let cloudSyncBusy = false;
+  let cloudSyncMutations = 0;
 
   function persistStateNow() {
+    if (cloudSyncBusy) { cloudSyncMutations++; return; }
     normalizeStateStoragePaths(state);
     persistState(state);
     if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
-      windowObject.hikariApi
-        .autoSaveDataFile(state, '')
+      syncMarkdownRecordState(windowObject.hikariApi, state)
         .then((result) => {
+          undoService?.acceptExternalChanges();
           // autoSaveDataFile resolves { ok:false, error } on a write failure (it
           // does not throw), so the result must be inspected — otherwise a failed
           // durable save to the storage folder is lost silently.
           if (result && result.ok === false) {
             console.warn('Auto-save to the storage folder failed:', result.error);
+            const message = String(result.error || '').replace(/^Error:\s*/, '');
+            if (saveError !== message) {
+              saveError = message;
+              showTransientNotice(message, { type: 'error' });
+            }
+          } else {
+            saveError = '';
           }
         })
         .catch((error) => {
@@ -207,8 +212,8 @@ export function startHikariCore({
     }
   }
 
-  // All module writes go through here. Once the undo service exists it saves via
-  // persistStateNow and records the change as an undo step (see undoService).
+  // Shared controllers use the active module; module constructors receive their
+  // own bound persist callback so async work keeps its originating owner.
   function persist(options = {}) {
     return undoService ? undoService.persist(options) : persistStateNow();
   }
@@ -217,46 +222,21 @@ export function startHikariCore({
     moduleRuntime?.renderAll();
   }
 
-  function renderRestoredState() {
-    navigationShell?.applyAppearanceSnapshot(state.settings?.appearance);
-    renderAll();
+  function renderRestoredState(change) {
+    if (change.owner === 'settings') navigationShell?.applyAppearanceSnapshot(state.settings?.appearance);
+    moduleRuntime?.restoreHistory(change);
   }
-
-  // A focused plugin frame becomes documentElement.activeElement in the host, but
-  // clicking a history button moves focus onto the button — so remember the frame
-  // rather than reading activeElement at command time.
-  let lastFocusedPluginFrame = null;
-  function trackPluginFrameFocus() {
-    const active = documentObject?.activeElement;
-    if (active?.tagName === 'IFRAME') {
-      lastFocusedPluginFrame = active;
-      return;
-    }
-    if (!active?.closest?.('.topbar-history-controls')) {
-      lastFocusedPluginFrame = null;
-    }
-  }
-  documentObject?.addEventListener?.('focusin', () => {
-    trackPluginFrameFocus();
-    undoService?.syncButtons?.();
-  });
-  windowObject?.addEventListener?.('blur', () => {
-    trackPluginFrameFocus();
-    undoService?.syncButtons?.();
-  });
 
   undoService = createUndoService({
     state,
     persistState: persistStateNow,
-    renderAll: renderRestoredState,
+    onRestore: renderRestoredState,
+    beforeRestore: change => !cloudSyncBusy && moduleRuntime?.beforeHistoryRestore(change) !== false,
+    getActiveOwner: () => moduleRuntime?.getHistoryOwner() || '',
     documentObject,
-    delegate: {
-      claim: () => pluginBridge.getFrameHistory(lastFocusedPluginFrame?.contentWindow || null),
-      run: (command) => pluginBridge.sendFrameHistoryCommand(
-        lastFocusedPluginFrame?.contentWindow || null,
-        command
-      )
-    }
+    windowObject,
+    delegate: createPluginHistoryDelegate({ documentObject, windowObject, bridge: pluginBridge,
+      onChange: () => undoService?.syncButtons?.() })
   });
 
   const moduleRegistry = createModuleRegistry({
@@ -286,6 +266,7 @@ export function startHikariCore({
   moduleRuntime = createRendererModuleRuntime({
     state,
     persist,
+    getModuleHistory: owner => undoService.forModule(owner),
     createId,
     safeText,
     cssEscape,
@@ -301,11 +282,31 @@ export function startHikariCore({
     windowObject,
     onStoragePathSaved: async (storagePath, options = {}) => {
       const result = await storageImportController.runStorageRootImport(storagePath, {
-        persistMergedState: true,
+        persistMergedState: options.cloudSync !== true,
         resetWorkspace: options.resetWorkspace === true
       });
+      if (result.ok || result.refreshed) undoService.reset();
       renderAll();
       return result;
+    },
+    runCloudSync: async (work) => {
+      if (cloudSyncBusy) throw new Error('Workspace sync is already in progress.');
+      const sources = ['protocol', 'assay', 'biologyNotebook']
+        .map(key => moduleRegistry.get(key))
+        .concat(pluginBridge.getUnsavedSources().map(source => source.moduleApi));
+      if (sources.some(source => source?.hasUnsavedChanges?.())) {
+        throw new Error('Save your open editor or plugin changes before syncing the workspace.');
+      }
+      cloudSyncBusy = true;
+      cloudSyncMutations = 0;
+      try {
+        const saved = await syncMarkdownRecordState(windowObject.hikariApi, state);
+        if (!saved?.ok || saved.sidecarPaths?.skippedRecords?.length) throw new Error(saved?.error || 'Some workspace records could not be saved. Resolve them before syncing.');
+        return await work({ canApply: () => cloudSyncMutations === 0 });
+      } finally {
+        cloudSyncBusy = false;
+        persistState(state);
+      }
     }
   });
 
@@ -354,7 +355,6 @@ export function startHikariCore({
     setSearchInputValue: viewController.setSearchInputValue,
     topbarSearchInput: viewController.getTopbarSearchInput(),
     apps: APP_REGISTRY,
-    normalizeViewId: normalizeAppViewId,
     openItemHandlers,
     windowObject
   });
@@ -425,7 +425,8 @@ export function startHikariCore({
     }
     undoService.reset();
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
-    await loadPluginIcons({ plugins: state.settings?.plugins, appRegistry: APP_REGISTRY, api: windowObject.hikariApi });
+    await loadPluginIcons({ plugins: state.settings?.plugins, appRegistry: APP_REGISTRY,
+      api: windowObject.hikariApi, documentObject });
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
     renderAll();

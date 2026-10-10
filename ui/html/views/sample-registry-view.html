@@ -1,145 +1,73 @@
 <section id="sample-registry-view" class="view">
-      <div class="sample-layout left-rail-template">
-        <div class="sample-editor-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <h2>Samples</h2>
-          <label class="sample-top-search">
-            Search Samples
-            <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
-          </label>
-          <form id="sample-form" class="form-grid">
-            <input type="hidden" id="sample-id" />
-            <label>
-              Sample Code
-              <input id="sample-code" placeholder="e.g. C-021, CL-HEK293-17, pET28a-Myc" />
-            </label>
-            <label>
-              Sample Name
-              <input id="sample-name" required />
-            </label>
-            <label class="sample-type-field">
-              Type
-              <span class="sample-type-control">
-                <select id="sample-type" required>
-                  <option value="plasmid">Plasmid</option>
-                  <option value="cell_line">Cell Line</option>
-                  <option value="strain">Strain</option>
-                  <option value="antibody">Antibody</option>
-                  <option value="protein">Purified Protein</option>
-                  <option value="chemical">Chemical</option>
-                  <option value="primer">Primer</option>
-                </select>
-              </span>
-            </label>
-            <section id="sample-type-fields" class="sample-type-fields form-grid" hidden></section>
-            <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
-              <div class="inline-row sample-cell-passage-head">
-                <strong>Cell Passage Reminder</strong>
-                <span class="small-note">Shown on dashboard for cell line tracking</span>
-              </div>
-              <div class="form-grid">
-                <label>
-                  Last Passage Date
-                  <input id="sample-passage-last-date" type="date" />
-                </label>
-                <label>
-                  Passage Interval (days)
-                  <input id="sample-passage-interval-days" type="number" min="1" step="1" placeholder="e.g. 3" />
-                </label>
-              </div>
-            </section>
-            <section id="sample-compound-fields" class="sample-compound-fields">
-              <div class="inline-row sample-compound-head">
-                <strong>Chemical Structure</strong>
-                <span class="small-note">Paste SMILES or MOL/SDF structure data</span>
-              </div>
-              <div class="form-actions">
-                <button id="sample-compound-paste-btn" type="button" class="ghost-btn" title="Read a SMILES or MOL/SDF structure from the clipboard">Paste Structure</button>
-                <button id="sample-compound-clear-btn" type="button" class="ghost-btn" title="Remove the captured structure from this sample">Clear Structure</button>
-              </div>
-              <label>
-                Captured Structure
-                <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
-              </label>
-              <div id="sample-compound-status" class="small-note"></div>
-              <div id="sample-compound-preview" class="sample-compound-preview" hidden>
-                <img id="sample-compound-preview-image" alt="Chemical structure preview" />
-              </div>
-            </section>
-            <label>
-              Lot / Batch
-              <input id="sample-lot" placeholder="e.g. A17" />
-            </label>
-            <label>
-              Concentration
-              <input id="sample-concentration" placeholder="e.g. 2 mg/mL" />
-            </label>
-            <label>
-              Storage Type
-              <select id="sample-storage-type">
-                <option value="freezer">Freezer</option>
-                <option value="fridge">Fridge</option>
-                <option value="desiccator">Desiccator</option>
-                <option value="rt_cabinet">RT Cabinet</option>
-              </select>
-            </label>
-            <label>
-              Link Personal Inventory Container
-              <select id="sample-link-container">
-                <option value="">Not linked</option>
-              </select>
-            </label>
-            <label>
-              Link Position / Slot
-              <select id="sample-link-position">
-                <option value="">Auto / none</option>
-              </select>
-            </label>
-            <label>
-              Related Chemicals (multi-select)
-              <select id="sample-link-chemicals" multiple size="3"></select>
-            </label>
-            <div id="sample-location-fields" class="form-grid"></div>
-            <label>
-              Notes
-              <textarea id="sample-notes" rows="2"></textarea>
-            </label>
-            <div class="form-actions">
-              <button type="submit" class="primary-btn" title="Save this sample to the registry">Save Sample</button>
-              <button type="button" id="sample-cancel-btn" class="ghost-btn" title="Discard changes and clear the form">Cancel Edit</button>
+      <div class="personal-inventory-layout left-rail-template">
+        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="inventory-rail-scroll left-rail-template__scroll">
+            <div class="inventory-rail-stack app-left-rail-section">
+              <div id="inventory-location-nav" class="inventory-location-nav"></div>
+              <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
             </div>
-          </form>
-        </div>
-
-        <div class="sample-main left-rail-template__main">
-          <div class="sample-main-grid">
-            <div class="panel sample-list-panel">
-              <div class="sample-panel-head">
-                <div class="sample-panel-copy">
-                  <h3>Registered Samples</h3>
-                  <p id="sample-results-summary" class="small-note">Showing 0 samples.</p>
-                </div>
-                <div class="form-actions">
-                  <button type="button" id="sample-export-csv-btn" class="ghost-btn" title="Download all samples as a CSV file"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Export CSV</button>
-                  <button type="button" id="sample-import-csv-btn" class="ghost-btn" title="Add samples from a CSV file"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v12M17 8l-5-5-5 5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>Import CSV</button>
-                  <input id="sample-import-csv-file" type="file" accept=".csv,text/csv" hidden />
-                </div>
-              </div>
-              <p id="sample-csv-status" class="small-note"></p>
-              <div id="sample-registry-list" class="list-table"></div>
-            </div>
-
-            <div id="sample-detail-panel" class="panel sample-detail-panel" hidden>
-              <div class="sample-panel-head">
-                <h3 id="sample-detail-title">Sample Details</h3>
-                <div class="card-actions">
-                  <button type="button" id="sample-detail-edit-btn" class="row-action-icon-btn" aria-label="Edit sample" title="Load this sample into the form for editing"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                  <button type="button" id="sample-detail-delete-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Delete sample" title="Permanently delete this sample"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
-                </div>
-              </div>
-              <div id="sample-detail-content" class="stack-form"></div>
-            </div>
+            <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
           </div>
+        </aside>
+
+        <div class="panel inventory-main-panel left-rail-template__main">
+          <div id="inventory-sections" class="inventory-sections"></div>
         </div>
       </div>
 
+      <div id="inventory-add-container-overlay" class="inventory-add-container-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <form
+          id="inventory-add-container-form"
+          class="form-grid inventory-add-form inventory-add-container-dialog app-dialog-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inventory-add-container-title"
+        >
+          <div class="app-dialog-head inventory-add-container-head">
+            <div>
+              <h3 id="inventory-add-container-title">Add Container</h3>
+              <p id="inventory-add-container-note" class="small-note" hidden></p>
+            </div>
+            <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <label>
+            <span id="inventory-add-item-name-label">Container Name</span>
+            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+          </label>
+          <label>
+            Location
+            <select id="inventory-add-container-location" required>
+              <option value="">Select location</option>
+            </select>
+          </label>
+          <label id="inventory-add-container-type-field">
+            Type
+            <select id="inventory-add-container-type">
+              <option value="box25">25-well grid box (5 × 5)</option>
+              <option value="box49">49-well grid box (7 × 7)</option>
+              <option value="box64">64-well grid box (8 × 8)</option>
+              <option value="box81">81-well grid box</option>
+              <option value="box100">100-well grid box (10 × 10)</option>
+              <option value="customGrid">Custom grid box</option>
+              <option value="plate96">96-well plate</option>
+              <option value="single">Single container (tube/bottle)</option>
+            </select>
+          </label>
+          <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
+            <label>
+              Rows
+              <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <label>
+              Columns
+              <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+          </div>
+          <div class="form-actions">
+            <button id="inventory-add-container-submit" type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
     </section>

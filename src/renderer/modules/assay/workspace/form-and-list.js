@@ -393,6 +393,20 @@ function createAssayFormAndList({
     }
   }
 
+  function restoreHistory() {
+    const mode = runtime.assayMode;
+    const id = elements.assayIdInput?.value || runtime.activeResultsAssayId;
+    if (id && getAssayById(id)) {
+      editAssay(id, { quiet: true });
+      setAssayMode(mode);
+    } else if (id) {
+      // Undoing creation removes the open record. Do not leave its old values
+      // in the form where the next Save would recreate it.
+      resetForm();
+    }
+    render();
+  }
+
   return {
     setAssayMode,
     onResultsAssaySelected,
@@ -403,7 +417,8 @@ function createAssayFormAndList({
     editAssay,
     deleteAssay,
     onListClick,
-    render
+    render,
+    restoreHistory
   };
 }
 

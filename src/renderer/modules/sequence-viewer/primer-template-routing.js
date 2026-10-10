@@ -10,7 +10,7 @@ export function assignPrimerTemplateEntries(primers, { fragments = [], parentEnt
     let entryId = '';
     const fragment = byId.get(primer.templateId);
     const metadata = fragment?.metadata || {};
-    if (primer.template_kind === 'hypothetical_intermediate' || metadata.source === 'synthesis') {
+    if (['hypothetical_intermediate', 'oligo_pool'].includes(primer.template_kind) || metadata.source === 'synthesis') {
       entryId = '';
     } else if (Object.hasOwn(primer, 'templateEntryId')) {
       entryId = primer.templateEntryId;

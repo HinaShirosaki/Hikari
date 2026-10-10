@@ -140,8 +140,8 @@ function extractOriginalTemplateForEditedRange(source = {}, start, end) {
   // A range wholly inside a de-novo insertion maps to one zero-width point in
   // the pre-edit record. Expanding that point by the inserted length silently
   // substituted unrelated downstream vector DNA as the insert's PCR template.
-  // Keep the zero-width result: the caller can then require a real donor or a
-  // declared synthesis fragment.
+  // Keep the zero-width result: the caller can then prepare an oligo-built
+  // insert or use a real donor.
   return originalSequence.slice(originalStart, originalEnd);
 }
 

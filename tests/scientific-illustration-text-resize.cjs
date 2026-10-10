@@ -69,9 +69,9 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
   let saved = await read();
   check(saved.width === 360 && saved.height === 144 && saved.fontSize === 40 && saved.x === fixture.x && saved.y === fixture.y,
     'Numeric text width proportionally scales height and font without moving the layer');
-  await evaluate('document.getElementById("undo").click()'); await pause(80); saved = await read();
+  await evaluate('illustrationWorkspace.history("undo")'); await pause(80); saved = await read();
   check(saved.width === 180 && saved.height === 72 && saved.fontSize === 20, 'Undo restores text geometry and font together');
-  await evaluate('document.getElementById("redo").click()'); await pause(80); saved = await read();
+  await evaluate('illustrationWorkspace.history("redo")'); await pause(80); saved = await read();
   check(saved.width === 360 && saved.height === 144 && saved.fontSize === 40, 'Redo restores proportional text scaling');
   await numericChange('height', 36); saved = await read();
   check(saved.width === 90 && saved.height === 36 && saved.fontSize === 10, 'Numeric text height proportionally scales width and font');

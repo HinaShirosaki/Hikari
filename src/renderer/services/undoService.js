@@ -1,4 +1,6 @@
 import { showTransientNotice } from '../lib/notify.js';
+import { applyHistoryChanges, canApplyHistoryChanges, captureHistoryState, diffHistoryState,
+  historyChangesOverlap, mergeHistoryChanges, removesReferencedHistoryRecord } from './history-patches.js';
 
 const DEFAULT_MAX_DEPTH = 80;
 const DEFAULT_MAX_BYTES = 24 * 1024 * 1024;
@@ -19,44 +21,6 @@ const COALESCED_INPUT_TYPES = new Set([
   'url',
   'week'
 ]);
-
-function serializeHistoryState(state) {
-  if (!state || typeof state !== 'object') {
-    return null;
-  }
-  try {
-    return JSON.stringify(state);
-  } catch (error) {
-    console.warn('Unable to serialize undo history snapshot:', error);
-    showTransientNotice('Undo history could not be saved.', { type: 'error' });
-    return null;
-  }
-}
-
-function parseHistorySnapshot(serialized) {
-  try {
-    const parsed = JSON.parse(serialized);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
-  } catch (error) {
-    console.warn('Unable to restore undo history snapshot:', error);
-    showTransientNotice('Undo history could not be restored.', { type: 'error' });
-    return null;
-  }
-}
-
-function replaceStateContents(target, nextState) {
-  if (!target || typeof target !== 'object' || !nextState || typeof nextState !== 'object') {
-    return;
-  }
-  Object.keys(target).forEach((key) => {
-    delete target[key];
-  });
-  Object.assign(target, nextState);
-}
-
-function estimateBytes(value) {
-  return String(value || '').length * 2;
-}
 
 function isEditableTarget(target) {
   if (typeof Element === 'undefined' || !(target instanceof Element)) {
@@ -108,251 +72,243 @@ function getKeyboardCommand(event) {
   return event.shiftKey ? 'redo' : 'undo';
 }
 
-// A plugin frame owns the edits the user is making inside it, and its keyboard
-// events never reach the host document. `delegate` lets such a frame claim the
-// global history controls: `claim()` returns its {canUndo, canRedo} while it is
-// the focused frame, and `run(command)` forwards the command into it.
+// The shared controls route to one module's stack (or a plugin delegate). Each
+// module receives a bound persist callback, so async completions retain their
+// owner even after navigation. Cross-module records changed by one persist are
+// one transaction in the initiating module's history.
 export function createUndoService({
   state,
   persistState,
   renderAll,
+  onRestore = renderAll,
+  beforeRestore = () => true,
+  getActiveOwner = () => 'app',
   delegate = null,
   documentObject = globalThis?.document || null,
+  windowObject = documentObject?.defaultView || globalThis?.window || null,
   undoButtonId = 'global-undo-btn',
   redoButtonId = 'global-redo-btn',
   maxDepth = DEFAULT_MAX_DEPTH,
   maxBytes = DEFAULT_MAX_BYTES,
   coalesceMs = DEFAULT_COALESCE_MS
 } = {}) {
-  const undoStack = [];
-  const redoStack = [];
+  const histories = new Map();
+  const scopes = new Map();
   const persistStateNow = typeof persistState === 'function' ? persistState : () => {};
-  const renderCurrentState = typeof renderAll === 'function' ? renderAll : () => {};
   const undoButton = documentObject?.getElementById?.(undoButtonId) || null;
   const redoButton = documentObject?.getElementById?.(redoButtonId) || null;
-  let lastSnapshot = serializeHistoryState(state);
-  let lastHistoryPushAt = 0;
-  let lastCoalesceTarget = null;
-  let applyingSnapshot = false;
+  let baseline = captureHistoryState(state);
+  let applying = false;
+  let sequence = 0;
+  let lastOwner = '';
 
-  function historyBytes() {
-    return [...undoStack, ...redoStack].reduce((sum, item) => sum + estimateBytes(item), 0);
+  function historyFor(owner) {
+    if (!histories.has(owner)) histories.set(owner, { undo: [], redo: [], at: 0, target: null });
+    return histories.get(owner);
   }
 
-  function trimStackDepth(stack) {
-    while (stack.length > maxDepth) {
-      stack.shift();
+  function clear(history) {
+    history.undo.length = 0;
+    history.redo.length = 0;
+    history.at = 0;
+    history.target = null;
+  }
+
+  function invalidate(changes, exceptOwner = null) {
+    for (const [owner, history] of histories) {
+      if (owner !== exceptOwner && [...history.undo, ...history.redo]
+        .some(entry => historyChangesOverlap(entry.changes, changes))) clear(history);
     }
   }
 
-  function trimHistoryBudget() {
-    trimStackDepth(undoStack);
-    trimStackDepth(redoStack);
-    while (historyBytes() > maxBytes && undoStack.length > 1) {
-      undoStack.shift();
+  function trimHistory() {
+    const stacks = [];
+    for (const history of histories.values()) {
+      for (const stack of [history.undo, history.redo]) {
+        while (stack.length > maxDepth) stack.shift();
+        stacks.push(stack);
+      }
     }
-    while (historyBytes() > maxBytes && redoStack.length > 1) {
-      redoStack.shift();
+    // One budget for all module histories, including large images/attachments.
+    let bytes = stacks.flat().reduce((total, entry) => total + entry.bytes, 0);
+    while (bytes > maxBytes) {
+      // Only remove the far end of a stack, never a prerequisite for a retained
+      // entry. Redo's farthest future change is at index zero.
+      const stack = stacks.filter(items => items.length).sort((a, b) => a[0].order - b[0].order)[0];
+      if (!stack) break;
+      bytes -= stack.shift().bytes;
     }
   }
 
   function getDelegateClaim() {
-    if (typeof delegate?.claim !== 'function') {
-      return null;
-    }
-    const claim = delegate.claim();
+    const claim = delegate?.claim?.();
     return claim && typeof claim === 'object' ? claim : null;
   }
 
-  function getHistoryState() {
-    const claim = getDelegateClaim();
-    if (claim) {
-      return {
-        canUndo: claim.canUndo === true,
-        canRedo: claim.canRedo === true,
-        undoDepth: claim.canUndo === true ? 1 : 0,
-        redoDepth: claim.canRedo === true ? 1 : 0
-      };
-    }
-    return {
-      canUndo: undoStack.length > 0,
-      canRedo: redoStack.length > 0,
-      undoDepth: undoStack.length,
-      redoDepth: redoStack.length
-    };
-  }
-
-  // Returns true when a claiming frame took the command.
-  function runOnDelegate(command) {
-    if (!getDelegateClaim() || typeof delegate?.run !== 'function') {
-      return false;
-    }
-    const handled = delegate.run(command) === true;
-    syncButtons();
-    return handled;
+  function getHistoryState(owner = getActiveOwner()) {
+    const history = histories.get(owner);
+    return { canUndo: Boolean(history?.undo.length), canRedo: Boolean(history?.redo.length),
+      undoDepth: history?.undo.length || 0, redoDepth: history?.redo.length || 0 };
   }
 
   function syncButtons() {
-    const historyState = getHistoryState();
-    if (undoButton) {
-      undoButton.disabled = !historyState.canUndo;
-      undoButton.setAttribute('aria-disabled', String(!historyState.canUndo));
-      undoButton.title = historyState.canUndo ? 'Undo (Command+Z)' : 'Nothing to undo';
-    }
-    if (redoButton) {
-      redoButton.disabled = !historyState.canRedo;
-      redoButton.setAttribute('aria-disabled', String(!historyState.canRedo));
-      redoButton.title = historyState.canRedo ? 'Redo (Command+Shift+Z)' : 'Nothing to redo';
+    const history = getDelegateClaim() || getHistoryState();
+    for (const [button, available, title] of [
+      [undoButton, history.canUndo, 'Undo (Command+Z / Ctrl+Z)'],
+      [redoButton, history.canRedo, 'Redo (Command+Shift+Z / Ctrl+Y)']
+    ]) {
+      if (!button) continue;
+      button.disabled = !available;
+      button.setAttribute('aria-disabled', String(!available));
+      button.title = available ? title : button === undoButton ? 'Nothing to undo' : 'Nothing to redo';
     }
   }
 
-  function pushUndoSnapshot(serialized) {
-    if (!serialized) {
-      return;
-    }
-    const now = Date.now();
-    const coalesceTarget = getCoalesceTarget(documentObject);
-    const withinCoalesceWindow = Boolean(coalesceTarget)
-      && coalesceTarget === lastCoalesceTarget
-      && undoStack.length > 0
-      && now - lastHistoryPushAt <= coalesceMs;
-    lastCoalesceTarget = coalesceTarget;
-    if (withinCoalesceWindow || undoStack[undoStack.length - 1] === serialized) {
-      return;
-    }
-    undoStack.push(serialized);
-    // Only a real push advances the window. Advancing it on a dropped push makes
-    // the window slide with every keystroke, so sustained typing never
-    // checkpoints and one undo reverts the whole burst.
-    lastHistoryPushAt = now;
-    trimHistoryBudget();
+  function reset() {
+    histories.forEach(clear);
+    baseline = captureHistoryState(state);
+    lastOwner = '';
+    syncButtons();
   }
 
-  // options.external — the change came from the main process (an agent write, an
-  //   IPC push), not the user. Save it, but leave both stacks alone: it is not
-  //   the user's to undo, and clearing redo would destroy history they own.
-  // options.barrier — the change accompanies a side effect outside `state` that
-  //   undo cannot reverse (a moved or written file). Undoing across it would
-  //   desynchronize state from disk, so history is dropped instead.
+  function acceptExternalChanges() {
+    const after = captureHistoryState(state);
+    if (after.settings?.storagePath !== baseline.settings?.storagePath) {
+      reset();
+      return;
+    }
+    invalidate(diffHistoryState(baseline, after));
+    baseline = after;
+    syncButtons();
+  }
+
   function persist(options = {}) {
-    const before = lastSnapshot || serializeHistoryState(state);
+    const before = baseline;
     const result = persistStateNow();
-    const after = serializeHistoryState(state);
-    if (!after) {
-      syncButtons();
-      return result;
-    }
-    if (applyingSnapshot || options.external === true) {
-      lastSnapshot = after;
-      syncButtons();
-      return result;
-    }
-    if (options.barrier === true) {
+    const after = captureHistoryState(state);
+    baseline = after;
+    if (applying) return result;
+    if (before.settings?.storagePath !== after.settings?.storagePath || options.resetHistory === true) {
       reset();
       return result;
     }
-    if (before && after !== before) {
-      pushUndoSnapshot(before);
-      redoStack.length = 0;
-      lastSnapshot = after;
+    const owner = options.owner ?? getActiveOwner();
+    const changes = diffHistoryState(before, after);
+    if (options.external === true || options.barrier === true || !owner) {
+      invalidate(changes);
+      if (options.barrier === true && owner) clear(historyFor(owner));
+      lastOwner = '';
       syncButtons();
       return result;
     }
-    lastSnapshot = after;
+    if (!changes.length) { syncButtons(); return result; }
+    invalidate(changes, owner);
+    const history = historyFor(owner);
+    const now = Date.now();
+    const target = getCoalesceTarget(documentObject);
+    const previous = history.undo.at(-1);
+    const merged = previous && target && target === history.target && lastOwner === owner
+      && now - history.at <= coalesceMs && !history.redo.length
+      ? mergeHistoryChanges(previous.changes, changes) : null;
+    if (merged) {
+      previous.changes = merged;
+      previous.bytes = JSON.stringify(merged).length * 2;
+      if (!merged.length) history.undo.pop();
+    } else {
+      history.undo.push({ changes, order: ++sequence, bytes: JSON.stringify(changes).length * 2 });
+      history.at = now; // Keep the typing window fixed, not sliding.
+    }
+    history.target = target;
+    lastOwner = owner;
+    history.redo.length = 0;
+    trimHistory();
     syncButtons();
     return result;
   }
 
-  function applySnapshot(serialized) {
-    const snapshot = parseHistorySnapshot(serialized);
-    if (!snapshot) {
+  function run(direction, owner) {
+    if (applying || !owner) return false;
+    // Catch a save acknowledgment or external mutation that has not called
+    // persist. Never apply an old history entry over changed live data.
+    acceptExternalChanges();
+    const history = histories.get(owner);
+    const from = history?.[direction];
+    const entry = from?.at(-1);
+    if (!entry) { syncButtons(); return false; }
+    const context = { owner, direction, changes: entry.changes };
+    if (beforeRestore(context) === false) return false;
+    if (!canApplyHistoryChanges(state, entry.changes, direction)) {
+      clear(history);
       syncButtons();
+      showTransientNotice('This history no longer matches the current records.', { type: 'error' });
       return false;
     }
-    applyingSnapshot = true;
-    try {
-      replaceStateContents(state, snapshot);
-      persistStateNow();
-      lastSnapshot = serializeHistoryState(state) || serialized;
-      lastHistoryPushAt = 0;
-      lastCoalesceTarget = null;
-      renderCurrentState();
-    } finally {
-      applyingSnapshot = false;
+    if (removesReferencedHistoryRecord(state, entry.changes, direction)) {
+      showTransientNotice('Another record uses this item. Undo or remove that link first.', { type: 'error' });
+      return false;
     }
-    syncButtons();
+    applying = true;
+    const reverse = direction === 'undo' ? 'redo' : 'undo';
+    try {
+      applyHistoryChanges(state, entry.changes, direction);
+      try {
+        persistStateNow();
+      } catch (error) {
+        applyHistoryChanges(state, entry.changes, reverse);
+        baseline = captureHistoryState(state);
+        showTransientNotice(`Could not ${direction}: ${error.message}`, { type: 'error' });
+        return false;
+      }
+      from.pop();
+      history[reverse].push(entry);
+      history.at = 0;
+      history.target = null;
+      lastOwner = '';
+      baseline = captureHistoryState(state);
+      onRestore?.(context);
+      baseline = captureHistoryState(state);
+    } finally {
+      applying = false;
+      syncButtons();
+    }
     return true;
   }
 
-  function undo() {
-    if (runOnDelegate('undo')) {
-      return true;
-    }
-    const targetSnapshot = undoStack.pop();
-    if (!targetSnapshot) {
+  function command(direction) {
+    if (getDelegateClaim()) {
+      // A claiming editor with empty/busy history must never fall through to a
+      // different module if delivery fails.
+      const handled = delegate?.run?.(direction) === true;
       syncButtons();
-      return false;
+      return handled;
     }
-    const currentSnapshot = serializeHistoryState(state) || lastSnapshot;
-    if (currentSnapshot && currentSnapshot !== targetSnapshot) {
-      redoStack.push(currentSnapshot);
-    }
-    trimHistoryBudget();
-    return applySnapshot(targetSnapshot);
+    return run(direction, getActiveOwner());
   }
 
-  function redo() {
-    if (runOnDelegate('redo')) {
-      return true;
-    }
-    const targetSnapshot = redoStack.pop();
-    if (!targetSnapshot) {
-      syncButtons();
-      return false;
-    }
-    const currentSnapshot = serializeHistoryState(state) || lastSnapshot;
-    if (currentSnapshot && currentSnapshot !== targetSnapshot) {
-      undoStack.push(currentSnapshot);
-    }
-    trimHistoryBudget();
-    return applySnapshot(targetSnapshot);
+  function forModule(owner) {
+    if (!scopes.has(owner)) scopes.set(owner, {
+      persist: (options = {}) => persist({ ...options, owner }),
+      undo: () => run('undo', owner),
+      redo: () => run('redo', owner),
+      getHistoryState: () => getHistoryState(owner)
+    });
+    return scopes.get(owner);
   }
 
-  function reset() {
-    undoStack.length = 0;
-    redoStack.length = 0;
-    lastSnapshot = serializeHistoryState(state);
-    lastHistoryPushAt = 0;
-    lastCoalesceTarget = null;
-    syncButtons();
-  }
-
-  undoButton?.addEventListener('click', () => {
-    undo();
-  });
-  redoButton?.addEventListener('click', () => {
-    redo();
-  });
-  documentObject?.addEventListener?.('keydown', (event) => {
-    const command = getKeyboardCommand(event);
-    if (!command) {
-      return;
-    }
+  undoButton?.addEventListener('click', () => command('undo'));
+  redoButton?.addEventListener('click', () => command('redo'));
+  documentObject?.addEventListener?.('keydown', event => {
+    const direction = getKeyboardCommand(event);
+    if (!direction) return;
     event.preventDefault();
-    if (command === 'redo') {
-      redo();
-    } else {
-      undo();
-    }
+    command(direction);
   });
-
+  documentObject?.addEventListener?.('focusin', syncButtons);
+  const Observer = windowObject?.MutationObserver;
+  if (Observer && documentObject?.body) new Observer(syncButtons).observe(documentObject.body,
+    { attributes: true, attributeFilter: ['data-active-view'] });
   syncButtons();
 
-  return {
-    persist,
-    redo,
-    reset,
-    syncButtons,
-    undo
-  };
+  return { persist, forModule, getHistoryState, acceptExternalChanges, reset, syncButtons,
+    undo: () => command('undo'), redo: () => command('redo') };
 }

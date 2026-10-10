@@ -19,7 +19,7 @@ flowchart TB
     subgraph MODS["Feature modules · modules/* by manifest family"]
       foundation["foundation<br/>biologyNotebook · protocol"]
       collab["collaboration<br/>agentChat · agentChatRail<br/>workflowManagement · papers"]
-      inventory["inventory<br/>labCommonInventory · personalInventory<br/>sampleRegistry"]
+      inventory["inventory<br/>labCommonInventory · personalInventory"]
       analysis["analysis<br/>assay"]
       sequence["sequence<br/>sequenceViewer"]
       utility["utility<br/>toolBox · settings · homeDashboard"]
@@ -252,7 +252,7 @@ Every module owns a slice of `state`, renders its own view, and reaches main onl
 | Protocols | `protocol` | Protocol library CRUD with a structured step editor, JSON import/export, list/preview. Drafting runs through the Codex agent (so it can use web + literature tools); "polish" is a direct-LLM call. Accepts drafts extracted from Papers and protocols the agent saved from main. | `protocols` | agent protocol generation, direct LLM | `onProtocolsChanged` |
 | Notebook | `biologyNotebook` | Projects and experiment entries that link a protocol, samples, an assay plate, a gel, and papers. Result tables use the shared formula engine (`lib/formula.js`); imported result files and page logs go into the storage root; PDF export; calculation sidebar; agent notebook drafts are reviewed here before they persist. | `projects`, `notebookEntries` | storage dirs, file import/read, page logs, direct LLM | `onProjectsChanged`, `onNotebookEntriesChanged`, `onCreateLinkedAssay` |
 | Papers | `papers` | Local PDF library (folder rail, drag/drop), in-app PDF viewer with anchored comments and highlights, summaries and method extraction via direct LLM. PDFs are stored/moved inside the storage root and rediscovered on hydration. Can turn an extracted method into a protocol draft. | `papers`, `paperExperimentLinks`, comments | file store/move/read, paper discovery, direct LLM, open external | `onCreateProtocolDraft` |
-| Samples | `sampleRegistry`, `personalInventory` | Samples recorded inside physical containers (boxes, racks, well grids) with a multi-well editor; CSV round-trip; captures samples mentioned in notebook entries. Location and sample-type vocabularies come from Settings. | `samples` | — | `onSamplesChanged`, `onNotebookSampleCaptured` |
+| Samples | `personalInventory` | Samples recorded inside physical containers (boxes, racks, well grids) with a multi-well editor; every sample lives in a container; per-container CSV round-trip. Notebook pages add samples through their own Add Samples dialog. Location and sample-type vocabularies come from Settings. | `samples` | — | — |
 | Chemicals | `labCommonInventory` | Shared reagent inventory: locations with generated codes, lots, stock, and an append-only activity ledger. CSV/XLSX import with header mapping (parsed in main, fields guessed by LLM). Mirrors records into the storage-root SQLite index. | `labInventory` | chemical import parsing, direct LLM, SQLite sync | — |
 | Workflows | `workflowManagement` | Graph workflow builder with reusable templates; executions link to projects and notebook entries; result files stored in the storage root. Re-renders whenever protocols, entries, projects, or assays change. | `workflows`, `workflowTemplates` | storage dirs, file import | `onCreateLinkedAssay` |
 | Agent | `agentChat`, `agentChatRail` | Chat over app state: sessions and folders, streamed turns and cancel, a compact experiment context built by `experiment-llm-mapper`. Session logs live in main. Review-before-write: agent drafts land in Notebook/Protocols only after the user accepts. The rail is the same controller mounted as a side panel in other views. | `agentChat` | `agent:chat`, cancel, chat-log sessions | `onNotebookEntriesChanged` |
@@ -290,9 +290,7 @@ flowchart LR
   biologyNotebook -- "notebookEntriesChanged" --> N[notebook svc] --> assay & workflowManagement
   biologyNotebook -- "projectsChanged" --> J[project svc] --> agentChat & assay & papers & workflowManagement & biologyNotebook
   assay -- "assaysChanged" --> A[analysis svc] --> agentChatRail & biologyNotebook & workflowManagement
-  personalInventory -- "samplesChanged" --> I[inventory svc] --> sampleRegistry
-  settings -- "sampleInventorySettingsChanged" --> I
-  sampleRegistry -- "notebookSampleCaptured" --> N
+  settings -- "sampleInventorySettingsChanged" --> I[inventory svc] --> personalInventory & protocol
   agentChatRail -- "notebookEntriesChanged" --> N
   papers -- "createProtocolDraft" --> P
   biologyNotebook & workflowManagement -- "createLinkedAssay" --> A --> assay

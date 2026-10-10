@@ -23,10 +23,14 @@ export function initializeModuleManifest(moduleRegistry, manifest, context) {
   if (!manifest?.key || typeof manifest.init !== 'function') {
     return null;
   }
+  const history = context.getModuleHistory?.(manifest.historyOwner || manifest.key);
+  const moduleContext = history ? { ...context, persist: history.persist, history } : context;
   const options = typeof manifest.createOptions === 'function'
-    ? manifest.createOptions(context)
+    ? manifest.createOptions(moduleContext)
     : {};
-  return initAndRegisterModule(moduleRegistry, manifest.key, manifest.init, options);
+  const module = initAndRegisterModule(moduleRegistry, manifest.key, manifest.init, options);
+  if (module && history) module.history = history;
+  return module;
 }
 
 export function initializeModuleManifests(moduleRegistry, manifests, context) {
@@ -56,7 +60,7 @@ function addManifestViewId(viewIds, viewId) {
 
 // A manifest may name its views four ways (viewIds, viewKeys, viewId, viewKey);
 // all are merged, deduped, and resolved against context.views.
-function resolveManifestViewIds(manifest, context) {
+export function resolveManifestViewIds(manifest, context) {
   const viewIds = [];
   const dynamicViewIds = typeof manifest.viewIds === 'function'
     ? manifest.viewIds(context)

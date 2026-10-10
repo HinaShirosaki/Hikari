@@ -22,16 +22,14 @@ if (!process.versions.electron) {
     const url = (file) => pathToFileURL(path.join(root, file)).href;
     const fixture = path.join(temp, 'fixture.html');
     fs.writeFileSync(fixture, `<!doctype html><html><head><link rel="stylesheet" href="${url('styles.css')}">
-      <style>body{display:block;padding:2rem}main{max-width:32rem;margin:auto}#registry{display:none}</style>
-      </head><body><main><h2>Samples</h2><div id="inventory-sections"></div><div id="registry">
-      ${fs.readFileSync(path.join(root, 'ui/html/views/sample-registry-view.html'), 'utf8')}
-      </div></main></body></html>`);
+      <style>body{display:block;padding:2rem}main{max-width:32rem;margin:auto}</style>
+      </head><body><main><h2>Samples</h2><div id="inventory-sections"></div></main></body></html>`);
     const win = new BrowserWindow({ width: 720, height: 940, show: false,
       webPreferences: { contextIsolation: true, sandbox: false } });
     await win.loadFile(fixture);
     try {
       const result = await win.webContents.executeJavaScript(`(async () => {
-        const { bindPlasmidNameSuggestions, matchPlasmidNames } = await import(${JSON.stringify(url('src/renderer/modules/sample-registry/name-suggestions.js'))});
+        const { bindPlasmidNameSuggestions, matchPlasmidNames } = await import(${JSON.stringify(url('src/renderer/modules/personal-inventory/name-suggestions.js'))});
         const { createSingleContainerEditorRenderer } = await import(${JSON.stringify(url('src/renderer/modules/personal-inventory/detail-single-editor.js'))});
         const { createWellEditorRenderer } = await import(${JSON.stringify(url('src/renderer/modules/personal-inventory/detail-well-editor.js'))});
         const { bindSingleSampleEvents } = await import(${JSON.stringify(url('src/renderer/modules/personal-inventory/single-sample-events.js'))});
@@ -108,23 +106,12 @@ if (!process.versions.electron) {
         input(retryName,'pet'); await wait(); assert(list(retryName).textContent.includes('Type again to retry'), 'Search errors are actionable');
         handler = async () => ({ok:true,entries}); input(retryName,'puc'); await wait();
         assert(list(retryName).textContent === 'pUC19', 'Search retries recover');
-        document.getElementById('registry').style.display = 'block';
-        const form = document.getElementById('sample-form');
-        form.closest('section').style.display = 'block';
-        bindPlasmidNameSuggestions(form, state, {getBridge,delay:15});
-        const registryName = document.getElementById('sample-name');
-        registryName.focus();
-        const registryTypeTop = document.getElementById('sample-type').getBoundingClientRect().top;
-        input(registryName,'pet'); await wait(); assert(!list(registryName).hidden, 'Registry uses suggestions');
-        assert(document.getElementById('sample-type').getBoundingClientRect().top === registryTypeTop, 'Registry suggestions do not move the Type field');
-        form.reset(); assert(list(registryName).hidden, 'Reset closes registry suggestions');
-        document.getElementById('registry').style.display = 'none';
         // Save a selected name through the existing single-container handler.
         linked = []; host.innerHTML = single.renderSingleContainerEditor('-20 Degree',container);
         let persisted = null;
         const ctx = { state, uiState, elements:{inventorySections:host}, pendingStructureDrafts:new Map(),
           helpers:{...helpers,ensureSamples(){},getContainer:()=>container,normalizeSampleCode:value=>value || '',makeDefaultSampleCode:()=> 'S-1',normalizeSampleType:value=>value,buildAutoLocationFromLink:()=>({})},
-          persist:()=>persisted=JSON.parse(JSON.stringify(state.samples)),renderSections(){},notifySamplesChanged(){},notifySampleRecorded(){},isChemicalSampleType:()=>false,getPendingStructureKey:()=>'' };
+          persist:()=>persisted=JSON.parse(JSON.stringify(state.samples)),renderSections(){},isChemicalSampleType:()=>false,getPendingStructureKey:()=>'' };
         bindSingleSampleEvents(ctx);
         const saveName = host.querySelector('[data-single-sample-new-name]');
         input(saveName,'pet'); await wait(); key(saveName,'ArrowDown'); key(saveName,'Enter');
@@ -141,7 +128,7 @@ if (!process.versions.electron) {
         assert(bounds.bottom > typeBounds.top, 'Dropdown overlaps the Type field');
         assert(list(saveName).contains(document.elementFromPoint(bounds.left + 10, typeBounds.top + 2)), 'Suggestions receive pointer events above the Type field');
         assert(document.documentElement.scrollWidth <= innerWidth, 'No horizontal overflow');
-        return {checks:'All five editors, keyboard/pointer selection, free text, type gating, stale requests, blur/reset/storage changes, failure/retry, save persistence, geometry', options:list(saveName).textContent};
+        return {checks:'All four editors, keyboard/pointer selection, free text, type gating, stale requests, blur/storage changes, failure/retry, save persistence, geometry', options:list(saveName).textContent};
       })()`);
       const output = path.join(root, 'artifacts/sample-plasmid-suggestions');
       fs.mkdirSync(output, { recursive: true });

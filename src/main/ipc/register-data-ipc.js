@@ -88,6 +88,7 @@ function registerDataIpc(deps = {}) {
     const result = await mainDataHelpers.autoSaveDataFile({ data, filePath });
     if (result?.ok) {
       await mirrorStorageRoot(data?.settings?.storagePath);
+      deps.onWorkspaceSaved?.(data?.settings?.storagePath);
     }
     return result;
   });

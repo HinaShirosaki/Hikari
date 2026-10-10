@@ -139,6 +139,14 @@ export function initWorkflowManagement({
       actions.selectWorkflow(id);
     },
     render,
+    // Saved execution data is independent of the unsaved graph/form draft.
+    // Refresh the lists and board without reapplying a stale draft to inputs.
+    restoreHistory: () => {
+      renderer.renderTemplateSourceOptions();
+      renderer.renderTemplateList();
+      renderer.renderWorkflowList();
+      renderer.renderExecutionBoard();
+    },
     renderProjectOptions: renderer.renderProjectOptions,
     renderNotebookOptions: renderer.renderNotebookOptions,
     renderProtocolOptions: renderer.renderProtocolOptions

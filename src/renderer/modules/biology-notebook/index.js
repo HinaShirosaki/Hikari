@@ -490,11 +490,13 @@ export function initLabNotebook({
     if (open) onOpenWorkflowProcess(open.dataset.projectProcessOpen);
   });
 
+  const hasUnsavedChanges = () => Boolean(
+    drafts.getSavedDraftSnapshot()
+    && getCurrentDraftSnapshot() !== drafts.getSavedDraftSnapshot()
+  );
+
   return {
-    hasUnsavedChanges: () => Boolean(
-      drafts.getSavedDraftSnapshot()
-      && getCurrentDraftSnapshot() !== drafts.getSavedDraftSnapshot()
-    ),
+    hasUnsavedChanges,
     openEntry: editEntry,
     renderLinkedPreviews,
     appendAgentNotebookContent,
@@ -506,7 +508,14 @@ export function initLabNotebook({
     },
     getAgentChatContext,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,
-    renderProtocolOptions: dropdownRenderer.renderProtocolOptions,
+    // Refreshes from navigation, history and other modules. They must not
+    // replace an open draft with saved content while its protocol stays selected.
+    renderProtocolOptions: (protocolId = '', options = {}) => {
+      const selected = elements.notebookProtocolSelect.value;
+      dropdownRenderer.renderProtocolOptions(protocolId, { ...options, triggerChange: false });
+      if (options.triggerChange !== false
+        && (elements.notebookProtocolSelect.value !== selected || !hasUnsavedChanges())) onProtocolChange();
+    },
     renderEntries: entryListRenderer.renderEntries,
     onProtocolChange,
     saveUnsavedChanges: async () => {

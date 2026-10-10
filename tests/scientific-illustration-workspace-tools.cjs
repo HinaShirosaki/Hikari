@@ -10,9 +10,12 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
     const result = await tool({ action: 'apply', illustration_id: current.illustration_id, expected_revision: current.revision, request_id: randomUUID(), operations });
     check(result.ok, result.error || 'Save shared-tools fixture'); await pause(80);
   };
-  for (let i = 0; i < 50; i++) { if (await host('document.querySelectorAll("#plugin-workspace-tools button").length===13')) break; await pause(40); }
+  for (let i = 0; i < 50; i++) { if (await host('document.querySelectorAll("#plugin-workspace-tools button").length===12')) break; await pause(40); }
   const viewId = await host('qaRegistry[0].viewId');
-  check(await host('document.body.classList.contains("has-plugin-workspace-tools") && document.querySelectorAll("#plugin-workspace-tools button").length===13 && document.querySelectorAll("#agent-chat-rail-toggle-btn").length===1'), 'Illustration tools and the existing chat toggle occupy one host strip');
+  check(await host('document.body.classList.contains("has-plugin-workspace-tools") && document.querySelectorAll("#plugin-workspace-tools button").length===12 && document.querySelectorAll("#agent-chat-rail-toggle-btn").length===1'), 'Illustration tools and the existing chat toggle occupy one host strip');
+  const capabilities = await evaluate('window.HikariPlugin.hikari.call("app.info").then(info=>info.layout.workspaceTools)');
+  const cropPath = capabilities.icons?.includes('crop') ? 'M6 3v15h15M3 6h15v15' : 'M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6';
+  check(await host(`document.querySelector('[data-workspace-tool-id="crop-raster"] path').getAttribute('d')===${JSON.stringify(cropPath)}`), 'The shared Crop button uses a glyph accepted by this host version');
   check(await evaluate('document.body.classList.contains("has-host-tools") && document.getElementById("workspace-tools").getBoundingClientRect().width===0 && document.querySelector(".toolbar #group-selection,.toolbar #layers-tab")===null'), 'Mounted host tools release the local strip and header space');
   await apply([
     { op: 'upsert', object: { id: 'tool-cell', type: 'vector', x: 180, y: 180, width: 200, height: 160, svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160"><ellipse cx="100" cy="80" rx="98" ry="78" fill="#b6d8c8" stroke="#547966" stroke-width="3"/></svg>' } },
@@ -57,7 +60,8 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
     check((await read()).groups.length === 1 && await host('document.querySelector("[data-workspace-tool-id=group-selection]").disabled && !document.querySelector("[data-workspace-tool-id=ungroup-selection]").disabled'), 'Host grouping applies one edit and updates enabled actions');
     await clickTool('ungroup-selection');
     check((await read()).groups.length === 0, 'Host Ungroup preserves independent components');
-    await clickTool('undo'); await clickTool('undo');
+    check(await host('!document.getElementById("global-undo-btn").disabled && !document.querySelector("[data-workspace-tool-id=undo],[data-workspace-tool-id=redo]")'), 'Shared toolbar edits keep the system undo button enabled without duplicates');
+    await click('#global-undo-btn'); await click('#global-undo-btn');
     check(JSON.stringify((await read()).objects) === JSON.stringify(before.objects), 'Host undo returns all fixture objects to their starting geometry');
     await evaluate('document.getElementById("close-layers").click()');
     for (const width of [1300, 980, 720, 480, 320]) {
@@ -97,8 +101,21 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
   await host(`document.body.dataset.agentAvailability='connected';document.dispatchEvent(new CustomEvent('hikari:agent-chat-rail-availability-changed'));document.body.dataset.activeView='papers-view'`); await pause(80);
   check(await host('document.getElementById("plugin-workspace-tools").hidden && !document.body.classList.contains("has-plugin-workspace-tools")'), 'Illustration tools do not leak into another module');
   await host(`document.body.dataset.activeView=${JSON.stringify(viewId)}`); await pause(80);
-  check(await host('document.querySelectorAll("#plugin-workspace-tools button").length===13'), 'Returning to the illustration restores one copy of each tool');
+  check(await host('document.querySelectorAll("#plugin-workspace-tools button").length===12'), 'Returning to the illustration restores one copy of each tool');
   await evaluate('location.reload()'); await pause(350);
-  check(await host('document.querySelectorAll("#plugin-workspace-tools button").length===13'), 'Reload replaces the configuration without duplicate tools');
+  check(await host('document.querySelectorAll("#plugin-workspace-tools button").length===12'), 'Reload replaces the configuration without duplicate tools');
+  check(await host('document.querySelector("[data-workspace-tool-id=crop-raster]").disabled'), 'The shared toolbar disables Crop without a single raster selection');
+  const bytes = await evaluate(`(()=>{const canvas=document.createElement('canvas');canvas.width=160;canvas.height=100;const ctx=canvas.getContext('2d');ctx.fillStyle='#287c75';ctx.fillRect(0,0,160,100);return canvas.toDataURL('image/png')})()`);
+  await apply([{ op: 'upsert', object: { id: 'toolbar-crop-image', name: 'Crop fixture', type: 'raster', dataUrl: bytes, textFree: true, width: 320, height: 200 } }]);
+  await evaluate('document.querySelector("[data-layer-id=toolbar-crop-image] .layer-select").click()'); await pause(100);
+  check(await host('!document.querySelector("[data-workspace-tool-id=crop-raster]").disabled'), 'Selecting an image enables the shared Crop toolbar button');
+  const beforeCrop = await read();
+  win.webContents.debugger.attach('1.3');
+  try { await clickTool('crop-raster'); } finally { win.webContents.debugger.detach(); }
+  for (let i = 0; i < 50; i++) { if (await evaluate('Boolean(document.getElementById("canvas-crop-preview")?.cropper?.ready)')) break; await pause(40); }
+  check(await evaluate('Boolean(document.getElementById("canvas-crop-preview")?.cropper?.ready) && !document.getElementById("raster-dialog").open'), 'A real host toolbar click opens the vendored cropper directly in the canvas');
+  check(await host('document.querySelector("[data-workspace-tool-id=crop-raster]").getAttribute("aria-pressed")==="true"'), 'The shared toolbar reflects active crop mode');
+  await evaluate('document.getElementById("canvas-crop-cancel").click()'); await pause(100);
+  check((await read()).revision === beforeCrop.revision && await host('document.querySelector("[data-workspace-tool-id=crop-raster]").getAttribute("aria-pressed")==="false"'), 'Cancel restores toolbar state without changing the illustration');
 }
 module.exports = { verifySharedWorkspaceTools };

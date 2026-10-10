@@ -4,7 +4,7 @@ const WORKFLOW_ROOT_FOLDER_NAME = 'Workflow';
 const TEMPLATE_METADATA_FILE_NAME = 'template.json';
 const WORKFLOW_METADATA_FILE_NAME = 'workflow.json';
 const RELATED_PAPERS_FILE_NAME = 'related-papers.json';
-const NOTEBOOK_PAGE_FILE_NAME = 'page.json';
+const NOTEBOOK_PAGE_FILE_NAME = 'page.md';
 
 module.exports = {
   NOTEBOOK_PAGE_FILE_NAME,

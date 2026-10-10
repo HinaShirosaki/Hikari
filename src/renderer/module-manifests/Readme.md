@@ -17,3 +17,5 @@ Current manifest groups:
 Each group is loaded with `loadManifests(...)`, which imports every manifest on its own so one that fails to load is logged and skipped instead of breaking the renderer.
 
 When adding a module, create a focused `<module>.js` manifest and add a `['./<module>.js', '<name>Manifest']` row to the right group in `index.js`. Use `viewKey`, `viewKeys`, `viewId`, or `viewIds` to declare routes, and `navigationAliases` when a secondary route should highlight another app entry. Add `bootOrder` only when the module needs to render during `renderAll()`; the runtime uses `renderAll` if present and otherwise falls back to `render`.
+
+History ownership is bound before `createOptions` runs. Each module API receives `history`; its `persist` callback is permanently bound to that owner, including asynchronous completions. Declare `historyStateKeys` for related visible-state refreshes and optionally `renderHistory` for editor reconciliation. `historyOwner` joins implementations that share one user-facing module (Inventory). History restore does not use `bootOrder`; see [the module contract](../../../docs/module-development/03-module-contract.md).

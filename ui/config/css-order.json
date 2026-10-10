@@ -16,7 +16,6 @@
     "ui/css/components/spreadsheet-fill-handle.css",
     "ui/css/components/plugin-frame.css",
     "ui/css/overrides/cross-view-fixes.css",
-    "ui/css/views/sample-registry-shell-overrides.css",
     "ui/css/views/protocol-management-shell-overrides.css",
     "ui/css/views/assay-shell-overrides.css",
     "ui/css/views/workflow-shell-overrides.css",

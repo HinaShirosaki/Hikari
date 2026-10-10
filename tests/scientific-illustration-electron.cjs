@@ -21,6 +21,11 @@ const { verifySharedWorkspaceTools } = require('./scientific-illustration-worksp
 const { verifyImageGenerationPreference } = require('./scientific-illustration-image-preference.cjs');
 const { verifySourceActions } = require('./scientific-illustration-source-actions.cjs');
 const { verifyAutomaticAssets } = require('./scientific-illustration-auto-assets.cjs');
+const { verifyImportCrop } = require('./scientific-illustration-import-crop.cjs');
+const { verifyPowerPoint } = require('./scientific-illustration-powerpoint.cjs');
+const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
+const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
+const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
@@ -60,12 +65,19 @@ async function run() {
   const pluginPath = path.join(temp, 'installed', 'scientific-illustration');
   await fs.cp(process.env.HIKARI_PLUGIN_QA_SOURCE || path.join(repo, 'plugins/scientific-illustration'), pluginPath, { recursive: true });
   registry = registerPluginIpc({ ipcMain, session, fs, dialog: { ...dialog,
-    showSaveDialog: async options => ({ canceled: false, filePath: path.join(temp, path.basename(options.defaultPath)) }) } });
+    showSaveDialog: async options => {
+      const mode = await win?.webContents.executeJavaScript('window.qaExportDialogMode || ""');
+      if (mode === 'cancel') return { canceled: true };
+      if (mode === 'fail') throw new Error('Injected export disk failure');
+      return { canceled: false, filePath: path.join(temp, path.basename(options.defaultPath)) };
+    } } });
   const url = relative => pathToFileURL(path.join(runtime, relative)).href;
   await fs.writeFile(path.join(temp, 'host.mjs'), `
     // This fixture supplies a connected, local stub agent.
     document.body.dataset.agentAvailability='connected';
     import { createPluginBridge } from ${JSON.stringify(url('src/renderer/app/plugin-bridge.js'))};
+    import { createUndoService } from ${JSON.stringify(url('src/renderer/services/undoService.js'))};
+    import { createPluginHistoryDelegate } from ${JSON.stringify(pathToFileURL(path.join(repo, 'src/renderer/app/plugin-history.js')).href)};
     import { installPlugins } from ${JSON.stringify(url('src/renderer/app/plugin-loader.js'))};
     import { createPluginPromptHandler, createPluginChatContextHandler } from ${JSON.stringify(url('src/renderer/app/plugin-agent.js'))};
     import { createAgentRailScopeContextGetter } from ${JSON.stringify(url('src/renderer/module-manifests/agent-chat-rail.js'))};
@@ -91,10 +103,15 @@ async function run() {
     railRuntime.init();window.qaRailRuntime=railRuntime;
     const setChatContext=createPluginChatContextHandler({documentObject:document,getModuleRuntime:()=>({modules:{agentChatRail:rail}})});
     const prompt=createPluginPromptHandler({state:qaState,setChatContext,getNavigation:()=>({showView:id=>{document.body.dataset.activeView=id;railRuntime.syncState(id);},openAgentChatRail:()=>{window.qaRailOpened=true;railRuntime.open();}}),getModuleRuntime:()=>({modules:{agentChatRail:rail}})});
+    let historyService;
     const bridge=createPluginBridge({state:qaState,windowObject:window,persist:()=>{},onPluginPrompt:prompt,onPluginChatContext:setChatContext,
+      onFrameHistoryChanged:()=>historyService?.syncButtons(),
       onPluginActivate:plugin=>{document.body.dataset.activeView='plugin-'+plugin.id+'-view';railRuntime.syncState(document.body.dataset.activeView);},
       api:{...hikariApi,writePluginFile:payload=>failSave||(failIndex&&payload.path==='library.json')||(window.qaFailAssets&&payload.path==='reusable-assets.json')||(window.qaFailGroupAck&&payload.path.startsWith('illustrations/'))?Promise.resolve({ok:false,error:'Injected disk failure'}):hikariApi.writePluginFile(payload)}});
     window.qaBridge=bridge;
+    window.qaHostHistoryState={value:0};
+    window.qaHistoryDelegate=createPluginHistoryDelegate({documentObject:document,windowObject:window,bridge,onChange:()=>historyService?.syncButtons()});
+    window.qaUndoService=historyService=createUndoService({state:qaHostHistoryState,persistState:()=>{},renderAll:()=>{},documentObject:document,delegate:qaHistoryDelegate});
     window.addEventListener('hikari:left-rail-width-changed',()=>bridge.broadcastAppContext('layout'));
     hikariApi.onPluginCanvasRequest(async request=>hikariApi.respondToPluginCanvasRequest({id:request.id,result:await bridge.requestCanvas(request)}));
     installPlugins({state:qaState,documentObject:document,appRegistry:qaRegistry,bridge,api:hikariApi});
@@ -102,13 +119,16 @@ async function run() {
     document.getElementById(qaRegistry[0].viewId).classList.add('is-active');
     railRuntime.syncState(qaRegistry[0].viewId);
   `);
+  const historyControls='<div class="topbar-history-controls" role="group" aria-label="Undo and redo" style="position:fixed;left:16px;bottom:16px;z-index:1000"><button id="global-undo-btn" aria-label="Undo" disabled>↶</button><button id="global-redo-btn" aria-label="Redo" disabled>↷</button></div>';
   if (sharedToolsQA) {
-    const shell = fsSync.readFileSync(path.join(runtime, 'ui/html/shell/end.html'), 'utf8');
+    // Packages contain the generated shell rather than the UI source fragments.
+    const shellPath = path.join(runtime, 'ui/html/shell/end.html');
+    const shell = fsSync.readFileSync(fsSync.existsSync(shellPath) ? shellPath : path.join(runtime, 'index.html'), 'utf8');
     const railStart = shell.indexOf('<aside id="universal-agent-chat-rail"');
     const railMarkup = shell.slice(railStart, shell.indexOf('</aside>', railStart) + 8);
-    await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><link rel="stylesheet" href="${url('styles.css')}"><style>body{margin:0;height:100vh}.workspace-main{height:100%;padding:0}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style><div class="workspace-shell"><div class="workspace-main"></div>${railMarkup}</div><script type="module" src="host.mjs"></script>`);
+    await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><link rel="stylesheet" href="${url('styles.css')}"><style>body{margin:0;height:100vh}.workspace-main{height:100%;padding:0}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div class="workspace-shell"><div class="workspace-main"></div>${railMarkup}</div><script type="module" src="host.mjs"></script>`);
   } else {
-  await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><style>body{margin:0}.workspace-main{height:100vh}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style><div hidden><select id="agent-rail-project-select"></select><div id="agent-rail-chat-history"></div><textarea id="agent-rail-message-input"></textarea><button id="agent-rail-send-btn">Send</button><div id="agent-rail-quick-prompts"><button data-agent-suggest-prompt="Summarize workspace">Old prompt</button></div><div id="agent-rail-session-list"></div><p id="agent-rail-status"></p></div><div class="workspace-main"></div><script type="module" src="host.mjs"></script>`);
+  await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><style>body{margin:0}.workspace-main{height:100vh}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div hidden><select id="agent-rail-project-select"></select><div id="agent-rail-chat-history"></div><textarea id="agent-rail-message-input"></textarea><button id="agent-rail-send-btn">Send</button><div id="agent-rail-quick-prompts"><button data-agent-suggest-prompt="Summarize workspace">Old prompt</button></div><div id="agent-rail-session-list"></div><p id="agent-rail-status"></p></div><div class="workspace-main"></div><script type="module" src="host.mjs"></script>`);
   }
   win = new BrowserWindow({ show: false, width: 1300, height: 1000, webPreferences: {
     // Hidden fixtures still need animation frames for layout/context observers.
@@ -127,7 +147,7 @@ async function run() {
   }
   check(frame, `Plugin failed to load: ${errors.join('\n')}`);
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
-  check(await evaluate('document.getElementById("undo").disabled && document.getElementById("redo").disabled && !document.getElementById("canvas-empty").hidden'), 'Empty workspace presents a starting point and disabled history controls');
+  check(await evaluate('!document.querySelector("#undo,#redo") && !document.getElementById("canvas-empty").hidden') && await win.webContents.executeJavaScript('document.getElementById("global-undo-btn").disabled && document.getElementById("global-redo-btn").disabled'), 'Empty workspace uses disabled system history controls without duplicate plugin buttons');
   check(await evaluate('document.getElementById("layer-inspector").hidden && document.getElementById("layer-inspector").inert'), 'New illustrations start with the canvas dominant and Layers folded');
   await fs.writeFile(path.join(temp, 'empty.png'), (await win.webContents.capturePage()).toPNG());
   check(await win.webContents.executeJavaScript('qaInspected.permissions.includes("agent:chat") && qaInspected.permissions.includes("agent:canvas") && qaInspected.permissions.includes("layout")'), 'Installer IPC accepts agent and existing layout permissions');
@@ -156,29 +176,55 @@ async function run() {
     check(errors.length === 0, `No renderer errors: ${errors.join('\n')}`);
     console.log(JSON.stringify({ ok: true, automaticAssets: true, checks, temp })); return;
   }
+  if (process.env.HIKARI_ASSET_IMPORT_QA_ONLY === '1') {
+    await verifyImportCrop({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura asset import/crop: ${checks} checks passed. Screenshots: ${temp}`); return;
+  }
+  if (process.env.HIKARI_POWERPOINT_QA_ONLY === '1') {
+    await verifyPowerPoint({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura PowerPoint export: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_ROTATION_QA_ONLY === '1') {
+    await verifyRotation({ tool, evaluate, check, win, pause, temp });
+    await verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura rotation and canvas interaction: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_CLIPBOARD_QA_ONLY === '1') {
+    await verifyClipboard({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura clipboard: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_HISTORY_QA_ONLY === '1') {
+    await verifySystemHistory({ tool, evaluate, check, win, pause });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura system history: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   await verifyImageGenerationPreference({ tool, evaluate, check, win, pause, temp });
   if (sharedToolsQA) {
     await verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
-    console.log(`Scientific Illustration shared tools: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    console.log(`Figura shared tools: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   if (process.env.HIKARI_GROUPING_QA_ONLY === '1') {
     await verifyGrouping({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
-    console.log(`Scientific Illustration grouping: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    console.log(`Figura grouping: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   if (process.env.HIKARI_ASSETS_QA_ONLY === '1') {
     await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
-    console.log(`Scientific Illustration reusable assets: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    console.log(`Figura reusable assets: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   if (process.env.HIKARI_SELECTION_QA_ONLY === '1') {
     await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
-    console.log(`Scientific Illustration area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    console.log(`Figura area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   let current = await tool({ action: 'read' });
@@ -284,7 +330,7 @@ async function run() {
   check(await win.webContents.executeJavaScript('qaRequests[0].agent.pluginCanvasId==="scientific-illustration"'), 'Plugin chat carries structured canvas scope for completion enforcement');
   check(await win.webContents.executeJavaScript(`qaState.paperAgentChatSessions[${JSON.stringify(`plugin:scientific-illustration:item:${current.illustration_id}`)}].messages.some(message=>message.role==="assistant" && message.text==="Fixture response")`), 'Fixture model response is saved in the illustration chat');
   check(await win.webContents.executeJavaScript(`qaRequests.every(request=>request.chatSessionId===qaRequests[0].chatSessionId && request.agent.pluginCanvasIllustrationId===${JSON.stringify(current.illustration_id)})`), 'Same figure reuses only its own saved session and pins its canvas target');
-  check(await win.webContents.executeJavaScript('document.getElementById("agent-rail-quick-prompts").hidden && [...document.querySelectorAll("[data-agent-suggest-prompt]")].every(button=>button.hidden)'), 'Scientific Illustration hides all prefilled prompt suggestions');
+  check(await win.webContents.executeJavaScript('document.getElementById("agent-rail-quick-prompts").hidden && [...document.querySelectorAll("[data-agent-suggest-prompt]")].every(button=>button.hidden)'), 'Figura hides all prefilled prompt suggestions');
   await waitFor(async () => await evaluate('document.getElementById("prompt-form").hidden'), 'Opening the host rail did not hide the redundant prompt');
   check(await evaluate('document.getElementById("prompt-form").getBoundingClientRect().height===0 && document.querySelector(".toolbar #complexity").getBoundingClientRect().height>0 && document.getElementById("prompt").value===""'), 'Open rail removes the canvas prompt and keeps complexity in the toolbar; accepted prompts clear');
   check((await evaluate('HikariPlugin.hikari.call("app.info")')).layout.agentChatRail.expanded, 'Plugin can read the actual host rail expansion state');
@@ -303,9 +349,9 @@ async function run() {
   await evaluate('document.getElementById("prompt").value=""');
   current = await tool(apply(promptSceneObjects.map(object => ({ op: 'upsert', object }))));
   check(await evaluate('document.getElementById("prompt-form").hidden'), 'Adding components hides the starting composer without a host layout event');
-  await evaluate('document.getElementById("undo").click()');
+  await evaluate('illustrationWorkspace.history("undo")');
   await waitFor(async () => await evaluate('!document.getElementById("prompt-form").hidden'), 'Undo to an empty illustration did not restore the starting composer');
-  await evaluate('document.getElementById("redo").click()');
+  await evaluate('illustrationWorkspace.history("redo")');
   await waitFor(async () => await evaluate('document.getElementById("prompt-form").hidden'), 'Redo to a populated illustration did not hide the starting composer');
   current = await tool({ action: 'read' });
   current = await tool(apply(current.objects.filter(object => object.canvas === 'main').map(object => ({ op: 'delete', id: object.id }))));
@@ -327,7 +373,7 @@ async function run() {
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').fontSize === 36, 'User controls and agent share editable text objects');
   check(await evaluate('!document.getElementById("text-properties").hidden && document.getElementById("vector-properties").hidden && !document.querySelector(".geometry-options").open'), 'Selected text shows formatting before optional geometry');
-  check(await evaluate('!document.getElementById("undo").disabled && document.getElementById("redo").disabled'), 'History controls reflect available edits');
+  check(await win.webContents.executeJavaScript('(()=>{const history=qaBridge.getFrameHistory(document.querySelector("iframe.plugin-frame").contentWindow);return history.canUndo && !history.canRedo})()'), 'Plugin API reports available edits to system history');
   for (const style of ['bold', 'italic', 'underline']) {
     await evaluate(`document.querySelector('[data-text-style="${style}"]').click()`);
     current = await tool({ action: 'read' });
@@ -336,10 +382,10 @@ async function run() {
   current = await tool({ action: 'read' });
   const formatted = current.objects.find(object => object.id === 'label');
   check(formatted.fontWeight === 700 && formatted.italic && formatted.underline && formatted.align === 'end', 'Compact text formatting updates independent layer properties');
-  await evaluate('document.getElementById("undo").click()');
+  await evaluate('illustrationWorkspace.history("undo")');
   current = await tool({ action: 'read' });
-  check(current.objects.find(object => object.id === 'label').align === 'middle' && await evaluate('!document.getElementById("redo").disabled'), 'Undo restores formatting and enables redo');
-  await evaluate('document.getElementById("redo").click()');
+  check(current.objects.find(object => object.id === 'label').align === 'middle' && await win.webContents.executeJavaScript('qaBridge.getFrameHistory(document.querySelector("iframe.plugin-frame").contentWindow).canRedo'), 'Undo restores formatting and reports redo to Hikari');
+  await evaluate('illustrationWorkspace.history("redo")');
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').align === 'end', 'Redo restores formatting');
   current = await tool(apply([{ op: 'update', id: 'label', patch: { fontWeight: 600, italic: false, underline: false, align: 'middle' } }]));
@@ -532,7 +578,7 @@ async function run() {
   check((await inspect(reviewedImages)).inspection.complete, 'Agent review completes the inspection for that revision');
   current = await tool(apply([{ op: 'title', title: 'Changed after inspection' }]));
   check(!(await inspect(reviewedImages)).ok && !(await tool({ action: 'inspection_status' })).inspection.complete, 'An edit invalidates the prior inspection');
-  await evaluate('document.getElementById("undo").click()'); current = await tool({ action: 'read' });
+  await evaluate('illustrationWorkspace.history("undo")'); current = await tool({ action: 'read' });
   check(!current.inspection.complete, 'Undo still requires a fresh inspection');
   const beforeReload = await tool({ action: 'render', canvas: 'both' }); await inspect(beforeReload);
   await evaluate('location.reload()'); await pause(350);
@@ -568,7 +614,7 @@ async function run() {
   await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
   await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
   check(errors.length === 0, errors.join('\n'));
-  console.log(`Scientific Illustration host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+  console.log(`Figura host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
 }
 const timeout = setTimeout(() => { console.error('Plugin test timed out'); app.exit(1); }, 120000);
 run().then(() => 0, error => { console.error(error.stack || error); return 1; }).then(async code => {

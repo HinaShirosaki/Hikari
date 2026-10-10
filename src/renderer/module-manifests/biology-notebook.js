@@ -2,6 +2,7 @@ import { initLabNotebook as initBiologyNotebook } from '../modules/biology-noteb
 
 export const biologyNotebookManifest = {
   key: 'biologyNotebook',
+  historyStateKeys: ['notebookEntries', 'projects', 'protocols'],
   init: initBiologyNotebook,
   viewKey: 'BIOLOGY_NOTEBOOK',
   bootOrder: 50,

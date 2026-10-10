@@ -5,6 +5,7 @@ import { initAgentChat, createScopedAgentChatState } from '../modules/agent-chat
 
 export const homeDashboardManifest = {
   key: 'homeDashboard',
+  historyStateKeys: ['settings', 'notebookEntries'],
   init: initHomeDashboard,
   viewKey: 'HOME',
   bootOrder: 100,

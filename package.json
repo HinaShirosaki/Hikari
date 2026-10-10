@@ -1,7 +1,7 @@
 {
   "name": "@hinashirosaki/hikari",
   "productName": "Hikari",
-  "version": "1.1.0-beta.8",
+  "version": "1.1.0-beta.9",
   "description": "Electron shell for Hikari sub-app launcher",
   "author": "HinaShirosaki",
   "license": "Apache-2.0",
@@ -23,6 +23,8 @@
     "assets",
     "scripts/build-ui.mjs",
     "scripts/build-ui",
+    "scripts/maintenance/migrate-record-markdown.js",
+    "scripts/maintenance/rebuild-record-markdown.js",
     "forge.config.js",
     "THIRD-PARTY-NOTICES.md",
     "!src/**/README.md",
@@ -34,6 +36,7 @@
     "!assets/loadingicon.png"
   ],
   "scripts": {
+    "migrate:markdown": "node scripts/maintenance/migrate-record-markdown.js",
     "build:ui": "node scripts/build-ui.mjs",
     "check:css-colors": "node scripts/check-css-colors.mjs",
     "check:dom-ids": "node scripts/check-dom-ids.mjs",
@@ -65,6 +68,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "electron-squirrel-startup": "^1.0.1",
+    "js-yaml": "^4.3.1",
     "zod": "^3.25.0"
   },
   "allowScripts": {

@@ -61,7 +61,7 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
   };
   const rectangle = (canvas, start, end, modifiers) => gesture(canvas, [start, end], modifiers);
   const undoTo = async before => {
-    await evaluate('document.getElementById("undo").click()'); await pause(80);
+    await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
     check(JSON.stringify((await read()).objects) === JSON.stringify(before.objects), 'Undo restores every component after a direct selection transform');
   };
   const moveWithoutSwitch = async (canvas, ids, from, to) => {

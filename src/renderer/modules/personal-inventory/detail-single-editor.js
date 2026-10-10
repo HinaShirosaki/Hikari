@@ -1,4 +1,4 @@
-import { renderTypeFieldsMarkup } from '../sample-registry/type-fields.js';
+import { renderTypeFieldsMarkup } from './type-fields.js';
 
 export function createSingleContainerEditorRenderer({
   safeText,
@@ -46,7 +46,7 @@ export function createSingleContainerEditorRenderer({
               </svg>
               <span class="sr-only">Save Sample</span>
             </button>
-            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-unlink="${safeText(activeSample.id)}" aria-label="Delete Sample" data-hover-caption="Delete sample">
+            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-delete="${safeText(activeSample.id)}" aria-label="Delete Sample" data-hover-caption="Delete sample">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M3 6h18"></path>
                 <path d="M8 6V4h8v2"></path>

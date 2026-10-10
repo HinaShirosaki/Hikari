@@ -342,7 +342,7 @@ function createAgentSubAppApi(deps = {}) {
       return {
         record_type: 'notebook',
         record_id: cleanText(payload.id, 120),
-        title: cleanText(payload.protocolName || payload.id, 220),
+        title: cleanText(payload.experimentName || payload.title || payload.protocolName || payload.id, 220),
         project_id: project.id,
         project_name: project.name,
         summary: cleanText(payload.result, 500),
@@ -351,6 +351,8 @@ function createAgentSubAppApi(deps = {}) {
         updated_at: cleanText(payload.updatedAt || payload.createdAt, 80),
         search_text: buildSearchText([
           payload.id,
+          payload.experimentName,
+          payload.title,
           payload.protocolId,
           payload.protocolName,
           project.id,

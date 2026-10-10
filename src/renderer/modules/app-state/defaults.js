@@ -81,7 +81,6 @@ export const defaultState = {
     },
     storagePath: '',
     notebookPdf: { ...DEFAULT_NOTEBOOK_PDF_SETTINGS },
-    pendingNotebookSampleCapture: null,
     storageImport: {
       lastImportedAt: '',
       summary: {

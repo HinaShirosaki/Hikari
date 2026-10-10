@@ -15,7 +15,7 @@ This is a quick lookup map for the `src/main/` platform layer (`storage/`, `data
 | `main.js` | Main path | entry; runs the MCP stdio server when launched with `--hikari-mcp-stdio`, otherwise starts the app |
 | `app/start-main-app.js` | Main path | Electron lifecycle: Squirrel hooks, crash reporting, window creation, `start()` / `shutdown()`, the unsaved-changes close handshake |
 | `core/main-services.js` | Main path | the only composition root: constructs services in dependency order and registers all IPC |
-| `core/services/` | Main path | agent, MCP, Codex, Codex-workspace, agent-log, and notebook-suggestion service factories, plus the assay plot bridge |
+| `core/services/` | Main path | agent, MCP, Codex, Codex-workspace, agent-log, and notebook-suggestion service factories, plus the assay plot and plugin canvas bridges |
 | `windows/create-main-window.js` | Main path | the main `BrowserWindow`, preload wiring, and navigation guards |
 | `preload.js` → `preload/create-preload-api.js` | Main path | builds `window.hikariApi` from one `preload/api/*-api.js` file per domain ([README](../../../src/main/preload/README.md)) |
 
@@ -75,6 +75,7 @@ See [Sequence library](../sequences/sequence-library.md) and `src/renderer/modul
 | `lib/inspect-plugin-folder.js` | Support | validates a plugin folder and its `plugin.json` permissions |
 | `lib/plugin-server.js` | Support | serves a plugin folder on its own `http://127.0.0.1:<port>` origin |
 | `lib/plugin-files.js` | Support | plugin file read/write confined to `Plugins/<plugin-id>/`, rejecting links |
+| `lib/plugin-icon.js` | Support | reads a manifest `icon` SVG (inside the folder, at most 32 KiB) as a data URL |
 | `lib/chemical-import-parser.js` + `lib/chemical-import/` | Support | parses chemical-inventory import tables (incl. gzip) |
 | `lib/path-safety.js` | Support | `ensurePathWithinRoot`, `isPathInside`, and related guards |
 | `lib/shared-json-file.js` | Support | serialized read-modify-write and atomic replace for shared JSON files |

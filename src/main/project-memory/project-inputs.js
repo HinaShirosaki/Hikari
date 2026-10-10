@@ -1,7 +1,7 @@
 'use strict';
 
-const fs = require('node:fs/promises');
 const path = require('node:path');
+const { readRecordDocument } = require('../lib/record-markdown/read');
 const { asArray, ensureObject } = require('../lib/normalize.js');
 const { cleanText } = require('./text-utils.js');
 const { atomicWriteFile, buildFallbackCacheEntry, shouldGenerateConclusion, pruneNotebookConclusionCache, readJsonObject, readNotebookConclusionCache, stableJson, writeNotebookConclusionCache } = require('./conclusion-cache.js');
@@ -170,18 +170,14 @@ async function renderProjectMemoryInput(input, { writePrunedCache = false, reset
 // reports both as {}. Conflating them is what made a failed read re-ask the model
 // on every single save, so the caller needs to tell them apart.
 async function readCurrentNotebookMemorySource(input, requestedSource) {
-  let payload = null;
-  try {
-    payload = JSON.parse(await fs.readFile(requestedSource.pageFilePath, 'utf8'));
-  } catch {
-    return { unverifiable: true, source: null };
-  }
+  const loaded = await readRecordDocument(requestedSource.pageFilePath, 'notebook');
+  if (!loaded.ok || loaded.warnings.length) return { unverifiable: true, source: null };
   return {
     unverifiable: false,
     source: buildNotebookMemorySource(
       input.storageRootPath,
       input.projectRecord,
-      ensureObject(ensureObject(payload).notebookEntry)
+      { ...ensureObject(loaded.data.notebookEntry), storageFolder: path.dirname(requestedSource.pageFilePath), storageDocumentFile: loaded.markdownLoaded ? 'page.md' : 'page.json' }
     )
   };
 }

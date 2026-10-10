@@ -2,7 +2,8 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { cleanText, ensureObject, keepLatestById, readJsonFile, readRecordFile } = require('../storage-utils');
+const { cleanText, ensureObject, keepLatestById, readRecordFile } = require('../storage-utils');
+const { readRecordDocument } = require('../record-markdown/document-storage');
 const { NOTEBOOK_PAGE_FILE_NAME, TEMPLATE_METADATA_FILE_NAME, WORKFLOW_METADATA_FILE_NAME } = require('./constants.js');
 const { isPermissionDeniedError } = require('./folder-names.js');
 
@@ -51,9 +52,10 @@ async function readWorkflowFolders(workflowRootPath) {
   return result(true);
 }
 
-async function readNotebookEntriesForWorkflowFolder(workflowFolderPath) {
+async function readNotebookEntriesForWorkflowFolder(workflowFolderPath, warnings = [], alerts = []) {
   const notebookRoot = path.join(workflowFolderPath, 'Notebook');
   const out = [];
+  const seen = new Set();
   async function walk(currentPath) {
     let entries = [];
     try {
@@ -70,11 +72,17 @@ async function readNotebookEntriesForWorkflowFolder(workflowFolderPath) {
         await walk(absPath);
         continue;
       }
-      if (!entry.isFile() || entry.name !== NOTEBOOK_PAGE_FILE_NAME) {
+      if (!entry.isFile() || ![NOTEBOOK_PAGE_FILE_NAME, 'page.json', 'page.json.pending'].includes(entry.name)) {
         continue;
       }
-      const payload = await readJsonFile(absPath);
+      const filePath = absPath.replace(/\.json(?:\.pending)?$/, '.md');
+      if (seen.has(filePath)) continue;
+      seen.add(filePath);
+      const payload = await readRecordDocument(filePath, 'notebook');
+      warnings.push(...payload.warnings);
+      alerts.push(...payload.alerts);
       if (!payload.ok) {
+        if (payload.exists && payload.error) warnings.push(payload.error);
         continue;
       }
       const notebookEntry = ensureObject(payload.data?.notebookEntry);
@@ -84,7 +92,8 @@ async function readNotebookEntriesForWorkflowFolder(workflowFolderPath) {
       }
       out.push({
         ...notebookEntry,
-        storageFolder: path.dirname(absPath)
+        storageFolder: path.dirname(absPath),
+        storageDocumentFile: payload.markdownLoaded ? 'page.md' : 'page.json'
       });
     }
   }

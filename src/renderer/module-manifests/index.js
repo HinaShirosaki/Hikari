@@ -29,8 +29,7 @@ export const collaborationModuleManifests = await loadManifests([
 
 export const inventoryModuleManifests = await loadManifests([
   ['./lab-common-inventory.js', 'labCommonInventoryManifest'],
-  ['./personal-inventory.js', 'personalInventoryManifest'],
-  ['./sample-registry.js', 'sampleRegistryManifest']
+  ['./personal-inventory.js', 'personalInventoryManifest']
 ]);
 
 export const analysisModuleManifests = await loadManifests([

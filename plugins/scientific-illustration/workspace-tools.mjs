@@ -2,7 +2,8 @@
 // declarative controls beside the existing agent chat toggle.
 const definitions = [
   ['pointer-tool', 'pointer', 'selection'], ['freehand-tool', 'lasso', 'selection'],
-  ['add-menu', 'plus', 'edit'], ['undo', 'undo', 'edit'], ['redo', 'redo', 'edit'],
+  ['add-menu', 'plus', 'edit'],
+  ['crop-raster', 'crop', 'edit'],
   ['group-selection', 'group', 'group'], ['ungroup-selection', 'ungroup', 'group'],
   ['layers-tab', 'layers', 'panels'], ['assets-tab', 'assets', 'panels'], ['toggle-scratch', 'scratch', 'panels'],
   ['zoom-out', 'minus', 'zoom'], ['zoom-level', '', 'zoom'], ['zoom-in', 'plus', 'zoom'], ['zoom-fit', 'fit', 'zoom']
@@ -10,9 +11,12 @@ const definitions = [
 export function createWorkspaceTools({ hikari, document, onHosted = () => {} }) {
   const $ = id => document.getElementById(id), win = document.defaultView;
   let supported = false, hosted = false, signature = '', scheduled = false, inFlight = false;
+  // Hosts predating icon capabilities accept fit but reject crop, which would
+  // otherwise reject the entire shared toolbar. Keep the Crop action intact.
+  let cropIcon = 'fit';
   const tools = () => definitions.map(([id, icon, group]) => {
     const node = $(id), control = id === 'add-menu' ? node.querySelector('summary') : node;
-    const tool = { id, icon, group, label: id === 'zoom-level' ? node.textContent : control.title || control.getAttribute('aria-label') };
+    const tool = { id, icon: icon === 'crop' ? cropIcon : icon, group, label: id === 'zoom-level' ? node.textContent : control.title || control.getAttribute('aria-label') };
     if (id === 'zoom-level') { delete tool.icon; tool.kind = 'output'; }
     else {
       tool.disabled = Boolean(control.disabled);
@@ -66,7 +70,8 @@ export function createWorkspaceTools({ hikari, document, onHosted = () => {} }) 
   return {
     sync: schedule, focus, isHosted: () => hosted,
     connect(info) {
-      if (supported || hosted || !info?.layout?.workspaceTools?.available || info.permissions && !info.permissions.includes('layout')) return;
+      if (!info?.layout?.workspaceTools?.available || info.permissions && !info.permissions.includes('layout')) return;
+      cropIcon = Array.isArray(info.layout.workspaceTools.icons) && info.layout.workspaceTools.icons.includes('crop') ? 'crop' : 'fit';
       supported = true; schedule();
     }
   };

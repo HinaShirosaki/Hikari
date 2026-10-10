@@ -8,7 +8,7 @@ function normalizeSearchToken(value) {
     .replace(/[^a-z0-9-]/g, '');
 }
 
-function buildViewAliasMap({ apps = [], normalizeViewId }) {
+function buildViewAliasMap({ apps = [] }) {
   const map = new Map();
   apps.forEach((app) => {
     if (app?.hiddenFromNavigation === true) {
@@ -23,20 +23,20 @@ function buildViewAliasMap({ apps = [], normalizeViewId }) {
       if (!normalized || map.has(normalized)) {
         return;
       }
-      map.set(normalized, normalizeViewId(app.viewId));
+      map.set(normalized, app.viewId);
     });
   });
   return map;
 }
 
-function buildSearchScopeMap({ apps = [], normalizeViewId }) {
+function buildSearchScopeMap({ apps = [] }) {
   const map = new Map();
   apps.forEach((app) => {
     if (app?.hiddenFromNavigation === true) {
       return;
     }
     const target = {
-      viewId: normalizeViewId(app.viewId),
+      viewId: app.viewId,
       inputId: String(app.searchInputId || '').trim(),
       label: app.label
     };

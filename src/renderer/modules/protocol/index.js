@@ -432,6 +432,15 @@ export function initProtocolManagement({
     ),
     importProtocolsFromJson: importController.importProtocolsFromJson,
     renderList: listController.renderList,
+    restoreHistory: () => {
+      listController.renderList();
+      const protocol = getSelectedProtocol();
+      if (localState.protocolDetailMode === 'edit' && protocol) {
+        // The history guard has already protected dirty drafts. Refresh a
+        // clean open editor so its next Save cannot put back the old content.
+        openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
+      }
+    },
     renderPlaceholderPresets,
     saveUnsavedChanges: async () => {
       const protocol = onProtocolSubmit({ preventDefault() {} });

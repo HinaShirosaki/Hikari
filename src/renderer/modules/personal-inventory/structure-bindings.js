@@ -1,5 +1,5 @@
 import { showTransientNotice } from '../../lib/notify.js';
-import { renderTypeFieldsMarkup } from '../sample-registry/type-fields.js';
+import { renderTypeFieldsMarkup } from './type-fields.js';
 
 export function bindStructureButtons(ctx) {
   const { inventorySections } = ctx.elements;
