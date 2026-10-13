@@ -643,7 +643,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       assert.equal(elements.cloningDesignRunBtn.disabled, false);
     });
 
-    test('[EDGE] cloning design ignores stale donor hydration and blocks incomplete actions', async () => {
+    test('[EDGE] cloning design ignores stale donor hydration and blocks actions without primers', async () => {
       const cloningDesign = loadEsmStyleModule(
         path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-design.js')
       );
@@ -768,7 +768,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
         strategy: 'gibson',
         feasible: false,
         plans: [],
-        primers: [{ name: 'partial F', role: 'assembly-forward', sequence: 'ACGT', bindingSequence: 'ACGT' }],
+        primers: [],
         warnings: ['Insert reverse primer failed.'],
         summary: {}
       };

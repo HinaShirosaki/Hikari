@@ -11,7 +11,7 @@ import { buildSourceKey, deriveDefaultInsertRange, getEditEndIndex, getEditStart
 import { formatStrategyLabel } from './cloning-design/formatting.js';
 import { buildDisplayPlan } from './cloning-design/plan-building.js';
 import { isVisibleElement, renderPlanSummary, renderPrimerTable, renderProcedure, renderRestrictionEnzymes, renderWarnings } from './cloning-design/plan-rendering.js';
-import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
+import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, canConfirmCloningDesignPlan, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
 
 export function createSequenceViewerCloningDesignController(config = {}) {
   const elements = config?.elements || {};
@@ -237,10 +237,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       elements.cloningDesignRunBtn.disabled = Boolean(designState.storedAgentDesign) || !hasSource || isDonorHydrationPending() || confirmPending;
     }
     if (elements.cloningDesignConfirmBtn) {
-      // Nothing to commit until a feasible plan with primers exists.
+      // Confirmation saves the working product and generated primers. Review
+      // warnings remain visible, but do not prevent saving that draft.
       elements.cloningDesignConfirmBtn.disabled = Boolean(designState.storedAgentDesign) || confirmPending
         || !hasSource
-        || !isCloningDesignPlanActionable(designState.displayPlan);
+        || !canConfirmCloningDesignPlan(designState.displayPlan);
       elements.cloningDesignConfirmBtn.textContent = confirmPending ? 'Confirming…' : 'Confirm Design';
     }
     if (elements.cloningDesignStatus) {
@@ -335,9 +336,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
 
   async function confirmDesign() {
     const designState = getDesignState();
-    const primers = asArray(designState.displayPlan?.primers);
-    if (confirmPending || !isCloningDesignPlanActionable(designState.displayPlan)) {
-      setStatus('Generate a feasible, complete primer design before confirming it.', true);
+    const confirmedPlan = designState.displayPlan;
+    const primers = asArray(confirmedPlan?.primers);
+    if (confirmPending) return null;
+    if (designState.storedAgentDesign || !hasDesignSource() || !canConfirmCloningDesignPlan(confirmedPlan)) {
+      setStatus('Generate primers for the current sequence before confirming the design.', true);
       return null;
     }
     confirmPending = true;
@@ -369,7 +372,10 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       }
       await onDesignConfirmed(result);
       if (confirmedSource?.proteinBuilderDesign) onReturnToDetail();
-      setStatus(describeCloningDesignConfirmation(result), result.templates.some((template) => template.error || template.unplaced.length));
+      const needsReview = !confirmedPlan.feasible;
+      const message = describeCloningDesignConfirmation(result);
+      setStatus(needsReview ? `${message} Design still needs review; check the design warnings.` : message,
+        needsReview || result.templates.some((template) => template.error || template.unplaced.length));
       return result;
     } catch (error) {
       setStatus(error?.message || 'Failed to confirm the design.', true);

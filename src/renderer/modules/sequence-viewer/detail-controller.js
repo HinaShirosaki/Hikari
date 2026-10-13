@@ -376,6 +376,8 @@ export function createSequenceViewerDetailController(config = {}) {
     elements,
     state,
     getSelectedRecord,
+    getSelectedFeature: (record) => getFeatureByIndexForRecord(record, state.selectedFeatureIndex),
+    getVisibleFeatures: getVisibleFeaturesForRecord,
     getSequenceSelectionRange,
     clearSequenceSelection,
     hideFeatureContextMenu,

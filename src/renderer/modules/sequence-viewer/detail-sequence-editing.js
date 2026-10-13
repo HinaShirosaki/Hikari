@@ -1,4 +1,11 @@
-import { clamp, normalizeSequenceText } from './shared.js';
+import { escapeHtml } from '../../lib/html.js';
+import { clamp, cleanText, normalizeSequenceText } from './shared.js';
+import {
+  buildPeptideInsertDna,
+  getCodingOffsetAtBoundary,
+  getInsertionCodingFeatures,
+  PEPTIDE_INSERT_GROUPS
+} from './sequence-edit-peptides.js';
 
 function normalizeEditableSequence(raw) {
   return normalizeSequenceText(raw).replace(/\*/g, '');
@@ -59,6 +66,8 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
   const elements = config?.elements || {};
   const state = config?.state || {};
   const getSelectedRecord = config?.getSelectedRecord || (() => null);
+  const getSelectedFeature = config?.getSelectedFeature || (() => null);
+  const getVisibleFeatures = config?.getVisibleFeatures || (() => []);
   const getSequenceSelectionRange = config?.getSequenceSelectionRange || (() => null);
   const clearSequenceSelection = config?.clearSequenceSelection || (() => {});
   const hideFeatureContextMenu = config?.hideFeatureContextMenu || (() => {});
@@ -69,6 +78,73 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
 
   let editState = null;
+
+  function renderPeptideControls() {
+    const isInsert = editState?.mode === 'insert';
+    if (elements.sequenceEditTagWrap) elements.sequenceEditTagWrap.hidden = !isInsert;
+    if (elements.sequenceEditTagSelect) {
+      elements.sequenceEditTagSelect.innerHTML = '<option value="">Custom DNA</option>' + PEPTIDE_INSERT_GROUPS
+        .map((group) => `<optgroup label="${escapeHtml(group.label)}">${group.items.map((part) =>
+          `<option value="${group.id}:${escapeHtml(part.id)}">${escapeHtml(part.label)}</option>`
+        ).join('')}</optgroup>`).join('');
+      elements.sequenceEditTagSelect.value = '';
+    }
+    const features = editState?.codingFeatures || [];
+    if (elements.sequenceEditTagOrfSelect) {
+      elements.sequenceEditTagOrfSelect.innerHTML = '<option value="">No ORF reference</option>' + features
+        .map((feature, index) => `<option value="${index}">${escapeHtml(cleanText(feature.name, 120) || 'ORF')} (${Number(feature.strand) === -1 ? '−' : '+'})</option>`).join('');
+      // A selected coding feature wins. Without one, avoid silently choosing
+      // between overlapping reading frames.
+      elements.sequenceEditTagOrfSelect.value = editState?.preferredCodingIndex >= 0
+        ? String(editState.preferredCodingIndex)
+        : (features.length === 1 ? '0' : '');
+    }
+    if (elements.sequenceEditTagOrientation) elements.sequenceEditTagOrientation.value = 'along';
+    if (elements.sequenceEditTagOptions) elements.sequenceEditTagOptions.hidden = true;
+    if (elements.sequenceEditTagPreview) elements.sequenceEditTagPreview.textContent = '';
+  }
+
+  function updatePeptideSequence() {
+    if (editState?.mode !== 'insert') return;
+    const partKey = elements.sequenceEditTagSelect?.value || '';
+    if (elements.sequenceEditTagOptions) elements.sequenceEditTagOptions.hidden = !partKey;
+    if (!partKey) return;
+    const referenceValue = elements.sequenceEditTagOrfSelect?.value || '';
+    const feature = referenceValue !== '' ? editState.codingFeatures[Number(referenceValue)] : null;
+    const orientation = elements.sequenceEditTagOrientation?.value === 'reverse' ? 'reverse' : 'along';
+    const generated = buildPeptideInsertDna(partKey, feature?.strand, orientation);
+    if (!generated) return;
+    if (elements.sequenceEditTagOrientation) {
+      const labels = feature
+        ? ['Along ORF', 'Reverse of ORF']
+        : ['Forward strand (+)', 'Reverse strand (−)'];
+      elements.sequenceEditTagOrientation.innerHTML = `<option value="along">${labels[0]}</option><option value="reverse">${labels[1]}</option>`;
+      elements.sequenceEditTagOrientation.value = orientation;
+    }
+    if (elements.sequenceEditTextarea) elements.sequenceEditTextarea.value = generated.sequence;
+    if (elements.sequenceEditTagPreview) {
+      let frameNote = 'Choose an ORF reference to check the reading frame.';
+      if (feature) {
+        const offset = getCodingOffsetAtBoundary(getSelectedRecord(), feature, editState.range.start);
+        const codonStart = Number(feature?.qualifiers?.codon_start || 1) - 1;
+        frameNote = Number.isFinite(offset) && offset >= codonStart && (offset - codonStart) % 3 === 0
+          ? 'Insertion is at a codon boundary.'
+          : 'Insertion is inside a codon. Choose a codon boundary to express the peptide in frame.';
+        if (orientation === 'reverse') frameNote += ' Peptide DNA faces opposite to this ORF.';
+      }
+      elements.sequenceEditTagPreview.textContent = `${generated.part.sequence} · ${generated.sequence.length} bp · ${generated.strand === -1 ? '−' : '+'} strand. ${frameNote}`;
+    }
+  }
+
+  elements.sequenceEditTagSelect?.addEventListener('change', updatePeptideSequence);
+  elements.sequenceEditTagOrfSelect?.addEventListener('change', updatePeptideSequence);
+  elements.sequenceEditTagOrientation?.addEventListener('change', updatePeptideSequence);
+  elements.sequenceEditTextarea?.addEventListener('input', () => {
+    // Hand edits become custom DNA; changing a library part later must not overwrite
+    // text while still presenting it as an unchanged library peptide.
+    if (elements.sequenceEditTagSelect) elements.sequenceEditTagSelect.value = '';
+    if (elements.sequenceEditTagOptions) elements.sequenceEditTagOptions.hidden = true;
+  });
 
   function getNormalizedRange(record, range = {}) {
     const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
@@ -109,6 +185,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     const range = getNormalizedRange(record, editState.range);
     const selectedLength = Math.max(0, range.end - range.start);
     setInputVisibility(mode);
+    renderPeptideControls();
 
     if (elements.sequenceEditTitle) {
       elements.sequenceEditTitle.textContent = mode === 'delete'
@@ -161,6 +238,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
       elements.sequenceEditDeleteMessage.hidden = true;
       elements.sequenceEditDeleteMessage.innerHTML = '';
     }
+    renderPeptideControls();
   }
 
   function hasOpenSequenceEditDialog() {
@@ -190,12 +268,18 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
 
     hideFeatureContextMenu();
     hideFeatureEditor();
+    const selectedFeature = context.feature || getSelectedFeature(record);
+    const codingFeatures = resolvedMode === 'insert'
+      ? getInsertionCodingFeatures(record, range.start, selectedFeature, getVisibleFeatures(record))
+      : [];
     editState = {
       mode: resolvedMode,
       range: resolvedMode === 'insert'
         ? { start: range.start, end: range.start }
         : range,
-      initialSequence: normalizeEditableSequence(context.initialSequence || '')
+      initialSequence: normalizeEditableSequence(context.initialSequence || ''),
+      codingFeatures,
+      preferredCodingIndex: codingFeatures.indexOf(selectedFeature)
     };
     renderSequenceEditDialog();
     return true;

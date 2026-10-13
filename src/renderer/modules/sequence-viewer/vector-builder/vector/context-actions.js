@@ -175,7 +175,10 @@ function createVectorContextActions({
 
     if (action.startsWith('insert-bases')) {
       hideContextMenu();
-      sequenceEditing.openSequenceEditDialog('insert', { range: { start: insertAt, end: insertAt } });
+      sequenceEditing.openSequenceEditDialog('insert', {
+        range: { start: insertAt, end: insertAt },
+        feature: context?.feature
+      });
       return;
     }
     if (!range || range.end <= range.start) {

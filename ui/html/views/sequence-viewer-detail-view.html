@@ -335,6 +335,27 @@
             </div>
             <p id="sequence-viewer-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
 
+            <label id="sequence-viewer-sequence-edit-tag-wrap" class="sequence-viewer-sequence-edit-input-wrap" hidden>
+              Common peptides
+              <select id="sequence-viewer-sequence-edit-tag-select"><option value="">Custom DNA</option></select>
+            </label>
+            <div id="sequence-viewer-sequence-edit-tag-options" class="sequence-viewer-sequence-edit-tag-options" hidden>
+              <div class="sequence-viewer-sequence-edit-tag-fields">
+                <label class="sequence-viewer-sequence-edit-input-wrap">
+                  ORF reference
+                  <select id="sequence-viewer-sequence-edit-tag-orf"><option value="">No ORF reference</option></select>
+                </label>
+                <label class="sequence-viewer-sequence-edit-input-wrap">
+                  Peptide orientation
+                  <select id="sequence-viewer-sequence-edit-tag-orientation">
+                    <option value="along">Along ORF</option>
+                    <option value="reverse">Reverse of ORF</option>
+                  </select>
+                </label>
+              </div>
+              <p id="sequence-viewer-sequence-edit-tag-preview" class="small-note sequence-viewer-sequence-edit-tag-preview" aria-live="polite"></p>
+            </div>
+
             <label id="sequence-viewer-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
               Sequence
               <textarea id="sequence-viewer-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
@@ -534,6 +555,27 @@
               <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <p id="sequence-viewer-vector-builder-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
+
+            <label id="sequence-viewer-vector-builder-sequence-edit-tag-wrap" class="sequence-viewer-sequence-edit-input-wrap" hidden>
+              Common peptides
+              <select id="sequence-viewer-vector-builder-sequence-edit-tag-select"><option value="">Custom DNA</option></select>
+            </label>
+            <div id="sequence-viewer-vector-builder-sequence-edit-tag-options" class="sequence-viewer-sequence-edit-tag-options" hidden>
+              <div class="sequence-viewer-sequence-edit-tag-fields">
+                <label class="sequence-viewer-sequence-edit-input-wrap">
+                  ORF reference
+                  <select id="sequence-viewer-vector-builder-sequence-edit-tag-orf"><option value="">No ORF reference</option></select>
+                </label>
+                <label class="sequence-viewer-sequence-edit-input-wrap">
+                  Peptide orientation
+                  <select id="sequence-viewer-vector-builder-sequence-edit-tag-orientation">
+                    <option value="along">Along ORF</option>
+                    <option value="reverse">Reverse of ORF</option>
+                  </select>
+                </label>
+              </div>
+              <p id="sequence-viewer-vector-builder-sequence-edit-tag-preview" class="small-note sequence-viewer-sequence-edit-tag-preview" aria-live="polite"></p>
+            </div>
 
             <label id="sequence-viewer-vector-builder-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
               Sequence
