@@ -9,7 +9,7 @@ const fixture = () => applyOperations(createDocument(), [
   { op: 'upsert', object: { id: 'membrane', type: 'vector', x: 100, y: 150, width: 120, height: 80, rotation: 37, svg } },
   { op: 'upsert', object: { id: 'label', type: 'text', x: 240, y: 170, width: 100, height: 40, fontSize: 20, text: 'ER' } },
   { op: 'upsert', object: { id: 'other', type: 'vector', x: 140, y: 180, width: 30, height: 30, svg } },
-  { op: 'upsert', object: { id: 'scratch', type: 'vector', canvas: 'scratch', svg } }
+  { op: 'upsert', object: { id: 'spare', type: 'vector', canvas: 'main', svg } }
 ]);
 const group = document => applyOperations(document, [{ op: 'group', id: 'er', name: 'ER and label', ids: ['membrane', 'label'] }]);
 const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-8, `${a} != ${b}`);
@@ -30,9 +30,9 @@ test('legacy documents default to no groups', () => {
   assert.deepEqual(normalizeDocument(old).groups, []);
 });
 
-test('group validation rejects mixed canvases, duplicates, unknown members and partial regrouping atomically', () => {
+test('group validation rejects duplicates, unknown members and partial regrouping atomically', () => {
   const before = group(fixture()), snapshot = JSON.stringify(before);
-  for (const ids of [['membrane', 'scratch'], ['other', 'other'], ['other', 'missing'], ['membrane', 'other']]) {
+  for (const ids of [['other', 'other'], ['other', 'missing'], ['membrane', 'other']]) {
     assert.throws(() => applyOperations(before, [{ op: 'title', title: 'Uncommitted' }, { op: 'group', id: 'bad', ids }]));
     assert.equal(JSON.stringify(before), snapshot);
   }
@@ -97,28 +97,28 @@ test('mixed selections resize around their visible bounds rather than oversized 
   }
 });
 
-test('individual editing stays independent and moving/deleting a member prunes stale groups', () => {
+test('individual editing stays independent and deleting a member prunes stale groups', () => {
   const before = group(fixture());
   const edited = applyOperations(before, [{ op: 'update', id: 'label', patch: { text: 'Rough ER', x: 280 } }]);
   assert.deepEqual(edited.objects[0], before.objects[0]); assert.equal(edited.groups.length, 1);
-  for (const operation of [{ op: 'delete', id: 'label' }, { op: 'transfer', id: 'label', canvas: 'scratch' }, { op: 'update', id: 'label', patch: { canvas: 'scratch' } }]) {
+  for (const operation of [{ op: 'delete', id: 'label' }]) {
     const after = applyOperations(edited, [operation]); assert.deepEqual(after.groups, []);
     assert.deepEqual(after.objects.find(object => object.id === 'membrane'), before.objects[0]);
   }
 });
 
-test('group copies and transfers preserve geometry and membership on either canvas', () => {
+test('group copies and transfers preserve geometry and membership on the canvas', () => {
   const before = group(fixture());
-  const copied = applyOperations(before, [{ op: 'transfer', id: 'er', canvas: 'scratch', copy: true, new_id: 'er-copy' }]);
+  const copied = applyOperations(before, [{ op: 'transfer', id: 'er', canvas: 'main', copy: true, new_id: 'er-copy' }]);
   const copy = copied.groups.find(group => group.id === 'er-copy');
-  assert.equal(copy.canvas, 'scratch'); assert.equal(copy.ids.length, 2);
+  assert.equal(copy.canvas, 'main'); assert.equal(copy.ids.length, 2);
   assert.ok(copy.ids.every(id => !before.objects.some(object => object.id === id)));
   for (const [index, id] of copy.ids.entries()) {
     const object = copied.objects.find(object => object.id === id), original = before.objects[index];
     assert.deepEqual({ ...object, id: original.id, canvas: original.canvas }, original);
   }
-  const moved = applyOperations(before, [{ op: 'transfer', id: 'er', canvas: 'scratch' }]);
-  assert.equal(moved.groups[0].canvas, 'scratch'); assert.ok(moved.objects.slice(0, 2).every(object => object.canvas === 'scratch'));
+  const moved = applyOperations(before, [{ op: 'transfer', id: 'er', canvas: 'main' }]);
+  assert.equal(moved.groups[0].canvas, 'main'); assert.ok(moved.objects.slice(0, 2).every(object => object.canvas === 'main'));
   const deleted = applyOperations(copied, [{ op: 'delete', id: 'er-copy' }]);
   assert.deepEqual(deleted.objects, before.objects); assert.deepEqual(deleted.groups, before.groups);
 });
@@ -129,7 +129,7 @@ test('a maximum-size group moves and ungroups in single atomic operations', () =
   const before = normalizeDocument(document), grouped = applyOperations(before, [{ op: 'group', id: 'large', ids: before.objects.map(object => object.id) }]);
   const moved = applyOperations(grouped, [{ op: 'transform', id: 'large', patch: { x: 100, y: 120 } }]);
   assert.ok(moved.objects.every((object, i) => object.x === before.objects[i].x + 100 && object.y === before.objects[i].y + 120));
-  assert.throws(() => applyOperations(grouped, [{ op: 'transfer', id: 'large', canvas: 'scratch', copy: true, new_id: 'too-many' }]), /maximum 200/);
+  assert.throws(() => applyOperations(grouped, [{ op: 'transfer', id: 'large', canvas: 'main', copy: true, new_id: 'too-many' }]), /maximum 200/);
   assert.deepEqual(applyOperations(moved, [{ op: 'ungroup', id: 'large' }]).objects, moved.objects);
   assert.deepEqual(applyOperations(moved, [{ op: 'delete', id: 'large' }]).objects, []);
 });

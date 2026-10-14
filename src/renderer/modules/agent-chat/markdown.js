@@ -12,7 +12,16 @@ function sanitizeUrl(url) {
   return value;
 }
 
-// Safety rule for the inline pass: code spans and links are rendered and
+// A remote image URL written by the model can carry chat data to any host, so
+// images load only after the user clicks their placeholder. Loaded URLs stay
+// loaded across re-renders for the rest of the session.
+const allowedImageUrls = new Set();
+
+export function allowChatImage(url) {
+  allowedImageUrls.add(String(url || ''));
+}
+
+// Safety rule for the inline pass: code spans, images and links are rendered and
 // escaped first, then swapped out for @@MDTOKEN_n@@ markers; the rest of the
 // text is HTML-escaped as a whole before emphasis tags are added, and the
 // markers are swapped back last. No raw model text reaches the output unescaped.
@@ -29,10 +38,31 @@ function createInlineRenderer(safeText) {
       tokens.push(String(html || ''));
       return marker;
     };
+    const restoreTokens = (value) => value.replace(/@@MDTOKEN_(\d+)@@/g, (_match, index) => tokens[Number(index)] || '');
 
     let escaped = source.replace(/`([^`\n]+)`/g, (_match, code) => (
       pushToken(`<code>${safeText(code)}</code>`)
     ));
+
+    escaped = escaped.replace(/!\[([^\]\n]*)\]\(\s*(<[^<>\n]+>|(?:[^()\s]|\([^()\s]*\))+)(?:\s+"[^"\n]*")?\s*\)/g, (_match, alt, src) => {
+      let imageUrl;
+      try {
+        imageUrl = new URL(src.replace(/^<|>$/g, ''));
+      } catch {
+        return pushToken(safeText(alt));
+      }
+      if (!/^https?:$/.test(imageUrl.protocol)) {
+        return pushToken(safeText(alt));
+      }
+      if (!allowedImageUrls.has(imageUrl.href)) {
+        return pushToken(
+          `<button type="button" class="agent-chat-image-placeholder" data-agent-load-image="${safeText(imageUrl.href)}" data-agent-image-alt="${safeText(alt)}" title="${safeText(imageUrl.href)}">Load image${alt ? `: ${safeText(alt)}` : ''} <span>(${safeText(imageUrl.host)})</span></button>`
+        );
+      }
+      return pushToken(
+        `<img class="agent-chat-inline-image" src="${safeText(imageUrl.href)}" alt="${safeText(alt)}" referrerpolicy="no-referrer" decoding="async" />`
+      );
+    });
 
     escaped = escaped.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label, href) => {
       const safeUrl = sanitizeUrl(href);
@@ -40,7 +70,7 @@ function createInlineRenderer(safeText) {
         return pushToken(safeText(label));
       }
       return pushToken(
-        `<a href="${safeText(safeUrl)}" target="_blank" rel="noreferrer noopener">${safeText(label)}</a>`
+        `<a href="${safeText(safeUrl)}" target="_blank" rel="noreferrer noopener">${restoreTokens(safeText(label))}</a>`
       );
     });
 
@@ -53,7 +83,7 @@ function createInlineRenderer(safeText) {
       .replace(/(^|[\s([{-])_([^_\n]+)_(?=$|[\s).,;:!?}\]-])/g, '$1<em>$2</em>')
       .replace(/~~([^~]+)~~/g, '<del>$1</del>');
 
-    return escaped.replace(/@@MDTOKEN_(\d+)@@/g, (_match, index) => tokens[Number(index)] || '');
+    return restoreTokens(escaped);
   };
 }
 
@@ -92,8 +122,8 @@ function isListItem(line) {
 }
 
 // Small Markdown subset for chat replies: fenced code, pipe tables, headings,
-// rules, blockquotes (recursive), flat lists and paragraphs. Nested lists and
-// raw HTML are not supported (HTML is shown escaped).
+// rules, blockquotes (recursive), flat lists, HTTP(S) images and paragraphs.
+// Nested lists and raw HTML are not supported (HTML is shown escaped).
 export function renderMarkdown(text, safeText) {
   const renderInline = createInlineRenderer(safeText);
   const source = normalizeSource(text).trim();

@@ -26,7 +26,7 @@ const { createAgentSubAppApi } = require('../src/main/agent/runtime/agent-sub-ap
 const { hydrateSnapshotFromBundle } = require('../src/main/storage/storage-hydration');
 const { syncBundleFromSnapshot } = require('../src/main/storage/storage-sidecars');
 const { rebuildRecordMarkdown } = require('../src/main/storage/record-markdown/rebuild');
-const { readRecordDocument } = require('../src/main/storage/record-markdown/document-storage');
+const { readRecordDocument, writeRecordDocument } = require('../src/main/storage/record-markdown/document-storage');
 const { block, blocks } = require('../src/main/storage/record-markdown/document-fields');
 
 const httpMode = process.argv.includes('--http');
@@ -150,7 +150,7 @@ async function fixture(work, requestContext = {}) {
 
 test('MCP advertises protocol and notebook contracts after Markdown migration', async () => fixture(async ({ client }) => {
   const { tools } = await client.listTools();
-  for (const name of ['protocol_lookup', 'protocol_generation', 'notebook_lookup', 'notebook_draft', 'notebook_append']) {
+  for (const name of ['protocol_lookup', 'protocol_generation', 'notebook_lookup', 'notebook_list', 'notebook_draft', 'notebook_append']) {
     assert.ok(tools.some(tool => tool.name === name), name);
   }
   for (const name of ['protocol_lookup', 'notebook_lookup', 'notebook_draft', 'notebook_append']) {
@@ -227,6 +227,55 @@ test('MCP notebook filters include migrated project and workflow pages with limi
   assert.equal(limited.items[0].content, undefined);
   assert.equal((await call('notebook_lookup', {})).status, 'invalid_input');
   assert.deepEqual(await inventory(root), before);
+}));
+
+test('MCP notebook_list enumerates migrated project and workflow titles without altering storage', async () => fixture(async ({ root, pageFiles, call }) => {
+  const updateTitle = async (file, title) => {
+    const payload = (await readRecordDocument(file, 'notebook')).data;
+    payload.notebookEntry.experimentName = title;
+    await writeRecordDocument({ filePath: file, kind: 'notebook', storageRoot: root, payload });
+  };
+  await updateTitle(pageFiles.n1, 'New saved list title');
+  const before = await inventory(root);
+  const ids = [];
+  let cursor;
+  do {
+    const result = await call('notebook_list', { limit: 1, ...(cursor ? { cursor } : {}) });
+    assert.equal(result.ok, true, result.error);
+    assert.equal(result.source, 'markdown');
+    assert.equal(result.access.complete, true);
+    assert.equal(result.pagination.total, 3);
+    assert.equal(result.counts.matched, 3);
+    ids.push(...result.items.map(item => item.id));
+    for (const item of result.items) {
+      assert.equal(item.result, undefined);
+      assert.equal(item.content, undefined);
+      assert.equal(item.summary, undefined);
+      assert.equal(item.ui_target.entry_id, item.id);
+      if (item.id === 'n1') assert.equal(item.title, 'New saved list title');
+    }
+    cursor = result.pagination.next_cursor;
+  } while (cursor);
+  assert.deepEqual(ids.sort(), ['n1', 'n2', 'n3']);
+  const scoped = await call('notebook_list', { project_name: 'Migration project', notebook_state: 'planned',
+    date_field: 'updated', date_from: '2026-10-08', date_to: '2026-10-08' });
+  assert.deepEqual(scoped.items.map(item => item.id), ['n2']);
+  assert.equal(scoped.pagination.next_cursor, null);
+  const noMatch = await call('notebook_list', { date_from: '2026-11-01' });
+  assert.equal(noMatch.status, 'no_match');
+  assert.deepEqual(noMatch.items, []);
+  assert.equal(noMatch.pagination.total, 0);
+  const invalid = await call('notebook_list', { date_from: '2026-02-30' });
+  assert.equal(invalid.ok, false);
+  assert.equal(invalid.status, 'invalid_input');
+  assert.deepEqual(await inventory(root), before);
+  const first = await call('notebook_list', { limit: 1 });
+  await updateTitle(pageFiles.n2, 'Changed between pages');
+  const changed = await inventory(root);
+  const stale = await call('notebook_list', { limit: 1, cursor: first.pagination.next_cursor });
+  assert.equal(stale.status, 'stale_cursor');
+  assert.equal(stale.ok, false);
+  assert.deepEqual(await inventory(root), changed);
 }));
 
 test('MCP protocol lookup and notebook drafts consume edited Markdown and preserve frozen snapshots', async () => fixture(async ({ root, protocolFile, pageFiles, call }) => {
@@ -357,5 +406,10 @@ test('MCP reports damaged notebook metadata as incomplete evidence without overw
   assert.ok(result.access.warning_codes.includes('storage_read_warning'));
   // The request snapshot may supply recovery content; it must remain partial.
   assert.ok(result.items.every(item => item.project_id === 'proj' && item.notebook_state === 'executed'));
+  const list = await call('notebook_list', { project_name: 'Migration project', notebook_state: 'executed' });
+  assert.equal(list.access.complete, false);
+  assert.equal(list.status, 'partial');
+  assert.ok(list.access.warning_codes.includes('storage_read_warning'));
+  assert.match(list.summary, /totals cover available pages only/);
   assert.deepEqual(await inventory(root), before);
 }));

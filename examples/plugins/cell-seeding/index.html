@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cell Seeding</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <section aria-labelledby="count-heading">
+      <h2 id="count-heading">1. Count</h2>
+      <div class="fields">
+        <label>Live cells per square
+          <input id="live" inputmode="numeric" autocomplete="off" placeholder="52 47 55 50" />
+        </label>
+        <label>Dead cells per square <span class="hint">optional</span>
+          <input id="dead" inputmode="numeric" autocomplete="off" placeholder="3 5 2 4" />
+        </label>
+        <label>Dilution factor <span class="hint">2 for a 1:1 trypan blue mix</span>
+          <input id="dilution" type="number" min="1" step="any" value="2" data-setting />
+        </label>
+      </div>
+      <output id="count-result" class="result" aria-live="polite"></output>
+    </section>
+
+    <section aria-labelledby="plan-heading">
+      <h2 id="plan-heading">2. Plan</h2>
+      <div class="fields">
+        <label>Plate
+          <select id="plate" data-setting>
+            <option value="6" data-medium="2">6-well</option>
+            <option value="12" data-medium="1">12-well</option>
+            <option value="24" data-medium="0.5" selected>24-well</option>
+            <option value="48" data-medium="0.3">48-well</option>
+            <option value="96" data-medium="0.1">96-well</option>
+          </select>
+        </label>
+        <label>Wells to seed
+          <input id="wells" type="number" min="1" step="1" value="24" data-setting />
+        </label>
+        <label>Cells per well
+          <input id="cells-per-well" type="number" min="0" step="any" value="50000" data-setting />
+        </label>
+        <label>Medium per well (mL)
+          <input id="medium-per-well" type="number" min="0" step="any" value="0.5" data-setting />
+        </label>
+        <label>Overage (%)
+          <input id="overage" type="number" min="0" step="any" value="10" data-setting />
+        </label>
+      </div>
+      <dl id="plan-result" class="plan" hidden>
+        <div><dt>Cell suspension</dt><dd id="suspension"></dd></div>
+        <div><dt>Medium</dt><dd id="medium"></dd></div>
+        <div><dt>Total volume</dt><dd id="total"></dd></div>
+        <div><dt>Cells needed</dt><dd id="cells-needed"></dd></div>
+      </dl>
+      <output id="plan-error" class="result error" aria-live="polite"></output>
+    </section>
+
+    <section aria-labelledby="record-heading">
+      <h2 id="record-heading">3. Record</h2>
+      <div class="fields">
+        <label>Cell line <span class="hint">optional</span>
+          <input id="cell-line" list="cell-lines" autocomplete="off" data-setting />
+          <datalist id="cell-lines"></datalist>
+        </label>
+        <label>Notebook page
+          <select id="entry" disabled aria-busy="true"><option value="">Loading&hellip;</option></select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="save" type="button" disabled>Save to notebook page</button>
+        <button id="retry" type="button" class="secondary" hidden>Try again</button>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <script src="./hikari.js"></script>
+    <script src="./seeding.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

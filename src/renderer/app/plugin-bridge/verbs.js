@@ -2,6 +2,7 @@ import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
 import { LAYOUT_VERBS } from './layout-verbs.js';
 import { asArray } from '../../lib/normalize.js';
+import { buildBufferCandidates } from '../../lib/bench-calculations/buffer-candidates.js';
 import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
 
 const MAX_NOTIFICATION_MESSAGE_CHARS = 1000;
@@ -150,6 +151,22 @@ const VERBS = {
         id: text(sample?.id, 200),
         name: text(sample?.name, 200),
         type: text(sample?.type, 80)
+      }))
+  },
+
+  // The compound list the built-in Buffer Preparer suggests from: the user's
+  // inventory chemicals merged with Hikari's reference compounds, inventory
+  // values winning. Uncapped: a reagent cut from the list cannot be looked up.
+  'chemicals.list': {
+    permission: 'chemicals:read',
+    handler: (_params, { state }) => buildBufferCandidates({ storedCompounds: asArray(state.labInventory?.chemicals) })
+      .map((compound) => ({
+        name: text(compound.name, 200),
+        mw: Number(compound.mw) || null,
+        pKa: Number(compound.pKa) || null,
+        form: compound.form === 'liquid' ? 'liquid' : 'solid',
+        category: text(compound.category, 120),
+        source: compound.source === 'Stored' ? 'inventory' : 'reference'
       }))
   },
 

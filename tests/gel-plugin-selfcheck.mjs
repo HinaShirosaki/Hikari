@@ -29,7 +29,7 @@ globalThis.ImageData ??= class ImageData {
 };
 
 const workspace = path.join(pluginDir, 'workspace');
-const { detectLanes } = await import(new URL(`file://${workspace}/analysis/auto-lanes.js`));
+const { createLaneDetector, detectLanes, findLocalMaxima } = await import(new URL(`file://${workspace}/analysis/auto-lanes.js`));
 const {
   analyzeGelImage,
   buildLanesFromManualSegmentation,
@@ -390,6 +390,108 @@ function checkLaneDetection() {
   );
 }
 
+function checkLaneDetectionRegressions() {
+  const width = 320;
+  const height = 200;
+  function makeGel({ centers = [45, 90, 135, 180, 225, 270], halfWidths = [], blank = [], gaussian = false, inverted = false, noise = 0 } = {}) {
+    const gray = new Float32Array(width * height).fill(0.9);
+    centers.forEach((center, index) => {
+      if (blank.includes(index)) return;
+      for (let y = 0; y < height; y += 1) {
+        for (let x = 0; x < width; x += 1) {
+          if (gaussian) {
+            const amplitude = index < 3 ? 0.75 : 0.04;
+            const row = index < 3 ? 80 : 140;
+            gray[y * width + x] -= amplitude * Math.exp(-0.5 * ((x - center) / 5) ** 2 - 0.5 * ((y - row) / 3) ** 2);
+          } else if (y >= 90 && y < 110 && Math.abs(x - center) <= (halfWidths[index] ?? 8)) {
+            gray[y * width + x] = 0.15;
+          }
+        }
+      }
+    });
+    let seed = 7;
+    for (let i = 0; i < gray.length; i += 1) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      gray[i] += noise * (seed / 4294967296 - 0.5);
+      if (inverted) gray[i] = 1 - gray[i];
+    }
+    return { gray, width, height };
+  }
+
+  assert.deepEqual(findLocalMaxima([0, 1, 1, 1, 0], 0, 4), [2], 'a flat peak has one center');
+  assert.deepEqual(findLocalMaxima([0, 1, 1, 1, 1], 0, 4), [], 'a rising edge is not a bounded peak');
+  for (const inverted of [false, true]) {
+    const faint = detectLanes(makeGel({ gaussian: true, inverted }));
+    assert.deepEqual(faint.peaks, [45, 90, 135, 180, 225, 270], 'faint lanes at a different height must survive');
+    for (const noise of [0, 0.01]) {
+      const wide = detectLanes(makeGel({ centers: [60, 160, 260], halfWidths: [12, 12, 12], inverted, noise }));
+      assert.equal(wide.peaks.length, 3, 'broad bands must not be split into lanes');
+      assert.equal(wide.dividers.length, 2);
+      wide.dividers.forEach((divider, i) => assert.ok(Math.abs(divider - [110, 210][i]) <= 8, 'divider stays in the gutter'));
+    }
+    const tight = detectLanes({ ...makeGel({ inverted }), yStart: 90, yEnd: 109 });
+    assert.deepEqual(tight.peaks, [45, 90, 135, 180, 225, 270], 'flat bands remain detectable within the selected window');
+    const emptyWindow = detectLanes({ ...makeGel({ inverted }), yStart: 10, yEnd: 30 });
+    assert.deepEqual(emptyWindow.peaks, [], 'bands outside a selected empty window must not create contrast inside it');
+  }
+
+  const blank = makeGel({ blank: [2] });
+  const filled = detectLanes({ ...blank, expectedLaneCount: 6 });
+  assert.deepEqual(filled.inferredPeaks, [135]);
+  assert.equal(filled.observedPeaks.length, 5);
+  assert.equal(filled.countMismatch, false);
+  assert.equal(detectLanes(blank).inferredPeaks.length, 0, 'auto count must not invent blank lanes');
+  const leadingBlank = makeGel({ blank: [0] });
+  const ambiguous = detectLanes({ ...leadingBlank, expectedLaneCount: 6 });
+  assert.equal(ambiguous.countMismatch, true, 'unknown blank edge location requires review');
+  assert.deepEqual(ambiguous.inferredPeaks, []);
+  const bounded = detectLanes({ ...leadingBlank, gelLeft: 22, gelRight: 293, expectedLaneCount: 6 });
+  assert.deepEqual(bounded.inferredPeaks, [45], 'explicit boundaries can resolve the missing edge lane');
+  assert.equal(bounded.countMismatch, false);
+  assert.equal(bounded.gelLeft, 22);
+  assert.equal(bounded.gelRight, 293);
+
+  const uneven = detectLanes(makeGel({ centers: [30, 65, 130, 245], halfWidths: [4, 8, 12, 16] }));
+  assert.equal(uneven.peaks.length, 4, 'a narrow ladder and uneven lane spacing are supported');
+  assert.ok(uneven.gelLeft > 0, 'a distant wide gap must not expand the narrow first lane to the image edge');
+  assert.ok(uneven.gelRight >= 261, 'the outermost band must be fully included');
+
+  // Check boundaries through the real quantification pipeline, not just counts.
+  const gel = makeGel();
+  const detected = detectLanes(gel);
+  const quantify = (segmentation) => analyzeGelImage({ ...gel, imageName: 'boundary-check', params: {
+    analysisType: 'sds-page', ladderStandards: [], normalization: 'none', enhancement: {},
+    manualOverrides: { laneSegmentation: { ...segmentation, bandTop: 90, bandBottom: 109 } }
+  } }).report.lanes.map((lane) => lane.targetBand.correctedIntensity);
+  const reference = quantify({ gelLeft: 23, gelRight: 293, dividers: [68, 113, 158, 203, 248] });
+  const actual = quantify(detected);
+  actual.forEach((value, i) => assert.ok(Math.abs(value - reference[i]) < 0.001, 'detected boundaries preserve reference band intensity'));
+
+  for (const noise of [0.001, 0.01, 0.05]) {
+    const empty = makeGel({ centers: [], noise });
+    assert.deepEqual(detectLanes(empty).peaks, [], 'background speckle alone must not produce lanes');
+  }
+  const compact = makeGel({ centers: [125, 145, 165], halfWidths: [3, 3, 3] });
+  assert.equal(detectLanes({ ...compact, expectedLaneCount: 3 }).peaks.length, 3, 'large image margins must not merge compact lanes');
+  const competing = makeGel({ centers: [50, 80, 110], halfWidths: [3, 3, 3] });
+  for (let y = 90; y < 110; y += 1) {
+    for (const center of [50, 110]) {
+      for (let x = center - 3; x <= center + 3; x += 1) competing.gray[y * width + x] = 0.87;
+    }
+  }
+  assert.deepEqual(detectLanes({ ...competing, gelLeft: 0, gelRight: 159, expectedLaneCount: 2 }).peaks,
+    [50, 110], 'global count-constrained selection must not let one stronger candidate block two supported lanes');
+
+  const cached = createLaneDetector();
+  const options = { ...gel, imageRevision: 1 };
+  assert.deepEqual(cached(options), detectLanes(options));
+  assert.deepEqual(cached({ ...options, expectedLaneCount: 4 }), detectLanes({ ...options, expectedLaneCount: 4 }));
+  assert.deepEqual(cached({ ...options, yStart: 90, yEnd: 109 }), detectLanes({ ...options, yStart: 90, yEnd: 109 }));
+  gel.gray.fill(0.5);
+  assert.deepEqual(cached({ ...options, imageRevision: 2 }).peaks, [], 'image revision invalidates pixel cache');
+  assert.equal(detectLanes({ gray: new Float32Array(3), width, height }), null);
+}
+
 function checkLadderPresets() {
   const { DEFAULT_LADDER_PRESET_ID, DEFAULT_LADDER_STANDARDS, LADDER_PRESETS, getLadderPresetBands } = ladderConstants;
 
@@ -504,6 +606,41 @@ function checkHistoryController() {
   assert.deepEqual(history.getHistoryState(), { canUndo: false, canRedo: false });
   assert.equal(history.undo(), false);
   assert.equal(runtime.manualOverrides.ladderLane, 9, 'a dropped stack still rolled the state back');
+
+  // A step comes back with or without its report, as it was shown. Re-running the
+  // analysis on every undo turned divider-only steps into a full report with lane
+  // 1 drawn as the ladder.
+  const restored = [];
+  const reportRuntime = { manualOverrides: { dividers: [10] }, currentReport: null, imageRevision: 0 };
+  const reportHistory = createHistoryController({
+    runtime: reportRuntime,
+    deps: {
+      renderAll: ({ analyzed } = {}) => {
+        restored.push(analyzed);
+        reportRuntime.currentReport = analyzed ? { lanes: [] } : null;
+      }
+    }
+  });
+  reportRuntime.manualOverrides = { dividers: [10, 40] };
+  reportHistory.commit();
+  reportRuntime.manualOverrides = { dividers: [10, 40], ladderLane: 1 };
+  reportHistory.commit();
+  // The ladder pick renders first; its analysis lands on a later, unchanged commit.
+  reportRuntime.currentReport = { lanes: [] };
+  reportHistory.commit();
+  // Done Ladder MW never renders, so nothing committed it.
+  reportRuntime.manualOverrides = { dividers: [10, 40], ladderLane: 1, ladderBandsDone: true };
+  reportHistory.undo();
+  assert.equal(reportRuntime.manualOverrides.ladderBandsDone, undefined, 'undo skipped the uncommitted edit');
+  assert.equal(reportRuntime.manualOverrides.ladderLane, 1);
+  reportHistory.undo();
+  reportHistory.undo();
+  assert.deepEqual(reportRuntime.manualOverrides, { dividers: [10] });
+  reportHistory.redo();
+  reportHistory.redo();
+  reportHistory.redo();
+  assert.equal(reportRuntime.manualOverrides.ladderBandsDone, true, 'redo lost the uncommitted edit');
+  assert.deepEqual(restored, [true, false, false, false, true, true]);
 }
 
 await checkFolderContract();
@@ -512,6 +649,7 @@ await checkAdapterContract();
 await checkLeftRailContract();
 checkPipeline();
 checkLaneDetection();
+checkLaneDetectionRegressions();
 checkLadderPresets();
 checkLadderDetection();
 checkHistoryController();

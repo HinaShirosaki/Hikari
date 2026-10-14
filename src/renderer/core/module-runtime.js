@@ -54,7 +54,6 @@ export function createRendererModuleRuntime(config = {}) {
     showView,
     views,
     onStoragePathSaved,
-    runCloudSync: config.runCloudSync,
     rootDocument,
     windowObject,
     apiBridge,

@@ -7,7 +7,7 @@ function isNotebookSuggestionContext(context = {}) {
 }
 
 const SUGGESTION_TOOLS = new Set([
-  'notebook_suggest', 'notebook_lookup', 'protocol_lookup', 'inventory_lookup',
+  'notebook_suggest', 'notebook_lookup', 'notebook_list', 'protocol_lookup', 'inventory_lookup',
   'chemical_lookup', 'literature_search'
 ]);
 

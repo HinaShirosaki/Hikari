@@ -17,18 +17,18 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `images/image-controller.js`: file load, decode, enhancement settings (denoise/contrast), and the preprocessed-image cache (`getPreprocessedImageForCurrentSettings`).
 - `images/crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
 - `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
-- `rendering/lane-table.js`: the editable lane/sample table beneath the viewer.
+- `rendering/lane-table.js`: the editable lane/sample table in its own floating window. Export still composes the saved table with the gel; editing the table does not change the viewer's fitted dimensions.
 - `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
-- Dialogs: the peak editor and per-cell band intensity view each live in an overlay opened from **Gel Tools -> Analysis**, so neither takes permanent workspace height. Their triggers disable when the underlying data is missing, and closing follows the same open/close/overlay-click/Escape shape.
+- `floating-windows.js`: owns the nonmodal Gel Tools, Lane Intensity, lane table, peak editor, and band intensity windows. Their launchers stay above the canvas. Windows are bounded to the image stage, support pointer dragging and arrow-key movement from their title bars, and close individually or with **Hide windows**. Escape closes the top window. Rendering remains owned by the existing controllers; opening or dismissing a window does not resize the gel. Observers and pointer listeners are disposed with the workspace.
 - `history.js`: the frame's own undo/redo stack over `manualOverrides`. `commit()` runs after every render and is a no-op unless the overrides actually moved, so no call site has to decide whether an interaction was an edit. A changed `runtime.imageRevision` (load, crop, rotate) drops the stack rather than replaying coordinates onto different pixels.
 - `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
 
 ### Pure / support modules (no DOM)
 
 - `analysis/analysis-core.js`: the analysis engine — `analyzeGelImage(...)` plus `buildCalibration`, `applyCalibrationToBands`, `applyNormalization`, `clusterBandsAcrossLanes`, `computeLaneConfidence`, `interpretLane`, and `linearRegression`.
-- `analysis/auto-lanes.js`: `detectLanes(...)` automatic lane detection.
+- `analysis/auto-lanes.js`: `detectLanes(...)` automatic lane detection combines overlapping height windows with column-background contrast, centers flat peaks, rejects shallow splits, and selects a compatible set of peaks. Expected-count reconstruction labels inferred blank lanes and reports unresolved count mismatches. Explicit outer boundaries can resolve blank edge lanes; without them the detector does not guess their location. `createLaneDetector()` caches the pixel profile by image revision and height window for repeat detections; preview contrast settings do not affect detection.
 - `analysis/image-processing.js`: histogram percentiles, range normalization, Gaussian blur, `preprocessWithJs`, polarity detection, and the quantification signal.
-- `images/image-io.js`: decode and `normalizeDecodedImage` (handles multi-page TIFF).
+- `images/image-io.js`: decode and `normalizeDecodedImage` (handles multi-page TIFF). Single-channel 16-bit TIFFs keep a full-precision float `gray` (the 8-bit `imageData` is display only); resize and `cropGray` work on that float image, replaying Cropper.js's rotation. Saving such a gel also writes `source-16bit.tif` beside `source.png`, fingerprinted with that PNG; reopening restores the 16-bit grey only when the fingerprint still matches.
 - `shared.js`: math helpers plus the manual-override model (`createEmptyManualOverrides`, lane-vertex and lane-band-window normalization/geometry helpers).
 - `export.js`: `createBandsCsv` and `downloadTextFile`.
 - `manual/manual-ui.js`: small presentational helpers for the viewer toolbar and step classes.

@@ -87,7 +87,7 @@ async function submit(id, prompt) {
   check(after.inspection.complete === true && after.inspection.revision === after.revision, `${id}: mandatory inspection covers the latest revision`);
   const calls = evidence.calls.filter(call => call.run === id && call.origin === 'agent');
   check(calls.some(call => call.request.action === 'read' && call.ok), `${id}: agent reads the existing figure and contract`);
-  check(calls.some(call => call.request.action === 'render' && call.request.canvas === 'both' && call.ok), `${id}: agent renders both canvases`);
+  check(calls.some(call => call.request.action === 'render' && (!call.request.canvas || ['main', 'both'].includes(call.request.canvas)) && call.ok), `${id}: agent renders the canvas`);
   check(calls.some(call => call.request.action === 'inspect' && call.ok), `${id}: agent submits a successful review`);
   check(calls.filter(call => !['list', 'asset_list'].includes(call.request.action)).every(call => call.request.illustration_id === targetId), `${id}: every agent canvas request targets the same figure`);
   await save();
@@ -234,7 +234,7 @@ async function run() {
   await canvas({ action: 'open', illustration_id: targetId, expected_library_revision: listing.library_revision, request_id: randomUUID() });
   await fs.writeFile(path.join(output, 'workspace.png'), (await win.webContents.capturePage()).toPNG());
   evidence.ok = true; evidence.completed_at = new Date().toISOString(); await save();
-  await fs.writeFile(path.join(output, 'report.md'), `# Live existing-illustration edit QA\n\nPassed ${evidence.checks.length} checks with ${model} (Codex CLI ${version}) and installed Figura ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Hidden Electron source-host fixture; real plugin workspace, scoped chat rail, request builder, preload IPC, Codex agent runtime and live MCP. Chat log persistence and unrelated controller routing use the fixture. User artwork/storage were never opened or edited.\n\n## Initial prompt\n\n${prompt}\n\n## Follow-up in agent rail\n\n${followup}\n\nBoth requests modified the same existing illustration. All nine object IDs and paint order survived. Seven unrelated components and the second saved illustration stayed identical. Both live agent runs rendered main and scratch and submitted inspection for the latest revision.\n\nEvidence: evaluation.json, before.json, edit.json, followup.json and their main/scratch PNGs.\n`);
+  await fs.writeFile(path.join(output, 'report.md'), `# Live existing-illustration edit QA\n\nPassed ${evidence.checks.length} checks with ${model} (Codex CLI ${version}) and installed Figura ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Hidden Electron source-host fixture; real plugin workspace, scoped chat rail, request builder, preload IPC, Codex agent runtime and live MCP. Chat log persistence and unrelated controller routing use the fixture. User artwork/storage were never opened or edited.\n\n## Initial prompt\n\n${prompt}\n\n## Follow-up in agent rail\n\n${followup}\n\nBoth requests modified the same existing illustration. All nine object IDs and paint order survived. Seven unrelated components and the second saved illustration stayed identical. Both live agent runs rendered the canvas and submitted inspection for the latest revision.\n\nEvidence: evaluation.json, before.json, edit.json, followup.json and their canvas PNGs.\n`);
   console.log(`Passed ${evidence.checks.length} live edit checks. Evidence: ${output}`);
 }
 run().catch(async error => {

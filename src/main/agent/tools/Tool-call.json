@@ -401,6 +401,83 @@
       }
     }
   },
+  "notebook-list": {
+    "description": "List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_cursor with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id. A stale_cursor requires restarting the list.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 220,
+          "description": "Case-insensitive title substring."
+        },
+        "project_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "project_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 220
+        },
+        "protocol_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "protocol_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 220
+        },
+        "notebook_state": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "executed",
+            "suggested"
+          ]
+        },
+        "date_field": {
+          "type": "string",
+          "enum": [
+            "created",
+            "updated",
+            "executed"
+          ],
+          "default": "updated"
+        },
+        "date_from": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Inclusive YYYY-MM-DD (UTC) or ISO timestamp with timezone."
+        },
+        "date_to": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Inclusive YYYY-MM-DD (whole UTC day) or ISO timestamp with timezone."
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 100
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "pagination.next_cursor from the previous response; keep all filters unchanged."
+        }
+      }
+    }
+  },
   "protocol-matching": {
     "description": "Use this tool to choose the best local protocol for a user-described activity before generating a notebook entry or protocol-driven draft. It ranks candidate protocols against parser hints, protocol names, aliases, purposes, and step overlap. Provide `protocol_candidates` when the parser or caller already identified likely names, and optionally provide `fallback_protocol` only when there is one specific protocol record that should be considered if ranked candidates are weak.",
     "input_schema": {
@@ -1159,7 +1236,7 @@
     }
   },
   "paper-search": {
-    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet \u2014 prefer this over re-reading the full PDF when answering a focused question.",
+    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet — prefer this over re-reading the full PDF when answering a focused question.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

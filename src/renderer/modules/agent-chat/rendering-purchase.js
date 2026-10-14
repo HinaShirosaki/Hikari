@@ -27,6 +27,8 @@ export function renderPurchaseRecommendationCards(purchaseRecommendation, safeTe
                 class="agent-purchase-image"
                 src="${safeText(trimText(item.image_url, 2000))}"
                 alt="${safeText(trimText(item.title, 220))}"
+                referrerpolicy="no-referrer"
+                decoding="async"
               />
             </span>
             <span class="agent-purchase-copy">

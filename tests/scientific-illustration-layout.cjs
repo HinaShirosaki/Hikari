@@ -10,7 +10,7 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
   await pause(80);
-  const before = await tool({ action: 'read' }), images = await tool({ action: 'render', canvas: 'both' }), closed = await measure();
+  const before = await tool({ action: 'read' }), images = await tool({ action: 'render', canvas: 'main' }), closed = await measure();
   check(closed.hidden && closed.inert && closed.expanded === 'false' && Math.abs(closed.stage.width+closed.tools.width+8-closed.work.width)<1,
     'Closed Layers releases the entire editing width and removes its controls from focus');
   check(closed.stage.height > closed.work.height * 0.85, 'The main stage dominates the editing height');
@@ -41,11 +41,11 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
     check(!(await measure()).hidden, 'Layers opens with the keyboard after closing');
   } finally { win.webContents.debugger.detach(); }
   await evaluate('document.getElementById("close-layers").click()');
-  const after = await tool({ action: 'read' }), afterImages = await tool({ action: 'render', canvas: 'both' });
+  const after = await tool({ action: 'read' }), afterImages = await tool({ action: 'render', canvas: 'main' });
   check(before.revision === after.revision && JSON.stringify(before.objects) === JSON.stringify(after.objects)
     && JSON.stringify(before.canvases) === JSON.stringify(after.canvases), 'Panel and selection changes never alter saved scene coordinates');
   check(JSON.stringify(images.content.filter(item => item.type === 'image')) === JSON.stringify(afterImages.content.filter(item => item.type === 'image')),
-    'Agent readbacks of both canvases are byte-identical across panel changes');
+    'Agent readbacks of the canvas are byte-identical across panel changes');
   await fs.writeFile(path.join(temp, 'canvas-layout-main.png'), (await win.webContents.capturePage()).toPNG());
   const narrow = [];
   for (const width of [980, 720, 480, 320]) {

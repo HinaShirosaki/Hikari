@@ -7,6 +7,7 @@ const { readSampleContainers } = require('./sample-containers');
 const { asArray, cleanText, cloneJson, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 const { readExperimentLogSidecar } = require('./experiment-log-storage');
+const { readPrimerLibrary } = require('./primer-library-storage');
 const { hydrateProjectRootFromStoragePath } = require('./hydration/project-folders.js');
 const { getLegacyProtocolsFilePath, hydrateSamplesRootFromStoragePath, readProtocolDirectory, readRecordFolders } = require('./hydration/protocol-directory.js');
 const { hydrateInventoryFromSqliteSnapshot, mergePaperExperimentLinks, mergePaperRecords, mergeRecordsById, mergeSamplesSidecarIntoSnapshot, readNotebookEntriesFromSidecar, readProtocolsFromSidecar } = require('./hydration/sqlite-inventory.js');
@@ -93,6 +94,13 @@ async function hydrateSnapshotFromBundle({
   const storageRootPath = cleanText(nextSnapshot?.settings?.storagePath, 2400)
     || cleanText(bundlePaths?.storageRootPath, 2400);
   if (storageRootPath) {
+    const primerLibrary = await readPrimerLibrary(storageRootPath);
+    if (primerLibrary.ok) {
+      nextSnapshot.primerLibrary = primerLibrary.primers;
+      migration.applied.push('primer_library');
+    } else if (primerLibrary.error) {
+      migration.warnings.push(primerLibrary.error);
+    }
     const projectHydrated = await hydrateProjectRootFromStoragePath({
       storagePath: storageRootPath,
       knownProjects: nextSnapshot.projects

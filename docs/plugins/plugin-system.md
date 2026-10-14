@@ -2,7 +2,8 @@
 
 A plugin is a folder of web files that Hikari boots as a first-class app: it
 gets a navigation entry, its own workspace view, and — if its manifest asks for
-it — a narrow set of permission-gated host capabilities.
+it — a narrow set of permission-gated host capabilities. A **tool plugin** is
+booted as one more tool in **Tools** instead (§1.7).
 
 New plugin author? Start with the copyable
 [**quickstart.md**](quickstart.md), then use this page for the complete folder
@@ -56,6 +57,10 @@ different install flow.
 - **Service** to extend a built-in feature rather than add a workspace — today,
   teaching a feature to open a file format via conversion. Full details in
   [service-plugins.md](service-plugins.md).
+
+A local or served plugin can also be a **tool**: add `"tool": true` for a
+calculator or other small utility that belongs beside Hikari's bench tools
+rather than in the dock (§1.7).
 
 Served and remote plugins differ in one thing that matters more than the
 mechanics: with a served plugin the code is in the folder you installed and
@@ -113,6 +118,9 @@ my-remote-app/
 | `serve` and `embed` are mutually exclusive | `plugin.json cannot set both "serve" and "embed".` |
 | `service`, if present, declares a non-empty `fileConversions` array of bare lower-case `{ from, to }` extensions | `plugin.json "service" must declare a non-empty "fileConversions" array.` |
 | `service` excludes `embed` and `serve` | `plugin.json a "service" plugin cannot also use "embed" or "serve".` |
+| `tool`, if present, is a boolean | `plugin.json "tool" must be true or false.` |
+| `tool` excludes `embed` and `service` | `plugin.json a "tool" plugin cannot also use "embed" or "service".` |
+| a tool does not request `layout` or `agent:chat` | `A "tool" plugin cannot request "X" — Tools owns its rail, toolbar, and chat.` |
 
 Source of truth:
 [`src/main/lib/inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js).
@@ -140,6 +148,7 @@ Source of truth:
 | `serve` | boolean | no | Legacy explicit opt-in to loopback delivery; local folders now receive this automatically. Rejected alongside `embed`. |
 | `embed` | string | no | Absolute **https** URL. Makes this a remote plugin: `index.html` is not required and host permissions are refused. |
 | `service` | object | no | Makes this a headless service. `{ "fileConversions": [{ "from": "dna", "to": "gbk" }] }`. No view is created. Rejected alongside `embed`/`serve`. See [service-plugins.md](service-plugins.md). |
+| `tool` | boolean | no | `true` mounts the plugin as a tile and panel in **Tools** instead of as an app (§1.7). Rejected alongside `embed`/`service`, and with the `layout` or `agent:chat` permissions. |
 
 Unknown fields are ignored, so new optional fields can land later without
 breaking existing plugins.
@@ -155,6 +164,7 @@ full list on the plugin's row in Settings before enabling it.
 | `protocols:read` | List protocols and read one in full (steps, materials, troubleshooting). |
 | `projects:read` | List project ids and names. |
 | `samples:read` | List sample ids, names, and types. |
+| `chemicals:read` | List compound names, molecular weights, pKa values, and forms: the user's inventory chemicals merged with Hikari's reference compounds, the same list the built-in Buffer Preparer uses ([plugin-api.md `chemicals.list`](plugin-api.md#chemicalslist--chemicalsread)). No quantities or locations. |
 | `notebook:read` | List notebook entries and read one in full. |
 | `notebook:write` | Append result text and result tables to an **existing** notebook entry. |
 | `storage` | Read and replace the plugin's **own** persisted JSON blob (§3.1). Grants nothing outside that slice. |
@@ -194,6 +204,42 @@ it must not render anything:
 If your extension needs to show something, it is a view plugin (§1.0) — a
 plugin may be one or the other, not both.
 
+### 1.7 A tool lives in Tools
+
+`"tool": true` turns a local plugin into one more tool beside Molarity
+Calculator, Buffer Preparer, and the other built-in bench tools:
+
+```json
+{
+  "id": "buffer-ratio",
+  "name": "Buffer Ratio",
+  "version": "1.0.0",
+  "description": "Base-to-acid ratio for a target pH, from the buffer's pKa.",
+  "tool": true,
+  "permissions": ["chemicals:read"]
+}
+```
+
+- **Where it appears.** A tile labelled with the plugin's `name`, after the
+  built-in tools in the **Tools** rail. Clicking it shows the tool's panel: a
+  head with the `name` and `description`, drawn by Hikari like every other
+  tool's head, and the plugin's frame filling the rest of the tool area.
+- **What it does not get.** No dock or **More** entry, no topbar-search entry,
+  and no view of its own. Tools owns the left rail and the right toolbar and
+  has no agent chat rail, so a tool may not request `layout` or `agent:chat`;
+  the manifest is rejected if it does.
+- **Everything else is a local plugin.** The same folder layout, loopback
+  origin, sandbox, client, and permissions. It runs from boot whether or not
+  its panel is shown, like any view plugin.
+- **The page.** Ship only the controls: the head already shows the title.
+  The frame is at least 420 px tall. [plugin-api.md §1.2](plugin-api.md#12-tool-plugins)
+  lists how each verb behaves from a tool.
+
+[`examples/plugins/cell-seeding`](../../examples/plugins/cell-seeding/) is the
+reference tool: a hemocytometer count to a plate-seeding plan, saved to a
+notebook page. [`examples/plugins/buffer-ratio`](../../examples/plugins/buffer-ratio/)
+is the minimal one, reading pKa values through `chemicals.list`.
+
 ---
 
 ## 2. Installing and managing plugins
@@ -205,7 +251,8 @@ plugin may be one or the other, not both.
 4. After reload it appears in the dock after the built-in apps (or under
    **More** when the dock runs out of room), with its manifest `icon` or
    Hikari's generic plug icon, and takes part in topbar search and startup-view
-   logic like any built-in app.
+   logic like any built-in app. A tool plugin appears as the last tile in
+   **Tools** instead (§1.7), and its Settings row says so.
 
 Each row shows name, version, description, **declared host access**, and folder
 path, plus an On/Off toggle and a **Remove** button. Removing forgets the
@@ -247,6 +294,7 @@ Installed plugins live in `state.settings.plugins`:
   "embedUrl": "",
   "serve": false,
   "service": null,
+  "tool": false,
   "enabled": true
 }
 ```
@@ -389,6 +437,16 @@ For each entry with `enabled !== false`,
    definition may provide trusted `iconMarkup`, such as Gel's electrophoresis
    mark; manifest-provided host markup is never accepted.
 
+A **tool** plugin skips steps 1 and 3. `installToolFrame()` appends a tile to
+`#tool-box-view .tool-grid` and a hidden `.tool-subview.plugin-tool` panel,
+holding the head and the frame, to `.tool-content`, then serves and registers
+the frame as in step 2. It must run before Tools initializes, because
+[`view-manager.js`](../../src/renderer/modules/tool-box/view-manager.js) binds
+every `.tool-tile` and `.tool-subview` once, at module init; boot order
+guarantees this. `loadPluginIcons()` refreshes the tile label and head after a
+manifest rename. A tool's frame is undo-capable while its panel is the visible
+tool ([`plugin-history.js`](../../src/renderer/app/plugin-history.js)).
+
 Because plugin apps are ordinary registry entries created before the shell
 boots, everything downstream works with zero plugin-specific code: dock/more
 navigation, `showView()` toggling, topbar search aliases, valid-startup-view
@@ -411,7 +469,7 @@ The renderer cannot touch the filesystem, so folder validation is an IPC call:
   [`plugin-api.js`](../../src/main/preload/api/plugin-api.js)
 
 On success it returns `{ ok: true, id, name, version, description,
-iconDataUrl, permissions, path, entryUrl, embedUrl, serve, service }`. Settings
+iconDataUrl, permissions, path, entryUrl, embedUrl, serve, service, tool }`. Settings
 stores everything except `iconDataUrl`, plus `enabled: true`. The directory
 picker reuses `storage:pick-directory`.
 
@@ -615,6 +673,8 @@ that calls `window.HikariPlugin.hikari`:
   rail width and fold state, buttons in the right toolbar, and actions in the
   Protocol `…` menu and the PDF selection toolbar. Anything else stays inside
   the frame.
+- **One tile per tool plugin, after the built-in tools.** A tool cannot add
+  several tiles, choose its position, or show an icon; Tools tiles are text.
 - **No inter-plugin communication**, and no background execution — a plugin
   only runs while its view exists.
 - **Durable persistence uses the host APIs.** Browser storage works for the
@@ -637,7 +697,8 @@ that calls `window.HikariPlugin.hikari`:
 | `Unknown verb "…"` for a verb in [plugin-api.md](plugin-api.md) | An older Hikari build. Keep a local fallback and feature-detect, e.g. `app.info.layout.workspaceTools.available` ([plugin-api.md §4](plugin-api.md#4-layout-and-host-ui-verbs)). |
 | Workspace tools or context actions do not appear | Declare `layout` (then remove and re-add). Tools show only while the plugin's view is active; `requiresAgent` actions are hidden while Codex is not connected. |
 | `agent.chat` resolves `{ ok: false }` | Read `reason`: `unavailable` means Codex is not connected; `busy` and `composer_not_empty` mean the chat is in use. An `agent:canvas` plugin also needs **Settings → Tool access → Plugin canvases**. |
-| Plugin added but not in navigation | Reload the app (Settings → Plugins → Reload App). |
+| Plugin added but not in navigation | Reload the app (Settings → Plugins → Reload App). A tool plugin is never in navigation: look for it at the end of the **Tools** rail. |
+| `A "tool" plugin cannot request "layout"` (or `"agent:chat"`) | Tools owns the rail, toolbar, and chat. Remove the permission, or drop `"tool": true` to make a workspace plugin. |
 | Local scripts fail to load | Reload with the current app version and check that the plugin folder still exists. All local assets now load from loopback (§5.4). |
 | Blank plugin view | Open DevTools; the page failed like any webpage would (bad script path, JS error). Paths inside the plugin must be relative. Add an in-frame loading/error state so users see the failure too. |
 | `…did not declare the "X" permission in plugin.json` | Add it to `permissions`, then **remove and re-add** the plugin — grants are snapshotted. |
@@ -878,6 +939,10 @@ external skill folders only for user- or site-specific additions.
   `python.run is permission gated and hands back no host paths`, and
   `plugin chat context updates only its owning view and validates item identifiers`
   pin down those verbs' permission gates and limits.
+- `tool plugins mount inside Tools and read the compound list` — the `tool`
+  manifest rules, remote records never normalized into tools, the tile and
+  panel mounted in Tools with no view section or navigation entry, and
+  `chemicals.list` gated on `chemicals:read` with inventory values winning.
 - `every public verb and host event is documented` — fails when a public verb
   has no `###` heading in [plugin-api.md](plugin-api.md), or a listed host
   event is not mentioned there.
@@ -887,18 +952,19 @@ external skill folders only for user- or site-specific additions.
 The newer layout and host-UI pieces have focused unit tests outside `npm test`:
 
 ```bash
-node --test tests/plugin-icon.test.mjs tests/plugin-left-rail.test.mjs tests/plugin-workspace-tools.test.mjs tests/plugin-context-actions.test.mjs
+node --test tests/plugin-icon.test.mjs tests/plugin-left-rail.test.mjs tests/plugin-workspace-tools.test.mjs tests/plugin-context-actions.test.mjs tests/plugin-history.test.mjs
 ```
 
 They cover icon confinement and markup safety, per-plugin rail folding,
+undo routing (a tool frame claims history only while its panel is shown),
 declarative workspace tools and their separate permission and origin checks,
 and context-action handoffs: one source per click, expiry on navigation or
 re-registration, Markdown path confinement, and explicit missing or truncated
 paper context.
 
 The core contracts live in `tests/suites/core/plugin-system-suite/` (registered
-through [`test.js`](../../test.js)); copyable-client and Gel folder checks live in
-[`tests/`](../../tests/). For manual end-to-end checks, install
+through [`test.js`](../../test.js)); copyable-client, Gel folder, and
+`cell-seeding` example checks live in [`tests/`](../../tests/). For manual end-to-end checks, install
 [`examples/plugins/notebook-results/`](../../examples/plugins/notebook-results/)
 for the host API, and open the bundled Gel plugin for a production-sized served
 plugin. [`plugins/scientific-illustration/`](../../plugins/scientific-illustration/)
@@ -914,5 +980,6 @@ needs loopback networking.
 `node node_modules/electron/cli.js tests/plugin-runtime-electron.cjs` runs a
 hidden Electron window with a temporary profile and the real preload. It checks
 local asset loading, host isolation, navigation grants, loopback-origin
-clearing, file IPC, notebook and storage persistence, and headless conversion
-without opening user data.
+clearing, file IPC, notebook and storage persistence, headless conversion, and
+a tool plugin reading `chemicals.list` from its Tools panel. It never opens
+user data.

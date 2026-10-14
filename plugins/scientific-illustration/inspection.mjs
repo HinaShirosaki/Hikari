@@ -1,4 +1,4 @@
-const CANVASES = ['main', 'scratch'];
+import { CANVASES } from './model.mjs';
 export const INSPECTION_CHECKS = ['layout', 'labels', 'artwork', 'science'];
 
 // Ephemeral receipts prove a preview was generated in this run, for this exact
@@ -30,7 +30,7 @@ export function createInspectionTracker() {
   function inspect(illustrationId, revision, runId, args) {
     const entry = current(illustrationId, revision, runId);
     if (args.expected_revision !== revision || !entry?.token || args.inspection_id !== entry.token) {
-      return { ok: false, status: 'inspection_required', error: 'Render both canvases at the current revision, inspect their images, then submit the returned inspection_id and expected_revision.' };
+      return { ok: false, status: 'inspection_required', error: 'Render the canvas at the current revision, inspect its image, then submit the returned inspection_id and expected_revision.' };
     }
     entry.review = Object.fromEntries(INSPECTION_CHECKS.map(key => [key, args.review[key].trim()]));
     return { ok: true, status: 'inspected', illustration_id: illustrationId, revision,

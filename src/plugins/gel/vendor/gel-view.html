@@ -107,8 +107,15 @@
                   <button type="button" id="gel-export-image-btn" class="ghost-btn" disabled title="Export the gel lanes (and the table, if present) as a PNG">Export image</button>
                   <button type="button" id="gel-export-pptx-btn" class="ghost-btn" disabled title="Export the gel lanes (and the table, if present) as an editable PowerPoint">Export PPT</button>
                 </div>
+                <div class="gel-window-toolbar" role="toolbar" aria-label="Gel windows">
+                  <button type="button" id="gel-open-tools-btn" class="ghost-btn" aria-controls="gel-tools-window" aria-expanded="true">Gel Tools</button>
+                  <button type="button" id="gel-open-profile-btn" class="ghost-btn" aria-controls="gel-lane-profile-panel" aria-expanded="false" disabled>Lane Intensity</button>
+                  <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-window" aria-expanded="false">Lane table</button>
+                  <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn" aria-controls="gel-peak-editor-overlay" aria-expanded="false">Peak editor</button>
+                  <button type="button" id="gel-open-cell-table-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" disabled>Band intensity</button>
+                  <button type="button" id="gel-hide-windows-btn" class="ghost-btn">Hide windows</button>
+                </div>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
-                  <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
                   <div id="gel-image-row" class="gel-image-row">
                     <div id="gel-lane-table-label-spacer" class="gel-lane-table-label-spacer" hidden aria-hidden="true"></div>
                     <div class="gel-canvas-shell">
@@ -120,11 +127,18 @@
               </div>
 
               <div class="gel-side-rail">
-                <section class="panel gel-manual-panel gel-tool-panel" aria-label="Gel tools">
-                  <h3>Gel Tools</h3>
+                <section id="gel-tools-window" class="panel gel-manual-panel gel-tool-panel" data-gel-window="tools" role="dialog" aria-modal="false" aria-labelledby="gel-tools-title">
+                  <header class="gel-floating-head" data-gel-window-handle>
+                    <h3 id="gel-tools-title">Gel Tools</h3>
+                    <button type="button" class="ghost-btn gel-window-close" data-gel-window-close="tools" aria-label="Close Gel Tools">×</button>
+                  </header>
+                  <div class="gel-tool-tabs" role="group" aria-label="Tool groups">
+                    <button type="button" class="ghost-btn" data-gel-tool-group="lane" aria-pressed="true">Lane</button>
+                    <button type="button" class="ghost-btn" data-gel-tool-group="band" aria-pressed="false">Band</button>
+                    <button type="button" class="ghost-btn" data-gel-tool-group="analysis" aria-pressed="false">Analysis</button>
+                  </div>
                   <div class="gel-tool-groups">
-                    <details class="gel-tool-group" open>
-                      <summary>Lane</summary>
+                    <section class="gel-tool-group" data-gel-tool-panel="lane" aria-label="Lane tools">
                       <div class="gel-tool-actions">
                         <button type="button" id="gel-tool-dividers-btn" class="ghost-btn gel-tool-wide" aria-pressed="false" title="Click the gel to add lane boundaries; click this button again to finish. Outermost dividers define the gel edges">Lane dividers</button>
                         <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
@@ -137,19 +151,17 @@
                           <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
                         </div>
                       </div>
-                    </details>
+                    </section>
 
-                    <details class="gel-tool-group" open>
-                      <summary>Band</summary>
+                    <section class="gel-tool-group" data-gel-tool-panel="band" aria-label="Band tools" hidden>
                       <div class="gel-tool-actions">
                         <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Band top</button>
                         <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Band bottom</button>
                         <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn gel-tool-wide" aria-pressed="false">Per-lane band</button>
                       </div>
-                    </details>
+                    </section>
 
-                    <details class="gel-tool-group" open>
-                      <summary>Analysis</summary>
+                    <section class="gel-tool-group" data-gel-tool-panel="analysis" aria-label="Analysis tools" hidden>
                       <div class="gel-tool-actions">
                         <label class="small-note gel-tool-field">
                           Ladder MW
@@ -159,12 +171,7 @@
                         <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" title="Detect ladder bands and label them from the selected preset">Detect ladder</button>
                         <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" title="Click a ladder band to label it with the MW above; drag a label to move it">Set MW</button>
                       </div>
-                      <div class="gel-tool-actions gel-tool-results" role="group" aria-label="Analysis results">
-                        <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
-                        <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
-                        <button type="button" id="gel-open-cell-table-btn" class="ghost-btn gel-tool-wide" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" title="Open per-cell band intensity" disabled>Band intensity</button>
-                      </div>
-                    </details>
+                    </section>
                   </div>
                   <div class="gel-tool-footer">
                     <button type="button" id="gel-manual-next-btn" class="ghost-btn" hidden>Done</button>
@@ -172,11 +179,12 @@
                   </div>
                 </section>
 
-                <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
+                <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" data-gel-window="profile" role="dialog" aria-modal="false" aria-labelledby="gel-profile-title" hidden>
+                  <header class="gel-floating-head" data-gel-window-handle>
+                    <h3 id="gel-profile-title">Lane Intensity</h3>
+                    <button type="button" class="ghost-btn gel-window-close" data-gel-window-close="profile" aria-label="Close Lane Intensity">×</button>
+                  </header>
                   <div class="gel-lane-profile-head">
-                    <div>
-                      <h3>Lane Intensity</h3>
-                    </div>
                     <label class="gel-lane-profile-picker">
                       Lane
                       <select id="gel-lane-profile-select" disabled>
@@ -194,26 +202,35 @@
 
           </div>
 
-          <div id="gel-cell-table-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
-            <section id="gel-cell-table-panel" class="gel-cell-table-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-cell-table-title">
-              <header class="app-dialog-head gel-cell-table-header">
+          <section id="gel-lane-table-window" class="gel-lane-table-window" data-gel-window="table" role="dialog" aria-modal="false" aria-labelledby="gel-lane-table-title" hidden>
+            <header class="gel-floating-head" data-gel-window-handle>
+              <h3 id="gel-lane-table-title">Lane table</h3>
+              <button type="button" class="ghost-btn gel-window-close" data-gel-window-close="table" aria-label="Close lane table">×</button>
+            </header>
+            <div class="gel-lane-table-window-body">
+              <p id="gel-lane-table-empty" class="small-note">Finish the lane dividers, then add a table. The table is included in image and PowerPoint exports.</p>
+              <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
+              <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
+            </div>
+          </section>
+
+          <div id="gel-cell-table-overlay" data-gel-window="intensity" hidden>
+            <section id="gel-cell-table-panel" class="gel-cell-table-dialog" role="dialog" aria-modal="false" aria-labelledby="gel-cell-table-title">
+              <header class="gel-floating-head gel-cell-table-header" data-gel-window-handle>
                 <div>
-                  <h3 id="gel-cell-table-title">Per-Cell Band Intensity</h3>
-                  <div id="gel-cell-table-summary" class="small-note"></div>
+                  <h3 id="gel-cell-table-title">Band intensity</h3>
+                  <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
                 </div>
-                <label class="small-note gel-cell-snr-label">
-                  SNR threshold:
-                  <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
-                </label>
+                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy table</button>
                 <button type="button" id="gel-cell-table-close-btn" class="app-dialog-close-btn" aria-label="Close band intensity report" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </header>
               <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
             </section>
           </div>
 
-          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-            <section class="gel-peak-editor-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
-              <header class="gel-peak-editor-header app-dialog-head">
+          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" data-gel-window="peak" hidden>
+            <section class="gel-peak-editor-dialog" role="dialog" aria-modal="false" aria-labelledby="gel-peak-editor-title">
+              <header class="gel-peak-editor-header gel-floating-head" data-gel-window-handle>
                 <div>
                   <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
                   <div id="gel-peak-editor-summary" class="small-note"></div>

@@ -258,7 +258,7 @@ export function createProtocolPolishController({
 
       localState.polishedProtocolDraft = nextPolishedDraft;
       renderProtocolPreviewInto(ui.protocolPolishResultPreview, localState.polishedProtocolDraft, { includeNameSection: true });
-      setProtocolPolishStatus('Review the polished version on the right, then apply it if you want to replace the editor draft.');
+      setProtocolPolishStatus('');
     } catch (error) {
       if (requestToken !== localState.protocolPolishRequestToken || ui.protocolPolishOverlay?.hidden) {
         return;

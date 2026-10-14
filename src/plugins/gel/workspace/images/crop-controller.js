@@ -294,16 +294,14 @@ export function createCropController({ runtime, elements, deps }) {
       deps.setStatus('Start crop mode first.');
       return;
     }
-    const croppedCanvas = runtime.cropperInstance.getCroppedCanvas({
-      minWidth: 12,
-      minHeight: 12,
-      fillColor: '#000'
-    });
+    // No min size: cropGray replays an unscaled crop, and the check below
+    // rejects a small one anyway.
+    const croppedCanvas = runtime.cropperInstance.getCroppedCanvas({ fillColor: '#000' });
     if (!croppedCanvas || croppedCanvas.width < 12 || croppedCanvas.height < 12) {
       deps.setStatus('Select a larger crop area first.');
       return;
     }
-    deps.setCurrentImage(deps.normalizeCurrentCanvasCrop(croppedCanvas));
+    deps.setCurrentImage(deps.normalizeCurrentCanvasCrop(croppedCanvas, runtime.cropperInstance.getData()));
     runtime.cropApplied = true;
     resetAfterCropMutation();
     leaveCropMode();

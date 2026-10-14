@@ -1,0 +1,8 @@
+{
+  "id": "buffer-ratio",
+  "name": "Buffer Ratio",
+  "version": "1.0.0",
+  "description": "Base-to-acid ratio for a target pH, from the buffer's pKa.",
+  "tool": true,
+  "permissions": ["chemicals:read"]
+}

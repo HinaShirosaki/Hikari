@@ -18,6 +18,9 @@ manifest) cannot hold permissions and its frame is never registered with the
 bridge, so none of this applies to it — the API is absent there, not merely
 denied. See [plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin).
 
+**Tool plugins** (`"tool": true`) live as a tile in **Tools** instead of as an
+app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
+
 ## At a glance
 
 | Verb or event | Permission | What it does | See |
@@ -27,6 +30,7 @@ denied. See [plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin).
 | `protocols.list`, `protocols.get` | `protocols:read` | Protocol summaries; one protocol in full | [§2](#2-read-verbs) |
 | `projects.list` | `projects:read` | Project ids and names | [§2](#2-read-verbs) |
 | `samples.list` | `samples:read` | Sample ids, names, and types | [§2](#2-read-verbs) |
+| `chemicals.list` | `chemicals:read` | Compound names, molecular weights, pKa values, and forms: inventory plus reference | [§2](#2-read-verbs) |
 | `notebook.list`, `notebook.get` | `notebook:read` | Notebook summaries; one entry in full | [§2](#2-read-verbs) |
 | `storage.get`, `storage.set` | `storage` | The plugin's own JSON blob | [§2](#2-read-verbs), [§3](#3-write-verbs) |
 | `notifications.show` | `notifications` | An attributed, transient toast | [§3](#3-write-verbs) |
@@ -114,6 +118,37 @@ Replies and host events target the plugin's assigned loopback origin explicitly.
 Access control checks both `event.source` and `event.origin`; a message from a
 replacement origin revokes the frame grant. An in-flight reply cannot be
 delivered to another origin after navigation.
+
+### 1.2 Tool plugins
+
+A plugin whose manifest sets `"tool": true` is not an app of its own. Hikari
+adds it as the last tile in **Tools** and shows its frame in that tile's panel,
+below a host-drawn head with the plugin's name and description
+([plugin-system.md §1.7](plugin-system.md#17-a-tool-lives-in-tools)). The
+client, wire format, and access control are unchanged. What differs:
+
+| Verbs | In a tool plugin |
+| --- | --- |
+| `chemicals.list`, `notebook.*`, `storage.*`, `files.*`, `downloads.save`, `python.run`, `notifications.show` | Work as documented. These are the usual building blocks of a tool. |
+| `app.info`, `app.context` | Same payload. `layout.leftRail` describes the shared rail, which Tools draws, not the plugin. |
+| `app.setUnsaved`, `app.save` | Same. |
+| `app.setHistory`, `app.undo` / `app.redo` | Hikari's undo and redo buttons drive the frame while its panel is the visible tool. |
+| `agent.canvas`, `agent.respond` | Same. Requests reach the frame whether or not its panel is shown. |
+| Everything gated on `layout` or `agent:chat` | Refused at install: the manifest is rejected. Tools owns its rail and right toolbar and has no chat rail, so these verbs would have nothing to drive. |
+
+Draw only the tool's controls. The head already shows the title, so do not
+repeat it; keep page padding to a few pixels and the background transparent,
+and set `color-scheme` from `app.info.appearance.mode` so form controls follow
+Hikari's day and night modes. The frame fills the tool area and is at least
+420 px tall.
+
+[`examples/plugins/cell-seeding`](../../examples/plugins/cell-seeding/) is the
+reference tool. It turns a hemocytometer count into a plate-seeding plan,
+remembers plate settings with `storage`, suggests cell lines from
+`samples.list`, and saves the plan to a page chosen from `notebook.list` with
+`notebook.appendResult`. Its math is in a separate `seeding.js` with a
+`node seeding.js` self-check. [`buffer-ratio`](../../examples/plugins/buffer-ratio/)
+is the minimal `chemicals.list` tool.
 
 ---
 
@@ -219,6 +254,32 @@ canonical draft shape is in
 ```js
 // [{ id, name, type }, …]
 ```
+
+### `chemicals.list` — `chemicals:read`
+
+The compounds Hikari's own Buffer Preparer suggests: the user's inventory
+chemicals merged, by case-insensitive name, with Hikari's reference buffer
+compounds. An inventory record wins field by field, and the reference list
+fills what it leaves blank. The list is sorted by name and not capped, so a
+lookup never misses a reagent late in the alphabet.
+
+```js
+await hikari.call('chemicals.list');
+// [{ name: 'HEPES', mw: 238.3, pKa: 7.48, form: 'solid', category: 'Good buffer', source: 'reference' },
+//  { name: 'Tris base', mw: 121.14, pKa: 8.06, form: 'solid', category: 'CAS 77-86-1', source: 'inventory' }, …]
+```
+
+| Field | Notes |
+| --- | --- |
+| `name` | Display name, at most 200 characters. Match it case-insensitively. |
+| `mw` | Molecular (formula) weight in g/mol, or `null` when unknown. |
+| `pKa` | Buffering pKa, or `null`. |
+| `form` | `solid` or `liquid`, inferred from the inventory record's form or unit. |
+| `category` | `CAS <number>` for an inventory record that has one; otherwise a short group such as `Good buffer`. |
+| `source` | `inventory` when the name matches one of the user's chemicals, otherwise `reference`. |
+
+Only these fields cross the bridge. Storage locations, quantities, and other
+inventory columns stay in Hikari.
 
 ### `notebook.list` — `notebook:read`
 
@@ -570,6 +631,8 @@ and Hikari drops the set when the frame's origin grant is revoked (§6).
 Older hosts answer `Unknown verb "…"`. Keep a local fallback — your own toolbar
 or entry point — and switch to the host surface once a call succeeds.
 
+A tool plugin cannot declare `layout`; Tools owns these surfaces (§1.2).
+
 ### `app.setLeftRailWidth` — `layout`
 
 Commits the final width of a plugin-owned left rail to Hikari's shared layout
@@ -627,7 +690,7 @@ await hikari.call('app.setWorkspaceTools', { tools: [
 | --- | --- | --- |
 | `id` | string | Required and unique: a lower-case letter, then letters, digits, or hyphens, at most 64 characters. |
 | `label` | string | Required, 1–100 characters. A button's tooltip and accessible name; an output's visible text. |
-| `icon` | string | Required for buttons: `pointer`, `lasso`, `plus`, `undo`, `redo`, `group`, `ungroup`, `layers`, `assets`, `scratch`, `minus`, `crop`, or `fit`. |
+| `icon` | string | Required for buttons: `pointer`, `lasso`, `plus`, `undo`, `redo`, `group`, `ungroup`, `align`, `layers`, `assets`, `scratch`, `minus`, `crop`, or `fit`. |
 | `kind` | string | `button` (default) or `output`, which displays its label without accepting clicks. |
 | `group` | string | Optional, at most 40 characters. A change of group between adjacent tools starts a separator. |
 | `disabled`, `pressed`, `expanded` | boolean | Optional. Mirror editor state; `pressed` and `expanded` become `aria-pressed` and `aria-expanded`. |
@@ -755,7 +818,9 @@ tools; Codex sign-in, model choice, and credentials stay in Hikari. A plugin
 view that declares `agent:chat` gets Hikari's agent chat rail beside its frame.
 While Codex is not connected, `app.info.layout.agentChatRail.available` is
 `false`, the rail and AI actions are hidden, and `agent.chat` reports
-`unavailable` — hide your own prompt UI too.
+`unavailable` — hide your own prompt UI too. A tool plugin cannot declare
+`agent:chat`, because Tools has no chat rail (§1.2); it may still declare
+`agent:canvas`.
 
 ### `agent.chat` — `agent:chat`
 

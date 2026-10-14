@@ -163,11 +163,25 @@ function createAgentLookupSupport(deps = {}) {
       snapshot: sourceSnapshot
     });
     const rawHydratedSnapshot = ensureObject(hydrated?.snapshot || sourceSnapshot);
+    const persistedNotebookById = new Map(asArray(rawHydratedSnapshot.notebookEntries)
+      .map((entry) => [cleanText(entry?.id, 220), entry]));
+    // A renderer bridge contains bounded summaries, not complete pages. Keep
+    // persisted notes/tables/calculations while allowing current title metadata
+    // to override it. Full live records still take precedence as before.
+    const mergedLiveNotebookEntries = liveNotebookEntries.map((entry) => {
+      const persisted = persistedNotebookById.get(cleanText(entry?.id, 220));
+      if (!entry?.bridgeSnapshot || !persisted) return entry;
+      const metadata = Object.fromEntries([
+        'id', 'experimentName', 'projectId', 'projectName', 'protocolId', 'protocolName',
+        'notebookType', 'notebookState', 'createdAt', 'updatedAt', 'executedAt'
+      ].filter(key => Object.prototype.hasOwnProperty.call(entry, key)).map(key => [key, entry[key]]));
+      return { ...persisted, ...metadata };
+    });
     const hydratedSnapshot = liveNotebookEntries.length
       ? {
         ...rawHydratedSnapshot,
         notebookEntries: mergeRowsByKey(
-          liveNotebookEntries,
+          mergedLiveNotebookEntries,
           rawHydratedSnapshot.notebookEntries,
           (entry) => cleanText(entry?.id, 220)
         )

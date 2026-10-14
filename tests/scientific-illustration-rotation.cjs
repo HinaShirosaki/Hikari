@@ -17,7 +17,6 @@ async function verifyRotation({ tool, evaluate, check, win, pause, temp }) {
     { op: 'upsert', object: { id: 'rotate-vector', type: 'vector', name: 'Membrane', svg, x: 300, y: 200, width: 180, height: 120, rotation: 17 } },
     { op: 'upsert', object: { id: 'rotate-raster', type: 'raster', name: 'Cargo', dataUrl, textFree: true, x: 550, y: 300, width: 80, height: 60, rotation: -12 } },
     { op: 'upsert', object: { id: 'rotate-text', type: 'text', name: 'Independent label', text: 'Receptor', x: 250, y: 150, width: 600, height: 300, fontSize: 28, align: 'end', anchor: 'bottom', rotation: -23 } },
-    { op: 'upsert', object: { id: 'rotate-scratch', type: 'vector', canvas: 'scratch', name: 'Scratch component', svg, x: 80, y: 50, width: 90, height: 60 } }
   ]);
   const object = (state, id) => state.objects.find(item => item.id === id);
   const select = async id => {
@@ -127,10 +126,6 @@ async function verifyRotation({ tool, evaluate, check, win, pause, temp }) {
     await evaluate('illustrationWorkspace.history("undo")'); after = await waitForChange(after.revision);
     check(JSON.stringify(after.objects) === JSON.stringify(before.objects), 'Group rotation is one undoable edit');
 
-    await tool({ action: 'scratch', illustration_id: before.illustration_id, visible: true }); await select('rotate-scratch');
-    before = await read(); await gesture(-55, 0, 'scratch'); after = await waitForChange(before.revision);
-    check(angularError(object(after, 'rotate-scratch').rotation, -55) < 0.01 && after.objects.filter(o => o.canvas === 'main').every(o => JSON.stringify(o) === JSON.stringify(object(before, o.id))), 'Scratch rotation keeps Main artwork unchanged');
-    await tool({ action: 'scratch', illustration_id: before.illustration_id, visible: false });
     await apply([{ op: 'ungroup', id: 'rotation-group' }, { op: 'update', id: 'rotate-vector', patch: { x: 0, y: 0, rotation: 0 } }]);
     await select('rotate-vector');
     for (const narrow of [false, true]) {

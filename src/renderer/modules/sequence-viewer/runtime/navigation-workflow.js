@@ -68,6 +68,7 @@ export function createNavigationActions(ctx) {
     controllers.cloningDesign?.render?.();
     controllers.vectorBuilder?.render?.();
     controllers.proteinBuilder?.render();
+    controllers.primerLibrary?.render?.();
     controllers.home.syncHomeControlsState();
     void controllers.home.refreshLibraryEntries({ silent: true });
   }

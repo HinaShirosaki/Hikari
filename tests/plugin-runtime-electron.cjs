@@ -62,15 +62,23 @@ async function run() {
     window.HikariPlugin.hikari.call('app.info').then(info => parent.postMessage({audit:'service-info',info}, '*'));
     parent.postMessage({hikari:1,call:'service:ready'}, '*');
   `);
+  await write('tool-audit/hikari.js', client);
+  await write('tool-audit/index.html', '<script src="./hikari.js"></script><script src="./main.js"></script>');
+  await write('tool-audit/main.js', `
+    window.HikariPlugin.hikari.call('chemicals.list')
+      .then(list => parent.postMessage({audit:'tool-chemicals', hepes:list.find(item => item.name === 'HEPES')}, '*'),
+        error => parent.postMessage({audit:'failure',error:String(error)}, '*'));
+  `);
   const sourceHtml = await fs.readFile(path.join(projectRoot, 'index.html'), 'utf8');
   const csp = sourceHtml.match(/<meta http-equiv="Content-Security-Policy"[\s\S]*?>/)[0];
   const local = (id, extra = {}) => ({ id, name: id, path: path.join(temp, id), entryUrl: pathToFileURL(path.join(temp, id, 'index.html')).href, ...extra });
   const plugins = [
     local('local-audit', { permissions: ['storage', 'files', 'notebook:write'] }),
     local('served-audit', { serve: true, permissions: ['notebook:read'] }),
-    local('service-audit', { service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } })
+    local('service-audit', { service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }),
+    local('tool-audit', { tool: true, permissions: ['chemicals:read'] })
   ];
-  await write('index.html', `<!DOCTYPE html><head>${csp}</head><body><div class="workspace-main"></div><script type="module" src="./host.js"></script></body>`);
+  await write('index.html', `<!DOCTYPE html><head>${csp}</head><body><div class="workspace-main"></div><section id="tool-box-view"><div class="tool-grid"></div><div class="tool-content"></div></section><script type="module" src="./host.js"></script></body>`);
   const moduleUrl = (file) => pathToFileURL(path.join(projectRoot, 'src/renderer/app', file)).href;
   await write('host.js', `
     import { installPlugins } from '${moduleUrl('plugin-loader.js')}';
@@ -98,7 +106,7 @@ async function run() {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     events = await window.webContents.executeJavaScript('window.auditEvents || []');
     if (events.some(e => e.audit === 'failure')) throw new Error(JSON.stringify(events));
-    if (['local-complete', 'navigated', 'converted', 'service-info'].every(name => events.some(e => e.audit === name))) break;
+    if (['local-complete', 'navigated', 'converted', 'service-info', 'tool-chemicals'].every(name => events.some(e => e.audit === name))) break;
     await new Promise(resolve => setTimeout(resolve, 50));
   }
   await new Promise(resolve => setTimeout(resolve, 250));
@@ -114,6 +122,10 @@ async function run() {
   assert.equal(events.some(e => e.audit === 'leaked-reply'), false, 'navigation must not transfer the grant');
   assert.equal(events.find(e => e.audit === 'converted')?.result.text, 'Converted 3');
   assert.equal(events.find(e => e.audit === 'service-info')?.info.pluginId, 'service-audit');
+  const tool = events.find(e => e.audit === 'tool-chemicals');
+  assert.equal(tool?.hepes?.pKa, 7.48, 'a tool plugin reads the compound list over its own origin');
+  assert.notEqual(tool.origin, new URL(completed.origin).origin, 'the tool frame has its own loopback origin');
+  assert.equal(await window.webContents.executeJavaScript('document.querySelector("#tool-box-view .tool-tile").dataset.toolView'), 'plugin-tool-audit-tool');
   const snapshot = await window.webContents.executeJavaScript('JSON.parse(localStorage.getItem("audit-state"))');
   assert.equal(snapshot.notebookEntries[0].result, 'Existing result\n\nPlugin result');
   assert.equal(snapshot.settings.pluginStorage['local-audit'].latest, 'nested/result.txt');
@@ -137,7 +149,7 @@ async function run() {
   } finally {
     probe.destroy();
   }
-  console.log('plugin-runtime-electron: ok (assets, isolation, origin grants, origin reuse, file IPC, notebook, storage, service conversion)');
+  console.log('plugin-runtime-electron: ok (assets, isolation, origin grants, origin reuse, file IPC, notebook, storage, service conversion, tool panel)');
 }
 
 const timeout = setTimeout(() => { console.error('plugin-runtime-electron timed out'); app.exit(1); }, 20000);

@@ -290,6 +290,26 @@ Input schema:
 
 `action` defaults to `search`. Search requires `query` or at least one scope filter. `get` requires `entry_id` and returns `detail: "full"`. Permission failures return `status: "partial"` or `status: "permission_denied"`, with recovery guidance in `access.user_action`.
 
+### `notebook_list`
+
+Read-only title enumeration, independent of the lookup candidate limit. `{}` lists all available notebook pages across projects and workflows. Optional filters are `project_id`, `project_name`, `protocol_id`, `protocol_name`, `notebook_state` (planned, executed, suggested), and `query` (case-insensitive title substring). Project names match exactly without case; protocol names use a case-insensitive substring. Filters combine with AND.
+
+`date_field` selects `created`, `updated` (default), or `executed`. `date_from` and `date_to` are inclusive and may be supplied independently. A `YYYY-MM-DD` bound uses UTC; `date_to` includes that entire UTC day. For local calendar days, supply ISO timestamps with explicit offsets, for example `2026-10-01T00:00:00-05:00` through `2026-10-14T23:59:59.999-05:00`. Invalid calendar dates, timestamps without timezones, and reversed ranges return `invalid_input`. Pages missing a valid selected timestamp are excluded from date ranges and reported in `counts.missing_dates`; without a range they remain in the list. As in the notebook UI, an executed page without its own executed time uses its update time, and planned or suggested pages have no executed time, so they never match an `executed` range and are not counted as missing.
+
+```json
+{
+  "project_name": "Atlas",
+  "date_field": "executed",
+  "date_from": "2026-10-01",
+  "date_to": "2026-10-14",
+  "limit": 100
+}
+```
+
+Each item contains its `id`, `title`, notebook type/state, project/protocol identity, all three timestamps, and `ui_target`, without page content, result text, tables, file paths, or images. Results sort by the selected date newest first, with entry ID as the tie-breaker and undated pages last. `updated_at` falls back to creation time when the record has no update timestamp.
+
+`limit` defaults to 100 (maximum 200). `pagination` contains `total`, `offset`, `limit`, `has_more`, and `next_cursor`. Repeat with the same filters and the returned cursor until `next_cursor` is null. Cursor consistency covers returned metadata and storage access; changed records or filters return `stale_cursor`, requiring a restart. Totals refer to available matching pages; a complete inventory also requires `access.complete: true`. Unreadable storage or a bounded live index without persisted storage yields incomplete coverage. To read a listed page, call `notebook_lookup` with its ID as `query` and `detail: "full"`.
+
 ### `literature_search`
 
 For interactive Codex research, the main agent sends one compact `query` and the complete research objective in `message` (up to 12,000 characters). A research sub-agent then refines searches, uses native web search, calls `paper_download`, and reads extracted Markdown until the evidence is sufficient or remaining gaps cannot be resolved. Its searches return database candidates directly without recursively creating another researcher.

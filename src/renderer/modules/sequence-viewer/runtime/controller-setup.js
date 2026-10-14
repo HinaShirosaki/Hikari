@@ -2,6 +2,7 @@ import { createSequenceViewerAlignmentController } from '../alignment-controller
 import { createSequenceViewerAnnotationController } from '../annotation.js';
 import { createSequenceViewerCloningDesignController } from '../cloning-design.js';
 import { createPrimerOrderController } from '../primer-order-dialog.js';
+import { createPrimerLibraryController } from '../primer-library.js';
 import { createSequenceViewerDetailController } from '../detail-controller.js';
 import { createSequenceViewerHomeController } from '../home-controller.js';
 import { createSequenceViewerProteinBuilderController } from '../protein-builder.js';
@@ -50,9 +51,16 @@ export function setupSequenceViewerControllers(ctx) {
   });
 
   controllers.primerOrder = createPrimerOrderController({
+    rootDocument,
     elements,
     getBridge: actions.getBridge,
     setStatus: actions.setStatus
+  });
+
+  controllers.primerLibrary = createPrimerLibraryController({
+    rootDocument, elements, appState: options?.state, persist: options?.persist,
+    createId: options?.createId, getSelectedRecord: actions.getSelectedRecord,
+    onRequestPrimerOrder: (primers) => controllers.primerOrder?.open?.(primers)
   });
 
   controllers.detail = createSequenceViewerDetailController({
@@ -123,6 +131,7 @@ export function setupSequenceViewerControllers(ctx) {
     setStatus: actions.setStatus,
     persistFeatureMutation: actions.persistFeatureMutation,
     onRequestPrimerOrder: (primers) => controllers.primerOrder?.open?.(primers),
+    onSavePrimersToLibrary: (primers) => controllers.primerLibrary?.save?.(primers, actions.getSelectedRecord()?.name || ''),
     onNavigateCloningDesign: actions.showCloningDesignWorkspace,
     onReturnToDetail: actions.returnToSequenceDetailFromCloningDesign,
     // The confirmed product becomes the record the viewer is editing, so later

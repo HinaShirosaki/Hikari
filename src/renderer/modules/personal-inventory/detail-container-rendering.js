@@ -89,8 +89,11 @@ export function createContainerDetailRenderer({
       const sampleDotFill = buildSampleDotFill(linkedSamples.map((item) => item.type));
       const hasSamples = linkedSamples.length > 0;
       const sampleCount = linkedSamples.length;
+      const gridEdgeClasses = layout.className === 'box81'
+        ? `${(index + 1) % layout.cols === 0 ? ' well-last-column' : ''}${index >= (layout.rows - 1) * layout.cols ? ' well-last-row' : ''}`
+        : '';
       return `
-        <button type="button" class="well well-${safeText(layout.className)}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" title="${safeText(title)}">
+        <button type="button" class="well well-${safeText(layout.className)}${gridEdgeClasses}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" title="${safeText(title)}">
           <span class="well-number">${safeText(well.name)}</span>
           <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''}></span>
           ${sampleCount > 1 ? `<span class="well-sample-count">${safeText(String(sampleCount))}</span>` : ''}

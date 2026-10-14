@@ -745,10 +745,6 @@
 .biology-notebook-tool-workspace {
   display: grid;
   gap: var(--space-12);
-  padding: var(--space-12);
-  border: 1px solid var(--theme-border);
-  border-radius: 8px;
-  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-tool-workspace[hidden] {

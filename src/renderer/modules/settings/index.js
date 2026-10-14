@@ -19,14 +19,12 @@ import { createCodexAccountSettings } from './codex-account.js';
 import { createPreferredJournalSettings } from './preferred-journals.js';
 import { createNotebookPdfSettingsController } from './notebook-pdf-controller.js';
 import { createSettingsFormPresentation } from './form-presentation.js';
-import { createCloudDriveController } from './cloud-drive-controller.js';
 
 
 export function initSettings({
   state,
   persist,
   onStoragePathSaved,
-  runCloudSync,
   onSampleInventorySettingsChanged,
   document: rootDocument = globalThis?.document || null,
   windowObject = globalThis?.window || null
@@ -98,7 +96,6 @@ export function initSettings({
     clearPreferredJournalBtn
   } = getSettingsElements(document);
   const llmModelCatalog = createLlmModelCatalog();
-  const cloudDriveController = createCloudDriveController({ document, windowObject: window, state, runCloudSync, onStoragePathSaved });
   const formPresentation = createSettingsFormPresentation({
     document,
     onRestoreModel: (reasoning) => renderReasoningEffortOptions(
@@ -434,7 +431,6 @@ export function initSettings({
     settingMode.value = appearance.mode || 'day';
 
     settingStoragePath.value = state.settings.storagePath || '';
-    void cloudDriveController.refresh();
     if (settingStartupDefaultView) {
       const startupDefaultViewId = String(state.settings.startup?.defaultViewId || 'home-view');
       const hasOption = [...settingStartupDefaultView.options].some((option) => option.value === startupDefaultViewId);

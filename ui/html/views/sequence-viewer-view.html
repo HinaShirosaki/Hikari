@@ -33,9 +33,12 @@
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                 </section>
                 <section class="sequence-viewer-library-controls left-rail-template__section">
-                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                    <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                    <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                  <div class="sequence-viewer-library-filter-row">
+                    <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                      <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                      <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                    </div>
+                    <button id="sequence-viewer-primer-library-open" class="ghost-btn sequence-viewer-primer-library-open-btn" type="button" aria-label="Open Primer Library" title="Primer Library" aria-haspopup="dialog">Primers</button>
                   </div>
                   <input
                     id="sequence-viewer-library-search-input"

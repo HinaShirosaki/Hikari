@@ -3,6 +3,8 @@ const {
   asArray: defaultAsArray,
   ensureObject: defaultEnsureObject
 } = require('../../lib/normalize.js');
+const { buildNotebookLookupCoverage } = require('./notebook-lookup-coverage.js');
+const { createNotebookListExecutor } = require('./notebook-list.js');
 
 function defaultCleanText(value) {
   return String(value || '');
@@ -112,6 +114,9 @@ function createAgentNotebookLookupRuntime(deps = {}) {
       : (payload.resultTable ? [payload.resultTable] : []);
     const resultFiles = normalizeResultFiles(payload);
     const toolCalculations = asArray(payload.toolCalculations);
+    // Same rule as the notebook UI (resolveEntryExecutedAt): only executed pages
+    // have an executed time, falling back to their last update.
+    const executed = !['planned', 'suggested'].includes(cleanText(payload.notebookState, 80).toLowerCase());
     const item = {
       id: cleanText(payload.id, 120),
       record_type: 'notebook',
@@ -126,8 +131,10 @@ function createAgentNotebookLookupRuntime(deps = {}) {
       result: cleanText(payload.result, includeContent ? 12000 : 800),
       summary: cleanText(payload.summary || payload.result, 800),
       created_at: cleanText(payload.createdAt || payload.created_at, 80),
-      updated_at: cleanText(payload.updatedAt || payload.updated_at || payload.createdAt, 80),
-      executed_at: cleanText(payload.executedAt || payload.executed_at, 80),
+      updated_at: cleanText(payload.updatedAt || payload.updated_at || payload.createdAt || payload.created_at, 80),
+      executed_at: executed
+        ? cleanText(payload.executedAt || payload.executed_at || payload.updatedAt || payload.updated_at, 80)
+        : '',
       content_available: Boolean(
         payload.result
         || Object.keys(ensureObject(payload.values)).length
@@ -252,42 +259,9 @@ function createAgentNotebookLookupRuntime(deps = {}) {
       limit: Math.max(requestedLimit * 10, 200),
       includeContent: detail === 'full'
     }), { projectId, projectName, protocolId, protocolName, notebookState }).slice(0, requestedLimit);
-    const permissionWarnings = asArray(context.warnings)
-      .filter((warning) => /permission denied|\bEPERM\b|\bEACCES\b/i.test(String(warning || '')));
-    const otherWarnings = asArray(context.warnings).filter((warning) => !permissionWarnings.includes(warning));
-    const accessStatus = permissionWarnings.length
-      ? (items.length ? 'degraded' : 'permission_denied')
-      : (otherWarnings.length ? 'degraded' : 'ready');
-    const appliedSources = asArray(context.migration?.applied);
     return {
       items,
-      source: appliedSources.includes('notebook_markdown') ? 'markdown' : 'fallback_json',
-      sources: uniqueStrings([
-        ...(asArray(snapshot?.notebookEntries).length ? ['request_snapshot'] : []),
-        ...(Number(context.liveNotebookBridge?.entryCount) > 0 ? ['live_notebook_bridge'] : []),
-        ...(context.loadedDataFile ? ['data_file'] : []),
-        ...(appliedSources.includes('notebook_sidecar') ? ['notebook_sidecar'] : []),
-        ...(appliedSources.includes('project_root_storage') ? ['project_storage'] : []),
-        ...(appliedSources.includes('workflow_root_storage') ? ['workflow_storage'] : []),
-        ...(appliedSources.includes('notebook_markdown') ? ['notebook_markdown'] : [])
-      ], 10),
-      candidateCount: asArray(context.hydratedSnapshot?.notebookEntries).length,
-      access: {
-        status: accessStatus,
-        complete: accessStatus === 'ready',
-        retryable: permissionWarnings.length > 0,
-        warning_codes: [
-          ...(permissionWarnings.length ? ['storage_permission_denied'] : []),
-          ...(otherWarnings.length ? ['storage_read_warning'] : [])
-        ],
-        warnings: [
-          ...(permissionWarnings.length ? ['Hikari could not read part of the configured notebook storage.'] : []),
-          ...(otherWarnings.length ? ['One or more notebook storage sources could not be read.'] : [])
-        ],
-        user_action: permissionWarnings.length
-          ? 'Grant Hikari access to the configured storage folder, or choose that folder again in Hikari Settings, then retry the lookup.'
-          : ''
-      }
+      ...buildNotebookLookupCoverage(context, snapshot, items.length)
     };
   }
 
@@ -370,6 +344,7 @@ function createAgentNotebookLookupRuntime(deps = {}) {
   return {
     normalizeNotebookItem,
     searchNotebookEntries,
+    executeList: createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem, filterNotebookItems }),
     execute
   };
 }

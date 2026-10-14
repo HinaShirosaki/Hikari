@@ -183,6 +183,8 @@ const allowedSequencePrefixes = [
   'src/main/storage/'
 ];
 const allowedSequenceFiles = new Set([
+  // Primer records cross the renderer cache / durable-storage boundary.
+  'src/shared/primer-library.mjs',
   'src/renderer/module-manifests/sequence-viewer.js',
   // Tool Box owns these DOM panels; their pure calculations remain in Sequence Viewer.
   'src/renderer/modules/tool-box/oligo-tool.js',

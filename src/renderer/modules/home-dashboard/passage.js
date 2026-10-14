@@ -329,7 +329,7 @@ export function initPassageWidget({
     if (!passageRows.rows.length) {
       summary.textContent = '';
       summary.hidden = true;
-      list.innerHTML = '<p class="home-empty-note">No cell lines tracked yet. Use + to get a reminder when one needs splitting.</p>';
+      list.innerHTML = '';
       panelList.innerHTML = '';
       return;
     }

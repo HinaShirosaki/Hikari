@@ -96,7 +96,7 @@
 }
 
 .gel-cell-table-dialog.app-dialog-surface {
-  --app-dialog-width: 900px;
+  --app-dialog-width: 540px;
   --app-dialog-max-height: calc(100% - 36px);
   --app-dialog-padding: var(--space-18);
   --app-dialog-gap: var(--space-14);
@@ -478,6 +478,7 @@
 }
 
 #gel-form .gel-record-btn {
+  position: relative;
   display: inline-flex;
   flex: 0 0 2.25rem;
   align-items: center;
@@ -491,6 +492,52 @@
   font-size: 0.75rem;
   text-align: center;
   white-space: nowrap;
+}
+
+/* Keep captions above the bottom actions, inside the clipped setup rail.
+ * aria-label also follows the Save/Export busy states. */
+#gel-form .gel-record-btn::after {
+  content: attr(aria-label);
+  position: absolute;
+  z-index: 3200;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 180px;
+  padding: var(--space-4) var(--space-8);
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 6px 16px var(--theme-shadow-color);
+  color: var(--theme-text-strong);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+#gel-form .gel-record-btn:hover::after,
+#gel-form .gel-record-btn:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+#gel-form .gel-record-btn:first-child::after {
+  left: 0;
+  transform: none;
+}
+
+#gel-form .gel-record-btn:last-child::after {
+  right: 0;
+  left: auto;
+  transform: none;
 }
 
 #gel-form .gel-record-btn svg {
@@ -1341,14 +1388,8 @@ body.theme-night .gel-lane-table-input:focus {
   flex-wrap: wrap;
 }
 
-.gel-cell-snr-label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
-}
-
-.gel-cell-snr-label input {
-  width: 64px;
+#gel-cell-table-copy-btn {
+  margin-left: auto;
 }
 
 .gel-cell-table-host {
@@ -1375,20 +1416,6 @@ body.theme-night .gel-lane-table-input:focus {
   font-variant-numeric: tabular-nums;
 }
 
-.gel-cell-table tbody tr.is-has-band td.gel-cell-intensity {
-  color: var(--gel-band-positive);
+.gel-cell-table td.gel-cell-intensity {
   font-weight: 600;
-}
-
-.gel-cell-table tbody tr.is-empty td {
-  color: var(--theme-text-muted);
-}
-
-.gel-cell-table tbody tr.is-has-band td.gel-cell-hasband {
-  color: var(--gel-band-positive);
-  font-weight: 600;
-}
-
-.gel-cell-table tbody tr.is-empty td.gel-cell-hasband {
-  color: var(--theme-text-muted);
 }

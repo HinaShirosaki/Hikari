@@ -121,6 +121,8 @@ function createAgentRuntimeSupport(deps = {}) {
 
   function normalizeAgentSnapshot(rawSnapshot) {
     const snapshot = rawSnapshot && typeof rawSnapshot === 'object' ? rawSnapshot : {};
+    const notebookBridge = snapshot.notebook_lookup_bridge || snapshot.notebookLookupBridge;
+    const bridgeEntries = asArray(notebookBridge?.entries);
     const experimentData = snapshot.experimentData && typeof snapshot.experimentData === 'object'
       ? snapshot.experimentData
       : {};
@@ -215,6 +217,14 @@ function createAgentRuntimeSupport(deps = {}) {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 500),
       notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
+      ...(notebookBridge ? {
+        notebook_lookup_bridge: {
+          complete: notebookBridge.complete === true && bridgeEntries.length <= 60,
+          entries: bridgeEntries.slice(-60)
+        }
+      } : (asArray(snapshot.notebookEntries).length > 180 ? {
+        notebook_lookup_bridge: { complete: false, entries: [] }
+      } : {})),
       workflows: asArray(snapshot.workflows).slice(0, 120),
       assays,
       gelAnalyses,

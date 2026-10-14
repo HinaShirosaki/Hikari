@@ -8,7 +8,7 @@ function buildPreview(toolName, result) {
   if (toolName === 'inventory-lookup') {
     return cleanText(source.items?.[0]?.name || source.items?.[0]?.id);
   }
-  if (toolName === 'notebook-lookup') {
+  if (toolName === 'notebook-lookup' || toolName === 'notebook-list') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.protocolName || source.items?.[0]?.id);
   }
   if (toolName === 'protocol-matching') {

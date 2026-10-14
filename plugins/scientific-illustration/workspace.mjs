@@ -25,13 +25,12 @@ async function signature(value) {
 }
 const failure = (status, error) => ({ ok: false, status, error });
 
-export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange = () => {}, onAssetsChange = () => {}, onViewChange = () => {}, onHistoryChange = () => {}, onStatus = () => {} }) {
+export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange = () => {}, onAssetsChange = () => {}, onHistoryChange = () => {}, onStatus = () => {} }) {
   let documentState;
   let ready;
   let tail = Promise.resolve();
   let library;
   let assetLibrary;
-  let scratchVisible = false;
   const inspections = createInspectionTracker();
   const assetRuns = new Map();
   function assetRun(runId) {
@@ -43,7 +42,6 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     }
     return run;
   }
-  const readView = () => ({ scratch_visible: scratchVisible });
   const undoStack = [], redoStack = [];
   const enqueue = work => {
     const result = tail.then(() => ready).then(work);
@@ -55,7 +53,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     onHistoryChange(history);
     void hikari.call('app.setHistory', history).catch(() => {});
   }
-  function publish() { onChange(documentState, library.activeId); onLibraryChange(readLibrary(library)); onViewChange(readView()); reportHistory(); }
+  function publish() { onChange(documentState, library.activeId); onLibraryChange(readLibrary(library)); reportHistory(); }
   async function writeJson(path, value) {
     const dataBase64 = encodeText(JSON.stringify(value));
     if (dataBase64.length > 24000000) throw new Error('The illustration exceeds the file storage size limit. Use smaller assets.');
@@ -63,6 +61,22 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   }
   async function readJson(path) {
     return JSON.parse(decodeText((await hikari.call('files.read', { path })).dataBase64));
+  }
+  // The host drops the storage blob on a root switch or a fresh profile, so a
+  // missing pointer is not a first run. A file that exists but does not parse
+  // still throws: overwriting it would orphan every scene it indexes.
+  async function readExistingJson(path) {
+    let dataBase64;
+    try { ({ dataBase64 } = await hikari.call('files.read', { path })); } catch { return null; }
+    return JSON.parse(decodeText(dataBase64));
+  }
+  async function loadScene(path) {
+    const raw = await readJson(path);
+    const migrated = Boolean(raw.canvases?.scratch || raw.objects?.some(object => object.canvas === 'scratch')
+      || raw.groups?.some(group => group.canvas === 'scratch'));
+    const document = normalizeDocument(raw, validateSvg);
+    if (migrated) { document.revision = crypto.randomUUID(); document.receipts = []; }
+    return { document, migrated };
   }
   async function loadAsset(id) {
     if (!assetLibrary.assets.some(asset => asset.id === id)) throw new Error('This reusable asset does not exist. Refresh Assets.');
@@ -225,23 +239,23 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (args.action !== 'create' && !original) return failure('not_found', 'This illustration does not exist.');
     if (args.action !== 'open' && library.illustrations.length >= 100) return failure('limit', 'The library holds at most 100 illustrations.');
     const id = args.action === 'open' ? original.id : crypto.randomUUID();
-    const next = args.action === 'create' ? createDocument() : normalizeDocument(await readJson(original.path), validateSvg);
+    const loaded = args.action === 'create' ? { document: createDocument(), migrated: false } : await loadScene(original.path);
+    const next = loaded.document;
     if (args.action !== 'open') {
       next.title = args.title?.trim() || (args.action === 'duplicate' ? `${next.title} copy`.slice(0, 200) : 'Untitled figure');
       next.revision = crypto.randomUUID(); next.receipts = [];
       if (args.action === 'create' && args.source !== undefined) next.source = normalizeSourceContext(args.source);
     }
-    const entry = { id, title: next.title, path: `illustrations/${id}/scene-a.json`, updatedAt: new Date().toISOString() };
+    const entry = { id, title: next.title, path: args.action === 'open' ? (loaded.migrated ? nextScenePath(original) : original.path) : `illustrations/${id}/scene-a.json`, updatedAt: new Date().toISOString() };
     const nextLibrary = { ...library, revision: crypto.randomUUID(), activeId: id,
-      illustrations: args.action === 'open' ? library.illustrations : [...library.illustrations, entry],
+      illustrations: args.action === 'open' ? library.illustrations.map(item => loaded.migrated && item.id === id ? entry : item) : [...library.illustrations, entry],
       receipts: [...library.receipts, { id: args.request_id, hash, illustrationId: id }].slice(-64) };
     if (Date.now() >= deadline) return failure('expired', 'The request expired before selection.');
     await hikari.call('app.setUnsaved', { unsaved: true });
     try {
-      if (args.action !== 'open') await writeJson(entry.path, next);
+      if (args.action !== 'open' || loaded.migrated) await writeJson(entry.path, next);
       await writeJson(LIBRARY_PATH, nextLibrary);
       library = nextLibrary; documentState = next; undoStack.length = 0; redoStack.length = 0;
-      scratchVisible = false;
       publish(); onStatus('');
       return { ok: true, status: args.action === 'open' ? 'opened' : 'created', illustration_id: id, ...readLibrary(library), ...readDocument(documentState) };
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
@@ -298,19 +312,15 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
           const result = inspections.inspect(library.activeId, documentState.revision, inspectionRunId, args);
           return { ...result, auto_saved_assets: autoSavedAssets, ...readAssetLibrary(assetLibrary), ...readLibrary(library) };
         }
-        if (args.action === 'scratch') {
-          scratchVisible = args.visible; onViewChange(readView());
-          return { ok: true, status: 'view_updated', illustration_id: library.activeId, revision: documentState.revision, ...readView() };
-        }
         if (args.action === 'apply') return await apply(args, deadline, importedIds, { agentRequest, inspectionRunId, importedSources });
         if (args.action === 'render') {
           const canvases = !args.canvas || args.canvas === 'both' ? CANVASES : [args.canvas];
           const previews = await Promise.all(canvases.map(key => renderPreview(documentState, key)));
-          if (Date.now() >= deadline) return failure('expired', 'The render expired. Render both canvases again before inspecting.');
-          return { ok: true, status: 'rendered', illustration_id: library.activeId, revision: documentState.revision, ...readView(), previews,
+          if (Date.now() >= deadline) return failure('expired', 'The render expired. Render the canvas again before inspecting.');
+          return { ok: true, status: 'rendered', illustration_id: library.activeId, revision: documentState.revision, previews,
             inspection: inspections.rendered(library.activeId, documentState.revision, inspectionRunId, canvases) };
         }
-        return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary), ...readView(),
+        return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary),
           inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId), asset_reuse: { required: true, checked: run.checked },
           agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
@@ -328,31 +338,42 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   }
   ready = (async () => {
     const { value: stored } = await hikari.call('storage.get');
-    if (stored?.version === 2 && stored.libraryPath) {
-      if (stored.libraryPath !== LIBRARY_PATH) throw new Error('Invalid library path.');
-      library = normalizeLibrary(await readJson(LIBRARY_PATH));
-      documentState = normalizeDocument(await readJson(library.illustrations.find(item => item.id === library.activeId).path), validateSvg);
+    const indexed = stored?.version === 2 && stored.libraryPath;
+    const foundLibrary = indexed ? null : await readExistingJson(LIBRARY_PATH);
+    if (indexed || foundLibrary) {
+      if (indexed && stored.libraryPath !== LIBRARY_PATH) throw new Error('Invalid library path.');
+      library = normalizeLibrary(foundLibrary || await readJson(LIBRARY_PATH));
+      const entry = library.illustrations.find(item => item.id === library.activeId), loaded = await loadScene(entry.path);
+      documentState = loaded.document;
+      if (loaded.migrated) {
+        const path = nextScenePath(entry), nextLibrary = { ...library, revision: crypto.randomUUID(), illustrations: library.illustrations.map(item => item.id === entry.id
+          ? { ...item, path, updatedAt: new Date().toISOString() } : item) };
+        await writeJson(path, documentState); await writeJson(LIBRARY_PATH, nextLibrary);
+        library = nextLibrary;
+      }
     } else {
       const id = crypto.randomUUID();
-      documentState = stored?.workspacePath ? normalizeDocument(await readJson(stored.workspacePath), validateSvg) : createDocument();
-      const path = stored?.workspacePath || `illustrations/${id}/scene-a.json`;
+      const loaded = stored?.workspacePath ? await loadScene(stored.workspacePath) : { document: createDocument(), migrated: false };
+      documentState = loaded.document;
+      const path = stored?.workspacePath && !loaded.migrated ? stored.workspacePath : `illustrations/${id}/scene-a.json`;
       library = normalizeLibrary({ version: 1, revision: crypto.randomUUID(), activeId: id, receipts: [],
         illustrations: [{ id, title: documentState.title, path, updatedAt: new Date().toISOString() }] });
-      if (!stored?.workspacePath) await writeJson(path, documentState);
+      if (!stored?.workspacePath || loaded.migrated) await writeJson(path, documentState);
       await writeJson(LIBRARY_PATH, library);
     }
-    if (stored?.assetsPath) {
-      if (stored.assetsPath !== ASSETS_PATH) throw new Error('Invalid reusable asset library path.');
-      assetLibrary = normalizeAssetLibrary(await readJson(ASSETS_PATH));
+    const foundAssets = stored?.assetsPath ? null : await readExistingJson(ASSETS_PATH);
+    if (stored?.assetsPath || foundAssets) {
+      if (stored?.assetsPath && stored.assetsPath !== ASSETS_PATH) throw new Error('Invalid reusable asset library path.');
+      assetLibrary = normalizeAssetLibrary(foundAssets || await readJson(ASSETS_PATH));
     } else {
       assetLibrary = createAssetLibrary(); await writeJson(ASSETS_PATH, assetLibrary);
-      await hikari.call('storage.set', { value: { version: 2, libraryPath: LIBRARY_PATH, assetsPath: ASSETS_PATH } });
     }
+    if (!stored?.assetsPath) await hikari.call('storage.set', { value: { version: 2, libraryPath: LIBRARY_PATH, assetsPath: ASSETS_PATH } });
     onAssetsChange(readAssetLibrary(assetLibrary));
     publish(); onStatus('');
   })();
   ready.catch(error => onStatus(`Could not open illustration: ${error.message}`));
-  return { ready, request, history, getDocument: () => documentState, getLibrary: () => library && readLibrary(library), getAssets: () => assetLibrary && readAssetLibrary(assetLibrary), getView: readView,
+  return { ready, request, history, getDocument: () => documentState, getLibrary: () => library && readLibrary(library), getAssets: () => assetLibrary && readAssetLibrary(assetLibrary),
     async paste(snapshot, { illustrationId, canvas, offset = 15 }) {
       // Capture the clipboard before joining the shared persistence queue.
       const copied = structuredClone(snapshot);

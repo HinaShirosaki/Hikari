@@ -1,4 +1,4 @@
-import { decodeImageFile, decodeImageSource, isTiffFile, normalizeDecodedImage } from './image-io.js';
+import { cropGray, decodeImageFile, decodeImageSource, isTiffFile, normalizeDecodedImage } from './image-io.js';
 import { normalizeEnhancementSettings, preprocessWithJs } from '../analysis/image-processing.js';
 import { createEmptyManualOverrides } from '../shared.js';
 
@@ -153,14 +153,19 @@ export function createImageController({ runtime, elements, deps }) {
     await loadImageFile(file);
   }
 
-  function normalizeCurrentCanvasCrop(croppedCanvas) {
+  // The canvas crop is 8-bit; the grey image is cropped from the current float
+  // one with the same geometry so a 16-bit TIFF keeps its precision.
+  function normalizeCurrentCanvasCrop(croppedCanvas, cropData) {
     const context = croppedCanvas.getContext('2d', { willReadFrequently: true });
     const croppedData = context.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
+    const { gray, width, height } = runtime.currentImage;
     return normalizeDecodedImage({
       name: runtime.currentImage.name,
       width: croppedCanvas.width,
       height: croppedCanvas.height,
       imageData: croppedData,
+      gray: cropGray(gray, width, height, cropData, croppedCanvas.width, croppedCanvas.height),
+      grayBitDepth: runtime.currentImage.grayBitDepth,
       tiffPageIndex: runtime.currentImage.tiffPageIndex,
       tiffPageCount: runtime.currentImage.tiffPageCount
     });

@@ -194,7 +194,7 @@ export function initIncubationWidget({
     if (!locations.length) {
       summary.textContent = '';
       summary.hidden = true;
-      list.innerHTML = '<p class="home-empty-note">No locations yet. Add your shaker or incubator to get a reminder the next morning.</p>';
+      list.innerHTML = '';
       panelList.innerHTML = '';
       return;
     }

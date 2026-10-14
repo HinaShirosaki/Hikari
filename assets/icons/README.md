@@ -27,12 +27,3 @@ SVG paths are unchanged; root attributes are normalized to the app's
 
 The folder, update, and cloud glyphs (`folder.svg`, `update.svg`, `cloud-drive.svg`) and the remaining PNG/SVG marks
 (`hikari*.svg`, `dolphin-dna-icon*.png`) are Hikari's own artwork.
-
-The Cloud drives provider marks are bundled locally and keep their original colors:
-
-| Asset | Source |
-| --- | --- |
-| google-drive.png | [Google Drive product logo](https://www.gstatic.com/images/branding/productlogos/drive_2026/v2/web-64dp/logo_drive_2026_color_2x_web_64dp.png), linked by [Google's branding guide](https://developers.google.com/workspace/drive/api/guides/branding) |
-| dropbox.svg | Unchanged glyph paths from [Dropbox's brand logo page](https://brand.dropbox.com/logo), using Dropbox blue |
-
-These marks belong to Google and Dropbox, respectively, and are not covered by the Lucide license.

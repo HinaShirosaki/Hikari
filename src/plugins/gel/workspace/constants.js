@@ -1,6 +1,8 @@
 export const MAX_IMAGE_DIMENSION = 1400;
 export const DEFAULT_LADDER_STANDARDS = [250, 150, 100, 75, 50, 37, 25, 20, 15, 10];
 export const LOCAL_UTIF_URL = './vendor/utif/UTIF.js';
+// Full-precision copy of a 16-bit gel's source.png, saved in the same folder.
+export const SOURCE_GRAY16_FILE_NAME = 'source-16bit.tif';
 
 export const DEFAULT_LADDER_PRESET_ID = 'biorad-precision-plus';
 

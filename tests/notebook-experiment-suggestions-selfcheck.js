@@ -44,7 +44,7 @@ async function run() {
       assert.equal(input.enableWebSearch, false);
       assert.match(input.prompt, /Do not download/);
       const tools = getDirectMcpToolDefinitions(requestContext).map(tool => tool.name);
-      assert.deepEqual(tools.sort(), ['chemical_lookup', 'inventory_lookup', 'literature_search', 'notebook_lookup', 'notebook_suggest', 'protocol_lookup']);
+      assert.deepEqual(tools.sort(), ['chemical_lookup', 'inventory_lookup', 'literature_search', 'notebook_list', 'notebook_lookup', 'notebook_suggest', 'protocol_lookup']);
       for (const blocked of ['paper_download', 'notebook_draft', 'protocol_generation', 'ask_user', 'sequence_feature_edit']) {
         assert.equal((await gateway.callGatewayTool(blocked, {}, requestContext)).status, 'rejected');
       }

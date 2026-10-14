@@ -21,8 +21,7 @@ API; older hosts still support drawing from the plugin's own composer.
 
 The **Illustrations** left rail contains saved figures. Use **+** to create
 one, the title field to rename it, and **Figure options → Duplicate illustration** to copy
-the entire figure. Search filters titles; selecting a row opens its main and
-scratch contents. Each illustration saves independently. Your existing figure
+the entire figure. Search filters titles; selecting a row opens its canvas. Each illustration saves independently. Your existing figure
 is added to this library automatically. The canvas uses the full editing width
 when a figure opens. The **Layers / Assets** buttons in the right toolbar open
 either panel in the shared rail beside it. Click the active button again or
@@ -40,14 +39,11 @@ On older Hikari builds the toggle stays hidden until this API is available.
 An existing installation without `layout` permission needs the folder re-added
 to grant it.
 
-The main canvas defaults to 1200 × 800; scratch defaults to 500 × 350. Both
-are editable SVG scenes with independent vector, raster, and text objects.
-Scratch is hidden by default. The agent summons it only when useful for complex
-components; you can also use **Scratch** in the right toolbar.
-Use **Close** to hide it. Closing preserves its objects, and the agent can read,
-edit, and render both canvases while it is hidden. Opening another illustration
-or reloading starts with scratch hidden again. Selecting a scratch layer or
-copying a component to scratch opens it for manual work.
+The canvas defaults to 1200 × 800. It is an editable SVG scene with independent
+vector, raster, and text objects. Older figures move their scratch components
+and groups to this canvas with their positions, dimensions, rotation, artwork
+and labels intact. The migration saves a new scene file before committing the
+library index, leaving the original file recoverable.
 Select objects on a canvas or in the layer list; drag to move and use the
 eight handles to resize. Vector and raster artwork stretches with the box:
 corners adjust both dimensions, edge midpoints adjust one dimension.
@@ -57,11 +53,18 @@ The font-size control remains independently editable.
 Text selection outlines and click targets fit the rendered label, so blank
 space in its layout box does not interfere with nearby components. Alignment,
 anchoring, and saved placement remain unchanged.
+The toolbar's **Align and distribute** menu aligns two or more selected items
+to the left, right, top, bottom, horizontal center, or vertical center of their
+combined visible bounds. With at least three items, distribute horizontally or
+vertically to give them equal gaps while keeping the outer items fixed.
+Complete groups count as one item; individually selected group members can be
+arranged independently. Alignment uses rotated bounds and the measured text
+range, and only changes position. Each action saves one undoable edit.
 The opposite corner or edge midpoint stays fixed, including rotated
 objects. Arrow keys nudge, Shift nudges by ten pixels; Escape clears selection.
 Drag the round handle connected to the selection frame to rotate around its
 center. It works on artwork, text, groups, and multiple selected components in
-both canvases. Hold Shift to snap to 15° increments. Escape cancels rotation
+the canvas. Hold Shift to snap to 15° increments. Escape cancels rotation
 without changing the figure; releasing the pointer saves one undoable edit.
 Text rotates around its visible bounds while keeping its font and layout size.
 The handle keeps a fixed screen size and moves to an available edge when needed.
@@ -69,7 +72,7 @@ Focus the rotation handle and use arrow keys for 1° steps, or Shift for 15° st
 Enter or Space rotates 15° clockwise.
 Use **Ctrl+C / Ctrl+V** (or **⌘C / ⌘V** on macOS) to copy and paste selected
 components, multiple selections, or complete groups. Paste targets the active
-canvas, including Scratch or another illustration, and selects the new copies.
+canvas or another illustration, and selects the new copies.
 The copied snapshot keeps the original artwork, independent text, styling,
 rotations, layer order, and full group membership even if the source is later
 edited or deleted. Copies get fresh IDs and a 15-pixel cascading offset; each
@@ -78,10 +81,10 @@ Native clipboard events carry editable Figura data. When a browser clipboard
 command is unavailable, the editor keeps a private copy buffer until reload.
 Use **− / +** to zoom and **Fit** to show the whole canvas. Scroll to pan when
 zoomed, or hold **⌘ / Ctrl** while scrolling to zoom at the pointer. Zoom applies
-to the active canvas; main and scratch keep separate views. Saved geometry,
+to the canvas. Saved geometry,
 exports and agent readbacks keep their original canvas coordinates. Handles
 retain their screen size at every zoom. Layer rows show component previews and a visibility button
-on hover or keyboard focus. Main and scratch layers are grouped separately.
+on hover or keyboard focus.
 Use **Add layer (+)** in the right toolbar for text labels, vector components,
 or imported artwork.
 
@@ -90,7 +93,7 @@ Select & move combines rectangle selection,
 movement and resizing in one tool: drag empty space to select an area, drag a
 component to move it, and drag a resize handle to adjust its size. Dragging one
 member of a selection moves all its selected components together.
-Drag to outline components on the main or scratch canvas; a freehand path
+Drag to outline components on the canvas; a freehand path
 closes automatically on release. Components whose boxes touch the region are
 selected, including rotated components. Hidden standalone layers are excluded.
 Groups select together; hold Alt to select only the touched members. Each selected
@@ -117,14 +120,14 @@ composer beneath the canvas. Click the arrow or press **⌘Enter / Ctrl+Enter** 
 send it to Codex. Once either canvas contains a component, use the agent rail's
 input for changes; the bottom composer stays hidden even when chat is folded.
 Opening the agent rail also hides the starting composer. Folding chat restores
-it and any unsent canvas draft only while both canvases are empty. Complexity remains in the top toolbar
+it and any unsent canvas draft only while the canvas is empty. Complexity remains in the top toolbar
 throughout. The canvas remains
 visible while scrolling a long property panel. Use Hikari's system Undo and Redo
 buttons; they enable only when the focused Figura editor has history available,
 including edits made from the shared toolbar. Figura's toolbar has no duplicate
 history icons. ⌘/Ctrl+Z undoes, ⌘/Ctrl+Shift+Z or Ctrl+Y redoes. Text fields keep
 their native text undo. The top toolbar holds the compact title field,
-active canvas and size controls; zoom, Fit and Scratch are in the right toolbar.
+active canvas and size controls; zoom and Fit are in the right toolbar.
 In narrow workspaces, canvas controls wrap within the same toolbar.
 The canvas-size dropdown offers Landscape,
 Portrait, Square, Widescreen and Small presets. Select **Custom…** for exact
@@ -142,13 +145,11 @@ The toolbar offers three **Complexity** levels, saved per illustration:
 
 Codex forms an illustration brief using the selected level before drawing.
 All levels preserve requested content and scientific accuracy, prefer SVG,
-keep labels separate and use scratch only when needed. Changing the level
+keep labels separate and use editable groups for complex components. Changing the level
 guides the next request; it does not redraw existing artwork automatically.
 Existing figures default to Standard. The canvas surround has no separate fill.
 
-Use scratch for complex components, then copy individual objects or all its
-objects to main. Copied objects remain independent and the scratch originals
-are retained. Layer ordering, visibility, duplication, deletion, undo/redo,
+Build complex components as editable groups on the canvas, or save them as reusable assets. Layer ordering, visibility, duplication, deletion, undo/redo,
 canvas sizes and background colors are available. **Export → SVG** keeps artwork
 and text in separate SVG groups; **Export → PNG** exports the assembled main canvas.
 **Export → PowerPoint** creates one slide matching the main canvas. Every visible
@@ -156,7 +157,7 @@ component remains a separate object you can move, resize, rotate, or delete in
 PowerPoint. Labels are editable text boxes; SVG artwork remains vector graphics,
 with a PNG fallback for older readers, and raster artwork remains individual
 images. WebP images are converted to PNG. Canvas groups export as independent
-members in their original layer order. Scratch and hidden layers are omitted.
+members in their original layer order. Hidden layers are omitted.
 PowerPoint uses fonts installed on the computer opening the file. Editing paths
 inside an SVG component requires PowerPoint's **Convert to Shape** feature;
 imported raster pixels remain images.
@@ -175,8 +176,7 @@ the box rather than leaving proportional artwork inside a changed viewport.
 This source change is saved with the geometry, visible to Codex and included
 in previews and exports; undo restores both. Agents can request free stretching
 by using `preserveAspectRatio="none"` in their SVG source. Coordinates use canvas units at the unrotated box's
-top-left, with clockwise rotation about its center. Scratch transfers keep
-these coordinates and dimensions. Logical object IDs stay stable; rendered
+top-left, with clockwise rotation about its center. Logical object IDs stay stable; rendered
 IDs are isolated from other components, layer previews and editor controls.
 
 Artwork colors do not inherit the editor's day/night theme. SVG `currentColor`
@@ -247,9 +247,8 @@ per asset and 64 megapixels decoded.
 There is no per-request asset-count or combined-import-byte quota, or plugin
 quota on native image-generation calls. Saved scene/file size limits remain.
 
-Before completing a drawing run, Codex must render both canvases and review
-placement, clipping, labels, artwork and scientific relationships. Scratch
-stays hidden while being rendered. The agent records its observations through
+Before completing a drawing run, Codex must render the canvas and review
+placement, clipping, labels, artwork and scientific relationships. The agent records its observations through
 `inspect`; a render alone is insufficient. Any subsequent edit, undo/redo,
 reload or new run requires another inspection. Hikari gives a skipped
 inspection one automatic follow-up, then reports the run as incomplete if
@@ -277,7 +276,7 @@ Use **Assets → Import asset…** to save an SVG, PNG, JPEG, or WebP file direc
 to the library. Give it a name in the preview. Raster imports require the same
 text-free review as canvas artwork; SVG keeps its editable vector form.
 
-Place a raster asset on Main or Scratch, select the image and click **Crop selected image** in the
+Place a raster asset on the canvas, select the image and click **Crop selected image** in the
 toolbar. Drag the crop handles directly in the canvas or enter pixel bounds,
 then choose **Apply crop**. No crop dialog opens. **Reset** restores the full source
 crop. Cropping preserves transparency and saves embedded PNG bytes. It keeps
@@ -356,18 +355,15 @@ and drawing instructions. It operates on the same objects as the user interface.
 | `open` | Open `illustration_id` from the list. Requires `expected_library_revision` and unique `request_id`. |
 | `duplicate` | Copy and open `illustration_id`, optionally with `title`. Requires `expected_library_revision` and unique `request_id`. |
 | `read` | Current revision, both canvas dimensions/backgrounds, all object properties and SVG sources. Raster bytes are omitted unless `include_assets:true`. |
-| `render` | Native MCP PNG images of `main`, `scratch`, or `both` (default), bounded to 1600 pixels per dimension. This works while the plugin's view is inactive. |
-| `inspect` | Record observations after reviewing both rendered canvases. Requires `expected_revision`, the render's `inspection.inspection_id`, and `review` with nonempty `layout`, `labels`, `artwork`, and `science` strings. |
+| `render` | A native MCP PNG image of `main` (default), bounded to 1600 pixels per dimension. This works while the plugin's view is inactive. |
+| `inspect` | Record observations after reviewing the rendered canvas. Requires `expected_revision`, the render's `inspection.inspection_id`, and `review` with nonempty `layout`, `labels`, `artwork`, and `science` strings. |
 | `inspection_status` | Whether the current revision has a completed review in this agent run. Does not return an inspection receipt. |
-| `scratch` | Summon with `visible:true`, close with `visible:false`. Include `illustration_id` to pin the target. View-only; no revision or request ID required. |
-| `apply` | An atomic batch of 1–100 operations, acknowledged after durable file persistence. Requires `expected_revision` and unique `request_id`. |
+| `apply` | An atomic batch of 1–200 operations, acknowledged after durable file persistence. Requires `expected_revision` and unique `request_id`. |
 
-Read/render/apply/scratch/inspect/inspection_status act on the open illustration. Include its `illustration_id`
+Read/render/apply/inspect/inspection_status act on the open illustration. Include its `illustration_id`
 to pin the target; selection changes return `illustration_changed` without
 editing another figure. List and reopen the intended illustration to continue.
-Read and render report `scratch_visible`; hiding never deletes artwork or
-prevents canvas readback. Scratch visibility is temporary and resets on
-selection/reload.
+
 
 `read` returns `imageGenerationPercent` (`null` for Automatic) and matching
 renderer instructions. To change it when requested by the user, apply
@@ -383,7 +379,7 @@ has one selection frame with eight handles. Drag or use arrow keys to move
 it; resizing or changing its width/height scales the entire group
 proportionally, including text fonts. Text keeps its fixed ratio. Select a
 child in Layers, or Alt-click it on the canvas, to edit it independently.
-Group membership survives save/reload, undo/redo and copying between canvases.
+Group membership survives save/reload, undo/redo and copying components.
 Grouping and ungrouping do not change placement or paint order. SVG exports
 retain separate object groups and include membership metadata; there is no
 extra nested transform that could move the artwork.
@@ -431,15 +427,15 @@ Example after reading the revision:
   "expected_revision": "revision-from-read",
   "request_id": "unique-request-id",
   "operations": [
-    {"op":"upsert","object":{"id":"cell","name":"Cell","type":"vector","canvas":"scratch","x":20,"y":20,"width":180,"height":140,"svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 140\"><ellipse cx=\"90\" cy=\"70\" rx=\"85\" ry=\"65\" fill=\"#dce9e0\" stroke=\"#587a64\" stroke-width=\"3\"/></svg>"}},
+    {"op":"upsert","object":{"id":"cell","name":"Cell","type":"vector","canvas":"main","x":20,"y":20,"width":180,"height":140,"svg":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 180 140\"><ellipse cx=\"90\" cy=\"70\" rx=\"85\" ry=\"65\" fill=\"#dce9e0\" stroke=\"#587a64\" stroke-width=\"3\"/></svg>"}},
     {"op":"upsert","object":{"id":"cell-label","type":"text","text":"Cell","canvas":"main","x":180,"y":300,"width":180,"height":50,"fontFamily":"Arial","fontSize":24,"fontWeight":600,"color":"#27352d","align":"middle","anchor":"middle"}}
   ]
   }
 }
 ```
 
-Read again before the next edit. After composing, render both canvases,
-visually review the images and call `inspect`. Revision conflicts require a fresh read and
+Read again before the next edit. After composing, render the canvas,
+visually review the image and call `inspect`. Revision conflicts require a fresh read and
 reconciliation. Retrying identical arguments with the same request ID does not
 apply the edit twice, including after undo or reload (last 64 request IDs).
 

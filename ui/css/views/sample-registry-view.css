@@ -601,6 +601,15 @@
   gap: 0;
 }
 
+/* The renderer marks outer edges using each box's actual dimensions. */
+.well-grid-box81 .well-last-column {
+  border-right: 0;
+}
+
+.well-grid-box81 .well-last-row {
+  border-bottom: 0;
+}
+
 .well-grid-plate96 {
   box-sizing: border-box;
   position: absolute;

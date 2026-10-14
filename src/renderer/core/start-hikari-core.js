@@ -181,11 +181,8 @@ export function startHikariCore({
   let undoService = null;
   let navigationShell = null;
   let saveError = '';
-  let cloudSyncBusy = false;
-  let cloudSyncMutations = 0;
 
   function persistStateNow() {
-    if (cloudSyncBusy) { cloudSyncMutations++; return; }
     normalizeStateStoragePaths(state);
     persistState(state);
     if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
@@ -231,7 +228,7 @@ export function startHikariCore({
     state,
     persistState: persistStateNow,
     onRestore: renderRestoredState,
-    beforeRestore: change => !cloudSyncBusy && moduleRuntime?.beforeHistoryRestore(change) !== false,
+    beforeRestore: change => moduleRuntime?.beforeHistoryRestore(change) !== false,
     getActiveOwner: () => moduleRuntime?.getHistoryOwner() || '',
     documentObject,
     windowObject,
@@ -288,25 +285,6 @@ export function startHikariCore({
       if (result.ok || result.refreshed) undoService.reset();
       renderAll();
       return result;
-    },
-    runCloudSync: async (work) => {
-      if (cloudSyncBusy) throw new Error('Workspace sync is already in progress.');
-      const sources = ['protocol', 'assay', 'biologyNotebook']
-        .map(key => moduleRegistry.get(key))
-        .concat(pluginBridge.getUnsavedSources().map(source => source.moduleApi));
-      if (sources.some(source => source?.hasUnsavedChanges?.())) {
-        throw new Error('Save your open editor or plugin changes before syncing the workspace.');
-      }
-      cloudSyncBusy = true;
-      cloudSyncMutations = 0;
-      try {
-        const saved = await syncMarkdownRecordState(windowObject.hikariApi, state);
-        if (!saved?.ok || saved.sidecarPaths?.skippedRecords?.length) throw new Error(saved?.error || 'Some workspace records could not be saved. Resolve them before syncing.');
-        return await work({ canApply: () => cloudSyncMutations === 0 });
-      } finally {
-        cloudSyncBusy = false;
-        persistState(state);
-      }
     }
   });
 

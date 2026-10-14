@@ -14,6 +14,7 @@ const { writeChemicalSqliteBundleIndex } = require('./storage-sql-write');
 const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
+const { writePrimerLibrary } = require('./primer-library-storage');
 const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 const { isPathInside } = require('../lib/path-safety.js');
@@ -292,6 +293,7 @@ async function syncBundleFromSnapshotUnlocked({
     safeSnapshot,
     updatedAt
   );
+  const primerLibraryPath = await writePrimerLibrary(storageRootPath, safeSnapshot, updatedAt);
   for (const [snapshotKey, folders] of Object.entries(RECORD_FOLDERS)) {
     await writeRecordFolders(bundlePaths[folders.rootKey], safeSnapshot[snapshotKey], folders, updatedAt);
   }
@@ -326,6 +328,7 @@ async function syncBundleFromSnapshotUnlocked({
       skippedRecords: [...skippedRecords, ...workflowSync.skippedRecords],
       projectMemoryFilePaths,
       experimentLogPath,
+      primerLibraryPath,
       knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,
       paperMarkdownRootPath: bundlePaths.paperMarkdownRootPath,
       samplesRootPath: bundlePaths.samplesRootPath

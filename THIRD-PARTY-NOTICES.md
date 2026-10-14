@@ -187,12 +187,6 @@ Crossref. Their terms of use apply to those requests.
 
 ## Trademarks
 
-Google Drive and its product logo are trademarks of Google LLC. The Dropbox name
-and glyph are trademarks of Dropbox, Inc. Hikari uses these marks to identify
-the corresponding cloud-drive integrations. See the
-[Google Drive branding guide](https://developers.google.com/workspace/drive/api/guides/branding)
-and [Dropbox developer branding guide](https://docs.dropboxapi.com/dropbox-api/docs/developer-resources/branding-guide).
-
 Product and company names are used only to describe compatibility and are the
 property of their respective owners. In particular: Gibson Assembly® and Q5® are
 registered trademarks of New England Biolabs, Inc.; In-Fusion® is a registered

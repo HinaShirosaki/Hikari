@@ -66,6 +66,7 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
   controllers.vectorBuilder?.bindEvents?.();
   controllers.proteinBuilder?.bindEvents?.();
   controllers.primerOrder?.bindEvents?.();
+  controllers.primerLibrary?.bindEvents?.();
 
   elements.vectorBuilderOpenBtn?.addEventListener('click', (event) => {
     event.preventDefault();

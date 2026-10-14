@@ -322,4 +322,3 @@ export function analyzeGelImage({
 }
 
 export { buildLanesFromManualSegmentation } from './manual-lanes.js';
-export { computeManualBand } from './lane-signal.js';

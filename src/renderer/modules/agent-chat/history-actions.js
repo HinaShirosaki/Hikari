@@ -1,6 +1,7 @@
 import { createNotebookHistoryActions } from './history-notebook-actions.js';
 import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
+import { allowChatImage } from './markdown.js';
 
 function getNotebookAppendFromMessage(message) {
   const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
@@ -117,6 +118,22 @@ export function createHistoryActionController({
   }
 
   async function onHistoryClick(event) {
+    const imageButton = event?.target?.closest?.('[data-agent-load-image]');
+    if (imageButton) {
+      // Inside a Markdown link, the click must load the image, not follow the link.
+      event.preventDefault();
+      const image = imageButton.ownerDocument.createElement('img');
+      Object.assign(image, {
+        className: 'agent-chat-inline-image',
+        src: imageButton.dataset.agentLoadImage,
+        alt: imageButton.dataset.agentImageAlt || '',
+        referrerPolicy: 'no-referrer',
+        decoding: 'async'
+      });
+      allowChatImage(imageButton.dataset.agentLoadImage);
+      imageButton.replaceWith(image);
+      return;
+    }
     const copyButton = event?.target?.closest?.('[data-agent-copy-message]');
     if (copyButton) {
       const text = findMessage(copyButton.dataset.agentCopyMessage)?.text || '';

@@ -177,7 +177,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const usableWidth = (stage.clientWidth || 0) - labelWidth;
     const rowTop = row.getBoundingClientRect?.()?.top;
     const stageTop = stage.getBoundingClientRect?.()?.top;
-    const contentTop = Number.isFinite(rowTop) && Number.isFinite(stageTop) ? rowTop - stageTop : 0;
+    const contentTop = !elements.gelLaneTableWindow && Number.isFinite(rowTop) && Number.isFinite(stageTop)
+      ? rowTop - stageTop : 0;
     const usableHeight = stageHeight - contentTop;
     if (!image?.width || !image?.height || usableWidth <= 0 || usableHeight <= 0) {
       stage.classList.remove('is-fitted');
@@ -185,7 +186,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     }
     const canvasWidth = Math.min(usableWidth, (usableHeight * image.width) / image.height);
     stage.style.setProperty('--gel-fit-width', `${Math.floor(canvasWidth + labelWidth)}px`);
-    stage.style.setProperty('--gel-fit-height', `${Math.floor(usableHeight)}px`);
+    const fittedHeight = elements.gelLaneTableWindow ? canvasWidth * image.height / image.width : usableHeight;
+    stage.style.setProperty('--gel-fit-height', `${Math.floor(fittedHeight)}px`);
     stage.classList.add('is-fitted');
   }
 
@@ -229,9 +231,12 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     elements.gelAddTableBtn.hidden = false;
     elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
     elements.gelViewerStage.style.setProperty('--gel-lane-label-width', `${LABEL_COLUMN_WIDTH_PX}px`);
-    elements.gelViewerStage.classList.toggle('has-lane-table', hasTable);
-    elements.gelLaneTableSpacer.hidden = !hasTable;
+    const inlineTable = hasTable && !elements.gelLaneTableWindow;
+    elements.gelViewerStage.classList.toggle('has-lane-table', inlineTable);
+    elements.gelLaneTableSpacer.hidden = !inlineTable;
     elements.gelLaneTableShell.hidden = !hasTable;
+    if (elements.gelLaneTableEmpty) elements.gelLaneTableEmpty.hidden = hasTable;
+    if (elements.gelLaneTableWindow) elements.gelAddTableBtn.hidden = hasTable;
 
     if (!hasTable || !layout) {
       elements.gelLaneTableShell.innerHTML = '';
@@ -346,7 +351,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return [createBlankRow(layout.laneCount)];
     });
     render();
-    deps.setStatus?.('Added an aligned table above the gel. Use Add row to expand it.');
+    deps.openLaneTableWindow?.();
+    deps.setStatus?.('Added a lane table. Use Add row to expand it.');
     requestAnimationFrame(() => {
       focusLastRowLabel();
     });

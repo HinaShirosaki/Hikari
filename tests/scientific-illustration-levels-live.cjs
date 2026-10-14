@@ -88,7 +88,7 @@ async function submit(id, prompt) {
   check(after.inspection.complete === true && after.inspection.revision === after.revision, `${id}: mandatory inspection covers the latest revision`);
   const calls = evidence.calls.filter(call => call.run === id && call.origin === 'agent');
   check(calls.some(call => call.request.action === 'read' && call.ok), `${id}: agent reads the selected figure and contract`);
-  check(calls.some(call => call.request.action === 'render' && call.request.canvas === 'both' && call.ok), `${id}: agent renders both canvases`);
+  check(calls.some(call => call.request.action === 'render' && (!call.request.canvas || ['main', 'both'].includes(call.request.canvas)) && call.ok), `${id}: agent renders the canvas`);
   check(calls.some(call => call.request.action === 'inspect' && call.ok), `${id}: agent submits a successful review`);
   check(calls.filter(call => !['list', 'asset_list'].includes(call.request.action)).every(call => call.request.illustration_id === targetId), `${id}: every agent canvas request targets the same figure`);
   await save();
@@ -274,7 +274,7 @@ async function run() {
     const test = selected.find(test => test.id === item.id), count = item.layer_counts || {};
     return `| ${test.percent}% | ${test.title} | ${count.vector || 0} | ${count.raster || 0} | ${count.text || 0} | ${item.native_generation_calls || 0} | ${item.passed ? 'Passed' : item.error || 'Failed'} |`;
   });
-  await fs.writeFile(path.join(output, 'report.md'), `# Live illustration level and complex hybrid tests\n\nModel: ${model}; Codex CLI ${version}; installed Figura ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Real scoped prompt submission, plugin workspace, preload IPC, native Codex runtime and MCP, in disposable profile/storage. User figures were not opened or edited. Percentages are approximate visual preferences; these checks prove renderer decisions, imported layer types, independent labels and mandatory inspection, not exact pixel-area shares.\n\n| Target | Figure | SVG | Raster | Text | Native generation calls | Result |\n| --- | --- | --- | --- | --- | --- | --- |\n${rows.join('\n')}\n\n${selected.map(test => `## ${test.title} (${test.percent}%)\n\n${test.prompt}\n`).join('\n')}\nEvidence: evaluation.json, per-figure JSON snapshots, generated components, and main/scratch previews. Visual review remains separate from these structural checks.\n`);
+  await fs.writeFile(path.join(output, 'report.md'), `# Live illustration level and complex hybrid tests\n\nModel: ${model}; Codex CLI ${version}; installed Figura ${evidence.plugin_version}.\n\nRuntime: ${runtime}. Real scoped prompt submission, plugin workspace, preload IPC, native Codex runtime and MCP, in disposable profile/storage. User figures were not opened or edited. Percentages are approximate visual preferences; these checks prove renderer decisions, imported layer types, independent labels and mandatory inspection, not exact pixel-area shares.\n\n| Target | Figure | SVG | Raster | Text | Native generation calls | Result |\n| --- | --- | --- | --- | --- | --- | --- |\n${rows.join('\n')}\n\n${selected.map(test => `## ${test.title} (${test.percent}%)\n\n${test.prompt}\n`).join('\n')}\nEvidence: evaluation.json, per-figure JSON snapshots, generated components, and canvas previews. Visual review remains separate from these structural checks.\n`);
   console.log(`Live level tests finished. Evidence: ${output}`);
   if (!evidence.ok) process.exitCode = 1;
 }

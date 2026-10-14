@@ -86,6 +86,11 @@ function createLabSmokeChecks({ structuredResponder } = {}) {
     };
   }
 
+  async function smokeNotebookList(snapshot) {
+    const result = await createAgentNotebookLookupRuntime().executeList({ snapshot, limit: 100 });
+    return { ...result, summary: `Listed ${result.items.length} notebook pages.` };
+  }
+
   async function smokeProtocolMatching(snapshot, options = {}) {
     const runtime = createProtocolMatchingRuntime({
       requestStructuredJsonPayload: structuredResponder
@@ -339,6 +344,7 @@ function createLabSmokeChecks({ structuredResponder } = {}) {
   return {
     smokeInventoryLookup,
     smokeNotebookLookup,
+    smokeNotebookList,
     smokeProtocolMatching,
     smokeNotebookGeneration,
     smokeNotebookDraft,

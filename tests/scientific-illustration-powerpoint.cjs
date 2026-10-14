@@ -17,7 +17,6 @@ async function verifyPowerPoint({ tool, evaluate, check, win, pause, temp }) {
     { op: 'upsert', object: { id: 'webp', name: 'WebP component', type: 'raster', dataUrl: bytes.webp, textFree: true, x: 660, y: 410, width: 240, height: 150 } },
     { op: 'upsert', object: { id: 'rotated-label', name: 'Editable rotated label', type: 'text', text: 'Separate editable text', fontFamily: 'Arial', fontSize: 28, fontWeight: 400, italic: true, underline: true, align: 'end', anchor: 'middle', color: '#11223380', opacity: 0.8, x: -24, y: 630, width: 480, height: 90, rotation: 15 } },
     { op: 'upsert', object: { id: 'hidden-label', name: 'Hidden label', type: 'text', text: 'SHOULD NOT EXPORT', visible: false } },
-    { op: 'upsert', object: { id: 'scratch-label', name: 'Scratch label', type: 'text', text: 'SCRATCH ONLY', canvas: 'scratch' } },
     { op: 'group', id: 'cell-group', name: 'Cell component', ids: ['cell', 'cell-label'] }
   ] });
   check(result.ok, result.error || 'Save PPTX fixture'); await pause(80);

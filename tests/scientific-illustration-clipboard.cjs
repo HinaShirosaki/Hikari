@@ -29,7 +29,7 @@ async function verifyClipboard({ tool, evaluate, check, win, pause, temp }) {
       if(action==='copy')qaClipboard=data.getData('text/plain');return event.defaultPrevented;
     };`);
   const select = async id => {
-    await evaluate(`document.querySelector('[data-layer-id="${id}"] .layer-select').click();document.getElementById('close-layers').click();document.getElementById('${id === 'scratch-copy' ? 'scratch' : 'main'}-canvas').focus()`);
+    await evaluate(`document.querySelector('[data-layer-id="${id}"] .layer-select').click();document.getElementById('close-layers').click();document.getElementById('main-canvas').focus()`);
     await pause(40);
   };
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer-select[aria-pressed=true]")].map(button=>button.closest("[data-layer-id]").dataset.layerId)');
@@ -85,17 +85,10 @@ async function verifyClipboard({ tool, evaluate, check, win, pause, temp }) {
     const last = after.objects.slice(-3), source = before.objects.filter(object => pastedGroup.ids.includes(object.id));
     check(last.every((object, index) => sameCopy(object, source[index], 45)), 'Repeated pastes cascade their position and retain layer order');
 
-    await tool({ action: 'scratch', illustration_id: after.illustration_id, visible: true });
-    await evaluate('document.querySelector("button[data-canvas=scratch]").click();document.getElementById("scratch-canvas").focus()');
-    before = await read(); await key('v'); after = await settled();
-    const scratch = after.objects.filter(object => object.canvas === 'scratch');
-    check(scratch.length === 3 && after.groups.some(group => group.canvas === 'scratch' && group.ids.length === 3), 'Paste targets Scratch and retains grouping');
-    check(JSON.stringify(after.objects.filter(object => object.canvas === 'main')) === JSON.stringify(before.objects.filter(object => object.canvas === 'main')), 'Scratch paste preserves all Main components');
-    await tool({ action: 'scratch', illustration_id: after.illustration_id, visible: false });
     const created = await tool({ action: 'create', title: 'Paste destination', expected_library_revision: after.library_revision, request_id: randomUUID() });
     check(created.ok, created.error || 'Create separate paste destination');
     await evaluate('document.getElementById("main-canvas").focus()'); await key('v'); after = await settled();
-    check(after.objects.length === 3 && after.groups.length === 1 && after.objects.every((object, index) => sameCopy(object, source[index], 75)), 'Clipboard works between illustrations without changing the snapshot');
+    check(after.objects.length === 3 && after.groups.length === 1 && after.objects.every((object, index) => sameCopy(object, source[index], 60)), 'Clipboard works between illustrations without changing the snapshot');
 
     await evaluate('document.getElementById("figure-title").focus();window.qaTextCopyEvent=new ClipboardEvent("copy",{bubbles:true,cancelable:true,clipboardData:new DataTransfer()});document.activeElement.dispatchEvent(qaTextCopyEvent)');
     check(await evaluate('document.activeElement.id==="figure-title" && !qaTextCopyEvent.defaultPrevented'), 'Copy in a text field retains native text editing');

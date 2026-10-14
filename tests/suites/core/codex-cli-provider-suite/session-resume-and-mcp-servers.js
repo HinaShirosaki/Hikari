@@ -1257,7 +1257,7 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(configText, /\[mcp_servers\.hikari\]/);
         assert.match(configText, /required = true/);
-        assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "notebook_list", "protocol_lookup", "protocol_generation"/);
         assert.match(configText, /"container"/);
         assert.match(configText, /"assay_table"/);
         assert.match(configText, /"plotly_graph"/);

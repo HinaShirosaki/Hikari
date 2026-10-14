@@ -24,8 +24,6 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     { op: 'upsert', object: { id: 'select-d', type: 'vector', name: 'Vesicle', x: 110, y: 280, width: 60, height: 60, svg } },
     { op: 'upsert', object: { id: 'select-rotated', type: 'vector', name: 'Rotated component', x: 400, y: 300, width: 80, height: 80, rotation: 45, svg } },
     { op: 'upsert', object: { id: 'select-hidden', type: 'vector', x: 110, y: 110, width: 20, height: 20, visible: false, svg } },
-    { op: 'upsert', object: { id: 'select-s1', type: 'vector', canvas: 'scratch', x: 40, y: 40, width: 60, height: 40, svg } },
-    { op: 'upsert', object: { id: 'select-s2', type: 'text', canvas: 'scratch', text: 'Scratch', x: 140, y: 60, width: 90, height: 30 } }
   ]);
   win.setSize(1300, 1000); await pause(80);
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
@@ -89,17 +87,17 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     check(await evaluate(`document.getElementById('selection-tool').value===${JSON.stringify(toolMode)} && !document.querySelector('.selection-region')`), 'Resizing works without switching selection tools or drawing another region');
     await undoTo(before);
   };
-  const snapshot = await read(), beforeImage = await tool({ action: 'render', canvas: 'both' });
+  const snapshot = await read(), beforeImage = await tool({ action: 'render', canvas: 'main' });
   const evidence = {};
   try {
     check(await evaluate('document.getElementById("selection-tool").options.length===2 && document.getElementById("selection-tool").value==="pointer"'), 'Select & move is the default tool alongside Freehand');
     await begin('main', [[90, 90], [370, 180]]);
     check(await evaluate('Boolean(document.querySelector("#main-canvas .selection-region")) && document.getElementById("main-canvas").classList.contains("is-area-selecting")'), 'Rectangle gesture displays a transient outline');
-    const during = await tool({ action: 'render', canvas: 'both' });
+    const during = await tool({ action: 'render', canvas: 'main' });
     check(JSON.stringify(during.content.filter(c => c.type === 'image')) === JSON.stringify(beforeImage.content.filter(c => c.type === 'image')), 'The active selection outline never leaks into agent readback');
     await fs.writeFile(path.join(temp, 'selection-rectangle-preview.png'), (await win.webContents.capturePage()).toPNG());
     await mouse('mouseReleased', await screen('main', [370, 180]));
-    await selected(['select-a', 'select-b'], 'Rectangle selects vector and independent text while excluding hidden and scratch objects');
+    await selected(['select-a', 'select-b'], 'Rectangle selects vector and independent text while excluding hidden objects');
     await feedback('main', ['select-a', 'select-b']);
     check(await evaluate('!document.querySelector(".selection-region") && document.getElementById("layer-inspector").hidden'), 'Completing selection removes the outline and keeps the canvas dominant');
     await fs.writeFile(path.join(temp, 'selection-component-outlines.png'), (await win.webContents.capturePage()).toPNG());
@@ -149,7 +147,7 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     await mode('freehand'); await gesture('main', lasso);
     await selected(['select-a', 'select-b', 'select-d'], 'Freehand selection stays accurate at the same zoom and scroll');
     await feedback('main', ['select-a', 'select-b', 'select-d']);
-    const outlinedPreview = await tool({ action: 'render', canvas: 'both' });
+    const outlinedPreview = await tool({ action: 'render', canvas: 'main' });
     check(JSON.stringify(outlinedPreview.content.filter(c=>c.type==='image')) === JSON.stringify(beforeImage.content.filter(c=>c.type==='image')), 'Individual selection outlines never appear in agent readback');
     const unchanged = await read();
     check(unchanged.revision === snapshot.revision && JSON.stringify(unchanged.objects) === JSON.stringify(snapshot.objects), 'All selection gestures preserve scene geometry and revision');
@@ -176,19 +174,6 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     check(await evaluate('!document.querySelector(".selection-region") && !document.querySelector(".is-area-selecting")'), 'An intervening agent edit cancels a stale selection gesture');
     await mouse('mouseReleased', await screen('main', [370, 180]));
     await selected(['select-a'], 'Releasing a cancelled stale gesture does not replace selection');
-
-    const current = await read(); await tool({ action: 'scratch', illustration_id: current.illustration_id, visible: true }); await pause(80);
-    await rectangle('scratch', [10, 10], [240, 100]);
-    await selected(['select-s1', 'select-s2'], 'Rectangle selects only scratch objects and switches the active canvas');
-    await feedback('scratch', ['select-s1', 'select-s2']);
-    check(await evaluate('!document.querySelector("#main-canvas .selection-member")'), 'Scratch selection clears individual selection outlines from main');
-    await moveWithoutSwitch('scratch', ['select-s1', 'select-s2'], [70, 60], [90, 70]);
-    await mode('freehand'); await gesture('scratch', [[10, 10], [110, 10], [110, 90], [10, 90]]);
-    await selected(['select-s1'], 'Freehand selection works independently on scratch');
-    await begin('scratch', [[10, 10], [240, 100]]);
-    await tool({ action: 'scratch', illustration_id: current.illustration_id, visible: false }); await pause(80);
-    await mouse('mouseReleased', { x: 20, y: 20 });
-    check(await evaluate('!document.querySelector(".selection-region") && !document.querySelector(".is-area-selecting") && document.getElementById("scratch-workspace").hidden'), 'Hiding scratch during selection safely cancels capture and its preview');
 
     // Selecting and moving a label use the same combined tool.
     await mode('pointer'); await rectangle('main', [250, 90], [370, 150]);

@@ -10,6 +10,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['./inventory-lookup.js', 'INVENTORY_LOOKUP_MCP_TOOL', 'callInventoryLookup'],
   ['./chemical-lookup.js', 'CHEMICAL_LOOKUP_MCP_TOOL', 'callChemicalLookup'],
   ['./notebook-lookup.js', 'NOTEBOOK_LOOKUP_MCP_TOOL', 'callNotebookLookup'],
+  ['./notebook-list.js', 'NOTEBOOK_LIST_MCP_TOOL', 'callNotebookList'],
   ['./protocol-lookup.js', 'PROTOCOL_LOOKUP_MCP_TOOL', 'callProtocolLookup'],
   ['./protocol-generation.js', 'PROTOCOL_GENERATION_MCP_TOOL', 'callProtocolGeneration'],
   ['./notebook-suggest.js', 'NOTEBOOK_SUGGEST_MCP_TOOL', 'callNotebookSuggest'],

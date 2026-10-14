@@ -64,6 +64,7 @@ export function createPluginsController({
       embedUrl: inspected.embedUrl || '',
       serve: inspected.serve === true,
       service: inspected.service || null,
+      tool: inspected.tool === true,
       enabled: true
     });
     persist();
@@ -123,6 +124,7 @@ export function createPluginsController({
           ${plugin.embedUrl
             ? `<p class="small-note settings-skill-embed">Loads remote code from ${escapeHtml(plugin.embedUrl)} — needs internet, and anything you open in it leaves this machine.</p>`
             : ''}
+          ${plugin.tool ? '<p class="small-note settings-skill-tool">Opens as a tool in Tools.</p>' : ''}
           <p class="small-note settings-skill-path">${plugin.bundled ? 'Bundled with Hikari' : escapeHtml(plugin.path)}</p>
         </div>
         <label class="settings-skill-toggle">

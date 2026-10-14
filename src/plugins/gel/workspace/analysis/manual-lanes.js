@@ -1,5 +1,5 @@
 import { clamp, getLaneVertexBounds, getLaneVerticesForLane, getTargetBandWindowForLane } from '../shared.js';
-import { computeCellIntensity, computeManualBand } from './lane-signal.js';
+import { computeCellIntensity } from './lane-signal.js';
 
 // Lanes the user drew by hand, and the bands they added or moved on top of what
 // the automatic pass found.
@@ -67,10 +67,14 @@ const segmentation = overrides?.laneSegmentation || {};
 lanes.forEach((lane) => {
   const laneIndex = lane.index + 1;
   const targetWindow = getTargetBandWindowForLane(segmentation, laneIndex);
+  // A clicked band is measured like the target band, in a window of the same
+  // thickness centred on the click; 5 rows when the lane has no window yet.
+  let halfThickness = 2;
 
   if (targetWindow) {
     const targetTop = clamp(Math.floor(Math.min(targetWindow.bandTop, targetWindow.bandBottom)), 0, height - 1);
     const targetBottom = clamp(Math.floor(Math.max(targetWindow.bandTop, targetWindow.bandBottom)), targetTop, height - 1);
+    halfThickness = Math.floor((targetBottom - targetTop) / 2);
     const targetBand = computeCellIntensity({
       signal,
       rawGray,
@@ -88,18 +92,17 @@ lanes.forEach((lane) => {
   added.forEach((item) => {
     const exists = lane.bands.some((band) => Math.abs(band.pixelY - item.pixelY) <= 8);
     if (!exists) {
-      const band = computeManualBand({
+      const band = computeCellIntensity({
         signal,
         rawGray,
         width,
         height,
         lane,
-        pixelY: item.pixelY,
-        measurementMode: 'manual-point'
+        bandTop: item.pixelY - halfThickness,
+        bandBottom: item.pixelY + halfThickness
       });
-      if (band.rawIntensity > 0) {
-        lane.bands.push(band);
-      }
+      band.measurementMode = 'manual-point';
+      lane.bands.push(band);
     }
   });
 

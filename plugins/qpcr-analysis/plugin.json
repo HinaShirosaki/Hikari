@@ -1,0 +1,9 @@
+{
+  "id": "qpcr-analysis",
+  "name": "qPCR Analysis",
+  "version": "1.0.0",
+  "description": "Relative expression by ΔΔCt and standard curve amplification efficiency.",
+  "tool": true,
+  "icon": "icon.svg",
+  "permissions": ["storage", "notebook:read", "notebook:write", "downloads"]
+}
