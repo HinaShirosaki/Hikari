@@ -292,6 +292,8 @@ const FIXED_ACROSS_THEMES = new Set([
   ...Array.from({ length: 12 }, (_, i) => `--sequence-viewer-builder-palette-${i + 1}`),
   '--gel-marker', '--gel-marker-solid', '--gel-marker-label', '--gel-divider',
   '--gel-band-positive', '--gel-path', '--gel-path-glow',
+  // Crop marks sit on the gel image, so they contrast with it, not the page.
+  '--gel-crop-edge', '--gel-crop-shadow',
   '--papers-highlight',
   // The Hikari action mark is a fixed brand spectrum in every theme.
   '--theme-hikari-rainbow-red', '--theme-hikari-rainbow-orange',
