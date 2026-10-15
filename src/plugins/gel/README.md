@@ -8,6 +8,13 @@ band quantification, peak editing, reports, saved records, and CSV export.
 Generated PNG figures use up to 4× raster density for publication-scale text,
 and PowerPoint export keeps the lane table as an editable native table.
 
+The main workspace stays on the gel image. Open **Gel Tools**, **Lane Intensity**,
+**Lane table**, **Peak editor**, or **Band intensity** from the toolbar to work in
+overlapping, nonmodal windows. Drag a title bar to move a window, or focus its
+title bar and use the arrow keys (Shift moves farther). Escape closes the top
+window; **Hide windows** clears the canvas. The setup rail keeps its existing
+controls, and adding table rows does not shrink the image.
+
 ## Distribution and permissions
 
 Gel is bundled with Hikari and appears automatically in **More**; users do not

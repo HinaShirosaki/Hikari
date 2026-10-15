@@ -326,8 +326,7 @@ export function initTimerWidget({
     timerStatus.hidden = !activeTimers.length;
     timerStatus.setAttribute('aria-label', `${tickingCount} running, ${running.length - tickingCount} paused, ${finished.length} finished`);
 
-    const hasPresets = !activeTimers.length && savedTemplates().length > 0;
-    const structure = JSON.stringify([hasPresets, activeTimers.map((timer) => [
+    const structure = JSON.stringify([activeTimers.map((timer) => [
       timer.sourceIndex, timer.name, timer.durationMinutes, timer.isPaused, timer.isAlert, timer.endAtMs
     ])]);
     if (structure !== lastTimerStructure) {
@@ -337,7 +336,7 @@ export function initTimerWidget({
         : '';
       timerActiveList.innerHTML = activeTimers.length
         ? finishedHtml + running.map((timer, index) => renderActiveTimer(timer, index, safeText)).join('')
-        : `<p class="home-empty-note">${hasPresets ? 'No timers running.' : 'No timers running. Save a preset with + to start it here in one click.'}</p>`;
+        : '';
       lastTimerStructure = structure;
       if (focusedIndex !== undefined) {
         timerActiveList.querySelector(`[data-dashboard-toggle-active-timer="${Number(focusedIndex)}"], [data-dashboard-remove-active-timer="${Number(focusedIndex)}"]`)?.focus();

@@ -1520,14 +1520,6 @@ button:disabled {
   min-height: 0;
 }
 
-.well:nth-child(9n) {
-  border-right: 0;
-}
-
-.well:nth-last-child(-n + 9) {
-  border-bottom: 0;
-}
-
 .well:hover {
   background: var(--theme-surface-subtle);
 }

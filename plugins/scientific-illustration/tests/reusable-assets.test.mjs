@@ -30,8 +30,8 @@ const apply = async (w, operations, extra = {}) => {
     request_id: crypto.randomUUID(), operations, ...extra });
 };
 const seed = w => apply(w, [
-  { op: 'upsert', object: { id: 'a', name: 'First label', type: 'text', canvas: 'scratch', x: 80, y: 30, width: 160, height: 50, rotation: 35, text: 'α Cell', fontSize: 28, color: '#287c75' } },
-  { op: 'upsert', object: { id: 'b', name: 'Second label', type: 'text', canvas: 'scratch', x: 270, y: 80, width: 80, height: 25, text: 'ATP', fontSize: 14, fontWeight: 700 } },
+  { op: 'upsert', object: { id: 'a', name: 'First label', type: 'text', canvas: 'main', x: 80, y: 30, width: 160, height: 50, rotation: 35, text: 'α Cell', fontSize: 28, color: '#287c75' } },
+  { op: 'upsert', object: { id: 'b', name: 'Second label', type: 'text', canvas: 'main', x: 270, y: 80, width: 80, height: 25, text: 'ATP', fontSize: 14, fontWeight: 700 } },
   { op: 'group', id: 'component', name: 'Labeled component', ids: ['b', 'a'] }
 ]);
 const saveArgs = async (w, extra = {}) => {
@@ -51,7 +51,7 @@ test('snapshot and placement retain rotated vector/raster/text geometry and inde
   const asset = snapshotAsset(doc, { name: 'Mixed component', ids: ['t', 'r', 'v'] });
   assert.equal(JSON.stringify(doc), before);
   assert.deepEqual(asset.objects.map(o => o.id), ['v', 'r', 't']);
-  const placed = instantiateAsset(asset, { op: 'insert_asset', asset_id: 'saved', canvas: 'scratch', x: 40, y: 50, width: box.width * 2 }, doc);
+  const placed = instantiateAsset(asset, { op: 'insert_asset', asset_id: 'saved', canvas: 'main', x: 40, y: 50, width: box.width * 2 }, doc);
   const copies = placed.operations.filter(o => o.op === 'upsert').map(o => o.object);
   assert.equal(copies.length, 3); assert.ok(placed.inserted.group_id);
   for (let i = 0; i < copies.length; i++) {
@@ -60,7 +60,7 @@ test('snapshot and placement retain rotated vector/raster/text geometry and inde
     assert.ok(Math.abs(o.x - (40 + (old.x - box.x) * 2)) < 1e-8);
     assert.ok(Math.abs(o.y - (50 + (old.y - box.y) * 2)) < 1e-8);
     assert.ok(Math.abs(o.width-old.width*2)<1e-8); assert.ok(Math.abs(o.height-old.height*2)<1e-8);
-    assert.equal(o.canvas, 'scratch');
+    assert.equal(o.canvas, 'main');
   }
   assert.equal(copies[0].svg, doc.objects[0].svg); assert.equal(copies[0].fill, '#123456');
   assert.equal(copies[1].dataUrl, doc.objects[1].dataUrl);
@@ -97,7 +97,7 @@ test('asset insertion creates independent groups, honors preceding canvas change
   assert.ok(Math.abs(instance.bounds.x - (2400 - instance.bounds.width) / 2) < 1e-8);
   assert.ok(Math.abs(instance.bounds.y - (1200 - instance.bounds.height) / 2) < 1e-8);
   const inserted = result.objects;
-  const second = await apply(w, [{ op: 'insert_asset', asset_id: saved.asset_id, canvas: 'scratch', x: 10, y: 15 }]);
+  const second = await apply(w, [{ op: 'insert_asset', asset_id: saved.asset_id, canvas: 'main', x: 10, y: 15 }]);
   assert.ok(second.ok); assert.equal(second.objects.length, 4);
   assert.ok(second.inserted_assets[0].ids.every(id => !instance.ids.includes(id)));
   await w.history('undo'); assert.deepEqual(w.getDocument().objects, inserted);
@@ -113,7 +113,7 @@ test('a single saved object stays a single independently editable layer', async 
   const b = selectionBounds(placed.objects); assert.ok(Math.abs(b.x-100)<1e-8); assert.ok(Math.abs(b.y-110)<1e-8);
 });
 
-test('save guards revisions and active illustration and rejects mixed or nonexistent selections', async () => {
+test('save guards revisions and active illustration and rejects nonexistent selections', async () => {
   const host = fixture(), w = host.open(); await w.ready; await seed(w);
   const args = await saveArgs(w), writes = host.writes.length;
   assert.equal((await w.request({ ...args, expected_revision: 'stale' })).status, 'revision_conflict');
@@ -121,7 +121,7 @@ test('save guards revisions and active illustration and rejects mixed or nonexis
   assert.equal((await w.request({ ...args, id: 'missing' })).ok, false); assert.equal(host.writes.length, writes);
   await apply(w, [{ op: 'upsert', object: { id: 'main-label', type: 'text', canvas: 'main' } }]);
   const mixed = await saveArgs(w); delete mixed.id; mixed.ids = ['a', 'main-label'];
-  assert.match((await w.request(mixed)).error, /one canvas/);
+  assert.equal((await w.request(mixed)).ok, true, 'Separate components on the single canvas can be saved together');
   const pinned = await saveArgs(w); await w.manage('create');
   assert.equal((await w.request(pinned)).status, 'illustration_changed');
 });

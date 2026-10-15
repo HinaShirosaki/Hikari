@@ -73,9 +73,9 @@ async function verifyPlacement({ tool, evaluate, check, win, pause, temp }) {
   check(Math.hypot(after[0].x - before[0].x, after[0].y - before[0].y) < 0.1
     && Math.hypot(after[1].x - before[1].x - 30, after[1].y - before[1].y - 18) < 0.1, 'Rotated resize fixes the opposite corner and follows the pointer');
   current = await tool({ action: 'read' }); const original = current.objects[0];
-  await apply([{ op: 'transfer', id: 'rotated', canvas: 'scratch', copy: true, new_id: 'rotated-copy' }]);
+  await apply([{ op: 'transfer', id: 'rotated', canvas: 'main', copy: true, new_id: 'rotated-copy' }]);
   const copied = current.objects.find(object => object.id === 'rotated-copy');
-  check(['x', 'y', 'width', 'height', 'rotation'].every(key => original[key] === copied[key]), 'Scratch transfer preserves exact geometry');
+  check(['x', 'y', 'width', 'height', 'rotation'].every(key => original[key] === copied[key]), 'Same-canvas copy preserves exact geometry');
 
   await replace([
     { id: 'cell-part', type: 'vector', x: 50, y: 50, width: 100, height: 100, svg: svg('<defs><clipPath id="outline"><rect width="50" height="100"/></clipPath></defs><rect width="100" height="100" fill="#ff0000" clip-path="url(#outline)"/>') },

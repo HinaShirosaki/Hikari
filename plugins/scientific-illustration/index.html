@@ -26,7 +26,7 @@
             <option value="pointer">Select &amp; move · V</option>
             <option value="freehand">Freehand select · L</option>
           </select>
-          <button type="button" data-canvas="main" aria-pressed="true">Main canvas</button>
+          <span class="canvas-label">Canvas</span>
           <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
             <option value="1200x800">Landscape · 1200 × 800</option>
             <option value="800x1200">Portrait · 800 × 1200</option>
@@ -65,10 +65,6 @@
               <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
               <div id="canvas-empty" class="canvas-empty" hidden><strong>Start with an idea</strong><span id="canvas-empty-hint">Describe your figure below, or add a layer.</span></div>
             </div>
-            <section id="scratch-workspace" aria-label="Scratch workspace" hidden>
-              <div class="scratch-heading canvas-heading"><button type="button" data-canvas="scratch" aria-pressed="false">Scratch canvas</button><span id="scratch-size"></span><button type="button" id="place-scratch">Copy to main</button><button id="close-scratch" class="icon-button" data-icon="close" type="button" aria-label="Close scratch canvas" title="Close scratch canvas"></button></div>
-              <div id="scratch-canvas" class="canvas-stage scratch" data-canvas="scratch"></div>
-            </section>
           </div>
           <form id="prompt-form" class="prompt" hidden>
             <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
@@ -84,7 +80,7 @@
             <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
             <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
               <label class="sr-only" for="label-content">Label text</label><textarea id="label-content" name="text" rows="2" maxlength="3000" placeholder="Label text"></textarea>
-              <div class="font-row"><label class="sr-only" for="text-font">Font</label><input id="text-font" name="fontFamily" list="fonts" maxlength="100" title="Font"><datalist id="fonts"><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Georgia</option><option>Verdana</option><option>Courier New</option></datalist><label class="size-field"><span class="sr-only">Font size</span><input name="fontSize" type="number" min="4" max="300" step="any" required title="Font size in pixels"><span>px</span></label><input name="color" type="color" aria-label="Text color" title="Text color"></div>
+              <div class="font-row"><label class="sr-only" for="text-font">Font</label><input id="text-font" name="fontFamily" list="fonts" maxlength="100" title="Font"><datalist id="fonts"><option>Inter</option><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Georgia</option><option>Verdana</option><option>Courier New</option></datalist><label class="size-field"><span class="sr-only">Font size</span><input name="fontSize" type="number" min="4" max="300" step="any" required title="Font size in pixels"><span>px</span></label><input name="color" type="color" aria-label="Text color" title="Text color"></div>
               <div class="text-toolbar"><div class="format-group" role="group" aria-label="Text formatting"><button type="button" data-text-style="bold" aria-label="Bold" title="Bold" aria-pressed="false"><b>B</b></button><button type="button" data-text-style="italic" aria-label="Italic" title="Italic" aria-pressed="false"><i>I</i></button><button type="button" data-text-style="underline" aria-label="Underline" title="Underline" aria-pressed="false"><u>U</u></button></div><div class="format-group" role="group" aria-label="Text alignment"><button type="button" data-align="start" data-icon="alignLeft" aria-label="Align left" title="Align left" aria-pressed="false"></button><button type="button" data-align="middle" data-icon="alignCenter" aria-label="Align center" title="Align center" aria-pressed="false"></button><button type="button" data-align="end" data-icon="alignRight" aria-label="Align right" title="Align right" aria-pressed="false"></button></div></div>
               <div class="field-grid"><label>Weight<select name="fontWeight"><option value="100">Thin</option><option value="200">Extra light</option><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option><option value="900">Black</option></select></label><label>Anchor<select name="anchor"><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select></label></div>
             </fieldset>
@@ -95,9 +91,8 @@
             </fieldset>
             <button type="button" id="replace-raster" class="secondary-button" hidden>Replace artwork…</button>
             <div class="field-grid object-basics"><label>Rotation<span class="unit-field"><input name="rotation" type="number" min="-360" max="360" step="any" required><span>°</span></span></label><label>Opacity<input name="opacity" type="number" min="0" max="1" step="0.05" required></label></div>
-            <details class="geometry-options"><summary>Position &amp; size</summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label>Width<input name="width" type="number" min="1" max="8000" step="any" required></label><label>Height<input name="height" type="number" min="1" max="8000" step="any" required></label></div><label>Canvas<select name="canvas"><option value="main">Main</option><option value="scratch">Scratch</option></select></label></details>
+            <details class="geometry-options"><summary>Position &amp; size</summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label>Width<input name="width" type="number" min="1" max="8000" step="any" required></label><label>Height<input name="height" type="number" min="1" max="8000" step="any" required></label></div></details>
             <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer"></button></div>
-            <button type="button" id="transfer" class="transfer-button">Copy to scratch</button>
           </form>
           </section>
           <section id="assets-panel" role="region" aria-labelledby="assets-tab" hidden inert>
@@ -115,6 +110,17 @@
             <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
             <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
           </div>
+          <details class="popover" id="align-menu"><summary class="icon-button" data-icon="align" title="Align and distribute" aria-label="Align and distribute" aria-expanded="false"><span class="sr-only">Align</span></summary><div class="popover-panel alignment-panel" role="group" aria-label="Align selected items">
+            <button type="button" data-layout-action="left" data-icon="objectLeft" disabled>Align left</button>
+            <button type="button" data-layout-action="horizontal-center" data-icon="objectHorizontal" disabled>Horizontal center</button>
+            <button type="button" data-layout-action="right" data-icon="objectRight" disabled>Align right</button>
+            <button type="button" data-layout-action="top" data-icon="objectTop" disabled>Align top</button>
+            <button type="button" data-layout-action="vertical-center" data-icon="objectVertical" disabled>Vertical center</button>
+            <button type="button" data-layout-action="bottom" data-icon="objectBottom" disabled>Align bottom</button>
+            <hr>
+            <button type="button" data-layout-action="distribute-horizontal" data-icon="distributeHorizontal" title="Equal horizontal gaps; keep the outermost items fixed" disabled>Distribute horizontally</button>
+            <button type="button" data-layout-action="distribute-vertical" data-icon="distributeVertical" title="Equal vertical gaps; keep the outermost items fixed" disabled>Distribute vertically</button>
+          </div></details>
           <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
             <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
           </div></details>
@@ -129,7 +135,6 @@
               <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
               <button id="zoom-fit" class="icon-button" data-icon="fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true"><span class="sr-only">Fit</span></button>
             </div>
-            <button id="toggle-scratch" class="scratch-toggle icon-button" data-icon="scratch" title="Scratch canvas" aria-label="Scratch canvas" type="button" aria-expanded="false" aria-controls="scratch-workspace"><span class="sr-only">Scratch</span></button>
         </aside>
       </div>
       <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>

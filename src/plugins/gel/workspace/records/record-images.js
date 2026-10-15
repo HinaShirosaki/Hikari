@@ -1,3 +1,6 @@
+import { SOURCE_GRAY16_FILE_NAME } from '../constants.js';
+import { applySourceGray16 } from '../images/image-io.js';
+
 // Reading a saved gel's image back off disk so a stored record can be reopened.
 function createGelRecordImages({
   deps,
@@ -42,6 +45,23 @@ function createGelRecordImages({
     return `data:${inferImageMimeType(storedPath)};base64,${response.dataBase64}`;
   }
 
+  // A 16-bit gel's full-precision grey sits beside source.png. A missing or
+  // unreadable one leaves the 8-bit image source.png decodes to.
+  async function restoreSourceGray16(image, sourcePath, sourceDataUrl) {
+    try {
+      const sidecarDataUrl = await readStoredImageDataUrl(sourcePath.replace(/[^\\/]+$/, SOURCE_GRAY16_FILE_NAME));
+      return sidecarDataUrl
+        ? await applySourceGray16(
+          image,
+          sidecarDataUrl.slice(sidecarDataUrl.indexOf(',') + 1),
+          sourceDataUrl.slice(sourceDataUrl.indexOf(',') + 1)
+        )
+        : image;
+    } catch {
+      return image;
+    }
+  }
+
   async function restoreRecordImage(record) {
     const sourcePath = resolveStoredImagePath(record.sourceImagePath, record.sourceImageRelativePath);
     const previewPath = resolveStoredImagePath(record.previewImagePath, record.previewImageRelativePath);
@@ -80,7 +100,9 @@ function createGelRecordImages({
           String(record.imageName || candidate.path || 'saved-gel.png')
         );
         return {
-          image,
+          image: candidate.kind === 'source' && candidate.path
+            ? await restoreSourceGray16(image, candidate.path, dataUrl)
+            : image,
           kind: candidate.kind,
           hadCandidate: true,
           error: null

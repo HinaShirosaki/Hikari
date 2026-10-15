@@ -26,6 +26,8 @@ const { verifyPowerPoint } = require('./scientific-illustration-powerpoint.cjs')
 const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
 const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
 const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
+const { verifyAlignment } = require('./scientific-illustration-alignment.cjs');
+const { verifySingleCanvas } = require('./scientific-illustration-single-canvas.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
@@ -152,8 +154,8 @@ async function run() {
   await fs.writeFile(path.join(temp, 'empty.png'), (await win.webContents.capturePage()).toPNG());
   check(await win.webContents.executeJavaScript('qaInspected.permissions.includes("agent:chat") && qaInspected.permissions.includes("agent:canvas") && qaInspected.permissions.includes("layout")'), 'Installer IPC accepts agent and existing layout permissions');
   check(await win.webContents.executeJavaScript('qaRegistry[0].agentChatRail'), 'Installed plugin enables its own chat rail');
-  check(await evaluate('document.querySelectorAll(".canvas-stage svg").length===2'), 'Both canvases render');
-  check(await evaluate('document.getElementById("scratch-workspace").hidden && document.getElementById("scratch-canvas").getBoundingClientRect().height===0 && document.getElementById("toggle-scratch").getAttribute("aria-expanded")==="false"'), 'Only main canvas is visible on initial load');
+  check(await evaluate('document.querySelectorAll(".canvas-stage svg").length===1'), 'The canvas renders');
+  check(await evaluate('!document.getElementById("scratch-workspace") && !document.getElementById("toggle-scratch")'), 'The scratch canvas and its toolbar button are removed');
   const nativeHome = path.join(temp, 'codex-home');
   const nativeImageFolder = path.join(nativeHome, 'generated_images');
   await fs.mkdir(nativeImageFolder, { recursive: true });
@@ -166,6 +168,20 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (process.env.HIKARI_SINGLE_CANVAS_QA_ONLY === '1') {
+    await verifySingleCanvas({ tool, evaluate, check, win, pause, temp, storage, reloadPlugin: async () => {
+      await evaluate('location.reload()'); await pause(350);
+      frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
+      await evaluate('illustrationWorkspace.ready.then(()=>true)');
+    } });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura single canvas: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_ALIGNMENT_QA_ONLY === '1') {
+    await verifyAlignment({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura alignment: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (sourceActionsQA) {
     await verifySourceActions({ tool, evaluate, check, win, pause, temp, runtime });
     check(errors.length === 0, `No renderer errors: ${errors.join('\n')}`);
@@ -230,18 +246,14 @@ async function run() {
   let current = await tool({ action: 'read' });
   check(current.ok && current.agent_contract.request_schema.properties.operations, 'Read discovers the plugin-owned schema');
   check(current.complexity === 'standard' && await evaluate('document.getElementById("complexity").value==="standard" && document.getElementById("complexity").options.length===3'), 'Three complexity levels default to Standard');
-  check(current.scratch_visible === false && current.agent_contract.request_schema.properties.action.enum.includes('scratch'), 'Agent discovers on-demand scratch controls');
-  const scratch = visible => tool({ action: 'scratch', illustration_id: current.illustration_id, visible });
-  const summoned = await scratch(true);
-  check(summoned.ok && summoned.scratch_visible && summoned.revision === current.revision && await evaluate('!document.getElementById("scratch-workspace").hidden'), 'Agent summons scratch without changing artwork revision');
-  check((await scratch(false)).scratch_visible === false && await evaluate('document.getElementById("scratch-workspace").hidden'), 'Agent closes the scratch canvas');
+  check(Object.keys(current.canvases).join()==='main' && !current.agent_contract.request_schema.properties.action.enum.includes('scratch'), 'Agent discovers one canvas');
   const apply = operations => ({ action: 'apply', illustration_id: current.illustration_id, expected_revision: current.revision, request_id: randomUUID(), operations });
   // Exercise the native tool's file handoff with fixture pixels, no live model.
   const nativeImagePath = path.join(nativeImageFolder, 'component.png');
   const nativePixels = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=', 'base64');
   await fs.writeFile(nativeImagePath, nativePixels);
   const nativeAssets = [{ id: 'native-image', source: 'codex', path: nativeImagePath }];
-  const nativeObject = { id: 'native-component', type: 'raster', canvas: 'scratch', x: 38, y: 28, width: 120, height: 80, textFree: true };
+  const nativeObject = { id: 'native-component', type: 'raster', canvas: 'main', x: 38, y: 28, width: 120, height: 80, textFree: true };
   current = await tool(apply([{ op: 'upsert', object: nativeObject, raster_asset: 'native-image' },
     { op: 'upsert', object: { id: 'native-label', type: 'text', text: 'Component', x: 38, y: 120 } }]), nativeAssets);
   check(current.ok && current.objects.length === 2 && current.objects[0].type === 'raster', 'Native Codex file imports from outside Hikari storage with a separate text label');
@@ -251,7 +263,7 @@ async function run() {
   check(current.ok && current.objects.filter(object => object.type === 'raster').length === 13, 'One real MCP request imports more than eight native generated assets and persists each editable raster');
   current = await tool(apply(multipleAssets.map((asset, i) => ({ op: 'delete', id: `native-component-${i}` }))));
   check(current.objects[0].width === 120 && current.objects[0].height === 120, 'Raster import fits the box height to the image aspect ratio');
-  check(await evaluate('document.querySelector("#scratch-canvas [data-object-id=native-component] image").getAttribute("href").startsWith("data:image/png;base64,")'), 'Native raster paints as embedded image bytes on scratch');
+  check(await evaluate('document.querySelector("#main-canvas [data-object-id=native-component] image").getAttribute("href").startsWith("data:image/png;base64,")'), 'Native raster paints as embedded image bytes on the canvas');
   current = await tool(apply([{ op: 'transfer', id: 'native-component', canvas: 'main' },
     { op: 'update', id: 'native-component', patch: { x: 210, y: 140, width: 240, height: 160, rotation: 15 } }]));
   const nativeResult = current.objects.find(object => object.id === 'native-component');
@@ -263,39 +275,24 @@ async function run() {
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
   current = await tool({ action: 'read', include_assets: true });
   check(current.objects.find(object => object.id === 'native-component').dataUrl.endsWith(nativePixels.toString('base64')), 'Native component persists after the original Codex output is deleted and plugin reloads');
-  check((await tool({ action: 'render', canvas: 'both' })).content.filter(item => item.type === 'image').length === 2, 'Native component remains visible in MCP readback after reload');
+  check((await tool({ action: 'render', canvas: 'main' })).content.filter(item => item.type === 'image').length === 1, 'Native component remains visible in MCP readback after reload');
   current = await tool(apply([{ op: 'delete', id: 'native-component' }, { op: 'delete', id: 'native-label' }]));
   const batch = apply([
-    { op: 'upsert', object: { id: 'cell', type: 'vector', canvas: 'scratch', x: 25, y: 25, width: 160, height: 160, svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#dce9e0" stroke="#587a64" stroke-width="2"/><circle cx="50" cy="50" r="17" fill="#a9c8b4" stroke="#587a64"/></svg>' } },
+    { op: 'upsert', object: { id: 'cell', type: 'vector', canvas: 'main', x: 25, y: 25, width: 160, height: 160, svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="#dce9e0" stroke="#587a64" stroke-width="2"/><circle cx="50" cy="50" r="17" fill="#a9c8b4" stroke="#587a64"/></svg>' } },
     { op: 'upsert', object: { id: 'label', type: 'text', text: 'Cell', x: 380, y: 350, width: 160, height: 50, align: 'middle', fontSize: 24, fontWeight: 600 } }
   ]);
   current = await tool(batch); check(current.ok && current.persisted, 'Agent edits are persisted');
-  check(await evaluate('document.getElementById("scratch-workspace").hidden'), 'Editing hidden scratch artwork does not reopen it');
   check((await tool(batch)).status === 'already_applied', 'Identical retry is idempotent');
   check((await tool({ ...batch, request_id: randomUUID() })).status === 'revision_conflict', 'Stale edits are rejected');
   current = await tool(apply([{ op: 'transfer', id: 'cell', canvas: 'main', copy: true, new_id: 'cell-main' }, { op: 'update', id: 'cell-main', patch: { x: 380, y: 170 } }]));
-  check(current.objects.length === 3, 'Scratch component copies independently to main');
+  check(current.objects.length === 3, 'Component copies independently on the canvas');
   const bad = await tool(apply([{ op: 'upsert', object: { id: 'bad', type: 'vector', svg: '<svg xmlns="http://www.w3.org/2000/svg"><text>Forbidden</text></svg>' } }]));
   check(!bad.ok && (await tool({ action: 'read' })).revision === current.revision, 'Text-bearing SVG is rejected atomically');
-  const images = await tool({ action: 'render', canvas: 'both' });
-  check(images.content.filter(item => item.type === 'image').length === 2, 'MCP renders native images of both canvases');
-  check(images.scratch_visible === false, 'Agent can render scratch while its panel is closed');
+  const images = await tool({ action: 'render', canvas: 'main' });
+  check(images.content.filter(item => item.type === 'image').length === 1, 'MCP renders a native image of the canvas');
   check(!JSON.stringify(images.previews).includes('data_url'), 'Binary previews stay out of JSON');
-  await evaluate('document.getElementById("toggle-scratch").click()');
-  await waitFor(async () => (await tool({ action: 'read' })).scratch_visible, 'Manual scratch toggle did not open');
-  check(await evaluate('document.getElementById("scratch-canvas").getBoundingClientRect().height>0'), 'User can summon scratch manually');
-  await evaluate('document.getElementById("close-scratch").click()');
-  await waitFor(async () => !(await tool({ action: 'read' })).scratch_visible, 'Manual close did not hide scratch');
-  const afterClose = await tool({ action: 'read' });
-  check(afterClose.revision === current.revision && afterClose.objects.some(object => object.canvas === 'scratch'), 'Closing scratch preserves its contents and revision');
-  await evaluate('document.querySelector("[data-layer-id=cell] .layer-select").click()');
-  await waitFor(async () => (await tool({ action: 'read' })).scratch_visible, 'Scratch layer selection did not open its canvas');
-  check(await evaluate('document.querySelector("button[data-canvas=scratch]").getAttribute("aria-pressed")==="true"'), 'Selecting a scratch layer opens its editable canvas');
-  await evaluate('document.getElementById("close-scratch").click()');
-  await waitFor(async () => !(await tool({ action: 'read' })).scratch_visible, 'Close after selection did not hide scratch');
-  check(await evaluate('document.querySelector("button[data-canvas=main]").getAttribute("aria-pressed")==="true" && document.getElementById("properties").hidden'), 'Closing scratch returns manual editing to main');
   await win.webContents.executeJavaScript('document.querySelector("iframe").hidden=true');
-  check((await tool({ action: 'render' })).content.filter(item => item.type === 'image').length === 2, 'Agent sees hidden canvases');
+  check((await tool({ action: 'render' })).content.filter(item => item.type === 'image').length === 1, 'Agent sees the canvas while the view is hidden');
   await win.webContents.executeJavaScript('document.querySelector("iframe").hidden=false');
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   check(await evaluate('document.getElementById("prompt-form").hidden && document.getElementById("prompt-form").getBoundingClientRect().height===0'), 'A populated illustration has no bottom composer even with chat folded');
@@ -355,7 +352,6 @@ async function run() {
   await waitFor(async () => await evaluate('document.getElementById("prompt-form").hidden'), 'Redo to a populated illustration did not hide the starting composer');
   current = await tool({ action: 'read' });
   current = await tool(apply(current.objects.filter(object => object.canvas === 'main').map(object => ({ op: 'delete', id: object.id }))));
-  check(current.objects.length===1 && current.objects[0].canvas==='scratch' && await evaluate('document.getElementById("prompt-form").hidden && document.getElementById("scratch-workspace").hidden'), 'Hidden scratch components also keep the illustration composer closed');
   current = await tool(apply(promptSceneObjects.filter(object => object.canvas === 'main').map(object => ({ op: 'upsert', object }))));
   await win.webContents.executeJavaScript('qaRailRuntime.open()');
   await waitFor(async () => (await evaluate('HikariPlugin.hikari.call("app.info")')).layout.agentChatRail.expanded, 'Chat rail did not open for an existing illustration');
@@ -438,12 +434,10 @@ async function run() {
   const originalChatSession = await win.webContents.executeJavaScript('qaScopedState.agentChat.currentSessionId');
   const originalReplyCount = await win.webContents.executeJavaScript('qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length');
   await win.webContents.executeJavaScript('document.getElementById("agent-rail-message-input").value="Unsent figure-specific change"');
-  await scratch(true);
   const revision = current.revision; await evaluate('location.reload()'); await pause(350);
   frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
   check((await tool({ action: 'read' })).revision === revision, 'Reload preserves the document');
-  check((await tool({ action: 'read' })).scratch_visible === false && await evaluate('document.getElementById("scratch-workspace").hidden'), 'Reload hides scratch even when it contains saved components');
   const pluginStorage = path.join(storage, 'Plugins/scientific-illustration');
   const index = JSON.parse(await fs.readFile(path.join(pluginStorage, 'library.json'), 'utf8'));
   const saved = JSON.parse(await fs.readFile(path.join(pluginStorage, index.illustrations.find(item => item.id === originalId).path), 'utf8'));
@@ -480,7 +474,6 @@ async function run() {
   const freshChatSession = await win.webContents.executeJavaScript('qaScopedState.agentChat.currentSessionId');
   check(await win.webContents.executeJavaScript(`qaScopedState.agentChat.currentSessionId!==${JSON.stringify(originalChatSession)} && qaRequests.at(-1).conversation.length===1 && qaRequests.at(-1).conversation[0].text==="Draw a different figure" && qaScopedState.agentChat.messages.length===2`), 'The second figure uses a distinct saved session and sends only its own history');
   check((await tool({ action: 'read', illustration_id: originalId })).status === 'illustration_changed', 'Agent requests cannot target the wrong selected illustration');
-  check((await tool({ action: 'scratch', illustration_id: originalId, visible: true })).status === 'illustration_changed', 'Scratch summons also guard against changed illustration selection');
   await evaluate('document.getElementById("illustration-search").value="SIGNALING";document.getElementById("illustration-search").dispatchEvent(new Event("input"))');
   check(await evaluate('document.querySelectorAll(".illustration-row").length===2'), 'Rail searches illustration titles without case sensitivity');
   await evaluate(`document.querySelector('[data-illustration-id="${originalId}"]').click()`);
@@ -519,7 +512,7 @@ async function run() {
   await evaluate('document.fonts.ready.then(()=>true)');
   const day = await evaluate('({background:getComputedStyle(document.body).backgroundColor,font:getComputedStyle(document.body).fontFamily,size:getComputedStyle(document.body).fontSize,rail:document.querySelector(".illustrations-rail").getBoundingClientRect().width})');
   check(day.background === 'rgb(252, 251, 248)' && day.font.startsWith('Inter') && day.size === '13px' && day.rail === 280, 'Day palette, typography and rail geometry match Hikari');
-  check(await evaluate('[...document.querySelectorAll(".canvas-stage")].every(stage=>getComputedStyle(stage).backgroundColor==="rgba(0, 0, 0, 0)")'), 'Main and scratch have no separate canvas backdrop in day mode');
+  check(await evaluate('[...document.querySelectorAll(".canvas-stage")].every(stage=>getComputedStyle(stage).backgroundColor==="rgba(0, 0, 0, 0)")'), 'The canvas has no separate backdrop in day mode');
   const apiLayout = await evaluate('HikariPlugin.hikari.call("app.setLeftRailWidth",{width:320})');
   await pause(100);
   check(apiLayout.leftRail.width === 320 && await evaluate('document.querySelector(".illustrations-rail").getBoundingClientRect().width===320'), 'Existing layout API updates the plugin rail');
@@ -537,14 +530,11 @@ async function run() {
   await evaluate('document.querySelector("[data-layer-id=label] .layer-select").click()');
   await pause(100);
   await fs.writeFile(path.join(temp, 'day.png'), (await win.webContents.capturePage()).toPNG());
-  await scratch(true); await pause(80);
-  await fs.writeFile(path.join(temp, 'scratch.png'), (await win.webContents.capturePage()).toPNG());
-  await scratch(false);
   await win.webContents.executeJavaScript('qaState.settings.appearance={mode:"night",fontSize:20};qaBridge.broadcastAppContext("appearance")');
   await pause(100);
   const night = await evaluate('({background:getComputedStyle(document.body).backgroundColor,size:getComputedStyle(document.body).fontSize,night:document.body.classList.contains("theme-night")})');
   check(night.background === 'rgb(19, 20, 23)' && night.size === '16.25px' && night.night, 'Appearance events update night mode and host font scale');
-  check(await evaluate('[...document.querySelectorAll(".canvas-stage")].every(stage=>getComputedStyle(stage).backgroundColor==="rgba(0, 0, 0, 0)")'), 'Main and scratch have no separate canvas backdrop in night mode');
+  check(await evaluate('[...document.querySelectorAll(".canvas-stage")].every(stage=>getComputedStyle(stage).backgroundColor==="rgba(0, 0, 0, 0)")'), 'The canvas has no separate backdrop in night mode');
   await fs.writeFile(path.join(temp, 'night.png'), (await win.webContents.capturePage()).toPNG());
   await win.webContents.executeJavaScript('qaState.settings.appearance={mode:"day",fontSize:16};qaBridge.broadcastAppContext("appearance")');
   win.setSize(480, 800); await pause(80);
@@ -563,7 +553,7 @@ async function run() {
   await verifyTextBounds({ tool, evaluate, check, win, pause, temp });
   await verifyGrouping({ tool, evaluate, check, win, pause, temp });
   await verifyPlacement({ tool, evaluate, check, win, pause, temp });
-  const review = { layout: 'Inspected both previews for clipping and overlap.', labels: 'Text stays separate and legible.',
+  const review = { layout: 'Inspected the preview for clipping and overlap.', labels: 'Text stays separate and legible.',
     artwork: 'Vector and raster artwork are text-free.', science: 'This fixture has no scientific mechanism to verify.' };
   current = await tool({ action: 'read' });
   const inspect = (render, extra = {}) => tool({ action: 'inspect', illustration_id: current.illustration_id,
@@ -571,16 +561,16 @@ async function run() {
   check(current.inspection.required && !current.inspection.complete, 'Inspection is required and incomplete on the current scene');
   check(!(await inspect(current)).ok, 'An agent cannot inspect without a render receipt');
   const mainOnly = await tool({ action: 'render', canvas: 'main' });
-  check(!mainOnly.inspection.inspection_id, 'Main-only readback does not satisfy the both-canvas requirement');
-  const reviewedImages = await tool({ action: 'render', canvas: 'both' });
-  check(reviewedImages.content.filter(item => item.type === 'image').length === 2 && !reviewedImages.inspection.complete, 'Inspection images are delivered but render alone is insufficient');
+  check(Boolean(mainOnly.inspection.inspection_id), 'A canvas readback provides the required inspection receipt');
+  const reviewedImages = await tool({ action: 'render', canvas: 'main' });
+  check(reviewedImages.content.filter(item => item.type === 'image').length === 1 && !reviewedImages.inspection.complete, 'Inspection images are delivered but render alone is insufficient');
   check(!(await inspect(reviewedImages, { review: { ...review, science: '' } })).ok, 'Review requires every observation field');
   check((await inspect(reviewedImages)).inspection.complete, 'Agent review completes the inspection for that revision');
   current = await tool(apply([{ op: 'title', title: 'Changed after inspection' }]));
   check(!(await inspect(reviewedImages)).ok && !(await tool({ action: 'inspection_status' })).inspection.complete, 'An edit invalidates the prior inspection');
   await evaluate('illustrationWorkspace.history("undo")'); current = await tool({ action: 'read' });
   check(!current.inspection.complete, 'Undo still requires a fresh inspection');
-  const beforeReload = await tool({ action: 'render', canvas: 'both' }); await inspect(beforeReload);
+  const beforeReload = await tool({ action: 'render', canvas: 'main' }); await inspect(beforeReload);
   await evaluate('location.reload()'); await pause(350);
   frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
@@ -603,7 +593,7 @@ async function run() {
       await tool({ action: 'asset_list' });
       if (modelCalls === 1) await tool(apply([{ op: 'title', title: 'Mandatory inspection fixture' }]));
       else {
-        const result = await inspect(await tool({ action: 'render', canvas: 'both' }));
+        const result = await inspect(await tool({ action: 'render', canvas: 'main' }));
         check(result.ok, 'Inspection receipt crosses the actual MCP and frame bridges in the same agent run');
       }
       return { text: 'Inspected the illustration.', metadata: { session_id: 'fixture-session' } };

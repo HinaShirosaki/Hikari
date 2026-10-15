@@ -35,10 +35,8 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
     await apply({});
     await evaluate('document.getElementById("zoom-fit").click();for(let i=0;i<3;i++)document.getElementById("zoom-in").click()');
     const cases = [0, 37].flatMap(rotation => Object.keys(directions).map(direction => ({ canvas: 'main', rotation, direction })));
-    cases.push({ canvas: 'scratch', rotation: 37, direction: 'se' });
     for (const { canvas, rotation, direction } of cases) {
-      await apply({ canvas, rotation, x: canvas === 'scratch' ? 40 : 160, y: canvas === 'scratch' ? 40 : 140 });
-      if (canvas === 'scratch') await evaluate('document.getElementById("zoom-fit").click();document.getElementById("zoom-in").click()');
+      await apply({ canvas, rotation, x: 160, y: 140 });
       await evaluate(`document.getElementById('${canvas}-canvas').scrollTo(0,0)`);
       const start = await points(canvas, direction);
       const [horizontal, vertical] = directions[direction], angle = rotation * Math.PI / 180;
@@ -64,7 +62,7 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
     }
   } finally { win.webContents.debugger.detach(); }
   await apply({});
-  await evaluate('document.getElementById("close-scratch").click();document.getElementById("zoom-fit").click()');
+  await evaluate('document.getElementById("zoom-fit").click()');
   await numericChange('width', 360);
   let saved = await read();
   check(saved.width === 360 && saved.height === 144 && saved.fontSize === 40 && saved.x === fixture.x && saved.y === fixture.y,
@@ -81,8 +79,8 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
   check(saved.fontSize === 300 && saved.width === 900 && saved.height === 360,
     'Numeric dimensions stop at the font limit without breaking the ratio');
   await apply({ width: 270, height: 108, fontSize: 30, rotation: 37 });
-  const rendered = await tool({ action: 'render', canvas: 'both' });
-  check(rendered.ok && rendered.content.filter(item => item.type === 'image').length === 2, 'Both-canvas agent images render after proportional text edits');
+  const rendered = await tool({ action: 'render', canvas: 'main' });
+  check(rendered.ok && rendered.content.filter(item => item.type === 'image').length === 1, 'Canvas agent images render after proportional text edits');
   await fs.writeFile(path.join(temp, 'text-fixed-ratio.png'), (await win.webContents.capturePage()).toPNG());
   await fs.writeFile(path.join(temp, 'text-resize.json'), JSON.stringify(await read(), null, 2));
 }

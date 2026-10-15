@@ -53,3 +53,11 @@ test('shared tools select their active owner even before iframe focus and stale 
   f.tools.dataset.viewId = 'plugin-other-view'; f.focus(f.button('#plugin-workspace-tools'));
   assert.equal(f.delegate.claim(), null);
 });
+
+test('a tool plugin frame claims history only while its Tools panel is shown', () => {
+  const f = fixture(), tools = { id: 'tool-box-view' }, panel = { hidden: false, closest: () => tools };
+  f.frame.closest = selector => selector === '.plugin-tool:not([hidden])' && !panel.hidden ? panel : null;
+  f.documentObject.body.dataset.activeView = tools.id; f.focus(f.frame);
+  assert.equal(f.delegate.claim().canUndo, true); assert.equal(f.delegate.run('undo'), true);
+  panel.hidden = true; assert.equal(f.delegate.claim(), null);
+});

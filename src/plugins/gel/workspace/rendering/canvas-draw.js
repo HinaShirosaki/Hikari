@@ -38,7 +38,7 @@ export function createCanvasDrawController({
   renderPeakEditor,
   setLaneProfileHover
 }) {
-  const { renderCellTable } = createCellTableController({ runtime, elements, safeText });
+  const { onCellTableCopy, renderCellTable } = createCellTableController({ runtime, elements, safeText, deps });
 
   function strokeLaneOutline(context, lane, height) {
     const vertices = getLaneVertexArray(lane);
@@ -84,14 +84,11 @@ export function createCanvasDrawController({
 
   function drawLaneVertexHandles(context, lanes, savedLaneVertices = []) {
     const vertexToolActive = runtime.selectedViewerTool === 'lane-vertices';
-    const savedLaneIndexes = new Set(
-      (Array.isArray(savedLaneVertices) ? savedLaneVertices : [])
-        .map((item) => Number(item?.laneIndex))
-        .filter(Number.isFinite)
-    );
-    const outlineLanes = vertexToolActive
-      ? lanes
-      : lanes.filter((lane) => savedLaneIndexes.has(lane.index + 1));
+    if (runtime.selectedViewerTool === 'dividers'
+      || (!vertexToolActive && runtime.currentReport?.lanes?.length)) {
+      return;
+    }
+    const outlineLanes = vertexToolActive || savedLaneVertices.length ? lanes : [];
     if (!outlineLanes.length) {
       return;
     }
@@ -308,6 +305,13 @@ export function createCanvasDrawController({
       runtime.currentImage.width,
       runtime.currentImage.height
     ) || [];
+    const dividerToolActive = runtime.selectedViewerTool === 'dividers';
+    const vertexToolActive = runtime.selectedViewerTool === 'lane-vertices';
+    // Only one lane layout is visible: divider editing, vertex editing, or the
+    // current report. Original straight dividers are obsolete after tilt edits.
+    const showStraightDividers = dividerToolActive || (
+      !vertexToolActive && !segmentation.laneVertices?.length && !runtime.currentReport?.lanes?.length
+    );
     if (
       Number.isFinite(segmentation.gelLeft)
       || Number.isFinite(segmentation.gelRight)
@@ -315,7 +319,7 @@ export function createCanvasDrawController({
     ) {
       context.save();
       context.lineWidth = 1.4;
-      if (Number.isFinite(segmentation.gelLeft)) {
+      if (showStraightDividers && Number.isFinite(segmentation.gelLeft)) {
         const x = clamp(segmentation.gelLeft, 0, runtime.currentImage.width - 1);
         context.strokeStyle = 'rgba(255, 214, 10, 0.95)';
         context.beginPath();
@@ -323,7 +327,7 @@ export function createCanvasDrawController({
         context.lineTo(x + 0.5, runtime.currentImage.height);
         context.stroke();
       }
-      if (Number.isFinite(segmentation.gelRight)) {
+      if (showStraightDividers && Number.isFinite(segmentation.gelRight)) {
         const x = clamp(segmentation.gelRight, 0, runtime.currentImage.width - 1);
         context.strokeStyle = 'rgba(255, 214, 10, 0.95)';
         context.beginPath();
@@ -331,7 +335,7 @@ export function createCanvasDrawController({
         context.lineTo(x + 0.5, runtime.currentImage.height);
         context.stroke();
       }
-      (Array.isArray(segmentation.dividers) ? segmentation.dividers : []).forEach((divider) => {
+      (showStraightDividers && Array.isArray(segmentation.dividers) ? segmentation.dividers : []).forEach((divider) => {
         const x = clamp(divider, 0, runtime.currentImage.width - 1);
         context.strokeStyle = 'rgba(255, 255, 255, 0.88)';
         context.beginPath();
@@ -339,6 +343,11 @@ export function createCanvasDrawController({
         context.lineTo(x + 0.5, runtime.currentImage.height);
         context.stroke();
       });
+
+      if (dividerToolActive) {
+        context.restore();
+        return;
+      }
 
       const laneBandMode = isPerLaneBandMode(segmentation);
       if (!laneBandMode && Number.isFinite(segmentation.bandTop)) {
@@ -391,7 +400,8 @@ export function createCanvasDrawController({
         });
       }
 
-      if (Number.isFinite(overrides.ladderLane) && segmentationLanes.length) {
+      if (!vertexToolActive && !runtime.currentReport?.lanes?.length
+        && Number.isFinite(overrides.ladderLane) && segmentationLanes.length) {
         const ladder = segmentationLanes.find((lane) => lane.index + 1 === overrides.ladderLane);
         if (ladder) {
           context.strokeStyle = 'rgba(255, 197, 61, 0.98)';
@@ -429,15 +439,19 @@ export function createCanvasDrawController({
       context.restore();
     }
 
-    drawCellOverlays(context, overrides);
+    if (!dividerToolActive) {
+      drawCellOverlays(context, overrides);
+    }
 
-    if (runtime.currentReport?.lanes?.length) {
+    if (!dividerToolActive && runtime.currentReport?.lanes?.length) {
       runtime.currentReport.lanes.forEach((lane) => {
         const isLadder = (overrides.ladderLane === lane.laneIndex)
           || (runtime.currentReport.calibration?.ladderLane === lane.laneIndex);
         context.strokeStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.9)';
         context.lineWidth = isLadder ? 2.2 : 1.6;
-        strokeLaneOutline(context, lane, runtime.currentImage.height);
+        if (!vertexToolActive) {
+          strokeLaneOutline(context, lane, runtime.currentImage.height);
+        }
 
         const labelSegment = getLaneRowSegment(lane, 0, runtime.currentImage.height);
         context.fillStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.95)';
@@ -472,6 +486,7 @@ export function createCanvasDrawController({
 
   return {
     drawCanvas,
+    onCellTableCopy,
     onCanvasHoverLeave,
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,

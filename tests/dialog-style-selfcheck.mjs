@@ -32,9 +32,12 @@ assert.match(dialogCss, /\.unsaved-changes-list li\s*\{[^}]*border:\s*0;[^}]*bor
 
 assert.match(agentHtml, /class="(?=[^"]*\bagent-review-dialog\b)(?=[^"]*\bapp-dialog-surface\b)[^"]*"/);
 assert.match(agentHtml, /class="agent-review-dialog-header app-dialog-head"/);
-assert.match(gelHtml, /id="gel-peak-editor-overlay"[^>]*app-dialog-overlay app-dialog-overlay--center/);
-assert.match(gelHtml, /class="gel-peak-editor-dialog app-dialog-surface"/);
-assert.match(gelHtml, /class="gel-peak-editor-header app-dialog-head"/);
+// The peak editor is a nonmodal floating window, not a centered overlay; it
+// keeps the shared close button.
+assert.match(gelHtml, /id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" data-gel-window="peak"/);
+assert.doesNotMatch(gelHtml, /id="gel-peak-editor-overlay"[^>]*app-dialog-overlay/);
+assert.match(gelHtml, /class="gel-peak-editor-dialog" role="dialog" aria-modal="false"/);
+assert.match(gelHtml, /id="gel-peak-editor-close-btn" class="app-dialog-close-btn"/);
 for (const id of ['dashboard-passage-dialog-close-btn', 'dashboard-timer-dialog-close-btn', 'dashboard-incubation-dialog-close-btn']) {
   assert.match(homeHtml, new RegExp(`id="${id}"[^>]*class="app-dialog-close-btn"`, 's'));
 }

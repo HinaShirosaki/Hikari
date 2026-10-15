@@ -16,12 +16,15 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
   const capabilities = await evaluate('window.HikariPlugin.hikari.call("app.info").then(info=>info.layout.workspaceTools)');
   const cropPath = capabilities.icons?.includes('crop') ? 'M6 3v15h15M3 6h15v15' : 'M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6';
   check(await host(`document.querySelector('[data-workspace-tool-id="crop-raster"] path').getAttribute('d')===${JSON.stringify(cropPath)}`), 'The shared Crop button uses a glyph accepted by this host version');
+  const alignPath = capabilities.icons?.includes('align') ? 'M4 3v18M8 5h12v5H8zM8 14h8v5H8z' : 'M3 4h18v16H3zM15 4v16M3 14h12';
+  check(await host(`document.querySelector('[data-workspace-tool-id="align-menu"] path').getAttribute('d')===${JSON.stringify(alignPath)}
+    && [...document.querySelectorAll('#plugin-workspace-tools button')].filter(button=>button.querySelector('path')?.getAttribute('d')===document.querySelector('[data-workspace-tool-id="layers-tab"] path').getAttribute('d')).length===1`), 'Only Layers uses the Layers glyph; Align has a distinct, host-compatible layout icon');
   check(await evaluate('document.body.classList.contains("has-host-tools") && document.getElementById("workspace-tools").getBoundingClientRect().width===0 && document.querySelector(".toolbar #group-selection,.toolbar #layers-tab")===null'), 'Mounted host tools release the local strip and header space');
   await apply([
     { op: 'upsert', object: { id: 'tool-cell', type: 'vector', x: 180, y: 180, width: 200, height: 160, svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160"><ellipse cx="100" cy="80" rx="98" ry="78" fill="#b6d8c8" stroke="#547966" stroke-width="3"/></svg>' } },
     { op: 'upsert', object: { id: 'tool-label', type: 'text', text: 'Cell', x: 240, y: 370, width: 90, height: 40, fontSize: 28 } }
   ]);
-  const before = await read(), previews = await tool({ action: 'render', canvas: 'both' });
+  const before = await read(), previews = await tool({ action: 'render', canvas: 'main' });
   check(await evaluate('(()=>{const title=document.getElementById("figure-title"),controls=document.querySelector(".canvas-controls"),toolbar=document.querySelector(".toolbar"),r=title.getBoundingClientRect(),c=controls.getBoundingClientRect();title.value="A detailed illustration of protein secretion from the endoplasmic reticulum through the Golgi to the cell surface";return controls.closest(".toolbar")===toolbar&&r.width<=288&&Math.abs(r.top+r.height/2-c.top-c.height/2)<2})()'), 'A compact rename field leaves room for canvas settings in the same header row');
   win.webContents.debugger.attach('1.3');
   const click = async selector => {
@@ -47,9 +50,7 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
     check(await evaluate('document.getElementById("selection-tool").value==="freehand"') && await host('document.querySelector("[data-workspace-tool-id=freehand-tool]").getAttribute("aria-pressed")==="true"'), 'Host selection mode reflects the editor state');
     await clickTool('pointer-tool');
     await clickTool('zoom-in'); await clickTool('zoom-fit');
-    await clickTool('toggle-scratch');
-    check(await evaluate('!document.getElementById("scratch-workspace").hidden'), 'Host Scratch summons the secondary canvas');
-    await clickTool('toggle-scratch');
+    check(await evaluate('!document.getElementById("scratch-workspace") && !document.getElementById("toggle-scratch")'), 'The workspace and shared toolbar contain no scratch canvas');
     await clickTool('add-menu');
     check(await evaluate('document.getElementById("add-menu").open && document.activeElement.id==="add-text" && (()=>{const r=document.querySelector("#add-menu .popover-panel").getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()'), 'Host Add opens a usable plugin-owned menu in bounds');
     await evaluate('document.getElementById("add-text").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))'); await pause(80);
@@ -68,7 +69,7 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
       win.setSize(width, 850); await pause(100);
       check(await host('(()=>{const r=document.getElementById("universal-agent-chat-rail").getBoundingClientRect(),t=document.getElementById("plugin-workspace-tools").getBoundingClientRect(),w=document.querySelector(".workspace-main").getBoundingClientRect();return r.width<=46&&t.width<=40&&r.right<=innerWidth&&w.right<=r.left+1&&document.documentElement.scrollWidth<=innerWidth})()'), `${width}px uses one slim right strip without horizontal overflow`);
       const layout = await evaluate('(()=>{const stage=document.getElementById("main-canvas").getBoundingClientRect(),bar=document.querySelector(".toolbar").getBoundingClientRect(),status=document.getElementById("status");return {height:innerHeight,bottom:stage.bottom,stageHeight:stage.height,top:stage.top,headerBottom:bar.bottom,controlsInHeader:!!document.querySelector(".canvas-controls").closest(".toolbar"),overflow:document.documentElement.scrollWidth>innerWidth,status:status.textContent,statusHeight:status.getBoundingClientRect().height}})()');
-      if (Math.abs(layout.bottom-layout.height)>=1) layout.boxes = await evaluate('Object.fromEntries(["html","body",".illustration-workspace",".workspace",".work-area",".canvas-column",".canvases",".main-stage-wrap","#prompt-form","#scratch-workspace"].map(s=>{const n=document.querySelector(s),r=n.getBoundingClientRect(),c=getComputedStyle(n);return [s,{top:r.top,bottom:r.bottom,height:r.height,display:c.display,rows:c.gridTemplateRows,flex:c.flex,padding:c.padding}]}))');
+      if (Math.abs(layout.bottom-layout.height)>=1) layout.boxes = await evaluate('Object.fromEntries(["html","body",".illustration-workspace",".workspace",".work-area",".canvas-column",".canvases",".main-stage-wrap","#prompt-form"].map(s=>{const n=document.querySelector(s),r=n.getBoundingClientRect(),c=getComputedStyle(n);return [s,{top:r.top,bottom:r.bottom,height:r.height,display:c.display,rows:c.gridTemplateRows,flex:c.flex,padding:c.padding}]}))');
       check(!layout.overflow && layout.stageHeight>250 && layout.controlsInHeader && layout.headerBottom<=layout.top && Math.abs(layout.bottom-layout.height)<1, `${width}px keeps controls in the header and stretches the canvas workspace to the bottom: ${JSON.stringify(layout)}`);
       await evaluate('document.getElementById("canvas-size").value="custom";document.getElementById("canvas-size").dispatchEvent(new Event("change",{bubbles:true}))'); await pause(60);
       check(await evaluate('(()=>{const r=document.querySelector(".canvas-options .popover-panel").getBoundingClientRect(),bar=document.querySelector(".canvas-controls").getBoundingClientRect();return r.top>=bar.bottom&&r.left>=0&&r.right<=innerWidth&&r.bottom<=innerHeight&&document.activeElement===document.getElementById("canvas-properties").elements.width})()'), `${width}px opens custom size below the top controls in bounds`);
@@ -76,6 +77,9 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
       await evaluate('document.getElementById("figure-menu").open=true'); await pause(60);
       check(await evaluate('(()=>{const r=document.querySelector("#figure-menu .popover-panel").getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=document.querySelector(".toolbar").getBoundingClientRect().bottom&&r.bottom<=innerHeight&&document.getElementById("image-generation-percent").getBoundingClientRect().width>60})()'), `${width}px keeps the image generation controls accessible in bounds without adding a header row`);
       await evaluate('document.getElementById("figure-menu").open=false');
+      await clickTool('align-menu');
+      check(await evaluate('(()=>{const r=document.querySelector("#align-menu .popover-panel").getBoundingClientRect();return r.width>0&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight})()'), `${width}px keeps the alignment menu inside the plugin workspace`);
+      await evaluate('document.getElementById("align-menu").open=false');
       await clickTool('assets-tab');
       check(await evaluate('!document.getElementById("assets-panel").hidden'), `${width}px opens the asset panel from the host strip`);
       await clickTool('assets-tab');
@@ -89,7 +93,7 @@ async function verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, t
     }
     win.setSize(1300, 1000); await pause(80);
     await fs.writeFile(path.join(temp, 'workspace-tools-main.png'), (await win.webContents.capturePage()).toPNG());
-    const after = await read(), afterPreviews = await tool({ action: 'render', canvas: 'both' });
+    const after = await read(), afterPreviews = await tool({ action: 'render', canvas: 'main' });
     check(JSON.stringify(after.objects) === JSON.stringify(before.objects) && JSON.stringify(after.canvases) === JSON.stringify(before.canvases), 'Toolbar and panel layout never transform saved artwork');
     check(JSON.stringify(previews.content.filter(c => c.type === 'image')) === JSON.stringify(afterPreviews.content.filter(c => c.type === 'image')), 'Agent previews stay identical across toolbar layout changes');
   } finally { win.webContents.debugger.detach(); }

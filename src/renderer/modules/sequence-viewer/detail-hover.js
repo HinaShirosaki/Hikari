@@ -28,7 +28,7 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
     <p>${escapeHtml(feature?.type || '-')} | Strand ${strand}</p>
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
-    ${renderPrimerHoverSection(feature, recordSequence)}
+    ${renderPrimerHoverSection(feature, recordSequence, { allowLibrarySave: true })}
     ${renderCdsProteinHoverSection(feature, recordSequence)}
   `;
 }

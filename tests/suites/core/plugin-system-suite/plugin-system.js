@@ -378,6 +378,127 @@ test('plugin system: a service plugin mounts a hidden frame and no view', async 
   );
 });
 
+test('plugin system: tool plugins mount inside Tools and read the compound list', async () => {
+  const { inspectPluginFolder } = require(path.join(__dirname, 'src', 'main', 'lib', 'inspect-plugin-folder.js'));
+  const dir = path.join(__dirname, 'tmp', 'tool-plugin');
+  await fsPromises.rm(dir, { recursive: true, force: true });
+  await fsPromises.mkdir(dir, { recursive: true });
+  await fsPromises.writeFile(path.join(dir, 'index.html'), '<!doctype html><title>tool</title>');
+  const writeManifest = (manifest) => fsPromises.writeFile(path.join(dir, 'plugin.json'), JSON.stringify(manifest));
+  const valid = { id: 'tool-plugin', name: 'Tool', version: '1.0.0', tool: true, permissions: ['chemicals:read', 'notebook:write'] };
+  await writeManifest(valid);
+  const ok = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+  assert.equal(ok.ok, true, ok.error);
+  assert.equal(ok.tool, true);
+  assert.deepEqual(ok.permissions, ['chemicals:read', 'notebook:write']);
+  await writeManifest({ ...valid, tool: undefined });
+  assert.equal((await inspectPluginFolder({ fs: fsPromises, folderPath: dir })).tool, false, 'tool defaults to false');
+  for (const [label, manifest] of [
+    ['non-boolean tool', { ...valid, tool: 'yes' }],
+    ['tool plus embed', { ...valid, permissions: [], embed: 'https://x.test/' }],
+    ['tool plus service', { ...valid, service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }],
+    ['tool with layout', { ...valid, permissions: ['layout'] }],
+    ['tool with agent chat', { ...valid, permissions: ['agent:chat'] }]
+  ]) {
+    await writeManifest(manifest);
+    const rejected = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+    assert.equal(rejected.ok, false, `${label} must be rejected`);
+    assert.ok(rejected.error, `${label} must report a reason`);
+  }
+
+  const { normalizeState } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'state-normalizer.js')).href
+  );
+  const normalized = Object.fromEntries(normalizeState({ settings: { plugins: [
+    { id: 'kept', name: 'K', entryUrl: 'file:///k/index.html', tool: true },
+    { id: 'remote', name: 'R', embedUrl: 'https://x.test/', tool: true }
+  ] } }).settings.plugins.map((plugin) => [plugin.id, plugin]));
+  assert.equal(normalized.kept.tool, true);
+  assert.equal(normalized.remote.tool, false, 'a remote record never becomes a tool');
+
+  const { installPlugins } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
+  );
+  const all = [];
+  function makeNode(tag) {
+    const node = {
+      tagName: String(tag).toUpperCase(), id: '', className: '', hidden: false, src: '', textContent: '',
+      dataset: {}, children: [], attributes: new Map(),
+      setAttribute(n, v) { this.attributes.set(n, String(v)); },
+      getAttribute(n) { return this.attributes.has(n) ? this.attributes.get(n) : null; },
+      append(...kids) { this.children.push(...kids); all.push(...kids); },
+      querySelector(sel) { return all.find((child) => child.className.split(' ').includes(sel.slice(1))) || null; }
+    };
+    if (node.tagName === 'IFRAME') node.contentWindow = {};
+    return node;
+  }
+  const workspace = makeNode('div');
+  const toolBox = makeNode('section');
+  toolBox.id = 'tool-box-view';
+  const grid = makeNode('div');
+  grid.className = 'tool-grid';
+  const content = makeNode('div');
+  content.className = 'tool-content';
+  toolBox.append(grid, content);
+  const documentObject = {
+    createElement: (tag) => makeNode(tag),
+    querySelector: (sel) => (sel === '.workspace-main' ? workspace : null),
+    getElementById: (id) => (id === toolBox.id ? toolBox : all.find((node) => node.id === id) || null)
+  };
+  const bridged = [];
+  const appRegistry = [];
+  const installed = installPlugins({
+    state: { settings: { plugins: [{ id: 'dilution', name: 'Dilution', description: 'C1V1 = C2V2.',
+      entryUrl: 'file:///tmp/dilution/index.html', path: '/tmp/dilution', permissions: ['chemicals:read'], tool: true }] } },
+    documentObject,
+    appRegistry,
+    bridge: { register: (frameWindow, plugin) => bridged.push({ frameWindow, plugin }) },
+    api: { servePluginFolder: async () => ({ ok: true, baseUrl: 'http://127.0.0.1:43210/' }) }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepEqual(installed, ['plugin-dilution-tool']);
+  assert.equal(appRegistry.length, 0, 'a tool adds no dock or More entry');
+  assert.equal(workspace.children.length, 0, 'a tool adds no view section');
+  const [tile] = grid.children;
+  assert.equal(tile.dataset.toolView, 'plugin-dilution-tool', 'the Tools view manager binds the tile by data-tool-view');
+  assert.ok(tile.className.split(' ').includes('tool-tile'));
+  assert.equal(tile.children[0].textContent, 'Dilution', 'the tile label is the plugin name, as text');
+  const [panel] = content.children;
+  assert.equal(panel.id, 'plugin-dilution-tool');
+  assert.equal(panel.hidden, true, 'Tools decides which panel is shown');
+  assert.ok(panel.className.split(' ').includes('tool-subview'));
+  const [head, frame] = panel.children;
+  assert.deepEqual(head.children.map((node) => node.textContent), ['Dilution', 'C1V1 = C2V2.']);
+  assert.equal(frame.src, 'http://127.0.0.1:43210/');
+  assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-forms allow-modals allow-popups allow-same-origin');
+  assert.match(frame.title, /Tool plugin/);
+  assert.equal(bridged.length, 1, 'the tool frame is registered with the permission bridge');
+  assert.equal(bridged[0].frameWindow, frame.contentWindow);
+
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const bridge = createPluginBridge({
+    state: { labInventory: { chemicals: [{ name: 'Tris base', molecularWeight: '121.14', casNumber: '77-86-1' }] } },
+    windowObject: { addEventListener() {} }
+  });
+  const makeFrame = () => ({ replies: [], postMessage(payload) { this.replies.push(payload); } });
+  const reader = makeFrame();
+  const denied = makeFrame();
+  bridge.register(reader, { id: 'reader', permissions: ['chemicals:read'] }, PLUGIN_TEST_ORIGIN);
+  bridge.register(denied, { id: 'denied', permissions: [] }, PLUGIN_TEST_ORIGIN);
+  const send = (source) => {
+    bridge.handleMessage({ origin: PLUGIN_TEST_ORIGIN, source, data: { hikari: 1, id: 'c', verb: 'chemicals.list' } });
+    return source.replies.at(-1);
+  };
+  assert.equal(send(denied).ok, false, 'chemicals.list needs chemicals:read');
+  const compounds = send(reader).result;
+  const tris = compounds.find((compound) => compound.name.toLowerCase() === 'tris base');
+  assert.deepEqual(tris, { name: 'Tris base', mw: 121.14, pKa: tris.pKa, form: 'solid', category: 'CAS 77-86-1', source: 'inventory' },
+    'an inventory record wins over the reference compound of the same name');
+  assert.ok(compounds.some((compound) => compound.source === 'reference'), 'reference compounds are included');
+});
+
 test('plugin system: only non-host origins get allow-same-origin', async () => {
   const { isSameOriginSafeUrl } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href

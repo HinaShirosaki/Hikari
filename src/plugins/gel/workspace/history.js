@@ -20,10 +20,20 @@ function serialize(overrides) {
   }
 }
 
+// The analysis report is derived, so an entry keeps only whether its step was
+// showing one. Undo re-runs it for steps that had one; re-running it everywhere
+// turned divider-only steps into a full report with lane 1 drawn as the ladder.
+function snapshot(runtime) {
+  return {
+    overrides: serialize(runtime.manualOverrides),
+    analyzed: Boolean(runtime.currentReport)
+  };
+}
+
 export function createHistoryController({ runtime, deps = {}, maxDepth = DEFAULT_MAX_DEPTH }) {
   const undoStack = [];
   const redoStack = [];
-  let baseline = serialize(runtime.manualOverrides);
+  let baseline = snapshot(runtime);
   let imageRevision = runtime.imageRevision;
   let applying = false;
 
@@ -51,11 +61,17 @@ export function createHistoryController({ runtime, deps = {}, maxDepth = DEFAULT
       reset();
       return false;
     }
-    const next = serialize(runtime.manualOverrides);
-    if (!next || next === baseline) {
+    const next = snapshot(runtime);
+    if (!next.overrides) {
       return false;
     }
-    if (baseline) {
+    if (next.overrides === baseline.overrides) {
+      // Most edits render first and analyze after, so the report this step
+      // ends up showing only arrives on a later, otherwise unchanged commit.
+      baseline.analyzed = next.analyzed;
+      return false;
+    }
+    if (baseline.overrides) {
       undoStack.push(baseline);
       while (undoStack.length > maxDepth) {
         undoStack.shift();
@@ -67,18 +83,18 @@ export function createHistoryController({ runtime, deps = {}, maxDepth = DEFAULT
     return true;
   }
 
-  function apply(serialized) {
+  function apply(entry) {
     let restored = null;
     try {
-      restored = JSON.parse(serialized);
+      restored = JSON.parse(entry.overrides);
     } catch {
       return false;
     }
     applying = true;
     try {
       runtime.manualOverrides = restored;
-      baseline = serialized;
-      deps.renderAll?.();
+      baseline = { ...entry };
+      deps.renderAll?.({ analyzed: entry.analyzed });
     } finally {
       applying = false;
     }
@@ -86,25 +102,30 @@ export function createHistoryController({ runtime, deps = {}, maxDepth = DEFAULT
     return true;
   }
 
+  // Edits that never re-render (lane-table text, peak marks, Done Quantify) are
+  // still pending here. Commit them first, or undo skips past them and redo
+  // can't bring them back.
   function undo() {
+    commit();
     const target = undoStack.pop();
     if (!target) {
       announce();
       return false;
     }
-    if (baseline && baseline !== target) {
+    if (baseline.overrides && baseline.overrides !== target.overrides) {
       redoStack.push(baseline);
     }
     return apply(target);
   }
 
   function redo() {
+    commit();
     const target = redoStack.pop();
     if (!target) {
       announce();
       return false;
     }
-    if (baseline && baseline !== target) {
+    if (baseline.overrides && baseline.overrides !== target.overrides) {
       undoStack.push(baseline);
     }
     return apply(target);
@@ -113,7 +134,7 @@ export function createHistoryController({ runtime, deps = {}, maxDepth = DEFAULT
   function reset() {
     undoStack.length = 0;
     redoStack.length = 0;
-    baseline = serialize(runtime.manualOverrides);
+    baseline = snapshot(runtime);
     imageRevision = runtime.imageRevision;
     announce();
   }

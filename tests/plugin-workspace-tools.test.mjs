@@ -41,6 +41,7 @@ test('host advertises exactly the icons its workspace toolbar accepts', () => {
   assert.equal(context.layout.workspaceTools.available, true);
   assert.deepEqual(context.layout.workspaceTools.icons, workspaceToolIcons);
   assert.ok(context.layout.workspaceTools.icons.includes('crop'));
+  assert.ok(context.layout.workspaceTools.icons.includes('align'));
   for (const icon of context.layout.workspaceTools.icons) {
     assert.doesNotThrow(() => normalizeWorkspaceTools({ tools: [{ id: 'tool', label: 'Tool', icon }] }));
   }
@@ -50,13 +51,13 @@ function illustrationToolbarFixture(icons) {
   const calls = [], events = {}, classes = new Set();
   const classList = { toggle: (name, on) => on ? classes.add(name) : classes.delete(name) };
   const ids = ['pointer-tool', 'freehand-tool', 'add-menu', 'crop-raster', 'group-selection',
-    'ungroup-selection', 'layers-tab', 'assets-tab', 'toggle-scratch', 'zoom-out', 'zoom-level', 'zoom-in', 'zoom-fit', 'workspace-tools'];
+    'ungroup-selection', 'align-menu', 'layers-tab', 'assets-tab', 'zoom-out', 'zoom-level', 'zoom-in', 'zoom-fit', 'workspace-tools'];
   const nodes = Object.fromEntries(ids.map(id => [id, {
     title: id === 'crop-raster' ? 'Crop selected image' : id, textContent: '100%', disabled: id === 'crop-raster',
     classList, hasAttribute: () => false, getAttribute: () => null, querySelector() { return this; },
     addEventListener() {}, click() { this.clicks = (this.clicks || 0) + 1; }
   }]));
-  const accepted = new Set(icons || workspaceToolIcons.filter(icon => icon !== 'crop'));
+  const accepted = new Set(icons || workspaceToolIcons.filter(icon => !['crop', 'align'].includes(icon)));
   const hikari = { on: (name, callback) => { events[name] = callback; }, call: async (verb, params) => {
     calls.push({ verb, params });
     if (params.tools.some(tool => tool.kind !== 'output' && !accepted.has(tool.icon))) throw new Error('Unsupported icon');
@@ -69,13 +70,15 @@ function illustrationToolbarFixture(icons) {
 const flushToolbar = () => new Promise(resolve => setImmediate(resolve));
 
 test('older packaged hosts keep the merged toolbar and Crop action without a crop icon capability', async () => {
-  for (const icons of [undefined, workspaceToolIcons.filter(icon => icon !== 'crop')]) {
+  for (const icons of [undefined, workspaceToolIcons.filter(icon => !['crop', 'align'].includes(icon))]) {
     const fixture = illustrationToolbarFixture(icons);
     fixture.toolbar.connect(fixture.info); await flushToolbar();
     assert.equal(fixture.toolbar.isHosted(), true, 'A rejected glyph must not detach the entire toolbar');
     assert.ok(fixture.classes.has('has-host-tools'));
     const tools = fixture.calls.at(-1).params.tools, crop = tools.find(tool => tool.id === 'crop-raster');
     assert.equal(tools.filter(tool => tool.kind !== 'output').length, 12);
+    assert.equal(tools.find(tool => tool.id === 'align-menu').icon, 'scratch');
+    assert.deepEqual(tools.filter(tool => tool.icon === 'layers').map(tool => tool.id), ['layers-tab']);
     assert.equal(crop.icon, 'fit'); assert.equal(crop.label, 'Crop selected image'); assert.equal(crop.disabled, true);
     fixture.nodes['crop-raster'].disabled = false; fixture.toolbar.sync(); await flushToolbar();
     assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'crop-raster').disabled, false);
@@ -89,10 +92,14 @@ test('current hosts use the dedicated Crop icon and context refresh keeps the ho
   fixture.toolbar.connect(fixture.info); await flushToolbar();
   assert.equal(fixture.toolbar.isHosted(), true);
   assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'crop-raster').icon, 'crop');
+  assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'align-menu').icon, 'align');
+  assert.deepEqual(fixture.calls.at(-1).params.tools.filter(tool => tool.icon === 'layers').map(tool => tool.id), ['layers-tab']);
   const count = fixture.calls.length;
   fixture.toolbar.connect(fixture.info); await flushToolbar();
   assert.equal(fixture.calls.length, count, 'Unchanged context does not re-register controls');
   fixture.toolbar.connect({ ...fixture.info, layout: { workspaceTools: { available: true } } }); await flushToolbar();
   assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'crop-raster').icon, 'fit');
+  assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'align-menu').icon, 'scratch');
+  assert.deepEqual(fixture.calls.at(-1).params.tools.filter(tool => tool.icon === 'layers').map(tool => tool.id), ['layers-tab']);
   assert.equal(fixture.toolbar.isHosted(), true);
 });

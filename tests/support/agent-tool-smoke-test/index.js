@@ -23,6 +23,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   const {
     smokeInventoryLookup,
     smokeNotebookLookup,
+    smokeNotebookList,
     smokeProtocolMatching,
     smokeNotebookGeneration,
     smokeNotebookDraft,
@@ -49,6 +50,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   const smokeRunners = {
     'inventory-lookup': async (options = {}) => smokeInventoryLookup(buildSmokeSnapshot(), options),
     'notebook-lookup': async (options = {}) => smokeNotebookLookup(buildSmokeSnapshot(), options),
+    'notebook-list': async (options = {}) => smokeNotebookList(buildSmokeSnapshot(), options),
     'protocol-matching': async (options = {}) => smokeProtocolMatching(buildSmokeSnapshot(), options),
     'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),
     'notebook-draft': async (options = {}) => smokeNotebookDraft(buildSmokeSnapshot(), options),

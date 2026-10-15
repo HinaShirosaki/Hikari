@@ -215,7 +215,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
           assert.match(runtimeConfig, /mcp-contract\/stdio-server\.js/);
           assert.match(runtimeConfig, /required = true/);
-          assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
+          assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "notebook_list", "protocol_lookup", "protocol_generation"/);
           assert.match(runtimeConfig, /"container"/);
           assert.match(runtimeConfig, /"assay_table"/);
           assert.match(runtimeConfig, /"plotly_graph"/);

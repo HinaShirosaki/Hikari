@@ -2,27 +2,27 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createCodexAgentRuntime } = require('../src/main/agent/codex-agent/runtime.js');
 
-const review = { layout: 'Both canvases fit; no clipping.', labels: 'Labels are legible and separate.',
+const review = { layout: 'The canvas fits; no clipping.', labels: 'Labels are legible and separate.',
   artwork: 'Artwork contains no text.', science: 'Arrow direction matches the requested process.' };
 
 async function tracker() { return (await import('../plugins/scientific-illustration/inspection.mjs')).createInspectionTracker(); }
 
-test('inspection requires both rendered canvases and the exact revision receipt', async () => {
+test('inspection requires a rendered canvas and the exact revision receipt', async () => {
   const gate = await tracker();
   const inspect = (token, revision = 'r1', run = 'run1') => gate.inspect('figure1', revision, run,
     { expected_revision: revision, inspection_id: token, review });
   assert.equal(inspect('invented').ok, false);
-  const main = gate.rendered('figure1', 'r1', 'run1', ['main']);
-  assert.equal(main.inspection_id, undefined);
+  const unknown = gate.rendered('figure1', 'r1', 'run1', ['unknown']);
+  assert.equal(unknown.inspection_id, undefined);
   assert.equal(inspect('invented').ok, false);
-  const both = gate.rendered('figure1', 'r1', 'run1', ['scratch']);
-  assert.ok(both.inspection_id);
-  assert.equal(both.complete, false, 'Rendering alone cannot pass');
+  const rendered = gate.rendered('figure1', 'r1', 'run1', ['main']);
+  assert.ok(rendered.inspection_id);
+  assert.equal(rendered.complete, false, 'Rendering alone cannot pass');
   assert.equal(gate.status('figure1', 'r1', 'run1').inspection_id, undefined, 'Only a render discloses the receipt');
-  assert.equal(inspect(both.inspection_id, 'r2').ok, false, 'An intervening edit invalidates the receipt');
-  assert.equal(inspect(both.inspection_id, 'r1', 'another-run').ok, false);
-  assert.equal(gate.inspect('figure2', 'r1', 'run1', { expected_revision: 'r1', inspection_id: both.inspection_id, review }).ok, false);
-  assert.equal(inspect(both.inspection_id).inspection.complete, true);
+  assert.equal(inspect(rendered.inspection_id, 'r2').ok, false, 'An intervening edit invalidates the receipt');
+  assert.equal(inspect(rendered.inspection_id, 'r1', 'another-run').ok, false);
+  assert.equal(gate.inspect('figure2', 'r1', 'run1', { expected_revision: 'r1', inspection_id: rendered.inspection_id, review }).ok, false);
+  assert.equal(inspect(rendered.inspection_id).inspection.complete, true);
   assert.equal(gate.status('figure1', 'r2', 'run1').complete, false);
   assert.equal((await tracker()).status('figure1', 'r1', 'run1').complete, false, 'Reload has no old inspection receipts');
 });

@@ -14,7 +14,7 @@ async function verifyRailFolding({ tool, evaluate, check, win, pause, temp, relo
       expanded:toggle.getAttribute('aria-expanded'),label:toggle.getAttribute('aria-label'),
       toggleHidden:toggle.hidden,dividerHidden:document.querySelector('.app-left-rail-handle').hidden};
   })()`);
-  const before = await tool({ action: 'read' }), previews = await tool({ action: 'render', canvas: 'both' }), expanded = await measure();
+  const before = await tool({ action: 'read' }), previews = await tool({ action: 'render', canvas: 'main' }), expanded = await measure();
   check((await info()).layout.leftRail.foldable && !expanded.toggleHidden && expanded.expanded === 'true', 'Host advertises folding and the plugin exposes its accessible toggle');
   await evaluate('document.getElementById("illustration-search").focus()');
   await fold(true);
@@ -22,10 +22,10 @@ async function verifyRailFolding({ tool, evaluate, check, win, pause, temp, relo
   check(collapsed.hidden && collapsed.inert && collapsed.dividerHidden && collapsed.expanded === 'false' && collapsed.label === 'Show illustrations', 'Folding removes navigation and divider from interaction while keeping a reopen control');
   check(Math.abs(collapsed.canvasWidth - expanded.canvasWidth - expanded.width) < 1, 'The canvas receives all space released by the navigation rail');
   check(await evaluate('document.activeElement===document.getElementById("toggle-illustrations")'), 'Folding externally moves focus out of the hidden rail to its toggle');
-  const after = await tool({ action: 'read' }), foldedPreviews = await tool({ action: 'render', canvas: 'both' });
+  const after = await tool({ action: 'read' }), foldedPreviews = await tool({ action: 'render', canvas: 'main' });
   check(before.revision === after.revision && JSON.stringify(before.objects) === JSON.stringify(after.objects)
     && JSON.stringify(before.canvases) === JSON.stringify(after.canvases), 'Folding leaves saved figure geometry and revision unchanged');
-  check(JSON.stringify(previews.content.filter(item => item.type === 'image')) === JSON.stringify(foldedPreviews.content.filter(item => item.type === 'image')), 'Agent images of both canvases remain byte-identical after folding');
+  check(JSON.stringify(previews.content.filter(item => item.type === 'image')) === JSON.stringify(foldedPreviews.content.filter(item => item.type === 'image')), 'Agent images of the canvas remain byte-identical after folding');
   await fs.writeFile(path.join(temp, 'rail-folded.png'), (await win.webContents.capturePage()).toPNG());
   await evaluate('HikariPlugin.hikari.call("app.setLeftRailWidth",{width:336})'); await pause(80);
   check((await info()).layout.leftRail.width === 336 && (await measure()).hidden, 'Expanded width can change while folded without opening the rail');

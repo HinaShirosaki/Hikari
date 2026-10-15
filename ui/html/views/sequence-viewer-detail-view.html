@@ -51,9 +51,12 @@
                 </div>
               </section>
               <section class="sequence-viewer-library-controls left-rail-template__section">
-                <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                  <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                  <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                <div class="sequence-viewer-library-filter-row">
+                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                    <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                    <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                  </div>
+                  <button id="sequence-viewer-detail-primer-library-open" class="ghost-btn sequence-viewer-primer-library-open-btn" type="button" aria-label="Open Primer Library" title="Primer Library" aria-haspopup="dialog">Primers</button>
                 </div>
               </section>
             </div>
@@ -430,6 +433,32 @@
           <div class="form-actions">
             <button id="sequence-viewer-primer-design-order" type="button" class="ghost-btn">Order Primers</button>
             <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+          </div>
+        </section>
+      </div>
+
+      <div id="sequence-viewer-primer-library-overlay" class="sequence-viewer-primer-library-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <section class="sequence-viewer-primer-library-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-library-title">
+          <div class="result-card-head app-dialog-head">
+            <h4 id="sequence-viewer-primer-library-title">Primer Library</h4>
+            <button id="sequence-viewer-primer-library-close" type="button" class="app-dialog-close-btn" aria-label="Close Primer Library" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <div class="sequence-viewer-primer-library-toolbar">
+            <input id="sequence-viewer-primer-library-search" type="search" placeholder="Search primers" aria-label="Search Primer Library" autocomplete="off">
+            <span id="sequence-viewer-primer-library-count" class="small-note" aria-live="polite">0 primers · 0 selected</span>
+          </div>
+          <div class="sequence-viewer-primer-library-table-wrap">
+            <table class="sequence-viewer-primer-library-table">
+              <thead><tr>
+                <th scope="col"><input id="sequence-viewer-primer-library-select-all" type="checkbox" aria-label="Select all visible primers"></th>
+                <th scope="col">Name</th><th scope="col">Sequence (5′ → 3′)</th><th scope="col">nt</th><th scope="col">Source</th>
+              </tr></thead>
+              <tbody id="sequence-viewer-primer-library-body"></tbody>
+            </table>
+          </div>
+          <div class="form-actions sequence-viewer-primer-library-actions">
+            <button id="sequence-viewer-primer-library-remove" type="button" class="ghost-btn" disabled>Remove Selected</button>
+            <button id="sequence-viewer-primer-library-export" type="button" class="primary-btn" disabled>Export Selected to IDT</button>
           </div>
         </section>
       </div>

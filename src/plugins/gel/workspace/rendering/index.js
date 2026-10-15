@@ -216,7 +216,11 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    elements.gelLaneProfilePanel.hidden = !runtime.currentImage;
+    elements.gelLaneProfilePanel.hidden = !runtime.currentImage
+      || runtime.laneProfileWindowOpen === false;
+    if (elements.gelOpenProfileBtn) {
+      elements.gelOpenProfileBtn.disabled = !runtime.currentImage;
+    }
 
     if (!runtime.currentImage) {
       runtime.selectedLaneProfileLane = null;
@@ -322,6 +326,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   } = peakEditorController;
   const {
     onCanvasHoverLeave,
+    onCellTableCopy,
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,
     onLaneProfileChartMouseMove,
@@ -366,6 +371,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
   return {
     onCanvasHoverLeave,
+    onCellTableCopy,
     onCellTableClose,
     onCellTableKeyDown,
     onCellTableOpen,

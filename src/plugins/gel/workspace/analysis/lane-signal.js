@@ -1,7 +1,7 @@
 import { clamp, getLaneRectifiedWidth, getLaneRowSegment, sampleArrayValue } from '../shared.js';
 
 // Reading the intensity profile of one lane out of the quantification signal:
-// row means, the rolling baseline under them, and a hand-drawn band's measurement.
+// row means, the rolling baseline under them, and a band window's measurement.
 function forEachRectifiedLaneSample({ lane, height, rowY }, callback) {
   const laneWidth = getLaneRectifiedWidth(lane);
   const segment = getLaneRowSegment(lane, rowY, height);
@@ -15,99 +15,6 @@ function forEachRectifiedLaneSample({ lane, height, rowY }, callback) {
     });
   }
   return laneWidth;
-}
-
-function computeManualBand({
-  signal,
-  rawGray,
-  width,
-  height,
-  lane,
-  pixelY,
-  bandTopOverride = null,
-  bandBottomOverride = null,
-  measurementMode = 'manual-point'
-}) {
-  const yCenter = clamp(Math.round(pixelY), 0, height - 1);
-  const hasWindow = Number.isFinite(bandTopOverride) && Number.isFinite(bandBottomOverride);
-  const requestedTop = hasWindow ? Math.floor(Math.min(bandTopOverride, bandBottomOverride)) : (yCenter - 2);
-  const requestedBottom = hasWindow ? Math.floor(Math.max(bandTopOverride, bandBottomOverride)) : (yCenter + 2);
-  const bandTop = clamp(requestedTop, 0, height - 1);
-  const bandBottom = clamp(requestedBottom, bandTop, height - 1);
-  const thickness = Math.max(1, bandBottom - bandTop + 1);
-  const backgroundSpan = Math.max(2, Math.round(thickness * 1.5));
-
-  let bandSum = 0;
-  let bandPixelCount = 0;
-  let bgSum = 0;
-  let bgSumSquares = 0;
-  let bgPixelCount = 0;
-  let saturatedCount = 0;
-
-  for (let y = bandTop; y <= bandBottom; y += 1) {
-    forEachRectifiedLaneSample({ lane, width, height, rowY: y }, ({ x, y: sampleY }) => {
-      const value = sampleArrayValue(signal, width, height, x, sampleY);
-      const raw = sampleArrayValue(rawGray, width, height, x, sampleY);
-      bandSum += value;
-      bandPixelCount += 1;
-      if (raw >= 0.99) {
-        saturatedCount += 1;
-      }
-    });
-  }
-
-  const ranges = [
-    { start: bandTop - backgroundSpan, end: bandTop - 1 },
-    { start: bandBottom + 1, end: bandBottom + backgroundSpan }
-  ];
-  ranges.forEach((range) => {
-    const start = clamp(range.start, 0, height - 1);
-    const end = clamp(range.end, 0, height - 1);
-    if (end < start) {
-      return;
-    }
-    for (let y = start; y <= end; y += 1) {
-      forEachRectifiedLaneSample({ lane, width, height, rowY: y }, ({ x, y: sampleY }) => {
-        const value = sampleArrayValue(signal, width, height, x, sampleY);
-        bgSum += value;
-        bgSumSquares += value * value;
-        bgPixelCount += 1;
-      });
-    }
-  });
-
-  const bgMean = bgPixelCount ? (bgSum / bgPixelCount) : 0;
-  const bgVariance = bgPixelCount
-    ? Math.max(0, (bgSumSquares / bgPixelCount) - (bgMean ** 2))
-    : 0;
-  const bgStd = Math.sqrt(bgVariance);
-  const correctedIntensity = Math.max(0, bandSum - (bgMean * bandPixelCount));
-  const bandMean = bandPixelCount ? (bandSum / bandPixelCount) : 0;
-  const snr = bgStd > 1e-6 ? (bandMean - bgMean) / bgStd : (bandMean > bgMean ? 5 : 0);
-  const sharpness = Math.max(0.01, Math.abs(bandMean - bgMean) / Math.max(1, thickness));
-
-  return {
-    bandIndex: 0,
-    pixelY: yCenter,
-    top: bandTop,
-    bottom: bandBottom,
-    thickness,
-    rawIntensity: correctedIntensity,
-    correctedIntensity,
-    bandSignalSum: bandSum,
-    backgroundMean: bgMean,
-    backgroundStd: bgStd,
-    areaPx: bandPixelCount,
-    measurementMode,
-    snr,
-    sharpness,
-    saturationFraction: bandPixelCount ? (saturatedCount / bandPixelCount) : 0,
-    normalizedIntensity: null,
-    estimatedMw: null,
-    groupId: null,
-    groupLabel: null,
-    manual: true
-  };
 }
 
 function smoothFloat32(values, radius) {
@@ -331,7 +238,6 @@ function computeCellIntensity({
 export {
   computeCellIntensity,
   forEachRectifiedLaneSample,
-  computeManualBand,
   smoothFloat32,
   rollingMinimum,
   computeLaneRowMeans,

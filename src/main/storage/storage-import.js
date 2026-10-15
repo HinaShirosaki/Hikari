@@ -16,6 +16,7 @@ const { importWorkflowRoot } = require('./workflow-storage');
 const { asArray, cleanText, ensureObject, parseJsonObject, toPosixRelative } = require('./storage-utils');
 const { addPaperExperimentLinks } = require('../../shared/paper-experiment-links.mjs');
 const { readProtocolDirectory } = require('./hydration/protocol-directory');
+const { readPrimerLibrary } = require('./primer-library-storage');
 
 function mergeByIdMap(targetMap, records, fallbackPrefix) {
   asArray(records).forEach((rawRecord, index) => {
@@ -133,6 +134,8 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   const paperExperimentLinkMap = new Map();
   const assayMap = new Map();
   const gelAnalysisMap = new Map();
+  const primerMap = new Map();
+  let hasPrimerLibrary = false;
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
   const inventoryFolderMap = new Map();
@@ -185,6 +188,10 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     addPaperExperimentLinks(paperExperimentLinkMap, source.paperExperimentLinks, { text: cleanText });
     mergeByIdMap(assayMap, source.assays, 'assay');
     mergeByIdMap(gelAnalysisMap, source.gelAnalyses, 'gel');
+    if (Array.isArray(source.primerLibrary)) {
+      hasPrimerLibrary = true;
+      mergeByIdMap(primerMap, source.primerLibrary, 'primer');
+    }
     mergeByIdMap(chemicalMap, ensureObject(source.labInventory).chemicals, 'chemical');
     mergeInventoryMap(inventoryZoneMap, source.inventory);
     mergeInventoryMap(inventoryFolderMap, source.inventoryFolders);
@@ -297,6 +304,15 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
   mergeInventoryMap(inventoryZoneMap, samplesRoot.inventory);
   mergeInventoryMap(inventoryFolderMap, samplesRoot.inventoryFolders);
   const rootLayout = resolveStorageRootLayout({ storagePath: resolvedStoragePath });
+  const primerLibraryRoot = await readPrimerLibrary(resolvedStoragePath);
+  if (primerLibraryRoot.ok) {
+    // The workspace file is authoritative, including an empty library after removal.
+    hasPrimerLibrary = true;
+    primerMap.clear();
+    mergeByIdMap(primerMap, primerLibraryRoot.primers, 'primer');
+  } else if (primerLibraryRoot.error) {
+    warnings.push(primerLibraryRoot.error);
+  }
   const experimentLogRoot = await readExperimentLogSidecar(rootLayout.experimentLogPath);
   if (experimentLogRoot.ok) {
     mergeExperimentLogState({
@@ -335,6 +351,7 @@ async function importStorageRootUnlocked({ storagePath = '', transformPaperRecor
     paperExperimentLinks: [...paperExperimentLinkMap.values()],
     assays: [...assayMap.values()],
     gelAnalyses: [...gelAnalysisMap.values()],
+    ...(hasPrimerLibrary ? { primerLibrary: [...primerMap.values()] } : {}),
     labInventory: {
       chemicals: [...chemicalMap.values()],
       blocks: mergedBlocks,

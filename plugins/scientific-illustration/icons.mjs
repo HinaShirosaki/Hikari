@@ -4,7 +4,6 @@ const paths = {
   pointer: ['M5 3v17l5-5 4 7 3-2-4-7h7Z'],
   lasso: ['M7 18c-4-2-5-5-3-9S13 3 18 6s4 9-1 12-10 3-10 0 4-3 5-1-1 5-4 5'],
   assets: ['M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z'],
-  scratch: ['M3 4h18v16H3zM15 4v16M3 14h12'],
   fit: ['M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6'],
   plus: ['M12 5v14M5 12h14'],
   minus: ['M5 12h14'],
@@ -29,7 +28,16 @@ const paths = {
   alignRight: ['M4 5h16M10 10h10M4 15h16M10 20h10'],
   arrow: ['M12 19V5m-6 6 6-6 6 6'],
   image: ['M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5', 'M8 7h.01'],
-  crop: ['M6 3v15h15M3 6h15v15']
+  crop: ['M6 3v15h15M3 6h15v15'],
+  align: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
+  objectLeft: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
+  objectRight: ['M20 3v18M4 5h12v5H4zM8 14h8v5H8z'],
+  objectHorizontal: ['M12 2v3m0 5v4m0 5v3M4 5h16v5H4zM7 14h10v5H7z'],
+  objectTop: ['M3 4h18M5 8h5v12H5zM14 8h5v8h-5z'],
+  objectBottom: ['M3 20h18M5 4h5v12H5zM14 8h5v8h-5z'],
+  objectVertical: ['M2 12h3m5 0h4m5 0h3M5 4h5v16H5zM14 7h5v10h-5z'],
+  distributeHorizontal: ['M3 3v18M21 3v18M7 6h3v12H7zM14 6h3v12h-3z'],
+  distributeVertical: ['M3 3h18M3 21h18M6 7h12v3H6zM6 14h12v3H6z']
 };
 export function icon(name) {
   const svg = element('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', class: 'ui-icon' });

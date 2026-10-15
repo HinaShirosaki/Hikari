@@ -143,7 +143,8 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
   });
 
   await controller.onListClick(editEvent(sourceRecord.id));
-  assert.deepEqual(readPaths, [sourceRecord.sourceImagePath]);
+  // source.png, then the 16-bit sidecar beside it (unreadable here, so ignored).
+  assert.deepEqual(readPaths, [sourceRecord.sourceImagePath, '/workspace/Gels/gel-source/source-16bit.tif']);
   assert.equal(decodedSources[0].dataUrl, 'data:image/png;base64,c2F2ZWQtZ2Vs');
   assert.equal(runtime.currentImage.name, sourceRecord.imageName);
   assert.equal(runtime.originalImage.copied, true);
@@ -1205,8 +1206,9 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
   assert.equal(controller.getManualStep(), 'band-bottom');
 });
 
-test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane-by-lane band mode', () => {
+test('[EDGE] gel-analysis lane tools display one current layout when switching from adjusted vertices to dividers', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'index.js'));
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'manual', 'manual-workflow.js'));
   const operations = [];
   let strokeStyle = '';
   const context = {
@@ -1308,9 +1310,167 @@ test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane
   assert.equal(operations.some((item) => item.type === 'moveTo' && item.x === 5.5 && item.y === 0.5), true);
   assert.equal(operations.some((item) => item.type === 'lineTo' && item.x === 42.5 && item.y === 99.5), true);
   assert.equal(operations.some((item) => item.type === 'arc'), false);
+  assert.equal(operations.some((item) => item.type === 'stroke' && item.strokeStyle === 'rgba(255, 255, 255, 0.88)'), false, 'original straight dividers overlap the adjusted lanes');
+  assert.equal(operations.filter((item) => item.type === 'closePath').length, 2, 'unadjusted neighboring lane must stay visible');
+
+  const savedVertices = JSON.stringify(runtime.manualOverrides.laneSegmentation.laneVertices);
+  const manual = manualModule.createManualWorkflowController({
+    runtime,
+    elements: { gelCanvas, gelOverrideStatus: new MockElement('gel-override-status') },
+    deps: { renderCanvas: controller.renderCanvas, renderLaneTable() {}, onRunAnalysis() {}, setStatus() {} }
+  });
+  operations.length = 0;
+  manual.onViewerToolSelected('lane-vertices');
+  assert.equal(operations.filter((item) => item.type === 'arc').length, 8, 'selecting vertices must redraw the handles immediately');
+  assert.equal(operations.some((item) => item.type === 'stroke' && item.strokeStyle === 'rgba(255, 255, 255, 0.88)'), false);
+
+  runtime.currentReport = {
+    lanes: [
+      { laneIndex: 1, xStart: 0, xEnd: 49, bands: [] },
+      { laneIndex: 2, xStart: 50, xEnd: 98, bands: [] }
+    ]
+  };
+  operations.length = 0;
+  controller.renderCanvas();
+  assert.equal(operations.filter((item) => item.type === 'closePath').length, 2, 'report outlines must not be duplicated during vertex editing');
+  assert.equal(operations.some((item) => item.type === 'strokeRect'), false);
+  operations.length = 0;
+  manual.onViewerToolSelected('lane-vertices');
+  assert.equal(operations.filter((item) => item.type === 'strokeRect').length, 2, 'report supplies the lane outlines after vertex editing');
+  assert.equal(operations.some((item) => item.type === 'closePath' || item.type === 'arc'), false, 'saved vertex outlines must not duplicate the report');
+  manual.onViewerToolSelected('lane-vertices');
+  runtime.manualOverrides.laneSegmentation.laneBandWindows = [{ laneIndex: 1, bandTop: 25, bandBottom: 60 }];
+  runtime.manualOverrides.ladderLane = 1;
+  runtime.manualOverrides.ladderBands = [{ pixelY: 35, mw: 50 }];
+  operations.length = 0;
+  manual.onViewerToolSelected('dividers');
+  assert.equal(operations.some((item) => item.type === 'stroke' && item.strokeStyle === 'rgba(255, 255, 255, 0.88)'), true, 'divider mode must redraw its boundaries immediately');
+  assert.equal(operations.some((item) => item.type === 'arc'), false, 'vertex handles linger in divider mode');
+  assert.equal(operations.some((item) => item.type === 'closePath' || item.type === 'strokeRect'), false, 'old vertex or report outlines overlap the dividers');
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneVertices), savedVertices, 'switching tools must preserve vertex edits');
+
+  runtime.currentReport = null;
+  runtime.manualOverrides.laneSegmentation.laneBandWindows = [];
+  runtime.manualOverrides.ladderLane = null;
+  runtime.manualOverrides.ladderBands = [];
+  operations.length = 0;
+  manual.onViewerToolSelected('dividers');
+  assert.equal(operations.filter((item) => item.type === 'closePath').length, 2, 'finishing dividers must restore the current lane layout');
 });
 
-test('[EDGE] gel-analysis band intensity report opens as a dialog and closes when its data goes away', () => {
+test('[EDGE] gel-analysis auto-detection replaces adjusted lanes and clears stale analysis before rendering', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'manual', 'manual-workflow.js'));
+  const width = 100;
+  const height = 60;
+  const gray = new Float32Array(width * height).fill(0.85);
+  for (let y = 20; y < 30; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (Math.abs(x - 25) < 7 || Math.abs(x - 75) < 7) {
+        gray[y * width + x] = 0.1;
+      }
+    }
+  }
+  const runtime = {
+    currentImage: { width, height, gray },
+    currentReport: { lanes: [{ laneIndex: 1, xStart: 4, xEnd: 48, bands: [] }] },
+    selectedViewerTool: 'lane-vertices',
+    laneVertexDrag: { laneIndex: 1, vertexKey: 'topLeft' },
+    suppressNextLaneVertexClick: true,
+    manualDividerConfirmed: true,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0, gelRight: 99, dividers: [50], dividerDone: true,
+        bandTop: 10, bandBottom: 49, quantifyConfirmed: true,
+        laneVertices: [{
+          laneIndex: 1,
+          topLeft: { x: 4, y: 0 }, topRight: { x: 48, y: 0 },
+          bottomRight: { x: 42, y: 59 }, bottomLeft: { x: 0, y: 59 }
+        }]
+      },
+      ladderLane: 1, ladderBandsDone: true, ladderBands: [{ pixelY: 20, mw: 50 }],
+      addedBands: [{ laneIndex: 1, pixelY: 30 }]
+    })
+  };
+  const rendered = [];
+  const statuses = [];
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements: {
+      gelExpectedLaneCountInput: { value: '2' },
+      gelOverrideStatus: new MockElement('gel-override-status')
+    },
+    deps: {
+      renderCanvas() { rendered.push({ report: runtime.currentReport, tool: runtime.selectedViewerTool }); },
+      renderLaneTable() {}, onRunAnalysis() {}, setStatus(message) { statuses.push(message); }
+    }
+  });
+
+  controller.onAutoDetectLanes();
+  assert.match(statuses.at(-1), /Auto-detected 2 lane/);
+  assert.equal(runtime.currentReport, null, 'previous report must not survive new lane detection');
+  assert.deepEqual(rendered, [{ report: null, tool: 'dividers' }]);
+  assert.equal(runtime.manualOverrides.laneSegmentation.laneVertices.length, 0);
+  assert.equal(runtime.manualOverrides.laneSegmentation.dividers.length, 1);
+  assert.equal(runtime.manualOverrides.laneSegmentation.quantifyConfirmed, false);
+  assert.equal(runtime.manualOverrides.laneSegmentation.bandTop, 10);
+  assert.equal(runtime.manualOverrides.laneSegmentation.bandBottom, 49);
+  assert.equal(runtime.manualOverrides.ladderLane, null);
+  assert.equal(runtime.laneVertexDrag, null);
+  assert.equal(runtime.suppressNextLaneVertexClick, false);
+
+  const beforeFailure = JSON.stringify(runtime.manualOverrides);
+  runtime.currentReport = { lanes: [{ laneIndex: 1 }] };
+  const previousReport = runtime.currentReport;
+  runtime.currentImage.gray.fill(0.5);
+  controller.onAutoDetectLanes();
+  assert.match(statuses.at(-1), /no clear lanes/);
+  assert.equal(runtime.currentReport, previousReport, 'failed detection must preserve the existing analysis');
+  assert.equal(JSON.stringify(runtime.manualOverrides), beforeFailure);
+});
+
+test('[EDGE] gel-analysis auto-detection identifies inferred lanes and expected-count mismatches', () => {
+  const { createManualWorkflowController } = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'manual', 'manual-workflow.js')
+  );
+  const width = 320;
+  const height = 200;
+  const gray = new Float32Array(width * height).fill(0.9);
+  for (const center of [45, 90, 180, 225, 270]) {
+    for (let y = 90; y < 110; y += 1) {
+      for (let x = center - 8; x <= center + 8; x += 1) gray[y * width + x] = 0.15;
+    }
+  }
+  const runtime = {
+    currentImage: { width, height, gray }, imageRevision: 1,
+    manualOverrides: gelAnalysisInternals.createEmptyManualOverrides()
+  };
+  const statuses = [];
+  const controller = createManualWorkflowController({
+    runtime,
+    elements: {
+      gelExpectedLaneCountInput: { value: '6' },
+      gelOverrideStatus: new MockElement('gel-override-status')
+    },
+    deps: { renderCanvas() {}, renderLaneTable() {}, onRunAnalysis() {}, setStatus(message) { statuses.push(message); } }
+  });
+  controller.onAutoDetectLanes();
+  assert.match(statuses.at(-1), /Lane\(s\) 3 inferred as blank/);
+  assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, false, 'inference must remain reviewable before confirmation');
+
+  gray.fill(0.9);
+  for (const center of [90, 135, 180, 225, 270]) {
+    for (let y = 90; y < 110; y += 1) {
+      for (let x = center - 8; x <= center + 8; x += 1) gray[y * width + x] = 0.15;
+    }
+  }
+  runtime.imageRevision += 1;
+  runtime.manualOverrides = gelAnalysisInternals.createEmptyManualOverrides();
+  controller.onAutoDetectLanes();
+  assert.match(statuses.at(-1), /Expected 6; found 5/);
+  assert.doesNotMatch(statuses.at(-1), /inferred as blank/);
+});
+
+test('[EDGE] gel-analysis band intensity dialog shows and copies only the intensity measurement', async () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'index.js'));
   const runtime = {
     currentImage: { width: 8, height: 5, gray: new Float32Array(40), imageData: { tag: 'image-data' } },
@@ -1337,15 +1497,16 @@ test('[EDGE] gel-analysis band intensity report opens as a dialog and closes whe
     gelCellTableCloseBtn: new MockElement('gel-cell-table-close-btn'),
     gelOpenCellTableBtn: new MockElement('gel-open-cell-table-btn'),
     gelCellTableHost: new MockElement('gel-cell-table-host'),
-    gelCellTableSummary: new MockElement('gel-cell-table-summary'),
-    gelCellSnrThresholdInput: Object.assign(new MockElement('gel-cell-snr-threshold'), { value: '3' })
+    gelCellTableCopyBtn: new MockElement('gel-cell-table-copy-btn'),
+    gelCellTableCopyStatus: new MockElement('gel-cell-table-copy-status')
   };
   const statuses = [];
+  const copies = [];
   const controller = renderingModule.createRenderingController({
     runtime,
     elements,
     safeText: (value) => String(value ?? ''),
-    deps: { setStatus: (message) => statuses.push(message) }
+    deps: { setStatus: (message) => statuses.push(message), writeClipboardText: async (value) => copies.push(value) }
   });
 
   // Data exists, so the trigger unlocks — but the dialog stays shut until asked.
@@ -1353,7 +1514,14 @@ test('[EDGE] gel-analysis band intensity report opens as a dialog and closes whe
   assert.equal(elements.gelOpenCellTableBtn.disabled, false);
   assert.equal(elements.gelCellTableOverlay.hidden, true);
   assert.ok(elements.gelCellTableHost.innerHTML.includes('<table class="gel-cell-table">'));
-  assert.match(elements.gelCellTableSummary.textContent, /1\/2 cells classified as band/);
+  assert.equal(elements.gelCellTableCopyBtn.disabled, false);
+  assert.equal((elements.gelCellTableHost.innerHTML.match(/<th[ >]/g) || []).length, 3);
+  assert.match(elements.gelCellTableHost.innerHTML, /Band intensity/);
+  assert.doesNotMatch(elements.gelCellTableHost.innerHTML, /Band sum|Baseline sum|Corrected|SNR|Has band|Sat %|is-empty/);
+
+  await controller.onCellTableCopy();
+  assert.deepEqual(copies, ['Lane\tLabel\tBand intensity\n1\t\t120.00\n2\t\t12.00']);
+  assert.equal(elements.gelCellTableCopyStatus.textContent, 'Table copied.');
 
   controller.onCellTableOpen();
   assert.equal(elements.gelCellTableOverlay.hidden, false);
@@ -1375,10 +1543,92 @@ test('[EDGE] gel-analysis band intensity report opens as a dialog and closes whe
   assert.equal(elements.gelCellTableOverlay.hidden, true);
   assert.equal(elements.gelOpenCellTableBtn.disabled, true);
   assert.equal(elements.gelCellTableHost.innerHTML, '');
+  assert.equal(elements.gelCellTableCopyBtn.disabled, true);
+  assert.equal(elements.gelCellTableCopyStatus.textContent, '');
+  await controller.onCellTableCopy();
+  assert.equal(copies.length, 1, 'empty measurements must not overwrite the clipboard');
 
   controller.onCellTableOpen();
   assert.equal(elements.gelCellTableOverlay.hidden, true, 'a disabled trigger still opened the dialog');
   assert.match(statuses[statuses.length - 1], /Measure a target band/);
+});
+
+test('[EDGE] gel-analysis copies all current labels and formatted intensities and reports clipboard failures', async () => {
+  const cellModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'cell-table.js'));
+  const { escapeHtml } = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'lib', 'html.js'));
+  const runtime = {
+    currentReport: { lanes: [
+      { laneIndex: 1, targetBand: { correctedIntensity: 1200.4 } },
+      { laneIndex: 2, targetBand: { correctedIntensity: 12.345 } },
+      { laneIndex: 3, targetBand: { correctedIntensity: NaN } },
+      { laneIndex: 4 }
+    ] },
+    manualOverrides: {
+      laneSegmentation: { bandTop: 1, bandBottom: 3 },
+      laneTable: { rows: [{ label: 'Label', values: ['Control <A>', 'Sample\tB\nrepeat', 'Blank'] }] }
+    }
+  };
+  const elements = {
+    gelCellTableHost: new MockElement('gel-cell-table-host'),
+    gelCellTableCopyBtn: new MockElement('gel-cell-table-copy-btn'),
+    gelCellTableCopyStatus: new MockElement('gel-cell-table-copy-status')
+  };
+  const copies = [];
+  let finishCopy;
+  let failure = false;
+  const controller = cellModule.createCellTableController({
+    runtime, elements, safeText: escapeHtml,
+    deps: { writeClipboardText(value) {
+      copies.push(value);
+      if (failure) return Promise.reject(new Error('Denied'));
+      return new Promise((resolve) => { finishCopy = resolve; });
+    } }
+  });
+  controller.renderCellTable();
+  assert.match(elements.gelCellTableHost.innerHTML, /Control &lt;A&gt;/);
+  assert.equal((elements.gelCellTableHost.innerHTML.match(/class="gel-cell-row"/g) || []).length, 3);
+  runtime.currentReport.lanes[1].targetBand.correctedIntensity = 14.25;
+  const pending = controller.onCellTableCopy();
+  assert.equal(elements.gelCellTableCopyBtn.disabled, true);
+  await controller.onCellTableCopy();
+  assert.deepEqual(copies, ['Lane\tLabel\tBand intensity\n1\tControl <A>\t1200\n2\tSample B repeat\t14.25\n3\tBlank\t-']);
+  finishCopy();
+  await pending;
+  assert.equal(elements.gelCellTableCopyBtn.disabled, false);
+
+  failure = true;
+  await controller.onCellTableCopy();
+  assert.match(elements.gelCellTableCopyStatus.textContent, /Could not copy/);
+  assert.equal(elements.gelCellTableCopyBtn.disabled, false);
+});
+
+test('[EDGE] gel-analysis clipboard fallback restores focus and removes its temporary field', async () => {
+  const { copyTextToClipboard } = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'lib', 'clipboard.js'));
+  const events = [];
+  let accepted = true;
+  let field;
+  const documentObject = {
+    defaultView: { navigator: { clipboard: { async writeText() { throw new Error('Iframe policy'); } } } },
+    activeElement: { focus() { events.push('focus'); } },
+    body: { append(value) { field = value; events.push('append'); } },
+    createElement(tag) {
+      assert.equal(tag, 'textarea');
+      return { style: {}, select() { events.push('select'); }, remove() { events.push('remove'); } };
+    },
+    execCommand(command) { assert.equal(command, 'copy'); events.push('copy'); return accepted; }
+  };
+  await copyTextToClipboard('Lane\tBand intensity\n1\t123.45', documentObject);
+  assert.equal(field.value, 'Lane\tBand intensity\n1\t123.45');
+  assert.deepEqual(events, ['append', 'select', 'copy', 'remove', 'focus']);
+  events.length = 0;
+  accepted = false;
+  await assert.rejects(copyTextToClipboard('new data', documentObject), /Clipboard access is unavailable/);
+  assert.deepEqual(events, ['append', 'select', 'copy', 'remove', 'focus']);
+  const copies = [];
+  await copyTextToClipboard('modern clipboard', { defaultView: { navigator: { clipboard: {
+    async writeText(value) { copies.push(value); }
+  } } } });
+  assert.deepEqual(copies, ['modern clipboard']);
 });
 
 test('[EDGE] gel-analysis peak editor records curve baselines and vertical dividers lane by lane', () => {
@@ -2130,6 +2380,115 @@ test('[EDGE] gel-analysis peak integration area uses baseline and vertical divid
   ]));
 });
 
+test('[EDGE] gel-analysis peak area of one band does not depend on lane width', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'index.js'));
+  // The same 30 px wide band in a 40 px and an 80 px lane: the profile is the
+  // per-row mean, so the wider lane's peak is half as tall.
+  const profileFor = (laneWidth) => ({
+    laneWidth,
+    values: Array.from({ length: 80 }, (_unused, row) => 0.1 + ((0.5 * 30 / laneWidth) * Math.exp(-((row - 40) ** 2) / 32)))
+  });
+  const areaFor = (laneWidth) => renderingModule.calculatePeakIntegrationRows(profileFor(laneWidth), [
+    { laneIndex: 1, left: { row: 10 }, right: { row: 70 }, dividers: [] }
+  ])[0].area;
+  assertClose(areaFor(40) / areaFor(80), 1, 1e-3);
+});
+
+test('[EDGE] gel-analysis clicked band is measured like the target band window', () => {
+  const width = 60;
+  const height = 220;
+  const gray = new Float32Array(width * height).fill(0.1);
+  // Two identical thick bands (sigma 6 rows); the target window holds the first,
+  // the second is a clicked band.
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 10; x < 50; x += 1) {
+      gray[(y * width) + x] += 0.5 * (Math.exp(-((y - 60) ** 2) / 72) + Math.exp(-((y - 150) ** 2) / 72));
+    }
+  }
+  const result = gelAnalysisInternals.analyzeGelImage({
+    gray,
+    imageName: 'thick-bands.png',
+    width,
+    height,
+    preprocessed: { cleanNormalized: gray, preprocessing: { grayscale: true, backend: 'test' } },
+    params: {
+      analysisType: 'western',
+      ladderLane: 1,
+      ladderStandards: [250, 150, 100],
+      normalization: 'none',
+      enhancement: {},
+      manualOverrides: {
+        laneSegmentation: {
+          gelLeft: 0, gelRight: 59, dividers: [], dividerDone: true,
+          bandTop: 42, bandBottom: 78, quantifyConfirmed: true
+        },
+        ladderLane: 1,
+        ladderBandsDone: true,
+        addedBands: [{ laneIndex: 1, pixelY: 150 }]
+      }
+    }
+  });
+  const [target, clicked] = result.report.lanes[0].bands;
+  assert.equal(target.measurementMode, 'target-window');
+  assert.equal(clicked.measurementMode, 'manual-point');
+  assert.equal(clicked.pixelY, 150);
+  assertClose(clicked.rawIntensity / target.rawIntensity, 1, 0.01);
+  assert.equal(result.report.lanes[0].targetBand.rawIntensity, target.rawIntensity);
+});
+
+test('[EDGE] gel-analysis 16-bit TIFF keeps full precision and crops replay rotation', async () => {
+  const imageIo = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'images', 'image-io.js'),
+    {
+      window: { UTIF: require(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'utif', 'UTIF.js')) },
+      ImageData: class ImageData {
+        constructor(data, width, height) { Object.assign(this, { data, width, height }); }
+      }
+    }
+  );
+  // Uncompressed little-endian single-channel 16-bit TIFF. A chemiluminescence
+  // band of 1,200 counts over 300 is 5 grey levels once cut to 8 bits.
+  const width = 80;
+  const height = 70;
+  const countAt = (x, y) => Math.round(300 + (1200 * Math.exp(-((y - 35) ** 2) / 18)) + (x % 7));
+  const pixelBytes = width * height * 2;
+  const entries = [[256, 3, width], [257, 3, height], [258, 3, 16], [259, 3, 1], [262, 3, 1],
+    [273, 4, 8], [277, 3, 1], [278, 3, height], [279, 4, pixelBytes]];
+  const buffer = new ArrayBuffer(8 + pixelBytes + 2 + (entries.length * 12) + 4);
+  const view = new DataView(buffer);
+  view.setUint16(0, 0x4949);
+  view.setUint16(2, 42, true);
+  view.setUint32(4, 8 + pixelBytes, true);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) view.setUint16(8 + (2 * ((y * width) + x)), countAt(x, y), true);
+  }
+  view.setUint16(8 + pixelBytes, entries.length, true);
+  entries.forEach(([tag, type, value], index) => {
+    const offset = 8 + pixelBytes + 2 + (index * 12);
+    view.setUint16(offset, tag, true);
+    view.setUint16(offset + 2, type, true);
+    view.setUint32(offset + 4, 1, true);
+    if (type === 3) view.setUint16(offset + 8, value, true);
+    else view.setUint32(offset + 8, value, true);
+  });
+
+  const image = await imageIo.decodeImageFile({ name: 'chemi.tif', type: 'image/tiff', arrayBuffer: async () => buffer });
+  assert.equal(image.width, width);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      assertClose(image.gray[(y * width) + x] * 65535, countAt(x, y), 1e-2);
+    }
+  }
+
+  // An unrotated crop is the sub-rectangle; a 90 degree one turns clockwise,
+  // the way Cropper.js draws it.
+  const flat = imageIo.cropGray(image.gray, width, height, { x: 5, y: 4, width: 20, height: 10, rotate: 0 }, 20, 10);
+  assert.equal(flat[(3 * 20) + 7], image.gray[((4 + 3) * width) + 5 + 7]);
+  const turned = imageIo.cropGray(image.gray, width, height, { x: 0, y: 0, width: height, height: width, rotate: 90 }, height, width);
+  assert.equal(turned[(0 * height) + (height - 1)], image.gray[0]);
+  assert.equal(turned[(7 * height) + 2], image.gray[((height - 1 - 2) * width) + 7]);
+});
+
 test('[EDGE] gel-analysis resolves target band windows by global or per-lane mode', () => {
   const global = gelAnalysisInternals.getTargetBandWindowForLane({
     bandTop: 6,
@@ -2707,5 +3066,63 @@ test('[EDGE] gel-analysis save keeps the imported file byte for byte next to sou
   const resaved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' }, saved);
   assert.equal(resaved.originalImagePath, saved.originalImagePath);
   assert.equal(writes.has('original.tif'), false);
+});
+
+test('[EDGE] gel-analysis saved 16-bit gel reopens at full precision', async () => {
+  const files = new Map();
+  const globals = {
+    atob: (value) => Buffer.from(value, 'base64').toString('binary'),
+    btoa: (value) => Buffer.from(value, 'binary').toString('base64'),
+    window: {
+      UTIF: require(path.join(__dirname, 'src', 'plugins', 'gel', 'vendor', 'utif', 'UTIF.js')),
+      hikariApi: {
+        async storeImportedFile({ targetFolder, fileName, dataBase64 }) {
+          files.set(`${targetFolder}/${fileName}`, dataBase64);
+          return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+        },
+        async writeJsonFile({ targetFolder, fileName }) {
+          return { ok: true, filePath: `${targetFolder}/${fileName}`, relativePath: `${targetFolder}/${fileName}` };
+        },
+        async readFileBase64(filePath) {
+          return files.has(filePath) ? { ok: true, dataBase64: files.get(filePath) } : { ok: false };
+        }
+      }
+    }
+  };
+  const recordsDir = path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'records');
+  const { createGelRecordArtifacts } = loadEsmStyleModule(path.join(recordsDir, 'record-artifacts.js'), globals);
+  const { createGelRecordImages } = loadEsmStyleModule(path.join(recordsDir, 'record-images.js'), globals);
+
+  const width = 80;
+  const height = 70;
+  const gray = Float32Array.from({ length: width * height }, (_unused, index) => (300 + (index % 997)) / 65535);
+  // What source.png decodes to: the 8-bit copy, here all zeros to tell it apart.
+  const eightBit = () => ({ name: 'chemi.tif', width, height, imageData: { width, height }, gray: new Float32Array(width * height) });
+  let sourcePng = 'data:image/png;base64,cG5n';
+  const runtime = {
+    currentImage: { ...eightBit(), gray, grayBitDepth: 16 },
+    state: { settings: { storagePath: '/root' }, notebookEntries: [] }
+  };
+  const artifacts = createGelRecordArtifacts({ runtime, elements: {}, deps: { imageDataToDataUrl: () => sourcePng } });
+  const { restoreRecordImage } = createGelRecordImages({
+    deps: { decodeImageSource: async () => eightBit() },
+    getStorageRoot: () => '/root'
+  });
+
+  const saved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' });
+  const reopened = (await restoreRecordImage(saved)).image;
+  assert.equal(reopened.grayBitDepth, 16);
+  for (let index = 0; index < gray.length; index += 1) {
+    assertClose(reopened.gray[index] * 65535, gray[index] * 65535, 1e-2);
+  }
+
+  // A later 8-bit save rewrites source.png and leaves the old sidecar behind;
+  // its fingerprint no longer matches, so the 8-bit image is what reopens.
+  sourcePng = 'data:image/png;base64,b3RoZXI=';
+  runtime.currentImage = eightBit();
+  const resaved = await artifacts.persistGelRecordArtifacts({ id: 'gel-1', name: 'Blot' }, saved);
+  const stale = (await restoreRecordImage(resaved)).image;
+  assert.equal(stale.grayBitDepth, undefined);
+  assert.equal(stale.gray.every((value) => value === 0), true);
 });
 };

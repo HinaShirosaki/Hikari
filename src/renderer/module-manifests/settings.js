@@ -10,7 +10,6 @@ export const settingsManifest = {
     state,
     persist,
     onStoragePathSaved,
-    runCloudSync,
     rendererServices,
     rootDocument,
     windowObject
@@ -18,7 +17,6 @@ export const settingsManifest = {
     state,
     persist,
     onStoragePathSaved,
-    runCloudSync,
     onSampleInventorySettingsChanged: rendererServices.inventory.handleSampleInventorySettingsChanged,
     document: rootDocument,
     windowObject

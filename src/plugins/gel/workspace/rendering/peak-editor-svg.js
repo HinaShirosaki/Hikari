@@ -36,6 +36,9 @@ function calculatePeakIntegrationRows(profile, integrations = []) {
   }
 
   const rowMax = profile.values.length - 1;
+  // Profile values are per-row means across the lane; areas are sums over its
+  // pixels, so the same band reads the same in a narrow lane and a wide one.
+  const laneWidth = profile.laneWidth || 1;
   const rows = [];
   integrations.forEach((integration, integrationIndex) => {
     if (!integration?.left || !integration?.right) {
@@ -93,9 +96,9 @@ function calculatePeakIntegrationRows(profile, integrations = []) {
         endRow: segmentEnd,
         apexRow,
         apexValue: round(apexValue, 4),
-        area: round(area, 4),
-        rawArea: round(rawArea, 4),
-        baselineArea: round(baselineArea, 4)
+        area: round(area * laneWidth, 4),
+        rawArea: round(rawArea * laneWidth, 4),
+        baselineArea: round(baselineArea * laneWidth, 4)
       });
     }
   });

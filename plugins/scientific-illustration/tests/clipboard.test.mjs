@@ -23,12 +23,12 @@ test('copy is an immutable snapshot of selected paint order, media, labels and f
 
 test('paste remaps IDs and full group membership, retaining exact editable content and relative geometry', () => {
   const original = scene(), snapshot = copyComponents(original, ['text', 'vector', 'raster', 'other']);
-  const instance = instantiateClipboard(snapshot, 'scratch', 30), pasted = applyOperations(original, instance.operations);
+  const instance = instantiateClipboard(snapshot, 'main', 30), pasted = applyOperations(original, instance.operations);
   const copies = pasted.objects.filter(object => instance.ids.includes(object.id));
   assert.equal(new Set(pasted.objects.map(object => object.id)).size, 8);
   copies.forEach((copy, index) => {
     const source = original.objects[index], { id, canvas, x, y, ...content } = copy;
-    assert.notEqual(id, source.id); assert.equal(canvas, 'scratch'); assert.equal(x, source.x + 30); assert.equal(y, source.y + 30);
+    assert.notEqual(id, source.id); assert.equal(canvas, 'main'); assert.equal(x, source.x + 30); assert.equal(y, source.y + 30);
     assert.deepEqual(content, (({ id, canvas, x, y, ...content }) => content)(source));
   });
   assert.equal(pasted.groups[1].name, original.groups[0].name);
@@ -44,7 +44,7 @@ test('paste clamps translation as an assembly and rejects malformed clipboard pa
   assert.equal(parseClipboard(JSON.stringify(snapshot)).objects.length, 2);
   for (const raw of [null, 'text', { ...snapshot, version: 2 }, { ...snapshot, objects: [] },
     { ...snapshot, unknown: true }, { ...snapshot, groups: scene().groups },
-    { ...snapshot, objects: snapshot.objects.map((object, index) => ({ ...object, canvas: index ? 'scratch' : 'main' })) }]) {
+    { ...snapshot, objects: snapshot.objects.map((object, index) => ({ ...object, canvas: index ? 'unknown' : 'main' })) }]) {
     assert.equal(parseClipboard(JSON.stringify(raw)), null); assert.throws(() => normalizeClipboard(raw));
   }
   assert.equal(parseClipboard('x'.repeat(MAX_DOCUMENT_CHARS + 1)), null);
@@ -57,7 +57,10 @@ function fixture() {
   const host = { failSave: false, call: async (verb, params) => {
     if (verb === 'storage.get') return { value: stored };
     if (verb === 'storage.set') { stored = params.value; return {}; }
-    if (verb === 'files.read') return { dataBase64: files.get(params.path) };
+    if (verb === 'files.read') {
+      if (!files.has(params.path)) throw new Error('Missing file');
+      return { dataBase64: files.get(params.path) };
+    }
     if (verb === 'files.write') {
       if (host.failSave) throw new Error('Injected paste disk failure');
       files.set(params.path, params.dataBase64);

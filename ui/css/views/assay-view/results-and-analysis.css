@@ -837,16 +837,6 @@
   gap: var(--space-8);
 }
 
-.assay-analysis-agent-note {
-  color: var(--theme-text-muted);
-  font-size: var(--text-base);
-  line-height: 1.35;
-}
-
-.assay-analysis-agent-note span {
-  margin-left: var(--space-8);
-}
-
 .assay-analysis-chart {
   border: 1px solid var(--assay-plate-line);
   border-radius: 10px;

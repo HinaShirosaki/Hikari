@@ -5,7 +5,7 @@ import { imageGenerationPercent } from './image-generation.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
 import { selectionBounds, transformSelection } from './grouping.mjs';
 import { rotateComponents } from './rotation.mjs';
-export const CANVASES = ['main', 'scratch'];
+export const CANVASES = ['main'];
 export const MAX_DOCUMENT_CHARS = 12000000;
 export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
 export const TEXT_FIELDS = ['text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline'];
@@ -38,7 +38,7 @@ export function color(value, allowNone = false) {
 }
 export function createDocument() {
   return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null,
-    canvases: { main: { width: 1200, height: 800, background: '#ffffff' }, scratch: { width: 500, height: 350, background: '#ffffff' } },
+    canvases: { main: { width: 1200, height: 800, background: '#ffffff' } },
     objects: [], groups: [], receipts: [] };
 }
 export function normalizeObject(raw, validateSvg = value => value) {
@@ -81,18 +81,20 @@ export function normalizeCanvas(raw) {
 export function normalizeDocument(raw, validateSvg) {
   record(raw, 'Document');
   if (raw.version !== 1 || !Array.isArray(raw.objects) || raw.objects.length > 200) throw new Error('Unsupported document or too many objects (maximum 200).');
-  const objects = raw.objects.map(obj => normalizeObject(obj, validateSvg));
-  if (new Set(objects.map(obj => obj.id)).size !== objects.length) throw new Error('Object IDs must be unique across both canvases.');
+  // Read legacy scenes without dropping their components. New mutations still
+  // pass through normalizeObject, which only accepts the main canvas.
+  const objects = raw.objects.map(obj => normalizeObject(obj.canvas === 'scratch' ? { ...obj, canvas: 'main' } : obj, validateSvg));
+  if (new Set(objects.map(obj => obj.id)).size !== objects.length) throw new Error('Object IDs must be unique.');
   if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.length > 100)) throw new Error('Use at most 100 groups.');
   const used = new Set(objects.map(object => object.id)), members = new Set();
   const groups = (raw.groups || []).map(group => {
     record(group, 'Group'); fields(group, ['id', 'name', 'canvas', 'ids']);
     if (!validId(group.id) || used.has(group.id)) throw new Error('Group IDs must be unique and use 1–100 letters, numbers, underscores or hyphens.');
     used.add(group.id);
-    const canvas = choice(group.canvas, CANVASES, 'Group canvas');
+    const canvas = choice(group.canvas === 'scratch' ? 'main' : group.canvas, CANVASES, 'Group canvas');
     if (!Array.isArray(group.ids) || group.ids.length < 2 || new Set(group.ids).size !== group.ids.length) throw new Error('Groups need at least two distinct component IDs.');
     for (const id of group.ids) {
-      if (!objects.some(object => object.id === id && object.canvas === canvas) || members.has(id)) throw new Error('Each group member must exist on the same canvas and belong to only one group.');
+      if (!raw.objects.some(object => object.id === id && (object.canvas ?? 'main') === group.canvas) || members.has(id)) throw new Error('Each group member must exist on the same canvas and belong to only one group.');
       members.add(id);
     }
     return { id: group.id, name: string(group.name ?? 'Group', 'Group name', 200), canvas, ids: [...group.ids] };
@@ -111,8 +113,8 @@ export function normalizeDocument(raw, validateSvg) {
   return result;
 }
 export function validateRequest(args) {
-  record(args, 'Request'); fields(args, ['action', 'canvas', 'include_assets', 'expected_revision', 'request_id', 'operations', 'visible', 'inspection_id', 'review']);
-  choice(args.action, ['read', 'render', 'apply', 'scratch', 'inspect', 'inspection_status'], 'action');
+  record(args, 'Request'); fields(args, ['action', 'canvas', 'include_assets', 'expected_revision', 'request_id', 'operations', 'inspection_id', 'review']);
+  choice(args.action, ['read', 'render', 'apply', 'inspect', 'inspection_status'], 'action');
   if (args.action === 'inspection_status') { fields(args, ['action']); return args; }
   if (args.action === 'inspect') {
     fields(args, ['action', 'expected_revision', 'inspection_id', 'review']);
@@ -126,14 +128,9 @@ export function validateRequest(args) {
     return args;
   }
   if (args.inspection_id !== undefined || args.review !== undefined) throw new Error('Inspection fields require the inspect action.');
-  if (args.action === 'scratch') {
-    fields(args, ['action', 'visible']);
-    if (typeof args.visible !== 'boolean') throw new Error('Scratch requires visible: true or false.');
-    return args;
-  }
-  if (args.visible !== undefined) throw new Error('visible is only supported by the scratch action.');
   if (args.canvas !== undefined) {
     if (args.action !== 'render') throw new Error('canvas is only supported by the render action.');
+    // Old chats may still request "both"; render the sole canvas for them.
     choice(args.canvas, [...CANVASES, 'both'], 'canvas');
   }
   if (args.include_assets !== undefined) {
@@ -143,7 +140,7 @@ export function validateRequest(args) {
   if (args.action === 'apply') {
     if (!args.expected_revision || !args.request_id) throw new Error('Apply requires expected_revision and request_id. Read the canvas first.');
     string(args.expected_revision, 'expected_revision', 100); string(args.request_id, 'request_id', 100);
-    if (!Array.isArray(args.operations) || !args.operations.length || args.operations.length > 100) throw new Error('Apply needs 1–100 operations.');
+    if (!Array.isArray(args.operations) || !args.operations.length || args.operations.length > 200) throw new Error('Apply needs 1–200 operations.');
   } else if (args.operations !== undefined || args.request_id !== undefined || args.expected_revision !== undefined) throw new Error('Read/render do not accept mutation fields.');
   return args;
 }

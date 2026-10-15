@@ -12,6 +12,7 @@ export const workspaceToolIconPaths = {
   scratch: ['M3 4h18v16H3zM15 4v16M3 14h12'],
   minus: ['M5 12h14'],
   crop: ['M6 3v15h15M3 6h15v15'],
+  align: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
   fit: ['M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6']
 };
 export const workspaceToolIcons = Object.freeze(Object.keys(workspaceToolIconPaths));

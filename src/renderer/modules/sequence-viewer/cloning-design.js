@@ -21,6 +21,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
+  const onSavePrimersToLibrary = config?.onSavePrimersToLibrary || (() => {});
   const getBridge = config?.getBridge || (() => null);
   const getStoragePath = config?.getStoragePath || (() => '');
   const onNavigateCloningDesign = config?.onNavigateCloningDesign || (() => {});
@@ -199,9 +200,14 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
           <h4>Primers <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
+          <div class="form-actions">
+          ${asArray(displayPlan.primers).length
+            ? '<button type="button" class="ghost-btn" data-cloning-design-action="save-primers">Save All to Primer Library</button>'
+            : ''}
           ${isCloningDesignPlanActionable(displayPlan)
             ? '<button type="button" class="ghost-btn" data-cloning-design-action="order-primers">Order Primers</button>'
             : ''}
+          </div>
         </div>
         ${renderPrimerTable(asArray(displayPlan.primers))}
       </section>
@@ -471,6 +477,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     });
 
     elements.cloningDesignResult?.addEventListener('click', (event) => {
+      if (event?.target?.closest?.('[data-cloning-design-action="save-primers"]')) {
+        event.preventDefault();
+        onSavePrimersToLibrary(asArray(getDesignState().displayPlan?.primers));
+        return;
+      }
       if (event?.target?.closest?.('[data-cloning-design-action="order-primers"]')) {
         event.preventDefault();
         const displayPlan = getDesignState().displayPlan;

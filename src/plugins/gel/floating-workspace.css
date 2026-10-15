@@ -1,0 +1,249 @@
+/* The viewer owns the main workspace. Auxiliary windows are out of flow and
+ * bounded to the image stage, so they cannot cover the window launchers. */
+body.plugin-gel,
+body.plugin-gel #gel-host,
+body.plugin-gel #gel-view.is-active {
+  height: 100vh;
+  overflow: hidden;
+}
+
+#gel-view .gel-workspace {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
+}
+
+#gel-view .gel-main {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  padding: 18px;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+#gel-view .gel-main-stack,
+#gel-view .gel-main-grid {
+  display: block;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+#gel-view .gel-side-rail { display: contents; }
+
+#gel-view .gel-viewer-panel {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#gel-view .gel-viewer-panel > h3 { margin: 0; }
+
+#gel-view .gel-viewer-toolbar,
+#gel-view .gel-window-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+#gel-view .gel-window-toolbar {
+  border-bottom: 1px solid var(--theme-border-soft);
+  padding-bottom: 12px;
+}
+
+#gel-view .gel-window-toolbar .ghost-btn,
+#gel-view .gel-viewer-toolbar .ghost-btn {
+  min-height: 32px;
+  padding: 6px 10px;
+  border-radius: 3px;
+  font-size: 0.78rem;
+}
+
+#gel-view .gel-main .ghost-btn {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 3px;
+}
+
+#gel-view .gel-main .ghost-btn:hover { background: var(--theme-surface-elevated); }
+#gel-view .gel-main .ghost-btn:disabled { opacity: 0.5; }
+
+#gel-view .gel-window-toolbar .is-active,
+#gel-view .gel-tool-tabs [aria-pressed='true'],
+#gel-view .gel-main .ghost-btn[aria-pressed='true'] {
+  color: var(--theme-accent);
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
+}
+
+#gel-hide-windows-btn { margin-left: auto; }
+
+#gel-view .gel-viewer-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#gel-view .gel-image-row { width: 100%; flex: 0 1 auto; }
+#gel-view .gel-canvas-shell { border-radius: 0; }
+#gel-view #gel-canvas { min-height: 0; }
+
+.gel-floating-layer {
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#gel-view .gel-floating-window {
+  position: absolute;
+  inset: 0 0 auto auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 260px;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 4px;
+  background: var(--theme-surface);
+  box-shadow: var(--theme-shadow-medium, 0 8px 28px rgb(0 0 0 / 18%));
+  pointer-events: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#gel-view .gel-floating-window[hidden],
+#gel-view [data-gel-tool-panel][hidden] { display: none; }
+
+#gel-view .gel-floating-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 40px;
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--theme-border-soft);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+}
+
+#gel-view .gel-floating-head h3 { margin: 0; font-size: 0.88rem; }
+#gel-view .gel-floating-head > div:first-child { flex: 1; min-width: 0; }
+#gel-view .gel-floating-head .gel-window-close,
+#gel-view .gel-floating-head .app-dialog-close-btn {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 4px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+
+#gel-view .gel-tool-tabs { display: flex; padding: 8px 12px 0; gap: 4px; }
+#gel-view .gel-tool-tabs button { flex: 1; min-width: 0; padding: 6px; border-radius: 3px; }
+#gel-view .gel-tool-groups { display: block; padding: 12px; }
+#gel-view .gel-tool-group { border: 0; padding: 0; }
+#gel-view .gel-tool-actions { padding: 0; }
+#gel-view .gel-tool-footer { padding: 0 12px 12px; }
+
+#gel-view #gel-lane-profile-panel { inset: auto auto 0 0; width: 360px; }
+#gel-view .gel-lane-profile-head { padding: 12px 12px 0; justify-content: flex-end; }
+#gel-view .gel-lane-profile-picker { display: flex; align-items: center; min-width: 0; }
+#gel-view .gel-lane-profile-picker select { width: 110px; }
+#gel-view .gel-lane-profile-chart-shell { padding: 8px 12px 12px; }
+
+#gel-view #gel-lane-table-window { inset: 28px auto auto 20px; width: 660px; }
+#gel-view .gel-lane-table-window-body { padding: 12px; min-height: 0; overflow: auto; }
+#gel-view .gel-lane-table-window-body > p { margin: 0 0 12px; }
+#gel-view .gel-lane-table-window-body .gel-lane-table-shell {
+  --gel-lane-label-width: 118px;
+  grid-template-columns: 118px minmax(0, 1fr);
+}
+#gel-view .gel-lane-table-window-body .gel-lane-table-labels { display: grid; }
+#gel-view .gel-lane-table-grid-offsets { padding: 0 !important; }
+#gel-view .gel-lane-table { min-width: 320px; }
+
+#gel-view #gel-cell-table-overlay { inset: 32px auto auto 28px; width: 540px; }
+#gel-view .gel-cell-table-dialog {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+#gel-view .gel-cell-table-host { padding: 12px; min-height: 0; overflow: auto; }
+#gel-view #gel-cell-table-copy-btn { flex-shrink: 0; font-size: 0.75rem; }
+
+#gel-view #gel-peak-editor-overlay { inset: 12px auto auto 12px; width: 780px; height: 540px; }
+#gel-view .gel-peak-editor-dialog {
+  display: grid;
+  grid-template-rows: auto auto minmax(80px, 2fr) minmax(60px, 1fr);
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+  padding: 0 12px 12px;
+  overflow: auto;
+}
+#gel-view .gel-peak-editor-header { margin: 0 -12px; }
+#gel-view .gel-peak-editor-toolbar { gap: 6px; }
+#gel-view .gel-peak-editor-chart-shell,
+#gel-view .gel-peak-editor-table { min-height: 0; overflow: auto; }
+#gel-view .gel-peak-editor-chart { height: 100%; min-height: 0; }
+
+#gel-view .gel-peak-editor-table.tabulator,
+#gel-view .gel-peak-editor-table .tabulator-tableholder,
+#gel-view .gel-peak-editor-table .tabulator-tableholder .tabulator-table,
+#gel-view .gel-peak-editor-table .tabulator-row {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-border-soft);
+}
+#gel-view .gel-peak-editor-table .tabulator-header,
+#gel-view .gel-peak-editor-table .tabulator-header .tabulator-col {
+  color: var(--theme-text-muted);
+  background: var(--theme-surface-elevated);
+  border-color: var(--theme-border-soft);
+}
+#gel-view .gel-peak-editor-table .tabulator-row .tabulator-cell { border-color: var(--theme-border-soft); }
+#gel-view .gel-peak-editor-table .tabulator-placeholder { color: var(--theme-text-muted); }
+
+@media (max-width: 980px) {
+  #gel-view .gel-main { padding: 12px; }
+}
+
+/* Keep the desktop canvas usable in narrow plugin frames. The setup rail's
+ * controls and ordering are unchanged; only its width contracts. */
+@media (max-width: 720px) {
+  #gel-view .gel-workspace { grid-template-columns: minmax(160px, 30%) minmax(0, 1fr); }
+  #gel-view .gel-workspace > .gel-setup-panel { min-height: 0; height: 100%; }
+  #gel-view .gel-viewer-toolbar .ghost-btn,
+  #gel-view .gel-window-toolbar .ghost-btn { padding: 5px 6px; font-size: 0.72rem; }
+  #gel-view .gel-viewer-panel { gap: 8px; }
+  #gel-view .gel-floating-head { padding: 6px 8px; flex-wrap: wrap; }
+}

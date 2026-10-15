@@ -12,8 +12,8 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
     check(result.ok, result.error || 'Interaction fixture saved'); await pause(60);
   };
   const scale = canvas => evaluate(`Math.hypot(...(()=>{const m=document.querySelector('#${canvas}-canvas > svg').getScreenCTM();return [m.a,m.b]})())`);
-  await evaluate('document.querySelector("button[data-canvas=main]").click();document.getElementById("zoom-fit").click()');
-  const before = await read(), imageBefore = await tool({ action: 'render', canvas: 'both' });
+  await evaluate('document.getElementById("zoom-fit").click()');
+  const before = await read(), imageBefore = await tool({ action: 'render', canvas: 'main' });
   const fitted = await scale('main');
   await evaluate('document.getElementById("zoom-in").click()');
   check(Math.abs(await scale('main') - fitted * 1.25) < 0.001, 'Zoom in uses the displayed canvas scale');
@@ -22,15 +22,11 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   for (let step = 0; step < 20 && await scale('main') < 1.5; step += 1) await evaluate('document.getElementById("zoom-in").click()');
   check(await scale('main') >= 1.5, 'Zoom controls reach a useful detail scale');
   const mainZoom = await scale('main');
-  await evaluate('document.getElementById("toggle-scratch").click();document.querySelector("button[data-canvas=scratch]").click()'); await pause(80);
-  const scratchFit = await scale('scratch');
-  await evaluate('document.getElementById("zoom-in").click()');
-  check(Math.abs(await scale('scratch') - scratchFit * 1.25) < 0.001 && Math.abs(await scale('main') - mainZoom) < 0.001, 'Main and scratch keep independent zoom levels');
-  const zoomed = await read(), imageAfter = await tool({ action: 'render', canvas: 'both' });
+  const zoomed = await read(), imageAfter = await tool({ action: 'render', canvas: 'main' });
   check(zoomed.revision === before.revision && JSON.stringify(zoomed.objects) === JSON.stringify(before.objects)
     && JSON.stringify(zoomed.canvases) === JSON.stringify(before.canvases), 'Zoom never changes saved canvas dimensions or object geometry');
-  check(JSON.stringify(imageBefore.content.filter(item => item.type === 'image')) === JSON.stringify(imageAfter.content.filter(item => item.type === 'image')), 'MCP images of both canvases are identical before and after view zoom');
-  await evaluate('document.getElementById("zoom-fit").click();document.getElementById("close-scratch").click();document.querySelector("button[data-canvas=main]").click()');
+  check(JSON.stringify(imageBefore.content.filter(item => item.type === 'image')) === JSON.stringify(imageAfter.content.filter(item => item.type === 'image')), 'MCP images of the canvas are identical before and after view zoom');
+  await evaluate('document.getElementById("zoom-fit").click()');
   await apply([{ op: 'upsert', object: { id: 'resize-fixture', type: 'vector', x: 40, y: 40, width: 130, height: 80,
     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 80"><rect width="130" height="80" fill="#ff0000"/></svg>' } }]);
   await evaluate('document.querySelector("[data-layer-id=resize-fixture] .layer-select").click();document.getElementById("zoom-fit").click();for(let i=0;i<6;i++)document.getElementById("zoom-in").click()');

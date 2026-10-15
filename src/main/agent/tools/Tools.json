@@ -8,6 +8,10 @@
     "description": "Search notebook pages or retrieve one page by stable entry id with agent-safe content and storage-access status."
   },
   {
+    "name": "notebook-list",
+    "description": "List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_cursor with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id. A stale_cursor requires restarting the list."
+  },
+  {
     "name": "protocol-matching",
     "description": "Rank local protocols against protocol candidates and select the best protocol for notebook generation."
   },

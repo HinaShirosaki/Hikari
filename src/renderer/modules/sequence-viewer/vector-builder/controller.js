@@ -110,6 +110,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
   });
 
   const mapHover = attachMapHoverLabel({
+    allowLibrarySave: true,
     host: () => elements.vectorBuilderMap,
     rootDocument,
     getFeature: (index) => getFeatureByIndex(getSelectedRecord(), index),

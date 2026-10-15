@@ -2,6 +2,7 @@ export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['inventory_lookup', 'Inventory lookup', 'Search local personal containers and samples.'],
   ['chemical_lookup', 'Chemical lookup', 'Search local chemical stock records.'],
   ['notebook_lookup', 'Notebook lookup', 'Search local biology notebook pages.'],
+  ['notebook_list', 'Notebook list', 'List notebook titles with date filters and pagination.'],
   ['protocol_lookup', 'Protocol lookup', 'Search saved protocols.'],
   ['protocol_generation', 'Protocol generation', 'Prepare protocols and queue requested saves for review.', 'hikari-protocol-generation'],
   ['notebook_draft', 'Notebook draft', 'Prepare planned notebook pages for confirmation.', 'hikari-notebook-draft'],

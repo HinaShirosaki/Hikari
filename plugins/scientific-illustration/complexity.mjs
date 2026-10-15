@@ -13,7 +13,7 @@ export const COMPLEXITY_PROFILES = Object.freeze({
   detailed: {
     label: 'Detailed',
     summary: 'Relevant substructures, stages and annotations, with careful organization.',
-    guidance: 'Targets: 20 or more components; use multiple panels or insets for stages, scales or zoomed views; label components and their substructures and number sequential steps; shading and gradients allowed. Show canonical substructures (for example organelles or protein domains). Use scratch for intricate components.'
+    guidance: 'Targets: 20 or more components; use multiple panels or insets for stages, scales or zoomed views; label components and their substructures and number sequential steps; shading and gradients allowed. Show canonical substructures (for example organelles or protein domains). Build intricate components as independently editable groups.'
   }
 });
 export const COMPLEXITY_LEVELS = Object.keys(COMPLEXITY_PROFILES);

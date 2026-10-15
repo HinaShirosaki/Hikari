@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!--
-    Local-first app: everything is bundled, so nothing loads over the network.
+    App code and styles are bundled. Agent replies can display product images
+    from vendor sites and their image CDNs over HTTP(S).
     'wasm-unsafe-eval' is for the onnxruntime colony-counter model; 'unsafe-inline'
     on style-src covers the <style> blocks the print and sequence-preview documents
     build at runtime. blob: covers generated PDFs (print iframe + viewer popup).
@@ -24,7 +25,7 @@
     default-src 'self';
     script-src 'self' 'wasm-unsafe-eval';
     style-src 'self' 'unsafe-inline';
-    img-src 'self' data: blob:;
+    img-src 'self' data: blob: https: http:;
     font-src 'self' data:;
     connect-src 'self' data: blob:;
     frame-src 'self' blob: http://127.0.0.1:* hikari-html:;

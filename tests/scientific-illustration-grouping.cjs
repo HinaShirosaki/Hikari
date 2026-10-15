@@ -23,7 +23,7 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
     { op: 'upsert', object: { id: 'group-text', name: 'ER label', type: 'text', x: 90, y: 240, width: 200, height: 40, fontSize: 24, fontFamily: 'Inter', text: 'Rough ER' } },
     { op: 'upsert', object: { id: 'group-image', name: 'Raster inset', type: 'raster', x: 400, y: 80, width: 80, height: 60, dataUrl: raster, textFree: true } }
   ]);
-  const initial = await read(), beforeImage = await tool({ action: 'render', canvas: 'both' });
+  const initial = await read(), beforeImage = await tool({ action: 'render', canvas: 'main' });
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer-select[aria-pressed=true]")].map(b=>b.closest("[data-layer-id]").dataset.layerId)');
   const clickToolbar = async id => {
     const target = await evaluate(`(()=>{const r=document.getElementById(${JSON.stringify(id)}).getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
@@ -44,7 +44,7 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   let grouped = await read(), group = grouped.groups[0];
   check(group?.ids.length === 4 && JSON.stringify(grouped.objects) === JSON.stringify(initial.objects), 'UI grouping preserves every object property');
   check(await evaluate('document.getElementById("layer-inspector").hidden && document.getElementById("group-selection").disabled && !document.getElementById("ungroup-selection").disabled'), 'Toolbar grouping works with Layers closed and switches enabled actions');
-  const afterImage = await tool({ action: 'render', canvas: 'both' });
+  const afterImage = await tool({ action: 'render', canvas: 'main' });
   check(JSON.stringify(beforeImage.content.filter(c => c.type === 'image')) === JSON.stringify(afterImage.content.filter(c => c.type === 'image')), 'Grouping leaves both rendered canvases pixel-identical');
   await fs.writeFile(path.join(temp, 'grouping-toolbar.png'), (await win.webContents.capturePage()).toPNG());
   await clickToolbar('ungroup-selection');
@@ -96,14 +96,6 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   check(copy?.ids.length === 4 && copy.ids.every(id => !group.ids.includes(id)), 'Group duplicate creates fresh member IDs and preserves membership');
   check(copy.ids.every((id, index) => { const o = duplicated.objects.find(o => o.id === id), old = edited.objects[index]; return Math.abs(o.x - old.x - 15) < 1e-8 && Math.abs(o.y - old.y - 15) < 1e-8; }), 'Group duplicate offsets every member once');
   await apply([{ op: 'delete', id: copy.id }]);
-  await evaluate(`document.querySelector('[data-layer-id="${group.id}"] .layer-select').click();document.getElementById('transfer').click()`); await pause(100);
-  let transferred = await read(), scratchGroup = transferred.groups.find(item => item.canvas === 'scratch');
-  check(scratchGroup?.ids.length === 4 && transferred.scratch_visible, 'Copy-to-scratch retains grouping and summons scratch');
-  const scratchMembers = transferred.objects.filter(o => scratchGroup.ids.includes(o.id));
-  check(scratchMembers.every((o, i) => o.x === edited.objects[i].x && o.y === edited.objects[i].y && o.width === edited.objects[i].width && o.height === edited.objects[i].height), 'Scratch group copy retains exact canvas-unit geometry');
-  await apply([{ op: 'transfer', id: scratchGroup.id, canvas: 'main' }]);
-  transferred = await read(); check(transferred.groups.find(item => item.id === scratchGroup.id).canvas === 'main', 'Agent transfers every group member together');
-  await apply([{ op: 'delete', id: scratchGroup.id }]);
   await evaluate(`document.querySelector('[data-layer-id="${group.id}"] .layer-select').click();document.body.dispatchEvent(new KeyboardEvent('keydown',{key:'g',ctrlKey:true,shiftKey:true,bubbles:true}))`); await pause(80);
   const ungrouped = await read(); check(ungrouped.groups.length === 0 && JSON.stringify(ungrouped.objects) === JSON.stringify(edited.objects), 'Ctrl-Shift-G ungroups without moving or flattening children');
   await evaluate('illustrationWorkspace.history("undo")'); await pause(80);

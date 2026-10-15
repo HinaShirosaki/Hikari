@@ -133,13 +133,6 @@ async function verifyImportCrop({ tool, evaluate, check, win, pause, temp }) {
     check(await evaluate('!document.getElementById("canvas-crop-overlay") && !document.getElementById("main-canvas").inert'), 'Escape exits cropping and restores canvas interaction');
   }
   win.setSize(1300, 1000);
-  const beforeScratch = await read();
-  check((await tool({action:'scratch',visible:true})).ok, 'Scratch opens for inline crop');
-  const scratchCopy = await apply([{op:'insert_asset',asset_id:cell.id,canvas:'scratch',x:20,y:20,width:160}]), scratchId = scratchCopy.inserted_assets[0].ids[0];
-  await evaluate(`document.querySelector('button[data-canvas="scratch"]').click();document.querySelector('[data-layer-id="${scratchId}"] .layer-select').click();document.getElementById('crop-raster').click()`); await crop();
-  check(await evaluate('document.getElementById("scratch-workspace").contains(document.getElementById("canvas-crop-overlay")) && document.getElementById("canvas-crop-overlay").scrollHeight<=document.getElementById("canvas-crop-overlay").clientHeight && !document.querySelector("dialog[open]")'), 'Scratch cropping stays inside its own canvas');
-  await applyCrop();
-  check((await read()).objects.find(object=>object.id===scratchId).width===80 && JSON.stringify((await read()).objects.filter(object=>object.canvas==='main'))===JSON.stringify(beforeScratch.objects.filter(object=>object.canvas==='main')), 'Scratch crops leave Main artwork unchanged');
   const beforeReload = await read(), assetsBeforeReload = await list();
   await evaluate('window.importQaReload=true;location.reload()');
   await wait('!window.importQaReload && Boolean(window.illustrationWorkspace?.getDocument())', 'Plugin reloads'); await settle();

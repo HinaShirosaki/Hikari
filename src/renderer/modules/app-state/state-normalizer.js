@@ -24,6 +24,7 @@ import {
 import { normalizePaperRecord } from './paper-normalizers.js';
 import { normalizeSampleRecord } from './sample-normalizers.js';
 import { migrateProteinBuilderCloningNotebookState } from '../../services/notebook-record-compat.js';
+import { normalizePrimerLibrary } from '../../../shared/primer-library.mjs';
 
 export { defaultState };
 
@@ -106,6 +107,8 @@ function normalizePluginEntries(rawPlugins) {
         // server, so `serve` only survives alongside one.
         serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
         service,
+        // A tool mounts inside Tools; like a service, it is local code only.
+        tool: raw.tool === true && !embedUrl && !service,
         bundled: raw.bundled === true,
         enabled: raw.enabled !== false
       };
@@ -268,6 +271,7 @@ export function normalizeState(parsed) {
     assays: Array.isArray(source.assays) ? source.assays : [],
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
     samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),
+    primerLibrary: normalizePrimerLibrary(source.primerLibrary),
     growthMetrics: normalizeGrowthMetrics(source),
     messages: Array.isArray(source.messages) ? source.messages : [],
     labInventory: {

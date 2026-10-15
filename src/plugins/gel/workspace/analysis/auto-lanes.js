@@ -49,7 +49,10 @@ function gutterNoise(values) {
   const sorted = Array.from(values).sort((a, b) => a - b);
   const lower = sorted.slice(0, Math.max(1, Math.floor(sorted.length * 0.5)));
   const med = median(lower);
-  return medianAbsoluteDeviation(lower, med) || 1e-6;
+  return {
+    deviation: medianAbsoluteDeviation(lower, med) || 1e-6,
+    floor: sorted[Math.floor(sorted.length * 0.1)] || 0
+  };
 }
 
 // Per-column mean absolute deviation from the column mean over the chosen Y
@@ -78,40 +81,44 @@ function columnAbsDevProfile(gray, width, height, yStart, yEnd) {
   return profile;
 }
 
-function detectGelEdges(smoothed, threshold) {
-  const length = smoothed.length;
-  if (length < 4) {
-    return { left: 0, right: length - 1 };
+// Combine overlapping windows without rejecting rows relative to the strongest
+// band. Compare window means with a robust full-column background as well: vertical
+// variation alone vanishes when a selected window lies inside a flat band.
+function buildDetectionProfile(gray, width, height, yStart, yEnd) {
+  const background = new Float32Array(width);
+  const sampleStride = Math.max(1, Math.ceil(height / 64));
+  for (let x = 0; x < width; x += 1) {
+    const samples = [];
+    for (let y = 0; y < height; y += sampleStride) samples.push(gray[y * width + x]);
+    // A mean would turn bands outside a selected empty window into negative
+    // contrast inside it, falsely detecting lanes that have no selected signal.
+    background[x] = median(samples);
   }
-  let maxValue = 0;
-  for (let i = 0; i < length; i += 1) {
-    if (smoothed[i] > maxValue) {
-      maxValue = smoothed[i];
+  const profile = new Float32Array(width);
+  const selected = Number.isFinite(yStart) && Number.isFinite(yEnd) && yEnd > yStart + 1;
+  const top = selected ? clamp(Math.floor(yStart), 0, height - 2) : 0;
+  const bottom = selected ? clamp(Math.floor(yEnd), top + 1, height - 1) : height - 1;
+  const windowSize = Math.min(bottom - top + 1, Math.max(8, Math.ceil(height / 4)));
+  const stride = Math.max(1, Math.floor(windowSize / 2));
+  for (let start = top; ; start += stride) {
+    const end = Math.min(bottom, start + windowSize - 1);
+    const values = columnAbsDevProfile(gray, width, height, start, end);
+    for (let x = 0; x < width; x += 1) {
+      let sum = 0;
+      for (let y = start; y <= end; y += 1) sum += gray[y * width + x];
+      const contrast = Math.abs(sum / (end - start + 1) - background[x]);
+      profile[x] = Math.max(profile[x], values[x], contrast);
     }
+    if (end === bottom) break;
   }
-  if (maxValue <= 0) {
-    return { left: 0, right: length - 1 };
-  }
-  // Generous: this only bounds the peak search. A 15%-of-max bar let one
-  // overloaded lane push the edge past every faint lane on the gel. The
-  // reported lane boundaries come from the peak grid instead (see detectLanes).
-  const thr = threshold ?? maxValue * 0.02;
-  let left = 0;
-  while (left < length && smoothed[left] < thr) {
-    left += 1;
-  }
-  let right = length - 1;
-  while (right > left && smoothed[right] < thr) {
-    right -= 1;
-  }
-  return { left, right };
+  return profile;
 }
 
 // Auto-detect the band-rich Y window: collapse each row to a horizontal
 // abs-dev value within the gel X range, then keep the contiguous Y range where
 // the smoothed row-signal exceeds a fraction of its max. Empty rows of gel and
 // the gap above the wells naturally fall away.
-function autoBandYWindow(gray, width, height, edges, fraction = 0.30) {
+function autoBandYWindow(gray, width, height, edges, fraction = 0.02) {
   const xL = edges.left;
   const xR = edges.right;
   const cols = xR - xL + 1;
@@ -156,11 +163,10 @@ function autoBandYWindow(gray, width, height, edges, fraction = 0.30) {
 export function findLocalMaxima(values, fromX, toX) {
   const peaks = [];
   for (let x = fromX + 1; x < toX; x += 1) {
-    const v = values[x];
-    if ((v > values[x - 1] && v >= values[x + 1])
-      || (v >= values[x - 1] && v > values[x + 1])) {
-      peaks.push(x);
-    }
+    if (values[x] <= values[x - 1]) continue;
+    const start = x;
+    while (x < toX && values[x + 1] === values[start]) x += 1;
+    if (x < toX && values[x] > values[x + 1]) peaks.push(Math.round((start + x) / 2));
   }
   return peaks;
 }
@@ -229,161 +235,203 @@ function findValley(smoothed, fromX, toX) {
   return bestX;
 }
 
-export function detectLanes({
-  gray,
-  width,
-  height,
-  yStart = null,
-  yEnd = null,
-  gelLeft = null,
-  gelRight = null,
-  expectedLaneCount = null
-} = {}) {
-  if (!gray || !(width >= 4) || !(height >= 4)) {
-    return null;
-  }
-  const wantCount = Number.isFinite(expectedLaneCount) && expectedLaneCount >= 2
-    ? Math.floor(expectedLaneCount)
-    : null;
-
-  // Rough edges from a coarse pass over the lower 3/4 of the image — this skips
-  // wells at the top, which can have high abs-dev that distorts edge detection.
-  const roughTop = Math.floor(height * 0.25);
-  const roughBot = Math.floor(height * 0.98);
-  const roughProfile = columnAbsDevProfile(gray, width, height, roughTop, roughBot);
-  const hasManualEdges = Number.isFinite(gelLeft)
-    && Number.isFinite(gelRight)
-    && gelRight > gelLeft + 2;
-  const edges = hasManualEdges
-    ? {
-      left: clamp(Math.floor(gelLeft), 0, width - 1),
-      right: clamp(Math.floor(gelRight), 0, width - 1)
+// Weighted interval selection considers the whole set, rather than allowing one
+// strong peak to greedily exclude two plausible neighboring lanes.
+function selectPeaks(scored, minSpacing, count, prominenceFloor) {
+  const limit = Math.min(count || scored.length, scored.length);
+  const previous = scored.map((peak, i) => {
+    let j = i - 1;
+    while (j >= 0 && peak.x - scored[j].x < minSpacing) j -= 1;
+    return j + 1;
+  });
+  const scores = Array.from({ length: scored.length + 1 }, () => {
+    const row = new Float64Array(limit + 1).fill(Number.NEGATIVE_INFINITY);
+    row[0] = 0;
+    return row;
+  });
+  const take = Array.from({ length: scored.length + 1 }, () => new Uint8Array(limit + 1));
+  for (let i = 1; i <= scored.length; i += 1) {
+    for (let k = 1; k <= limit; k += 1) {
+      const withPeak = scores[previous[i - 1]][k - 1]
+        + Math.log1p(scored[i - 1].prominence / prominenceFloor);
+      const withoutPeak = scores[i - 1][k];
+      take[i][k] = Number(withPeak > withoutPeak);
+      scores[i][k] = Math.max(withPeak, withoutPeak);
     }
-    : detectGelEdges(gaussianBlur1d(roughProfile, Math.max(3, width * 0.01)));
-  if (edges.right <= edges.left + 2) {
-    return null;
   }
+  const kept = [];
+  let selectedCount = 0;
+  for (let k = 1; k <= limit; k += 1) {
+    if (Number.isFinite(scores[scored.length][k])
+      && (count || scores[scored.length][k] > scores[scored.length][selectedCount])) selectedCount = k;
+  }
+  for (let i = scored.length, k = selectedCount; i > 0 && k > 0;) {
+    if (take[i][k]) {
+      kept.push(scored[i - 1]);
+      i = previous[i - 1];
+      k -= 1;
+    } else i -= 1;
+  }
+  return kept.reverse();
+}
 
-  // Band Y window: respect the user's choice, otherwise auto-detect.
+function inferBlankPeaks(peaks, count, edges, hasManualEdges) {
+  if (!count || peaks.length < 3 || peaks.length >= count) return [];
+  // Explicit outer boundaries resolve the otherwise ambiguous position of an
+  // empty first/last lane. Require observed centers to agree with this grid.
+  if (hasManualEdges) {
+    const pitch = (edges.right - edges.left) / count;
+    const occupied = new Set();
+    const fits = peaks.every((x) => {
+      const slot = Math.round((x - edges.left) / pitch - 0.5);
+      if (slot < 0 || slot >= count || occupied.has(slot)
+        || Math.abs(x - (edges.left + (slot + 0.5) * pitch)) > pitch * 0.18) return false;
+      occupied.add(slot);
+      return true;
+    });
+    if (fits && peaks.length >= count / 2) {
+      return Array.from({ length: count }, (_, i) => i)
+        .filter((i) => !occupied.has(i))
+        .map((i) => Math.round(edges.left + (i + 0.5) * pitch));
+    }
+  }
+  const gaps = peakGaps(peaks);
+  const pitch = median(gaps.slice().sort((a, b) => a - b).slice(0, Math.ceil(gaps.length / 2)));
+  // Do not invent a pitch from a single short gap (e.g. a narrow ladder).
+  if (gaps.filter((gap) => Math.abs(gap - pitch) <= pitch * 0.15).length < 2) return [];
+  const inferred = [];
+  for (let i = 1; i < peaks.length; i += 1) {
+    const gap = peaks[i] - peaks[i - 1];
+    const steps = Math.round(gap / pitch);
+    if (steps < 1 || Math.abs(gap / steps - pitch) > pitch * 0.15) return [];
+    for (let k = 1; k < steps; k += 1) inferred.push(Math.round(peaks[i - 1] + gap * k / steps));
+  }
+  return peaks.length + inferred.length <= count ? inferred : [];
+}
+
+function detectWithProfile({
+  gray, width, height, yStart = null, yEnd = null,
+  gelLeft = null, gelRight = null, expectedLaneCount = null
+}, profile) {
+  const wantCount = Number.isFinite(expectedLaneCount) && expectedLaneCount >= 2
+    ? Math.min(40, Math.floor(expectedLaneCount)) : null;
+  const hasManualEdges = Number.isFinite(gelLeft) && Number.isFinite(gelRight) && gelRight > gelLeft + 2;
+  const edges = hasManualEdges
+    ? { left: clamp(Math.floor(gelLeft), 0, width - 1), right: clamp(Math.floor(gelRight), 0, width - 1) }
+    : { left: 0, right: width - 1 };
+  if (edges.right <= edges.left + 2) return null;
   let bandTop;
   let bandBottom;
   if (Number.isFinite(yStart) && Number.isFinite(yEnd) && yEnd > yStart + 1) {
-    bandTop = clamp(Math.floor(yStart), 0, height - 1);
+    bandTop = clamp(Math.floor(yStart), 0, height - 2);
     bandBottom = clamp(Math.floor(yEnd), bandTop + 1, height - 1);
   } else {
     const auto = autoBandYWindow(gray, width, height, edges);
     bandTop = auto.yStart;
     bandBottom = auto.yEnd;
   }
-
-  const profile = columnAbsDevProfile(gray, width, height, bandTop, bandBottom);
-  const gelWidth = edges.right - edges.left;
-  // When the caller knows the lane count, set min spacing to about half the
-  // expected pitch (gelWidth / count). Factor 2.0 = exactly half-pitch, which
-  // accommodates gels where some lanes are narrower than typical (e.g. a thin
-  // ladder lane next to a sample lane) while still rejecting double-detection
-  // of bands within a single lane.
+  // Empty image margins must not set the spacing/smoothing scale. Estimate
+  // the occupied span, while keeping the actual search range and user edges.
+  const profileWindow = profile.slice(edges.left, edges.right + 1);
+  const activityFloor = Math.max(...profileWindow) * 0.02;
+  let activeLeft = edges.left;
+  let activeRight = edges.right;
+  while (activeLeft < activeRight && profile[activeLeft] < activityFloor) activeLeft += 1;
+  while (activeRight > activeLeft && profile[activeRight] < activityFloor) activeRight -= 1;
+  const gelWidth = hasManualEdges ? edges.right - edges.left : Math.max(4, activeRight - activeLeft);
   const minLaneWidth = wantCount
-    ? Math.max(6, Math.round(gelWidth / (wantCount * 2.0)))
+    ? Math.max(6, Math.round(gelWidth / (wantCount * 2)))
     : Math.max(8, Math.round(gelWidth * 0.022));
-  // Sigma is tied to band width, not min spacing — otherwise raising the
-  // expected count would over-smooth and wipe out adjacent peaks.
-  const sigma = clamp(gelWidth * 0.005, 1.5, 6);
-  const smoothed = gaussianBlur1d(profile, sigma);
-
+  const smoothed = gaussianBlur1d(profile, clamp(gelWidth * 0.005, 1.5, 6));
   const windowValues = smoothed.slice(edges.left, edges.right + 1);
   const noise = gutterNoise(windowValues);
-  let windowMax = 0;
-  for (let i = 0; i < windowValues.length; i += 1) {
-    if (windowValues[i] > windowMax) {
-      windowMax = windowValues[i];
+  const windowMax = Math.max(...windowValues);
+  // A noise-only image still has local maxima. Require contrast above the
+  // measured background level as well as its spread; otherwise texture alone
+  // generates an apparently valid lane layout at every noise amplitude.
+  const minProminence = Math.max(3 * noise.deviation, 0.25 * noise.floor, 0.02 * windowMax, 1e-6);
+  const scored = findLocalMaxima(smoothed, edges.left, edges.right)
+    .map((x) => ({ x, prominence: computeProminence(smoothed, x, edges.left, edges.right) }))
+    .filter((peak) => peak.prominence >= minProminence);
+  // A shallow ripple across one broad band is not another lane. Demand a
+  // valley at least 20% below the weaker peak before retaining both centers.
+  const distinct = [];
+  for (const peak of scored) {
+    let keep = true;
+    while (distinct.length) {
+      const prior = distinct[distinct.length - 1];
+      const valley = findValley(smoothed, prior.x, peak.x);
+      if (Math.min(smoothed[prior.x], smoothed[peak.x]) - smoothed[valley]
+        >= 0.2 * Math.min(prior.prominence, peak.prominence)) break;
+      if (prior.prominence >= peak.prominence) { keep = false; break; }
+      distinct.pop();
     }
+    if (keep) distinct.push(peak);
   }
-  // Two floors, because either one alone fails: the noise term tracks background
-  // texture (near zero on a clean gel with wide gutters, which let junk peaks
-  // through), the relative term tracks signal scale. 0.02 is low enough to keep a
-  // lane 25x fainter than the strongest one.
-  const minProminence = Math.max(3.0 * noise, 0.02 * windowMax);
-
-  const candidates = findLocalMaxima(smoothed, edges.left, edges.right);
-  const scored = candidates
-    .map((x) => ({
-      x,
-      prominence: computeProminence(smoothed, x, edges.left, edges.right)
-    }))
-    .filter((c) => c.prominence >= minProminence);
-
-  let kept;
-  if (wantCount) {
-    // Greedy: take the most prominent peak that respects min spacing against
-    // already-kept peaks. Stops at wantCount or when no more candidates fit.
-    const byProminence = scored.slice().sort((a, b) => b.prominence - a.prominence);
-    kept = [];
-    for (const c of byProminence) {
-      if (kept.length >= wantCount) break;
-      const tooClose = kept.some((k) => Math.abs(k.x - c.x) < minLaneWidth);
-      if (!tooClose) kept.push(c);
-    }
-    kept.sort((a, b) => a.x - b.x);
-  } else {
-    scored.sort((a, b) => a.x - b.x);
-    kept = [];
-    for (const c of scored) {
-      if (kept.length && c.x - kept[kept.length - 1].x < minLaneWidth) {
-        if (c.prominence > kept[kept.length - 1].prominence) {
-          kept[kept.length - 1] = c;
-        }
-      } else {
-        kept.push(c);
-      }
-    }
-  }
-  let peaks = kept.map((c) => c.x);
-  // A blank lane (negative control) carries no signal and so no peak, which
-  // renumbers every lane after it. It leaves a gap of ~2x the pitch, so fill it
-  // back in — but only when the caller said how many lanes to expect, otherwise
-  // a deliberately uneven gel grows phantom lanes.
-  if (wantCount && peaks.length >= 3 && peaks.length < wantCount) {
-    const pitch = median(peakGaps(peaks));
-    const filled = [peaks[0]];
-    for (let i = 1; i < peaks.length; i += 1) {
-      const steps = Math.round((peaks[i] - peaks[i - 1]) / pitch);
-      for (let k = 1; k < steps; k += 1) {
-        filled.push(Math.round(peaks[i - 1] + (((peaks[i] - peaks[i - 1]) * k) / steps)));
-      }
-      filled.push(peaks[i]);
-    }
-    if (filled.length <= wantCount) {
-      peaks = filled;
-    }
-  }
-
+  const observed = selectPeaks(distinct, minLaneWidth, wantCount, minProminence);
+  const observedPeaks = observed.map((peak) => peak.x);
+  const inferredPeaks = inferBlankPeaks(observedPeaks, wantCount, edges, hasManualEdges);
+  const peaks = [...observedPeaks, ...inferredPeaks].sort((a, b) => a - b);
   const dividers = [];
   for (let i = 1; i < peaks.length; i += 1) {
     const valley = findValley(smoothed, peaks[i - 1] + 1, peaks[i] - 1);
-    if (valley > edges.left + 1 && valley < edges.right - 1) {
-      dividers.push(valley);
-    }
+    if (valley > edges.left + 1 && valley < edges.right - 1) dividers.push(valley);
   }
-
-  // Reported edges are lane boundaries downstream (manual-lanes.js builds lanes
-  // from [gelLeft, ...dividers, gelRight]), so put them half a pitch outside the
-  // outer peaks rather than where the outer lane's flank crossed a threshold —
-  // that clipped ~20% off the first and last lane only.
   let outerLeft = edges.left;
   let outerRight = edges.right;
-  if (!hasManualEdges && peaks.length >= 2) {
-    const pitch = median(peakGaps(peaks));
-    outerLeft = clamp(Math.round(peaks[0] - (pitch / 2)), 0, width - 1);
-    outerRight = clamp(Math.round(peaks[peaks.length - 1] + (pitch / 2)), 0, width - 1);
+  if (!hasManualEdges && observed.length >= 2) {
+    const support = observed.map((peak) => {
+      const floor = smoothed[peak.x] - peak.prominence * 0.9;
+      let left = peak.x;
+      let right = peak.x;
+      while (left > edges.left && smoothed[left - 1] > floor) left -= 1;
+      while (right < edges.right && smoothed[right + 1] > floor) right += 1;
+      return { left, right };
+    });
+    const first = support[0];
+    const last = support[support.length - 1];
+    // Extrapolate only the nearest gutter; a distant wide/blank lane must not
+    // determine how much of the outermost band is included.
+    const nextHalfWidth = peaks[1] === observedPeaks[1]
+      ? observedPeaks[1] - support[1].left : observedPeaks[0] - first.left;
+    const priorHalfWidth = peaks.at(-2) === observedPeaks.at(-2)
+      ? support.at(-2).right - observedPeaks.at(-2) : last.right - observedPeaks.at(-1);
+    const firstGap = Math.max(0, peaks[1] - first.right - nextHalfWidth);
+    const lastGap = Math.max(0, last.left - peaks.at(-2) - priorHalfWidth);
+    outerLeft = clamp(Math.round(first.left - firstGap / 2), 0, width - 1);
+    outerRight = clamp(Math.round(last.right + lastGap / 2), 0, width - 1);
   }
-
   return {
-    gelLeft: outerLeft,
-    gelRight: outerRight,
-    bandTop,
-    bandBottom,
-    dividers,
-    peaks
+    gelLeft: outerLeft, gelRight: outerRight, bandTop, bandBottom, dividers, peaks,
+    observedPeaks, inferredPeaks, expectedLaneCount: wantCount,
+    countMismatch: Boolean(wantCount && peaks.length !== wantCount)
+  };
+}
+
+function validImage({ gray, width, height } = {}) {
+  return gray && Number.isInteger(width) && width >= 4 && Number.isInteger(height)
+    && height >= 4 && gray.length === width * height;
+}
+
+export function detectLanes(options = {}) {
+  if (!validImage(options)) return null;
+  return detectWithProfile(options, buildDetectionProfile(options.gray, options.width,
+    options.height, options.yStart, options.yEnd));
+}
+
+// The controller owns a one-image cache. Count/boundary edits reuse pixel work;
+// a load, crop, rotation, or height-window edit invalidates it. No global image
+// retention, and callers using the pure detectLanes API never receive stale data.
+export function createLaneDetector() {
+  let cached = null;
+  return (options = {}) => {
+    if (!validImage(options)) return null;
+    if (!Number.isFinite(options.imageRevision)) return detectLanes(options);
+    const keys = ['gray', 'width', 'height', 'imageRevision', 'yStart', 'yEnd'];
+    if (!cached || keys.some((key) => cached.options[key] !== options[key])) {
+      cached = { options: { ...options }, profile: buildDetectionProfile(options.gray,
+        options.width, options.height, options.yStart, options.yEnd) };
+    }
+    return detectWithProfile(options, cached.profile);
   };
 }

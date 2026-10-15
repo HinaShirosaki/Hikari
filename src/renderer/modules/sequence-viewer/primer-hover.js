@@ -42,7 +42,7 @@ export function renderPrimerNameCopyButton(feature) {
 }
 
 // The sequence plus its copy button, or '' for anything that is not a primer.
-export function renderPrimerHoverSection(feature, recordSequence = '') {
+export function renderPrimerHoverSection(feature, recordSequence = '', { allowLibrarySave = false } = {}) {
   if (!isPrimerBindingFeature(feature?.type)) {
     return '';
   }
@@ -56,6 +56,13 @@ export function renderPrimerHoverSection(feature, recordSequence = '') {
       <div class="sequence-viewer-primer-hover-actions">
         <span class="sequence-viewer-primer-hover-meta">${sequence.length.toLocaleString()} nt</span>
         ${renderPrimerCopyButton(sequence, 'sequence', 'primer sequence')}
+        ${allowLibrarySave ? `<button type="button" class="sequence-viewer-primer-library-save-btn" data-sequence-primer-library-save data-primer-name="${escapeHtml(feature?.name || 'Primer')}" data-primer-sequence="${escapeHtml(sequence)}" title="Save to Primer Library" aria-label="Save to Primer Library">
+          <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+            <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
+            <path d="M8.5 5.5h7v4h-7Z"></path>
+            <path d="M8 12.5h8v6h-8Z"></path>
+          </svg>
+        </button>` : ''}
       </div>
     </div>
   `;

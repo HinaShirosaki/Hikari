@@ -1,5 +1,5 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
-import { detectLanes } from '../analysis/auto-lanes.js';
+import { createLaneDetector } from '../analysis/auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import { createManualCanvasInteraction } from './canvas-interaction.js';
 import { createManualStepNavigation } from './step-navigation.js';
@@ -19,6 +19,7 @@ import {
 
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
+  const detectLanes = createLaneDetector();
   function clearCanvasInteractionState({ clearTool = true } = {}) {
     if (clearTool) {
       runtime.selectedViewerTool = '';
@@ -52,6 +53,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       updateLaneSegmentation({ dividerDone: false });
     }
     renderManualProgress();
+    deps.renderCanvas();
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
       if (runtime.selectedViewerTool === 'dividers') {
@@ -147,6 +149,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     updateLaneSegmentation({ dividerDone: true });
     clearCanvasTool('dividers');
     renderOverrideStatus();
+    deps.renderCanvas();
     deps.setStatus('Lane dividers finished. Click a lane to set the ladder lane.');
     return true;
   }
@@ -297,6 +300,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       laneVertices: [],
       quantifyConfirmed: false
     });
+    runtime.currentReport = null;
     return true;
   }
 
@@ -351,11 +355,12 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = normalized.laneSegmentation || {};
     const rawCount = Number(elements.gelExpectedLaneCountInput?.value);
-    const expectedLaneCount = Number.isFinite(rawCount) && rawCount >= 2 ? Math.floor(rawCount) : null;
+    const expectedLaneCount = Number.isFinite(rawCount) && rawCount >= 2 ? Math.min(40, Math.floor(rawCount)) : null;
     const result = detectLanes({
       gray: runtime.currentImage.gray,
       width: runtime.currentImage.width,
       height: runtime.currentImage.height,
+      imageRevision: runtime.imageRevision,
       yStart: Number.isFinite(segmentation.bandTop) ? segmentation.bandTop : null,
       yEnd: Number.isFinite(segmentation.bandBottom) ? segmentation.bandBottom : null,
       gelLeft: segmentation.gelLeft,
@@ -364,7 +369,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     });
     const peakCount = result?.peaks?.length ?? 0;
     if (!result || peakCount < 2) {
-      deps.setStatus('Auto-detection found no clear lanes. Adjust the lane dividers or contrast and try again.');
+      deps.setStatus('Auto-detection found no clear lanes (at least two are required). Adjust the image crop or set lane dividers manually.');
       return;
     }
     updateLaneSegmentation({
@@ -375,15 +380,24 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       bandTop: segmentation.bandTop,
       bandBottom: segmentation.bandBottom,
       laneBandWindows: [],
-      laneVertices: []
+      laneVertices: [],
+      quantifyConfirmed: false
     });
+    runtime.currentReport = null;
+    runtime.laneProfileHoverY = null;
     resetDownstreamManualSelections();
     runtime.manualDividerConfirmed = false;
     clearCanvasInteractionState();
     runtime.selectedViewerTool = 'dividers';
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus(`Auto-detected ${peakCount} lane(s). Review the boundaries, add any missing ones, then click Lane dividers again to finish.`);
+    const inferred = result.inferredPeaks.length;
+    const inferredLaneNumbers = result.inferredPeaks.map((peak) => result.peaks.indexOf(peak) + 1).join(', ');
+    const inferenceNote = inferred
+      ? ` Lane(s) ${inferredLaneNumbers} inferred as blank from spacing; verify their positions.` : '';
+    const countNote = result.countMismatch
+      ? ` Expected ${expectedLaneCount}; found ${peakCount}. Add missing boundaries or correct the expected count.` : '';
+    deps.setStatus(`Auto-detected ${peakCount} lane(s).${inferenceNote}${countNote} Review the boundaries, add any missing ones, then click Lane dividers again to finish.`);
   }
 
   function onResetManualOverrides() {

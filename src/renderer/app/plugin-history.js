@@ -4,7 +4,9 @@ export function createPluginHistoryDelegate({ documentObject, windowObject, brid
   let lastFrame = null;
   const activeView = () => documentObject.body?.dataset?.activeView;
   const currentFrame = () => documentObject.getElementById(activeView())?.querySelector('iframe.plugin-frame') || null;
-  const validFrame = () => lastFrame?.isConnected && lastFrame.closest('.plugin-view')?.id === activeView() ? lastFrame : null;
+  // A tool plugin's frame sits in a Tools panel; only the visible panel counts.
+  const frameView = frame => frame.closest('.plugin-view') || frame.closest('.plugin-tool:not([hidden])')?.closest('.view');
+  const validFrame = () => lastFrame?.isConnected && frameView(lastFrame)?.id === activeView() ? lastFrame : null;
   function owner() {
     // Cross-origin frame focus can update activeElement without a host focusin.
     // Read it when history is queried as well as when focus events arrive.

@@ -70,18 +70,18 @@ async function verifyTextBounds({ tool, evaluate, check, win, pause, temp }) {
     }
     await apply([{ op: 'update', id: label.id, patch: { text: 'A longer independently editable label', fontSize: 35, fontWeight: 700, fontFamily: 'Arial', rotation: -25, underline: false } }]);
     await checkBounds('Text and typography edits refresh cached bounds');
-    const before = await read(), previewBefore = await tool({ action: 'render', canvas: 'both' });
+    const before = await read(), previewBefore = await tool({ action: 'render', canvas: 'main' });
     await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-in").click();document.getElementById("zoom-fit").click()');
-    const after = await read(), previewAfter = await tool({ action: 'render', canvas: 'both' });
+    const after = await read(), previewAfter = await tool({ action: 'render', canvas: 'main' });
     check(before.revision === after.revision && JSON.stringify(before.objects) === JSON.stringify(after.objects), 'Measuring and zooming text never rewrites saved alignment or placement');
     check(JSON.stringify(previewBefore.content.filter(item => item.type === 'image')) === JSON.stringify(previewAfter.content.filter(item => item.type === 'image')), 'Tight selection bounds leave both agent previews unchanged');
     await fs.writeFile(path.join(temp, 'text-tight-bounds.png'), (await win.webContents.capturePage()).toPNG());
     await apply([{ op: 'update', id: label.id, patch: { text: '', width: 300, height: 160 } }]);
     const empty = await bounds(); check(empty.hit.width === 1 && empty.hit.height === 1, 'An empty label has a tiny target instead of an invisible oversized obstacle');
-    await apply([{ op: 'update', id: label.id, patch: { canvas: 'scratch', x: 40, y: 40, text: 'Cell', align: 'start', anchor: 'top', rotation: 37 } }]);
+    await apply([{ op: 'update', id: label.id, patch: { canvas: 'main', x: 40, y: 40, text: 'Cell', align: 'start', anchor: 'top', rotation: 37 } }]);
     await evaluate('document.querySelector("[data-layer-id=bounds-label] .layer-select").click();document.getElementById("close-layers").click()'); await pause(80);
     await evaluate('document.getElementById("zoom-fit").click();for(let i=0;i<12;i++)document.getElementById("zoom-in").click()');
-    await checkBounds('Scratch label at maximum zoom', 'scratch');
+    await checkBounds('Canvas label at maximum zoom', 'main');
   } finally { win.webContents.debugger.detach(); }
   const listing = await tool({ action: 'list' });
   check((await tool({ action: 'open', illustration_id: original.illustration_id, expected_library_revision: listing.library_revision, request_id: randomUUID() })).ok, 'Restore the originating illustration after text-bounds QA');

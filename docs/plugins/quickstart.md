@@ -12,6 +12,7 @@ Use a **local plugin** unless you know you need something else.
 | Need | Kind | Manifest setting |
 | --- | --- | --- |
 | HTML/CSS/JavaScript workspace | Local | none |
+| A calculator or small utility beside the bench tools in **Tools** | Tool (a local plugin) | `"tool": true` |
 | ES modules, IndexedDB, WebAssembly, or browser storage | Local (or existing served plugin) | none; `"serve": true` remains supported |
 | Embed an existing HTTPS application | Remote | `"embed": "https://…"` |
 | Add a headless file converter | Service | `"service": {…}` |
@@ -122,7 +123,7 @@ permission to `plugin.json`; permissions are listed in
 3. Check the displayed name, version, and host access.
 4. Click **Reload App**.
 5. Open the plugin from the dock (or **More** on a narrow window) or topbar
-   search.
+   search. A tool plugin is the last tile in **Tools** instead.
 
 Manifest and permission changes require removing and re-adding the plugin
 because grants are snapshotted at install time. HTML, CSS, and JavaScript edits
@@ -178,6 +179,11 @@ When the basics work, the same client reaches further:
 - Declare `agent:chat` for a chat rail beside your view, and `agent:canvas` to
   let the agent edit and render your plugin's scene. Hide prompt UI while
   `app.info.layout.agentChatRail.available` is `false`.
+- Add `"tool": true` to live in **Tools** instead of the dock. Declare
+  `chemicals:read` to look up molecular weights and pKa values with
+  `chemicals.list`. A tool cannot declare `layout` or `agent:chat`; see
+  [plugin-api.md §1.2](plugin-api.md#12-tool-plugins) and the
+  [`cell-seeding`](../../examples/plugins/cell-seeding/) example.
 
 See [plugin-api.md §4–§5](plugin-api.md#4-layout-and-host-ui-verbs) for those
 verbs, and [`plugins/scientific-illustration`](../../plugins/scientific-illustration/)

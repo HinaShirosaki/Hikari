@@ -3,8 +3,10 @@
 // a sandboxed iframe) plus an APP_REGISTRY entry, so navigation, search, and
 // startup-view handling treat plugins exactly like built-in apps.
 //
+// A tool plugin (`tool: true`) instead becomes a tile and panel in Tools.
+//
 // Must run before createNavigationShell(), which snapshots `.view` sections
-// and APP_REGISTRY. Adding or removing a plugin therefore requires an app
+// and APP_REGISTRY, and before Tools initializes, which binds its tiles. Adding or removing a plugin therefore requires an app
 // reload (Settings > Plugins offers a Reload App button).
 
 import { pluginOrigin } from './plugin-origin.js';
@@ -33,7 +35,14 @@ export async function loadPluginIcons({ plugins, appRegistry, api, documentObjec
       if (!matches || typeof inspected.name !== 'string' || !inspected.name.trim()) return;
       plugin.name = inspected.name;
       if (app) app.label = inspected.name;
-      const section = documentObject?.getElementById?.(app?.viewId || pluginViewId(plugin.id));
+      const section = documentObject?.getElementById?.(app?.viewId
+        || (plugin.tool ? pluginToolId(plugin.id) : pluginViewId(plugin.id)));
+      if (plugin.tool) {
+        const tileLabel = documentObject?.getElementById?.(`${pluginToolId(plugin.id)}-tile`)?.querySelector?.('.label');
+        const heading = section?.querySelector?.('.tool-head h3');
+        if (tileLabel) tileLabel.textContent = plugin.name;
+        if (heading) heading.textContent = plugin.name;
+      }
       section?.setAttribute('data-plugin-name', plugin.name);
       section?.setAttribute('aria-label', plugin.name);
       const frame = section?.querySelector?.('.plugin-frame');
@@ -50,6 +59,10 @@ const REMOTE_SANDBOX = `${LOCAL_SANDBOX} allow-same-origin`;
 
 export function pluginViewId(pluginId) {
   return `plugin-${pluginId}-view`;
+}
+
+export function pluginToolId(pluginId) {
+  return `plugin-${pluginId}-tool`;
 }
 
 // Origins that may be loaded into a frame carrying allow-same-origin.
@@ -123,7 +136,7 @@ async function startServedFrame({ frame, plugin, api, showError = true, beforeNa
 // gates trust was never the rail anyway — it is the permission list on the
 // plugin's row in Settings, shown before the plugin is enabled.
 function describePlugin(plugin, { isRemote }) {
-  const kind = isRemote ? 'Remote plugin' : 'Local plugin';
+  const kind = isRemote ? 'Remote plugin' : plugin.tool ? 'Tool plugin' : 'Local plugin';
   const permissions = Array.isArray(plugin.permissions) ? plugin.permissions : [];
   const origin = isRemote && plugin.embedUrl
     ? `loads ${plugin.embedUrl}`
@@ -181,6 +194,67 @@ function installServiceFrame({ documentObject, host, plugin, services, bridge, a
   });
 }
 
+// Mounts a tool plugin: one more tile in the Tools rail and a panel holding its
+// frame, laid out like the built-in tools (host head, then the tool body). It
+// adds no view section and no navigation entry; the Tools view manager binds
+// the tile when Tools initializes, which runs after plugins are installed.
+function installToolFrame({ documentObject, plugin, bridge, api }) {
+  const tools = documentObject.getElementById('tool-box-view');
+  const grid = tools?.querySelector?.('.tool-grid');
+  const content = tools?.querySelector?.('.tool-content');
+  const panelId = pluginToolId(plugin.id);
+  if (!grid || !content || documentObject.getElementById(panelId)) {
+    return false;
+  }
+  const name = plugin.name || plugin.id;
+
+  const tile = documentObject.createElement('button');
+  tile.id = `${panelId}-tile`;
+  tile.type = 'button';
+  tile.className = 'tile tool-tile';
+  tile.dataset.toolView = panelId;
+  tile.setAttribute('role', 'tab');
+  tile.setAttribute('aria-controls', panelId);
+  const tileLabel = documentObject.createElement('span');
+  tileLabel.className = 'label';
+  tileLabel.textContent = name;
+  tile.append(tileLabel);
+  grid.append(tile);
+
+  const panel = documentObject.createElement('div');
+  panel.id = panelId;
+  panel.className = 'panel tool-subview plugin-tool';
+  panel.hidden = true;
+  panel.setAttribute('data-plugin-id', plugin.id);
+  panel.setAttribute('data-plugin-name', name);
+  panel.setAttribute('role', 'tabpanel');
+  const head = documentObject.createElement('header');
+  head.className = 'tool-head';
+  const heading = documentObject.createElement('h3');
+  heading.textContent = name;
+  head.append(heading);
+  if (plugin.description) {
+    const note = documentObject.createElement('p');
+    note.className = 'tool-head-note';
+    note.textContent = plugin.description;
+    head.append(note);
+  }
+  const frame = documentObject.createElement('iframe');
+  frame.className = 'plugin-frame';
+  const summary = describePlugin(plugin, { isRemote: false });
+  frame.title = summary;
+  frame.setAttribute('aria-label', summary);
+  frame.setAttribute('sandbox', LOCAL_SANDBOX);
+  panel.append(head, frame);
+  content.append(panel);
+
+  void startServedFrame({
+    frame, plugin, api,
+    beforeNavigate: (baseUrl) => bridge?.register?.(frame.contentWindow, plugin, baseUrl)
+  });
+  return true;
+}
+
 export function installPlugins({ state, documentObject, appRegistry, bridge = null, api = null, services = null }) {
   const plugins = Array.isArray(state?.settings?.plugins) ? state.settings.plugins : [];
   const host = documentObject?.querySelector?.('.workspace-main');
@@ -196,6 +270,12 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       // section, no registry entry, no rail.
       if (plugin.service && plugin.entryUrl) {
         installServiceFrame({ documentObject, host, plugin, services, bridge, api });
+        return;
+      }
+      if (plugin.tool && plugin.entryUrl) {
+        if (installToolFrame({ documentObject, plugin, bridge, api })) {
+          installed.push(pluginToolId(plugin.id));
+        }
         return;
       }
 

@@ -162,7 +162,6 @@ export function createAssayAnalysisView({
   // column is overridden that model no longer answers the question, so it has to be
   // rebuilt from the result table -- otherwise the Data Series mapping does nothing.
   chartSurface = createChartSurface({
-    safeText,
     runtime,
     chartStyleStore,
     chartControls,
@@ -235,10 +234,9 @@ export function createAssayAnalysisView({
     unmountAnalysisChart();
     purgeAgentPlotly();
     if (assayAnalysisTable) {
-      assayAnalysisTable.innerHTML = assayAnalysisSummaryTable
-        ? '<p class="small-note assay-workspace-empty">Add result values to see the analysis chart.</p>' : '';
+      assayAnalysisTable.innerHTML = '';
     }
-    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = '<p class="small-note">No summary yet.</p>';
+    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = '';
     if (previewSaveTimer) {
       clearTimeout(previewSaveTimer);
       previewSaveTimer = null;

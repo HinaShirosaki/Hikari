@@ -1,0 +1,56 @@
+/* Tools draws the title and description above this frame; the page holds only
+   the tool's controls and keeps a transparent background so it sits on the
+   host surface in day and night modes. */
+:root { --border: color-mix(in srgb, currentColor 22%, transparent); }
+
+/* Author `display` rules would otherwise override the hidden attribute. */
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  padding: 2px 2px 24px;
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+section + section { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+h2 { margin: 0 0 8px; font-size: 14px; font-weight: 650; }
+
+.fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); align-items: end; gap: 10px 16px; }
+label { display: block; font-size: 13px; font-weight: 600; }
+.hint { font-weight: 400; opacity: 0.65; }
+
+input, select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+}
+
+.result { display: block; min-height: 1.5em; margin-top: 10px; }
+.error { color: #b42318; }
+:root[data-mode="night"] .error { color: #f97066; }
+
+.plan { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 16px; margin: 12px 0 0; }
+.plan dt { font-size: 12px; opacity: 0.7; }
+.plan dd { margin: 0; font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 12px; }
+button {
+  padding: 7px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { cursor: default; opacity: 0.5; }
+.status { font-size: 13px; }

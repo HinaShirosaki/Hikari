@@ -37,8 +37,8 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
     { op: 'upsert', object: { id: 'asset-label', name: 'Independent cell label', type: 'text', text: 'Cell α', x: 150, y: 250, width: 170, height: 40, fontSize: 25, fontFamily: 'Inter', fontWeight: 600, color: '#243746', anchor: 'middle', align: 'middle' } },
     { op: 'group', id: 'asset-source-group', name: 'Cell component', ids: ['asset-cell', 'asset-image', 'asset-label'] }
   ]);
-  const before = await read(), beforePreview = await tool({ action: 'render', canvas: 'both' });
-  const review = { layout: 'Mixed component lies within main; scratch is empty.', labels: 'Cell alpha is independent text.', artwork: 'Vector and embedded raster are text-free.', science: 'Geometry fixture only; no scientific interpretation.' };
+  const before = await read(), beforePreview = await tool({ action: 'render', canvas: 'main' });
+  const review = { layout: 'Mixed component lies within the canvas.', labels: 'Cell alpha is independent text.', artwork: 'Vector and embedded raster are text-free.', science: 'Geometry fixture only; no scientific interpretation.' };
   const inspected = await tool({ action: 'inspect', expected_revision: before.revision, inspection_id: beforePreview.inspection.inspection_id, review });
   check(inspected.ok, 'Inspection completes before saving an asset');
   await evaluate('document.querySelector("[data-layer-id=asset-source-group] .layer-select").click();document.getElementById("save-selection-asset").click()');
@@ -116,16 +116,18 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   await create('Exact placement QA');
   const { x, y, width } = before.groups[0].bounds;
   const exact = await apply([{ op: 'insert_asset', asset_id: entry.id, canvas: 'main', x, y }]);
-  const exactPreview = await tool({ action: 'render', canvas: 'both' });
-  check(JSON.stringify(exactPreview.content.filter(c => c.type === 'image')) === JSON.stringify(beforePreview.content.filter(c => c.type === 'image')), 'Reinserting at original rotated bounds produces byte-identical main and scratch renders');
+  const exactPreview = await tool({ action: 'render', canvas: 'main' });
+  check(JSON.stringify(exactPreview.content.filter(c => c.type === 'image')) === JSON.stringify(beforePreview.content.filter(c => c.type === 'image')), 'Reinserting at original rotated bounds produces a byte-identical canvas render');
   check(!(await read()).inspection.complete, 'Inserting a saved asset requires fresh final canvas inspection');
   await evaluate('illustrationWorkspace.history("undo")'); await settle();
   check((await read()).objects.length === 0, 'Undo removes the inserted group atomically');
   await evaluate('illustrationWorkspace.history("redo")'); await settle();
   check((await read()).objects.length === 3, 'Redo restores the saved component as editable layers');
-  const scaled = await apply([{ op: 'insert_asset', asset_id: entry.id, canvas: 'scratch', x: 20, y: 30, width: width * .5 }]);
-  check(scaled.result.inserted_assets[0].canvas === 'scratch' && scaled.result.objects.filter(o => o.canvas === 'scratch').every((o,i) => Math.abs(o.width-before.objects[i].width*.5)<1e-8 && o.rotation === before.objects[i].rotation)
-    && scaled.result.objects.find(o => o.canvas === 'scratch' && o.type === 'text').fontSize === 12.5, 'Agent inserts a proportional scratch copy with correct rotated placement and text scaling');
+  const scaled = await apply([{ op: 'insert_asset', asset_id: entry.id, canvas: 'main', x: 20, y: 30, width: width * .5 }]);
+  const scaledIds = scaled.result.inserted_assets[0].ids;
+  const scaledObjects = scaled.result.objects.filter(o => scaledIds.includes(o.id));
+  check(scaled.result.inserted_assets[0].canvas === 'main' && scaledObjects.every((o,i) => Math.abs(o.width-before.objects[i].width*.5)<1e-8 && o.rotation === before.objects[i].rotation)
+    && scaledObjects.find(o => o.type === 'text').fontSize === 12.5, 'Agent inserts a proportional canvas copy with correct rotated placement and text scaling');
   check((await tool(scaled.args)).status === 'already_applied', 'Agent insertion retry returns the same copy IDs');
   // Resize retains enough editing area while the assets panel overlays on narrow windows.
   await evaluate(openAssets); win.setSize(480, 800); await pause(80);
@@ -145,8 +147,8 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   check(!remaining.reusable_assets.some(asset => asset.id === entry.id) && otherAssetIds.every(id => remaining.reusable_assets.some(asset => asset.id === id))
     && JSON.stringify((await read()).objects) === JSON.stringify(placed.objects), 'User removes one saved asset without changing other assets or any placed copy');
   check((await tool(scaled.args)).status === 'already_applied', 'Retrying a committed insertion after asset removal never reimports or duplicates it');
-  const afterDelete = await tool({ action: 'render', canvas: 'both' });
-  check(afterDelete.ok && afterDelete.content.filter(c => c.type === 'image').length === 2, 'Placed raster bytes remain renderable after their saved asset is removed');
+  const afterDelete = await tool({ action: 'render', canvas: 'main' });
+  check(afterDelete.ok && afterDelete.content.filter(c => c.type === 'image').length === 1, 'Placed raster bytes remain renderable after their saved asset is removed');
   await fs.writeFile(path.join(temp, 'reusable-assets-result.png'), (await win.webContents.capturePage()).toPNG());
   await fs.writeFile(path.join(temp, 'reusable-assets-evidence.json'), JSON.stringify({ entry, exact: exact.result.inserted_assets, scaled: scaled.result.inserted_assets, copiesAfterAssetRemoval: (await read()).objects.map(({ dataUrl: _bytes, svg: _svg, ...o }) => o) }, null, 2));
   const r = await read();

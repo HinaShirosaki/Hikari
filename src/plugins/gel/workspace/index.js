@@ -1,6 +1,7 @@
 import { analyzeGelImage } from './analysis/analysis-core.js';
 import { createCropController } from './images/crop-controller.js';
 import { getGelElements } from './dom.js';
+import { createFloatingWindows } from './floating-windows.js';
 import { createImageController } from './images/image-controller.js';
 import { createLaneTableController } from './rendering/lane-table.js';
 import { createManualWorkflowController } from './manual/manual-workflow.js';
@@ -71,6 +72,7 @@ export function initGelAnalysis({
     persist,
     preprocessedCache: null,
     cellTableDialogOpen: false,
+    laneProfileWindowOpen: false,
     safeText,
     laneProfileHoverY: null,
     laneVertexDrag: null,
@@ -129,20 +131,35 @@ export function initGelAnalysis({
     runtime,
     deps: {
       onHistoryChanged: (historyState) => onHistoryChanged?.(historyState),
-      renderAll: () => {
+      renderAll: ({ analyzed }) => {
+        const segmentation = runtime.manualOverrides?.laneSegmentation || {};
+        runtime.currentReport = null;
+        runtime.manualDividerConfirmed = Boolean(segmentation.dividerDone);
+        // Unfinished dividers are edited with the divider tool, so undoing
+        // Finish reopens it and redoing Finish closes it, as the clicks did.
+        if (!segmentation.dividerDone && Number.isFinite(segmentation.gelLeft)) {
+          runtime.selectedViewerTool = 'dividers';
+        } else if (segmentation.dividerDone && runtime.selectedViewerTool === 'dividers') {
+          runtime.selectedViewerTool = '';
+        }
         manualWorkflow.renderOverrideStatus();
         rendering.renderCanvas();
-        onRunAnalysis();
+        if (analyzed) {
+          onRunAnalysis();
+        }
       }
     }
   });
 
+  let floatingWindows;
+  let viewerResizeObserver;
   const laneTable = createLaneTableController({
     runtime,
     elements,
     safeText,
     deps: {
       documentObject: rootDocument,
+      openLaneTableWindow: () => floatingWindows?.open('table'),
       getFigureImageData: () => {
         const preprocessed = runtime.viewerMode === 'processed'
           ? imageController.getPreprocessedImageForCurrentSettings?.()
@@ -220,6 +237,29 @@ export function initGelAnalysis({
     }
   });
 
+  floatingWindows = createFloatingWindows({
+    documentObject: rootDocument,
+    onOpen: {
+      profile: () => {
+        runtime.laneProfileWindowOpen = true;
+        rendering.renderLaneProfile();
+      },
+      peak: () => {
+        rendering.onPeakEditorOpen();
+        return Boolean(runtime.peakEditor?.open);
+      },
+      intensity: () => {
+        rendering.onCellTableOpen();
+        return runtime.cellTableDialogOpen;
+      }
+    },
+    onClose: {
+      profile: () => { runtime.laneProfileWindowOpen = false; },
+      peak: rendering.onPeakEditorClose,
+      intensity: rendering.onCellTableClose
+    }
+  });
+
   elements.gelImageFileInput?.addEventListener('change', imageController.onImageFileChange);
   const unbindFileDrop = bindFileDropTarget({
     target: elements.gelViewerStage || elements.gelImageRow || elements.gelForm,
@@ -248,8 +288,8 @@ export function initGelAnalysis({
     rootWindow.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
     rootWindow.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
     if (rootWindow.ResizeObserver && elements.gelViewerStage) {
-      new rootWindow.ResizeObserver(() => laneTable.fitViewerToStage())
-        .observe(elements.gelViewerStage);
+      viewerResizeObserver = new rootWindow.ResizeObserver(() => laneTable.fitViewerToStage());
+      viewerResizeObserver.observe(elements.gelViewerStage);
     }
   }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
@@ -295,10 +335,6 @@ export function initGelAnalysis({
   elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelManualResetBtn?.addEventListener('click', manualWorkflow.onManualResetSteps);
   elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);
-  elements.gelCellSnrThresholdInput?.addEventListener('input', () => {
-    rendering.renderCellTable();
-    rendering.renderCanvas();
-  });
   function updateViewerModeButtons() {
     const isProcessed = runtime.viewerMode === 'processed';
     if (elements.gelProcessImageBtn) {
@@ -338,12 +374,9 @@ export function initGelAnalysis({
   });
   elements.gelLaneProfileChart?.addEventListener('mousemove', rendering.onLaneProfileChartMouseMove);
   elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
-  elements.gelOpenPeakEditorBtn?.addEventListener('click', rendering.onPeakEditorOpen);
-  elements.gelPeakEditorCloseBtn?.addEventListener('click', rendering.onPeakEditorClose);
-  elements.gelOpenCellTableBtn?.addEventListener('click', rendering.onCellTableOpen);
-  elements.gelCellTableCloseBtn?.addEventListener('click', rendering.onCellTableClose);
-  elements.gelCellTableOverlay?.addEventListener('click', rendering.onCellTableOverlayClick);
-  rootDocument?.addEventListener?.('keydown', rendering.onCellTableKeyDown);
+  elements.gelPeakEditorCloseBtn?.addEventListener('click', () => floatingWindows.close('peak'));
+  elements.gelCellTableCloseBtn?.addEventListener('click', () => floatingWindows.close('intensity'));
+  elements.gelCellTableCopyBtn?.addEventListener('click', rendering.onCellTableCopy);
   elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
   elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
   elements.gelPeakEditorDividerModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('divider'));
@@ -391,7 +424,7 @@ export function initGelAnalysis({
         preprocessed
       });
       runtime.currentReport = result.report;
-      rendering.renderCanvas();
+      renderCanvasAndCommit();
       manualWorkflow.renderOverrideStatus();
       setStatus(`Analysis complete: ${runtime.currentReport.lanes.length} lane(s), ${runtime.currentReport.bandGroups.length} group(s).`);
     } catch (error) {
@@ -400,6 +433,8 @@ export function initGelAnalysis({
   }
 
   function destroy() {
+    floatingWindows.destroy();
+    viewerResizeObserver?.disconnect();
     unbindFileDrop?.();
     if (runtime.enhancementRerunTimer) {
       clearTimeout(runtime.enhancementRerunTimer);
@@ -413,7 +448,6 @@ export function initGelAnalysis({
       rootWindow.removeEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
       rootWindow.removeEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
     }
-    rootDocument.removeEventListener?.('keydown', rendering.onCellTableKeyDown);
   }
 
   return {

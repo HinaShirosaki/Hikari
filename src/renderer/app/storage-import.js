@@ -3,6 +3,7 @@ import { syncMarkdownRecordState } from '../services/markdown-record-storage.js'
 import { showTransientNotice } from '../lib/notify.js';
 import { migrateProteinBuilderCloningNotebookState } from '../services/notebook-record-compat.js';
 import { mergePaperExperimentLinks } from '../../shared/paper-experiment-links.mjs';
+import { normalizePrimerLibrary } from '../../shared/primer-library.mjs';
 import {
   cloneDefaultValue,
   mergeInventoryMap,
@@ -29,6 +30,7 @@ const WORKSPACE_STATE_KEYS = [
   'assays',
   'gelAnalyses',
   'samples',
+  'primerLibrary',
   'labInventory',
   'inventory',
   'inventoryFolders'
@@ -167,6 +169,7 @@ export function createStorageImportController({
     state.paperExperimentLinks = mergePaperExperimentLinks(state.paperExperimentLinks, patch.paperExperimentLinks);
     state.assays = mergeRecordsById(state.assays, patch.assays, 'assay');
     state.gelAnalyses = mergeRecordsById(state.gelAnalyses, patch.gelAnalyses, 'gel');
+    if (Array.isArray(patch.primerLibrary)) state.primerLibrary = normalizePrimerLibrary(patch.primerLibrary);
 
     const existingLabInventory = state.labInventory && typeof state.labInventory === 'object'
       ? state.labInventory

@@ -1,4 +1,6 @@
+import { SOURCE_GRAY16_FILE_NAME } from '../constants.js';
 import { bytesToBase64 } from '../export.js';
+import { encodeSourceGray16 } from '../images/image-io.js';
 import { safeFilePart } from '../shared.js';
 
 // Where a saved gel's files live on disk, and the notebook links and preview
@@ -196,13 +198,18 @@ function createGelRecordArtifacts({
       : String(existingRecord?.sourceImageDataUrl || '').trim();
 
     const originalFile = runtime.originalFile || null;
+    // source.png is 8-bit; a 16-bit image keeps its precision in a sidecar.
+    const sourceGray16Base64 = sourceImageDataUrl && runtime.currentImage?.grayBitDepth === 16
+      ? bytesToBase64(encodeSourceGray16(runtime.currentImage, encodeDataUrlPayload(sourceImageDataUrl)))
+      : '';
 
     let reportResult = null;
     let metadataResult = null;
     let sourceImageResult = null;
     let originalFileResult = null;
+    let sourceGray16Result = null;
     try {
-      [reportResult, metadataResult, sourceImageResult, originalFileResult] = await Promise.all([
+      [reportResult, metadataResult, sourceImageResult, originalFileResult, sourceGray16Result] = await Promise.all([
         window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
@@ -237,6 +244,9 @@ function createGelRecordArtifacts({
           : Promise.resolve(null),
         originalFile
           ? persistOriginalFileArtifact({ targetFolder, file: originalFile })
+          : Promise.resolve(null),
+        sourceGray16Base64
+          ? persistBase64Artifact({ targetFolder, fileName: SOURCE_GRAY16_FILE_NAME, dataBase64: sourceGray16Base64 })
           : Promise.resolve(null)
       ]);
     } catch (error) {
@@ -253,7 +263,10 @@ function createGelRecordArtifacts({
     if (originalFile && !originalFileResult) {
       throw new Error('Could not save gel artifacts: the original image file could not be stored.');
     }
-    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null, originalFileResult]
+    if (sourceGray16Base64 && !sourceGray16Result) {
+      throw new Error('Could not save gel artifacts: the 16-bit source image could not be stored.');
+    }
+    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null, originalFileResult, sourceGray16Result]
       .find((result) => result && result.ok !== true);
     if (failedResult) {
       throw new Error(`Could not save gel artifacts: ${failedResult.error || 'the host did not confirm the write.'}`);

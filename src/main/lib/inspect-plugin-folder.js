@@ -20,6 +20,7 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'protocols:read',
   'projects:read',
   'samples:read',
+  'chemicals:read',
   'notebook:read',
   'notebook:write',
   'storage',
@@ -31,6 +32,11 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'agent:chat',
   'agent:canvas'
 ]);
+
+// A tool plugin is a panel inside Tools, not a workspace: Tools owns the rail,
+// the right toolbar, and the chat rail, so the permissions that drive those
+// have nothing to drive.
+const TOOL_EXCLUDED_PERMISSIONS = Object.freeze(['layout', 'agent:chat']);
 
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
   return String(value || '').trim().slice(0, maxLength);
@@ -96,6 +102,7 @@ function parseService(rawService) {
 //
 // Two kinds of plugin:
 //   local  - ships `index.html`; runs on private loopback; may hold host permissions.
+//            With `tool: true` it mounts as a panel in Tools instead of an app.
 //   remote - declares `embed` (https URL); the folder is metadata only, and it
 //            may NOT hold host permissions because the code is third-party and
 //            not shipped in the folder the user reviewed.
@@ -168,6 +175,14 @@ async function inspectPluginFolder({ fs, folderPath }) {
     return { ok: false, error: `${PLUGIN_MANIFEST_FILE} a "service" plugin cannot also use "embed" or "serve".` };
   }
 
+  if (manifest.tool !== undefined && typeof manifest.tool !== 'boolean') {
+    return { ok: false, error: `${PLUGIN_MANIFEST_FILE} "tool" must be true or false.` };
+  }
+  const tool = manifest.tool === true;
+  if (tool && (service || embedUrl)) {
+    return { ok: false, error: `${PLUGIN_MANIFEST_FILE} a "tool" plugin cannot also use "embed" or "service".` };
+  }
+
   // Every plugin ships its entry page except a remote embed. A service runs its
   // code in a hidden frame, so it needs index.html too.
   let entryUrl = '';
@@ -202,6 +217,11 @@ async function inspectPluginFolder({ fs, folderPath }) {
     }
   }
 
+  const toolExcluded = tool && permissions.find((permission) => TOOL_EXCLUDED_PERMISSIONS.includes(permission));
+  if (toolExcluded) {
+    return { ok: false, error: `A "tool" plugin cannot request "${toolExcluded}" — Tools owns its rail, toolbar, and chat.` };
+  }
+
   // Host permissions are a grant to code the user can read in the folder they
   // installed. Remote code can change after review, so it never gets one.
   if (embedUrl && permissions.length) {
@@ -230,7 +250,8 @@ async function inspectPluginFolder({ fs, folderPath }) {
     entryUrl,
     embedUrl,
     serve,
-    service
+    service,
+    tool
   };
 }
 

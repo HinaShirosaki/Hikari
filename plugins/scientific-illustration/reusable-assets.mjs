@@ -98,7 +98,7 @@ export function readAsset(asset, includeAssets = false) {
 }
 export function instantiateAsset(asset, operation, document) {
   fields(record(operation, 'insert_asset'), ['op', 'asset_id', 'canvas', 'x', 'y', 'width', 'height']);
-  if (!validId(operation.asset_id) || !CANVASES.includes(operation.canvas)) throw new Error('insert_asset requires asset_id and canvas: main or scratch.');
+  if (!validId(operation.asset_id) || !CANVASES.includes(operation.canvas)) throw new Error('insert_asset requires asset_id and canvas: main.');
   const { width: cw, height: ch } = document.canvases[operation.canvas];
   const { width, height, x, y } = operation;
   const scale = width !== undefined ? width / asset.width : height !== undefined ? height / asset.height : 1;

@@ -1,4 +1,5 @@
 import { hasAnyTargetBandWindow, normalizeManualOverrides } from '../shared.js';
+import { copyTextToClipboard } from '../../lib/clipboard.js';
 
 export function formatIntensity(value) {
   if (!Number.isFinite(value)) {
@@ -21,7 +22,57 @@ export function readSnrThreshold(input) {
   return value;
 }
 
-export function createCellTableController({ runtime, elements, safeText }) {
+export function createCellTableController({ runtime, elements, safeText, deps = {} }) {
+  let copying = false;
+
+  function getTableRows() {
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    if (!hasAnyTargetBandWindow(overrides.laneSegmentation)) {
+      return [];
+    }
+    const labelRow = (overrides.laneTable?.rows || []).find((row) => /label/i.test(row?.label || ''));
+    return (runtime.currentReport?.lanes || [])
+      .filter((lane) => lane.targetBand)
+      .map((lane) => [
+        String(lane.laneIndex),
+        String(labelRow?.values?.[lane.laneIndex - 1] || '').replace(/[\t\r\n]+/g, ' '),
+        formatIntensity(Number(lane.targetBand.correctedIntensity))
+      ]);
+  }
+
+  async function onCellTableCopy() {
+    const rows = getTableRows();
+    if (copying || !rows.length) {
+      return;
+    }
+    const documentObject = elements.gelCellTableHost?.ownerDocument;
+    const restoreButtonFocus = documentObject?.activeElement === elements.gelCellTableCopyBtn;
+    copying = true;
+    if (elements.gelCellTableCopyBtn) {
+      elements.gelCellTableCopyBtn.disabled = true;
+    }
+    const status = elements.gelCellTableCopyStatus;
+    if (status) status.textContent = '';
+    try {
+      const text = [['Lane', 'Label', 'Band intensity'], ...rows]
+        .map((row) => row.join('\t')).join('\n');
+      const writeText = deps.writeClipboardText || ((value) => copyTextToClipboard(value, elements.gelCellTableHost?.ownerDocument));
+      await writeText(text);
+      if (status) status.textContent = 'Table copied.';
+    } catch {
+      if (status) status.textContent = 'Could not copy. Select the table and copy it manually.';
+    } finally {
+      copying = false;
+      if (elements.gelCellTableCopyBtn) {
+        elements.gelCellTableCopyBtn.disabled = !getTableRows().length;
+        if (restoreButtonFocus && runtime.cellTableDialogOpen && !elements.gelCellTableCopyBtn.disabled
+          && documentObject?.activeElement === documentObject?.body) {
+          elements.gelCellTableCopyBtn.focus?.();
+        }
+      }
+    }
+  }
+
   // The report lives in its own dialog, so "has data" only gates the trigger
   // button; whether it is on screen is the user's choice.
   function setCellTableVisibility(hasCells) {
@@ -38,57 +89,34 @@ export function createCellTableController({ runtime, elements, safeText }) {
     if (elements.gelCellTableOverlay) {
       elements.gelCellTableOverlay.hidden = !hasCells || !runtime.cellTableDialogOpen;
     }
+    if (elements.gelCellTableCopyBtn) {
+      elements.gelCellTableCopyBtn.disabled = !hasCells || copying;
+    }
   }
 
   function renderCellTable() {
     const host = elements.gelCellTableHost;
-    const summary = elements.gelCellTableSummary;
     if (!host) {
       return;
     }
 
-    const overrides = normalizeManualOverrides(runtime.manualOverrides);
-    const segmentation = overrides.laneSegmentation || {};
-    const hasBandWindow = hasAnyTargetBandWindow(segmentation);
-    const reportLanes = runtime.currentReport?.lanes || [];
-    const cells = reportLanes
-      .map((lane) => ({ lane, cell: lane.targetBand || null }))
-      .filter((entry) => entry.cell);
-
-    if (!hasBandWindow || !cells.length) {
+    const rows = getTableRows();
+    if (elements.gelCellTableCopyStatus && !copying) {
+      elements.gelCellTableCopyStatus.textContent = '';
+    }
+    if (!rows.length) {
       setCellTableVisibility(false);
       host.innerHTML = '';
-      if (summary) {
-        summary.textContent = '';
-      }
       return;
     }
 
     setCellTableVisibility(true);
-    const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
-    const labelRow = (overrides.laneTable?.rows || []).find((row) => /label/i.test(row?.label || '')) || null;
-
-    const rowsHtml = cells.map(({ lane, cell }) => {
-      const snr = Number(cell.snr);
-      const hasBand = Number.isFinite(snr) && snr >= threshold;
-      const label = labelRow ? safeText(labelRow.values?.[lane.laneIndex - 1] || '') : '';
-      const className = `gel-cell-row ${hasBand ? 'is-has-band' : 'is-empty'}`;
-      const intensity = formatIntensity(Number(cell.correctedIntensity));
-      const bandSum = formatIntensity(Number(cell.bandSignalSum));
-      const baselineSum = formatIntensity(Number(cell.baselineSum));
-      const saturationPct = Number.isFinite(Number(cell.saturationFraction))
-        ? `${(Number(cell.saturationFraction) * 100).toFixed(1)}%`
-        : '-';
+    const rowsHtml = rows.map(([lane, label, intensity]) => {
       return `
-        <tr class="${className}">
-          <td>${safeText(String(lane.laneIndex))}</td>
-          <td>${label}</td>
-          <td class="num">${safeText(bandSum)}</td>
-          <td class="num">${safeText(baselineSum)}</td>
+        <tr class="gel-cell-row">
+          <td>${safeText(lane)}</td>
+          <td>${safeText(label)}</td>
           <td class="num gel-cell-intensity">${safeText(intensity)}</td>
-          <td class="num">${safeText(Number.isFinite(snr) ? snr.toFixed(2) : '-')}</td>
-          <td class="gel-cell-hasband">${hasBand ? 'yes' : 'no'}</td>
-          <td class="num">${safeText(saturationPct)}</td>
         </tr>
       `;
     }).join('');
@@ -99,24 +127,13 @@ export function createCellTableController({ runtime, elements, safeText }) {
           <tr>
             <th>Lane</th>
             <th>Label</th>
-            <th class="num">Band sum</th>
-            <th class="num">Baseline sum</th>
-            <th class="num">Corrected</th>
-            <th class="num">SNR</th>
-            <th>Has band?</th>
-            <th class="num">Sat %</th>
+            <th class="num">Band intensity</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
     `;
-
-    if (summary) {
-      const presentCells = cells.filter(({ cell }) => Number(cell.snr) >= threshold).length;
-      const baselineMode = cells[0]?.cell?.baselineMode || 'lane-profile';
-      summary.textContent = `${presentCells}/${cells.length} cells classified as band (SNR ≥ ${threshold.toFixed(1)}). Baseline: ${baselineMode}.`;
-    }
   }
 
-  return { renderCellTable };
+  return { onCellTableCopy, renderCellTable };
 }

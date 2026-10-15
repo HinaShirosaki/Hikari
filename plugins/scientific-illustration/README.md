@@ -23,21 +23,26 @@ intact. Source context remains available on canvas read and after reopening.
 Missing or truncated paper context is explicit. No broad protocol/paper read
 permission is needed: Hikari grants only the source selected by the user click.
 
-The main canvas assembles the final figure. The smaller scratch canvas opens
-only when you or the agent summon it for component work, and closes without
-losing its contents. Vector, raster, and text layers remain independently editable by
-you and Codex. SVG artwork is text-free; labels are separate text objects.
+The canvas assembles the final figure. Vector, raster, and text layers remain
+independently editable by you and Codex. SVG artwork is text-free; labels are separate text objects.
 Shift-click components to select several, then use the toolbar's Group button
 (⌘G / Ctrl+G). The adjacent Ungroup button uses ⌘⇧G / Ctrl+Shift+G. Groups move and resize
 proportionally together; child layers remain editable in Layers. Alt-click
 on the canvas selects an individual group member. Groups persist with each
 illustration and are available through the agent's canvas API.
 The compact right toolbar offers **Select & move (V)** and **Freehand (L)**,
-adding layers, cropping, grouping, Layers, Assets, Scratch, and zoom controls.
+adding layers, cropping, grouping, alignment, Layers, Assets, and zoom controls.
+**Align and distribute** aligns two or more selected items to the left, right,
+top, bottom, horizontal center or vertical center of their combined visible
+bounds. With three or more items, distribute horizontally or vertically to
+create equal gaps while keeping the outer items fixed. Fully selected groups
+count as one item. Rotated components and text use their visible editing bounds;
+alignment only moves items and preserves their sizes, artwork and typography.
+Each action is one undoable edit on the active canvas.
 It shares Hikari's outer strip with the folded agent chat rail. Opening Layers
 or Assets folds chat; opening chat folds the component panel. Hosts without a
 shared toolbar use the plugin's local right toolbar. Older hosts with the shared
-strip use a compatible glyph for Crop so all controls stay beside chat.
+strip use compatible glyphs for Crop and Align so all controls stay beside chat.
 Undo and redo use Hikari's system buttons through the existing plugin API:
 `app.setHistory` reports availability, and `app.undo` / `app.redo` restore Figura's
 own saved scene history. ⌘/Ctrl+Z, ⌘/Ctrl+Shift+Z and Ctrl+Y work inside the canvas;
@@ -90,13 +95,12 @@ gives that space back to the canvas. The buttons stay visible at narrow widths.
 Layers provides component previews, visibility and property controls.
 Adding a layer or double-clicking a text
 label opens its controls. Canvas selection and size share the top toolbar with
-the compact title field; zoom, Fit and
-Scratch are in the right toolbar. At narrow widths the panel overlays the canvas and scrolls
+the compact title field; zoom and Fit are in the right toolbar. At narrow widths the panel overlays the canvas and scrolls
 independently.
-Zoom controls and Fit adjust the editing view independently for each canvas.
+Zoom controls and Fit adjust the editing view on the canvas.
 Eight resize handles work along corners and edges, including rotated layers.
 The attached circular rotation handle turns artwork, labels, or selected groups
-directly on either canvas. Shift snaps to 15°; Escape cancels the gesture. Keyboard
+directly on the canvas. Shift snaps to 15°; Escape cancels the gesture. Keyboard
 focus supports 1° arrow-key steps and 15° steps with Shift. Rotations save as one
 undoable edit with independently editable member geometry.
 Ctrl+C / Ctrl+V (⌘C / ⌘V on macOS) copy and paste selected components or groups
@@ -174,8 +178,10 @@ are saved in the illustration. The plugin has no separate provider or API key.
 If the running Codex lacks that tool or generation fails, the agent reports
 the limitation and uses SVG or supplied artwork without switching providers.
 
-Before a drawing run can complete, Codex must render both canvases at the
+Before a drawing run can complete, Codex must render the canvas at the
 latest revision and submit observations about layout, labels, artwork and
 scientific relationships through `inspect`. Edits invalidate the inspection.
 The matching Hikari host enforces this step, with one automatic follow-up if
 it is skipped; saved artwork is retained if inspection remains incomplete.
+
+Older figures migrate their scratch components and groups to the canvas without changing their geometry or styling. Migration commits to a new scene file and keeps the original file recoverable.

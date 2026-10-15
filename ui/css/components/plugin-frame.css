@@ -30,3 +30,15 @@
 .plugin-service-frame {
   display: none !important;
 }
+
+/* A tool plugin's panel in Tools: the host head, then its frame filling the
+   rest of the tool area. */
+.tool-subview.plugin-tool {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  height: 100%;
+}
+
+.plugin-tool > .plugin-frame {
+  min-height: 420px;
+}

@@ -49,6 +49,8 @@ function createManualStepNavigation({
     if (step === 'quantify') {
       updateLaneSegmentation({ quantifyConfirmed: true });
       renderOverrideStatus();
+      // Renders commit undo steps; without one this merges into the next edit.
+      deps.renderCanvas();
       deps.setStatus('Quantification confirmed. (Optional) click additional band points in lanes.');
     }
   }

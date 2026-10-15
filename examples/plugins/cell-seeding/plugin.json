@@ -1,0 +1,8 @@
+{
+  "id": "cell-seeding",
+  "name": "Cell Seeding",
+  "version": "1.0.0",
+  "description": "Viable cells/mL from a hemocytometer count, then the cell suspension and medium to seed a plate.",
+  "tool": true,
+  "permissions": ["storage", "samples:read", "notebook:read", "notebook:write"]
+}

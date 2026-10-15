@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>qPCR Analysis</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main>
+  <div class="mode-switch" aria-label="Analysis method">
+    <button id="expression-mode" type="button" aria-pressed="true" aria-controls="expression-inputs">Relative expression</button>
+    <button id="curve-mode" type="button" aria-pressed="false" aria-controls="curve-inputs">Standard curve</button>
+  </div>
+  <form id="analysis-form">
+    <section id="expression-inputs">
+      <div class="fields">
+        <label>Target gene <input id="target-name" maxlength="200" placeholder="e.g. IL6"></label>
+        <label>Reference gene <input id="reference-name" maxlength="200" placeholder="e.g. GAPDH"></label>
+        <label>Calibrator group <input id="calibrator" list="group-options" maxlength="200" value="Control" required></label>
+      </div>
+      <datalist id="group-options"></datalist>
+      <label for="expression-data">Sample Ct values</label>
+      <p id="expression-help" class="hint">Paste four tab-separated columns: Sample, Group, Target Ct, Reference Ct. One row per biological sample; separate technical Ct replicates with commas. The header is optional.</p>
+      <textarea id="expression-data" rows="7" maxlength="60000" spellcheck="false" wrap="off" aria-describedby="expression-help" placeholder="Sample&#9;Group&#9;Target Ct&#9;Reference Ct"></textarea>
+      <p class="method-note">ΔCt = mean target Ct − mean reference Ct. ΔΔCt = sample ΔCt − mean calibrator ΔCt. Fold change = 2<sup>−ΔΔCt</sup>. This model assumes approximately equal target and reference efficiencies near 100%.</p>
+    </section>
+    <section id="curve-inputs" hidden>
+      <label for="curve-data">Standard Ct values</label>
+      <p id="curve-help" class="hint">Paste two tab-separated columns: Quantity, Ct. Use at least three distinct positive quantities in the same units; separate technical Ct replicates with commas. The header is optional.</p>
+      <textarea id="curve-data" rows="7" maxlength="60000" spellcheck="false" wrap="off" aria-describedby="curve-help" placeholder="Quantity&#9;Ct"></textarea>
+      <p class="method-note">Fit mean Ct against log₁₀ starting quantity, weighting each quantity equally. Efficiency = (10<sup>−1/slope</sup> − 1) × 100%.</p>
+    </section>
+    <div class="actions">
+      <button type="submit" class="primary" id="analyze">Analyze</button>
+      <button type="button" id="load-example">Load example</button>
+      <button type="button" id="save-inputs" disabled>Save inputs</button>
+      <span id="save-status" class="hint" role="status" aria-live="polite"></span>
+    </div>
+  </form>
+  <p id="analysis-status" role="status" aria-live="polite">Paste your data or load an example.</p>
+  <section id="results" hidden aria-label="Analysis results">
+    <div id="metrics" class="metrics"></div>
+    <div id="curve-plot" hidden></div>
+    <h2 id="result-heading">Results by sample</h2>
+    <div class="table-scroll" tabindex="0" role="region" aria-labelledby="result-heading"><table id="result-table"></table></div>
+    <section id="group-results" hidden>
+      <h2 id="group-heading">Group summary</h2>
+      <div class="table-scroll" tabindex="0" role="region" aria-labelledby="group-heading"><table id="group-table"></table></div>
+      <p class="hint">n counts biological samples. Group fold change is the geometric mean of sample fold changes. SD is the sample standard deviation of biological ΔCt values; no significance test is performed.</p>
+    </section>
+    <div class="actions"><button type="button" id="export-results" disabled>Export TSV</button><span id="export-status" role="status" aria-live="polite" class="hint"></span></div>
+  </section>
+  <section class="notebook-area" aria-label="Save results to notebook">
+    <label for="notebook-entry">Notebook page</label>
+    <div class="notebook-controls">
+      <select id="notebook-entry" disabled><option value="">Connect to load notebook pages</option></select>
+      <button id="refresh-notebooks" type="button" disabled>Refresh</button>
+      <button id="append-results" type="button" disabled>Append results</button>
+    </div>
+    <p id="notebook-status" class="hint" role="status" aria-live="polite">Choose an existing page after analyzing.</p>
+  </section>
+  <div class="connection"><p id="host-status" class="hint" role="status" aria-live="polite">Connecting to Hikari…</p><button id="connect" type="button" hidden>Try again</button></div>
+  <details><summary>Method references</summary><p><a href="https://www.thermofisher.com/us/en/home/life-science/pcr/real-time-pcr/real-time-pcr-learning-center/real-time-pcr-basics/essentials-real-time-pcr.html" target="_blank" rel="noopener noreferrer">Applied Biosystems comparative Ct method</a> · <a href="https://www.bio-rad.com/webroot/web/pdf/lsr/literature/10031339.pdf" target="_blank" rel="noopener noreferrer">Bio-Rad PCR efficiency guide</a></p></details>
+</main>
+<script src="./hikari.js"></script>
+<script src="./analysis.js"></script>
+<script src="./main.js"></script>
+</body>
+</html>

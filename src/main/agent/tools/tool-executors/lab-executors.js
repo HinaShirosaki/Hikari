@@ -97,6 +97,15 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('notebook-list', async ({ args, context }) => {
+    return notebookLookupRuntime.executeList({
+      ...args,
+      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+      dataFilePath: cleanText(context?.dataFilePath, 2000),
+      fallbackDataFilePath: cleanText(context?.fallbackDataFilePath, 2000)
+    });
+  });
+
   genericAgentToolRuntime.registerToolExecutor('protocol-matching', async ({ args, context, state }) => {
     const parserPayload = resolveToolParserPayload(args, context, {
       protocol_candidates: Array.isArray(args?.protocol_candidates)

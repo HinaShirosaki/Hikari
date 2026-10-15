@@ -328,6 +328,80 @@ test('agent-chat renders assistant markdown with emphasis, tables, and escaped H
   assert.match(history.innerHTML, /&lt;script&gt;alert\(&quot;xss&quot;\)&lt;\/script&gt;/);
   assert.doesNotMatch(history.innerHTML, /<script>/);
 });
+test('agent-chat shows vendor images from Codex replies only after a click and keeps unsafe image sources inert', async () => {
+  // One module graph, so the click handler and the renderer share loaded-image state.
+  const graph = new Map();
+  const agentChatDir = path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat');
+  const rendering = loadEsmStyleModule(path.join(agentChatDir, 'rendering.js'), { URL }, [], graph);
+  const { createHistoryActionController } = loadEsmStyleModule(path.join(agentChatDir, 'history-actions.js'), { URL }, [], graph);
+  const response = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+  const result = response.normalizeAgentResponse({
+    codex_agent: {
+      status: 'completed',
+      answer: [
+        '![Vendor "product" <photo>](https://cdn.vendor.test/product.png?size=400&view=front)',
+        '![HTTP product](http://vendor.test/product.jpg)',
+        '[![Linked image](https://vendor.test/product(front).jpg "Product photo")](https://vendor.test/product)',
+        '![Spaced URL](<https://vendor.test/product photo.jpg>)',
+        '[Vendor product page](https://vendor.test/product)',
+        '![Script image](javascript:alert(1))',
+        '![Local image](file:///private/product.png)',
+        '![Embedded HTML](data:text/html;base64,PHNjcmlwdD4=)',
+        '![Mail image](mailto:vendor@example.com)',
+        '`![Example](https://vendor.test/example.png)`',
+        '```markdown\n![Code image](https://vendor.test/code.png)\n```',
+        '<img src="https://vendor.test/raw.png" onerror="alert(1)">'
+      ].join('\n\n')
+    }
+  });
+  const render = () => rendering.renderHistory({
+    historyNode: history,
+    messages: [{ id: 'codex-product', role: 'assistant', text: result.assistantText }],
+    state: {},
+    safeText: shared.safeText
+  });
+  render();
+  // A model-written image URL can carry chat data to its host, so nothing loads unasked.
+  assert.doesNotMatch(history.innerHTML, /<img\s/);
+  const placeholders = [...history.innerHTML.matchAll(/data-agent-load-image="([^"]+)" data-agent-image-alt="([^"]*)"/g)];
+  assert.equal(placeholders.length, 4);
+  assert.match(history.innerHTML, /data-agent-image-alt="Vendor &quot;product&quot; &lt;photo&gt;"/);
+  assert.match(history.innerHTML, /<a[^>]+><button[^>]+data-agent-load-image="https:\/\/vendor\.test\/product\(front\)\.jpg"/);
+  assert.match(history.innerHTML, /Load image: HTTP product <span>\(vendor\.test\)<\/span>/);
+
+  const controller = createHistoryActionController({ state: {} });
+  for (const [, src, alt] of placeholders) {
+    let prevented = false, replacement = null;
+    const button = {
+      dataset: { agentLoadImage: src.replace(/&amp;/g, '&'), agentImageAlt: alt },
+      ownerDocument: { createElement: (tag) => ({ tag }) },
+      replaceWith: (node) => { replacement = node; }
+    };
+    await controller.onHistoryClick({
+      target: { closest: (selector) => (selector === '[data-agent-load-image]' ? button : null) },
+      preventDefault: () => { prevented = true; }
+    });
+    assert.equal(prevented, true, 'a linked image loads instead of opening the link');
+    assert.equal(replacement.tag, 'img');
+    assert.equal(replacement.src, button.dataset.agentLoadImage);
+    assert.equal(replacement.referrerPolicy, 'no-referrer');
+  }
+  render();
+  assert.equal((history.innerHTML.match(/<img\s/g) || []).length, 4, 'clicked images stay loaded across re-renders');
+  assert.match(history.innerHTML, /src="https:\/\/cdn\.vendor\.test\/product\.png\?size=400&amp;view=front"/);
+  assert.match(history.innerHTML, /alt="Vendor &quot;product&quot; &lt;photo&gt;"/);
+  assert.match(history.innerHTML, /src="http:\/\/vendor\.test\/product\.jpg"/);
+  assert.match(history.innerHTML, /referrerpolicy="no-referrer"/);
+  assert.match(history.innerHTML, /<a href="https:\/\/vendor\.test\/product"/);
+  assert.match(history.innerHTML, /<a[^>]+><img[^>]+src="https:\/\/vendor\.test\/product\(front\)\.jpg"/);
+  assert.match(history.innerHTML, /src="https:\/\/vendor\.test\/product%20photo\.jpg"/);
+  assert.doesNotMatch(history.innerHTML, /@@MDTOKEN_/);
+  assert.doesNotMatch(history.innerHTML, /<img[^>]*src="(?:javascript:|file:|data:|mailto:)/);
+  assert.match(history.innerHTML, /<code>!\[Example\]/);
+  assert.match(history.innerHTML, /&lt;img src=/);
+});
 test('agent-chat normalizes Codex agent answer envelopes', () => {
   const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'public-api.js'));
   const completed = responseModule.normalizeAgentResponse({

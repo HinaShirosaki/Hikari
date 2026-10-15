@@ -1,15 +1,14 @@
 import { sanitizeFilePart } from '../shared.js';
 import { applyFigureDefaults } from '../plotly/figure-theme.js';
 import { showTransientNotice } from '../../../lib/notify.js';
-import { asArray, ensureObject } from '../../../lib/normalize.js';
-import { getPlotlyTitle, normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
+import { ensureObject } from '../../../lib/normalize.js';
+import { normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
 import { normalizePlotElements } from '../../../../shared/assay-plot.mjs';
 import { buildPlotElements, plotElementEditPatch, validatePlotElementAxes } from '../plotly/plot-elements.js';
 
 // Owns the Plotly surface: the analysis chart, the agent-supplied graph that can
 // replace it, and the context the style store and controls read.
 function createChartSurface({
-  safeText,
   runtime,
   chartStyleStore,
   chartControls,
@@ -213,16 +212,8 @@ function createChartSurface({
     const traceNames = normalized.figure.data
       .map((trace, index) => String(trace?.name || `Trace ${index + 1}`).trim())
       .filter(Boolean);
-    const title = normalized.name || getPlotlyTitle(normalized.figure.layout);
-    const issueCount = asArray(normalized.inspection?.issues).length;
-    const graphLabel = title ? `Agent Plotly graph: ${title}` : 'Agent Plotly graph';
-    // The graph's own caption carries the inspection count; nothing is written to
-    // the controls rail.
     assayAnalysisTable.innerHTML = `
       <div class="assay-analysis-results assay-analysis-agent-results" data-assay-agent-plotly-output>
-        <div class="assay-analysis-agent-note">
-          ${safeText(graphLabel)}${normalized.id ? ` <span>${safeText(`ID ${normalized.id}`)}</span>` : ''}${issueCount ? ` <span>${safeText(`Inspection issues: ${issueCount}`)}</span>` : ''}
-        </div>
         <div class="assay-analysis-chart assay-analysis-agent-chart" data-assay-agent-plotly-chart></div>
       </div>
     `;

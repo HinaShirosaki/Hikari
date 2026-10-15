@@ -859,7 +859,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   max-width: 100%;
 }
 
-.sequence-viewer-primer-copy-btn {
+.sequence-viewer-primer-copy-btn,
+.sequence-viewer-primer-library-save-btn {
   flex: 0 0 auto;
   width: 24px;
   height: 24px;
@@ -874,12 +875,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-primer-copy-btn:hover,
-.sequence-viewer-primer-copy-btn:focus-visible {
+.sequence-viewer-primer-copy-btn:focus-visible,
+.sequence-viewer-primer-library-save-btn:hover,
+.sequence-viewer-primer-library-save-btn:focus-visible {
   border-color: var(--theme-border);
   background: var(--theme-surface-subtle);
 }
 
-.sequence-viewer-primer-copy-btn svg {
+.sequence-viewer-primer-copy-btn svg,
+.sequence-viewer-primer-library-save-btn svg {
   width: 14px;
   height: 14px;
   fill: none;

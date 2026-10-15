@@ -85,6 +85,7 @@ function registerAgentToolExecutors(deps = {}) {
   return [
     'inventory-lookup',
     'notebook-lookup',
+    'notebook-list',
     'protocol-matching',
     'notebook-generation',
     'notebook-draft',

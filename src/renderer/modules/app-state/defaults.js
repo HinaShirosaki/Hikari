@@ -59,6 +59,7 @@ export const defaultState = {
   assays: [],
   gelAnalyses: [],
   samples: [],
+  primerLibrary: [],
   labInventory: {
     chemicals: [],
     blocks: [],

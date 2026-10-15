@@ -121,7 +121,7 @@ export function attachMapHoverLabel(config = {}) {
       }
       const feature = getFeature(Number(trigger.dataset.featureIndex));
       const sequence = getSequence();
-      const detailHtml = renderPrimerHoverSection(feature, sequence) + renderCdsProteinHoverSection(feature, sequence);
+      const detailHtml = renderPrimerHoverSection(feature, sequence, { allowLibrarySave: Boolean(config.allowLibrarySave) }) + renderCdsProteinHoverSection(feature, sequence);
       const rect = event.type === 'focusin' ? trigger.getBoundingClientRect?.() : null;
       show(label, detailHtml, rect ? rect.left : event.clientX, rect ? rect.bottom : event.clientY);
     }
