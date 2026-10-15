@@ -1,7 +1,9 @@
 'use strict';
 
 const path = require('node:path');
-const { LOGIN_STATUS_CACHE_TTL_MS } = require('./constants');
+const fs = require('node:fs/promises');
+const { createHash } = require('node:crypto');
+const { LOGIN_STATUS_CACHE_TTL_MS, CODEX_SIGNED_OUT_FILE } = require('./constants');
 const { removeFileIfExists } = require('./fs-utils');
 const {
   getActiveCodexLogin,
@@ -16,7 +18,6 @@ const {
 } = require('./login-launch');
 const {
   getCodexCliAuthFilePath,
-  getCodexCliCandidateHomeDirectories,
   resolveCodexCliRuntimeHomeDirectory
 } = require('./paths');
 const {
@@ -39,12 +40,12 @@ async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
     activeLogin.finished = true;
     setActiveCodexLogin(null);
   }
-  const targetPaths = new Set(
-    [...getCodexCliCandidateHomeDirectories(), resolveCodexCliRuntimeHomeDirectory(cwd)]
-      .map((homeDirectory) => String(homeDirectory || '').trim())
-      .filter(Boolean)
-      .map((homeDirectory) => path.resolve(path.join(homeDirectory, 'auth.json')))
-  );
+  const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd);
+  // Sign-out belongs to Hikari; never remove the desktop/terminal account.
+  await fs.mkdir(runtimeHome, { recursive: true });
+  await fs.writeFile(path.join(runtimeHome, CODEX_SIGNED_OUT_FILE), '', { mode: 0o600 });
+  const targetPaths = [path.resolve(runtimeHome, 'auth.json')];
+  require('./catalog').invalidateCodexCliCatalog();
 
   const clearedPaths = [];
   for (const targetPath of targetPaths) {
@@ -128,6 +129,9 @@ async function readCodexLoginStatus({ forceRefresh = false, runtime } = {}) {
     expired: profile.expired === true,
     canRefresh: profile.authMode === 'chatgpt' && Boolean(profile.refreshToken),
     sourcePath: hasStoredTokens ? profile.sourcePath : '',
+    email: profile.email,
+    planType: profile.planType,
+    accountKey: profile.accountId ? createHash('sha256').update(profile.accountId).digest('hex').slice(0, 16) : '',
     message: hasStoredTokens
       ? (profile.expired === true
         ? 'Stored Codex ChatGPT login is expired. Save Codex settings to sign in again.'

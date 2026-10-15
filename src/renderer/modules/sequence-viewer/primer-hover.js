@@ -41,7 +41,17 @@ export function renderPrimerNameCopyButton(feature) {
   return renderPrimerCopyButton(feature?.name, 'name', 'primer name');
 }
 
-// The sequence plus its copy button, or '' for anything that is not a primer.
+function renderLibrarySaveButton(feature, sequence) {
+  return `<button type="button" class="sequence-viewer-primer-library-save-btn" data-sequence-primer-library-save data-primer-name="${escapeHtml(feature?.name || 'Primer')}" data-primer-sequence="${escapeHtml(sequence)}" title="Save to Primer Library" aria-label="Save to Primer Library">
+    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+      <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
+      <path d="M8.5 5.5h7v4h-7Z"></path>
+      <path d="M8 12.5h8v6h-8Z"></path>
+    </svg>
+  </button>`;
+}
+
+// One primer card shared by DNA tracks and maps, with actions beside their values.
 export function renderPrimerHoverSection(feature, recordSequence = '', { allowLibrarySave = false } = {}) {
   if (!isPrimerBindingFeature(feature?.type)) {
     return '';
@@ -51,18 +61,20 @@ export function renderPrimerHoverSection(feature, recordSequence = '', { allowLi
     return '';
   }
   return `
-    <div class="sequence-viewer-primer-hover">
-      <code class="sequence-viewer-primer-hover-seq">${escapeHtml(sequence)}</code>
-      <div class="sequence-viewer-primer-hover-actions">
-        <span class="sequence-viewer-primer-hover-meta">${sequence.length.toLocaleString()} nt</span>
-        ${renderPrimerCopyButton(sequence, 'sequence', 'primer sequence')}
-        ${allowLibrarySave ? `<button type="button" class="sequence-viewer-primer-library-save-btn" data-sequence-primer-library-save data-primer-name="${escapeHtml(feature?.name || 'Primer')}" data-primer-sequence="${escapeHtml(sequence)}" title="Save to Primer Library" aria-label="Save to Primer Library">
-          <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-            <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
-            <path d="M8.5 5.5h7v4h-7Z"></path>
-            <path d="M8 12.5h8v6h-8Z"></path>
-          </svg>
-        </button>` : ''}
+    <div class="sequence-viewer-primer-hover-card">
+      <div class="sequence-viewer-primer-hover-head">
+        <div class="sequence-viewer-primer-hover-title">${escapeHtml(feature?.name || 'Primer')}</div>
+        <div class="sequence-viewer-primer-hover-buttons">
+          ${renderPrimerNameCopyButton(feature)}
+          ${allowLibrarySave ? renderLibrarySaveButton(feature, sequence) : ''}
+        </div>
+      </div>
+      <div class="sequence-viewer-primer-hover">
+        <div class="sequence-viewer-primer-hover-actions">
+          <span class="sequence-viewer-primer-hover-meta">${sequence.length.toLocaleString()} nt</span>
+          ${renderPrimerCopyButton(sequence, 'sequence', 'primer sequence')}
+        </div>
+        <code class="sequence-viewer-primer-hover-seq">${escapeHtml(sequence)}</code>
       </div>
     </div>
   `;
@@ -89,6 +101,10 @@ export function createHoverTooltipInteractivity(node, hide) {
 
   node?.addEventListener?.('mouseenter', cancelHide);
   node?.addEventListener?.('mouseleave', hideNow);
+  node?.addEventListener?.('focusin', cancelHide);
+  node?.addEventListener?.('focusout', (event) => {
+    if (!node.contains?.(event.relatedTarget)) hideNow();
+  });
 
   return {
     cancelHide,

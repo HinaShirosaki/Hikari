@@ -97,9 +97,10 @@ function createCodexAccountSettings({
     }
 
     if (connected) {
+      const identity = [codexLoginConfig.email, codexLoginConfig.planType].filter(Boolean).join(' · ');
       settingCodexStatus.textContent = codexLoginConfig.source === 'env'
         ? 'OpenAI account: connected through an environment token.'
-        : 'OpenAI account: connected.';
+        : `OpenAI account: connected${identity ? ` (${identity})` : ''}.`;
       if (codexLoginConfig.cliVersion) {
         settingCodexStatus.textContent += ` Codex CLI ${codexLoginConfig.cliVersion}; updates automatically.`;
       }
@@ -150,6 +151,7 @@ function createCodexAccountSettings({
       else usage.clear();
       if (isCodexConnected(codexLoginConfig)
         && (!isCodexConnected(previousStatus) || previousStatus.cliVersion !== codexLoginConfig.cliVersion
+          || previousStatus.accountKey !== codexLoginConfig.accountKey || previousStatus.planType !== codexLoginConfig.planType
           || !llmModelCatalog?.hasCodexModels?.())) {
         await refreshCodexCatalog();
       }

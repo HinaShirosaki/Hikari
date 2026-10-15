@@ -25,6 +25,7 @@ function createHomeNavigation({
             : mode === 'vector'
               ? 'vector'
               : 'home';
+    const previous = state.localWorkspaceMode;
     state.localWorkspaceMode = next;
     rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
@@ -44,6 +45,16 @@ function createHomeNavigation({
     }
     if (elements.alignmentWorkspace) {
       elements.alignmentWorkspace.hidden = next !== 'alignment';
+    }
+    if (previous !== next && (next === 'home' || next === 'detail')) {
+      const list = next === 'home' ? elements.libraryList : elements.detailLibraryList;
+      const scroll = list?.closest?.('.left-rail-template__scroll');
+      // The shell makes the destination view visible after this local switch.
+      rootDocument?.defaultView?.requestAnimationFrame?.(() => {
+        if (state.localWorkspaceMode === next && scroll) {
+          scroll.scrollTop = state.libraryScrollTop || 0;
+        }
+      });
     }
   }
 

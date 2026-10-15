@@ -85,7 +85,7 @@ module.exports = {
       /^\/reports($|\/)/,
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,
-      /^\/config($|\/)/,
+      /^\/config($|\/)/i,
       /^\/ui\/(?:config|html)($|\/)/,
       /^\/test\.js$/,
       /^\/(?:eslint|forge)\.config\.(?:js|mjs)$/,

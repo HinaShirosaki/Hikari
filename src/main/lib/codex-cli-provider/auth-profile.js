@@ -63,12 +63,17 @@ function readCodexCliOAuthProfile(env = process.env) {
   const accessToken = cleanText(authFile?.tokens?.access_token, 20000);
   const refreshToken = cleanText(authFile?.tokens?.refresh_token, 20000);
   const accountId = cleanText(authFile?.tokens?.account_id, 400);
+  const identity = decodeJwtPayload(authFile?.tokens?.id_token) || {};
+  const access = decodeJwtPayload(accessToken) || {};
   const expiresAt = resolveCodexCliAccessTokenExpiry(accessToken);
   return {
     authMode,
     accessToken,
     refreshToken,
     accountId,
+    email: cleanText(identity.email || access['https://api.openai.com/profile']?.email, 320),
+    planType: cleanText(access['https://api.openai.com/auth']?.chatgpt_plan_type
+      || identity['https://api.openai.com/auth']?.chatgpt_plan_type, 80),
     expiresAt,
     expired: Boolean(expiresAt && Date.now() >= expiresAt),
     sourcePath: cleanText(authFileState?.sourcePath, 2400) || getCodexCliAuthFilePath(env)

@@ -110,7 +110,7 @@
                 <div class="gel-window-toolbar" role="toolbar" aria-label="Gel windows">
                   <button type="button" id="gel-open-tools-btn" class="ghost-btn" aria-controls="gel-tools-window" aria-expanded="true">Gel Tools</button>
                   <button type="button" id="gel-open-profile-btn" class="ghost-btn" aria-controls="gel-lane-profile-panel" aria-expanded="false" disabled>Lane Intensity</button>
-                  <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-window" aria-expanded="false">Lane table</button>
+                  <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false">Lane table</button>
                   <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn" aria-controls="gel-peak-editor-overlay" aria-expanded="false">Peak editor</button>
                   <button type="button" id="gel-open-cell-table-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-cell-table-overlay" aria-expanded="false" disabled>Band intensity</button>
                   <button type="button" id="gel-hide-windows-btn" class="ghost-btn">Hide windows</button>
@@ -123,7 +123,21 @@
                       <img id="gel-cropper-image" alt="Gel cropper" />
                     </div>
                   </div>
+                  <section id="gel-lane-table-panel" class="gel-lane-table-panel" aria-labelledby="gel-lane-table-title" hidden>
+                    <header class="gel-lane-table-head">
+                      <h3 id="gel-lane-table-title">Lane table</h3>
+                      <button type="button" id="gel-close-lane-table-btn" class="ghost-btn" aria-label="Hide lane table">×</button>
+                    </header>
+                    <div class="gel-lane-table-body">
+                      <p id="gel-lane-table-empty" class="small-note">Finish the lane dividers, then add a table. The table is included in image and PowerPoint exports.</p>
+                      <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
+                      <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
+                    </div>
+                  </section>
                 </div>
+                <form id="gel-ladder-mw-editor" class="gel-ladder-mw-editor" aria-label="Set ladder MW" hidden>
+                  <input id="gel-ladder-band-mw" type="number" min="0" step="any" placeholder="MW" aria-label="Ladder MW (kDa)" required />
+                </form>
               </div>
 
               <div class="gel-side-rail">
@@ -140,9 +154,6 @@
                   <div class="gel-tool-groups">
                     <section class="gel-tool-group" data-gel-tool-panel="lane" aria-label="Lane tools">
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn gel-tool-wide" aria-pressed="false" title="Click the gel to add lane boundaries; click this button again to finish. Outermost dividers define the gel edges">Lane dividers</button>
-                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
-                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Lane vertices</button>
                         <div class="gel-tool-control-row">
                           <label class="small-note gel-tool-field">
                             Lanes
@@ -150,6 +161,9 @@
                           </label>
                           <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
                         </div>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn gel-tool-wide" aria-pressed="false" title="Click the gel to add lane boundaries; click this button again to finish. Outermost dividers define the gel edges">Lane dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Lane vertices</button>
                       </div>
                     </section>
 
@@ -163,13 +177,8 @@
 
                     <section class="gel-tool-group" data-gel-tool-panel="analysis" aria-label="Analysis tools" hidden>
                       <div class="gel-tool-actions">
-                        <label class="small-note gel-tool-field">
-                          Ladder MW
-                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="50 kDa" list="gel-ladder-band-mw-options" />
-                          <datalist id="gel-ladder-band-mw-options"></datalist>
-                        </label>
                         <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" title="Detect ladder bands and label them from the selected preset">Detect ladder</button>
-                        <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" title="Click a ladder band to label it with the MW above; drag a label to move it">Set MW</button>
+                        <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" aria-pressed="false" aria-controls="gel-ladder-mw-editor" title="Toggle MW labeling: click a band in the ladder lane to enter its MW; drag a label to move it">Set MW</button>
                       </div>
                     </section>
                   </div>
@@ -186,7 +195,7 @@
                   </header>
                   <div class="gel-lane-profile-head">
                     <label class="gel-lane-profile-picker">
-                      Lane
+                      <span class="sr-only">Lane</span>
                       <select id="gel-lane-profile-select" disabled>
                         <option value="">Select lane</option>
                       </select>
@@ -201,18 +210,6 @@
             </div>
 
           </div>
-
-          <section id="gel-lane-table-window" class="gel-lane-table-window" data-gel-window="table" role="dialog" aria-modal="false" aria-labelledby="gel-lane-table-title" hidden>
-            <header class="gel-floating-head" data-gel-window-handle>
-              <h3 id="gel-lane-table-title">Lane table</h3>
-              <button type="button" class="ghost-btn gel-window-close" data-gel-window-close="table" aria-label="Close lane table">×</button>
-            </header>
-            <div class="gel-lane-table-window-body">
-              <p id="gel-lane-table-empty" class="small-note">Finish the lane dividers, then add a table. The table is included in image and PowerPoint exports.</p>
-              <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
-              <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
-            </div>
-          </section>
 
           <div id="gel-cell-table-overlay" data-gel-window="intensity" hidden>
             <section id="gel-cell-table-panel" class="gel-cell-table-dialog" role="dialog" aria-modal="false" aria-labelledby="gel-cell-table-title">

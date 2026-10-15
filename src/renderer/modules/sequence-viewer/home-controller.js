@@ -47,6 +47,7 @@ export function createSequenceViewerHomeController(config = {}) {
   let previewedEntryId = '';
   let draggedLibraryEntryId = '';
   let activeFolderDropTarget = null;
+  const librarySearchInputs = [elements.librarySearchInput, elements.detailLibrarySearchInput].filter(Boolean);
 
   const {
     getLibraryListElements,
@@ -99,9 +100,10 @@ export function createSequenceViewerHomeController(config = {}) {
     getLibraryTemporaryFilterButtons().forEach((button) => {
       button.disabled = !hasStorage;
     });
-    if (elements.librarySearchInput) {
-      elements.librarySearchInput.disabled = !hasStorage;
-    }
+    librarySearchInputs.forEach((input) => {
+      input.disabled = !hasStorage;
+      input.value = state.librarySearchQuery || '';
+    });
   }
 
   // Held so the hover readout can resolve an arc back to its feature.
@@ -455,9 +457,26 @@ export function createSequenceViewerHomeController(config = {}) {
       }
     });
 
-    elements.librarySearchInput?.addEventListener('input', () => {
-      state.librarySearchQuery = cleanText(elements.librarySearchInput.value, 200);
-      renderLibraryList();
+    librarySearchInputs.forEach((input) => {
+      input.addEventListener('input', () => {
+        state.librarySearchQuery = cleanText(input.value, 200);
+        librarySearchInputs.forEach((other) => {
+          if (other !== input) other.value = input.value;
+        });
+        renderLibraryList();
+      });
+    });
+
+    [
+      [elements.libraryList, 'home'],
+      [elements.detailLibraryList, 'detail']
+    ].forEach(([list, mode]) => {
+      const scroll = list?.closest?.('.left-rail-template__scroll');
+      scroll?.addEventListener('scroll', () => {
+        if (state.localWorkspaceMode === mode && scroll.getClientRects().length) {
+          state.libraryScrollTop = scroll.scrollTop;
+        }
+      });
     });
   }
 

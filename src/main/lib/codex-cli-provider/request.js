@@ -19,6 +19,7 @@ const { getCodexLoginStatus } = require('./login');
 const { resolveWorkingDirectory } = require('./paths');
 const { createCodexJsonEventHandler } = require('./request-stream');
 const { prepareCodexRuntime, resolveCodexRequestSelection } = require('./runtime-gateway');
+const { getCodexCliCatalog, requestCodexCliCatalog } = require('./catalog');
 const {
   extractCodexSessionIdFromText,
   normalizeCodexSessionId
@@ -63,11 +64,16 @@ async function requestCodexCliText({
   }
 
   const runtime = await prepareCodexRuntime({ cwd: safeCwd, envOverrides });
-  const selection = resolveCodexRequestSelection({ runtime, model, reasoningEffort });
   const loginStatus = await getCodexLoginStatus({ runtime });
   if (!loginStatus.loggedIn) {
     throw new Error(loginStatus.message || 'Codex ChatGPT OAuth credentials are not configured.');
   }
+  let catalog = getCodexCliCatalog(runtime);
+  if (!catalog.ok) catalog = await requestCodexCliCatalog({ runtime });
+  if (!catalog.ok || !catalog.defaultModel) {
+    throw new Error('Codex did not report an available default model for this account. Refresh Codex settings or sign in again.');
+  }
+  const selection = resolveCodexRequestSelection({ runtime, model, reasoningEffort, catalog });
 
   const requestState = await prepareCodexRequest({
     cwd: safeCwd,

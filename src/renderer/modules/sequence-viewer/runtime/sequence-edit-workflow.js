@@ -5,6 +5,7 @@ import {
 } from '../shared.js';
 import { buildAminoAcidSubstitution } from '../amino-acid-substitution.js';
 import { buildEditedSequenceName } from '../sequence-naming.js';
+import { rotateCircularSequenceRecord } from '../sequence-origin.js';
 import { PROTEIN_DIRECT_CLONING_MAX_AA } from '../protein-builder/constants.js';
 import {
   adjustFeatureSegmentsForSequenceEdit,
@@ -106,9 +107,35 @@ export function createSequenceEditActions(ctx) {
     return substitution;
   }
 
+  async function setSequenceOrigin(cursorBase) {
+    const record = actions.getSelectedRecord();
+    const nextRecord = rotateCircularSequenceRecord(record, cursorBase);
+    if (nextRecord === record) return;
+    const nextRecords = [...state.records];
+    nextRecords[state.selectedRecordIndex] = nextRecord;
+    state.records = nextRecords;
+    state.selectedFeatureIndex = -1;
+    state.sequenceCursorBase = 0;
+    // These workflows hold coordinates in the previous reference sequence.
+    // Reindexing alone must not become a replacement in the cloning planner.
+    state.sequenceEditDesignSource = null;
+    state.cloningDesign = {};
+    if (state.vectorBuilder) {
+      Object.assign(state.vectorBuilder, {
+        selectedFeatureIndex: -1, selectionAnchor: null, selectionFocus: null,
+        cursorBase: null, isSelecting: false, insertTarget: null
+      });
+    }
+    actions.resetAlignmentState({ preserveSessions: true });
+    renderAfterEdit();
+    await actions.persistFeatureMutation(nextRecord,
+      `Set sequence start to former base ${(Math.round(cursorBase) + 1).toLocaleString()}.`);
+  }
+
   return {
     applyAminoAcidEdit,
     applySequenceEdit,
+    setSequenceOrigin,
     hasCurrentCloningDesignSource
   };
 

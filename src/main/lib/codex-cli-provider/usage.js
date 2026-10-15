@@ -21,7 +21,11 @@ function usageFromCodexRateLimits(result = {}) {
   const windows = [limits?.primary, limits?.secondary];
   return {
     fiveHour: normalizeUsageWindow(windows.find(window => window?.windowDurationMins === 300)),
-    weekly: normalizeUsageWindow(windows.find(window => window?.windowDurationMins === 10080))
+    weekly: normalizeUsageWindow(windows.find(window => window?.windowDurationMins === 10080)),
+    windows: windows.filter(window => normalizeUsageWindow(window)
+      && Number.isFinite(window.windowDurationMins) && window.windowDurationMins > 0)
+      .map(window => ({ ...normalizeUsageWindow(window), windowDurationMins: window.windowDurationMins })),
+    planType: typeof limits?.planType === 'string' ? limits.planType.slice(0, 80) : ''
   };
 }
 
@@ -64,7 +68,10 @@ function readCodexRateLimits({ env = process.env, invocation, cwd, timeoutMs = 1
         if (!message || message.id !== (initialized ? 2 : 1)) continue;
         if (message.error) {
           // Do not forward raw server errors or stderr, which may include account data.
-          finish(new Error('Codex account usage is unavailable. Try refreshing or signing in again.'));
+          const networkFailure = /error sending request|timed? out|connection|dns/iu.test(message.error.message || '');
+          finish(new Error(networkFailure
+            ? 'Could not reach Codex account usage. Check your connection and refresh.'
+            : 'Codex account usage is unavailable. Try refreshing or signing in again.'));
           return;
         }
         if (!Object.hasOwn(message, 'result')) continue;

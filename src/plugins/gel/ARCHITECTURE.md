@@ -17,9 +17,9 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `images/image-controller.js`: file load, decode, enhancement settings (denoise/contrast), and the preprocessed-image cache (`getPreprocessedImageForCurrentSettings`).
 - `images/crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
 - `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
-- `rendering/lane-table.js`: the editable lane/sample table in its own floating window. Export still composes the saved table with the gel; editing the table does not change the viewer's fitted dimensions.
+- `rendering/lane-table.js`: the editable lane/sample table docked below the gel, with columns aligned to the image lanes. The viewer fits into the remaining space; long tables scroll within the dock. The Lane table toolbar button shows or hides it, and exports compose the saved table with the gel.
 - `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
-- `floating-windows.js`: owns the nonmodal Gel Tools, Lane Intensity, lane table, peak editor, and band intensity windows. Their launchers stay above the canvas. Windows are bounded to the image stage, support pointer dragging and arrow-key movement from their title bars, and close individually or with **Hide windows**. Escape closes the top window. Rendering remains owned by the existing controllers; opening or dismissing a window does not resize the gel. Observers and pointer listeners are disposed with the workspace.
+- `floating-windows.js`: owns the nonmodal Gel Tools, Lane Intensity, peak editor, and band intensity windows. Their launchers stay above the canvas. Windows are bounded to the image stage, support pointer dragging and arrow-key movement from their title bars, and close individually or with **Hide windows**. The docked lane table stays visible when floating windows are hidden. Escape closes the top window. Rendering remains owned by the existing controllers; opening or dismissing a floating window does not resize the gel. Observers and pointer listeners are disposed with the workspace.
 - `history.js`: the frame's own undo/redo stack over `manualOverrides`. `commit()` runs after every render and is a no-op unless the overrides actually moved, so no call site has to decide whether an interaction was an edit. A changed `runtime.imageRevision` (load, crop, rotate) drops the stack rather than replaying coordinates onto different pixels.
 - `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
 
@@ -42,8 +42,11 @@ The headline feature is a step-by-step manual override flow driven by `manual/ma
    the gel edges. The green **Lane dividers** tool means editing is active;
    clicking it again finishes the step.
 2. **Set ladder lane** — which lane is the MW ladder (Gel Tools → Lane → Ladder lane).
-3. **Ladder MW** — assign known molecular weights to ladder bands (confirmed
-   via "Done Ladder MW").
+3. **Ladder MW** — toggle **Set MW** in Analysis, then click a band in the
+   ladder lane to enter its MW in a single inline number field (Enter saves,
+   Escape dismisses). The cursor becomes a
+   crosshair while the tool is on. Clicking an existing label edits its value;
+   dragging it moves the calibration row. Confirm via "Done Ladder MW".
 4. **Band top** / 5. **Band bottom** — the quantification band window; supports
    a per-lane band mode where each lane gets its own top/bottom (progress shows
    `n/total` lanes).

@@ -50,9 +50,9 @@ function setCodexCliReasoningEffort(reasoningEffort = '') {
   return configuredCodexReasoningEffort;
 }
 
-// '' means "no -m": Codex then runs its own current default model.
+// An empty preference is resolved against the account catalog before execution.
 function resolveCodexCliModel(model = '') {
-  // Preserve the requested model. The selected CLI reports availability errors.
+  // Selection validation happens with the prepared runtime's catalog.
   return normalizeCodexCliModel(model) || configuredCodexModel;
 }
 
@@ -156,10 +156,16 @@ function resolveCodexRequestSelection({ runtime, model = '', reasoningEffort = '
   const defaults = runtime?.modelDefaults || { model: configuredCodexModel, reasoningEffort: configuredCodexReasoningEffort };
   const chosen = normalizeCodexCliModel(model) || defaults.model;
   const explicit = normalizeCodexCliReasoningEffort(reasoningEffort);
-  const effort = explicit || defaults.reasoningEffort;
-  const config = findCodexCliModelConfig(chosen || catalog.defaultModel, catalog);
-  return { model: chosen, reasoningEffort: config?.reasoningEfforts?.length
-    ? ([explicit, defaults.reasoningEffort].find(value => config.reasoningEfforts.includes(value)) || config.defaultReasoningEffort || '')
+  const config = findCodexCliModelConfig(chosen, catalog)
+    || findCodexCliModelConfig(catalog.defaultModel, catalog);
+  // A copied config can name a model from another account. Pin the account's
+  // advertised default even for an empty selection, overriding that config.
+  const selectedModel = catalog.ok && config ? config.id : chosen;
+  const changedModel = Boolean(chosen && selectedModel !== chosen);
+  const effort = changedModel ? '' : explicit || defaults.reasoningEffort;
+  return { model: selectedModel, reasoningEffort: config?.reasoningEfforts?.length
+    ? ((changedModel ? [] : [explicit, defaults.reasoningEffort])
+      .find(value => config.reasoningEfforts.includes(value)) || config.defaultReasoningEffort || '')
     : effort };
 }
 

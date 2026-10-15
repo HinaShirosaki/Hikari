@@ -78,6 +78,9 @@ function registerSystemIpc(deps = {}) {
       expired: status.expired === true,
       canRefresh: status.canRefresh === true,
       sourcePath: cleanText(status.sourcePath, 2400),
+      email: cleanText(status.email, 320),
+      planType: cleanText(status.planType, 80),
+      accountKey: cleanText(status.accountKey, 80),
       message: status.message || '',
       cliAvailable: status.cliAvailable,
       cliPath: cleanText(status.cliPath, 2400),
@@ -160,7 +163,7 @@ function registerSystemIpc(deps = {}) {
   ipcMain.handle(LLM.CODEX_CATALOG, async () => {
     // Asked from Codex each time: no Codex, no login, or no network means no list,
     // and Settings then offers only "Use the default model".
-    const catalog = await requestCodexCliCatalog().catch((error) => ({
+    const catalog = await requestCodexCliCatalog({ cwd: getCodexCliWorkingDirectory() }).catch((error) => ({
       ok: false, error: cleanText(error?.message || error, 400), models: []
     }));
     return {
@@ -170,6 +173,7 @@ function registerSystemIpc(deps = {}) {
       defaultReasoningEffort: cleanText(catalog.defaultReasoningEffort, 40),
       currentModel: cleanText(getCodexCliModel(), 120),
       currentReasoningEffort: cleanText(getCodexCliReasoningEffort(), 40),
+      availableModelIds: Array.isArray(catalog.models) ? catalog.models.map(entry => cleanText(entry?.id, 120)).filter(Boolean) : [],
       // Hidden models (Codex's own picker hides them) stay valid for a saved choice.
       models: Array.isArray(catalog.models)
         ? catalog.models.filter((entry) => !entry?.hidden).map((entry) => ({
